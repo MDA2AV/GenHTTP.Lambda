@@ -1,0 +1,134 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+
+  frontend:
+
+    name: Frontend
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: src/Frontend
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/Frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # the server serves this directory, so a broken build here is a broken app
+      - name: Upload web root
+        uses: actions/upload-artifact@v4
+        with:
+          name: wwwroot
+          path: src/GenHTTP.Lambda/wwwroot
+          retention-days: 7
+
+  backend:
+
+    name: Backend
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build GenHTTP.Lambda.slnx -c Release
+
+      # the tests compile and run lambdas, so they need the Roslyn reference
+      # assemblies that ship with the SDK - no extra setup beyond the build
+      - name: Test
+        run: dotnet test GenHTTP.Lambda.slnx --no-build -c Release --logger "console;verbosity=normal"
+
+  image:
+
+    name: Image
+
+    needs: [frontend, backend]
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: genhttp-lambda:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # starts the image and walks a lambda through its whole life: created,
+      # deployed, served on its public URL, undeployed
+      - name: Smoke test
+        run: |
+          docker run -d --name lambda -p 8080:8080 genhttp-lambda:ci
+
+          for i in $(seq 30); do
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' lambda)" = "healthy" ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          docker inspect -f '{{.State.Health.Status}}' lambda | grep -qx healthy
+
+          keys=$(curl -sf -X POST http://localhost:8080/api/v1/lambdas \
+                   -H 'Content-Type: application/json' \
+                   -d '{"publicKey":"ci","acceptedTerms":true}')
+
+          private=$(echo "$keys" | jq -r .privateKey)
+
+          curl -sf -X POST "http://localhost:8080/api/v1/lambdas/$private/versions" \
+               -H 'Content-Type: application/json' \
+               -d '{"code":"return Inline.Create().Get(() => \"ci\");"}' > /dev/null
+
+          curl -sf -X POST "http://localhost:8080/api/v1/lambdas/$private/deployment" \
+               -H 'Content-Type: application/json' -d '{}' | jq -e .success > /dev/null
+
+          test "$(curl -sf http://localhost:8080/lambda/ci/)" = "ci"
+
+          curl -sf -X DELETE "http://localhost:8080/api/v1/lambdas/$private/deployment" > /dev/null
+
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/lambda/ci/)" = "404"
+
+      - name: Server log
+        if: always()
+        run: docker logs lambda

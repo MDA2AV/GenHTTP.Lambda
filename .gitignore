@@ -55,3 +55,20 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Node (the single page application in src/Frontend)
+node_modules/
+.npm
+*.tsbuildinfo
+
+# The built frontend, compiled into the web root of the server by
+# "npm run build" - the image and CI build it from source.
+src/GenHTTP.Lambda/wwwroot/
+
+# Runtime data: the SQLite database, the stored code and the lambda workspaces
+data/
+
+# IDEs
+.vs/
+.idea/
+*.user

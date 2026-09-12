@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+
+        <RootNamespace>GenHTTP.Lambda.Tests</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda.Tests</AssemblyName>
+
+        <IsPackable>false</IsPackable>
+
+    </PropertyGroup>
+
+    <ItemGroup>
+
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="MSTest" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../src/GenHTTP.Lambda/GenHTTP.Lambda.csproj" />
+    </ItemGroup>
+
+</Project>

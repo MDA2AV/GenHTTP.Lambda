@@ -1,0 +1,52 @@
+using GenHTTP.Lambda.Services.Deployment.Model;
+
+namespace GenHTTP.Lambda.Services.Meta.Model;
+
+/// <summary>
+/// Everything the editor needs to know about a lambda.
+/// </summary>
+public sealed record LambdaInfo(
+    string PublicKey,
+    string PrivateKey,
+    string Tier,
+    DateTime Created,
+    DateTime Modified,
+    int? ActiveVersion,
+    int? LatestVersion
+);
+
+/// <summary>
+/// A stored version of the code of a lambda.
+/// </summary>
+public sealed record LambdaVersionInfo(int Version, DateTime Created);
+
+/// <summary>
+/// A stored version, including the code itself.
+/// </summary>
+public sealed record LambdaVersionContent(int Version, DateTime Created, string Code);
+
+/// <summary>
+/// A lambda that has been looked up by its public key and is ready to run.
+/// </summary>
+public sealed record ResolvedLambda(long Id, string PublicKey, string Tier, int ActiveVersion, DateTime DeployedAt);
+
+/// <summary>
+/// What a visitor of a public key may know about it.
+/// </summary>
+public sealed record PublicStatus(string PublicKey, bool Exists, bool Deployed);
+
+/// <summary>
+/// The answer to "can I have this key?".
+/// </summary>
+public sealed record KeyAvailability(string PublicKey, bool Available, string? Reason);
+
+/// <summary>
+/// The outcome of a deployment attempt - either the updated lambda or the
+/// reasons why its code did not build.
+/// </summary>
+public sealed record DeploymentResult(bool Success, LambdaInfo? Lambda, IReadOnlyList<CompilationDiagnostic> Diagnostics);
+
+/// <summary>
+/// What a maintenance run has cleaned up.
+/// </summary>
+public sealed record MaintenanceReport(int Undeployed, int Deleted);

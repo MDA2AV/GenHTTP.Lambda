@@ -1,0 +1,8 @@
+<Solution>
+    <Folder Name="/src/">
+        <Project Path="src/GenHTTP.Lambda/GenHTTP.Lambda.csproj" />
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/GenHTTP.Lambda.Tests/GenHTTP.Lambda.Tests.csproj" />
+    </Folder>
+</Solution>

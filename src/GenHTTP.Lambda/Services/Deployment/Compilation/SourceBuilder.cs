@@ -1,0 +1,309 @@
+using System.Text;
+
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+
+namespace GenHTTP.Lambda.Services.Deployment.Compilation;
+
+/// <summary>
+/// Turns the snippet a user wrote into a compilable file.
+/// </summary>
+/// <remarks>
+/// The snippet is parsed as a script, which lets people mix statements with
+/// record and class declarations. Statements move into the body of the entry
+/// method, declared types move next to it, and <c>#line</c> directives keep
+/// every compiler message pointing at the line the user actually wrote.
+/// Everything lands in a namespace of its own: GenHTTP generates invocation
+/// code that refers to the types of a handler by their full name, and two
+/// lambdas both declaring a <c>Book</c> must not collide there.
+/// </remarks>
+internal static class SourceBuilder
+{
+
+    internal const string UserFile = "lambda.cs";
+
+    internal const string GeneratedFile = "generated.cs";
+
+    internal const string EntryType = "__GenHttpLambda";
+
+    internal const string EntryMethod = "BuildAsync";
+
+    internal const string WorkspaceType = "__LambdaWorkspace";
+
+    internal static CSharpParseOptions ScriptOptions { get; } = new(LanguageVersion.Latest, DocumentationMode.None, SourceCodeKind.Script);
+
+    internal static CSharpParseOptions RegularOptions { get; } = new(LanguageVersion.Latest, DocumentationMode.None);
+
+    #region Functionality
+
+    /// <summary>
+    /// Parses the snippet the way the user wrote it, so diagnostics and the
+    /// code guard can work on the original line numbers.
+    /// </summary>
+    internal static SyntaxTree ParseSnippet(string code) => CSharpSyntaxTree.ParseText(code, ScriptOptions, UserFile);
+
+    /// <summary>
+    /// Wraps the parsed snippet into the file that is handed to the compiler.
+    /// </summary>
+    /// <param name="snippet">The parsed snippet of the user</param>
+    /// <param name="workspace">The directory this lambda may read and write</param>
+    /// <param name="scope">The namespace everything generated for this lambda lives in</param>
+    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string scope)
+    {
+        var root = (CompilationUnitSyntax)snippet.GetRoot();
+
+        var text = snippet.GetText();
+
+        var statements = new List<MemberDeclarationSyntax>();
+        var types = new List<MemberDeclarationSyntax>();
+
+        foreach (var member in root.Members)
+        {
+            // types live next to the entry point, everything else (statements,
+            // script level fields and methods) becomes part of its body
+            (member is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax ? types : statements).Add(member);
+        }
+
+        var builder = new StringBuilder();
+
+        foreach (var import in ModuleCatalog.Imports)
+        {
+            builder.AppendLine($"using {import};");
+        }
+
+        foreach (var import in root.Usings)
+        {
+            builder.AppendLine(import.NormalizeWhitespace().ToFullString());
+        }
+
+        builder.AppendLine();
+        builder.AppendLine($"namespace {scope};");
+        builder.AppendLine();
+        builder.AppendLine("internal static class LambdaEnvironment");
+        builder.AppendLine("{");
+        builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
+        builder.AppendLine("}");
+        builder.AppendLine();
+        builder.AppendLine($"internal static class {EntryType}");
+        builder.AppendLine("{");
+        builder.AppendLine($"    private static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
+        builder.AppendLine();
+        builder.AppendLine($"    internal static async global::System.Threading.Tasks.Task<object> {EntryMethod}()");
+        builder.AppendLine("    {");
+
+        foreach (var member in statements)
+        {
+            Append(builder, text, member);
+        }
+
+        builder.AppendLine("#line default");
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
+
+        foreach (var member in types)
+        {
+            AppendType(builder, text, member);
+        }
+
+        builder.AppendLine("#line default");
+        builder.AppendLine();
+        builder.AppendLine(WorkspaceSource);
+
+        return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
+    }
+
+    /// <summary>
+    /// Copies one member over verbatim, prefixed by the line directive that
+    /// maps it back onto the snippet.
+    /// </summary>
+    private static void Append(StringBuilder builder, SourceText text, SyntaxNode member)
+        => Append(builder, text, member.Span, text.ToString(member.Span));
+
+    private static void Append(StringBuilder builder, SourceText text, TextSpan span, string content)
+    {
+        var start = text.Lines.GetLinePosition(span.Start);
+
+        builder.AppendLine($"#line {start.Line + 1} \"{UserFile}\"");
+
+        // the span starts at the first token, so the indentation of the first
+        // line has to be restored to keep the columns of the messages correct
+        builder.Append(' ', start.Character);
+        builder.AppendLine(content);
+    }
+
+    /// <summary>
+    /// Copies a declared type over, made public on the way.
+    /// </summary>
+    /// <remarks>
+    /// GenHTTP generates invocation code into an assembly of its own, so every
+    /// type that shows up in the signature of a handler has to be visible from
+    /// the outside. The keyword goes on a line of its own ahead of the line
+    /// directive, and a narrower one that is already there is blanked out
+    /// rather than removed - both so that the positions the compiler reports
+    /// keep matching the snippet character for character.
+    /// </remarks>
+    private static void AppendType(StringBuilder builder, SourceText text, MemberDeclarationSyntax member)
+    {
+        var accessibility = member.Modifiers.Where(IsAccessibility).ToList();
+
+        if (accessibility.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
+        {
+            Append(builder, text, member);
+            return;
+        }
+
+        builder.AppendLine("public");
+
+        var span = member.Span;
+
+        var content = text.ToString(span).ToCharArray();
+
+        foreach (var modifier in accessibility)
+        {
+            for (var i = 0; i < modifier.Span.Length; i++)
+            {
+                content[modifier.SpanStart - span.Start + i] = ' ';
+            }
+        }
+
+        Append(builder, text, span, new string(content));
+    }
+
+    private static bool IsAccessibility(SyntaxToken token) => token.Kind() is SyntaxKind.PublicKeyword
+        or SyntaxKind.InternalKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.ProtectedKeyword or SyntaxKind.FileKeyword;
+
+    private static string Literal(string value) => SyntaxFactory.Literal(value).ToFullString();
+
+    #endregion
+
+    #region Workspace
+
+    /// <summary>
+    /// The only door a lambda has to the file system: a private directory,
+    /// handed to the snippet as <c>Workspace</c>. Generated into the lambda
+    /// rather than referenced, so the assembly of this application stays
+    /// invisible to the code being compiled.
+    /// </summary>
+    private const string WorkspaceSource = $$"""
+        internal sealed class {{WorkspaceType}}
+        {
+            private const int MaxFileSize = 1024 * 1024;
+
+            private const int MaxFiles = 64;
+
+            private readonly string _root;
+
+            internal {{WorkspaceType}}(string root)
+            {
+                _root = global::System.IO.Path.TrimEndingDirectorySeparator(global::System.IO.Path.GetFullPath(root))
+                      + global::System.IO.Path.DirectorySeparatorChar;
+
+                global::System.IO.Directory.CreateDirectory(_root);
+            }
+
+            /// <summary>The absolute path of this workspace.</summary>
+            public string Root => _root;
+
+            /// <summary>Checks whether the given file exists.</summary>
+            public bool Exists(string name) => global::System.IO.File.Exists(Resolve(name));
+
+            /// <summary>Reads a file as UTF-8 text.</summary>
+            public string ReadText(string name) => global::System.IO.File.ReadAllText(Resolve(name));
+
+            /// <summary>Reads a file as bytes.</summary>
+            public byte[] ReadBytes(string name) => global::System.IO.File.ReadAllBytes(Resolve(name));
+
+            /// <summary>Writes UTF-8 text into a file, replacing it if it exists.</summary>
+            public void WriteText(string name, string content)
+            {
+                var path = Resolve(name);
+                Reserve(path, content == null ? 0 : content.Length);
+                global::System.IO.File.WriteAllText(path, content);
+            }
+
+            /// <summary>Writes bytes into a file, replacing it if it exists.</summary>
+            public void WriteBytes(string name, byte[] content)
+            {
+                var path = Resolve(name);
+                Reserve(path, content == null ? 0 : content.Length);
+                global::System.IO.File.WriteAllBytes(path, content);
+            }
+
+            /// <summary>Removes a file, if it exists.</summary>
+            public void Delete(string name)
+            {
+                var path = Resolve(name);
+
+                if (global::System.IO.File.Exists(path))
+                {
+                    global::System.IO.File.Delete(path);
+                }
+            }
+
+            /// <summary>Lists the files in this workspace, relative to its root.</summary>
+            public string[] List()
+            {
+                var files = global::System.IO.Directory.GetFiles(_root, "*", global::System.IO.SearchOption.AllDirectories);
+
+                var result = new string[files.Length];
+
+                for (var i = 0; i < files.Length; i++)
+                {
+                    result[i] = files[i].Substring(_root.Length).Replace('\\', '/');
+                }
+
+                return result;
+            }
+
+            /// <summary>Provides this workspace as a resource tree.</summary>
+            public global::GenHTTP.Api.Content.IO.IResourceTree Tree()
+                => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
+
+            /// <summary>Creates a handler that serves the files of this workspace.</summary>
+            public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files()
+                => global::GenHTTP.Modules.Files.Assets.From(Tree());
+
+            private string Resolve(string name)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    throw new global::System.ArgumentException("The name of a workspace file must not be empty.", "name");
+                }
+
+                var resolved = global::System.IO.Path.GetFullPath(global::System.IO.Path.Combine(_root, name));
+
+                if (!resolved.StartsWith(_root, global::System.StringComparison.Ordinal))
+                {
+                    throw new global::System.UnauthorizedAccessException("'" + name + "' is outside of the workspace of this lambda.");
+                }
+
+                var directory = global::System.IO.Path.GetDirectoryName(resolved);
+
+                if (directory != null)
+                {
+                    global::System.IO.Directory.CreateDirectory(directory);
+                }
+
+                return resolved;
+            }
+
+            private void Reserve(string path, int size)
+            {
+                if (size > MaxFileSize)
+                {
+                    throw new global::System.InvalidOperationException("A workspace file must not exceed " + MaxFileSize + " bytes.");
+                }
+
+                if (!global::System.IO.File.Exists(path) && List().Length >= MaxFiles)
+                {
+                    throw new global::System.InvalidOperationException("A workspace must not hold more than " + MaxFiles + " files.");
+                }
+            }
+        }
+        """;
+
+    #endregion
+
+}

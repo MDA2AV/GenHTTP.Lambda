@@ -1,0 +1,15 @@
+**/bin
+**/obj
+**/node_modules
+**/dist
+src/GenHTTP.Lambda/wwwroot
+tests
+data
+.git
+.github
+.vs
+.idea
+*.md
+Dockerfile
+.dockerignore
+docker-compose.yml

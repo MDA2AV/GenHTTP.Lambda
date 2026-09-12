@@ -1,0 +1,18 @@
+services:
+
+  lambda:
+    build: .
+    image: genhttp-lambda:latest
+    ports:
+      - "8080:8080"
+    environment:
+      # the lifetime of a free tier deployment and how long an untouched
+      # lambda is kept, both in hours
+      LAMBDA_DEPLOYMENT_LIFETIME_HOURS: 24
+      LAMBDA_RETENTION_HOURS: 720
+    volumes:
+      - lambda-data:/data
+    restart: unless-stopped
+
+volumes:
+  lambda-data:

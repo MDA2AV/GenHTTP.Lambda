@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+
+        <OutputType>Exe</OutputType>
+
+        <RootNamespace>GenHTTP.Lambda</RootNamespace>
+        <AssemblyName>GenHTTP.Lambda</AssemblyName>
+
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+
+    </PropertyGroup>
+
+    <ItemGroup>
+
+        <PackageReference Include="GenHTTP.Full.Ioxide" />
+
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+
+        <PackageReference Include="Evolve" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- the frontend is built into wwwroot by "npm run build" in src/Frontend -->
+        <None Remove="wwwroot/**" />
+        <Content Include="wwwroot/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Data/Migrations/*.sql" />
+        <!-- WithCulture is required: MSBuild would read the "cs" in "Template.cs.txt" as Czech -->
+        <EmbeddedResource Include="Resources/*.cs.txt" WithCulture="false" />
+    </ItemGroup>
+
+</Project>
