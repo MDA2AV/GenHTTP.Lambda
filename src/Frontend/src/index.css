@@ -150,6 +150,35 @@
   }
 }
 
+@layer utilities {
+  /*
+   * The first screen and the one under it each hold the view. A nudge of the
+   * wheel carries all the way to the next rather than leaving the page halfway
+   * between two things - which is the state where neither is readable.
+   *
+   * Mandatory, because proximity only pulls from a few dozen pixels away and
+   * the ask was that any nudge carries. The two sections are sized to a
+   * window, so nothing is left unreachable between them.
+   */
+  .snap-page {
+    scroll-snap-type: y mandatory;
+  }
+
+  .snap-stop {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    /* the bar sits over the top of the scrollport, so a section aligned to it
+       would begin underneath one */
+    scroll-margin-top: 3.75rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .snap-page {
+      scroll-snap-type: none;
+    }
+  }
+}
+
 @layer components {
   .surface {
     @apply border border-grey-300 bg-white dark:border-ink-800 dark:bg-ink-900;

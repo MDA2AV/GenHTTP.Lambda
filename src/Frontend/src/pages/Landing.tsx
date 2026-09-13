@@ -1,27 +1,23 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-import { CSharp } from '../components/CSharp';
+import { Explainer } from '../components/Explainer';
 import { IconChevronDown } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
 
-const example = `var books = new List<Book> { new(1, "Dune") };
-
-var api = Inline.Create()
-                .Get(() => books)
-                .Get(":id", (int id) => Find(id));
-
-Book Find(int id) => books.First(b => b.Id == id);
-
-return Layout.Create()
-             .Add("books", api)
-             .AddOpenApi()
-             .AddScalar();
-
-record Book(int Id, string Title);`;
-
 export function Landing() {
   const rest = useRef<HTMLDivElement>(null);
+
+  /*
+   * Snapping belongs to whatever actually scrolls, and that is the document -
+   * a class on a div inside it does nothing. It is set here and taken away
+   * again, because the editor and the panels want to be scrolled normally.
+   */
+  useEffect(() => {
+    document.documentElement.classList.add('snap-page');
+
+    return () => document.documentElement.classList.remove('snap-page');
+  }, []);
 
   return (
     <div className="w-full">
@@ -35,7 +31,7 @@ export function Landing() {
         and not a panel's. Negative margin pulls it under the header the bar
         would otherwise have pushed it below.
       */}
-      <section className="relative -mt-[3.75rem] flex min-h-screen flex-col justify-center overflow-hidden px-5 pb-24 pt-[3.75rem]">
+      <section className="snap-stop relative -mt-[3.75rem] flex min-h-screen flex-col justify-center overflow-hidden px-5 pb-24 pt-[3.75rem]">
         <div className="aurora aurora-a" aria-hidden="true" />
         <div className="aurora aurora-b" aria-hidden="true" />
         <div className="aurora aurora-c" aria-hidden="true" />
@@ -76,42 +72,23 @@ export function Landing() {
         </button>
       </section>
 
-      <div ref={rest} className="mx-auto w-full max-w-5xl scroll-mt-20 px-5 pb-24">
+      <div ref={rest} className="snap-stop mx-auto w-full max-w-6xl px-5 pb-24 pt-10">
         <Reveal>
-          <div className="surface overflow-hidden shadow-xl">
-            <div className="flex items-stretch border-b border-grey-300 bg-grey-50 dark:border-ink-800 dark:bg-ink-950">
-              <span className="border-b-2 border-accent-500 bg-white px-4 py-2 font-mono text-xs text-grey-900 dark:border-accent-400 dark:bg-ink-900 dark:text-grey-200">
-                lambda.cs
-              </span>
-              <span className="ml-auto self-center px-4 font-mono text-[11px] uppercase tracking-wide text-grey-500">
-                C#
-              </span>
-            </div>
-
-            <div className="flex overflow-x-auto font-mono text-[12.5px] leading-[1.7]">
-              <div
-                aria-hidden="true"
-                className="shrink-0 select-none border-r border-grey-300 bg-grey-50 px-3 py-4 text-right text-grey-500 dark:border-ink-800 dark:bg-ink-950"
-              >
-                {example.split('\n').map((_, line) => (
-                  <div key={line}>{line + 1}</div>
-                ))}
-              </div>
-
-              <pre className="px-4 py-4 text-grey-900 dark:text-grey-300">
-                <CSharp code={example} />
-              </pre>
-            </div>
-
-            <p className="border-t border-grey-300 px-4 py-2.5 text-xs text-grey-500 dark:border-ink-800">
-              The whole file. It answers on <code className="font-mono">/books/</code> and documents itself.
-            </p>
-          </div>
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+            A lambda is one handler
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
+            Whatever you return is what the world gets. Here is one, and what it answers.
+          </p>
         </Reveal>
 
-        <Reveal delay={120}>
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Link to="/editor/create" className="btn-primary px-5 py-2.5">
+        <Reveal delay={120} className="mt-8">
+          <Explainer />
+        </Reveal>
+
+        <Reveal delay={200}>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+            <Link to="/editor/create" className="btn-primary px-6 py-3">
               Put something online
             </Link>
 
@@ -123,14 +100,6 @@ export function Landing() {
             >
               What you can build
             </a>
-
-            <span className="text-xs text-slate-500">
-              Runs on{' '}
-              <a href="https://genhttp.org/" target="_blank" rel="noreferrer" className="underline">
-                GenHTTP
-              </a>
-              . Knowing it is not a prerequisite - the editor suggests everything you can use.
-            </span>
           </div>
         </Reveal>
       </div>
