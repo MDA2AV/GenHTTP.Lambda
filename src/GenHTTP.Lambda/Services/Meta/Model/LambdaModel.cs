@@ -12,7 +12,10 @@ public sealed record LambdaInfo(
     DateTime Created,
     DateTime Modified,
     int? ActiveVersion,
-    int? LatestVersion
+    int? LatestVersion,
+    DateTime? DeployedAt,
+    DateTime? DeployedUntil,
+    DateTime KeptUntil
 );
 
 /// <summary>

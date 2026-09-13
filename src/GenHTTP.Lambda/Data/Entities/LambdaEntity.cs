@@ -29,6 +29,16 @@ public sealed class LambdaEntity
 
     public DateTime Modified { get; set; }
 
+    /// <summary>
+    /// When the active version was put online. Null while nothing is deployed.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from the creation date of the version it runs: the same
+    /// version can be taken down and put back up, and each time starts a fresh
+    /// lifetime rather than continuing the one the code was written in.
+    /// </remarks>
+    public DateTime? Deployed { get; set; }
+
     public List<DeploymentEntity> Deployments { get; set; } = [];
 
 }

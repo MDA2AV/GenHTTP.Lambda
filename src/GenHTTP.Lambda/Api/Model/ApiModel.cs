@@ -36,7 +36,10 @@ public sealed record LambdaResponse(
     int? ActiveVersion,
     int? LatestVersion,
     string PublicPath,
-    string EditorPath
+    string EditorPath,
+    DateTime? DeployedAt,
+    DateTime? DeployedUntil,
+    DateTime KeptUntil
 );
 
 /// <summary>

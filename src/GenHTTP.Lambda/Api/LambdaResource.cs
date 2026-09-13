@@ -169,7 +169,10 @@ public sealed class LambdaResource(IMetaService meta)
         lambda.ActiveVersion,
         lambda.LatestVersion,
         $"/lambda/{lambda.PublicKey}/",
-        $"/editor/{lambda.PrivateKey}"
+        $"/editor/{lambda.PrivateKey}",
+        lambda.DeployedAt,
+        lambda.DeployedUntil,
+        lambda.KeptUntil
     );
 
     #endregion
