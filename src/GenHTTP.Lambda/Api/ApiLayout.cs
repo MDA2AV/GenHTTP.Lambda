@@ -10,7 +10,7 @@ namespace GenHTTP.Lambda.Api;
 
 /// <summary>
 /// The versioned API the single page application talks to, described by an
-/// OpenAPI document and browsable at <c>/api/v1/swagger/</c>.
+/// OpenAPI document and browsable at <c>/api/v1/scalar/</c>.
 /// </summary>
 public static class ApiLayout
 {
