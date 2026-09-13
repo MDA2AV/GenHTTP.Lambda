@@ -3,9 +3,9 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
 
+using GenHTTP.Modules.Files;
 using GenHTTP.Modules.IO;
 using GenHTTP.Modules.SinglePageApplications;
-using GenHTTP.Modules.Files;
 
 using Microsoft.Extensions.Logging;
 
@@ -26,9 +26,17 @@ public sealed class SpaResources
     /// </summary>
     public bool Available { get; }
 
+    /// <summary>
+    /// Whether the bundle's asset directory exists and can be routed ahead of
+    /// the application itself.
+    /// </summary>
+    public bool HasAssets { get; }
+
     private string Root { get; }
 
     private string IndexFile { get; }
+
+    private string AssetDirectory { get; }
 
     #endregion
 
@@ -38,8 +46,10 @@ public sealed class SpaResources
     {
         Root = options.WebRoot;
         IndexFile = Path.Combine(Root, "index.html");
+        AssetDirectory = Path.Combine(Root, "assets");
 
         Available = File.Exists(IndexFile);
+        HasAssets = Directory.Exists(AssetDirectory);
 
         if (!Available)
         {
@@ -63,39 +73,23 @@ public sealed class SpaResources
         }
 
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
-                                    .ServerSideRouting();
+                                    .ServerSideRouting()
+                                    .Add(CacheControl.NoCache());
     }
 
     /// <summary>
-    /// Serves the built files, answering for the ones that are not there rather
-    /// than letting the application below take the request.
+    /// The bundle's own files, routed before the application so a request for a
+    /// file that is not there ends in a 404.
+    ///
+    /// Server side routing answers anything it cannot resolve with the index
+    /// page, which is right for a route the client router owns and wrong for a
+    /// script: a browser holding a stale index asks for the bundle it was built
+    /// with, is handed markup with a 200 and a text/html type, and dies on the
+    /// first angle bracket with no failed request to show for it.
     /// </summary>
-    /// <remarks>
-    /// Server side routing answers anything it does not recognise with the
-    /// index page, which is right for a route and wrong for a file: a build
-    /// names its chunks by hash, so a tab left open across a deployment asks
-    /// for one that no longer exists, and gets HTML with a 200 where it
-    /// expected a script. The browser then fails to parse it as a module, the
-    /// import never settles and the page waits forever - which is what a
-    /// visitor sees as a spinner that never stops. A 404 here says what
-    /// happened and lets the application recover.
-    /// </remarks>
-    public IHandlerBuilder? CreateAssetHandler()
-    {
-        if (!Available)
-        {
-            return null;
-        }
-
-        var assets = Path.Combine(Root, "assets");
-
-        // created rather than checked for: a build always writes one, and a
-        // deployment that somehow did not should still report a missing file
-        // as missing rather than falling through to the page below
-        Directory.CreateDirectory(assets);
-
-        return Assets.From(ResourceTree.FromDirectory(assets));
-    }
+    public IHandlerBuilder CreateAssetHandler()
+        => Assets.From(AssetDirectory)
+                 .Add(CacheControl.Immutable());
 
     /// <summary>
     /// Answers with the application itself, using the given status - so a
@@ -108,6 +102,7 @@ public sealed class SpaResources
         return request.Respond()
                       .Status(status)
                       .Content(markup, ContentType.TextHtml)
+                      .Header("Cache-Control", "no-cache")
                       .Build();
     }
 

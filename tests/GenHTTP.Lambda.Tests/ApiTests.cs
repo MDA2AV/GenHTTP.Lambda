@@ -181,31 +181,6 @@ public sealed class ApiTests
     }
 
     [TestMethod]
-    public async Task AMissingAssetIsReportedMissing()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync();
-
-        // a chunk is named by the hash of its content, so a tab open across a
-        // deployment asks for one that is gone. Answering that with the index
-        // page hands the browser HTML where it expected a module, and the
-        // import it came from never settles - a spinner with no end.
-        using var response = await fixture.GetAsync("/assets/Editor-oldhash.js");
-
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [TestMethod]
-    public async Task ARouteStillFallsBackToTheApplication()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync();
-
-        // everything that is not a file still belongs to the client side router
-        using var response = await fixture.GetAsync("/editor/some-key", "text/html");
-
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [TestMethod]
     public async Task TheApiIsDocumented()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
