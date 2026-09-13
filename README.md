@@ -59,11 +59,22 @@ port, each against its own temporary data directory.
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
 | `/api/v1/`           | everything the editor calls                               |
+| `/api/v1/start`      | creates a lambda and redirects into its editor            |
 
 The assistant asks what the lambda should do before it asks for a key: a
 service that answers requests, or a socket that stays open - and then which of
 the examples in `Resources/Templates` to start from. A new one is a file next
 to those, listed in `TemplateCatalog`.
+
+Another page can hand someone a working lambda with a link:
+
+```html
+<a href="https://your.host/api/v1/start?template=websocket-functional">Try it online</a>
+```
+
+That creates one with a generated key and redirects into the editor. Ask for
+`application/json` instead and the lambda is described rather than redirected
+to, for a caller that would rather send the browser itself.
 
 A lambda has two keys. The public one is part of its URL and may be changed;
 the private one is the editor link and is shown only to whoever created the
