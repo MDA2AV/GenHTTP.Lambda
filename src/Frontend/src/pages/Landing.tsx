@@ -1,6 +1,9 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 import { CSharp } from '../components/CSharp';
+import { IconChevronDown } from '../components/Icons';
+import { Reveal } from '../components/Reveal';
 
 const example = `var books = new List<Book> { new(1, "Dune") };
 
@@ -18,78 +21,108 @@ return Layout.Create()
 record Book(int Id, string Title);`;
 
 export function Landing() {
+  const rest = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 pb-20 pt-12 sm:pt-20">
-      <section className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr]">
-        <div>
-          <h1 className="rise text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+    <div className="w-full">
+      {/*
+        The first screen is one sentence and one button. Everything else is
+        below it, because a visitor who is already convinced should not have to
+        read past the example to find the way in.
+      */}
+      <section className="relative flex min-h-[calc(100vh-3.75rem)] flex-col justify-center px-5 pb-24">
+        <div className="mx-auto w-full max-w-5xl">
+          <h1 className="rise max-w-4xl text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
             Host a small web service
             <br />
             <span className="text-accent-500">without hosting anything.</span>
           </h1>
 
           <p
-            className="rise mt-5 max-w-xl text-[15px] leading-relaxed text-slate-600 dark:text-slate-400"
-            style={{ animationDelay: '80ms' }}
+            className="rise mt-7 max-w-xl text-lg leading-relaxed text-slate-600 dark:text-slate-400"
+            style={{ animationDelay: '90ms' }}
           >
             Write a bit of C# in your browser, press deploy, and get a public HTTPS address you can hand
-            to anyone. A REST API, a webhook, a mock backend, a websocket. No account, no server, no
-            pipeline.
+            to anyone.
           </p>
 
-          <div className="rise mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: '160ms' }}>
-            <Link to="/editor/create" className="btn-primary px-5 py-2.5 text-[15px]">
+          <div className="rise mt-10" style={{ animationDelay: '180ms' }}>
+            <Link to="/editor/create" className="btn-primary px-7 py-3.5 text-base">
               Put something online
             </Link>
+          </div>
+        </div>
+
+        {/* the way down, for anyone who would rather see it first */}
+        <button
+          type="button"
+          onClick={() => rest.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          className="rise group absolute inset-x-0 bottom-8 mx-auto flex w-fit flex-col items-center gap-2 text-xs text-slate-500 hover:text-accent-500 dark:hover:text-accent-400"
+          style={{ animationDelay: '320ms' }}
+        >
+          See what that looks like
+          <IconChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
+        </button>
+      </section>
+
+      <div ref={rest} className="mx-auto w-full max-w-5xl scroll-mt-20 px-5 pb-24">
+        <Reveal>
+          <div className="surface overflow-hidden shadow-xl">
+            <div className="flex items-stretch border-b border-grey-300 bg-grey-50 dark:border-ink-800 dark:bg-ink-950">
+              <span className="border-b-2 border-accent-500 bg-white px-4 py-2 font-mono text-xs text-grey-900 dark:border-accent-400 dark:bg-ink-900 dark:text-grey-200">
+                lambda.cs
+              </span>
+              <span className="ml-auto self-center px-4 font-mono text-[11px] uppercase tracking-wide text-grey-500">
+                C#
+              </span>
+            </div>
+
+            <div className="flex overflow-x-auto font-mono text-[12.5px] leading-[1.7]">
+              <div
+                aria-hidden="true"
+                className="shrink-0 select-none border-r border-grey-300 bg-grey-50 px-3 py-4 text-right text-grey-500 dark:border-ink-800 dark:bg-ink-950"
+              >
+                {example.split('\n').map((_, line) => (
+                  <div key={line}>{line + 1}</div>
+                ))}
+              </div>
+
+              <pre className="px-4 py-4 text-grey-900 dark:text-grey-300">
+                <CSharp code={example} />
+              </pre>
+            </div>
+
+            <p className="border-t border-grey-300 px-4 py-2.5 text-xs text-grey-500 dark:border-ink-800">
+              The whole file. It answers on <code className="font-mono">/books/</code> and documents itself.
+            </p>
+          </div>
+        </Reveal>
+
+        <Reveal delay={120}>
+          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Link to="/editor/create" className="btn-primary px-5 py-2.5">
+              Put something online
+            </Link>
+
             <a
               href="https://genhttp.org/documentation/content/"
               target="_blank"
               rel="noreferrer"
-              className="btn-ghost px-5 py-2.5 text-[15px]"
+              className="text-sm text-accent-500 hover:underline dark:text-accent-400"
             >
               What you can build
             </a>
-          </div>
 
-          <p className="rise mt-4 text-xs text-slate-500" style={{ animationDelay: '220ms' }}>
-            Runs on <a href="https://genhttp.org/" target="_blank" rel="noreferrer" className="underline">GenHTTP</a>.
-            Knowing it is not a prerequisite - the editor suggests everything you can use.
-          </p>
-        </div>
-
-        <div className="rise surface overflow-hidden shadow-xl" style={{ animationDelay: '280ms' }}>
-          {/* a tab rather than a window: this is a file, not an application */}
-          <div className="flex items-stretch border-b border-grey-300 bg-grey-50 dark:border-ink-800 dark:bg-ink-950">
-            <span className="border-b-2 border-accent-500 bg-white px-4 py-2 font-mono text-xs text-grey-900 dark:border-accent-400 dark:bg-ink-900 dark:text-grey-200">
-              lambda.cs
-            </span>
-            <span className="ml-auto self-center px-4 font-mono text-[11px] uppercase tracking-wide text-grey-500">
-              C#
+            <span className="text-xs text-slate-500">
+              Runs on{' '}
+              <a href="https://genhttp.org/" target="_blank" rel="noreferrer" className="underline">
+                GenHTTP
+              </a>
+              . Knowing it is not a prerequisite - the editor suggests everything you can use.
             </span>
           </div>
-
-          <div className="flex overflow-x-auto font-mono text-[12.5px] leading-[1.7]">
-            {/* the gutter is not selectable, so copying the example copies code */}
-            <div
-              aria-hidden="true"
-              className="shrink-0 select-none border-r border-grey-300 bg-grey-50 px-3 py-4 text-right text-grey-500 dark:border-ink-800 dark:bg-ink-950"
-            >
-              {example.split('\n').map((_, line) => (
-                <div key={line}>{line + 1}</div>
-              ))}
-            </div>
-
-            <pre className="px-4 py-4 text-grey-900 dark:text-grey-300">
-              <CSharp code={example} />
-            </pre>
-          </div>
-
-          <p className="border-t border-grey-300 px-4 py-2.5 text-xs text-grey-500 dark:border-ink-800">
-            The whole file. It answers on <code className="font-mono">/books/</code> and documents itself.
-          </p>
-        </div>
-      </section>
-
+        </Reveal>
+      </div>
     </div>
   );
 }
