@@ -56,6 +56,6 @@ return Layout.Create()
              .Index(Content.From(index))
              .Add("books", service)
              .AddOpenApi()
-             .AddSwaggerUi();
+             .AddScalar();
 
 record Book(int Id, string Title, string Author);

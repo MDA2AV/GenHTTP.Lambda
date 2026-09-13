@@ -46,7 +46,7 @@ public static class CompletionCatalog
             return Layout.Create()
                          .Add("api", service)
                          .AddOpenApi()
-                         .AddSwaggerUi();
+                         .AddScalar();
             """),
 
         new("lambda-page", "snippet", "A single HTML page", """
