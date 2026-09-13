@@ -1,0 +1,18 @@
+// A handful of routes and nothing else. Whatever you return from this snippet
+// is hosted below /lambda/{{KEY}}/ - the full GenHTTP module API is
+// available and you never have to write a using statement.
+//
+//   GET  /lambda/{{KEY}}/api/         a greeting
+//   GET  /lambda/{{KEY}}/api/42       a greeting for 42
+//   POST /lambda/{{KEY}}/api/         shouts back whatever you send
+//
+// Hit "Deploy" to build this and put it online.
+
+var service = Inline.Create()
+                    .Get(() => new Message("hello"))
+                    .Get(":id", (int id) => new Message($"you asked for {id}"))
+                    .Post((string body) => new Message(body.ToUpperInvariant()));
+
+return Layout.Create().Add("api", service);
+
+record Message(string Text);

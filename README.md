@@ -60,6 +60,11 @@ port, each against its own temporary data directory.
 | `/lambda/:publicKey` | the deployed handler                                      |
 | `/api/v1/`           | everything the editor calls                               |
 
+The assistant asks what the lambda should do before it asks for a key: a
+service that answers requests, or a socket that stays open - and then which of
+the examples in `Resources/Templates` to start from. A new one is a file next
+to those, listed in `TemplateCatalog`.
+
 A lambda has two keys. The public one is part of its URL and may be changed;
 the private one is the editor link and is shown only to whoever created the
 lambda - anyone holding it can edit, deploy and delete.

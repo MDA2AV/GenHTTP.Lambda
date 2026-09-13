@@ -60,9 +60,23 @@ export interface Completion {
   insert?: string;
 }
 
+export interface Template {
+  id: string;
+  name: string;
+  description: string;
+  code: string;
+}
+
+export interface TemplateGroup {
+  id: string;
+  name: string;
+  description: string;
+  templates: Template[];
+}
+
 export interface Platform {
   terms: string;
-  template: string;
+  templates: TemplateGroup[];
   maxCodeLength: number;
   deploymentLifetimeHours: number;
   retentionDays: number;
@@ -119,8 +133,8 @@ export const api = {
 
   publicStatus: (key: string) => request<PublicStatus>(`/lambdas/public/${encodeURIComponent(key)}`),
 
-  create: (publicKey: string | null) =>
-    request<Lambda>('/lambdas', send({ publicKey, acceptedTerms: true })),
+  create: (publicKey: string | null, template: string | null = null) =>
+    request<Lambda>('/lambdas', send({ publicKey, acceptedTerms: true, template })),
 
   get: (privateKey: string) => request<Lambda>(`/lambdas/${privateKey}`),
 

@@ -15,9 +15,10 @@ public interface IMetaService
     ValueTask<KeyAvailability> CheckKeyAsync(string? publicKey, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Creates a new lambda, generating a public key if none was requested.
+    /// Creates a new lambda, generating a public key if none was requested and
+    /// seeding it with the given template (the default one if none was named).
     /// </summary>
-    ValueTask<LambdaInfo> CreateAsync(string? publicKey, CancellationToken cancellation = default);
+    ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Reads a lambda by the private key of its editor.

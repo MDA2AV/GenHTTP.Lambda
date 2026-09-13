@@ -100,9 +100,14 @@ public sealed class MetaService : IMetaService
 
     #region Lifecycle
 
-    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, CancellationToken cancellation = default)
+    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, CancellationToken cancellation = default)
     {
         var requested = !string.IsNullOrWhiteSpace(publicKey);
+
+        if (template != null && !TemplateCatalog.Exists(template))
+        {
+            throw LambdaException.Invalid($"There is no template called '{template}'.");
+        }
 
         if (requested && !LambdaKeys.TryNormalize(publicKey, out _, out var reason))
         {
@@ -143,7 +148,7 @@ public sealed class MetaService : IMetaService
                 throw LambdaException.Conflict("This key is already in use.");
             }
 
-            await SeedAsync(database, entity, now, cancellation);
+            await SeedAsync(database, entity, template, now, cancellation);
 
             Logger.LogInformation("Created lambda {LambdaId} at '{PublicKey}'", entity.Id, entity.PublicKey);
 
@@ -394,8 +399,8 @@ public sealed class MetaService : IMetaService
         => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-    private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, DateTime now, CancellationToken cancellation)
-        => await AppendAsync(database, lambda, CodeTemplate.ForKey(lambda.PublicKey), now, cancellation);
+    private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, string? template, DateTime now, CancellationToken cancellation)
+        => await AppendAsync(database, lambda, TemplateCatalog.ForKey(template, lambda.PublicKey), now, cancellation);
 
     private async ValueTask<LambdaVersionInfo> AppendAsync(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, CancellationToken cancellation)
     {
