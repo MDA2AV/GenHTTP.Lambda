@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Telemetry;
 
 namespace GenHTTP.Lambda.Api.Model;
 
@@ -97,6 +98,43 @@ public sealed record TemplateGroupResponse(string Id, string Name, string Descri
 /// snippets, where the text to insert differs from the label.
 /// </summary>
 public sealed record CompletionItem(string Label, string Kind, string Detail, string? Insert = null);
+
+/// <summary>
+/// What is running, and on what.
+/// </summary>
+public sealed record ServerDescription(
+    string Engine,
+    string Version,
+    string Runtime,
+    string Platform,
+    bool ServerGarbageCollection,
+    int Processors,
+    DateTime Started,
+    long UptimeSeconds
+);
+
+/// <summary>
+/// What the server has answered since it came up.
+/// </summary>
+public sealed record TrafficDescription(long Requests, long Failed, long Upgrades, int OpenSockets);
+
+/// <summary>
+/// What the platform is holding.
+/// </summary>
+public sealed record PlatformDescription(int Lambdas, int Deployed, int Versions);
+
+/// <summary>
+/// The telemetry page in one document: what is running, what it has done, and
+/// the readings taken while it did.
+/// </summary>
+public sealed record TelemetryResponse(
+    ServerDescription Server,
+    TrafficDescription Traffic,
+    PlatformDescription Platform,
+    TelemetrySample Latest,
+    int IntervalSeconds,
+    IReadOnlyList<TelemetrySample> Samples
+);
 
 /// <summary>
 /// How an error is reported to the single page application.

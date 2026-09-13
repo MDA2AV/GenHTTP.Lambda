@@ -72,6 +72,16 @@ public sealed record LambdaOptions
     public TimeSpan ExecutionTimeout { get; init; } = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// How often a telemetry reading is taken.
+    /// </summary>
+    public TimeSpan TelemetryInterval { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How many readings are kept. At the default interval this is a day.
+    /// </summary>
+    public int TelemetrySamples { get; init; } = 2880;
+
+    /// <summary>
     /// The port the server offers TLS on. Zero leaves the secure endpoint off.
     /// </summary>
     public ushort SecurePort { get; init; }
@@ -136,6 +146,8 @@ public sealed record LambdaOptions
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),
+            TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
+            TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),
             SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", defaults.SecurePort),
             CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),

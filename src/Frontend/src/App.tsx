@@ -8,6 +8,7 @@ import { Create } from './pages/Create';
 import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
+import { Stats } from './pages/Stats';
 import { useTheme } from './theme';
 
 // Monaco is most of the bundle, so the landing page never downloads it
@@ -43,6 +44,7 @@ export function App() {
             <Shell theme={theme} onToggleTheme={toggleTheme}>
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/stats" element={<Stats dark={theme === 'dark'} />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

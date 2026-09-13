@@ -80,4 +80,9 @@ public interface IMetaService
     /// </summary>
     ValueTask<MaintenanceReport> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default);
 
+    /// <summary>
+    /// Counts the lambdas, the deployed ones and the versions kept for them.
+    /// </summary>
+    ValueTask<LambdaCounts> CountAsync(CancellationToken cancellation = default);
+
 }

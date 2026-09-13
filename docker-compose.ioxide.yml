@@ -1,0 +1,21 @@
+# Runs the server on the io_uring engine instead of Kestrel:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ioxide.yml up -d
+#
+# The default seccomp profile of a container runtime does not allow the
+# io_uring syscalls, so the engine cannot start under it. The profile next to
+# this file is the default one with those three syscalls added and nothing
+# else - which is the smallest hole that gets the engine running.
+#
+# Read that as a deliberate trade rather than a setting: io_uring has a wider
+# kernel attack surface than ordinary sockets, and this platform compiles and
+# runs code written by strangers in the same process. Worth it to measure the
+# engine, worth thinking about before leaving it on.
+
+services:
+
+  lambda:
+    environment:
+      LAMBDA_ENGINE: ioxide
+    security_opt:
+      - seccomp=./seccomp-ioxide.json

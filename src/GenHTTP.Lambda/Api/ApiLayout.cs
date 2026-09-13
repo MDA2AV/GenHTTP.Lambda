@@ -20,6 +20,7 @@ public static class ApiLayout
         var version = Layout.Create()
                             .AddDependentService<LambdaResource>("lambdas")
                             .AddDependentService<SystemResource>("system")
+                            .AddDependentService<TelemetryResource>("telemetry")
                             .AddScalar(title: "GenHTTP Lambda API")
                             .AddOpenApi()
                             .Add(ErrorHandler.From(new ApiErrorMapper()));

@@ -133,6 +133,8 @@ Everything is read from the environment on startup, see
 | `LAMBDA_RATE_LIMIT`                 | `240`            | lambda requests per minute and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
+| `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
+| `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -142,6 +144,33 @@ The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so the image defaults to
 `LAMBDA_ENGINE=kestrel`. Set it back to `ioxide` where io_uring is available
 and allowed.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ioxide.yml up -d
+```
+
+That override runs the server on io_uring under `seccomp-ioxide.json`, which is
+the default profile of the runtime with `io_uring_setup`, `io_uring_enter` and
+`io_uring_register` added and nothing else. Without it the engine stops at
+`io_uring_setup failed: -1` before the first request. The hole is small but it
+is real: io_uring reaches further into the kernel than ordinary sockets, and
+this platform runs code written by strangers in the same process.
+
+## Telemetry
+
+`/stats` shows what the process is doing, and `/api/v1/telemetry` is where it
+comes from. A reading is taken every `LAMBDA_TELEMETRY_INTERVAL_SECONDS` and
+`LAMBDA_TELEMETRY_SAMPLES` of them are kept, which is a day at the defaults.
+
+The readings live in memory and go with the process. That suits what they are
+for - a restart ends the run they were measuring - but it does mean a redeploy
+starts the graph over.
+
+The page is aggregates only: no key, no code and no client address leaves
+through it, which is what makes it safe to serve to anyone. What it is for is
+the shape of the memory curve. A managed heap that climbs across gen 2
+collections is a leak; committed bytes climbing while the managed heap stays
+flat is the heap keeping pages it could return, which is not.
 
 ## TLS
 

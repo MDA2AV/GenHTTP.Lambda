@@ -84,6 +84,46 @@ export interface Platform {
   completions: Completion[];
 }
 
+export interface TelemetrySample {
+  taken: string;
+  managedBytes: number;
+  heapCommittedBytes: number;
+  heapFragmentedBytes: number;
+  workingSetBytes: number;
+  privateBytes: number;
+  gen0Collections: number;
+  gen1Collections: number;
+  gen2Collections: number;
+  allocatedBytes: number;
+  pausePercentage: number;
+  cpuPercentage: number;
+  threads: number;
+  requests: number;
+  failed: number;
+  upgrades: number;
+  inFlight: number;
+  openSockets: number;
+  averageMillis: number;
+}
+
+export interface Telemetry {
+  server: {
+    engine: string;
+    version: string;
+    runtime: string;
+    platform: string;
+    serverGarbageCollection: boolean;
+    processors: number;
+    started: string;
+    uptimeSeconds: number;
+  };
+  traffic: { requests: number; failed: number; upgrades: number; openSockets: number };
+  platform: { lambdas: number; deployed: number; versions: number };
+  latest: TelemetrySample;
+  intervalSeconds: number;
+  samples: TelemetrySample[];
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -128,6 +168,8 @@ const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) })
 
 export const api = {
   platform: () => request<Platform>('/system'),
+
+  telemetry: (minutes: number) => request<Telemetry>(`/telemetry?minutes=${minutes}`),
 
   checkKey: (key: string) => request<Availability>(`/lambdas/keys/${encodeURIComponent(key)}`),
 
