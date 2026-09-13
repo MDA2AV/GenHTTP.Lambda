@@ -72,6 +72,17 @@ public sealed record LambdaOptions
     public TimeSpan ExecutionTimeout { get; init; } = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// Whether the per lambda activity is served to anyone who asks.
+    /// </summary>
+    /// <remarks>
+    /// Public while the platform is small and the numbers are interesting to
+    /// look at. Turning it off leaves the figures being collected and the
+    /// owner of a lambda still seeing its own; only the overview of everyone
+    /// else's goes away.
+    /// </remarks>
+    public bool PublicActivity { get; init; } = true;
+
+    /// <summary>
     /// How often a telemetry reading is taken.
     /// </summary>
     public TimeSpan TelemetryInterval { get; init; } = TimeSpan.FromSeconds(30);
@@ -146,6 +157,7 @@ public sealed record LambdaOptions
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),
+            PublicActivity = ReadBool("LAMBDA_PUBLIC_ACTIVITY", defaults.PublicActivity),
             TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
             TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),
             SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", defaults.SecurePort),

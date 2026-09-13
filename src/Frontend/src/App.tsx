@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Component, Suspense, lazy, type ReactNode } from 'react';
 import { Route, Routes } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
@@ -12,7 +12,30 @@ import { Stats } from './pages/Stats';
 import { useTheme } from './theme';
 
 // Monaco is most of the bundle, so the landing page never downloads it
-const Editor = lazy(() => import('./pages/Editor').then((module) => ({ default: module.Editor })));
+const RELOADED = 'lambda-reloaded-for-chunk';
+
+/**
+ * Loads the editor, and recovers from the one way that reliably fails: the
+ * application was deployed again while this tab was open, so the index it was
+ * built from names a chunk the server no longer has. Fetching the page again
+ * is all it takes, and the flag keeps a genuinely broken build from turning
+ * that into a loop.
+ */
+const Editor = lazy(() =>
+  import('./pages/Editor')
+    .then((module) => {
+      sessionStorage.removeItem(RELOADED);
+      return { default: module.Editor };
+    })
+    .catch((error: unknown) => {
+      if (sessionStorage.getItem(RELOADED) === null) {
+        sessionStorage.setItem(RELOADED, '1');
+        window.location.reload();
+      }
+
+      throw error;
+    }),
+);
 
 export function App() {
   const [theme, toggleTheme] = useTheme();
@@ -32,9 +55,11 @@ export function App() {
           path="/editor/:privateKey"
           element={
             <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
-              <Suspense fallback={<Loading />}>
-                <Editor theme={theme} />
-              </Suspense>
+              <ChunkBoundary>
+                <Suspense fallback={<Loading />}>
+                  <Editor theme={theme} />
+                </Suspense>
+              </ChunkBoundary>
             </Shell>
           }
         />
@@ -63,4 +88,41 @@ function Loading() {
       Loading the editor…
     </div>
   );
+}
+
+/**
+ * Catches an editor that refuses to load. Without one the failed import leaves
+ * the fallback on screen for good, which reads as a spinner that never stops.
+ */
+class ChunkBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (!this.state.failed) {
+      return this.props.children;
+    }
+
+    return (
+      <div className="mx-auto max-w-md px-5 py-20 text-center">
+        <h1 className="text-lg font-semibold">The editor could not be loaded</h1>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          This usually means the site was updated while this tab was open.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            sessionStorage.removeItem(RELOADED);
+            window.location.reload();
+          }}
+          className="btn-primary mt-6"
+        >
+          Reload the page
+        </button>
+      </div>
+    );
+  }
 }

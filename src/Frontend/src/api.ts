@@ -124,6 +124,25 @@ export interface Telemetry {
   samples: TelemetrySample[];
 }
 
+export interface LambdaActivity {
+  publicKey: string;
+  requests: number;
+  failed: number;
+  upgrades: number;
+  openSockets: number;
+  averageMillis: number;
+  slowestMillis: number;
+  bytesOut: number;
+  firstSeen?: string;
+  lastSeen?: string;
+}
+
+export interface Activity {
+  lambdas: LambdaActivity[];
+  requests: number;
+  upgrades: number;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -168,6 +187,8 @@ const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) })
 
 export const api = {
   platform: () => request<Platform>('/system'),
+
+  activity: () => request<Activity>('/telemetry/lambdas'),
 
   telemetry: (minutes: number) => request<Telemetry>(`/telemetry?minutes=${minutes}`),
 
