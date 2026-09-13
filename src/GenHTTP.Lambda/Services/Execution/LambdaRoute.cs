@@ -30,11 +30,14 @@ public static class LambdaRoute
         var execution = new LambdaExecutionHandler(deployments);
 
         return Concerns.Chain([
-            // innermost, so what it times is the lambda and not the wait in
-            // front of it - and by here the lambda is known
-            new LambdaActivityConcernBuilder(telemetry),
             new ThrottleConcernBuilder(options),
             ErrorHandler.From(new LambdaErrorMapper(loggers.CreateLogger<LambdaErrorMapper>())),
+            // outside the error handler and the throttle, inside the lookup: so
+            // it records the answer the visitor actually got, and knows which
+            // lambda to file it under. Inside the throttle it saw neither the
+            // timeout nor the rejection - a lambda that timed out on every
+            // request was recorded as succeeding, slowly.
+            new LambdaActivityConcernBuilder(telemetry),
             new LambdaResolutionConcernBuilder(meta, spa),
             new RateLimitConcernBuilder(options)
         ], execution);

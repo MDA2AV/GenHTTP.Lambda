@@ -140,6 +140,30 @@ public sealed class ActivityTests
         Assert.ContainsSingle(telemetry.Describe().Where(l => l.PublicKey == "counted"));
     }
 
+    [TestMethod]
+    public async Task ALambdaThatTimesOutIsRecordedAsFailing()
+    {
+        // a second to answer in, and a lambda that takes longer
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { ExecutionTimeout = TimeSpan.FromSeconds(1) });
+
+        var lambda = await fixture.CreateLambdaAsync("dawdler");
+
+        await fixture.DeployAsync(lambda.PrivateKey, """
+            return Inline.Create().Get(async () => { await Task.Delay(TimeSpan.FromSeconds(5)); return "late"; });
+            """);
+
+        using var response = await fixture.GetAsync("/lambda/dawdler/");
+
+        Assert.AreEqual(HttpStatusCode.GatewayTimeout, response.StatusCode);
+
+        var entry = (await DescribeAsync(fixture)).Lambdas.Single(l => l.PublicKey == "dawdler");
+
+        // what the visitor got, not what the lambda eventually managed
+        Assert.AreEqual(1, entry.Requests);
+        Assert.AreEqual(1, entry.Failed, "a request nobody got an answer to is not a success");
+        Assert.IsLessThan(5000, entry.AverageMillis, "and it is timed to the giving up, not to the finishing");
+    }
+
     private static async Task<ActivityResponse> DescribeAsync(LambdaFixture fixture)
     {
         using var response = await fixture.GetAsync("/api/v1/telemetry/lambdas");

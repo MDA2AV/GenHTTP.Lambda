@@ -16,6 +16,11 @@ public sealed record LambdaActivity(
     int OpenSockets,
     double AverageMillis,
     double SlowestMillis,
+    /// <summary>
+    /// What the responses carried, counting only the ones that declared a
+    /// length. A response streamed without one adds nothing here, so this is a
+    /// floor rather than a total.
+    /// </summary>
     long BytesOut,
     DateTime? FirstSeen,
     DateTime? LastSeen

@@ -192,7 +192,9 @@ export function Stats({ dark }: { dark: boolean }) {
                   <th className="px-4 py-2 text-right font-medium">Sockets</th>
                   <th className="px-4 py-2 text-right font-medium">Avg</th>
                   <th className="px-4 py-2 text-right font-medium">Slowest</th>
-                  <th className="px-4 py-2 text-right font-medium">Sent</th>
+                  <th className="px-4 py-2 text-right font-medium" title="Counting only responses that declared a length">
+                    Sent
+                  </th>
                   <th className="px-4 py-2 text-right font-medium">Last seen</th>
                 </tr>
               </thead>
@@ -213,7 +215,11 @@ export function Stats({ dark }: { dark: boolean }) {
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">{entry.averageMillis.toFixed(1)} ms</td>
                     <td className="px-4 py-2 text-right tabular-nums text-slate-500">{entry.slowestMillis.toFixed(0)} ms</td>
-                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">{bytes(entry.bytesOut)}</td>
+                    {/* zero means the responses never declared a length, which
+                        is not the same as having sent nothing */}
+                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">
+                      {entry.bytesOut > 0 ? bytes(entry.bytesOut) : '—'}
+                    </td>
                     <td className="px-4 py-2 text-right text-slate-500">{entry.lastSeen ? ago(entry.lastSeen) : '—'}</td>
                   </tr>
                 ))}

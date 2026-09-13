@@ -9,10 +9,14 @@ using GenHTTP.Lambda.Services.Protection;
 namespace GenHTTP.Lambda.Services.Telemetry;
 
 /// <summary>
-/// Counts what a single lambda does. Sits innermost, directly around the code
-/// of the user, so what it times is the lambda rather than the queue in front
-/// of it.
+/// Counts what a single lambda does.
 /// </summary>
+/// <remarks>
+/// Sits outside the throttle and the error handler, so what it records is the
+/// answer the visitor was given - a timeout is a timeout here and not the
+/// success the lambda eventually got round to - and what it times is the whole
+/// wait rather than only the part spent running.
+/// </remarks>
 public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry telemetry) : IConcern
 {
 
