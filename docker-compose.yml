@@ -17,6 +17,9 @@ services:
       LAMBDA_RETENTION_HOURS: 720
       # TLS, terminated by the server itself - the certificate is published
       # into this directory by the certbot deploy hook
+      # the administration panel, off unless the host supplies a token - the
+      # value belongs in .env beside this file, not in a tracked one
+      LAMBDA_ADMIN_TOKEN: ${LAMBDA_ADMIN_TOKEN:-}
       LAMBDA_TLS_PORT: 443
       LAMBDA_CERTIFICATE: /certs/fullchain.pem
       LAMBDA_CERTIFICATE_KEY: /certs/privkey.pem
