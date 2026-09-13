@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { api, type Telemetry, type TelemetrySample } from '../api';
+import { api, type Activity, type Telemetry, type TelemetrySample } from '../api';
 import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
 
@@ -23,12 +23,15 @@ const GEN2: [string, string] = ['#174ea6', '#1a73e8'];
 
 export function Stats({ dark }: { dark: boolean }) {
   const [data, setData] = useState<Telemetry | null>(null);
+  const [activity, setActivity] = useState<Activity | null>(null);
   const [minutes, setMinutes] = useState(60);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setData(await api.telemetry(minutes));
+      // absent when the installation keeps the per lambda figures to itself
+      setActivity(await api.activity().catch(() => null));
       setError(null);
     } catch {
       setError('The telemetry could not be read.');
@@ -169,6 +172,57 @@ export function Stats({ dark }: { dark: boolean }) {
         />
       </div>
 
+      {activity !== null && activity.lambdas.length > 0 && (
+        <figure className="surface mt-6">
+          <figcaption className="border-b border-slate-200 px-4 py-3 dark:border-ink-800">
+            <h2 className="text-sm font-medium">Lambdas</h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              What each one has served since the server came up, busiest first. Counters, not a history - they
+              start over with the process.
+            </p>
+          </figcaption>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-ink-800">
+                  <th className="px-4 py-2 font-medium">Key</th>
+                  <th className="px-4 py-2 text-right font-medium">Requests</th>
+                  <th className="px-4 py-2 text-right font-medium">Errors</th>
+                  <th className="px-4 py-2 text-right font-medium">Sockets</th>
+                  <th className="px-4 py-2 text-right font-medium">Avg</th>
+                  <th className="px-4 py-2 text-right font-medium">Slowest</th>
+                  <th className="px-4 py-2 text-right font-medium">Sent</th>
+                  <th className="px-4 py-2 text-right font-medium">Last seen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activity.lambdas.map((entry) => (
+                  <tr key={entry.publicKey} className="border-b border-slate-200 last:border-0 dark:border-ink-800">
+                    <td className="px-4 py-2">
+                      <a href={`/lambda/${entry.publicKey}/`} className="font-mono text-accent-500 hover:underline dark:text-accent-400">
+                        {entry.publicKey}
+                      </a>
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">{count(entry.requests)}</td>
+                    <td className={`px-4 py-2 text-right tabular-nums ${entry.failed > 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                      {count(entry.failed)}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">
+                      {entry.openSockets > 0 ? `${entry.openSockets} open` : count(entry.upgrades)}
+                    </td>
+                    <td className="px-4 py-2 text-right tabular-nums">{entry.averageMillis.toFixed(1)} ms</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">{entry.slowestMillis.toFixed(0)} ms</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">{bytes(entry.bytesOut)}</td>
+                    <td className="px-4 py-2 text-right text-slate-500">{entry.lastSeen ? ago(entry.lastSeen) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </figure>
+      )}
+
       <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
         <Fact label="Engine" value={server.engine} />
         <Fact label="GenHTTP" value={server.version} />
@@ -230,6 +284,17 @@ function duration(seconds: number): string {
   if (hours > 0) return `${hours}h ${minutes}m`;
 
   return `${minutes}m`;
+}
+
+/** How long ago, in the coarsest unit that still says something. */
+function ago(iso: string): string {
+  const seconds = Math.max(0, (Date.now() - new Date(iso.endsWith('Z') ? iso : `${iso}Z`).getTime()) / 1000);
+
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+
+  return `${Math.floor(seconds / 86400)}d ago`;
 }
 
 const time = (iso: string) =>

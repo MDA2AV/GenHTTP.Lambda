@@ -95,6 +95,7 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<SpaResources>();
 
+        services.AddSingleton<LambdaTelemetry>();
         services.AddSingleton<TelemetryService>();
         services.AddSingleton<ITelemetryService>(p => p.GetRequiredService<TelemetryService>());
 
@@ -119,6 +120,7 @@ public sealed class Application : IAsyncDisposable
             services.GetRequiredService<IDeploymentService>(),
             spa,
             options,
+            services.GetRequiredService<LambdaTelemetry>(),
             loggers
         );
 

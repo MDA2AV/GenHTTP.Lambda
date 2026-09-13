@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Storage;
+using GenHTTP.Lambda.Services.Telemetry;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,8 @@ public sealed class MetaService : IMetaService
 
     private IDeploymentService Deployments { get; }
 
+    private LambdaTelemetry Activity { get; }
+
     private LambdaOptions Options { get; }
 
     private ILogger Logger { get; }
@@ -36,11 +39,12 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaOptions options, ILogger<MetaService> logger)
+        LambdaTelemetry activity, LambdaOptions options, ILogger<MetaService> logger)
     {
         Databases = databases;
         Storage = storage;
         Deployments = deployments;
+        Activity = activity;
         Options = options;
         Logger = logger;
     }
@@ -464,6 +468,10 @@ public sealed class MetaService : IMetaService
     private async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
     {
         Deployments.Evict(lambda.Id);
+
+        // a deleted lambda takes its numbers with it rather than leaving a row
+        // in the activity list that nothing can be looked up from any more
+        Activity.Evict(lambda.Id);
 
         database.Lambdas.Remove(lambda);
 

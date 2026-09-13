@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Protection;
+using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.ErrorHandling;
@@ -23,11 +24,15 @@ namespace GenHTTP.Lambda.Services.Execution;
 public static class LambdaRoute
 {
 
-    public static IHandler Create(IMetaService meta, IDeploymentService deployments, SpaResources spa, LambdaOptions options, ILoggerFactory loggers)
+    public static IHandler Create(IMetaService meta, IDeploymentService deployments, SpaResources spa, LambdaOptions options,
+                                  LambdaTelemetry telemetry, ILoggerFactory loggers)
     {
         var execution = new LambdaExecutionHandler(deployments);
 
         return Concerns.Chain([
+            // innermost, so what it times is the lambda and not the wait in
+            // front of it - and by here the lambda is known
+            new LambdaActivityConcernBuilder(telemetry),
             new ThrottleConcernBuilder(options),
             ErrorHandler.From(new LambdaErrorMapper(loggers.CreateLogger<LambdaErrorMapper>())),
             new LambdaResolutionConcernBuilder(meta, spa),
