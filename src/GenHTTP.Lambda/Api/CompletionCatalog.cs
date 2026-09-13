@@ -61,6 +61,80 @@ public static class CompletionCatalog
             return Layout.Create()
                          .Add("files", Workspace.Files())
                          .Index(Inline.Create().Get(() => Workspace.List()));
+            """),
+
+        new("lambda-websocket", "snippet", "A websocket, handled as events", """
+            var clients = new List<IReactiveConnection>();
+
+            return Websocket.Functional()
+                            .OnConnected(c =>
+                            {
+                                lock (clients) { clients.Add(c); }
+                                return ValueTask.CompletedTask;
+                            })
+                            .OnMessage(async (c, m) =>
+                            {
+                                var text = await m.ReadPayloadAsync<string>();
+
+                                IReactiveConnection[] targets;
+
+                                lock (clients) { targets = clients.ToArray(); }
+
+                                foreach (var client in targets)
+                                {
+                                    await client.WritePayloadAsync($"someone said: {text}");
+                                }
+                            })
+                            .OnClose((c, _) =>
+                            {
+                                lock (clients) { clients.Remove(c); }
+                                return ValueTask.CompletedTask;
+                            });
+            """),
+
+        new("lambda-websocket-reactive", "snippet", "A websocket, handled by a class", """
+            return Websocket.Reactive().Handler(new Echo());
+
+            public class Echo : IReactiveHandler
+            {
+                public ValueTask OnConnected(IReactiveConnection connection)
+                    => connection.WritePayloadAsync("welcome");
+
+                public async ValueTask OnMessage(IReactiveConnection connection, IWebsocketFrame message)
+                    => await connection.WritePayloadAsync(await message.ReadPayloadAsync<string>());
+
+                public ValueTask OnClose(IReactiveConnection connection, IWebsocketFrame message)
+                    => ValueTask.CompletedTask;
+            }
+            """),
+
+        new("lambda-websocket-imperative", "snippet", "A websocket, read frame by frame", """
+            return Websocket.Imperative().Handler(new Loop());
+
+            public class Loop : IImperativeHandler
+            {
+                public async ValueTask HandleAsync(IImperativeConnection connection)
+                {
+                    while (connection.Request.Server.Running)
+                    {
+                        var frame = await connection.ReadFrameAsync();
+
+                        if (frame.Type == FrameType.Ping)
+                        {
+                            await connection.PongAsync();
+                        }
+                        else if (frame.Type == FrameType.Text)
+                        {
+                            await connection.WritePayloadAsync(await frame.ReadPayloadAsync<string>());
+                        }
+                        else if (frame.Type == FrameType.Close)
+                        {
+                            await connection.CloseAsync();
+                            break;
+                        }
+                    }
+                }
+            }
             """)
     ];
 

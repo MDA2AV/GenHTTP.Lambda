@@ -64,6 +64,14 @@ A lambda has two keys. The public one is part of its URL and may be changed;
 the private one is the editor link and is shown only to whoever created the
 lambda - anyone holding it can edit, deploy and delete.
 
+A lambda may also return a websocket rather than a document, in any of the
+three flavours the module offers - `Websocket.Functional()`, `.Reactive()` and
+`.Imperative()`. The handshake is an ordinary request and is bounded by the
+execution timeout like any other; everything after it belongs to the
+connection, which is why a socket may stay open far longer than a lambda is
+given to answer. `FrameType`, which the imperative flavour reads off every
+frame, is one of the names a lambda is given, so no import is needed.
+
 Editing and deploying are separate: saving creates a version, deploying picks
 one (the latest by default) and makes it live. A lambda has at most one
 deployment at a time, and older versions stay available to deploy again.

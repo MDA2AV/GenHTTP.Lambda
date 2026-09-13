@@ -46,6 +46,16 @@ public static class ModuleCatalog
     ];
 
     /// <summary>
+    /// Namespaces that hold types a lambda needs but that do not follow the
+    /// "GenHTTP.Modules.{module}" shape the list above is turned into.
+    /// </summary>
+    private static readonly string[] Nested =
+    [
+        // FrameType, which the imperative websocket flavour reads off every frame
+        "GenHTTP.Modules.Websockets.Protocol"
+    ];
+
+    /// <summary>
     /// The namespaces every lambda gets for free.
     /// </summary>
     public static IReadOnlyList<string> Imports { get; } = BuildImports();
@@ -100,7 +110,7 @@ public static class ModuleCatalog
             "GenHTTP.Api.Protocol"
         ];
 
-        return [..system, ..api, ..Modules.Select(m => $"GenHTTP.Modules.{m}")];
+        return [..system, ..api, ..Modules.Select(m => $"GenHTTP.Modules.{m}"), ..Nested];
     }
 
 }
