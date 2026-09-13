@@ -61,6 +61,7 @@ port, each against its own temporary data directory.
 | `/api/v1/`           | everything the editor calls                               |
 | `/api/v1/lambdas/:privateKey/files` | the workspace of one lambda                |
 | `/api/v1/start`      | creates a lambda and redirects into its editor            |
+| `/admin`             | every lambda on the server, for whoever runs it            |
 
 The assistant asks what the lambda should do before it asks for a key: a
 service that answers requests, or a socket that stays open - and then which of
@@ -156,6 +157,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
 | `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
+| `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel at `/admin`               |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -235,6 +237,21 @@ install -m 0640 -o root -g 1001 /etc/letsencrypt/live/your.host.name/privkey.pem
 Because the server holds port 80, the standalone authenticator needs it back
 for the few seconds a renewal takes - a pre hook stops the container and a post
 hook starts it again.
+
+## The panel
+
+`/admin` lists every lambda, when it was created, whether it is online, and
+what its code says - and takes them offline or removes them.
+
+It is the one thing here that authenticates. Everywhere else the editor link is
+the credential and it only ever reaches one lambda; this reads code that belongs
+to other people and can take their work away, so it asks for `LAMBDA_ADMIN_TOKEN`
+in an `X-Admin-Token` header. Until that variable is set there is no panel at
+all, and a wrong token is answered exactly like a missing one - an installation
+that has no panel and one that is guarding it look the same from outside.
+
+The listing carries no editor links. The panel acts on lambdas it does not own,
+and handing those out would make that irreversible for the people who do.
 
 ## Database
 

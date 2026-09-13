@@ -427,6 +427,52 @@ public sealed class MetaService : IMetaService
                              .FirstOrDefaultAsync(cancellation);
     }
 
+    public async ValueTask<IReadOnlyList<LambdaOverview>> ListAsync(CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var lambdas = await database.Lambdas.AsNoTracking()
+                                    .OrderByDescending(l => l.Created)
+                                    .ToListAsync(cancellation);
+
+        var counts = await database.Deployments.AsNoTracking()
+                                   .GroupBy(d => d.LambdaId)
+                                   .Select(g => new { LambdaId = g.Key, Count = g.Count() })
+                                   .ToDictionaryAsync(g => g.LambdaId, g => g.Count, cancellation);
+
+        var latest = await database.Deployments.AsNoTracking()
+                                   .GroupBy(d => d.LambdaId)
+                                   .Select(g => new { LambdaId = g.Key, Version = g.Max(d => d.Version) })
+                                   .ToDictionaryAsync(g => g.LambdaId, g => (int?)g.Version, cancellation);
+
+        return [.. lambdas.Select(l => new LambdaOverview(
+            l.PublicKey,
+            l.Tier.ToString(),
+            l.Created,
+            l.Modified,
+            l.ActiveVersion,
+            latest.GetValueOrDefault(l.Id),
+            counts.GetValueOrDefault(l.Id),
+            l.ActiveVersion != null ? l.Deployed + Options.DeploymentLifetime : null,
+            l.Modified + Options.Retention
+        ))];
+    }
+
+    public async ValueTask<string?> GetPrivateKeyAsync(string publicKey, CancellationToken cancellation = default)
+    {
+        if (!LambdaKeys.TryNormalize(publicKey, out var normalized, out _))
+        {
+            return null;
+        }
+
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        return await database.Lambdas.AsNoTracking()
+                             .Where(l => l.PublicKey == normalized)
+                             .Select(l => l.PrivateKey)
+                             .FirstOrDefaultAsync(cancellation);
+    }
+
     private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
         => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");

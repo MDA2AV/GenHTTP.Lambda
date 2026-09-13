@@ -180,6 +180,16 @@ public sealed record FileRequest(string? Content);
 public sealed record ActivityResponse(IReadOnlyList<LambdaActivity> Lambdas, long Requests, long Upgrades);
 
 /// <summary>
+/// Every lambda on the installation, for the administration panel.
+/// </summary>
+public sealed record AdminListingResponse(IReadOnlyList<LambdaOverview> Lambdas, int Total, int Deployed);
+
+/// <summary>
+/// What is left of a lambda after the panel acted on it.
+/// </summary>
+public sealed record LambdaOverviewResponse(string PublicKey, int? ActiveVersion, DateTime? DeployedUntil);
+
+/// <summary>
 /// How an error is reported to the single page application.
 /// </summary>
 public sealed record ErrorResponse(int Status, string Error, string Message);

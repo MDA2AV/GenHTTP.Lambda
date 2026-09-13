@@ -91,4 +91,15 @@ public interface IMetaService
     /// </summary>
     ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
 
+    /// <summary>
+    /// Every lambda on this installation, newest first.
+    /// </summary>
+    ValueTask<IReadOnlyList<LambdaOverview>> ListAsync(CancellationToken cancellation = default);
+
+    /// <summary>
+    /// The editor key behind a public one, for the operations that act on a
+    /// lambda without having been given its link.
+    /// </summary>
+    ValueTask<string?> GetPrivateKeyAsync(string publicKey, CancellationToken cancellation = default);
+
 }

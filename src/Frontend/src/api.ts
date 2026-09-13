@@ -163,6 +163,24 @@ export interface Activity {
   upgrades: number;
 }
 
+export interface LambdaOverview {
+  publicKey: string;
+  tier: string;
+  created: string;
+  modified: string;
+  activeVersion?: number;
+  latestVersion?: number;
+  versions: number;
+  deployedUntil?: string;
+  keptUntil: string;
+}
+
+export interface AdminListing {
+  lambdas: LambdaOverview[];
+  total: number;
+  deployed: number;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -205,10 +223,34 @@ async function describe(response: Response): Promise<string> {
 
 const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) });
 
+/** The panel is the only part of this API that authenticates. */
+const withToken = (token: string, init: RequestInit = {}) => ({
+  ...init,
+  headers: { ...init.headers, 'X-Admin-Token': token },
+});
+
 export const api = {
   platform: () => request<Platform>('/system'),
 
   activity: () => request<Activity>('/telemetry/lambdas'),
+
+  admin: {
+    list: (token: string) => request<AdminListing>('/admin/lambdas', withToken(token)),
+
+    code: (token: string, publicKey: string, version?: number) =>
+      request<VersionContent>(
+        `/admin/lambdas/${encodeURIComponent(publicKey)}/code${version ? `?version=${version}` : ''}`,
+        withToken(token),
+      ),
+
+    undeploy: (token: string, publicKey: string) =>
+      request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}/deployment`,
+        withToken(token, { method: 'DELETE' })),
+
+    remove: (token: string, publicKey: string) =>
+      request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}`,
+        withToken(token, { method: 'DELETE' })),
+  },
 
   telemetry: (minutes: number) => request<Telemetry>(`/telemetry?minutes=${minutes}`),
 

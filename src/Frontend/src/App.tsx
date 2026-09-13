@@ -8,6 +8,7 @@ import { Create } from './pages/Create';
 import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
+import { Admin } from './pages/Admin';
 import { Stats } from './pages/Stats';
 import { useTheme } from './theme';
 
@@ -70,6 +71,7 @@ export function App() {
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/stats" element={<Stats dark={theme === 'dark'} />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

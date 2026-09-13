@@ -58,3 +58,20 @@ public sealed record MaintenanceReport(int Undeployed, int Deleted);
 /// How much the platform is holding, for the telemetry page.
 /// </summary>
 public sealed record LambdaCounts(int Lambdas, int Deployed, int Versions);
+
+/// <summary>
+/// One lambda as the administration panel lists it. No private key: the panel
+/// acts on lambdas it does not own, and handing out the editor link of every
+/// lambda on the server would make that irreversible for their owners.
+/// </summary>
+public sealed record LambdaOverview(
+    string PublicKey,
+    string Tier,
+    DateTime Created,
+    DateTime Modified,
+    int? ActiveVersion,
+    int? LatestVersion,
+    int Versions,
+    DateTime? DeployedUntil,
+    DateTime KeptUntil
+);

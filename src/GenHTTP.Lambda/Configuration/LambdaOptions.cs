@@ -72,6 +72,18 @@ public sealed record LambdaOptions
     public TimeSpan ExecutionTimeout { get; init; } = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// The token the administration panel has to present. Empty leaves the
+    /// panel switched off.
+    /// </summary>
+    /// <remarks>
+    /// It reads the code of lambdas it does not own and can take them down, so
+    /// it is not something to leave open on an installation anyone can reach.
+    /// Nothing is served at all until a token is configured - a panel that is
+    /// off cannot be misconfigured into being open.
+    /// </remarks>
+    public string? AdminToken { get; init; }
+
+    /// <summary>
     /// Whether the per lambda activity is served to anyone who asks.
     /// </summary>
     /// <remarks>
@@ -131,6 +143,11 @@ public sealed record LambdaOptions
     /// </summary>
     public bool Secure => SecurePort > 0 && !string.IsNullOrWhiteSpace(CertificatePath);
 
+    /// <summary>
+    /// Whether the administration panel is available at all.
+    /// </summary>
+    public bool Administrable => !string.IsNullOrWhiteSpace(AdminToken);
+
     #endregion
 
     #region Functionality
@@ -157,6 +174,7 @@ public sealed record LambdaOptions
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),
+            AdminToken = ReadOptional("LAMBDA_ADMIN_TOKEN"),
             PublicActivity = ReadBool("LAMBDA_PUBLIC_ACTIVITY", defaults.PublicActivity),
             TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
             TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),

@@ -28,6 +28,9 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
           <Link to="/stats" className="btn-ghost hidden sm:inline-flex">
             Server
           </Link>
+          <Link to="/admin" className="btn-ghost hidden sm:inline-flex">
+            Lambdas
+          </Link>
           <button
             type="button"
             onClick={onToggleTheme}
