@@ -80,6 +80,24 @@
     100% { transform: translate3d(0, 14%, 0) rotate(380deg) scale(1.1); }
   }
 
+  /*
+   * The field is fixed to the window rather than laid inside the first screen.
+   *
+   * Belonging to a section meant ending with it, and a colour that ends draws a
+   * rule across the page at whatever height that happened to be - which is the
+   * seam that showed on the way down. Fading it out instead only moved the seam
+   * and took the colour with it. So it does not end: the page scrolls over it,
+   * the panels below are opaque and sit on it perfectly well, and there is no
+   * boundary left to transition across.
+   */
+  .aurora-field {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
   .aurora {
     position: absolute;
     inset: -35%;
@@ -119,7 +137,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.85;
+    opacity: 0.6;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
   }

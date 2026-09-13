@@ -21,22 +21,22 @@ export function Landing() {
 
   return (
     <div className="w-full">
+      {/* fixed to the window, so the page scrolls over it and it never ends */}
+      <div className="aurora-field" aria-hidden="true">
+        <div className="aurora aurora-a" />
+        <div className="aurora aurora-b" />
+        <div className="aurora aurora-c" />
+        <div className="aurora-grain" />
+        <div className="aurora-clearing" />
+      </div>
+
       {/*
         The first screen is one sentence and one button. Everything else is
         below it, because a visitor who is already convinced should not have to
-        read past the example to find the way in.
+        read past the example to find the way in. It reaches up behind the bar,
+        so the colour is the page's and not a panel's.
       */}
-      {/*
-        The first screen reaches up behind the bar, so the colour is the page's
-        and not a panel's. Negative margin pulls it under the header the bar
-        would otherwise have pushed it below.
-      */}
-      <section className="snap-stop relative -mt-[3.75rem] flex min-h-screen flex-col justify-center overflow-hidden px-5 pb-24 pt-[3.75rem]">
-        <div className="aurora aurora-a" aria-hidden="true" />
-        <div className="aurora aurora-b" aria-hidden="true" />
-        <div className="aurora aurora-c" aria-hidden="true" />
-        <div className="aurora-grain" aria-hidden="true" />
-        <div className="aurora-clearing" aria-hidden="true" />
+      <section className="snap-stop relative -mt-[3.75rem] flex min-h-screen flex-col justify-center px-5 pb-24 pt-[3.75rem]">
 
         <div className="relative mx-auto w-full max-w-4xl text-center">
           <h1 className="rise text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
