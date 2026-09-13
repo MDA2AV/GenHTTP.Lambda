@@ -146,6 +146,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
+| `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -177,8 +178,13 @@ The readings live in memory and go with the process. That suits what they are
 for - a restart ends the run they were measuring - but it does mean a redeploy
 starts the graph over.
 
-The page is aggregates only: no key, no code and no client address leaves
-through it, which is what makes it safe to serve to anyone. What it is for is
+It also lists what each lambda has served, busiest first. Only the public key
+identifies one there - the editor key, the code and the visitors are not part
+of it - and `LAMBDA_PUBLIC_ACTIVITY=false` stops that list being served without
+stopping anything being counted.
+
+The page is otherwise aggregates only: no key, no code and no client address
+leaves through it, which is what makes it safe to serve to anyone. What it is for is
 the shape of the memory curve. A managed heap that climbs across gen 2
 collections is a leak; committed bytes climbing while the managed heap stays
 flat is the heap keeping pages it could return, which is not.

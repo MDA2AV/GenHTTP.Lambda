@@ -137,6 +137,11 @@ public sealed record TelemetryResponse(
 );
 
 /// <summary>
+/// What every lambda has been doing since the server came up.
+/// </summary>
+public sealed record ActivityResponse(IReadOnlyList<LambdaActivity> Lambdas, long Requests, long Upgrades);
+
+/// <summary>
 /// How an error is reported to the single page application.
 /// </summary>
 public sealed record ErrorResponse(int Status, string Error, string Message);
