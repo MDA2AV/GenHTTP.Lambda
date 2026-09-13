@@ -8,7 +8,7 @@
 //   DELETE /lambda/{{KEY}}/books/1      remove one
 //
 //   /lambda/{{KEY}}/openapi.json        the generated specification
-//   /lambda/{{KEY}}/swagger/            Swagger UI, to try it out right away
+//   /lambda/{{KEY}}/scalar/             Scalar, to try it out right away
 //
 // Hit "Deploy" to build this and put it online. "Workspace" gives you a small
 // private directory to read and write files in, should you need one.
@@ -48,7 +48,7 @@ var index = Resource.FromString("""
                                 <!doctype html>
                                 <title>My Lambda</title>
                                 <h1>It works</h1>
-                                <p>Try <a href="books/">books/</a> or the <a href="swagger/">API browser</a>.</p>
+                                <p>Try <a href="books/">books/</a> or the <a href="scalar/">API browser</a>.</p>
                                 """)
                     .Type(ContentType.TextHtml);
 
@@ -56,6 +56,6 @@ return Layout.Create()
              .Index(Content.From(index))
              .Add("books", service)
              .AddOpenApi()
-             .AddSwaggerUi();
+             .AddScalar();
 
 record Book(int Id, string Title, string Author);

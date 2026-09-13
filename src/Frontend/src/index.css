@@ -12,56 +12,59 @@
   }
 
   body {
-    @apply bg-white text-ink-900 antialiased;
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-white text-grey-900 antialiased;
   }
 
   html.dark body {
-    @apply bg-ink-950 text-slate-200;
+    @apply bg-ink-950 text-grey-300;
   }
 
   ::selection {
-    @apply bg-accent-500/30;
+    @apply bg-accent-500/20;
   }
 }
 
 @layer components {
   .surface {
-    @apply rounded-xl border border-slate-200 bg-white dark:border-ink-700 dark:bg-ink-900;
+    @apply border border-grey-300 bg-white dark:border-ink-800 dark:bg-ink-900;
   }
 
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium
-           transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex select-none items-center justify-center gap-2 px-4 py-2 text-sm font-medium
+           tracking-[0.01em] transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
 
+  /* the filled button carries the only shadow on the page, the way Google
+     separates the one action that commits from the ones that do not */
   .btn-primary {
-    @apply btn bg-accent-500 text-white hover:bg-accent-600 disabled:hover:bg-accent-500;
+    @apply btn bg-accent-500 text-white shadow-sm hover:bg-accent-600 hover:shadow
+           disabled:hover:bg-accent-500 dark:bg-accent-400 dark:text-grey-900 dark:hover:bg-accent-400/90;
   }
 
   .btn-ghost {
-    @apply btn border border-slate-200 bg-white text-ink-800 hover:bg-slate-50
-           dark:border-ink-700 dark:bg-ink-850 dark:text-slate-200 dark:hover:bg-ink-800;
+    @apply btn border border-grey-300 bg-white text-accent-500 hover:bg-accent-500/[0.04]
+           dark:border-ink-800 dark:bg-transparent dark:text-accent-400 dark:hover:bg-accent-400/[0.08];
   }
 
   .btn-danger {
-    @apply btn border border-red-300 bg-white text-red-600 hover:bg-red-50
-           dark:border-red-900/60 dark:bg-ink-850 dark:text-red-400 dark:hover:bg-red-950/40;
+    @apply btn border border-grey-300 bg-white text-red-500 hover:bg-red-500/[0.04]
+           dark:border-ink-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-400/[0.08];
   }
 
   .field {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none
-           placeholder:text-slate-400 focus:border-accent-500 focus:ring-2 focus:ring-accent-500/30
-           dark:border-ink-700 dark:bg-ink-850 dark:text-slate-100 dark:placeholder:text-slate-500;
+    @apply w-full border border-grey-300 bg-white px-3 py-2 text-sm outline-none
+           placeholder:text-grey-500 focus:border-accent-500 focus:ring-1 focus:ring-accent-500
+           dark:border-ink-800 dark:bg-ink-900 dark:text-grey-200 dark:placeholder:text-grey-600
+           dark:focus:border-accent-400 dark:focus:ring-accent-400;
   }
 
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium;
   }
 }
 
-/* keeps the editor from fighting the rounded corners of its container */
+/* the editor sits flush inside its frame */
 .monaco-editor,
 .monaco-editor .overflow-guard {
-  border-radius: 0.5rem;
+  border-radius: 0;
 }

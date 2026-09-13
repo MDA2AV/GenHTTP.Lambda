@@ -50,3 +50,8 @@ public sealed record DeploymentResult(bool Success, LambdaInfo? Lambda, IReadOnl
 /// What a maintenance run has cleaned up.
 /// </summary>
 public sealed record MaintenanceReport(int Undeployed, int Deleted);
+
+/// <summary>
+/// How much the platform is holding, for the telemetry page.
+/// </summary>
+public sealed record LambdaCounts(int Lambdas, int Deployed, int Versions);

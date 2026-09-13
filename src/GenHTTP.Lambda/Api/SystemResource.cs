@@ -30,12 +30,21 @@ public sealed class SystemResource(LambdaOptions options)
     [ResourceMethod]
     public PlatformResponse Get() => new(
         Terms,
-        CodeTemplate.ForKey("your-key"),
+        Describe(),
         options.MaxCodeLength,
         (int)options.DeploymentLifetime.TotalHours,
         (int)options.Retention.TotalDays,
         ModuleCatalog.Imports,
         CompletionCatalog.Items
     );
+
+    /// <summary>
+    /// The template catalogue, with a stand in key so the assistant can show
+    /// the code of a template before a lambda exists to fill it with.
+    /// </summary>
+    private static IReadOnlyList<TemplateGroupResponse> Describe()
+        => [.. TemplateCatalog.Groups.Select(g => new TemplateGroupResponse(g.Id, g.Name, g.Description,
+               [.. g.Templates.Select(t => new TemplateResponse(t.Id, t.Name, t.Description,
+                   TemplateCatalog.ForKey(t.Id, "your-key")))]))];
 
 }

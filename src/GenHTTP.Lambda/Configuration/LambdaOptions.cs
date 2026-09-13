@@ -71,6 +71,49 @@ public sealed record LambdaOptions
     /// </summary>
     public TimeSpan ExecutionTimeout { get; init; } = TimeSpan.FromSeconds(15);
 
+    /// <summary>
+    /// Whether the per lambda activity is served to anyone who asks.
+    /// </summary>
+    /// <remarks>
+    /// Public while the platform is small and the numbers are interesting to
+    /// look at. Turning it off leaves the figures being collected and the
+    /// owner of a lambda still seeing its own; only the overview of everyone
+    /// else's goes away.
+    /// </remarks>
+    public bool PublicActivity { get; init; } = true;
+
+    /// <summary>
+    /// How often a telemetry reading is taken.
+    /// </summary>
+    public TimeSpan TelemetryInterval { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How many readings are kept. At the default interval this is a day.
+    /// </summary>
+    public int TelemetrySamples { get; init; } = 2880;
+
+    /// <summary>
+    /// The port the server offers TLS on. Zero leaves the secure endpoint off.
+    /// </summary>
+    public ushort SecurePort { get; init; }
+
+    /// <summary>
+    /// The certificate the TLS endpoint is secured with, either a PEM chain or
+    /// a PKCS#12 archive.
+    /// </summary>
+    public string? CertificatePath { get; init; }
+
+    /// <summary>
+    /// The private key belonging to the certificate. Set for a PEM pair, left
+    /// empty when the archive carries its own key.
+    /// </summary>
+    public string? CertificateKeyPath { get; init; }
+
+    /// <summary>
+    /// The password of the PKCS#12 archive, if it has one.
+    /// </summary>
+    public string? CertificatePassword { get; init; }
+
     #region Derived
 
     public string DatabaseFile => Path.Combine(DataDirectory, "lambda.db");
@@ -82,6 +125,11 @@ public sealed record LambdaOptions
     public string WorkspaceDirectory => Path.Combine(DataDirectory, "workspaces");
 
     public string AssemblyDirectory => Path.Combine(DataDirectory, "assemblies");
+
+    /// <summary>
+    /// Whether the server should offer a TLS endpoint next to the plain one.
+    /// </summary>
+    public bool Secure => SecurePort > 0 && !string.IsNullOrWhiteSpace(CertificatePath);
 
     #endregion
 
@@ -108,7 +156,14 @@ public sealed record LambdaOptions
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
-            ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds))
+            ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),
+            PublicActivity = ReadBool("LAMBDA_PUBLIC_ACTIVITY", defaults.PublicActivity),
+            TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
+            TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),
+            SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", defaults.SecurePort),
+            CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),
+            CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),
+            CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD")
         };
     }
 
@@ -117,6 +172,13 @@ public sealed record LambdaOptions
         var value = Environment.GetEnvironmentVariable(key);
 
         return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
+
+    private static string? ReadOptional(string key)
+    {
+        var value = Environment.GetEnvironmentVariable(key);
+
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private static int ReadInt(string key, int fallback)

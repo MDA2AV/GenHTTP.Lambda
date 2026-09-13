@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Telemetry;
 
 namespace GenHTTP.Lambda.Api.Model;
 
@@ -6,7 +7,7 @@ namespace GenHTTP.Lambda.Api.Model;
 /// Asks for a new lambda. The key is optional, a short random one is generated
 /// if none is given.
 /// </summary>
-public sealed record CreateLambdaRequest(string? PublicKey, bool AcceptedTerms);
+public sealed record CreateLambdaRequest(string? PublicKey, bool AcceptedTerms, string? Template = null);
 
 /// <summary>
 /// The code to be stored as the next version.
@@ -73,7 +74,7 @@ public sealed record StatusResponse(string PublicKey, bool Exists, bool Deployed
 /// </summary>
 public sealed record PlatformResponse(
     string Terms,
-    string Template,
+    IReadOnlyList<TemplateGroupResponse> Templates,
     int MaxCodeLength,
     int DeploymentLifetimeHours,
     int RetentionDays,
@@ -82,10 +83,63 @@ public sealed record PlatformResponse(
 );
 
 /// <summary>
+/// One example a new lambda can be started from, with the code it would be
+/// seeded with so the assistant can show it before anything is created.
+/// </summary>
+public sealed record TemplateResponse(string Id, string Name, string Description, string Code);
+
+/// <summary>
+/// A group of templates, which is the first choice the assistant offers.
+/// </summary>
+public sealed record TemplateGroupResponse(string Id, string Name, string Description, IReadOnlyList<TemplateResponse> Templates);
+
+/// <summary>
 /// A single suggestion for the code editor. <see cref="Insert" /> is set for
 /// snippets, where the text to insert differs from the label.
 /// </summary>
 public sealed record CompletionItem(string Label, string Kind, string Detail, string? Insert = null);
+
+/// <summary>
+/// What is running, and on what.
+/// </summary>
+public sealed record ServerDescription(
+    string Engine,
+    string Version,
+    string Runtime,
+    string Platform,
+    bool ServerGarbageCollection,
+    int Processors,
+    DateTime Started,
+    long UptimeSeconds
+);
+
+/// <summary>
+/// What the server has answered since it came up.
+/// </summary>
+public sealed record TrafficDescription(long Requests, long Failed, long Upgrades, int OpenSockets);
+
+/// <summary>
+/// What the platform is holding.
+/// </summary>
+public sealed record PlatformDescription(int Lambdas, int Deployed, int Versions);
+
+/// <summary>
+/// The telemetry page in one document: what is running, what it has done, and
+/// the readings taken while it did.
+/// </summary>
+public sealed record TelemetryResponse(
+    ServerDescription Server,
+    TrafficDescription Traffic,
+    PlatformDescription Platform,
+    TelemetrySample Latest,
+    int IntervalSeconds,
+    IReadOnlyList<TelemetrySample> Samples
+);
+
+/// <summary>
+/// What every lambda has been doing since the server came up.
+/// </summary>
+public sealed record ActivityResponse(IReadOnlyList<LambdaActivity> Lambdas, long Requests, long Upgrades);
 
 /// <summary>
 /// How an error is reported to the single page application.

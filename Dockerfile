@@ -37,7 +37,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:11.0
 # io_uring in their default seccomp profile, and a platform that runs code
 # written by strangers is the last place to hand out a weaker one. Set
 # LAMBDA_ENGINE=ioxide where io_uring is available and allowed.
-ENV LAMBDA_PORT=8080 \
+ENV HOME=/home/lambda \
+    LAMBDA_PORT=8080 \
     LAMBDA_DATA_DIRECTORY=/data \
     LAMBDA_ENGINE=kestrel \
     DOTNET_gcServer=1
@@ -47,18 +48,23 @@ WORKDIR /app
 COPY --from=backend /app ./
 
 # the database, the stored code and the workspaces of the lambdas
-RUN useradd --uid 1001 --no-create-home --shell /usr/sbin/nologin lambda \
+# the home directory is not decoration: .NET keeps the certificate store it
+# builds TLS chains from underneath it, and a server that cannot read the
+# issuers of its own certificate cannot send them
+RUN useradd --uid 1001 --home-dir /home/lambda --create-home --shell /usr/sbin/nologin lambda \
  && mkdir -p /data \
- && chown -R lambda:lambda /data /app
+ && chown -R lambda:lambda /data /app /home/lambda
 
 USER lambda
 
 VOLUME ["/data"]
 
-EXPOSE 8080
+EXPOSE 8080 8443
 
-# a Host header is mandatory: GenHTTP answers a request without one with a 400
+# a Host header is mandatory: GenHTTP answers a request without one with a 400.
+# 301 counts as healthy because a configured TLS endpoint makes the server
+# upgrade plain requests instead of answering them.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/${LAMBDA_PORT} && printf "GET /api/v1/system HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -q " 200 "'
+    CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/${LAMBDA_PORT} && printf "GET /api/v1/system HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -qE " (200|301) "'
 
 ENTRYPOINT ["./GenHTTP.Lambda"]

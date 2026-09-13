@@ -4,14 +4,29 @@ services:
     build: .
     image: genhttp-lambda:latest
     ports:
-      - "8080:8080"
+      # the ports have to match the ones the server binds: it upgrades plain
+      # requests by name and port, so a mapping that renumbers them would
+      # redirect clients to a port that is not open to them
+      - "80:80"
+      - "443:443"
     environment:
+      LAMBDA_PORT: 80
       # the lifetime of a free tier deployment and how long an untouched
       # lambda is kept, both in hours
       LAMBDA_DEPLOYMENT_LIFETIME_HOURS: 24
       LAMBDA_RETENTION_HOURS: 720
+      # TLS, terminated by the server itself - the certificate is published
+      # into this directory by the certbot deploy hook
+      LAMBDA_TLS_PORT: 443
+      LAMBDA_CERTIFICATE: /certs/fullchain.pem
+      LAMBDA_CERTIFICATE_KEY: /certs/privkey.pem
+    sysctls:
+      # lets the unprivileged user bind 80 and 443 inside its own network
+      # namespace, so the server keeps running as uid 1001
+      - net.ipv4.ip_unprivileged_port_start=0
     volumes:
       - lambda-data:/data
+      - /opt/genhttp-lambda/certs:/certs:ro
     restart: unless-stopped
 
 volumes:

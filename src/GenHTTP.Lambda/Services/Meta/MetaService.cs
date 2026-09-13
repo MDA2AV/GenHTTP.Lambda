@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Storage;
+using GenHTTP.Lambda.Services.Telemetry;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,8 @@ public sealed class MetaService : IMetaService
 
     private IDeploymentService Deployments { get; }
 
+    private LambdaTelemetry Activity { get; }
+
     private LambdaOptions Options { get; }
 
     private ILogger Logger { get; }
@@ -36,11 +39,12 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaOptions options, ILogger<MetaService> logger)
+        LambdaTelemetry activity, LambdaOptions options, ILogger<MetaService> logger)
     {
         Databases = databases;
         Storage = storage;
         Deployments = deployments;
+        Activity = activity;
         Options = options;
         Logger = logger;
     }
@@ -100,9 +104,14 @@ public sealed class MetaService : IMetaService
 
     #region Lifecycle
 
-    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, CancellationToken cancellation = default)
+    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, CancellationToken cancellation = default)
     {
         var requested = !string.IsNullOrWhiteSpace(publicKey);
+
+        if (template != null && !TemplateCatalog.Exists(template))
+        {
+            throw LambdaException.Invalid($"There is no template called '{template}'.");
+        }
 
         if (requested && !LambdaKeys.TryNormalize(publicKey, out _, out var reason))
         {
@@ -143,7 +152,7 @@ public sealed class MetaService : IMetaService
                 throw LambdaException.Conflict("This key is already in use.");
             }
 
-            await SeedAsync(database, entity, now, cancellation);
+            await SeedAsync(database, entity, template, now, cancellation);
 
             Logger.LogInformation("Created lambda {LambdaId} at '{PublicKey}'", entity.Id, entity.PublicKey);
 
@@ -390,12 +399,23 @@ public sealed class MetaService : IMetaService
         }
     }
 
+    public async ValueTask<LambdaCounts> CountAsync(CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        return new LambdaCounts(
+            await database.Lambdas.CountAsync(cancellation),
+            await database.Lambdas.CountAsync(l => l.ActiveVersion != null, cancellation),
+            await database.Deployments.CountAsync(cancellation)
+        );
+    }
+
     private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
         => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-    private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, DateTime now, CancellationToken cancellation)
-        => await AppendAsync(database, lambda, CodeTemplate.ForKey(lambda.PublicKey), now, cancellation);
+    private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, string? template, DateTime now, CancellationToken cancellation)
+        => await AppendAsync(database, lambda, TemplateCatalog.ForKey(template, lambda.PublicKey), now, cancellation);
 
     private async ValueTask<LambdaVersionInfo> AppendAsync(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, CancellationToken cancellation)
     {
@@ -448,6 +468,10 @@ public sealed class MetaService : IMetaService
     private async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
     {
         Deployments.Evict(lambda.Id);
+
+        // a deleted lambda takes its numbers with it rather than leaving a row
+        // in the activity list that nothing can be looked up from any more
+        Activity.Evict(lambda.Id);
 
         database.Lambdas.Remove(lambda);
 

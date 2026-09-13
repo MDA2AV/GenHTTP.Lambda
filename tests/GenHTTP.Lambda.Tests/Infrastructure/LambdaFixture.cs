@@ -128,9 +128,9 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// Creates a lambda through the API, the way the creation assistant does.
     /// </summary>
-    public async Task<LambdaResponse> CreateLambdaAsync(string? publicKey = null)
+    public async Task<LambdaResponse> CreateLambdaAsync(string? publicKey = null, string? template = null)
     {
-        using var response = await SendAsync(HttpMethod.Post, "/api/v1/lambdas", new CreateLambdaRequest(publicKey, true));
+        using var response = await SendAsync(HttpMethod.Post, "/api/v1/lambdas", new CreateLambdaRequest(publicKey, true, template));
 
         Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
 

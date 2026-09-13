@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Protection;
+using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.ErrorHandling;
@@ -23,13 +24,20 @@ namespace GenHTTP.Lambda.Services.Execution;
 public static class LambdaRoute
 {
 
-    public static IHandler Create(IMetaService meta, IDeploymentService deployments, SpaResources spa, LambdaOptions options, ILoggerFactory loggers)
+    public static IHandler Create(IMetaService meta, IDeploymentService deployments, SpaResources spa, LambdaOptions options,
+                                  LambdaTelemetry telemetry, ILoggerFactory loggers)
     {
         var execution = new LambdaExecutionHandler(deployments);
 
         return Concerns.Chain([
             new ThrottleConcernBuilder(options),
             ErrorHandler.From(new LambdaErrorMapper(loggers.CreateLogger<LambdaErrorMapper>())),
+            // outside the error handler and the throttle, inside the lookup: so
+            // it records the answer the visitor actually got, and knows which
+            // lambda to file it under. Inside the throttle it saw neither the
+            // timeout nor the rejection - a lambda that timed out on every
+            // request was recorded as succeeding, slowly.
+            new LambdaActivityConcernBuilder(telemetry),
             new LambdaResolutionConcernBuilder(meta, spa),
             new RateLimitConcernBuilder(options)
         ], execution);

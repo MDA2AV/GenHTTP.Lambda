@@ -1,0 +1,48 @@
+// A websocket, wired up as three callbacks. Connect to it with
+//
+//   wss://<this-host>/lambda/{{KEY}}/
+//
+// and whatever one client sends is passed on to all of them. The handshake is
+// an ordinary request; everything after it belongs to the connection, so a
+// socket may stay open far longer than a lambda is given to answer.
+//
+// Connections are not thread safe and the callbacks run on the message pump -
+// keep them short, and start a Task for anything that takes a while.
+
+var clients = new List<IReactiveConnection>();
+
+return Websocket.Functional()
+                .OnConnected(connection =>
+                {
+                    lock (clients)
+                    {
+                        clients.Add(connection);
+                    }
+
+                    return connection.WritePayloadAsync("welcome");
+                })
+                .OnMessage(async (connection, message) =>
+                {
+                    var text = await message.ReadPayloadAsync<string>();
+
+                    IReactiveConnection[] targets;
+
+                    lock (clients)
+                    {
+                        targets = clients.ToArray();
+                    }
+
+                    foreach (var client in targets)
+                    {
+                        await client.WritePayloadAsync($"someone said: {text}");
+                    }
+                })
+                .OnClose((connection, _) =>
+                {
+                    lock (clients)
+                    {
+                        clients.Remove(connection);
+                    }
+
+                    return ValueTask.CompletedTask;
+                });

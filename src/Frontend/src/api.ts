@@ -60,14 +60,87 @@ export interface Completion {
   insert?: string;
 }
 
+export interface Template {
+  id: string;
+  name: string;
+  description: string;
+  code: string;
+}
+
+export interface TemplateGroup {
+  id: string;
+  name: string;
+  description: string;
+  templates: Template[];
+}
+
 export interface Platform {
   terms: string;
-  template: string;
+  templates: TemplateGroup[];
   maxCodeLength: number;
   deploymentLifetimeHours: number;
   retentionDays: number;
   imports: string[];
   completions: Completion[];
+}
+
+export interface TelemetrySample {
+  taken: string;
+  managedBytes: number;
+  heapCommittedBytes: number;
+  heapFragmentedBytes: number;
+  workingSetBytes: number;
+  privateBytes: number;
+  gen0Collections: number;
+  gen1Collections: number;
+  gen2Collections: number;
+  allocatedBytes: number;
+  pausePercentage: number;
+  cpuPercentage: number;
+  threads: number;
+  requests: number;
+  failed: number;
+  upgrades: number;
+  inFlight: number;
+  openSockets: number;
+  averageMillis: number;
+}
+
+export interface Telemetry {
+  server: {
+    engine: string;
+    version: string;
+    runtime: string;
+    platform: string;
+    serverGarbageCollection: boolean;
+    processors: number;
+    started: string;
+    uptimeSeconds: number;
+  };
+  traffic: { requests: number; failed: number; upgrades: number; openSockets: number };
+  platform: { lambdas: number; deployed: number; versions: number };
+  latest: TelemetrySample;
+  intervalSeconds: number;
+  samples: TelemetrySample[];
+}
+
+export interface LambdaActivity {
+  publicKey: string;
+  requests: number;
+  failed: number;
+  upgrades: number;
+  openSockets: number;
+  averageMillis: number;
+  slowestMillis: number;
+  bytesOut: number;
+  firstSeen?: string;
+  lastSeen?: string;
+}
+
+export interface Activity {
+  lambdas: LambdaActivity[];
+  requests: number;
+  upgrades: number;
 }
 
 export class ApiError extends Error {
@@ -115,12 +188,16 @@ const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) })
 export const api = {
   platform: () => request<Platform>('/system'),
 
+  activity: () => request<Activity>('/telemetry/lambdas'),
+
+  telemetry: (minutes: number) => request<Telemetry>(`/telemetry?minutes=${minutes}`),
+
   checkKey: (key: string) => request<Availability>(`/lambdas/keys/${encodeURIComponent(key)}`),
 
   publicStatus: (key: string) => request<PublicStatus>(`/lambdas/public/${encodeURIComponent(key)}`),
 
-  create: (publicKey: string | null) =>
-    request<Lambda>('/lambdas', send({ publicKey, acceptedTerms: true })),
+  create: (publicKey: string | null, template: string | null = null) =>
+    request<Lambda>('/lambdas', send({ publicKey, acceptedTerms: true, template })),
 
   get: (privateKey: string) => request<Lambda>(`/lambdas/${privateKey}`),
 

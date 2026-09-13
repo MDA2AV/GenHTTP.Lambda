@@ -10,6 +10,7 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Execution;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Storage;
+using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.DependencyInjection;
@@ -94,7 +95,12 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<SpaResources>();
 
+        services.AddSingleton<LambdaTelemetry>();
+        services.AddSingleton<TelemetryService>();
+        services.AddSingleton<ITelemetryService>(p => p.GetRequiredService<TelemetryService>());
+
         services.AddSingleton<IBackgroundJob, MaintenanceJob>();
+        services.AddSingleton<IBackgroundJob, TelemetryJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();
@@ -114,6 +120,7 @@ public sealed class Application : IAsyncDisposable
             services.GetRequiredService<IDeploymentService>(),
             spa,
             options,
+            services.GetRequiredService<LambdaTelemetry>(),
             loggers
         );
 
@@ -146,6 +153,7 @@ public sealed class Application : IAsyncDisposable
                .Development(Options.Development)
                .AddDependencyInjection(Services)
                .Add(Registry.Capture())
+               .Add(new TelemetryConcernBuilder(Services.GetRequiredService<TelemetryService>()))
                .Defaults();
 
     /// <summary>

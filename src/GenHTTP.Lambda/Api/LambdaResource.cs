@@ -29,7 +29,7 @@ public sealed class LambdaResource(IMetaService meta)
             throw LambdaException.Invalid("The terms of service need to be accepted.");
         }
 
-        var lambda = await meta.CreateAsync(request.PublicKey);
+        var lambda = await meta.CreateAsync(request.PublicKey, request.Template);
 
         return new Result<LambdaResponse>(Describe(lambda)).Status(ResponseStatus.Created);
     }

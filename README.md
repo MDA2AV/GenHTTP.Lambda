@@ -60,9 +60,22 @@ port, each against its own temporary data directory.
 | `/lambda/:publicKey` | the deployed handler                                      |
 | `/api/v1/`           | everything the editor calls                               |
 
+The assistant asks what the lambda should do before it asks for a key: a
+service that answers requests, or a socket that stays open - and then which of
+the examples in `Resources/Templates` to start from. A new one is a file next
+to those, listed in `TemplateCatalog`.
+
 A lambda has two keys. The public one is part of its URL and may be changed;
 the private one is the editor link and is shown only to whoever created the
 lambda - anyone holding it can edit, deploy and delete.
+
+A lambda may also return a websocket rather than a document, in any of the
+three flavours the module offers - `Websocket.Functional()`, `.Reactive()` and
+`.Imperative()`. The handshake is an ordinary request and is bounded by the
+execution timeout like any other; everything after it belongs to the
+connection, which is why a socket may stay open far longer than a lambda is
+given to answer. `FrameType`, which the imperative flavour reads off every
+frame, is one of the names a lambda is given, so no import is needed.
 
 Editing and deploying are separate: saving creates a version, deploying picks
 one (the latest by default) and makes it live. A lambda has at most one
@@ -120,11 +133,88 @@ Everything is read from the environment on startup, see
 | `LAMBDA_RATE_LIMIT`                 | `240`            | lambda requests per minute and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
+| `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
+| `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
+| `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
+| `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
+| `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
+| `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
+| `LAMBDA_CERTIFICATE_PASSWORD`       | -                | password of the PKCS#12 archive             |
 
 The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so the image defaults to
 `LAMBDA_ENGINE=kestrel`. Set it back to `ioxide` where io_uring is available
 and allowed.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ioxide.yml up -d
+```
+
+That override runs the server on io_uring under `seccomp-ioxide.json`, which is
+the default profile of the runtime with `io_uring_setup`, `io_uring_enter` and
+`io_uring_register` added and nothing else. Without it the engine stops at
+`io_uring_setup failed: -1` before the first request. The hole is small but it
+is real: io_uring reaches further into the kernel than ordinary sockets, and
+this platform runs code written by strangers in the same process.
+
+## Telemetry
+
+`/stats` shows what the process is doing, and `/api/v1/telemetry` is where it
+comes from. A reading is taken every `LAMBDA_TELEMETRY_INTERVAL_SECONDS` and
+`LAMBDA_TELEMETRY_SAMPLES` of them are kept, which is a day at the defaults.
+
+The readings live in memory and go with the process. That suits what they are
+for - a restart ends the run they were measuring - but it does mean a redeploy
+starts the graph over.
+
+It also lists what each lambda has served, busiest first. Only the public key
+identifies one there - the editor key, the code and the visitors are not part
+of it - and `LAMBDA_PUBLIC_ACTIVITY=false` stops that list being served without
+stopping anything being counted.
+
+The page is otherwise aggregates only: no key, no code and no client address
+leaves through it, which is what makes it safe to serve to anyone. What it is for is
+the shape of the memory curve. A managed heap that climbs across gen 2
+collections is a leak; committed bytes climbing while the managed heap stays
+flat is the heap keeping pages it could return, which is not.
+
+## TLS
+
+The server terminates TLS itself, so nothing has to sit in front of it. Point
+`LAMBDA_CERTIFICATE` at a certificate and set `LAMBDA_TLS_PORT`, and the plain
+port starts answering with a redirect to the secure one.
+
+```bash
+LAMBDA_TLS_PORT=8443
+LAMBDA_CERTIFICATE=/certs/fullchain.pem
+LAMBDA_CERTIFICATE_KEY=/certs/privkey.pem
+```
+
+A PKCS#12 archive works just as well - leave the key empty and set
+`LAMBDA_CERTIFICATE_PASSWORD` instead. The certificate is read again when the
+files change, so a renewal is picked up without a restart.
+
+The issuers in the file are published into the certificate store of the user
+the server runs as, because a client needs the chain and not just the leaf to
+reach a root. Kestrel papers over a missing chain by fetching the issuer over
+the network mid-handshake; the io_uring engine sends what it was given, so a
+server that never published its issuers answers it with a certificate nobody
+can verify.
+
+There is no ACME client built in. With certbot, the private key stays readable
+by root only while the server runs unprivileged, so a deploy hook publishes the
+renewed files where the container can read them:
+
+```bash
+certbot certonly --standalone -d your.host.name
+
+install -m 0644 -o root -g 1001 /etc/letsencrypt/live/your.host.name/fullchain.pem /opt/genhttp-lambda/certs/
+install -m 0640 -o root -g 1001 /etc/letsencrypt/live/your.host.name/privkey.pem   /opt/genhttp-lambda/certs/
+```
+
+Because the server holds port 80, the standalone authenticator needs it back
+for the few seconds a renewal takes - a pre hook stops the container and a post
+hook starts it again.
 
 ## Database
 
