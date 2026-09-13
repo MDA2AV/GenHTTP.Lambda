@@ -42,8 +42,13 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
       >
         <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
           <IconLogo />
+          {/* the name is the mark plus the letter the thing is named after */}
           <span>
-            GenHTTP <span className="text-accent-500">Lambda</span>
+            GenHTTP{' '}
+            <span className="text-accent-500" title="Lambda">
+              <span aria-hidden="true" className="text-[1.15em] leading-none">λ</span>
+              <span className="sr-only">Lambda</span>
+            </span>
           </span>
         </Link>
 

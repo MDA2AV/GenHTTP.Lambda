@@ -39,16 +39,18 @@ export function Landing() {
         <div className="aurora aurora-a" aria-hidden="true" />
         <div className="aurora aurora-b" aria-hidden="true" />
         <div className="aurora aurora-c" aria-hidden="true" />
+        <div className="aurora-grain" aria-hidden="true" />
+        <div className="aurora-clearing" aria-hidden="true" />
 
-        <div className="relative mx-auto w-full max-w-5xl">
-          <h1 className="rise max-w-4xl text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+        <div className="relative mx-auto w-full max-w-4xl text-center">
+          <h1 className="rise text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
             Host a small web service
             <br />
             <span className="text-accent-500">without hosting anything.</span>
           </h1>
 
           <p
-            className="rise mt-7 max-w-xl text-lg leading-relaxed text-slate-600 dark:text-slate-400"
+            className="rise mx-auto mt-7 max-w-xl text-lg leading-relaxed text-grey-700 dark:text-grey-200"
             style={{ animationDelay: '90ms' }}
           >
             Write a bit of C# in your browser, press deploy, and get a public HTTPS address you can hand
@@ -66,7 +68,7 @@ export function Landing() {
         <button
           type="button"
           onClick={() => rest.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          className="rise group absolute inset-x-0 bottom-8 mx-auto flex w-fit flex-col items-center gap-2 text-xs text-slate-500 hover:text-accent-500 dark:hover:text-accent-400"
+          className="rise group absolute inset-x-0 bottom-8 mx-auto flex w-fit flex-col items-center gap-2 text-xs text-grey-700 hover:text-accent-500 dark:text-grey-300 dark:hover:text-accent-400"
           style={{ animationDelay: '320ms' }}
         >
           See what that looks like
