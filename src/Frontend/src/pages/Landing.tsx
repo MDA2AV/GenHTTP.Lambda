@@ -22,19 +22,22 @@ export function Landing() {
     <div className="mx-auto w-full max-w-5xl px-5 pb-20 pt-12 sm:pt-20">
       <section className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr]">
         <div>
-          <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+          <h1 className="rise text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
             Host a small web service
             <br />
             <span className="text-accent-500">without hosting anything.</span>
           </h1>
 
-          <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
+          <p
+            className="rise mt-5 max-w-xl text-[15px] leading-relaxed text-slate-600 dark:text-slate-400"
+            style={{ animationDelay: '80ms' }}
+          >
             Write a bit of C# in your browser, press deploy, and get a public HTTPS address you can hand
             to anyone. A REST API, a webhook, a mock backend, a websocket. No account, no server, no
             pipeline.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="rise mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: '160ms' }}>
             <Link to="/editor/create" className="btn-primary px-5 py-2.5 text-[15px]">
               Put something online
             </Link>
@@ -48,13 +51,13 @@ export function Landing() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="rise mt-4 text-xs text-slate-500" style={{ animationDelay: '220ms' }}>
             Runs on <a href="https://genhttp.org/" target="_blank" rel="noreferrer" className="underline">GenHTTP</a>.
             Knowing it is not a prerequisite - the editor suggests everything you can use.
           </p>
         </div>
 
-        <div className="surface overflow-hidden shadow-xl">
+        <div className="rise surface overflow-hidden shadow-xl" style={{ animationDelay: '280ms' }}>
           {/* a tab rather than a window: this is a file, not an application */}
           <div className="flex items-stretch border-b border-grey-300 bg-grey-50 dark:border-ink-800 dark:bg-ink-950">
             <span className="border-b-2 border-accent-500 bg-white px-4 py-2 font-mono text-xs text-grey-900 dark:border-accent-400 dark:bg-ink-900 dark:text-grey-200">

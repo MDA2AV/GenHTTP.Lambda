@@ -24,6 +24,36 @@
   }
 }
 
+@layer utilities {
+  /*
+   * The page arrives a piece at a time, top first, so the eye is led down it
+   * rather than handed all of it at once. Short and small: anything longer is
+   * a delay with a reason attached, and this is read before it is admired.
+   */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .rise {
+    animation: rise 0.5s cubic-bezier(0.2, 0, 0, 1) backwards;
+  }
+
+  /* asked not to move things, so nothing moves - it is simply already there */
+  @media (prefers-reduced-motion: reduce) {
+    .rise {
+      animation: none;
+    }
+  }
+}
+
 @layer components {
   .surface {
     @apply border border-grey-300 bg-white dark:border-ink-800 dark:bg-ink-900;
