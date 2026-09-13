@@ -130,6 +130,20 @@ export interface Telemetry {
   samples: TelemetrySample[];
 }
 
+export interface WorkspaceEntry {
+  path: string;
+  size: number;
+  modified: string;
+}
+
+export interface WorkspaceListing {
+  files: WorkspaceEntry[];
+  usedBytes: number;
+  quotaBytes: number;
+  maxFiles: number;
+  maxFileSize: number;
+}
+
 export interface LambdaActivity {
   publicKey: string;
   requests: number;
@@ -206,6 +220,22 @@ export const api = {
     request<Lambda>('/lambdas', send({ publicKey, acceptedTerms: true, template })),
 
   get: (privateKey: string) => request<Lambda>(`/lambdas/${privateKey}`),
+
+  files: (privateKey: string) => request<WorkspaceListing>(`/lambdas/${privateKey}/files`),
+
+  readFile: (privateKey: string, path: string) =>
+    request<{ path: string; content: string; size: number }>(
+      `/lambdas/${privateKey}/files/content?path=${encodeURIComponent(path)}`,
+    ),
+
+  writeFile: (privateKey: string, path: string, content: string) =>
+    request<WorkspaceEntry>(`/lambdas/${privateKey}/files/content?path=${encodeURIComponent(path)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    }),
+
+  deleteFile: (privateKey: string, path: string) =>
+    request<void>(`/lambdas/${privateKey}/files/content?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
 
   versions: (privateKey: string) => request<VersionInfo[]>(`/lambdas/${privateKey}/versions`),
 

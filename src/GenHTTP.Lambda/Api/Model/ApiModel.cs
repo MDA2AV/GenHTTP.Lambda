@@ -167,6 +167,14 @@ public sealed record TelemetryResponse(
 );
 
 /// <summary>
+/// The content of a workspace file, base64 encoded so anything can travel.
+/// </summary>
+public sealed record FileResponse(string Path, string Content, int Size);
+
+/// <summary>
+/// A file to write into the workspace, base64 encoded.
+/// </summary>
+public sealed record FileRequest(string? Content);
 /// What every lambda has been doing since the server came up.
 /// </summary>
 public sealed record ActivityResponse(IReadOnlyList<LambdaActivity> Lambdas, long Requests, long Upgrades);

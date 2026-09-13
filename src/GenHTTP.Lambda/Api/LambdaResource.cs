@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Workspace;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -13,7 +14,7 @@ namespace GenHTTP.Lambda.Api;
 /// Everything the editor does, one endpoint at a time. The private key in the
 /// path is what authorizes a call - whoever has it may edit the lambda.
 /// </summary>
-public sealed class LambdaResource(IMetaService meta)
+public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspace)
 {
 
     #region Creation
@@ -162,5 +163,73 @@ public sealed class LambdaResource(IMetaService meta)
 
 
     #endregion
+
+    #region Workspace
+
+    /// <summary>
+    /// Lists the files a lambda keeps in its private directory.
+    /// </summary>
+    [ResourceMethod(":privateKey/files")]
+    public async ValueTask<WorkspaceListing> GetFiles(string privateKey)
+        => await workspace.ListAsync(await ResolveIdAsync(privateKey));
+
+    /// <summary>
+    /// Reads one file.
+    /// </summary>
+    /// <param name="path">The name of the file, relative to the workspace</param>
+    /// <remarks>
+    /// The content travels base64 encoded in a JSON document like everything
+    /// else this API answers, so a workspace holding an image or an archive
+    /// reads the same way as one holding text.
+    /// </remarks>
+    [ResourceMethod(":privateKey/files/content")]
+    public async ValueTask<FileResponse> GetFile(string privateKey, string path)
+    {
+        var file = await workspace.ReadAsync(await ResolveIdAsync(privateKey), path)
+                ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
+
+        return new FileResponse(file.Path, Convert.ToBase64String(file.Content), file.Content.Length);
+    }
+
+    /// <summary>
+    /// Writes a file, replacing it if it is already there.
+    /// </summary>
+    /// <param name="path">The name of the file, relative to the workspace</param>
+    [ResourceMethod(Method.Put, ":privateKey/files/content")]
+    public async ValueTask<WorkspaceEntry> PutFile(string privateKey, string path, FileRequest request)
+    {
+        byte[] content;
+
+        try
+        {
+            content = Convert.FromBase64String(request.Content ?? string.Empty);
+        }
+        catch (FormatException)
+        {
+            throw LambdaException.Invalid("The content of a file has to be base64 encoded.");
+        }
+
+        using var stream = new MemoryStream(content);
+
+        return await workspace.WriteAsync(await ResolveIdAsync(privateKey), path, stream);
+    }
+
+    /// <summary>
+    /// Removes a file.
+    /// </summary>
+    /// <param name="path">The name of the file, relative to the workspace</param>
+    [ResourceMethod(Method.Delete, ":privateKey/files/content")]
+    public async ValueTask DeleteFile(string privateKey, string path)
+        => await workspace.DeleteAsync(await ResolveIdAsync(privateKey), path);
+
+    /// <summary>
+    /// Turns the editor key into the identity the workspace is filed under,
+    /// which doubles as the check that the caller owns the lambda.
+    /// </summary>
+    private async ValueTask<long> ResolveIdAsync(string privateKey)
+        => await meta.GetIdAsync(privateKey)
+        ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+
+        #endregion
 
 }

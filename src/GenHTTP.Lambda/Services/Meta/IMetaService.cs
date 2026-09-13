@@ -85,4 +85,10 @@ public interface IMetaService
     /// </summary>
     ValueTask<LambdaCounts> CountAsync(CancellationToken cancellation = default);
 
+    /// <summary>
+    /// The identity a lambda is filed under, for the services that store things
+    /// beside the database. Null when the key belongs to nothing.
+    /// </summary>
+    ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
+
 }
