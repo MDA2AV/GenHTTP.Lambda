@@ -85,22 +85,29 @@
    *
    * Belonging to a section meant ending with it, and a colour that ends draws a
    * rule across the page at whatever height that happened to be - which is the
-   * seam that showed on the way down. Fading it out instead only moved the seam
-   * and took the colour with it. So it does not end: the page scrolls over it,
-   * the panels below are opaque and sit on it perfectly well, and there is no
-   * boundary left to transition across.
+   * seam that showed on the way down. So it covers the whole page instead of a
+   * part of it, and there is no boundary left to cross.
+   *
+   * Absolute rather than fixed, and that is the whole point: pinned to the
+   * window it stays put while the page moves over it, and a background that
+   * holds still under a moving page reads as a picture rather than as
+   * something alive - the drift underneath it is the same either way. Here it
+   * travels with the page, and scrolling is most of the movement anyone sees.
    */
   .aurora-field {
-    position: fixed;
+    position: absolute;
     inset: 0;
-    z-index: -1;
+    z-index: 0;
     overflow: hidden;
     pointer-events: none;
   }
 
   .aurora {
     position: absolute;
-    inset: -35%;
+    /* the field is as tall as the page, so a shape sized to it would be one
+       smear; these are sized to a window and repeated down it instead */
+    inset: -10% -35%;
+    height: 90vh;
     pointer-events: none;
     /* enough to blend the shapes into each other, not enough to erase them */
     filter: blur(60px);

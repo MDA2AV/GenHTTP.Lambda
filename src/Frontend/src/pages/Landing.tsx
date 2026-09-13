@@ -20,8 +20,8 @@ export function Landing() {
   }, []);
 
   return (
-    <div className="w-full">
-      {/* fixed to the window, so the page scrolls over it and it never ends */}
+    <div className="relative w-full">
+      {/* as tall as the page, so it never ends, and travelling with it */}
       <div className="aurora-field" aria-hidden="true">
         <div className="aurora aurora-a" />
         <div className="aurora aurora-b" />
@@ -36,7 +36,7 @@ export function Landing() {
         read past the example to find the way in. It reaches up behind the bar,
         so the colour is the page's and not a panel's.
       */}
-      <section className="snap-stop relative -mt-[3.75rem] flex min-h-screen flex-col justify-center px-5 pb-24 pt-[3.75rem]">
+      <section className="snap-stop relative z-10 -mt-[3.75rem] flex min-h-screen flex-col justify-center px-5 pb-24 pt-[3.75rem]">
 
         <div className="relative mx-auto w-full max-w-4xl text-center">
           <h1 className="rise text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
@@ -72,7 +72,7 @@ export function Landing() {
         </button>
       </section>
 
-      <div ref={rest} className="snap-stop mx-auto w-full max-w-6xl px-5 pb-24 pt-10">
+      <div ref={rest} className="snap-stop relative z-10 mx-auto w-full max-w-6xl px-5 pb-24 pt-10">
         <Reveal>
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
             A lambda is one handler
