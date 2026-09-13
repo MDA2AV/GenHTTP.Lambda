@@ -99,6 +99,8 @@ jobs:
       # deployed, served on its public URL, undeployed
       - name: Smoke test
         run: |
+          set -euo pipefail
+
           docker run -d --name lambda -p 8080:8080 genhttp-lambda:ci
 
           for i in $(seq 30); do
@@ -110,24 +112,32 @@ jobs:
 
           docker inspect -f '{{.State.Health.Status}}' lambda | grep -qx healthy
 
-          keys=$(curl -sf -X POST http://localhost:8080/api/v1/lambdas \
+          # --fail-with-body so a rejected request shows why, not just an exit code
+          call() { curl -s --fail-with-body "$@"; }
+
+          # the key has to survive validation: at least three characters
+          keys=$(call -X POST http://localhost:8080/api/v1/lambdas \
                    -H 'Content-Type: application/json' \
-                   -d '{"publicKey":"ci","acceptedTerms":true}')
+                   -d '{"publicKey":"citest","acceptedTerms":true}')
 
           private=$(echo "$keys" | jq -r .privateKey)
 
-          curl -sf -X POST "http://localhost:8080/api/v1/lambdas/$private/versions" \
+          call -X POST "http://localhost:8080/api/v1/lambdas/$private/versions" \
                -H 'Content-Type: application/json' \
                -d '{"code":"return Inline.Create().Get(() => \"ci\");"}' > /dev/null
 
-          curl -sf -X POST "http://localhost:8080/api/v1/lambdas/$private/deployment" \
+          call -X POST "http://localhost:8080/api/v1/lambdas/$private/deployment" \
                -H 'Content-Type: application/json' -d '{}' | jq -e .success > /dev/null
 
-          test "$(curl -sf http://localhost:8080/lambda/ci/)" = "ci"
+          served=$(call http://localhost:8080/lambda/citest/)
+          test "$served" = "ci" || { echo "expected 'ci', got '$served'"; exit 1; }
 
-          curl -sf -X DELETE "http://localhost:8080/api/v1/lambdas/$private/deployment" > /dev/null
+          call -X DELETE "http://localhost:8080/api/v1/lambdas/$private/deployment" > /dev/null
 
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/lambda/ci/)" = "404"
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/lambda/citest/)
+          test "$status" = "404" || { echo "expected 404 after undeploy, got $status"; exit 1; }
+
+          echo "created, deployed, served and undeployed a lambda"
 
       - name: Server log
         if: always()
