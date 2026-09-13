@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Configuration;
 
 using GenHTTP.Modules.IO;
 using GenHTTP.Modules.SinglePageApplications;
+using GenHTTP.Modules.Files;
 
 using Microsoft.Extensions.Logging;
 
@@ -63,6 +64,37 @@ public sealed class SpaResources
 
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .ServerSideRouting();
+    }
+
+    /// <summary>
+    /// Serves the built files, answering for the ones that are not there rather
+    /// than letting the application below take the request.
+    /// </summary>
+    /// <remarks>
+    /// Server side routing answers anything it does not recognise with the
+    /// index page, which is right for a route and wrong for a file: a build
+    /// names its chunks by hash, so a tab left open across a deployment asks
+    /// for one that no longer exists, and gets HTML with a 200 where it
+    /// expected a script. The browser then fails to parse it as a module, the
+    /// import never settles and the page waits forever - which is what a
+    /// visitor sees as a spinner that never stops. A 404 here says what
+    /// happened and lets the application recover.
+    /// </remarks>
+    public IHandlerBuilder? CreateAssetHandler()
+    {
+        if (!Available)
+        {
+            return null;
+        }
+
+        var assets = Path.Combine(Root, "assets");
+
+        // created rather than checked for: a build always writes one, and a
+        // deployment that somehow did not should still report a missing file
+        // as missing rather than falling through to the page below
+        Directory.CreateDirectory(assets);
+
+        return Assets.From(ResourceTree.FromDirectory(assets));
     }
 
     /// <summary>

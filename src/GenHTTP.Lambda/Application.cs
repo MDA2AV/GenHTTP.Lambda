@@ -124,10 +124,20 @@ public sealed class Application : IAsyncDisposable
             loggers
         );
 
-        return Layout.Create()
-                     .Add("api", ApiLayout.Create())
-                     .Add("lambda", lambdas)
-                     .Add(spa.CreateHandler())
+        var layout = Layout.Create()
+                           .Add("api", ApiLayout.Create())
+                           .Add("lambda", lambdas);
+
+        // before the application, so a file that is not there is reported as
+        // missing rather than answered with the index page
+        var assets = spa.CreateAssetHandler();
+
+        if (assets != null)
+        {
+            layout.Add("assets", assets);
+        }
+
+        return layout.Add(spa.CreateHandler())
                      .Build();
     }
 
