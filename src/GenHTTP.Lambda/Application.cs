@@ -95,6 +95,7 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<SpaResources>();
 
+        services.AddSingleton<LambdaTelemetry>();
         services.AddSingleton<TelemetryService>();
         services.AddSingleton<ITelemetryService>(p => p.GetRequiredService<TelemetryService>());
 
@@ -106,9 +107,9 @@ public sealed class Application : IAsyncDisposable
     }
 
     /// <summary>
-    /// Builds the four routes of the system: the API, the deployed lambdas and
-    /// the single page application, which serves both the landing page and the
-    /// editor and catches every other path.
+    /// Builds the routes of the system: the API, the deployed lambdas, the
+    /// frontend's own assets and the single page application, which serves both
+    /// the landing page and the editor and catches every other path.
     /// </summary>
     private static IHandler BuildHandler(IServiceProvider services, LambdaOptions options, ILoggerFactory loggers)
     {
@@ -119,13 +120,23 @@ public sealed class Application : IAsyncDisposable
             services.GetRequiredService<IDeploymentService>(),
             spa,
             options,
+            services.GetRequiredService<LambdaTelemetry>(),
             loggers
         );
 
-        return Layout.Create()
-                     .Add("api", ApiLayout.Create())
-                     .Add("lambda", lambdas)
-                     .Add(spa.CreateHandler())
+        var layout = Layout.Create()
+                           .Add("api", ApiLayout.Create())
+                           .Add("lambda", lambdas);
+
+        // Ahead of the application, so a miss here is a 404 rather than the
+        // index page: a named route answers for itself and never falls through
+        // to the handler that catches everything else.
+        if (spa.HasAssets)
+        {
+            layout = layout.Add("assets", spa.CreateAssetHandler());
+        }
+
+        return layout.Add(spa.CreateHandler())
                      .Build();
     }
 

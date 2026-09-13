@@ -11,7 +11,7 @@ var api = Inline.Create()
 return Layout.Create()
              .Add("books", api)
              .AddOpenApi()
-             .AddSwaggerUi();
+             .AddScalar();
 
 record Book(int Id, string Title);`;
 
@@ -22,34 +22,40 @@ export function Landing() {
         <div>
           <span className="chip bg-accent-500/10 text-accent-500">
             <IconSpark className="h-3.5 w-3.5" />
-            Powered by GenHTTP 11
+            Free · No account · Live in seconds
           </span>
 
           <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-            Write a handler.
+            Host a small web service
             <br />
-            <span className="text-accent-500">Get a URL.</span>
+            <span className="text-accent-500">without hosting anything.</span>
           </h1>
 
           <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
-            A GenHTTP Lambda is a snippet of C# that returns an <code className="font-mono text-[13px]">IHandler</code>.
-            Paste it in the editor, hit deploy, and it is online under a URL of your choosing - a REST service,
-            an OpenAPI document, a redirect, a page, whatever the module API can build.
+            Write a bit of C# in your browser and press deploy. You get a public HTTPS address you can
+            hand to anyone - a REST API, a webhook receiver, a mock backend, a websocket, a page. No
+            account to make, no server to rent, no pipeline to set up.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link to="/editor/create" className="btn-primary px-5 py-2.5 text-[15px]">
-              Create a GenHTTP Lambda
+              Put something online
             </Link>
             <a
-              href="https://genhttp.org/documentation/content/frameworks/functional/"
+              href="https://genhttp.org/documentation/content/"
               target="_blank"
               rel="noreferrer"
               className="btn-ghost px-5 py-2.5 text-[15px]"
             >
-              Read the docs
+              What you can build
             </a>
           </div>
+
+          <p className="mt-4 text-xs text-slate-500">
+            Runs on <a href="https://genhttp.org/" target="_blank" rel="noreferrer" className="underline">GenHTTP</a>,
+            an open source web server for .NET. Knowing it is not a prerequisite - the editor suggests
+            everything you can use.
+          </p>
         </div>
 
         <div className="surface overflow-hidden shadow-xl">
@@ -62,29 +68,33 @@ export function Landing() {
           <pre className="overflow-x-auto px-4 py-4 font-mono text-[12.5px] leading-relaxed text-slate-700 dark:text-slate-300">
             {example}
           </pre>
+          <p className="border-t border-slate-200 px-4 py-2.5 text-xs text-slate-500 dark:border-ink-800">
+            That is the whole file. It answers on <code className="font-mono">/books/</code> and documents
+            itself.
+          </p>
         </div>
       </section>
 
       <section className="mt-20 grid gap-5 sm:grid-cols-3">
-        <Feature icon={<IconKey className="h-5 w-5" />} title="Two keys, no account">
-          A public key is where your lambda is hosted. A private one opens the editor. There is nothing
-          else to sign up for.
+        <Feature icon={<IconKey className="h-5 w-5" />} title="Nothing to sign up for">
+          You get two links: one to share, one to edit. Keep the editing link and you are the owner.
+          There is no password and no email.
         </Feature>
-        <Feature icon={<IconHistory className="h-5 w-5" />} title="Every save is a version">
-          Editing and deploying are separate steps. Go back to any earlier version and put it back
-          online whenever you want.
+        <Feature icon={<IconHistory className="h-5 w-5" />} title="Change it without breaking it">
+          Saving and publishing are separate. Try something, and if it was worse, put an earlier
+          version back online in one click.
         </Feature>
-        <Feature icon={<IconSpark className="h-5 w-5" />} title="The whole module API">
-          Webservices, controllers, OpenAPI, server sent events, static content - every GenHTTP module
-          is already imported for you.
+        <Feature icon={<IconSpark className="h-5 w-5" />} title="More than a hello world">
+          JSON APIs, OpenAPI docs with a browser to try them, websockets, file uploads, static pages,
+          server sent events - all available without installing anything.
         </Feature>
       </section>
 
       <section className="surface mt-12 px-6 py-5 text-sm text-slate-600 dark:text-slate-400">
-        <strong className="font-semibold text-ink-900 dark:text-slate-200">The free tier, in short.</strong>{' '}
-        A deployment stays online for a day, and a lambda nobody touches is removed after a month.
-        Code runs on shared infrastructure, so no malware, no crypto miners, and nothing that attacks
-        other systems.
+        <strong className="font-semibold text-ink-900 dark:text-slate-200">Free, with two timers.</strong>{' '}
+        Something you publish stays reachable for a day, and a lambda you have not opened for a month is
+        cleaned up. Both reset the moment you touch it again, so anything you are actually using stays.
+        It is shared infrastructure, so nothing that attacks, scans or floods other systems.
       </section>
     </div>
   );

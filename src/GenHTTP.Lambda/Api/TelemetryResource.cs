@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Api;
 /// leaves through this resource, which is what makes it safe to serve without
 /// asking who is looking.
 /// </remarks>
-public sealed class TelemetryResource(TelemetryService telemetry, ServerRegistry registry, IMetaService meta, LambdaOptions options)
+public sealed class TelemetryResource(TelemetryService telemetry, LambdaTelemetry lambdas, ServerRegistry registry, IMetaService meta, LambdaOptions options)
 {
 
     /// <summary>
@@ -61,6 +61,32 @@ public sealed class TelemetryResource(TelemetryService telemetry, ServerRegistry
             latest,
             (int)options.TelemetryInterval.TotalSeconds,
             series
+        );
+    }
+
+    /// <summary>
+    /// What each lambda has been doing since the server came up.
+    /// </summary>
+    /// <remarks>
+    /// Public while the platform is small; set LAMBDA_PUBLIC_ACTIVITY=false and
+    /// it stops being served without anything stopping being counted. Only the
+    /// public key identifies a lambda here - the editor key, the code and the
+    /// visitors are not part of it.
+    /// </remarks>
+    [ResourceMethod("lambdas")]
+    public ActivityResponse GetLambdas()
+    {
+        if (!options.PublicActivity)
+        {
+            throw LambdaException.NotFound("The activity of the lambdas is not public on this installation.");
+        }
+
+        var activity = lambdas.Describe();
+
+        return new ActivityResponse(
+            activity,
+            activity.Sum(a => a.Requests),
+            activity.Sum(a => a.Upgrades)
         );
     }
 
