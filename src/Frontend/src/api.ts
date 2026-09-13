@@ -13,6 +13,12 @@ export interface Lambda {
   latestVersion?: number;
   publicPath: string;
   editorPath: string;
+  /** When the live version went online; absent while nothing is deployed. */
+  deployedAt?: string;
+  /** When the deployment will be taken offline again. */
+  deployedUntil?: string;
+  /** When an untouched lambda is removed altogether. */
+  keptUntil: string;
 }
 
 export interface VersionInfo {

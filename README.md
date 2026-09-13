@@ -88,6 +88,10 @@ connection, which is why a socket may stay open far longer than a lambda is
 given to answer. `FrameType`, which the imperative flavour reads off every
 frame, is one of the names a lambda is given, so no import is needed.
 
+The editor says when both free tier timers run out: a hint under the public URL
+for the deployment, and a chip beside the buttons for the lambda itself, which
+opens an explanation of how each one is extended.
+
 Editing and deploying are separate: saving creates a version, deploying picks
 one (the latest by default) and makes it live. A lambda has at most one
 deployment at a time, and older versions stay available to deploy again.

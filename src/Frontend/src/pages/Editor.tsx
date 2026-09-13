@@ -10,6 +10,7 @@ import {
 } from '../api';
 import { CodeEditor } from '../components/CodeEditor';
 import { CopyField } from '../components/CopyField';
+import { Lifetime } from '../components/Lifetime';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
 import {
@@ -281,6 +282,7 @@ export function Editor({ theme }: Props) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Toolbar
+        lambda={lambda}
         live={live}
         activeVersion={lambda.activeVersion}
         dirty={dirty}
@@ -339,6 +341,14 @@ export function Editor({ theme }: Props) {
 
         <aside className="shrink-0 space-y-6 overflow-y-auto border-t border-slate-200 px-4 py-5 dark:border-ink-800 lg:w-80 lg:border-l lg:border-t-0">
           <CopyField label="Public URL" value={publicUrl} href={live ? publicUrl : undefined} />
+
+          {/* a deployment ends on its own, so it says when rather than letting
+              it be discovered by a visitor finding nothing there */}
+          {live && lambda.deployedUntil && (
+            <p className="-mt-4 text-xs text-slate-500">
+              Online until {new Date(lambda.deployedUntil).toLocaleString()}. Deploying again extends it.
+            </p>
+          )}
 
           <CopyField label="Editor link (keep private)" value={editorUrl} />
 
@@ -451,6 +461,7 @@ export function Editor({ theme }: Props) {
 }
 
 function Toolbar({
+  lambda,
   live,
   activeVersion,
   dirty,
@@ -460,6 +471,7 @@ function Toolbar({
   onDeploy,
   onUndeploy,
 }: {
+  lambda: Lambda | null;
   live: boolean;
   activeVersion?: number;
   dirty: boolean;
@@ -483,6 +495,8 @@ function Toolbar({
       </span>
 
       {dirty && <span className="chip bg-amber-500/10 text-amber-600 dark:text-amber-400">unsaved changes</span>}
+
+      {lambda && <Lifetime lambda={lambda} />}
 
       <div className="ml-auto flex items-center gap-2">
         <button type="button" onClick={onCheck} disabled={busy !== null} className="btn-ghost">
