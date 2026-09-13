@@ -10,17 +10,10 @@ import {
 } from '../api';
 import { CodeEditor } from '../components/CodeEditor';
 import { CopyField } from '../components/CopyField';
+import { Storage } from '../components/Storage';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
-import {
-  IconAlert,
-  IconHistory,
-  IconPlay,
-  IconSave,
-  IconSpinner,
-  IconStop,
-  IconTrash,
-} from '../components/Icons';
+import { IconAlert, IconFolder, IconHistory, IconPlay, IconSave, IconSpinner, IconStop, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { registerCompletions } from '../monaco';
 import type { Theme } from '../theme';
@@ -49,6 +42,7 @@ export function Editor({ theme }: Props) {
   const [reveal, setReveal] = useState<{ line: number; column: number; nonce: number }>();
   const [renaming, setRenaming] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [storage, setStorage] = useState(false);
 
   const fresh = (location.state as { created?: boolean } | null)?.created === true;
   const dirty = code !== saved;
@@ -279,7 +273,10 @@ export function Editor({ theme }: Props) {
         onSave={save}
         onDeploy={() => deploy()}
         onUndeploy={undeploy}
+        onFiles={() => setStorage(true)}
       />
+
+      {storage && <Storage privateKey={privateKey!} onClose={() => setStorage(false)} />}
 
       {fresh && (
         <div className="border-b border-accent-500/30 bg-accent-500/5 px-4 py-3 sm:px-6">
@@ -436,6 +433,7 @@ function Toolbar({
   onSave,
   onDeploy,
   onUndeploy,
+  onFiles,
 }: {
   live: boolean;
   activeVersion?: number;
@@ -445,6 +443,7 @@ function Toolbar({
   onSave: () => void;
   onDeploy: () => void;
   onUndeploy: () => void;
+  onFiles: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2.5 dark:border-ink-800 sm:px-6">
@@ -462,6 +461,11 @@ function Toolbar({
       {dirty && <span className="chip bg-amber-500/10 text-amber-600 dark:text-amber-400">unsaved changes</span>}
 
       <div className="ml-auto flex items-center gap-2">
+        <button type="button" onClick={onFiles} className="btn-ghost" title="Workspace files">
+          <IconFolder />
+          Files
+        </button>
+
         <button type="button" onClick={onCheck} disabled={busy !== null} className="btn-ghost">
           {busy === 'check' ? <IconSpinner /> : null}
           Check

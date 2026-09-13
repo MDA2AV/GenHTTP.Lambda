@@ -5,6 +5,8 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
+using GenHTTP.Lambda.Services.Workspace;
+
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
@@ -186,12 +188,12 @@ internal static class SourceBuilder
     /// rather than referenced, so the assembly of this application stays
     /// invisible to the code being compiled.
     /// </summary>
-    private const string WorkspaceSource = $$"""
+    private static readonly string WorkspaceSource = $$"""
         internal sealed class {{WorkspaceType}}
         {
-            private const int MaxFileSize = 1024 * 1024;
+            private const int MaxFileSize = {{WorkspaceLimits.MaxFileSize}};
 
-            private const int MaxFiles = 64;
+            private const int MaxFiles = {{WorkspaceLimits.MaxFiles}};
 
             private readonly string _root;
 

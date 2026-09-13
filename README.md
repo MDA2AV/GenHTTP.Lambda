@@ -59,6 +59,7 @@ port, each against its own temporary data directory.
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
 | `/api/v1/`           | everything the editor calls                               |
+| `/api/v1/lambdas/:privateKey/files` | the workspace of one lambda                |
 
 The assistant asks what the lambda should do before it asks for a key: a
 service that answers requests, or a socket that stays open - and then which of
@@ -91,6 +92,10 @@ services that the API resources talk to through interfaces:
   that speaks to the database. Its public surface is DTOs, mapped by hand.
 - **Storage** (`Services/Storage`) - the code itself, on the file system, one
   file per version. Never in the database.
+- **Workspace** (`Services/Workspace`) - the private directory of a lambda,
+  reached from the editor. The same directory the generated `Workspace` class
+  writes to from inside a lambda, under the same limits, so a file put there by
+  hand behaves like one the lambda wrote itself.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached.

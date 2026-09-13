@@ -406,6 +406,16 @@ public sealed class MetaService : IMetaService
         );
     }
 
+    public async ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        return await database.Lambdas.AsNoTracking()
+                             .Where(l => l.PrivateKey == privateKey)
+                             .Select(l => (long?)l.Id)
+                             .FirstOrDefaultAsync(cancellation);
+    }
+
     private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
         => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
