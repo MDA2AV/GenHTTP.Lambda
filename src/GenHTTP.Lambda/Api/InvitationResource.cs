@@ -39,7 +39,7 @@ public sealed class InvitationResource(IMetaService meta)
     {
         var lambda = await meta.CreateAsync(null, template);
 
-        var described = Describe(lambda);
+        var described = LambdaDescription.Of(lambda);
 
         if (WantsJson(request))
         {
@@ -64,16 +64,5 @@ public sealed class InvitationResource(IMetaService meta)
             && !accepted.Contains("text/html", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static LambdaResponse Describe(LambdaInfo lambda) => new(
-        lambda.PublicKey,
-        lambda.PrivateKey,
-        lambda.Tier,
-        lambda.Created,
-        lambda.Modified,
-        lambda.ActiveVersion,
-        lambda.LatestVersion,
-        $"/lambda/{lambda.PublicKey}/",
-        $"/editor/{lambda.PrivateKey}"
-    );
 
 }

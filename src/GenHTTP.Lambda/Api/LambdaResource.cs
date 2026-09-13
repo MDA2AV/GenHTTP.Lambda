@@ -31,7 +31,7 @@ public sealed class LambdaResource(IMetaService meta)
 
         var lambda = await meta.CreateAsync(request.PublicKey, request.Template);
 
-        return new Result<LambdaResponse>(Describe(lambda)).Status(ResponseStatus.Created);
+        return new Result<LambdaResponse>(LambdaDescription.Of(lambda)).Status(ResponseStatus.Created);
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public sealed class LambdaResource(IMetaService meta)
     {
         var lambda = await meta.GetAsync(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-        return Describe(lambda);
+        return LambdaDescription.Of(lambda);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public sealed class LambdaResource(IMetaService meta)
     /// </summary>
     [ResourceMethod(Method.Put, ":privateKey/key")]
     public async ValueTask<LambdaResponse> ChangeKey(string privateKey, ChangeKeyRequest request)
-        => Describe(await meta.ChangeKeyAsync(privateKey, request.PublicKey));
+        => LambdaDescription.Of(await meta.ChangeKeyAsync(privateKey, request.PublicKey));
 
     /// <summary>
     /// Removes the lambda for good.
@@ -145,7 +145,7 @@ public sealed class LambdaResource(IMetaService meta)
     {
         var result = await meta.DeployAsync(privateKey, request?.Version);
 
-        var payload = new DeploymentResponse(result.Success, result.Lambda == null ? null : Describe(result.Lambda), result.Diagnostics);
+        var payload = new DeploymentResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
 
         return new Result<DeploymentResponse>(payload).Status(result.Success ? ResponseStatus.Ok : ResponseStatus.UnprocessableEntity);
     }
@@ -154,26 +154,12 @@ public sealed class LambdaResource(IMetaService meta)
     /// Takes the lambda off the air, keeping its code.
     /// </summary>
     [ResourceMethod(Method.Delete, ":privateKey/deployment")]
-    public async ValueTask<LambdaResponse> Undeploy(string privateKey) => Describe(await meta.UndeployAsync(privateKey));
+    public async ValueTask<LambdaResponse> Undeploy(string privateKey) => LambdaDescription.Of(await meta.UndeployAsync(privateKey));
 
     #endregion
 
     #region Mapping
 
-    private static LambdaResponse Describe(LambdaInfo lambda) => new(
-        lambda.PublicKey,
-        lambda.PrivateKey,
-        lambda.Tier,
-        lambda.Created,
-        lambda.Modified,
-        lambda.ActiveVersion,
-        lambda.LatestVersion,
-        $"/lambda/{lambda.PublicKey}/",
-        $"/editor/{lambda.PrivateKey}",
-        lambda.DeployedAt,
-        lambda.DeployedUntil,
-        lambda.KeptUntil
-    );
 
     #endregion
 
