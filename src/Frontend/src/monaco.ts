@@ -3,6 +3,7 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 // a custom build: the full editor, but only the C# grammar
 import 'monaco-editor/esm/vs/editor/editor.all.js';
 import 'monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution';
+import { language as csharp } from 'monaco-editor/esm/vs/basic-languages/csharp/csharp';
 
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
@@ -12,8 +13,41 @@ self.MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
 
+/**
+ * Replaces the shipped C# grammar with one that tells a type from a member.
+ *
+ * Inline rather than imported from its own module: that module imports this
+ * one back, and a cycle between them leaves whichever loads second holding an
+ * undefined monaco.
+ */
+function registerGrammar(): void {
+  const language = structuredClone(csharp);
+
+  const tokenizer = language.tokenizer as Record<string, unknown[]>;
+
+  tokenizer.root = [
+    // a capitalised word not reached through a dot: a type name
+    [/@?[A-Z]\w*/, { token: 'type', next: '@qualified' }],
+    ...tokenizer.root,
+  ];
+
+  tokenizer.qualified = [
+    // after a dot and followed by a bracket: a method being called
+    [/[a-zA-Z_]\w*(?=\s*\()/, { token: 'member.call' }],
+
+    // after a dot, capitalised: a property or a nested type
+    [/[A-Z]\w*/, { token: 'member' }],
+
+    ...tokenizer.qualified,
+  ];
+
+  monaco.languages.setMonarchTokensProvider('csharp', language);
+}
+
 // syntax colours are the four Google brand hues in the tints that hold their
 // contrast on a dark surface, so the editor belongs to the same palette
+registerGrammar();
+
 monaco.editor.defineTheme('lambda-dark', {
   base: 'vs-dark',
   inherit: true,
@@ -23,6 +57,14 @@ monaco.editor.defineTheme('lambda-dark', {
     { token: 'keyword', foreground: '8ab4f8' },
     { token: 'number', foreground: 'fdd663' },
     { token: 'type', foreground: '78d9ec' },
+    { token: 'member', foreground: 'd7aefb' },
+    { token: 'member.call', foreground: 'fdd663' },
+    { token: 'identifier', foreground: 'e8eaed' },
+    // what the semantic pass adds once the server has looked at the code
+    { token: 'parameter', foreground: 'f6aea9' },
+    { token: 'local', foreground: 'e8eaed' },
+    { token: 'method', foreground: 'fdd663' },
+    { token: 'property', foreground: 'd7aefb' },
   ],
   colors: {
     'editor.background': '#202124',
@@ -52,6 +94,13 @@ monaco.editor.defineTheme('lambda-light', {
     { token: 'keyword', foreground: '1a73e8' },
     { token: 'number', foreground: 'e37400' },
     { token: 'type', foreground: '129eaf' },
+    { token: 'member', foreground: '8430ce' },
+    { token: 'member.call', foreground: 'b06000' },
+    { token: 'identifier', foreground: '202124' },
+    { token: 'parameter', foreground: 'a50e0e' },
+    { token: 'local', foreground: '202124' },
+    { token: 'method', foreground: 'b06000' },
+    { token: 'property', foreground: '8430ce' },
   ],
   colors: {
     'editor.background': '#ffffff',
