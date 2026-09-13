@@ -54,6 +54,64 @@
   }
 }
 
+@layer utilities {
+  /*
+   * A field of colour behind the first screen, moving slowly enough that it is
+   * noticed rather than watched. Two shapes in the two colours this site
+   * already uses - the accent and the mark - at an opacity that leaves every
+   * contrast ratio on the page where it was.
+   */
+  @keyframes drift-a {
+    0%, 100% { transform: translate3d(-8%, -6%, 0) scale(1); }
+    50%      { transform: translate3d(6%, 8%, 0) scale(1.15); }
+  }
+
+  @keyframes drift-b {
+    0%, 100% { transform: translate3d(10%, 4%, 0) scale(1.1); }
+    50%      { transform: translate3d(-6%, -8%, 0) scale(0.95); }
+  }
+
+  .aurora {
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+    filter: blur(90px);
+  }
+
+  /*
+   * Light values are a third of the dark ones. A wash that looks merely pretty
+   * on white took the body text to 3.1:1 against it, and decoration does not
+   * get to outrank reading.
+   */
+  .aurora-a {
+    background: radial-gradient(closest-side, rgb(26 115 232 / 0.14), transparent);
+    animation: drift-a 34s ease-in-out infinite;
+  }
+
+  .aurora-b {
+    background: radial-gradient(closest-side, rgb(170 85 255 / 0.12), transparent);
+    animation: drift-b 46s ease-in-out infinite;
+  }
+
+  .aurora-c {
+    background: radial-gradient(closest-side, rgb(52 168 83 / 0.07), transparent);
+    animation: drift-a 58s ease-in-out infinite reverse;
+  }
+
+  html.dark .aurora-a { background: radial-gradient(closest-side, rgb(66 133 244 / 0.34), transparent); }
+  html.dark .aurora-b { background: radial-gradient(closest-side, rgb(170 85 255 / 0.28), transparent); }
+  html.dark .aurora-c { background: radial-gradient(closest-side, rgb(52 168 83 / 0.14), transparent); }
+
+  /* it is decoration; anyone who asked for stillness gets it */
+  @media (prefers-reduced-motion: reduce) {
+    .aurora-a,
+    .aurora-b,
+    .aurora-c {
+      animation: none;
+    }
+  }
+}
+
 @layer components {
   .surface {
     @apply border border-grey-300 bg-white dark:border-ink-800 dark:bg-ink-900;

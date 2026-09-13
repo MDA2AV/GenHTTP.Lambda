@@ -30,8 +30,17 @@ export function Landing() {
         below it, because a visitor who is already convinced should not have to
         read past the example to find the way in.
       */}
-      <section className="relative flex min-h-[calc(100vh-3.75rem)] flex-col justify-center px-5 pb-24">
-        <div className="mx-auto w-full max-w-5xl">
+      {/*
+        The first screen reaches up behind the bar, so the colour is the page's
+        and not a panel's. Negative margin pulls it under the header the bar
+        would otherwise have pushed it below.
+      */}
+      <section className="relative -mt-[3.75rem] flex min-h-screen flex-col justify-center overflow-hidden px-5 pb-24 pt-[3.75rem]">
+        <div className="aurora aurora-a" aria-hidden="true" />
+        <div className="aurora aurora-b" aria-hidden="true" />
+        <div className="aurora aurora-c" aria-hidden="true" />
+
+        <div className="relative mx-auto w-full max-w-5xl">
           <h1 className="rise max-w-4xl text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
             Host a small web service
             <br />
