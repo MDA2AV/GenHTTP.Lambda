@@ -47,6 +47,8 @@ export function CodeEditor({ value, theme, diagnostics, reveal, onChange, onSave
       wordBasedSuggestions: 'currentDocument',
       suggestSelection: 'first',
       bracketPairColorization: { enabled: true },
+      // the grammar colours every keystroke, the compiler refines it on a pause
+      'semanticHighlighting.enabled': true,
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     });
 

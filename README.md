@@ -123,6 +123,14 @@ services that the API resources talk to through interfaces:
   free tier lambdas a day after their last deployment and removes them after
   30 days without a save.
 
+The editor asks the compiler what the code means rather than guessing from how
+it is spelled. `Services/Deployment/Compilation/SemanticClassifier.cs` says
+what each name is, so a type, a method, a parameter and a local are coloured
+apart, and `CompletionResolver.cs` answers what may be written where the caret
+sits - including what follows a dot, which needs the type of what precedes it
+and therefore needs a compiler. Both bind without emitting; the browser's own
+grammar colours each keystroke in the meantime so nothing waits on the network.
+
 Snippets are compiled against the GenHTTP module surface with its namespaces
 already imported, so no `using` directives are needed. A guard
 (`Compilation/CodeGuard.cs`) rejects code that reaches for the file system,

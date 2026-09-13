@@ -58,6 +58,11 @@ public static class SemanticClassifier
         {
             switch (node)
             {
+                // "var" resolves to whatever was inferred, and colouring it
+                // as that type contradicts every editor people have used
+                case IdentifierNameSyntax { IsVar: true }:
+                    break;
+
                 // a name being used
                 case SimpleNameSyntax name:
                     Add(tokens, wrapped, name.Identifier, Describe(model.GetSymbolInfo(name).Symbol));

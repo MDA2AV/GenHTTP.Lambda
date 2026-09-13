@@ -16,7 +16,7 @@ import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
 import { IconAlert, IconFolder, IconHistory, IconPlay, IconSave, IconSpinner, IconStop, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
-import { registerCompletions } from '../monaco';
+import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 
 type Busy = 'save' | 'check' | 'deploy' | 'undeploy' | null;
@@ -62,6 +62,18 @@ export function Editor({ theme }: Props) {
       })
       .catch(() => undefined);
   }, []);
+
+  // the compiler colours this lambda's code, so the provider needs its key
+  useEffect(() => {
+    if (privateKey === undefined) {
+      return;
+    }
+
+    registerSemantics(async (code) => (await api.semantics(privateKey, code)).tokens);
+
+    registerResolver(async (code, line, column) =>
+      (await api.completions(privateKey, code, line, column)).completions);
+  }, [privateKey]);
 
   useEffect(() => {
     let active = true;

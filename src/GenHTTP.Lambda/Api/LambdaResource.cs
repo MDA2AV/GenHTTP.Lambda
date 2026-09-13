@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Workspace;
 
 using GenHTTP.Modules.Reflection;
@@ -124,6 +125,39 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     }
 
     /// <summary>
+    /// What every name in the given code means, for the colours in the editor.
+    /// </summary>
+    /// <remarks>
+    /// Behind the editor key like the check below it, because it runs the
+    /// compiler: an endpoint that binds arbitrary C# for anyone who asks is a
+    /// way to spend a server.
+    /// </remarks>
+    [ResourceMethod(Method.Post, ":privateKey/semantics")]
+    public async ValueTask<SemanticsResponse> Semantics(string privateKey, CodeRequest request)
+    {
+        await RequireAsync(privateKey);
+
+        var tokens = SemanticClassifier.Classify(request.Code);
+
+        return new SemanticsResponse([.. tokens.Select(t => new SemanticToken(t.Line, t.Column, t.Length, t.Kind))]);
+    }
+
+    /// <summary>
+    /// What could be written where the caret is.
+    /// </summary>
+    /// <param name="privateKey">The lambda being edited</param>
+    /// <param name="request">The code and where in it the caret sits</param>
+    [ResourceMethod(Method.Post, ":privateKey/completions")]
+    public async ValueTask<CompletionsResponse> Completions(string privateKey, CompletionRequest request)
+    {
+        await RequireAsync(privateKey);
+
+        var found = CompletionResolver.Resolve(request.Code, request.Line, request.Column);
+
+        return new CompletionsResponse([.. found.Select(c => new ResolvedCompletionResponse(c.Label, c.Kind, c.Detail, c.Documentation))]);
+    }
+
+    /// <summary>
     /// Compiles the code without storing or deploying it.
     /// </summary>
     [ResourceMethod(Method.Post, ":privateKey/check")]
@@ -226,6 +260,10 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     /// Turns the editor key into the identity the workspace is filed under,
     /// which doubles as the check that the caller owns the lambda.
     /// </summary>
+    private async ValueTask RequireAsync(string privateKey)
+        => _ = await meta.GetIdAsync(privateKey)
+        ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+
     private async ValueTask<long> ResolveIdAsync(string privateKey)
         => await meta.GetIdAsync(privateKey)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");

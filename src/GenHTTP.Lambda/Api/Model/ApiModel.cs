@@ -190,6 +190,32 @@ public sealed record AdminListingResponse(IReadOnlyList<LambdaOverview> Lambdas,
 public sealed record LambdaOverviewResponse(string PublicKey, int? ActiveVersion, DateTime? DeployedUntil);
 
 /// <summary>
+/// One name in a snippet and what the compiler resolved it to, in the
+/// coordinates of the code the user wrote.
+/// </summary>
+public sealed record SemanticToken(int Line, int Column, int Length, string Kind);
+
+/// <summary>
+/// What every name in a snippet means.
+/// </summary>
+public sealed record SemanticsResponse(IReadOnlyList<SemanticToken> Tokens);
+
+/// <summary>
+/// Asks what may be written at a place in a snippet.
+/// </summary>
+public sealed record CompletionRequest(string Code, int Line, int Column);
+
+/// <summary>
+/// One thing the compiler says could be written there.
+/// </summary>
+public sealed record ResolvedCompletionResponse(string Label, string Kind, string Detail, string? Documentation);
+
+/// <summary>
+/// Everything that could be written there.
+/// </summary>
+public sealed record CompletionsResponse(IReadOnlyList<ResolvedCompletionResponse> Completions);
+
+/// <summary>
 /// How an error is reported to the single page application.
 /// </summary>
 public sealed record ErrorResponse(int Status, string Error, string Message);

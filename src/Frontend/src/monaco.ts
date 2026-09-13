@@ -134,6 +134,77 @@ const kinds: Record<string, monaco.languages.CompletionItemKind> = {
 };
 
 let provider: monaco.IDisposable | null = null;
+let resolver: monaco.IDisposable | null = null;
+
+const KINDS_TO_MONACO: Record<string, monaco.languages.CompletionItemKind> = {
+  class: monaco.languages.CompletionItemKind.Class,
+  interface: monaco.languages.CompletionItemKind.Interface,
+  struct: monaco.languages.CompletionItemKind.Struct,
+  enum: monaco.languages.CompletionItemKind.Enum,
+  method: monaco.languages.CompletionItemKind.Method,
+  property: monaco.languages.CompletionItemKind.Property,
+  field: monaco.languages.CompletionItemKind.Field,
+  parameter: monaco.languages.CompletionItemKind.Variable,
+  variable: monaco.languages.CompletionItemKind.Variable,
+  text: monaco.languages.CompletionItemKind.Text,
+};
+
+/**
+ * Asks the compiler what may be written where the caret is.
+ *
+ * The catalogue below offers the same few hundred names wherever you are,
+ * which cannot answer the question people actually have - what comes after
+ * this dot. That needs the type of what precedes it, which needs a compiler,
+ * and there is one on the other end of this call.
+ */
+export function registerResolver(
+  resolve: (code: string, line: number, column: number) => Promise<ResolvedCompletionData[]>,
+): void {
+  resolver?.dispose();
+
+  resolver = monaco.languages.registerCompletionItemProvider('csharp', {
+    triggerCharacters: ['.'],
+
+    provideCompletionItems: async (model, position) => {
+      const word = model.getWordUntilPosition(position);
+
+      const range: monaco.IRange = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      let found: ResolvedCompletionData[];
+
+      try {
+        // Monaco counts from one, the compiler from zero
+        found = await resolve(model.getValue(), position.lineNumber - 1, position.column - 1);
+      } catch {
+        // the catalogue is still registered and answers on its own
+        return { suggestions: [] };
+      }
+
+      return {
+        suggestions: found.map((item) => ({
+          label: item.label,
+          kind: KINDS_TO_MONACO[item.kind] ?? monaco.languages.CompletionItemKind.Text,
+          detail: item.detail,
+          documentation: item.documentation,
+          insertText: item.label,
+          range,
+        })),
+      };
+    },
+  });
+}
+
+export interface ResolvedCompletionData {
+  label: string;
+  kind: string;
+  detail: string;
+  documentation?: string;
+}
 
 /**
  * Teaches the editor the vocabulary of the platform: every type a lambda can
@@ -167,6 +238,73 @@ export function registerCompletions(completions: Completion[]): void {
       };
     },
   });
+}
+
+/**
+ * The kinds the server reports, in the order the encoded stream refers to them
+ * by. Names match the theme rules, so a token is coloured by what it is.
+ */
+const KINDS = ['type', 'interface', 'struct', 'enum', 'method', 'property', 'parameter', 'local', 'namespace', 'enumMember'];
+
+let semantics: monaco.IDisposable | null = null;
+
+/**
+ * Colours the editor from what the compiler resolved rather than from what the
+ * words look like.
+ *
+ * The grammar in the browser runs on every keystroke and guesses; this runs on
+ * a pause and knows. Monaco layers the two, so there is no moment where the
+ * code is uncoloured while the server thinks.
+ */
+export function registerSemantics(classify: (code: string) => Promise<SemanticTokenData[]>): void {
+  semantics?.dispose();
+
+  semantics = monaco.languages.registerDocumentSemanticTokensProvider('csharp', {
+    getLegend: () => ({ tokenTypes: KINDS, tokenModifiers: [] }),
+
+    provideDocumentSemanticTokens: async (model) => {
+      let tokens: SemanticTokenData[];
+
+      try {
+        tokens = await classify(model.getValue());
+      } catch {
+        // the editor keeps whatever the grammar gave it
+        return { data: new Uint32Array() };
+      }
+
+      const data: number[] = [];
+
+      let line = 0;
+      let column = 0;
+
+      for (const token of tokens) {
+        const index = KINDS.indexOf(token.kind);
+
+        if (index < 0) {
+          continue;
+        }
+
+        // the stream is relative: each token is described as an offset from
+        // the one before it, and the column restarts on a new line
+        data.push(token.line - line, token.line === line ? token.column - column : token.column,
+                  token.length, index, 0);
+
+        line = token.line;
+        column = token.column;
+      }
+
+      return { data: new Uint32Array(data) };
+    },
+
+    releaseDocumentSemanticTokens: () => undefined,
+  });
+}
+
+export interface SemanticTokenData {
+  line: number;
+  column: number;
+  length: number;
+  kind: string;
 }
 
 /** Shows the messages of the last build right where they happened. */

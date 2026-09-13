@@ -181,6 +181,20 @@ export interface AdminListing {
   deployed: number;
 }
 
+export interface SemanticToken {
+  line: number;
+  column: number;
+  length: number;
+  kind: string;
+}
+
+export interface ResolvedCompletion {
+  label: string;
+  kind: string;
+  detail: string;
+  documentation?: string;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -286,6 +300,13 @@ export const api = {
 
   save: (privateKey: string, code: string) =>
     request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ code })),
+
+  completions: (privateKey: string, code: string, line: number, column: number) =>
+    request<{ completions: ResolvedCompletion[] }>(`/lambdas/${privateKey}/completions`,
+      send({ code, line, column })),
+
+  semantics: (privateKey: string, code: string) =>
+    request<{ tokens: SemanticToken[] }>(`/lambdas/${privateKey}/semantics`, send({ code })),
 
   check: (privateKey: string, code: string) =>
     request<CompilationResult>(`/lambdas/${privateKey}/check`, send({ code })),
