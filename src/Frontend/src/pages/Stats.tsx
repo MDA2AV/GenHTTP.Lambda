@@ -79,7 +79,8 @@ export function Stats({ dark }: { dark: boolean }) {
           <h1 className="text-2xl font-bold tracking-tight">Server</h1>
           <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
             Running on <strong className="font-medium">{server.engine}</strong>, GenHTTP {server.version},{' '}
-            {server.runtime}. Sampled every {data.intervalSeconds}s.
+            {server.runtime}. Sampled every {data.intervalSeconds}s
+            {latest?.taken ? <> · figures below as of {time(latest.taken)}</> : null}.
           </p>
         </div>
 
