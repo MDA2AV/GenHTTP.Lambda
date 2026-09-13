@@ -20,6 +20,14 @@ export function App() {
     <ToastHost>
       <Routes>
         <Route
+          path="/editor/create"
+          element={
+            <Shell theme={theme} onToggleTheme={toggleTheme}>
+              <Create />
+            </Shell>
+          }
+        />
+        <Route
           path="/editor/:privateKey"
           element={
             <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
@@ -35,7 +43,6 @@ export function App() {
             <Shell theme={theme} onToggleTheme={toggleTheme}>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/editor/create" element={<Create />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
