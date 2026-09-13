@@ -1,9 +1,11 @@
+using System.Net;
 using System.Runtime.InteropServices;
 
 using GenHTTP.Api.Infrastructure;
 
 using GenHTTP.Lambda;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 
 using Microsoft.Extensions.Logging;
 
@@ -27,13 +29,34 @@ var logger = loggers.CreateLogger("GenHTTP.Lambda");
 
 await using var application = Application.Create(options, loggers);
 
-var host = application.Configure(CreateHost(options.Engine)).Port(options.Port);
+var host = application.Configure(CreateHost(options.Engine));
+
+// the certificate is loaded up front so a bad one stops the server here rather
+// than on the first handshake, and it stays alive to serve renewals afterwards
+using var certificates = options.Secure ? new CertificateLoader(options, loggers.CreateLogger<CertificateLoader>()) : null;
+
+if (certificates != null)
+{
+    host.Bind(IPAddress.Any, options.Port);
+    host.Bind(IPAddress.Any, options.SecurePort, certificates);
+}
+else
+{
+    host.Port(options.Port);
+}
 
 await host.StartAsync();
 
 application.StartBackgroundJobs();
 
-logger.LogInformation("GenHTTP Lambda is listening on port {Port} ({Engine}), storing data in '{Directory}'", options.Port, options.Engine, options.DataDirectory);
+if (certificates != null)
+{
+    logger.LogInformation("GenHTTP Lambda is listening on port {Port} and TLS port {SecurePort} ({Engine}), storing data in '{Directory}'", options.Port, options.SecurePort, options.Engine, options.DataDirectory);
+}
+else
+{
+    logger.LogInformation("GenHTTP Lambda is listening on port {Port} ({Engine}), storing data in '{Directory}'", options.Port, options.Engine, options.DataDirectory);
+}
 
 await WaitForShutdownAsync();
 

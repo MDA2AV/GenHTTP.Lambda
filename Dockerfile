@@ -55,10 +55,12 @@ USER lambda
 
 VOLUME ["/data"]
 
-EXPOSE 8080
+EXPOSE 8080 8443
 
-# a Host header is mandatory: GenHTTP answers a request without one with a 400
+# a Host header is mandatory: GenHTTP answers a request without one with a 400.
+# 301 counts as healthy because a configured TLS endpoint makes the server
+# upgrade plain requests instead of answering them.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/${LAMBDA_PORT} && printf "GET /api/v1/system HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -q " 200 "'
+    CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/${LAMBDA_PORT} && printf "GET /api/v1/system HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -1 <&3 | grep -qE " (200|301) "'
 
 ENTRYPOINT ["./GenHTTP.Lambda"]

@@ -120,11 +120,46 @@ Everything is read from the environment on startup, see
 | `LAMBDA_RATE_LIMIT`                 | `240`            | lambda requests per minute and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
+| `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
+| `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
+| `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
+| `LAMBDA_CERTIFICATE_PASSWORD`       | -                | password of the PKCS#12 archive             |
 
 The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so the image defaults to
 `LAMBDA_ENGINE=kestrel`. Set it back to `ioxide` where io_uring is available
 and allowed.
+
+## TLS
+
+The server terminates TLS itself, so nothing has to sit in front of it. Point
+`LAMBDA_CERTIFICATE` at a certificate and set `LAMBDA_TLS_PORT`, and the plain
+port starts answering with a redirect to the secure one.
+
+```bash
+LAMBDA_TLS_PORT=8443
+LAMBDA_CERTIFICATE=/certs/fullchain.pem
+LAMBDA_CERTIFICATE_KEY=/certs/privkey.pem
+```
+
+A PKCS#12 archive works just as well - leave the key empty and set
+`LAMBDA_CERTIFICATE_PASSWORD` instead. The certificate is read again when the
+files change, so a renewal is picked up without a restart.
+
+There is no ACME client built in. With certbot, the private key stays readable
+by root only while the server runs unprivileged, so a deploy hook publishes the
+renewed files where the container can read them:
+
+```bash
+certbot certonly --standalone -d your.host.name
+
+install -m 0644 -o root -g 1001 /etc/letsencrypt/live/your.host.name/fullchain.pem /opt/genhttp-lambda/certs/
+install -m 0640 -o root -g 1001 /etc/letsencrypt/live/your.host.name/privkey.pem   /opt/genhttp-lambda/certs/
+```
+
+Because the server holds port 80, the standalone authenticator needs it back
+for the few seconds a renewal takes - a pre hook stops the container and a post
+hook starts it again.
 
 ## Database
 
