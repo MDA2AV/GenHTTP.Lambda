@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Telemetry;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -36,8 +37,37 @@ public sealed record LambdaResponse(
     int? ActiveVersion,
     int? LatestVersion,
     string PublicPath,
-    string EditorPath
+    string EditorPath,
+    DateTime? DeployedAt,
+    DateTime? DeployedUntil,
+    DateTime KeptUntil
 );
+
+/// <summary>
+/// Describes a lambda for the API.
+/// </summary>
+/// <remarks>
+/// Lives here rather than in the resources that answer with it: there is more
+/// than one of those, and a copy each is a copy to forget when the record
+/// gains a field - which compiles right up until the copy is in another file.
+/// </remarks>
+public static class LambdaDescription
+{
+    public static LambdaResponse Of(LambdaInfo lambda) => new(
+        lambda.PublicKey,
+        lambda.PrivateKey,
+        lambda.Tier,
+        lambda.Created,
+        lambda.Modified,
+        lambda.ActiveVersion,
+        lambda.LatestVersion,
+        $"/lambda/{lambda.PublicKey}/",
+        $"/editor/{lambda.PrivateKey}",
+        lambda.DeployedAt,
+        lambda.DeployedUntil,
+        lambda.KeptUntil
+    );
+}
 
 /// <summary>
 /// One entry of the version history.
@@ -145,6 +175,9 @@ public sealed record FileResponse(string Path, string Content, int Size);
 /// A file to write into the workspace, base64 encoded.
 /// </summary>
 public sealed record FileRequest(string? Content);
+/// What every lambda has been doing since the server came up.
+/// </summary>
+public sealed record ActivityResponse(IReadOnlyList<LambdaActivity> Lambdas, long Requests, long Upgrades);
 
 /// <summary>
 /// How an error is reported to the single page application.

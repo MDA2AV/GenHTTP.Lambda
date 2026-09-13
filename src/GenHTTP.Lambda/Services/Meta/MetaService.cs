@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Storage;
+using GenHTTP.Lambda.Services.Telemetry;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,6 +28,8 @@ public sealed class MetaService : IMetaService
 
     private IDeploymentService Deployments { get; }
 
+    private LambdaTelemetry Activity { get; }
+
     private LambdaOptions Options { get; }
 
     private ILogger Logger { get; }
@@ -36,11 +39,12 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaOptions options, ILogger<MetaService> logger)
+        LambdaTelemetry activity, LambdaOptions options, ILogger<MetaService> logger)
     {
         Databases = databases;
         Storage = storage;
         Deployments = deployments;
+        Activity = activity;
         Options = options;
         Logger = logger;
     }
@@ -295,6 +299,7 @@ public sealed class MetaService : IMetaService
         }
 
         lambda.ActiveVersion = target;
+        lambda.Deployed = DateTime.UtcNow;
         lambda.Modified = DateTime.UtcNow;
 
         await database.SaveChangesAsync(cancellation);
@@ -311,6 +316,7 @@ public sealed class MetaService : IMetaService
         if (lambda.ActiveVersion != null)
         {
             lambda.ActiveVersion = null;
+            lambda.Deployed = null;
 
             await database.SaveChangesAsync(cancellation);
 
@@ -349,16 +355,21 @@ public sealed class MetaService : IMetaService
 
         foreach (var lambda in running)
         {
-            var deployed = await database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version == lambda.ActiveVersion)
-                                         .Select(d => (DateTime?)d.Created)
-                                         .FirstOrDefaultAsync(cancellation);
+            // a lambda deployed before the column existed has no date; it is
+            // treated as deployed now rather than swept on the next pass
+            if (lambda.Deployed is null)
+            {
+                lambda.Deployed = now;
+                continue;
+            }
 
-            if (deployed != null && deployed > stale)
+            if (lambda.Deployed > stale)
             {
                 continue;
             }
 
             lambda.ActiveVersion = null;
+            lambda.Deployed = null;
 
             Deployments.Evict(lambda.Id);
 
@@ -475,6 +486,10 @@ public sealed class MetaService : IMetaService
     {
         Deployments.Evict(lambda.Id);
 
+        // a deleted lambda takes its numbers with it rather than leaving a row
+        // in the activity list that nothing can be looked up from any more
+        Activity.Evict(lambda.Id);
+
         database.Lambdas.Remove(lambda);
 
         await database.SaveChangesAsync(cancellation);
@@ -482,12 +497,18 @@ public sealed class MetaService : IMetaService
         await Storage.DeleteAsync(lambda.Id, cancellation);
     }
 
-    private static async ValueTask<LambdaInfo> DescribeAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
+    private async ValueTask<LambdaInfo> DescribeAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
     {
         var latest = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
                                    .MaxAsync(d => (int?)d.Version, cancellation);
 
-        return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified, lambda.ActiveVersion, latest);
+        // the two deadlines the maintenance job will act on, so the editor can
+        // say when rather than leaving it to be discovered
+        var until = lambda.Deployed + Options.DeploymentLifetime;
+
+        return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
+                              lambda.ActiveVersion, latest, lambda.Deployed, lambda.ActiveVersion != null ? until : null,
+                              lambda.Modified + Options.Retention);
     }
 
     private static async ValueTask<IReadOnlyList<LambdaVersionInfo>> ListVersionsAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation)

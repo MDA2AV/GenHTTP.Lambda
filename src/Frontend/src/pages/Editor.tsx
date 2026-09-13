@@ -11,6 +11,7 @@ import {
 import { CodeEditor } from '../components/CodeEditor';
 import { CopyField } from '../components/CopyField';
 import { Storage } from '../components/Storage';
+import { Lifetime } from '../components/Lifetime';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
 import { IconAlert, IconFolder, IconHistory, IconPlay, IconSave, IconSpinner, IconStop, IconTrash } from '../components/Icons';
@@ -43,13 +44,23 @@ export function Editor({ theme }: Props) {
   const [renaming, setRenaming] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [storage, setStorage] = useState(false);
+  const [terms, setTerms] = useState<string | null>(null);
 
-  const fresh = (location.state as { created?: boolean } | null)?.created === true;
+  // the assistant navigates with router state; a lambda created from a link
+  // elsewhere arrives by redirect, which carries none - so the query says so
+  const invited = new URLSearchParams(location.search).get('created') === '1';
+  const fresh = (location.state as { created?: boolean } | null)?.created === true || invited;
   const dirty = code !== saved;
 
   // completions come from the server, so they always match what compiles
   useEffect(() => {
-    api.platform().then((platform) => registerCompletions(platform.completions)).catch(() => undefined);
+    api
+      .platform()
+      .then((platform) => {
+        registerCompletions(platform.completions);
+        setTerms(platform.terms);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -265,6 +276,7 @@ export function Editor({ theme }: Props) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <Toolbar
+        lambda={lambda}
         live={live}
         activeVersion={lambda.activeVersion}
         dirty={dirty}
@@ -284,6 +296,19 @@ export function Editor({ theme }: Props) {
           <div className="mt-2 max-w-xl">
             <CopyField value={editorUrl} tone="accent" />
           </div>
+
+          {/* someone who arrived from a link elsewhere never saw the terms, so
+              they are shown here rather than assumed */}
+          {invited && (
+            <details className="mt-2.5 max-w-xl text-xs text-slate-600 dark:text-slate-400">
+              <summary className="cursor-pointer select-none">
+                This lambda was created for you. What you agree to by using it
+              </summary>
+              <p className="mt-2 whitespace-pre-line leading-relaxed">
+                {terms ?? 'Loading the terms…'}
+              </p>
+            </details>
+          )}
         </div>
       )}
 
@@ -313,6 +338,14 @@ export function Editor({ theme }: Props) {
 
         <aside className="shrink-0 space-y-6 overflow-y-auto border-t border-slate-200 px-4 py-5 dark:border-ink-800 lg:w-80 lg:border-l lg:border-t-0">
           <CopyField label="Public URL" value={publicUrl} href={live ? publicUrl : undefined} />
+
+          {/* a deployment ends on its own, so it says when rather than letting
+              it be discovered by a visitor finding nothing there */}
+          {live && lambda.deployedUntil && (
+            <p className="-mt-4 text-xs text-slate-500">
+              Online until {new Date(lambda.deployedUntil).toLocaleString()}. Deploying again extends it.
+            </p>
+          )}
 
           <CopyField label="Editor link (keep private)" value={editorUrl} />
 
@@ -425,6 +458,7 @@ export function Editor({ theme }: Props) {
 }
 
 function Toolbar({
+  lambda,
   live,
   activeVersion,
   dirty,
@@ -435,6 +469,7 @@ function Toolbar({
   onUndeploy,
   onFiles,
 }: {
+  lambda: Lambda | null;
   live: boolean;
   activeVersion?: number;
   dirty: boolean;
@@ -459,6 +494,8 @@ function Toolbar({
       </span>
 
       {dirty && <span className="chip bg-amber-500/10 text-amber-600 dark:text-amber-400">unsaved changes</span>}
+
+      {lambda && <Lifetime lambda={lambda} />}
 
       <div className="ml-auto flex items-center gap-2">
         <button type="button" onClick={onFiles} className="btn-ghost" title="Workspace files">

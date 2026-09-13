@@ -13,6 +13,12 @@ export interface Lambda {
   latestVersion?: number;
   publicPath: string;
   editorPath: string;
+  /** When the live version went online; absent while nothing is deployed. */
+  deployedAt?: string;
+  /** When the deployment will be taken offline again. */
+  deployedUntil?: string;
+  /** When an untouched lambda is removed altogether. */
+  keptUntil: string;
 }
 
 export interface VersionInfo {
@@ -138,6 +144,25 @@ export interface WorkspaceListing {
   maxFileSize: number;
 }
 
+export interface LambdaActivity {
+  publicKey: string;
+  requests: number;
+  failed: number;
+  upgrades: number;
+  openSockets: number;
+  averageMillis: number;
+  slowestMillis: number;
+  bytesOut: number;
+  firstSeen?: string;
+  lastSeen?: string;
+}
+
+export interface Activity {
+  lambdas: LambdaActivity[];
+  requests: number;
+  upgrades: number;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -182,6 +207,8 @@ const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) })
 
 export const api = {
   platform: () => request<Platform>('/system'),
+
+  activity: () => request<Activity>('/telemetry/lambdas'),
 
   telemetry: (minutes: number) => request<Telemetry>(`/telemetry?minutes=${minutes}`),
 
