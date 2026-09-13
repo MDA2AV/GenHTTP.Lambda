@@ -50,7 +50,7 @@ export function Landing() {
           </h1>
 
           <p
-            className="rise mx-auto mt-7 max-w-xl text-lg leading-relaxed text-grey-700 dark:text-grey-200"
+            className="rise mx-auto mt-7 max-w-xl text-lg leading-relaxed text-grey-800 dark:text-grey-200"
             style={{ animationDelay: '90ms' }}
           >
             Write a bit of C# in your browser, press deploy, and get a public HTTPS address you can hand

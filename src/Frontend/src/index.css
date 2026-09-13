@@ -91,17 +91,17 @@
 
   /* ellipses rather than circles: they have an orientation, so turning shows */
   .aurora-a {
-    background: radial-gradient(42% 26% at 50% 50%, rgb(26 115 232 / 0.30), transparent 70%);
+    background: radial-gradient(42% 26% at 50% 50%, rgb(26 115 232 / 0.55), transparent 70%);
     animation: turn-a 26s linear infinite;
   }
 
   .aurora-b {
-    background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.26), transparent 70%);
+    background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.48), transparent 70%);
     animation: turn-b 34s linear infinite;
   }
 
   .aurora-c {
-    background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.16), transparent 70%);
+    background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.30), transparent 70%);
     animation: turn-c 44s linear infinite;
   }
 
@@ -134,7 +134,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(58% 42% at 50% 46%, rgb(255 255 255 / 0.78), transparent 72%);
+    background: radial-gradient(54% 38% at 50% 46%, rgb(255 255 255 / 0.62), transparent 72%);
   }
 
   html.dark .aurora-clearing {
@@ -156,25 +156,25 @@
   }
 
   .btn {
-    @apply inline-flex select-none items-center justify-center gap-2 px-4 py-2 text-sm font-medium
-           tracking-[0.01em] transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full px-5 py-2 text-sm
+           font-medium tracking-[0.01em] transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
 
-  /* the filled button carries the only shadow on the page, the way Google
-     separates the one action that commits from the ones that do not */
+  /* the filled button is the only one with an edge of its own: it is the action
+     that commits, and everything else is a word you can press */
   .btn-primary {
     @apply btn bg-accent-500 text-white shadow-sm hover:bg-accent-600 hover:shadow
            disabled:hover:bg-accent-500 dark:bg-accent-400 dark:text-grey-900 dark:hover:bg-accent-400/90;
   }
 
+  /* no outline: the tint that appears under the pointer is the affordance, and
+     a box drawn around every word makes a toolbar look like a form */
   .btn-ghost {
-    @apply btn border border-grey-300 bg-white text-accent-500 hover:bg-accent-500/[0.04]
-           dark:border-ink-800 dark:bg-transparent dark:text-accent-400 dark:hover:bg-accent-400/[0.08];
+    @apply btn text-accent-500 hover:bg-accent-500/10 dark:text-accent-400 dark:hover:bg-accent-400/10;
   }
 
   .btn-danger {
-    @apply btn border border-grey-300 bg-white text-red-500 hover:bg-red-500/[0.04]
-           dark:border-ink-800 dark:bg-transparent dark:text-red-400 dark:hover:bg-red-400/[0.08];
+    @apply btn text-red-500 hover:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-400/10;
   }
 
   .field {

@@ -38,7 +38,7 @@ export function CodeEditor({ value, theme, diagnostics, reveal, onChange, onSave
       minimap: { enabled: false },
       fontSize: 13.5,
       lineHeight: 21,
-      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+      fontFamily: '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
       padding: { top: 14, bottom: 14 },
       scrollBeyondLastLine: false,
       smoothScrolling: true,

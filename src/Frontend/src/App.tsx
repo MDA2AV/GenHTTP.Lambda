@@ -1,5 +1,5 @@
-import { Component, Suspense, lazy, type ReactNode } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Component, Suspense, lazy, useEffect, type ReactNode } from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
 import { IconSpinner } from './components/Icons';
@@ -40,6 +40,8 @@ const Editor = lazy(() =>
 
 export function App() {
   const [theme, toggleTheme] = useTheme();
+
+  useScrollToTop();
 
   return (
     <ToastHost>
@@ -90,6 +92,15 @@ function Loading() {
       Loading the editor…
     </div>
   );
+}
+
+/** Every route starts at the top, the way arriving at a page does. */
+function useScrollToTop(): void {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 }
 
 /**

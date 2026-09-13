@@ -19,8 +19,10 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   darkMode: 'class',
   theme: {
-    // nothing on a Google surface has a rounded corner, and the scale is
-    // flattened rather than removed so existing utilities keep resolving
+    // Panels, cards and inputs are square - that is the flat look the rest of
+    // the page is drawn in. Only "full" survives the flattening, for the things
+    // that should read as something to press rather than as a region: a pill
+    // has no corners to be boxy with.
     borderRadius: {
       none: '0',
       sm: '0',
@@ -30,7 +32,7 @@ export default {
       xl: '0',
       '2xl': '0',
       '3xl': '0',
-      full: '0',
+      full: '9999px',
     },
     extend: {
       colors: {
@@ -78,10 +80,20 @@ export default {
         },
       },
       fontFamily: {
-        // Google sets its interface in Roboto, falling back to whatever the
-        // system uses for the same job
-        sans: ['Roboto', 'Arial', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        mono: ['Roboto Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        /*
+         * The stack the reference site uses: whatever the system draws its own
+         * interface in, with Inter ahead of it for anyone who has it. Nothing
+         * is fetched - a face downloaded before the first word can be read is
+         * a poor trade for a page whose whole claim is speed.
+         */
+        sans: [
+          '-apple-system', 'BlinkMacSystemFont', 'Inter', 'system-ui', 'Segoe UI',
+          'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Open Sans', 'Helvetica Neue', 'sans-serif',
+        ],
+        mono: [
+          'Geist Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco',
+          'Consolas', 'Liberation Mono', 'Courier New', 'monospace',
+        ],
       },
     },
   },
