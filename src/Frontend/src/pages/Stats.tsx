@@ -111,15 +111,27 @@ export function Stats({ dark }: { dark: boolean }) {
 
       <div className="mt-6 space-y-5">
         <Chart
-          title="Memory"
-          hint="A managed heap that keeps climbing across gen 2 collections is what a leak looks like from here. Committed rising while managed stays flat is the heap holding on to pages, not objects."
+          title="Managed heap"
+          hint="The leak chart. A heap that keeps climbing across gen 2 collections is holding references it should have dropped. Committed rising while the live heap stays flat is the collector keeping pages it could hand back, which is not the same thing."
           labels={labels}
           dark={dark}
           format={bytes}
           series={[
-            line('Managed heap', BLUE, (s) => s.managedBytes),
-            line('Working set', ORANGE, (s) => s.workingSetBytes),
-            line('Committed', PURPLE, (s) => s.heapCommittedBytes),
+            line('Live', BLUE, (s) => s.managedBytes),
+            line('Committed', ORANGE, (s) => s.heapCommittedBytes),
+            line('Fragmented', PURPLE, (s) => s.heapFragmentedBytes),
+          ]}
+        />
+
+        <Chart
+          title="Process memory"
+          hint="What the operating system thinks the process is using. Kept apart from the heap above because the two live an order of magnitude apart, and one axis holding both would flatten whichever is smaller."
+          labels={labels}
+          dark={dark}
+          format={bytes}
+          series={[
+            line('Working set', BLUE, (s) => s.workingSetBytes),
+            line('Private', ORANGE, (s) => s.privateBytes),
           ]}
         />
 
@@ -128,6 +140,7 @@ export function Stats({ dark }: { dark: boolean }) {
           hint="Gen 2 runs should be rare and should bring the heap back down. If they run often and the heap does not fall, something is holding references."
           labels={labels}
           dark={dark}
+          shape="step"
           format={(v) => v.toFixed(0)}
           series={[
             { label: 'Gen 0', color: GEN0, values: deltas((s) => s.gen0Collections) },
@@ -141,6 +154,7 @@ export function Stats({ dark }: { dark: boolean }) {
           hint="What the engine actually carried while the memory above was measured."
           labels={labels}
           dark={dark}
+          shape="step"
           format={(v) => v.toFixed(0)}
           series={[line('Answered', BLUE, (s) => s.requests), line('Server errors', RED, (s) => s.failed)]}
         />

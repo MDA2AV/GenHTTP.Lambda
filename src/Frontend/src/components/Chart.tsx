@@ -16,6 +16,12 @@ interface Props {
   format: (value: number) => string;
   dark: boolean;
   height?: number;
+  /**
+   * "line" for a measure that exists at every instant, "step" for one that
+   * counts what happened during an interval - drawing those sloped would
+   * claim the value moved smoothly between two readings, which it did not.
+   */
+  shape?: 'line' | 'step';
 }
 
 const PAD = { top: 12, right: 12, bottom: 22, left: 56 };
@@ -27,7 +33,7 @@ const PAD = { top: 12, right: 12, bottom: 22, left: 56 };
  * numbers do not support. Where two measures do not share a scale they get two
  * charts instead.
  */
-export function Chart({ title, hint, labels, series, format, dark, height = 190 }: Props) {
+export function Chart({ title, hint, labels, series, format, dark, height = 190, shape = 'line' }: Props) {
   const clip = useId();
   const [hover, setHover] = useState<number | null>(null);
   const [table, setTable] = useState(false);
@@ -41,7 +47,10 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190 
   const max = Math.max(1, ...all);
   // the floor stays at zero: a memory curve read against a cropped axis makes
   // every wobble look like a leak
-  const ticks = [0, max / 2, max];
+  const ticks = [...new Set([0, max / 2, max].map((t) => format(t)))].map((label) => ({
+    label,
+    at: [0, max / 2, max].find((t) => format(t) === label) ?? 0,
+  }));
 
   const x = (i: number) => (count < 2 ? plotW / 2 : (i / (count - 1)) * plotW);
   const y = (v: number) => plotH - (v / max) * plotH;
@@ -127,19 +136,19 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190 
 
           <g transform={`translate(${PAD.left},${PAD.top})`}>
             {ticks.map((tick) => (
-              <g key={tick}>
-                <line x1={0} x2={plotW} y1={y(tick)} y2={y(tick)} stroke={grid} strokeWidth={1} />
-                <text x={-8} y={y(tick) + 3.5} textAnchor="end" fontSize={10} fill={ink}>
-                  {format(tick)}
+              <g key={tick.label}>
+                <line x1={0} x2={plotW} y1={y(tick.at)} y2={y(tick.at)} stroke={grid} strokeWidth={1} />
+                <text x={-8} y={y(tick.at) + 3.5} textAnchor="end" fontSize={10} fill={ink}>
+                  {tick.label}
                 </text>
               </g>
             ))}
 
             <g clipPath={`url(#${clip})`}>
               {series.map((s) => (
-                <polyline
+                <path
                   key={s.label}
-                  points={s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+                  d={trace(s.values, x, y, shape)}
                   fill="none"
                   stroke={s.color[dark ? 1 : 0]}
                   strokeWidth={2}
@@ -178,6 +187,25 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190 
       )}
     </figure>
   );
+}
+
+/** Builds the path, holding each value flat across its interval when stepped. */
+function trace(values: number[], x: (i: number) => number, y: (v: number) => number, shape: 'line' | 'step') {
+  if (values.length === 0) {
+    return '';
+  }
+
+  const parts = [`M ${x(0)},${y(values[0])}`];
+
+  for (let i = 1; i < values.length; i++) {
+    if (shape === 'step') {
+      parts.push(`L ${x(i)},${y(values[i - 1])}`);
+    }
+
+    parts.push(`L ${x(i)},${y(values[i])}`);
+  }
+
+  return parts.join(' ');
 }
 
 function Caption({ title, hint }: { title: string; hint?: string }) {
