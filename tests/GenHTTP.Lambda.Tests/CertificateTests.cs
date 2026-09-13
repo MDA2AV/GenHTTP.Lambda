@@ -78,6 +78,21 @@ public sealed class CertificateTests
         Assert.AreEqual("CN=intact.example", loader.Provide(null)?.Subject, "a half written file must not take the endpoint down");
     }
 
+    [TestMethod]
+    public void AChainYieldsTheLeafAndNotItsIssuer()
+    {
+        using var workspace = new TemporaryDirectory();
+
+        var options = WriteChain(workspace, "leaf.example", "issuer.example");
+
+        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+
+        var served = loader.Provide(null);
+
+        Assert.AreEqual("CN=leaf.example", served?.Subject, "the issuer must not be served in place of the leaf");
+        Assert.IsTrue(served!.HasPrivateKey, "the served certificate has to be able to answer a handshake");
+    }
+
     #region Helpers
 
     /// <summary>
@@ -110,6 +125,34 @@ public sealed class CertificateTests
     /// Writes a file and stamps it, so a rewrite within the resolution of the
     /// file system still reads as a change.
     /// </summary>
+    /// <summary>
+    /// Writes a leaf followed by its issuer, the way an ACME client does.
+    /// </summary>
+    private static LambdaOptions WriteChain(TemporaryDirectory workspace, string leaf, string issuer)
+    {
+        using var issuerKey = RSA.Create(2048);
+
+        var issuerRequest = new CertificateRequest($"CN={issuer}", issuerKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+        issuerRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
+
+        using var authority = issuerRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(2));
+
+        using var leafKey = RSA.Create(2048);
+
+        var leafRequest = new CertificateRequest($"CN={leaf}", leafKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+        using var signed = leafRequest.Create(authority, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1), Guid.NewGuid().ToByteArray());
+
+        var certificatePath = Path.Combine(workspace.Path, "fullchain.pem");
+        var keyPath = Path.Combine(workspace.Path, "privkey.pem");
+
+        Touch(certificatePath, signed.ExportCertificatePem() + "\n" + authority.ExportCertificatePem());
+        Touch(keyPath, leafKey.ExportPkcs8PrivateKeyPem());
+
+        return new LambdaOptions { SecurePort = 8443, CertificatePath = certificatePath, CertificateKeyPath = keyPath };
+    }
+
     private static void Touch(string path, string content)
     {
         File.WriteAllText(path, content);

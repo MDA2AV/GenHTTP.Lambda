@@ -37,7 +37,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:11.0
 # io_uring in their default seccomp profile, and a platform that runs code
 # written by strangers is the last place to hand out a weaker one. Set
 # LAMBDA_ENGINE=ioxide where io_uring is available and allowed.
-ENV LAMBDA_PORT=8080 \
+ENV HOME=/home/lambda \
+    LAMBDA_PORT=8080 \
     LAMBDA_DATA_DIRECTORY=/data \
     LAMBDA_ENGINE=kestrel \
     DOTNET_gcServer=1
@@ -47,9 +48,12 @@ WORKDIR /app
 COPY --from=backend /app ./
 
 # the database, the stored code and the workspaces of the lambdas
-RUN useradd --uid 1001 --no-create-home --shell /usr/sbin/nologin lambda \
+# the home directory is not decoration: .NET keeps the certificate store it
+# builds TLS chains from underneath it, and a server that cannot read the
+# issuers of its own certificate cannot send them
+RUN useradd --uid 1001 --home-dir /home/lambda --create-home --shell /usr/sbin/nologin lambda \
  && mkdir -p /data \
- && chown -R lambda:lambda /data /app
+ && chown -R lambda:lambda /data /app /home/lambda
 
 USER lambda
 

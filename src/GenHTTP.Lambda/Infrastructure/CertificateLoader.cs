@@ -111,10 +111,62 @@ public sealed class CertificateLoader : ICertificateProvider, IDisposable
                 throw new FileNotFoundException($"The certificate key '{_options.CertificateKeyPath}' does not exist.", _options.CertificateKeyPath);
             }
 
+            // a PEM chain holds the issuers after the leaf, and reading the file
+            // as a certificate keeps only the first of them
+            var chain = new X509Certificate2Collection();
+
+            chain.ImportFromPemFile(path);
+
+            Publish(chain);
+
             return X509Certificate2.CreateFromPemFile(path, _options.CertificateKeyPath);
         }
 
-        return X509CertificateLoader.LoadPkcs12FromFile(path, _options.CertificatePassword);
+        var archive = X509CertificateLoader.LoadPkcs12CollectionFromFile(path, _options.CertificatePassword);
+
+        Publish(archive);
+
+        return archive.FirstOrDefault(c => c.HasPrivateKey)
+            ?? X509CertificateLoader.LoadPkcs12FromFile(path, _options.CertificatePassword);
+    }
+
+    /// <summary>
+    /// Puts the issuers of the certificate where the runtime will find them.
+    /// </summary>
+    /// <remarks>
+    /// A server has to send the chain, not just its own certificate, or a client
+    /// has nothing to build a path to a root with. .NET assembles that chain from
+    /// the certificates it can find locally, so the issuers have to be in a store
+    /// before the first handshake rather than in a file nobody reads. Kestrel
+    /// hides the omission by fetching the issuer over the network on demand; the
+    /// io_uring engine sends what it was given and the connection fails.
+    /// </remarks>
+    private void Publish(X509Certificate2Collection chain)
+    {
+        if (chain.Count < 2)
+        {
+            return;
+        }
+
+        try
+        {
+            using var store = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser);
+
+            store.Open(OpenFlags.ReadWrite);
+
+            foreach (var issuer in chain.Skip(1).Where(c => !c.HasPrivateKey))
+            {
+                store.Add(issuer);
+            }
+
+            _logger.LogInformation("Published {Count} issuer(s) of the certificate for chain building", chain.Count - 1);
+        }
+        catch (Exception e)
+        {
+            // a read only or missing store is survivable: clients that already
+            // know the issuer still connect, the rest get a verification error
+            _logger.LogWarning(e, "The issuers of the certificate could not be published, clients may fail to verify the chain");
+        }
     }
 
     /// <summary>

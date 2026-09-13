@@ -188,6 +188,13 @@ A PKCS#12 archive works just as well - leave the key empty and set
 `LAMBDA_CERTIFICATE_PASSWORD` instead. The certificate is read again when the
 files change, so a renewal is picked up without a restart.
 
+The issuers in the file are published into the certificate store of the user
+the server runs as, because a client needs the chain and not just the leaf to
+reach a root. Kestrel papers over a missing chain by fetching the issuer over
+the network mid-handshake; the io_uring engine sends what it was given, so a
+server that never published its issuers answers it with a certificate nobody
+can verify.
+
 There is no ACME client built in. With certbot, the private key stays readable
 by root only while the server runs unprivileged, so a deploy hook publishes the
 renewed files where the container can read them:
