@@ -102,12 +102,12 @@ public sealed class SpaResources
             <style>
                 :root { color-scheme: dark; }
                 body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-                       background: #0e1116; color: #e6edf3; font: 15px/1.6 ui-sans-serif, system-ui, sans-serif; }
+                       background: #202124; color: #e8eaed; font: 15px/1.6 Roboto, Arial, sans-serif; }
                 main { max-width: 34rem; padding: 2rem; }
                 h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
-                code { background: #1b212b; border-radius: .3rem; padding: .15rem .4rem; }
-                pre { background: #1b212b; border-radius: .5rem; padding: 1rem; overflow-x: auto; }
-                a { color: #7ab7ff; }
+                code { background: #292a2d; border: 1px solid #3c4043; padding: .15rem .4rem; }
+                pre { background: #292a2d; border: 1px solid #3c4043; padding: 1rem; overflow-x: auto; }
+                a { color: #8ab4f8; }
             </style>
         </head>
         <body>

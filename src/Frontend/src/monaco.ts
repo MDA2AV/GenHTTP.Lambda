@@ -12,39 +12,57 @@ self.MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
 
+// syntax colours are the four Google brand hues in the tints that hold their
+// contrast on a dark surface, so the editor belongs to the same palette
 monaco.editor.defineTheme('lambda-dark', {
   base: 'vs-dark',
   inherit: true,
   rules: [
-    { token: 'comment', foreground: '6b7a90', fontStyle: 'italic' },
-    { token: 'string', foreground: 'b8e4a0' },
+    { token: 'comment', foreground: '9aa0a6', fontStyle: 'italic' },
+    { token: 'string', foreground: '81c995' },
     { token: 'keyword', foreground: '8ab4f8' },
-    { token: 'number', foreground: 'f0b47a' },
-    { token: 'type', foreground: '7fd3c8' },
+    { token: 'number', foreground: 'fdd663' },
+    { token: 'type', foreground: '78d9ec' },
   ],
   colors: {
-    'editor.background': '#10141c',
-    'editor.lineHighlightBackground': '#151a24',
-    'editorLineNumber.foreground': '#3a4658',
-    'editorLineNumber.activeForeground': '#7b8ba3',
-    'editorGutter.background': '#10141c',
-    'editorIndentGuide.background1': '#1b2230',
-    'editorWidget.background': '#151a24',
-    'editorWidget.border': '#273040',
-    'editorSuggestWidget.background': '#151a24',
-    'editorSuggestWidget.border': '#273040',
-    'editorSuggestWidget.selectedBackground': '#273040',
-    'scrollbarSlider.background': '#27304080',
+    'editor.background': '#202124',
+    'editor.foreground': '#e8eaed',
+    'editor.lineHighlightBackground': '#292a2d',
+    'editorLineNumber.foreground': '#5f6368',
+    'editorLineNumber.activeForeground': '#9aa0a6',
+    'editorGutter.background': '#202124',
+    'editorIndentGuide.background1': '#3c4043',
+    'editorWidget.background': '#292a2d',
+    'editorWidget.border': '#3c4043',
+    'editorSuggestWidget.background': '#292a2d',
+    'editorSuggestWidget.border': '#3c4043',
+    'editorSuggestWidget.selectedBackground': '#3c4043',
+    'editorCursor.foreground': '#8ab4f8',
+    'editor.selectionBackground': '#1a73e855',
+    'scrollbarSlider.background': '#3c404380',
   },
 });
 
 monaco.editor.defineTheme('lambda-light', {
   base: 'vs',
   inherit: true,
-  rules: [{ token: 'comment', foreground: '64748b', fontStyle: 'italic' }],
+  rules: [
+    { token: 'comment', foreground: '5f6368', fontStyle: 'italic' },
+    { token: 'string', foreground: '188038' },
+    { token: 'keyword', foreground: '1a73e8' },
+    { token: 'number', foreground: 'e37400' },
+    { token: 'type', foreground: '129eaf' },
+  ],
   colors: {
     'editor.background': '#ffffff',
-    'editor.lineHighlightBackground': '#f6f8fb',
+    'editor.foreground': '#202124',
+    'editor.lineHighlightBackground': '#f8f9fa',
+    'editorLineNumber.foreground': '#bdc1c6',
+    'editorLineNumber.activeForeground': '#5f6368',
+    'editorWidget.border': '#dadce0',
+    'editorSuggestWidget.border': '#dadce0',
+    'editorCursor.foreground': '#1a73e8',
+    'editor.selectionBackground': '#1a73e833',
   },
 });
 
