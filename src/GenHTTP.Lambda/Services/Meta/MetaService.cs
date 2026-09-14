@@ -338,7 +338,9 @@ public sealed class MetaService : IMetaService
 
         var abandoned = now - Options.Retention;
 
-        var expired = await database.Lambdas.Where(l => l.Modified < abandoned)
+        // examples are the installation's own, and being untouched is their
+        // normal state rather than a sign that nobody wants them
+        var expired = await database.Lambdas.Where(l => !l.IsExample && l.Modified < abandoned)
                                     .ToListAsync(cancellation);
 
         foreach (var lambda in expired)
@@ -348,7 +350,7 @@ public sealed class MetaService : IMetaService
 
         var stale = now - Options.DeploymentLifetime;
 
-        var running = await database.Lambdas.Where(l => l.ActiveVersion != null)
+        var running = await database.Lambdas.Where(l => !l.IsExample && l.ActiveVersion != null)
                                     .ToListAsync(cancellation);
 
         var undeployed = 0;

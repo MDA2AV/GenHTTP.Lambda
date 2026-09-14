@@ -94,6 +94,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
+        services.AddSingleton<ExampleSeeder>();
 
         services.AddSingleton<SpaResources>();
 
@@ -162,6 +163,31 @@ public sealed class Application : IAsyncDisposable
     /// Starts the maintenance jobs. Call once the server is up.
     /// </summary>
     public void StartBackgroundJobs() => Scheduler.Start();
+
+    /// <summary>
+    /// Brings the examples online, once the server is already answering.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not awaited by the caller: every example has to be
+    /// compiled, and that is seconds the installation would otherwise spend
+    /// refusing connections. They appear shortly after startup instead.
+    /// </remarks>
+    public void SeedExamples()
+    {
+        var seeder = Services.GetRequiredService<ExampleSeeder>();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await seeder.SeedAsync();
+            }
+            catch (Exception e)
+            {
+                Services.GetRequiredService<ILoggerFactory>().CreateLogger<Application>().LogWarning(e, "The examples could not be prepared");
+            }
+        });
+    }
 
     public async ValueTask DisposeAsync()
     {

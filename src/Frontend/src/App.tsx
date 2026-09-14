@@ -9,6 +9,7 @@ import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
+import { Example } from './pages/Example';
 import { Stats } from './pages/Stats';
 import { Terms } from './pages/Terms';
 import { useTheme } from './theme';
@@ -76,6 +77,7 @@ export function App() {
                 <Route path="/stats" element={<Stats dark={theme === 'dark'} />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/terms" element={<Terms />} />
+                <Route path="/examples/:id" element={<Example />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

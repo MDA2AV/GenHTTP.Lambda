@@ -144,6 +144,31 @@ export interface Telemetry {
   samples: TelemetrySample[];
 }
 
+export interface Example {
+  id: string;
+  name: string;
+  description: string;
+  publicKey: string;
+  path: string;
+  /** What is worth calling underneath it, which is rarely the root. */
+  tryPath: string;
+  /** Reached by opening a socket rather than by asking for a page. */
+  socket: boolean;
+  code: string;
+  /** They are prepared after startup, so one can exist but not yet answer. */
+  live: boolean;
+}
+
+export interface ExampleGroup {
+  id: string;
+  name: string;
+  examples: Example[];
+}
+
+export interface ExampleListing {
+  groups: ExampleGroup[];
+}
+
 export interface WorkspaceEntry {
   path: string;
   size: number;
@@ -295,6 +320,10 @@ export const api = {
 
   telemetry: (minutes: number, token: string) =>
     request<Telemetry>(`/telemetry?minutes=${minutes}`, withToken(token)),
+
+  examples: () => request<ExampleListing>('/examples'),
+
+  example: (id: string) => request<Example>(`/examples/${encodeURIComponent(id)}`),
 
   checkKey: (key: string) => request<Availability>(`/lambdas/keys/${encodeURIComponent(key)}`),
 
