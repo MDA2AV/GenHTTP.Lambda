@@ -20,6 +20,14 @@ public sealed record TelemetrySample(
     long WorkingSetBytes,
     long PrivateBytes,
 
+    // where the resident set actually went, which the runtime cannot say
+    long ResidentBytes,
+    long AnonymousBytes,
+    long JitBytes,
+    long AssemblyBytes,
+    long OtherFileBytes,
+    long SwapBytes,
+
     // the collector
     int Gen0Collections,
     int Gen1Collections,
@@ -37,5 +45,15 @@ public sealed record TelemetrySample(
     long Upgrades,
     int InFlight,
     int OpenSockets,
-    double AverageMillis
+    double AverageMillis,
+
+    // connections, which are not the same thing as requests: a visitor who
+    // reloads a page opens a new one, while a browser holding a tab open
+    // makes many requests down a single one
+    int OpenConnections,
+    long AcceptedConnections,
+    long Connections,
+    int FileDescriptors,
+    int SocketDescriptors,
+    int RingDescriptors
 );

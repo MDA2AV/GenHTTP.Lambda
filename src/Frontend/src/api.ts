@@ -97,6 +97,12 @@ export interface TelemetrySample {
   heapFragmentedBytes: number;
   workingSetBytes: number;
   privateBytes: number;
+  residentBytes: number;
+  anonymousBytes: number;
+  jitBytes: number;
+  assemblyBytes: number;
+  otherFileBytes: number;
+  swapBytes: number;
   gen0Collections: number;
   gen1Collections: number;
   gen2Collections: number;
@@ -110,6 +116,12 @@ export interface TelemetrySample {
   inFlight: number;
   openSockets: number;
   averageMillis: number;
+  openConnections: number;
+  acceptedConnections: number;
+  connections: number;
+  fileDescriptors: number;
+  socketDescriptors: number;
+  ringDescriptors: number;
 }
 
 export interface Telemetry {

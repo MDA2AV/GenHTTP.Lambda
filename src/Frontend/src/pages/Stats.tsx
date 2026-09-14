@@ -16,6 +16,13 @@ const BLUE: [string, string] = ['#1a73e8', '#4285f4'];
 const ORANGE: [string, string] = ['#e8710a', '#d56e0c'];
 const PURPLE: [string, string] = ['#9334e6', '#a142f4'];
 const RED: [string, string] = ['#c5221f', '#ea4335'];
+// the four things a resident set is made of; checked as a set against both
+// surfaces, including for colour blindness, rather than picked to look nice
+const ANON: [string, string] = ['#1a73e8', '#4285f4'];
+const CODE: [string, string] = ['#e8710a', '#d56e0c'];
+const META: [string, string] = ['#9334e6', '#a142f4'];
+const FILES: [string, string] = ['#188038', '#34a853'];
+
 // gen 0 to gen 2 is an order, so it gets one hue in three steps
 const GEN0: [string, string] = ['#8ab4f8', '#aecbfa'];
 const GEN1: [string, string] = ['#4285f4', '#669df6'];
@@ -113,6 +120,24 @@ export function Stats({ dark }: { dark: boolean }) {
         <Tile label="Lambdas" value={`${platform.deployed} / ${platform.lambdas}`} />
       </div>
 
+      {/* absent rather than zeroed where the kernel does not offer them */}
+      {latest.residentBytes > 0 && (
+        <div className="mt-px grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
+          <Tile label="Connections open" value={count(latest.openConnections)} />
+          <Tile
+            label="Connections accepted"
+            value={count(latest.acceptedConnections)}
+            note="Every inbound connection since the container started, counted by the kernel. Unlike the graph below, this one includes the health check's own connections over loopback."
+          />
+          <Tile label="File descriptors" value={count(latest.fileDescriptors)} />
+          <Tile
+            label="io_uring rings"
+            value={count(latest.ringDescriptors)}
+            note="A fixed handful for the lifetime of the process. If this climbs with traffic, the engine is opening a ring per connection and not closing it."
+          />
+        </div>
+      )}
+
       <div className="mt-6 space-y-5">
         <Chart
           title="Managed heap"
@@ -138,6 +163,52 @@ export function Stats({ dark }: { dark: boolean }) {
             line('Private', ORANGE, (s) => s.privateBytes),
           ]}
         />
+
+        {latest.residentBytes > 0 && (
+          <Chart
+            title="What the memory is"
+            hint="The resident set, split by what is actually holding it. The managed heap sits inside the blue band and is usually a small share of it - the rest of that band is the engine's buffers and the runtime's own allocations. The other three are not objects at all, so no collection will hand them back."
+            labels={labels}
+            dark={dark}
+            shape="stacked"
+            format={bytes}
+            series={[
+              line('Anonymous (heap, stacks, buffers)', ANON, (s) => s.anonymousBytes),
+              line('Compiled code', CODE, (s) => s.jitBytes),
+              line('Assemblies', META, (s) => s.assemblyBytes),
+              line('Other mapped files', FILES, (s) => s.otherFileBytes),
+            ]}
+          />
+        )}
+
+        {latest.residentBytes > 0 && (
+          <Chart
+            title="Connections open"
+            hint="Connections, not requests. A browser holding a page open keeps one and sends many requests down it, while a visitor who reloads opens a new one each time - which is the difference that decides how much the server holds. Loopback is left out, so the health check does not put a floor under this."
+            labels={labels}
+            dark={dark}
+            format={(v) => v.toFixed(0)}
+            series={[
+              line('Open', BLUE, (s) => s.openConnections),
+              line('Upgraded', PURPLE, (s) => s.openSockets),
+            ]}
+          />
+        )}
+
+        {latest.residentBytes > 0 && (
+          <Chart
+            title="Connections and requests per interval"
+            hint="Both counted the same way over the same interval, so the gap between them is how much reuse the clients are getting. Requests far above connections means keep alive is working; the two lines together means every request is paying for a new connection."
+            labels={labels}
+            dark={dark}
+            shape="step"
+            format={(v) => v.toFixed(0)}
+            series={[
+              line('Connections accepted', ORANGE, (s) => s.connections),
+              line('Requests answered', BLUE, (s) => s.requests),
+            ]}
+          />
+        )}
 
         <Chart
           title="Collections per interval"
@@ -248,9 +319,9 @@ export function Stats({ dark }: { dark: boolean }) {
   );
 }
 
-function Tile({ label, value, tone }: { label: string; value: string; tone?: 'bad' }) {
+function Tile({ label, value, tone, note }: { label: string; value: string; tone?: 'bad'; note?: string }) {
   return (
-    <div className="bg-white px-4 py-3.5 dark:bg-ink-900">
+    <div className="bg-white px-4 py-3.5 dark:bg-ink-900" title={note}>
       <div className="text-xs text-slate-500">{label}</div>
       <div className={`mt-1 text-xl font-semibold tabular-nums ${tone === 'bad' ? 'text-red-500' : ''}`}>{value}</div>
     </div>

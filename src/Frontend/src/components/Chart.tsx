@@ -20,8 +20,10 @@ interface Props {
    * "line" for a measure that exists at every instant, "step" for one that
    * counts what happened during an interval - drawing those sloped would
    * claim the value moved smoothly between two readings, which it did not.
+   * "stacked" for parts of a whole, where the outline is the total and each
+   * band is a share of it.
    */
-  shape?: 'line' | 'step';
+  shape?: 'line' | 'step' | 'stacked';
 }
 
 const PAD = { top: 12, right: 12, bottom: 22, left: 56 };
@@ -43,8 +45,14 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
   const plotW = width - PAD.left - PAD.right;
   const plotH = height - PAD.top - PAD.bottom;
 
-  const all = series.flatMap((s) => s.values);
-  const max = Math.max(1, ...all);
+  // stacked bands are read against the total, so the axis has to reach the top
+  // of the pile rather than the tallest single band
+  const stacks = series.map((_, si) =>
+    labels.map((_, i) => series.slice(0, si + 1).reduce((sum, s) => sum + (s.values[i] ?? 0), 0)));
+
+  const max = shape === 'stacked'
+    ? Math.max(1, ...(stacks[stacks.length - 1] ?? [0]))
+    : Math.max(1, ...series.flatMap((s) => s.values));
   // the floor stays at zero: a memory curve read against a cropped axis makes
   // every wobble look like a leak
   const ticks = [...new Set([0, max / 2, max].map((t) => format(t)))].map((label) => ({
@@ -57,6 +65,8 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
 
   const ink = dark ? '#9aa0a6' : '#5f6368';
   const grid = dark ? '#3c4043' : '#e8eaed';
+  // the page behind the chart, used to hold the bands apart
+  const surface = dark ? '#292a2d' : '#ffffff';
 
   if (count === 0) {
     return (
@@ -145,30 +155,50 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
             ))}
 
             <g clipPath={`url(#${clip})`}>
-              {series.map((s) => (
-                <path
-                  key={s.label}
-                  d={trace(s.values, x, y, shape)}
-                  fill="none"
-                  stroke={s.color[dark ? 1 : 0]}
-                  strokeWidth={2}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-              ))}
+              {shape === 'stacked'
+                ? series.map((s, si) => (
+                    <g key={s.label}>
+                      <path
+                        d={band(stacks[si], si > 0 ? stacks[si - 1] : null, x, y, plotH)}
+                        fill={s.color[dark ? 1 : 0]}
+                        stroke="none"
+                      />
+                      {/* a gap in the page colour, so neighbouring bands read as
+                          two things rather than one gradient */}
+                      {si > 0 && (
+                        <path
+                          d={trace(stacks[si - 1], x, y, 'line')}
+                          fill="none"
+                          stroke={surface}
+                          strokeWidth={2}
+                        />
+                      )}
+                    </g>
+                  ))
+                : series.map((s) => (
+                    <path
+                      key={s.label}
+                      d={trace(s.values, x, y, shape)}
+                      fill="none"
+                      stroke={s.color[dark ? 1 : 0]}
+                      strokeWidth={2}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  ))}
             </g>
 
             {hover !== null && (
               <g>
                 <line x1={x(hover)} x2={x(hover)} y1={0} y2={plotH} stroke={ink} strokeWidth={1} strokeDasharray="3 3" />
-                {series.map((s) => (
+                {series.map((s, si) => (
                   <circle
                     key={s.label}
                     cx={x(hover)}
-                    cy={y(s.values[hover] ?? 0)}
+                    cy={y(shape === 'stacked' ? stacks[si][hover] ?? 0 : s.values[hover] ?? 0)}
                     r={4}
                     fill={s.color[dark ? 1 : 0]}
-                    stroke={dark ? '#202124' : '#ffffff'}
+                    stroke={surface}
                     strokeWidth={2}
                   />
                 ))}
@@ -190,7 +220,7 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
 }
 
 /** Builds the path, holding each value flat across its interval when stepped. */
-function trace(values: number[], x: (i: number) => number, y: (v: number) => number, shape: 'line' | 'step') {
+function trace(values: number[], x: (i: number) => number, y: (v: number) => number, shape: 'line' | 'step' | 'stacked') {
   if (values.length === 0) {
     return '';
   }
@@ -206,6 +236,29 @@ function trace(values: number[], x: (i: number) => number, y: (v: number) => num
   }
 
   return parts.join(' ');
+}
+
+/**
+ * One band of a stack: along its own top, then back along the one below it.
+ */
+function band(
+  top: number[],
+  below: number[] | null,
+  x: (i: number) => number,
+  y: (v: number) => number,
+  floor: number,
+) {
+  if (top.length === 0) {
+    return '';
+  }
+
+  const forward = top.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x(i)},${y(v)}`);
+
+  const back = below
+    ? below.map((v, i) => `L ${x(i)},${y(v)}`).reverse()
+    : [`L ${x(top.length - 1)},${floor}`, `L ${x(0)},${floor}`];
+
+  return [...forward, ...back, 'Z'].join(' ');
 }
 
 function Caption({ title, hint }: { title: string; hint?: string }) {

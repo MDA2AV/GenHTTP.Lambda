@@ -36,6 +36,7 @@ public sealed class TelemetryService : ITelemetryService
     private long _lastRequests;
     private long _lastFailed;
     private long _lastUpgrades;
+    private long _lastAccepted;
     private long _lastElapsedTicks;
     private TimeSpan _lastCpu;
     private DateTime _lastTaken;
@@ -122,6 +123,12 @@ public sealed class TelemetryService : ITelemetryService
 
         _process.Refresh();
 
+        var memory = ProcessProbe.Memory();
+
+        var connections = ProcessProbe.Connections();
+
+        var descriptors = ProcessProbe.Descriptors();
+
         var cpu = _process.TotalProcessorTime;
 
         var requests = Interlocked.Read(ref _requests);
@@ -147,6 +154,12 @@ public sealed class TelemetryService : ITelemetryService
                 info.FragmentedBytes,
                 _process.WorkingSet64,
                 _process.PrivateMemorySize64,
+                memory.Resident,
+                memory.Anonymous,
+                memory.Jit,
+                memory.Assemblies,
+                memory.OtherFiles,
+                memory.Swap,
                 GC.CollectionCount(0),
                 GC.CollectionCount(1),
                 GC.CollectionCount(2),
@@ -159,9 +172,19 @@ public sealed class TelemetryService : ITelemetryService
                 upgrades - _lastUpgrades,
                 Volatile.Read(ref _inFlight),
                 Volatile.Read(ref _openSockets),
-                handled > 0 ? Math.Round(TimeSpan.FromTicks(ticks - _lastElapsedTicks).TotalMilliseconds / handled, 2) : 0
+                handled > 0 ? Math.Round(TimeSpan.FromTicks(ticks - _lastElapsedTicks).TotalMilliseconds / handled, 2) : 0,
+                connections.Established,
+                connections.Accepted,
+                // the first sample has nothing to subtract from, and reporting
+                // every connection since boot as though they arrived in one
+                // interval would put a spike at the left of every graph
+                _lastAccepted > 0 ? Math.Max(0, connections.Accepted - _lastAccepted) : 0,
+                descriptors.Total,
+                descriptors.Sockets,
+                descriptors.Rings
             );
 
+            _lastAccepted = connections.Accepted;
             _lastRequests = requests;
             _lastFailed = failed;
             _lastUpgrades = upgrades;
