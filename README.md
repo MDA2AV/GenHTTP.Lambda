@@ -166,6 +166,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
 | `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
 | `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel, and closes the figures   |
+| `LAMBDA_MCP_ORIGINS`                | -                | hosts a browser may use `/mcp` from         |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -268,6 +269,32 @@ install -m 0640 -o root -g 1001 /etc/letsencrypt/live/your.host.name/privkey.pem
 Because the server holds port 80, the standalone authenticator needs it back
 for the few seconds a renewal takes - a pre hook stops the container and a post
 hook starts it again.
+
+## For agents
+
+There is a Model Context Protocol endpoint at `/mcp`, so an agent can build
+something here and put it online without a person driving the editor. It is
+JSON-RPC over a single path, taking POST; a GET is declined with 405, because
+this server answers rather than streams.
+
+```
+https://genhttp.dev/mcp
+```
+
+The tools are the shape of the job: `create_lambda`, `write_code`, `check_code`,
+`deploy`, `read_lambda`, and `list_examples` / `read_example` for reading
+something that already works. `platform_guide` is the one to call first - it
+says what a snippet has to return, what is imported, what is refused, and the
+handful of things that catch people out.
+
+Nothing is created until `acceptTerms` is true, and the editor key that comes
+back is the only way into what was made. There is no session and nothing is
+remembered between calls: everything a call needs is in its arguments.
+
+`LAMBDA_MCP_ORIGINS` lists the hosts a browser may drive the endpoint from. An
+agent speaking HTTP sends no `Origin` and is never checked against it; the list
+is there because a browser does, and a page on another site could otherwise aim
+somebody's browser at this endpoint.
 
 ## Administration
 

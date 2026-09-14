@@ -127,6 +127,16 @@ public sealed record LambdaOptions
     public string? CertificatePassword { get; init; }
 
     /// <summary>
+    /// Hosts a browser may drive the MCP endpoint from.
+    /// </summary>
+    /// <remarks>
+    /// Only browsers send an Origin, and only a browser can be made to send a
+    /// request somebody else wrote. An agent speaking HTTP sends none and is
+    /// never checked against this.
+    /// </remarks>
+    public IReadOnlyList<string> McpOrigins { get; init; } = [];
+
+    /// <summary>
     /// A directory holding further certificates, one subdirectory per name,
     /// each with a <c>fullchain.pem</c> and a <c>privkey.pem</c> beside it.
     /// </summary>
@@ -194,7 +204,9 @@ public sealed record LambdaOptions
             CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),
             CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD"),
-            CertificateDirectory = ReadOptional("LAMBDA_CERTIFICATE_DIRECTORY")
+            CertificateDirectory = ReadOptional("LAMBDA_CERTIFICATE_DIRECTORY"),
+            McpOrigins = (ReadOptional("LAMBDA_MCP_ORIGINS") ?? "")
+                         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         };
     }
 

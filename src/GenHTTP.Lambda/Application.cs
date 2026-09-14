@@ -2,6 +2,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 
 using GenHTTP.Lambda.Api;
+using GenHTTP.Lambda.Api.Mcp;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Infrastructure;
@@ -97,6 +98,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         services.AddSingleton<ExampleSeeder>();
+        services.AddSingleton<McpTools>();
 
         services.AddSingleton<SpaResources>();
 
@@ -131,6 +133,8 @@ public sealed class Application : IAsyncDisposable
 
         var layout = Layout.Create()
                            .Add("api", ApiLayout.Create())
+                           // one path, for agents rather than for browsers
+                           .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
                            .Add("lambda", lambdas);
 
         // Ahead of the application, so a miss here is a 404 rather than the

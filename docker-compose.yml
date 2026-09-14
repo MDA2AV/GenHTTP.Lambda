@@ -26,6 +26,9 @@ services:
       # further certificates, a subdirectory per name, for the other hostnames
       # the server answers to - the one above answers for anything not named
       LAMBDA_CERTIFICATE_DIRECTORY: /certs
+      # hosts a browser may drive the agent endpoint from. An agent speaking
+      # HTTP sends no origin and is never checked against this.
+      LAMBDA_MCP_ORIGINS: genhttp.dev,www.genhttp.dev
     sysctls:
       # lets the unprivileged user bind 80 and 443 inside its own network
       # namespace, so the server keeps running as uid 1001
