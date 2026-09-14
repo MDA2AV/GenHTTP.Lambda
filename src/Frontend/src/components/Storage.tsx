@@ -7,11 +7,13 @@ import { useToast } from './Toast';
 /**
  * Everything a lambda has on disk, which is two directories and not one.
  *
- * What it **ships** was written here and is part of a version: it is saved and
- * deployed with the code, travels with a clone, and every deploy replaces the
- * lot. What it has in its **workspace** it put there itself at runtime, or
- * somebody uploaded; it outlives every deployment and a deploy never touches
- * it.
+ * One is **part of the code**: saved when the code is saved, deployed when it
+ * is deployed, rolled back when a version is, and copied when the lambda is
+ * cloned. The other is a **folder on the server**: it changes the moment
+ * something is uploaded or the lambda writes to it, and no deploy touches it.
+ *
+ * "Shipped" was the word used here for the first of those, and somebody had
+ * to ask what it meant, which is the answer to whether it was a good word.
  *
  * That difference is why they cannot simply be one directory. Merge them and a
  * deploy either wipes whatever the lambda has written since, or nothing can
@@ -294,13 +296,14 @@ export function Storage({
             <p className="mt-0.5 text-xs text-slate-500">
               {side === 'shipped' ? (
                 <>
-                  Part of the code: saved and deployed with it, and served with{' '}
-                  <code className="font-mono">Assets.App()</code>.
+                  These go out when you press Deploy, and come back if you roll a version back.
+                  Serve them with <code className="font-mono">Assets.App()</code>.
                 </>
               ) : (
                 <>
-                  A private directory that outlives every deploy. Your lambda reads and writes it
-                  through <code className="font-mono">Workspace</code>, and can serve it with{' '}
+                  A folder on the server. It changes the moment you upload, and a deploy never
+                  touches it. Your lambda reads and writes it through{' '}
+                  <code className="font-mono">Workspace</code>, and can serve it with{' '}
                   <code className="font-mono">Workspace.App()</code>.
                 </>
               )}
@@ -317,6 +320,9 @@ export function Storage({
             <button
               key={half}
               type="button"
+              title={half === 'shipped'
+                ? 'Part of your code: saved and deployed with it'
+                : 'A folder on the server: changes as soon as you upload, and a deploy never touches it'}
               onClick={() => show(half)}
               className={`px-5 py-2 text-xs ${
                 side === half
@@ -324,7 +330,7 @@ export function Storage({
                   : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
-              {half === 'shipped' ? 'Shipped with the code' : 'Workspace'}
+              {half === 'shipped' ? 'Saved with your code' : 'Workspace'}
               <span className="ml-1.5 text-slate-400">
                 {half === 'shipped' ? shipped.length : (listing?.files.length ?? 0)}
               </span>
@@ -471,7 +477,7 @@ export function Storage({
           {full && <span className="text-xs text-amber-600 dark:text-amber-400">The workspace is full.</span>}
 
           {side === 'shipped' && (
-            <span className="ml-auto text-xs text-slate-500">Changes here are saved with the code.</span>
+            <span className="ml-auto text-xs text-slate-500">Press Save to keep these.</span>
           )}
         </div>
       </div>

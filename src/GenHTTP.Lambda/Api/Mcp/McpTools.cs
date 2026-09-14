@@ -388,7 +388,7 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
                 "Workspace.Root - where it is on disk"
             },
             note = "Nothing else on the file system is reachable, and there is no Append.",
-            orTheOtherOne = "A front end can live here instead of being shipped with the code, and Workspace.App() serves it the same way Assets.App() serves the shipped one. Which to use is a real choice: shipped is versioned, travels with a clone, and is replaced wholesale by every deploy, so it suits a site that is part of the program. The workspace outlives deploys and is never touched by one, so it suits a site that is uploaded and changed without redeploying. What must not happen is both, because then it is not clear which one answers."
+            orTheOtherOne = "A front end can live here instead of being part of the code, and Workspace.App() serves it the same way Assets.App() serves the other. The difference is when each one changes: a file that is part of the code is saved and deployed with it, rolled back with a version and copied by a clone, and every deploy replaces all of them. The workspace changes the moment something is written or uploaded, and no deploy touches it. So a site that is part of the program belongs in the first, and one that is uploaded and changed without redeploying belongs here. Doing both is the one thing to avoid, because then it is not clear which answers."
         },
         servingAPage = new
         {
