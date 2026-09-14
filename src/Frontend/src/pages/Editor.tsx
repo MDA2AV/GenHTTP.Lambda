@@ -354,9 +354,10 @@ export function Editor({ theme }: Props) {
       {storage && (
         <Storage
           privateKey={privateKey!}
-          shipped={files.filter((file) => !file.name.endsWith('.cs'))}
+          shipped={files}
           onShip={(added) => setFiles((all) => [...all, ...added])}
           onUnship={(name) => setFiles((all) => all.filter((file) => file.name !== name))}
+          onOpen={(name) => { setActive(name); setStorage(false); }}
           onClose={() => setStorage(false)}
         />
       )}

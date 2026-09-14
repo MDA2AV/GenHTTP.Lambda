@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, api, type LambdaFile, type WorkspaceListing } from '../api';
 import { IconFolder, IconPlus, IconSpinner, IconTrash } from './Icons';
 import { useToast } from './Toast';
+import { ENTRY } from './FileTabs';
 
 /**
  * Everything a lambda has on disk, which is two directories and not one.
@@ -11,6 +12,12 @@ import { useToast } from './Toast';
  * is deployed, rolled back when a version is, and copied when the lambda is
  * cloned. The other is a **folder on the server**: it changes the moment
  * something is uploaded or the lambda writes to it, and no deploy touches it.
+ *
+ * The first half means every file of the version, the C# included. It used to
+ * leave the .cs files out, from when it was called "shipped" and meant the
+ * things served rather than compiled - which made a tab called "saved with
+ * your code" show everything except the code. They are all saved together;
+ * that is the whole of what the tab is saying.
  *
  * "Shipped" was the word used here for the first of those, and somebody had
  * to ask what it meant, which is the answer to whether it was a good word.
@@ -30,12 +37,14 @@ export function Storage({
   shipped,
   onShip,
   onUnship,
+  onOpen,
   onClose,
 }: {
   privateKey: string;
   shipped: LambdaFile[];
   onShip: (added: LambdaFile[]) => void;
   onUnship: (name: string) => void;
+  onOpen: (name: string) => void;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -206,6 +215,11 @@ export function Storage({
 
   async function download(path: string) {
     if (side === 'shipped') {
+      // a file of the version opens where it is edited, unless it is bytes
+      if (!binary(path)) {
+        onOpen(path);
+      }
+
       return;
     }
 
@@ -245,7 +259,14 @@ export function Storage({
     }
 
     if (side === 'shipped') {
-      for (const name of isFolder ? names.filter((one) => one.startsWith(`${path}/`)) : [path]) {
+      const going = isFolder ? names.filter((one) => one.startsWith(`${path}/`)) : [path];
+
+      if (going.includes(ENTRY)) {
+        toast(`${ENTRY} is the snippet that runs. It cannot be removed.`, 'error');
+        return;
+      }
+
+      for (const name of going) {
         onUnship(name);
       }
 
@@ -296,8 +317,9 @@ export function Storage({
             <p className="mt-0.5 text-xs text-slate-500">
               {side === 'shipped' ? (
                 <>
-                  These go out when you press Deploy, and come back if you roll a version back.
-                  Serve them with <code className="font-mono">Assets.App()</code>.
+                  Every file of your lambda, the C# included. They go out when you press Deploy and
+                  come back if you roll a version back. The ones that are not C# are served as they
+                  are — <code className="font-mono">Assets.App()</code> serves them.
                 </>
               ) : (
                 <>
@@ -321,7 +343,7 @@ export function Storage({
               key={half}
               type="button"
               title={half === 'shipped'
-                ? 'Part of your code: saved and deployed with it'
+                ? 'Every file of your lambda: saved and deployed together'
                 : 'A folder on the server: changes as soon as you upload, and a deploy never touches it'}
               onClick={() => show(half)}
               className={`px-5 py-2 text-xs ${
@@ -418,7 +440,7 @@ export function Storage({
                     type="button"
                     onClick={() => download(row.path)}
                     className="min-w-0 flex-1 text-left"
-                    title={side === 'workspace' ? 'Download' : row.path}
+                    title={side === 'workspace' ? 'Download' : binary(row.path) ? row.path : `Open ${row.path}`}
                   >
                     <span className="block truncate font-mono text-sm">{row.name}</span>
                     <span className="text-xs text-slate-500">
@@ -429,15 +451,17 @@ export function Storage({
 
                   {busy === row.path && <IconSpinner className="h-4 w-4 text-slate-400" />}
 
-                  <button
-                    type="button"
-                    onClick={() => remove(row.path, false)}
-                    disabled={busy !== null}
-                    className="btn-danger !px-2 !py-1"
-                    aria-label={`Delete ${row.path}`}
-                  >
-                    <IconTrash className="h-4 w-4" />
-                  </button>
+                  {!(side === 'shipped' && row.path === ENTRY) && (
+                    <button
+                      type="button"
+                      onClick={() => remove(row.path, false)}
+                      disabled={busy !== null}
+                      className="btn-danger !px-2 !py-1"
+                      aria-label={`Delete ${row.path}`}
+                    >
+                      <IconTrash className="h-4 w-4" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
