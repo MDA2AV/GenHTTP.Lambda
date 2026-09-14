@@ -466,6 +466,77 @@ internal static class SourceBuilder
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree()
                 => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
 
+            /// <summary>One folder of this workspace as a resource tree.</summary>
+            public global::GenHTTP.Api.Content.IO.IResourceTree Tree(string folder)
+                => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(Folder(folder)).Build();
+
+            /// <summary>
+            /// A single page application over this workspace.
+            /// </summary>
+            /// <remarks>
+            /// The same thing Assets.App does, over the other directory. Which
+            /// one a front end belongs in is a real choice rather than a
+            /// detail: shipped with the code it is versioned, travels with a
+            /// clone and is replaced wholesale on every deploy; here it is
+            /// uploaded once, outlives every deployment, and a deploy never
+            /// touches it. A site that is part of the program wants the first.
+            /// A site somebody uploads and changes without redeploying wants
+            /// this one.
+            /// </remarks>
+            public global::GenHTTP.Modules.SinglePageApplications.Provider.SinglePageBuilder App()
+                => global::GenHTTP.Modules.SinglePageApplications.SinglePageApplication.From(Tree()).ServerSideRouting();
+
+            /// <summary>A single page application over one folder of this workspace.</summary>
+            public global::GenHTTP.Modules.SinglePageApplications.Provider.SinglePageBuilder App(string folder)
+                => global::GenHTTP.Modules.SinglePageApplications.SinglePageApplication.From(Tree(folder)).ServerSideRouting();
+
+            /// <summary>A handler that serves one folder of this workspace.</summary>
+            public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files(string folder)
+                => global::GenHTTP.Modules.Files.Assets.From(Tree(folder));
+
+            /// <summary>Makes a folder, so files can be written into it.</summary>
+            public void CreateFolder(string name)
+                => global::System.IO.Directory.CreateDirectory(Resolve(name));
+
+            /// <summary>The folders of this workspace, relative to its root.</summary>
+            public string[] Folders()
+            {
+                if (!global::System.IO.Directory.Exists(_root))
+                {
+                    return new string[0];
+                }
+
+                var found = global::System.IO.Directory.GetDirectories(_root, "*", global::System.IO.SearchOption.AllDirectories);
+
+                var result = new string[found.Length];
+
+                for (var i = 0; i < found.Length; i++)
+                {
+                    result[i] = found[i].Substring(_root.Length).Replace('\\', '/');
+                }
+
+                return result;
+            }
+
+            private string Folder(string name)
+            {
+                var resolved = Resolve(name);
+
+                if (!global::System.IO.Directory.Exists(resolved))
+                {
+                    var had = Folders();
+
+                    var known = had.Length > 0
+                              ? "The folders this workspace holds are: " + string.Join(", ", had) + "."
+                              : "This workspace holds no folders yet.";
+
+                    throw new global::System.InvalidOperationException(
+                        "There is no folder called '" + name + "' in the workspace. " + known);
+                }
+
+                return resolved;
+            }
+
             /// <summary>Creates a handler that serves the files of this workspace.</summary>
             public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files()
                 => global::GenHTTP.Modules.Files.Assets.From(Tree());

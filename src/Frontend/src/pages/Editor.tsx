@@ -356,6 +356,7 @@ export function Editor({ theme }: Props) {
           privateKey={privateKey!}
           shipped={files.filter((file) => !file.name.endsWith('.cs'))}
           onShip={(added) => setFiles((all) => [...all, ...added])}
+          onUnship={(name) => setFiles((all) => all.filter((file) => file.name !== name))}
           onClose={() => setStorage(false)}
         />
       )}

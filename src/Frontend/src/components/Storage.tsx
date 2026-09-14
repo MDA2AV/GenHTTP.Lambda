@@ -1,36 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError, api, type LambdaFile, type WorkspaceEntry, type WorkspaceListing } from '../api';
-import { IconSpinner, IconTrash } from './Icons';
+import { ApiError, api, type LambdaFile, type WorkspaceListing } from '../api';
+import { IconFolder, IconPlus, IconSpinner, IconTrash } from './Icons';
 import { useToast } from './Toast';
 
 /**
- * What a lambda has on disk, which is two different things.
+ * Everything a lambda has on disk, which is two directories and not one.
  *
- * What it ships was written in the editor and is served as it is; what it has
- * written it did itself, at runtime, through Workspace. They were easy to
- * confuse when only one of them was shown here and the button that opened it
- * said "Files" - somebody who had just put a page in a folder came looking
- * for it and found somebody else's directory.
+ * What it **ships** was written here and is part of a version: it is saved and
+ * deployed with the code, travels with a clone, and every deploy replaces the
+ * lot. What it has in its **workspace** it put there itself at runtime, or
+ * somebody uploaded; it outlives every deployment and a deploy never touches
+ * it.
  *
- * The shipped half is listed rather than managed: it is edited in the tabs
- * above, and offering a second place to change it would only raise the
- * question of which one wins.
+ * That difference is why they cannot simply be one directory. Merge them and a
+ * deploy either wipes whatever the lambda has written since, or nothing can
+ * ever be removed from what it ships. Both are real front ends to serve from -
+ * Assets.App() for the first, Workspace.App() for the second - so the choice
+ * is which one a particular file belongs in, not which one is correct.
  *
- * The private directory of a lambda, as a list you can add to and take from.
- *
- * Content travels base64 encoded, which is what lets the same panel carry an
- * image, an archive or a text file without knowing which it has.
+ * They behave identically here on purpose. One trail back to the top, one
+ * upload that lands where you are, one button that makes a folder. Learning
+ * the panel once is the whole point of it looking like this.
  */
 export function Storage({
   privateKey,
   shipped,
   onShip,
+  onUnship,
   onClose,
 }: {
   privateKey: string;
   shipped: LambdaFile[];
   onShip: (added: LambdaFile[]) => void;
+  onUnship: (name: string) => void;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -38,20 +41,14 @@ export function Storage({
   const [listing, setListing] = useState<WorkspaceListing | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  /** Which folder is open. Empty is the top of the workspace. */
+  /** Which half is showing, and which of its folders is open. */
+  const [side, setSide] = useState<'shipped' | 'workspace'>('shipped');
   const [where, setWhere] = useState('');
 
   const [naming, setNaming] = useState(false);
   const [folder, setFolder] = useState('');
 
-  const [makingShipped, setMakingShipped] = useState(false);
-  const [shippedFolder, setShippedFolder] = useState('');
-
   const picker = useRef<HTMLInputElement>(null);
-
-  /** The file chooser for shipped assets, and the folder it is aimed at. */
-  const shipping = useRef<HTMLInputElement>(null);
-  const [into, setInto] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -65,18 +62,92 @@ export function Storage({
     load();
   }, [load]);
 
+  function show(half: 'shipped' | 'workspace') {
+    setSide(half);
+    setWhere('');
+    setNaming(false);
+    setFolder('');
+  }
+
+  /*
+   * What is in the folder that is open. Names are held whole - "site/app.css"
+   * - and cut down to what is inside the current one, so a file deeper than
+   * here shows as the folder that holds it rather than as itself.
+   */
+  const inside = (path: string) => {
+    const rest = where ? (path.startsWith(`${where}/`) ? path.slice(where.length + 1) : null) : path;
+
+    return rest === null || rest.includes('/') ? null : rest;
+  };
+
+  const names = side === 'shipped' ? shipped.map((file) => file.name) : (listing?.files ?? []).map((f) => f.path);
+
+  /*
+   * Shipped folders are worked out from the names; workspace folders are
+   * listed by the server. The difference is not an inconsistency: nothing but
+   * a file can be shipped, so a shipped folder with nothing in it cannot
+   * exist, while an empty workspace folder is a thing somebody can make.
+   */
+  const folders =
+    side === 'shipped'
+      ? [...new Set(names.flatMap((name) => {
+          const parts = name.split('/');
+          return parts.slice(0, -1).map((_, depth) => parts.slice(0, depth + 1).join('/'));
+        }))]
+      : (listing?.folders ?? []);
+
+  const hereFolders = folders.map((path) => ({ path, name: inside(path) }))
+                             .filter((row): row is { path: string; name: string } => row.name !== null);
+
+  const hereFiles = names.map((path) => ({ path, name: inside(path) }))
+                         .filter((row): row is { path: string; name: string } => row.name !== null);
+
+  const crumbs = where ? where.split('/') : [];
+
+  const sizeOf = (path: string) => {
+    if (side === 'shipped') {
+      const file = shipped.find((one) => one.name === path);
+
+      return file ? (file.encoding === 'base64' ? (file.code.length * 3) / 4 : file.code.length) : 0;
+    }
+
+    return listing?.files.find((one) => one.path === path)?.size ?? 0;
+  };
+
+  const binary = (path: string) =>
+    side === 'shipped' && shipped.find((one) => one.name === path)?.encoding === 'base64';
+
   async function upload(files: FileList | null) {
     if (files === null || files.length === 0) {
       return;
     }
 
+    const added: LambdaFile[] = [];
+
     for (const file of Array.from(files)) {
-      setBusy(file.name);
+      const name = where ? `${where}/${file.name}` : file.name;
+
+      setBusy(name);
 
       try {
-        await api.writeFile(privateKey, where ? `${where}/${file.name}` : file.name, await encode(file));
+        if (side === 'shipped') {
+          if (shipped.some((one) => one.name.toLowerCase() === name.toLowerCase())) {
+            toast(`${name} is already there. Remove it first.`, 'error');
+            continue;
+          }
+
+          // anything that is not text goes as base64, which is the only way an
+          // image or a font gets in at all - the tabs are a text editor
+          const bytes = new Uint8Array(await file.arrayBuffer());
+
+          added.push(readable(bytes)
+            ? { name, code: new TextDecoder().decode(bytes) }
+            : { name, code: encodeBytes(bytes), encoding: 'base64' });
+        } else {
+          await api.writeFile(privateKey, name, await encode(file));
+        }
       } catch (error) {
-        toast(error instanceof ApiError ? error.message : `${file.name} could not be uploaded.`, 'error');
+        toast(error instanceof ApiError ? error.message : `${name} could not be uploaded.`, 'error');
       }
     }
 
@@ -86,48 +157,11 @@ export function Storage({
       picker.current.value = '';
     }
 
-    await load();
-  }
-
-  /**
-   * Takes uploads into the files the lambda ships, rather than the workspace.
-   *
-   * Anything that is not plainly text goes as base64, which is the only way
-   * an image or a font can get in here at all: the tabs are a text editor and
-   * a PNG cannot be typed into one. The files are handed back to the page
-   * rather than written - they belong to a version, and are saved with it.
-   */
-  async function ship(files: FileList | null, folder: string) {
-    if (files === null || files.length === 0) {
-      return;
-    }
-
-    const added: LambdaFile[] = [];
-
-    for (const file of Array.from(files)) {
-      const name = folder ? `${folder}/${file.name}` : file.name;
-
-      if (shipped.some((one) => one.name.toLowerCase() === name.toLowerCase())) {
-        toast(`${name} is already shipped. Remove it first.`, 'error');
-        continue;
-      }
-
-      const bytes = new Uint8Array(await file.arrayBuffer());
-
-      if (readable(bytes)) {
-        added.push({ name, code: new TextDecoder().decode(bytes) });
-      } else {
-        added.push({ name, code: encodeBytes(bytes), encoding: 'base64' });
-      }
-    }
-
     if (added.length > 0) {
       onShip(added);
       toast(`${added.length} file${added.length === 1 ? '' : 's'} added. Save to keep them.`, 'success');
-    }
-
-    if (shipping.current) {
-      shipping.current.value = '';
+    } else if (side === 'workspace') {
+      await load();
     }
   }
 
@@ -140,13 +174,27 @@ export function Storage({
       return;
     }
 
+    const path = where ? `${where}/${wanted}` : wanted;
+
+    setFolder('');
+    setNaming(false);
+
+    /*
+     * A shipped folder is not made, it is gone to: there is nothing to create
+     * until something is put in it, so the panel simply opens it and the next
+     * upload lands there. In the workspace it is a real directory and the
+     * server is asked for one.
+     */
+    if (side === 'shipped') {
+      setWhere(path);
+      return;
+    }
+
     setBusy('folder');
 
     try {
-      setListing(await api.createFolder(privateKey, where ? `${where}/${wanted}` : wanted));
-      setWhere(where ? `${where}/${wanted}` : wanted);
-      setFolder('');
-      setNaming(false);
+      setListing(await api.createFolder(privateKey, path));
+      setWhere(path);
     } catch (error) {
       toast(error instanceof ApiError ? error.message : 'The folder could not be made.', 'error');
     } finally {
@@ -154,20 +202,23 @@ export function Storage({
     }
   }
 
-  async function download(entry: WorkspaceEntry) {
-    setBusy(entry.path);
+  async function download(path: string) {
+    if (side === 'shipped') {
+      return;
+    }
+
+    setBusy(path);
 
     try {
-      const file = await api.readFile(privateKey, entry.path);
+      const file = await api.readFile(privateKey, path);
 
       // the browser is handed the bytes rather than a link to them: the file
       // belongs to whoever wrote it and has no business being rendered here
-      const blob = new Blob([decode(file.content)]);
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(new Blob([decode(file.content)]));
       const link = document.createElement('a');
 
       link.href = url;
-      link.download = entry.path.split('/').pop() ?? entry.path;
+      link.download = path.split('/').pop() ?? path;
       link.click();
 
       URL.revokeObjectURL(url);
@@ -178,86 +229,51 @@ export function Storage({
     }
   }
 
-  async function remove(entry: WorkspaceEntry) {
-    const isFolder = (listing?.folders ?? []).includes(entry.path);
-
+  async function remove(path: string, isFolder: boolean) {
     if (isFolder) {
-      const held = (listing?.files ?? []).filter((file) => file.path.startsWith(`${entry.path}/`)).length;
+      const held = names.filter((name) => name.startsWith(`${path}/`)).length;
 
       const warning = held === 0
-        ? `Remove the folder ${entry.path}?`
-        : `Remove ${entry.path} and the ${held} file${held === 1 ? '' : 's'} in it?`;
+        ? `Remove the folder ${path}?`
+        : `Remove ${path} and the ${held} file${held === 1 ? '' : 's'} in it?`;
 
       if (!window.confirm(warning)) {
         return;
       }
     }
 
-    setBusy(entry.path);
+    if (side === 'shipped') {
+      for (const name of isFolder ? names.filter((one) => one.startsWith(`${path}/`)) : [path]) {
+        onUnship(name);
+      }
+
+      if (isFolder && (where === path || where.startsWith(`${path}/`))) {
+        setWhere('');
+      }
+
+      return;
+    }
+
+    setBusy(path);
 
     try {
-      await api.deleteFile(privateKey, entry.path);
+      await api.deleteFile(privateKey, path);
 
-      if (where === entry.path || where.startsWith(`${entry.path}/`)) {
-        setWhere(entry.path.includes('/') ? entry.path.slice(0, entry.path.lastIndexOf('/')) : '');
+      if (where === path || where.startsWith(`${path}/`)) {
+        setWhere(path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '');
       }
 
       await load();
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The file could not be removed.', 'error');
+      toast(error instanceof ApiError ? error.message : 'It could not be removed.', 'error');
     } finally {
       setBusy(null);
     }
   }
 
-  const full = listing !== null && listing.files.length >= listing.maxFiles;
+  const full = side === 'workspace' && listing !== null && listing.files.length >= listing.maxFiles;
 
-  /*
-   * What is in the folder that is open, rather than everything at once. A
-   * workspace with a few hundred files in it was one flat list of paths, which
-   * is readable right up until somebody puts things in folders and then is
-   * not.
-   */
-  const inside = (path: string) => {
-    const rest = where ? (path.startsWith(`${where}/`) ? path.slice(where.length + 1) : null) : path;
-
-    return rest === null || rest.includes('/') ? null : rest;
-  };
-
-  const here = (listing?.files ?? [])
-    .map((entry) => ({ entry, name: inside(entry.path) }))
-    .filter((row): row is { entry: WorkspaceEntry; name: string } => row.name !== null);
-
-  const folders = (listing?.folders ?? [])
-    .map((path) => ({ path, name: inside(path) }))
-    .filter((row): row is { path: string; name: string } => row.name !== null);
-
-  const crumbs = where ? where.split('/') : [];
-
-  /*
-   * The shipped files by the folder they are in. A folder here is only ever
-   * the prefix of a name - there is no such thing as an empty one, because
-   * nothing but a file can be shipped - so it is inferred rather than listed,
-   * which is the opposite of the workspace and correct for the same reason.
-   */
-  const groups = (() => {
-    const by = new Map<string, LambdaFile[]>();
-
-    for (const file of shipped) {
-      const cut = file.name.lastIndexOf('/');
-      const folder = cut < 0 ? '' : file.name.slice(0, cut);
-
-      (by.get(folder) ?? by.set(folder, []).get(folder)!).push(file);
-    }
-
-    if (!by.has('')) {
-      by.set('', []);
-    }
-
-    return [...by.entries()]
-      .sort(([a], [b]) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)))
-      .map(([folder, files]) => ({ folder, files }));
-  })();
+  const empty = hereFiles.length === 0 && hereFolders.length === 0;
 
   return (
     <div
@@ -270,13 +286,24 @@ export function Storage({
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Workspace"
+        aria-label="Storage"
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-ink-800">
           <div>
-            <h2 className="text-base font-semibold">Workspace</h2>
+            <h2 className="text-base font-semibold">Storage</h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              The private directory your lambda reads and writes through <code className="font-mono">Workspace</code>.
+              {side === 'shipped' ? (
+                <>
+                  Part of the code: saved and deployed with it, and served with{' '}
+                  <code className="font-mono">Assets.App()</code>.
+                </>
+              ) : (
+                <>
+                  A private directory that outlives every deploy. Your lambda reads and writes it
+                  through <code className="font-mono">Workspace</code>, and can serve it with{' '}
+                  <code className="font-mono">Workspace.App()</code>.
+                </>
+              )}
             </p>
           </div>
 
@@ -285,249 +312,168 @@ export function Storage({
           </button>
         </div>
 
-        <div className="border-b border-slate-200 px-5 py-3 dark:border-ink-800">
-          <div className="text-xs font-medium text-slate-600 dark:text-slate-300">Shipped with the code</div>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Served exactly as written, never compiled. Text is edited in the tabs above; anything
-            that is not - an image, a font - can only be uploaded, which is what these buttons are
-            for. A folder is served by naming it: <code className="font-mono">Assets.App("site")</code>.
-          </p>
-
-          <input
-            ref={shipping}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(event) => ship(event.target.files, into)}
-          />
-
-          {groups.map((group) => (
-            <div key={group.folder} className="mt-2.5">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-mono text-xs text-slate-500">
-                  {group.folder === '' ? 'at the root' : `${group.folder}/`}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => { setInto(group.folder); shipping.current?.click(); }}
-                  className="text-xs text-accent-500 hover:underline"
-                >
-                  Upload here
-                </button>
-              </div>
-
-              <ul className="mt-1 space-y-0.5">
-                {group.files.map((file) => (
-                  <li key={file.name} className="flex items-baseline justify-between gap-3 font-mono text-xs">
-                    <span className="truncate text-slate-700 dark:text-slate-300">
-                      {file.name.slice(group.folder === '' ? 0 : group.folder.length + 1)}
-                      {file.encoding === 'base64' && <span className="ml-1.5 text-slate-400">binary</span>}
-                    </span>
-                    <span className="shrink-0 text-slate-400">
-                      {bytes(file.encoding === 'base64' ? (file.code.length * 3) / 4 : file.code.length)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-
-          {makingShipped ? (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                const wanted = shippedFolder.trim().replace(/^\/+|\/+$/g, '');
-                if (wanted) { setInto(wanted); shipping.current?.click(); }
-                setShippedFolder('');
-                setMakingShipped(false);
-              }}
-              className="mt-2"
-            >
-              <input
-                autoFocus
-                value={shippedFolder}
-                onChange={(event) => setShippedFolder(event.target.value)}
-                onBlur={() => { setMakingShipped(false); setShippedFolder(''); }}
-                placeholder="new folder, then pick files"
-                className="w-56 border border-slate-300 bg-white px-2 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
-              />
-            </form>
-          ) : (
+        <div className="flex items-stretch border-b border-slate-200 dark:border-ink-800">
+          {(['shipped', 'workspace'] as const).map((half) => (
             <button
+              key={half}
               type="button"
-              onClick={() => setMakingShipped(true)}
-              className="mt-2 text-xs text-accent-500 hover:underline"
+              onClick={() => show(half)}
+              className={`px-5 py-2 text-xs ${
+                side === half
+                  ? 'border-b-2 border-accent-500 font-medium dark:border-accent-400'
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
             >
-              Upload into a new folder
+              {half === 'shipped' ? 'Shipped with the code' : 'Workspace'}
+              <span className="ml-1.5 text-slate-400">
+                {half === 'shipped' ? shipped.length : (listing?.files.length ?? 0)}
+              </span>
             </button>
+          ))}
+        </div>
+
+        {side === 'workspace' && listing !== null && (
+          <div className="border-b border-slate-200 px-5 py-3 dark:border-ink-800">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>
+                {listing.files.length} of {listing.maxFiles} files · {bytes(listing.usedBytes)} of{' '}
+                {bytes(listing.quotaBytes)}
+              </span>
+              <span>at most {bytes(listing.maxFileSize)} per file</span>
+            </div>
+
+            <div className="mt-1.5 h-1.5 w-full bg-slate-200 dark:bg-ink-800">
+              <div
+                className="h-full bg-accent-500 dark:bg-accent-400"
+                style={{ width: `${Math.min(100, (listing.usedBytes / listing.quotaBytes) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 px-5 py-2 text-xs dark:border-ink-800">
+          <button
+            type="button"
+            onClick={() => setWhere('')}
+            className={where === '' ? 'font-medium' : 'text-accent-500 hover:underline'}
+          >
+            {side === 'shipped' ? 'shipped' : 'workspace'}
+          </button>
+
+          {crumbs.map((crumb, depth) => (
+            <span key={crumb + depth} className="flex items-center gap-1">
+              <span className="text-slate-400">/</span>
+              <button
+                type="button"
+                onClick={() => setWhere(crumbs.slice(0, depth + 1).join('/'))}
+                className={
+                  depth === crumbs.length - 1 ? 'font-mono font-medium' : 'font-mono text-accent-500 hover:underline'
+                }
+              >
+                {crumb}
+              </button>
+            </span>
+          ))}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {side === 'workspace' && listing === null ? (
+            <div className="flex items-center gap-2 px-5 py-10 text-sm text-slate-500">
+              <IconSpinner /> Reading the workspace…
+            </div>
+          ) : empty ? (
+            <p className="px-5 py-10 text-center text-sm text-slate-500">
+              {where === '' ? 'Nothing here yet. Upload something.' : `${where} is empty. Upload into it.`}
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-200 dark:divide-ink-800">
+              {hereFolders.map((row) => (
+                <li key={row.path} className="flex items-center gap-3 px-5 py-2.5">
+                  <button type="button" onClick={() => setWhere(row.path)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    <IconFolder className="h-4 w-4 shrink-0 text-slate-400" />
+                    <span className="block truncate font-mono text-sm text-accent-500">{row.name}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => remove(row.path, true)}
+                    disabled={busy !== null}
+                    className="btn-danger !px-2 !py-1"
+                    aria-label={`Delete ${row.path}`}
+                  >
+                    <IconTrash className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+
+              {hereFiles.map((row) => (
+                <li key={row.path} className="flex items-center gap-3 px-5 py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => download(row.path)}
+                    className="min-w-0 flex-1 text-left"
+                    title={side === 'workspace' ? 'Download' : row.path}
+                  >
+                    <span className="block truncate font-mono text-sm">{row.name}</span>
+                    <span className="text-xs text-slate-500">
+                      {bytes(sizeOf(row.path))}
+                      {binary(row.path) && ' · binary'}
+                    </span>
+                  </button>
+
+                  {busy === row.path && <IconSpinner className="h-4 w-4 text-slate-400" />}
+
+                  <button
+                    type="button"
+                    onClick={() => remove(row.path, false)}
+                    disabled={busy !== null}
+                    className="btn-danger !px-2 !py-1"
+                    aria-label={`Delete ${row.path}`}
+                  >
+                    <IconTrash className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
-        {listing === null ? (
-          <div className="flex items-center gap-2 px-5 py-10 text-sm text-slate-500">
-            <IconSpinner /> Reading the workspace…
-          </div>
-        ) : (
-          <>
-            <div className="border-b border-slate-200 px-5 py-3 dark:border-ink-800">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>
-                  {listing.files.length} of {listing.maxFiles} files · {bytes(listing.usedBytes)} of{' '}
-                  {bytes(listing.quotaBytes)}
-                </span>
-                <span>at most {bytes(listing.maxFileSize)} per file</span>
-              </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-5 py-3 dark:border-ink-800">
+          <input ref={picker} type="file" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
 
-              <div className="mt-1.5 h-1.5 w-full bg-slate-200 dark:bg-ink-800">
-                <div
-                  className="h-full bg-accent-500 dark:bg-accent-400"
-                  style={{ width: `${Math.min(100, (listing.usedBytes / listing.quotaBytes) * 100)}%` }}
-                />
-              </div>
-            </div>
+          <button
+            type="button"
+            onClick={() => picker.current?.click()}
+            disabled={busy !== null || full}
+            className="btn-ghost"
+          >
+            {busy !== null ? <IconSpinner /> : <IconPlus />}
+            {where === '' ? 'Upload here' : `Upload into ${where}`}
+          </button>
 
-            <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 px-5 py-2 text-xs dark:border-ink-800">
-              <button
-                type="button"
-                onClick={() => setWhere('')}
-                className={where === '' ? 'font-medium' : 'text-accent-500 hover:underline'}
-              >
-                workspace
-              </button>
-
-              {crumbs.map((crumb, depth) => (
-                <span key={crumb + depth} className="flex items-center gap-1">
-                  <span className="text-slate-400">/</span>
-                  <button
-                    type="button"
-                    onClick={() => setWhere(crumbs.slice(0, depth + 1).join('/'))}
-                    className={
-                      depth === crumbs.length - 1 ? 'font-mono font-medium' : 'font-mono text-accent-500 hover:underline'
-                    }
-                  >
-                    {crumb}
-                  </button>
-                </span>
-              ))}
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {here.length === 0 && folders.length === 0 ? (
-                <p className="px-5 py-10 text-center text-sm text-slate-500">
-                  {where === '' ? (
-                    <>
-                      Nothing here yet. Your lambda can write files with{' '}
-                      <code className="font-mono">Workspace.WriteText(…)</code>, or you can upload some.
-                    </>
-                  ) : (
-                    <>
-                      This folder is empty. Upload into it, or write to{' '}
-                      <code className="font-mono">{where}/…</code> from your lambda.
-                    </>
-                  )}
-                </p>
-              ) : (
-                <ul className="divide-y divide-slate-200 dark:divide-ink-800">
-                  {folders.map((row) => (
-                    <li key={row.path} className="flex items-center gap-3 px-5 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setWhere(row.path)}
-                        className="min-w-0 flex-1 text-left"
-                      >
-                        <span className="block truncate font-mono text-sm text-accent-500">{row.name}/</span>
-                        <span className="text-xs text-slate-500">folder</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => remove({ path: row.path, size: 0, modified: new Date().toISOString() })}
-                        disabled={busy !== null}
-                        className="btn-danger !px-2 !py-1"
-                        aria-label={`Delete ${row.path}`}
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-
-                  {here.map(({ entry }) => (
-                    <li key={entry.path} className="flex items-center gap-3 px-5 py-2.5">
-                      <button
-                        type="button"
-                        onClick={() => download(entry)}
-                        className="min-w-0 flex-1 text-left"
-                        title="Download"
-                      >
-                        <span className="block truncate font-mono text-sm">{inside(entry.path)}</span>
-                        <span className="text-xs text-slate-500">
-                          {bytes(entry.size)} · {new Date(entry.modified).toLocaleString()}
-                        </span>
-                      </button>
-
-                      {busy === entry.path && <IconSpinner className="h-4 w-4 text-slate-400" />}
-
-                      <button
-                        type="button"
-                        onClick={() => remove(entry)}
-                        disabled={busy !== null}
-                        className="btn-danger !px-2 !py-1"
-                        aria-label={`Delete ${entry.path}`}
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 border-t border-slate-200 px-5 py-3 dark:border-ink-800">
+          {naming ? (
+            <form onSubmit={makeFolder}>
               <input
-                ref={picker}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(event) => upload(event.target.files)}
+                autoFocus
+                value={folder}
+                onChange={(event) => setFolder(event.target.value)}
+                onBlur={() => { setNaming(false); setFolder(''); }}
+                placeholder="folder name"
+                className="w-40 border border-slate-300 bg-white px-2 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
               />
+            </form>
+          ) : (
+            <button type="button" onClick={() => setNaming(true)} disabled={busy !== null} className="btn-ghost">
+              New folder
+            </button>
+          )}
 
-              <button
-                type="button"
-                onClick={() => picker.current?.click()}
-                disabled={busy !== null || full}
-                className="btn-ghost"
-              >
-                {busy !== null ? <IconSpinner /> : null}
-                {where === '' ? 'Upload files' : `Upload into ${where}`}
-              </button>
+          {full && <span className="text-xs text-amber-600 dark:text-amber-400">The workspace is full.</span>}
 
-              {naming ? (
-                <form onSubmit={makeFolder} className="flex items-center gap-2">
-                  <input
-                    autoFocus
-                    value={folder}
-                    onChange={(event) => setFolder(event.target.value)}
-                    onBlur={() => { setNaming(false); setFolder(''); }}
-                    placeholder="folder name"
-                    className="w-40 border border-slate-300 bg-white px-2 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
-                  />
-                </form>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setNaming(true)}
-                  disabled={busy !== null}
-                  className="btn-ghost"
-                >
-                  New folder
-                </button>
-              )}
-
-              {full && <span className="text-xs text-amber-600 dark:text-amber-400">The workspace is full.</span>}
-            </div>
-          </>
-        )}
+          {side === 'shipped' && (
+            <span className="ml-auto text-xs text-slate-500">Changes here are saved with the code.</span>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -536,8 +482,8 @@ export function Storage({
 /**
  * Whether bytes are text somebody could reasonably edit in the tabs.
  *
- * A NUL byte settles it - no text file has one - and so does anything that is
- * not valid UTF-8. Guessing from the extension would be wrong for exactly the
+ * A NUL settles it - no text file has one - and so does anything that is not
+ * valid UTF-8. Guessing from the extension would be wrong for exactly the
  * files it matters for: a .txt full of bytes and a .dat full of JSON.
  */
 function readable(bytes: Uint8Array): boolean {
@@ -553,7 +499,7 @@ function readable(bytes: Uint8Array): boolean {
   }
 }
 
-/** Base64 of bytes already in hand, in chunks so a large file does not blow the stack. */
+/** Base64 of bytes in hand, in chunks so a large file does not blow the stack. */
 function encodeBytes(bytes: Uint8Array): string {
   let binary = '';
 
@@ -587,16 +533,14 @@ function decode(content: string): ArrayBuffer {
   return buffer;
 }
 
-const units = ['B', 'kB', 'MB'];
-
 function bytes(value: number): string {
-  let size = value;
-  let unit = 0;
-
-  while (size >= 1024 && unit < units.length - 1) {
-    size /= 1024;
-    unit++;
+  if (value < 1024) {
+    return `${Math.round(value)} B`;
   }
 
-  return `${size.toFixed(unit === 0 || size >= 100 ? 0 : 1)} ${units[unit]}`;
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} kB`;
+  }
+
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
 }

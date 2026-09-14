@@ -381,11 +381,14 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
                 "Workspace.ReadText(name) / WriteText(name, text)",
                 "Workspace.ReadBytes(name) / WriteBytes(name, bytes)",
                 "Workspace.Exists(name) / Delete(name) / List()",
-                "Workspace.Tree() - the folder as a resource tree",
-                "Workspace.Files() - a handler that serves the folder",
+                "Workspace.Tree() / Tree(folder) - as a resource tree",
+                "Workspace.Files() / Files(folder) - a handler that serves it",
+                "Workspace.App() / App(folder) - a single page application over it",
+                "Workspace.Folders() / CreateFolder(name)",
                 "Workspace.Root - where it is on disk"
             },
-            note = "Nothing else on the file system is reachable, and there is no Append."
+            note = "Nothing else on the file system is reachable, and there is no Append.",
+            orTheOtherOne = "A front end can live here instead of being shipped with the code, and Workspace.App() serves it the same way Assets.App() serves the shipped one. Which to use is a real choice: shipped is versioned, travels with a clone, and is replaced wholesale by every deploy, so it suits a site that is part of the program. The workspace outlives deploys and is never touched by one, so it suits a site that is uploaded and changed without redeploying. What must not happen is both, because then it is not clear which one answers."
         },
         servingAPage = new
         {

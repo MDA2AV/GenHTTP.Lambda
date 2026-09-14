@@ -184,4 +184,38 @@ public sealed class WebAssetTests
         CollectionAssert.AreEqual(gif, bytes);
     }
 
+
+    [TestMethod]
+    public async Task AFrontEndCanLiveInTheWorkspaceInstead()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("uploaded");
+
+        /*
+         * The other answer to where a page goes. Nothing is shipped with the
+         * code at all: the lambda serves whatever is in its workspace, which
+         * somebody uploads and can change again without redeploying.
+         */
+        await fixture.DeployAsync(lambda.PrivateKey,
+            "return Layout.Create().Add(Workspace.App());");
+
+        using var before = await fixture.GetAsync("/lambda/uploaded/");
+
+        Assert.AreNotEqual(HttpStatusCode.InternalServerError, before.StatusCode,
+                           "an empty workspace is not an error, just an empty site");
+
+        using var written = await fixture.SendAsync(HttpMethod.Put,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=index.html",
+            new { content = Convert.ToBase64String("<!doctype html><title>up</title><h1>uploaded</h1>"u8.ToArray()) });
+
+        Assert.AreEqual(HttpStatusCode.OK, written.StatusCode);
+
+        // no redeploy: the files are read where they lie
+        using var served = await fixture.GetAsync("/lambda/uploaded/");
+
+        Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
+        Assert.Contains("uploaded", await served.GetContentAsync());
+    }
+
 }
