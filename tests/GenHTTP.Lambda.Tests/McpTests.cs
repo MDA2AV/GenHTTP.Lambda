@@ -4,6 +4,8 @@ using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Tests.Infrastructure;
 
+using GenHTTP.Testing;
+
 namespace GenHTTP.Lambda.Tests;
 
 /// <summary>
@@ -71,7 +73,8 @@ public sealed class McpTests
 
         var named = tools.Select(t => t!["name"]!.GetValue<string>()).ToList();
 
-        foreach (var wanted in (string[])["create_lambda", "write_code", "check_code", "deploy", "read_lambda", "platform_guide"])
+        foreach (var wanted in (string[])["create_lambda", "write_code", "check_code", "deploy", "read_lambda",
+                                          "upload_file", "list_files", "delete_file", "platform_guide"])
         {
             Assert.Contains(wanted, named);
         }
@@ -217,6 +220,106 @@ public sealed class McpTests
         // folder, or it will flatten everything into the root and wonder why
         Assert.Contains("Assets.App(\\u0022site\\u0022)", guide,
                         "the guide has to say a folder can be served by naming it");
+
+        // an agent has no Storage panel, so the guide has to name the tool
+        // that puts a file there and say which way round to prefer
+        Assert.Contains("Workspace.App()", guide, "and that a front end can live in the workspace instead");
+        Assert.Contains("upload_file", guide, "the guide has to name the tool that puts a file in the workspace");
+        // both ways are ordinary, so the guide has to describe both and say
+        // what decides between them rather than naming a winner
+        Assert.Contains("withTheCode", guide);
+        Assert.Contains("inTheWorkspace", guide);
+        Assert.Contains("whenToPreferIt", guide, "each way has to say what it is for");
+    }
+
+    [TestMethod]
+    public async Task AnAgentCanUploadAFrontEndAndHaveItServed()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["acceptTerms"] = true,
+            ["publicKey"] = "uploaded-by-agent"
+        }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        // one deploy, and never another for a change to the front end
+        Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["files"] = new JsonArray(new JsonObject
+            {
+                ["name"] = "lambda.cs",
+                ["code"] = "return Layout.Create().Add(Workspace.App());"
+            })
+        }));
+
+        var deployed = Structured(await CallToolAsync(fixture, "deploy", new JsonObject
+        {
+            ["privateKey"] = privateKey
+        }));
+
+        Assert.IsTrue(deployed["ok"]!.GetValue<bool>(), deployed.ToJsonString());
+
+        var written = Structured(await CallToolAsync(fixture, "upload_file", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["path"] = "index.html",
+            ["content"] = "<!doctype html><title>by an agent</title><h1>uploaded, not deployed</h1>"
+        }));
+
+        Assert.IsTrue(written["ok"]!.GetValue<bool>(), written.ToJsonString());
+
+        // no second deploy
+        using var served = await fixture.GetAsync("/lambda/uploaded-by-agent/");
+
+        Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
+        Assert.Contains("uploaded, not deployed", await served.GetContentAsync());
+
+        // and an image, which is the only way one gets in at all
+        var gif = Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+
+        Structured(await CallToolAsync(fixture, "upload_file", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["path"] = "dot.gif",
+            ["content"] = Convert.ToBase64String(gif),
+            ["encoding"] = "base64"
+        }));
+
+        using var image = await fixture.GetAsync("/lambda/uploaded-by-agent/dot.gif");
+
+        Assert.AreEqual(HttpStatusCode.OK, image.StatusCode);
+        CollectionAssert.AreEqual(gif, await image.Content.ReadAsByteArrayAsync(),
+                                  "a base64 upload has to arrive as the bytes it stood for");
+
+        var listed = Structured(await CallToolAsync(fixture, "list_files", new JsonObject
+        {
+            ["privateKey"] = privateKey
+        }));
+
+        var names = ((JsonArray)listed["files"]!).Select(f => f!["path"]!.GetValue<string>()).ToList();
+
+        Assert.Contains("index.html", names);
+        Assert.Contains("dot.gif", names);
+
+        Structured(await CallToolAsync(fixture, "delete_file", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["path"] = "dot.gif"
+        }));
+
+        /*
+         * It answers 200 after being deleted, because the application answers
+         * every address that names no file with its shell. What says it has
+         * gone is that the answer is the page rather than the image.
+         */
+        using var gone = await fixture.GetAsync("/lambda/uploaded-by-agent/dot.gif");
+
+        Assert.AreEqual("text/html", gone.Content.Headers.ContentType?.MediaType,
+                        "and it can be taken away again");
     }
 
     [TestMethod]

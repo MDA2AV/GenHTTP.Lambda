@@ -22,6 +22,22 @@ var json = new JsonSerializerOptions
 };
 
 var players = new ConcurrentDictionary<IReactiveConnection, Player>();
+
+/*
+ * The connections part way through joining.
+ *
+ * A message handler is asynchronous, so two messages from the same socket can
+ * both be inside it at once. A browser sends join and then starts steering
+ * twenty times a second, and if a steer arrives before the join has finished
+ * writing the welcome, the second one finds nobody registered, decides it is
+ * a join too, and writes a second welcome into a socket already being written
+ * to. That is a fault, and the player is dropped without being told why.
+ *
+ * One join at a time per connection. Anything else arriving meanwhile is
+ * dropped, which costs a steer that would have been replaced fifty
+ * milliseconds later anyway.
+ */
+var arriving = new ConcurrentDictionary<IReactiveConnection, byte>();
 var pellets = new ConcurrentDictionary<int, Pellet>();
 
 /*
@@ -1306,6 +1322,13 @@ var socket = Websocket.Functional()
 
                           if (!players.TryGetValue(connection, out var player))
                           {
+                              if (!arriving.TryAdd(connection, 0))
+                              {
+                                  return;
+                              }
+
+                              try
+                              {
                               var joining = JsonSerializer.Deserialize<Join>(text, json);
 
                               var spot = Somewhere();
@@ -1344,6 +1367,11 @@ var socket = Websocket.Functional()
                               players[connection] = player;
 
                               StartClock();
+                              }
+                              finally
+                              {
+                                  arriving.TryRemove(connection, out _);
+                              }
 
                               return;
                           }

@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Workspace;
 
 namespace GenHTTP.Lambda.Api.Mcp;
 
@@ -20,7 +21,7 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// Every tool answers with an object rather than prose. A model reads the text
 /// and a program reads the structured copy, and both are the same thing.
 /// </remarks>
-public sealed class McpTools(IMetaService meta, LambdaOptions options)
+public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, LambdaOptions options)
 {
 
     #region Catalogue
@@ -126,6 +127,46 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
                  ["required"] = new JsonArray("privateKey")
              }),
 
+        Tool("upload_file",
+             "Put a file into a lambda's workspace, which is a directory on the server it can read, write and serve. This is how a front end gets there without being part of the code: upload the files, then serve the directory. The file appears the moment this returns - there is no deploy, and changing a file later needs no deploy either.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["path"] = Field("string", "Where it goes, relative to the workspace. Slashes make folders: 'site/app.css'."),
+                     ["content"] = Field("string", "The contents. Text as it is, or base64 with encoding set."),
+                     ["encoding"] = Field("string", "\"base64\" for anything that is not text. Leave it out otherwise.")
+                 },
+                 ["required"] = new JsonArray("privateKey", "path", "content")
+             }),
+
+        Tool("list_files",
+             "What is in a lambda's workspace: every file, its size, and when it was last written. This is the directory the lambda reads and writes at runtime, not the files saved with its code - read_lambda shows those.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
+             }),
+
+        Tool("delete_file",
+             "Remove a file from a lambda's workspace, or a folder and everything in it.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["path"] = Field("string", "What to remove, relative to the workspace.")
+                 },
+                 ["required"] = new JsonArray("privateKey", "path")
+             }),
+
         Tool("list_examples",
              "The working lambdas this installation keeps online, basic and advanced. Read one before writing anything: they are the shortest description of what this platform will accept.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
@@ -165,6 +206,9 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
                 "check_code" => await CheckAsync(arguments),
                 "deploy" => await DeployAsync(arguments),
                 "read_lambda" => await ReadAsync(arguments),
+                "upload_file" => await UploadAsync(arguments),
+                "list_files" => await FilesAsync(arguments),
+                "delete_file" => await RemoveAsync(arguments),
                 "list_examples" => Examples(),
                 "read_example" => Example(arguments),
                 "platform_guide" => Guide(),
@@ -242,6 +286,97 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
             compiles = outcome.Success,
             diagnostics = outcome.Diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message })
         });
+    }
+
+    /// <summary>
+    /// Puts a file into the workspace of a lambda.
+    /// </summary>
+    /// <remarks>
+    /// The editor has a panel for this and an agent had nothing, which made
+    /// serving a front end from the workspace something it could be told
+    /// about and not do.
+    /// </remarks>
+    private async ValueTask<JsonObject> UploadAsync(JsonObject arguments)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        var path = Required(arguments, "path");
+
+        var content = Required(arguments, "content");
+
+        var id = await meta.GetIdAsync(privateKey);
+
+        if (id == null)
+        {
+            return McpProtocol.Refuse("There is no lambda with that editor key.");
+        }
+
+        byte[] bytes;
+
+        if (Text(arguments, "encoding") == "base64")
+        {
+            try
+            {
+                bytes = Convert.FromBase64String(content);
+            }
+            catch (FormatException)
+            {
+                return McpProtocol.Refuse("That says it is base64 and is not.");
+            }
+        }
+        else
+        {
+            bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        }
+
+        using var stream = new MemoryStream(bytes);
+
+        var written = await workspace.WriteAsync(id.Value, path, stream);
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            written.Path,
+            written.Size,
+            note = "It is there now. Nothing needs deploying for a workspace file to be served, and changing it later needs nothing either."
+        });
+    }
+
+    private async ValueTask<JsonObject> FilesAsync(JsonObject arguments)
+    {
+        var id = await meta.GetIdAsync(Required(arguments, "privateKey"));
+
+        if (id == null)
+        {
+            return McpProtocol.Refuse("There is no lambda with that editor key.");
+        }
+
+        var listing = await workspace.ListAsync(id.Value);
+
+        return McpProtocol.Say(new
+        {
+            files = listing.Files.Select(f => new { f.Path, f.Size, f.Modified }),
+            listing.Folders,
+            listing.UsedBytes,
+            listing.QuotaBytes,
+            note = "This is what the lambda reads and writes at runtime. The files saved with its code are in read_lambda."
+        });
+    }
+
+    private async ValueTask<JsonObject> RemoveAsync(JsonObject arguments)
+    {
+        var id = await meta.GetIdAsync(Required(arguments, "privateKey"));
+
+        if (id == null)
+        {
+            return McpProtocol.Refuse("There is no lambda with that editor key.");
+        }
+
+        var path = Required(arguments, "path");
+
+        await workspace.DeleteAsync(id.Value, path);
+
+        return McpProtocol.Say(new { ok = true, path });
     }
 
     private async ValueTask<JsonObject> DeployAsync(JsonObject arguments)
@@ -390,6 +525,26 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
             },
             note = "Nothing else on the file system is reachable, and there is no Append.",
             orTheOtherOne = "A front end can live here instead of being part of the code, and Workspace.App() serves it the same way Assets.App() serves the other. The difference is when each one changes: a file that is part of the code is saved and deployed with it, rolled back with a version and copied by a clone, and every deploy replaces all of them. The workspace changes the moment something is written or uploaded, and no deploy touches it. So a site that is part of the program belongs in the first, and one that is uploaded and changed without redeploying belongs here. Doing both is the one thing to avoid, because then it is not clear which answers."
+        },
+        servingAFrontEnd = new
+        {
+            twoWays = "Static files live either with the code or in the workspace. Both are ordinary and neither is a workaround. The difference is when each changes: files saved with the code are versioned, roll back, travel with a clone, and every deploy replaces all of them. The workspace changes the moment something is uploaded and no deploy ever touches it.",
+            withTheCode = new
+            {
+                how = "write_code with the files - a name with slashes puts one in a folder - then deploy. Serve with Assets.App() or Assets.App(\"site\") for one folder.",
+                whenToPreferIt = "The front end is part of the program. You want it versioned with the code that serves it, rolled back together, and carried along when somebody clones the lambda. There is one thing to deploy and one thing to read back, which also makes it the simpler of the two to write in one pass.",
+                mind = "The files go through write_code, so they count against the code budget, and a change to any of them costs a deploy. Binary goes as base64 with encoding set.",
+                example = "read_example \"site\""
+            },
+            inTheWorkspace = new
+            {
+                how = "write_code with one file that returns Layout.Create().Add(Workspace.App()), deploy once, then upload_file for each of index.html and everything beside it. The address answers immediately.",
+                whenToPreferIt = "The files change more often than the code does, or somebody other than you will replace them, or there are enough of them that redeploying to change one is absurd. Nothing here costs a deploy after the first, and nothing counts against the code budget.",
+                mind = "Not versioned and not carried by a clone. Workspace.App() with no folder serves the whole workspace, so anything else the lambda writes is reachable too - put the front end in a folder and serve that if it writes anything.",
+                example = "read_example \"uploads\""
+            },
+            eitherWay = "Both end in the same GenHTTP module: SinglePageApplication.From(tree).ServerSideRouting(), where the tree is Assets.Tree() or Workspace.Tree(). App() is those two calls. ServerSideRouting is what answers an address matching no file with index.html, which is what makes a deep link survive a reload.",
+            doNotDoBoth = "Serving both at the same address leaves it unclear which answers. Pick one."
         },
         servingAPage = new
         {
