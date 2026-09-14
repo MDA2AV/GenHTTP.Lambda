@@ -4,9 +4,10 @@
 //   GET /lambda/{{KEY}}/api/best    the best runs it remembers
 //   WS  /lambda/{{KEY}}/play        everything that happens
 //
-// Six files: this one is the socket, the clock and the storage, World.cs is
-// the rules, Protocol.cs is what the two halves say, and index.html, game.js
-// and style.css are shipped as assets - served as they are, never compiled.
+// Seven files: this one is the socket, the clock and the storage, World.cs is
+// the rules, Protocol.cs is what the two halves say, State.cs is a player as
+// the server holds one, and index.html, game.js and style.css are shipped as
+// assets - served as they are, never compiled.
 //
 // Written to be leaned on. Everything that moves is decided here and sent to
 // everybody twenty times a second, so the interesting number is not the frame
@@ -175,28 +176,73 @@ async ValueTask Broadcast()
                         .Select(p => new Score(p.Value.Name, World.ScoreOf(p.Value.Radius)))
                         .ToArray();
 
+    // whoever went this tick is told so and dropped. It touches the shared
+    // state and happens to a handful of people at most, so it stays here
+    // rather than joining the fan out below.
     foreach (var (connection, player) in everyone)
     {
+        if (!player.Gone)
+        {
+            continue;
+        }
+
         try
         {
-            if (player.Gone)
-            {
-                await connection.WritePayloadAsync(JsonSerializer.Serialize(
-                    new Eaten("eaten", player.EatenBy ?? "somebody", World.ScoreOf(player.Radius)), json));
-
-                Remember(player);
-
-                players.TryRemove(connection, out _);
-
-                continue;
-            }
-
-            await connection.WritePayloadAsync(Picture(player, blobs, board, blobs.Length));
+            await connection.WritePayloadAsync(JsonSerializer.Serialize(
+                new Eaten("eaten", player.EatenBy ?? "somebody", World.ScoreOf(player.Radius)), json));
         }
         catch (Exception)
         {
-            players.TryRemove(connection, out _);
+            // they have gone either way
         }
+
+        Remember(player);
+
+        players.TryRemove(connection, out _);
+    }
+
+    var living = everyone.Where(e => !e.Value.Gone).ToArray();
+
+    if (living.Length == 0)
+    {
+        return;
+    }
+
+    /*
+     * Everybody sees something different, so there is one of these per player
+     * and together they are the whole tick. They are also completely
+     * independent of each other, which is worth spending: a loop that builds
+     * them one after another is one core no matter what the machine has, and
+     * on a four core box that is the number that decides how many people fit
+     * in the arena rather than anything about the socket.
+     */
+    var payloads = new string[living.Length];
+
+    Parallel.For(0, living.Length,
+                 i => payloads[i] = Picture(living[i].Value, blobs, board, blobs.Length));
+
+    var writes = new List<Task>(living.Length);
+
+    for (var i = 0; i < living.Length; i++)
+    {
+        writes.Add(Send(living[i].Key, payloads[i]));
+    }
+
+    await Task.WhenAll(writes);
+}
+
+/// <summary>
+/// Sends one frame, and forgets whoever is no longer there to receive it.
+/// </summary>
+async Task Send(IReactiveConnection connection, string payload)
+{
+    try
+    {
+        await connection.WritePayloadAsync(payload);
+    }
+    catch (Exception)
+    {
+        players.TryRemove(connection, out _);
     }
 }
 
