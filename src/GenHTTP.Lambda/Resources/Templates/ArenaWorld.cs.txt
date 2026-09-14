@@ -59,6 +59,31 @@ static class World
     public static readonly double Biggest = Math.Sqrt(Win / Math.PI + Start * Start);
 
     /// <summary>
+    /// What a pellet is worth, by grade.
+    /// </summary>
+    /// <remarks>
+    /// Graded rather than free-form so that a pellet's worth costs nothing to
+    /// send: the grade is a number under sixteen, and it rides in the spare
+    /// bits of the colour it was already carrying. Ordinary scattered pellets
+    /// are all grade zero; the larger ones are what falls out of something
+    /// big when it is hurt.
+    /// </remarks>
+    public static readonly double[] Grades = [300, 900, 2700, 8100];
+
+    /// <summary>What a pellet of this grade adds to the area of whoever eats it.</summary>
+    public static double Worth(int grade) => Grades[Math.Clamp(grade, 0, Grades.Length - 1)];
+
+    /// <summary>
+    /// How big a pellet of this grade is, which is the radius its own worth
+    /// comes to - so a pellet that is worth nine times as much looks three
+    /// times as wide, and what it is worth can be judged by looking at it.
+    /// </summary>
+    public static double Girth(int grade) => Math.Sqrt(Worth(grade) / Math.PI);
+
+    /// <summary>The grades, as the browser needs them to draw one.</summary>
+    public static double[] Girths => [.. Grades.Select((_, g) => Girth(g))];
+
+    /// <summary>
     /// What a pellet adds to the area of whoever eats it.
     /// </summary>
     /// <remarks>
@@ -109,6 +134,7 @@ static class World
     /// </summary>
     /// <remarks>
     /// The number that decides whether this is a mechanic or a punishment.
+    /// Holding on raises it - see Clutch - but never to one.
     /// A new blob at 260 a second fleeing the biggest possible chaser, which
     /// moves at about 102, keeps 130 against their 102 and pulls away at 28 -
     /// slowly, and only if it commits. Above about six tenths that margin
@@ -117,7 +143,7 @@ static class World
     /// player's own steering authority, without which the drag stops reading
     /// as gravity and starts reading as a broken connection.
     /// </remarks>
-    public const double Grip = 0.5;
+    public const double Hand = 0.5;
 
     /// <summary>
     /// The size at which a blob starts bending things around it.
@@ -157,6 +183,104 @@ static class World
     /// <summary>The fastest a pellet is ever dragged, in units a second.</summary>
     public const double Sweep = 18;
 
+    #region Holding on
+
+    /*
+     * The space bar. A player roots themselves to the floor, pulls everything
+     * near them far harder than standing there would, and burns themselves to
+     * do it. It is the one thing in the game a player presses rather than
+     * steers, and everything about it is arranged so that it is a trap to be
+     * set rather than a button that wins.
+     */
+
+    /// <summary>How much harder a held pull drags than an idle one.</summary>
+    public const double Grasp = 3;
+
+    /// <summary>
+    /// The most of your own speed a held pull can take from you.
+    /// </summary>
+    /// <remarks>
+    /// Higher than the idle cap and deliberately still under one. At eight
+    /// tenths, somebody running straight away from a held pull always nets a
+    /// fifth of their own speed outwards, so leaving is always possible and
+    /// always slow - which is the difference between a trap and a death
+    /// sentence. Past one, two overlapping pulls make a patch of floor that
+    /// nobody who wanders into it can ever leave.
+    /// </remarks>
+    public const double Clutch = 0.8;
+
+    /// <summary>
+    /// What fraction of your own area holding costs you a second.
+    /// </summary>
+    /// <remarks>
+    /// Of the area rather than the radius, because the score is the area, so
+    /// this reads as the same fraction of the score at every size: a blob of
+    /// radius a hundred holding for three seconds gives up about eleven per
+    /// cent of itself, or a dozen pellets.
+    ///
+    /// It does not scale with what is being caught. Holding on and catching
+    /// nothing has to be a straight loss, or there is no reason not to hold
+    /// it down for ever.
+    /// </remarks>
+    public const double Burn = 0.04;
+
+    /// <summary>
+    /// How long a held pull takes to come up to full strength.
+    /// </summary>
+    /// <remarks>
+    /// Long enough that tapping it is pure loss, and long enough that the
+    /// floor visibly caves in before the pull arrives - which is the warning
+    /// everybody else gets.
+    /// </remarks>
+    public const double Wind = 0.4;
+
+    /// <summary>How long before it can be held again.</summary>
+    public const double Rest = 2.0;
+
+    /// <summary>What a held pull does to loose pellets instead of the usual.</summary>
+    public const double HeldDust = 0.24;
+
+    /// <summary>The fastest a held pull drags a pellet, in units a second.</summary>
+    public const double HeldSweep = 60;
+
+    /// <summary>
+    /// How much of what is burned comes back to the arena as pellets.
+    /// </summary>
+    /// <remarks>
+    /// Half. All of it and holding on is a way of turning your own size into
+    /// food you then eat; none of it and a big blob bleeding itself dry is
+    /// area the arena simply loses. Half, scattered anywhere except within
+    /// reach of somebody holding, feeds the field rather than the holder.
+    /// </remarks>
+    public const double Refund = 0.5;
+
+    /// <summary>How far past the usual count the arena will carry refunds.</summary>
+    public const double Glut = 1.5;
+
+    /// <summary>
+    /// How hard somebody is pulling, given whether and how long they have held.
+    /// </summary>
+    /// <remarks>
+    /// One number carries the whole thing. Nought is a blob too small to
+    /// bend anything, one is standing there being large, and up to three is
+    /// holding on. The physics multiplies by it, the browser draws a dent
+    /// that deep, and neither needs to know anything else - so a blob too
+    /// small to have a field of its own grows one the moment it holds, and
+    /// the floor says so before the pull arrives.
+    /// </remarks>
+    public static double Grip(double radius, bool held, double wound)
+    {
+        if (held)
+        {
+            return Grasp * Math.Clamp(wound / Wind, 0, 1);
+        }
+
+        return radius >= WellSize ? 1 : 0;
+    }
+
+    #endregion
+
+
     /// <summary>
     /// How far a blob of this size drags loose pellets.
     /// </summary>
@@ -190,17 +314,11 @@ static class World
     /// to be rivals have almost no speed between them, so a pull at that
     /// ratio would be inescapable exactly where it is least deserved.
     /// </remarks>
-    public static double PullSpeed(double mine, double theirs, double distance)
+    public static double PullSpeed(double mine, double theirs, double distance, double grip)
     {
         var reach = Reach(theirs);
 
-        if (distance >= reach || mine <= 0)
-        {
-            return 0;
-        }
-
-        // one threshold for the pull and for the dent that shows it
-        if (theirs < WellSize)
+        if (grip <= 0 || distance >= reach || mine <= 0)
         {
             return 0;
         }
@@ -218,7 +336,7 @@ static class World
         // and faded away over the last half radius of the reach
         var edge = Math.Clamp((reach - distance) / (theirs * 0.5), 0, 1);
 
-        return Pull * theirs * theirs / (distance * distance + Soften * Soften) * bite * edge;
+        return Pull * theirs * theirs / (distance * distance + Soften * Soften) * bite * edge * grip;
     }
 
     /// <summary>The usual ease in and out, flat at both ends.</summary>
@@ -355,6 +473,22 @@ static class World
     /// <summary>Whether one blob may eat another.</summary>
     public static bool Eats(double mine, double theirs) => mine > theirs * EatRatio;
 
+    /// <summary>
+    /// Whether a blob is touching a pellet, which is edge to edge rather
+    /// than centre to edge - a pellet worth eight thousand is fifty units
+    /// across and being told to swallow its middle before it counts is the
+    /// same lie the drawing used to tell about blobs.
+    /// </summary>
+    public static bool Reaches(double px, double py, double radius, double x, double y, int grade)
+    {
+        var dx = px - x;
+        var dy = py - y;
+
+        var touch = radius + Girth(grade);
+
+        return dx * dx + dy * dy < touch * touch;
+    }
+
     /// <summary>Whether two blobs are touching enough for that to happen.</summary>
     public static bool Overlaps(double ax, double ay, double ar, double bx, double by)
     {
@@ -373,20 +507,25 @@ static class World
     /// size to compare against, so nothing is gated on the ratio: anything
     /// with a dent pulls dust, and the dust falls in.
     /// </remarks>
-    public static double DriftSpeed(double theirs, double distance)
+    public static double DriftSpeed(double theirs, double distance, double grip, bool held)
     {
         var reach = Drag(theirs);
 
-        if (theirs < WellSize || distance >= reach)
+        if (grip <= 0 || distance >= reach)
         {
             return 0;
         }
 
         var edge = Math.Clamp((reach - distance) / (theirs * 0.5), 0, 1);
 
-        var speed = Pull * theirs * theirs / (distance * distance + Soften * Soften) * edge * Dust;
+        // holding on drags dust far harder than standing there does, and the
+        // wind up is already in the grip
+        var temper = held ? HeldDust : Dust;
+        var most = held ? HeldSweep : Sweep;
 
-        return Math.Min(speed, Sweep);
+        var speed = Pull * theirs * theirs / (distance * distance + Soften * Soften) * edge * temper * grip;
+
+        return Math.Min(speed, most);
     }
 
     /// <summary>Whether something is near enough to whoever is looking.</summary>

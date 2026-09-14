@@ -7,17 +7,34 @@
 /// <summary>Sent by a browser as its first frame.</summary>
 public record Join(string Kind, string Name);
 
-/// <summary>Where a browser would like to be heading, sent continuously.</summary>
-public record Steer(string Kind, double X, double Y);
+/// <summary>
+/// Where a browser would like to be heading, sent continuously.
+/// </summary>
+/// <remarks>
+/// Whether the space bar is down rides along with it rather than being its
+/// own message. It is a thing that is true or false for a stretch of time
+/// rather than an event, so sending it with every steer means a lost or
+/// late message cannot leave somebody rooted to the floor with nothing
+/// holding them there.
+/// </remarks>
+public record Steer(string Kind, double X, double Y, bool Hold);
 
-/// <summary>A blob, as everybody else sees it.</summary>
-public record Blob(string I, string N, string C, double X, double Y, double R);
+/// <summary>
+/// A blob, as everybody else sees it.
+/// </summary>
+/// <remarks>
+/// G is how hard it is pulling: nought for something too small to bend the
+/// floor, one for standing there being large, up to three for holding on.
+/// The browser draws a dent that deep, which is how everybody else finds out
+/// somebody is holding - before the pull reaches them, because it ramps.
+/// </remarks>
+public record Blob(string I, string N, string C, double X, double Y, double R, double G);
 
 /// <summary>One line of the leaderboard.</summary>
 public record Score(string N, int S);
 
 /// <summary>Who you are and how big the world is, sent once.</summary>
-public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette, double Well);
+public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette, double Well, double[] Girths);
 
 /// <summary>
 /// What is near enough to matter, sent on every tick.
@@ -28,8 +45,13 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// anyone has done anything, and nobody can see it anyway.
 ///
 /// P is flat, four numbers to a pellet: which one it is, where it is, and
-/// what colour. The first of those is what lets the browser recognise a
-/// pellet it has seen before, which it has to do now that pellets move.
+/// what it looks like. The first of those is what lets the browser recognise
+/// a pellet it has seen before, which it has to do now that pellets move.
+///
+/// The last packs two things into one number, because pellets are the bulk
+/// of a frame and a fifth number for every one of them is not worth what it
+/// says: the low four bits are the colour, the rest is the grade. Both are
+/// small and neither is ever going to need more room than that.
 ///
 /// W is how big the arena currently is, which travels with every frame
 /// rather than only with the welcome because it grows and shrinks with the

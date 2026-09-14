@@ -17,6 +17,8 @@ canvas { display: block; }
 
 #hud { position: fixed; left: 16px; bottom: 16px; }
 #hud b { font-size: 30px; font-variant-numeric: tabular-nums; display: block; }
+#hold { display: block; color: #fdd663; font-size: 13px; margin-top: 2px; }
+kbd { font: inherit; border: 1px solid #3c4043; border-bottom-width: 2px; padding: 0 4px; border-radius: 3px; }
 
 #board {
   position: fixed; top: 14px; right: 16px; width: 190px;

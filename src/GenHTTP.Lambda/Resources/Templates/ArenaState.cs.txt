@@ -26,6 +26,15 @@ sealed class Pellet
 
     /// <summary>Which of the palette's colours it is.</summary>
     public int C;
+
+    /// <summary>
+    /// How much it is worth, as a grade rather than an amount.
+    /// </summary>
+    /// <remarks>
+    /// Ordinary ones are grade zero. The bigger grades are what a large blob
+    /// sheds when something hurts it.
+    /// </remarks>
+    public int Grade;
 }
 
 sealed class Player
@@ -43,12 +52,30 @@ sealed class Player
     public double WantY;
 
     /// <summary>
+    /// Whether they are holding the space bar: rooted in place, pulling
+    /// everything nearby much harder, and burning themselves to do it.
+    /// </summary>
+    public bool Hold;
+
+    /// <summary>How long they have been holding, which the pull ramps over.</summary>
+    public double Wound;
+
+    /// <summary>How long until they may hold again.</summary>
+    public double Rest;
+
+    /// <summary>
     /// How hard everything bigger is dragging them this tick, in units a
     /// second, worked out before anybody has moved so that the order players
     /// happen to be in cannot change the outcome.
     /// </summary>
     public double PullX;
     public double PullY;
+
+    /// <summary>
+    /// Whether any of that pull came from somebody holding on, which is what
+    /// decides how much of their own speed they can be robbed of.
+    /// </summary>
+    public bool Clutched;
 
     /// <summary>Set when somebody has eaten them; the socket is told and closed.</summary>
     public bool Gone;

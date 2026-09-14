@@ -27,7 +27,7 @@ const DELAY = 100;
 const history = [];
 
 let socket = null, me = null, world = 2400;
-let palette = [], wellSize = 40;
+let palette = [], wellSize = 40, girths = [5];
 
 /*
  * The floor is a sheet, and anything heavy enough to eat you sits in a dent
@@ -63,6 +63,25 @@ let camera = null;
 
 let pointer = { x: 0, y: 0 };
 
+/** Whether the space bar is down, which is the one thing a player presses. */
+let hold = false;
+
+addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' || e.repeat) return;
+  hold = true;
+  e.preventDefault();
+});
+
+addEventListener('keyup', (e) => {
+  if (e.code !== 'Space') return;
+  hold = false;
+  e.preventDefault();
+});
+
+// letting go of the window counts as letting go of the key, or a player who
+// alt-tabs mid pull comes back to find themselves still burning
+addEventListener('blur', () => { hold = false; });
+
 function size() {
   canvas.width = innerWidth * devicePixelRatio;
   canvas.height = innerHeight * devicePixelRatio;
@@ -85,7 +104,7 @@ setInterval(() => {
   const x = camera.x + (pointer.x - innerWidth / 2) / scale;
   const y = camera.y + (pointer.y - innerHeight / 2) / scale;
 
-  socket.send(JSON.stringify({ kind: 'steer', x, y }));
+  socket.send(JSON.stringify({ kind: 'steer', x, y, hold }));
 }, 50);
 
 /** How many pixels one world unit is. */
@@ -114,14 +133,28 @@ function wellsOf(blobs) {
   const wells = [];
 
   for (const b of blobs) {
-    if (b.r >= wellSize) {
+    /*
+     * A blob bends the floor as hard as it is gripping, which the server
+     * sends: nought for something too small to bend anything, one for
+     * standing there being large, up to three for holding the space bar.
+     * So somebody who holds grows a well even if they were too small to
+     * have one, and everybody nearby watches the floor cave in under them
+     * before the pull that is coming arrives.
+     */
+    const grip = b.g ?? (b.r >= wellSize ? 1 : 0);
+
+    if (grip > 0) {
       const reach = b.r * 4;
 
       // the dent stops deepening long before a blob stops growing. Past this
       // the well is already wider than the screen, and letting it go on would
       // gather everything visible into a single point rather than look like
       // anything - what keeps reading as bigger is the width, not the depth
-      wells.push({ i: b.i, x: b.x, y: b.y, deep: Math.min(b.r * 2, 320), span: reach * reach });
+      wells.push({
+        i: b.i, x: b.x, y: b.y,
+        deep: Math.min(b.r * 2 * grip, 320 * Math.max(1, grip)),
+        span: reach * reach,
+      });
     }
   }
 
@@ -203,6 +236,7 @@ function moment() {
       x: a.x + (b.x - a.x) * t,
       y: a.y + (b.y - a.y) * t,
       r: a.r + (b.r - a.r) * t,
+      g: (a.g ?? 0) + ((b.g ?? 0) - (a.g ?? 0)) * t,
     };
   });
 
@@ -343,15 +377,17 @@ function draw() {
   // three at a time rather than unpacked into objects that live one frame
   ctx.globalAlpha = 0.75;
 
-  const dot = Math.max(2, 5 * scale);
   const pellets = now.pellets;
 
   for (let i = 0; i < pellets.length; i += 3) {
     const at = flat(pellets[i], pellets[i + 1]);
 
-    ctx.fillStyle = palette[pellets[i + 2]] ?? '#9aa0a6';
+    // colour in the low four bits, how big it is above them
+    const tag = pellets[i + 2];
+
+    ctx.fillStyle = palette[tag & 15] ?? '#9aa0a6';
     ctx.beginPath();
-    ctx.arc(at.x, at.y, dot, 0, Math.PI * 2);
+    ctx.arc(at.x, at.y, Math.max(2, (girths[tag >> 4] ?? girths[0]) * scale), 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -381,6 +417,18 @@ function draw() {
     ctx.strokeStyle = b.i === me ? '#ffffff' : '#00000055';
     ctx.lineWidth = b.i === me ? 3 : 2;
     ctx.stroke();
+
+    // a ring that tightens as the grip comes up, so it is obvious at a
+    // glance who is rooted and how far along they are
+    if ((b.g ?? 0) > 1) {
+      const wound = Math.min(1, ((b.g ?? 0) - 1) / 2);
+
+      ctx.strokeStyle = `rgba(255,214,99,${0.25 + wound * 0.55})`;
+      ctx.lineWidth = 2 + wound * 3;
+      ctx.beginPath();
+      ctx.arc(at.x, y, r + 14 * scale + (1 - wound) * 26 * scale, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     if (r > 14) {
       ctx.fillStyle = '#0b0d11';
@@ -469,7 +517,7 @@ function connect(name) {
     const m = JSON.parse(event.data);
 
     if (m.kind === 'welcome') {
-      me = m.id; world = m.world; palette = m.palette; wellSize = m.well ?? 40;
+      me = m.id; world = m.world; palette = m.palette; wellSize = m.well ?? 40; girths = m.girths ?? [5];
       history.length = 0; camera = null;
       $('gate').hidden = true; $('over').hidden = true;
       $('hud').hidden = false; $('board').hidden = false;
@@ -505,6 +553,7 @@ function connect(name) {
 
     $('score').textContent = self ? Math.round(Math.PI * self.r * self.r - Math.PI * 196) : 0;
     $('here').textContent = `${m.alive} in the arena`;
+    $('hold').hidden = !(self && (self.g ?? 0) > 1);
     $('list').innerHTML = m.l.map((s) =>
       `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
   };

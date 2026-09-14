@@ -43,6 +43,12 @@ var nextSlot = 0;
 
 var tick = 0L;
 
+/// <summary>
+/// Area burned by people holding on, waiting to be put back on the floor as
+/// pellets. Half of what is burned comes back; the rest leaves the arena.
+/// </summary>
+var owed = 0.0;
+
 const int Quiet = 20;
 
 int TakeSlot()
@@ -163,6 +169,49 @@ void Rebucket()
     return (bestX, bestY);
 }
 
+/// <summary>
+/// Somewhere out of reach of anybody holding on.
+/// </summary>
+/// <remarks>
+/// A refunded pellet must not land where the person who paid for it can
+/// simply drag it back. A handful of tries is plenty - somebody holding has
+/// a grip on a small part of the arena, and if every try lands inside one
+/// the last is taken anyway rather than looping.
+/// </remarks>
+(double X, double Y) Clear()
+{
+    for (var attempt = 0; attempt < 10; attempt++)
+    {
+        var spot = Thinnest();
+
+        var free = true;
+
+        foreach (var soul in players.Values)
+        {
+            if (!soul.Hold)
+            {
+                continue;
+            }
+
+            var reach = World.Reach(soul.Radius);
+
+            if (Math.Abs(soul.X - spot.X) < reach && Math.Abs(soul.Y - spot.Y) < reach)
+            {
+                free = false;
+
+                break;
+            }
+        }
+
+        if (free)
+        {
+            return spot;
+        }
+    }
+
+    return Thinnest();
+}
+
 void Scatter()
 {
     var wanted = World.PelletsFor(size);
@@ -179,6 +228,38 @@ void Scatter()
         }
     }
 
+    /*
+     * What people holding on have burned comes back to the floor here, over
+     * and above the usual count and up to half again. It is scattered well
+     * clear of anybody currently holding, which is what stops the whole
+     * thing being a way of turning your own size into food you then eat.
+     */
+    var ceiling = (int)(wanted * World.Glut);
+
+    while (owed >= World.Worth(0) && pellets.Count < ceiling)
+    {
+        var slot = TakeSlot();
+
+        var spot = Clear();
+
+        pellets[slot] = new Pellet
+        {
+            Slot = slot,
+            X = spot.X,
+            Y = spot.Y,
+            C = World.AnyTint(random),
+            Grade = 0
+        };
+
+        owed -= World.Worth(0);
+    }
+
+    if (pellets.Count >= ceiling)
+    {
+        // the floor is as full as it will get; the rest of the debt is lost
+        owed = 0;
+    }
+
     while (pellets.Count < wanted)
     {
         var slot = TakeSlot();
@@ -190,7 +271,8 @@ void Scatter()
             Slot = slot,
             X = spot.X,
             Y = spot.Y,
-            C = World.AnyTint(random)
+            C = World.AnyTint(random),
+            Grade = 0
         };
     }
 }
@@ -291,7 +373,9 @@ void Step(double seconds)
      */
     foreach (var heavy in everyone)
     {
-        if (heavy.Radius < World.WellSize)
+        var grip = World.Grip(heavy.Radius, heavy.Hold, heavy.Wound);
+
+        if (grip <= 0)
         {
             continue;
         }
@@ -315,7 +399,7 @@ void Step(double seconds)
                     continue;
                 }
 
-                var speed = World.DriftSpeed(heavy.Radius, gap);
+                var speed = World.DriftSpeed(heavy.Radius, gap, grip, heavy.Hold);
 
                 if (speed <= 0)
                 {
@@ -333,6 +417,47 @@ void Step(double seconds)
     Rebucket();
 
     /*
+     * Who is holding on, what it is costing them, and what the floor is owed
+     * because of it. Done before the pulls are worked out, so that the grip
+     * everything is computed from is this tick's rather than last tick's.
+     */
+    foreach (var player in everyone)
+    {
+        if (player.Hold && player.Rest <= 0)
+        {
+            var burn = World.AreaOf(player.Radius) * World.Burn * seconds;
+
+            var left = World.AreaOf(player.Radius) - burn;
+
+            if (left <= World.AreaOf(World.Start))
+            {
+                // nothing left to spend; let go rather than shrink away
+                player.Hold = false;
+                player.Wound = 0;
+                player.Rest = World.Rest;
+            }
+            else
+            {
+                player.Wound += seconds;
+                player.Radius = World.RadiusOf(left);
+
+                owed += burn * World.Refund;
+            }
+        }
+        else
+        {
+            // letting go starts the wait, whether it was let go of or ran out
+            if (player.Wound > 0)
+            {
+                player.Rest = World.Rest;
+            }
+
+            player.Wound = 0;
+            player.Rest = Math.Max(0, player.Rest - seconds);
+        }
+    }
+
+    /*
      * What everybody is being dragged towards, worked out for all of them
      * from where they all are now. It has to happen before anybody moves, or
      * the order the dictionary happens to hand players back in would decide
@@ -347,7 +472,9 @@ void Step(double seconds)
 
     foreach (var heavy in everyone)
     {
-        if (heavy.Radius <= World.Start * World.EatRatio)
+        var grip = World.Grip(heavy.Radius, heavy.Hold, heavy.Wound);
+
+        if (grip <= 0)
         {
             continue;
         }
@@ -376,10 +503,21 @@ void Step(double seconds)
                 continue;
             }
 
-            var speed = World.PullSpeed(player.Radius, heavy.Radius, gap);
+            var speed = World.PullSpeed(player.Radius, heavy.Radius, gap, grip);
+
+            if (speed <= 0)
+            {
+                continue;
+            }
 
             player.PullX += toX / gap * speed;
             player.PullY += toY / gap * speed;
+
+            // being dragged by somebody holding on loosens the cap below
+            if (heavy.Hold)
+            {
+                player.Clutched = true;
+            }
         }
     }
 
@@ -393,7 +531,8 @@ void Step(double seconds)
         var goX = 0.0;
         var goY = 0.0;
 
-        if (distance > 1)
+        // holding on roots you: the pull still moves you, your own legs do not
+        if (distance > 1 && !(player.Hold && player.Rest <= 0))
         {
             var step = Math.Min(World.Speed(player.Radius) * seconds, distance);
 
@@ -412,7 +551,7 @@ void Step(double seconds)
 
         if (drag > 0)
         {
-            var most = World.Grip * World.Speed(player.Radius);
+            var most = (player.Clutched ? World.Clutch : World.Hand) * World.Speed(player.Radius);
 
             var scale = drag > most ? most / drag : 1;
 
@@ -423,9 +562,11 @@ void Step(double seconds)
         player.X = World.Clamp(player.X + goX, size);
         player.Y = World.Clamp(player.Y + goY, size);
 
+        player.Clutched = false;
+
         // pellets first: growing before the fight is resolved is what makes a
         // near miss feel like a near miss
-        foreach (var key in World.KeysWithin(player.X, player.Y, player.Radius))
+        foreach (var key in World.KeysWithin(player.X, player.Y, player.Radius + World.Girth(World.Grades.Length - 1)))
         {
             if (!floor.TryGetValue(key, out var bucket))
             {
@@ -434,7 +575,7 @@ void Step(double seconds)
 
             foreach (var pellet in bucket)
             {
-                if (!World.Overlaps(player.X, player.Y, player.Radius, pellet.X, pellet.Y))
+                if (!World.Reaches(player.X, player.Y, player.Radius, pellet.X, pellet.Y, pellet.Grade))
                 {
                     continue;
                 }
@@ -443,7 +584,7 @@ void Step(double seconds)
                 {
                     spare.Enqueue((pellet.Slot, tick));
 
-                    player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.PelletArea);
+                    player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.Worth(pellet.Grade));
                 }
             }
         }
@@ -555,7 +696,9 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
                 crumbs.Add(pellet.Slot);
                 crumbs.Add((int)pellet.X);
                 crumbs.Add((int)pellet.Y);
-                crumbs.Add(pellet.C);
+
+                // colour in the low four bits, grade above them
+                crumbs.Add(pellet.C | (pellet.Grade << 4));
             }
         }
     }
@@ -570,7 +713,8 @@ async ValueTask Broadcast()
     var blobs = everyone.Where(p => !p.Value.Gone)
                         .Select(p => new Blob(p.Value.Id, p.Value.Name, p.Value.Colour,
                                               Math.Round(p.Value.X, 1), Math.Round(p.Value.Y, 1),
-                                              Math.Round(p.Value.Radius, 1)))
+                                              Math.Round(p.Value.Radius, 1),
+                                              Math.Round(World.Grip(p.Value.Radius, p.Value.Hold, p.Value.Wound), 2)))
                         .ToArray();
 
     var board = everyone.Where(p => !p.Value.Gone)
@@ -747,7 +891,7 @@ var socket = Websocket.Functional()
                               players[connection] = player;
 
                               await connection.WritePayloadAsync(JsonSerializer.Serialize(
-                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize), json));
+                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize, World.Girths), json));
 
                               StartClock();
 
@@ -763,6 +907,7 @@ var socket = Websocket.Functional()
 
                           player.WantX = World.Clamp(steer.X, size);
                           player.WantY = World.Clamp(steer.Y, size);
+                          player.Hold = steer.Hold;
                       })
                       .OnClose((connection, _) =>
                       {
