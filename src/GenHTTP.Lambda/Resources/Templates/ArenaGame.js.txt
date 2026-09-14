@@ -661,8 +661,8 @@ function connect(name) {
 
     perk.hidden = !carrying;
     perk.textContent = carrying === 1
-      ? 'harpoon in hand — click to throw it at something big'
-      : 'blast in hand — click and everything large near you takes it with you';
+      ? 'harpoon in hand: click to throw it at something big'
+      : 'blast in hand: click and everything large near you takes it with you';
     perk.className = carrying === 1 ? 'harpoon' : 'blast';
     $('list').innerHTML = m.l.map((s) =>
       `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');

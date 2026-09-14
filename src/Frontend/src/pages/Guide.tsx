@@ -94,7 +94,7 @@ export function Guide() {
             <p>
               A lambda is a snippet that returns a GenHTTP handler. The platform compiles it,
               loads it, and mounts whatever it returned under your own address. There is no
-              project, no build file and no <Code>using</Code> statement — every GenHTTP module is
+              project, no build file and no <Code>using</Code> statement. Every GenHTTP module is
               already imported for you.
             </p>
 
@@ -107,7 +107,7 @@ export function Guide() {
 
             <Aside>
               The snippet is <em>statements</em>, not a class. The last thing it does is return
-              something that can serve requests — a handler, or a builder for one.
+              something that can serve requests: a handler, or a builder for one.
             </Aside>
           </Section>
 
@@ -116,7 +116,7 @@ export function Guide() {
               steps={[
                 <>
                   Press <b>Create a lambda</b>. You get a public address and an editor key. The key
-                  is the only way back in, so keep it — nobody can recover it for you.
+                  is the only way back in, so keep it. Nobody can recover it for you.
                 </>,
                 <>
                   You land in the editor with a small REST service already written. Read it or
@@ -149,9 +149,9 @@ export function Guide() {
 
           <Section id="files" title="More than one file">
             <p>
-              Types do not have to sit underneath the code that uses them. Add a file in the tabs —
-              a name with no extension is taken to be C# — and it is compiled beside the snippet in
-              the same namespace, so nothing has to be imported to be reached.
+              Types do not have to sit underneath the code that uses them. Add a file in the tabs
+              and it is compiled beside the snippet, in the same namespace, so nothing has to be
+              imported to be reached. A name with no extension is taken to be C#.
             </p>
 
             <Two
@@ -194,7 +194,7 @@ return Content.From(page);`} />
             <h3 className="pt-2 text-sm font-semibold">A folder of real files</h3>
             <p>
               What you want for anything with a stylesheet and a script. The files are added the
-              same way a C# file is, and served exactly as written — never compiled, never touched.
+              same way a C# file is, and served exactly as written. Nothing compiles them.
             </p>
             <Sample code={`return Layout.Create()
              .Add("api", api)
@@ -202,7 +202,7 @@ return Content.From(page);`} />
 
             <h3 className="pt-2 text-sm font-semibold">From the workspace</h3>
             <p>
-              When the page is uploaded rather than written — and should be changeable without
+              When the page is uploaded rather than written, and should be changeable without
               redeploying.
             </p>
             <Sample code={`return Layout.Create().Add(Workspace.App());`} />
@@ -226,11 +226,11 @@ return Content.From(page);`} />
                 </>,
                 <>
                   Add <Code>site/app.css</Code> and <Code>site/app.js</Code> the same way. Your page
-                  refers to them by name — <Code>href="app.css"</Code> — because the folder is the
-                  root of what gets served, not part of the address.
+                  refers to them by name, as in <Code>href="app.css"</Code>, because the folder is
+                  the root of what gets served rather than part of the address.
                 </>,
                 <>
-                  For anything that is not text — an image, a font — open <b>Storage</b>, go into{' '}
+                  For anything that is not text, like an image or a font, open <b>Storage</b>, go into{' '}
                   <Code>site</Code>, and upload it. A PNG cannot be typed into a text editor, so
                   that is the only way in.
                 </>,
@@ -241,8 +241,8 @@ return Content.From(page);`} />
                 <>
                   Press <b>Deploy</b>. <Code>site/index.html</Code> answers at <Code>/</Code>,{' '}
                   <Code>site/app.css</Code> at <Code>/app.css</Code>, and any address matching no
-                  file is answered with the page — so a front end that does its own routing works
-                  when somebody reloads on a deep link.
+                  file is answered with the page, so a front end that does its own routing still
+                  works when somebody reloads on a deep link.
                 </>,
                 <>
                   Add an API beside it and the page has something to talk to:
@@ -258,9 +258,9 @@ return Layout.Create()
 
           <Section id="storage" title="The two places files live">
             <p>
-              Both are in the <b>Storage</b> panel, as two tabs. They behave the same way — a trail
-              back to the top, upload lands where you are, one button makes a folder — but they are
-              not the same thing, and the difference is <em>when each changes</em>.
+              Both are in the <b>Storage</b> panel, as two tabs. They behave the same way: a trail
+              back to the top, upload lands where you are, one button makes a folder. They are not
+              the same thing though, and the difference is <em>when each changes</em>.
             </p>
 
             <div className="overflow-x-auto">
@@ -301,7 +301,7 @@ return Layout.Create()
           <Section id="keeping" title="Keeping data">
             <p>
               <Code>Workspace</Code> is a private directory your lambda may read and write. It is
-              the place for anything that has to outlive a request — or a deployment.
+              the place for anything that has to outlive a request, or a deployment.
             </p>
 
             <Sample code={`var notes = new List<string>();
@@ -329,7 +329,7 @@ return Inline.Create()
 
           <Section id="sockets" title="Websockets">
             <p>
-              Supported, and not an afterthought — the{' '}
+              Supported, and not an afterthought. The{' '}
               <Link to="/examples/arena" className="text-accent-500 hover:underline">
                 arena
               </Link>{' '}
@@ -373,7 +373,7 @@ return Layout.Create().Add("chat", socket);`} />
           <Section id="agents" title="Letting an agent do it">
             <p>
               There is an MCP endpoint at <Code>/mcp</Code>. Point an agent at it and it can do
-              everything the editor does — read the guide, read an example in full, write files,
+              everything the editor does: read the guide, read an example in full, write files,
               compile them, and deploy. It is the same API underneath.
             </p>
             <p>

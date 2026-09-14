@@ -11,7 +11,7 @@
   <b id="score">0</b>
   <span class="dim">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull</span>
   <span id="perk" hidden></span>
-  <span id="hold" hidden>holding on — everything nearby is coming to you, and it is costing you</span>
+  <span id="hold" hidden>holding on. Everything nearby is coming to you, and it is costing you</span>
 </div>
 
 <div id="board" hidden>
@@ -29,14 +29,14 @@
     </p>
     <p class="dim">
       Hold <kbd>space</kbd> and you root to the spot and drag everything near you in.
-      The longer you hold, the harder you pull and the further it reaches — and the
+      The longer you hold, the harder you pull and the further it reaches, and the
       more it costs you, climbing to five times the rate you started at. A moment of
       it is roughly free; ten seconds of it is most of you. The floor caves
       in under you while you do it, so everybody can see it coming.
     </p>
     <p class="dim">
       Things worth picking up lie about the floor. A <b>harpoon</b> is thrown at
-      anything big and takes a share of it off — what comes off lands around it as
+      anything big and takes a share of it off. What comes off lands around it as
       food, and the throw drags you in to claim it. A <b>blast</b> spends you, and
       everything large nearby goes with you. Neither can touch anything small, and
       neither can be picked up once you are large yourself.

@@ -55,7 +55,7 @@ const BACK: { id: string; label: string; value: string }[] = [
   { id: 'learn', label: 'imports', value: 'every GenHTTP module, no usings' },
   { id: 'make', label: 'publicUrl', value: '/lambda/your-key/' },
   { id: 'make', label: 'privateKey', value: 'the only way back in' },
-  { id: 'write', label: 'diagnostics', value: 'Types.cs:3 — the name does not exist' },
+  { id: 'write', label: 'diagnostics', value: 'Types.cs(3): the name does not exist' },
   { id: 'ship', label: 'onlineUntil', value: 'a day, extended by deploying again' },
 ];
 

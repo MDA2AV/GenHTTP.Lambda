@@ -319,7 +319,7 @@ export function Storage({
                 <>
                   Every file of your lambda, the C# included. They go out when you press Deploy and
                   come back if you roll a version back. The ones that are not C# are served as they
-                  are — <code className="font-mono">Assets.App()</code> serves them.
+                  are, by <code className="font-mono">Assets.App()</code>.
                 </>
               ) : (
                 <>
