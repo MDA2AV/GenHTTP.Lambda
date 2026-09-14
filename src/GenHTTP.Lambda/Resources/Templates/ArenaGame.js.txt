@@ -88,9 +88,25 @@ setInterval(() => {
   socket.send(JSON.stringify({ kind: 'steer', x, y }));
 }, 50);
 
-/** How many pixels one world unit is. Bigger blobs see more of the arena. */
+/** How many pixels one world unit is. */
 function scaleFor(radius) {
-  return Math.min(innerWidth, innerHeight) / (radius * 16 + 260);
+  return Math.min(innerWidth, innerHeight) / extentFor(radius);
+}
+
+/**
+ * How much of the arena fits across the shorter side of the window.
+ *
+ * Bigger blobs see more, but a good deal less than their size would suggest.
+ * Straight off the radius and a blob near the cap looks at nine thousand
+ * units of arena through an eight hundred pixel window, where a starting
+ * blob is two pixels across and the pellets are dust you cannot aim at. This
+ * gets to about three thousand instead, which still fills the screen with
+ * the arena and leaves everything in it a size worth steering at.
+ *
+ * The server keeps the same curve, because it decides what to send from it.
+ */
+function extentFor(radius) {
+  return 260 + 224 * Math.pow(radius / 14, 0.7);
 }
 
 /** The blobs heavy enough to dent the floor, as the drawing wants them. */
@@ -190,9 +206,41 @@ function moment() {
     };
   });
 
-  // pellets do not move, so they are taken from the older half: one then
-  // disappears exactly as the blob drawn between the two reaches it
-  return { blobs, pellets: before.p };
+  /*
+   * Pellets are read the same way now that they are dragged about: four
+   * numbers each, the first of which says which pellet it is, so one seen in
+   * both snapshots can be drawn between the two places it was. One that has
+   * only just appeared is drawn where it is; one that has gone is simply not
+   * in the newer half, and so is not drawn at all.
+   */
+  const dust = new Map();
+
+  for (let i = 0; i < before.p.length; i += 4) dust.set(before.p[i], i);
+
+  const pellets = [];
+
+  for (let i = 0; i < after.p.length; i += 4) {
+    const j = dust.get(after.p[i]);
+
+    // a pellet is dragged at most a few units between two frames, so a slot
+    // that appears to have crossed the arena is not the pellet it was - the
+    // server leaves a freed slot alone long enough that this should never
+    // fire, and drawing the streak if it ever did would be worse than not
+    const jumped = j === undefined
+                || Math.abs(after.p[i + 1] - before.p[j + 1]) > 40
+                || Math.abs(after.p[i + 2] - before.p[j + 2]) > 40;
+
+    if (jumped) {
+      pellets.push(after.p[i + 1], after.p[i + 2], after.p[i + 3]);
+    } else {
+      pellets.push(
+        before.p[j + 1] + (after.p[i + 1] - before.p[j + 1]) * t,
+        before.p[j + 2] + (after.p[i + 2] - before.p[j + 2]) * t,
+        after.p[i + 3]);
+    }
+  }
+
+  return { blobs, pellets };
 }
 
 function draw() {
@@ -219,30 +267,26 @@ function draw() {
   const wells = wellsOf(now.blobs);
 
   /*
-   * The camera is put on the player's warped position rather than their real
-   * one, and everything is drawn relative to how deep the floor is under
-   * them rather than to zero.
-   *
-   * Both halves matter. Without the first the gathering would slide the
-   * player off the middle of the screen whenever they came near somebody
-   * big, and the pointer would stop meaning the place it is over. Without
-   * the second, standing in a well would slide the whole world off the
-   * screen instead of the floor rising around the player - which is what
-   * standing in a hole actually looks like.
-   *
-   * Their own dent is left out of both, so that growing does not drag the
-   * world out from under them.
+   * How deep the floor is under the player, which everything else is drawn
+   * relative to. Without it, standing in a well would slide the whole world
+   * off the screen instead of the floor rising around the player - which is
+   * what standing in a hole actually looks like. Their own dent is left out,
+   * so that growing does not drag the world out from under them.
    */
-  const self = sink(mine.x, mine.y, wells, mine.i);
+  const under = sink(mine.x, mine.y, wells, mine.i).z;
 
-  const under = self.z;
+  const ox = innerWidth / 2 - mine.x * scale;
+  const oy = innerHeight / 2 - mine.y * scale;
 
-  const ox = innerWidth / 2 - self.x * scale;
-  const oy = innerHeight / 2 - self.y * scale;
-
-  /** Where a point of the floor lands on the screen. */
-  const put = (x, y, skip) => {
-    const s = sink(x, y, wells, skip);
+  /**
+   * Where a point of the floor lands on the screen.
+   *
+   * For the floor only. Nothing that can be eaten goes through here - see
+   * `flat` below, and the note on it, which is the whole reason this is two
+   * functions rather than one.
+   */
+  const put = (x, y) => {
+    const s = sink(x, y, wells);
 
     return {
       x: ox + s.x * scale,
@@ -250,6 +294,24 @@ function draw() {
       z: s.z,
     };
   };
+
+  /*
+   * Where a thing standing on the floor lands on the screen: exactly where
+   * it is, with none of the bending applied to it.
+   *
+   * This is not a shortcut, it is the point. The server decides who eats
+   * whom from where things actually are, so if the drawing moved them the
+   * two would disagree - and they disagree by a lot, because the gathering
+   * is strongest exactly where the eating happens. Next to a blob of radius
+   * ninety six, something eighty units too far away to be caught is drawn
+   * comfortably inside it: you would aim at what you could see, miss, and
+   * conclude the hit box was broken. It was; this is it fixed.
+   *
+   * The floor keeps bending underneath them, which is where the whole
+   * effect lives anyway. A blob covers the deepest part of its own dent, so
+   * what shows is the ring around it - and that reads as sitting in it.
+   */
+  const flat = (x, y) => ({ x: ox + x * scale, y: oy + y * scale });
 
   // the dark of each well, under the grid, so the lines read as lying on it
   for (const w of wells) {
@@ -285,7 +347,7 @@ function draw() {
   const pellets = now.pellets;
 
   for (let i = 0; i < pellets.length; i += 3) {
-    const at = put(pellets[i], pellets[i + 1]);
+    const at = flat(pellets[i], pellets[i + 1]);
 
     ctx.fillStyle = palette[pellets[i + 2]] ?? '#9aa0a6';
     ctx.beginPath();
@@ -297,16 +359,9 @@ function draw() {
 
   // smallest first, so being swallowed looks like being swallowed
   for (const b of [...now.blobs].sort((a, z) => a.r - z.r)) {
-    /*
-     * A blob is placed by everybody else's dent and then dropped part of
-     * the way into its own: all the way and a big one covers its own funnel
-     * completely, none of the way and it looks like it is hovering over its
-     * own hole.
-     */
-    const at = put(b.x, b.y, b.i);
-    const own = b.r >= wellSize ? b.r * 2 * 0.35 : 0;
+    const at = flat(b.x, b.y);
 
-    const y = at.y + own * scale * TILT;
+    const y = at.y;
     const r = b.r * scale;
 
     // a shadow on the sheet under it, which is what says it is resting on

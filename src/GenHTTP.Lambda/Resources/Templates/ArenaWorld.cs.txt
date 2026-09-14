@@ -120,15 +120,56 @@ static class World
     public const double Grip = 0.5;
 
     /// <summary>
-    /// The size at which a blob is worth drawing a dent in the floor for.
+    /// The size at which a blob starts bending things around it.
     /// </summary>
     /// <remarks>
-    /// Sent to the browser rather than agreed with it, because it decides
-    /// two things that have to match: which blobs are drawn as wells, and
-    /// which ones are sent to a player who cannot see them but can see the
-    /// floor bending around them.
+    /// One number for all of it: below this a blob pulls nothing and has no
+    /// dent drawn, above it the dent appears and everything loose nearby
+    /// starts falling towards it. Keeping the drawing and the physics on the
+    /// same threshold is what makes the picture trustworthy - a dent means a
+    /// pull, always, and no pull ever happens without one.
+    ///
+    /// It is sent to the browser rather than agreed with it, because it also
+    /// decides which blobs are sent to a player who cannot see them but can
+    /// see the floor bending around them.
     /// </remarks>
     public const double WellSize = 40;
+
+    /// <summary>
+    /// How much of the pull a pellet feels, against what a player feels.
+    /// </summary>
+    /// <remarks>
+    /// Far less, and the reason is not subtlety but supply. Whatever drifts
+    /// in gets eaten, and the scatter that replaces it lands anywhere in the
+    /// arena, so the ground around a big blob empties faster than a uniform
+    /// scatter refills it. How bare it ends up is set by how long a pellet
+    /// takes to cross the gap: slow the drift by half and twice as many are
+    /// in the air at any moment. Dragged hard enough, a blob simply sits in
+    /// a clearing with nothing visibly falling in at all, which is the
+    /// opposite of the thing being drawn.
+    ///
+    /// This sits where it does because the scatter now aims at the thinnest
+    /// ground it can find, so the clearing is being refilled as fast as it
+    /// is being swept and the drift can afford to be seen.
+    /// </remarks>
+    public const double Dust = 0.08;
+
+    /// <summary>The fastest a pellet is ever dragged, in units a second.</summary>
+    public const double Sweep = 18;
+
+    /// <summary>
+    /// How far a blob of this size drags loose pellets.
+    /// </summary>
+    /// <remarks>
+    /// What is being tuned here is not the strength of anything, it is how
+    /// many pellets are in the air at once - which is the inflow times how
+    /// long the crossing takes, and nothing else. Too tight and the gap is
+    /// crossed in a second, so whatever lands in it is gone before it can be
+    /// seen moving. This is wide enough that the crossing takes the better
+    /// part of half a minute, and the ring around a big blob is always full
+    /// of dust on its way in.
+    /// </remarks>
+    public static double Drag(double radius) => radius * 3.5;
 
     /// <summary>How far a blob of this size reaches, past which it pulls nothing.</summary>
     /// <remarks>
@@ -154,6 +195,12 @@ static class World
         var reach = Reach(theirs);
 
         if (distance >= reach || mine <= 0)
+        {
+            return 0;
+        }
+
+        // one threshold for the pull and for the dent that shows it
+        if (theirs < WellSize)
         {
             return 0;
         }
@@ -198,11 +245,29 @@ static class World
     /// and too generous for a small one, which pays every tick for pellets it
     /// could not possibly see.
     ///
-    /// The browser fits (radius * 16 + 260) units across the shorter side of
-    /// the window. Nine tenths of that either way covers a wide screen with a
-    /// little to spare, so nothing arrives late.
+    /// The browser fits Extent(radius) across the shorter side of the window.
+    /// Nine tenths of that either way covers a wide screen with a little to
+    /// spare, so nothing arrives late.
     /// </remarks>
-    public static double ViewOf(double radius) => (radius * 16 + 260) * 0.9;
+    public static double ViewOf(double radius) => Extent(radius) * 0.9;
+
+    /// <summary>
+    /// How much of the arena the browser fits across the shorter side of the
+    /// window, for a player of this size.
+    /// </summary>
+    /// <remarks>
+    /// This has to match what the browser does, and the browser has its own
+    /// copy - it is the one number both halves need and neither can be told
+    /// by the other without asking every frame.
+    ///
+    /// It climbs well short of the radius on purpose. Straight off the radius
+    /// and a blob near the cap is looking at nine thousand units of arena
+    /// through a window eight hundred pixels tall, where a starting blob is
+    /// two pixels across and the pellets are dust. At this exponent the same
+    /// blob sees three thousand, which is enough to fill the screen with the
+    /// arena and still leave everything in it a size you can aim at.
+    /// </remarks>
+    public static double Extent(double radius) => 260 + 224 * Math.Pow(radius / Start, 0.7);
 
     /// <summary>
     /// Everything here is one of these nine colours, and the browser is told
@@ -298,6 +363,30 @@ static class World
 
         // the middle of the smaller one has to be inside the larger
         return dx * dx + dy * dy < ar * ar;
+    }
+
+    /// <summary>
+    /// How fast a pellet at this distance is dragged towards a blob.
+    /// </summary>
+    /// <remarks>
+    /// The same law the players feel, tempered and capped. A pellet has no
+    /// size to compare against, so nothing is gated on the ratio: anything
+    /// with a dent pulls dust, and the dust falls in.
+    /// </remarks>
+    public static double DriftSpeed(double theirs, double distance)
+    {
+        var reach = Drag(theirs);
+
+        if (theirs < WellSize || distance >= reach)
+        {
+            return 0;
+        }
+
+        var edge = Math.Clamp((reach - distance) / (theirs * 0.5), 0, 1);
+
+        var speed = Pull * theirs * theirs / (distance * distance + Soften * Soften) * edge * Dust;
+
+        return Math.Min(speed, Sweep);
     }
 
     /// <summary>Whether something is near enough to whoever is looking.</summary>

@@ -13,15 +13,6 @@ public record Steer(string Kind, double X, double Y);
 /// <summary>A blob, as everybody else sees it.</summary>
 public record Blob(string I, string N, string C, double X, double Y, double R);
 
-/// <summary>
-/// A pellet worth eating, as the server holds it.
-///
-/// Never sent as itself. On the wire a pellet is three numbers - see Frame -
-/// because four hundred of them carrying field names and an identifier they
-/// are never referred to by is most of what a frame would weigh.
-/// </summary>
-public record Pellet(string I, double X, double Y, int C);
-
 /// <summary>One line of the leaderboard.</summary>
 public record Score(string N, int S);
 
@@ -36,15 +27,18 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// pellets broadcast whole to everybody is most of a megabyte a second before
 /// anyone has done anything, and nobody can see it anyway.
 ///
+/// P is flat, four numbers to a pellet: which one it is, where it is, and
+/// what colour. The first of those is what lets the browser recognise a
+/// pellet it has seen before, which it has to do now that pellets move.
+///
 /// W is how big the arena currently is, which travels with every frame
 /// rather than only with the welcome because it grows and shrinks with the
 /// crowd - a browser told once would draw the wrong edge for the rest of the
 /// session.
 ///
-/// P is flat rather than a list of objects: x, y, colour, x, y, colour, and so
-/// on, the colour being a position in the palette sent with the welcome. The
-/// same pellets written out as records cost seven times as much, and they are
-/// the bulk of every frame.
+/// Flat rather than a list of objects: the same pellets written out as
+/// records cost several times as much, and they are the bulk of every frame.
+/// The colour is a position in the palette sent with the welcome.
 /// </remarks>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W);
 

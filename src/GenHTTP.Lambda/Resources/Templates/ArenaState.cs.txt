@@ -4,6 +4,30 @@
 // player to move them a few units would be a lot of rubbish for the collector.
 // What leaves the process is the immutable shape in Protocol.cs.
 
+/// <summary>
+/// One pellet on the floor.
+/// </summary>
+/// <remarks>
+/// Mutable for the same reason a player is: pellets are dragged about by
+/// whatever is big enough to drag them, and replacing seven hundred records
+/// twenty times a second to move some of them a few units would be a lot of
+/// rubbish for no gain.
+///
+/// The slot is a small number rather than a name, recycled when a pellet is
+/// eaten, so that the browser can tell which pellet is which across two
+/// frames without paying for an identifier per pellet per tick.
+/// </remarks>
+sealed class Pellet
+{
+    public int Slot;
+
+    public double X;
+    public double Y;
+
+    /// <summary>Which of the palette's colours it is.</summary>
+    public int C;
+}
+
 sealed class Player
 {
     public string Id;

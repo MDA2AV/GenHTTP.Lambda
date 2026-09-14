@@ -22,7 +22,46 @@ var json = new JsonSerializerOptions
 };
 
 var players = new ConcurrentDictionary<IReactiveConnection, Player>();
-var pellets = new ConcurrentDictionary<string, Pellet>(StringComparer.Ordinal);
+var pellets = new ConcurrentDictionary<int, Pellet>();
+
+/*
+ * Slot numbers, handed out and taken back. A pellet has to be recognisable
+ * across two frames now that they move - the browser draws between the last
+ * two things it was told, and cannot interpolate what it cannot match up -
+ * and recycling keeps those numbers short enough to be worth sending.
+ *
+ * A freed slot is left alone for a while before it is handed out again. The
+ * browser is drawing a tenth of a second in the past, so a slot reused
+ * immediately would be the old pellet in one of the two frames it is reading
+ * between and a brand new one somewhere else in the other, and it would draw
+ * the difference: a dot sliding the width of the arena. A second of quiet is
+ * several times longer than that window.
+ */
+var spare = new Queue<(int Slot, long Tick)>();
+
+var nextSlot = 0;
+
+var tick = 0L;
+
+const int Quiet = 20;
+
+int TakeSlot()
+{
+    if (spare.Count > 0 && tick - spare.Peek().Tick > Quiet)
+    {
+        return spare.Dequeue().Slot;
+    }
+
+    return nextSlot++;
+}
+
+void Drop(Pellet pellet)
+{
+    if (pellets.TryRemove(pellet.Slot, out _))
+    {
+        spare.Enqueue((pellet.Slot, tick));
+    }
+}
 var best = new List<Score>();
 
 // Random.Shared rather than one of our own, because this is reached from the
@@ -56,6 +95,74 @@ string NewId() => Convert.ToHexStringLower(System.Security.Cryptography.RandomNu
  */
 var size = World.Smallest;
 
+/// <summary>
+/// The pellets, in buckets, so that nobody has to look at all of them.
+/// </summary>
+/// <remarks>
+/// Rebuilt once a tick and then read by everything for the rest of it. It is
+/// held rather than passed because the broadcast needs it too, and it is
+/// replaced whole rather than edited so the threads reading it during the
+/// fan out are never looking at one being changed underneath them.
+/// </remarks>
+var floor = new Dictionary<long, List<Pellet>>();
+
+void Rebucket()
+{
+    var next = new Dictionary<long, List<Pellet>>();
+
+    foreach (var pellet in pellets.Values)
+    {
+        var key = World.KeyOf(pellet.X, pellet.Y);
+
+        if (!next.TryGetValue(key, out var bucket))
+        {
+            next[key] = bucket = [];
+        }
+
+        bucket.Add(pellet);
+    }
+
+    floor = next;
+}
+
+/// <summary>
+/// Somewhere to put a pellet: a few guesses, and whichever of them lands
+/// where the floor is thinnest wins.
+/// </summary>
+/// <remarks>
+/// Scattering uniformly sounds fair and is not, because what is eaten is
+/// not eaten uniformly. Players strip the ground they stand on and big ones
+/// drag in everything around them, so a uniform scatter refills the empty
+/// patches at the same rate as the full ones and the empty patches stay
+/// empty - the arena ends up with a bare middle and a well stocked border
+/// that nobody visits. Three guesses is enough to level it out and costs a
+/// dictionary lookup each.
+/// </remarks>
+(double X, double Y) Thinnest()
+{
+    var bestX = random.NextDouble() * size;
+    var bestY = random.NextDouble() * size;
+
+    var fewest = int.MaxValue;
+
+    for (var guess = 0; guess < 3; guess++)
+    {
+        var x = random.NextDouble() * size;
+        var y = random.NextDouble() * size;
+
+        var held = floor.TryGetValue(World.KeyOf(x, y), out var bucket) ? bucket.Count : 0;
+
+        if (held < fewest)
+        {
+            fewest = held;
+            bestX = x;
+            bestY = y;
+        }
+    }
+
+    return (bestX, bestY);
+}
+
 void Scatter()
 {
     var wanted = World.PelletsFor(size);
@@ -68,16 +175,23 @@ void Scatter()
     {
         if (pellet.X > size || pellet.Y > size)
         {
-            pellets.TryRemove(pellet.I, out _);
+            Drop(pellet);
         }
     }
 
     while (pellets.Count < wanted)
     {
-        var id = NewId();
+        var slot = TakeSlot();
 
-        pellets[id] = new Pellet(id, random.NextDouble() * size, random.NextDouble() * size,
-                                 World.AnyTint(random));
+        var spot = Thinnest();
+
+        pellets[slot] = new Pellet
+        {
+            Slot = slot,
+            X = spot.X,
+            Y = spot.Y,
+            C = World.AnyTint(random)
+        };
     }
 }
 
@@ -149,39 +263,12 @@ void Remember(Player player)
     }
 }
 
-/// <summary>
-/// The pellets, in buckets, so that nobody has to look at all of them.
-/// </summary>
-/// <remarks>
-/// Rebuilt once a tick and then read by everything for the rest of it. It is
-/// held rather than passed because the broadcast needs it too, and it is
-/// replaced whole rather than edited so the threads reading it during the
-/// fan out are never looking at one being changed underneath them.
-/// </remarks>
-var floor = new Dictionary<long, List<Pellet>>();
-
-void Rebucket()
-{
-    var next = new Dictionary<long, List<Pellet>>();
-
-    foreach (var pellet in pellets.Values)
-    {
-        var key = World.KeyOf(pellet.X, pellet.Y);
-
-        if (!next.TryGetValue(key, out var bucket))
-        {
-            next[key] = bucket = [];
-        }
-
-        bucket.Add(pellet);
-    }
-
-    floor = next;
-}
 
 void Step(double seconds)
 {
     var everyone = players.Values.ToArray();
+
+    tick++;
 
     // the arena is sized for whoever is in it, once, before anything moves
     size = World.SizeFor(everyone.Length);
@@ -190,6 +277,58 @@ void Step(double seconds)
     // over it, so that the eating below and the broadcast afterwards are both
     // reading the same arena rather than one a tick apart
     Scatter();
+
+    /*
+     * The dust falls in as well. Anything with a dent drags the pellets
+     * around it towards itself, which is what makes the arena look like it
+     * is draining into the big blobs rather than merely bending around them.
+     *
+     * This runs against the buckets as they were at the end of the last tick
+     * rather than rebuilding them first. A pellet moves at most three or four
+     * units in a tick against buckets two hundred and sixty across, so being
+     * one tick stale about which bucket a pellet is in costs nothing, and the
+     * alternative is bucketing the whole floor twice every tick.
+     */
+    foreach (var heavy in everyone)
+    {
+        if (heavy.Radius < World.WellSize)
+        {
+            continue;
+        }
+
+        foreach (var key in World.KeysWithin(heavy.X, heavy.Y, World.Drag(heavy.Radius)))
+        {
+            if (!floor.TryGetValue(key, out var dust))
+            {
+                continue;
+            }
+
+            foreach (var pellet in dust)
+            {
+                var toX = heavy.X - pellet.X;
+                var toY = heavy.Y - pellet.Y;
+
+                var gap = Math.Sqrt(toX * toX + toY * toY);
+
+                if (gap < 0.001)
+                {
+                    continue;
+                }
+
+                var speed = World.DriftSpeed(heavy.Radius, gap);
+
+                if (speed <= 0)
+                {
+                    continue;
+                }
+
+                var step = Math.Min(speed * seconds, gap);
+
+                pellet.X = World.Clamp(pellet.X + toX / gap * step, size);
+                pellet.Y = World.Clamp(pellet.Y + toY / gap * step, size);
+            }
+        }
+    }
 
     Rebucket();
 
@@ -300,8 +439,10 @@ void Step(double seconds)
                     continue;
                 }
 
-                if (pellets.TryRemove(pellet.I, out _))
+                if (pellets.TryRemove(pellet.Slot, out _))
                 {
+                    spare.Enqueue((pellet.Slot, tick));
+
                     player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.PelletArea);
                 }
             }
@@ -395,8 +536,9 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         }
     }
 
-    // whole units: a pellet does not move, so the half unit lost to rounding
-    // is a fixed offset nobody can see rather than a jitter anybody can
+    // whole units. A pellet does move now, but only ever towards something,
+    // and half a unit of rounding on a dot five units wide is well under a
+    // pixel at any zoom the game is played at
     var crumbs = new List<int>();
 
     foreach (var key in World.KeysWithin(viewer.X, viewer.Y, World.ViewOf(viewer.Radius)))
@@ -410,6 +552,7 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         {
             if (World.InView(viewer.X, viewer.Y, viewer.Radius, pellet.X, pellet.Y))
             {
+                crumbs.Add(pellet.Slot);
                 crumbs.Add((int)pellet.X);
                 crumbs.Add((int)pellet.Y);
                 crumbs.Add(pellet.C);
