@@ -6,9 +6,34 @@ const $ = (id) => document.getElementById(id);
 const canvas = $('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 
-let socket = null, me = null, world = 2400, mine = null;
-let blobs = [], pellets = [], board = [], palette = [];
-const drawn = new Map();           // id -> where it is being drawn, so it slides
+/*
+ * How far behind the newest thing the server said everything is drawn.
+ *
+ * The server speaks twenty times a second and the screen redraws sixty, so
+ * two frames in three have nothing new in them. Rather than guess at what
+ * happened in between, this keeps the last few snapshots and draws a fixed
+ * moment in the past, reading every blob off between the two places it
+ * actually was. The delay is what makes that possible: it is long enough
+ * that the snapshot on the far side has almost always arrived by the time it
+ * is wanted, so there is something to read between rather than nothing.
+ *
+ * A hundred milliseconds is two ticks and a margin. Shorter and a late
+ * packet leaves nothing to interpolate towards, which shows up as a hitch;
+ * much longer and steering starts to feel posted rather than driven.
+ */
+const DELAY = 100;
+
+/** The last few snapshots, oldest first. */
+const history = [];
+
+let socket = null, me = null, world = 2400;
+let palette = [];
+
+/** Where the player was when the last frame was drawn, which the camera and
+ *  the steering both read so that the point under the cursor is the point
+ *  that gets sent. */
+let camera = null;
+
 let pointer = { x: 0, y: 0 };
 
 function size() {
@@ -27,19 +52,59 @@ addEventListener('pointermove', (e) => { pointer = { x: e.clientX, y: e.clientY 
 // second - the same rate it answers at, because sending faster than it
 // replies only builds a queue
 setInterval(() => {
-  if (socket?.readyState !== 1 || !mine) return;
+  if (socket?.readyState !== 1 || !camera) return;
 
-  const scale = view();
-  const x = mine.x + (pointer.x - innerWidth / 2) / scale;
-  const y = mine.y + (pointer.y - innerHeight / 2) / scale;
+  const scale = scaleFor(camera.r);
+  const x = camera.x + (pointer.x - innerWidth / 2) / scale;
+  const y = camera.y + (pointer.y - innerHeight / 2) / scale;
 
   socket.send(JSON.stringify({ kind: 'steer', x, y }));
 }, 50);
 
 /** How many pixels one world unit is. Bigger blobs see more of the arena. */
-function view() {
-  const radius = mine?.r ?? 14;
+function scaleFor(radius) {
   return Math.min(innerWidth, innerHeight) / (radius * 16 + 260);
+}
+
+/**
+ * Everything as it was DELAY milliseconds ago, read between the two
+ * snapshots that bracket that moment.
+ */
+function moment() {
+  if (history.length === 0) return null;
+
+  const want = performance.now() - DELAY;
+
+  // the newest pair whose older half is already behind us
+  let i = history.length - 1;
+
+  while (i > 0 && history[i - 1].at > want) i--;
+
+  const after = history[i];
+  const before = history[i - 1] ?? after;
+
+  const span = after.at - before.at;
+  const t = span > 0 ? Math.min(1, Math.max(0, (want - before.at) / span)) : 1;
+
+  const was = new Map(before.b.map((b) => [b.i, b]));
+
+  const blobs = after.b.map((b) => {
+    const a = was.get(b.i);
+
+    // somebody who has only just appeared has nowhere to come from
+    if (!a) return b;
+
+    return {
+      i: b.i, n: b.n, c: b.c,
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+      r: a.r + (b.r - a.r) * t,
+    };
+  });
+
+  // pellets do not move, so they are taken from the older half: one then
+  // disappears exactly as the blob drawn between the two reaches it
+  return { blobs, pellets: before.p };
 }
 
 function draw() {
@@ -49,9 +114,20 @@ function draw() {
   ctx.fillStyle = '#0b0d11';
   ctx.fillRect(0, 0, innerWidth, innerHeight);
 
+  const now = moment();
+
+  if (!now) return;
+
+  const mine = now.blobs.find((b) => b.i === me);
+
   if (!mine) return;
 
-  const scale = view();
+  // the camera sits on the same position the blob is drawn at, so the
+  // player is exactly in the middle of the screen every frame rather than
+  // swinging about it
+  camera = mine;
+
+  const scale = scaleFor(mine.r);
   const ox = innerWidth / 2 - mine.x * scale;
   const oy = innerHeight / 2 - mine.y * scale;
 
@@ -78,7 +154,9 @@ function draw() {
   // pellets arrive flat - x, y, colour, x, y, colour - so they are walked
   // three at a time rather than unpacked into objects that live one frame
   ctx.globalAlpha = 0.75;
+
   const dot = Math.max(2, 5 * scale);
+  const pellets = now.pellets;
 
   for (let i = 0; i < pellets.length; i += 3) {
     ctx.fillStyle = palette[pellets[i + 2]] ?? '#9aa0a6';
@@ -90,16 +168,10 @@ function draw() {
   ctx.globalAlpha = 1;
 
   // smallest first, so being swallowed looks like being swallowed
-  for (const b of [...blobs].sort((a, z) => a.r - z.r)) {
-    const at = drawn.get(b.i) ?? { x: b.x, y: b.y, r: b.r };
-    at.x += (b.x - at.x) * 0.35;
-    at.y += (b.y - at.y) * 0.35;
-    at.r += (b.r - at.r) * 0.2;
-    drawn.set(b.i, at);
-
-    const x = ox + at.x * scale;
-    const y = oy + at.y * scale;
-    const r = at.r * scale;
+  for (const b of [...now.blobs].sort((a, z) => a.r - z.r)) {
+    const x = ox + b.x * scale;
+    const y = oy + b.y * scale;
+    const r = b.r * scale;
 
     ctx.fillStyle = b.c;
     ctx.beginPath();
@@ -118,10 +190,6 @@ function draw() {
       ctx.fillText(b.n, x, y);
     }
   }
-
-  for (const id of [...drawn.keys()]) {
-    if (!blobs.some((b) => b.i === id)) drawn.delete(id);
-  }
 }
 
 requestAnimationFrame(draw);
@@ -138,6 +206,7 @@ function connect(name) {
 
     if (m.kind === 'welcome') {
       me = m.id; world = m.world; palette = m.palette;
+      history.length = 0; camera = null;
       $('gate').hidden = true; $('over').hidden = true;
       $('hud').hidden = false; $('board').hidden = false;
       return;
@@ -147,21 +216,28 @@ function connect(name) {
       $('verdict').textContent = `Eaten by ${m.by}`;
       $('final').textContent = `You got to ${m.score}.`;
       $('over').hidden = false;
-      mine = null;
+      camera = null;
       return;
     }
 
-    blobs = m.b; pellets = m.p; board = m.l; world = m.w ?? world;
-    mine = blobs.find((b) => b.i === me) ?? mine;
+    world = m.w ?? world;
 
-    $('score').textContent = mine ? Math.round(Math.PI * mine.r * mine.r - Math.PI * 196) : 0;
+    history.push({ at: performance.now(), b: m.b, p: m.p });
+
+    // a couple of seconds is far more than DELAY ever reaches back for, and
+    // keeps this from growing for as long as somebody leaves the tab open
+    while (history.length > 40) history.shift();
+
+    const self = m.b.find((b) => b.i === me);
+
+    $('score').textContent = self ? Math.round(Math.PI * self.r * self.r - Math.PI * 196) : 0;
     $('here').textContent = `${m.alive} in the arena`;
-    $('list').innerHTML = board.map((s) =>
-      `<li class="${mine && s.n === mine.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
+    $('list').innerHTML = m.l.map((s) =>
+      `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
   };
 
   socket.onclose = () => { $('here').textContent = 'disconnected'; };
 }
 
 $('go').onclick = () => connect($('name').value);
-$('again').onclick = () => { drawn.clear(); connect($('name').value); };
+$('again').onclick = () => connect($('name').value);
