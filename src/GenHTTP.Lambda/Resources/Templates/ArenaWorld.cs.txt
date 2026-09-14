@@ -99,6 +99,96 @@ static class World
     /// <summary>How much bigger you have to be to eat somebody.</summary>
     public const double EatRatio = 1.18;
 
+    #region Getting hurt
+
+    /*
+     * Nothing small can eat anything large - that is the whole shape of the
+     * game - so hurting one has to be a separate channel that takes area off
+     * it directly. What comes off does not vanish: most of it lands on the
+     * floor around the victim as pellets, which is what turns a giant into
+     * something worth attacking rather than something to be avoided.
+     */
+
+    /// <summary>The smallest thing an ability can hurt.</summary>
+    /// <remarks>
+    /// The same size at which a blob starts bending the floor. Below it a
+    /// blob is somebody's lunch rather than somebody's problem, and letting
+    /// harpoons reach that far down would make spawning a hazard.
+    /// </remarks>
+    public const double Tender = WellSize;
+
+    /// <summary>What a harpoon takes off whatever it hits.</summary>
+    /// <remarks>
+    /// A share of the victim rather than an amount, so that a spawn's lever
+    /// does not shrink as its target grows - which is the only way a small
+    /// player is ever a threat to a large one. One hit on the largest
+    /// possible blob is worth a hundred and twenty thousand area, and it
+    /// would still take forty one of them alone.
+    /// </remarks>
+    public const double Barb = 0.12;
+
+    /// <summary>The most an ability can take off one blob in <see cref="Window" />.</summary>
+    /// <remarks>
+    /// Without this a crowd with harpoons deletes anything. With it they can
+    /// carve a giant down over a minute if they keep it up, which is a siege
+    /// rather than an execution.
+    /// </remarks>
+    public const double Bruise = 0.30;
+
+    /// <summary>How long that ceiling is measured over.</summary>
+    public const double Window = 10.0;
+
+    /// <summary>How much of what is taken off lands on the floor.</summary>
+    /// <remarks>
+    /// Most, not all. The rest leaves the arena - partly so that the victim
+    /// cannot simply hoover its own blood back and come out even, and partly
+    /// because a fight that conserves everything is a round that never ends.
+    /// </remarks>
+    public const double Spill = 0.70;
+
+    /// <summary>
+    /// The least a shower ever lands from the edge of whoever it came off.
+    /// </summary>
+    /// <remarks>
+    /// Only ever the floor for something small. What actually decides it is
+    /// how far the victim can drag pellets, because anything that lands
+    /// inside that is a gift back to them.
+    /// </remarks>
+    public const double Splash = 30;
+
+    /// <summary>And how far it reaches at its widest.</summary>
+    /// <remarks>
+    /// Past what anything large can move in the time it takes a small player
+    /// to get there. The heaviest pieces land furthest out for the same
+    /// reason: the loot is meant to be worth racing for.
+    /// </remarks>
+    public const double Scatter = 330;
+
+    /// <summary>How many pieces one shower may break into.</summary>
+    public const int Shards = 48;
+
+    /// <summary>What a self destruct takes off, at the centre of the blast.</summary>
+    public const double Blast = 0.22;
+
+    /// <summary>How far a blast reaches, for somebody of this size.</summary>
+    public static double Bang(double radius) => Math.Clamp(radius * 5, 150, 900);
+
+    /// <summary>The most a blast can take off, against what it cost to set off.</summary>
+    /// <remarks>
+    /// Eight times the area spent. It stops a spawn from setting off
+    /// something that hurts a giant, and makes this the middling player's
+    /// trade: theirs is the body big enough to be worth spending.
+    /// </remarks>
+    public const double Yield = 8;
+
+    /// <summary>How much of somebody who sets themselves off lands on the floor.</summary>
+    public const double Remains = 0.40;
+
+    /// <summary>How long the fuse burns, so that it can be read and run from.</summary>
+    public const double Fuse = 0.6;
+
+    #endregion
+
     #region Gravity
 
     /*
@@ -193,8 +283,14 @@ static class World
      * set rather than a button that wins.
      */
 
-    /// <summary>How much harder a held pull drags than an idle one.</summary>
-    public const double Grasp = 3;
+    /// <summary>How much harder a freshly held pull drags than an idle one.</summary>
+    /// <remarks>
+    /// Where it starts, not where it ends. A hold that arrives at full
+    /// strength in half a second is a button rather than a commitment - the
+    /// whole of the interest is in deciding whether to keep paying, and
+    /// there is no decision if the first moment is already the best one.
+    /// </remarks>
+    public const double Grasp = 1.8;
 
     /// <summary>
     /// The most of your own speed a held pull can take from you.
@@ -243,7 +339,7 @@ static class World
     /// floor visibly caves in before the pull arrives - which is the warning
     /// everybody else gets.
     /// </remarks>
-    public const double Wind = 0.4;
+    public const double Wind = 0.6;
 
     /// <summary>How long before it can be held again.</summary>
     public const double Rest = 2.0;
@@ -253,15 +349,15 @@ static class World
     /// </summary>
     /// <remarks>
     /// The wind up is the warning; this is the commitment. A hold that is
-    /// merely on is worth three of standing there, and one that has been on
-    /// for six more seconds is worth nine - but six seconds of holding is a
-    /// fifth of yourself, spent rooted to the spot where everybody can see
-    /// you. The escalation is what makes that trade worth considering.
+    /// merely on is worth not quite two of standing there; ten seconds later
+    /// it is worth nine. Ten seconds is a long time to spend rooted to one
+    /// spot with the floor caving in under you and the cost climbing with
+    /// the pull - which is exactly the decision the whole thing is for.
     /// </remarks>
-    public const double Swell = 6.0;
+    public const double Swell = 10.0;
 
     /// <summary>How many times its initial strength a hold can reach.</summary>
-    public const double Zenith = 3.0;
+    public const double Zenith = 5.0;
 
     /// <summary>What a held pull does to loose pellets instead of the usual.</summary>
     public const double HeldDust = 0.24;
@@ -329,11 +425,13 @@ static class World
     /// How far a blob of this size drags loose pellets.
     /// </summary>
     /// <remarks>
-    /// It does not widen when somebody holds, though the pull on players
-    /// does. Holding is meant to be how you catch somebody, not how you
-    /// farm: a dust reach that grew with the grip turned a few seconds of
-    /// holding into a sweep of a fifth of the arena, which paid for itself
-    /// many times over and made the whole thing free.
+    /// It widens with the grip, the same as the pull on players does - a
+    /// hold that reaches further for people and not for dust looks broken,
+    /// because the floor near you stays put while everything else comes in.
+    ///
+    /// What stops that being free money is the cost, which climbs with the
+    /// grip as well: the swept area grows with the grip and so does the
+    /// bill, and the bill grows faster.
     ///
     /// What is being tuned here is not the strength of anything, it is how
     /// many pellets are in the air at once - which is the inflow times how
@@ -343,7 +441,7 @@ static class World
     /// part of half a minute, and the ring around a big blob is always full
     /// of dust on its way in.
     /// </remarks>
-    public static double Drag(double radius) => radius * 3.5;
+    public static double Drag(double radius, double grip) => radius * 3.5 * Math.Sqrt(Math.Max(1, grip));
 
     /// <summary>How far a blob of this size reaches, past which it pulls nothing.</summary>
     /// <remarks>
@@ -566,7 +664,7 @@ static class World
     /// </remarks>
     public static double DriftSpeed(double theirs, double distance, double grip, bool held)
     {
-        var reach = Drag(theirs);
+        var reach = Drag(theirs, grip);
 
         if (grip <= 0 || distance >= reach)
         {

@@ -49,7 +49,16 @@ public sealed record LambdaOptions
     /// <summary>
     /// The maximum size of a code snippet that will be accepted.
     /// </summary>
-    public int MaxCodeLength { get; init; } = 64 * 1024;
+    /// <remarks>
+    /// Counted across every C# file of a lambda together, and not against
+    /// its assets, which have their own budget. It was half this and that
+    /// was the tightest of the three limits by a distance: a lambda may
+    /// ship twelve files and two megabytes of things to serve, and then be
+    /// refused for the code that serves them. What this actually guards is
+    /// the time the compiler spends, and that is not close to mattering at
+    /// either number.
+    /// </remarks>
+    public int MaxCodeLength { get; init; } = 128 * 1024;
 
     /// <summary>
     /// How many bytes of assets a lambda may ship beside its code.

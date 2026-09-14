@@ -158,7 +158,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_RETENTION_HOURS`            | `720`            | how long an untouched lambda is kept        |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
 | `LAMBDA_MAX_ASSET_BYTES`            | `2097152`        | what the shipped assets may come to         |
-| `LAMBDA_MAX_CODE_LENGTH`            | `65536`          | largest snippet accepted                    |
+| `LAMBDA_MAX_CODE_LENGTH`            | `131072`         | largest snippet accepted                    |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |

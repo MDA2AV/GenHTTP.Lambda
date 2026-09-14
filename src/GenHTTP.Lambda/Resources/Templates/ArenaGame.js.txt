@@ -29,6 +29,11 @@ const history = [];
 let socket = null, me = null, world = 2400;
 let palette = [], wellSize = 40, girths = [5];
 
+/** What this player is carrying, and how long is left of their own fuse. */
+let carrying = 0, fuse = 0;
+
+const PERKS = { 1: 'harpoon', 2: 'blast' };
+
 /*
  * The floor is a sheet, and anything heavy enough to eat you sits in a dent
  * it has made in it. The dent is not decoration - it is the same pull the
@@ -81,6 +86,13 @@ addEventListener('keyup', (e) => {
 // letting go of the window counts as letting go of the key, or a player who
 // alt-tabs mid pull comes back to find themselves still burning
 addEventListener('blur', () => { hold = false; });
+
+// clicking spends whatever is in hand: a harpoon goes where the pointer is,
+// a blast lights a fuse under you
+addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || socket?.readyState !== 1 || !camera) return;
+  socket.send(JSON.stringify({ kind: 'use' }));
+});
 
 function size() {
   canvas.width = innerWidth * devicePixelRatio;
@@ -276,7 +288,7 @@ function moment() {
     }
   }
 
-  return { blobs, pellets };
+  return { blobs, pellets, loot: after.k ?? [], spears: after.s ?? [] };
 }
 
 function draw() {
@@ -395,6 +407,59 @@ function draw() {
 
   ctx.globalAlpha = 1;
 
+  // what is lying about to be picked up: a fixture of the floor, so it sits
+  // where it is and the funnel bends around it rather than dragging it off
+  const loot = now.loot;
+
+  for (let i = 0; i < loot.length; i += 4) {
+    const at = flat(loot[i + 1], loot[i + 2]);
+    const r = Math.max(5, 9 * scale);
+    const harpoon = loot[i + 3] === 1;
+
+    ctx.save();
+    ctx.translate(at.x, at.y);
+    ctx.rotate(performance.now() / 900);
+
+    ctx.strokeStyle = harpoon ? '#8ab4f8' : '#ff8bcb';
+    ctx.fillStyle = harpoon ? '#8ab4f81a' : '#ff8bcb1a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    // a diamond for the harpoon, a ring of spikes for the blast, so the two
+    // can be told apart at a glance and at any zoom
+    if (harpoon) {
+      ctx.moveTo(0, -r); ctx.lineTo(r, 0); ctx.lineTo(0, r); ctx.lineTo(-r, 0);
+      ctx.closePath();
+    } else {
+      for (let s = 0; s < 8; s++) {
+        const a = s * Math.PI / 4;
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.lineTo(Math.cos(a + Math.PI / 8) * r * 0.45, Math.sin(a + Math.PI / 8) * r * 0.45);
+      }
+      ctx.closePath();
+    }
+
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // harpoons in the air
+  const flying = now.spears;
+
+  for (let i = 0; i < flying.length; i += 3) {
+    const at = flat(flying[i], flying[i + 1]);
+    const heading = flying[i + 2] / 100;
+    const long = Math.max(10, 26 * scale);
+
+    ctx.strokeStyle = '#8ab4f8';
+    ctx.lineWidth = Math.max(2, 3 * scale);
+    ctx.beginPath();
+    ctx.moveTo(at.x - Math.cos(heading) * long, at.y - Math.sin(heading) * long);
+    ctx.lineTo(at.x, at.y);
+    ctx.stroke();
+  }
+
   // smallest first, so being swallowed looks like being swallowed
   for (const b of [...now.blobs].sort((a, z) => a.r - z.r)) {
     const at = flat(b.x, b.y);
@@ -419,6 +484,17 @@ function draw() {
     ctx.strokeStyle = b.i === me ? '#ffffff' : '#00000055';
     ctx.lineWidth = b.i === me ? 3 : 2;
     ctx.stroke();
+
+    // somebody with a lit fuse, which is the only warning anybody gets
+    if (b.i === me && fuse > 0) {
+      const left = Math.min(1, fuse / 0.6);
+
+      ctx.strokeStyle = `rgba(242,139,130,${0.4 + (1 - left) * 0.6})`;
+      ctx.lineWidth = 3 + (1 - left) * 6;
+      ctx.beginPath();
+      ctx.arc(at.x, y, r + (1 - left) * 5 * r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     // a ring that tightens as the grip comes up, so it is obvious at a
     // glance who is rooted and how far along they are
@@ -545,7 +621,10 @@ function connect(name) {
 
     world = m.w ?? world;
 
-    history.push({ at: performance.now(), b: m.b, p: m.p });
+    history.push({ at: performance.now(), b: m.b, p: m.p, k: m.k, s: m.s });
+
+    carrying = m.mine ?? 0;
+    fuse = m.fuse ?? 0;
 
     // a couple of seconds is far more than DELAY ever reaches back for, and
     // keeps this from growing for as long as somebody leaves the tab open
@@ -556,6 +635,14 @@ function connect(name) {
     $('score').textContent = self ? Math.round(Math.PI * self.r * self.r - Math.PI * 196) : 0;
     $('here').textContent = `${m.alive} in the arena`;
     $('hold').hidden = !(self && (self.g ?? 0) > 1);
+
+    const perk = $('perk');
+
+    perk.hidden = !carrying;
+    perk.textContent = carrying === 1
+      ? 'harpoon in hand — click to throw it at something big'
+      : 'blast in hand — click and everything large near you takes it with you';
+    perk.className = carrying === 1 ? 'harpoon' : 'blast';
     $('list').innerHTML = m.l.map((s) =>
       `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
   };
