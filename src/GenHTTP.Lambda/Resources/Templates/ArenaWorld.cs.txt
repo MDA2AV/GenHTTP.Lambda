@@ -2,11 +2,42 @@
 
 static class World
 {
-    /// <summary>The arena is a square this many units on a side.</summary>
-    public const double Size = 2400;
+    /// <summary>The smallest the arena ever is, which is how it starts.</summary>
+    public const double Smallest = 2400;
 
-    /// <summary>How many pellets are on the floor at once.</summary>
-    public const int Pellets = 420;
+    /// <summary>
+    /// How much room one player is given.
+    /// </summary>
+    /// <remarks>
+    /// About two screens' worth. Below this the arena stops being a game and
+    /// becomes a scrum: every pellet that lands in the middle is eaten within
+    /// a tick, and the only ones that survive are the ones out at the edge
+    /// where nobody goes - so the middle wears bare and stays bare, while the
+    /// total never drops far enough for the scatter to notice.
+    /// </remarks>
+    public const double Elbow = 360_000;
+
+    /// <summary>
+    /// How big the arena is for this many people.
+    /// </summary>
+    /// <remarks>
+    /// It grows with the crowd rather than being fixed, which keeps the
+    /// density of both players and pellets roughly constant however many
+    /// turn up - and so keeps what one player is sent per tick constant too,
+    /// because that is decided by how far they can see and not by how big
+    /// the world is.
+    /// </remarks>
+    public static double SizeFor(int players) => Math.Max(Smallest, Math.Sqrt(players * Elbow));
+
+    /// <summary>
+    /// How many pellets belong on the floor of an arena this size.
+    /// </summary>
+    /// <remarks>
+    /// A density rather than a count, so that it is what a player sees that
+    /// stays the same: about forty on screen, which is enough that there is
+    /// always something worth steering at.
+    /// </remarks>
+    public static int PelletsFor(double size) => (int)(size * size / 8_229);
 
     /// <summary>The radius everybody starts at.</summary>
     public const double Start = 14;
@@ -23,8 +54,22 @@ static class World
     /// <summary>How much of the loser's area the winner keeps.</summary>
     public const double Spoils = 0.85;
 
-    /// <summary>How far either side of a player is sent to them.</summary>
-    public const double View = 700;
+    /// <summary>
+    /// How far either side of a player is worth sending to them.
+    /// </summary>
+    /// <remarks>
+    /// This follows the browser's zoom instead of being a fixed distance,
+    /// because the browser zooms out as a blob grows. A fixed distance is
+    /// necessarily wrong in both directions: too tight for a big blob, which
+    /// then watches things appear out of nothing at the edge of its screen,
+    /// and too generous for a small one, which pays every tick for pellets it
+    /// could not possibly see.
+    ///
+    /// The browser fits (radius * 16 + 260) units across the shorter side of
+    /// the window. Nine tenths of that either way covers a wide screen with a
+    /// little to spare, so nothing arrives late.
+    /// </remarks>
+    public static double ViewOf(double radius) => (radius * 16 + 260) * 0.9;
 
     /// <summary>
     /// Everything here is one of these nine colours, and the browser is told
@@ -50,6 +95,49 @@ static class World
     /// </remarks>
     public static double Speed(double radius) => 260.0 / Math.Pow(radius / Start, 0.42);
 
+    /// <summary>
+    /// How big a square of the arena one bucket of the pellet grid covers.
+    /// </summary>
+    /// <remarks>
+    /// The widest a blob ever gets, so anybody touching a pellet is touching
+    /// one held in their own bucket or a neighbouring one, never further.
+    /// </remarks>
+    public const double Cell = Biggest * 2;
+
+    /// <summary>Which bucket something at this position belongs in.</summary>
+    /// <remarks>
+    /// Two cell numbers packed into one, so the grid is an ordinary
+    /// dictionary rather than something that has to be sized in advance and
+    /// rebuilt every time the arena grows.
+    /// </remarks>
+    public static long KeyOf(double x, double y) => ((long)(x / Cell) << 24) | (long)(y / Cell);
+
+    /// <summary>
+    /// Every bucket that a square of this reach around a point touches.
+    /// </summary>
+    /// <remarks>
+    /// This is what keeps the tick affordable. Both of the loops that used to
+    /// walk every pellet for every player - who is eating what, and what each
+    /// player can see - now walk the handful of buckets they actually reach.
+    /// At a few hundred of each that is the difference between a tick that
+    /// fits in fifty milliseconds and one that does not.
+    /// </remarks>
+    public static IEnumerable<long> KeysWithin(double x, double y, double reach)
+    {
+        var fromX = (long)(Math.Max(0, x - reach) / Cell);
+        var toX = (long)(Math.Max(0, x + reach) / Cell);
+        var fromY = (long)(Math.Max(0, y - reach) / Cell);
+        var toY = (long)(Math.Max(0, y + reach) / Cell);
+
+        for (var cx = fromX; cx <= toX; cx++)
+        {
+            for (var cy = fromY; cy <= toY; cy++)
+            {
+                yield return (cx << 24) | cy;
+            }
+        }
+    }
+
     /// <summary>The area of a blob, which is what actually accumulates.</summary>
     public static double AreaOf(double radius) => Math.PI * radius * radius;
 
@@ -72,11 +160,15 @@ static class World
         return dx * dx + dy * dy < ar * ar;
     }
 
-    /// <summary>Whether something is near enough to be worth sending.</summary>
-    public static bool InView(double px, double py, double x, double y)
-        => Math.Abs(x - px) < View && Math.Abs(y - py) < View;
+    /// <summary>Whether something is near enough to whoever is looking.</summary>
+    public static bool InView(double px, double py, double radius, double x, double y)
+    {
+        var reach = ViewOf(radius);
 
-    public static double Clamp(double value) => Math.Clamp(value, 0, Size);
+        return Math.Abs(x - px) < reach && Math.Abs(y - py) < reach;
+    }
+
+    public static double Clamp(double value, double size) => Math.Clamp(value, 0, size);
 
     public static string Called(string name)
     {

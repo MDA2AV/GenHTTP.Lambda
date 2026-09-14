@@ -25,7 +25,12 @@ var players = new ConcurrentDictionary<IReactiveConnection, Player>();
 var pellets = new ConcurrentDictionary<string, Pellet>(StringComparer.Ordinal);
 var best = new List<Score>();
 
-var random = new Random();
+// Random.Shared rather than one of our own, because this is reached from the
+// clock and from every socket at once. A Random used from two threads has its
+// state torn and starts answering near zero forever - which here means every
+// pellet scattered after that lands in the same corner, and the arena quietly
+// empties out everywhere else. Nothing throws; it just goes wrong.
+var random = Random.Shared;
 var writing = new object();
 var ticking = 0;
 var seat = 0;
@@ -37,13 +42,35 @@ if (Workspace.Exists("best.json"))
 
 string NewId() => Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4));
 
+/*
+ * How big the arena is right now. It follows the crowd, so it is read once a
+ * tick and then used everywhere for that tick rather than recomputed - a
+ * world that changed size halfway through a tick would clamp some players
+ * against one edge and scatter pellets past it.
+ */
+var size = World.Smallest;
+
 void Scatter()
 {
-    while (pellets.Count < World.Pellets)
+    var wanted = World.PelletsFor(size);
+
+    // whatever is now outside the arena comes off the floor first. A world
+    // that has just shrunk is otherwise left holding its whole count out
+    // past the edge, where nobody can reach it and where it still counts
+    // against the target, so nothing is ever scattered anywhere useful again
+    foreach (var pellet in pellets.Values)
+    {
+        if (pellet.X > size || pellet.Y > size)
+        {
+            pellets.TryRemove(pellet.I, out _);
+        }
+    }
+
+    while (pellets.Count < wanted)
     {
         var id = NewId();
 
-        pellets[id] = new Pellet(id, random.NextDouble() * World.Size, random.NextDouble() * World.Size,
+        pellets[id] = new Pellet(id, random.NextDouble() * size, random.NextDouble() * size,
                                  World.AnyTint(random));
     }
 }
@@ -72,9 +99,49 @@ void Remember(Player player)
     }
 }
 
+/// <summary>
+/// The pellets, in buckets, so that nobody has to look at all of them.
+/// </summary>
+/// <remarks>
+/// Rebuilt once a tick and then read by everything for the rest of it. It is
+/// held rather than passed because the broadcast needs it too, and it is
+/// replaced whole rather than edited so the threads reading it during the
+/// fan out are never looking at one being changed underneath them.
+/// </remarks>
+var floor = new Dictionary<long, List<Pellet>>();
+
+void Rebucket()
+{
+    var next = new Dictionary<long, List<Pellet>>();
+
+    foreach (var pellet in pellets.Values)
+    {
+        var key = World.KeyOf(pellet.X, pellet.Y);
+
+        if (!next.TryGetValue(key, out var bucket))
+        {
+            next[key] = bucket = [];
+        }
+
+        bucket.Add(pellet);
+    }
+
+    floor = next;
+}
+
 void Step(double seconds)
 {
     var everyone = players.Values.ToArray();
+
+    // the arena is sized for whoever is in it, once, before anything moves
+    size = World.SizeFor(everyone.Length);
+
+    // and the floor is made good and put into buckets before anybody walks
+    // over it, so that the eating below and the broadcast afterwards are both
+    // reading the same arena rather than one a tick apart
+    Scatter();
+
+    Rebucket();
 
     foreach (var player in everyone)
     {
@@ -87,27 +154,33 @@ void Step(double seconds)
         {
             var step = Math.Min(World.Speed(player.Radius) * seconds, distance);
 
-            player.X = World.Clamp(player.X + dx / distance * step);
-            player.Y = World.Clamp(player.Y + dy / distance * step);
+            player.X = World.Clamp(player.X + dx / distance * step, size);
+            player.Y = World.Clamp(player.Y + dy / distance * step, size);
         }
 
         // pellets first: growing before the fight is resolved is what makes a
         // near miss feel like a near miss
-        foreach (var pellet in pellets.Values)
+        foreach (var key in World.KeysWithin(player.X, player.Y, player.Radius))
         {
-            if (!World.Overlaps(player.X, player.Y, player.Radius, pellet.X, pellet.Y))
+            if (!floor.TryGetValue(key, out var bucket))
             {
                 continue;
             }
 
-            if (pellets.TryRemove(pellet.I, out _))
+            foreach (var pellet in bucket)
             {
-                player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.PelletArea);
+                if (!World.Overlaps(player.X, player.Y, player.Radius, pellet.X, pellet.Y))
+                {
+                    continue;
+                }
+
+                if (pellets.TryRemove(pellet.I, out _))
+                {
+                    player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.PelletArea);
+                }
             }
         }
     }
-
-    Scatter();
 
     foreach (var player in everyone)
     {
@@ -137,7 +210,7 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
 
     foreach (var blob in blobs)
     {
-        if (World.InView(viewer.X, viewer.Y, blob.X, blob.Y))
+        if (World.InView(viewer.X, viewer.Y, viewer.Radius, blob.X, blob.Y))
         {
             near.Add(blob);
         }
@@ -147,17 +220,25 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
     // is a fixed offset nobody can see rather than a jitter anybody can
     var crumbs = new List<int>();
 
-    foreach (var pellet in pellets.Values)
+    foreach (var key in World.KeysWithin(viewer.X, viewer.Y, World.ViewOf(viewer.Radius)))
     {
-        if (World.InView(viewer.X, viewer.Y, pellet.X, pellet.Y))
+        if (!floor.TryGetValue(key, out var bucket))
         {
-            crumbs.Add((int)pellet.X);
-            crumbs.Add((int)pellet.Y);
-            crumbs.Add(pellet.C);
+            continue;
+        }
+
+        foreach (var pellet in bucket)
+        {
+            if (World.InView(viewer.X, viewer.Y, viewer.Radius, pellet.X, pellet.Y))
+            {
+                crumbs.Add((int)pellet.X);
+                crumbs.Add((int)pellet.Y);
+                crumbs.Add(pellet.C);
+            }
         }
     }
 
-    return JsonSerializer.Serialize(new Frame("f", near, crumbs, board.ToList(), alive), json);
+    return JsonSerializer.Serialize(new Frame("f", near, crumbs, board.ToList(), alive, size), json);
 }
 
 async ValueTask Broadcast()
@@ -306,8 +387,8 @@ var socket = Websocket.Functional()
                                   Id = NewId(),
                                   Name = World.Called(joining?.Name),
                                   Colour = World.ColourFor(Interlocked.Increment(ref seat)),
-                                  X = random.NextDouble() * World.Size,
-                                  Y = random.NextDouble() * World.Size,
+                                  X = random.NextDouble() * size,
+                                  Y = random.NextDouble() * size,
                                   Radius = World.Start
                               };
 
@@ -317,7 +398,7 @@ var socket = Websocket.Functional()
                               players[connection] = player;
 
                               await connection.WritePayloadAsync(JsonSerializer.Serialize(
-                                  new Welcome("welcome", player.Id, player.Colour, World.Size, World.Palette), json));
+                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette), json));
 
                               StartClock();
 
@@ -331,8 +412,8 @@ var socket = Websocket.Functional()
                               return;
                           }
 
-                          player.WantX = World.Clamp(steer.X);
-                          player.WantY = World.Clamp(steer.Y);
+                          player.WantX = World.Clamp(steer.X, size);
+                          player.WantY = World.Clamp(steer.Y, size);
                       })
                       .OnClose((connection, _) =>
                       {

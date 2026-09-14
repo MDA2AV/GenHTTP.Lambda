@@ -151,7 +151,7 @@ function connect(name) {
       return;
     }
 
-    blobs = m.b; pellets = m.p; board = m.l;
+    blobs = m.b; pellets = m.p; board = m.l; world = m.w ?? world;
     mine = blobs.find((b) => b.i === me) ?? mine;
 
     $('score').textContent = mine ? Math.round(Math.PI * mine.r * mine.r - Math.PI * 196) : 0;

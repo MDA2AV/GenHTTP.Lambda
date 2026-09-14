@@ -36,12 +36,17 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// pellets broadcast whole to everybody is most of a megabyte a second before
 /// anyone has done anything, and nobody can see it anyway.
 ///
+/// W is how big the arena currently is, which travels with every frame
+/// rather than only with the welcome because it grows and shrinks with the
+/// crowd - a browser told once would draw the wrong edge for the rest of the
+/// session.
+///
 /// P is flat rather than a list of objects: x, y, colour, x, y, colour, and so
 /// on, the colour being a position in the palette sent with the welcome. The
 /// same pellets written out as records cost seven times as much, and they are
 /// the bulk of every frame.
 /// </remarks>
-public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive);
+public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W);
 
 /// <summary>Sent to whoever has just been eaten.</summary>
 public record Eaten(string Kind, string By, int Score);
