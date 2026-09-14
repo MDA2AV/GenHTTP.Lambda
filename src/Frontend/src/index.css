@@ -114,6 +114,24 @@
     pointer-events: none;
     /* enough to blend the shapes into each other, not enough to erase them */
     filter: blur(42px);
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 12%,
+      transparent 27%,
+      transparent 48%,
+      #000 64%,
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0%,
+      #000 12%,
+      transparent 27%,
+      transparent 48%,
+      #000 64%,
+      #000 100%
+    );
     will-change: transform;
   }
 
@@ -154,11 +172,11 @@
 
   /*
    * Somewhere for the words to sit. The field is as tall as the whole page,
-   * so a clearing at inset 0 puts its centre halfway down the document and
-   * nowhere near the heading - it has to be pinned to the first screen to be
-   * behind the type at all. It breathes rather than holding still, because a
-   * fixed disc in the middle of moving colour is the one thing that reads as
-   * static however fast the rest of it turns.
+   * so this has to be pinned to the first screen to be behind the type at
+   * all - at inset 0 its centre lands halfway down the document. It runs
+   * across rather than in a circle: a disc of washed-out colour reads as a
+   * spotlight cut out of the art, where a band reads as the horizon it sits
+   * under, and the shapes are masked to match.
    */
   .aurora-clearing {
     position: absolute;
@@ -167,21 +185,22 @@
     right: 0;
     height: 100vh;
     pointer-events: none;
-    background: radial-gradient(
-      45% 29% at 50% 46%,
-      rgb(255 255 255 / 0.9),
-      rgb(255 255 255 / 0.5) 55%,
-      transparent 79%
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgb(255 255 255 / 0.45) 30%,
+      rgb(255 255 255 / 0.45) 62%,
+      transparent 92%
     );
-    animation: breathe 19s ease-in-out infinite;
   }
 
   html.dark .aurora-clearing {
-    background: radial-gradient(
-      47% 31% at 50% 46%,
-      rgb(32 33 36 / 0.91),
-      rgb(32 33 36 / 0.55) 55%,
-      transparent 79%
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgb(32 33 36 / 0.5) 30%,
+      rgb(32 33 36 / 0.5) 62%,
+      transparent 92%
     );
   }
 
