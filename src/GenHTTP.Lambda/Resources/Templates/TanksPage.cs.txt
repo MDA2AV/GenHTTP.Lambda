@@ -286,14 +286,21 @@ function frame(now) {
     }
 
     /*
-     * Over the shoulder of the turret rather than of the hull: what a player
-     * is doing with a tank is aiming, and a camera that swings with the hull
-     * turns the screen every time they steer.
+     * The camera keeps the same bearing on the maze and only ever follows the
+     * tank about. It used to sit behind whatever the turret was pointing at,
+     * which reads well until you notice where the aim comes from: the mouse,
+     * cast through this camera onto the floor. Camera from aim and aim from
+     * camera is a loop, and a pointer a little off centre sent the view round
+     * and round for ever.
+     *
+     * Holding the bearing also makes the mouse mean something steady - a spot
+     * on the screen is the same spot in the maze from one moment to the next,
+     * which is most of what makes aiming with it feel like aiming.
      */
-    const behind = 11, above = 16;
+    const behind = 13, above = 17;
 
-    camera.position.set(mine.position.x - Math.sin(aim) * behind, above, mine.position.z - Math.cos(aim) * behind);
-    camera.lookAt(mine.position.x + Math.sin(aim) * 4, 0.5, mine.position.z + Math.cos(aim) * 4);
+    camera.position.set(mine.position.x, above, mine.position.z + behind);
+    camera.lookAt(mine.position.x, 0.5, mine.position.z);
   }
 
   renderer.render(scene, camera);
