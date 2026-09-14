@@ -416,6 +416,11 @@ public sealed class MetaService : IMetaService
         {
             throw LambdaException.Invalid($"The code must not exceed {Options.MaxCodeLength} characters.");
         }
+
+        if (LambdaSource.AssetBytes(files) > Options.MaxAssetBytes)
+        {
+            throw LambdaException.Invalid($"The assets must not exceed {Options.MaxAssetBytes / 1024} KB in total.");
+        }
     }
 
     public async ValueTask<LambdaCounts> CountAsync(CancellationToken cancellation = default)

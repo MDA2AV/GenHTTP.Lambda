@@ -58,9 +58,11 @@ public static class CodeGuard
     /// <summary>
     /// Inspects the parsed snippet and returns a message for every rule it breaks.
     /// </summary>
-    public static IReadOnlyList<CompilationDiagnostic> Inspect(SyntaxNode root)
+    public static IReadOnlyList<CompilationDiagnostic> Inspect(SyntaxNode root, IReadOnlySet<string>? declared = null)
     {
         var findings = new List<CompilationDiagnostic>();
+
+        declared ??= Declared(root);
 
         foreach (var node in root.DescendantNodesAndSelf())
         {
@@ -74,11 +76,12 @@ public static class CodeGuard
                     CheckNamespace(qualified.ToString(), qualified.GetLocation(), findings);
                     break;
 
-                case IdentifierNameSyntax identifier when !IsHarmlessMember(identifier):
+                case IdentifierNameSyntax identifier
+                    when !IsHarmlessMember(identifier) && !declared.Contains(identifier.Identifier.ValueText):
                     CheckName(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
                     break;
 
-                case GenericNameSyntax generic:
+                case GenericNameSyntax generic when !declared.Contains(generic.Identifier.ValueText):
                     CheckName(generic.Identifier.ValueText, generic.GetLocation(), findings);
                     break;
             }
@@ -105,6 +108,57 @@ public static class CodeGuard
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// Every name the code declares for itself.
+    /// </summary>
+    /// <remarks>
+    /// A name somebody declares is theirs, whatever it is called. A helper
+    /// named File shadows nothing dangerous - a call to it reaches their
+    /// method, and the type of the same name is still out of reach through
+    /// its namespace, which is checked separately. Refusing it was refusing
+    /// somebody their own code because of what it was called.
+    /// </remarks>
+    public static HashSet<string> Declared(SyntaxNode root)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var node in root.DescendantNodesAndSelf())
+        {
+            switch (node)
+            {
+                case BaseTypeDeclarationSyntax type:
+                    names.Add(type.Identifier.ValueText);
+                    break;
+
+                case DelegateDeclarationSyntax @delegate:
+                    names.Add(@delegate.Identifier.ValueText);
+                    break;
+
+                case MethodDeclarationSyntax method:
+                    names.Add(method.Identifier.ValueText);
+                    break;
+
+                case LocalFunctionStatementSyntax function:
+                    names.Add(function.Identifier.ValueText);
+                    break;
+
+                case PropertyDeclarationSyntax property:
+                    names.Add(property.Identifier.ValueText);
+                    break;
+
+                case VariableDeclaratorSyntax variable:
+                    names.Add(variable.Identifier.ValueText);
+                    break;
+
+                case ParameterSyntax parameter:
+                    names.Add(parameter.Identifier.ValueText);
+                    break;
+            }
+        }
+
+        return names;
     }
 
     /// <summary>
@@ -219,7 +273,9 @@ public static class CodeGuard
         // these all accept a plain path and would hand out a resource tree pointing
         // anywhere on the host - Listing, StaticWebsite and SinglePageApplication only
         // accept a tree and therefore stay available
-        Add("use Workspace.Tree() to serve files", "FromFile", "FromDirectory", "FromWeb", "FromAssembly", "Assets");
+        // Assets is no longer among these: a lambda ships its own now, and
+        // Assets.Tree() is the thing it reaches them with
+        Add("use Workspace.Tree() or Assets.Tree() to serve files", "FromFile", "FromDirectory", "FromWeb", "FromAssembly");
 
         Add("outbound proxying is disabled", "Proxy", "ReverseProxy");
 

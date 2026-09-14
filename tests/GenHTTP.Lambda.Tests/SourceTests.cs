@@ -157,6 +157,119 @@ public sealed class SourceTests
     }
 
     [TestMethod]
+    [DataRow("www/app.css", true)]
+    [DataRow("index.html", true)]
+    [DataRow("img/logo-2.png", true)]
+    [DataRow("a/b/c/d/e/f/g.css", false)]
+    [DataRow("../escape.css", false)]
+    [DataRow("/leading.css", false)]
+    [DataRow("no-extension", false)]
+    [DataRow(".hidden.css", false)]
+    [DataRow("with space.css", false)]
+    public void OnlyUsableAssetNamesAreAccepted(string name, bool usable)
+        => Assert.AreEqual(usable, LambdaSource.IsValidAssetName(name));
+
+    [TestMethod]
+    public void AnAssetCostsNoneOfTheCodeBudget()
+    {
+        LambdaFile[] files =
+        [
+            new(LambdaSource.EntryName, "return null;"),
+            new("www/app.css", new string('x', 5000))
+        ];
+
+        Assert.AreEqual("return null;".Length, LambdaSource.Length(files), "the code budget counts code");
+        Assert.AreEqual(5000, LambdaSource.AssetBytes(files), "and the assets are counted on their own");
+    }
+
+    [TestMethod]
+    public void BinaryAssetsArriveAsTheBytesTheyWere()
+    {
+        byte[] bytes = [0x89, 0x50, 0x4E, 0x47, 0x00, 0xFF];
+
+        var file = new LambdaFile("logo.png", Convert.ToBase64String(bytes), "base64");
+
+        CollectionAssert.AreEqual(bytes, file.Bytes);
+        Assert.AreEqual(bytes.Length, LambdaSource.AssetBytes([file]));
+    }
+
+    [TestMethod]
+    public void Base64ThatIsNotBase64IsRefused()
+        => Assert.IsNotNull(LambdaSource.Validate([
+               new LambdaFile(LambdaSource.EntryName, "return null;"),
+               new LambdaFile("logo.png", "not base64 at all !!", "base64")
+           ]));
+
+    [TestMethod]
+    public async Task AnAssetIsShippedAndServedWithoutBeingCompiled()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("shipper");
+
+        var code = LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, "return Assets.Files();"),
+            // deliberately not valid C#: an asset must never reach the compiler
+            new LambdaFile("app.css", "body { margin: 0 } /* if this compiled it would not */"),
+            new LambdaFile("index.html", "<!doctype html><title>shipped</title>")
+        ]);
+
+        var deployment = await fixture.DeployAsync(lambda.PrivateKey, code);
+
+        Assert.IsTrue(deployment.Success, string.Join("; ", deployment.Diagnostics.Select(d => d.Message)));
+
+        using var css = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/app.css");
+
+        Assert.AreEqual(HttpStatusCode.OK, css.StatusCode);
+        Assert.Contains("margin: 0", await css.Content.ReadAsStringAsync());
+        Assert.Contains("text/css", css.Content.Headers.ContentType?.MediaType ?? "",
+                        "the content type comes from the extension");
+    }
+
+    [TestMethod]
+    public async Task AnAssetDroppedFromAVersionStopsBeingServed()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("forgetful");
+
+        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, "return Assets.Files();"),
+            new LambdaFile("gone.css", "body { margin: 0 }")
+        ]));
+
+        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, "return Assets.Files();"),
+            new LambdaFile("kept.css", "body { margin: 1px }")
+        ]));
+
+        using var gone = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/gone.css");
+        using var kept = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/kept.css");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, gone.StatusCode, "a version ships what it ships, not what the last one did");
+        Assert.AreEqual(HttpStatusCode.OK, kept.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task AHelperNamedAfterABannedTypeIsTheAuthorsOwn()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // the name is banned as a type; as somebody's own helper it is theirs
+        var outcome = await fixture.Deployments.ValidateAsync(
+            "static string File(string name) => name.Trim();\n\n"
+          + "return Inline.Create().Get(() => new Thing(File(\" x \")));\n\nrecord Thing(string Name);");
+
+        Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
+
+        // and the type of that name is still out of reach
+        var reaching = await fixture.Deployments.ValidateAsync(
+            "return Content.From(Resource.FromString(System.IO.File.ReadAllText(\"/etc/passwd\")));");
+
+        Assert.IsFalse(reaching.Success, "declaring a helper must not open the door to the type it is named after");
+    }
+
+    [TestMethod]
     public async Task TheGuardReadsEveryFileRatherThanOnlyTheSnippet()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

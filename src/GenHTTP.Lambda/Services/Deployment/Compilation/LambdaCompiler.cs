@@ -51,10 +51,12 @@ internal static class LambdaCompiler
     /// <param name="request">What to compile and where to put it</param>
     internal static async ValueTask<(CompilationOutcome Outcome, IHandler? Handler)> CompileAsync(CompilationRequest request)
     {
-        var snippet = SourceBuilder.ParseSnippet(request.Files[0].Code);
+        var code = request.Files.Where(f => f.IsCode).ToList();
+
+        var snippet = SourceBuilder.ParseSnippet(code[0].Code);
 
         // the snippet is script, the rest are ordinary C# holding types
-        var others = request.Files.Skip(1)
+        var others = code.Skip(1)
                             .Select(f => (File: f, Tree: SourceBuilder.ParseFile(f.Code, f.Name)))
                             .ToList();
 
@@ -70,13 +72,29 @@ internal static class LambdaCompiler
             return (CompilationOutcome.Failed(syntaxErrors), null);
         }
 
-        var rejections = new List<CompilationDiagnostic>(CodeGuard.Inspect(await snippet.GetRootAsync()));
+        // what the code declares is gathered across all of its files first: a
+        // type declared in one and used in another is still the author's own
+        var roots = new List<SyntaxNode> { await snippet.GetRootAsync() };
+
+        foreach (var other in others)
+        {
+            roots.Add(await other.Tree.GetRootAsync());
+        }
+
+        var declared = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var node in roots)
+        {
+            declared.UnionWith(CodeGuard.Declared(node));
+        }
+
+        var rejections = new List<CompilationDiagnostic>();
 
         // every file is the user's, so every file is inspected - a guard that
         // only looked at the snippet would be avoided by moving the code
-        foreach (var other in others)
+        foreach (var node in roots)
         {
-            rejections.AddRange(CodeGuard.Inspect(await other.Tree.GetRootAsync()));
+            rejections.AddRange(CodeGuard.Inspect(node, declared));
         }
 
         if (rejections.Count > 0)
@@ -92,7 +110,7 @@ internal static class LambdaCompiler
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
 
-        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, scope) };
+        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Assets, scope) };
 
         foreach (var other in others)
         {
@@ -249,4 +267,4 @@ internal static class LambdaCompiler
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
-internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string AssemblyDirectory, string Name, bool Run);
+internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Assets, string AssemblyDirectory, string Name, bool Run);

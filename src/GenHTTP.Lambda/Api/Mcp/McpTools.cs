@@ -45,7 +45,7 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
              }),
 
         Tool("write_code",
-             "Store code as a new version of a lambda. Takes one file or several: the first is always lambda.cs, the snippet that returns a handler, and the rest are ordinary C# holding types. This does not put anything online.",
+             "Store the source of a lambda as a new version. The first file is always lambda.cs, the snippet that returns a handler; further .cs files hold types; anything that is not .cs is an asset - a stylesheet, a script, a page, an image - which is served rather than compiled and reached from the snippet as Assets. This does not put anything online.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -61,8 +61,9 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
                              ["type"] = "object",
                              ["properties"] = new JsonObject
                              {
-                                 ["name"] = Field("string", "Ending in .cs. The first must be lambda.cs."),
-                                 ["code"] = Field("string", "The contents of the file.")
+                                 ["name"] = Field("string", "The first must be lambda.cs. Ending in .cs to be compiled; anything else, such as 'www/app.css' or 'logo.png', is an asset and is served as it is."),
+                                 ["code"] = Field("string", "The contents, or base64 when encoding says so."),
+                                 ["encoding"] = Field("string", "'base64' for an asset that is not text. Leave it out otherwise.")
                              },
                              ["required"] = new JsonArray("name", "code")
                          }
@@ -72,7 +73,7 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
              }),
 
         Tool("check_code",
-             "Compile code without storing or deploying it, and get the compiler's complaints back with the file and line they are about. Cheaper than deploying to find out.",
+             "Compile the C# without storing or deploying it, and get the compiler's complaints back with the file and line they are about. Cheaper than deploying to find out. It does not build the handler, which happens at deploy - a route whose return type GenHTTP cannot serve compiles here and is refused there.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -88,8 +89,9 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
                              ["type"] = "object",
                              ["properties"] = new JsonObject
                              {
-                                 ["name"] = Field("string", "Ending in .cs."),
-                                 ["code"] = Field("string", "The contents of the file.")
+                                 ["name"] = Field("string", "Ending in .cs to be compiled; anything else is an asset and is not."),
+                                 ["code"] = Field("string", "The contents, or base64 when encoding says so."),
+                                 ["encoding"] = Field("string", "'base64' for an asset that is not text.")
                              },
                              ["required"] = new JsonArray("name", "code")
                          }
@@ -253,7 +255,7 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
             return McpProtocol.Say(new
             {
                 ok = false,
-                problem = "It did not compile, so nothing was put online.",
+                problem = "Nothing was put online. The messages say whether it failed to compile or whether the handler it returned could not be served - the second happens here rather than in check_code.",
                 diagnostics = result.Diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message })
             }, failed: true);
         }
@@ -351,15 +353,50 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
         },
         moreThanOneFile = new
         {
-            howItWorks = "Files after lambda.cs are ordinary C# holding types. They are compiled into the same namespace, so the snippet reaches them without a using.",
+            howItWorks = "Further .cs files are ordinary C# holding types. They are compiled into the same namespace, so the snippet reaches them without a using.",
             limit = LambdaSource.MaxFiles
+        },
+        assets = new
+        {
+            what = "Any file whose name does not end in .cs. It is served as it is, never compiled, and does not spend any of the code budget.",
+            shipping = "Send it with the code: { name: \"www/app.css\", code: \"body { margin: 0 }\" }. For anything that is not text, base64 it and set encoding to \"base64\".",
+            reading = "The snippet reaches them as Assets: Assets.Tree() is a resource tree, Assets.Files() a handler that serves them, Assets.App() a single page application whose index.html answers any path that matches no file. Assets.Exists / ReadText / ReadBytes / List are there too.",
+            serving = "return Layout.Create().Add(\"api\", api).Add(Assets.App());",
+            contentTypes = "Inferred from the extension, so name things properly and nothing else has to be said.",
+            limits = new
+            {
+                bytes = options.MaxAssetBytes,
+                count = LambdaSource.MaxAssets,
+                names = "Letters, digits, dashes, underscores, dots and slashes. Folders are allowed; leading slashes and .. are not."
+            },
+            whyNotAStringConstant = "Because a raw string literal ends at the first \"\"\" inside it, which ordinary JavaScript contains, and because base64 in a string costs a third more than the bytes it carries."
         },
         importedForYou = ModuleCatalog.Imports,
         storage = new
         {
-            what = "A Workspace object, which is a private directory this lambda may read and write. Use it for anything that has to outlive a request.",
-            how = "Workspace.WriteText(\"things.json\", json); Workspace.ReadText(\"things.json\"); Workspace.Exists(\"things.json\")",
-            note = "Nothing else on the file system is reachable."
+            what = "A Workspace object, which is a private directory this lambda may read and write. Use it for anything that has to outlive a request. Assets are what the lambda shipped; the workspace is what it has written since.",
+            surface = new[]
+            {
+                "Workspace.ReadText(name) / WriteText(name, text)",
+                "Workspace.ReadBytes(name) / WriteBytes(name, bytes)",
+                "Workspace.Exists(name) / Delete(name) / List()",
+                "Workspace.Tree() - the folder as a resource tree",
+                "Workspace.Files() - a handler that serves the folder",
+                "Workspace.Root - where it is on disk"
+            },
+            note = "Nothing else on the file system is reachable, and there is no Append."
+        },
+        servingAPage = new
+        {
+            fromAssets = "Assets.App() is the whole of it for a single page application: index.html is the shell and unmatched paths are answered with it, so client side routes are real addresses.",
+            fromStrings = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory, for when a file is generated rather than shipped.",
+            oneFile = "Content.From(Resource.FromString(html).Type(new ContentType(\"text/html; charset=utf-8\"))) serves a single page with no tree at all.",
+            revalidation = "Trees answer with an ETag and a 304, so a browser stops re-fetching what it already has."
+        },
+        whenThingsAreChecked = new
+        {
+            checkCode = "Compiles the C#. It does not build the handler.",
+            deploy = "Compiles and then builds the handler, which is where a route whose return type cannot be served is refused. A lambda can pass check_code and be refused by deploy for that reason."
         },
         refused = new
         {
@@ -371,7 +408,9 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
             "A request body is bound by its type. Asking for a bare string hands you null; take a record instead.",
             "A websocket cannot read the request it was upgraded from - reaching for the query throws. Send anything it needs as the first frame.",
             "Two writes to the same socket at once corrupt it. Put a semaphore around a broadcast.",
-            "The REST routes answer in camel case, so anything sent down a socket should match."
+            "The REST routes answer in camel case, so anything sent down a socket should match.",
+            "A name you declare yourself is yours: a helper called File is fine. It is the type of that name, reached through its namespace, that is refused.",
+            "Do not paste a stylesheet or a script into a string constant. Ship it as an asset - it is served as it is and costs none of the code budget."
         },
         limits = new
         {
@@ -440,7 +479,7 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
                 return null;
             }
 
-            files.Add(new LambdaFile(Text(file, "name") ?? "", Text(file, "code") ?? ""));
+            files.Add(new LambdaFile(Text(file, "name") ?? "", Text(file, "code") ?? "", Text(file, "encoding")));
         }
 
         complaint = LambdaSource.Validate(files);

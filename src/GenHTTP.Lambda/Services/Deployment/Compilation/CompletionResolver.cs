@@ -48,7 +48,7 @@ public static class CompletionResolver
 
         var scope = "Lambda_completion";
 
-        var wrapped = SourceBuilder.Wrap(snippet, string.Empty, scope);
+        var wrapped = SourceBuilder.Wrap(snippet, string.Empty, string.Empty, scope);
 
         var compilation = CSharpCompilation.Create(scope, [wrapped], ReferenceProvider.Resolve(), Options);
 

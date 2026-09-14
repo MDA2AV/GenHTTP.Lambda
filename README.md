@@ -157,6 +157,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_DEPLOYMENT_LIFETIME_HOURS`  | `24`             | how long a free tier deployment stays up    |
 | `LAMBDA_RETENTION_HOURS`            | `720`            | how long an untouched lambda is kept        |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
+| `LAMBDA_MAX_ASSET_BYTES`            | `2097152`        | what the shipped assets may come to         |
 | `LAMBDA_MAX_CODE_LENGTH`            | `65536`          | largest snippet accepted                    |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
 | `LAMBDA_RATE_LIMIT`                 | `240`            | lambda requests per minute and client       |
@@ -225,6 +226,37 @@ LAMBDA_CERTIFICATE_KEY=/certs/privkey.pem
 A PKCS#12 archive works just as well - leave the key empty and set
 `LAMBDA_CERTIFICATE_PASSWORD` instead. The certificate is read again when the
 files change, so a renewal is picked up without a restart.
+
+### Shipping assets
+
+A lambda is not only C#. Any file whose name does not end in `.cs` is an asset:
+it is served as it is, never compiled, and costs none of the code budget.
+
+```
+lambda.cs      the snippet
+Types.cs       compiled beside it
+index.html     an asset
+www/app.css    an asset, in a folder
+logo.png       an asset, sent as base64
+```
+
+The snippet reaches them through `Assets`, which is the other half of
+`Workspace` - what the lambda shipped, against what it has written since:
+
+```csharp
+return Layout.Create()
+             .Add("api", api)
+             .Add(Assets.App());
+```
+
+`Assets.App()` is a single page application over them: `index.html` is the
+shell and a path matching no file is answered with it. `Assets.Tree()` and
+`Assets.Files()` are there for anything less opinionated, and content types
+come from the extension.
+
+The directory is rewritten from the version being deployed, so an asset dropped
+from a version stops being served rather than lingering. `LAMBDA_MAX_ASSET_BYTES`
+is what they may come to in total.
 
 ### More than one hostname
 

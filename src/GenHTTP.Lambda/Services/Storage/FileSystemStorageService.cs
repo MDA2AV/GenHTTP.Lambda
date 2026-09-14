@@ -77,6 +77,7 @@ public sealed class FileSystemStorageService : IStorageService
     {
         Remove(GetCodeDirectory(lambdaId));
         Remove(GetWorkspaceDirectory(lambdaId));
+        Remove(GetAssetDirectory(lambdaId));
 
         // the generated assembly stays: it cannot be unloaded and GenHTTP builds
         // its invocation code from the files behind the loaded assemblies, so
@@ -98,6 +99,8 @@ public sealed class FileSystemStorageService : IStorageService
     }
 
     public string GetAssemblyDirectory(long lambdaId) => Path.Combine(Options.AssemblyDirectory, lambdaId.ToString());
+
+    public string GetAssetDirectory(long lambdaId) => Path.Combine(Options.AssetDirectory, lambdaId.ToString());
 
     private string GetCodeDirectory(long lambdaId) => Path.Combine(Options.CodeDirectory, lambdaId.ToString());
 

@@ -37,4 +37,15 @@ public interface IStorageService
     /// </summary>
     string GetAssemblyDirectory(long lambdaId);
 
+    /// <summary>
+    /// The directory the assets shipped with a lambda are written to.
+    /// </summary>
+    /// <remarks>
+    /// Rewritten from the deployed version every time one goes online, so it
+    /// holds what that version shipped and nothing a previous one did. The
+    /// lambda may read it and not write it - what it writes goes in the
+    /// workspace, which outlives a deployment.
+    /// </remarks>
+    string GetAssetDirectory(long lambdaId);
+
 }

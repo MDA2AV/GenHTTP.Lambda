@@ -52,6 +52,16 @@ public sealed record LambdaOptions
     public int MaxCodeLength { get; init; } = 64 * 1024;
 
     /// <summary>
+    /// How many bytes of assets a lambda may ship beside its code.
+    /// </summary>
+    /// <remarks>
+    /// Counted apart from the code because it is not code: a stylesheet is
+    /// never compiled, and charging a page of markup against the budget for
+    /// the program that serves it is the wrong ceiling for both.
+    /// </remarks>
+    public int MaxAssetBytes { get; init; } = 2 * 1024 * 1024;
+
+    /// <summary>
     /// The number of versions kept per lambda (older ones are pruned).
     /// </summary>
     public int MaxVersions { get; init; } = 50;
@@ -160,6 +170,8 @@ public sealed record LambdaOptions
 
     public string AssemblyDirectory => Path.Combine(DataDirectory, "assemblies");
 
+    public string AssetDirectory => Path.Combine(DataDirectory, "assets");
+
     /// <summary>
     /// Whether the server should offer a TLS endpoint next to the plain one.
     /// </summary>
@@ -192,6 +204,7 @@ public sealed record LambdaOptions
             Retention = ReadSpan("LAMBDA_RETENTION_HOURS", defaults.Retention),
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
             MaxCodeLength = ReadInt("LAMBDA_MAX_CODE_LENGTH", defaults.MaxCodeLength),
+            MaxAssetBytes = ReadInt("LAMBDA_MAX_ASSET_BYTES", defaults.MaxAssetBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),

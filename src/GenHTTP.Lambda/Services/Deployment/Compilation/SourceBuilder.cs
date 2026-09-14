@@ -34,6 +34,8 @@ internal static class SourceBuilder
 
     internal const string WorkspaceType = "__LambdaWorkspace";
 
+    internal const string AssetType = "__LambdaAssets";
+
     internal static CSharpParseOptions ScriptOptions { get; } = new(LanguageVersion.Latest, DocumentationMode.None, SourceCodeKind.Script);
 
     internal static CSharpParseOptions RegularOptions { get; } = new(LanguageVersion.Latest, DocumentationMode.None);
@@ -99,7 +101,7 @@ internal static class SourceBuilder
     /// <param name="snippet">The parsed snippet of the user</param>
     /// <param name="workspace">The directory this lambda may read and write</param>
     /// <param name="scope">The namespace everything generated for this lambda lives in</param>
-    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string scope)
+    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string assets, string scope)
     {
         var root = (CompilationUnitSyntax)snippet.GetRoot();
 
@@ -133,11 +135,13 @@ internal static class SourceBuilder
         builder.AppendLine("internal static class LambdaEnvironment");
         builder.AppendLine("{");
         builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
+        builder.AppendLine($"    internal static readonly {AssetType} Assets = new {AssetType}({Literal(assets)});");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {EntryType}");
         builder.AppendLine("{");
         builder.AppendLine($"    private static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
+        builder.AppendLine($"    private static {AssetType} Assets => LambdaEnvironment.Assets;");
         builder.AppendLine();
         builder.AppendLine($"    internal static async global::System.Threading.Tasks.Task<object> {EntryMethod}()");
         builder.AppendLine("    {");
@@ -159,6 +163,7 @@ internal static class SourceBuilder
         builder.AppendLine("#line default");
         builder.AppendLine();
         builder.AppendLine(WorkspaceSource);
+        builder.AppendLine(AssetSource);
 
         return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
     }
@@ -241,6 +246,93 @@ internal static class SourceBuilder
     /// rather than referenced, so the assembly of this application stays
     /// invisible to the code being compiled.
     /// </summary>
+    /// <summary>
+    /// What a lambda shipped, as it can read it back.
+    /// </summary>
+    /// <remarks>
+    /// Read only, and rewritten from the version being deployed every time one
+    /// goes online. It is the other half of the workspace: this is what came
+    /// with the code, that is what the code has written since.
+    /// </remarks>
+    private static readonly string AssetSource = $$"""
+        internal sealed class {{AssetType}}
+        {
+            private readonly string _root;
+
+            internal {{AssetType}}(string root)
+            {
+                _root = global::System.IO.Path.TrimEndingDirectorySeparator(global::System.IO.Path.GetFullPath(root))
+                      + global::System.IO.Path.DirectorySeparatorChar;
+
+                global::System.IO.Directory.CreateDirectory(_root);
+            }
+
+            /// <summary>The absolute path the assets were written to.</summary>
+            public string Root => _root;
+
+            /// <summary>Whether an asset was shipped under this name.</summary>
+            public bool Exists(string name) => global::System.IO.File.Exists(Resolve(name));
+
+            /// <summary>Reads an asset as UTF-8 text.</summary>
+            public string ReadText(string name) => global::System.IO.File.ReadAllText(Resolve(name));
+
+            /// <summary>Reads an asset as bytes.</summary>
+            public byte[] ReadBytes(string name) => global::System.IO.File.ReadAllBytes(Resolve(name));
+
+            /// <summary>Every asset that was shipped, relative to the root.</summary>
+            public string[] List()
+            {
+                if (!global::System.IO.Directory.Exists(_root))
+                {
+                    return new string[0];
+                }
+
+                var files = global::System.IO.Directory.GetFiles(_root, "*", global::System.IO.SearchOption.AllDirectories);
+
+                var result = new string[files.Length];
+
+                for (var i = 0; i < files.Length; i++)
+                {
+                    result[i] = files[i].Substring(_root.Length).Replace('\\', '/');
+                }
+
+                return result;
+            }
+
+            /// <summary>The assets as a resource tree, ready to be served.</summary>
+            public global::GenHTTP.Api.Content.IO.IResourceTree Tree()
+                => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
+
+            /// <summary>A handler that serves the assets as files.</summary>
+            public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files()
+                => global::GenHTTP.Modules.Files.Assets.From(Tree());
+
+            /// <summary>
+            /// A single page application over the assets: index.html is the
+            /// shell, and a path that matches no file is answered with it.
+            /// </summary>
+            public global::GenHTTP.Modules.SinglePageApplications.Provider.SinglePageBuilder App()
+                => global::GenHTTP.Modules.SinglePageApplications.SinglePageApplication.From(Tree()).ServerSideRouting();
+
+            private string Resolve(string name)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    throw new global::System.ArgumentException("The name of an asset must not be empty.", "name");
+                }
+
+                var resolved = global::System.IO.Path.GetFullPath(global::System.IO.Path.Combine(_root, name));
+
+                if (!resolved.StartsWith(_root, global::System.StringComparison.Ordinal))
+                {
+                    throw new global::System.ArgumentException("An asset must be inside the asset directory.", "name");
+                }
+
+                return resolved;
+            }
+        }
+        """;
+
     private static readonly string WorkspaceSource = $$"""
         internal sealed class {{WorkspaceType}}
         {

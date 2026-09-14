@@ -54,7 +54,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     {
         var id = lambdaId ?? 0;
 
-        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetAssemblyDirectory(id), $"check_{id}", false);
+        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetAssetDirectory(id),
+                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false);
 
         await _compiling.WaitAsync(cancellation);
 
@@ -90,7 +91,15 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
             return CompilationOutcome.Failed($"Version {version} of this lambda does not exist anymore.");
         }
 
-        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(lambdaId), Storage.GetAssemblyDirectory(lambdaId), $"{lambdaId}_{version}", true);
+        var files = LambdaSource.Parse(code);
+
+        // what this version ships is written out before it is compiled, so the
+        // handler it returns is serving the assets of the version going online
+        // rather than whatever the last one left behind
+        Materialize(lambdaId, files);
+
+        var request = new CompilationRequest(files, Storage.GetWorkspace(lambdaId), Storage.GetAssetDirectory(lambdaId),
+                                            Storage.GetAssemblyDirectory(lambdaId), $"{lambdaId}_{version}", true);
 
         await _compiling.WaitAsync(cancellation);
 
@@ -147,6 +156,58 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
 
         return _deployed[lambdaId].Handler;
+    }
+
+    /// <summary>
+    /// Writes what a version ships into the directory the lambda reads it from.
+    /// </summary>
+    /// <remarks>
+    /// Emptied first, so an asset dropped from a version stops being served
+    /// rather than lingering because nothing overwrote it. Names were checked
+    /// before they got here, and the path is resolved against the root again
+    /// anyway - a file that would land outside is skipped rather than trusted.
+    /// </remarks>
+    private void Materialize(long lambdaId, IReadOnlyList<LambdaFile> files)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Storage.GetAssetDirectory(lambdaId)))
+                 + Path.DirectorySeparatorChar;
+
+        try
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, true);
+            }
+
+            Directory.CreateDirectory(root);
+
+            foreach (var file in files)
+            {
+                if (file.IsCode)
+                {
+                    continue;
+                }
+
+                var path = Path.GetFullPath(Path.Combine(root, file.Name));
+
+                if (!path.StartsWith(root, StringComparison.Ordinal))
+                {
+                    Logger.LogWarning("The asset '{Name}' of lambda {LambdaId} would land outside its directory and was skipped", file.Name, lambdaId);
+
+                    continue;
+                }
+
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+                File.WriteAllBytes(path, file.Bytes);
+            }
+        }
+        catch (Exception e)
+        {
+            // a lambda that ships nothing is still a lambda; failing the whole
+            // deployment because a file could not be written would be worse
+            Logger.LogWarning(e, "The assets of lambda {LambdaId} could not be written", lambdaId);
+        }
     }
 
     public void Evict(long lambdaId)

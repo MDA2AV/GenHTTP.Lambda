@@ -5,11 +5,23 @@ using GenHTTP.Lambda.Services.Meta;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
-/// One file of a lambda.
+/// One file of a lambda: either C# to compile, or an asset to serve.
 /// </summary>
 /// <param name="Name">What it is called, which is also what diagnostics name</param>
-/// <param name="Code">Its contents</param>
-public sealed record LambdaFile(string Name, string Code);
+/// <param name="Code">Its contents, base64 when <paramref name="Encoding" /> says so</param>
+/// <param name="Encoding">"base64" for a file that is not text, absent otherwise</param>
+public sealed record LambdaFile(string Name, string Code, string? Encoding = null)
+{
+
+    /// <summary>Whether this is C# rather than something to serve.</summary>
+    public bool IsCode => LambdaSource.IsCode(Name);
+
+    /// <summary>The bytes of an asset, whatever it was sent as.</summary>
+    public byte[] Bytes => Encoding == "base64"
+                         ? Convert.FromBase64String(Code)
+                         : System.Text.Encoding.UTF8.GetBytes(Code);
+
+}
 
 /// <summary>
 /// The source of a lambda: an entry file, and whatever else it was split into.
@@ -32,9 +44,18 @@ public static class LambdaSource
     public const string EntryName = "lambda.cs";
 
     /// <summary>
-    /// How many files one lambda may be split into.
+    /// How many C# files one lambda may be split into. Assets are not counted:
+    /// a frontend is many small files and none of them is a reason to run out.
     /// </summary>
     public const int MaxFiles = 12;
+
+    /// <summary>
+    /// How many assets one lambda may ship.
+    /// </summary>
+    public const int MaxAssets = 60;
+
+    /// <summary>Whether a name is C# rather than something to serve.</summary>
+    public static bool IsCode(string? name) => name?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) == true;
 
     private static readonly JsonSerializerOptions Format = new()
     {
@@ -102,15 +123,49 @@ public static class LambdaSource
     }
 
     /// <summary>
-    /// The combined length of every file, which is what the size limit counts.
+    /// The combined length of the code, which is what the size limit counts.
     /// </summary>
+    /// <remarks>
+    /// Assets are left out on purpose. They are not compiled, and a page of
+    /// markup charged against the budget for the program that serves it makes
+    /// the budget wrong for both of them.
+    /// </remarks>
     public static int Length(IReadOnlyList<LambdaFile> files)
     {
         var total = 0;
 
         foreach (var file in files)
         {
-            total += file.Code.Length;
+            if (file.IsCode)
+            {
+                total += file.Code.Length;
+            }
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    /// How many bytes of assets are shipped, decoded rather than as sent.
+    /// </summary>
+    public static long AssetBytes(IReadOnlyList<LambdaFile> files)
+    {
+        long total = 0;
+
+        foreach (var file in files)
+        {
+            if (!file.IsCode)
+            {
+                try
+                {
+                    total += file.Bytes.Length;
+                }
+                catch (FormatException)
+                {
+                    // a file that is not the base64 it claims to be is caught
+                    // by Validate; here it simply counts for nothing
+                }
+            }
         }
 
         return total;
@@ -127,9 +182,14 @@ public static class LambdaSource
             return "A lambda needs at least one file.";
         }
 
-        if (files.Count > MaxFiles)
+        if (files.Count(f => f.IsCode) > MaxFiles)
         {
-            return $"A lambda may be split into at most {MaxFiles} files.";
+            return $"A lambda may be split into at most {MaxFiles} C# files. Assets do not count towards that.";
+        }
+
+        if (files.Count(f => !f.IsCode) > MaxAssets)
+        {
+            return $"A lambda may ship at most {MaxAssets} assets.";
         }
 
         if (files[0].Name != EntryName)
@@ -141,9 +201,33 @@ public static class LambdaSource
 
         foreach (var file in files)
         {
-            if (!IsValidName(file.Name))
+            if (file.IsCode)
             {
-                return $"'{file.Name}' is not a usable file name. Use letters, digits, dashes and underscores, ending in '.cs'.";
+                if (!IsValidName(file.Name))
+                {
+                    return $"'{file.Name}' is not a usable name for a C# file. Use letters, digits, dashes and underscores, ending in '.cs'.";
+                }
+            }
+            else if (!IsValidAssetName(file.Name))
+            {
+                return $"'{file.Name}' is not a usable name for an asset. Use letters, digits, dashes, underscores, dots and slashes, and no leading or doubled slashes.";
+            }
+
+            if (file.Encoding is not (null or "" or "text" or "base64"))
+            {
+                return $"'{file.Name}' asks for encoding '{file.Encoding}'. Only 'base64' is understood; leave it out for text.";
+            }
+
+            if (file.Encoding == "base64")
+            {
+                try
+                {
+                    _ = Convert.FromBase64String(file.Code);
+                }
+                catch (FormatException)
+                {
+                    return $"'{file.Name}' says it is base64 and is not.";
+                }
             }
 
             if (!seen.Add(file.Name))
@@ -156,7 +240,56 @@ public static class LambdaSource
     }
 
     /// <summary>
-    /// Whether a name is one a file may have.
+    /// Whether a name is one an asset may have.
+    /// </summary>
+    /// <remarks>
+    /// An asset becomes a real file in a real directory, so this is about
+    /// where it can end up rather than about how it reads. Segments are
+    /// checked one at a time and '..' is not one of them, because the whole
+    /// point of a relative path is that it can leave.
+    /// </remarks>
+    public static bool IsValidAssetName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 120 || name.StartsWith('/') || name.EndsWith('/'))
+        {
+            return false;
+        }
+
+        var segments = name.Split('/');
+
+        if (segments.Length > 6)
+        {
+            return false;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length is 0 or > 60 || segment is "." or "..")
+            {
+                return false;
+            }
+
+            if (segment.StartsWith('.'))
+            {
+                return false;
+            }
+
+            foreach (var character in segment)
+            {
+                if (!char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_' or '.'))
+                {
+                    return false;
+                }
+            }
+        }
+
+        // something to infer a content type from; a file with no extension
+        // would be served as a download and surprise whoever shipped it
+        return Path.GetExtension(name).Length > 1;
+    }
+
+    /// <summary>
+    /// Whether a name is one a C# file may have.
     /// </summary>
     /// <remarks>
     /// Deliberately narrow. The name reaches a <c>#line</c> directive and a
