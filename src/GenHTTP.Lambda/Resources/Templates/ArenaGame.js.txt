@@ -141,7 +141,7 @@ function extentFor(radius) {
 }
 
 /** The blobs heavy enough to dent the floor, as the drawing wants them. */
-function wellsOf(blobs) {
+function wellsOf(blobs, mine, spread) {
   const wells = [];
 
   for (const b of blobs) {
@@ -312,7 +312,11 @@ function draw() {
   camera = mine;
 
   const scale = scaleFor(mine.r);
-  const wells = wellsOf(now.blobs);
+  // how far the screen reaches into the world, which is what decides
+  // whether a dent is worth carrying through the rest of the frame
+  const spread = Math.max(innerWidth, innerHeight) / scale;
+
+  const wells = wellsOf(now.blobs, mine, spread);
 
   /*
    * How deep the floor is under the player, which everything else is drawn
@@ -361,11 +365,28 @@ function draw() {
    */
   const flat = (x, y) => ({ x: ox + x * scale, y: oy + y * scale });
 
-  // the dark of each well, under the grid, so the lines read as lying on it
+  /*
+   * The dark of each well, under the grid so the lines read as lying on it.
+   *
+   * Painted over the square the well actually covers rather than over the
+   * whole canvas. A radial gradient across twelve hundred by eight hundred
+   * is a megapixel of work, and there is one of these per well: at one or
+   * two that was merely wasteful, but a hold widens its own reach and pulls
+   * more blobs into view, and a screen with eight of them was repainting
+   * eight million pixels of gradient every frame for a dent that covers a
+   * fraction of it.
+   */
   for (const w of wells) {
     const at = put(w.x, w.y);
     const span = Math.sqrt(w.span) * scale;
     const sag = Math.min(w.deep, FLOOR) * scale * TILT;
+
+    const left = Math.max(0, at.x - span);
+    const top = Math.max(0, at.y - span - sag);
+    const right = Math.min(innerWidth, at.x + span);
+    const bottom = Math.min(innerHeight, at.y + span);
+
+    if (right <= left || bottom <= top) continue;
 
     // the two focuses are offset, which tilts the cone for free and lights
     // it from the top of the screen without a second pass
@@ -377,7 +398,7 @@ function draw() {
     shade.addColorStop(1, 'rgba(8,12,26,0)');
 
     ctx.fillStyle = shade;
-    ctx.fillRect(0, 0, innerWidth, innerHeight);
+    ctx.fillRect(left, top, right - left, bottom - top);
   }
 
   drawSheet(put, scale,

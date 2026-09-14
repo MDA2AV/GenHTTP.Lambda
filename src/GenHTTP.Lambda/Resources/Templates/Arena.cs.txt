@@ -282,15 +282,31 @@ double Wound(Player victim, double asked, double now)
 /// </remarks>
 void Shower(double x, double y, double radius, double area)
 {
+    /*
+     * A fight cannot leave more on the floor than the arena is willing to
+     * hold. The scatter only ever tops the count up, never down, so without
+     * this a long enough fight walks the pellet count up and never brings
+     * it back - and every frame, every bucket and every sweep pays for it
+     * from then on.
+     */
+    var room = (int)(World.PelletsFor(size) * World.Glut) - pellets.Count;
+
+    if (room <= 0)
+    {
+        return;
+    }
+
     var pieces = new List<int>();
 
-    for (var grade = World.Grades.Length - 1; grade >= 0 && pieces.Count < World.Shards; grade--)
+    var most = Math.Min(World.Shards, room);
+
+    for (var grade = World.Grades.Length - 1; grade >= 0 && pieces.Count < most; grade--)
     {
         // never spend the whole lot on the largest grade, or a big hit comes
         // back as four boulders and nothing a small player can chip at
         var share = grade == 0 ? area : area * 0.5;
 
-        while (area >= World.Worth(grade) && share >= World.Worth(grade) && pieces.Count < World.Shards)
+        while (area >= World.Worth(grade) && share >= World.Worth(grade) && pieces.Count < most)
         {
             pieces.Add(grade);
 
