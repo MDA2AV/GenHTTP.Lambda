@@ -5,12 +5,32 @@ import { IconSpinner, IconTrash } from './Icons';
 import { useToast } from './Toast';
 
 /**
+ * What a lambda has on disk, which is two different things.
+ *
+ * What it ships was written in the editor and is served as it is; what it has
+ * written it did itself, at runtime, through Workspace. They were easy to
+ * confuse when only one of them was shown here and the button that opened it
+ * said "Files" - somebody who had just put a page in a folder came looking
+ * for it and found somebody else's directory.
+ *
+ * The shipped half is listed rather than managed: it is edited in the tabs
+ * above, and offering a second place to change it would only raise the
+ * question of which one wins.
+ *
  * The private directory of a lambda, as a list you can add to and take from.
  *
  * Content travels base64 encoded, which is what lets the same panel carry an
  * image, an archive or a text file without knowing which it has.
  */
-export function Storage({ privateKey, onClose }: { privateKey: string; onClose: () => void }) {
+export function Storage({
+  privateKey,
+  shipped,
+  onClose,
+}: {
+  privateKey: string;
+  shipped: { name: string; code: string }[];
+  onClose: () => void;
+}) {
   const toast = useToast();
 
   const [listing, setListing] = useState<WorkspaceListing | null>(null);
@@ -117,6 +137,28 @@ export function Storage({ privateKey, onClose }: { privateKey: string; onClose: 
             Close
           </button>
         </div>
+
+        {shipped.length > 0 && (
+          <div className="border-b border-slate-200 px-5 py-3 dark:border-ink-800">
+            <div className="text-xs font-medium text-slate-600 dark:text-slate-300">
+              Shipped with the code
+            </div>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Served exactly as written, never compiled. Edit these in the tabs above the editor; a
+              name with a slash in it puts one in a folder, and{' '}
+              <code className="font-mono">Assets.App("site")</code> serves that folder.
+            </p>
+
+            <ul className="mt-2 space-y-0.5">
+              {shipped.map((file) => (
+                <li key={file.name} className="flex items-baseline justify-between gap-3 font-mono text-xs">
+                  <span className="truncate text-slate-700 dark:text-slate-300">{file.name}</span>
+                  <span className="shrink-0 text-slate-400">{bytes(file.code.length)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {listing === null ? (
           <div className="flex items-center gap-2 px-5 py-10 text-sm text-slate-500">

@@ -319,7 +319,13 @@ export function Editor({ theme }: Props) {
         onFiles={() => setStorage(true)}
       />
 
-      {storage && <Storage privateKey={privateKey!} onClose={() => setStorage(false)} />}
+      {storage && (
+        <Storage
+          privateKey={privateKey!}
+          shipped={files.filter((file) => !file.name.endsWith('.cs'))}
+          onClose={() => setStorage(false)}
+        />
+      )}
 
       {fresh && (
         <div className="border-b border-accent-500/30 bg-accent-500/5 px-4 py-3 sm:px-6">
@@ -541,9 +547,9 @@ function Toolbar({
       {lambda && <Lifetime lambda={lambda} />}
 
       <div className="ml-auto flex items-center gap-2">
-        <button type="button" onClick={onFiles} className="btn-ghost" title="Workspace files">
+        <button type="button" onClick={onFiles} className="btn-ghost" title="What this lambda ships and what it has written">
           <IconFolder />
-          Files
+          Storage
         </button>
 
         <button type="button" onClick={onCheck} disabled={busy !== null} className="btn-ghost">
