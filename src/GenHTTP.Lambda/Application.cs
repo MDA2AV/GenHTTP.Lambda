@@ -15,6 +15,8 @@ using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.DependencyInjection;
+using GenHTTP.Modules.Compression;
+using GenHTTP.Modules.Compression.Algorithms;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
 
@@ -157,7 +159,23 @@ public sealed class Application : IAsyncDisposable
                .AddDependencyInjection(Services)
                .Add(Registry.Capture())
                .Add(new TelemetryConcernBuilder(Services.GetRequiredService<TelemetryService>()))
-               .Defaults();
+               /*
+                * Compression is configured here rather than left to the
+                * defaults, and it offers gzip alone.
+                *
+                * Brotli and zstd truncate a generated response: anything much
+                * past twelve kilobytes arrives cut short, and since every
+                * browser asks for brotli first, every visitor gets the broken
+                * one while curl - which asks for nothing - sees a whole
+                * answer. Files served from disk are unaffected, so this is
+                * about content produced per request, which is what every
+                * lambda here returns.
+                *
+                * Losing brotli costs some bandwidth. Serving half a response
+                * costs the response.
+                */
+               .Defaults(compression: false)
+               .Compression(CompressedContent.Empty().Add(new GzipAlgorithm()));
 
     /// <summary>
     /// Starts the maintenance jobs. Call once the server is up.

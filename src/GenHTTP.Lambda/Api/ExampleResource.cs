@@ -28,11 +28,22 @@ public sealed class ExampleResource(IMetaService meta)
 
         foreach (var group in ExampleCatalog.All.Where(e => !e.Hidden).GroupBy(e => e.GroupId))
         {
-            var examples = new List<ExampleResponse>();
+            var examples = new List<ExampleSummaryResponse>();
 
             foreach (var example in group)
             {
-                examples.Add(await DescribeAsync(example));
+                var described = await DescribeAsync(example);
+
+                examples.Add(new ExampleSummaryResponse(
+                    described.Id,
+                    described.Name,
+                    described.Description,
+                    described.PublicKey,
+                    described.Path,
+                    described.TryPath,
+                    described.Socket,
+                    described.Live
+                ));
             }
 
             groups.Add(new ExampleGroupResponse(group.Key, group.First().GroupName, examples));

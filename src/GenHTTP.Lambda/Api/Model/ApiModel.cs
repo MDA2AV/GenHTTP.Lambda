@@ -127,7 +127,26 @@ public sealed record TemplateResponse(string Id, string Name, string Description
 /// </summary>
 public sealed record ExampleListingResponse(IReadOnlyList<ExampleGroupResponse> Groups);
 
-public sealed record ExampleGroupResponse(string Id, string Name, IReadOnlyList<ExampleResponse> Examples);
+public sealed record ExampleGroupResponse(string Id, string Name, IReadOnlyList<ExampleSummaryResponse> Examples);
+
+/// <summary>
+/// An example as the menu needs it.
+/// </summary>
+/// <remarks>
+/// Without the code, which is the whole of the example and most of its weight.
+/// A menu that listed eight of them would carry some forty kilobytes to show
+/// eight names, and nothing on the way in has asked to read any of it yet.
+/// </remarks>
+public sealed record ExampleSummaryResponse(
+    string Id,
+    string Name,
+    string Description,
+    string PublicKey,
+    string Path,
+    string TryPath,
+    bool Socket,
+    bool Live
+);
 
 /// <summary>
 /// One example: where it is answering, and the code that is answering.

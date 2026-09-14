@@ -159,10 +159,13 @@ export interface Example {
   live: boolean;
 }
 
+/** What the menu needs: everything but the code. */
+export type ExampleSummary = Omit<Example, 'code'>;
+
 export interface ExampleGroup {
   id: string;
   name: string;
-  examples: Example[];
+  examples: ExampleSummary[];
 }
 
 export interface ExampleListing {
