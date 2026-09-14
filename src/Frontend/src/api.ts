@@ -390,6 +390,9 @@ export const api = {
     request<{ completions: ResolvedCompletion[] }>(`/lambdas/${privateKey}/completions`,
       send({ code, line, column })),
 
+  /** Where the project zip is. A plain link, so the browser does the saving. */
+  downloadUrl: (privateKey: string) => `${base}/lambdas/${privateKey}/download`,
+
   definition: (privateKey: string, files: LambdaFile[], file: string, line: number, column: number) =>
     request<{ file: string | null; line: number; column: number; length: number }>(
       `/lambdas/${privateKey}/definition`,

@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -158,6 +159,37 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
         var found = CompletionResolver.Resolve(request.Code, request.Line, request.Column);
 
         return new CompletionsResponse([.. found.Select(c => new ResolvedCompletionResponse(c.Label, c.Kind, c.Detail, c.Documentation))]);
+    }
+
+    /// <summary>
+    /// The lambda as a project that can be opened and run.
+    /// </summary>
+    /// <remarks>
+    /// A way out. Whatever somebody writes here runs on a machine they do not
+    /// own, for as long as it is left running; being able to take it away is
+    /// the difference between a place to build something and a place it is
+    /// stuck.
+    /// </remarks>
+    /// <param name="privateKey">The lambda being taken away</param>
+    [ResourceMethod(":privateKey/download")]
+    public async ValueTask<IResponse> Download(string privateKey, IRequest request)
+    {
+        var lambda = await meta.GetAsync(privateKey)
+                  ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+
+        if (lambda.LatestVersion is not { } latest)
+        {
+            throw LambdaException.NotFound("That lambda has nothing saved to take away yet.");
+        }
+
+        var content = await meta.GetVersionAsync(privateKey, latest);
+
+        var zip = ProjectPacker.Pack(lambda.PublicKey, LambdaSource.Parse(content.Code));
+
+        return request.Respond()
+                      .Content(new ZippedProject(zip))
+                      .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}.zip\"")
+                      .Build();
     }
 
     /// <summary>

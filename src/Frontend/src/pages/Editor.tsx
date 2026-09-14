@@ -16,7 +16,7 @@ import { Storage } from '../components/Storage';
 import { Lifetime } from '../components/Lifetime';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconFolder, IconHistory, IconPlay, IconSave, IconSpinner, IconStop, IconTrash } from '../components/Icons';
+import { IconAlert, IconDownload, IconFolder, IconHistory, IconPlay, IconSave, IconSpinner, IconStop, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { languageFor, registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
@@ -349,6 +349,7 @@ export function Editor({ theme }: Props) {
         onDeploy={() => deploy()}
         onUndeploy={undeploy}
         onFiles={() => setStorage(true)}
+        downloadUrl={api.downloadUrl(privateKey)}
       />
 
       {storage && (
@@ -571,6 +572,7 @@ function Toolbar({
   onDeploy,
   onUndeploy,
   onFiles,
+  downloadUrl,
 }: {
   lambda: Lambda | null;
   live: boolean;
@@ -582,6 +584,7 @@ function Toolbar({
   onDeploy: () => void;
   onUndeploy: () => void;
   onFiles: () => void;
+  downloadUrl: string;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2.5 dark:border-ink-800 sm:px-6">
@@ -605,6 +608,15 @@ function Toolbar({
           <IconFolder />
           Storage
         </button>
+
+        <a
+          href={downloadUrl}
+          className="btn-ghost"
+          title="Take it away as a .NET project you can open and run"
+        >
+          <IconDownload />
+          Download
+        </a>
 
         <button type="button" onClick={onCheck} disabled={busy !== null} className="btn-ghost">
           {busy === 'check' ? <IconSpinner /> : null}

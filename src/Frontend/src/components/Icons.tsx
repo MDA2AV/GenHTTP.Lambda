@@ -136,3 +136,14 @@ export const IconSpinner = ({ className = 'h-4 w-4' }: IconProps) => (
     <path d="M12 3a9 9 0 1 0 9 9" />
   </svg>
 );
+
+export function IconDownload(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round" className={props.className ?? 'h-4 w-4'}>
+      <path d="M12 3v12" />
+      <path d="m7 11 5 5 5-5" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}

@@ -27,6 +27,7 @@ const PARTS: Part[] = [
   { id: 'keeping', title: 'Keeping data' },
   { id: 'sockets', title: 'Websockets' },
   { id: 'limits', title: 'What it will not let you do' },
+  { id: 'away', title: 'Taking it away' },
   { id: 'agents', title: 'Letting an agent do it' },
 ];
 
@@ -368,6 +369,24 @@ return Layout.Create().Add("chat", socket);`} />
               Everything else is there, including the whole of the GenHTTP module API. If something
               is refused you are told which line and why, not simply that it failed.
             </p>
+          </Section>
+
+          <Section id="away" title="Taking it away">
+            <p>
+              <b>Download</b> in the editor gives you the whole thing as a .NET project: a solution
+              you can open, <Code>dotnet run</Code>, and keep. It has one package reference and no
+              trace of this platform in it.
+            </p>
+            <p>
+              Your snippet becomes the body of <Code>Program.cs</Code>, wrapped in a host that
+              serves what it returns. Your other files come across exactly as you wrote them.{' '}
+              <Code>Workspace</Code> and <Code>Assets</Code> become two folders beside the code, with
+              the same methods, so nothing in your code has to change.
+            </p>
+            <Aside>
+              Worth knowing before you build anything here: what you write is yours and it leaves
+              whole. Nothing about running it on this machine locks it to this machine.
+            </Aside>
           </Section>
 
           <Section id="agents" title="Letting an agent do it">
