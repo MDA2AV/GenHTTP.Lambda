@@ -17,6 +17,11 @@ public interface IWorkspaceService
     ValueTask<WorkspaceListing> ListAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
+    /// Makes a folder, so that files can be put into it afterwards.
+    /// </summary>
+    ValueTask CreateFolderAsync(long lambdaId, string path, CancellationToken cancellation = default);
+
+    /// <summary>
     /// Reads a single file, or null if there is none by that name.
     /// </summary>
     ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, CancellationToken cancellation = default);

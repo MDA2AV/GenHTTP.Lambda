@@ -74,6 +74,38 @@ export function Editor({ theme }: Props) {
     setActive((was) => (usable.some((file) => file.name === was) ? was : usable[0].name));
   }, []);
 
+  /**
+   * Where a name was declared, and going there.
+   *
+   * The server answers only with files of this lambda: a name that came from
+   * the framework has a declaration but not one there is anywhere to show, so
+   * nothing happens rather than something surprising.
+   */
+  const goToDefinition = useCallback(
+    async (line: number, column: number) => {
+      if (!privateKey || !active.endsWith('.cs')) {
+        return;
+      }
+
+      try {
+        const at = await api.definition(privateKey, files, active, line, column);
+
+        if (!at.file) {
+          return;
+        }
+
+        if (at.file !== active) {
+          setActive(at.file);
+        }
+
+        setReveal({ line: at.line + 1, column: at.column + 1, nonce: Date.now() });
+      } catch {
+        // nowhere to go is not worth interrupting anybody over
+      }
+    },
+    [privateKey, files, active],
+  );
+
   // completions come from the server, so they always match what compiles
   useEffect(() => {
     api
@@ -371,6 +403,7 @@ export function Editor({ theme }: Props) {
               reveal={reveal}
               onChange={setCode}
               onSave={save}
+              onDefinition={goToDefinition}
             />
           </div>
 

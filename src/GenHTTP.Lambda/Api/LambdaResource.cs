@@ -161,6 +161,34 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     }
 
     /// <summary>
+    /// Where the name under the caret was declared.
+    /// </summary>
+    /// <remarks>
+    /// Only ever answers with a file of this lambda. A name that came from the
+    /// framework has a declaration, but not one anybody here can be shown, and
+    /// sending the editor to a file that does not exist is worse than telling
+    /// it there is nowhere to go.
+    /// </remarks>
+    /// <param name="privateKey">The lambda being edited</param>
+    /// <param name="request">The files and where in them the caret sits</param>
+    [ResourceMethod(Method.Post, ":privateKey/definition")]
+    public async ValueTask<DefinitionResponse> Definition(string privateKey, DefinitionRequest request)
+    {
+        await RequireAsync(privateKey);
+
+        var files = request.Files is { Count: > 0 } sent ? sent : [];
+
+        var found = DefinitionResolver.Resolve(files,
+                                               request.File ?? LambdaSource.EntryName,
+                                               request.Line,
+                                               request.Column);
+
+        return found == null
+             ? new DefinitionResponse(null, 0, 0, 0)
+             : new DefinitionResponse(found.File, found.Line, found.Column, found.Length);
+    }
+
+    /// <summary>
     /// Compiles the code without storing or deploying it.
     /// </summary>
     [ResourceMethod(Method.Post, ":privateKey/check")]
@@ -275,7 +303,21 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     }
 
     /// <summary>
-    /// Removes a file.
+    /// Makes a folder, so files can be put into it.
+    /// </summary>
+    /// <param name="path">Where it goes, relative to the workspace</param>
+    [ResourceMethod(Method.Put, ":privateKey/files/folder")]
+    public async ValueTask<WorkspaceListing> CreateFolder(string privateKey, string path)
+    {
+        var id = await ResolveIdAsync(privateKey);
+
+        await workspace.CreateFolderAsync(id, path);
+
+        return await workspace.ListAsync(id);
+    }
+
+    /// <summary>
+    /// Removes a file, or a folder and everything in it.
     /// </summary>
     /// <param name="path">The name of the file, relative to the workspace</param>
     [ResourceMethod(Method.Delete, ":privateKey/files/content")]

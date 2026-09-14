@@ -189,4 +189,53 @@ public sealed class WorkspaceTests
 
     #endregion
 
+
+    [TestMethod]
+    public async Task AFolderCanBeMadeBeforeThereIsAnythingToPutInIt()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var made = await fixture.SendAsync(HttpMethod.Put,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/folder?path=logs");
+
+        Assert.AreEqual(HttpStatusCode.OK, made.StatusCode);
+
+        using var listed = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files");
+
+        var body = await listed.GetContentAsync();
+
+        Assert.Contains("logs", body, "an empty folder has to survive being listed, or making one is pointless");
+
+        // and it can be put back where it came from
+        using var gone = await fixture.SendAsync(HttpMethod.Delete,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=logs");
+
+        Assert.IsTrue(gone.IsSuccessStatusCode, $"removing a folder answered {(int)gone.StatusCode}");
+    }
+
+    [TestMethod]
+    public async Task AFolderGoesWithWhateverIsInIt()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var written = await fixture.SendAsync(HttpMethod.Put,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=logs%2Ftoday.txt",
+            new { content = Convert.ToBase64String("hello"u8.ToArray()) });
+
+        Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, "writing into a folder makes the folder");
+
+        using var gone = await fixture.SendAsync(HttpMethod.Delete,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=logs");
+
+        Assert.IsTrue(gone.IsSuccessStatusCode, $"removing a folder answered {(int)gone.StatusCode}");
+
+        using var listed = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files");
+
+        Assert.DoesNotContain("today.txt", await listed.GetContentAsync());
+    }
+
 }

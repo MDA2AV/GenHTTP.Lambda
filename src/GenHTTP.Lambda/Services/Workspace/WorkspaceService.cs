@@ -32,7 +32,16 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
 
         files.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
 
-        return ValueTask.FromResult(new WorkspaceListing(files, used, WorkspaceLimits.Quota,
+        var folders = new List<string>();
+
+        foreach (var path in Directory.GetDirectories(root, "*", SearchOption.AllDirectories))
+        {
+            folders.Add(Relative(root, path));
+        }
+
+        folders.Sort(string.CompareOrdinal);
+
+        return ValueTask.FromResult(new WorkspaceListing(files, folders, used, WorkspaceLimits.Quota,
                                                          WorkspaceLimits.MaxFiles, WorkspaceLimits.MaxFileSize));
     }
 
@@ -94,6 +103,36 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
         var info = new FileInfo(resolved);
 
         return new WorkspaceEntry(Relative(root, resolved), info.Length, info.LastWriteTimeUtc);
+    }
+
+    public ValueTask CreateFolderAsync(long lambdaId, string path, CancellationToken cancellation = default)
+    {
+        var root = Root(lambdaId);
+
+        var resolved = Resolve(root, path);
+
+        if (File.Exists(resolved))
+        {
+            throw LambdaException.Invalid("There is already a file with that name.");
+        }
+
+        /*
+         * Counted against the file limit even though it holds none. A folder
+         * is a thing on the disk and making a thousand of them is the same
+         * nuisance as making a thousand empty files, which the limit exists
+         * to stop.
+         */
+        if (!Directory.Exists(resolved)
+         && Directory.GetDirectories(root, "*", SearchOption.AllDirectories).Length >= WorkspaceLimits.MaxFiles)
+        {
+            throw LambdaException.Invalid($"A workspace must not hold more than {WorkspaceLimits.MaxFiles} folders.");
+        }
+
+        Directory.CreateDirectory(resolved);
+
+        logger.LogInformation("Workspace of lambda {LambdaId} gained folder '{Path}'", lambdaId, path);
+
+        return ValueTask.CompletedTask;
     }
 
     public ValueTask DeleteAsync(long lambdaId, string path, CancellationToken cancellation = default)
@@ -173,6 +212,13 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
             if (File.Exists(path))
             {
                 File.Delete(path);
+            }
+            else if (Directory.Exists(path))
+            {
+                // with everything in it: the editor asks before it gets here,
+                // and a folder that refuses to go while it holds something is
+                // a folder somebody has to empty by hand one file at a time
+                Directory.Delete(path, true);
             }
         }
         catch (Exception)

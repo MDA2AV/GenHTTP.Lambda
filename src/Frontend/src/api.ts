@@ -191,6 +191,7 @@ export interface WorkspaceEntry {
 
 export interface WorkspaceListing {
   files: WorkspaceEntry[];
+  folders: string[];
   usedBytes: number;
   quotaBytes: number;
   maxFiles: number;
@@ -349,6 +350,11 @@ export const api = {
 
   files: (privateKey: string) => request<WorkspaceListing>(`/lambdas/${privateKey}/files`),
 
+  createFolder: (privateKey: string, path: string) =>
+    request<WorkspaceListing>(
+      `/lambdas/${privateKey}/files/folder?path=${encodeURIComponent(path)}`,
+      { method: 'PUT' }),
+
   readFile: (privateKey: string, path: string) =>
     request<{ path: string; content: string; size: number }>(
       `/lambdas/${privateKey}/files/content?path=${encodeURIComponent(path)}`,
@@ -374,6 +380,11 @@ export const api = {
   completions: (privateKey: string, code: string, line: number, column: number) =>
     request<{ completions: ResolvedCompletion[] }>(`/lambdas/${privateKey}/completions`,
       send({ code, line, column })),
+
+  definition: (privateKey: string, files: LambdaFile[], file: string, line: number, column: number) =>
+    request<{ file: string | null; line: number; column: number; length: number }>(
+      `/lambdas/${privateKey}/definition`,
+      send({ files, file, line, column })),
 
   semantics: (privateKey: string, code: string) =>
     request<{ tokens: SemanticToken[] }>(`/lambdas/${privateKey}/semantics`, send({ code })),

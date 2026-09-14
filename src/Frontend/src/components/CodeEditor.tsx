@@ -12,6 +12,7 @@ interface Props {
   reveal?: { line: number; column: number; nonce: number };
   onChange: (value: string) => void;
   onSave: () => void;
+  onDefinition?: (line: number, column: number) => void;
 }
 
 /**
@@ -19,12 +20,14 @@ interface Props {
  * only pushed in when it differs - otherwise every keystroke would reset the
  * cursor.
  */
-export function CodeEditor({ value, language, theme, diagnostics, reveal, onChange, onSave }: Props) {
+export function CodeEditor({ value, language, theme, diagnostics, reveal, onChange, onSave, onDefinition }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const save = useRef(onSave);
+  const jump = useRef(onDefinition);
 
   save.current = onSave;
+  jump.current = onDefinition;
 
   useEffect(() => {
     if (!host.current) {
@@ -59,7 +62,48 @@ export function CodeEditor({ value, language, theme, diagnostics, reveal, onChan
 
     instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => save.current());
 
+    /*
+     * Control-click, and F12, go to where a name was declared.
+     *
+     * Done by hand rather than through a definition provider because the
+     * editor keeps one model and swaps it as the file changes: Monaco's own
+     * navigation wants a model per file behind a URI, and there is no second
+     * model for it to open. Asking the server where the name was declared and
+     * then switching files through the page that owns them does the same
+     * thing without pretending to be a workspace.
+     */
+    const clicked = instance.onMouseDown((event) => {
+      const held = event.event.ctrlKey || event.event.metaKey;
+
+      if (!held || !event.target.position || !jump.current) {
+        return;
+      }
+
+      const word = instance.getModel()?.getWordAtPosition(event.target.position);
+
+      if (word) {
+        jump.current(event.target.position.lineNumber - 1, word.startColumn - 1);
+      }
+    });
+
+    instance.addAction({
+      id: 'lambda.goToDefinition',
+      label: 'Go to definition',
+      keybindings: [monaco.KeyCode.F12],
+      contextMenuGroupId: 'navigation',
+      run: (target) => {
+        const at = target.getPosition();
+
+        const word = at && target.getModel()?.getWordAtPosition(at);
+
+        if (at && word && jump.current) {
+          jump.current(at.lineNumber - 1, word.startColumn - 1);
+        }
+      },
+    });
+
     return () => {
+      clicked.dispose();
       changed.dispose();
       instance.dispose();
       editor.current = null;
