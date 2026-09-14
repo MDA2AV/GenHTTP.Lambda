@@ -42,7 +42,7 @@ export function Landing() {
           <h1 className="rise text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
             Host a small web service
             <br />
-            <span className="text-accent-500">without hosting anything.</span>
+            <span className="text-accent-700 dark:text-accent-400">without hosting anything.</span>
           </h1>
 
           <p

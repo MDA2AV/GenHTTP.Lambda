@@ -63,21 +63,21 @@
    * difference is whether anyone notices it at all.
    */
   @keyframes turn-a {
-    0%   { transform: translate3d(-18%, -10%, 0) rotate(0deg) scale(1); }
-    50%  { transform: translate3d(12%, 8%, 0) rotate(180deg) scale(1.25); }
-    100% { transform: translate3d(-18%, -10%, 0) rotate(360deg) scale(1); }
+    0%   { transform: translate3d(-32%, -18%, 0) rotate(0deg) scale(1); }
+    50%  { transform: translate3d(26%, 16%, 0) rotate(180deg) scale(1.35); }
+    100% { transform: translate3d(-32%, -18%, 0) rotate(360deg) scale(1); }
   }
 
   @keyframes turn-b {
-    0%   { transform: translate3d(16%, 12%, 0) rotate(0deg) scale(1.15); }
-    50%  { transform: translate3d(-14%, -10%, 0) rotate(-200deg) scale(0.95); }
-    100% { transform: translate3d(16%, 12%, 0) rotate(-360deg) scale(1.15); }
+    0%   { transform: translate3d(30%, 20%, 0) rotate(0deg) scale(1.25); }
+    50%  { transform: translate3d(-28%, -18%, 0) rotate(-180deg) scale(0.85); }
+    100% { transform: translate3d(30%, 20%, 0) rotate(-360deg) scale(1.25); }
   }
 
   @keyframes turn-c {
-    0%   { transform: translate3d(0, 14%, 0) rotate(20deg) scale(1.1); }
-    50%  { transform: translate3d(6%, -12%, 0) rotate(200deg) scale(1.3); }
-    100% { transform: translate3d(0, 14%, 0) rotate(380deg) scale(1.1); }
+    0%   { transform: translate3d(-10%, 24%, 0) rotate(20deg) scale(1.1); }
+    50%  { transform: translate3d(18%, -22%, 0) rotate(200deg) scale(1.4); }
+    100% { transform: translate3d(-10%, 24%, 0) rotate(380deg) scale(1.1); }
   }
 
   /*
@@ -104,72 +104,102 @@
 
   .aurora {
     position: absolute;
-    /* the field is as tall as the page, so a shape sized to it would be one
-       smear; these are sized to a window and repeated down it instead */
-    inset: -10% -35%;
-    height: 90vh;
+    /* sized and placed against the window, not the document: a shape sized to
+       a page-tall field would be one smear, and one placed in percentages
+       would move whenever the page below it got longer */
+    left: -35%;
+    right: -35%;
+    top: -10vh;
+    height: 150vh;
     pointer-events: none;
     /* enough to blend the shapes into each other, not enough to erase them */
-    filter: blur(60px);
+    filter: blur(42px);
     will-change: transform;
   }
 
   /* ellipses rather than circles: they have an orientation, so turning shows */
   .aurora-a {
-    background: radial-gradient(42% 26% at 50% 50%, rgb(26 115 232 / 0.55), transparent 70%);
-    animation: turn-a 26s linear infinite;
+    background: radial-gradient(42% 26% at 50% 50%, rgb(26 115 232 / 0.70), transparent 72%);
+    animation: turn-a 13s linear infinite;
   }
 
   .aurora-b {
-    background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.48), transparent 70%);
-    animation: turn-b 34s linear infinite;
+    background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.62), transparent 72%);
+    animation: turn-b 17s linear infinite;
   }
 
   .aurora-c {
-    background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.30), transparent 70%);
-    animation: turn-c 44s linear infinite;
+    background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.42), transparent 72%);
+    animation: turn-c 21s linear infinite;
   }
 
-  html.dark .aurora-a { background: radial-gradient(42% 26% at 50% 50%, rgb(66 133 244 / 0.50), transparent 70%); }
-  html.dark .aurora-b { background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.44), transparent 70%); }
-  html.dark .aurora-c { background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.24), transparent 70%); }
+  html.dark .aurora-a { background: radial-gradient(42% 26% at 50% 50%, rgb(66 133 244 / 0.66), transparent 72%); }
+  html.dark .aurora-b { background: radial-gradient(38% 24% at 50% 50%, rgb(170 85 255 / 0.58), transparent 72%); }
+  html.dark .aurora-c { background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.34), transparent 72%); }
 
   /*
-   * A film of noise over the lot. A gradient this wide crosses fewer than two
-   * hundred shades in eight bit colour, and the eye reads the steps between
-   * them as bands - which is the mottling that looks like low resolution.
-   * Grain scatters each step across its neighbours and the banding goes.
+   * A film of noise over the lot, against the banding a wide gradient gets in
+   * eight bit colour. Kept faint: measured across both themes the gradients
+   * step cleanly without it, so this is insurance, and at the 0.6 it used to
+   * be it was worth about six shades of visible noise to buy nothing.
    */
   .aurora-grain {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.6;
+    opacity: 0.18;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   /*
-   * And a clearing behind the words. The field is wanted at the edges, where
-   * it can be watched; behind a paragraph it is something to read through, so
-   * the page colour comes back up underneath the text and lets it keep its
-   * contrast without the colour having to be turned down everywhere.
+   * Somewhere for the words to sit. The field is as tall as the whole page,
+   * so a clearing at inset 0 puts its centre halfway down the document and
+   * nowhere near the heading - it has to be pinned to the first screen to be
+   * behind the type at all. It breathes rather than holding still, because a
+   * fixed disc in the middle of moving colour is the one thing that reads as
+   * static however fast the rest of it turns.
    */
   .aurora-clearing {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100vh;
     pointer-events: none;
-    background: radial-gradient(54% 38% at 50% 46%, rgb(255 255 255 / 0.62), transparent 72%);
+    background: radial-gradient(
+      45% 29% at 50% 46%,
+      rgb(255 255 255 / 0.9),
+      rgb(255 255 255 / 0.5) 55%,
+      transparent 79%
+    );
+    animation: breathe 19s ease-in-out infinite;
   }
 
   html.dark .aurora-clearing {
-    background: radial-gradient(58% 42% at 50% 46%, rgb(32 33 36 / 0.74), transparent 72%);
+    background: radial-gradient(
+      47% 31% at 50% 46%,
+      rgb(32 33 36 / 0.91),
+      rgb(32 33 36 / 0.55) 55%,
+      transparent 79%
+    );
+  }
+
+  @keyframes breathe {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.08);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .aurora-a,
     .aurora-b,
-    .aurora-c {
+    .aurora-c,
+    .aurora-clearing {
       animation: none;
     }
   }

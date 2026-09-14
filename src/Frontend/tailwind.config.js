@@ -52,6 +52,7 @@ export default {
           400: '#8ab4f8',
           500: '#1a73e8',
           600: '#1765cc',
+          700: '#174ea6',
         },
         // the greys the light theme is drawn with
         slate: grey,
