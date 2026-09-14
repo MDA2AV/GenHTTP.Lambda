@@ -56,6 +56,10 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
 
         <div className="ml-auto flex items-center gap-2">
           {actions}
+          <Link to="/#agents" className="btn-ghost hidden sm:inline-flex">
+            For agents
+          </Link>
+
           <ExamplesMenu />
           <AdminMenu />
           <button

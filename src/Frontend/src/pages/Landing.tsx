@@ -1,13 +1,17 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
+import { Agents } from '../components/Agents';
+import { CopyField } from '../components/CopyField';
 import { Explainer } from '../components/Explainer';
 import { ReportAbuse } from '../components/ReportAbuse';
 import { IconChevronDown } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
 
 export function Landing() {
+  const location = useLocation();
   const rest = useRef<HTMLDivElement>(null);
+  const agents = useRef<HTMLDivElement>(null);
 
   /*
    * Snapping belongs to whatever actually scrolls, and that is the document -
@@ -19,6 +23,21 @@ export function Landing() {
 
     return () => document.documentElement.classList.remove('snap-page');
   }, []);
+
+  /*
+   * A link from the header carries a hash, which the router does not act on by
+   * itself. Waited a frame because the sections are revealed as they arrive and
+   * scrolling to one that has not been laid out yet lands short of it.
+   */
+  useEffect(() => {
+    if (location.hash !== '#agents') {
+      return;
+    }
+
+    const timer = window.setTimeout(() => agents.current?.scrollIntoView({ block: 'start' }), 80);
+
+    return () => window.clearTimeout(timer);
+  }, [location]);
 
   return (
     <div className="relative w-full">
@@ -101,6 +120,40 @@ export function Landing() {
             >
               What you can build
             </a>
+          </div>
+        </Reveal>
+
+      </div>
+
+      <div
+        id="agents"
+        ref={agents}
+        className="snap-stop relative z-10 mx-auto w-full max-w-6xl px-5 pb-24 pt-10"
+      >
+        <Reveal>
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+            An agent can do this too
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
+            There is a Model Context Protocol endpoint here, so something that is not a person can read what
+            this platform is, write a lambda and put it online.
+          </p>
+        </Reveal>
+
+        <Reveal delay={120} className="mt-8">
+          <Agents />
+        </Reveal>
+
+        <Reveal delay={200}>
+          <div className="mx-auto mt-10 max-w-xl">
+            <p className="mb-2 text-center text-xs uppercase tracking-wide text-grey-500">
+              Point your client at
+            </p>
+            <CopyField value={`${window.location.origin}/mcp`} tone="accent" />
+            <p className="mt-3 text-center text-sm text-grey-700 dark:text-grey-300">
+              No key and no account to reach it. The lambda it makes belongs to whoever it hands the editor
+              link to.
+            </p>
           </div>
         </Reveal>
 
