@@ -13,7 +13,6 @@ public sealed record LambdaActivity(
     long Requests,
     long Failed,
     long Upgrades,
-    int OpenSockets,
     double AverageMillis,
     double SlowestMillis,
     /// <summary>

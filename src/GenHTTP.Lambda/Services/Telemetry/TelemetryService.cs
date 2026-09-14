@@ -30,7 +30,6 @@ public sealed class TelemetryService : ITelemetryService
     private long _upgrades;
     private long _elapsedTicks;
     private int _inFlight;
-    private int _openSockets;
 
     // the deltas of the previous reading, so a sample describes the interval
     private long _lastRequests;
@@ -80,7 +79,18 @@ public sealed class TelemetryService : ITelemetryService
     /// <summary>
     /// Connections that were upgraded and have not closed again.
     /// </summary>
-    public int OpenSockets => Volatile.Read(ref _openSockets);
+    /// <summary>
+    /// How many connections are open right now.
+    /// </summary>
+    /// <remarks>
+    /// Read from the operating system rather than counted here, because a
+    /// counter cannot be made to work: a concern sees the upgrade and
+    /// returns, and the socket then lives for as long as it likes with
+    /// nothing left watching it. This was counted, never decremented, and so
+    /// reported every upgrade since boot as though they were all still open
+    /// - an arena with one player in it showed four hundred and fifty eight.
+    /// </remarks>
+    public int OpenSockets => ProcessProbe.Connections().Established;
 
     #endregion
 
@@ -97,16 +107,7 @@ public sealed class TelemetryService : ITelemetryService
         }
     }
 
-    public void Upgraded()
-    {
-        Interlocked.Increment(ref _upgrades);
-        Interlocked.Increment(ref _openSockets);
-    }
-
-    /// <summary>
-    /// Called when an upgraded connection is done with.
-    /// </summary>
-    public void Closed() => Interlocked.Decrement(ref _openSockets);
+    public void Upgraded() => Interlocked.Increment(ref _upgrades);
 
     public IDisposable Track()
     {
@@ -171,7 +172,7 @@ public sealed class TelemetryService : ITelemetryService
                 failed - _lastFailed,
                 upgrades - _lastUpgrades,
                 Volatile.Read(ref _inFlight),
-                Volatile.Read(ref _openSockets),
+                connections.Established,
                 handled > 0 ? Math.Round(TimeSpan.FromTicks(ticks - _lastElapsedTicks).TotalMilliseconds / handled, 2) : 0,
                 connections.Established,
                 connections.Accepted,

@@ -42,7 +42,6 @@ public sealed class LambdaTelemetry
             if (status == 101)
             {
                 counters.Upgrades++;
-                counters.OpenSockets++;
 
                 // the handler returned at the handshake; what follows is the
                 // connection, and timing it as a request would say nothing
@@ -60,23 +59,6 @@ public sealed class LambdaTelemetry
             if (status >= 500)
             {
                 counters.Failed++;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Records that an upgraded connection of a lambda has closed.
-    /// </summary>
-    public void Closed(long id)
-    {
-        if (_lambdas.TryGetValue(id, out var counters))
-        {
-            lock (counters)
-            {
-                if (counters.OpenSockets > 0)
-                {
-                    counters.OpenSockets--;
-                }
             }
         }
     }
@@ -102,7 +84,6 @@ public sealed class LambdaTelemetry
                     counters.Requests,
                     counters.Failed,
                     counters.Upgrades,
-                    counters.OpenSockets,
                     counters.Requests > 0 ? Math.Round(counters.TotalMillis / counters.Requests, 2) : 0,
                     Math.Round(counters.SlowestMillis, 2),
                     counters.Bytes,
@@ -123,7 +104,6 @@ public sealed class LambdaTelemetry
         internal long Requests;
         internal long Failed;
         internal long Upgrades;
-        internal int OpenSockets;
         internal double TotalMillis;
         internal double SlowestMillis;
         internal long Bytes;

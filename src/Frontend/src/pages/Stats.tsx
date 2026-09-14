@@ -216,7 +216,7 @@ export function Stats({ dark }: { dark: boolean }) {
             format={(v) => v.toFixed(0)}
             series={[
               line('Open', BLUE, (s) => s.openConnections),
-              line('Upgraded', PURPLE, (s) => s.openSockets),
+              line('Open sockets', PURPLE, (s) => s.openSockets),
             ]}
           />
         )}
@@ -309,7 +309,7 @@ export function Stats({ dark }: { dark: boolean }) {
                       {count(entry.failed)}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums text-slate-500">
-                      {entry.openSockets > 0 ? `${entry.openSockets} open` : count(entry.upgrades)}
+                      {count(entry.upgrades)}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">{entry.averageMillis.toFixed(1)} ms</td>
                     <td className="px-4 py-2 text-right tabular-nums text-slate-500">{entry.slowestMillis.toFixed(0)} ms</td>

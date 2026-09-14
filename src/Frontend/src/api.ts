@@ -202,7 +202,6 @@ export interface LambdaActivity {
   requests: number;
   failed: number;
   upgrades: number;
-  openSockets: number;
   averageMillis: number;
   slowestMillis: number;
   bytesOut: number;
