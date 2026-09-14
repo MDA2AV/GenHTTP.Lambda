@@ -54,7 +54,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     {
         var id = lambdaId ?? 0;
 
-        var request = new CompilationRequest(code, Storage.GetWorkspace(id), Storage.GetAssemblyDirectory(id), $"check_{id}", false);
+        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetAssemblyDirectory(id), $"check_{id}", false);
 
         await _compiling.WaitAsync(cancellation);
 
@@ -90,7 +90,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
             return CompilationOutcome.Failed($"Version {version} of this lambda does not exist anymore.");
         }
 
-        var request = new CompilationRequest(code, Storage.GetWorkspace(lambdaId), Storage.GetAssemblyDirectory(lambdaId), $"{lambdaId}_{version}", true);
+        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(lambdaId), Storage.GetAssemblyDirectory(lambdaId), $"{lambdaId}_{version}", true);
 
         await _compiling.WaitAsync(cancellation);
 

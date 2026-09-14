@@ -51,16 +51,33 @@ internal static class LambdaCompiler
     /// <param name="request">What to compile and where to put it</param>
     internal static async ValueTask<(CompilationOutcome Outcome, IHandler? Handler)> CompileAsync(CompilationRequest request)
     {
-        var snippet = SourceBuilder.ParseSnippet(request.Code);
+        var snippet = SourceBuilder.ParseSnippet(request.Files[0].Code);
+
+        // the snippet is script, the rest are ordinary C# holding types
+        var others = request.Files.Skip(1)
+                            .Select(f => (File: f, Tree: SourceBuilder.ParseFile(f.Code, f.Name)))
+                            .ToList();
 
         var syntaxErrors = Translate(snippet.GetDiagnostics());
+
+        foreach (var other in others)
+        {
+            syntaxErrors.AddRange(Translate(other.Tree.GetDiagnostics()));
+        }
 
         if (syntaxErrors.Count > 0)
         {
             return (CompilationOutcome.Failed(syntaxErrors), null);
         }
 
-        var rejections = CodeGuard.Inspect(await snippet.GetRootAsync());
+        var rejections = new List<CompilationDiagnostic>(CodeGuard.Inspect(await snippet.GetRootAsync()));
+
+        // every file is the user's, so every file is inspected - a guard that
+        // only looked at the snippet would be avoided by moving the code
+        foreach (var other in others)
+        {
+            rejections.AddRange(CodeGuard.Inspect(await other.Tree.GetRootAsync()));
+        }
 
         if (rejections.Count > 0)
         {
@@ -75,9 +92,16 @@ internal static class LambdaCompiler
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
 
+        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, scope) };
+
+        foreach (var other in others)
+        {
+            trees.Add(SourceBuilder.WrapFile(other.Tree, scope, other.File.Name));
+        }
+
         var compilation = CSharpCompilation.Create(
             scope,
-            [SourceBuilder.Wrap(snippet, request.Workspace, scope)],
+            trees,
             ReferenceProvider.Resolve(),
             CompilationOptions
         );
@@ -146,7 +170,14 @@ internal static class LambdaCompiler
     /// </summary>
     private static string Identify(CompilationRequest request)
     {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes($"{request.Workspace}\n{request.Code}"));
+        var builder = new StringBuilder(request.Workspace);
+
+        foreach (var file in request.Files)
+        {
+            builder.Append('\n').Append(file.Name).Append('\n').Append(file.Code);
+        }
+
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString()));
 
         return Convert.ToHexStringLower(bytes);
     }
@@ -179,14 +210,18 @@ internal static class LambdaCompiler
 
             var span = diagnostic.Location.GetMappedLineSpan();
 
-            var inSnippet = span.Path is SourceBuilder.UserFile or "";
+            // a mapped path is one of the user's files; anything else came out
+            // of the generated wrapper and has no line worth pointing at
+            var written = span.Path != SourceBuilder.GeneratedFile
+                       && !span.Path.EndsWith(".generated.cs", StringComparison.Ordinal);
 
             result.Add(new CompilationDiagnostic(
                 severity == DiagnosticSeverity.Error ? "Error" : "Warning",
                 diagnostic.Id,
                 Describe(diagnostic),
-                inSnippet ? span.StartLinePosition.Line + 1 : 0,
-                inSnippet ? span.StartLinePosition.Character + 1 : 0
+                written ? span.StartLinePosition.Line + 1 : 0,
+                written ? span.StartLinePosition.Character + 1 : 0,
+                written ? (span.Path.Length > 0 ? span.Path : SourceBuilder.UserFile) : null
             ));
         }
 
@@ -214,4 +249,4 @@ internal static class LambdaCompiler
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
-internal sealed record CompilationRequest(string Code, string Workspace, string AssemblyDirectory, string Name, bool Run);
+internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string AssemblyDirectory, string Name, bool Run);

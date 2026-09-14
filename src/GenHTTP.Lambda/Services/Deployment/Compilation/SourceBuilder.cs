@@ -47,6 +47,53 @@ internal static class SourceBuilder
     internal static SyntaxTree ParseSnippet(string code) => CSharpSyntaxTree.ParseText(code, ScriptOptions, UserFile);
 
     /// <summary>
+    /// Parses a file that is not the snippet: ordinary C#, holding types.
+    /// </summary>
+    internal static SyntaxTree ParseFile(string code, string name) => CSharpSyntaxTree.ParseText(code, RegularOptions, name);
+
+    /// <summary>
+    /// Puts one of the other files into the namespace the snippet lives in, so
+    /// its types are reachable from the snippet without a using.
+    /// </summary>
+    /// <remarks>
+    /// The imports every lambda gets are repeated here rather than made global:
+    /// a global using would have to be emitted once, and each file is its own
+    /// compilation unit so there is no single place that is. Line directives
+    /// carry the file's own name, which is what a diagnostic then reports.
+    /// </remarks>
+    internal static SyntaxTree WrapFile(SyntaxTree file, string scope, string name)
+    {
+        var root = (CompilationUnitSyntax)file.GetRoot();
+
+        var text = file.GetText();
+
+        var builder = new StringBuilder();
+
+        foreach (var import in ModuleCatalog.Imports)
+        {
+            builder.AppendLine($"using {import};");
+        }
+
+        foreach (var import in root.Usings)
+        {
+            builder.AppendLine(import.NormalizeWhitespace().ToFullString());
+        }
+
+        builder.AppendLine();
+        builder.AppendLine($"namespace {scope};");
+        builder.AppendLine();
+
+        foreach (var member in root.Members)
+        {
+            AppendFrom(builder, text, member, name);
+        }
+
+        builder.AppendLine("#line default");
+
+        return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, $"{name}.generated.cs");
+    }
+
+    /// <summary>
     /// Wraps the parsed snippet into the file that is handed to the compiler.
     /// </summary>
     /// <param name="snippet">The parsed snippet of the user</param>
@@ -121,13 +168,19 @@ internal static class SourceBuilder
     /// maps it back onto the snippet.
     /// </summary>
     private static void Append(StringBuilder builder, SourceText text, SyntaxNode member)
-        => Append(builder, text, member.Span, text.ToString(member.Span));
+        => Append(builder, text, member.Span, text.ToString(member.Span), UserFile);
 
-    private static void Append(StringBuilder builder, SourceText text, TextSpan span, string content)
+    /// <summary>
+    /// Copies a member of one of the other files over, mapped onto that file.
+    /// </summary>
+    private static void AppendFrom(StringBuilder builder, SourceText text, SyntaxNode member, string file)
+        => Append(builder, text, member.Span, text.ToString(member.Span), file);
+
+    private static void Append(StringBuilder builder, SourceText text, TextSpan span, string content, string file)
     {
         var start = text.Lines.GetLinePosition(span.Start);
 
-        builder.AppendLine($"#line {start.Line + 1} \"{UserFile}\"");
+        builder.AppendLine($"#line {start.Line + 1} \"{file}\"");
 
         // the span starts at the first token, so the indentation of the first
         // line has to be restored to keep the columns of the messages correct
@@ -170,7 +223,7 @@ internal static class SourceBuilder
             }
         }
 
-        Append(builder, text, span, new string(content));
+        Append(builder, text, span, new string(content), UserFile);
     }
 
     private static bool IsAccessibility(SyntaxToken token) => token.Kind() is SyntaxKind.PublicKeyword
