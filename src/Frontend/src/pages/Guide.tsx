@@ -406,10 +406,12 @@ function Section({ id, title, children }: { id: string; title: string; children:
 }
 
 function Sample({ code }: { code: string }) {
+  // a pre, because the highlighter emits spans and nothing else - the line
+  // breaks in the sample are only line breaks if something keeps them
   return (
-    <div className="surface overflow-x-auto p-3 text-[13px]">
+    <pre className="surface overflow-x-auto p-3 font-mono text-[13px] leading-relaxed">
       <CSharp code={code} />
-    </div>
+    </pre>
   );
 }
 
@@ -465,9 +467,9 @@ function Two({ left, right }: { left: [string, string]; right: [string, string] 
           <div className="border-b border-slate-200 px-3 py-1.5 font-mono text-xs text-slate-500 dark:border-ink-800">
             {name}
           </div>
-          <div className="overflow-x-auto p-3 text-[13px]">
+          <pre className="overflow-x-auto p-3 font-mono text-[13px] leading-relaxed">
             <CSharp code={code} />
-          </div>
+          </pre>
         </div>
       ))}
     </div>
