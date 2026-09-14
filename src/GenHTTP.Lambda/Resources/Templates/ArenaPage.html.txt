@@ -27,9 +27,10 @@
       eat anybody smaller than you, and keep away from anybody bigger.
     </p>
     <p class="dim">
-      Hold <kbd>space</kbd> and you root to the spot and drag everything near you in
-      much harder than usual — at the cost of your own size, four per cent of it a
-      second. The floor caves in under you while you do it, so everybody can see.
+      Hold <kbd>space</kbd> and you root to the spot and drag everything near you in.
+      The longer you hold, the harder you pull and the further it reaches — and the
+      more it costs you, up to three times the rate you started at. The floor caves
+      in under you while you do it, so everybody can see it coming.
     </p>
     <p><input id="name" maxlength="12" placeholder="Your name"> <button id="go">Dive in</button></p>
   </div>

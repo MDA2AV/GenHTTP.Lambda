@@ -144,7 +144,9 @@ function wellsOf(blobs) {
     const grip = b.g ?? (b.r >= wellSize ? 1 : 0);
 
     if (grip > 0) {
-      const reach = b.r * 4;
+      // the dent widens with the grip as well as the size, the same way the
+      // pull does - see Reach in World.cs, which is the half that matters
+      const reach = b.r * 4 * Math.sqrt(Math.max(1, grip));
 
       // the dent stops deepening long before a blob stops growing. Past this
       // the well is already wider than the screen, and letting it go on would

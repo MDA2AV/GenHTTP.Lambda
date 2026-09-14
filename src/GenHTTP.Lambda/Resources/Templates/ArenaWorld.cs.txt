@@ -225,6 +225,17 @@ static class World
     public const double Burn = 0.04;
 
     /// <summary>
+    /// How hard a hold has to be pulling before it costs the full rate.
+    /// </summary>
+    /// <remarks>
+    /// The cost goes up with the pull rather than being flat, because the
+    /// pull no longer is: a hold that has been on long enough to be worth
+    /// nine of standing there costs three times what one just wound up does.
+    /// Without that, the right play would be to hold it down for ever.
+    /// </remarks>
+    public const double Toll = Grasp;
+
+    /// <summary>
     /// How long a held pull takes to come up to full strength.
     /// </summary>
     /// <remarks>
@@ -236,6 +247,21 @@ static class World
 
     /// <summary>How long before it can be held again.</summary>
     public const double Rest = 2.0;
+
+    /// <summary>
+    /// How long a hold keeps getting stronger for, after it has wound up.
+    /// </summary>
+    /// <remarks>
+    /// The wind up is the warning; this is the commitment. A hold that is
+    /// merely on is worth three of standing there, and one that has been on
+    /// for six more seconds is worth nine - but six seconds of holding is a
+    /// fifth of yourself, spent rooted to the spot where everybody can see
+    /// you. The escalation is what makes that trade worth considering.
+    /// </remarks>
+    public const double Swell = 6.0;
+
+    /// <summary>How many times its initial strength a hold can reach.</summary>
+    public const double Zenith = 3.0;
 
     /// <summary>What a held pull does to loose pellets instead of the usual.</summary>
     public const double HeldDust = 0.24;
@@ -258,24 +284,42 @@ static class World
     public const double Glut = 1.5;
 
     /// <summary>
+    /// What holding costs this second, as a fraction of your own area.
+    /// </summary>
+    /// <remarks>
+    /// It rises with the pull rather than being flat, because the pull no
+    /// longer is: a hold that has been on long enough to be worth nine of
+    /// standing there costs three times what one just wound up does. Flat,
+    /// the right play would be to hold it down for ever.
+    /// </remarks>
+    public static double Cost(double grip) => Burn * Math.Max(1, grip) / Toll;
+
+
+    /// <summary>
     /// How hard somebody is pulling, given whether and how long they have held.
     /// </summary>
     /// <remarks>
     /// One number carries the whole thing. Nought is a blob too small to
-    /// bend anything, one is standing there being large, and up to three is
-    /// holding on. The physics multiplies by it, the browser draws a dent
+    /// bend anything, one is standing there being large, three is a hold
+    /// that has just wound up, and nine is one that has been paid for. The physics multiplies by it, the browser draws a dent
     /// that deep, and neither needs to know anything else - so a blob too
     /// small to have a field of its own grows one the moment it holds, and
     /// the floor says so before the pull arrives.
     /// </remarks>
     public static double Grip(double radius, bool held, double wound)
     {
-        if (held)
+        if (!held)
         {
-            return Grasp * Math.Clamp(wound / Wind, 0, 1);
+            return radius >= WellSize ? 1 : 0;
         }
 
-        return radius >= WellSize ? 1 : 0;
+        // up to full strength over the wind up, and then on past it for as
+        // long as they are willing to keep paying
+        var wound_up = Math.Clamp(wound / Wind, 0, 1);
+
+        var deeper = 1 + Math.Clamp((wound - Wind) / Swell, 0, 1) * (Zenith - 1);
+
+        return Grasp * wound_up * deeper;
     }
 
     #endregion
@@ -285,6 +329,12 @@ static class World
     /// How far a blob of this size drags loose pellets.
     /// </summary>
     /// <remarks>
+    /// It does not widen when somebody holds, though the pull on players
+    /// does. Holding is meant to be how you catch somebody, not how you
+    /// farm: a dust reach that grew with the grip turned a few seconds of
+    /// holding into a sweep of a fifth of the arena, which paid for itself
+    /// many times over and made the whole thing free.
+    ///
     /// What is being tuned here is not the strength of anything, it is how
     /// many pellets are in the air at once - which is the inflow times how
     /// long the crossing takes, and nothing else. Too tight and the gap is
@@ -302,7 +352,14 @@ static class World
     /// half radius of it is faded out - otherwise a blob crossing the line
     /// would feel the pull switch on all at once.
     /// </remarks>
-    public static double Reach(double radius) => radius * 4;
+    /// <remarks>
+    /// It widens with the grip as well as the size, or a hold that has been
+    /// on for six seconds would be pulling everything inside a fixed circle
+    /// at the cap already and the extra strength would buy nothing. The
+    /// square root keeps it from running away: nine times the grip is three
+    /// times the reach, not nine.
+    /// </remarks>
+    public static double Reach(double radius, double grip) => radius * 4 * Math.Sqrt(Math.Max(1, grip));
 
     /// <summary>
     /// How fast <paramref name="theirs" /> drags <paramref name="mine" /> in,
@@ -316,7 +373,7 @@ static class World
     /// </remarks>
     public static double PullSpeed(double mine, double theirs, double distance, double grip)
     {
-        var reach = Reach(theirs);
+        var reach = Reach(theirs, grip);
 
         if (grip <= 0 || distance >= reach || mine <= 0)
         {

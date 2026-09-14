@@ -193,7 +193,7 @@ void Rebucket()
                 continue;
             }
 
-            var reach = World.Reach(soul.Radius);
+            var reach = World.Reach(soul.Radius, World.Grip(soul.Radius, soul.Hold, soul.Wound));
 
             if (Math.Abs(soul.X - spot.X) < reach && Math.Abs(soul.Y - spot.Y) < reach)
             {
@@ -304,7 +304,7 @@ Scatter();
                 continue;
             }
 
-            var reach = World.Reach(other.Radius);
+            var reach = World.Reach(other.Radius, 1);
 
             if (Math.Abs(other.X - x) < reach && Math.Abs(other.Y - y) < reach)
             {
@@ -425,7 +425,9 @@ void Step(double seconds)
     {
         if (player.Hold && player.Rest <= 0)
         {
-            var burn = World.AreaOf(player.Radius) * World.Burn * seconds;
+            var pulling = World.Grip(player.Radius, true, player.Wound + seconds);
+
+            var burn = World.AreaOf(player.Radius) * World.Cost(pulling) * seconds;
 
             var left = World.AreaOf(player.Radius) - burn;
 
@@ -479,7 +481,7 @@ void Step(double seconds)
             continue;
         }
 
-        var reach = World.Reach(heavy.Radius);
+        var reach = World.Reach(heavy.Radius, grip);
 
         foreach (var player in everyone)
         {
@@ -666,9 +668,9 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         // itself past the edge of the screen, because the bend it makes is
         // not - and a bend that appeared only once its cause did would look
         // like the floor snapping rather than like anything being there
-        if (blob.R >= World.WellSize)
+        if (blob.G > 0)
         {
-            var edge = World.ViewOf(viewer.Radius) + World.Reach(blob.R);
+            var edge = World.ViewOf(viewer.Radius) + World.Reach(blob.R, blob.G);
 
             if (Math.Abs(blob.X - viewer.X) < edge && Math.Abs(blob.Y - viewer.Y) < edge)
             {
