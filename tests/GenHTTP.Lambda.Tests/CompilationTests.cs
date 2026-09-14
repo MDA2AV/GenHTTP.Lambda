@@ -77,6 +77,33 @@ public sealed class CompilationTests
     }
 
     [TestMethod]
+    [DataRow("System.IO.Path.Combine(\"a\", \"b\"); return Content.From(Resource.FromString(\"x\"));",
+             "reached through its namespace")]
+    [DataRow("var p = Path.GetTempPath(); return Content.From(Resource.FromString(p));",
+             "written bare")]
+    public async Task ABannedTypeIsStillRefusedHoweverItIsWritten(string code, string how)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var outcome = await fixture.Deployments.ValidateAsync(code);
+
+        Assert.IsFalse(outcome.Success, $"a banned type {how} is still that type");
+    }
+
+    [TestMethod]
+    public async Task AMemberThatSharesItsNameWithABannedTypeIsAllowed()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // the guard reads what was written rather than what it means, and a
+        // handler has every reason to ask a request for its path
+        var outcome = await fixture.Deployments.ValidateAsync(
+            "return Inline.Create().Get((IRequest request) => new Seen(request.Header.Path.ToString()));\n\nrecord Seen(string Path);");
+
+        Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
+    }
+
+    [TestMethod]
     public async Task StorageGoesThroughTheWorkspace()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

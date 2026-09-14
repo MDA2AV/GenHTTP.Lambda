@@ -27,11 +27,11 @@ public sealed class ExampleResource(IMetaService meta)
     {
         var groups = new List<ExampleGroupResponse>();
 
-        foreach (var group in ExampleCatalog.All.Where(e => !e.Hidden).GroupBy(e => e.GroupId))
+        foreach (var level in ExampleCatalog.Levels)
         {
             var examples = new List<ExampleSummaryResponse>();
 
-            foreach (var example in group)
+            foreach (var example in ExampleCatalog.All.Where(e => e.Level == level))
             {
                 var described = await DescribeAsync(example);
 
@@ -47,7 +47,7 @@ public sealed class ExampleResource(IMetaService meta)
                 ));
             }
 
-            groups.Add(new ExampleGroupResponse(group.Key, group.First().GroupName, examples));
+            groups.Add(new ExampleGroupResponse(level, ExampleCatalog.NameOf(level), examples));
         }
 
         return new ExampleListingResponse(groups);
@@ -77,7 +77,7 @@ public sealed class ExampleResource(IMetaService meta)
     {
         var status = await meta.GetStatusAsync(example.PublicKey);
 
-        var files = TemplateCatalog.FilesFor(example.Id, example.PublicKey);
+        var files = ExampleCatalog.FilesFor(example);
 
         return new ExampleResponse(
             example.Id,

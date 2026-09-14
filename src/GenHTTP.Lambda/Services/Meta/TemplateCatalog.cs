@@ -29,7 +29,19 @@ public static class TemplateCatalog
         new("chat", "app", "Chat room", "Accounts, a sign in, and a room that stays open. Passwords hashed, messages kept.", "Chat",
             false, ("Accounts.cs", "ChatAccounts"), ("Page.cs", "ChatPage")),
         new("game", "app", "Game with a scoreboard", "A three.js runner in the browser, and a scoreboard this lambda keeps.", "Game",
-            false, ("Scores.cs", "GameScores"), ("Page.cs", "GamePage"))
+            false, ("Scores.cs", "GameScores"), ("Page.cs", "GamePage")),
+
+        // the examples. Hidden, because the picker is for somewhere to start
+        // from and these are finished things to look at - they are reached by
+        // name, from the examples menu and from a clone.
+        new("shortener", "app", "Link shortener", "Paste a long address, get a short one. Follows are counted.", "Shortener",
+            true, ("Links.cs", "ShortenerLinks"), ("Page.cs", "ShortenerPage")),
+        new("guestbook", "app", "Guestbook", "Anyone can sign it, everyone can read it, and it is still there tomorrow.", "Guestbook",
+            true, ("Entries.cs", "GuestbookEntries"), ("Page.cs", "GuestbookPage")),
+        new("inspector", "app", "Request inspector", "Answers every request with a description of itself.", "Inspector",
+            true, ("Page.cs", "InspectorPage")),
+        new("arena", "app", "Shared arena", "Everybody in one three dimensional room, with the server deciding where they are.", "Arena",
+            true, ("World.cs", "ArenaWorld"), ("Protocol.cs", "ArenaProtocol"), ("Page.cs", "ArenaPage"))
     ];
 
 

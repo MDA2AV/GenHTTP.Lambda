@@ -4,14 +4,17 @@
 //
 //   GET  /lambda/{{KEY}}/api/         a greeting
 //   GET  /lambda/{{KEY}}/api/42       a greeting for 42
-//   POST /lambda/{{KEY}}/api/         shouts back whatever you send
+//   POST /lambda/{{KEY}}/api/         shouts back the text you send it
 //
 // Hit "Deploy" to build this and put it online.
 
 var service = Inline.Create()
                     .Get(() => new Message("hello"))
                     .Get(":id", (int id) => new Message($"you asked for {id}"))
-                    .Post((string body) => new Message(body.ToUpperInvariant()));
+                    // a body is bound by its type, so this takes the same
+                    // record it gives back rather than a bare string - asking
+                    // for a string hands you null
+                    .Post((Message body) => new Message(body.Text.ToUpperInvariant()));
 
 return Layout.Create().Add("api", service);
 

@@ -51,6 +51,43 @@ public sealed class ExampleSeeder(IMetaService meta, IDbContextFactory<LambdaDbC
         {
             logger.LogInformation("Prepared {Count} example(s)", seeded);
         }
+
+        await RetireAsync(cancellation);
+    }
+
+    /// <summary>
+    /// Removes lambdas that were examples and are not any more.
+    /// </summary>
+    /// <remarks>
+    /// An example is exempt from both maintenance sweeps, so one dropped from
+    /// the catalogue would otherwise sit on its key for ever - taking a name
+    /// somebody might want and answering with something nobody maintains.
+    /// Only lambdas this created are considered: the flag is what says so.
+    /// </remarks>
+    private async ValueTask RetireAsync(CancellationToken cancellation)
+    {
+        var wanted = ExampleCatalog.All.Select(e => e.PublicKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        var retired = await database.Lambdas.AsNoTracking()
+                                    .Where(l => l.IsExample)
+                                    .Select(l => new { l.PublicKey, l.PrivateKey })
+                                    .ToListAsync(cancellation);
+
+        foreach (var lambda in retired.Where(l => !wanted.Contains(l.PublicKey)))
+        {
+            try
+            {
+                await meta.DeleteAsync(lambda.PrivateKey, cancellation);
+
+                logger.LogInformation("Retired the example at '{Key}', which is no longer one", lambda.PublicKey);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning(e, "The retired example at '{Key}' could not be removed", lambda.PublicKey);
+            }
+        }
     }
 
     /// <summary>

@@ -74,7 +74,7 @@ public static class CodeGuard
                     CheckNamespace(qualified.ToString(), qualified.GetLocation(), findings);
                     break;
 
-                case IdentifierNameSyntax identifier:
+                case IdentifierNameSyntax identifier when !IsHarmlessMember(identifier):
                     CheckName(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
                     break;
 
@@ -107,6 +107,45 @@ public static class CodeGuard
         }
     }
 
+    /// <summary>
+    /// Whether this occurrence of a banned name is harmless: a member read off
+    /// some object rather than the type of the same name.
+    /// </summary>
+    /// <remarks>
+    /// This reads what was written rather than what it means, so
+    /// <c>request.Header.Path</c> looked exactly like <c>System.IO.Path</c>
+    /// and was refused - a name a handler has every reason to ask for.
+    ///
+    /// Only the names in <see cref="HarmlessMembers" /> are let through this
+    /// way, and only where the left of the dot is an expression rather than a
+    /// namespace. It cannot be every banned name: <c>Assembly</c> is a type
+    /// and also the property that <c>typeof(x).Assembly</c> reaches reflection
+    /// through, so letting members past wholesale would open the door this is
+    /// here to hold shut.
+    /// </remarks>
+    private static bool IsHarmlessMember(IdentifierNameSyntax identifier)
+    {
+        if (!HarmlessMembers.Contains(identifier.Identifier.ValueText))
+        {
+            return false;
+        }
+
+        if (identifier.Parent is not MemberAccessExpressionSyntax access || access.Name != identifier)
+        {
+            return false;
+        }
+
+        var root = access.Expression;
+
+        while (root is MemberAccessExpressionSyntax inner)
+        {
+            root = inner.Expression;
+        }
+
+        // a chain rooted in a namespace is a type being named, not a member
+        return root is not IdentifierNameSyntax start || !BannedRoots.Contains(start.Identifier.ValueText);
+    }
+
     private static void CheckName(string name, Location location, List<CompilationDiagnostic> findings)
     {
         if (BannedNames.TryGetValue(name, out var reason))
@@ -128,6 +167,29 @@ public static class CodeGuard
 
         return new CompilationDiagnostic("Error", "LAMBDA0001", message, position.Line + 1, position.Character + 1);
     }
+
+    /// <summary>
+    /// The namespaces a banned type can be reached through, so a name written
+    /// after one of them is still read as that type.
+    /// </summary>
+    private static readonly HashSet<string> BannedRoots = new(StringComparer.Ordinal)
+    {
+        "System", "Microsoft", "global"
+    };
+
+    /// <summary>
+    /// Banned names that are types only, and so mean nothing as a member.
+    /// </summary>
+    /// <remarks>
+    /// Kept short on purpose, and grown only when something a lambda has a
+    /// real reason to write turns out to be refused. Every entry here is a
+    /// name that cannot reach anything on its own: reading <c>.Path</c> off an
+    /// object gives whatever that object calls its path.
+    /// </remarks>
+    private static readonly HashSet<string> HarmlessMembers = new(StringComparer.Ordinal)
+    {
+        "Path"
+    };
 
     private static Dictionary<string, string> Build()
     {

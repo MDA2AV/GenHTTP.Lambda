@@ -1,0 +1,86 @@
+// A link shortener. Give it a long address, get a short one back.
+//
+//   GET  /lambda/{{KEY}}/           the page
+//   POST /lambda/{{KEY}}/api/links  { "target": "https://..." } -> a key
+//   GET  /lambda/{{KEY}}/api/links  every link it knows
+//   GET  /lambda/{{KEY}}/go/abc123  follow one
+//
+// The links live in Workspace, the private folder this lambda gets, so they
+// survive a redeployment.
+
+var json = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true
+};
+
+var links = new ConcurrentDictionary<string, Link>(StringComparer.Ordinal);
+var writing = new object();
+
+if (Workspace.Exists("links.json"))
+{
+    foreach (var link in JsonSerializer.Deserialize<List<Link>>(Workspace.ReadText("links.json"), json) ?? [])
+    {
+        links[link.Key] = link;
+    }
+}
+
+Made Shorten(Target request)
+{
+    if (Links.Refuse(request?.Address) is string problem)
+    {
+        return new Made(false, problem, null, null);
+    }
+
+    var address = request.Address.Trim();
+
+    // the same address twice is the same link, so a page that submits on every
+    // render does not fill the file with duplicates
+    var existing = links.Values.FirstOrDefault(l => l.Address == address);
+
+    if (existing != null)
+    {
+        return new Made(true, null, existing.Key, $"/lambda/{{KEY}}/go/{existing.Key}");
+    }
+
+    var key = Links.NewKey();
+
+    links[key] = new Link(key, address, DateTime.UtcNow, 0);
+
+    lock (writing)
+    {
+        Workspace.WriteText("links.json", JsonSerializer.Serialize(links.Values.ToList(), json));
+    }
+
+    return new Made(true, null, key, $"/lambda/{{KEY}}/go/{key}");
+}
+
+var api = Inline.Create()
+                .Get("links", () => links.Values.OrderByDescending(l => l.Created).Take(25).ToList())
+                .Post("links", (Target body) => Shorten(body));
+
+var follow = Inline.Create()
+                   .Get(":key", (string key) =>
+                   {
+                       if (!links.TryGetValue(key, out var link))
+                       {
+                           return new Result<string>("No such link.").Status(ResponseStatus.NotFound);
+                       }
+
+                       // counted before the redirect, because after it this
+                       // lambda never hears about the visit again
+                       links[key] = link with { Follows = link.Follows + 1 };
+
+                       lock (writing)
+                       {
+                           Workspace.WriteText("links.json", JsonSerializer.Serialize(links.Values.ToList(), json));
+                       }
+
+                       return new Result<string>("").Status(ResponseStatus.TemporaryRedirect)
+                                                    .Header("Location", link.Address);
+                   });
+
+return Layout.Create()
+             .Add("api", api)
+             .Add("go", follow)
+             .Add(Content.From(Resource.FromString(Site.Page).Type(new ContentType("text/html; charset=utf-8"))));

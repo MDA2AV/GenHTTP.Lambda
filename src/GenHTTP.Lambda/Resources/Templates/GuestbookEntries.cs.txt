@@ -1,0 +1,45 @@
+// What may be written in the book.
+//
+// lambda.cs keeps the file; this decides what is allowed into it. Splitting it
+// this way means the rules can be read without reading the plumbing.
+
+/// <summary>A line somebody left.</summary>
+public record Entry(string Name, string Message, DateTime At);
+
+/// <summary>What is sent to leave one.</summary>
+public record Signature(string Name, string Message);
+
+/// <summary>The answer, carrying the entry when it was accepted.</summary>
+public record Signed(bool Ok, string Problem, Entry Entry);
+
+static class Guestbook
+{
+    /// <summary>How many lines the book holds before the oldest fall off.</summary>
+    public const int Keep = 200;
+
+    /// <summary>
+    /// Whether a signature may go in the book, and why not when it may not.
+    /// </summary>
+    /// <remarks>
+    /// Nothing here is about safety on the page: what is written is escaped
+    /// where it is shown, which is the only place that can be done properly.
+    /// These are the limits that keep one visitor from filling the file.
+    /// </remarks>
+    public static string Refuse(Signature signature)
+    {
+        var name = (signature?.Name ?? "").Trim();
+        var message = (signature?.Message ?? "").Trim();
+
+        if (name.Length is < 1 or > 24)
+        {
+            return "A name is between one and twenty-four characters.";
+        }
+
+        if (message.Length is < 1 or > 280)
+        {
+            return "A message is between one and two hundred and eighty characters.";
+        }
+
+        return null;
+    }
+}

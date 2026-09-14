@@ -1,0 +1,197 @@
+// A room everybody is in at once.
+//
+//   GET /lambda/{{KEY}}/               the room
+//   GET /lambda/{{KEY}}/api/standings  the best runs it remembers
+//   WS  /lambda/{{KEY}}/join           the socket everything happens on
+//
+// Four files. This one is the socket and the storage, World.cs is the rules,
+// Protocol.cs is what the two halves say to each other, and Page.cs is the
+// browser half.
+//
+// The server decides where everyone is. A browser says where it would like to
+// be and is told where it ended up, so a player with an altered client cannot
+// cross the room in a frame or stand on a prize it never reached.
+//
+// There is no timer anywhere. Everything happens because somebody moved, which
+// is what keeps an empty room costing nothing: a lambda that is still loaded
+// but has nobody in it should not be spending a thread on an arena nobody is
+// standing in.
+
+var json = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true
+};
+
+var players = new ConcurrentDictionary<IReactiveConnection, Player>();
+var prizes = new ConcurrentDictionary<string, Prize>(StringComparer.Ordinal);
+var standings = new List<Standing>();
+var random = new Random();
+var writing = new object();
+var seat = 0;
+
+// one broadcast at a time: a socket is one stream of frames, and two players
+// moving at once means two handlers writing to the same sockets
+var sending = new SemaphoreSlim(1, 1);
+
+if (Workspace.Exists("standings.json"))
+{
+    standings.AddRange(JsonSerializer.Deserialize<List<Standing>>(Workspace.ReadText("standings.json"), json) ?? []);
+}
+
+string NewId() => Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(6));
+
+void Scatter()
+{
+    while (prizes.Count < Arena.Prizes)
+    {
+        var (x, z) = Arena.Somewhere(random);
+
+        // one identifier, used as the key and carried by the prize itself -
+        // two would mean nothing could ever be removed by the id it was sent
+        // out with, and nobody would ever score
+        var id = NewId();
+
+        prizes[id] = new Prize(id, x, z);
+    }
+}
+
+Scatter();
+
+void Remember(Player player)
+{
+    if (player.Score <= 0)
+    {
+        return;
+    }
+
+    lock (writing)
+    {
+        standings.Add(new Standing(player.Name, player.Score, DateTime.UtcNow));
+
+        var kept = standings.OrderByDescending(s => s.Score).ThenBy(s => s.At).Take(50).ToList();
+
+        standings.Clear();
+        standings.AddRange(kept);
+
+        Workspace.WriteText("standings.json", JsonSerializer.Serialize(standings, json));
+    }
+}
+
+async ValueTask Tell(IReactiveConnection connection, object message)
+{
+    try
+    {
+        await connection.WritePayloadAsync(JsonSerializer.Serialize(message, json));
+    }
+    catch (Exception)
+    {
+        players.TryRemove(connection, out _);
+    }
+}
+
+async ValueTask Publish()
+{
+    var state = new State("state", players.Values.OrderByDescending(p => p.Score).ToList(), prizes.Values.ToList());
+
+    var payload = JsonSerializer.Serialize(state, json);
+
+    await sending.WaitAsync();
+
+    try
+    {
+        foreach (var listener in players.Keys.ToArray())
+        {
+            try
+            {
+                await listener.WritePayloadAsync(payload);
+            }
+            catch (Exception)
+            {
+                players.TryRemove(listener, out _);
+            }
+        }
+    }
+    finally
+    {
+        sending.Release();
+    }
+}
+
+var socket = Websocket.Functional()
+                      .OnMessage(async (connection, message) =>
+                      {
+                          var text = await message.ReadPayloadAsync<string>() ?? "";
+
+                          if (text.Length is 0 or > 400)
+                          {
+                              return;
+                          }
+
+                          // the first frame names the player; the rest are moves
+                          if (!players.TryGetValue(connection, out var player))
+                          {
+                              var joining = JsonSerializer.Deserialize<Join>(text, json);
+
+                              var (x, z) = Arena.Somewhere(random);
+
+                              var colour = Arena.ColourFor(Interlocked.Increment(ref seat));
+
+                              player = new Player(NewId(), Arena.Called(joining?.Name), colour, x, z, 0);
+
+                              players[connection] = player;
+
+                              await Tell(connection, new Welcome("welcome", player.Id, colour, Arena.Half));
+
+                              await Publish();
+
+                              return;
+                          }
+
+                          var wanted = JsonSerializer.Deserialize<Move>(text, json);
+
+                          if (wanted == null)
+                          {
+                              return;
+                          }
+
+                          var (nx, nz) = Arena.Settle(player.X, player.Z, wanted.X, wanted.Z);
+
+                          var taken = prizes.Values.FirstOrDefault(p => Arena.Reaches(nx, nz, p));
+
+                          var score = player.Score;
+
+                          if (taken != null && prizes.TryRemove(taken.Id, out _))
+                          {
+                              score++;
+
+                              Scatter();
+                          }
+
+                          players[connection] = player with { X = nx, Z = nz, Score = score };
+
+                          await Publish();
+                      })
+                      .OnClose(async (connection, _) =>
+                      {
+                          if (players.TryRemove(connection, out var leaving))
+                          {
+                              Remember(leaving);
+
+                              await Publish();
+                          }
+                      });
+
+var api = Inline.Create()
+                .Get("standings", () =>
+                {
+                    lock (writing)
+                    {
+                        return standings.Take(10).ToList();
+                    }
+                });
+
+return Layout.Create()
+             .Add("api", api)
+             .Add("join", socket)
+             .Add(Content.From(Resource.FromString(Site.Page).Type(new ContentType("text/html; charset=utf-8"))));

@@ -1,0 +1,68 @@
+// A page that calls the echo route and shows what came back, so the example
+// can be looked at in a browser as well as with curl.
+
+static class Site
+{
+    public const string Page =
+"""
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What did you send?</title>
+<style>
+  :root { color-scheme: light dark; --line: #d5d7da; --dim: #5f6368; }
+  body { margin: 0 auto; max-width: 46rem; padding: 3rem 1.25rem;
+         font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 .25rem; }
+  p.dim { color: var(--dim); margin-top: 0; }
+  .row { display: flex; gap: .5rem; margin: 1.25rem 0; flex-wrap: wrap; }
+  select, input { padding: .5rem .6rem; border: 1px solid var(--line); background: transparent;
+                  color: inherit; font: inherit; }
+  input { flex: 1; min-width: 12rem; }
+  button { padding: .5rem 1.1rem; border: 0; background: #1a73e8; color: #fff; font: inherit; cursor: pointer; }
+  pre { background: #f1f3f4; padding: 1rem; overflow-x: auto; font-size: 13px;
+        font-family: ui-monospace, Menlo, Consolas, monospace; }
+  @media (prefers-color-scheme: dark) { pre { background: #202124; } }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+</style>
+
+<h1>What did you send?</h1>
+<p class="dim">Every request here is answered with a description of itself.</p>
+
+<div class="row">
+  <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
+  <input id="query" value="?who=you&amp;why=curious">
+  <button id="send">Send it</button>
+</div>
+
+<div class="row">
+  <input id="body" placeholder="a body, for POST and PUT" style="flex:1">
+</div>
+
+<pre id="out">press the button</pre>
+
+<p class="dim">Or from a terminal: <code id="curl"></code></p>
+
+<script type="module">
+const base = location.pathname.replace(/\/$/, '');
+const $ = (id) => document.getElementById(id);
+
+$('curl').textContent = `curl -X POST -d hello ${location.origin}${base}/echo`;
+
+$('send').onclick = async () => {
+  const method = $('method').value;
+  const body = $('body').value;
+
+  const response = await fetch(`${base}/echo${$('query').value}`, {
+    method,
+    headers: { 'X-Sent-By': 'the example page' },
+    body: method === 'GET' || method === 'DELETE' ? undefined : (body || 'hello'),
+  });
+
+  $('out').textContent = JSON.stringify(await response.json(), null, 2);
+};
+</script>
+</html>
+""";
+}

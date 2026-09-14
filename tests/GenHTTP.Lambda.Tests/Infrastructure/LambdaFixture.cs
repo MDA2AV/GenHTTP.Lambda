@@ -4,6 +4,9 @@ using System.Text.Json;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Data;
+
+using Microsoft.EntityFrameworkCore;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Meta;
 
@@ -61,6 +64,23 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// for an example.
     /// </summary>
     public ValueTask<string?> PrivateKeyOfAsync(string publicKey) => Meta.GetPrivateKeyAsync(publicKey);
+
+    /// <summary>
+    /// Flags a lambda as one the installation maintains, which is what the
+    /// seeder and the maintenance sweeps go by.
+    /// </summary>
+    public async ValueTask MarkAsExampleAsync(string publicKey)
+    {
+        var databases = Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
+
+        await using var database = await databases.CreateDbContextAsync();
+
+        var entity = await database.Lambdas.FirstAsync(l => l.PublicKey == publicKey);
+
+        entity.IsExample = true;
+
+        await database.SaveChangesAsync();
+    }
 
     private string Root { get; }
 

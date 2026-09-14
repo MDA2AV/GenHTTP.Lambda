@@ -1,0 +1,69 @@
+// What did you just send me?
+//
+// Every request to this lambda is answered with a description of itself: the
+// method, the path, the query, the headers and whatever body came with it.
+// Useful when something is calling you and you want to see exactly what it
+// sent, rather than what it says it sent.
+//
+//   ANY /lambda/{{KEY}}/         a page, in a browser
+//   ANY /lambda/{{KEY}}/echo     the same thing as JSON
+//
+// Nothing is stored. What you send is described back to you and forgotten.
+
+async ValueTask<Seen> DescribeAsync(IRequest request)
+{
+    var headers = new List<Pair>();
+
+    for (var i = 0; i < request.Header.Headers.Count; i++)
+    {
+        var entry = request.Header.Headers.GetMemoryEntry(i);
+
+        headers.Add(new Pair(Encoding.UTF8.GetString(entry.Key.Span), Encoding.UTF8.GetString(entry.Value.Span)));
+    }
+
+    var query = new List<Pair>();
+
+    for (var i = 0; i < request.Header.Query.Count; i++)
+    {
+        var entry = request.Header.Query.GetMemoryEntry(i);
+
+        query.Add(new Pair(Encoding.UTF8.GetString(entry.Key.Span), Encoding.UTF8.GetString(entry.Value.Span)));
+    }
+
+    var body = "";
+
+    if (request.HasBody)
+    {
+        // asynchronously, because that is the only way the engine will hand a
+        // body over - reading it as a plain stream throws
+        var content = await request.GetBody().AsMemoryAsync();
+
+        // bounded on purpose: describing a request should not cost more memory
+        // than the request itself did
+        body = Encoding.UTF8.GetString(content.Span[..Math.Min(content.Length, 4096)]);
+    }
+
+    return new Seen(
+        request.Header.Method.ToString(),
+        request.Header.Path.ToString(),
+        request.Header.Protocol.ToString(),
+        query.OrderBy(p => p.Name).ToList(),
+        headers.OrderBy(p => p.Name).ToList(),
+        body.Length,
+        body
+    );
+}
+
+var echo = Inline.Create()
+                 .Get((IRequest request) => DescribeAsync(request))
+                 .Post((IRequest request) => DescribeAsync(request))
+                 .Put((IRequest request) => DescribeAsync(request))
+                 .Delete((IRequest request) => DescribeAsync(request));
+
+return Layout.Create()
+             .Add("echo", echo)
+             .Add(Content.From(Resource.FromString(Site.Page).Type(new ContentType("text/html; charset=utf-8"))));
+
+record Pair(string Name, string Value);
+
+record Seen(string Method, string Path, string Protocol, List<Pair> Query, List<Pair> Headers, int BodyLength, string Body);
