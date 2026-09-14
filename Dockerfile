@@ -26,7 +26,12 @@ RUN dotnet restore src/GenHTTP.Lambda/GenHTTP.Lambda.csproj
 COPY src/GenHTTP.Lambda/ src/GenHTTP.Lambda/
 COPY --from=frontend /src/GenHTTP.Lambda/wwwroot src/GenHTTP.Lambda/wwwroot
 
-RUN dotnet publish src/GenHTTP.Lambda/GenHTTP.Lambda.csproj --no-restore -c Release -o /app
+# The .NET 11 async runtime is on by default; this is the way to build without
+# it, which is the first thing to try when something asynchronous misbehaves.
+ARG RUNTIME_ASYNC=true
+
+RUN dotnet publish src/GenHTTP.Lambda/GenHTTP.Lambda.csproj --no-restore -c Release -o /app \
+    -p:RuntimeAsync=$RUNTIME_ASYNC
 
 # What is actually shipped. The ASP.NET Core framework is required because
 # GenHTTP.Full ships the Kestrel engine next to the ioxide one; lambdas are

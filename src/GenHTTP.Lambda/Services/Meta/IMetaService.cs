@@ -94,7 +94,11 @@ public interface IMetaService
     /// <summary>
     /// Every lambda on this installation, newest first.
     /// </summary>
-    ValueTask<IReadOnlyList<LambdaOverview>> ListAsync(CancellationToken cancellation = default);
+    /// <summary>
+    /// One page of the lambdas on the installation, newest first.
+    /// </summary>
+    /// <param name="search">Narrows the listing to public keys containing this</param>
+    ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, CancellationToken cancellation = default);
 
     /// <summary>
     /// The editor key behind a public one, for the operations that act on a

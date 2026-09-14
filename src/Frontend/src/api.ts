@@ -71,6 +71,8 @@ export interface Template {
   name: string;
   description: string;
   code: string;
+  /** Reachable by link, but not offered in the picker. */
+  hidden: boolean;
 }
 
 export interface TemplateGroup {
@@ -177,6 +179,11 @@ export interface Activity {
 
 export interface LambdaOverview {
   publicKey: string;
+  /** The editor key. Served only to a request carrying the admin token. */
+  privateKey: string;
+  requests: number;
+  failed: number;
+  lastSeen?: string;
   tier: string;
   created: string;
   modified: string;
@@ -191,6 +198,10 @@ export interface AdminListing {
   lambdas: LambdaOverview[];
   total: number;
   deployed: number;
+  /** How many the search matched; the pages are counted from this. */
+  matched: number;
+  page: number;
+  pages: number;
 }
 
 export interface SemanticToken {
@@ -261,7 +272,11 @@ export const api = {
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
 
   admin: {
-    list: (token: string) => request<AdminListing>('/admin/lambdas', withToken(token)),
+    list: (token: string, search: string, page: number) =>
+      request<AdminListing>(
+        `/admin/lambdas?page=${page}${search === '' ? '' : `&search=${encodeURIComponent(search)}`}`,
+        withToken(token),
+      ),
 
     code: (token: string, publicKey: string, version?: number) =>
       request<VersionContent>(

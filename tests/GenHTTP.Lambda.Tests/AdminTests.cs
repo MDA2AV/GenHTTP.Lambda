@@ -70,7 +70,7 @@ public sealed class AdminTests
     }
 
     [TestMethod]
-    public async Task TheListingCarriesNoEditorKeys()
+    public async Task TheListingCarriesEditorKeys()
     {
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
@@ -80,8 +80,26 @@ public sealed class AdminTests
 
         var body = await response.Content.ReadAsStringAsync();
 
-        Assert.DoesNotContain(lambda.PrivateKey, body,
-                              "the panel acts on lambdas it does not own; handing out their editor links would give that away for good");
+        // deciding whether something is abusive means reading it, and the
+        // editor is also where it can be emptied or corrected rather than only
+        // deleted - so the panel hands out the editor link, which is the whole
+        // of the credential, and the token is what stands in front of that
+        Assert.Contains(lambda.PrivateKey, body);
+    }
+
+    [TestMethod]
+    public async Task NobodyWithoutTheTokenSeesAnEditorKey()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        var lambda = await fixture.CreateLambdaAsync("private");
+
+        using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas", "not-the-token");
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.DoesNotContain(lambda.PrivateKey, body, "which is the only thing keeping the listing from being a giveaway");
     }
 
     [TestMethod]

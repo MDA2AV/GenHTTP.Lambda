@@ -9,6 +9,21 @@
 
         <ServerGarbageCollection>true</ServerGarbageCollection>
 
+        <!--
+            .NET 11 can compile async methods into the runtime itself rather
+            than into a state machine class per method. A server is almost
+            entirely await, so this is where its allocation goes.
+
+            Still a preview feature, hence the switch: build with
+            -p:RuntimeAsync=false to get the state machines back, which is the
+            first thing to try if something asynchronous starts misbehaving.
+        -->
+        <RuntimeAsync Condition="'$(RuntimeAsync)' == ''">true</RuntimeAsync>
+
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(RuntimeAsync)' == 'true'">
+        <Features>$(Features);runtime-async=on</Features>
     </PropertyGroup>
 
     <ItemGroup>

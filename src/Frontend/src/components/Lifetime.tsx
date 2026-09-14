@@ -12,8 +12,8 @@ import type { Lambda } from '../api';
 export function Lifetime({ lambda }: { lambda: Lambda }) {
   const [open, setOpen] = useState(false);
 
-  const days = remaining(lambda.keptUntil);
-  const deployHours = lambda.deployedUntil ? remaining(lambda.deployedUntil) * 24 : null;
+  const days = remaining(lambda.keptUntil, DAY);
+  const deployHours = lambda.deployedUntil ? remaining(lambda.deployedUntil, HOUR) : null;
 
   // green while there is plenty of room, amber once it is worth noticing
   const tone =
@@ -57,7 +57,9 @@ export function Lifetime({ lambda }: { lambda: Lambda }) {
                 <dt className="font-medium">
                   {deployHours === null
                     ? 'Nothing is online right now'
-                    : `Online for about ${format(deployHours, 'hour')} more`}
+                    : deployHours >= 23
+                      ? 'Online for about a day more'
+                      : `Online for about ${format(deployHours, 'hour')} more`}
                 </dt>
                 <dd className="mt-0.5 text-slate-600 dark:text-slate-400">
                   {deployHours === null
@@ -91,12 +93,21 @@ export function Lifetime({ lambda }: { lambda: Lambda }) {
   );
 }
 
-/** Whole units left, never below zero - a lambda past its date still reads as 0. */
-function remaining(until: string): number {
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
+
+/**
+ * Units left, never below zero - a lambda past its date still reads as 0.
+ *
+ * Rounded up rather than down, because down reads as expired while there is
+ * still most of a unit to go: a deployment made a minute ago has 23 hours and
+ * 59 minutes left, which is not "0 hours", and the day it is measured in is
+ * not over until it is over.
+ */
+function remaining(until: string, unit: number): number {
   const ms = new Date(until).getTime() - Date.now();
 
-  return Math.max(0, Math.floor(ms / 86_400_000));
+  return Math.max(0, Math.ceil(ms / unit));
 }
 
-const format = (value: number, unit: string) =>
-  `${Math.max(0, Math.round(value))} ${unit}${Math.round(value) === 1 ? '' : 's'}`;
+const format = (value: number, unit: string) => `${value} ${unit}${value === 1 ? '' : 's'}`;

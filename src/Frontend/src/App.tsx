@@ -10,6 +10,7 @@ import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
 import { Stats } from './pages/Stats';
+import { Terms } from './pages/Terms';
 import { useTheme } from './theme';
 
 // Monaco is most of the bundle, so the landing page never downloads it
@@ -74,6 +75,7 @@ export function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/stats" element={<Stats dark={theme === 'dark'} />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/terms" element={<Terms />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

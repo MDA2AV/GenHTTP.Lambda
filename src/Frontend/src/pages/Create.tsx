@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApiError, api, type Availability, type Platform, type Template, type TemplateGroup } from '../api';
 import { IconCheck, IconSpinner } from '../components/Icons';
@@ -10,6 +10,11 @@ type Step = 'kind' | 'template' | 'key';
 export function Create() {
   const navigate = useNavigate();
   const toast = useToast();
+
+  // a link from somewhere else can choose the example and skip the picking
+  const [query] = useSearchParams();
+  const invited = query.get('invited') === '1';
+  const wanted = query.get('template');
 
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [step, setStep] = useState<Step>('kind');
@@ -26,6 +31,29 @@ export function Create() {
   useEffect(() => {
     api.platform().then(setPlatform).catch(() => undefined);
   }, []);
+
+  /*
+   * An invitation names a template, so the two choosing steps are already
+   * answered and the visitor is put straight on the last one. Hidden templates
+   * resolve here as well as listed ones - being unlisted is about the picker,
+   * not about whether the editor knows them.
+   */
+  useEffect(() => {
+    if (platform === null || wanted === null || template !== null) {
+      return;
+    }
+
+    for (const candidate of platform.templates) {
+      const match = candidate.templates.find((t) => t.id === wanted);
+
+      if (match) {
+        setGroup(candidate);
+        setTemplate(match);
+        setStep('key');
+        return;
+      }
+    }
+  }, [platform, wanted, template]);
 
   // the key is validated while it is typed, but only the newest answer counts
   useEffect(() => {
@@ -93,9 +121,20 @@ export function Create() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-14 sm:py-20">
-      <h1 className="text-2xl font-bold tracking-tight">Create a lambda</h1>
+      <h1 className="text-2xl font-bold tracking-tight">
+        {invited ? 'Put this example online' : 'Create a lambda'}
+      </h1>
       <p className="mt-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
-        Start from an example, then pick the key it will be hosted at.
+        {invited ? (
+          <>
+            You came here from a link, so the example is already chosen
+            {template === null ? '' : <> - <strong className="font-medium">{template.name}</strong></>}. Pick a
+            name for it and it goes online at a public address, with nothing to install and no account. Nothing
+            exists yet: it is created when you press the button below.
+          </>
+        ) : (
+          'Start from an example, then pick the key it will be hosted at.'
+        )}
       </p>
 
       <Steps step={step} group={group} template={template} onGo={setStep} />
@@ -122,7 +161,7 @@ export function Create() {
 
       {step === 'template' && group !== null && (
         <section className="mt-8 space-y-3">
-          {group.templates.map((candidate) => {
+          {group.templates.filter((candidate) => !candidate.hidden || candidate.id === template?.id).map((candidate) => {
             const active = candidate.id === template?.id;
 
             return (
@@ -228,6 +267,17 @@ export function Create() {
             <p className="mt-3 whitespace-pre-line text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
               {platform?.terms ?? 'Loading the terms…'}
             </p>
+
+            {/* the short version is what gets read; the full one has to be
+                reachable without losing what has been filled in so far */}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block text-[13px] text-accent-600 hover:underline dark:text-accent-400"
+            >
+              Read the full terms of service
+            </a>
           </div>
 
           <div className="flex gap-2">

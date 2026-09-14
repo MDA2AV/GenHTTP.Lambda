@@ -19,6 +19,20 @@ public sealed record LambdaInfo(
 );
 
 /// <summary>
+/// One page of the lambdas on the installation.
+/// </summary>
+/// <param name="Lambdas">The page that was asked for</param>
+/// <param name="Matched">How many the search found, which is what the pages are counted from</param>
+/// <param name="Total">How many there are in total, search or no search</param>
+/// <param name="Deployed">How many of the total are online</param>
+public sealed record LambdaPage(
+    IReadOnlyList<LambdaOverview> Lambdas,
+    int Matched,
+    int Total,
+    int Deployed
+);
+
+/// <summary>
 /// A stored version of the code of a lambda.
 /// </summary>
 public sealed record LambdaVersionInfo(int Version, DateTime Created);
@@ -66,6 +80,11 @@ public sealed record LambdaCounts(int Lambdas, int Deployed, int Versions);
 /// </summary>
 public sealed record LambdaOverview(
     string PublicKey,
+    /// <summary>
+    /// The editor key. Only ever leaves the process through the panel, which
+    /// is behind the administration token.
+    /// </summary>
+    string PrivateKey,
     string Tier,
     DateTime Created,
     DateTime Modified,

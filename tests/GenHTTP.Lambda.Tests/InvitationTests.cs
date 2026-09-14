@@ -1,6 +1,7 @@
 using System.Net;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -8,12 +9,21 @@ using GenHTTP.Testing;
 namespace GenHTTP.Lambda.Tests;
 
 /// <summary>
-/// Creating a lambda from a link on another page, the way a "try this online"
-/// button does it.
+/// Arriving from a link on another page, the way a "try this online" button
+/// does it.
 /// </summary>
+/// <remarks>
+/// This used to create the lambda as the link was followed. It does not any
+/// more, and most of what is asserted here is that it does not: a GET that
+/// creates something is followed by every crawler and every link preview, none
+/// of which has agreed to anything.
+/// </remarks>
 [TestClass]
 public sealed class InvitationTests
 {
+    private const string Token = "a-token-nobody-would-guess";
+
+    private static Func<LambdaOptions, LambdaOptions> WithPanel => o => o with { AdminToken = Token };
 
     [TestMethod]
     public async Task ALinkLandsInTheEditor()
@@ -27,24 +37,26 @@ public sealed class InvitationTests
         var location = response.Headers.Location?.ToString();
 
         Assert.IsNotNull(location);
-        Assert.StartsWith("/editor/", location);
-        Assert.EndsWith("?created=1", location, "the editor has to know it owes the visitor the terms");
+        Assert.StartsWith("/editor/create", location, "creating one is the visitor's decision to make");
+        Assert.Contains("invited=1", location, "the editor has to know it is talking to somebody who has seen nothing yet");
     }
 
     [TestMethod]
-    public async Task TheKeyIsGeneratedRatherThanAskedFor()
+    public async Task FollowingTheLinkCreatesNothing()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
-        using var response = await fixture.GetAsync("/api/v1/start", "application/json");
+        using var invited = await fixture.GetAsync("/api/v1/start?template=websocket-reactive", "text/html");
 
-        Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.SeeOther, invited.StatusCode);
 
-        var lambda = await response.GetContentAsync<LambdaResponse>();
+        // the panel is the only thing that can see every lambda, so it is what
+        // can say that none of them appeared
+        using var response = await Send(fixture, "/api/v1/admin/lambdas");
 
-        Assert.IsNotEmpty(lambda.PublicKey);
-        Assert.IsNotEmpty(lambda.PrivateKey);
-        Assert.AreEqual($"/editor/{lambda.PrivateKey}", lambda.EditorPath);
+        var listing = await response.GetContentAsync<AdminListingResponse>();
+
+        Assert.AreEqual(0, listing.Total, "a link that is merely followed must not leave a lambda behind");
     }
 
     [TestMethod]
@@ -52,44 +64,69 @@ public sealed class InvitationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var response = await fixture.GetAsync("/api/v1/start?template=websocket-reactive", "application/json");
+        using var response = await fixture.GetAsync("/api/v1/start?template=websocket-reactive", "text/html");
 
-        var lambda = await response.GetContentAsync<LambdaResponse>();
+        var location = response.Headers.Location?.ToString();
 
-        using var seeded = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/1");
-
-        var version = await seeded.GetContentAsync<VersionContentResponse>();
-
-        Assert.Contains("Websocket.Reactive()", version.Code);
+        Assert.IsNotNull(location);
+        Assert.Contains("template=websocket-reactive", location,
+                        "the editor is what seeds the code, so the choice has to survive the redirect");
     }
 
     [TestMethod]
-    public async Task AnUnknownTemplateIsStillRefused()
+    public async Task AnUnknownTemplateStillLandsInTheEditor()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var response = await fixture.GetAsync("/api/v1/start?template=nope", "application/json");
+        using var response = await fixture.GetAsync("/api/v1/start?template=nope", "text/html");
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.SeeOther, response.StatusCode,
+                        "a link outlives the name it mentions, and an error page is a worse answer than the editor");
+
+        var location = response.Headers.Location?.ToString();
+
+        Assert.IsNotNull(location);
+        Assert.DoesNotContain("template=", location, "and it must not carry a name nothing answers to");
     }
 
     [TestMethod]
-    public async Task TheLambdaIsUsableStraightAway()
+    public async Task TheCatalogueSaysWhichTemplatesAreHidden()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var response = await fixture.GetAsync("/api/v1/start", "application/json");
+        using var response = await fixture.GetAsync("/api/v1/system");
 
-        var lambda = await response.GetContentAsync<LambdaResponse>();
+        var body = await response.Content.ReadAsStringAsync();
 
-        // whoever follows the link should find something that already runs
-        var deployment = await fixture.DeployAsync(lambda.PrivateKey);
+        var platform = await response.GetContentAsync<PlatformResponse>();
 
-        Assert.IsTrue(deployment.Success);
+        var offered = platform.Templates.SelectMany(g => g.Templates).ToList();
 
-        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        Assert.IsNotEmpty(offered, "the assistant has to have something to offer");
 
-        Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
+        // every one is described, hidden or not, because an editor reached by a
+        // link that names one has to be able to say what it is. Which of them
+        // the picker leaves out is the editor's decision, and it can only make
+        // it if the catalogue tells it - so the flag has to be on the wire.
+        Assert.Contains("\"hidden\"", body, "the editor filters the picker on this, so it has to be published");
+
+        foreach (var template in offered)
+        {
+            using var linked = await fixture.GetAsync($"/api/v1/start?template={template.Id}", "text/html");
+
+            Assert.AreEqual(HttpStatusCode.SeeOther, linked.StatusCode);
+            Assert.Contains($"template={template.Id}", linked.Headers.Location?.ToString() ?? string.Empty,
+                            "a template that exists can be linked to, listed or not");
+        }
+    }
+
+    private static async Task<HttpResponseMessage> Send(LambdaFixture fixture, string path)
+    {
+        using var request = fixture.Host.GetRequest(path, HttpMethod.Get);
+
+        request.Headers.Add("X-Admin-Token", Token);
+
+        return await fixture.Host.GetResponseAsync(request);
     }
 
 }

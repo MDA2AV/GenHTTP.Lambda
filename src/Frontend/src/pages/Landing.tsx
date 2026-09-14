@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Explainer } from '../components/Explainer';
+import { ReportAbuse } from '../components/ReportAbuse';
 import { IconChevronDown } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
 
@@ -102,6 +103,28 @@ export function Landing() {
             </a>
           </div>
         </Reveal>
+
+        {/*
+          Small, at the bottom, and on the front page rather than behind a
+          lambda: whoever needs it is here because something hosted here did
+          something to them, and they have no reason to know the rest of this.
+        */}
+        <footer className="mt-16 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-grey-300 pt-6 text-xs text-grey-700 dark:border-ink-800 dark:text-grey-300">
+          <ReportAbuse />
+
+          <Link to="/terms" className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400">
+            Terms of service
+          </Link>
+
+          <a
+            href="https://github.com/MDA2AV/GenHTTP.Lambda"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
+          >
+            Source
+          </a>
+        </footer>
       </div>
     </div>
   );

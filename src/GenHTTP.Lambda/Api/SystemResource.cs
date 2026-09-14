@@ -42,9 +42,14 @@ public sealed class SystemResource(LambdaOptions options)
     /// The template catalogue, with a stand in key so the assistant can show
     /// the code of a template before a lambda exists to fill it with.
     /// </summary>
+    /// <remarks>
+    /// Hidden templates are described here rather than left out: a link that
+    /// names one still has to arrive at an editor that can say what it is. It
+    /// is the assistant's list they are kept out of, not the catalogue.
+    /// </summary>
     private static IReadOnlyList<TemplateGroupResponse> Describe()
         => [.. TemplateCatalog.Groups.Select(g => new TemplateGroupResponse(g.Id, g.Name, g.Description,
                [.. g.Templates.Select(t => new TemplateResponse(t.Id, t.Name, t.Description,
-                   TemplateCatalog.ForKey(t.Id, "your-key")))]))];
+                   TemplateCatalog.ForKey(t.Id, "your-key"), t.Hidden))]))];
 
 }
