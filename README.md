@@ -170,6 +170,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
 | `LAMBDA_CERTIFICATE_PASSWORD`       | -                | password of the PKCS#12 archive             |
+| `LAMBDA_CERTIFICATE_DIRECTORY`      | -                | further certificates, one folder per name   |
 
 The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so the image defaults to
@@ -223,6 +224,28 @@ LAMBDA_CERTIFICATE_KEY=/certs/privkey.pem
 A PKCS#12 archive works just as well - leave the key empty and set
 `LAMBDA_CERTIFICATE_PASSWORD` instead. The certificate is read again when the
 files change, so a renewal is picked up without a restart.
+
+### More than one hostname
+
+A certificate is only good for the names it carries, so a server answering to
+several needs one per name. `LAMBDA_CERTIFICATE_DIRECTORY` points at a folder
+holding the rest, a subdirectory per name in the layout an ACME client already
+keeps them in:
+
+```
+/certs/fullchain.pem              the default, for anything unrecognised
+/certs/privkey.pem
+/certs/example.com/fullchain.pem  presented to clients asking for example.com
+/certs/example.com/privkey.pem
+```
+
+The names come from the certificates themselves rather than the folder names,
+including wildcards, and a client asking for a name none of them covers is
+answered with the default one.
+
+Note that this needs a PEM pair per name when running on the io_uring engine.
+Kestrel terminates TLS in .NET and is handed a loaded certificate, but the
+io_uring engine reads the files itself and has no way to be given an archive.
 
 The issuers in the file are published into the certificate store of the user
 the server runs as, because a client needs the chain and not just the leaf to

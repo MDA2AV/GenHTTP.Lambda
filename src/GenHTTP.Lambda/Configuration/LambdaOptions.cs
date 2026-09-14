@@ -126,6 +126,18 @@ public sealed record LambdaOptions
     /// </summary>
     public string? CertificatePassword { get; init; }
 
+    /// <summary>
+    /// A directory holding further certificates, one subdirectory per name,
+    /// each with a <c>fullchain.pem</c> and a <c>privkey.pem</c> beside it.
+    /// </summary>
+    /// <remarks>
+    /// The server answers to more than one hostname and a certificate names
+    /// the hosts it is good for, so the one to present depends on the host the
+    /// client asked for. The certificate above stays the default, used when a
+    /// client sends no name or a name nothing here covers.
+    /// </remarks>
+    public string? CertificateDirectory { get; init; }
+
     #region Derived
 
     public string DatabaseFile => Path.Combine(DataDirectory, "lambda.db");
@@ -181,7 +193,8 @@ public sealed record LambdaOptions
             SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", defaults.SecurePort),
             CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),
-            CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD")
+            CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD"),
+            CertificateDirectory = ReadOptional("LAMBDA_CERTIFICATE_DIRECTORY")
         };
     }
 

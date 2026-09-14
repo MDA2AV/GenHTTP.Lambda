@@ -23,6 +23,9 @@ services:
       LAMBDA_TLS_PORT: 443
       LAMBDA_CERTIFICATE: /certs/fullchain.pem
       LAMBDA_CERTIFICATE_KEY: /certs/privkey.pem
+      # further certificates, a subdirectory per name, for the other hostnames
+      # the server answers to - the one above answers for anything not named
+      LAMBDA_CERTIFICATE_DIRECTORY: /certs
     sysctls:
       # lets the unprivileged user bind 80 and 443 inside its own network
       # namespace, so the server keeps running as uid 1001
