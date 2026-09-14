@@ -1,0 +1,125 @@
+// The page the chat is served as. One file, no build step, no framework.
+//
+// It sits here rather than in lambda.cs because it is markup rather than
+// wiring, and a snippet with two hundred lines of HTML in the middle is a
+// snippet nobody reads to the end of.
+
+static class Site
+{
+    public const string Page =
+"""
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chat</title>
+<style>
+  :root { color-scheme: light dark; --line: #d5d7da; --dim: #5f6368; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         display: flex; flex-direction: column; height: 100vh; }
+  header { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; }
+  h1 { font-size: 16px; margin: 0; }
+  .dim { color: var(--dim); font-size: 13px; }
+  main { flex: 1; overflow: auto; padding: 16px; }
+  form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+  input { flex: 1; padding: 9px 11px; border: 1px solid var(--line); background: transparent;
+          color: inherit; font: inherit; min-width: 0; }
+  button { padding: 9px 16px; border: 0; background: #1a73e8; color: #fff; font: inherit; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .line { margin-bottom: 9px; }
+  .who { font-weight: 600; }
+  .room { color: var(--dim); font-style: italic; }
+  .when { color: var(--dim); font-size: 12px; margin-left: 6px; }
+  .problem { color: #c5221f; padding: 0 16px 10px; font-size: 13px; }
+  .gate { max-width: 330px; margin: 12vh auto; padding: 0 16px; }
+  .gate input { width: 100%; margin-bottom: 8px; }
+  .gate button { width: 100%; margin-bottom: 8px; }
+  .warn { font-size: 12px; color: var(--dim); margin-top: 14px; }
+</style>
+
+<header>
+  <h1>Chat</h1>
+  <span class="dim" id="status">not signed in</span>
+</header>
+
+<div class="gate" id="gate">
+  <input id="name" placeholder="Name" autocomplete="username">
+  <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+  <button id="login">Sign in</button>
+  <button id="register" style="background:#5f6368">Make an account</button>
+  <div class="problem" id="problem"></div>
+  <p class="warn">
+    A demo on a shared machine. Do not use a password you use anywhere else - and
+    anyone can read what is said here.
+  </p>
+</div>
+
+<main id="log" hidden></main>
+
+<form id="say" hidden>
+  <input id="text" placeholder="Say something" autocomplete="off" maxlength="500">
+  <button>Send</button>
+</form>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const base = location.pathname.replace(/\/$/, '');
+let socket = null;
+
+const escape = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function add(line) {
+  const at = new Date(line.at + 'Z');
+  const room = line.from === 'room';
+  $('log').insertAdjacentHTML('beforeend',
+    `<div class="line ${room ? 'room' : ''}">` +
+    (room ? '' : `<span class="who">${escape(line.from)}</span> `) +
+    escape(line.text) +
+    `<span class="when">${at.toLocaleTimeString()}</span></div>`);
+  $('log').scrollTop = $('log').scrollHeight;
+}
+
+async function send(path, body) {
+  const response = await fetch(`${base}/api/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+}
+
+async function enter(path) {
+  $('problem').textContent = '';
+  const answer = await send(path, { name: $('name').value, password: $('password').value });
+  if (!answer.ok) { $('problem').textContent = answer.problem; return; }
+
+  $('gate').hidden = true;
+  $('log').hidden = false;
+  $('say').hidden = false;
+  $('status').textContent = `signed in as ${answer.name}`;
+
+  for (const line of await (await fetch(`${base}/api/history`)).json()) add(line);
+
+  const address = new URL(`${base}/room`, location.href);
+  address.protocol = address.protocol === 'https:' ? 'wss:' : 'ws:';
+  socket = new WebSocket(address);
+  // the first frame is the token; the request is gone by the time the socket
+  // is open, so there is nowhere else to put it
+  socket.onopen = () => socket.send(answer.token);
+  socket.onmessage = (event) => add(JSON.parse(event.data));
+  socket.onclose = () => { $('status').textContent = 'disconnected'; };
+  $('text').focus();
+}
+
+$('login').onclick = () => enter('login');
+$('register').onclick = () => enter('register');
+$('say').onsubmit = (event) => {
+  event.preventDefault();
+  const text = $('text').value.trim();
+  if (text && socket?.readyState === 1) { socket.send(text); $('text').value = ''; }
+};
+</script>
+</html>
+""";
+}

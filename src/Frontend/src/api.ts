@@ -164,12 +164,14 @@ export interface Example {
   /** Reached by opening a socket rather than by asking for a page. */
   socket: boolean;
   code: string;
+  /** Every file it is made of, the snippet first. */
+  files: LambdaFile[];
   /** They are prepared after startup, so one can exist but not yet answer. */
   live: boolean;
 }
 
 /** What the menu needs: everything but the code. */
-export type ExampleSummary = Omit<Example, 'code'>;
+export type ExampleSummary = Omit<Example, 'code' | 'files'>;
 
 export interface ExampleGroup {
   id: string;

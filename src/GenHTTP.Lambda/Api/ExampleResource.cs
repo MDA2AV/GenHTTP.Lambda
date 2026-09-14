@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Webservices;
@@ -76,6 +77,8 @@ public sealed class ExampleResource(IMetaService meta)
     {
         var status = await meta.GetStatusAsync(example.PublicKey);
 
+        var files = TemplateCatalog.FilesFor(example.Id, example.PublicKey);
+
         return new ExampleResponse(
             example.Id,
             example.Name,
@@ -84,7 +87,8 @@ public sealed class ExampleResource(IMetaService meta)
             $"/lambda/{example.PublicKey}/",
             $"/lambda/{example.PublicKey}/{example.TryPath}",
             example.Socket,
-            TemplateCatalog.ForKey(example.Id, example.PublicKey),
+            files[0].Code,
+            files,
             status.Deployed
         );
     }

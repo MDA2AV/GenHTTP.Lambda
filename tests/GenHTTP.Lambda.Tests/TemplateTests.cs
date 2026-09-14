@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -27,6 +28,24 @@ public sealed class TemplateTests
 
                 Assert.IsNotEmpty(code, $"'{template.Id}' has no code");
                 Assert.DoesNotContain("{{KEY}}", code, $"'{template.Id}' still carries its placeholder");
+            }
+        }
+    }
+
+    [TestMethod]
+    public void TheApplicationsAreSplitIntoFiles()
+    {
+        foreach (var id in (string[])["chat", "game"])
+        {
+            var files = TemplateCatalog.FilesFor(id, "my-key");
+
+            Assert.IsTrue(files.Count > 1, $"'{id}' is long enough that it should not be one file");
+            Assert.AreEqual(LambdaSource.EntryName, files[0].Name, "the snippet comes first");
+
+            foreach (var file in files)
+            {
+                Assert.IsTrue(LambdaSource.IsValidName(file.Name), $"'{file.Name}' is not a usable name");
+                Assert.DoesNotContain("{{KEY}}", file.Code, $"'{file.Name}' still carries its placeholder");
             }
         }
     }

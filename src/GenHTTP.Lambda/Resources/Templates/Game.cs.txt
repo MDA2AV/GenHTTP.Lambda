@@ -4,13 +4,12 @@
 //   GET  /lambda/{{KEY}}/api/scores  the ten best runs
 //   POST /lambda/{{KEY}}/api/scores  add one
 //
-// The three.js half runs in the browser and this lambda never sees it. What it
-// does is keep the scoreboard: a file in Workspace, the private folder this
-// lambda gets, which is why the board is still there after a redeployment.
+// Three files. This one is the wiring and the only one that touches storage;
+// Scores.cs holds the rules about what may go on the board; Page.cs is the
+// game, which runs in the browser and which this lambda never sees.
 //
-// Nothing here trusts the browser. A score arrives as a number somebody could
-// have typed themselves, so it is bounded and the board is capped - which is
-// about as far as you can go without running the game on the server too.
+// The board is a file in Workspace, the private folder this lambda gets, which
+// is why it is still there after a redeployment.
 
 var json = new JsonSerializerOptions
 {
@@ -30,34 +29,25 @@ List<Score> Best()
 {
     lock (writing)
     {
-        return board.OrderByDescending(s => s.Points).ThenBy(s => s.At).Take(10).ToList();
+        return Scoreboard.Best(board);
     }
 }
 
 Posted Submit(Attempt attempt)
 {
-    var name = (attempt?.Name ?? "").Trim();
-
-    if (name.Length is < 1 or > 16)
+    if (Scoreboard.Refuse(attempt) is string problem)
     {
-        return new Posted(false, "A name is between one and sixteen characters.", Best());
-    }
-
-    // the browser reports this, so it is somebody's word rather than a fact
-    if (attempt!.Points is < 0 or > 100_000)
-    {
-        return new Posted(false, "That is not a score this game can produce.", Best());
+        return new Posted(false, problem, Best());
     }
 
     lock (writing)
     {
-        board.Add(new Score(name, attempt.Points, DateTime.UtcNow));
+        board.Add(new Score(attempt.Name.Trim(), attempt.Points, DateTime.UtcNow));
 
-        // the file is the board, so it cannot grow without end
-        var keep = board.OrderByDescending(s => s.Points).ThenBy(s => s.At).Take(200).ToList();
+        var kept = Scoreboard.Trim(board);
 
         board.Clear();
-        board.AddRange(keep);
+        board.AddRange(kept);
 
         Workspace.WriteText("scores.json", JsonSerializer.Serialize(board, json));
     }
@@ -71,194 +61,4 @@ var api = Inline.Create()
 
 return Layout.Create()
              .Add("api", api)
-             .Add(Content.From(Resource.FromString(Page()).Type(new ContentType("text/html; charset=utf-8"))));
-
-record Attempt(string Name, int Points);
-record Score(string Name, int Points, DateTime At);
-record Posted(bool Ok, string? Problem, List<Score> Board);
-
-string Page() => """
-<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Runner</title>
-<style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0d0f13; color: #e8eaed; overflow: hidden;
-         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  canvas { display: block; }
-  #hud { position: fixed; top: 14px; left: 16px; font-variant-numeric: tabular-nums; }
-  #hud b { font-size: 26px; }
-  #board { position: fixed; top: 14px; right: 16px; width: 190px; font-size: 13px;
-           background: #171a1f; padding: 10px 12px; }
-  #board h2 { font-size: 12px; margin: 0 0 6px; color: #9aa0a6; text-transform: uppercase; letter-spacing: .06em; }
-  #board li { display: flex; justify-content: space-between; gap: 8px; list-style: none; }
-  #board ol { margin: 0; padding: 0; }
-  #over { position: fixed; inset: 0; display: none; place-items: center; background: #0d0f13cc; }
-  #over div { text-align: center; }
-  input { padding: 8px 10px; border: 1px solid #3c4043; background: #171a1f; color: inherit; font: inherit; }
-  button { padding: 8px 16px; border: 0; background: #1a73e8; color: #fff; font: inherit; cursor: pointer; }
-  .dim { color: #9aa0a6; font-size: 13px; }
-</style>
-
-<div id="hud"><b id="score">0</b><div class="dim">left and right, or drag</div></div>
-
-<div id="board"><h2>Best runs</h2><ol id="scores"></ol></div>
-
-<div id="over"><div>
-  <h1 id="final">Caught</h1>
-  <p class="dim">Put your run on the board.</p>
-  <p><input id="name" maxlength="16" placeholder="Name"> <button id="save">Save</button></p>
-  <p><button id="again" style="background:#3c4043">Play again</button></p>
-</div></div>
-
-<script type="module">
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
-
-const base = location.pathname.replace(/\/$/, '');
-const $ = (id) => document.getElementById(id);
-
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0d0f13, 18, 46);
-
-const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 100);
-camera.position.set(0, 4.2, 9);
-camera.lookAt(0, 1.2, -6);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.setSize(innerWidth, innerHeight);
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.HemisphereLight(0x9fc0ff, 0x202124, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-sun.position.set(4, 9, 6);
-scene.add(sun);
-
-// the road, drawn as a long box that never moves; the stripes do the moving
-const road = new THREE.Mesh(new THREE.BoxGeometry(9, 0.4, 120),
-                            new THREE.MeshStandardMaterial({ color: 0x1b1f26 }));
-road.position.set(0, -0.2, -50);
-scene.add(road);
-
-const stripes = [];
-for (let i = 0; i < 30; i++) {
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 2.2),
-                                 new THREE.MeshStandardMaterial({ color: 0x3c4043 }));
-  stripe.position.set(0, 0.01, -i * 4);
-  scene.add(stripe);
-  stripes.push(stripe);
-}
-
-const player = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9),
-                               new THREE.MeshStandardMaterial({ color: 0x8ab4f8, roughness: 0.35 }));
-player.position.set(0, 0.45, 4);
-scene.add(player);
-
-const blockGeometry = new THREE.BoxGeometry(1.1, 1.1, 1.1);
-const blockMaterial = new THREE.MeshStandardMaterial({ color: 0xf28b82, roughness: 0.4 });
-const blocks = [];
-
-let lane = 0, score = 0, speed = 22, running = true, last = performance.now();
-const LANES = [-3, -1.5, 0, 1.5, 3];
-
-function spawn() {
-  const block = new THREE.Mesh(blockGeometry, blockMaterial);
-  block.position.set(LANES[Math.floor(Math.random() * LANES.length)], 0.55, -60);
-  scene.add(block);
-  blocks.push(block);
-}
-
-for (let i = 0; i < 7; i++) spawn();
-
-addEventListener('keydown', (event) => {
-  if (event.key === 'ArrowLeft') lane = Math.max(0, lane - 1);
-  if (event.key === 'ArrowRight') lane = Math.min(LANES.length - 1, lane + 1);
-});
-
-let dragging = null;
-addEventListener('pointerdown', (e) => { dragging = e.clientX; });
-addEventListener('pointerup', (e) => {
-  if (dragging === null) return;
-  const moved = e.clientX - dragging;
-  if (moved < -30) lane = Math.max(0, lane - 1);
-  if (moved > 30) lane = Math.min(LANES.length - 1, lane + 1);
-  dragging = null;
-});
-
-addEventListener('resize', () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-
-function frame(now) {
-  const delta = Math.min((now - last) / 1000, 0.05);
-  last = now;
-  requestAnimationFrame(frame);
-
-  if (running) {
-    score += delta * 10;
-    speed += delta * 0.6;
-    $('score').textContent = Math.floor(score);
-
-    player.position.x += (LANES[lane] - player.position.x) * Math.min(1, delta * 14);
-    player.rotation.z = (LANES[lane] - player.position.x) * 0.4;
-    player.position.y = 0.45 + Math.abs(Math.sin(now / 140)) * 0.08;
-
-    for (const stripe of stripes) {
-      stripe.position.z += speed * delta;
-      if (stripe.position.z > 8) stripe.position.z -= 120;
-    }
-
-    for (const block of blocks) {
-      block.position.z += speed * delta;
-      block.rotation.x += delta * 2;
-
-      if (block.position.z > 8) {
-        block.position.z = -60 - Math.random() * 25;
-        block.position.x = LANES[Math.floor(Math.random() * LANES.length)];
-      }
-
-      if (Math.abs(block.position.z - player.position.z) < 0.95
-          && Math.abs(block.position.x - player.position.x) < 0.95) {
-        running = false;
-        $('final').textContent = `Caught at ${Math.floor(score)}`;
-        $('over').style.display = 'grid';
-      }
-    }
-  }
-
-  renderer.render(scene, camera);
-}
-
-requestAnimationFrame(frame);
-
-async function showBoard(list) {
-  $('scores').innerHTML = (list ?? await (await fetch(`${base}/api/scores`)).json())
-    .map((s) => `<li><span>${s.name.replace(/[<&]/g, '')}</span><span>${s.points}</span></li>`)
-    .join('');
-}
-
-showBoard();
-
-$('save').onclick = async () => {
-  const answer = await (await fetch(`${base}/api/scores`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: $('name').value || 'anonymous', points: Math.floor(score) }),
-  })).json();
-  if (answer.ok) { showBoard(answer.board); $('save').disabled = true; }
-};
-
-$('again').onclick = () => {
-  score = 0; speed = 22; lane = 2; running = true;
-  $('over').style.display = 'none';
-  $('save').disabled = false;
-  for (const block of blocks) block.position.z = -60 - Math.random() * 40;
-};
-</script>
-</html>
-""";
+             .Add(Content.From(Resource.FromString(Site.Page).Type(new ContentType("text/html; charset=utf-8"))));

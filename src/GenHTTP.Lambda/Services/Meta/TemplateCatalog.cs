@@ -1,5 +1,7 @@
 using System.Reflection;
 
+using GenHTTP.Lambda.Services.Deployment.Model;
+
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
@@ -24,8 +26,10 @@ public static class TemplateCatalog
         new("websocket-functional", "websocket", "Functional", "Three callbacks for connect, message and close.", "WebsocketFunctional"),
         new("websocket-reactive", "websocket", "Reactive", "A class the platform calls when something happens.", "WebsocketReactive"),
         new("websocket-imperative", "websocket", "Imperative", "A loop that owns the connection and reads it frame by frame.", "WebsocketImperative"),
-        new("chat", "app", "Chat room", "Accounts, a sign in, and a room that stays open. Passwords hashed, messages kept.", "Chat"),
-        new("game", "app", "Game with a scoreboard", "A three.js runner in the browser, and a scoreboard this lambda keeps.", "Game")
+        new("chat", "app", "Chat room", "Accounts, a sign in, and a room that stays open. Passwords hashed, messages kept.", "Chat",
+            false, ("Accounts.cs", "ChatAccounts"), ("Page.cs", "ChatPage")),
+        new("game", "app", "Game with a scoreboard", "A three.js runner in the browser, and a scoreboard this lambda keeps.", "Game",
+            false, ("Scores.cs", "GameScores"), ("Page.cs", "GamePage"))
     ];
 
 
@@ -58,13 +62,36 @@ public static class TemplateCatalog
     /// </summary>
     /// <param name="id">The template to read, falling back to the default one</param>
     /// <param name="publicKey">The key the lambda will be hosted at</param>
+    /// <remarks>
+    /// A template of several files is returned as the blob a version is stored
+    /// as, which is what every caller of this wants: something to save.
+    /// </remarks>
     public static string ForKey(string? id, string publicKey)
+        => LambdaSource.Serialize(FilesFor(id, publicKey));
+
+    /// <summary>
+    /// The files a template starts a lambda with, the snippet first.
+    /// </summary>
+    public static IReadOnlyList<LambdaFile> FilesFor(string? id, string publicKey)
     {
         var template = Array.Find(All, t => t.Id == id)
                     ?? Array.Find(All, t => t.Id == DefaultId)!;
 
-        return template.Source.Replace(Placeholder, publicKey, StringComparison.Ordinal);
+        var files = new List<LambdaFile>
+        {
+            new(LambdaSource.EntryName, Fill(template.Source, publicKey))
+        };
+
+        foreach (var part in template.Parts)
+        {
+            files.Add(new LambdaFile(part.Name, Fill(part.Source, publicKey)));
+        }
+
+        return files;
     }
+
+    private static string Fill(string source, string publicKey)
+        => source.Replace(Placeholder, publicKey, StringComparison.Ordinal);
 
     #endregion
 
@@ -73,9 +100,18 @@ public static class TemplateCatalog
 /// <summary>
 /// One example, read from the assembly the first time it is asked for.
 /// </summary>
-public sealed class LambdaTemplate(string id, string group, string name, string description, string resource, bool hidden = false)
+public sealed class LambdaTemplate(string id, string group, string name, string description, string resource, bool hidden = false, params (string Name, string Resource)[] parts)
 {
     private readonly Lazy<string> _source = new(() => Read(resource), LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private readonly Lazy<IReadOnlyList<TemplatePart>> _parts = new(
+        () => [.. parts.Select(p => new TemplatePart(p.Name, p.Resource))],
+        LazyThreadSafetyMode.ExecutionAndPublication);
+
+    /// <summary>
+    /// The files beside the snippet, in the order they are offered.
+    /// </summary>
+    public IReadOnlyList<TemplatePart> Parts => _parts.Value;
 
     public string Id => id;
 
@@ -102,7 +138,7 @@ public sealed class LambdaTemplate(string id, string group, string name, string 
     /// </summary>
     public string Source => _source.Value;
 
-    private static string Read(string resource)
+    internal static string Read(string resource)
     {
         var assembly = Assembly.GetExecutingAssembly();
 
@@ -118,6 +154,18 @@ public sealed class LambdaTemplate(string id, string group, string name, string 
         return reader.ReadToEnd();
     }
 
+}
+
+/// <summary>
+/// One file of a template beside its snippet, read when it is first wanted.
+/// </summary>
+public sealed class TemplatePart(string name, string resource)
+{
+    private readonly Lazy<string> _source = new(() => LambdaTemplate.Read(resource), LazyThreadSafetyMode.ExecutionAndPublication);
+
+    public string Name => name;
+
+    public string Source => _source.Value;
 }
 
 /// <summary>

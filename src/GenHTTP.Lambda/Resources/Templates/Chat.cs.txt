@@ -4,14 +4,17 @@
 //   POST /lambda/{{KEY}}/api/register  make an account
 //   POST /lambda/{{KEY}}/api/login     get a token
 //   GET  /lambda/{{KEY}}/api/history   what was said before you arrived
-//   WS   /lambda/{{KEY}}/room       the room itself, token as the first frame
+//   WS   /lambda/{{KEY}}/room          the room, token as the first frame
+//
+// Three files. This one is the wiring and the only one that touches storage;
+// Accounts.cs decides who may talk; Page.cs is what a browser gets.
 //
 // Accounts and the last fifty lines live in Workspace, the private folder this
 // lambda gets, so they outlive a redeployment. Who is signed in does not - that
 // is a dictionary in memory, and a restart signs everybody out.
 
-// the platform answers the REST routes in camel case, so the frames this sends
-// down the socket have to match or the page would need two shapes for one thing
+// the platform answers REST in camel case, so what goes down the socket has to
+// match or the page would need two shapes for one thing
 var json = new JsonSerializerOptions
 {
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -26,8 +29,8 @@ var writing = new object();
 
 // one broadcast at a time. Two people arriving together means two handlers
 // writing to the same sockets at once, and a socket is one stream of frames -
-// without this they interleave, the write fails, and the listener is dropped
-// for a fault that was ours.
+// without this the writes interleave, the write fails, and a listener is
+// dropped for a fault that was ours.
 var sending = new SemaphoreSlim(1, 1);
 
 if (Workspace.Exists("users.json"))
@@ -42,16 +45,6 @@ if (Workspace.Exists("messages.json"))
 {
     history.AddRange(JsonSerializer.Deserialize<List<Line>>(Workspace.ReadText("messages.json"), json) ?? []);
 }
-
-// PBKDF2 rather than a bare hash. Being an example is not a reason to show
-// somebody the wrong way to keep a password.
-string Hash(string password, string salt)
-    => Convert.ToHexString(System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
-           password, Convert.FromHexString(salt), 60_000,
-           System.Security.Cryptography.HashAlgorithmName.SHA256, 32));
-
-string Random(int bytes)
-    => Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(bytes));
 
 void Remember(Line line)
 {
@@ -68,58 +61,14 @@ void Remember(Line line)
     }
 }
 
-Answer Register(Credentials request)
+Answer Admit(Answer answer)
 {
-    var name = (request?.Name ?? "").Trim();
-
-    if (name.Length is < 2 or > 20)
+    if (answer.Ok)
     {
-        return new Answer(false, "A name is between two and twenty characters.", null, null);
+        sessions[answer.Token] = answer.Name;
     }
 
-    if ((request?.Password ?? "").Length < 6)
-    {
-        return new Answer(false, "A password needs six characters at least.", null, null);
-    }
-
-    var salt = Random(16);
-
-    if (!users.TryAdd(name, new Account(name, salt, Hash(request!.Password, salt))))
-    {
-        return new Answer(false, "That name is taken.", null, null);
-    }
-
-    lock (writing)
-    {
-        Workspace.WriteText("users.json", JsonSerializer.Serialize(users.Values.ToList(), json));
-    }
-
-    var token = Random(24);
-
-    sessions[token] = name;
-
-    return new Answer(true, null, token, name);
-}
-
-Answer Login(Credentials request)
-{
-    var name = (request?.Name ?? "").Trim();
-
-    // one answer for an unknown name and for a wrong password, so this does
-    // not become a way of asking who has an account here
-    if (!users.TryGetValue(name, out var account)
-        || !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
-               Encoding.UTF8.GetBytes(Hash(request?.Password ?? "", account.Salt)),
-               Encoding.UTF8.GetBytes(account.Hash)))
-    {
-        return new Answer(false, "That name and password do not go together.", null, null);
-    }
-
-    var token = Random(24);
-
-    sessions[token] = account.Name;
-
-    return new Answer(true, null, token, account.Name);
+    return answer;
 }
 
 async ValueTask Broadcast(Line line)
@@ -153,8 +102,21 @@ async ValueTask Broadcast(Line line)
 }
 
 var api = Inline.Create()
-                .Post("register", (Credentials body) => Register(body))
-                .Post("login", (Credentials body) => Login(body))
+                .Post("register", (Credentials body) =>
+                {
+                    var answer = Admit(Accounts.Register(users, body));
+
+                    if (answer.Ok)
+                    {
+                        lock (writing)
+                        {
+                            Workspace.WriteText("users.json", JsonSerializer.Serialize(users.Values.ToList(), json));
+                        }
+                    }
+
+                    return answer;
+                })
+                .Post("login", (Credentials body) => Admit(Accounts.Login(users, body)))
                 .Get("history", () => history.ToList())
                 .Get("who", () => new Population(room.Count, users.Count));
 
@@ -170,7 +132,7 @@ var socket = Websocket.Functional()
                            * it is talk. The token cannot travel in the query or
                            * a header: once a socket is upgraded the request is
                            * gone, and reading it here throws. A browser cannot
-                           * set a header on a websocket handshake anyway.
+                           * set a header on a handshake anyway.
                            */
                           if (!room.TryGetValue(connection, out var speaker))
                           {
@@ -207,128 +169,4 @@ var socket = Websocket.Functional()
 return Layout.Create()
              .Add("api", api)
              .Add("room", socket)
-             .Add(Content.From(Resource.FromString(Page()).Type(new ContentType("text/html; charset=utf-8"))));
-
-record Credentials(string Name, string Password);
-record Account(string Name, string Salt, string Hash);
-record Answer(bool Ok, string? Problem, string? Token, string? Name);
-record Line(string From, string Text, DateTime At);
-record Population(int Here, int Registered);
-
-// The page. One file, no build step, no framework - it is here so the example
-// is one thing you can read top to bottom rather than a server plus a project.
-string Page() => """
-<!doctype html>
-<html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Chat</title>
-<style>
-  :root { color-scheme: light dark; --line: #d5d7da; --dim: #5f6368; }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-         display: flex; flex-direction: column; height: 100vh; }
-  header { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; }
-  h1 { font-size: 16px; margin: 0; }
-  .dim { color: var(--dim); font-size: 13px; }
-  main { flex: 1; overflow: auto; padding: 16px; }
-  form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
-  input { flex: 1; padding: 9px 11px; border: 1px solid var(--line); background: transparent;
-          color: inherit; font: inherit; min-width: 0; }
-  button { padding: 9px 16px; border: 0; background: #1a73e8; color: #fff; font: inherit; cursor: pointer; }
-  button:disabled { opacity: .5; cursor: default; }
-  .line { margin-bottom: 9px; }
-  .who { font-weight: 600; }
-  .room { color: var(--dim); font-style: italic; }
-  .when { color: var(--dim); font-size: 12px; margin-left: 6px; }
-  .problem { color: #c5221f; padding: 0 16px 10px; font-size: 13px; }
-  .gate { max-width: 330px; margin: 12vh auto; padding: 0 16px; }
-  .gate input { width: 100%; margin-bottom: 8px; }
-  .gate button { width: 100%; margin-bottom: 8px; }
-  .warn { font-size: 12px; color: var(--dim); margin-top: 14px; }
-</style>
-
-<header>
-  <h1>Chat</h1>
-  <span class="dim" id="status">not signed in</span>
-</header>
-
-<div class="gate" id="gate">
-  <input id="name" placeholder="Name" autocomplete="username">
-  <input id="password" type="password" placeholder="Password" autocomplete="current-password">
-  <button id="login">Sign in</button>
-  <button id="register" style="background:#5f6368">Make an account</button>
-  <div class="problem" id="problem"></div>
-  <p class="warn">
-    A demo on a shared machine. Do not use a password you use anywhere else - and
-    anyone can read what is said here.
-  </p>
-</div>
-
-<main id="log" hidden></main>
-
-<form id="say" hidden>
-  <input id="text" placeholder="Say something" autocomplete="off" maxlength="500">
-  <button>Send</button>
-</form>
-
-<script type="module">
-const $ = (id) => document.getElementById(id);
-const base = location.pathname.replace(/\/$/, '');
-let socket = null;
-
-const escape = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-function add(line) {
-  const at = new Date(line.at + 'Z');
-  const room = line.from === 'room';
-  $('log').insertAdjacentHTML('beforeend',
-    `<div class="line ${room ? 'room' : ''}">` +
-    (room ? '' : `<span class="who">${escape(line.from)}</span> `) +
-    escape(line.text) +
-    `<span class="when">${at.toLocaleTimeString()}</span></div>`);
-  $('log').scrollTop = $('log').scrollHeight;
-}
-
-async function send(path, body) {
-  const response = await fetch(`${base}/api/${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return response.json();
-}
-
-async function enter(path) {
-  $('problem').textContent = '';
-  const answer = await send(path, { name: $('name').value, password: $('password').value });
-  if (!answer.ok) { $('problem').textContent = answer.problem; return; }
-
-  $('gate').hidden = true;
-  $('log').hidden = false;
-  $('say').hidden = false;
-  $('status').textContent = `signed in as ${answer.name}`;
-
-  for (const line of await (await fetch(`${base}/api/history`)).json()) add(line);
-
-  const address = new URL(`${base}/room`, location.href);
-  address.protocol = address.protocol === 'https:' ? 'wss:' : 'ws:';
-  socket = new WebSocket(address);
-  // the first frame is the token; the request is gone by the time the socket
-  // is open, so there is nowhere else to put it
-  socket.onopen = () => socket.send(answer.token);
-  socket.onmessage = (event) => add(JSON.parse(event.data));
-  socket.onclose = () => { $('status').textContent = 'disconnected'; };
-  $('text').focus();
-}
-
-$('login').onclick = () => enter('login');
-$('register').onclick = () => enter('register');
-$('say').onsubmit = (event) => {
-  event.preventDefault();
-  const text = $('text').value.trim();
-  if (text && socket?.readyState === 1) { socket.send(text); $('text').value = ''; }
-};
-</script>
-</html>
-""";
+             .Add(Content.From(Resource.FromString(Site.Page).Type(new ContentType("text/html; charset=utf-8"))));

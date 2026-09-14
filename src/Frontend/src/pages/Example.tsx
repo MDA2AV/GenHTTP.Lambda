@@ -15,6 +15,7 @@ import { useToast } from '../components/Toast';
  */
 export function Example() {
   const { id } = useParams<{ id: string }>();
+  const [open, setOpen] = useState<string | null>(null);
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -46,6 +47,7 @@ export function Example() {
     setExample(null);
     setTried(null);
     setFrames(null);
+    setOpen(null);
     load();
   }, [load]);
 
@@ -229,12 +231,36 @@ export function Example() {
         <div className="border-b border-slate-200 px-4 py-3 dark:border-ink-800">
           <h2 className="text-sm font-medium">What it is made of</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            The whole of it. Whatever the snippet returns is what is hosted at the address above.
+            The whole of it. Whatever <span className="font-mono">lambda.cs</span> returns is what is hosted
+            at the address above; the other files are compiled beside it.
           </p>
         </div>
 
+        {example.files.length > 1 && (
+          <div className="flex flex-wrap gap-1 border-b border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-ink-800 dark:bg-ink-950">
+            {example.files.map((file) => {
+              const showing = (open ?? example.files[0].name) === file.name;
+
+              return (
+                <button
+                  key={file.name}
+                  type="button"
+                  onClick={() => setOpen(file.name)}
+                  className={`px-3 py-1 font-mono text-xs ${
+                    showing
+                      ? 'bg-white text-slate-900 dark:bg-ink-900 dark:text-slate-100'
+                      : 'text-slate-500 hover:bg-white/70 dark:hover:bg-ink-900/70'
+                  }`}
+                >
+                  {file.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <pre className="overflow-x-auto px-4 py-3 font-mono text-[13px] leading-relaxed">
-          <CSharp code={example.code} />
+          <CSharp code={(example.files.find((f) => f.name === (open ?? example.files[0]?.name)) ?? example.files[0])?.code ?? example.code} />
         </pre>
       </section>
     </div>
