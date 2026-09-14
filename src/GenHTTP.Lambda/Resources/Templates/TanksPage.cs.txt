@@ -75,7 +75,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.m
 const base = location.pathname.replace(/\/$/, '');
 const $ = (id) => document.getElementById(id);
 
-let socket = null, me = null, cell = 4, width = 19;
+let socket = null, me = null, cell = 4, width = 19, bearing = 0;
 let tanks = new Map(), shells = new Map(), crates = new Map();
 const keys = new Set();
 let aim = 0, firing = false;
@@ -286,21 +286,32 @@ function frame(now) {
     }
 
     /*
-     * The camera keeps the same bearing on the maze and only ever follows the
-     * tank about. It used to sit behind whatever the turret was pointing at,
-     * which reads well until you notice where the aim comes from: the mouse,
-     * cast through this camera onto the floor. Camera from aim and aim from
-     * camera is a loop, and a pointer a little off centre sent the view round
-     * and round for ever.
+     * The camera swings round behind the hull, and behind the hull only.
      *
-     * Holding the bearing also makes the mouse mean something steady - a spot
-     * on the screen is the same spot in the maze from one moment to the next,
-     * which is most of what makes aiming with it feel like aiming.
+     * Not behind the turret, which is what it used to do: the aim is the mouse
+     * cast through this camera onto the floor, so a camera placed from the aim
+     * is a camera placed from where the camera already was. Every frame moved
+     * it a little, which moved the spot a fixed mouse position pointed at,
+     * which moved the aim again - a pointer slightly off centre sent the view
+     * round for ever. The hull cannot do that: it turns because somebody held
+     * a key, and nothing about the camera can steer it.
+     *
+     * Eased rather than snapped, because a tank turns on the spot and a view
+     * that turned with it exactly would make the maze lurch.
      */
-    const behind = 13, above = 17;
+    const behind = 13, above = 15;
 
-    camera.position.set(mine.position.x, above, mine.position.z + behind);
-    camera.lookAt(mine.position.x, 0.5, mine.position.z);
+    const wanted = mine.userData.to.heading;
+
+    // the short way round, so crossing north does not spin the long way
+    let turn = (wanted - bearing) % (Math.PI * 2);
+    if (turn > Math.PI) turn -= Math.PI * 2;
+    if (turn < -Math.PI) turn += Math.PI * 2;
+
+    bearing += turn * 0.08;
+
+    camera.position.set(mine.position.x - Math.sin(bearing) * behind, above, mine.position.z - Math.cos(bearing) * behind);
+    camera.lookAt(mine.position.x + Math.sin(bearing) * 5, 0.5, mine.position.z + Math.cos(bearing) * 5);
   }
 
   renderer.render(scene, camera);
