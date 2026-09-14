@@ -29,6 +29,15 @@
   </div>
 </div>
 
+<div id="won" hidden>
+  <div>
+    <h1 id="champion">Somebody won</h1>
+    <p class="dim" id="tally"></p>
+    <p class="dim">Everyone is back at the starting size. Off you go again.</p>
+    <p><button id="carry">Carry on</button></p>
+  </div>
+</div>
+
 <div id="over" hidden>
   <div>
     <h1 id="verdict">Eaten</h1>

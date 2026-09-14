@@ -27,7 +27,34 @@ const DELAY = 100;
 const history = [];
 
 let socket = null, me = null, world = 2400;
-let palette = [];
+let palette = [], wellSize = 40;
+
+/*
+ * The floor is a sheet, and anything heavy enough to eat you sits in a dent
+ * it has made in it. The dent is not decoration - it is the same pull the
+ * server is applying to you, drawn.
+ *
+ * The depth is a quartic that reaches exactly as far as the pull does and
+ * then is flatly zero, so a well can be rejected with one comparison and
+ * there is no tail to fade out by hand. TILT is how much of that depth is
+ * spent sliding things down the screen - deeper is lower, the way the foot
+ * of a post is lower on screen than its top; FLOOR is as deep as the sheet
+ * is ever drawn, so that two wells on top of each other bottom out rather
+ * than falling through the floor.
+ */
+const TILT = 0.55;
+const FLOOR = 400;
+
+/*
+ * How much the sheet is gathered inwards as well as pushed down.
+ *
+ * Sag on its own bends the lines that run across the screen and leaves the
+ * ones running up it perfectly straight, because moving a point down does
+ * not move it sideways - so it reads as a ripple rather than as a hole.
+ * Pulling points in towards the well as well bends both sets and crowds the
+ * squares together going in, which is what a funnel does to a grid.
+ */
+const GATHER = 0.5;
 
 /** Where the player was when the last frame was drawn, which the camera and
  *  the steering both read so that the point under the cursor is the point
@@ -64,6 +91,67 @@ setInterval(() => {
 /** How many pixels one world unit is. Bigger blobs see more of the arena. */
 function scaleFor(radius) {
   return Math.min(innerWidth, innerHeight) / (radius * 16 + 260);
+}
+
+/** The blobs heavy enough to dent the floor, as the drawing wants them. */
+function wellsOf(blobs) {
+  const wells = [];
+
+  for (const b of blobs) {
+    if (b.r >= wellSize) {
+      const reach = b.r * 4;
+
+      // the dent stops deepening long before a blob stops growing. Past this
+      // the well is already wider than the screen, and letting it go on would
+      // gather everything visible into a single point rather than look like
+      // anything - what keeps reading as bigger is the width, not the depth
+      wells.push({ i: b.i, x: b.x, y: b.y, deep: Math.min(b.r * 2, 320), span: reach * reach });
+    }
+  }
+
+  return wells;
+}
+
+/**
+ * Where a point of the floor has moved to, and how far it has sunk.
+ *
+ * One pass over the wells doing both halves of the warp: in towards each
+ * well, and down. `mine` leaves one well out, which is how a blob is given
+ * the bend of everybody else's dent without being given its own.
+ */
+function sink(x, y, wells, mine) {
+  let gx = x;
+  let gy = y;
+  let z = 0;
+
+  for (const w of wells) {
+    if (w.i === mine) continue;
+
+    const dx = x - w.x;
+    const dy = y - w.y;
+    const d2 = dx * dx + dy * dy;
+
+    if (d2 >= w.span) continue;
+
+    // a quartic that reaches exactly as far as the pull does and is then
+    // flatly zero, so a well is rejected with one comparison and there is
+    // no tail left to fade out by hand
+    const near = 1 - d2 / w.span;
+    const dip = w.deep * near * near;
+
+    z += dip;
+
+    const d = Math.sqrt(d2);
+
+    if (d > 0.001) {
+      const inwards = Math.min(d * 0.85, dip * GATHER);
+
+      gx -= dx / d * inwards;
+      gy -= dy / d * inwards;
+    }
+  }
+
+  return { x: gx, y: gy, z: FLOOR * Math.tanh(z / FLOOR) };
 }
 
 /**
@@ -128,28 +216,66 @@ function draw() {
   camera = mine;
 
   const scale = scaleFor(mine.r);
-  const ox = innerWidth / 2 - mine.x * scale;
-  const oy = innerHeight / 2 - mine.y * scale;
+  const wells = wellsOf(now.blobs);
 
-  // the edge of the arena, so there is something to be lost against
-  ctx.strokeStyle = '#252a33';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(ox, oy, world * scale, world * scale);
+  /*
+   * The camera is put on the player's warped position rather than their real
+   * one, and everything is drawn relative to how deep the floor is under
+   * them rather than to zero.
+   *
+   * Both halves matter. Without the first the gathering would slide the
+   * player off the middle of the screen whenever they came near somebody
+   * big, and the pointer would stop meaning the place it is over. Without
+   * the second, standing in a well would slide the whole world off the
+   * screen instead of the floor rising around the player - which is what
+   * standing in a hole actually looks like.
+   *
+   * Their own dent is left out of both, so that growing does not drag the
+   * world out from under them.
+   */
+  const self = sink(mine.x, mine.y, wells, mine.i);
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(ox, oy, world * scale, world * scale);
-  ctx.clip();
+  const under = self.z;
 
-  ctx.strokeStyle = '#161a21';
-  ctx.lineWidth = 1;
-  for (let g = 0; g <= world; g += 120) {
-    ctx.beginPath();
-    ctx.moveTo(ox + g * scale, oy); ctx.lineTo(ox + g * scale, oy + world * scale);
-    ctx.moveTo(ox, oy + g * scale); ctx.lineTo(ox + world * scale, oy + g * scale);
-    ctx.stroke();
+  const ox = innerWidth / 2 - self.x * scale;
+  const oy = innerHeight / 2 - self.y * scale;
+
+  /** Where a point of the floor lands on the screen. */
+  const put = (x, y, skip) => {
+    const s = sink(x, y, wells, skip);
+
+    return {
+      x: ox + s.x * scale,
+      y: oy + s.y * scale + (s.z - under) * scale * TILT,
+      z: s.z,
+    };
+  };
+
+  // the dark of each well, under the grid, so the lines read as lying on it
+  for (const w of wells) {
+    const at = put(w.x, w.y);
+    const span = Math.sqrt(w.span) * scale;
+    const sag = Math.min(w.deep, FLOOR) * scale * TILT;
+
+    // the two focuses are offset, which tilts the cone for free and lights
+    // it from the top of the screen without a second pass
+    const shade = ctx.createRadialGradient(at.x, at.y, 0, at.x, at.y - sag * 0.45, span);
+
+    shade.addColorStop(0, 'rgba(0,0,0,0.72)');
+    shade.addColorStop(0.35, 'rgba(4,6,16,0.46)');
+    shade.addColorStop(0.7, 'rgba(8,12,26,0.18)');
+    shade.addColorStop(1, 'rgba(8,12,26,0)');
+
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, innerWidth, innerHeight);
   }
-  ctx.restore();
+
+  drawSheet(put, scale,
+            Math.max(0, mine.x - innerWidth / 2 / scale),
+            Math.min(world, mine.x + innerWidth / 2 / scale),
+            Math.max(0, mine.y - innerHeight / 2 / scale - FLOOR * TILT),
+            Math.min(world, mine.y + innerHeight / 2 / scale + FLOOR * TILT),
+            under);
 
   // pellets arrive flat - x, y, colour, x, y, colour - so they are walked
   // three at a time rather than unpacked into objects that live one frame
@@ -159,9 +285,11 @@ function draw() {
   const pellets = now.pellets;
 
   for (let i = 0; i < pellets.length; i += 3) {
+    const at = put(pellets[i], pellets[i + 1]);
+
     ctx.fillStyle = palette[pellets[i + 2]] ?? '#9aa0a6';
     ctx.beginPath();
-    ctx.arc(ox + pellets[i] * scale, oy + pellets[i + 1] * scale, dot, 0, Math.PI * 2);
+    ctx.arc(at.x, at.y, dot, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -169,13 +297,30 @@ function draw() {
 
   // smallest first, so being swallowed looks like being swallowed
   for (const b of [...now.blobs].sort((a, z) => a.r - z.r)) {
-    const x = ox + b.x * scale;
-    const y = oy + b.y * scale;
+    /*
+     * A blob is placed by everybody else's dent and then dropped part of
+     * the way into its own: all the way and a big one covers its own funnel
+     * completely, none of the way and it looks like it is hovering over its
+     * own hole.
+     */
+    const at = put(b.x, b.y, b.i);
+    const own = b.r >= wellSize ? b.r * 2 * 0.35 : 0;
+
+    const y = at.y + own * scale * TILT;
     const r = b.r * scale;
 
+    // a shadow on the sheet under it, which is what says it is resting on
+    // something rather than floating above it
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
+    ctx.beginPath();
+    ctx.ellipse(at.x, y + r * 0.2, r * 1.06, r * 0.36, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // the body stays a circle whatever the sheet is doing, because how big
+    // somebody is has to be readable at a glance and a squashed one is not
     ctx.fillStyle = b.c;
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.arc(at.x, y, r, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = b.i === me ? '#ffffff' : '#00000055';
@@ -187,9 +332,73 @@ function draw() {
       ctx.font = `${Math.min(r * 0.55, 22)}px -apple-system, system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(b.n, x, y);
+      ctx.fillText(b.n, at.x, y);
     }
   }
+}
+
+/**
+ * The grid, as a sheet rather than as straight lines.
+ *
+ * Every line is walked in short steps and each step is put through the warp,
+ * so a straight line through a well comes out as a curve and enough of them
+ * together read as a surface. The steps are sized in screen pixels rather
+ * than world units, so the cost is the same whether the player is small and
+ * zoomed right in or huge and zoomed out.
+ */
+function drawSheet(put, scale, left, right, top, bottom, under) {
+  const gap = scale < 0.7 ? 120 : 60;
+  const step = Math.min(80, Math.max(16, 22 / scale));
+
+  // four paths by depth, so the whole sheet is four strokes rather than one
+  // per segment, and the deep parts can be fainter without a colour change
+  const paths = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+
+  const run = (ax, ay, bx, by, into) => {
+    const steps = Math.ceil(Math.hypot(bx - ax, by - ay) / step);
+
+    let last = null;
+
+    for (let i = 0; i <= steps; i++) {
+      const x = ax + (bx - ax) * i / steps;
+      const y = ay + (by - ay) * i / steps;
+      const at = put(x, y);
+
+      if (last) {
+        const deep = Math.min(3, Math.max(0, at.z - under) / FLOOR * 4 | 0);
+
+        (into ?? paths[deep]).moveTo(last.x, last.y);
+        (into ?? paths[deep]).lineTo(at.x, at.y);
+      }
+
+      last = at;
+    }
+  };
+
+  for (let x = Math.ceil(left / gap) * gap; x <= right; x += gap) run(x, top, x, bottom);
+  for (let y = Math.ceil(top / gap) * gap; y <= bottom; y += gap) run(left, y, right, y);
+
+  ctx.lineWidth = 1;
+
+  const fade = [0.8, 0.58, 0.38, 0.22];
+
+  for (let i = 3; i >= 0; i--) {
+    ctx.strokeStyle = `rgba(54,64,82,${fade[i]})`;
+    ctx.stroke(paths[i]);
+  }
+
+  // the edge of the arena, which warps with everything else so that it reads
+  // as the rim of the same sheet rather than a frame laid over it
+  const rim = new Path2D();
+
+  if (top <= 0) run(left, 0, right, 0, rim);
+  if (bottom >= world) run(left, world, right, world, rim);
+  if (left <= 0) run(0, top, 0, bottom, rim);
+  if (right >= world) run(world, top, world, bottom, rim);
+
+  ctx.strokeStyle = '#46506a';
+  ctx.lineWidth = 3;
+  ctx.stroke(rim);
 }
 
 requestAnimationFrame(draw);
@@ -205,10 +414,19 @@ function connect(name) {
     const m = JSON.parse(event.data);
 
     if (m.kind === 'welcome') {
-      me = m.id; world = m.world; palette = m.palette;
+      me = m.id; world = m.world; palette = m.palette; wellSize = m.well ?? 40;
       history.length = 0; camera = null;
       $('gate').hidden = true; $('over').hidden = true;
       $('hud').hidden = false; $('board').hidden = false;
+      return;
+    }
+
+    if (m.kind === 'won') {
+      $('champion').textContent = `${m.who.replace(/[<&]/g, '')} took the arena`;
+      $('tally').textContent = `${m.score.toLocaleString()} points.`;
+      $('over').hidden = true;
+      $('won').hidden = false;
+      history.length = 0;
       return;
     }
 
@@ -241,3 +459,6 @@ function connect(name) {
 
 $('go').onclick = () => connect($('name').value);
 $('again').onclick = () => connect($('name').value);
+
+// a win does not put anybody out - the next round is already running
+$('carry').onclick = () => { $('won').hidden = true; };

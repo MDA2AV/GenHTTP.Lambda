@@ -42,14 +42,147 @@ static class World
     /// <summary>The radius everybody starts at.</summary>
     public const double Start = 14;
 
-    /// <summary>The radius nobody grows past, so one player cannot end the game.</summary>
-    public const double Biggest = 130;
+    /// <summary>
+    /// The score that wins the arena and ends the round.
+    /// </summary>
+    public const double Win = 1_000_000;
 
-    /// <summary>What a pellet adds to the area of whoever eats it.</summary>
-    public const double PelletArea = 120;
+    /// <summary>
+    /// The radius nobody grows past, which is the radius that scores exactly
+    /// <see cref="Win" />.
+    /// </summary>
+    /// <remarks>
+    /// Derived rather than picked, so that the cap and the target cannot
+    /// drift apart: a cap below the target is a game that can never be won,
+    /// and one above it is a target reached while still growing.
+    /// </remarks>
+    public static readonly double Biggest = Math.Sqrt(Win / Math.PI + Start * Start);
+
+    /// <summary>
+    /// What a pellet adds to the area of whoever eats it.
+    /// </summary>
+    /// <remarks>
+    /// A blob sweeps a path as wide as it is, so the bigger it gets the more
+    /// it collects per second - which means the radius climbs at close to a
+    /// constant rate whatever this is set to, and this only decides how many
+    /// minutes the climb takes. At this value a player eating steadily and
+    /// nothing else takes something like ten minutes to win, and eating
+    /// somebody their own size is worth about as much as a minute of it.
+    /// </remarks>
+    public const double PelletArea = 300;
 
     /// <summary>How much bigger you have to be to eat somebody.</summary>
     public const double EatRatio = 1.18;
+
+    #region Gravity
+
+    /*
+     * Anything big enough to eat you also pulls you towards it, harder the
+     * closer you are. It is what stops a big blob being something you can
+     * simply walk past, and it is the only thing in here that acts on a
+     * player who is not touching anything.
+     *
+     * It is a velocity rather than an acceleration on purpose. Nothing else
+     * in this arena stores momentum - a blob goes where it is pointed at the
+     * speed its size allows - and integrating an inverse square acceleration
+     * at twenty ticks a second with no substeps is the textbook way to get
+     * blobs slingshotting through each other and gaining energy. A velocity
+     * field cannot do that: what it adds in a tick is bounded by the cap
+     * below, so a blob can never move further in a tick than it could under
+     * its own steam.
+     */
+
+    /// <summary>How strong the pull is, before distance and size temper it.</summary>
+    public const double Pull = 360;
+
+    /// <summary>
+    /// Keeps the pull finite where the distance is not.
+    /// </summary>
+    /// <remarks>
+    /// Without it the force runs away as two centres converge, and the tick
+    /// that lands closest decides the whole encounter.
+    /// </remarks>
+    public const double Soften = 80;
+
+    /// <summary>
+    /// The most of your own speed that can be taken away from you.
+    /// </summary>
+    /// <remarks>
+    /// The number that decides whether this is a mechanic or a punishment.
+    /// A new blob at 260 a second fleeing the biggest possible chaser, which
+    /// moves at about 102, keeps 130 against their 102 and pulls away at 28 -
+    /// slowly, and only if it commits. Above about six tenths that margin
+    /// goes negative and being spawned near somebody large is simply death,
+    /// so this sits below it with room to spare. It also keeps half of the
+    /// player's own steering authority, without which the drag stops reading
+    /// as gravity and starts reading as a broken connection.
+    /// </remarks>
+    public const double Grip = 0.5;
+
+    /// <summary>
+    /// The size at which a blob is worth drawing a dent in the floor for.
+    /// </summary>
+    /// <remarks>
+    /// Sent to the browser rather than agreed with it, because it decides
+    /// two things that have to match: which blobs are drawn as wells, and
+    /// which ones are sent to a player who cannot see them but can see the
+    /// floor bending around them.
+    /// </remarks>
+    public const double WellSize = 40;
+
+    /// <summary>How far a blob of this size reaches, past which it pulls nothing.</summary>
+    /// <remarks>
+    /// Four times its own radius, so the reach of the largest possible blob
+    /// is two of the spatial cells the floor is bucketed into, and the last
+    /// half radius of it is faded out - otherwise a blob crossing the line
+    /// would feel the pull switch on all at once.
+    /// </remarks>
+    public static double Reach(double radius) => radius * 4;
+
+    /// <summary>
+    /// How fast <paramref name="theirs" /> drags <paramref name="mine" /> in,
+    /// at this distance between their centres.
+    /// </summary>
+    /// <remarks>
+    /// Only something that could actually eat you pulls at all, and it ramps
+    /// up from there rather than switching on: two blobs near enough in size
+    /// to be rivals have almost no speed between them, so a pull at that
+    /// ratio would be inescapable exactly where it is least deserved.
+    /// </remarks>
+    public static double PullSpeed(double mine, double theirs, double distance)
+    {
+        var reach = Reach(theirs);
+
+        if (distance >= reach || mine <= 0)
+        {
+            return 0;
+        }
+
+        var ratio = theirs / mine;
+
+        if (ratio <= EatRatio)
+        {
+            return 0;
+        }
+
+        // full strength once they are comfortably more than twice your size
+        var bite = Smoothstep((ratio - EatRatio) / (2.5 - EatRatio));
+
+        // and faded away over the last half radius of the reach
+        var edge = Math.Clamp((reach - distance) / (theirs * 0.5), 0, 1);
+
+        return Pull * theirs * theirs / (distance * distance + Soften * Soften) * bite * edge;
+    }
+
+    /// <summary>The usual ease in and out, flat at both ends.</summary>
+    public static double Smoothstep(double t)
+    {
+        var x = Math.Clamp(t, 0, 1);
+
+        return x * x * (3 - 2 * x);
+    }
+
+    #endregion
 
     /// <summary>How much of the loser's area the winner keeps.</summary>
     public const double Spoils = 0.85;
@@ -99,10 +232,14 @@ static class World
     /// How big a square of the arena one bucket of the pellet grid covers.
     /// </summary>
     /// <remarks>
-    /// The widest a blob ever gets, so anybody touching a pellet is touching
-    /// one held in their own bucket or a neighbouring one, never further.
+    /// A fixed size rather than one tied to how big a blob can get. A cell
+    /// the width of the largest possible blob would be five hundred units
+    /// across, which puts most of the arena in a handful of buckets and
+    /// gives back everything the bucketing was for. Anything larger than a
+    /// cell simply reads more of them - see KeysWithin, which walks the
+    /// whole range rather than assuming one neighbour is enough.
     /// </remarks>
-    public const double Cell = Biggest * 2;
+    public const double Cell = 260;
 
     /// <summary>Which bucket something at this position belongs in.</summary>
     /// <remarks>
@@ -146,6 +283,9 @@ static class World
 
     /// <summary>What a blob is worth on the leaderboard.</summary>
     public static int ScoreOf(double radius) => (int)Math.Round(AreaOf(radius) - AreaOf(Start));
+
+    /// <summary>Whether this blob has just taken the whole arena.</summary>
+    public static bool HasWon(double radius) => ScoreOf(radius) >= Win;
 
     /// <summary>Whether one blob may eat another.</summary>
     public static bool Eats(double mine, double theirs) => mine > theirs * EatRatio;

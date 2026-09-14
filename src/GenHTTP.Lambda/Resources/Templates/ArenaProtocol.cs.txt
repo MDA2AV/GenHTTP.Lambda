@@ -26,7 +26,7 @@ public record Pellet(string I, double X, double Y, int C);
 public record Score(string N, int S);
 
 /// <summary>Who you are and how big the world is, sent once.</summary>
-public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette);
+public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette, double Well);
 
 /// <summary>
 /// What is near enough to matter, sent on every tick.
@@ -47,6 +47,16 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// the bulk of every frame.
 /// </remarks>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W);
+
+/// <summary>
+/// Sent to everybody when somebody takes the whole arena.
+/// </summary>
+/// <remarks>
+/// The round is over at that point and the next one has already started -
+/// everybody is back at the starting size somewhere fresh by the time this
+/// arrives, so it is an announcement rather than a question.
+/// </remarks>
+public record Won(string Kind, string Who, int Score);
 
 /// <summary>Sent to whoever has just been eaten.</summary>
 public record Eaten(string Kind, string By, int Score);

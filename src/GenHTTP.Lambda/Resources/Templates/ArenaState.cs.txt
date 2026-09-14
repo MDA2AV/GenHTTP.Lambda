@@ -18,6 +18,14 @@ sealed class Player
     public double WantX;
     public double WantY;
 
+    /// <summary>
+    /// How hard everything bigger is dragging them this tick, in units a
+    /// second, worked out before anybody has moved so that the order players
+    /// happen to be in cannot change the outcome.
+    /// </summary>
+    public double PullX;
+    public double PullY;
+
     /// <summary>Set when somebody has eaten them; the socket is told and closed.</summary>
     public bool Gone;
     public string EatenBy;

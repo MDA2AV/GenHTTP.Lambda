@@ -31,6 +31,12 @@ var best = new List<Score>();
 // pellet scattered after that lands in the same corner, and the arena quietly
 // empties out everywhere else. Nothing throws; it just goes wrong.
 var random = Random.Shared;
+
+/// <summary>
+/// Set for the one tick on which somebody has won, and sent to everybody
+/// before that tick's frame goes out.
+/// </summary>
+Won winner = null;
 var writing = new object();
 var ticking = 0;
 var seat = 0;
@@ -76,6 +82,50 @@ void Scatter()
 }
 
 Scatter();
+
+/// <summary>
+/// Somewhere to arrive that is not already inside somebody's pull.
+/// </summary>
+/// <remarks>
+/// Landing next to a giant is not a bad start, it is no start at all: the
+/// drag is on before the first frame is drawn and there is nothing the
+/// player could have done. A handful of goes is enough - the arena grows
+/// with the crowd, so there is always somewhere.
+/// </remarks>
+(double X, double Y) Somewhere()
+{
+    for (var attempt = 0; attempt < 12; attempt++)
+    {
+        var x = random.NextDouble() * size;
+        var y = random.NextDouble() * size;
+
+        var clear = true;
+
+        foreach (var other in players.Values)
+        {
+            if (other.Radius < World.WellSize)
+            {
+                continue;
+            }
+
+            var reach = World.Reach(other.Radius);
+
+            if (Math.Abs(other.X - x) < reach && Math.Abs(other.Y - y) < reach)
+            {
+                clear = false;
+
+                break;
+            }
+        }
+
+        if (clear)
+        {
+            return (x, y);
+        }
+    }
+
+    return (random.NextDouble() * size, random.NextDouble() * size);
+}
 
 void Remember(Player player)
 {
@@ -143,6 +193,57 @@ void Step(double seconds)
 
     Rebucket();
 
+    /*
+     * What everybody is being dragged towards, worked out for all of them
+     * from where they all are now. It has to happen before anybody moves, or
+     * the order the dictionary happens to hand players back in would decide
+     * who gets pulled towards where somebody was and who towards where they
+     * ended up.
+     */
+    foreach (var player in everyone)
+    {
+        player.PullX = 0;
+        player.PullY = 0;
+    }
+
+    foreach (var heavy in everyone)
+    {
+        if (heavy.Radius <= World.Start * World.EatRatio)
+        {
+            continue;
+        }
+
+        var reach = World.Reach(heavy.Radius);
+
+        foreach (var player in everyone)
+        {
+            if (ReferenceEquals(player, heavy))
+            {
+                continue;
+            }
+
+            var toX = heavy.X - player.X;
+            var toY = heavy.Y - player.Y;
+
+            if (Math.Abs(toX) >= reach || Math.Abs(toY) >= reach)
+            {
+                continue;
+            }
+
+            var gap = Math.Sqrt(toX * toX + toY * toY);
+
+            if (gap < 0.001)
+            {
+                continue;
+            }
+
+            var speed = World.PullSpeed(player.Radius, heavy.Radius, gap);
+
+            player.PullX += toX / gap * speed;
+            player.PullY += toY / gap * speed;
+        }
+    }
+
     foreach (var player in everyone)
     {
         var dx = player.WantX - player.X;
@@ -150,13 +251,38 @@ void Step(double seconds)
 
         var distance = Math.Sqrt(dx * dx + dy * dy);
 
+        var goX = 0.0;
+        var goY = 0.0;
+
         if (distance > 1)
         {
             var step = Math.Min(World.Speed(player.Radius) * seconds, distance);
 
-            player.X = World.Clamp(player.X + dx / distance * step, size);
-            player.Y = World.Clamp(player.Y + dy / distance * step, size);
+            goX = dx / distance * step;
+            goY = dy / distance * step;
         }
+
+        /*
+         * However much everything bigger adds up to, it can only ever take
+         * the same fraction of this player's own speed away. Capping the sum
+         * rather than each puller is the point: two giants either side would
+         * otherwise add up to more than anybody can walk, and whoever was
+         * between them would simply stop.
+         */
+        var drag = Math.Sqrt(player.PullX * player.PullX + player.PullY * player.PullY);
+
+        if (drag > 0)
+        {
+            var most = World.Grip * World.Speed(player.Radius);
+
+            var scale = drag > most ? most / drag : 1;
+
+            goX += player.PullX * scale * seconds;
+            goY += player.PullY * scale * seconds;
+        }
+
+        player.X = World.Clamp(player.X + goX, size);
+        player.Y = World.Clamp(player.Y + goY, size);
 
         // pellets first: growing before the fight is resolved is what makes a
         // near miss feel like a near miss
@@ -202,6 +328,43 @@ void Step(double seconds)
             other.EatenBy = player.Name;
         }
     }
+
+    /*
+     * Somebody taking the whole arena ends the round for everybody. It is
+     * done here, after the eating, so that the blob that just swallowed its
+     * way over the line is the one that gets the credit.
+     */
+    foreach (var player in everyone)
+    {
+        if (player.Gone || !World.HasWon(player.Radius))
+        {
+            continue;
+        }
+
+        winner = new Won("won", player.Name, World.ScoreOf(player.Radius));
+
+        Remember(player);
+
+        // everybody starts again, including whoever just won - the alternative
+        // is an arena that stops, and a game nobody can rejoin without
+        // reloading the page
+        foreach (var soul in everyone)
+        {
+            var spot = Somewhere();
+
+            soul.Radius = World.Start;
+            soul.X = spot.X;
+            soul.Y = spot.Y;
+            soul.WantX = spot.X;
+            soul.WantY = spot.Y;
+            soul.Gone = false;
+            soul.EatenBy = null;
+        }
+
+        pellets.Clear();
+
+        break;
+    }
 }
 
 string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
@@ -213,6 +376,22 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         if (World.InView(viewer.X, viewer.Y, viewer.Radius, blob.X, blob.Y))
         {
             near.Add(blob);
+
+            continue;
+        }
+
+        // something heavy enough to bend the floor is sent even when it is
+        // itself past the edge of the screen, because the bend it makes is
+        // not - and a bend that appeared only once its cause did would look
+        // like the floor snapping rather than like anything being there
+        if (blob.R >= World.WellSize)
+        {
+            var edge = World.ViewOf(viewer.Radius) + World.Reach(blob.R);
+
+            if (Math.Abs(blob.X - viewer.X) < edge && Math.Abs(blob.Y - viewer.Y) < edge)
+            {
+                near.Add(blob);
+            }
         }
     }
 
@@ -280,6 +459,31 @@ async ValueTask Broadcast()
         Remember(player);
 
         players.TryRemove(connection, out _);
+    }
+
+    /*
+     * A round ending is told to everybody at once, ahead of the frame that
+     * shows the arena it has already been reset to. Sending it first is what
+     * lets the browser put the result up over a world that is visibly
+     * starting again rather than over a frozen one.
+     */
+    if (winner != null)
+    {
+        var news = JsonSerializer.Serialize(winner, json);
+
+        winner = null;
+
+        foreach (var (connection, _) in everyone)
+        {
+            try
+            {
+                await connection.WritePayloadAsync(news);
+            }
+            catch (Exception)
+            {
+                // they will not be in the next round either
+            }
+        }
     }
 
     var living = everyone.Where(e => !e.Value.Gone).ToArray();
@@ -382,13 +586,15 @@ var socket = Websocket.Functional()
                           {
                               var joining = JsonSerializer.Deserialize<Join>(text, json);
 
+                              var spot = Somewhere();
+
                               player = new Player
                               {
                                   Id = NewId(),
                                   Name = World.Called(joining?.Name),
                                   Colour = World.ColourFor(Interlocked.Increment(ref seat)),
-                                  X = random.NextDouble() * size,
-                                  Y = random.NextDouble() * size,
+                                  X = spot.X,
+                                  Y = spot.Y,
                                   Radius = World.Start
                               };
 
@@ -398,7 +604,7 @@ var socket = Websocket.Functional()
                               players[connection] = player;
 
                               await connection.WritePayloadAsync(JsonSerializer.Serialize(
-                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette), json));
+                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize), json));
 
                               StartClock();
 
