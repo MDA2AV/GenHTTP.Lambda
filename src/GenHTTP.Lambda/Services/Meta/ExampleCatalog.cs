@@ -48,6 +48,10 @@ public static class ExampleCatalog
             "Answers every request with a description of itself: the method, the query, the headers and the body.",
             "echo", false),
 
+        new("shop", Advanced, "Shop",
+            "A shelf anyone can put something on, a basket, a checkout and stock that comes off when an order is placed. Five files.",
+            "", false),
+
         new("chat", Advanced, "Chat room",
             "Accounts and a room that stays open. Passwords hashed, messages kept, and a socket per person.",
             "", false),

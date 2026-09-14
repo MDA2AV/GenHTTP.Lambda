@@ -1,0 +1,71 @@
+// What happens when somebody actually buys the things in their basket.
+
+/// <summary>One line of an order, kept as it was at the time.</summary>
+public record Bought(string Name, int Pence, int Quantity);
+
+/// <summary>A completed order.</summary>
+public record Order(string Reference, string Buyer, List<Bought> Lines, int Pence, DateTime Placed);
+
+/// <summary>What is sent to check out.</summary>
+public record Checkout(string Buyer);
+
+/// <summary>The answer to checking out.</summary>
+public record Placed(bool Ok, string Problem, Order Order);
+
+static class Orders
+{
+    /// <summary>How many orders one basket's worth of tokens remembers.</summary>
+    public const int Keep = 20;
+
+    /// <summary>How many shoppers the shop remembers at all.</summary>
+    public const int Shoppers = 500;
+
+    private const string Letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    /// <summary>
+    /// A reference somebody could read down a telephone.
+    /// </summary>
+    /// <remarks>
+    /// No I, O, 0 or 1, for the same reason a shortened link leaves them out:
+    /// this gets read aloud and typed from a screenshot, and the pairs that
+    /// look alike cost more than the extra letters are worth.
+    /// </remarks>
+    public static string Reference()
+    {
+        var bytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(8);
+
+        var reference = new StringBuilder(9);
+
+        for (var i = 0; i < 8; i++)
+        {
+            if (i == 4)
+            {
+                reference.Append('-');
+            }
+
+            reference.Append(Letters[bytes[i] % Letters.Length]);
+        }
+
+        return reference.ToString();
+    }
+
+    /// <summary>
+    /// Whether an order may be placed, and why not when it may not.
+    /// </summary>
+    public static string Refuse(Checkout checkout, Basket basket)
+    {
+        var buyer = (checkout?.Buyer ?? "").Trim();
+
+        if (buyer.Length is < 2 or > 40)
+        {
+            return "A name to put on the order, between two and forty characters.";
+        }
+
+        if (basket.Lines.Count == 0)
+        {
+            return "There is nothing in the basket.";
+        }
+
+        return null;
+    }
+}

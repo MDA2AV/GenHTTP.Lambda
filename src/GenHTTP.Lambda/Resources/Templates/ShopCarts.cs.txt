@@ -1,0 +1,93 @@
+// Baskets: what is in one, what it comes to, and what may go into it.
+//
+// A basket belongs to whoever is holding its token, which the browser keeps
+// and sends back. There is no account here and nothing to sign in to - the
+// token is the whole of the identity, which is the same bargain the editor
+// link of a lambda makes.
+//
+// Nothing here reads or writes a file. lambda.cs owns the shelf and the
+// baskets; this decides what the numbers come to.
+
+/// <summary>One line of a basket, as the browser sees it.</summary>
+public record Line(string ItemId, string Name, int Pence, int Quantity, int Stock);
+
+/// <summary>A basket, priced.</summary>
+public record Basket(List<Line> Lines, int Count, int Pence, string Total);
+
+/// <summary>What is sent to put something in a basket.</summary>
+public record Wanted(string ItemId, int Quantity);
+
+/// <summary>The answer to changing a basket.</summary>
+public record Changed(bool Ok, string Problem, Basket Basket);
+
+static class Carts
+{
+    /// <summary>How many of one thing may go in a basket at once.</summary>
+    public const int Most = 20;
+
+    /// <summary>
+    /// Prices a basket against the shelf as it stands.
+    /// </summary>
+    /// <remarks>
+    /// Read from the shelf every time rather than remembered: a price can
+    /// change and a thing can sell out while a basket sits there, and a shop
+    /// that charges the price something was when it went in is a shop that
+    /// argues with its customers.
+    /// </remarks>
+    public static Basket Price(Dictionary<string, int> held, IReadOnlyDictionary<string, Item> shelf)
+    {
+        var lines = new List<Line>();
+
+        var pence = 0;
+        var count = 0;
+
+        foreach (var (id, quantity) in held)
+        {
+            if (!shelf.TryGetValue(id, out var item))
+            {
+                continue;
+            }
+
+            var taking = Math.Min(quantity, item.Stock);
+
+            if (taking <= 0)
+            {
+                continue;
+            }
+
+            lines.Add(new Line(item.Id, item.Name, item.Pence, taking, item.Stock));
+
+            pence += item.Pence * taking;
+            count += taking;
+        }
+
+        lines.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+
+        return new Basket(lines, count, pence, Catalogue.Money(pence));
+    }
+
+    /// <summary>
+    /// Whether a change to a basket may happen, and why not when it may not.
+    /// </summary>
+    public static string Refuse(Wanted wanted, IReadOnlyDictionary<string, Item> shelf)
+    {
+        if (wanted == null || !shelf.TryGetValue(wanted.ItemId ?? "", out var item))
+        {
+            return "That is not something this shop sells.";
+        }
+
+        if (wanted.Quantity is < 0 or > Most)
+        {
+            return $"Between none and {Most} of one thing, please.";
+        }
+
+        if (wanted.Quantity > item.Stock)
+        {
+            return item.Stock == 0
+                 ? $"{item.Name} is sold out."
+                 : $"There {(item.Stock == 1 ? "is" : "are")} only {item.Stock} of {item.Name} left.";
+        }
+
+        return null;
+    }
+}

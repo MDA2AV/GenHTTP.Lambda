@@ -1,0 +1,250 @@
+// A shop. Put something on the shelf, fill a basket, buy it.
+//
+//   GET    /lambda/{{KEY}}/                  the shop
+//   GET    /lambda/{{KEY}}/api/items         what is for sale
+//   POST   /lambda/{{KEY}}/api/items         put something on the shelf
+//   GET    /lambda/{{KEY}}/api/basket/:token what is in a basket
+//   PUT    /lambda/{{KEY}}/api/basket/:token put something in one
+//   POST   /lambda/{{KEY}}/api/orders/:token buy what is in it
+//   GET    /lambda/{{KEY}}/api/orders/:token what that basket has bought
+//
+// Five files. This one is the routes and the storage, Catalogue.cs is what may
+// be sold, Carts.cs is what a basket comes to, Orders.cs is what buying does,
+// and Page.cs is the shop itself.
+//
+// The shelf and the orders live in Workspace, the private folder this lambda
+// gets, so they outlive a redeployment. Baskets do not: they are held in
+// memory against the token the browser keeps, and a restart empties them.
+//
+// Anybody may list something, which is what makes this worth looking at rather
+// than reading. Nothing is taken on trust for it: the price is a whole number
+// of pence, the shelf is capped, and stock comes off only when an order is
+// actually placed.
+
+var json = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true
+};
+
+var shelf = new ConcurrentDictionary<string, Item>(StringComparer.Ordinal);
+var baskets = new ConcurrentDictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
+// orders kept against the token that placed them, because the only thing a
+// token identifies is the basket it belongs to - showing one browser another's
+// shopping would be a strange thing for a shop to do
+var orders = new ConcurrentDictionary<string, List<Order>>(StringComparer.Ordinal);
+
+var random = new Random();
+var writing = new object();
+
+if (Workspace.Exists("shelf.json"))
+{
+    foreach (var item in JsonSerializer.Deserialize<List<Item>>(Workspace.ReadText("shelf.json"), json) ?? [])
+    {
+        shelf[item.Id] = item;
+    }
+}
+
+if (Workspace.Exists("orders.json"))
+{
+    var stored = JsonSerializer.Deserialize<Dictionary<string, List<Order>>>(Workspace.ReadText("orders.json"), json) ?? [];
+
+    foreach (var (token, placed) in stored)
+    {
+        orders[token] = placed;
+    }
+}
+
+// a shop with nothing in it teaches nobody anything, so it starts with a few
+// things on the shelf and forgets about them once somebody lists their own
+if (shelf.IsEmpty)
+{
+    (string Name, string Blurb, int Pence, int Stock, string Tint)[] opening =
+    [
+        ("Rubber duck", "For explaining the problem to. Has never once interrupted.", 650, 24, "amber"),
+        ("Mechanical keyboard", "Loud enough that everyone knows you are working.", 8900, 6, "slate"),
+        ("Desk plant", "Survives three weeks of neglect, which is two more than the last one.", 1450, 12, "green"),
+        ("Enormous mug", "Holds most of a pot. Nobody has to get up.", 1200, 18, "sky"),
+        ("Blank notebook", "The good kind, so nothing is ever written in it.", 900, 30, "rose")
+    ];
+
+    foreach (var (name, blurb, pence, stock, tint) in opening)
+    {
+        var id = Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(5));
+
+        shelf[id] = new Item(id, name, blurb, pence, stock, tint, DateTime.UtcNow);
+    }
+}
+
+void SaveShelf()
+{
+    lock (writing)
+    {
+        Workspace.WriteText("shelf.json", JsonSerializer.Serialize(shelf.Values.ToList(), json));
+    }
+}
+
+SaveShelf();
+
+IReadOnlyDictionary<string, Item> Shelf() => shelf;
+
+Dictionary<string, int> BasketFor(string token)
+    => baskets.GetOrAdd(token ?? "", _ => new Dictionary<string, int>(StringComparer.Ordinal));
+
+List<Item> OnSale()
+    => shelf.Values.OrderByDescending(i => i.Added).ToList();
+
+Listed List(Listing listing)
+{
+    if (Catalogue.Refuse(listing, shelf.Count) is string problem)
+    {
+        return new Listed(false, problem, null);
+    }
+
+    var id = Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(5));
+
+    var item = new Item(
+        id,
+        listing.Name.Trim(),
+        (listing.Blurb ?? "").Trim(),
+        listing.Pence,
+        listing.Stock,
+        Catalogue.TintOr(listing.Tint, random),
+        DateTime.UtcNow
+    );
+
+    shelf[id] = item;
+
+    SaveShelf();
+
+    return new Listed(true, null, item);
+}
+
+Changed Put(string token, Wanted wanted)
+{
+    if (Carts.Refuse(wanted, Shelf()) is string problem)
+    {
+        return new Changed(false, problem, Carts.Price(BasketFor(token), Shelf()));
+    }
+
+    var basket = BasketFor(token);
+
+    lock (basket)
+    {
+        if (wanted.Quantity <= 0)
+        {
+            basket.Remove(wanted.ItemId);
+        }
+        else
+        {
+            basket[wanted.ItemId] = wanted.Quantity;
+        }
+
+        return new Changed(true, null, Carts.Price(basket, Shelf()));
+    }
+}
+
+Placed Buy(string token, Checkout checkout)
+{
+    var basket = BasketFor(token);
+
+    lock (basket)
+    {
+        var priced = Carts.Price(basket, Shelf());
+
+        if (Orders.Refuse(checkout, priced) is string problem)
+        {
+            return new Placed(false, problem, null);
+        }
+
+        var lines = new List<Bought>();
+
+        // stock comes off here and nowhere else. Taken under the shelf lock so
+        // that two people buying the last one cannot both get it.
+        lock (writing)
+        {
+            foreach (var line in priced.Lines)
+            {
+                if (!shelf.TryGetValue(line.ItemId, out var item))
+                {
+                    continue;
+                }
+
+                var taking = Math.Min(line.Quantity, item.Stock);
+
+                if (taking <= 0)
+                {
+                    continue;
+                }
+
+                shelf[line.ItemId] = item with { Stock = item.Stock - taking };
+
+                lines.Add(new Bought(item.Name, item.Pence, taking));
+            }
+        }
+
+        if (lines.Count == 0)
+        {
+            return new Placed(false, "Everything in the basket sold out while it sat there.", null);
+        }
+
+        var order = new Order(
+            Orders.Reference(),
+            checkout.Buyer.Trim(),
+            lines,
+            lines.Sum(l => l.Pence * l.Quantity),
+            DateTime.UtcNow
+        );
+
+        basket.Clear();
+
+        lock (writing)
+        {
+            var mine = orders.GetOrAdd(token, _ => []);
+
+            mine.Add(order);
+
+            while (mine.Count > Orders.Keep)
+            {
+                mine.RemoveAt(0);
+            }
+
+            // and the shop as a whole does not remember for ever either
+            while (orders.Count > Orders.Shoppers)
+            {
+                var oldest = orders.OrderBy(o => o.Value.LastOrDefault()?.Placed ?? DateTime.MinValue).First();
+
+                orders.TryRemove(oldest.Key, out _);
+            }
+
+            Workspace.WriteText("orders.json", JsonSerializer.Serialize(orders, json));
+        }
+
+        SaveShelf();
+
+        return new Placed(true, null, order);
+    }
+}
+
+var api = Inline.Create()
+                .Get("items", () => OnSale())
+                .Post("items", (Listing body) => List(body))
+                .Get("basket/:token", (string token) => Carts.Price(BasketFor(token), Shelf()))
+                .Put("basket/:token", (string token, Wanted body) => Put(token, body))
+                .Post("orders/:token", (string token, Checkout body) => Buy(token, body))
+                .Get("orders/:token", (string token) =>
+                {
+                    lock (writing)
+                    {
+                        // only what this basket bought. The token is not an
+                        // account and this is not a way of reading somebody
+                        // else's shopping.
+                        return orders.TryGetValue(token ?? "", out var mine)
+                             ? mine.AsEnumerable().Reverse().Take(10).ToList()
+                             : [];
+                    }
+                });
+
+return Layout.Create()
+             .Add("api", api)
+             .Add(Content.From(Resource.FromString(Site.Page).Type(new ContentType("text/html; charset=utf-8"))));
