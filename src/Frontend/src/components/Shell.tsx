@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { AdminMenu } from './AdminMenu';
+import { ExamplesMenu } from './ExamplesMenu';
 import { IconLogo, IconMoon, IconSun } from './Icons';
 import type { Theme } from '../theme';
 
@@ -55,6 +56,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
 
         <div className="ml-auto flex items-center gap-2">
           {actions}
+          <ExamplesMenu />
           <AdminMenu />
           <button
             type="button"

@@ -15,6 +15,8 @@ using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.DependencyInjection;
+using GenHTTP.Modules.Compression;
+using GenHTTP.Modules.Compression.Algorithms;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
 
@@ -94,6 +96,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
+        services.AddSingleton<ExampleSeeder>();
 
         services.AddSingleton<SpaResources>();
 
@@ -156,12 +159,53 @@ public sealed class Application : IAsyncDisposable
                .AddDependencyInjection(Services)
                .Add(Registry.Capture())
                .Add(new TelemetryConcernBuilder(Services.GetRequiredService<TelemetryService>()))
-               .Defaults();
+               /*
+                * Compression is configured here rather than left to the
+                * defaults, and it offers gzip alone.
+                *
+                * Brotli and zstd truncate a generated response: anything much
+                * past twelve kilobytes arrives cut short, and since every
+                * browser asks for brotli first, every visitor gets the broken
+                * one while curl - which asks for nothing - sees a whole
+                * answer. Files served from disk are unaffected, so this is
+                * about content produced per request, which is what every
+                * lambda here returns.
+                *
+                * Losing brotli costs some bandwidth. Serving half a response
+                * costs the response.
+                */
+               .Defaults(compression: false)
+               .Compression(CompressedContent.Empty().Add(new GzipAlgorithm()));
 
     /// <summary>
     /// Starts the maintenance jobs. Call once the server is up.
     /// </summary>
     public void StartBackgroundJobs() => Scheduler.Start();
+
+    /// <summary>
+    /// Brings the examples online, once the server is already answering.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not awaited by the caller: every example has to be
+    /// compiled, and that is seconds the installation would otherwise spend
+    /// refusing connections. They appear shortly after startup instead.
+    /// </remarks>
+    public void SeedExamples()
+    {
+        var seeder = Services.GetRequiredService<ExampleSeeder>();
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await seeder.SeedAsync();
+            }
+            catch (Exception e)
+            {
+                Services.GetRequiredService<ILoggerFactory>().CreateLogger<Application>().LogWarning(e, "The examples could not be prepared");
+            }
+        });
+    }
 
     public async ValueTask DisposeAsync()
     {

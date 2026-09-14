@@ -49,6 +49,19 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
     public IDeploymentService Deployments => Application.Services.GetRequiredService<IDeploymentService>();
 
+    /// <summary>
+    /// Brings the examples into existence, which the application does in the
+    /// background at startup and a test has to ask for so it can wait for it.
+    /// </summary>
+    public ValueTask SeedExamplesAsync()
+        => Application.Services.GetRequiredService<ExampleSeeder>().SeedAsync();
+
+    /// <summary>
+    /// The editor key of a lambda, which only the installation itself knows
+    /// for an example.
+    /// </summary>
+    public ValueTask<string?> PrivateKeyOfAsync(string publicKey) => Meta.GetPrivateKeyAsync(publicKey);
+
     private string Root { get; }
 
     #endregion

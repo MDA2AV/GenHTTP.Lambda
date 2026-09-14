@@ -3,9 +3,9 @@ using System.Reflection;
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
-/// The examples a new lambda can start from, in the two groups the creation
-/// assistant offers: a service that answers requests, or a socket that stays
-/// open.
+/// The examples a new lambda can start from, in the groups the creation
+/// assistant offers: a service that answers requests, a socket that stays
+/// open, or a whole application to take apart.
 /// </summary>
 public static class TemplateCatalog
 {
@@ -23,14 +23,17 @@ public static class TemplateCatalog
         new("rest-webservice", "rest", "Class based service", "The same routes as methods of a class, described by attributes.", "RestWebservice"),
         new("websocket-functional", "websocket", "Functional", "Three callbacks for connect, message and close.", "WebsocketFunctional"),
         new("websocket-reactive", "websocket", "Reactive", "A class the platform calls when something happens.", "WebsocketReactive"),
-        new("websocket-imperative", "websocket", "Imperative", "A loop that owns the connection and reads it frame by frame.", "WebsocketImperative")
+        new("websocket-imperative", "websocket", "Imperative", "A loop that owns the connection and reads it frame by frame.", "WebsocketImperative"),
+        new("chat", "app", "Chat room", "Accounts, a sign in, and a room that stays open. Passwords hashed, messages kept.", "Chat"),
+        new("game", "app", "Game with a scoreboard", "A three.js runner in the browser, and a scoreboard this lambda keeps.", "Game")
     ];
 
 
     private static readonly LambdaTemplateGroup[] GroupList =
     [
         new("rest", "Answers requests", "A service, a page, a document - anything a client asks for and gets back.", [.. All.Where(t => t.Group == "rest")]),
-        new("websocket", "Keeps a connection", "A websocket that stays open, in each of the three flavours the module offers.", [.. All.Where(t => t.Group == "websocket")])
+        new("websocket", "Keeps a connection", "A websocket that stays open, in each of the three flavours the module offers.", [.. All.Where(t => t.Group == "websocket")]),
+        new("app", "A whole application", "Something finished rather than something to start from: a page, an API and whatever it needs to remember.", [.. All.Where(t => t.Group == "app")])
     ];
 
     #region Functionality

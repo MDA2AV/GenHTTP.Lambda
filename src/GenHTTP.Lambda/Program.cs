@@ -49,6 +49,10 @@ await host.StartAsync();
 
 application.StartBackgroundJobs();
 
+// after the server is up: the examples have to be compiled, and doing it first
+// would be seconds spent refusing connections
+application.SeedExamples();
+
 if (certificates != null)
 {
     logger.LogInformation("GenHTTP Lambda is listening on port {Port} and TLS port {SecurePort} ({Engine}), storing data in '{Directory}'", options.Port, options.SecurePort, options.Engine, options.DataDirectory);

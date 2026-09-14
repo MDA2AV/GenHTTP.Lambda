@@ -21,6 +21,7 @@ public static class ApiLayout
                             .AddDependentService<LambdaResource>("lambdas")
                             .AddDependentService<SystemResource>("system")
                             .AddDependentService<TelemetryResource>("telemetry")
+                            .AddDependentService<ExampleResource>("examples")
                             .AddDependentService<InvitationResource>("start")
                             .AddDependentService<AdminResource>("admin")
                             .AddScalar(title: "GenHTTP Lambda API")
