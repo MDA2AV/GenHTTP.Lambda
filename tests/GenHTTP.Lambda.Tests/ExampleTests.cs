@@ -117,19 +117,25 @@ public sealed class ExampleTests
     }
 
     [TestMethod]
-    public void EveryExampleKnowsWhereItIsWorthCalling()
+    public async Task EveryExampleAnswersWhereItSaysItDoes()
     {
-        foreach (var example in ExampleCatalog.All)
-        {
-            // most of them mount nothing at their own root, so offering the
-            // root would answer a visitor with a 404 and teach them the
-            // examples are broken
-            Assert.IsNotNull(example.TryPath);
+        await using var fixture = await LambdaFixture.CreateAsync();
 
-            if (!example.Socket)
-            {
-                Assert.IsNotEmpty(example.TryPath, $"'{example.Id}' has no route worth calling");
-            }
+        await fixture.SeedExamplesAsync();
+
+        foreach (var example in ExampleCatalog.All.Where(e => !e.Socket))
+        {
+            /*
+             * The route each example offers has to be one it actually answers.
+             * Most of them mount nothing at their own root, so a route taken on
+             * trust would send visitors to a 404 and teach them the examples
+             * are broken - and the two that do serve their root are exactly
+             * why this cannot be a rule about the string.
+             */
+            using var response = await fixture.GetAsync($"/lambda/{example.PublicKey}/{example.TryPath}");
+
+            Assert.AreNotEqual(HttpStatusCode.NotFound, response.StatusCode,
+                               $"'{example.Id}' offers a route it does not answer");
         }
     }
 

@@ -37,7 +37,10 @@ public static class ExampleCatalog
         ["rest-webservice"] = ("api/", false),
         ["websocket-functional"] = ("", true),
         ["websocket-reactive"] = ("", true),
-        ["websocket-imperative"] = ("", true)
+        ["websocket-imperative"] = ("", true),
+        // these two serve their own page at the root, so the root is the point
+        ["chat"] = ("", false),
+        ["game"] = ("", false)
     };
 
     /// <summary>

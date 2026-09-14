@@ -32,9 +32,10 @@ public sealed class TemplateTests
     }
 
     [TestMethod]
-    public void BothGroupsAreOffered()
+    public void EveryGroupIsOffered()
     {
-        CollectionAssert.AreEquivalent(new[] { "rest", "websocket" }, TemplateCatalog.Groups.Select(g => g.Id).ToArray());
+        CollectionAssert.AreEquivalent(new[] { "rest", "websocket", "app" },
+                                       TemplateCatalog.Groups.Select(g => g.Id).ToArray());
 
         Assert.HasCount(3, TemplateCatalog.Groups.Single(g => g.Id == "websocket").Templates, "one per flavour");
     }
