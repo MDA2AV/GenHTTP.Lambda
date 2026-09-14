@@ -2,6 +2,8 @@ using System.Runtime;
 using System.Runtime.InteropServices;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Api.Protocol;
+
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
@@ -28,8 +30,10 @@ public sealed class TelemetryResource(TelemetryService telemetry, LambdaTelemetr
     /// </summary>
     /// <param name="minutes">How far back the series should reach</param>
     [ResourceMethod]
-    public async ValueTask<TelemetryResponse> Get(int? minutes)
+    public async ValueTask<TelemetryResponse> Get(int? minutes, IRequest request)
     {
+        AdminGate.RequireForFigures(request, options);
+
         var window = TimeSpan.FromMinutes(Math.Clamp(minutes ?? 60, 1, 60 * 24));
 
         var series = telemetry.Series(window);
@@ -74,8 +78,10 @@ public sealed class TelemetryResource(TelemetryService telemetry, LambdaTelemetr
     /// visitors are not part of it.
     /// </remarks>
     [ResourceMethod("lambdas")]
-    public ActivityResponse GetLambdas()
+    public ActivityResponse GetLambdas(IRequest request)
     {
+        AdminGate.RequireForFigures(request, options);
+
         if (!options.PublicActivity)
         {
             throw LambdaException.NotFound("The activity of the lambdas is not public on this installation.");

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { api, type Activity, type Telemetry, type TelemetrySample } from '../api';
+import { useAdminToken } from '../admin';
+import { ApiError, api, type Activity, type Telemetry, type TelemetrySample } from '../api';
 import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
+import { Locked } from '../components/Locked';
 
 const WINDOWS = [
   { minutes: 15, label: '15m' },
@@ -29,21 +31,35 @@ const GEN1: [string, string] = ['#4285f4', '#669df6'];
 const GEN2: [string, string] = ['#174ea6', '#1a73e8'];
 
 export function Stats({ dark }: { dark: boolean }) {
+  const [token] = useAdminToken();
+  const [denied, setDenied] = useState(false);
   const [data, setData] = useState<Telemetry | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [minutes, setMinutes] = useState(60);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      setData(await api.telemetry(minutes));
-      // absent when the installation keeps the per lambda figures to itself
-      setActivity(await api.activity().catch(() => null));
-      setError(null);
-    } catch {
-      setError('The telemetry could not be read.');
+    if (token === '') {
+      return;
     }
-  }, [minutes]);
+
+    try {
+      setData(await api.telemetry(minutes, token));
+      // absent when the installation keeps the per lambda figures to itself
+      setActivity(await api.activity(token).catch(() => null));
+      setDenied(false);
+      setError(null);
+    } catch (problem) {
+      // a wrong token and an installation with no administration answer the
+      // same way, so this page cannot tell them apart either
+      if (problem instanceof ApiError && problem.status === 404) {
+        setDenied(true);
+        setData(null);
+      } else {
+        setError('The telemetry could not be read.');
+      }
+    }
+  }, [minutes, token]);
 
   useEffect(() => {
     load();
@@ -52,6 +68,16 @@ export function Stats({ dark }: { dark: boolean }) {
 
     return () => window.clearInterval(timer);
   }, [load]);
+
+  if (token === '' || denied) {
+    return (
+      <Locked
+        title="Server"
+        denied={denied}
+        what="What the process is holding and what the engine is carrying, which is nobody's business but the operator's."
+      />
+    );
+  }
 
   if (error !== null) {
     return <div className="mx-auto max-w-5xl px-5 py-14 text-sm text-red-500">{error}</div>;

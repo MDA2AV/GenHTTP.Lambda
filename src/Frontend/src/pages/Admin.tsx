@@ -1,24 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { useAdminToken } from '../admin';
 import { ApiError, api, type AdminListing, type LambdaOverview } from '../api';
 import { Dialog } from '../components/Dialog';
+import { Locked } from '../components/Locked';
 import { IconSpinner, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
-
-const KEY = 'lambda-admin-token';
 
 /**
  * Every lambda on the installation.
  *
- * The token lives in session storage rather than anywhere longer lived: this
- * page can take other people's lambdas down, and a tab that is closed should
- * not leave that behind on a shared machine.
+ * The token is the one the header asks for, so unlocking there opens this and
+ * the server figures together.
  */
 export function Admin() {
   const toast = useToast();
 
-  const [token, setToken] = useState(() => sessionStorage.getItem(KEY) ?? '');
-  const [entered, setEntered] = useState('');
+  const [token, setToken] = useAdminToken();
   const [listing, setListing] = useState<AdminListing | null>(null);
   const [denied, setDenied] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -48,16 +46,7 @@ export function Admin() {
     load();
   }, [load]);
 
-  function unlock(event: React.FormEvent) {
-    event.preventDefault();
-
-    sessionStorage.setItem(KEY, entered);
-    setToken(entered);
-    setEntered('');
-  }
-
   function forget() {
-    sessionStorage.removeItem(KEY);
     setToken('');
     setListing(null);
     setDenied(false);
@@ -107,29 +96,11 @@ export function Admin() {
 
   if (token === '' || denied) {
     return (
-      <div className="mx-auto w-full max-w-sm px-5 py-20">
-        <h1 className="text-xl font-bold tracking-tight">Lambdas</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          {denied
-            ? 'That token was not accepted, or this installation has no panel.'
-            : 'This panel reads and removes lambdas that belong to other people, so it asks for the token first.'}
-        </p>
-
-        <form onSubmit={unlock} className="mt-6 space-y-3">
-          <input
-            type="password"
-            value={entered}
-            onChange={(event) => setEntered(event.target.value)}
-            placeholder="Admin token"
-            autoFocus
-            className="field font-mono"
-            aria-label="Admin token"
-          />
-          <button type="submit" disabled={entered === ''} className="btn-primary w-full">
-            Unlock
-          </button>
-        </form>
-      </div>
+      <Locked
+        title="Lambdas"
+        denied={denied}
+        what="This panel reads and removes lambdas that belong to other people, so it asks for the token first."
+      />
     );
   }
 

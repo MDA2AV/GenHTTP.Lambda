@@ -93,24 +93,7 @@ public sealed class AdminResource(IMetaService meta, LambdaOptions options)
     /// with no panel is indistinguishable from one that simply has no such
     /// route.
     /// </remarks>
-    private void Authorize(IRequest request)
-    {
-        if (!options.Administrable)
-        {
-            throw LambdaException.NotFound("This installation has no administration panel.");
-        }
-
-        var presented = request.Header.Headers.GetEntry("X-Admin-Token");
-
-        var expected = Encoding.UTF8.GetBytes(options.AdminToken!);
-
-        var actual = Encoding.UTF8.GetBytes(presented ?? string.Empty);
-
-        if (actual.Length != expected.Length || !CryptographicOperations.FixedTimeEquals(actual, expected))
-        {
-            throw LambdaException.NotFound("This installation has no administration panel.");
-        }
-    }
+    private void Authorize(IRequest request) => AdminGate.Require(request, options);
 
     private async ValueTask<string> RequireAsync(string publicKey)
         => await meta.GetPrivateKeyAsync(publicKey)

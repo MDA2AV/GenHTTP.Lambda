@@ -249,7 +249,7 @@ async function describe(response: Response): Promise<string> {
 
 const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) });
 
-/** The panel is the only part of this API that authenticates. */
+/** The panel and the figures behind it are the parts of this API that authenticate. */
 const withToken = (token: string, init: RequestInit = {}) => ({
   ...init,
   headers: { ...init.headers, 'X-Admin-Token': token },
@@ -258,7 +258,7 @@ const withToken = (token: string, init: RequestInit = {}) => ({
 export const api = {
   platform: () => request<Platform>('/system'),
 
-  activity: () => request<Activity>('/telemetry/lambdas'),
+  activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
 
   admin: {
     list: (token: string) => request<AdminListing>('/admin/lambdas', withToken(token)),
@@ -278,7 +278,8 @@ export const api = {
         withToken(token, { method: 'DELETE' })),
   },
 
-  telemetry: (minutes: number) => request<Telemetry>(`/telemetry?minutes=${minutes}`),
+  telemetry: (minutes: number, token: string) =>
+    request<Telemetry>(`/telemetry?minutes=${minutes}`, withToken(token)),
 
   checkKey: (key: string) => request<Availability>(`/lambdas/keys/${encodeURIComponent(key)}`),
 

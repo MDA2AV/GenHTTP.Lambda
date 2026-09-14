@@ -165,7 +165,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
 | `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
-| `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel at `/admin`               |
+| `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel, and closes the figures   |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -269,17 +269,27 @@ Because the server holds port 80, the standalone authenticator needs it back
 for the few seconds a renewal takes - a pre hook stops the container and a post
 hook starts it again.
 
-## The panel
+## Administration
 
 `/admin` lists every lambda, when it was created, whether it is online, and
-what its code says - and takes them offline or removes them.
+what its code says - and takes them offline or removes them. `/stats` is what
+the process is holding and what the engine is carrying. Both are reached
+through the **Admin** menu in the header, which is where the token is entered:
+it is kept in session storage, so closing the tab locks it again.
 
-It is the one thing here that authenticates. Everywhere else the editor link is
+This is the one part that authenticates. Everywhere else the editor link is
 the credential and it only ever reaches one lambda; this reads code that belongs
 to other people and can take their work away, so it asks for `LAMBDA_ADMIN_TOKEN`
 in an `X-Admin-Token` header. Until that variable is set there is no panel at
 all, and a wrong token is answered exactly like a missing one - an installation
 that has no panel and one that is guarding it look the same from outside.
+
+The server figures follow the same token, on the rule that an installation with
+an administrator keeps them to them. Where no token is configured there is
+nothing to check a request against, so requiring one would only mean nobody
+could ever read them - there they stay public, as they were before there was a
+panel to put them behind, and `LAMBDA_PUBLIC_ACTIVITY` still decides the per
+lambda figures.
 
 The listing carries no editor links. The panel acts on lambdas it does not own,
 and handing those out would make that irreversible for the people who do.

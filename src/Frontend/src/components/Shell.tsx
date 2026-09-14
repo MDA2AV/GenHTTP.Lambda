@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { AdminMenu } from './AdminMenu';
 import { IconLogo, IconMoon, IconSun } from './Icons';
 import type { Theme } from '../theme';
 
@@ -54,12 +55,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
 
         <div className="ml-auto flex items-center gap-2">
           {actions}
-          <Link to="/stats" className="btn-ghost hidden sm:inline-flex">
-            Server
-          </Link>
-          <Link to="/admin" className="btn-ghost hidden sm:inline-flex">
-            Lambdas
-          </Link>
+          <AdminMenu />
           <button
             type="button"
             onClick={onToggleTheme}

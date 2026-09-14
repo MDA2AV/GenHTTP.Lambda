@@ -97,6 +97,14 @@ export const IconSave = (p: IconProps) => (
 
 export const IconChevronDown = (p: IconProps) => <Svg {...p}><path d="m6 9 6 6 6-6" /></Svg>;
 
+export const IconLock = (p: IconProps) => (
+  <Svg {...p}><rect x="4.5" y="10.5" width="15" height="10" /><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" /></Svg>
+);
+
+export const IconUnlock = (p: IconProps) => (
+  <Svg {...p}><rect x="4.5" y="10.5" width="15" height="10" /><path d="M8 10.5V7a4 4 0 0 1 7.7-1.5" /></Svg>
+);
+
 export const IconFolder = (p: IconProps) => (
   <Svg {...p}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Svg>
 );
