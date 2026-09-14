@@ -1323,10 +1323,25 @@ var socket = Websocket.Functional()
                               player.WantX = player.X;
                               player.WantY = player.Y;
 
-                              players[connection] = player;
-
+                              /*
+                               * The welcome goes out before they are put on
+                               * the books, and the order is the whole point.
+                               *
+                               * The clock writes a frame to everybody on the
+                               * books twenty times a second. Registering
+                               * first leaves a window - short, but open
+                               * twenty times a second and once per death,
+                               * because dying and coming back is a fresh
+                               * join - where the clock writes a frame to
+                               * this socket while the welcome is still going
+                               * out of it. Two writes at once is not
+                               * something a connection survives: it faults,
+                               * and the player is simply dropped.
+                               */
                               await connection.WritePayloadAsync(JsonSerializer.Serialize(
                                   new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize, World.Girths), json));
+
+                              players[connection] = player;
 
                               StartClock();
 
