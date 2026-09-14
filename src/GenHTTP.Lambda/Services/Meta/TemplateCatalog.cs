@@ -45,7 +45,10 @@ public static class TemplateCatalog
                   ("Page.cs", "ShopPage")),
         new("tanks", "app", "Tanks in a labyrinth", "Drive, aim and shoot in a maze everybody shares, with the server deciding all of it.", "Tanks",
             true, ("Maze.cs", "TanksMaze"), ("Battle.cs", "TanksBattle"), ("Protocol.cs", "TanksProtocol"),
-                  ("State.cs", "TanksState"), ("Page.cs", "TanksPage"))
+                  ("State.cs", "TanksState"), ("Page.cs", "TanksPage")),
+        new("arena", "app", "Arena", "Everybody in one arena, eating each other, twenty frames a second. The page is shipped as files rather than as strings.", "Arena",
+            true, ("World.cs", "ArenaWorld"), ("Protocol.cs", "ArenaProtocol"), ("State.cs", "ArenaState"),
+                  ("index.html", "ArenaPage"), ("game.js", "ArenaGame"), ("style.css", "ArenaStyle"))
     ];
 
 
@@ -154,14 +157,23 @@ public sealed class LambdaTemplate(string id, string group, string name, string 
     /// </summary>
     public string Source => _source.Value;
 
-    internal static string Read(string resource)
+    /// <summary>
+    /// Reads one embedded template file.
+    /// </summary>
+    /// <param name="resource">Its name in the assembly, without extensions</param>
+    /// <param name="kind">
+    /// The extension it is stored under, which is the extension of the file it
+    /// becomes. Parts are not all C#: an example that ships a page keeps that
+    /// page as a page, so that what is read in the editor is what is served.
+    /// </param>
+    internal static string Read(string resource, string kind = "cs")
     {
         var assembly = Assembly.GetExecutingAssembly();
 
         var names = assembly.GetManifestResourceNames();
 
-        var name = Array.Find(names, n => n.EndsWith($".{resource}.cs.txt", StringComparison.Ordinal))
-                ?? throw new InvalidOperationException($"The template '{resource}' is missing from the assembly ({string.Join(", ", names)}).");
+        var name = Array.Find(names, n => n.EndsWith($".{resource}.{kind}.txt", StringComparison.Ordinal))
+                ?? throw new InvalidOperationException($"The template '{resource}.{kind}' is missing from the assembly ({string.Join(", ", names)}).");
 
         using var stream = assembly.GetManifestResourceStream(name)!;
 
@@ -177,7 +189,11 @@ public sealed class LambdaTemplate(string id, string group, string name, string 
 /// </summary>
 public sealed class TemplatePart(string name, string resource)
 {
-    private readonly Lazy<string> _source = new(() => LambdaTemplate.Read(resource), LazyThreadSafetyMode.ExecutionAndPublication);
+    // the extension of the file this becomes is also the extension it is
+    // stored under, so a part says what it is by what it is called
+    private readonly Lazy<string> _source = new(
+        () => LambdaTemplate.Read(resource, Path.GetExtension(name).TrimStart('.')),
+        LazyThreadSafetyMode.ExecutionAndPublication);
 
     public string Name => name;
 

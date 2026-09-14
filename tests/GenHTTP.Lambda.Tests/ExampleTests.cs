@@ -180,4 +180,40 @@ public sealed class ExampleTests
         }
     }
 
+    [TestMethod]
+    public async Task AnExampleCanShipAPageAsFilesRatherThanStrings()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedExamplesAsync();
+
+        /*
+         * The arena keeps its page, its script and its stylesheet as assets,
+         * which are served as they are and never compiled. That is worth a
+         * test of its own because it is the only example built that way, and
+         * because it is the shape anybody with a real frontend will want.
+         */
+        using var page = await fixture.GetAsync("/lambda/example-arena/");
+
+        Assert.AreEqual(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("game.js", await page.GetContentAsync());
+
+        using var script = await fixture.GetAsync("/lambda/example-arena/game.js");
+
+        Assert.AreEqual(HttpStatusCode.OK, script.StatusCode);
+        Assert.AreEqual("application/javascript", script.Content.Headers.ContentType?.MediaType,
+                        "a script served as anything else is a script the browser refuses to run");
+
+        using var style = await fixture.GetAsync("/lambda/example-arena/style.css");
+
+        Assert.AreEqual(HttpStatusCode.OK, style.StatusCode);
+        Assert.AreEqual("text/css", style.Content.Headers.ContentType?.MediaType);
+
+        // and the code half is still code: the arena reports its own state
+        using var here = await fixture.GetAsync("/lambda/example-arena/api/here", "application/json");
+
+        Assert.AreEqual(HttpStatusCode.OK, here.StatusCode);
+        Assert.Contains("pellets", await here.GetContentAsync());
+    }
+
 }

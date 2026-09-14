@@ -9,12 +9,28 @@ using GenHTTP.Lambda.Configuration;
 namespace GenHTTP.Lambda.Services.Protection;
 
 /// <summary>
-/// Caps how many lambda requests a single client may send per minute, so one
+/// Caps how many lambda requests a single client may send per second, so one
 /// visitor cannot occupy the whole server.
 /// </summary>
+/// <remarks>
+/// The window is a second rather than a longer stretch because the budget is
+/// spent as fast as it is asked for. The same allowance over a minute lets a
+/// client spend all of it at once and then wait out the rest of the minute,
+/// which is the burst this exists to flatten.
+/// </remarks>
 public sealed class RateLimitConcern(IHandler content, LambdaOptions options) : IConcern
 {
-    private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan Window = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// How long a client has to be quiet before its bucket is forgotten.
+    /// </summary>
+    /// <remarks>
+    /// Much longer than the window on purpose. Sweeping a dictionary every
+    /// second to reclaim a handful of small objects costs more than holding
+    /// them, and nothing about the cap depends on how soon they go.
+    /// </remarks>
+    private static readonly TimeSpan Idle = TimeSpan.FromMinutes(1);
 
     private readonly ConcurrentDictionary<IPAddress, Bucket> _clients = [];
 
@@ -36,8 +52,8 @@ public sealed class RateLimitConcern(IHandler content, LambdaOptions options) : 
 
         if (client != null && !Allow(client))
         {
-            throw new ProviderException(ResponseStatus.TooManyRequests, $"Lambdas accept at most {options.RateLimit} requests per minute and client.",
-                response => response.Header("Retry-After", "60"));
+            throw new ProviderException(ResponseStatus.TooManyRequests, $"Lambdas accept at most {options.RateLimit} requests per second and client.",
+                response => response.Header("Retry-After", "1"));
         }
 
         return content.HandleAsync(request);
@@ -70,7 +86,7 @@ public sealed class RateLimitConcern(IHandler content, LambdaOptions options) : 
     {
         var last = Interlocked.Read(ref _cleaned);
 
-        if (Environment.TickCount64 - last < (long)Window.TotalMilliseconds)
+        if (Environment.TickCount64 - last < (long)Idle.TotalMilliseconds)
         {
             return;
         }
@@ -82,7 +98,7 @@ public sealed class RateLimitConcern(IHandler content, LambdaOptions options) : 
 
         foreach (var (address, bucket) in _clients)
         {
-            if (now - bucket.Started > Window)
+            if (now - bucket.Started > Idle)
             {
                 _clients.TryRemove(address, out _);
             }

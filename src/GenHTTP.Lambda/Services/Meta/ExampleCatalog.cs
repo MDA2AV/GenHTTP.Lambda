@@ -62,6 +62,10 @@ public static class ExampleCatalog
 
         new("tanks", Advanced, "Tanks in a labyrinth",
             "Drive a tank through a maze everybody shares, aim with the mouse, shoot the others and drive over crates. Six files, and the server decides all of it.",
+            "", false),
+
+        new("arena", Advanced, "Arena",
+            "Everyone who opens it is in the same arena, eating each other and growing. The server holds the world and sends each player only what they can see, twenty times a second. Seven files, three of which are the page it serves.",
             "", false)
     ];
 

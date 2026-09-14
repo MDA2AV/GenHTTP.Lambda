@@ -1,0 +1,47 @@
+// What the two halves say to each other.
+//
+// Kept short on purpose. This is sent to everybody twenty times a second, so
+// every name in it is paid for once per player per tick - which is why the
+// fields are one letter and the numbers are rounded before they leave.
+
+/// <summary>Sent by a browser as its first frame.</summary>
+public record Join(string Kind, string Name);
+
+/// <summary>Where a browser would like to be heading, sent continuously.</summary>
+public record Steer(string Kind, double X, double Y);
+
+/// <summary>A blob, as everybody else sees it.</summary>
+public record Blob(string I, string N, string C, double X, double Y, double R);
+
+/// <summary>
+/// A pellet worth eating, as the server holds it.
+///
+/// Never sent as itself. On the wire a pellet is three numbers - see Frame -
+/// because four hundred of them carrying field names and an identifier they
+/// are never referred to by is most of what a frame would weigh.
+/// </summary>
+public record Pellet(string I, double X, double Y, int C);
+
+/// <summary>One line of the leaderboard.</summary>
+public record Score(string N, int S);
+
+/// <summary>Who you are and how big the world is, sent once.</summary>
+public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette);
+
+/// <summary>
+/// What is near enough to matter, sent on every tick.
+/// </summary>
+/// <remarks>
+/// Only what falls inside the player's view is sent. A world of four hundred
+/// pellets broadcast whole to everybody is most of a megabyte a second before
+/// anyone has done anything, and nobody can see it anyway.
+///
+/// P is flat rather than a list of objects: x, y, colour, x, y, colour, and so
+/// on, the colour being a position in the palette sent with the welcome. The
+/// same pellets written out as records cost seven times as much, and they are
+/// the bulk of every frame.
+/// </remarks>
+public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive);
+
+/// <summary>Sent to whoever has just been eaten.</summary>
+public record Eaten(string Kind, string By, int Score);

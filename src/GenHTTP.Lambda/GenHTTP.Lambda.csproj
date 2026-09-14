@@ -51,6 +51,10 @@
         <EmbeddedResource Include="Data/Migrations/*.sql" />
         <!-- WithCulture is required: MSBuild would read the "cs" in "Template.cs.txt" as Czech -->
         <EmbeddedResource Include="Resources/Templates/*.cs.txt" WithCulture="false" />
+        <!-- an example may ship a page as well as the code that serves it -->
+        <EmbeddedResource Include="Resources/Templates/*.html.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.js.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.css.txt" WithCulture="false" />
     </ItemGroup>
 
 </Project>

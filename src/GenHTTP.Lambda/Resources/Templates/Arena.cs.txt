@@ -1,0 +1,316 @@
+// An arena everybody shares: eat the pellets, grow, and eat anybody smaller.
+//
+//   GET /lambda/{{KEY}}/            the game
+//   GET /lambda/{{KEY}}/api/best    the best runs it remembers
+//   WS  /lambda/{{KEY}}/play        everything that happens
+//
+// Six files: this one is the socket, the clock and the storage, World.cs is
+// the rules, Protocol.cs is what the two halves say, and index.html, game.js
+// and style.css are shipped as assets - served as they are, never compiled.
+//
+// Written to be leaned on. Everything that moves is decided here and sent to
+// everybody twenty times a second, so the interesting number is not the frame
+// rate but how many people can be in the arena before the socket is the thing
+// that gives. Only what falls inside a player's view is sent to them, because
+// the alternative is most of a megabyte a second before anybody has moved.
+
+var json = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true
+};
+
+var players = new ConcurrentDictionary<IReactiveConnection, Player>();
+var pellets = new ConcurrentDictionary<string, Pellet>(StringComparer.Ordinal);
+var best = new List<Score>();
+
+var random = new Random();
+var writing = new object();
+var ticking = 0;
+var seat = 0;
+
+if (Workspace.Exists("best.json"))
+{
+    best.AddRange(JsonSerializer.Deserialize<List<Score>>(Workspace.ReadText("best.json"), json) ?? []);
+}
+
+string NewId() => Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4));
+
+void Scatter()
+{
+    while (pellets.Count < World.Pellets)
+    {
+        var id = NewId();
+
+        pellets[id] = new Pellet(id, random.NextDouble() * World.Size, random.NextDouble() * World.Size,
+                                 World.AnyTint(random));
+    }
+}
+
+Scatter();
+
+void Remember(Player player)
+{
+    var score = World.ScoreOf(player.Radius);
+
+    if (score <= 0)
+    {
+        return;
+    }
+
+    lock (writing)
+    {
+        best.Add(new Score(player.Name, score));
+
+        var kept = best.OrderByDescending(s => s.S).Take(10).ToList();
+
+        best.Clear();
+        best.AddRange(kept);
+
+        Workspace.WriteText("best.json", JsonSerializer.Serialize(best, json));
+    }
+}
+
+void Step(double seconds)
+{
+    var everyone = players.Values.ToArray();
+
+    foreach (var player in everyone)
+    {
+        var dx = player.WantX - player.X;
+        var dy = player.WantY - player.Y;
+
+        var distance = Math.Sqrt(dx * dx + dy * dy);
+
+        if (distance > 1)
+        {
+            var step = Math.Min(World.Speed(player.Radius) * seconds, distance);
+
+            player.X = World.Clamp(player.X + dx / distance * step);
+            player.Y = World.Clamp(player.Y + dy / distance * step);
+        }
+
+        // pellets first: growing before the fight is resolved is what makes a
+        // near miss feel like a near miss
+        foreach (var pellet in pellets.Values)
+        {
+            if (!World.Overlaps(player.X, player.Y, player.Radius, pellet.X, pellet.Y))
+            {
+                continue;
+            }
+
+            if (pellets.TryRemove(pellet.I, out _))
+            {
+                player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.PelletArea);
+            }
+        }
+    }
+
+    Scatter();
+
+    foreach (var player in everyone)
+    {
+        foreach (var other in everyone)
+        {
+            if (ReferenceEquals(player, other) || other.Gone || player.Gone)
+            {
+                continue;
+            }
+
+            if (!World.Eats(player.Radius, other.Radius) || !World.Overlaps(player.X, player.Y, player.Radius, other.X, other.Y))
+            {
+                continue;
+            }
+
+            player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.AreaOf(other.Radius) * World.Spoils);
+
+            other.Gone = true;
+            other.EatenBy = player.Name;
+        }
+    }
+}
+
+string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
+{
+    var near = new List<Blob>();
+
+    foreach (var blob in blobs)
+    {
+        if (World.InView(viewer.X, viewer.Y, blob.X, blob.Y))
+        {
+            near.Add(blob);
+        }
+    }
+
+    // whole units: a pellet does not move, so the half unit lost to rounding
+    // is a fixed offset nobody can see rather than a jitter anybody can
+    var crumbs = new List<int>();
+
+    foreach (var pellet in pellets.Values)
+    {
+        if (World.InView(viewer.X, viewer.Y, pellet.X, pellet.Y))
+        {
+            crumbs.Add((int)pellet.X);
+            crumbs.Add((int)pellet.Y);
+            crumbs.Add(pellet.C);
+        }
+    }
+
+    return JsonSerializer.Serialize(new Frame("f", near, crumbs, board.ToList(), alive), json);
+}
+
+async ValueTask Broadcast()
+{
+    var everyone = players.ToArray();
+
+    var blobs = everyone.Where(p => !p.Value.Gone)
+                        .Select(p => new Blob(p.Value.Id, p.Value.Name, p.Value.Colour,
+                                              Math.Round(p.Value.X, 1), Math.Round(p.Value.Y, 1),
+                                              Math.Round(p.Value.Radius, 1)))
+                        .ToArray();
+
+    var board = everyone.Where(p => !p.Value.Gone)
+                        .OrderByDescending(p => p.Value.Radius)
+                        .Take(8)
+                        .Select(p => new Score(p.Value.Name, World.ScoreOf(p.Value.Radius)))
+                        .ToArray();
+
+    foreach (var (connection, player) in everyone)
+    {
+        try
+        {
+            if (player.Gone)
+            {
+                await connection.WritePayloadAsync(JsonSerializer.Serialize(
+                    new Eaten("eaten", player.EatenBy ?? "somebody", World.ScoreOf(player.Radius)), json));
+
+                Remember(player);
+
+                players.TryRemove(connection, out _);
+
+                continue;
+            }
+
+            await connection.WritePayloadAsync(Picture(player, blobs, board, blobs.Length));
+        }
+        catch (Exception)
+        {
+            players.TryRemove(connection, out _);
+        }
+    }
+}
+
+// the clock, started by whoever arrives to an empty arena and stopped by the
+// last of them leaving: an empty arena should not cost a thread
+void StartClock()
+{
+    if (Interlocked.Exchange(ref ticking, 1) == 1)
+    {
+        return;
+    }
+
+    _ = Task.Run(async () =>
+    {
+        var last = DateTime.UtcNow;
+
+        try
+        {
+            while (!players.IsEmpty)
+            {
+                await Task.Delay(50);
+
+                var now = DateTime.UtcNow;
+                var seconds = Math.Min((now - last).TotalSeconds, 0.25);
+
+                last = now;
+
+                Step(seconds);
+
+                await Broadcast();
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref ticking, 0);
+
+            if (!players.IsEmpty)
+            {
+                StartClock();
+            }
+        }
+    });
+}
+
+var socket = Websocket.Functional()
+                      .OnMessage(async (connection, message) =>
+                      {
+                          var text = await message.ReadPayloadAsync<string>() ?? "";
+
+                          if (text.Length is 0 or > 300)
+                          {
+                              return;
+                          }
+
+                          if (!players.TryGetValue(connection, out var player))
+                          {
+                              var joining = JsonSerializer.Deserialize<Join>(text, json);
+
+                              player = new Player
+                              {
+                                  Id = NewId(),
+                                  Name = World.Called(joining?.Name),
+                                  Colour = World.ColourFor(Interlocked.Increment(ref seat)),
+                                  X = random.NextDouble() * World.Size,
+                                  Y = random.NextDouble() * World.Size,
+                                  Radius = World.Start
+                              };
+
+                              player.WantX = player.X;
+                              player.WantY = player.Y;
+
+                              players[connection] = player;
+
+                              await connection.WritePayloadAsync(JsonSerializer.Serialize(
+                                  new Welcome("welcome", player.Id, player.Colour, World.Size, World.Palette), json));
+
+                              StartClock();
+
+                              return;
+                          }
+
+                          var steer = JsonSerializer.Deserialize<Steer>(text, json);
+
+                          if (steer == null)
+                          {
+                              return;
+                          }
+
+                          player.WantX = World.Clamp(steer.X);
+                          player.WantY = World.Clamp(steer.Y);
+                      })
+                      .OnClose((connection, _) =>
+                      {
+                          if (players.TryRemove(connection, out var leaving))
+                          {
+                              Remember(leaving);
+                          }
+
+                          return ValueTask.CompletedTask;
+                      });
+
+var api = Inline.Create()
+                .Get("best", () =>
+                {
+                    lock (writing)
+                    {
+                        return best.ToList();
+                    }
+                })
+                .Get("here", () => new Here(players.Count, pellets.Count));
+
+return Layout.Create()
+             .Add("api", api)
+             .Add("play", socket)
+             .Add(Assets.App());
+
+record Here(int Players, int Pellets);

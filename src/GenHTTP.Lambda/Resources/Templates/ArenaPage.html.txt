@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arena</title>
+<link rel="stylesheet" href="style.css">
+
+<canvas id="view"></canvas>
+
+<div id="hud" hidden>
+  <b id="score">0</b>
+  <span class="dim">move the mouse · eat anything smaller</span>
+</div>
+
+<div id="board" hidden>
+  <h2>Biggest</h2>
+  <ol id="list"></ol>
+  <div class="dim" id="here"></div>
+</div>
+
+<div id="gate">
+  <div>
+    <h1>Arena</h1>
+    <p class="dim">
+      Everybody who opens this is in the same arena. Eat the small things to grow,
+      eat anybody smaller than you, and keep away from anybody bigger.
+    </p>
+    <p><input id="name" maxlength="12" placeholder="Your name"> <button id="go">Dive in</button></p>
+  </div>
+</div>
+
+<div id="over" hidden>
+  <div>
+    <h1 id="verdict">Eaten</h1>
+    <p class="dim" id="final"></p>
+    <p><button id="again">Again</button></p>
+  </div>
+</div>
+
+<script src="game.js" type="module"></script>

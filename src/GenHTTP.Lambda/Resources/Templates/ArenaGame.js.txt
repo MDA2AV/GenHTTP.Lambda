@@ -1,0 +1,167 @@
+// The browser half. It draws what it is told and says where the pointer is;
+// everything else - where anyone is, who ate whom, how big anybody got - is
+// the server's, and this believes all of it.
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('view');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+let socket = null, me = null, world = 2400, mine = null;
+let blobs = [], pellets = [], board = [], palette = [];
+const drawn = new Map();           // id -> where it is being drawn, so it slides
+let pointer = { x: 0, y: 0 };
+
+function size() {
+  canvas.width = innerWidth * devicePixelRatio;
+  canvas.height = innerHeight * devicePixelRatio;
+  canvas.style.width = `${innerWidth}px`;
+  canvas.style.height = `${innerHeight}px`;
+}
+
+addEventListener('resize', size);
+size();
+
+addEventListener('pointermove', (e) => { pointer = { x: e.clientX, y: e.clientY }; });
+
+// the server is told where the pointer is in world units, twenty times a
+// second - the same rate it answers at, because sending faster than it
+// replies only builds a queue
+setInterval(() => {
+  if (socket?.readyState !== 1 || !mine) return;
+
+  const scale = view();
+  const x = mine.x + (pointer.x - innerWidth / 2) / scale;
+  const y = mine.y + (pointer.y - innerHeight / 2) / scale;
+
+  socket.send(JSON.stringify({ kind: 'steer', x, y }));
+}, 50);
+
+/** How many pixels one world unit is. Bigger blobs see more of the arena. */
+function view() {
+  const radius = mine?.r ?? 14;
+  return Math.min(innerWidth, innerHeight) / (radius * 16 + 260);
+}
+
+function draw() {
+  requestAnimationFrame(draw);
+
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  ctx.fillStyle = '#0b0d11';
+  ctx.fillRect(0, 0, innerWidth, innerHeight);
+
+  if (!mine) return;
+
+  const scale = view();
+  const ox = innerWidth / 2 - mine.x * scale;
+  const oy = innerHeight / 2 - mine.y * scale;
+
+  // the edge of the arena, so there is something to be lost against
+  ctx.strokeStyle = '#252a33';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(ox, oy, world * scale, world * scale);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ox, oy, world * scale, world * scale);
+  ctx.clip();
+
+  ctx.strokeStyle = '#161a21';
+  ctx.lineWidth = 1;
+  for (let g = 0; g <= world; g += 120) {
+    ctx.beginPath();
+    ctx.moveTo(ox + g * scale, oy); ctx.lineTo(ox + g * scale, oy + world * scale);
+    ctx.moveTo(ox, oy + g * scale); ctx.lineTo(ox + world * scale, oy + g * scale);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // pellets arrive flat - x, y, colour, x, y, colour - so they are walked
+  // three at a time rather than unpacked into objects that live one frame
+  ctx.globalAlpha = 0.75;
+  const dot = Math.max(2, 5 * scale);
+
+  for (let i = 0; i < pellets.length; i += 3) {
+    ctx.fillStyle = palette[pellets[i + 2]] ?? '#9aa0a6';
+    ctx.beginPath();
+    ctx.arc(ox + pellets[i] * scale, oy + pellets[i + 1] * scale, dot, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+
+  // smallest first, so being swallowed looks like being swallowed
+  for (const b of [...blobs].sort((a, z) => a.r - z.r)) {
+    const at = drawn.get(b.i) ?? { x: b.x, y: b.y, r: b.r };
+    at.x += (b.x - at.x) * 0.35;
+    at.y += (b.y - at.y) * 0.35;
+    at.r += (b.r - at.r) * 0.2;
+    drawn.set(b.i, at);
+
+    const x = ox + at.x * scale;
+    const y = oy + at.y * scale;
+    const r = at.r * scale;
+
+    ctx.fillStyle = b.c;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = b.i === me ? '#ffffff' : '#00000055';
+    ctx.lineWidth = b.i === me ? 3 : 2;
+    ctx.stroke();
+
+    if (r > 14) {
+      ctx.fillStyle = '#0b0d11';
+      ctx.font = `${Math.min(r * 0.55, 22)}px -apple-system, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.n, x, y);
+    }
+  }
+
+  for (const id of [...drawn.keys()]) {
+    if (!blobs.some((b) => b.i === id)) drawn.delete(id);
+  }
+}
+
+requestAnimationFrame(draw);
+
+function connect(name) {
+  const address = new URL('play', location.href.replace(/[^/]*$/, ''));
+  address.protocol = address.protocol === 'https:' ? 'wss:' : 'ws:';
+
+  socket = new WebSocket(address);
+  socket.onopen = () => socket.send(JSON.stringify({ kind: 'join', name }));
+
+  socket.onmessage = (event) => {
+    const m = JSON.parse(event.data);
+
+    if (m.kind === 'welcome') {
+      me = m.id; world = m.world; palette = m.palette;
+      $('gate').hidden = true; $('over').hidden = true;
+      $('hud').hidden = false; $('board').hidden = false;
+      return;
+    }
+
+    if (m.kind === 'eaten') {
+      $('verdict').textContent = `Eaten by ${m.by}`;
+      $('final').textContent = `You got to ${m.score}.`;
+      $('over').hidden = false;
+      mine = null;
+      return;
+    }
+
+    blobs = m.b; pellets = m.p; board = m.l;
+    mine = blobs.find((b) => b.i === me) ?? mine;
+
+    $('score').textContent = mine ? Math.round(Math.PI * mine.r * mine.r - Math.PI * 196) : 0;
+    $('here').textContent = `${m.alive} in the arena`;
+    $('list').innerHTML = board.map((s) =>
+      `<li class="${mine && s.n === mine.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
+  };
+
+  socket.onclose = () => { $('here').textContent = 'disconnected'; };
+}
+
+$('go').onclick = () => connect($('name').value);
+$('again').onclick = () => { drawn.clear(); connect($('name').value); };

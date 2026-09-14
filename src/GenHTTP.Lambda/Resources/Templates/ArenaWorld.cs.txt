@@ -1,0 +1,92 @@
+// The rules of the arena. All of them decided here, on the server.
+
+static class World
+{
+    /// <summary>The arena is a square this many units on a side.</summary>
+    public const double Size = 2400;
+
+    /// <summary>How many pellets are on the floor at once.</summary>
+    public const int Pellets = 420;
+
+    /// <summary>The radius everybody starts at.</summary>
+    public const double Start = 14;
+
+    /// <summary>The radius nobody grows past, so one player cannot end the game.</summary>
+    public const double Biggest = 130;
+
+    /// <summary>What a pellet adds to the area of whoever eats it.</summary>
+    public const double PelletArea = 120;
+
+    /// <summary>How much bigger you have to be to eat somebody.</summary>
+    public const double EatRatio = 1.18;
+
+    /// <summary>How much of the loser's area the winner keeps.</summary>
+    public const double Spoils = 0.85;
+
+    /// <summary>How far either side of a player is sent to them.</summary>
+    public const double View = 700;
+
+    /// <summary>
+    /// Everything here is one of these nine colours, and the browser is told
+    /// what they are on arrival rather than being expected to already agree.
+    /// </summary>
+    public static readonly string[] Palette =
+    [
+        "#8ab4f8", "#f28b82", "#fdd663", "#81c995", "#c58af9", "#78d9ec", "#ff8bcb", "#ffa26b", "#a0e7a0"
+    ];
+
+    public static string ColourFor(int seat) => Palette[seat % Palette.Length];
+
+    /// <summary>A colour to scatter a pellet in.</summary>
+    public static int AnyTint(Random random) => random.Next(Palette.Length);
+
+    /// <summary>
+    /// How fast a blob of this size travels, in units a second.
+    /// </summary>
+    /// <remarks>
+    /// Falling off with the radius, because a game where the biggest player is
+    /// also the fastest has one player and then it is over. The exponent is
+    /// gentle enough that being large is still worth it.
+    /// </remarks>
+    public static double Speed(double radius) => 260.0 / Math.Pow(radius / Start, 0.42);
+
+    /// <summary>The area of a blob, which is what actually accumulates.</summary>
+    public static double AreaOf(double radius) => Math.PI * radius * radius;
+
+    /// <summary>The radius an area comes to, capped.</summary>
+    public static double RadiusOf(double area) => Math.Min(Biggest, Math.Sqrt(area / Math.PI));
+
+    /// <summary>What a blob is worth on the leaderboard.</summary>
+    public static int ScoreOf(double radius) => (int)Math.Round(AreaOf(radius) - AreaOf(Start));
+
+    /// <summary>Whether one blob may eat another.</summary>
+    public static bool Eats(double mine, double theirs) => mine > theirs * EatRatio;
+
+    /// <summary>Whether two blobs are touching enough for that to happen.</summary>
+    public static bool Overlaps(double ax, double ay, double ar, double bx, double by)
+    {
+        var dx = ax - bx;
+        var dy = ay - by;
+
+        // the middle of the smaller one has to be inside the larger
+        return dx * dx + dy * dy < ar * ar;
+    }
+
+    /// <summary>Whether something is near enough to be worth sending.</summary>
+    public static bool InView(double px, double py, double x, double y)
+        => Math.Abs(x - px) < View && Math.Abs(y - py) < View;
+
+    public static double Clamp(double value) => Math.Clamp(value, 0, Size);
+
+    public static string Called(string name)
+    {
+        var trimmed = (name ?? "").Trim();
+
+        if (trimmed.Length == 0)
+        {
+            return "a blob";
+        }
+
+        return trimmed.Length > 12 ? trimmed[..12] : trimmed;
+    }
+}

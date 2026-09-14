@@ -160,7 +160,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_MAX_ASSET_BYTES`            | `2097152`        | what the shipped assets may come to         |
 | `LAMBDA_MAX_CODE_LENGTH`            | `65536`          | largest snippet accepted                    |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
-| `LAMBDA_RATE_LIMIT`                 | `240`            | lambda requests per minute and client       |
+| `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |

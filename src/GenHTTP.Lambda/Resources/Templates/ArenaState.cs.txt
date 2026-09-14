@@ -1,0 +1,24 @@
+// What the server keeps about a player while they are in the arena.
+//
+// Mutable, because it is stepped twenty times a second and rebuilding every
+// player to move them a few units would be a lot of rubbish for the collector.
+// What leaves the process is the immutable shape in Protocol.cs.
+
+sealed class Player
+{
+    public string Id;
+    public string Name;
+    public string Colour;
+
+    public double X;
+    public double Y;
+    public double Radius;
+
+    /// <summary>Where the browser last said it would like to be.</summary>
+    public double WantX;
+    public double WantY;
+
+    /// <summary>Set when somebody has eaten them; the socket is told and closed.</summary>
+    public bool Gone;
+    public string EatenBy;
+}

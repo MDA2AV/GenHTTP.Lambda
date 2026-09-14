@@ -67,9 +67,9 @@ public sealed record LambdaOptions
     public int MaxVersions { get; init; } = 50;
 
     /// <summary>
-    /// Requests per minute a single client may send to the lambda routes.
+    /// Requests per second a single client may send to the lambda routes.
     /// </summary>
-    public int RateLimit { get; init; } = 240;
+    public int RateLimit { get; init; } = 5000;
 
     /// <summary>
     /// How many lambda requests may be executed at the same time.
