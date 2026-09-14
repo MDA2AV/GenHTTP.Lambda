@@ -1,12 +1,10 @@
-using System.Security.Cryptography;
-using System.Text;
-
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Telemetry;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -23,7 +21,7 @@ namespace GenHTTP.Lambda.Api;
 /// token instead - and answers nothing at all until one is configured, because
 /// a panel that is off cannot be left open by accident.
 /// </remarks>
-public sealed class AdminResource(IMetaService meta, LambdaOptions options)
+public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, LambdaOptions options)
 {
 
     #region Functionality
@@ -32,13 +30,42 @@ public sealed class AdminResource(IMetaService meta, LambdaOptions options)
     /// Every lambda, newest first.
     /// </summary>
     [ResourceMethod("lambdas")]
-    public async ValueTask<AdminListingResponse> GetLambdas(IRequest request)
+    public async ValueTask<AdminListingResponse> GetLambdas(string? search, int? page, IRequest request)
     {
         Authorize(request);
 
-        var lambdas = await meta.ListAsync();
+        var wanted = Math.Max(1, page ?? 1);
 
-        return new AdminListingResponse(lambdas, lambdas.Count, lambdas.Count(l => l.ActiveVersion != null));
+        var result = await meta.ListAsync(search, (wanted - 1) * PageSize, PageSize);
+
+        // the counters are held per lambda in memory, so this is a lookup
+        // rather than a join - and a lambda nobody has called is simply absent
+        var activity = telemetry.Describe().ToDictionary(a => a.PublicKey, StringComparer.Ordinal);
+
+        var lambdas = result.Lambdas.Select(l =>
+        {
+            var seen = activity.GetValueOrDefault(l.PublicKey);
+
+            return new AdminLambda(
+                l.PublicKey,
+                l.PrivateKey,
+                l.Tier,
+                l.Created,
+                l.Modified,
+                l.ActiveVersion,
+                l.LatestVersion,
+                l.Versions,
+                l.DeployedUntil,
+                l.KeptUntil,
+                seen?.Requests ?? 0,
+                seen?.Failed ?? 0,
+                seen?.LastSeen
+            );
+        }).ToList();
+
+        var pages = Math.Max(1, (result.Matched + PageSize - 1) / PageSize);
+
+        return new AdminListingResponse(lambdas, result.Total, result.Deployed, result.Matched, Math.Min(wanted, pages), pages);
     }
 
     /// <summary>
@@ -93,6 +120,11 @@ public sealed class AdminResource(IMetaService meta, LambdaOptions options)
     /// with no panel is indistinguishable from one that simply has no such
     /// route.
     /// </remarks>
+    /// <summary>
+    /// How many lambdas a page of the listing holds.
+    /// </summary>
+    private const int PageSize = 20;
+
     private void Authorize(IRequest request) => AdminGate.Require(request, options);
 
     private async ValueTask<string> RequireAsync(string publicKey)

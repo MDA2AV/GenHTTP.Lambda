@@ -26,6 +26,7 @@ public static class TemplateCatalog
         new("websocket-imperative", "websocket", "Imperative", "A loop that owns the connection and reads it frame by frame.", "WebsocketImperative")
     ];
 
+
     private static readonly LambdaTemplateGroup[] GroupList =
     [
         new("rest", "Answers requests", "A service, a page, a document - anything a client asks for and gets back.", [.. All.Where(t => t.Group == "rest")]),
@@ -40,9 +41,14 @@ public static class TemplateCatalog
     public static IReadOnlyList<LambdaTemplateGroup> Groups => GroupList;
 
     /// <summary>
-    /// Whether the given identifier belongs to a template.
+    /// Whether the given identifier belongs to a template, hidden or not.
     /// </summary>
     public static bool Exists(string id) => Array.Exists(All, t => t.Id == id);
+
+    /// <summary>
+    /// The template a name refers to, or null where nothing does.
+    /// </summary>
+    public static LambdaTemplate? Find(string? id) => id == null ? null : Array.Find(All, t => t.Id == id);
 
     /// <summary>
     /// The code of a template, with the public key filled into its comments.
@@ -64,11 +70,23 @@ public static class TemplateCatalog
 /// <summary>
 /// One example, read from the assembly the first time it is asked for.
 /// </summary>
-public sealed class LambdaTemplate(string id, string group, string name, string description, string resource)
+public sealed class LambdaTemplate(string id, string group, string name, string description, string resource, bool hidden = false)
 {
     private readonly Lazy<string> _source = new(() => Read(resource), LazyThreadSafetyMode.ExecutionAndPublication);
 
     public string Id => id;
+
+    /// <summary>
+    /// Whether this one is reachable by name but left out of the listing.
+    /// </summary>
+    /// <remarks>
+    /// A page elsewhere - the GenHTTP documentation, say - can send somebody
+    /// here with a template chosen to match what they were just reading. That
+    /// example belongs to that page rather than to this catalogue, so it is
+    /// reachable by name and left out of the assistant, which would otherwise
+    /// grow an entry every time anything linked here.
+    /// </remarks>
+    public bool Hidden => hidden;
 
     public string Group => group;
 

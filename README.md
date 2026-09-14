@@ -291,8 +291,12 @@ could ever read them - there they stay public, as they were before there was a
 panel to put them behind, and `LAMBDA_PUBLIC_ACTIVITY` still decides the per
 lambda figures.
 
-The listing carries no editor links. The panel acts on lambdas it does not own,
-and handing those out would make that irreversible for the people who do.
+The listing links the editor of each lambda, which is the whole of the editor
+key and therefore the whole of the credential. That is a deliberate trade: an
+administrator who has to decide whether something is abusive needs to read it,
+and reading it in the editor is also how it gets emptied or corrected rather
+than only deleted. It is one more reason the token belongs to a person and not
+in a browser somebody else uses.
 
 ## Database
 

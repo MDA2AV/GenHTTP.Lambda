@@ -427,13 +427,31 @@ public sealed class MetaService : IMetaService
                              .FirstOrDefaultAsync(cancellation);
     }
 
-    public async ValueTask<IReadOnlyList<LambdaOverview>> ListAsync(CancellationToken cancellation = default)
+    public async ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var lambdas = await database.Lambdas.AsNoTracking()
-                                    .OrderByDescending(l => l.Created)
-                                    .ToListAsync(cancellation);
+        var total = await database.Lambdas.AsNoTracking().CountAsync(cancellation);
+
+        var deployed = await database.Lambdas.AsNoTracking().CountAsync(l => l.ActiveVersion != null, cancellation);
+
+        var query = database.Lambdas.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+
+            // the public key is the only thing an administrator has to go on
+            // that is not the code itself, and it is what the panel shows
+            query = query.Where(l => EF.Functions.Like(l.PublicKey, $"%{term}%"));
+        }
+
+        var matched = await query.CountAsync(cancellation);
+
+        var lambdas = await query.OrderByDescending(l => l.Created)
+                                 .Skip(skip)
+                                 .Take(take)
+                                 .ToListAsync(cancellation);
 
         var counts = await database.Deployments.AsNoTracking()
                                    .GroupBy(d => d.LambdaId)
@@ -445,8 +463,9 @@ public sealed class MetaService : IMetaService
                                    .Select(g => new { LambdaId = g.Key, Version = g.Max(d => d.Version) })
                                    .ToDictionaryAsync(g => g.LambdaId, g => (int?)g.Version, cancellation);
 
-        return [.. lambdas.Select(l => new LambdaOverview(
+        return new LambdaPage([.. lambdas.Select(l => new LambdaOverview(
             l.PublicKey,
+            l.PrivateKey,
             l.Tier.ToString(),
             l.Created,
             l.Modified,
@@ -455,7 +474,7 @@ public sealed class MetaService : IMetaService
             counts.GetValueOrDefault(l.Id),
             l.ActiveVersion != null ? l.Deployed + Options.DeploymentLifetime : null,
             l.Modified + Options.Retention
-        ))];
+        ))], matched, total, deployed);
     }
 
     public async ValueTask<string?> GetPrivateKeyAsync(string publicKey, CancellationToken cancellation = default)
