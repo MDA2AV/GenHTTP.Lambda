@@ -6,9 +6,11 @@ import {
   api,
   type Diagnostic,
   type Lambda,
+  type LambdaFile,
   type VersionInfo,
 } from '../api';
 import { CodeEditor } from '../components/CodeEditor';
+import { FileTabs, ENTRY } from '../components/FileTabs';
 import { CopyField } from '../components/CopyField';
 import { Storage } from '../components/Storage';
 import { Lifetime } from '../components/Lifetime';
@@ -34,8 +36,9 @@ export function Editor({ theme }: Props) {
   const [lambda, setLambda] = useState<Lambda | null>(null);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [loaded, setLoaded] = useState<number | null>(null);
-  const [code, setCode] = useState('');
+  const [files, setFiles] = useState<LambdaFile[]>([{ name: ENTRY, code: '' }]);
   const [saved, setSaved] = useState('');
+  const [active, setActive] = useState(ENTRY);
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [built, setBuilt] = useState<'idle' | 'clean'>('idle');
   const [busy, setBusy] = useState<Busy>(null);
@@ -50,7 +53,26 @@ export function Editor({ theme }: Props) {
   // elsewhere arrives by redirect, which carries none - so the query says so
   const invited = new URLSearchParams(location.search).get('created') === '1';
   const fresh = (location.state as { created?: boolean } | null)?.created === true || invited;
-  const dirty = code !== saved;
+  /*
+   * The file being edited is the one the editor shows; the rest are still
+   * part of what gets saved, checked and deployed. Dirtiness is about all of
+   * them, so switching files is not mistaken for changing something.
+   */
+  const current = files.find((file) => file.name === active) ?? files[0];
+  const code = current?.code ?? '';
+  const dirty = JSON.stringify(files) !== saved;
+
+  const setCode = useCallback((next: string) => {
+    setFiles((all) => all.map((file) => (file.name === active ? { ...file, code: next } : file)));
+  }, [active]);
+
+  const adopt = useCallback((loaded: LambdaFile[]) => {
+    const usable = loaded.length > 0 ? loaded : [{ name: ENTRY, code: '' }];
+
+    setFiles(usable);
+    setSaved(JSON.stringify(usable));
+    setActive((was) => (usable.some((file) => file.name === was) ? was : usable[0].name));
+  }, []);
 
   // completions come from the server, so they always match what compiles
   useEffect(() => {
@@ -76,14 +98,14 @@ export function Editor({ theme }: Props) {
   }, [privateKey]);
 
   useEffect(() => {
-    let active = true;
+    let alive = true;
 
     async function load() {
       try {
         const current = await api.get(privateKey);
         const history = await api.versions(privateKey);
 
-        if (!active) {
+        if (!alive) {
           return;
         }
 
@@ -95,14 +117,13 @@ export function Editor({ theme }: Props) {
         if (target != null) {
           const content = await api.version(privateKey, target);
 
-          if (active) {
-            setCode(content.code);
-            setSaved(content.code);
+          if (alive) {
+            adopt(content.files);
             setLoaded(target);
           }
         }
       } catch (error) {
-        if (active) {
+        if (alive) {
           setFailure(error instanceof ApiError ? error.message : 'This lambda could not be loaded.');
         }
       }
@@ -111,9 +132,9 @@ export function Editor({ theme }: Props) {
     load();
 
     return () => {
-      active = false;
+      alive = false;
     };
-  }, [privateKey]);
+  }, [privateKey, adopt]);
 
   useEffect(() => {
     if (!dirty) {
@@ -139,15 +160,15 @@ export function Editor({ theme }: Props) {
   }, [privateKey]);
 
   const store = useCallback(async () => {
-    const version = await api.save(privateKey, code);
+    const version = await api.save(privateKey, files);
 
-    setSaved(code);
+    setSaved(JSON.stringify(files));
     setLoaded(version.version);
 
     await refresh();
 
     return version.version;
-  }, [privateKey, code, refresh]);
+  }, [privateKey, files, refresh]);
 
   const save = useCallback(async () => {
     if (busy) {
@@ -175,7 +196,7 @@ export function Editor({ theme }: Props) {
     setBusy('check');
 
     try {
-      const result = await api.check(privateKey, code);
+      const result = await api.check(privateKey, files);
 
       setDiagnostics(result.diagnostics);
       setBuilt(result.success ? 'clean' : 'idle');
@@ -210,8 +231,7 @@ export function Editor({ theme }: Props) {
       if (result.success) {
         if (version != null) {
           const content = await api.version(privateKey, version);
-          setCode(content.code);
-          setSaved(content.code);
+          adopt(content.files);
           setLoaded(version);
         }
 
@@ -247,8 +267,7 @@ export function Editor({ theme }: Props) {
     try {
       const content = await api.version(privateKey, version);
 
-      setCode(content.code);
-      setSaved(content.code);
+      adopt(content.files);
       setLoaded(version);
       setDiagnostics([]);
       setBuilt('idle');
@@ -326,11 +345,22 @@ export function Editor({ theme }: Props) {
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <div className="flex min-h-0 flex-1 flex-col">
+          <FileTabs
+            files={files}
+            active={active}
+            onSelect={setActive}
+            onChange={setFiles}
+            faulty={new Set(diagnostics.filter((d) => d.file).map((d) => d.file!))}
+          />
+
           <div className="min-h-[18rem] flex-1">
             <CodeEditor
+              // the editor is remounted per file, so undo history and the
+              // model belong to the file they were made in
+              key={active}
               value={code}
               theme={theme}
-              diagnostics={diagnostics}
+              diagnostics={diagnostics.filter((d) => (d.file ?? ENTRY) === active)}
               reveal={reveal}
               onChange={setCode}
               onSave={save}

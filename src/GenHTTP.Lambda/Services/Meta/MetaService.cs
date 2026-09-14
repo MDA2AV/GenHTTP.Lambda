@@ -402,7 +402,17 @@ public sealed class MetaService : IMetaService
             throw LambdaException.Invalid("The code must not be empty.");
         }
 
-        if (code.Length > Options.MaxCodeLength)
+        var files = LambdaSource.Parse(code);
+
+        if (LambdaSource.Validate(files) is { } complaint)
+        {
+            throw LambdaException.Invalid(complaint);
+        }
+
+        // the limit counts what was written rather than what it is stored as,
+        // so splitting a lambda into files does not spend any of it on the
+        // envelope those files are kept in
+        if (LambdaSource.Length(files) > Options.MaxCodeLength)
         {
             throw LambdaException.Invalid($"The code must not exceed {Options.MaxCodeLength} characters.");
         }

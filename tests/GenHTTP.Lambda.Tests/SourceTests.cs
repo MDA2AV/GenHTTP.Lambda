@@ -1,5 +1,10 @@
+using System.Net;
+
+using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
+
+using GenHTTP.Testing;
 
 namespace GenHTTP.Lambda.Tests;
 
@@ -99,6 +104,56 @@ public sealed class SourceTests
 
         Assert.IsNotNull(complaint, "a mistake has to point at the file it is in, not at the snippet");
         Assert.AreEqual(3, complaint.Line, "and at the line it is on in that file");
+    }
+
+    [TestMethod]
+    public async Task FilesSurviveBeingSavedAndReadBack()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("split");
+
+        using var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions", new
+        {
+            files = new[]
+            {
+                new { name = "lambda.cs", code = "return Inline.Create().Get(() => new Greeting(\"hi\"));" },
+                new { name = "Greeting.cs", code = "public record Greeting(string Text);" }
+            }
+        });
+
+        Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
+
+        // creating a lambda already seeds version one from its template, so
+        // this is version two and the version has to be read from the answer
+        var stored = await saved.GetContentAsync<VersionResponse>();
+
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/{stored.Version}");
+
+        var content = await read.GetContentAsync<VersionContentResponse>();
+
+        Assert.HasCount(2, content.Files);
+        Assert.AreEqual("Greeting.cs", content.Files[1].Name);
+        Assert.Contains("Inline.Create()", content.Code, "and the snippet is still where a client that knows nothing of files looks");
+    }
+
+    [TestMethod]
+    public async Task AFileNameThatWouldEscapeIsRefused()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("nasty");
+
+        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions", new
+        {
+            files = new[]
+            {
+                new { name = "lambda.cs", code = "return null;" },
+                new { name = "../../escape.cs", code = "class X { }" }
+            }
+        });
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [TestMethod]

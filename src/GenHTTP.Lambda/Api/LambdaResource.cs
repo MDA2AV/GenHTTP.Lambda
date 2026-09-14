@@ -1,6 +1,7 @@
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -110,7 +111,9 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     {
         var content = await meta.GetVersionAsync(privateKey, version);
 
-        return new VersionContentResponse(content.Version, content.Created, content.Code);
+        var files = LambdaSource.Parse(content.Code);
+
+        return new VersionContentResponse(content.Version, content.Created, files[0].Code, files);
     }
 
     /// <summary>
@@ -119,7 +122,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(Method.Post, ":privateKey/versions")]
     public async ValueTask<Result<VersionResponse>> Save(string privateKey, CodeRequest request)
     {
-        var version = await meta.SaveAsync(privateKey, request.Code);
+        var version = await meta.SaveAsync(privateKey, Combine(request));
 
         return new Result<VersionResponse>(new VersionResponse(version.Version, version.Created)).Status(ResponseStatus.Created);
     }
@@ -137,7 +140,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     {
         await RequireAsync(privateKey);
 
-        var tokens = SemanticClassifier.Classify(request.Code);
+        var tokens = SemanticClassifier.Classify(request.Code ?? string.Empty);
 
         return new SemanticsResponse([.. tokens.Select(t => new SemanticToken(t.Line, t.Column, t.Length, t.Kind))]);
     }
@@ -163,9 +166,32 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(Method.Post, ":privateKey/check")]
     public async ValueTask<CompilationResponse> Check(string privateKey, CodeRequest request)
     {
-        var outcome = await meta.CheckAsync(privateKey, request.Code);
+        var outcome = await meta.CheckAsync(privateKey, Combine(request));
 
         return new CompilationResponse(outcome.Success, outcome.Diagnostics);
+    }
+
+    /// <summary>
+    /// Turns what was submitted into the single blob a version is stored as.
+    /// </summary>
+    /// <remarks>
+    /// A caller may send files or the one snippet it used to send, and older
+    /// clients still send only the snippet. Sending both is answered by the
+    /// files, because a client that knows about them meant them.
+    /// </remarks>
+    private static string Combine(CodeRequest request)
+    {
+        if (request.Files is not { Count: > 0 } files)
+        {
+            return request.Code ?? string.Empty;
+        }
+
+        if (LambdaSource.Validate(files) is { } complaint)
+        {
+            throw LambdaException.Invalid(complaint);
+        }
+
+        return LambdaSource.Serialize(files);
     }
 
     #endregion

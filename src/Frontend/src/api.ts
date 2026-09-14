@@ -26,8 +26,15 @@ export interface VersionInfo {
   created: string;
 }
 
-export interface VersionContent extends VersionInfo {
+export interface LambdaFile {
+  name: string;
   code: string;
+}
+
+export interface VersionContent extends VersionInfo {
+  /** The snippet, which is the first of the files. */
+  code: string;
+  files: LambdaFile[];
 }
 
 export interface Diagnostic {
@@ -36,6 +43,8 @@ export interface Diagnostic {
   message: string;
   line: number;
   column: number;
+  /** Which file it is in; absent when it is about none of them. */
+  file?: string;
 }
 
 export interface CompilationResult {
@@ -358,8 +367,8 @@ export const api = {
   version: (privateKey: string, version: number) =>
     request<VersionContent>(`/lambdas/${privateKey}/versions/${version}`),
 
-  save: (privateKey: string, code: string) =>
-    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ code })),
+  save: (privateKey: string, files: LambdaFile[]) =>
+    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files })),
 
   completions: (privateKey: string, code: string, line: number, column: number) =>
     request<{ completions: ResolvedCompletion[] }>(`/lambdas/${privateKey}/completions`,
@@ -368,8 +377,8 @@ export const api = {
   semantics: (privateKey: string, code: string) =>
     request<{ tokens: SemanticToken[] }>(`/lambdas/${privateKey}/semantics`, send({ code })),
 
-  check: (privateKey: string, code: string) =>
-    request<CompilationResult>(`/lambdas/${privateKey}/check`, send({ code })),
+  check: (privateKey: string, files: LambdaFile[]) =>
+    request<CompilationResult>(`/lambdas/${privateKey}/check`, send({ files })),
 
   deploy: (privateKey: string, version?: number) =>
     request<DeploymentResult>(`/lambdas/${privateKey}/deployment`, send({ version: version ?? null }), [422]),

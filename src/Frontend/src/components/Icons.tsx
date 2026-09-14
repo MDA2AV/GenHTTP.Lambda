@@ -95,6 +95,8 @@ export const IconSave = (p: IconProps) => (
   <Svg {...p}><path d="M5 4h11l3 3v13H5Z" /><path d="M9 4v5h6V4M8 20v-5h8v5" /></Svg>
 );
 
+export const IconPlus = (p: IconProps) => <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>;
+
 export const IconChevronDown = (p: IconProps) => <Svg {...p}><path d="m6 9 6 6 6-6" /></Svg>;
 
 export const IconLock = (p: IconProps) => (
