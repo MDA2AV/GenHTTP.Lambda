@@ -46,6 +46,7 @@ public static class TemplateCatalog
         new("tanks", "app", "Tanks in a labyrinth", "Drive, aim and shoot in a maze everybody shares, with the server deciding all of it.", "Tanks",
             true, ("Maze.cs", "TanksMaze"), ("Battle.cs", "TanksBattle"), ("Protocol.cs", "TanksProtocol"),
                   ("State.cs", "TanksState"), ("Page.cs", "TanksPage")),
+        new("uploads", "app", "A site you upload", "The single page application module pointed straight at the workspace, so the files it serves can be replaced without redeploying.", "Uploads", true),
         new("site", "app", "Front end in a folder", "A page, a stylesheet and a script in a folder called site, served from it with one line.", "Site",
             true, ("site/index.html", "SitePage"), ("site/app.css", "SiteStyle"), ("site/app.js", "SiteApp")),
         new("arena", "app", "Arena", "Everybody in one arena, eating each other, with gravity that bends the floor. The page is shipped as files rather than as strings.", "Arena",

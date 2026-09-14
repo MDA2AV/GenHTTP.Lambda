@@ -64,6 +64,10 @@ public static class ExampleCatalog
             "Drive a tank through a maze everybody shares, aim with the mouse, shoot the others and drive over crates. Six files, and the server decides all of it.",
             "", false),
 
+        new("uploads", Basic, "A site you upload",
+            "The same single page application module, pointed straight at the workspace instead of at the code. Nothing is shipped: the snippet writes a few files on its first run, and after that they can be replaced by uploading over them, live, with no deploy. One file, and it shows the two module calls that Assets.App and Workspace.App are made of.",
+            "", false),
+
         new("site", Basic, "Front end in a folder",
             "A page, a stylesheet and a script sitting in a folder called site, added in the Files tab like any other file and served from it with one line. The rest of the lambda is an ordinary API the page talks to.",
             "", false),

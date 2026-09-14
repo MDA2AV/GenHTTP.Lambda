@@ -181,6 +181,41 @@ public sealed class ExampleTests
     }
 
     [TestMethod]
+    public async Task ASiteCanBeServedStraightOutOfTheWorkspace()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedExamplesAsync();
+
+        /*
+         * This one ships nothing at all. Every file it serves was written into
+         * its workspace by its own first run, which is the point: the same
+         * module over the other directory, and what it serves can be replaced
+         * without the code changing.
+         */
+        using var page = await fixture.GetAsync("/lambda/example-uploads/");
+
+        Assert.AreEqual(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("file on disk", await page.GetContentAsync());
+
+        using var style = await fixture.GetAsync("/lambda/example-uploads/app.css");
+
+        Assert.AreEqual(HttpStatusCode.OK, style.StatusCode);
+        Assert.AreEqual("text/css", style.Content.Headers.ContentType?.MediaType);
+
+        // the whole reason ServerSideRouting is in there
+        using var deep = await fixture.GetAsync("/lambda/example-uploads/no/such/path");
+
+        Assert.AreEqual(HttpStatusCode.OK, deep.StatusCode);
+        Assert.Contains("file on disk", await deep.GetContentAsync());
+
+        // and it ships nothing, so there is nothing of it saved with the code
+        var files = await fixture.PrivateKeyOfAsync("example-uploads");
+
+        Assert.IsNotNull(files);
+    }
+
+    [TestMethod]
     public async Task AFrontEndCanBeAFolderOfFilesServedFromIt()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
