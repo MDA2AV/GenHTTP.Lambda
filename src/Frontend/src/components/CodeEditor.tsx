@@ -6,6 +6,7 @@ import type { Theme } from '../theme';
 
 interface Props {
   value: string;
+  language: string;
   theme: Theme;
   diagnostics: Diagnostic[];
   reveal?: { line: number; column: number; nonce: number };
@@ -18,7 +19,7 @@ interface Props {
  * only pushed in when it differs - otherwise every keystroke would reset the
  * cursor.
  */
-export function CodeEditor({ value, theme, diagnostics, reveal, onChange, onSave }: Props) {
+export function CodeEditor({ value, language, theme, diagnostics, reveal, onChange, onSave }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const save = useRef(onSave);
@@ -32,7 +33,7 @@ export function CodeEditor({ value, theme, diagnostics, reveal, onChange, onSave
 
     const instance = monaco.editor.create(host.current, {
       value,
-      language: 'csharp',
+      language,
       theme: theme === 'dark' ? 'lambda-dark' : 'lambda-light',
       automaticLayout: true,
       minimap: { enabled: false },
@@ -78,6 +79,16 @@ export function CodeEditor({ value, theme, diagnostics, reveal, onChange, onSave
   useEffect(() => {
     monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
   }, [theme]);
+
+  // one model outlives a change of file, so the grammar has to be moved with
+  // it or a page of markup goes on being coloured as if it were C#
+  useEffect(() => {
+    const model = editor.current?.getModel();
+
+    if (model) {
+      monaco.editor.setModelLanguage(model, language);
+    }
+  }, [language]);
 
   useEffect(() => {
     const model = editor.current?.getModel();

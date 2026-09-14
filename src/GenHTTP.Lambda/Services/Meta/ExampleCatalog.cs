@@ -64,6 +64,10 @@ public static class ExampleCatalog
             "Drive a tank through a maze everybody shares, aim with the mouse, shoot the others and drive over crates. Six files, and the server decides all of it.",
             "", false),
 
+        new("site", Basic, "Front end in a folder",
+            "A page, a stylesheet and a script sitting in a folder called site, added in the Files tab like any other file and served from it with one line. The rest of the lambda is an ordinary API the page talks to.",
+            "", false),
+
         new("arena", Advanced, "Arena",
             "Everyone who opens it is in the same arena, eating each other and growing. Anything big bends the floor and drags what is near it in; hold space and you root yourself and pull much harder, at the cost of your own size. The server holds the world and sends each player only what they can see, twenty times a second.",
             "", false)

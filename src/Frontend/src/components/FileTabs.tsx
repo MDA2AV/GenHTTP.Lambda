@@ -29,6 +29,80 @@ interface Props {
  * one that runs; everything else is ordinary C# compiled beside it, in the
  * same namespace, so nothing has to be imported to be reached.
  */
+/** What a C# file may be called, which is narrow because the name reaches a
+ *  line directive and a diagnostic. */
+function checkCode(name: string): string | null {
+  return /^[A-Za-z][A-Za-z0-9_-]*\.cs$/.test(name)
+    ? null
+    : 'Letters, digits, dashes and underscores, ending in .cs';
+}
+
+/**
+ * What anything else may be called. Wider, because it becomes a real file in
+ * a real directory - which is the point - so what matters is where it can end
+ * up rather than how it reads. The same rule the server applies.
+ */
+function checkAsset(name: string): string | null {
+  if (name.length > 120 || name.startsWith('/') || name.endsWith('/')) {
+    return 'No leading or trailing slash, and under 120 characters.';
+  }
+
+  const parts = name.split('/');
+
+  if (parts.length > 6) {
+    return 'At most six folders deep.';
+  }
+
+  for (const part of parts) {
+    if (!part || part.length > 60 || part.startsWith('.') || !/^[A-Za-z0-9._-]+$/.test(part)) {
+      return 'Letters, digits, dashes, underscores and dots, separated by slashes.';
+    }
+  }
+
+  return /\.[A-Za-z0-9]+$/.test(name) ? null : 'It needs an extension, so it can be served as the right thing.';
+}
+
+/**
+ * What a new file starts as. Never empty: an empty file is valid and says
+ * nothing about what it is for.
+ */
+function starterFor(name: string): string {
+  if (name.endsWith('.cs')) {
+    const stem = name.slice(0, -3);
+
+    return `// Types for ${stem}.\n// Everything here is compiled beside the snippet and needs no using.\n`;
+  }
+
+  if (name.endsWith('.html') || name.endsWith('.htm')) {
+    const folder = name.includes('/') ? name.slice(0, name.lastIndexOf('/')) : null;
+
+    return [
+      '<!doctype html>',
+      '<html lang="en">',
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1">',
+      '<title>My app</title>',
+      '',
+      '<h1>It is served</h1>',
+      '',
+      folder
+        ? `<!-- Serve this folder from lambda.cs with:\n     return Layout.Create().Add(Assets.App("${folder}")); -->`
+        : '<!-- Serve these files from lambda.cs with:\n     return Layout.Create().Add(Assets.App()); -->',
+      '',
+    ].join('\n');
+  }
+
+  if (name.endsWith('.css')) {
+    return 'body {\n  font: 16px/1.5 system-ui, sans-serif;\n  margin: 3rem auto;\n  max-width: 40rem;\n}\n';
+  }
+
+  if (name.endsWith('.js') || name.endsWith('.mjs')) {
+    return '// Served as it is. Nothing here is compiled or inspected.\n';
+  }
+
+  return '';
+}
+
 export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
@@ -37,10 +111,20 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
   function add(event: React.FormEvent) {
     event.preventDefault();
 
-    const wanted = name.trim().endsWith('.cs') ? name.trim() : `${name.trim()}.cs`;
+    /*
+     * A name with no extension is taken to be C#, which is what it almost
+     * always was. Anything else is a file to be served as it is - and it may
+     * name a folder, because that is how a front end gets to be a folder
+     * rather than a heap: site/index.html, site/app.js, and so on.
+     */
+    const typed = name.trim();
 
-    if (!/^[A-Za-z][A-Za-z0-9_-]*\.cs$/.test(wanted)) {
-      setProblem('Letters, digits, dashes and underscores, ending in .cs');
+    const wanted = typed.includes('.') ? typed : `${typed}.cs`;
+
+    const wrong = wanted.endsWith('.cs') ? checkCode(wanted) : checkAsset(wanted);
+
+    if (wrong) {
+      setProblem(wrong);
       return;
     }
 
@@ -51,7 +135,7 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
 
     // a new file starts as a comment rather than empty, because an empty file
     // compiles and therefore says nothing about what it is for
-    onChange([...files, { name: wanted, code: `// Types for ${wanted.replace('.cs', '')}.\n// Everything here is compiled beside the snippet and needs no using.\n` }]);
+    onChange([...files, { name: wanted, code: starterFor(wanted) }]);
     onSelect(wanted);
 
     setName('');
@@ -117,7 +201,7 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
             value={name}
             onChange={(event) => setName(event.target.value)}
             onBlur={() => { setAdding(false); setProblem(null); }}
-            placeholder="Types.cs"
+            placeholder="Types.cs or site/index.html"
             className="w-32 border border-slate-300 bg-white px-2 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
           />
           {problem && <span className="text-xs text-red-500">{problem}</span>}

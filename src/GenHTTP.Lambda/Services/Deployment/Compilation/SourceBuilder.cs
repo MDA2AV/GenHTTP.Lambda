@@ -303,9 +303,17 @@ internal static class SourceBuilder
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree()
                 => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
 
+            /// <summary>One folder of the assets as a resource tree.</summary>
+            public global::GenHTTP.Api.Content.IO.IResourceTree Tree(string folder)
+                => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(Folder(folder)).Build();
+
             /// <summary>A handler that serves the assets as files.</summary>
             public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files()
                 => global::GenHTTP.Modules.Files.Assets.From(Tree());
+
+            /// <summary>A handler that serves one folder of the assets as files.</summary>
+            public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files(string folder)
+                => global::GenHTTP.Modules.Files.Assets.From(Tree(folder));
 
             /// <summary>
             /// A single page application over the assets: index.html is the
@@ -313,6 +321,56 @@ internal static class SourceBuilder
             /// </summary>
             public global::GenHTTP.Modules.SinglePageApplications.Provider.SinglePageBuilder App()
                 => global::GenHTTP.Modules.SinglePageApplications.SinglePageApplication.From(Tree()).ServerSideRouting();
+
+            /// <summary>
+            /// A single page application over one folder of the assets.
+            /// </summary>
+            /// <remarks>
+            /// So that a front end can be a folder of files added the same way
+            /// every other file is, and served by naming it, rather than
+            /// having to be the whole of what the lambda ships.
+            /// </remarks>
+            public global::GenHTTP.Modules.SinglePageApplications.Provider.SinglePageBuilder App(string folder)
+                => global::GenHTTP.Modules.SinglePageApplications.SinglePageApplication.From(Tree(folder)).ServerSideRouting();
+
+            /// <summary>The folders assets were shipped in, relative to the root.</summary>
+            public string[] Folders()
+            {
+                if (!global::System.IO.Directory.Exists(_root))
+                {
+                    return new string[0];
+                }
+
+                var found = global::System.IO.Directory.GetDirectories(_root, "*", global::System.IO.SearchOption.AllDirectories);
+
+                var result = new string[found.Length];
+
+                for (var i = 0; i < found.Length; i++)
+                {
+                    result[i] = found[i].Substring(_root.Length).Replace('\\', '/');
+                }
+
+                return result;
+            }
+
+            private string Folder(string name)
+            {
+                var resolved = Resolve(name);
+
+                if (!global::System.IO.Directory.Exists(resolved))
+                {
+                    var had = Folders();
+
+                    var known = had.Length > 0
+                              ? "The folders this lambda ships are: " + string.Join(", ", had) + "."
+                              : "This lambda ships no folders - a file has to be named like 'site/index.html' to be in one.";
+
+                    throw new global::System.InvalidOperationException(
+                        "There is no asset folder called '" + name + "'. " + known);
+                }
+
+                return resolved;
+            }
 
             private string Resolve(string name)
             {

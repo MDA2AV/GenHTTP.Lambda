@@ -360,8 +360,9 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
         {
             what = "Any file whose name does not end in .cs. It is served as it is, never compiled, and does not spend any of the code budget.",
             shipping = "Send it with the code: { name: \"www/app.css\", code: \"body { margin: 0 }\" }. For anything that is not text, base64 it and set encoding to \"base64\".",
-            reading = "The snippet reaches them as Assets: Assets.Tree() is a resource tree, Assets.Files() a handler that serves them, Assets.App() a single page application whose index.html answers any path that matches no file. Assets.Exists / ReadText / ReadBytes / List are there too.",
-            serving = "return Layout.Create().Add(\"api\", api).Add(Assets.App());",
+            reading = "The snippet reaches them as Assets: Assets.Tree() is a resource tree, Assets.Files() a handler that serves them, Assets.App() a single page application whose index.html answers any path that matches no file. Assets.Exists / ReadText / ReadBytes / List / Folders are there too.",
+            folders = "Every one of those takes a folder name as well: Assets.App(\"site\") serves the folder site as the application, with site/index.html as its shell, and the folder's own name is not part of any address - site/app.css is asked for as /app.css. Put the front end in a folder and the root of the lambda stays free for anything else.",
+            serving = "return Layout.Create().Add(\"api\", api).Add(Assets.App(\"site\"));",
             contentTypes = "Inferred from the extension, so name things properly and nothing else has to be said.",
             limits = new
             {
@@ -389,6 +390,7 @@ public sealed class McpTools(IMetaService meta, LambdaOptions options)
         servingAPage = new
         {
             fromAssets = "Assets.App() is the whole of it for a single page application: index.html is the shell and unmatched paths are answered with it, so client side routes are real addresses.",
+            fromAFolder = "Assets.App(\"site\") does the same for one folder, which is what to use when the page is not the only thing the lambda ships. Name the files site/index.html, site/app.css, site/app.js and serve them with that one line; they are reached at /, /app.css, /app.js.",
             fromStrings = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory, for when a file is generated rather than shipped.",
             oneFile = "Content.From(Resource.FromString(html).Type(new ContentType(\"text/html; charset=utf-8\"))) serves a single page with no tree at all.",
             revalidation = "Trees answer with an ETag and a 304, so a browser stops re-fetching what it already has."

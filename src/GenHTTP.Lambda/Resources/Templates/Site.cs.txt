@@ -1,0 +1,66 @@
+// A front end served straight out of a folder of files.
+//
+//   GET /lambda/{{KEY}}/            the page, and anything it asks for
+//   GET /lambda/{{KEY}}/api/notes   what the page talks to
+//
+// The point of this one is the first line of the handler. Everything under
+// site/ was added in the Files tab the same way a C# file is, and is served
+// exactly as it was written - never compiled, never inspected, never turned
+// into a string constant in the middle of a program.
+//
+// Assets.App("site") makes a single page application of that folder:
+// site/index.html is the shell, anything else under it is served by name, and
+// a path matching no file is answered with the shell so the browser's own
+// routing works. Assets.App() with no folder does the same for everything the
+// lambda ships, which is the right thing when the page is all there is.
+//
+// Add site/about.html, or another folder beside it, and nothing here changes.
+
+var notes = new List<Note>();
+
+var writing = new object();
+
+if (Workspace.Exists("notes.json"))
+{
+    notes.AddRange(JsonSerializer.Deserialize<List<Note>>(Workspace.ReadText("notes.json")) ?? []);
+}
+
+var api = Inline.Create()
+                .Get("notes", () =>
+                {
+                    lock (writing)
+                    {
+                        return notes.ToList();
+                    }
+                })
+                .Post("notes", (Note posted) =>
+                {
+                    var written = new Note(Guid.NewGuid().ToString("n")[..8],
+                                           (posted?.Text ?? "").Trim(),
+                                           DateTime.UtcNow);
+
+                    if (written.Text.Length == 0)
+                    {
+                        throw new ProviderException(ResponseStatus.BadRequest, "A note needs something in it.");
+                    }
+
+                    lock (writing)
+                    {
+                        notes.Insert(0, written);
+
+                        if (notes.Count > 50)
+                        {
+                            notes.RemoveRange(50, notes.Count - 50);
+                        }
+
+                        Workspace.WriteText("notes.json", JsonSerializer.Serialize(notes));
+                    }
+
+                    return written;
+                });
+
+return Layout.Create()
+             .Add("api", api)
+             .Add(Assets.App("site"));
+
+record Note(string Id, string Text, DateTime Written);

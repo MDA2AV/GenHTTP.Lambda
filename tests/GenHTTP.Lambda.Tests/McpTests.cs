@@ -212,6 +212,27 @@ public sealed class McpTests
         Assert.Contains("Workspace", guide);
         Assert.Contains("anonymous", guide, "returning an anonymous type from a route is the first thing anybody hits");
         Assert.Contains("Inline.Create", guide);
+
+        // an agent shipping a front end has to be told it can put it in a
+        // folder, or it will flatten everything into the root and wonder why
+        Assert.Contains("Assets.App(\\u0022site\\u0022)", guide,
+                        "the guide has to say a folder can be served by naming it");
+    }
+
+    [TestMethod]
+    public async Task TheExampleOfAFolderServedAsASiteCanBeRead()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var read = Structured(await CallToolAsync(fixture, "read_example", new JsonObject { ["id"] = "site" }));
+
+        var files = (JsonArray)read["files"]!;
+
+        var names = files.Select(f => f!["name"]!.GetValue<string>()).ToList();
+
+        Assert.Contains("site/index.html", names, "an agent should see the folder, not just the code");
+        Assert.Contains("site/app.css", names);
+        Assert.Contains("site/app.js", names);
     }
 
     [TestMethod]

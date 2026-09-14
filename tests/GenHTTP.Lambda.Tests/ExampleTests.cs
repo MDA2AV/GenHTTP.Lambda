@@ -181,6 +181,55 @@ public sealed class ExampleTests
     }
 
     [TestMethod]
+    public async Task AFrontEndCanBeAFolderOfFilesServedFromIt()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedExamplesAsync();
+
+        /*
+         * The whole point of this one: the page and the things it asks for
+         * live in a folder that was added the way any other file is, and the
+         * lambda serves that folder by naming it. Nothing about them is
+         * compiled, and none of them is at the root of what the lambda ships.
+         */
+        using var page = await fixture.GetAsync("/lambda/example-site/");
+
+        Assert.AreEqual(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("Notes", await page.GetContentAsync());
+
+        using var style = await fixture.GetAsync("/lambda/example-site/app.css");
+
+        Assert.AreEqual(HttpStatusCode.OK, style.StatusCode, "a file beside the page is served by its name within the folder");
+        Assert.AreEqual("text/css", style.Content.Headers.ContentType?.MediaType);
+
+        using var script = await fixture.GetAsync("/lambda/example-site/app.js");
+
+        Assert.AreEqual(HttpStatusCode.OK, script.StatusCode);
+        Assert.AreEqual("application/javascript", script.Content.Headers.ContentType?.MediaType);
+
+        // the folder is what is served, so its own name is not part of any
+        // address: asking for it gets the shell back, the way any other path
+        // that names no file does
+        using var doubled = await fixture.GetAsync("/lambda/example-site/site/app.css");
+
+        Assert.AreEqual("text/html", doubled.Content.Headers.ContentType?.MediaType,
+                        "the folder is the root of what is served, not a segment underneath it");
+
+        // and a path matching no file is answered with the shell, which is
+        // what lets the browser do its own routing
+        using var deep = await fixture.GetAsync("/lambda/example-site/somewhere/else");
+
+        Assert.AreEqual(HttpStatusCode.OK, deep.StatusCode);
+        Assert.Contains("Notes", await deep.GetContentAsync());
+
+        // the code half is still code
+        using var api = await fixture.GetAsync("/lambda/example-site/api/notes", "application/json");
+
+        Assert.AreEqual(HttpStatusCode.OK, api.StatusCode);
+    }
+
+    [TestMethod]
     public async Task AnExampleCanShipAPageAsFilesRatherThanStrings()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

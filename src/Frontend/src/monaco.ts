@@ -3,11 +3,45 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 // a custom build: the full editor, but only the C# grammar
 import 'monaco-editor/esm/vs/editor/editor.all.js';
 import 'monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution';
+
+// the grammars a shipped asset is likely to be. Highlighting only - there is
+// no language service behind these, and none is wanted: the compiler has an
+// opinion about the C# and nothing has one about the rest.
+import 'monaco-editor/esm/vs/basic-languages/html/html.contribution';
+import 'monaco-editor/esm/vs/basic-languages/css/css.contribution';
+import 'monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution';
+import 'monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution';
 import { language as csharp } from 'monaco-editor/esm/vs/basic-languages/csharp/csharp';
 
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
 import type { Completion, Diagnostic } from './api';
+
+/**
+ * Which grammar a file is written in, by what it is called.
+ *
+ * Anything unrecognised is plain text rather than a guess: colouring markup as
+ * if it were code is worse than not colouring it.
+ */
+const GRAMMARS: Record<string, string> = {
+  cs: 'csharp',
+  html: 'html',
+  htm: 'html',
+  css: 'css',
+  js: 'javascript',
+  mjs: 'javascript',
+  ts: 'typescript',
+  json: 'json',
+  svg: 'html',
+  txt: 'plaintext',
+  md: 'plaintext',
+};
+
+export function languageFor(name: string): string {
+  const dot = name.lastIndexOf('.');
+
+  return (dot < 0 ? '' : GRAMMARS[name.slice(dot + 1).toLowerCase()]) ?? 'plaintext';
+}
 
 self.MonacoEnvironment = {
   getWorker: () => new EditorWorker(),

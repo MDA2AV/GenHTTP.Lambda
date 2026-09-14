@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Notes</title>
+<link rel="stylesheet" href="app.css">
+
+<main>
+  <h1>Notes</h1>
+  <p class="dim">
+    This page, its stylesheet and its script are three files in a folder called
+    <code>site</code>, added in the Files tab beside the C#. The lambda serves the
+    folder with one line: <code>Assets.App("site")</code>.
+  </p>
+
+  <form id="writing">
+    <input id="text" maxlength="140" placeholder="Write something" autocomplete="off">
+    <button>Keep it</button>
+  </form>
+
+  <ul id="notes"></ul>
+  <p class="dim" id="state">Loading…</p>
+</main>
+
+<script src="app.js" type="module"></script>

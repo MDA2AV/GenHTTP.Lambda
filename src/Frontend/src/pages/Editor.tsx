@@ -18,7 +18,7 @@ import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
 import { IconAlert, IconFolder, IconHistory, IconPlay, IconSave, IconSpinner, IconStop, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
-import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
+import { languageFor, registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 
 type Busy = 'save' | 'check' | 'deploy' | 'undeploy' | null;
@@ -359,6 +359,7 @@ export function Editor({ theme }: Props) {
               // model belong to the file they were made in
               key={active}
               value={code}
+              language={languageFor(active)}
               theme={theme}
               diagnostics={diagnostics.filter((d) => (d.file ?? ENTRY) === active)}
               reveal={reveal}
