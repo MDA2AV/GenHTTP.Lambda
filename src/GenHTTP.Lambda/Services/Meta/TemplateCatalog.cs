@@ -40,8 +40,9 @@ public static class TemplateCatalog
             true, ("Entries.cs", "GuestbookEntries"), ("Page.cs", "GuestbookPage")),
         new("inspector", "app", "Request inspector", "Answers every request with a description of itself.", "Inspector",
             true, ("Page.cs", "InspectorPage")),
-        new("arena", "app", "Shared arena", "Everybody in one three dimensional room, with the server deciding where they are.", "Arena",
-            true, ("World.cs", "ArenaWorld"), ("Protocol.cs", "ArenaProtocol"), ("Page.cs", "ArenaPage"))
+        new("tanks", "app", "Tanks in a labyrinth", "Drive, aim and shoot in a maze everybody shares, with the server deciding all of it.", "Tanks",
+            true, ("Maze.cs", "TanksMaze"), ("Battle.cs", "TanksBattle"), ("Protocol.cs", "TanksProtocol"),
+                  ("State.cs", "TanksState"), ("Page.cs", "TanksPage"))
     ];
 
 

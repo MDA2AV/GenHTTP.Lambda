@@ -1,0 +1,176 @@
+// The labyrinth: how it is dug, and what it will let you drive through.
+//
+// Dug once when the lambda starts and never again, so everybody who arrives is
+// in the same place and a reload does not rearrange the walls under them.
+//
+// The grid is the usual trick for mazes: rooms sit on odd coordinates and the
+// walls between them on even ones, so a grid of 2n+1 squares holds n rooms and
+// every wall they could share. Collision then has nothing to do with mazes -
+// it is a tank-sized circle against the squares it overlaps.
+
+static class Maze
+{
+    /// <summary>Rooms across and down. The grid is twice this plus one.</summary>
+    public const int Rooms = 9;
+
+    /// <summary>How wide one square of the grid is.</summary>
+    public const double Cell = 4.0;
+
+    /// <summary>Squares across the whole grid.</summary>
+    public const int Width = Rooms * 2 + 1;
+
+    /// <summary>How far a tank's middle stays from a wall.</summary>
+    public const double Radius = 1.25;
+
+    /// <summary>
+    /// Digs a labyrinth, as a grid of solid squares.
+    /// </summary>
+    /// <remarks>
+    /// Depth first with a stack, which is the shortest honest maze there is:
+    /// stand in a room, knock through to a neighbour nobody has visited, and
+    /// walk back when there are none. Every room ends up reachable from every
+    /// other, and there is exactly one way between any two - so a few walls
+    /// are knocked out afterwards, because a maze with no loops is a maze
+    /// where a fight is a corridor and nobody can ever get away.
+    /// </remarks>
+    public static bool[,] Dig(Random random)
+    {
+        var solid = new bool[Width, Width];
+
+        for (var x = 0; x < Width; x++)
+        {
+            for (var z = 0; z < Width; z++)
+            {
+                solid[x, z] = true;
+            }
+        }
+
+        var stack = new Stack<(int X, int Z)>();
+
+        var start = (X: 1, Z: 1);
+
+        solid[start.X, start.Z] = false;
+        stack.Push(start);
+
+        (int X, int Z)[] steps = [(0, -2), (2, 0), (0, 2), (-2, 0)];
+
+        while (stack.Count > 0)
+        {
+            var (x, z) = stack.Peek();
+
+            var options = new List<(int X, int Z)>();
+
+            foreach (var (dx, dz) in steps)
+            {
+                var (nx, nz) = (x + dx, z + dz);
+
+                if (nx > 0 && nz > 0 && nx < Width - 1 && nz < Width - 1 && solid[nx, nz])
+                {
+                    options.Add((nx, nz));
+                }
+            }
+
+            if (options.Count == 0)
+            {
+                stack.Pop();
+                continue;
+            }
+
+            var chosen = options[random.Next(options.Count)];
+
+            // knock out the wall between here and there, and the room itself
+            solid[(x + chosen.X) / 2, (z + chosen.Z) / 2] = false;
+            solid[chosen.X, chosen.Z] = false;
+
+            stack.Push(chosen);
+        }
+
+        // and then some loops, so a corridor is not always a dead end
+        for (var i = 0; i < Rooms * 2; i++)
+        {
+            var x = random.Next(1, Width - 1);
+            var z = random.Next(1, Width - 1);
+
+            // only ever a wall between two rooms, never a corner post
+            if (solid[x, z] && (x % 2 == 0) != (z % 2 == 0))
+            {
+                solid[x, z] = false;
+            }
+        }
+
+        return solid;
+    }
+
+    /// <summary>Where the middle of a grid square is.</summary>
+    public static (double X, double Z) Middle(int x, int z)
+        => ((x - Width / 2.0 + 0.5) * Cell, (z - Width / 2.0 + 0.5) * Cell);
+
+    /// <summary>Which grid square a point is in.</summary>
+    public static (int X, int Z) Square(double x, double z)
+        => ((int)Math.Floor(x / Cell + Width / 2.0), (int)Math.Floor(z / Cell + Width / 2.0));
+
+    /// <summary>Whether a point is inside a wall.</summary>
+    public static bool Blocked(bool[,] solid, double x, double z)
+    {
+        var (sx, sz) = Square(x, z);
+
+        return sx < 0 || sz < 0 || sx >= Width || sz >= Width || solid[sx, sz];
+    }
+
+    /// <summary>
+    /// Whether a tank of the usual size fits with its middle here.
+    /// </summary>
+    /// <remarks>
+    /// Four points around the middle rather than the middle alone: a tank is
+    /// wider than a point, and checking only the middle lets half of it sit
+    /// inside a wall.
+    /// </remarks>
+    public static bool Fits(bool[,] solid, double x, double z)
+        => !Blocked(solid, x - Radius, z - Radius)
+        && !Blocked(solid, x + Radius, z - Radius)
+        && !Blocked(solid, x - Radius, z + Radius)
+        && !Blocked(solid, x + Radius, z + Radius);
+
+    /// <summary>Somewhere open, for a tank to start or start again.</summary>
+    public static (double X, double Z) Somewhere(bool[,] solid, Random random)
+    {
+        for (var attempt = 0; attempt < 400; attempt++)
+        {
+            var x = random.Next(1, Width - 1);
+            var z = random.Next(1, Width - 1);
+
+            if (solid[x, z])
+            {
+                continue;
+            }
+
+            var (px, pz) = Middle(x, z);
+
+            if (Fits(solid, px, pz))
+            {
+                return (px, pz);
+            }
+        }
+
+        return Middle(1, 1);
+    }
+
+    /// <summary>
+    /// The grid as a line of noughts and ones, which is what the browser is
+    /// sent so it can build the same walls.
+    /// </summary>
+    public static string Describe(bool[,] solid)
+    {
+        var builder = new StringBuilder(Width * Width);
+
+        for (var z = 0; z < Width; z++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                builder.Append(solid[x, z] ? '1' : '0');
+            }
+        }
+
+        return builder.ToString();
+    }
+}

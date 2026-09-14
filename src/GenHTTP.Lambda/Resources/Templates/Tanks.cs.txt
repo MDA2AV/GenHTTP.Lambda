@@ -1,0 +1,363 @@
+// Tanks in a labyrinth. Drive, aim, shoot, and drive over crates.
+//
+//   GET /lambda/{{KEY}}/               the game
+//   GET /lambda/{{KEY}}/api/standings   the best rounds it remembers
+//   WS  /lambda/{{KEY}}/join            everything that happens
+//
+// Five files: this one is the socket, the clock and the storage; Maze.cs digs
+// the labyrinth and answers what fits where; Battle.cs holds the rules;
+// Protocol.cs is what the two halves say; Page.cs is the browser.
+//
+// The server decides everything. A browser sends what its keys are doing and
+// is told where every tank is, so an altered client can ask to drive through a
+// wall and simply not.
+//
+// There is a clock here, unlike the other examples, because a shell has to
+// keep travelling after the shot that fired it. It runs only while somebody is
+// connected and stops when the last of them leaves - an empty room should not
+// cost a thread, and a lambda stays loaded long after everyone has gone.
+
+var json = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true
+};
+
+var random = new Random();
+var solid = Maze.Dig(random);
+var walls = Maze.Describe(solid);
+
+var crews = new ConcurrentDictionary<IReactiveConnection, Crew>();
+var shells = new ConcurrentDictionary<string, Round>(StringComparer.Ordinal);
+var crates = new ConcurrentDictionary<string, Pickup>(StringComparer.Ordinal);
+var standings = new List<Standing>();
+
+var writing = new object();
+var sending = new SemaphoreSlim(1, 1);
+var ticking = 0;
+var seat = 0;
+
+if (Workspace.Exists("standings.json"))
+{
+    standings.AddRange(JsonSerializer.Deserialize<List<Standing>>(Workspace.ReadText("standings.json"), json) ?? []);
+}
+
+string NewId() => Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(6));
+
+void Stock()
+{
+    while (crates.Count < Battle.Crates)
+    {
+        var (x, z) = Maze.Somewhere(solid, random);
+        var id = NewId();
+
+        crates[id] = new Pickup(id, Battle.Sorts[random.Next(Battle.Sorts.Length)], x, z);
+    }
+}
+
+Stock();
+
+void Remember(Crew crew)
+{
+    if (crew.Score <= 0)
+    {
+        return;
+    }
+
+    lock (writing)
+    {
+        standings.Add(new Standing(crew.Name, crew.Score, DateTime.UtcNow));
+
+        var kept = standings.OrderByDescending(s => s.Score).ThenBy(s => s.At).Take(50).ToList();
+
+        standings.Clear();
+        standings.AddRange(kept);
+
+        Workspace.WriteText("standings.json", JsonSerializer.Serialize(standings, json));
+    }
+}
+
+async ValueTask Send(string payload)
+{
+    await sending.WaitAsync();
+
+    try
+    {
+        foreach (var listener in crews.Keys.ToArray())
+        {
+            try
+            {
+                await listener.WritePayloadAsync(payload);
+            }
+            catch (Exception)
+            {
+                crews.TryRemove(listener, out _);
+            }
+        }
+    }
+    finally
+    {
+        sending.Release();
+    }
+}
+
+ValueTask Announce(string text) => Send(JsonSerializer.Serialize(new Event("event", text), json));
+
+// one step of the fight. Everything that moves, moves here.
+void Step(double seconds)
+{
+    var now = DateTime.UtcNow;
+
+    foreach (var crew in crews.Values)
+    {
+        if (!crew.Alive)
+        {
+            if (now >= crew.Down)
+            {
+                var (rx, rz) = Maze.Somewhere(solid, random);
+
+                crew.X = rx;
+                crew.Z = rz;
+                crew.Health = Battle.Health;
+                crew.Down = null;
+            }
+
+            continue;
+        }
+
+        var (x, z, heading) = Battle.Drive(solid, crew.X, crew.Z, crew.Heading, crew.Throttle, crew.Steer, seconds);
+
+        crew.X = x;
+        crew.Z = z;
+        crew.Heading = heading;
+
+        if (crew.Firing && now >= crew.Ready)
+        {
+            crew.Ready = now.AddSeconds(crew.Reload);
+
+            var id = NewId();
+
+            // out of the end of the barrel rather than the middle of the tank,
+            // so nobody is shot by their own muzzle
+            shells[id] = new Round
+            {
+                Id = id,
+                Owner = crew.Id,
+                X = crew.X + Math.Sin(crew.Aim) * (Maze.Radius + 0.3),
+                Z = crew.Z + Math.Cos(crew.Aim) * (Maze.Radius + 0.3),
+                Heading = crew.Aim,
+                Gone = now.AddSeconds(Battle.ShellLife)
+            };
+        }
+
+        foreach (var crate in crates.Values)
+        {
+            if (!Battle.Within(crew.X, crew.Z, crate.X, crate.Z, Battle.PickupRadius))
+            {
+                continue;
+            }
+
+            if (!crates.TryRemove(crate.Id, out _))
+            {
+                continue;
+            }
+
+            if (crate.Sort == "repair")
+            {
+                crew.Health = Battle.Health;
+            }
+            else
+            {
+                crew.Boost = crate.Sort;
+                crew.BoostUntil = now.AddSeconds(Battle.BoostTime);
+            }
+
+            Stock();
+        }
+    }
+
+    foreach (var shell in shells.Values)
+    {
+        var distance = Battle.ShellSpeed * seconds;
+
+        shell.X += Math.Sin(shell.Heading) * distance;
+        shell.Z += Math.Cos(shell.Heading) * distance;
+
+        if (now >= shell.Gone || Maze.Blocked(solid, shell.X, shell.Z))
+        {
+            shells.TryRemove(shell.Id, out _);
+            continue;
+        }
+
+        foreach (var crew in crews.Values)
+        {
+            if (!crew.Alive || crew.Id == shell.Owner)
+            {
+                continue;
+            }
+
+            if (!Battle.Within(shell.X, shell.Z, crew.X, crew.Z, Battle.HitRadius))
+            {
+                continue;
+            }
+
+            shells.TryRemove(shell.Id, out _);
+
+            if (crew.Shielded)
+            {
+                // a shield takes the hit and is spent by it
+                crew.Boost = null;
+                break;
+            }
+
+            crew.Health--;
+
+            if (crew.Health <= 0)
+            {
+                crew.Down = now.AddSeconds(Battle.Respawn);
+
+                var shooter = crews.Values.FirstOrDefault(c => c.Id == shell.Owner);
+
+                if (shooter != null)
+                {
+                    shooter.Score++;
+
+                    _ = Announce($"{shooter.Name} knocked out {crew.Name}");
+                }
+            }
+
+            break;
+        }
+    }
+}
+
+string Picture()
+{
+    var tanks = crews.Values
+                     .OrderByDescending(c => c.Score)
+                     .Select(c => new Tank(c.Id, c.Name, c.Colour, Math.Round(c.X, 2), Math.Round(c.Z, 2),
+                                           Math.Round(c.Heading, 3), Math.Round(c.Aim, 3),
+                                           c.Health, c.Score, c.Alive, Math.Round(c.Remaining, 1)))
+                     .ToList();
+
+    var flying = shells.Values
+                       .Select(s => new Shell(s.Id, Math.Round(s.X, 2), Math.Round(s.Z, 2), Math.Round(s.Heading, 3)))
+                       .ToList();
+
+    return JsonSerializer.Serialize(new Snapshot("state", tanks, flying, crates.Values.ToList()), json);
+}
+
+// the clock. Started by whoever arrives to an empty room, and it stops itself
+// when the room is empty again.
+void StartClock()
+{
+    if (Interlocked.Exchange(ref ticking, 1) == 1)
+    {
+        return;
+    }
+
+    _ = Task.Run(async () =>
+    {
+        var last = DateTime.UtcNow;
+
+        try
+        {
+            while (!crews.IsEmpty)
+            {
+                await Task.Delay(50);
+
+                var now = DateTime.UtcNow;
+                var seconds = Math.Min((now - last).TotalSeconds, 0.2);
+
+                last = now;
+
+                Step(seconds);
+
+                await Send(Picture());
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref ticking, 0);
+
+            // somebody may have arrived while this was winding down
+            if (!crews.IsEmpty)
+            {
+                StartClock();
+            }
+        }
+    });
+}
+
+var socket = Websocket.Functional()
+                      .OnMessage(async (connection, message) =>
+                      {
+                          var text = await message.ReadPayloadAsync<string>() ?? "";
+
+                          if (text.Length is 0 or > 400)
+                          {
+                              return;
+                          }
+
+                          if (!crews.TryGetValue(connection, out var crew))
+                          {
+                              var joining = JsonSerializer.Deserialize<Join>(text, json);
+
+                              var (x, z) = Maze.Somewhere(solid, random);
+
+                              crew = new Crew
+                              {
+                                  Id = NewId(),
+                                  Name = Battle.Called(joining?.Name),
+                                  Colour = Battle.ColourFor(Interlocked.Increment(ref seat)),
+                                  X = x,
+                                  Z = z
+                              };
+
+                              crews[connection] = crew;
+
+                              await connection.WritePayloadAsync(JsonSerializer.Serialize(
+                                  new Welcome("welcome", crew.Id, crew.Colour, Maze.Width, Maze.Width, Maze.Cell, walls), json));
+
+                              await Announce($"{crew.Name} rolled in");
+
+                              StartClock();
+
+                              return;
+                          }
+
+                          var input = JsonSerializer.Deserialize<Input>(text, json);
+
+                          if (input == null)
+                          {
+                              return;
+                          }
+
+                          crew.Throttle = Math.Clamp(input.Throttle, -1, 1);
+                          crew.Steer = Math.Clamp(input.Steer, -1, 1);
+                          crew.Aim = input.Aim;
+                          crew.Firing = input.Fire;
+                      })
+                      .OnClose(async (connection, _) =>
+                      {
+                          if (crews.TryRemove(connection, out var leaving))
+                          {
+                              Remember(leaving);
+
+                              await Announce($"{leaving.Name} withdrew");
+                          }
+                      });
+
+var api = Inline.Create()
+                .Get("standings", () =>
+                {
+                    lock (writing)
+                    {
+                        return standings.Take(10).ToList();
+                    }
+                });
+
+return Layout.Create()
+             .Add("api", api)
+             .Add("join", socket)
+             .Add(Content.From(Resource.FromString(Site.Page).Type(new ContentType("text/html; charset=utf-8"))));
