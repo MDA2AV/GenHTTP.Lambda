@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError, api, type WorkspaceEntry, type WorkspaceListing } from '../api';
+import { ApiError, api, type LambdaFile, type WorkspaceEntry, type WorkspaceListing } from '../api';
 import { IconSpinner, IconTrash } from './Icons';
 import { useToast } from './Toast';
 
@@ -25,10 +25,12 @@ import { useToast } from './Toast';
 export function Storage({
   privateKey,
   shipped,
+  onShip,
   onClose,
 }: {
   privateKey: string;
-  shipped: { name: string; code: string }[];
+  shipped: LambdaFile[];
+  onShip: (added: LambdaFile[]) => void;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -42,7 +44,14 @@ export function Storage({
   const [naming, setNaming] = useState(false);
   const [folder, setFolder] = useState('');
 
+  const [makingShipped, setMakingShipped] = useState(false);
+  const [shippedFolder, setShippedFolder] = useState('');
+
   const picker = useRef<HTMLInputElement>(null);
+
+  /** The file chooser for shipped assets, and the folder it is aimed at. */
+  const shipping = useRef<HTMLInputElement>(null);
+  const [into, setInto] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +87,48 @@ export function Storage({
     }
 
     await load();
+  }
+
+  /**
+   * Takes uploads into the files the lambda ships, rather than the workspace.
+   *
+   * Anything that is not plainly text goes as base64, which is the only way
+   * an image or a font can get in here at all: the tabs are a text editor and
+   * a PNG cannot be typed into one. The files are handed back to the page
+   * rather than written - they belong to a version, and are saved with it.
+   */
+  async function ship(files: FileList | null, folder: string) {
+    if (files === null || files.length === 0) {
+      return;
+    }
+
+    const added: LambdaFile[] = [];
+
+    for (const file of Array.from(files)) {
+      const name = folder ? `${folder}/${file.name}` : file.name;
+
+      if (shipped.some((one) => one.name.toLowerCase() === name.toLowerCase())) {
+        toast(`${name} is already shipped. Remove it first.`, 'error');
+        continue;
+      }
+
+      const bytes = new Uint8Array(await file.arrayBuffer());
+
+      if (readable(bytes)) {
+        added.push({ name, code: new TextDecoder().decode(bytes) });
+      } else {
+        added.push({ name, code: encodeBytes(bytes), encoding: 'base64' });
+      }
+    }
+
+    if (added.length > 0) {
+      onShip(added);
+      toast(`${added.length} file${added.length === 1 ? '' : 's'} added. Save to keep them.`, 'success');
+    }
+
+    if (shipping.current) {
+      shipping.current.value = '';
+    }
   }
 
   async function makeFolder(event: React.FormEvent) {
@@ -183,6 +234,31 @@ export function Storage({
 
   const crumbs = where ? where.split('/') : [];
 
+  /*
+   * The shipped files by the folder they are in. A folder here is only ever
+   * the prefix of a name - there is no such thing as an empty one, because
+   * nothing but a file can be shipped - so it is inferred rather than listed,
+   * which is the opposite of the workspace and correct for the same reason.
+   */
+  const groups = (() => {
+    const by = new Map<string, LambdaFile[]>();
+
+    for (const file of shipped) {
+      const cut = file.name.lastIndexOf('/');
+      const folder = cut < 0 ? '' : file.name.slice(0, cut);
+
+      (by.get(folder) ?? by.set(folder, []).get(folder)!).push(file);
+    }
+
+    if (!by.has('')) {
+      by.set('', []);
+    }
+
+    return [...by.entries()]
+      .sort(([a], [b]) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)))
+      .map(([folder, files]) => ({ folder, files }));
+  })();
+
   return (
     <div
       className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
@@ -209,27 +285,84 @@ export function Storage({
           </button>
         </div>
 
-        {shipped.length > 0 && (
-          <div className="border-b border-slate-200 px-5 py-3 dark:border-ink-800">
-            <div className="text-xs font-medium text-slate-600 dark:text-slate-300">
-              Shipped with the code
-            </div>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Served exactly as written, never compiled. Edit these in the tabs above the editor; a
-              name with a slash in it puts one in a folder, and{' '}
-              <code className="font-mono">Assets.App("site")</code> serves that folder.
-            </p>
+        <div className="border-b border-slate-200 px-5 py-3 dark:border-ink-800">
+          <div className="text-xs font-medium text-slate-600 dark:text-slate-300">Shipped with the code</div>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Served exactly as written, never compiled. Text is edited in the tabs above; anything
+            that is not - an image, a font - can only be uploaded, which is what these buttons are
+            for. A folder is served by naming it: <code className="font-mono">Assets.App("site")</code>.
+          </p>
 
-            <ul className="mt-2 space-y-0.5">
-              {shipped.map((file) => (
-                <li key={file.name} className="flex items-baseline justify-between gap-3 font-mono text-xs">
-                  <span className="truncate text-slate-700 dark:text-slate-300">{file.name}</span>
-                  <span className="shrink-0 text-slate-400">{bytes(file.code.length)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+          <input
+            ref={shipping}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => ship(event.target.files, into)}
+          />
+
+          {groups.map((group) => (
+            <div key={group.folder} className="mt-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-xs text-slate-500">
+                  {group.folder === '' ? 'at the root' : `${group.folder}/`}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => { setInto(group.folder); shipping.current?.click(); }}
+                  className="text-xs text-accent-500 hover:underline"
+                >
+                  Upload here
+                </button>
+              </div>
+
+              <ul className="mt-1 space-y-0.5">
+                {group.files.map((file) => (
+                  <li key={file.name} className="flex items-baseline justify-between gap-3 font-mono text-xs">
+                    <span className="truncate text-slate-700 dark:text-slate-300">
+                      {file.name.slice(group.folder === '' ? 0 : group.folder.length + 1)}
+                      {file.encoding === 'base64' && <span className="ml-1.5 text-slate-400">binary</span>}
+                    </span>
+                    <span className="shrink-0 text-slate-400">
+                      {bytes(file.encoding === 'base64' ? (file.code.length * 3) / 4 : file.code.length)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          {makingShipped ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                const wanted = shippedFolder.trim().replace(/^\/+|\/+$/g, '');
+                if (wanted) { setInto(wanted); shipping.current?.click(); }
+                setShippedFolder('');
+                setMakingShipped(false);
+              }}
+              className="mt-2"
+            >
+              <input
+                autoFocus
+                value={shippedFolder}
+                onChange={(event) => setShippedFolder(event.target.value)}
+                onBlur={() => { setMakingShipped(false); setShippedFolder(''); }}
+                placeholder="new folder, then pick files"
+                className="w-56 border border-slate-300 bg-white px-2 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
+              />
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMakingShipped(true)}
+              className="mt-2 text-xs text-accent-500 hover:underline"
+            >
+              Upload into a new folder
+            </button>
+          )}
+        </div>
 
         {listing === null ? (
           <div className="flex items-center gap-2 px-5 py-10 text-sm text-slate-500">
@@ -398,6 +531,37 @@ export function Storage({
       </div>
     </div>
   );
+}
+
+/**
+ * Whether bytes are text somebody could reasonably edit in the tabs.
+ *
+ * A NUL byte settles it - no text file has one - and so does anything that is
+ * not valid UTF-8. Guessing from the extension would be wrong for exactly the
+ * files it matters for: a .txt full of bytes and a .dat full of JSON.
+ */
+function readable(bytes: Uint8Array): boolean {
+  if (bytes.includes(0)) {
+    return false;
+  }
+
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Base64 of bytes already in hand, in chunks so a large file does not blow the stack. */
+function encodeBytes(bytes: Uint8Array): string {
+  let binary = '';
+
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+
+  return btoa(binary);
 }
 
 /** Reads a file as base64, without the data URL prefix the reader adds. */

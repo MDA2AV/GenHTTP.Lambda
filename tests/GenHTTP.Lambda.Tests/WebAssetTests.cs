@@ -3,6 +3,8 @@ using System.Net;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
+using GenHTTP.Testing;
+
 namespace GenHTTP.Lambda.Tests;
 
 /// <summary>
@@ -114,6 +116,72 @@ public sealed class WebAssetTests
         using var response = await fixture.GetAsync("/");
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+    }
+
+
+    [TestMethod]
+    public async Task ABinaryAssetSurvivesBeingSavedAgain()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("pictures");
+
+        // a one pixel gif, which is bytes no text encoding leaves intact
+        var gif = Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+
+        var files = new object[]
+        {
+            new { name = "lambda.cs", code = "return Layout.Create().Add(Assets.App(\"site\"));" },
+            new { name = "site/index.html", code = "<!doctype html><title>x</title><img src=\"dot.gif\">" },
+            new { name = "site/dot.gif", code = Convert.ToBase64String(gif), encoding = "base64" }
+        };
+
+        using var saved = await fixture.SendAsync(HttpMethod.Post,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/versions", new { files });
+
+        Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode, await saved.GetContentAsync());
+
+        var first = System.Text.Json.Nodes.JsonNode.Parse(await saved.GetContentAsync())!["version"]!.GetValue<int>();
+
+        /*
+         * Read it back the way the editor does, and send exactly that back.
+         * The editor used not to model the encoding at all, so it came back
+         * without one - and the base64 was then stored as the literal text of
+         * itself, which is an image turned into a text file of its own
+         * spelling with nothing to say it had happened.
+         */
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/{first}");
+
+        var content = await read.GetContentAsync();
+
+        Assert.Contains("base64", content, "the encoding has to come back out, or it cannot be sent back in");
+
+        Assert.DoesNotContain("\"isCode\"", content, "the shape of a file is what it is, not what can be worked out from it");
+        Assert.DoesNotContain("\"bytes\"", content, "and certainly not a second copy of every file");
+
+        var body = System.Text.Json.Nodes.JsonNode.Parse(content)!;
+
+        using var again = await fixture.SendAsync(HttpMethod.Post,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
+            new { files = body["files"]!.DeepClone() });
+
+        Assert.AreEqual(HttpStatusCode.Created, again.StatusCode);
+
+        var version = System.Text.Json.Nodes.JsonNode.Parse(await again.GetContentAsync())!["version"]!.GetValue<int>();
+
+        using var deployed = await fixture.SendAsync(HttpMethod.Post,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/deployment", new { version });
+
+        Assert.AreEqual(HttpStatusCode.OK, deployed.StatusCode, await deployed.GetContentAsync());
+
+        using var served = await fixture.GetAsync("/lambda/pictures/dot.gif");
+
+        Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
+
+        var bytes = await served.Content.ReadAsByteArrayAsync();
+
+        Assert.AreEqual(gif.Length, bytes.Length, "the image is the image, not the letters of its base64");
+        CollectionAssert.AreEqual(gif, bytes);
     }
 
 }

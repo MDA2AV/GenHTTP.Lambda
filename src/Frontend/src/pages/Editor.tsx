@@ -355,6 +355,7 @@ export function Editor({ theme }: Props) {
         <Storage
           privateKey={privateKey!}
           shipped={files.filter((file) => !file.name.endsWith('.cs'))}
+          onShip={(added) => setFiles((all) => [...all, ...added])}
           onClose={() => setStorage(false)}
         />
       )}
@@ -392,6 +393,23 @@ export function Editor({ theme }: Props) {
           />
 
           <div className="min-h-[18rem] flex-1">
+            {current?.encoding === 'base64' ? (
+              /*
+               * A binary asset is shown rather than opened. What is in `code`
+               * is its base64, and putting that in a text editor invites
+               * somebody to change one character of it and ship a broken
+               * image - so it is not offered.
+               */
+              <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                <p className="font-mono text-sm">{active}</p>
+                <p className="text-sm text-slate-500">
+                  Shipped as it is, and not text, so there is nothing to edit here. It is served at{' '}
+                  <span className="font-mono">/{active}</span> and weighs{' '}
+                  {Math.round((code.length * 3) / 4 / 1024) || 1} kB.
+                </p>
+                <p className="text-xs text-slate-500">Replace it by deleting the tab and uploading again.</p>
+              </div>
+            ) : (
             <CodeEditor
               // the editor is remounted per file, so undo history and the
               // model belong to the file they were made in
@@ -405,6 +423,7 @@ export function Editor({ theme }: Props) {
               onSave={save}
               onDefinition={goToDefinition}
             />
+            )}
           </div>
 
           <div className="max-h-52 shrink-0 overflow-y-auto border-t border-slate-200 dark:border-ink-800">

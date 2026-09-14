@@ -29,6 +29,15 @@ export interface VersionInfo {
 export interface LambdaFile {
   name: string;
   code: string;
+
+  /**
+   * "base64" for a file that is not text, absent otherwise.
+   *
+   * Carried through the editor even though nothing here reads it, because
+   * dropping it on the way back out would turn an image into a text file
+   * full of the letters of its own encoding.
+   */
+  encoding?: string | null;
 }
 
 export interface VersionContent extends VersionInfo {

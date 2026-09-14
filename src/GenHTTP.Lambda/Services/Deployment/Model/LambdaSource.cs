@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using GenHTTP.Lambda.Services.Meta;
 
@@ -14,9 +15,18 @@ public sealed record LambdaFile(string Name, string Code, string? Encoding = nul
 {
 
     /// <summary>Whether this is C# rather than something to serve.</summary>
+    /// <remarks>
+    /// Not serialised, along with Bytes. This record is the API's shape as
+    /// well as the storage one, and both of these are worked out from what is
+    /// already there - so sending them put a second, base64 copy of every
+    /// file into every response that carried one, roughly doubling it, to say
+    /// something the caller could see for itself from the name.
+    /// </remarks>
+    [JsonIgnore]
     public bool IsCode => LambdaSource.IsCode(Name);
 
     /// <summary>The bytes of an asset, whatever it was sent as.</summary>
+    [JsonIgnore]
     public byte[] Bytes => Encoding == "base64"
                          ? Convert.FromBase64String(Code)
                          : System.Text.Encoding.UTF8.GetBytes(Code);
