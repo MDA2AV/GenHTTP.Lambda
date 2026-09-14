@@ -156,19 +156,13 @@
   html.dark .aurora-c { background: radial-gradient(34% 22% at 50% 50%, rgb(52 168 83 / 0.34), transparent 72%); }
 
   /*
-   * A film of noise over the lot, against the banding a wide gradient gets in
-   * eight bit colour. Kept faint: measured across both themes the gradients
-   * step cleanly without it, so this is insurance, and at the 0.6 it used to
-   * be it was worth about six shades of visible noise to buy nothing.
+   * There was a film of noise over all of this once, against the banding a
+   * wide gradient gets in eight bit colour. Measured across both themes at
+   * every strength it was worth, the gradients step cleanly without it - the
+   * browser dithers them itself - so it was buying nothing and costing about
+   * one and a half shades of visible speckle, worse in the dark theme where
+   * an overlay blend has more room to lighten.
    */
-  .aurora-grain {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.18;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
 
   /*
    * Somewhere for the words to sit. The field is as tall as the whole page,

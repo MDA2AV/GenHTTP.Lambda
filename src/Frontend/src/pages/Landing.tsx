@@ -46,7 +46,6 @@ export function Landing() {
         <div className="aurora aurora-a" />
         <div className="aurora aurora-b" />
         <div className="aurora aurora-c" />
-        <div className="aurora-grain" />
         <div className="aurora-clearing" />
       </div>
 
