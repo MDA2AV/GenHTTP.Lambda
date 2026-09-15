@@ -32,6 +32,18 @@ let palette = [], wellSize = 40, girths = [5];
 /** What this player is carrying, and how long is left of their own fuse. */
 let carrying = 0, fuse = 0;
 
+/*
+ * Whether this player is out and waiting to come back.
+ *
+ * It exists because a round can end while somebody is dead. The win is sent
+ * to everybody who was in the arena when the tick began, which includes the
+ * player eaten during that same tick, so their "eaten" screen is replaced by
+ * the winner's - and dismissing that used to leave them with no screen at
+ * all, not in the game, and nothing to press. That reads as the game having
+ * frozen, because from the inside it is indistinguishable from it.
+ */
+let out = false;
+
 const PERKS = { 1: 'harpoon', 2: 'blast' };
 
 /*
@@ -618,6 +630,7 @@ function connect(name) {
     if (m.kind === 'welcome') {
       me = m.id; world = m.world; palette = m.palette; wellSize = m.well ?? 40; girths = m.girths ?? [5];
       history.length = 0; camera = null;
+      out = false;
       $('gate').hidden = true; $('over').hidden = true;
       $('hud').hidden = false; $('board').hidden = false;
       return;
@@ -633,6 +646,7 @@ function connect(name) {
     }
 
     if (m.kind === 'eaten') {
+      out = true;
       $('verdict').textContent = `Eaten by ${m.by}`;
       $('final').textContent = `You got to ${m.score}.`;
       $('over').hidden = false;
@@ -675,4 +689,10 @@ $('go').onclick = () => connect($('name').value);
 $('again').onclick = () => connect($('name').value);
 
 // a win does not put anybody out - the next round is already running
-$('carry').onclick = () => { $('won').hidden = true; };
+$('carry').onclick = () => {
+  $('won').hidden = true;
+
+  // somebody who was already out goes back to the screen that has the way
+  // back in on it, rather than to an arena they are not in
+  if (out) $('over').hidden = false;
+};
