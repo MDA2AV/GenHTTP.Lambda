@@ -23,6 +23,9 @@ var fighters = new ConcurrentDictionary<IReactiveConnection, Fighter>();
 
 var arriving = new ConcurrentDictionary<IReactiveConnection, byte>();
 
+// one write at a time per socket, see Send
+var gates = new ConcurrentDictionary<IReactiveConnection, SemaphoreSlim>();
+
 var random = Random.Shared;
 
 var ticking = 0;
@@ -582,15 +585,45 @@ async ValueTask Broadcast()
     await Task.WhenAll(writes);
 }
 
-async Task Send(IReactiveConnection connection, string payload)
+/// <summary>
+/// Every write to a socket, one at a time per socket.
+/// </summary>
+/// <remarks>
+/// Two things write to a player's connection: the welcome, once, and the
+/// broadcast, twenty times a second. They were already ordered so that they
+/// could not overlap - the welcome goes out before the connection is
+/// registered, so the clock cannot see it yet - and the socket still faulted
+/// with "FlushAsync already in progress", which is what a connection says
+/// when a write starts before the previous one has finished flushing.
+/// Awaiting the write is evidently not the same as awaiting its flush.
+///
+/// So the ordering is no longer left to reasoning about who writes when. One
+/// gate per connection, held by every write, and a write that faults takes
+/// the player out of the game rather than taking the connection handler down
+/// with it - which is what the player sees as being disconnected for no
+/// reason in the middle of a round.
+/// </remarks>
+async Task<bool> Send(IReactiveConnection connection, string payload)
 {
+    var gate = gates.GetOrAdd(connection, _ => new SemaphoreSlim(1, 1));
+
+    await gate.WaitAsync();
+
     try
     {
         await connection.WritePayloadAsync(payload);
+
+        return true;
     }
     catch (Exception)
     {
         fighters.TryRemove(connection, out _);
+
+        return false;
+    }
+    finally
+    {
+        gate.Release();
     }
 }
 
@@ -703,10 +736,18 @@ var socket = Websocket.Functional()
                                                     .Select(s => new[] { s.X0, s.Y0, s.Z0, s.X1, s.Y1, s.Z1 })
                                                     .ToArray();
 
-                                  await connection.WritePayloadAsync(JsonSerializer.Serialize(
+                                  // through the same gate as every other
+                                  // write, and only counted as arrived if it
+                                  // actually got there
+                                  var greeted = await Send(connection, JsonSerializer.Serialize(
                                       new Welcome("welcome", who.Id, side, solids,
                                                   ["#4a9eff", "#ffa22b"],
                                                   World.HalfWidth, World.HalfLength), json));
+
+                                  if (!greeted)
+                                  {
+                                      return;
+                                  }
 
                                   fighters[connection] = who;
 
@@ -740,6 +781,11 @@ var socket = Websocket.Functional()
                       .OnClose((connection, reason) =>
                       {
                           fighters.TryRemove(connection, out var left);
+
+                          // not disposed: a write may still be holding it, and
+                          // a SemaphoreSlim nobody asked for a wait handle
+                          // from has nothing to dispose anyway
+                          gates.TryRemove(connection, out _);
 
                           return ValueTask.CompletedTask;
                       });

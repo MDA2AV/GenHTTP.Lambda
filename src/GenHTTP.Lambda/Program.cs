@@ -37,12 +37,12 @@ using var certificates = options.Secure ? new CertificateLoader(options, loggers
 
 if (certificates != null)
 {
-    host.Bind(IPAddress.Any, options.Port);
-    host.Bind(IPAddress.Any, options.SecurePort, certificates);
+    host.Bind(IPAddress.Any, options.Port, options.Protocols);
+    host.Bind(IPAddress.Any, options.SecurePort, certificates, httpProtocols: options.Protocols);
 }
 else
 {
-    host.Port(options.Port);
+    host.Bind(IPAddress.Any, options.Port, options.Protocols);
 }
 
 await host.StartAsync();

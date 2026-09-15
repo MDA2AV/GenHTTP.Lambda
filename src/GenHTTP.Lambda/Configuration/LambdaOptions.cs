@@ -1,3 +1,5 @@
+using GenHTTP.Api.Infrastructure;
+
 namespace GenHTTP.Lambda.Configuration;
 
 /// <summary>
@@ -20,6 +22,29 @@ public sealed record LambdaOptions
     /// The engine the root web server is hosted with.
     /// </summary>
     public LambdaEngine Engine { get; init; } = LambdaEngine.Ioxide;
+
+    /// <summary>
+    /// Which HTTP versions a port answers on.
+    /// </summary>
+    /// <remarks>
+    /// HTTP/1.1 only, and deliberately.
+    ///
+    /// The ioxide engine's HTTP/2 driver stops writing once it has filled the
+    /// window the client advertised and does not act on the WINDOW_UPDATE
+    /// frames that follow, so any response larger than that window arrives
+    /// truncated and the request never completes. Chrome advertises several
+    /// megabytes and so never notices; Firefox advertises a hundred and
+    /// twenty eight kilobytes, which the editor's script exceeds several
+    /// times over, so the editor never finished loading in it at all.
+    ///
+    /// HTTP/1.1 has no flow control to get wrong. The cost is multiplexing,
+    /// which a browser makes up for by opening more connections, and it is
+    /// a far smaller cost than a whole browser being unable to use the site.
+    ///
+    /// Set LAMBDA_HTTP_PROTOCOLS=Http1AndHttp2 to put it back once the engine
+    /// is fixed.
+    /// </remarks>
+    public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1;
 
     /// <summary>
     /// The directory holding the database, the stored code and the lambda workspaces.
@@ -207,6 +232,7 @@ public sealed record LambdaOptions
             Port = (ushort)ReadInt("LAMBDA_PORT", defaults.Port),
             Development = ReadBool("LAMBDA_DEVELOPMENT", defaults.Development),
             Engine = ReadEngine("LAMBDA_ENGINE", defaults.Engine),
+            Protocols = ReadProtocols("LAMBDA_HTTP_PROTOCOLS", defaults.Protocols),
             DataDirectory = Path.GetFullPath(ReadString("LAMBDA_DATA_DIRECTORY", defaults.DataDirectory)),
             WebRoot = Path.GetFullPath(ReadString("LAMBDA_WEB_ROOT", defaults.WebRoot)),
             DeploymentLifetime = ReadSpan("LAMBDA_DEPLOYMENT_LIFETIME_HOURS", defaults.DeploymentLifetime),
@@ -254,6 +280,9 @@ public sealed record LambdaOptions
 
     private static LambdaEngine ReadEngine(string key, LambdaEngine fallback)
         => Enum.TryParse<LambdaEngine>(Environment.GetEnvironmentVariable(key), true, out var value) ? value : fallback;
+
+    private static HttpProtocols ReadProtocols(string key, HttpProtocols fallback)
+        => Enum.TryParse<HttpProtocols>(Environment.GetEnvironmentVariable(key), true, out var value) ? value : fallback;
 
     private static TimeSpan ReadSpan(string key, TimeSpan fallback)
         => double.TryParse(Environment.GetEnvironmentVariable(key), out var value) ? TimeSpan.FromHours(value) : fallback;
