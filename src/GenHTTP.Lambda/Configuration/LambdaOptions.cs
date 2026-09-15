@@ -60,6 +60,17 @@ public sealed record LambdaOptions
     /// <summary>The secret the server sends the agent, so only it can ask.</summary>
     public string? AgentToken { get; init; }
 
+    /// <summary>
+    /// The password for the second model the build page offers.
+    /// </summary>
+    /// <remarks>
+    /// Unset, the second model is not offered and asking for it is refused, so
+    /// an installation that has not chosen a password does not quietly have an
+    /// unguarded one. There is deliberately no default: a password with a
+    /// default is a password everybody knows.
+    /// </remarks>
+    public string? AgentFablePassword { get; init; }
+
     /// <summary>How many builds one address may ask for in a day.</summary>
     /// <remarks>
     /// Ten rather than a handful, because a build is rarely the end of it: the
@@ -258,6 +269,7 @@ public sealed record LambdaOptions
             Protocols = ReadProtocols("LAMBDA_HTTP_PROTOCOLS", defaults.Protocols),
             AgentUrl = ReadOptional("LAMBDA_AGENT_URL"),
             AgentToken = ReadOptional("LAMBDA_AGENT_TOKEN"),
+            AgentFablePassword = ReadOptional("LAMBDA_AGENT_FABLE_PASSWORD"),
             AgentBuildsPerDay = ReadInt("LAMBDA_AGENT_BUILDS_PER_DAY", defaults.AgentBuildsPerDay),
             DataDirectory = Path.GetFullPath(ReadString("LAMBDA_DATA_DIRECTORY", defaults.DataDirectory)),
             WebRoot = Path.GetFullPath(ReadString("LAMBDA_WEB_ROOT", defaults.WebRoot)),

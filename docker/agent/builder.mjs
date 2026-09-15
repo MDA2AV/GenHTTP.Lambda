@@ -20,7 +20,21 @@ import { join } from 'node:path';
 
 const PORT = Number(process.env.AGENT_PORT ?? 8401);
 const MCP_URL = process.env.AGENT_MCP_URL ?? "https://genhttp.dev/mcp";
-const MODEL = process.env.AGENT_MODEL ?? 'claude-opus-4-5';
+const MODEL = process.env.AGENT_MODEL ?? 'claude-opus-5';
+
+/*
+ * Which models a caller may ask for, by short name.
+ *
+ * An allowlist rather than a passthrough, because the name arrives from a text
+ * box on the public internet: handing whatever it says to --model would let a
+ * visitor pick anything the account can reach, including something far more
+ * expensive than what is on offer. The short names are all the outside world
+ * ever sees, and the identifiers stay in here.
+ */
+const MODELS = {
+  opus: MODEL,
+  fable: process.env.AGENT_FABLE_MODEL ?? 'claude-fable-5-1'
+};
 const MAX_TURNS = Number(process.env.AGENT_MAX_TURNS ?? 40);
 const TIMEOUT = Number(process.env.AGENT_TIMEOUT_SECONDS ?? 300) * 1000;
 const ORIGIN = process.env.AGENT_PUBLIC_ORIGIN ?? 'https://genhttp.dev';
@@ -115,10 +129,10 @@ let running = false;
 
 const clip = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
 
-function enqueue(prompt, key) {
+function enqueue(prompt, key, model) {
   const id = randomUUID();
 
-  jobs.set(id, { id, state: 'queued', prompt, key, events: [], created: Date.now(), result: null });
+  jobs.set(id, { id, state: 'queued', prompt, key, model, events: [], created: Date.now(), result: null });
 
   queue.push(id);
   setImmediate(pump);
@@ -181,7 +195,7 @@ async function run(job) {
 
   const args = [
     '-p', brief,
-    '--model', MODEL,
+    '--model', MODELS[job.model] ?? MODEL,
     '--mcp-config', config,
     '--strict-mcp-config',
     '--permission-mode', 'dontAsk',
@@ -371,7 +385,7 @@ createServer((req, res) => {
   }
 
   if (req.method === 'GET' && req.url === '/health') {
-    return send(res, 200, { ok: true, running, queued: queue.length });
+    return send(res, 200, { ok: true, running, queued: queue.length, models: Object.keys(MODELS) });
   }
 
   if (req.method === 'POST' && req.url === '/build') {
@@ -399,7 +413,15 @@ createServer((req, res) => {
         return send(res, 400, { error: 'That does not look like an editor key.' });
       }
 
-      return send(res, 202, { id: enqueue(clip(prompt, 2000), key), queued: queue.length });
+      let model = '';
+
+      try { model = String(JSON.parse(body).model ?? '').trim(); } catch { model = ''; }
+
+      if (model && !Object.hasOwn(MODELS, model)) {
+        return send(res, 400, { error: 'There is no such model here.' });
+      }
+
+      return send(res, 202, { id: enqueue(clip(prompt, 2000), key, model), queued: queue.length });
     });
 
     return;

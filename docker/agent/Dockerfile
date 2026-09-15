@@ -16,7 +16,7 @@
 # verify-tools.sh and reading what it prints before changing this number.
 FROM node:22-slim
 
-ARG CLAUDE_VERSION=2.1.236
+ARG CLAUDE_VERSION=2.1.273
 
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_VERSION} \
  && npm cache clean --force

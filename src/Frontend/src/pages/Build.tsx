@@ -51,6 +51,9 @@ export function Build() {
   const [events, setEvents] = useState<string[]>([]);
   const [result, setResult] = useState<Result | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [secondModel, setSecondModel] = useState(false);
+  const [model, setModel] = useState('opus');
+  const [password, setPassword] = useState('');
   const [copied, setCopied] = useState(false);
 
   const polling = useRef<number | null>(null);
@@ -60,7 +63,10 @@ export function Build() {
 
     api.build
       .available()
-      .then((r) => setAvailable(r.available))
+      .then((r) => {
+        setAvailable(r.available);
+        setSecondModel(r.secondModel);
+      })
       .catch(() => setAvailable(false));
 
     return () => {
@@ -78,7 +84,14 @@ export function Build() {
     let id: string;
 
     try {
-      id = (await api.build.start(prompt.trim(), editor.trim() || undefined)).id;
+      id = (
+        await api.build.start(
+          prompt.trim(),
+          editor.trim() || undefined,
+          model === 'opus' ? undefined : model,
+          model === 'opus' ? undefined : password,
+        )
+      ).id;
     } catch (e) {
       setState('failed');
       setResult({ ok: false, error: e instanceof ApiError ? e.message : 'That did not go through.' });
@@ -174,13 +187,59 @@ export function Build() {
           <button
             type="button"
             onClick={start}
-            disabled={state === 'working' || prompt.trim().length < 3 || (changing && editor.trim().length < 8)}
+            disabled={
+              state === 'working' ||
+              prompt.trim().length < 3 ||
+              (changing && editor.trim().length < 8) ||
+              (model === 'fable' && password.length < 1)
+            }
             className="btn btn-primary"
           >
             {state === 'working' ? (changing ? 'Changing' : 'Building') : changing ? 'Change it' : 'Build it'}
           </button>
         </div>
       </div>
+
+      {state === 'idle' && secondModel && (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
+          <span className="text-slate-400">Built by</span>
+
+          {[
+            ['opus', 'Opus 5'],
+            ['fable', 'Fable 5.1'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setModel(id)}
+              className={
+                model === id
+                  ? 'chip !border-sky-500/60 !text-sky-600 dark:!text-sky-400'
+                  : 'chip hover:opacity-80'
+              }
+            >
+              {label}
+            </button>
+          ))}
+
+          {model === 'fable' && (
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="password"
+              autoComplete="off"
+              className="field !h-auto !w-36 !py-1 text-sm"
+            />
+          )}
+        </div>
+      )}
+
+      {state === 'idle' && model === 'fable' && (
+        <p className="mt-2 text-center text-xs text-slate-400">
+          Fable is behind a password while it is being tried out.
+        </p>
+      )}
 
       {state === 'idle' && !changing && (
         <p className="mt-4 text-center text-sm text-slate-500">

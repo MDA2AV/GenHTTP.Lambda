@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -65,6 +67,9 @@ public sealed class BuildService : IDisposable
     /// <summary>How many builds one address is allowed in a day.</summary>
     public int PerDay => _options.AgentBuildsPerDay;
 
+    /// <summary>Whether the second model is on offer at all.</summary>
+    public bool HasSecondModel => !string.IsNullOrWhiteSpace(_options.AgentFablePassword);
+
     #region Functionality
 
     /// <summary>
@@ -74,7 +79,11 @@ public sealed class BuildService : IDisposable
     /// An editor link or key, to change something that already exists rather
     /// than make something new.
     /// </param>
-    public async ValueTask<JsonObject> StartAsync(string? prompt, string? editor, IPAddress? caller)
+    /// <param name="model">
+    /// Which of the offered models to use. The second one needs the password.
+    /// </param>
+    /// <param name="password">The password for the second model, where one was asked for.</param>
+    public async ValueTask<JsonObject> StartAsync(string? prompt, string? editor, string? model, string? password, IPAddress? caller)
     {
         var agent = Required();
 
@@ -88,6 +97,34 @@ public sealed class BuildService : IDisposable
         if (wanted.Length > 2000)
         {
             wanted = wanted[..2000];
+        }
+
+        var wanted_model = (model ?? "").Trim().ToLowerInvariant();
+
+        if (wanted_model is not ("" or "opus" or "fable"))
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, "There is no such model here.");
+        }
+
+        if (wanted_model == "fable")
+        {
+            /*
+             * Compared in full rather than short-circuiting on the first wrong
+             * character. It is a soft gate rather than a secret, but a
+             * comparison that returns faster for a closer guess is one anybody
+             * can walk a character at a time, and constant time costs nothing
+             * here.
+             */
+            var expected = _options.AgentFablePassword;
+
+            if (string.IsNullOrWhiteSpace(expected) ||
+                !CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(expected),
+                    Encoding.UTF8.GetBytes(password ?? "")))
+            {
+                throw new ProviderException(ResponseStatus.Forbidden,
+                                            "That password is not right.");
+            }
         }
 
         var key = KeyOf(editor);
@@ -108,7 +145,7 @@ public sealed class BuildService : IDisposable
 
         try
         {
-            using var response = await agent.PostAsJsonAsync("build", new { prompt = wanted, key });
+            using var response = await agent.PostAsJsonAsync("build", new { prompt = wanted, key, model = wanted_model });
 
             var body = await ReadAsync(response);
 

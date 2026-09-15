@@ -27,6 +27,9 @@ services:
       LAMBDA_AGENT_URL: http://agent:8401
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
       LAMBDA_AGENT_BUILDS_PER_DAY: ${LAMBDA_AGENT_BUILDS_PER_DAY:-10}
+      # unset, the second model is not offered at all - there is no default
+      # password, because a password in a tracked file is not one
+      LAMBDA_AGENT_FABLE_PASSWORD: ${LAMBDA_AGENT_FABLE_PASSWORD:-}
     networks:
       default:
       agent-net:
@@ -45,7 +48,8 @@ services:
     environment:
       AGENT_PORT: 8401
       AGENT_MCP_URL: ${LAMBDA_AGENT_MCP_URL:-https://genhttp.dev/mcp}
-      AGENT_MODEL: ${LAMBDA_AGENT_MODEL:-claude-opus-4-5}
+      AGENT_MODEL: ${LAMBDA_AGENT_MODEL:-claude-opus-5}
+      AGENT_FABLE_MODEL: ${LAMBDA_AGENT_FABLE_MODEL:-claude-fable-5-1}
       AGENT_MAX_TURNS: ${LAMBDA_AGENT_MAX_TURNS:-40}
       AGENT_TIMEOUT_SECONDS: ${LAMBDA_AGENT_TIMEOUT_SECONDS:-300}
       AGENT_PUBLIC_ORIGIN: ${LAMBDA_AGENT_ORIGIN:-https://genhttp.dev}

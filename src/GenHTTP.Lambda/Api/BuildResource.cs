@@ -34,7 +34,10 @@ public sealed class BuildResource(BuildService builds)
     public JsonObject Get() => new()
     {
         ["available"] = builds.Available,
-        ["perDay"] = builds.PerDay
+        ["perDay"] = builds.PerDay,
+        // said, but never what it is: the page needs to know whether to offer
+        // the choice, not what the answer is
+        ["secondModel"] = builds.HasSecondModel
     };
 
     /// <summary>
@@ -42,7 +45,7 @@ public sealed class BuildResource(BuildService builds)
     /// </summary>
     [ResourceMethod(Method.Post)]
     public async ValueTask<JsonObject> Start(BuildRequest body, IRequest request)
-        => await builds.StartAsync(body?.Prompt, body?.Editor, request.Client.Address);
+        => await builds.StartAsync(body?.Prompt, body?.Editor, body?.Model, body?.Password, request.Client.Address);
 
     /// <summary>
     /// How a build is getting on, polled while it runs.
@@ -57,4 +60,4 @@ public sealed class BuildResource(BuildService builds)
 /// something that already exists, to change that instead of making something
 /// new.
 /// </summary>
-public sealed record BuildRequest(string? Prompt, string? Editor = null);
+public sealed record BuildRequest(string? Prompt, string? Editor = null, string? Model = null, string? Password = null);
