@@ -172,6 +172,14 @@ export interface Telemetry {
   latest: TelemetrySample;
   intervalSeconds: number;
   samples: TelemetrySample[];
+  events: EventHistory;
+}
+
+/** What has happened on the platform, counted by day. */
+export interface EventHistory {
+  /** yyyy-MM-dd, oldest first. */
+  days: string[];
+  series: { kind: string; counts: number[]; total: number }[];
 }
 
 export interface Example {
@@ -362,7 +370,7 @@ export const api = {
   },
 
   telemetry: (minutes: number, token: string) =>
-    request<Telemetry>(`/telemetry?minutes=${minutes}`, withToken(token)),
+    request<Telemetry>(`/telemetry?minutes=${minutes}&days=30`, withToken(token)),
 
   examples: () => request<ExampleListing>('/examples'),
 

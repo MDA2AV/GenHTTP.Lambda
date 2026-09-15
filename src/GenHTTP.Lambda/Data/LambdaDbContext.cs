@@ -15,6 +15,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<DeploymentEntity> Deployments => Set<DeploymentEntity>();
 
+    public DbSet<EventEntity> Events => Set<EventEntity>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         var lambdas = builder.Entity<LambdaEntity>();
@@ -48,6 +50,21 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.Created).HasColumnName("created");
 
         deployments.HasIndex(d => new { d.LambdaId, d.Version }).IsUnique();
+
+        var events = builder.Entity<EventEntity>();
+
+        events.ToTable("events");
+
+        events.HasKey(e => e.Id);
+
+        events.Property(e => e.Id).HasColumnName("id");
+        events.Property(e => e.Kind).HasColumnName("kind");
+        events.Property(e => e.LambdaId).HasColumnName("lambda_id");
+        events.Property(e => e.PublicKey).HasColumnName("public_key");
+        events.Property(e => e.Occurred).HasColumnName("occurred");
+
+        events.HasIndex(e => e.Occurred);
+        events.HasIndex(e => new { e.Kind, e.Occurred });
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

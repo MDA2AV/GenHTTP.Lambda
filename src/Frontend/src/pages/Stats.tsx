@@ -6,6 +6,23 @@ import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
 import { Locked } from '../components/Locked';
 
+/** What each kind of event is called on screen. */
+const KINDS: Record<string, string> = {
+  created: 'Created',
+  saved: 'Saved',
+  deployed: 'Deployed',
+  undeployed: 'Undeployed',
+  deleted: 'Deleted',
+};
+
+const NOTES: Record<string, string> = {
+  created: 'Lambdas people have made, examples excluded. Counted from the beginning: the older half of this was recovered from the timestamps already stored rather than started from zero when the counting began.',
+  saved: 'Versions written. One per save, so a lambda worked on all afternoon contributes many.',
+  deployed: 'Times something was put online, including redeployments of the same lambda. Only this one and the two below begin from the day they started being recorded - a redeploy used to overwrite the timestamp of the one before it.',
+  undeployed: 'Times something was taken offline by hand, rather than by expiring.',
+  deleted: 'Lambdas removed. The lambda is gone; the fact that it existed is not.',
+};
+
 const WINDOWS = [
   { minutes: 15, label: '15m' },
   { minutes: 60, label: '1h' },
@@ -17,6 +34,8 @@ const WINDOWS = [
 const BLUE: [string, string] = ['#1a73e8', '#4285f4'];
 const ORANGE: [string, string] = ['#e8710a', '#d56e0c'];
 const PURPLE: [string, string] = ['#9334e6', '#a142f4'];
+const GREEN: [string, string] = ['#137333', '#1e8e3e'];
+const GREY: [string, string] = ['#5f6368', '#9aa0a6'];
 const RED: [string, string] = ['#c5221f', '#ea4335'];
 // the four things a resident set is made of; checked as a set against both
 // surfaces, including for colour blindness, rather than picked to look nice
@@ -91,7 +110,10 @@ export function Stats({ dark }: { dark: boolean }) {
     );
   }
 
-  const { server, traffic, platform, latest, samples } = data;
+  const { server, traffic, platform, latest, samples, events } = data;
+
+  /** One event kind's daily counts, or nothing if the server did not send it. */
+  const pick = (kind: string) => events?.series.find((s) => s.kind === kind)?.counts ?? [];
   const labels = samples.map((s) => time(s.taken));
 
   const line = (label: string, color: [string, string], pick: (s: TelemetrySample) => number): Series => ({
@@ -146,6 +168,22 @@ export function Stats({ dark }: { dark: boolean }) {
         <Tile label="Lambdas" value={`${platform.deployed} / ${platform.lambdas}`} />
       </div>
 
+      {/* What people have done, as opposed to what the machine is doing. The
+          counts are for the whole life of the installation: the tables beside
+          them hold the present, and only the events remember last week. */}
+      {events && (
+        <div className="mt-px grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-5 dark:border-ink-800 dark:bg-ink-800">
+          {events.series.map((s) => (
+            <Tile
+              key={s.kind}
+              label={KINDS[s.kind] ?? s.kind}
+              value={count(s.total)}
+              note={NOTES[s.kind]}
+            />
+          ))}
+        </div>
+      )}
+
       {/* absent rather than zeroed where the kernel does not offer them */}
       {latest.residentBytes > 0 && (
         <div className="mt-px grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
@@ -165,6 +203,23 @@ export function Stats({ dark }: { dark: boolean }) {
       )}
 
       <div className="mt-6 space-y-5">
+        {events && events.days.length > 1 && (
+          <Chart
+            title="What people did"
+            hint="Drawn as steps rather than lines: each value counts a whole day, and sloping between them would claim activity moved smoothly from one to the next. Deployed counts every time something went online, so a lambda redeployed five times in an afternoon appears five times."
+            labels={events.days.map((d) => d.slice(5))}
+            dark={dark}
+            format={(v) => count(v)}
+            shape="step"
+            series={[
+              { label: 'Created', color: BLUE, values: pick('created') },
+              { label: 'Saved', color: PURPLE, values: pick('saved') },
+              { label: 'Deployed', color: GREEN, values: pick('deployed') },
+              { label: 'Deleted', color: GREY, values: pick('deleted') },
+            ]}
+          />
+        )}
+
         <Chart
           title="Managed heap"
           hint="The leak chart. A heap that keeps climbing across gen 2 collections is holding references it should have dropped. Committed rising while the live heap stays flat is the collector keeping pages it could hand back, which is not the same thing."

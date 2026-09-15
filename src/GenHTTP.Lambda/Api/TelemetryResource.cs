@@ -22,19 +22,25 @@ namespace GenHTTP.Lambda.Api;
 /// leaves through this resource, which is what makes it safe to serve without
 /// asking who is looking.
 /// </remarks>
-public sealed class TelemetryResource(TelemetryService telemetry, LambdaTelemetry lambdas, ServerRegistry registry, IMetaService meta, LambdaOptions options)
+public sealed class TelemetryResource(TelemetryService telemetry, LambdaTelemetry lambdas, ServerRegistry registry, IMetaService meta, EventReader events, LambdaOptions options)
 {
 
     /// <summary>
     /// The current state of the server and the readings of the last hour.
     /// </summary>
-    /// <param name="minutes">How far back the series should reach</param>
+    /// <param name="minutes">How far back the readings should reach</param>
+    /// <param name="days">How far back the business events should reach</param>
     [ResourceMethod]
-    public async ValueTask<TelemetryResponse> Get(int? minutes, IRequest request)
+    public async ValueTask<TelemetryResponse> Get(int? minutes, int? days, IRequest request)
     {
         AdminGate.RequireForFigures(request, options);
 
         var window = TimeSpan.FromMinutes(Math.Clamp(minutes ?? 60, 1, 60 * 24));
+
+        // a different window from the readings on purpose: memory is watched
+        // over an hour, and whether anybody is using the platform is a
+        // question about weeks
+        var history = await events.HistoryAsync(days ?? 30);
 
         var series = telemetry.Series(window);
 
@@ -64,7 +70,8 @@ public sealed class TelemetryResource(TelemetryService telemetry, LambdaTelemetr
             new PlatformDescription(counts.Lambdas, counts.Deployed, counts.Versions),
             latest,
             (int)options.TelemetryInterval.TotalSeconds,
-            series
+            series,
+            history
         );
     }
 

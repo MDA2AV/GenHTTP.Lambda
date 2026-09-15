@@ -101,6 +101,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<ExampleSeeder>();
         services.AddSingleton<McpTools>();
         services.AddSingleton<BuildService>();
+        services.AddSingleton<EventReader>();
 
         services.AddSingleton<SpaResources>();
 

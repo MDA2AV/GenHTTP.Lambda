@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -219,7 +220,8 @@ public sealed record TelemetryResponse(
     PlatformDescription Platform,
     TelemetrySample Latest,
     int IntervalSeconds,
-    IReadOnlyList<TelemetrySample> Samples
+    IReadOnlyList<TelemetrySample> Samples,
+    EventHistory Events
 );
 
 /// <summary>

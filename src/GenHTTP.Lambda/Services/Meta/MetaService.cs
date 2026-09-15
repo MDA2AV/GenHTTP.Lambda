@@ -154,6 +154,12 @@ public sealed class MetaService : IMetaService
 
             await SeedAsync(database, entity, template, now, cancellation);
 
+            // after the insert rather than before: the id the event refers to
+            // is the one the database just handed out
+            Record(database, entity, LambdaEvents.Created);
+
+            await database.SaveChangesAsync(cancellation);
+
             Logger.LogInformation("Created lambda {LambdaId} at '{PublicKey}'", entity.Id, entity.PublicKey);
 
             return await DescribeAsync(database, entity, cancellation);
@@ -302,6 +308,8 @@ public sealed class MetaService : IMetaService
         lambda.Deployed = DateTime.UtcNow;
         lambda.Modified = DateTime.UtcNow;
 
+        Record(database, lambda, LambdaEvents.Deployed);
+
         await database.SaveChangesAsync(cancellation);
 
         return new DeploymentResult(true, await DescribeAsync(database, lambda, cancellation), outcome.Diagnostics);
@@ -317,6 +325,8 @@ public sealed class MetaService : IMetaService
         {
             lambda.ActiveVersion = null;
             lambda.Deployed = null;
+
+            Record(database, lambda, LambdaEvents.Undeployed);
 
             await database.SaveChangesAsync(cancellation);
 
@@ -532,6 +542,8 @@ public sealed class MetaService : IMetaService
 
         lambda.Modified = now;
 
+        Record(database, lambda, LambdaEvents.Saved);
+
         await database.SaveChangesAsync(cancellation);
 
         await PruneAsync(database, lambda, cancellation);
@@ -564,6 +576,33 @@ public sealed class MetaService : IMetaService
         await database.SaveChangesAsync(cancellation);
     }
 
+    /// <summary>
+    /// Notes that something happened, to be read long after it did.
+    /// </summary>
+    /// <remarks>
+    /// Added to the same context as the change it describes, so it is written
+    /// in the same transaction: an event recorded for a save that then failed
+    /// would be a lie, and one written separately could be lost on its own.
+    ///
+    /// Examples are skipped. The installation seeds its own on every boot, and
+    /// counting those would bury the activity the figures are meant to show.
+    /// </remarks>
+    private static void Record(LambdaDbContext database, LambdaEntity lambda, string kind)
+    {
+        if (lambda.IsExample)
+        {
+            return;
+        }
+
+        database.Events.Add(new EventEntity
+        {
+            Kind = kind,
+            LambdaId = lambda.Id,
+            PublicKey = lambda.PublicKey,
+            Occurred = DateTime.UtcNow
+        });
+    }
+
     private async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
     {
         Deployments.Evict(lambda.Id);
@@ -571,6 +610,8 @@ public sealed class MetaService : IMetaService
         // a deleted lambda takes its numbers with it rather than leaving a row
         // in the activity list that nothing can be looked up from any more
         Activity.Evict(lambda.Id);
+
+        Record(database, lambda, LambdaEvents.Deleted);
 
         database.Lambdas.Remove(lambda);
 
