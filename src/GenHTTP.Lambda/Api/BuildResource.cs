@@ -31,7 +31,11 @@ public sealed class BuildResource(BuildService builds)
     /// offer the box rather than offering one that answers with an error.
     /// </summary>
     [ResourceMethod]
-    public JsonObject Get() => new() { ["available"] = builds.Available };
+    public JsonObject Get() => new()
+    {
+        ["available"] = builds.Available,
+        ["perDay"] = builds.PerDay
+    };
 
     /// <summary>
     /// Asks for something to be built.

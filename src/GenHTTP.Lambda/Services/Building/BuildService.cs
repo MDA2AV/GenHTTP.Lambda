@@ -62,6 +62,9 @@ public sealed class BuildService : IDisposable
     /// <summary>Whether this installation has an agent to build with.</summary>
     public bool Available => _client != null;
 
+    /// <summary>How many builds one address is allowed in a day.</summary>
+    public int PerDay => _options.AgentBuildsPerDay;
+
     #region Functionality
 
     /// <summary>

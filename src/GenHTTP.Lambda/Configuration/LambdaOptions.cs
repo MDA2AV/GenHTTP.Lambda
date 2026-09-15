@@ -61,7 +61,13 @@ public sealed record LambdaOptions
     public string? AgentToken { get; init; }
 
     /// <summary>How many builds one address may ask for in a day.</summary>
-    public int AgentBuildsPerDay { get; init; } = 3;
+    /// <remarks>
+    /// Ten rather than a handful, because a build is rarely the end of it: the
+    /// page invites somebody to change what they just made, and a conversation
+    /// that runs out after three turns is a conversation that stopped being
+    /// one. The counting is in memory, so a restart forgives everybody.
+    /// </remarks>
+    public int AgentBuildsPerDay { get; init; } = 10;
 
     /// <summary>
     /// The directory holding the database, the stored code and the lambda workspaces.

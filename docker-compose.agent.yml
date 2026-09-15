@@ -26,7 +26,7 @@ services:
       # it. Empty LAMBDA_AGENT_URL leaves the whole feature off.
       LAMBDA_AGENT_URL: http://agent:8401
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
-      LAMBDA_AGENT_BUILDS_PER_DAY: ${LAMBDA_AGENT_BUILDS_PER_DAY:-3}
+      LAMBDA_AGENT_BUILDS_PER_DAY: ${LAMBDA_AGENT_BUILDS_PER_DAY:-10}
     networks:
       default:
       agent-net:
