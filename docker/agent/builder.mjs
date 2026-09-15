@@ -55,6 +55,31 @@ const DENY = [
   'Skill', 'ToolSearch', 'ReportFindings', 'Workflow'
 ];
 
+const CHANGE = `You are changing a web application that already exists, for somebody who asked in
+a sentence and is not a programmer. They cannot answer questions: there is no
+one to ask, so make reasonable choices and change something rather than
+stopping to clarify.
+
+How to work:
+
+1. Call read_lambda with the editor key you were given. Read what is there
+   before you change any of it - you are editing somebody's working
+   application, not starting again.
+2. Make the change they asked for and nothing else. Keep what already works,
+   keep the parts they did not mention, and keep anything the application has
+   stored: rewriting a file that reads saved data into one that reads it
+   differently throws away what people have already put in.
+3. Call write_code with the full set of files. Then check_code, and fix
+   whatever it complains about.
+4. Call deploy. The change is not live until you do.
+
+If what they asked for does not make sense for this application, do the
+closest reasonable thing and say so at the end.
+
+Finish by writing two or three sentences for the person who asked: what you
+changed. Do not list the links, they are picked up automatically. Do not
+describe your process.`;
+
 const BRIEF = `You are building one small web application for somebody who asked for it in a
 sentence and is not a programmer. They cannot answer questions: there is no
 one to ask, so make reasonable choices and build something rather than
@@ -90,10 +115,10 @@ let running = false;
 
 const clip = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
 
-function enqueue(prompt) {
+function enqueue(prompt, key) {
   const id = randomUUID();
 
-  jobs.set(id, { id, state: 'queued', prompt, events: [], created: Date.now(), result: null });
+  jobs.set(id, { id, state: 'queued', prompt, key, events: [], created: Date.now(), result: null });
 
   queue.push(id);
   setImmediate(pump);
@@ -138,7 +163,7 @@ async function run(job) {
   job.state = 'running';
   job.started = Date.now();
 
-  say(job, 'Reading the platform guide');
+  say(job, job.key ? 'Reading what is already there' : 'Reading the platform guide');
 
   const cwd = await mkdtemp(join(tmpdir(), 'build-'));
 
@@ -150,8 +175,12 @@ async function run(job) {
     mcpServers: { genhttp: { type: 'http', url: MCP_URL } }
   }));
 
+  const brief = job.key
+    ? `${CHANGE}\n\nThe editor key of the application to change: ${job.key}\n\nWhat they asked for:\n\n${job.prompt}`
+    : `${BRIEF}\n\nWhat they asked for:\n\n${job.prompt}`;
+
   const args = [
-    '-p', `${BRIEF}\n\nWhat they asked for:\n\n${job.prompt}`,
+    '-p', brief,
     '--model', MODEL,
     '--mcp-config', config,
     '--strict-mcp-config',
@@ -171,7 +200,10 @@ async function run(job) {
 
   const killer = setTimeout(() => child.kill('SIGKILL'), TIMEOUT);
 
-  let created = null;
+  // a change already knows its own key: nothing in the run will announce one,
+  // because create_lambda is not called. The public half is picked up from
+  // read_lambda the same way as everything else.
+  let created = job.key ? { privateKey: job.key } : null;
   let deployed = false;
   let summary = '';
   let stderr = '';
@@ -241,7 +273,9 @@ async function run(job) {
       ok: false,
       error: code === null || child.killed
         ? 'The build ran out of time.'
-        : 'The build did not produce anything that could be put online.',
+        : job.key
+          ? 'Nothing was changed. The editor key may be wrong, or the change could not be made.'
+          : 'The build did not produce anything that could be put online.',
       detail: clip(summary || stderr, 600)
     };
     return;
@@ -250,6 +284,7 @@ async function run(job) {
   job.state = 'done';
   job.result = {
     ok: true,
+    changed: !!job.key,
     // said plainly because it cannot be recovered: this key is the only way
     // back into what was just built
     keep: 'The editor link is the only way back in. There is no way to recover it.',
@@ -270,19 +305,29 @@ function harvest(content) {
     ? content.filter(c => c.type === 'text').map(c => c.text)
     : [String(content ?? '')];
 
+  const found = {};
+
   for (const text of texts) {
     try {
       const body = JSON.parse(text);
 
-      if (body && typeof body === 'object') {
-        if (body.publicKey) return { publicKey: body.publicKey, privateKey: body.privateKey };
-        if (body.ok && body.deployedUntil !== undefined) return { deployed: true };
-        if (body.ok && /deployed/i.test(JSON.stringify(body))) return { deployed: true };
-      }
+      if (!body || typeof body !== 'object') continue;
+
+      if (body.publicKey) found.publicKey = body.publicKey;
+      if (body.privateKey) found.privateKey = body.privateKey;
+
+      /*
+       * onlineUntil is only in the answer deploy gives, which is what makes it
+       * usable as the signal. Reading it as "anything mentioning deployed"
+       * also matched read_lambda, and testing publicKey first - as this did -
+       * meant the deploy was never examined at all, because its answer carries
+       * a public key too. The change went online and the page said it had not.
+       */
+      if (body.ok && body.onlineUntil !== undefined) found.deployed = true;
     } catch { /* not every tool answers in json */ }
   }
 
-  return null;
+  return Object.keys(found).length > 0 ? found : null;
 }
 
 const WORDS = {
@@ -346,7 +391,15 @@ createServer((req, res) => {
 
       if (queue.length > 12) return send(res, 503, { error: 'Too many builds waiting. Try again shortly.' });
 
-      return send(res, 202, { id: enqueue(clip(prompt, 2000)), queued: queue.length });
+      let key = '';
+
+      try { key = String(JSON.parse(body).key ?? '').trim(); } catch { key = ''; }
+
+      if (key && !/^[a-z0-9]{8,64}$/.test(key)) {
+        return send(res, 400, { error: 'That does not look like an editor key.' });
+      }
+
+      return send(res, 202, { id: enqueue(clip(prompt, 2000), key), queued: queue.length });
     });
 
     return;

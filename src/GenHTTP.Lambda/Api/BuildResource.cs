@@ -38,7 +38,7 @@ public sealed class BuildResource(BuildService builds)
     /// </summary>
     [ResourceMethod(Method.Post)]
     public async ValueTask<JsonObject> Start(BuildRequest body, IRequest request)
-        => await builds.StartAsync(body?.Prompt, request.Client.Address);
+        => await builds.StartAsync(body?.Prompt, body?.Editor, request.Client.Address);
 
     /// <summary>
     /// How a build is getting on, polled while it runs.
@@ -48,5 +48,9 @@ public sealed class BuildResource(BuildService builds)
 
 }
 
-/// <summary>What the browser sends: one sentence.</summary>
-public sealed record BuildRequest(string? Prompt);
+/// <summary>
+/// What the browser sends: one sentence, and optionally the editor link of
+/// something that already exists, to change that instead of making something
+/// new.
+/// </summary>
+public sealed record BuildRequest(string? Prompt, string? Editor = null);

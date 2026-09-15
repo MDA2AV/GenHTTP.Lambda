@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { api, ApiError } from '../api';
+import { CopyField } from '../components/CopyField';
 
 /**
  * One text box.
@@ -22,6 +24,7 @@ type Result = {
   error?: string;
   detail?: string;
   deployed?: boolean;
+  changed?: boolean;
 };
 
 const IDEAS = [
@@ -32,8 +35,18 @@ const IDEAS = [
   'a countdown to a date everyone can see',
 ];
 
+const CHANGES = [
+  'make it dark',
+  'add a name field',
+  'sort the newest first',
+  'let people delete their own entry',
+];
+
 export function Build() {
   const [prompt, setPrompt] = useState('');
+  const [editor, setEditor] = useState('');
+  const [changing, setChanging] = useState(false);
+  const [origin, setOrigin] = useState('');
   const [state, setState] = useState<'idle' | 'working' | 'done' | 'failed'>('idle');
   const [events, setEvents] = useState<string[]>([]);
   const [result, setResult] = useState<Result | null>(null);
@@ -43,6 +56,8 @@ export function Build() {
   const polling = useRef<number | null>(null);
 
   useEffect(() => {
+    setOrigin(window.location.origin);
+
     api.build
       .available()
       .then((r) => setAvailable(r.available))
@@ -63,7 +78,7 @@ export function Build() {
     let id: string;
 
     try {
-      id = (await api.build.start(prompt.trim())).id;
+      id = (await api.build.start(prompt.trim(), editor.trim() || undefined)).id;
     } catch (e) {
       setState('failed');
       setResult({ ok: false, error: e instanceof ApiError ? e.message : 'That did not go through.' });
@@ -103,13 +118,13 @@ export function Build() {
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-16 sm:py-24">
       <h1 className="text-center text-4xl font-light tracking-tight sm:text-5xl">
-        Say what you want.
+        {changing ? 'Say what to change.' : 'Say what you want.'}
       </h1>
 
       <p className="mx-auto mt-4 max-w-lg text-center text-slate-500">
-        It gets built, put online, and you get a link you can send to anyone. No account, no
-        install, and it can remember things - scores, messages, entries - so everybody who opens it
-        sees the same thing.
+        {changing
+          ? 'It reads what is there, makes the change and puts it back online. The link stays the same, so anything you have already shared keeps working.'
+          : 'It gets built, put online, and you get a link you can send to anyone. No account, no install, and it can remember things - scores, messages, entries - so everybody who opens it sees the same thing.'}
       </p>
 
       <div className="surface mt-10 p-2">
@@ -122,29 +137,64 @@ export function Build() {
           rows={3}
           maxLength={2000}
           disabled={state === 'working'}
-          placeholder="build a…"
+          placeholder={changing ? 'change it so…' : 'build a…'}
           className="w-full resize-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-slate-400 disabled:opacity-60"
         />
 
+        {changing && (
+          <div className="border-t border-slate-200/70 px-4 py-2.5 dark:border-slate-700/60">
+            <label className="block text-xs uppercase tracking-widest text-slate-400">
+              The editor link of the one to change
+            </label>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                value={editor}
+                onChange={(e) => setEditor(e.target.value)}
+                disabled={state === 'working'}
+                spellCheck={false}
+                placeholder={`${origin}/editor/…`}
+                className="w-full bg-transparent py-1 font-mono text-sm outline-none placeholder:text-slate-400 disabled:opacity-60"
+              />
+              <button
+                type="button"
+                className="shrink-0 text-xs text-slate-400 underline"
+                onClick={() => { setEditor(''); setChanging(false); }}
+              >
+                cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-3 px-2 pb-1">
           <span className="text-xs text-slate-400">
-            {state === 'working' ? 'building…' : 'ctrl + enter'}
+            {state === 'working' ? 'working…' : 'ctrl + enter'}
           </span>
 
           <button
             type="button"
             onClick={start}
-            disabled={state === 'working' || prompt.trim().length < 3}
+            disabled={state === 'working' || prompt.trim().length < 3 || (changing && editor.trim().length < 8)}
             className="btn btn-primary"
           >
-            {state === 'working' ? 'Building' : 'Build it'}
+            {state === 'working' ? (changing ? 'Changing' : 'Building') : changing ? 'Change it' : 'Build it'}
           </button>
         </div>
       </div>
 
+      {state === 'idle' && !changing && (
+        <p className="mt-4 text-center text-sm text-slate-500">
+          Already made one?{' '}
+          <button type="button" className="underline" onClick={() => setChanging(true)}>
+            Change it instead
+          </button>
+          {' '}by pasting its editor link.
+        </p>
+      )}
+
       {state === 'idle' && (
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          {IDEAS.map((idea) => (
+          {(changing ? CHANGES : IDEAS).map((idea) => (
             <button
               key={idea}
               type="button"
@@ -189,7 +239,7 @@ export function Build() {
           >
             <span>
               <span className="block text-xs uppercase tracking-widest text-slate-400">
-                Your app
+                {result.changed ? 'Changed, and back online' : 'Your app'}
               </span>
               <span className="block truncate font-medium">{result.url}</span>
             </span>
@@ -230,12 +280,79 @@ export function Build() {
 
           <p className="text-sm text-slate-500">
             It stays online for a day and is kept for thirty. Open the editor and press deploy to
-            put it back up, or ask for something else below.
+            put it back up.
           </p>
 
-          <button type="button" className="btn btn-ghost" onClick={() => { setState('idle'); setPrompt(''); }}>
-            Build something else
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                // straight back into the box with the key already in it: the
+                // first thing anybody wants after seeing it work is one more
+                // change, and making them find the link again to do that is
+                // the difference between a conversation and a form
+                setEditor(result.editorUrl ?? '');
+                setChanging(true);
+                setPrompt('');
+                setState('idle');
+                setResult(null);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              Change it
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => { setState('idle'); setPrompt(''); setEditor(''); setChanging(false); }}
+            >
+              Build something else
+            </button>
+          </div>
+        </section>
+      )}
+
+      {state === 'idle' && (
+        <section className="mt-16 border-t border-slate-200 pt-10 dark:border-slate-800">
+          <h2 className="text-xl font-light tracking-tight">Or use your own agent</h2>
+
+          <p className="mt-3 max-w-xl text-sm text-slate-500">
+            The box above is a Claude running on this machine. If you already have one of your own,
+            point it here instead and it can do the same things - make a lambda, write the code,
+            put it online - without a daily limit and without going through this page.
+          </p>
+
+          <div className="mt-5">
+            <CopyField value={`${origin}/mcp`} tone="accent" />
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="surface p-4">
+              <h3 className="text-sm font-medium">Claude Code</h3>
+              <pre className="mt-2 whitespace-pre-wrap break-all rounded-md bg-slate-900 p-3 text-xs text-slate-100 dark:bg-black/40">
+{`claude mcp add --transport http genhttp ${origin}/mcp`}
+              </pre>
+              <p className="mt-2 text-xs text-slate-500">
+                Then ask it for what you want, the same way you would here.
+              </p>
+            </div>
+
+            <div className="surface p-4">
+              <h3 className="text-sm font-medium">Claude on the web</h3>
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                Settings, then Connectors, then Add custom connector. Paste the address above as
+                the remote MCP server URL. There is no key and no sign in step.
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-4 text-sm text-slate-500">
+            It works the same way for changing something: give your agent the editor link and tell
+            it what to do.{' '}
+            <Link to="/agentic-coding" className="underline">More about using an agent here</Link>.
+          </p>
         </section>
       )}
 

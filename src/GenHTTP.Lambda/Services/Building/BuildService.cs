@@ -67,7 +67,11 @@ public sealed class BuildService : IDisposable
     /// <summary>
     /// Starts a build, if this caller has any left today.
     /// </summary>
-    public async ValueTask<JsonObject> StartAsync(string? prompt, IPAddress? caller)
+    /// <param name="editor">
+    /// An editor link or key, to change something that already exists rather
+    /// than make something new.
+    /// </param>
+    public async ValueTask<JsonObject> StartAsync(string? prompt, string? editor, IPAddress? caller)
     {
         var agent = Required();
 
@@ -83,6 +87,15 @@ public sealed class BuildService : IDisposable
             wanted = wanted[..2000];
         }
 
+        var key = KeyOf(editor);
+
+        if (editor != null && editor.Trim().Length > 0 && key == null)
+        {
+            throw new ProviderException(ResponseStatus.BadRequest,
+                "That does not look like an editor link. It is the address you were given to change "
+              + "this with, ending in a long string of letters and numbers.");
+        }
+
         if (caller != null && !Spend(caller))
         {
             throw new ProviderException(ResponseStatus.TooManyRequests,
@@ -92,7 +105,7 @@ public sealed class BuildService : IDisposable
 
         try
         {
-            using var response = await agent.PostAsJsonAsync("build", new { prompt = wanted });
+            using var response = await agent.PostAsJsonAsync("build", new { prompt = wanted, key });
 
             var body = await ReadAsync(response);
 
@@ -104,7 +117,9 @@ public sealed class BuildService : IDisposable
                                             body?["error"]?.GetValue<string>() ?? "The build agent would not take that.");
             }
 
-            _logger.LogInformation("Build {Id} started", body?["id"]);
+            // the key is never logged: it is the only thing standing between
+            // somebody and the ability to change what was built
+            _logger.LogInformation("Build {Id} started, changing {Changing}", body?["id"], key != null);
 
             return body ?? [];
         }
@@ -149,6 +164,32 @@ public sealed class BuildService : IDisposable
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// The editor key inside whatever somebody pasted, or nothing.
+    /// </summary>
+    /// <remarks>
+    /// People paste the whole address far more often than the key on its own,
+    /// so both are accepted and anything that is neither is refused rather
+    /// than sent on to be refused less clearly somewhere else.
+    /// </remarks>
+    private static string? KeyOf(string? editor)
+    {
+        var text = (editor ?? "").Trim();
+
+        if (text.Length == 0)
+        {
+            return null;
+        }
+
+        // the last thing that looks like a key wins, so a full URL, a URL with
+        // a trailing slash and a bare key all arrive at the same place
+        var candidate = text.TrimEnd('/').Split('/', '?', '#').LastOrDefault() ?? "";
+
+        return candidate.Length is >= 8 and <= 64 && candidate.All(c => c is >= 'a' and <= 'z' or >= '0' and <= '9')
+             ? candidate
+             : null;
+    }
 
     private HttpClient Required()
         => _client ?? throw new ProviderException(ResponseStatus.NotFound,

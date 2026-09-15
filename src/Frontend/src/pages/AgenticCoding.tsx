@@ -95,7 +95,7 @@ export function AgenticCoding() {
         <div className="surface p-5">
           <h3 className="font-medium">Claude Code</h3>
           <p className="mt-1 text-sm text-slate-500">In a terminal, once:</p>
-          <pre className="mt-3 overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100 dark:bg-black/40">
+          <pre className="mt-3 whitespace-pre-wrap break-all rounded-md bg-slate-900 p-3 text-xs text-slate-100 dark:bg-black/40">
 {`claude mcp add --transport http genhttp ${origin || 'https://genhttp.dev'}/mcp`}
           </pre>
           <p className="mt-3 text-sm text-slate-500">
