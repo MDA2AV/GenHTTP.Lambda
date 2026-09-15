@@ -50,8 +50,8 @@ services:
       AGENT_MCP_URL: ${LAMBDA_AGENT_MCP_URL:-https://genhttp.dev/mcp}
       AGENT_MODEL: ${LAMBDA_AGENT_MODEL:-claude-opus-5}
       AGENT_FABLE_MODEL: ${LAMBDA_AGENT_FABLE_MODEL:-claude-fable-5-1}
-      AGENT_MAX_TURNS: ${LAMBDA_AGENT_MAX_TURNS:-40}
-      AGENT_TIMEOUT_SECONDS: ${LAMBDA_AGENT_TIMEOUT_SECONDS:-300}
+      AGENT_MAX_TURNS: ${LAMBDA_AGENT_MAX_TURNS:-60}
+      AGENT_TIMEOUT_SECONDS: ${LAMBDA_AGENT_TIMEOUT_SECONDS:-600}
       AGENT_PUBLIC_ORIGIN: ${LAMBDA_AGENT_ORIGIN:-https://genhttp.dev}
       AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
       # everything it says to the model goes through the proxy, because it has

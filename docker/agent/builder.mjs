@@ -35,8 +35,8 @@ const MODELS = {
   opus: MODEL,
   fable: process.env.AGENT_FABLE_MODEL ?? 'claude-fable-5-1'
 };
-const MAX_TURNS = Number(process.env.AGENT_MAX_TURNS ?? 40);
-const TIMEOUT = Number(process.env.AGENT_TIMEOUT_SECONDS ?? 300) * 1000;
+const MAX_TURNS = Number(process.env.AGENT_MAX_TURNS ?? 60);
+const TIMEOUT = Number(process.env.AGENT_TIMEOUT_SECONDS ?? 600) * 1000;
 const ORIGIN = process.env.AGENT_PUBLIC_ORIGIN ?? 'https://genhttp.dev';
 const TOKEN = process.env.AGENT_TOKEN ?? '';
 
@@ -112,6 +112,16 @@ How to work:
    that does not compile.
 5. Call deploy. Nothing is online until you do.
 
+You have about ten minutes and then you are stopped, wherever you have got
+to. Aim at something that works end to end within that rather than something
+ambitious and half finished: a small game that plays beats a large one that
+does not load, and nothing at all is worse than either. Get something
+deployed and working first; make it better with whatever time is left.
+
+If what they asked for is genuinely too big - a multiplayer strategy game, an
+operating system - build the smallest honest version of it and say in your
+closing note what you left out.
+
 What to build: something that works end to end and is worth opening. If they
 asked for something with state - scores, entries, a list - keep it on the
 server so it is still there tomorrow and everybody sees the same thing. That
@@ -158,6 +168,8 @@ async function pump() {
       job.state = 'failed';
       job.result = { ok: false, error: String(e?.message ?? e) };
     }
+
+    record(job);
   }
 
   running = false;
@@ -219,6 +231,11 @@ async function run(job) {
   // read_lambda the same way as everything else.
   let created = job.key ? { privateKey: job.key } : null;
   let deployed = false;
+  let wrote = false;
+
+  // which call each result belongs to. Without it a result is just an object,
+  // and two tools that answer with the same field are indistinguishable
+  const calls = new Map();
   let summary = '';
   let stderr = '';
   let buffer = '';
@@ -242,7 +259,10 @@ async function run(job) {
       // what the agent is doing, in words a visitor can follow
       if (event.type === 'assistant') {
         for (const part of event.message?.content ?? []) {
-          if (part.type === 'tool_use') say(job, describe(part.name, part.input));
+          if (part.type === 'tool_use') {
+            calls.set(part.id, String(part.name ?? '').replace('mcp__genhttp__', ''));
+            say(job, describe(part.name, part.input));
+          }
           if (part.type === 'text' && part.text.trim()) summary = part.text.trim();
         }
       }
@@ -252,6 +272,14 @@ async function run(job) {
       if (event.type === 'user') {
         for (const part of event.message?.content ?? []) {
           if (part.type !== 'tool_result') continue;
+
+          const from = calls.get(part.tool_use_id);
+
+          // code having been written is the difference between an application
+          // and an empty address. Nothing else in the run proves it: creating
+          // a lambda seeds a starter template, and deploying that answers
+          // exactly like deploying something real.
+          if (from === 'write_code' && looksOk(part.content)) wrote = true;
 
           const found = harvest(part.content);
 
@@ -280,6 +308,26 @@ async function run(job) {
   clearTimeout(killer);
 
   await rm(cwd, { recursive: true, force: true }).catch(() => {});
+
+  /*
+   * A fresh build that never wrote code is a failure however cheerfully it
+   * ended. create_lambda seeds the starter template, so the address answers,
+   * the deploy succeeds and everything looks right - and what is online is
+   * "My Lambda / It works". That was reported as a success, with a link,
+   * to somebody who had asked for a game.
+   */
+  if (!job.key && !wrote) {
+    job.state = 'failed';
+    job.result = {
+      ok: false,
+      error: 'It ran out of time before it wrote anything. Try asking for something smaller, or '
+           + 'ask again - it gets further some runs than others.',
+      detail: clip(summary, 400),
+      publicKey: created?.publicKey,
+      privateKey: created?.privateKey
+    };
+    return;
+  }
 
   if (!created?.publicKey) {
     job.state = 'failed';
@@ -311,6 +359,49 @@ async function run(job) {
   };
 
   say(job, deployed ? 'Deployed' : 'Built, but it never went online');
+}
+
+/**
+ * One line per finished job.
+ *
+ * There was none of this, and the first time somebody asked why their build
+ * came out wrong the only evidence left was the shape of the lambda table. A
+ * prompt, what it did and how long it took is the difference between
+ * answering that and guessing at it.
+ */
+function record(job) {
+  const seconds = Math.round((Date.now() - (job.started ?? job.created)) / 1000);
+  const r = job.result ?? {};
+
+  console.log(JSON.stringify({
+    at: new Date().toISOString(),
+    id: job.id.slice(0, 8),
+    model: job.model || 'opus',
+    changing: !!job.key,
+    seconds,
+    state: job.state,
+    wrote: r.ok === true || undefined,
+    deployed: r.deployed,
+    key: r.publicKey,
+    error: r.error,
+    prompt: clip(job.prompt, 300)
+  }));
+}
+
+/** Whether a tool answered with something that was not a refusal. */
+function looksOk(content) {
+  const texts = Array.isArray(content)
+    ? content.filter(c => c.type === 'text').map(c => c.text)
+    : [String(content ?? '')];
+
+  for (const text of texts) {
+    try {
+      const body = JSON.parse(text);
+      if (body && typeof body === 'object' && body.ok === true) return true;
+    } catch { /* a refusal is prose */ }
+  }
+
+  return false;
 }
 
 /** Pulls the facts out of a tool result, whatever shape it arrived in. */
