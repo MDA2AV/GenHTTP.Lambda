@@ -1,0 +1,405 @@
+// The arena and the rules of it. Everything here is decided once and read by
+// the tick; nothing in this file knows a socket exists.
+//
+// Centimetres, Y up, origin in the middle of the floor. The map is symmetric
+// under a half turn about the origin - every box at (x, z) has a twin at
+// (-x, -z) - so one side is written down and the other is generated, which is
+// the only way a symmetric map stays symmetric after somebody edits it.
+
+/// <summary>One solid box of the map.</summary>
+/// <remarks>
+/// Held as its two corners rather than centre and size, because everything
+/// done with it - can a player stand here, does this ray cross it - wants the
+/// corners and would otherwise convert on every test.
+/// </remarks>
+readonly record struct Solid(double X0, double Y0, double Z0, double X1, double Y1, double Z1, int Tone)
+{
+    public double Top => Y1;
+
+    public bool Holds(double x, double y, double z)
+        => x > X0 && x < X1 && y > Y0 && y < Y1 && z > Z0 && z < Z1;
+}
+
+static class World
+{
+    /// <summary>How far the floor reaches from the middle.</summary>
+    public const double HalfWidth = 1300;
+    public const double HalfLength = 1950;
+
+    #region Shapes
+
+    /*
+     * Three heights, and each one is a promise about the fight it makes.
+     *
+     *   100  a standing eye at 165 clears it and a crouching one at 105 still
+     *        shows twenty centimetres of head. Nobody can hide behind it, so
+     *        it is furniture to duel over rather than to wait behind.
+     *   130  crouching at 105 hides completely and standing exposes the head
+     *        and nothing else. This is where peeking happens.
+     *   230  nothing sees over it without jumping, and a jump buys two ticks.
+     */
+    public const int Duel = 145;
+    public const int Peek = 130;
+    public const int Blind = 230;
+
+    private static readonly (string Name, double X, double Z, double W, double H, double D, bool Twin)[] Pieces =
+    [
+        // the middle, which exists to delete the straight line between the spawns
+        ("mid",    0,     0,     360, Blind, 140, false),
+
+        // the signature duel: thirteen metres of heads-only across the top of it
+        ("wall",   0,    -650,   700, Duel,  130, true),
+
+        // owns the diagonal to its own twin. Crouch and you are safe; stand and
+        // you are in a head-for-head trade
+        ("jig",    520,  -260,   260, Peek,  130, true),
+
+        // splits the home lane and makes a two metre door to swing round
+        ("pillar", 910,  -780,   130, Blind, 260, true),
+
+        // the first cover out of the spawn, facing the far wall
+        ("exit",   390,  -1170,  390, Peek,  130, true),
+
+        // the screen across the spawn pocket, and the gap in it that is the way in
+        ("shield", 1105, -1560,  390, Blind, 70,  true),
+        ("screen", 585,  -1560,  320, Blind, 70,  true),
+        ("side",   425,  -1722,  70,  Blind, 256, true),
+
+        // behind the door, so that nothing coming through it is looking at a spawn
+        ("baffle", 865,  -1700,  290, Blind, 70,  true)
+    ];
+
+    /// <summary>Everything a player or a bullet can be stopped by.</summary>
+    public static readonly Solid[] Map = Build();
+
+    private static Solid[] Build()
+    {
+        var solids = new List<Solid>();
+
+        foreach (var (_, x, z, w, h, d, twin) in Pieces)
+        {
+            solids.Add(Box(x, z, w, h, d));
+
+            if (twin)
+            {
+                solids.Add(Box(-x, -z, w, h, d));
+            }
+        }
+
+        // the walls, which are only there to stop people leaving
+        solids.Add(Box(0, HalfLength + 15, HalfWidth * 2 + 60, 300, 30));
+        solids.Add(Box(0, -HalfLength - 15, HalfWidth * 2 + 60, 300, 30));
+        solids.Add(Box(HalfWidth + 15, 0, 30, 300, HalfLength * 2));
+        solids.Add(Box(-HalfWidth - 15, 0, 30, 300, HalfLength * 2));
+
+        return [.. solids];
+    }
+
+    private static Solid Box(double x, double z, double w, double h, double d)
+        => new(x - w / 2, 0, z - d / 2, x + w / 2, h, z + d / 2, (int)h);
+
+    #endregion
+
+    #region Bodies
+
+    /// <summary>How wide and deep a player is, standing or crouched.</summary>
+    public const double Girth = 30;
+
+    public const double Tall = 180;
+    public const double Squat = 120;
+
+    /// <summary>Where the eye sits, which is not the top of the head.</summary>
+    public const double EyeTall = 165;
+    public const double EyeSquat = 105;
+
+    /// <summary>
+    /// How much of the top of somebody counts as their head.
+    /// </summary>
+    /// <remarks>
+    /// A slab rather than a sphere. A box that is a person has no cheekbones,
+    /// and pretending otherwise would make the hit depend on arithmetic
+    /// nobody can see - the drawn head is exactly this slab, so what looks
+    /// like a headshot is one.
+    /// </remarks>
+    public const double Skull = 30;
+
+    public static double Height(bool crouched) => crouched ? Squat : Tall;
+
+    public static double Eye(bool crouched) => crouched ? EyeSquat : EyeTall;
+
+    #endregion
+
+    #region Moving
+
+    /// <summary>Top speed on foot, in centimetres a second.</summary>
+    public const double Pace = 420;
+
+    public const double Quicken = 3500;
+
+    /// <summary>What slows somebody who has let go of everything.</summary>
+    public const double Drag = 4000;
+
+    /// <summary>
+    /// What slows somebody pressing the opposite way.
+    /// </summary>
+    /// <remarks>
+    /// Harder than letting go, and that gap is the whole skill of an aim map.
+    /// Releasing stops you in two ticks; pressing back stops you in one, and
+    /// since the spread depends on speed, one tick is the difference between
+    /// a shot that lands and one that does not. Twenty ticks a second is
+    /// exactly enough resolution for that to be a thing somebody can learn.
+    /// </remarks>
+    public const double Brake = 8000;
+
+    public const double Fall = 1800;
+    public const double Leap = 550;
+
+    /// <summary>How much steering there is in the air. Not much.</summary>
+    public const double Float = 0.1;
+
+    /// <summary>How long going down or coming up takes.</summary>
+    public const double Fold = 0.1;
+
+    public const double Stoop = 0.5;
+
+    #endregion
+
+    #region Shooting
+
+    public const int Magazine = 20;
+
+    public const double Reload = 1.8;
+
+    /// <summary>The least time between two shots, which is six hundred a minute.</summary>
+    public const double Cadence = 0.09;
+
+    public const double Graze = 34;
+    public const double Headshot = 85;
+
+    public const double Health = 100;
+
+    public const double Reach = 5000;
+
+    /// <summary>
+    /// How far off the line a shot goes, in degrees.
+    /// </summary>
+    /// <remarks>
+    /// Standing still and shooting once is very nearly exact - three
+    /// centimetres at thirty four metres - and everything else makes it
+    /// worse: moving most of all, being in the air worse still, and holding
+    /// the trigger down worst over time. Crouching takes a little back.
+    /// </remarks>
+    public static double Spread(double speed, bool airborne, bool crouched, int burst)
+    {
+        var cone = 0.05 + 1.2 * Math.Min(1, speed / Pace) + (airborne ? 3 : 0);
+
+        cone += Math.Min(0.9, 0.15 * burst);
+
+        return crouched ? cone * 0.6 : cone;
+    }
+
+    /// <summary>
+    /// Where the barrel has climbed to after this many shots held down.
+    /// </summary>
+    /// <remarks>
+    /// The same every time, so it can be learned and pulled back down, and so
+    /// the browser can draw the shot it predicts in the place the server will
+    /// put it. Random recoil is only difficulty; this is a pattern.
+    /// </remarks>
+    public static (double Pitch, double Yaw) Climb(int burst)
+        => (Math.Min(3.6, 0.6 * burst), 0.35 * Math.Sin(0.9 * burst));
+
+    /// <summary>How long the trigger has to be off before the barrel comes back down.</summary>
+    public const double Settle = 0.35;
+
+    #endregion
+
+    #region Rounds
+
+    public const double Respawn = 2.0;
+
+    /// <summary>How long somebody is untouchable after arriving.</summary>
+    /// <remarks>
+    /// Ends the moment they fire. It is there so that arriving is not dying,
+    /// not so that it is a free shot.
+    /// </remarks>
+    public const double Grace = 1.5;
+
+    /// <summary>How long the server can be asked to look back for a shot.</summary>
+    /// <remarks>
+    /// Past this the shooter is aiming at something too old to honour, and
+    /// somebody who has already taken cover would still be dying to it.
+    /// </remarks>
+    /// <summary>
+    /// How much time one tick is worth, always, whatever the clock says.
+    /// </summary>
+    /// <remarks>
+    /// Fixed rather than measured, and that is the whole point of it. The
+    /// browser runs this same simulation ahead of the server so that pressing
+    /// a key moves you now rather than a round trip from now, and it can only
+    /// get the same answer if it is stepping the same distance. A tick worth
+    /// however long the last Task.Delay happened to take is a tick the
+    /// browser cannot reproduce, and the difference shows up as a player who
+    /// slides half a metre every second for no reason anybody can see.
+    ///
+    /// The wall clock still decides how many of these to run, so the game
+    /// keeps real time; each one is just always worth the same.
+    /// </remarks>
+    public const double Beat = 0.05;
+
+    public const double Rewind = 0.25;
+
+    public const int History = 8;
+
+    /// <summary>Where people arrive, one side of the map.</summary>
+    private static readonly (double X, double Z)[] Pockets =
+    [
+        (560, -1780), (660, -1780), (1000, -1780), (1100, -1780), (1200, -1780),
+        (610, -1660), (710, -1660), (1050, -1660), (1150, -1660), (1250, -1660)
+    ];
+
+    public static (double X, double Z)[] Spawns(int side)
+        => [.. Pockets.Select(p => side == 0 ? p : (-p.X, -p.Z))];
+
+    /// <summary>
+    /// The gap in the screen across the pocket: the only way out of a spawn.
+    /// </summary>
+    /// <remarks>
+    /// Here so that somebody arriving can be turned to face it. Facing the
+    /// middle of the map sounds right and is not: the screen is between them
+    /// and the middle, so the first thing a new player would see is a wall a
+    /// couple of metres away, and the first thing they would do is walk into
+    /// it. The way out is a better thing to be looking at.
+    /// </remarks>
+    public static (double X, double Z) Door(int side)
+        => side == 0 ? (827, -1560) : (-827, 1560);
+
+    #endregion
+
+    #region Geometry
+
+    /// <summary>
+    /// Whether a box of this size fits here without being inside something.
+    /// </summary>
+    public static bool Clear(double x, double y, double z, double height)
+    {
+        var x0 = x - Girth;
+        var x1 = x + Girth;
+        var z0 = z - Girth;
+        var z1 = z + Girth;
+        var y1 = y + height;
+
+        foreach (var solid in Map)
+        {
+            if (x1 > solid.X0 && x0 < solid.X1 && y1 > solid.Y0 && y > solid.Y0 - 0.001
+             && y < solid.Y1 && z1 > solid.Z0 && z0 < solid.Z1)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// How far along a ray it first meets a box, or nothing.
+    /// </summary>
+    /// <remarks>
+    /// The slab method: the ray is clipped against each pair of parallel
+    /// faces in turn, and what is left is where it is inside all three. It is
+    /// the shortest correct answer and it does not care which way the ray
+    /// points.
+    /// </remarks>
+    public static double? Meets(double ox, double oy, double oz,
+                                double dx, double dy, double dz,
+                                double x0, double y0, double z0,
+                                double x1, double y1, double z1)
+    {
+        var near = 0.0;
+        var far = double.MaxValue;
+
+        for (var axis = 0; axis < 3; axis++)
+        {
+            var origin = axis == 0 ? ox : axis == 1 ? oy : oz;
+            var along = axis == 0 ? dx : axis == 1 ? dy : dz;
+            var low = axis == 0 ? x0 : axis == 1 ? y0 : z0;
+            var high = axis == 0 ? x1 : axis == 1 ? y1 : z1;
+
+            if (Math.Abs(along) < 1e-9)
+            {
+                if (origin < low || origin > high)
+                {
+                    return null;
+                }
+
+                continue;
+            }
+
+            var a = (low - origin) / along;
+            var b = (high - origin) / along;
+
+            if (a > b)
+            {
+                (a, b) = (b, a);
+            }
+
+            near = Math.Max(near, a);
+            far = Math.Min(far, b);
+
+            if (near > far)
+            {
+                return null;
+            }
+        }
+
+        return near;
+    }
+
+    /// <summary>How far a ray travels before the map stops it.</summary>
+    public static double Blocked(double ox, double oy, double oz, double dx, double dy, double dz)
+    {
+        var nearest = Reach;
+
+        foreach (var solid in Map)
+        {
+            var at = Meets(ox, oy, oz, dx, dy, dz, solid.X0, solid.Y0, solid.Z0, solid.X1, solid.Y1, solid.Z1);
+
+            if (at is { } hit && hit < nearest)
+            {
+                nearest = hit;
+            }
+        }
+
+        return nearest;
+    }
+
+    /// <summary>Whether one point can see another, which is what spawning goes by.</summary>
+    public static bool Sees(double ax, double ay, double az, double bx, double by, double bz)
+    {
+        var dx = bx - ax;
+        var dy = by - ay;
+        var dz = bz - az;
+
+        var far = Math.Sqrt(dx * dx + dy * dy + dz * dz);
+
+        if (far < 1)
+        {
+            return true;
+        }
+
+        return Blocked(ax, ay, az, dx / far, dy / far, dz / far) >= far;
+    }
+
+    /// <summary>Which way somebody is looking, as a direction.</summary>
+    public static (double X, double Y, double Z) Facing(double yaw, double pitch)
+    {
+        var y = yaw * Math.PI / 180;
+        var p = pitch * Math.PI / 180;
+
+        var flat = Math.Cos(p);
+
+        return (Math.Sin(y) * flat, Math.Sin(p), -Math.Cos(y) * flat);
+    }
+
+    #endregion
+}

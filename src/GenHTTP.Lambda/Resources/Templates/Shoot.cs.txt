@@ -1,0 +1,755 @@
+// An aim map: a small arena, boxes to fight over, and nothing else to do.
+//
+//   GET /lambda/{{KEY}}/          the game
+//   GET /lambda/{{KEY}}/api/here  how many are in it
+//   WS  /lambda/{{KEY}}/play      everything that happens
+//
+// Six files. This one is the clock and the sockets, World.cs is the arena and
+// the numbers, Protocol.cs is what gets said, State.cs is a player as the
+// server holds one, and the page, script and stylesheet are shipped as assets.
+//
+// The server decides everything: where everybody is, what they hit, who died.
+// A browser sends which keys are down and where the mouse is pointing, and
+// draws what it is told. That is the only arrangement in which a shooter is
+// not simply a competition to write the better client.
+
+var json = new JsonSerializerOptions
+{
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true
+};
+
+var fighters = new ConcurrentDictionary<IReactiveConnection, Fighter>();
+
+var arriving = new ConcurrentDictionary<IReactiveConnection, byte>();
+
+var random = Random.Shared;
+
+var ticking = 0;
+
+var clock = 0.0;
+
+/// <summary>Where everybody was, lately, so a shot can be judged fairly.</summary>
+var history = new List<Moment>();
+
+/// <summary>Shots waiting to be judged, taken off the sockets and onto the clock.</summary>
+var triggers = new ConcurrentQueue<Trigger>();
+
+/// <summary>What happened this tick, which everybody is told about once.</summary>
+var tracers = new List<Tracer>();
+var fallen = new List<Fell>();
+
+string NewId() => Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4));
+
+#region Arriving
+
+/// <summary>
+/// Somewhere to come back that is not in front of somebody.
+/// </summary>
+/// <remarks>
+/// Every spawn on your own side is scored and the worst thrown away: anything
+/// a living enemy can see is out, and of what is left the one furthest from
+/// the nearest enemy wins. Arriving in somebody's sights is the fastest way
+/// to make a game not worth playing, and it costs ten line of sight tests to
+/// never do it.
+/// </remarks>
+(double X, double Z) Arrive(Fighter who)
+{
+    var spawns = World.Spawns(who.Side);
+
+    var best = spawns[random.Next(spawns.Length)];
+    var bestScore = -1.0;
+
+    foreach (var spot in spawns)
+    {
+        var eye = World.EyeTall;
+
+        var seen = false;
+        var nearest = double.MaxValue;
+
+        foreach (var other in fighters.Values)
+        {
+            if (ReferenceEquals(other, who) || !other.Alive || other.Side == who.Side)
+            {
+                continue;
+            }
+
+            var gap = Math.Sqrt((other.X - spot.X) * (other.X - spot.X) + (other.Z - spot.Z) * (other.Z - spot.Z));
+
+            nearest = Math.Min(nearest, gap);
+
+            if (World.Sees(spot.X, eye, spot.Z, other.X, other.Eye, other.Z))
+            {
+                seen = true;
+
+                break;
+            }
+        }
+
+        if (seen)
+        {
+            continue;
+        }
+
+        var score = nearest == double.MaxValue ? 1e9 : nearest;
+
+        if (score > bestScore)
+        {
+            bestScore = score;
+            best = spot;
+        }
+    }
+
+    return best;
+}
+
+void Revive(Fighter who)
+{
+    var spot = Arrive(who);
+
+    who.X = spot.X;
+    who.Y = 0;
+    who.Z = spot.Z;
+
+    who.VX = who.VY = who.VZ = 0;
+
+    who.Health = World.Health;
+    who.Ammo = World.Magazine;
+    who.Reloading = 0;
+    who.Burst = 0;
+    who.Folded = 0;
+    who.Returns = 0;
+    who.Sheltered = clock + World.Grace;
+
+    /*
+     * Facing wherever there is room, leaning towards the way out.
+     *
+     * Facing the middle of the map is the obvious rule and the wrong one: the
+     * screen across the pocket is between them and the middle, so somebody
+     * arriving would be looking at a wall two metres away. Facing the door is
+     * the next guess and is also wrong, because there is a baffle behind the
+     * door put there on purpose so that nothing coming through it can see a
+     * spawn - so that is a wall as well.
+     *
+     * Rather than name a third landmark and be wrong about that one too, this
+     * asks the map. Every heading gets scored by how far a shot from the eye
+     * would travel before something stopped it, less a penalty for pointing
+     * away from the door, and the best one wins. It cannot pick a wall two
+     * metres away while there is anything better, whatever the map is later
+     * rearranged into.
+     */
+    var door = World.Door(who.Side);
+
+    var want = Math.Atan2(door.X - who.X, -(door.Z - who.Z)) * 180 / Math.PI;
+
+    var best = want;
+    var most = double.MinValue;
+
+    for (var turn = -180.0; turn < 180; turn += 15)
+    {
+        var heading = want + turn;
+
+        var facing = World.Facing(heading, 0);
+
+        // capped, because the difference between a long lane and a very long
+        // one is not worth turning your back on the door for
+        var room = Math.Min(World.Blocked(who.X, who.Eye, who.Z, facing.X, facing.Y, facing.Z), 1200);
+
+        var score = room - Math.Abs(turn) * 1.5;
+
+        if (score > most)
+        {
+            most = score;
+            best = heading;
+        }
+    }
+
+    who.Yaw = (best + 540) % 360 - 180;
+    who.Pitch = 0;
+
+    who.Turn = who.Yaw;
+}
+
+#endregion
+
+#region Moving
+
+/// <summary>
+/// Moves one player for one tick.
+/// </summary>
+/// <remarks>
+/// One axis at a time against the boxes, which is what lets somebody slide
+/// along a wall instead of sticking to it: the move that would end inside
+/// something is refused on its own, and the other two still happen.
+/// </remarks>
+void Step(Fighter who, double seconds)
+{
+    if (!who.Alive)
+    {
+        return;
+    }
+
+    var wantCrouch = (who.Held & Buttons.Crouch) != 0;
+
+    // standing back up is refused where there is no room for it
+    if (!wantCrouch && who.Folded > 0 && !World.Clear(who.X, who.Y, who.Z, World.Tall))
+    {
+        wantCrouch = true;
+    }
+
+    who.Folded = Math.Clamp(who.Folded + (wantCrouch ? 1 : -1) * seconds / World.Fold, 0, 1);
+
+    var facing = World.Facing(who.Yaw, 0);
+
+    var sideX = -facing.Z;
+    var sideZ = facing.X;
+
+    var wishX = 0.0;
+    var wishZ = 0.0;
+
+    if ((who.Held & Buttons.Forward) != 0) { wishX += facing.X; wishZ += facing.Z; }
+    if ((who.Held & Buttons.Back) != 0) { wishX -= facing.X; wishZ -= facing.Z; }
+    if ((who.Held & Buttons.Right) != 0) { wishX += sideX; wishZ += sideZ; }
+    if ((who.Held & Buttons.Left) != 0) { wishX -= sideX; wishZ -= sideZ; }
+
+    var wish = Math.Sqrt(wishX * wishX + wishZ * wishZ);
+
+    var top = World.Pace * (1 - (1 - World.Stoop) * who.Folded);
+
+    if (wish > 0.001)
+    {
+        wishX /= wish;
+        wishZ /= wish;
+
+        /*
+         * Pressing against the way you are already going stops you in one
+         * tick rather than two. That gap is the whole of the movement: the
+         * spread depends on the speed, so a player who taps the opposite key
+         * before firing is accurate a tick earlier than one who lets go.
+         */
+        var going = who.VX * wishX + who.VZ * wishZ;
+
+        var push = (going < -1 ? World.Brake : World.Quicken) * (who.Grounded ? 1 : World.Float);
+
+        who.VX += wishX * push * seconds;
+        who.VZ += wishZ * push * seconds;
+    }
+    else if (who.Grounded)
+    {
+        var speed = Math.Sqrt(who.VX * who.VX + who.VZ * who.VZ);
+
+        var slowed = Math.Max(0, speed - World.Drag * seconds);
+
+        if (speed > 0.001)
+        {
+            who.VX *= slowed / speed;
+            who.VZ *= slowed / speed;
+        }
+    }
+
+    var carried = Math.Sqrt(who.VX * who.VX + who.VZ * who.VZ);
+
+    if (carried > top)
+    {
+        who.VX *= top / carried;
+        who.VZ *= top / carried;
+    }
+
+    if ((who.Held & Buttons.Jump) != 0 && who.Grounded)
+    {
+        who.VY = World.Leap;
+        who.Grounded = false;
+    }
+
+    who.VY -= World.Fall * seconds;
+
+    var height = who.Height;
+
+    var toX = who.X + who.VX * seconds;
+
+    if (World.Clear(toX, who.Y, who.Z, height)) who.X = toX; else who.VX = 0;
+
+    var toZ = who.Z + who.VZ * seconds;
+
+    if (World.Clear(who.X, who.Y, toZ, height)) who.Z = toZ; else who.VZ = 0;
+
+    var toY = who.Y + who.VY * seconds;
+
+    if (World.Clear(who.X, toY, who.Z, height))
+    {
+        who.Y = toY;
+        who.Grounded = false;
+    }
+    else
+    {
+        // landing on something rather than in it: find the top and sit on it
+        if (who.VY <= 0)
+        {
+            var rest = 0.0;
+
+            foreach (var solid in World.Map)
+            {
+                if (who.X + World.Girth > solid.X0 && who.X - World.Girth < solid.X1
+                 && who.Z + World.Girth > solid.Z0 && who.Z - World.Girth < solid.Z1
+                 && solid.Y1 <= who.Y + 1 && solid.Y1 > rest)
+                {
+                    rest = solid.Y1;
+                }
+            }
+
+            who.Y = rest;
+            who.Grounded = true;
+        }
+
+        who.VY = 0;
+    }
+
+    who.X = Math.Clamp(who.X, -World.HalfWidth + World.Girth, World.HalfWidth - World.Girth);
+    who.Z = Math.Clamp(who.Z, -World.HalfLength + World.Girth, World.HalfLength - World.Girth);
+
+    if (who.Y <= 0)
+    {
+        who.Y = 0;
+        who.VY = 0;
+        who.Grounded = true;
+    }
+}
+
+#endregion
+
+#region Shooting
+
+/// <summary>Where everybody was at a moment, worked out between the two nearest.</summary>
+(double X, double Y, double Z, double Height)? Rewound(string id, double at)
+{
+    if (history.Count == 0)
+    {
+        return null;
+    }
+
+    Moment before = null;
+    Moment after = null;
+
+    foreach (var moment in history)
+    {
+        if (moment.At <= at && (before == null || moment.At > before.At)) before = moment;
+        if (moment.At >= at && (after == null || moment.At < after.At)) after = moment;
+    }
+
+    before ??= after;
+    after ??= before;
+
+    if (before == null)
+    {
+        return null;
+    }
+
+    var span = after.At - before.At;
+    var t = span > 0.0001 ? Math.Clamp((at - before.At) / span, 0, 1) : 0;
+
+    (string Id, double X, double Y, double Z, double Height)? a = null;
+    (string Id, double X, double Y, double Z, double Height)? b = null;
+
+    foreach (var body in before.Bodies) if (body.Id == id) { a = body; break; }
+    foreach (var body in after.Bodies) if (body.Id == id) { b = body; break; }
+
+    if (a == null) return b == null ? null : (b.Value.X, b.Value.Y, b.Value.Z, b.Value.Height);
+    if (b == null) return (a.Value.X, a.Value.Y, a.Value.Z, a.Value.Height);
+
+    return (a.Value.X + (b.Value.X - a.Value.X) * t,
+            a.Value.Y + (b.Value.Y - a.Value.Y) * t,
+            a.Value.Z + (b.Value.Z - a.Value.Z) * t,
+            a.Value.Height + (b.Value.Height - a.Value.Height) * t);
+}
+
+/// <summary>
+/// Judges one shot.
+/// </summary>
+/// <remarks>
+/// Against where everybody was when the shooter was looking at them, not
+/// where they are now. The browser says which moment it was drawing; that is
+/// clamped to something recent and everybody is put back there for the length
+/// of one ray. The recoil and the spread are applied here rather than trusted
+/// from the browser - the browser knows the pattern and draws the same line,
+/// but it does not get to decide where its own bullets went.
+/// </remarks>
+void Resolve(Trigger shot)
+{
+    var who = shot.By;
+
+    if (!who.Alive || who.Ammo <= 0 || who.Reloading > 0 || clock < who.Ready)
+    {
+        return;
+    }
+
+    who.Ammo--;
+    who.Ready = clock + World.Cadence;
+    who.Fired = clock;
+    who.Sheltered = 0;
+
+    var climb = World.Climb(who.Burst);
+
+    who.Burst++;
+
+    var speed = Math.Sqrt(who.VX * who.VX + who.VZ * who.VZ);
+
+    var cone = World.Spread(speed, !who.Grounded, who.Folded > 0.5, who.Burst);
+
+    var spin = random.NextDouble() * Math.Tau;
+    var off = Math.Sqrt(random.NextDouble()) * cone;
+
+    var yaw = shot.Yaw + climb.Yaw + Math.Cos(spin) * off;
+    var pitch = Math.Clamp(shot.Pitch + climb.Pitch + Math.Sin(spin) * off, -89, 89);
+
+    var dir = World.Facing(yaw, pitch);
+
+    var ox = who.X;
+    var oy = who.Eye;
+    var oz = who.Z;
+
+    var nearest = World.Blocked(ox, oy, oz, dir.X, dir.Y, dir.Z);
+
+    Fighter struck = null;
+    var head = false;
+
+    var at = Math.Clamp(shot.Saw, clock - World.Rewind, clock);
+
+    foreach (var other in fighters.Values)
+    {
+        if (ReferenceEquals(other, who) || !other.Alive || other.Sheltered > clock || other.Side == who.Side)
+        {
+            continue;
+        }
+
+        if (Rewound(other.Id, at) is not { } was)
+        {
+            continue;
+        }
+
+        var hit = World.Meets(ox, oy, oz, dir.X, dir.Y, dir.Z,
+                              was.X - World.Girth, was.Y, was.Z - World.Girth,
+                              was.X + World.Girth, was.Y + was.Height, was.Z + World.Girth);
+
+        if (hit is not { } far || far >= nearest)
+        {
+            continue;
+        }
+
+        nearest = far;
+        struck = other;
+        head = oy + dir.Y * far > was.Y + was.Height - World.Skull;
+    }
+
+    tracers.Add(new Tracer(who.Id,
+                           (int)ox, (int)oy, (int)oz,
+                           (int)(ox + dir.X * nearest), (int)(oy + dir.Y * nearest), (int)(oz + dir.Z * nearest),
+                           struck == null ? 0 : head ? 2 : 1));
+
+    if (struck == null)
+    {
+        return;
+    }
+
+    struck.Health -= head ? World.Headshot : World.Graze;
+
+    struck.Hurt = head ? World.Headshot : World.Graze;
+    struck.HurtFrom = Math.Atan2(who.X - struck.X, -(who.Z - struck.Z)) * 180 / Math.PI;
+
+    if (struck.Health <= 0)
+    {
+        struck.Health = 0;
+        struck.Deaths++;
+        struck.Returns = clock + World.Respawn;
+
+        who.Kills++;
+
+        fallen.Add(new Fell(who.Name, struck.Name, head));
+    }
+}
+
+#endregion
+
+#region The clock
+
+void Tick(double seconds)
+{
+    clock += seconds;
+
+    var everyone = fighters.Values.ToArray();
+
+    foreach (var who in everyone)
+    {
+        if (!who.Alive)
+        {
+            if (clock >= who.Returns)
+            {
+                Revive(who);
+            }
+
+            continue;
+        }
+
+        if (who.Reloading > 0 && clock >= who.Reloading)
+        {
+            who.Reloading = 0;
+            who.Ammo = World.Magazine;
+        }
+
+        if ((who.Held & Buttons.Reload) != 0 && who.Reloading <= 0 && who.Ammo < World.Magazine)
+        {
+            who.Reloading = clock + World.Reload;
+        }
+
+        // the barrel comes back down once the trigger has been off a moment
+        if (clock - who.Fired > World.Settle)
+        {
+            who.Burst = 0;
+        }
+
+        Step(who, seconds);
+    }
+
+    // where everybody is now, kept for the shots that arrive believing in a
+    // moment that has already gone
+    history.Add(new Moment
+    {
+        At = clock,
+        Bodies = [.. everyone.Where(f => f.Alive)
+                             .Select(f => (f.Id, f.X, f.Y, f.Z, f.Height))]
+    });
+
+    while (history.Count > World.History)
+    {
+        history.RemoveAt(0);
+    }
+
+    while (triggers.TryDequeue(out var shot))
+    {
+        Resolve(shot);
+    }
+}
+
+async ValueTask Broadcast()
+{
+    var everyone = fighters.ToArray();
+
+    var bodies = new List<Body>();
+
+    foreach (var (_, who) in everyone)
+    {
+        var flags = 0;
+
+        if (who.Folded > 0.5) flags |= Flags.Crouched;
+        if (!who.Grounded) flags |= Flags.Airborne;
+        if (who.Sheltered > clock) flags |= Flags.Sheltered;
+        if (clock - who.Fired < 0.1) flags |= Flags.Firing;
+        if (!who.Alive) flags |= Flags.Dead;
+
+        bodies.Add(new Body(who.Id, who.Name, who.Side,
+                            (int)who.X, (int)who.Y, (int)who.Z,
+                            (int)Math.Round(who.Yaw * 100), (int)Math.Round(who.Pitch * 100),
+                            who.Alive ? 1 : 0, flags, who.Kills, who.Deaths));
+    }
+
+    var shots = tracers.Count > 0 ? [.. tracers] : new List<Tracer>();
+    var kills = fallen.Count > 0 ? [.. fallen] : new List<Fell>();
+
+    tracers.Clear();
+    fallen.Clear();
+
+    var writes = new List<Task>(everyone.Length);
+
+    foreach (var (connection, who) in everyone)
+    {
+        var mine = new Mine((int)Math.Ceiling(who.Health), who.Ammo,
+                            who.Reloading > 0 ? Math.Round(who.Reloading - clock, 2) : 0,
+                            who.Returns > 0 ? Math.Round(who.Returns - clock, 2) : 0,
+                            who.Kills, who.Deaths,
+                            who.Turn is { } turn ? Math.Round(turn, 2) : null);
+
+        who.Turn = null;
+
+        var hurt = who.Hurt > 0 ? new[] { Math.Round(who.Hurt), Math.Round(who.HurtFrom) } : null;
+
+        who.Hurt = 0;
+
+        var frame = JsonSerializer.Serialize(
+            new Frame("f", Math.Round(clock, 2), bodies, shots, kills, mine, hurt, who.Seen), json);
+
+        writes.Add(Send(connection, frame));
+    }
+
+    await Task.WhenAll(writes);
+}
+
+async Task Send(IReactiveConnection connection, string payload)
+{
+    try
+    {
+        await connection.WritePayloadAsync(payload);
+    }
+    catch (Exception)
+    {
+        fighters.TryRemove(connection, out _);
+    }
+}
+
+void StartClock()
+{
+    if (Interlocked.Exchange(ref ticking, 1) == 1)
+    {
+        return;
+    }
+
+    _ = Task.Run(async () =>
+    {
+        var last = DateTime.UtcNow;
+
+        var owed = 0.0;
+
+        try
+        {
+            while (!fighters.IsEmpty)
+            {
+                /*
+                 * Asked to wake twice as often as a tick is due, because a
+                 * Task.Delay of fifty milliseconds is never fifty and the
+                 * overshoot has to land somewhere. Waking early and counting
+                 * what is owed puts it in the accumulator instead of in the
+                 * length of the tick, which has to stay exactly World.Beat
+                 * for the browser to be able to predict it.
+                 */
+                await Task.Delay(25);
+
+                var now = DateTime.UtcNow;
+
+                owed += Math.Min((now - last).TotalSeconds, 0.5);
+
+                last = now;
+
+                var stepped = 0;
+
+                // four at once at the most: a machine that has been asleep
+                // owes a great many ticks and running all of them would be a
+                // long freeze rather than a catching up
+                while (owed >= World.Beat && stepped < 4)
+                {
+                    owed -= World.Beat;
+                    stepped++;
+
+                    Tick(World.Beat);
+                }
+
+                if (stepped > 0)
+                {
+                    await Broadcast();
+                }
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref ticking, 0);
+
+            if (!fighters.IsEmpty)
+            {
+                StartClock();
+            }
+        }
+    });
+}
+
+#endregion
+
+var socket = Websocket.Functional()
+                      .OnMessage(async (connection, message) =>
+                      {
+                          var text = await message.ReadPayloadAsync<string>() ?? "";
+
+                          if (text.Length is 0 or > 300)
+                          {
+                              return;
+                          }
+
+                          if (!fighters.TryGetValue(connection, out var who))
+                          {
+                              // one join at a time: a browser sends join and
+                              // then starts sending input, and a second
+                              // message arriving first would otherwise be
+                              // read as a second join into the same socket
+                              if (!arriving.TryAdd(connection, 0))
+                              {
+                                  return;
+                              }
+
+                              try
+                              {
+                                  var joining = JsonSerializer.Deserialize<Join>(text, json);
+
+                                  var here = fighters.Values.ToArray();
+
+                                  var side = here.Count(f => f.Side == 0) <= here.Count(f => f.Side == 1) ? 0 : 1;
+
+                                  who = new Fighter
+                                  {
+                                      Id = NewId(),
+                                      Name = string.IsNullOrWhiteSpace(joining?.Name) ? "nobody"
+                                           : joining.Name.Trim()[..Math.Min(12, joining.Name.Trim().Length)],
+                                      Side = side
+                                  };
+
+                                  Revive(who);
+
+                                  var solids = World.Map
+                                                    .Select(s => new[] { s.X0, s.Y0, s.Z0, s.X1, s.Y1, s.Z1 })
+                                                    .ToArray();
+
+                                  await connection.WritePayloadAsync(JsonSerializer.Serialize(
+                                      new Welcome("welcome", who.Id, side, solids,
+                                                  ["#4a9eff", "#ffa22b"],
+                                                  World.HalfWidth, World.HalfLength), json));
+
+                                  fighters[connection] = who;
+
+                                  StartClock();
+                              }
+                              finally
+                              {
+                                  arriving.TryRemove(connection, out _);
+                              }
+
+                              return;
+                          }
+
+                          var input = JsonSerializer.Deserialize<Input>(text, json);
+
+                          if (input == null)
+                          {
+                              return;
+                          }
+
+                          who.Seen = input.I;
+                          who.Held = input.B;
+                          who.Yaw = input.Y;
+                          who.Pitch = Math.Clamp(input.P, -89, 89);
+
+                          if ((input.B & Buttons.Fire) != 0)
+                          {
+                              triggers.Enqueue(new Trigger { By = who, Yaw = input.Y, Pitch = input.P, Saw = input.S });
+                          }
+                      })
+                      .OnClose((connection, reason) =>
+                      {
+                          fighters.TryRemove(connection, out var left);
+
+                          return ValueTask.CompletedTask;
+                      });
+
+var api = Inline.Create()
+                .Get("here", () => new Here(fighters.Count));
+
+return Layout.Create()
+             .Add("api", api)
+             .Add("play", socket)
+             .Add(Assets.App());
+
+record Here(int Playing);

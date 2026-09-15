@@ -74,6 +74,10 @@ public static class ExampleCatalog
 
         new("arena", Advanced, "Arena",
             "Everyone who opens it is in the same arena, eating each other and growing. Anything big bends the floor and drags what is near it in; hold space and you root yourself and pull much harder, at the cost of your own size. The server holds the world and sends each player only what they can see, twenty times a second.",
+            "", false),
+
+        new("shoot", Advanced, "Headwall",
+            "An aim map, in a browser. Two sides, a floor full of boxes and a wall down the middle that only your head clears. The server owns the game and judges every shot by rewinding a quarter of a second to the moment the browser was drawing; the browser runs the same movement code ahead of it so that pressing a key moves you now rather than a round trip from now. Six files.",
             "", false)
     ];
 

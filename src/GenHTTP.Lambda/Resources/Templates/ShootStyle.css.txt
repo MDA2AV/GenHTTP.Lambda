@@ -1,0 +1,453 @@
+/*
+ * The part of the game that is not the world: a crosshair, some numbers, and
+ * the screens either side of playing. Everything here is drawn by the browser
+ * rather than by three.js, because text in a 3D scene is a lot of work to make
+ * legible and a div is already legible.
+ */
+
+:root {
+  --ink: #e8edf4;
+  --dim: #8b97a8;
+  --faint: #5a6675;
+  --back: #05070a;
+  --panel: rgba(12, 17, 24, .82);
+  --edge: rgba(255, 255, 255, .09);
+  --blue: #4a9eff;
+  --amber: #ffa22b;
+  --hurt: #ff4d5e;
+  --good: #5fd97e;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--back);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The width and height matter. A canvas is a replaced element: without them
+   it lays out at its intrinsic size, which is the drawing buffer, which on a
+   screen with two device pixels to the pixel is twice the window - so the
+   window shows the top left quarter of the picture and the middle of the
+   world sits somewhere off to the lower right. */
+canvas {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+kbd {
+  font: 600 11px/1 var(--mono);
+  padding: 3px 6px;
+  border: 1px solid var(--edge);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .05);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- the hud */
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s;
+}
+
+#hud.on { opacity: 1; }
+
+/* The crosshair is four ticks and a dot. The ticks move apart as the shot gets
+   less certain, which is the same number the server spreads by, so what you
+   see is what you get. */
+#cross {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+
+#cross i {
+  position: absolute;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .55);
+  transform-origin: center;
+}
+
+#cross i.v { width: 2px; height: 9px; left: -1px; }
+#cross i.h { height: 2px; width: 9px; top: -1px; }
+#cross i.dot {
+  width: 2px; height: 2px; left: -1px; top: -1px;
+  border-radius: 50%; opacity: .85;
+}
+
+#cross.hit i { background: var(--hurt); }
+
+/* the X that says a shot landed */
+#marker {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  opacity: 0;
+}
+
+#marker span {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  width: 2px;
+  height: 9px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .5);
+}
+
+#marker span:nth-child(1) { transform: rotate(45deg) translateY(-6px); }
+#marker span:nth-child(2) { transform: rotate(135deg) translateY(-6px); }
+#marker span:nth-child(3) { transform: rotate(225deg) translateY(-6px); }
+#marker span:nth-child(4) { transform: rotate(315deg) translateY(-6px); }
+
+#marker.on { animation: pop .32s ease-out; }
+#marker.kill span { background: var(--hurt); }
+
+@keyframes pop {
+  0%   { opacity: 1; transform: scale(.65); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+/* the red wash when something hits you, and the arc saying where from */
+#hurtwash {
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(255, 40, 60, .55) 100%);
+  transition: opacity .45s ease-out;
+}
+
+#hurtwash.on { opacity: 1; transition: opacity .05s; }
+
+#arcs { position: fixed; left: 50%; top: 50%; }
+
+.arc {
+  position: absolute;
+  left: -90px;
+  top: -90px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--hurt);
+  clip-path: polygon(22% 0, 78% 0, 62% 26%, 38% 26%);
+  animation: fade .9s ease-out forwards;
+}
+
+@keyframes fade { from { opacity: .95; } to { opacity: 0; } }
+
+/* health on the left, ammunition on the right, both bottom */
+#vitals {
+  position: fixed;
+  left: 28px;
+  bottom: 24px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+#vitals .num {
+  font: 300 42px/.9 var(--mono);
+  letter-spacing: -.02em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+}
+
+#vitals .lab {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-bottom: 5px;
+}
+
+#bar {
+  position: fixed;
+  left: 28px;
+  bottom: 14px;
+  width: 190px;
+  height: 3px;
+  background: rgba(255, 255, 255, .12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#bar b {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--good);
+  border-radius: 2px;
+  transition: width .18s, background .18s;
+}
+
+#gun {
+  position: fixed;
+  right: 28px;
+  bottom: 24px;
+  text-align: right;
+}
+
+#gun .num {
+  font: 300 42px/.9 var(--mono);
+  letter-spacing: -.02em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+}
+
+#gun .num s { text-decoration: none; color: var(--faint); font-size: 22px; }
+
+#clip {
+  display: flex;
+  gap: 3px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  height: 8px;
+}
+
+#clip i {
+  width: 3px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+
+#clip i.spent { background: rgba(255, 255, 255, .13); }
+
+#reloading {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-top: 8px;
+}
+
+/* the kill feed, top right */
+#feed {
+  position: fixed;
+  right: 24px;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.kill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  font: 500 12px/1 var(--sans);
+  animation: slide .25s ease-out;
+  backdrop-filter: blur(6px);
+}
+
+.kill .head { color: var(--hurt); font-weight: 700; }
+.kill .a { color: var(--blue); }
+.kill .b { color: var(--amber); }
+.kill em { color: var(--faint); font-style: normal; }
+
+@keyframes slide { from { opacity: 0; transform: translateX(12px); } }
+
+/* who is winning, top middle */
+#tally {
+  position: fixed;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font: 600 13px/1 var(--mono);
+}
+
+#tally b {
+  padding: 8px 16px;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  backdrop-filter: blur(6px);
+}
+
+#tally b:first-child { border-radius: 7px 0 0 7px; color: var(--blue); }
+#tally b:last-child { border-radius: 0 7px 7px 0; color: var(--amber); }
+
+#tally b.mine { box-shadow: inset 0 -2px 0 currentColor; }
+
+/* waiting to come back */
+#again {
+  position: fixed;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: none;
+}
+
+#again.on { display: block; }
+#again .big { font: 200 72px/1 var(--mono); color: var(--hurt); }
+#again .by { font: 400 14px/1.6 var(--sans); color: var(--dim); margin-top: 10px; }
+
+/* ------------------------------------------------------------- scoreboard */
+
+#board {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(620px, 92vw);
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  backdrop-filter: blur(14px);
+  padding: 20px 22px;
+  display: none;
+}
+
+#board.on { display: block; }
+
+#board h3 {
+  margin: 0 0 14px;
+  font: 600 11px/1 var(--sans);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+#board table { width: 100%; border-collapse: collapse; font: 400 13px/1 var(--sans); }
+#board th {
+  text-align: right;
+  font: 600 10px/1 var(--sans);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 0 0 8px;
+}
+#board th:first-child { text-align: left; }
+#board td { padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, .06); text-align: right; }
+#board td:first-child { text-align: left; }
+#board tr.a td:first-child { color: var(--blue); }
+#board tr.b td:first-child { color: var(--amber); }
+#board tr.me td { background: rgba(255, 255, 255, .04); }
+#board .num { font-family: var(--mono); }
+
+/* ------------------------------------------------------------- the way in */
+
+#gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at 50% 40%, #0d141d 0%, #05070a 70%);
+  padding: 24px;
+  z-index: 10;
+}
+
+#gate.off { display: none; }
+
+#gate .card { width: min(480px, 100%); }
+
+#gate h1 {
+  margin: 0;
+  font: 200 58px/1 var(--sans);
+  letter-spacing: -.035em;
+}
+
+#gate h1 b { font-weight: 700; color: var(--blue); }
+
+#gate p { color: var(--dim); font: 400 14px/1.65 var(--sans); }
+
+#gate .keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 9px 14px;
+  margin: 22px 0;
+  font: 400 13px/1 var(--sans);
+  color: var(--dim);
+  align-items: center;
+}
+
+#gate .keys span { color: var(--dim); }
+
+#gate .sens {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  font: 400 13px/1 var(--sans);
+  color: var(--dim);
+}
+
+#gate .sens span { min-width: 46px; }
+#gate .sens input { flex: 1; accent-color: var(--blue); }
+#gate .sens b { font: 500 13px/1 var(--mono); color: var(--ink); min-width: 34px; text-align: right; }
+
+#gate form { display: flex; gap: 8px; margin-top: 14px; }
+
+#gate input {
+  flex: 1;
+  padding: 13px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--edge);
+  background: rgba(255, 255, 255, .04);
+  color: var(--ink);
+  font: 400 15px var(--sans);
+  outline: none;
+}
+
+#gate input:focus { border-color: var(--blue); }
+
+#gate button {
+  padding: 13px 26px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--blue);
+  color: #04121f;
+  font: 700 15px var(--sans);
+  cursor: pointer;
+}
+
+#gate button:hover { filter: brightness(1.1); }
+
+#gate .foot { margin-top: 20px; font-size: 12px; color: var(--faint); }
+#gate .foot a { color: var(--dim); }
+
+#gone {
+  position: fixed;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: rgba(5, 7, 10, .92);
+  z-index: 20;
+  text-align: center;
+}
+
+#gone.on { display: grid; }
+
+@media (max-width: 640px) {
+  #gate h1 { font-size: 42px; }
+  #vitals .num, #gun .num { font-size: 32px; }
+  #bar { width: 150px; }
+}

@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net;
+using System.Text.RegularExpressions;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -298,6 +300,78 @@ public sealed class ExampleTests
 
         Assert.AreEqual(HttpStatusCode.OK, here.StatusCode);
         Assert.Contains("pellets", await here.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task TheAimMapServesItsPageAndItsApi()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedExamplesAsync();
+
+        using var page = await fixture.GetAsync("/lambda/example-shoot/");
+
+        Assert.AreEqual(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("game.js", await page.GetContentAsync());
+
+        using var script = await fixture.GetAsync("/lambda/example-shoot/game.js");
+
+        Assert.AreEqual(HttpStatusCode.OK, script.StatusCode);
+        Assert.AreEqual("application/javascript", script.Content.Headers.ContentType?.MediaType);
+
+        using var here = await fixture.GetAsync("/lambda/example-shoot/api/here", "application/json");
+
+        Assert.AreEqual(HttpStatusCode.OK, here.StatusCode);
+        Assert.Contains("playing", await here.GetContentAsync());
+    }
+
+    /// <summary>
+    /// The browser half of the aim map runs the server's movement code so
+    /// that pressing a key moves you without waiting for a round trip. It can
+    /// only get the same answer from the same numbers, and there is nothing
+    /// stopping somebody changing one of them in World.cs and not the other.
+    /// </summary>
+    /// <remarks>
+    /// The failure this catches is a quiet one. Nothing breaks: the game runs,
+    /// the shots land, and every player slides a little every second because
+    /// the two halves disagree about how fast walking is. It took a
+    /// measurement to find the last time, so it is worth a test rather than
+    /// another measurement.
+    /// </remarks>
+    [TestMethod]
+    public void TheAimMapAgreesWithItselfAboutTheRules()
+    {
+        var files = TemplateCatalog.FilesFor("shoot", "test");
+
+        var world = files.First(f => f.Name == "World.cs").Code;
+        var browser = files.First(f => f.Name == "game.js").Code;
+
+        (string Server, string Browser)[] shared =
+        [
+            ("Pace", "pace"), ("Quicken", "quicken"), ("Drag", "drag"), ("Brake", "brake"),
+            ("Fall", "fall"), ("Leap", "leap"), ("Float", "float"), ("Fold", "fold"),
+            ("Stoop", "stoop"), ("Girth", "girth"), ("Tall", "tall"), ("Squat", "squat"),
+            ("EyeTall", "eyeTall"), ("EyeSquat", "eyeSquat"), ("Skull", "skull"),
+            ("Cadence", "cadence"), ("Magazine", "magazine"), ("Reload", "reload"),
+            ("Settle", "settle"), ("Beat", "tick")
+        ];
+
+        foreach (var (server, browser_) in shared)
+        {
+            var declared = Regex.Match(world, $@"const\s+(?:double|int)\s+{server}\s*=\s*([0-9.]+)");
+
+            Assert.IsTrue(declared.Success, $"World.cs no longer declares {server}");
+
+            var mirrored = Regex.Match(browser, $@"\b{browser_}:\s*([0-9.]+)");
+
+            Assert.IsTrue(mirrored.Success, $"game.js no longer mirrors {server} as {browser_}");
+
+            Assert.AreEqual(double.Parse(declared.Groups[1].Value, CultureInfo.InvariantCulture),
+                            double.Parse(mirrored.Groups[1].Value, CultureInfo.InvariantCulture),
+                            $"{server} is {declared.Groups[1].Value} on the server and "
+                          + $"{mirrored.Groups[1].Value} in the browser, so the browser will "
+                          + "predict movement the server does not agree with");
+        }
     }
 
 }

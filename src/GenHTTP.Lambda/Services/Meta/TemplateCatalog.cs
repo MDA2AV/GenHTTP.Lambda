@@ -51,7 +51,10 @@ public static class TemplateCatalog
             true, ("site/index.html", "SitePage"), ("site/app.css", "SiteStyle"), ("site/app.js", "SiteApp")),
         new("arena", "app", "Arena", "Everybody in one arena, eating each other, with gravity that bends the floor. The page is shipped as files rather than as strings.", "Arena",
             true, ("World.cs", "ArenaWorld"), ("Protocol.cs", "ArenaProtocol"), ("State.cs", "ArenaState"),
-                  ("index.html", "ArenaPage"), ("game.js", "ArenaGame"), ("style.css", "ArenaStyle"))
+                  ("index.html", "ArenaPage"), ("game.js", "ArenaGame"), ("style.css", "ArenaStyle")),
+        new("shoot", "app", "Headwall", "An aim map in the browser: two sides, boxes to hide behind and a wall only your head clears. The server judges every shot, rewinding to the moment the browser drew.", "Shoot",
+            true, ("World.cs", "ShootWorld"), ("Protocol.cs", "ShootProtocol"), ("State.cs", "ShootState"),
+                  ("index.html", "ShootPage"), ("game.js", "ShootGame"), ("style.css", "ShootStyle"))
     ];
 
 
