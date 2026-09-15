@@ -24,6 +24,31 @@ var json = new JsonSerializerOptions
 var players = new ConcurrentDictionary<IReactiveConnection, Player>();
 
 /*
+ * Blobs with nobody behind them.
+ *
+ * Kept apart from the players because the players are keyed by the socket
+ * they arrived on and these have no socket - but everything that decides what
+ * the arena does treats the two the same, which is what Souls is for. They
+ * are eaten, they grow, they appear on the board, and the only thing they
+ * never get is a frame.
+ */
+var bots = new ConcurrentDictionary<string, Player>();
+
+/// <summary>Everybody in the arena, driven or not.</summary>
+Player[] Souls()
+{
+    var driven = players.Values;
+    var idle = bots.Values;
+
+    var all = new List<Player>(driven.Count + idle.Count);
+
+    all.AddRange(driven);
+    all.AddRange(idle);
+
+    return [.. all];
+}
+
+/*
  * The connections part way through joining.
  *
  * A message handler is asynchronous, so two messages from the same socket can
@@ -220,7 +245,7 @@ void Rebucket()
 
         var free = true;
 
-        foreach (var soul in players.Values)
+        foreach (var soul in Souls())
         {
             if (!soul.Hold)
             {
@@ -450,7 +475,7 @@ Scatter();
 
         var clear = true;
 
-        foreach (var other in players.Values)
+        foreach (var other in Souls())
         {
             if (other.Radius < World.WellSize)
             {
@@ -499,9 +524,244 @@ void Remember(Player player)
 }
 
 
+/// <summary>
+/// Moves a blob along the line it was given, at the speed of the pickup.
+/// </summary>
+/// <remarks>
+/// Leg by leg rather than towards the far end, because the shape is the
+/// point: a line drawn round the back of somebody has to actually go round
+/// the back of them. Whatever is left of a tick's travel after finishing one
+/// leg is spent on the next, so a line made of many short segments is run as
+/// fast as one made of two long ones.
+/// </remarks>
+void Run(Player player, double seconds)
+{
+    var budget = World.StreakSpeed * seconds;
+
+    while (budget > 0 && player.StreakX != null)
+    {
+        var next = player.StreakLeg + 1;
+
+        if (next >= player.StreakX.Length)
+        {
+            player.StreakX = null;
+            player.StreakY = null;
+            return;
+        }
+
+        var toX = player.StreakX[next] - player.X;
+        var toY = player.StreakY[next] - player.Y;
+
+        var leg = Math.Sqrt(toX * toX + toY * toY);
+
+        if (leg < 0.5)
+        {
+            player.StreakLeg = next;
+            continue;
+        }
+
+        var step = Math.Min(budget, leg);
+
+        player.X = World.Clamp(player.X + toX / leg * step, size);
+        player.Y = World.Clamp(player.Y + toY / leg * step, size);
+
+        budget -= step;
+
+        if (step >= leg - 0.5)
+        {
+            player.StreakLeg = next;
+        }
+    }
+}
+
+/// <summary>
+/// Puts somebody somewhere else, if they have it to spend.
+/// </summary>
+/// <remarks>
+/// Bounded by distance and by a share of the blob, and refused outright to a
+/// hole - something that has stopped being able to move should not be able to
+/// cross the arena either.
+/// </remarks>
+bool Jump(Player player, double x, double y)
+{
+    if (at < player.WarpReady || World.IsHole(player.Radius) || player.StreakX != null)
+    {
+        return false;
+    }
+
+    var toX = World.Clamp(x, size) - player.X;
+    var toY = World.Clamp(y, size) - player.Y;
+
+    var far = Math.Sqrt(toX * toX + toY * toY);
+
+    if (far < 1)
+    {
+        return false;
+    }
+
+    var reach = Math.Min(far, World.WarpReach(player.Radius));
+
+    player.X = World.Clamp(player.X + toX / far * reach, size);
+    player.Y = World.Clamp(player.Y + toY / far * reach, size);
+
+    // steering follows, or the blob turns round and walks straight back
+    player.WantX = player.X;
+    player.WantY = player.Y;
+
+    player.WarpReady = at + World.WarpEvery;
+
+    var area = Math.PI * player.Radius * player.Radius * (1 - World.WarpToll);
+
+    player.Radius = Math.Max(World.Start, Math.Sqrt(area / Math.PI));
+
+    return true;
+}
+
+/// <summary>
+/// What a bot does next.
+/// </summary>
+/// <remarks>
+/// Deliberately simple, and deliberately not very good. It runs from anything
+/// big enough to eat it, chases anything it could eat, and otherwise goes to
+/// the nearest food - which is enough to make an empty arena worth opening
+/// without making it a place a person cannot win.
+/// </remarks>
+void Think(Player bot, Player[] everyone, double seconds)
+{
+    bot.Rethink -= seconds;
+
+    var danger = double.MaxValue;
+    Player from = null;
+    Player prey = null;
+    var nearest = double.MaxValue;
+
+    foreach (var other in everyone)
+    {
+        if (ReferenceEquals(other, bot) || other.Gone)
+        {
+            continue;
+        }
+
+        var gap = Math.Sqrt((other.X - bot.X) * (other.X - bot.X) + (other.Y - bot.Y) * (other.Y - bot.Y));
+
+        if (other.Radius > bot.Radius * World.EatRatio && gap < danger && gap < 900)
+        {
+            danger = gap;
+            from = other;
+        }
+        else if (bot.Radius > other.Radius * World.EatRatio && gap < nearest && gap < 1400)
+        {
+            nearest = gap;
+            prey = other;
+        }
+    }
+
+    // running away is decided every tick; everything else is decided rarely,
+    // so a bot commits to a direction instead of shivering between two
+    if (from != null)
+    {
+        var awayX = bot.X - from.X;
+        var awayY = bot.Y - from.Y;
+
+        var far = Math.Max(0.001, Math.Sqrt(awayX * awayX + awayY * awayY));
+
+        bot.AimX = World.Clamp(bot.X + awayX / far * 1200, size);
+        bot.AimY = World.Clamp(bot.Y + awayY / far * 1200, size);
+        bot.Rethink = 0.4;
+
+        // a cornered bot uses the thing everybody has
+        if (danger < bot.Radius * 6)
+        {
+            Jump(bot, bot.AimX, bot.AimY);
+        }
+    }
+    else if (prey != null)
+    {
+        bot.AimX = prey.X;
+        bot.AimY = prey.Y;
+        bot.Rethink = 0.3;
+    }
+    else if (bot.Rethink <= 0)
+    {
+        var food = Nearest(bot);
+
+        bot.AimX = food.X;
+        bot.AimY = food.Y;
+        bot.Rethink = 0.8 + random.NextDouble();
+    }
+
+    bot.WantX = bot.AimX;
+    bot.WantY = bot.AimY;
+}
+
+/// <summary>The closest pellet, or somewhere to wander if the floor is bare.</summary>
+(double X, double Y) Nearest(Player bot)
+{
+    var best = double.MaxValue;
+    var found = (X: bot.X, Y: bot.Y);
+    var any = false;
+
+    foreach (var key in World.KeysWithin(bot.X, bot.Y, 1100))
+    {
+        if (!floor.TryGetValue(key, out var dust))
+        {
+            continue;
+        }
+
+        foreach (var pellet in dust)
+        {
+            var gap = (pellet.X - bot.X) * (pellet.X - bot.X) + (pellet.Y - bot.Y) * (pellet.Y - bot.Y);
+
+            if (gap < best)
+            {
+                best = gap;
+                found = (pellet.X, pellet.Y);
+                any = true;
+            }
+        }
+    }
+
+    return any ? found : Somewhere();
+}
+
+/// <summary>
+/// Puts some company in the arena.
+/// </summary>
+/// <remarks>
+/// Asked for rather than always present, and capped, because an arena that
+/// fills itself is one nobody can ever have to themselves. They are cleared
+/// when the last person leaves, so an empty arena does not quietly keep a
+/// dozen of them running.
+/// </remarks>
+void Populate(int wanted)
+{
+    var names = new[] { "Mote", "Husk", "Drift", "Cinder", "Wisp", "Ember", "Shard", "Vessel", "Plume", "Quill", "Ash", "Fleck" };
+
+    for (var i = 0; i < wanted && bots.Count < 12; i++)
+    {
+        var spot = Somewhere();
+
+        var bot = new Player
+        {
+            Id = NewId(),
+            Name = names[random.Next(names.Length)] + " " + (char)('A' + random.Next(26)),
+            Colour = World.ColourFor(Interlocked.Increment(ref seat)),
+            X = spot.X,
+            Y = spot.Y,
+            Radius = World.Start * (1 + random.NextDouble()),
+            Bot = true
+        };
+
+        bot.WantX = bot.AimX = bot.X;
+        bot.WantY = bot.AimY = bot.Y;
+
+        bots[bot.Id] = bot;
+    }
+}
+
 void Step(double seconds)
 {
-    var everyone = players.Values.ToArray();
+    var everyone = Souls();
 
     tick++;
 
@@ -509,6 +769,14 @@ void Step(double seconds)
 
     // the arena is sized for whoever is in it, once, before anything moves
     size = World.SizeFor(everyone.Length);
+
+    foreach (var soul in everyone)
+    {
+        if (soul.Bot && !soul.Gone)
+        {
+            Think(soul, everyone, seconds);
+        }
+    }
 
     // and the floor is made good and put into buckets before anybody walks
     // over it, so that the eating below and the broadcast afterwards are both
@@ -530,12 +798,17 @@ void Step(double seconds)
     {
         var grip = World.Grip(heavy.Radius, heavy.Hold, heavy.Wound);
 
+        if (World.IsHole(heavy.Radius))
+        {
+            grip = Math.Max(grip, 1) * World.HoleGrip;
+        }
+
         if (grip <= 0)
         {
             continue;
         }
 
-        foreach (var key in World.KeysWithin(heavy.X, heavy.Y, World.Drag(heavy.Radius, grip)))
+        foreach (var key in World.KeysWithin(heavy.X, heavy.Y, World.Drag(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleReach : 1)))
         {
             if (!floor.TryGetValue(key, out var dust))
             {
@@ -631,12 +904,20 @@ void Step(double seconds)
     {
         var grip = World.Grip(heavy.Radius, heavy.Hold, heavy.Wound);
 
+        // a collapsed blob is not a big player, it is weather: it pulls
+        // whatever the rest of the rules would have given it, several times
+        // over, and from much further away
+        if (World.IsHole(heavy.Radius))
+        {
+            grip = Math.Max(grip, 1) * World.HoleGrip;
+        }
+
         if (grip <= 0)
         {
             continue;
         }
 
-        var reach = World.Reach(heavy.Radius, grip);
+        var reach = World.Reach(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleReach : 1);
 
         foreach (var player in everyone)
         {
@@ -712,8 +993,25 @@ void Step(double seconds)
             }
         }
 
+        /*
+         * Running a drawn line.
+         *
+         * It replaces steering rather than adding to it: the line was chosen
+         * in advance and the whole point is that it is taken exactly, so
+         * whatever the pointer is doing meanwhile is ignored until it ends.
+         */
+        if (player.StreakX != null)
+        {
+            Run(player, seconds);
+        }
+        // a hole has no legs. It is pulled by nothing and pulls everything,
+        // and the only way it moves is if something bigger turns up
+        else if (World.IsHole(player.Radius))
+        {
+            goX = goY = 0;
+        }
         // holding on roots you: the pull still moves you, your own legs do not
-        if (distance > 1 && !(player.Hold && player.Rest <= 0))
+        else if (distance > 1 && !(player.Hold && player.Rest <= 0))
         {
             var step = Math.Min(World.Speed(player.Radius) * seconds, distance);
 
@@ -1157,25 +1455,53 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
 
     return JsonSerializer.Serialize(
         new Frame("f", near, crumbs, board.ToList(), alive, size,
-                  loot, flying, viewer.Perk, Math.Round(viewer.Lit, 2)), json);
+                  loot, flying, viewer.Perk, Math.Round(viewer.Lit, 2),
+                  Math.Round(Math.Max(0, viewer.WarpReady - at), 2), World.IsHole(viewer.Radius)), json);
 }
 
 async ValueTask Broadcast()
 {
     var everyone = players.ToArray();
 
-    var blobs = everyone.Where(p => !p.Value.Gone)
-                        .Select(p => new Blob(p.Value.Id, p.Value.Name, p.Value.Colour,
-                                              Math.Round(p.Value.X, 1), Math.Round(p.Value.Y, 1),
-                                              Math.Round(p.Value.Radius, 1),
-                                              Math.Round(World.Grip(p.Value.Radius, p.Value.Hold, p.Value.Wound), 2)))
-                        .ToArray();
+    // drawn from everybody rather than from the sockets: a bot is in the
+    // arena and has to be seen, it simply has nowhere to be sent to
+    var souls = Souls().Where(p => !p.Gone).ToArray();
 
-    var board = everyone.Where(p => !p.Value.Gone)
-                        .OrderByDescending(p => p.Value.Radius)
-                        .Take(8)
-                        .Select(p => new Score(p.Value.Name, World.ScoreOf(p.Value.Radius)))
-                        .ToArray();
+    var blobs = souls.Select(p => new Blob(p.Id, p.Name, p.Colour,
+                                           Math.Round(p.X, 1), Math.Round(p.Y, 1),
+                                           Math.Round(p.Radius, 1),
+                                           Math.Round(World.IsHole(p.Radius)
+                                                      ? World.Grip(p.Radius, p.Hold, p.Wound) * World.HoleGrip
+                                                      : World.Grip(p.Radius, p.Hold, p.Wound), 2)))
+                     .ToArray();
+
+    var board = souls.OrderByDescending(p => p.Radius)
+                     .Take(8)
+                     .Select(p => new Score(p.Name, World.ScoreOf(p.Radius)))
+                     .ToArray();
+
+    // a bot that was eaten starts again rather than leaving the arena emptier
+    // than whoever asked for company wanted it
+    foreach (var (id, bot) in bots)
+    {
+        if (!bot.Gone)
+        {
+            continue;
+        }
+
+        var spot = Somewhere();
+
+        bot.X = bot.WantX = bot.AimX = spot.X;
+        bot.Y = bot.WantY = bot.AimY = spot.Y;
+        bot.Radius = World.Start;
+        bot.Gone = false;
+        bot.EatenBy = null;
+        bot.Perk = Perk.None;
+        bot.Hold = false;
+        bot.StreakX = null;
+        bot.StreakY = null;
+        bot.Wound = 0;
+    }
 
     // whoever went this tick is told so and dropped. It touches the shared
     // state and happens to a handful of people at most, so it stays here
@@ -1396,6 +1722,86 @@ var socket = Websocket.Functional()
                               return;
                           }
 
+                          if (text.Contains("\"warp\""))
+                          {
+                              var wants = JsonSerializer.Deserialize<Warp>(text, json);
+
+                              if (wants != null)
+                              {
+                                  Jump(player, wants.X, wants.Y);
+                              }
+
+                              return;
+                          }
+
+                          if (text.Contains("\"path\""))
+                          {
+                              /*
+                               * A drawn line, spent on arrival rather than on
+                               * the press that started it: somebody who draws
+                               * and then changes their mind has not used
+                               * anything, and the pickup is worth too much to
+                               * take for a gesture that never finished.
+                               */
+                              var drawn = JsonSerializer.Deserialize<Path>(text, json);
+
+                              if (player.Perk == Perk.Streak && drawn?.X is { Length: > 1 } && drawn.Y?.Length == drawn.X.Length)
+                              {
+                                  var count = Math.Min(drawn.X.Length, World.StreakPoints);
+
+                                  var xs = new double[count];
+                                  var ys = new double[count];
+
+                                  var run = 0.0;
+                                  var kept = 0;
+
+                                  for (var i = 0; i < count; i++)
+                                  {
+                                      var px = World.Clamp(drawn.X[i], size);
+                                      var py = World.Clamp(drawn.Y[i], size);
+
+                                      if (kept > 0)
+                                      {
+                                          run += Math.Sqrt((px - xs[kept - 1]) * (px - xs[kept - 1])
+                                                         + (py - ys[kept - 1]) * (py - ys[kept - 1]));
+
+                                          // a line longer than the rules allow
+                                          // is cut, not refused: the drawing
+                                          // was honest, it just went too far
+                                          if (run > World.StreakLength)
+                                          {
+                                              break;
+                                          }
+                                      }
+
+                                      xs[kept] = px;
+                                      ys[kept] = py;
+                                      kept++;
+                                  }
+
+                                  if (kept > 1)
+                                  {
+                                      player.StreakX = xs[..kept];
+                                      player.StreakY = ys[..kept];
+                                      player.StreakLeg = 0;
+                                      player.StreakGone = 0;
+                                      player.Perk = Perk.None;
+                                      player.Hold = false;
+                                  }
+                              }
+
+                              return;
+                          }
+
+                          if (text.Contains("\"fill\""))
+                          {
+                              var asked = JsonSerializer.Deserialize<Fill>(text, json);
+
+                              Populate(Math.Clamp(asked?.Count ?? 3, 1, 12));
+
+                              return;
+                          }
+
                           if (text.Contains("\"use\""))
                           {
                               /*
@@ -1428,6 +1834,12 @@ var socket = Websocket.Functional()
                               Remember(leaving);
                           }
 
+                          // the last person out takes the company with them
+                          if (players.IsEmpty)
+                          {
+                              bots.Clear();
+                          }
+
                           // not disposed: a write may still be holding it.
                           // Named rather than discarded because the close
                           // handler already has a parameter called _
@@ -1444,11 +1856,11 @@ var api = Inline.Create()
                         return best.ToList();
                     }
                 })
-                .Get("here", () => new Here(players.Count, pellets.Count));
+                .Get("here", () => new Here(players.Count, bots.Count, pellets.Count));
 
 return Layout.Create()
              .Add("api", api)
              .Add("play", socket)
              .Add(Assets.App());
 
-record Here(int Players, int Pellets);
+record Here(int Players, int Bots, int Pellets);

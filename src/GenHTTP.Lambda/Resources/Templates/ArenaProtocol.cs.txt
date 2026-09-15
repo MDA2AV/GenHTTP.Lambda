@@ -43,8 +43,22 @@ public static class Perk
     /// <summary>Spends your own blob to hurt everything large nearby.</summary>
     public const int Blast = 2;
 
-    public const int Count = 2;
+    /// <summary>
+    /// Draw a line, then run it far faster than anything can chase.
+    /// </summary>
+    public const int Streak = 3;
+
+    public const int Count = 3;
 }
+
+/// <summary>Somebody asking to be somewhere else.</summary>
+public record Warp(string Kind, double X, double Y);
+
+/// <summary>A line somebody drew, to be run at speed.</summary>
+public record Path(string Kind, double[] X, double[] Y);
+
+/// <summary>Asking for company, when there is nobody about.</summary>
+public record Fill(string Kind, int Count);
 
 /// <summary>Somebody used what they were carrying.</summary>
 public record Use(string Kind);
@@ -88,8 +102,10 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// records cost several times as much, and they are the bulk of every frame.
 /// The colour is a position in the palette sent with the welcome.
 /// </remarks>
+/// <param name="Cool">Seconds until this player may teleport again, nought if now</param>
+/// <param name="Hole">Whether this player has collapsed and can no longer move</param>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W,
-                    List<int> K, List<int> S, int Mine, double Fuse);
+                    List<int> K, List<int> S, int Mine, double Fuse, double Cool, bool Hole);
 
 /// <summary>
 /// Sent to everybody when somebody takes the whole arena.

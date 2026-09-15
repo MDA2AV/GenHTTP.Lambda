@@ -9,10 +9,13 @@
 
 <div id="hud" hidden>
   <b id="score">0</b>
-  <span class="dim">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull</span>
+  <span class="dim">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport</span>
   <span id="perk" hidden></span>
+  <span id="warp" class="ready">teleport ready &middot; E</span>
   <span id="hold" hidden>holding on. Everything nearby is coming to you, and it is costing you</span>
 </div>
+
+<button id="crowd" hidden>add bots</button>
 
 <div id="board" hidden>
   <h2>Biggest</h2>

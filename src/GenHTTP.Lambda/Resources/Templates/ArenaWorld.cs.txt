@@ -3,7 +3,7 @@
 static class World
 {
     /// <summary>The smallest the arena ever is, which is how it starts.</summary>
-    public const double Smallest = 2400;
+    public const double Smallest = 3600;
 
     /// <summary>
     /// How much room one player is given.
@@ -15,7 +15,7 @@ static class World
     /// where nobody goes - so the middle wears bare and stays bare, while the
     /// total never drops far enough for the scatter to notice.
     /// </remarks>
-    public const double Elbow = 360_000;
+    public const double Elbow = 820_000;
 
     /// <summary>
     /// How big the arena is for this many people.
@@ -46,6 +46,73 @@ static class World
     /// The score that wins the arena and ends the round.
     /// </summary>
     public const double Win = 1_000_000;
+
+    /// <summary>
+    /// The score at which somebody stops being a player and becomes a hole.
+    /// </summary>
+    /// <remarks>
+    /// Below the win rather than at it, so the last stretch of a round is
+    /// played out rather than announced. Whoever reaches this can no longer
+    /// move at all and pulls the whole arena towards them instead - which
+    /// makes the end of a round a thing everybody else has to survive rather
+    /// than a number going up somewhere they cannot see.
+    /// </remarks>
+    public const double Singularity = 800_000;
+
+    /// <summary>Whether this radius has collapsed.</summary>
+    public static bool IsHole(double radius) => ScoreOf(radius) >= Singularity;
+
+    /// <summary>
+    /// How much harder a hole pulls than the same size merely holding on.
+    /// </summary>
+    /// <remarks>
+    /// Large enough that it is not a strong player, it is weather. The reach
+    /// multiplier is the part that decides whether the arena feels it: a hole
+    /// that pulls enormously but only nearby is just a big blob.
+    /// </remarks>
+    public const double HoleGrip = 9.0;
+
+    public const double HoleReach = 3.2;
+
+    /// <summary>
+    /// How long between one teleport and the next, in seconds.
+    /// </summary>
+    /// <remarks>
+    /// Everybody has this, always: it is the answer to being cornered, and a
+    /// game where the answer to being cornered is owned by whoever is already
+    /// winning is a game that is over early. Ten seconds is long enough that
+    /// it is a decision and short enough that it is not a last resort.
+    /// </remarks>
+    public const double WarpEvery = 10.0;
+
+    /// <summary>
+    /// What a teleport costs, as a share of the blob.
+    /// </summary>
+    /// <remarks>
+    /// Small, and there so that it is not simply free movement. Vanishing and
+    /// reappearing across the arena for nothing would make chasing anybody
+    /// pointless, and being chased is most of the game.
+    /// </remarks>
+    public const double WarpToll = 0.04;
+
+    /// <summary>How far a teleport may carry somebody.</summary>
+    public static double WarpReach(double radius) => 900 + radius * 6;
+
+    /// <summary>
+    /// How fast a drawn line is run, in units a second.
+    /// </summary>
+    /// <remarks>
+    /// Far faster than anything can move under its own steam, which is the
+    /// whole of the pickup: it is not a speed boost, it is a route decided in
+    /// advance and then taken faster than anybody can react to.
+    /// </remarks>
+    public const double StreakSpeed = 2600;
+
+    /// <summary>The longest line that may be drawn, in units.</summary>
+    public const double StreakLength = 5200;
+
+    /// <summary>The most points a drawn line may be made of.</summary>
+    public const int StreakPoints = 64;
 
     /// <summary>
     /// The radius nobody grows past, which is the radius that scores exactly

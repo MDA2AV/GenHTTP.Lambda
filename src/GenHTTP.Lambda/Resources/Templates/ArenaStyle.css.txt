@@ -40,3 +40,33 @@ h1 { margin: 0 0 .4rem; }
 
 input { padding: 9px 11px; border: 1px solid #3c4043; background: #12151a; color: inherit; font: inherit; }
 button { padding: 9px 20px; border: 0; background: #1a73e8; color: #fff; font: inherit; cursor: pointer; }
+
+/* The teleport, which everybody has, and the one pickup that is drawn rather
+   than thrown. Kept to the same shape as the rest of the hud so the row reads
+   as one line of state and not as three separate notices. */
+#warp {
+  font-variant-numeric: tabular-nums;
+}
+
+#warp.ready { color: #8adcff; }
+#warp.cooling { color: #7c8698; }
+#warp.collapsed { color: #c884ff; font-weight: 600; }
+
+#perk.streak { color: #8adcff; }
+
+#crowd {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  background: rgba(14, 18, 26, .82);
+  color: #c3cbd9;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+
+#crowd:hover { color: #fff; border-color: rgba(255, 255, 255, .34); }

@@ -161,4 +161,32 @@ sealed class Player
     /// <summary>Set when somebody has eaten them; the socket is told and closed.</summary>
     public bool Gone;
     public string EatenBy;
+
+    /// <summary>When this blob may teleport again, on the arena clock.</summary>
+    public double WarpReady;
+
+    /// <summary>
+    /// The line this blob is running, if it is running one.
+    /// </summary>
+    /// <remarks>
+    /// Kept as the points the browser drew rather than as a direction,
+    /// because the point of it is the shape: a curve round the back of
+    /// somebody is a different thing from the straight line between its ends,
+    /// and reducing it to a heading would throw away exactly the part the
+    /// player chose.
+    /// </remarks>
+    public double[] StreakX;
+    public double[] StreakY;
+
+    /// <summary>Which leg of the line is being run, and how far along it.</summary>
+    public int StreakLeg;
+    public double StreakGone;
+
+    /// <summary>Whether nobody is driving this one.</summary>
+    public bool Bot;
+
+    /// <summary>What a bot is heading for, and when it will think again.</summary>
+    public double AimX;
+    public double AimY;
+    public double Rethink;
 }

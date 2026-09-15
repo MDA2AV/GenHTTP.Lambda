@@ -83,7 +83,41 @@ let pointer = { x: 0, y: 0 };
 /** Whether the space bar is down, which is the one thing a player presses. */
 let hold = false;
 
+/** The line being drawn, in world units, while the pickup is in hand. */
+let drawing = null;
+
+/** Seconds until the teleport is ready, and whether this blob has collapsed. */
+let cool = 0, collapsed = false;
+
+/** Where the pointer is, in world units. */
+function aim() {
+  if (!camera) return null;
+
+  const scale = scaleFor(camera.r);
+
+  return {
+    x: camera.x + (pointer.x - innerWidth / 2) / scale,
+    y: camera.y + (pointer.y - innerHeight / 2) / scale
+  };
+}
+
 addEventListener('keydown', (e) => {
+  /*
+   * Teleport. On its own key rather than on a mouse button, because both
+   * buttons already mean something and the one thing everybody has should
+   * not be the one thing that needs explaining.
+   */
+  if (e.code === 'KeyE' && !e.repeat) {
+    const to = aim();
+
+    if (to && socket?.readyState === 1 && cool <= 0 && !collapsed) {
+      socket.send(JSON.stringify({ kind: 'warp', x: to.x, y: to.y }));
+    }
+
+    e.preventDefault();
+    return;
+  }
+
   if (e.code !== 'Space' || e.repeat) return;
   hold = true;
   e.preventDefault();
@@ -100,11 +134,43 @@ addEventListener('keyup', (e) => {
 addEventListener('blur', () => { hold = false; });
 
 // clicking spends whatever is in hand: a harpoon goes where the pointer is,
-// a blast lights a fuse under you
+// a blast lights a fuse under you, and a streak is drawn rather than thrown
 addEventListener('pointerdown', (e) => {
   if (e.button !== 0 || socket?.readyState !== 1 || !camera) return;
+
+  /*
+   * The streak is the one pickup that is not spent by pressing. Pressing
+   * starts a line; it is spent when the line is let go of, so somebody who
+   * presses and changes their mind has not thrown anything away.
+   */
+  if (carrying === 3) {
+    const at = aim();
+
+    drawing = at ? [at] : null;
+
+    return;
+  }
+
   socket.send(JSON.stringify({ kind: 'use' }));
 });
+
+addEventListener('pointerup', () => {
+  if (!drawing) return;
+
+  const line = drawing;
+
+  drawing = null;
+
+  if (line.length > 1 && socket?.readyState === 1) {
+    socket.send(JSON.stringify({
+      kind: 'path',
+      x: line.map((q) => Math.round(q.x)),
+      y: line.map((q) => Math.round(q.y))
+    }));
+  }
+});
+
+addEventListener('blur', () => { drawing = null; });
 
 function size() {
   canvas.width = innerWidth * devicePixelRatio;
@@ -116,7 +182,23 @@ function size() {
 addEventListener('resize', size);
 size();
 
-addEventListener('pointermove', (e) => { pointer = { x: e.clientX, y: e.clientY }; });
+addEventListener('pointermove', (e) => {
+  pointer = { x: e.clientX, y: e.clientY };
+
+  if (!drawing) return;
+
+  const at = aim();
+
+  if (!at) return;
+
+  const last = drawing[drawing.length - 1];
+
+  // a point every so often rather than every event: a mouse reports far more
+  // often than the line needs, and sixty four points is the whole budget
+  if (Math.hypot(at.x - last.x, at.y - last.y) > 70 && drawing.length < 64) {
+    drawing.push(at);
+  }
+});
 
 // the server is told where the pointer is in world units, twenty times a
 // second - the same rate it answers at, because sending faster than it
@@ -303,6 +385,110 @@ function moment() {
   return { blobs, pellets, loot: after.k ?? [], spears: after.s ?? [] };
 }
 
+/**
+ * What a blob has grown into.
+ *
+ * Score rather than radius, because score is the number the player is
+ * watching go up and radius is the square root of it - tiers picked on radius
+ * land at sizes that mean nothing to anybody reading the board.
+ */
+const SCORE = (r) => Math.PI * (r * r - 14 * 14);
+
+function stageOf(r) {
+  const s = SCORE(r);
+
+  if (s >= 800000) return 4;   // collapsed
+  if (s >= 380000) return 3;   // black fire
+  if (s >= 120000) return 2;   // fire
+  if (s >= 24000) return 1;    // embers
+  return 0;
+}
+
+/**
+ * The fire around something large, and the hole around something larger.
+ *
+ * Drawn as a handful of arcs at rotating offsets rather than as particles:
+ * there can be a dozen of these on screen and a particle system for each is
+ * more frame than the effect is worth. The arcs are seeded off the blob's own
+ * position so two blobs of the same size do not flicker in step.
+ */
+function drawAura(x, y, r, stage, id, spin) {
+  if (stage <= 0) return;
+
+  const seed = (id.charCodeAt(0) + id.charCodeAt(1) * 7) % 100 / 100;
+
+  if (stage === 4) {
+    // the hole: a rim of light round a disc of nothing, and the light is all
+    // of it - the middle is painted out so it reads as absence
+    const halo = ctx.createRadialGradient(x, y, r * 0.86, x, y, r * 2.3);
+
+    halo.addColorStop(0, 'rgba(255,238,200,0.85)');
+    halo.addColorStop(0.12, 'rgba(255,150,60,0.55)');
+    halo.addColorStop(0.4, 'rgba(120,40,160,0.30)');
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(255,${190 - i * 50},${120 - i * 40},${0.5 - i * 0.12})`;
+      ctx.lineWidth = Math.max(1.5, r * (0.05 - i * 0.012));
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * (1.15 + i * 0.22), r * (0.34 + i * 0.1),
+                  spin * (0.6 + i * 0.25) + seed * 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#05060a';
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.94, 0, Math.PI * 2);
+    ctx.fill();
+
+    return;
+  }
+
+  const tongues = stage === 1 ? 5 : stage === 2 ? 8 : 10;
+  const reach = stage === 1 ? 0.22 : stage === 2 ? 0.38 : 0.5;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  for (let i = 0; i < tongues; i++) {
+    const a = (i / tongues) * Math.PI * 2 + spin * (0.5 + (i % 3) * 0.2) + seed * 6;
+    const wob = 0.6 + 0.4 * Math.sin(spin * 3 + i * 1.7 + seed * 10);
+    const len = r * reach * wob;
+
+    const fx = x + Math.cos(a) * (r + len * 0.5);
+    const fy = y + Math.sin(a) * (r + len * 0.5);
+
+    const flame = ctx.createRadialGradient(fx, fy, 0, fx, fy, Math.max(2, len));
+
+    if (stage === 3) {
+      // black fire: violet at the root going to nothing, so it eats the
+      // starfield behind it rather than lighting it
+      flame.addColorStop(0, `rgba(196,132,255,${0.42 * wob})`);
+      flame.addColorStop(0.45, `rgba(92,30,140,${0.30 * wob})`);
+      flame.addColorStop(1, 'rgba(10,0,20,0)');
+    } else if (stage === 2) {
+      flame.addColorStop(0, `rgba(255,236,170,${0.5 * wob})`);
+      flame.addColorStop(0.4, `rgba(255,132,40,${0.34 * wob})`);
+      flame.addColorStop(1, 'rgba(120,20,0,0)');
+    } else {
+      flame.addColorStop(0, `rgba(255,190,120,${0.3 * wob})`);
+      flame.addColorStop(1, 'rgba(120,50,0,0)');
+    }
+
+    ctx.fillStyle = flame;
+    ctx.beginPath();
+    ctx.arc(fx, fy, Math.max(2, len), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 function draw() {
   requestAnimationFrame(draw);
 
@@ -413,12 +599,11 @@ function draw() {
     ctx.fillRect(left, top, right - left, bottom - top);
   }
 
-  drawSheet(put, scale,
+  drawSpace(put, scale,
             Math.max(0, mine.x - innerWidth / 2 / scale),
             Math.min(world, mine.x + innerWidth / 2 / scale),
             Math.max(0, mine.y - innerHeight / 2 / scale - FLOOR * TILT),
-            Math.min(world, mine.y + innerHeight / 2 / scale + FLOOR * TILT),
-            under);
+            Math.min(world, mine.y + innerHeight / 2 / scale + FLOOR * TILT));
 
   // pellets arrive flat - x, y, colour, x, y, colour - so they are walked
   // three at a time rather than unpacked into objects that live one frame
@@ -493,6 +678,41 @@ function draw() {
     ctx.stroke();
   }
 
+  /*
+   * The line as it is being drawn.
+   *
+   * Drawn through the same warp as everything else, so a line dragged past
+   * something enormous bends with the space around it - which is honest,
+   * because that is the path the blob will actually be moved along.
+   */
+  if (drawing && drawing.length > 0) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(138,220,255,0.85)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([10, 8]);
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+
+    const head = put(drawing[0].x, drawing[0].y);
+
+    ctx.moveTo(head.x, head.y);
+
+    for (const q of drawing.slice(1)) {
+      const at = put(q.x, q.y);
+      ctx.lineTo(at.x, at.y);
+    }
+
+    const live = aim();
+
+    if (live) {
+      const at = put(live.x, live.y);
+      ctx.lineTo(at.x, at.y);
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // smallest first, so being swallowed looks like being swallowed
   for (const b of [...now.blobs].sort((a, z) => a.r - z.r)) {
     const at = flat(b.x, b.y);
@@ -507,9 +727,13 @@ function draw() {
     ctx.ellipse(at.x, y + r * 0.2, r * 1.06, r * 0.36, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    const stage = stageOf(b.r);
+
+    drawAura(at.x, y, r, stage, b.i, performance.now() / 1000);
+
     // the body stays a circle whatever the sheet is doing, because how big
     // somebody is has to be readable at a glance and a squashed one is not
-    ctx.fillStyle = b.c;
+    ctx.fillStyle = stage === 4 ? '#0a0b12' : b.c;
     ctx.beginPath();
     ctx.arc(at.x, y, r, 0, Math.PI * 2);
     ctx.fill();
@@ -552,67 +776,84 @@ function draw() {
 }
 
 /**
- * The grid, as a sheet rather than as straight lines.
+ * Deep space, and what gravity does to it.
  *
- * Every line is walked in short steps and each step is put through the warp,
- * so a straight line through a well comes out as a curve and enough of them
- * together read as a surface. The steps are sized in screen pixels rather
- * than world units, so the cost is the same whether the player is small and
- * zoomed right in or huge and zoomed out.
+ * There was a grid here. A grid is the easy way to show a surface bending -
+ * every line is visibly not straight any more - and it also made the arena
+ * look like graph paper, which is the wrong thing for a game about something
+ * enormous eating everything near it.
+ *
+ * The stars do the same job. They are a fixed field in world coordinates, so
+ * they hold still while the camera moves over them, and each one is put
+ * through the same warp the blobs are - so near a well they slide inwards and
+ * smear, which reads as lensing rather than as a dented sheet. The field is
+ * generated from a fixed seed, so it is the same field every frame and the
+ * same field for everybody.
  */
-function drawSheet(put, scale, left, right, top, bottom, under) {
-  const gap = scale < 0.7 ? 120 : 60;
-  const step = Math.min(80, Math.max(16, 22 / scale));
+const STARS = (() => {
+  // a small deterministic generator, so the sky does not shimmer between
+  // frames and two players describing it are describing the same thing
+  let seed = 0x9e3779b9;
 
-  // four paths by depth, so the whole sheet is four strokes rather than one
-  // per segment, and the deep parts can be fainter without a colour change
-  const paths = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
-
-  const run = (ax, ay, bx, by, into) => {
-    const steps = Math.ceil(Math.hypot(bx - ax, by - ay) / step);
-
-    let last = null;
-
-    for (let i = 0; i <= steps; i++) {
-      const x = ax + (bx - ax) * i / steps;
-      const y = ay + (by - ay) * i / steps;
-      const at = put(x, y);
-
-      if (last) {
-        const deep = Math.min(3, Math.max(0, at.z - under) / FLOOR * 4 | 0);
-
-        (into ?? paths[deep]).moveTo(last.x, last.y);
-        (into ?? paths[deep]).lineTo(at.x, at.y);
-      }
-
-      last = at;
-    }
+  const next = () => {
+    seed ^= seed << 13; seed >>>= 0;
+    seed ^= seed >> 17;
+    seed ^= seed << 5; seed >>>= 0;
+    return seed / 0xffffffff;
   };
 
-  for (let x = Math.ceil(left / gap) * gap; x <= right; x += gap) run(x, top, x, bottom);
-  for (let y = Math.ceil(top / gap) * gap; y <= bottom; y += gap) run(left, y, right, y);
+  return Array.from({ length: 1400 }, () => ({
+    x: next(), y: next(),
+    size: 0.4 + next() * 1.6,
+    lit: 0.25 + next() * 0.75,
+    warm: next()
+  }));
+})();
 
-  ctx.lineWidth = 1;
+function drawSpace(put, scale, left, right, top, bottom) {
+  const w = world || 1;
 
-  const fade = [0.8, 0.58, 0.38, 0.22];
+  // a few soft clouds, drawn flat: they are far enough away that bending
+  // them would say they were close
+  for (let i = 0; i < 5; i++) {
+    const cx = ((i * 0.37 + 0.11) % 1) * w;
+    const cy = ((i * 0.61 + 0.29) % 1) * w;
 
-  for (let i = 3; i >= 0; i--) {
-    ctx.strokeStyle = `rgba(54,64,82,${fade[i]})`;
-    ctx.stroke(paths[i]);
+    if (cx < left - 900 || cx > right + 900 || cy < top - 900 || cy > bottom + 900) continue;
+
+    const at = put(cx, cy);
+    const span = (700 + i * 240) * scale;
+
+    const cloud = ctx.createRadialGradient(at.x, at.y, 0, at.x, at.y, span);
+
+    cloud.addColorStop(0, i % 2 ? 'rgba(60,32,86,0.30)' : 'rgba(22,48,88,0.30)');
+    cloud.addColorStop(0.55, i % 2 ? 'rgba(42,22,64,0.13)' : 'rgba(16,34,66,0.13)');
+    cloud.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.fillStyle = cloud;
+    ctx.fillRect(at.x - span, at.y - span, span * 2, span * 2);
   }
 
-  // the edge of the arena, which warps with everything else so that it reads
-  // as the rim of the same sheet rather than a frame laid over it
-  const rim = new Path2D();
+  for (const s of STARS) {
+    const x = s.x * w;
+    const y = s.y * w;
 
-  if (top <= 0) run(left, 0, right, 0, rim);
-  if (bottom >= world) run(left, world, right, world, rim);
-  if (left <= 0) run(0, top, 0, bottom, rim);
-  if (right >= world) run(world, top, world, bottom, rim);
+    if (x < left || x > right || y < top || y > bottom) continue;
 
-  ctx.strokeStyle = '#46506a';
-  ctx.lineWidth = 3;
-  ctx.stroke(rim);
+    const at = put(x, y);
+
+    const r = Math.max(0.5, s.size * Math.min(1.6, scale * 1.4));
+
+    ctx.fillStyle = s.warm > 0.82
+      ? `rgba(255,214,170,${s.lit * 0.9})`
+      : s.warm > 0.62
+        ? `rgba(196,214,255,${s.lit * 0.85})`
+        : `rgba(226,232,246,${s.lit * 0.7})`;
+
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 requestAnimationFrame(draw);
@@ -632,7 +873,7 @@ function connect(name) {
       history.length = 0; camera = null;
       out = false;
       $('gate').hidden = true; $('over').hidden = true;
-      $('hud').hidden = false; $('board').hidden = false;
+      $('hud').hidden = false; $('board').hidden = false; $('crowd').hidden = false;
       return;
     }
 
@@ -660,6 +901,11 @@ function connect(name) {
 
     carrying = m.mine ?? 0;
     fuse = m.fuse ?? 0;
+    cool = m.cool ?? 0;
+    collapsed = !!m.hole;
+
+    // whatever was being drawn belongs to a pickup that is no longer in hand
+    if (carrying !== 3) drawing = null;
 
     // a couple of seconds is far more than DELAY ever reaches back for, and
     // keeps this from growing for as long as somebody leaves the tab open
@@ -676,8 +922,17 @@ function connect(name) {
     perk.hidden = !carrying;
     perk.textContent = carrying === 1
       ? 'harpoon in hand: click to throw it at something big'
-      : 'blast in hand: click and everything large near you takes it with you';
-    perk.className = carrying === 1 ? 'harpoon' : 'blast';
+      : carrying === 2
+        ? 'blast in hand: click and everything large near you takes it with you'
+        : 'streak in hand: hold the button and draw a line, let go and run it';
+    perk.className = carrying === 1 ? 'harpoon' : carrying === 2 ? 'blast' : 'streak';
+
+    $('warp').textContent = collapsed
+      ? 'collapsed. You cannot move. Everything comes to you.'
+      : cool > 0
+        ? `teleport in ${cool.toFixed(1)}s`
+        : 'teleport ready · E';
+    $('warp').className = collapsed ? 'collapsed' : cool > 0 ? 'cooling' : 'ready';
     $('list').innerHTML = m.l.map((s) =>
       `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
   };
@@ -689,6 +944,19 @@ $('go').onclick = () => connect($('name').value);
 $('again').onclick = () => connect($('name').value);
 
 // a win does not put anybody out - the next round is already running
+/*
+ * Company, for an arena with nobody in it.
+ *
+ * Asked for rather than always there. An arena that fills itself is one that
+ * can never be had to yourself, and the first thing anybody does on an empty
+ * server is leave - so it is a button, and it is capped server side.
+ */
+$('crowd').onclick = () => {
+  if (socket?.readyState !== 1) return;
+
+  socket.send(JSON.stringify({ kind: 'fill', count: 4 }));
+};
+
 $('carry').onclick = () => {
   $('won').hidden = true;
 
