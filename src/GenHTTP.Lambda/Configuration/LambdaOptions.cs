@@ -47,6 +47,23 @@ public sealed record LambdaOptions
     public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1;
 
     /// <summary>
+    /// Where the build agent listens, or nothing to do without one.
+    /// </summary>
+    /// <remarks>
+    /// Empty by default and deliberately: the agent spends a Claude
+    /// subscription on whatever a stranger types, so an installation has to
+    /// opt into that rather than inherit it. Clearing this is also the kill
+    /// switch - the text box stops being offered the moment it is unset.
+    /// </remarks>
+    public string? AgentUrl { get; init; }
+
+    /// <summary>The secret the server sends the agent, so only it can ask.</summary>
+    public string? AgentToken { get; init; }
+
+    /// <summary>How many builds one address may ask for in a day.</summary>
+    public int AgentBuildsPerDay { get; init; } = 3;
+
+    /// <summary>
     /// The directory holding the database, the stored code and the lambda workspaces.
     /// </summary>
     public string DataDirectory { get; init; } = Path.Combine(AppContext.BaseDirectory, "data");
@@ -233,6 +250,9 @@ public sealed record LambdaOptions
             Development = ReadBool("LAMBDA_DEVELOPMENT", defaults.Development),
             Engine = ReadEngine("LAMBDA_ENGINE", defaults.Engine),
             Protocols = ReadProtocols("LAMBDA_HTTP_PROTOCOLS", defaults.Protocols),
+            AgentUrl = ReadOptional("LAMBDA_AGENT_URL"),
+            AgentToken = ReadOptional("LAMBDA_AGENT_TOKEN"),
+            AgentBuildsPerDay = ReadInt("LAMBDA_AGENT_BUILDS_PER_DAY", defaults.AgentBuildsPerDay),
             DataDirectory = Path.GetFullPath(ReadString("LAMBDA_DATA_DIRECTORY", defaults.DataDirectory)),
             WebRoot = Path.GetFullPath(ReadString("LAMBDA_WEB_ROOT", defaults.WebRoot)),
             DeploymentLifetime = ReadSpan("LAMBDA_DEPLOYMENT_LIFETIME_HOURS", defaults.DeploymentLifetime),

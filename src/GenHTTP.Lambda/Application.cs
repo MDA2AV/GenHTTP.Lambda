@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Execution;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -99,6 +100,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         services.AddSingleton<ExampleSeeder>();
         services.AddSingleton<McpTools>();
+        services.AddSingleton<BuildService>();
 
         services.AddSingleton<SpaResources>();
 

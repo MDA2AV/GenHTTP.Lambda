@@ -65,6 +65,18 @@ export interface DeploymentResult extends CompilationResult {
   lambda?: Lambda;
 }
 
+export interface BuildResult {
+  ok: boolean;
+  url?: string;
+  editorUrl?: string;
+  publicKey?: string;
+  privateKey?: string;
+  summary?: string;
+  error?: string;
+  detail?: string;
+  deployed?: boolean;
+}
+
 export interface Availability {
   publicKey: string;
   available: boolean;
@@ -316,6 +328,14 @@ const withToken = (token: string, init: RequestInit = {}) => ({
 
 export const api = {
   platform: () => request<Platform>('/system'),
+
+  /** The text box on /build, and the agent behind it. */
+  build: {
+    available: () => request<{ available: boolean }>('/build'),
+    start: (prompt: string) => request<{ id: string }>('/build', send({ prompt })),
+    progress: (id: string) =>
+      request<{ state: string; events: string[]; result: BuildResult | null }>(`/build/${id}`),
+  },
 
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
 

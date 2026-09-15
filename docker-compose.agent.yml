@@ -1,0 +1,92 @@
+# The build agent, for the prompt box on the landing page.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ioxide.yml \
+#                  -f docker-compose.agent.yml up -d
+#
+# It runs Claude Code against whatever a stranger typed, so it is put where it
+# cannot do much. Two networks do most of that work:
+#
+#   agent-net   internal, no route off the machine. The agent and the lambda
+#               server share it, which is how the agent reaches the MCP - over
+#               the compose network rather than back out through the public
+#               address.
+#   egress      the ordinary bridge, which the agent is NOT on. Its only way
+#               to the model API is the proxy, and the proxy only resolves the
+#               hosts it is configured for.
+#
+# Seed its credentials once with docker/agent/seed-credentials.sh. They live
+# on a volume of its own because the OAuth token refreshes itself, and a
+# read-only credential stops working the day it expires.
+
+services:
+
+  lambda:
+    environment:
+      # where the server sends a prompt, and the shared secret it sends with
+      # it. Empty LAMBDA_AGENT_URL leaves the whole feature off.
+      LAMBDA_AGENT_URL: http://agent:8401
+      LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
+      LAMBDA_AGENT_BUILDS_PER_DAY: ${LAMBDA_AGENT_BUILDS_PER_DAY:-3}
+    networks:
+      default:
+      agent-net:
+        aliases:
+          # The agent talks to the MCP over this network, and the server
+          # redirects plain HTTP to HTTPS - so it has to be HTTPS, and HTTPS
+          # has to match the certificate. Answering to its own public name on
+          # the internal network means the agent uses the real address with a
+          # valid certificate and the traffic still never leaves the machine.
+          - genhttp.dev
+
+  agent:
+    build:
+      context: ./docker/agent
+    image: genhttp-agent:latest
+    environment:
+      AGENT_PORT: 8401
+      AGENT_MCP_URL: ${LAMBDA_AGENT_MCP_URL:-https://genhttp.dev/mcp}
+      AGENT_MODEL: ${LAMBDA_AGENT_MODEL:-claude-opus-4-5}
+      AGENT_MAX_TURNS: ${LAMBDA_AGENT_MAX_TURNS:-40}
+      AGENT_TIMEOUT_SECONDS: ${LAMBDA_AGENT_TIMEOUT_SECONDS:-300}
+      AGENT_PUBLIC_ORIGIN: ${LAMBDA_AGENT_ORIGIN:-https://genhttp.dev}
+      AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
+      # everything it says to the model goes through the proxy, because it has
+      # no other way out
+      HTTPS_PROXY: http://egress-proxy:3128
+      HTTP_PROXY: http://egress-proxy:3128
+      NO_PROXY: genhttp.dev,lambda,localhost,127.0.0.1
+    volumes:
+      - agent-config:/home/builder/.claude
+    networks:
+      - agent-net
+    # it holds nothing worth writing to and has no reason to grow one
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 2g
+    pids_limit: 512
+    restart: unless-stopped
+
+  egress-proxy:
+    image: genhttp-agent:latest
+    command: ["node", "/app/proxy.mjs"]
+    environment:
+      PROXY_PORT: 3128
+      PROXY_ALLOW: ${LAMBDA_AGENT_EGRESS:-api.anthropic.com,console.anthropic.com,statsig.anthropic.com,claude.ai}
+    depends_on:
+      - agent
+    networks:
+      - agent-net
+      - default
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    restart: unless-stopped
+
+volumes:
+  agent-config:
+
+networks:
+  agent-net:
+    internal: true
+  default:
