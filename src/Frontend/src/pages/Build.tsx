@@ -237,7 +237,8 @@ export function Build() {
 
       {state === 'idle' && model === 'fable' && (
         <p className="mt-2 text-center text-xs text-slate-400">
-          Fable is behind a password while it is being tried out.
+          Fable is behind a password while it is being tried out. It runs with no time limit,
+          so it will keep going until the thing is finished rather than until the clock runs out.
         </p>
       )}
 

@@ -134,8 +134,23 @@ automatically. Do not describe your process.`;
 /* ------------------------------------------------------------------ jobs */
 
 const jobs = new Map();
-const queue = [];
-let running = false;
+
+/*
+ * Two lanes, because one of them has no end.
+ *
+ * A build asked for with the password runs without a turn limit and without a
+ * clock, which is the point of it - but the ordinary queue runs one at a time,
+ * so an unbounded build sharing it would hold the public text box shut for as
+ * long as it felt like running. They get a lane of their own instead: at most
+ * one of each kind at once, and neither waits on the other.
+ */
+const lanes = {
+  quick: { queue: [], running: false },
+  long: { queue: [], running: false }
+};
+
+/** Whether a job runs without a clock or a turn limit. */
+const unbounded = job => job.model === 'fable';
 
 const clip = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
 
@@ -144,8 +159,10 @@ function enqueue(prompt, key, model) {
 
   jobs.set(id, { id, state: 'queued', prompt, key, model, events: [], created: Date.now(), result: null });
 
-  queue.push(id);
-  setImmediate(pump);
+  const lane = model === 'fable' ? lanes.long : lanes.quick;
+
+  lane.queue.push(id);
+  setImmediate(() => pump(lane));
 
   // an hour is long enough for somebody to come back to a tab
   setTimeout(() => jobs.delete(id), 60 * 60 * 1000).unref?.();
@@ -153,12 +170,12 @@ function enqueue(prompt, key, model) {
   return id;
 }
 
-async function pump() {
-  if (running || queue.length === 0) return;
+async function pump(lane) {
+  if (lane.running || lane.queue.length === 0) return;
 
-  running = true;
+  lane.running = true;
 
-  const id = queue.shift();
+  const id = lane.queue.shift();
   const job = jobs.get(id);
 
   if (job) {
@@ -172,9 +189,9 @@ async function pump() {
     record(job);
   }
 
-  running = false;
+  lane.running = false;
 
-  setImmediate(pump);
+  setImmediate(() => pump(lane));
 }
 
 function say(job, text) {
@@ -201,9 +218,22 @@ async function run(job) {
     mcpServers: { genhttp: { type: 'http', url: MCP_URL } }
   }));
 
-  const brief = job.key
+  let brief = job.key
     ? `${CHANGE}\n\nThe editor key of the application to change: ${job.key}\n\nWhat they asked for:\n\n${job.prompt}`
     : `${BRIEF}\n\nWhat they asked for:\n\n${job.prompt}`;
+
+  // the brief tells it how long it has, so it must not keep saying ten
+  // minutes to a build that has no clock on it at all
+  if (unbounded(job)) {
+    brief = brief.replace(
+      /You have about ten minutes[\s\S]*?time is left\./,
+      'Take the time you need. There is no clock on this one and no limit on how many\n'
+      + 'steps you take, so build the thing properly rather than the smallest version of\n'
+      + 'it: get it working first, then keep going until it is actually good.'
+    );
+  }
+
+  const free = unbounded(job);
 
   const args = [
     '-p', brief,
@@ -211,7 +241,9 @@ async function run(job) {
     '--mcp-config', config,
     '--strict-mcp-config',
     '--permission-mode', 'dontAsk',
-    '--max-turns', String(MAX_TURNS),
+    // left off entirely rather than set high: there is no value that means
+    // "no limit", and a large one is still a limit somebody eventually hits
+    ...(free ? [] : ['--max-turns', String(MAX_TURNS)]),
     '--output-format', 'stream-json',
     '--verbose',
     '--allowedTools', ...ALLOW,
@@ -224,7 +256,7 @@ async function run(job) {
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
-  const killer = setTimeout(() => child.kill('SIGKILL'), TIMEOUT);
+  const killer = free ? null : setTimeout(() => child.kill('SIGKILL'), TIMEOUT);
 
   // a change already knows its own key: nothing in the run will announce one,
   // because create_lambda is not called. The public half is picked up from
@@ -305,7 +337,7 @@ async function run(job) {
 
   const code = await new Promise(resolve => child.on('close', resolve));
 
-  clearTimeout(killer);
+  if (killer) clearTimeout(killer);
 
   await rm(cwd, { recursive: true, force: true }).catch(() => {});
 
@@ -333,7 +365,7 @@ async function run(job) {
     job.state = 'failed';
     job.result = {
       ok: false,
-      error: code === null || child.killed
+      error: !free && (code === null || child.killed)
         ? 'The build ran out of time.'
         : job.key
           ? 'Nothing was changed. The editor key may be wrong, or the change could not be made.'
@@ -377,6 +409,7 @@ function record(job) {
     at: new Date().toISOString(),
     id: job.id.slice(0, 8),
     model: job.model || 'opus',
+    unbounded: unbounded(job) || undefined,
     changing: !!job.key,
     seconds,
     state: job.state,
@@ -476,7 +509,12 @@ createServer((req, res) => {
   }
 
   if (req.method === 'GET' && req.url === '/health') {
-    return send(res, 200, { ok: true, running, queued: queue.length, models: Object.keys(MODELS) });
+    return send(res, 200, {
+      ok: true,
+      models: Object.keys(MODELS),
+      quick: { running: lanes.quick.running, queued: lanes.quick.queue.length },
+      long: { running: lanes.long.running, queued: lanes.long.queue.length }
+    });
   }
 
   if (req.method === 'POST' && req.url === '/build') {
@@ -494,7 +532,9 @@ createServer((req, res) => {
 
       if (prompt.length < 3) return send(res, 400, { error: 'Say what you want built.' });
 
-      if (queue.length > 12) return send(res, 503, { error: 'Too many builds waiting. Try again shortly.' });
+      if (lanes.quick.queue.length + lanes.long.queue.length > 12) {
+        return send(res, 503, { error: 'Too many builds waiting. Try again shortly.' });
+      }
 
       let key = '';
 
@@ -512,7 +552,11 @@ createServer((req, res) => {
         return send(res, 400, { error: 'There is no such model here.' });
       }
 
-      return send(res, 202, { id: enqueue(clip(prompt, 2000), key, model), queued: queue.length });
+      const id = enqueue(clip(prompt, 2000), key, model);
+
+      const lane = model === 'fable' ? lanes.long : lanes.quick;
+
+      return send(res, 202, { id, queued: lane.queue.length });
     });
 
     return;
@@ -525,11 +569,13 @@ createServer((req, res) => {
 
     if (!job) return send(res, 404, { error: 'No such build.' });
 
+    const lane = unbounded(job) ? lanes.long : lanes.quick;
+
     return send(res, 200, {
       state: job.state,
       events: job.events.map(e => e.text),
       result: job.result,
-      waiting: queue.indexOf(job.id) + 1
+      waiting: lane.queue.indexOf(job.id) + 1
     });
   }
 
