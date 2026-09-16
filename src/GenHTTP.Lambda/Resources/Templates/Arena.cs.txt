@@ -679,7 +679,7 @@ void Dash(Player player, double seconds)
 /// the nearest food - which is enough to make an empty arena worth opening
 /// without making it a place a person cannot win.
 /// </remarks>
-void Think(Player bot, Player[] everyone, double seconds)
+void Think(Player bot, double seconds)
 {
     bot.Rethink -= seconds;
 
@@ -743,7 +743,9 @@ void Think(Player bot, Player[] everyone, double seconds)
 
         bot.AimX = food.X;
         bot.AimY = food.Y;
-        bot.Rethink = 0.8 + random.NextDouble();
+        // the shared one, not the arena's: this runs on every core at once
+        // and System.Random is not something two threads may hold at a time
+        bot.Rethink = 0.8 + Random.Shared.NextDouble();
     }
 
     bot.WantX = bot.AimX;
@@ -878,13 +880,49 @@ void Step(double seconds)
     // the arena is sized for whoever is in it, once, before anything moves
     size = World.SizeFor(everyone.Length);
 
+    /*
+     * What every bot has decided, worked out on all of them at once.
+     *
+     * This is the whole of the tick at a crowd worth having: at ten thousand
+     * it was a hundred and thirty five milliseconds of the hundred and
+     * eighty eight, and the other four fifths of the machine sat watching
+     * one core do it.
+     *
+     * It parallelises because a bot shares nothing. It reads the two grids,
+     * which nothing writes until this pass is over, and it writes where it
+     * has decided to go - its own fields, on its own object, which no other
+     * bot has a reference to. The one thing that was not safe was the
+     * arena's random number generator, and that is a line further down.
+     *
+     * Chunked rather than one task per bot: the body is a few microseconds
+     * and handing ten thousand of those to the pool costs more than the work.
+     */
+    if (bots.Count >= 200)
+    {
+        Parallel.ForEach(Partitioner.Create(0, everyone.Length), span =>
+        {
+            for (var i = span.Item1; i < span.Item2; i++)
+            {
+                if (everyone[i].Bot && !everyone[i].Gone)
+                {
+                    Think(everyone[i], seconds);
+                }
+            }
+        });
+    }
+    else
+    {
+        foreach (var soul in everyone)
+        {
+            if (soul.Bot && !soul.Gone)
+            {
+                Think(soul, seconds);
+            }
+        }
+    }
+
     foreach (var soul in everyone)
     {
-        if (soul.Bot && !soul.Gone)
-        {
-            Think(soul, everyone, seconds);
-        }
-
         /*
          * A hole pulls the floor down around itself.
          *
@@ -971,7 +1009,8 @@ void Step(double seconds)
          * arena can be pulled anyway, so clamping costs nothing and is the
          * difference between a grade four working and the game hanging.
          */
-        var sweep = Math.Min(size, World.Drag(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleSpan(heavy.Radius) : 1));
+        var sweep = Math.Min(Math.Min(size, World.Dredge),
+                                 World.Drag(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleSpan(heavy.Radius) : 1));
 
         foreach (var key in World.KeysWithin(heavy.X, heavy.Y, sweep))
         {
@@ -1078,7 +1117,8 @@ void Step(double seconds)
         // the same bound, for the same reason: this one is compared against
         // rather than walked, but a reach larger than the arena means every
         // blob in it is inside every other one's pull, which is not a game
-        var reach = Math.Min(size, World.Reach(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleSpan(heavy.Radius) : 1));
+        var reach = Math.Min(Math.Min(size, World.Dredge),
+                                 World.Reach(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleSpan(heavy.Radius) : 1));
 
         foreach (var player in Around(heavy.X, heavy.Y, reach, everyone))
         {

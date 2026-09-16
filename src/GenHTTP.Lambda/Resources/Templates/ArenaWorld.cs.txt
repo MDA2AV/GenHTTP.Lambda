@@ -836,6 +836,20 @@ static class World
     /// </remarks>
     public const double Slip = 200;
 
+    /// <summary>The furthest anything drags loose pellets, in units.</summary>
+    /// <remarks>
+    /// These two sweeps were bounded by the arena, which was right while the
+    /// arena was nine thousand units across and is not now it can be a
+    /// quarter of a million. The grid they walk has cells of two hundred and
+    /// sixty, so a sweep that wide is three and a half million squares for
+    /// one blob in one tick, to find forty thousand pellets.
+    ///
+    /// Set to the largest the arena used to get, so nothing changes at any
+    /// size it reached before, and a hole in a huge one stops hauling the
+    /// entire floor towards itself - which was never a thing worth doing.
+    /// </remarks>
+    public const double Dredge = 24_000;
+
     /// <summary>Which square of the blob grid this position is in.</summary>
     public static long PatchOf(double x, double y) => ((long)(x / Patch) << 24) | (long)(y / Patch);
 
