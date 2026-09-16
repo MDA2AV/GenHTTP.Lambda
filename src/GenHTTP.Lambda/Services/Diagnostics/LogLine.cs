@@ -22,6 +22,17 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// The stack trace, when there is one. Kept apart from the text so the list
 /// stays one line per line and the trace is something you open.
 /// </param>
+/// <param name="Client">
+/// Who was being answered when this was said. The peer address, or where the
+/// request came through a proxy that said so, the address it claimed followed
+/// by the peer it actually arrived from - a claim and its provenance, since
+/// the header is written by whoever sent it.
+/// </param>
+/// <param name="Agent">
+/// What they said they were. Worth as much as any other thing a client says
+/// about itself, which is to say it tells a crawler from a browser and proves
+/// nothing.
+/// </param>
 public sealed record LogLine(
     long Seq,
     DateTime At,
@@ -29,5 +40,7 @@ public sealed record LogLine(
     string Source,
     string? Lambda,
     string Text,
-    string? Detail
+    string? Detail,
+    string? Client = null,
+    string? Agent = null
 );

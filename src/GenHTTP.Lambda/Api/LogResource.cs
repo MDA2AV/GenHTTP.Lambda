@@ -33,24 +33,29 @@ public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options
     /// arriving does not mean reading the whole ring.
     /// </param>
     /// <param name="lambda">Narrows it to one lambda's public key</param>
+    /// <param name="client">Narrows it to one caller's address</param>
     /// <param name="level">The lowest level worth returning</param>
     /// <param name="limit">At most this many lines</param>
     [ResourceMethod]
-    public LogResponse Get(long? since, string? lambda, string? level, int? limit, IRequest request)
+    public LogResponse Get(long? since, string? lambda, string? level, string? client, int? limit, IRequest request)
     {
         AdminGate.Require(request, options);
 
-        var wanted = limit ?? (since.HasValue ? 500 : 200);
+        // a reader carrying a cursor wants what is new, which is little; one
+        // arriving without one wants a screenful of history, and how much of a
+        // screenful is its own business
+        var wanted = limit ?? (since.HasValue ? 2000 : 1000);
 
-        var (lines, cursor, missed) = book.Read(since ?? 0, Blank(lambda), Minimum(level), wanted);
+        var (lines, cursor, missed) = book.Read(since ?? 0, Blank(lambda), Minimum(level), wanted, Blank(client));
 
         return new LogResponse(
-            lines.Select(l => new LogEntry(l.Seq, l.At, l.Level, l.Source, l.Lambda, l.Text, l.Detail)).ToList(),
+            lines.Select(l => new LogEntry(l.Seq, l.At, l.Level, l.Source, l.Lambda, l.Text, l.Detail, l.Client, l.Agent)).ToList(),
             cursor,
             missed,
             book.Capacity,
             book.Written,
             options.CaptureLambdaOutput,
+            options.LogClientAddress,
             // a clean stop is not worth saying anything about; one that was not
             // clean is the first thing an operator wants to know
             runs.Previous is { Clean: false } last

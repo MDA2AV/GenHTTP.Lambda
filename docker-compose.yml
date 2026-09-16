@@ -43,8 +43,17 @@ services:
       # In memory and lost on a restart; docker still has the whole of it on
       # stdout, which is what to read when the question is about a process
       # that is no longer running.
-      LAMBDA_LOG_HISTORY: ${LAMBDA_LOG_HISTORY:-4000}
+      #
+      # A million lines measured at about 220 MB of ordinary request lines,
+      # so the memory budget below is what actually decides it: whichever
+      # runs out first wins, and long lines simply mean fewer of them.
+      LAMBDA_LOG_HISTORY: ${LAMBDA_LOG_HISTORY:-1000000}
+      LAMBDA_LOG_MEMORY_MB: ${LAMBDA_LOG_MEMORY_MB:-256}
       LAMBDA_LOG_LAMBDA_OUTPUT: ${LAMBDA_LOG_LAMBDA_OUTPUT:-true}
+      # the address a request came from, kept against its lines. Personal
+      # data, admin-gated, never part of the public figures - false leaves
+      # every line in place with nothing personal on it.
+      LAMBDA_LOG_CLIENT_ADDRESS: ${LAMBDA_LOG_CLIENT_ADDRESS:-true}
     sysctls:
       # lets the unprivileged user bind 80 and 443 inside its own network
       # namespace, so the server keeps running as uid 1001

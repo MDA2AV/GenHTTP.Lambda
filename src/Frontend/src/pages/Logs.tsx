@@ -16,12 +16,53 @@ import { Locked } from '../components/Locked';
 const EVERY = 1500;
 
 /**
- * How many lines the page holds before it starts dropping its own oldest.
+ * How many lines the page will hold, and ask for.
  *
- * The server's ring is bounded; a tab left open for a day is not, and a
- * hundred thousand rows in the DOM is a frozen tab.
+ * The server's ring goes to a million; a browser does not, so this is the
+ * window onto it. Rows carry content-visibility, which lets the browser skip
+ * layout for everything scrolled out of sight - without that, twenty thousand
+ * rows is a tab that stops responding.
+ *
+ * The number chosen is also what the first load asks the server for, so
+ * picking a bigger window is how you reach further back rather than only how
+ * much of what arrived you keep.
  */
-const HELD = 4000;
+const WINDOWS = [1000, 5000, 20000];
+
+const DEFAULT_WINDOW = 1000;
+
+/**
+ * What the find box understands.
+ *
+ * Bare words all have to appear; a word after "!" must not. Quotes keep a
+ * phrase together. Everything is matched against the whole line - its text,
+ * where it came from, the lambda and the caller - so "!Requests" drops the
+ * request lines and leaves what the server and the lambdas said.
+ */
+function parse(query: string): { must: string[]; not: string[] } {
+  const must: string[] = [];
+  const not: string[] = [];
+
+  for (let token of query.match(/"[^"]*"|\S+/g) ?? []) {
+    const negated = token.startsWith('!');
+
+    if (negated) {
+      token = token.slice(1);
+    }
+
+    if (token.startsWith('"') && token.endsWith('"')) {
+      token = token.slice(1, -1);
+    }
+
+    const word = token.trim().toLowerCase();
+
+    if (word !== '') {
+      (negated ? not : must).push(word);
+    }
+  }
+
+  return { must, not };
+}
 
 const LEVELS = [
   { value: 'trace', label: 'All' },
@@ -73,11 +114,14 @@ export function Logs() {
   const [previous, setPrevious] = useState<PreviousRun | null>(null);
   const [opened, setOpened] = useState<number | null>(null);
   const [find, setFind] = useState('');
+  const [held, setHeld] = useState(DEFAULT_WINDOW);
+  const [addresses, setAddresses] = useState(true);
 
   // the lambda and the level live in the address, so a link from the lambda
   // listing opens this already narrowed and the narrowing survives a reload
   const lambda = params.get('lambda') ?? '';
   const level = params.get('level') ?? 'info';
+  const client = params.get('client') ?? '';
 
   const [typed, setTyped] = useState(lambda);
 
@@ -99,13 +143,18 @@ export function Logs() {
       const page = await api.logs(token, {
         since: cursor.current ?? undefined,
         lambda: lambda === '' ? undefined : lambda,
+        client: client === '' ? undefined : client,
         level,
+        // the first ask wants a window of history; every one after it wants
+        // only what has happened since, which is a much smaller thing
+        limit: cursor.current === null ? held : Math.min(held, 5000),
       });
 
       cursor.current = page.cursor;
 
       setCapturing(page.capturing);
       setCapacity(page.capacity);
+      setAddresses(page.addresses);
       setPrevious(page.previous ?? null);
       setDenied(false);
       setError(null);
@@ -119,7 +168,7 @@ export function Logs() {
         setLines((was) => {
           const all = was.concat(page.lines);
 
-          return all.length > HELD ? all.slice(all.length - HELD) : all;
+          return all.length > held ? all.slice(all.length - held) : all;
         });
       }
     } catch (problem) {
@@ -130,7 +179,7 @@ export function Logs() {
         setError('The log could not be read.');
       }
     }
-  }, [token, lambda, level]);
+  }, [token, lambda, level, client, held]);
 
   // a change of filter is a different question, so the answer starts over
   // rather than appending lines from one query onto lines from another
@@ -141,7 +190,7 @@ export function Logs() {
     setMissed(0);
     setReady(false);
     setOpened(null);
-  }, [lambda, level]);
+  }, [lambda, level, client, held]);
 
   useEffect(() => {
     load();
@@ -168,27 +217,26 @@ export function Logs() {
   }, [lines]);
 
   const shown = useMemo(() => {
-    const needle = find.trim().toLowerCase();
+    const { must, not } = parse(find);
 
-    if (needle === '') {
+    if (must.length === 0 && not.length === 0) {
       return lines;
     }
 
-    return lines.filter(
-      (l) =>
-        l.text.toLowerCase().includes(needle) ||
-        l.source.toLowerCase().includes(needle) ||
-        (l.lambda ?? '').toLowerCase().includes(needle),
-    );
+    return lines.filter((l) => {
+      const hay = `${l.text} ${l.source} ${l.lambda ?? ''} ${l.client ?? ''} ${l.agent ?? ''}`.toLowerCase();
+
+      return must.every((w) => hay.includes(w)) && !not.some((w) => hay.includes(w));
+    });
   }, [lines, find]);
 
-  function narrow(to: string) {
+  function only(key: 'lambda' | 'client', to: string) {
     const next = new URLSearchParams(params);
 
     if (to === '') {
-      next.delete('lambda');
+      next.delete(key);
     } else {
-      next.set('lambda', to);
+      next.set(key, to);
     }
 
     setParams(next, { replace: true });
@@ -235,6 +283,7 @@ export function Logs() {
             {capturing
               ? ' What a lambda prints while it is serving a request is filed under it.'
               : ' What lambdas print is not being kept on this installation.'}
+            {addresses ? '' : ' Caller addresses are not being recorded.'}
           </p>
         </div>
 
@@ -290,7 +339,7 @@ export function Logs() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            narrow(typed.trim());
+            only('lambda', typed.trim());
           }}
           className="flex items-center gap-2"
         >
@@ -311,7 +360,7 @@ export function Logs() {
             type="button"
             onClick={() => {
               setTyped('');
-              narrow('');
+              only('lambda', '');
             }}
             className="chip border border-accent-500/40 text-accent-500 dark:border-accent-400/40 dark:text-accent-400"
             title="Show everything again"
@@ -320,13 +369,45 @@ export function Logs() {
           </button>
         )}
 
-        <input
-          value={find}
-          onChange={(event) => setFind(event.target.value)}
-          placeholder="Find in what is loaded"
-          aria-label="Find"
-          className="field ml-auto w-56 text-sm"
-        />
+        {client !== '' && (
+          <button
+            type="button"
+            onClick={() => only('client', '')}
+            className="chip border border-accent-500/40 font-mono text-accent-500 dark:border-accent-400/40 dark:text-accent-400"
+            title="Show every caller again"
+          >
+            from {client} ✕
+          </button>
+        )}
+
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex border border-grey-300 dark:border-ink-800" role="group" aria-label="How many lines to hold">
+            {WINDOWS.map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => setHeld(size)}
+                title={`Hold and ask for ${size.toLocaleString()} lines`}
+                className={`px-3 py-1.5 text-sm tabular-nums ${
+                  size === held
+                    ? 'bg-accent-500 text-white dark:bg-accent-400 dark:text-ink-950'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-ink-850'
+                }`}
+              >
+                {size >= 1000 ? `${size / 1000}k` : size}
+              </button>
+            ))}
+          </div>
+
+          <input
+            value={find}
+            onChange={(event) => setFind(event.target.value)}
+            placeholder="Find — !word excludes"
+            aria-label="Find. Bare words must appear, a word after an exclamation mark must not, quotes keep a phrase together."
+            title={'Bare words must all appear.\n!word excludes it.\n"two words" keeps the phrase together.\nMatches the text, the source, the lambda and the caller.'}
+            className="field w-64 text-sm"
+          />
+        </div>
       </div>
 
       {previous !== null && (
@@ -385,6 +466,7 @@ export function Logs() {
           shown.map((line) => (
             <div
               key={line.seq}
+              style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 26px' }}
               className="border-b border-grey-300/40 px-3 py-1 last:border-0 hover:bg-slate-50 dark:border-ink-800/60 dark:hover:bg-ink-850"
             >
               <button
@@ -404,14 +486,14 @@ export function Logs() {
                     onClick={(event) => {
                       event.stopPropagation();
                       setTyped(line.lambda!);
-                      narrow(line.lambda!);
+                      only('lambda', line.lambda!);
                     }}
                     role="link"
                     tabIndex={0}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') {
                         setTyped(line.lambda!);
-                        narrow(line.lambda!);
+                        only('lambda', line.lambda!);
                       }
                     }}
                     className="shrink-0 cursor-pointer text-accent-500 hover:underline dark:text-accent-400"
@@ -422,6 +504,25 @@ export function Logs() {
                 )}
 
                 <span className="shrink-0 text-grey-500 dark:text-grey-600">{line.source}</span>
+
+                {line.client != null && (
+                  <span
+                    role="link"
+                    tabIndex={0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      // the hop, not the whole claim, is what narrows usefully
+                      only('client', line.client!.split(' via ')[0]);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') only('client', line.client!.split(' via ')[0]);
+                    }}
+                    title={line.agent ? `Only this caller · ${line.agent}` : 'Only this caller'}
+                    className="shrink-0 cursor-pointer text-grey-500 hover:text-accent-500 hover:underline dark:text-grey-600 dark:hover:text-accent-400"
+                  >
+                    {line.client}
+                  </span>
+                )}
 
                 <span className="whitespace-pre-wrap break-all text-slate-800 dark:text-grey-200">{line.text}</span>
 
@@ -443,7 +544,7 @@ export function Logs() {
       </div>
 
       <p className="mt-2 text-xs text-slate-500">
-        {shown.length.toLocaleString()} of {lines.length.toLocaleString()} loaded
+        {shown.length.toLocaleString()} of {lines.length.toLocaleString()} loaded, holding {held.toLocaleString()}
         {following ? ' · following' : ' · paused'}
         {' · every line is also on the container’s stdout, which is what survives a restart'}
       </p>

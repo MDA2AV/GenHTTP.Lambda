@@ -101,6 +101,71 @@ public sealed class LogTests
     }
 
     [TestMethod]
+    public void ADeepRingIsAllowedAndStillBoundedInMemory()
+    {
+        // a million is what the ceiling allows; the byte budget is what
+        // decides whether a million of these particular lines actually fit
+        var book = new LogBook(1_000_000, megabytes: 8);
+
+        Assert.AreEqual(1_000_000, book.Capacity);
+        Assert.AreEqual(8L * 1024 * 1024 / 2, book.Budget, "counted in chars, which are two bytes each");
+
+        for (var i = 0; i < 50_000; i++)
+        {
+            book.Append("info", "Requests", null, new string('x', 500));
+        }
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 50_000);
+
+        Assert.IsTrue(lines.Count < 10_000,
+                      $"eight megabytes of five hundred character lines is about eight thousand, not {lines.Count}");
+    }
+
+    [TestMethod]
+    public void OneCallerCanBeReadWithoutTheRest()
+    {
+        var book = new LogBook(100);
+
+        book.Append("info", "Requests", null, "from the first", null, "203.0.113.7");
+        book.Append("info", "Requests", null, "from the second", null, "198.51.100.4");
+        book.Append("info", "Requests", null, "from behind a proxy", null, "203.0.113.7 via 104.23.221.210");
+
+        var (mine, _, _) = book.Read(0, null, LogLevel.Information, 5000, "203.0.113.7");
+
+        Assert.AreEqual(2, mine.Count, "the claim and the hop are both searchable");
+
+        var (hop, _, _) = book.Read(0, null, LogLevel.Information, 5000, "104.23.221.210");
+
+        Assert.AreEqual(1, hop.Count);
+    }
+
+    [TestMethod]
+    public void RepeatedCallersAreSharedRatherThanCopied()
+    {
+        var pool = new StringPool();
+
+        var first = pool.Share("203.0.113.7");
+        var second = pool.Share(string.Concat("203.0.", "113.7"));
+
+        Assert.AreSame(first, second, "a million lines from one caller is one string, not a million");
+        Assert.AreEqual(1, pool.Count);
+        Assert.IsNull(pool.Share(null));
+    }
+
+    [TestMethod]
+    public void ThePoolStopsRatherThanGrowingWithoutBound()
+    {
+        var pool = new StringPool(most: 4);
+
+        for (var i = 0; i < 50; i++)
+        {
+            pool.Share($"198.51.100.{i}");
+        }
+
+        Assert.AreEqual(4, pool.Count, "past the bound it hands back what it was given and holds nothing");
+    }
+
+    [TestMethod]
     public void ArrivingIsNotFallingBehind()
     {
         var book = new LogBook(1000);
@@ -279,12 +344,76 @@ public sealed class LogTests
 
         var (lines, _, _) = book.Read(0, "unwatched", LogLevel.Information, 5000);
 
-        Assert.AreEqual(0, lines.Count);
+        Assert.IsFalse(lines.Any(l => l.Text == "nobody is writing this down"));
+
+        Assert.IsFalse(lines.Any(l => l.Source is "stdout" or "stderr"),
+                       "which is what the setting turns off");
+
+        // and not silence: that the lambda was reached is the server's own
+        // record of a request, which this setting has nothing to do with
+        Assert.IsTrue(lines.Any(l => l.Source == "Requests"));
     }
 
     #endregion
 
     #region The route
+
+    [TestMethod]
+    public async Task ARequestIsRecordedWithWhereItCameFrom()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        using var response = await fixture.GetAsync("/api/v1/system");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+        var (lines, _, _) = fixture.Book.Read(0, null, LogLevel.Information, 5000);
+
+        var served = lines.LastOrDefault(l => l.Source == "Requests" && l.Text.Contains("/api/v1/system"));
+
+        Assert.IsNotNull(served, "the request the server just answered is in its own log");
+        Assert.IsNotNull(served.Client, "and says who it was answering");
+        Assert.Contains("200", served.Text);
+    }
+
+    [TestMethod]
+    public async Task TheAddressIsLeftOffWhenTheInstallationSaysSo()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => WithPanel(o) with { LogClientAddress = false });
+
+        using var response = await fixture.GetAsync("/api/v1/system");
+
+        var (lines, _, _) = fixture.Book.Read(0, null, LogLevel.Information, 5000);
+
+        var served = lines.LastOrDefault(l => l.Source == "Requests" && l.Text.Contains("/api/v1/system"));
+
+        Assert.IsNotNull(served, "the line is still there");
+        Assert.IsNull(served.Client, "with nothing personal on it");
+    }
+
+    [TestMethod]
+    public async Task WhatALambdaPrintsNamesTheVisitorItWasPrintedFor()
+    {
+        ConsoleTee.Install();
+
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        var lambda = await fixture.CreateLambdaAsync("traced");
+
+        await fixture.DeployAsync(lambda.PrivateKey, """
+            return Inline.Create()
+                         .Get(() => { Console.WriteLine("who asked for this"); return "done"; });
+            """);
+
+        using var called = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+
+        var (lines, _, _) = fixture.Book.Read(0, "traced", LogLevel.Information, 5000);
+
+        var printed = lines.FirstOrDefault(l => l.Text == "who asked for this");
+
+        Assert.IsNotNull(printed);
+        Assert.IsNotNull(printed.Client, "a print is attributable to the request that caused it");
+    }
 
     [TestMethod]
     public async Task WithoutATokenThereIsNoLog()

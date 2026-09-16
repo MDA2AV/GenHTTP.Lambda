@@ -163,15 +163,19 @@ public sealed class OutputScope(string publicKey, LogBook book, int most)
 
         Said++;
 
+        var caller = Caller.Ambient;
+
         if (Said == Most)
         {
             book.Append("warn", "stdout", PublicKey,
-                        $"… this request printed more than {Most} lines; the rest was dropped.");
+                        $"… this request printed more than {Most} lines; the rest was dropped.",
+                        null, caller?.Client, caller?.Agent);
 
             return;
         }
 
-        book.Append(Stream ? "error" : "info", Stream ? "stderr" : "stdout", PublicKey, text);
+        book.Append(Stream ? "error" : "info", Stream ? "stderr" : "stdout", PublicKey, text,
+                    null, caller?.Client, caller?.Agent);
     }
 
     #endregion

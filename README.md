@@ -167,8 +167,10 @@ Everything is read from the environment on startup, see
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
 | `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
 | `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel, and closes the figures   |
-| `LAMBDA_LOG_HISTORY`                | `4000`           | log lines the panel can read back           |
+| `LAMBDA_LOG_HISTORY`                | `4000`           | log lines the panel can read back, to 10^6  |
+| `LAMBDA_LOG_MEMORY_MB`              | derived          | what their text may cost; whichever runs out first |
 | `LAMBDA_LOG_LAMBDA_OUTPUT`          | `true`           | keep what lambdas print, filed under them   |
+| `LAMBDA_LOG_CLIENT_ADDRESS`         | `true`           | record the address a request came from      |
 | `LAMBDA_LOG_MAX_LINES_PER_REQUEST`  | `200`            | before one request's output is cut off      |
 | `LAMBDA_MCP_ORIGINS`                | -                | hosts a browser may use `/mcp` from         |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
@@ -362,16 +364,36 @@ reads it back to decide whose line it is. Constructing a lambda is marked the
 same way, so a print at the top of a snippet is filed under it as well.
 
 The effect is that one lambda can be read on its own, which is what the **Log**
-button beside each row in `/admin` does. A warning the server logs *about* a
+button beside each row in `/admin` does, and so can one caller - clicking an
+address narrows to it. The find box takes bare words that must all appear,
+`!word` for one that must not, and `"a phrase"` to keep it together; it matches
+the text, the source, the lambda and the caller, so `!Requests` leaves only
+what the server and the lambdas said. A warning the server logs *about* a
 lambda - the one the error handler writes when it throws - is filed under that
 lambda too, with the stack trace that was kept from the visitor.
 
-Two bounds keep it honest. The whole thing is a ring of `LAMBDA_LOG_HISTORY`
-lines with a cap on the length of each, so a lambda in a print loop costs a
-fixed amount of memory rather than a growing one; and one request may only
-contribute `LAMBDA_LOG_MAX_LINES_PER_REQUEST` before the rest is counted and
-dropped, so it evicts its own output rather than everybody else's. Nothing
-here survives a restart. The container's stdout still has the whole run and is
+Every line says which address it was being written for. That is what turns a
+path being hit five hundred times a minute from a mystery into a question, and
+it applies to more than the request line: a lambda's print and an error the
+server logged both carry the caller, because the request is marked once at the
+outside and everything below reads the mark back. A request that arrived
+through a proxy is recorded as the address it claimed *and* the hop it came
+from, since the forwarded header is written by whoever sent it - taking it at
+face value would let anyone write any address into this log. Addresses and
+user agents are pooled, so a million lines from a few dozen callers is a few
+dozen strings rather than a million. It is personal data, it is only ever
+served behind the token, and `LAMBDA_LOG_CLIENT_ADDRESS=false` leaves every
+line in place with nothing personal on it.
+
+Three bounds keep it honest. The ring holds `LAMBDA_LOG_HISTORY` lines, up to
+a million, with a cap on the length of each; `LAMBDA_LOG_MEMORY_MB` caps what
+their text may cost, and whichever runs out first decides, so a lambda in a
+print loop costs a fixed amount of memory rather than a growing one and long
+lines simply mean fewer of them; and one request may only contribute
+`LAMBDA_LOG_MAX_LINES_PER_REQUEST` before the rest is counted and dropped, so
+it evicts its own output rather than everybody else's. A million ordinary
+request lines measured at about 220 MB, which is the number to budget against.
+Nothing here survives a restart. The container's stdout still has the whole run and is
 what to read when the question is about something that happened before the
 process started - reading the log through the panel is a convenience, not the
 record.

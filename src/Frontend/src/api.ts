@@ -275,6 +275,10 @@ export interface LogEntry {
   text: string;
   /** The stack trace, when there is one. */
   detail?: string;
+  /** Where it came from. `<claimed> via <peer>` where a proxy said so. */
+  client?: string;
+  /** What the caller said it was. */
+  agent?: string;
 }
 
 /** How the run before this one ended, when it did not end cleanly. */
@@ -300,6 +304,8 @@ export interface LogPage {
   written: number;
   /** Whether what lambdas print is being kept at all. */
   capturing: boolean;
+  /** Whether caller addresses are being recorded. */
+  addresses: boolean;
   /** Absent when the run before this one stopped the way it meant to. */
   previous?: PreviousRun;
 }
@@ -416,7 +422,10 @@ export const api = {
    * The tail of the log. Behind the token without exception - unlike the
    * figures, this is whatever somebody's code decided to print.
    */
-  logs: (token: string, options: { since?: number; lambda?: string; level?: string; limit?: number } = {}) => {
+  logs: (
+    token: string,
+    options: { since?: number; lambda?: string; level?: string; client?: string; limit?: number } = {},
+  ) => {
     const query = new URLSearchParams();
 
     // no cursor means "whatever is there now", which the server answers with
@@ -424,6 +433,7 @@ export const api = {
     if (options.since !== undefined) query.set('since', String(options.since));
     if (options.lambda) query.set('lambda', options.lambda);
     if (options.level) query.set('level', options.level);
+    if (options.client) query.set('client', options.client);
     if (options.limit) query.set('limit', String(options.limit));
 
     return request<LogPage>(`/logs?${query}`, withToken(token));

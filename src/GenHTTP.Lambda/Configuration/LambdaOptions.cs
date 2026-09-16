@@ -188,9 +188,22 @@ public sealed record LambdaOptions
     /// <remarks>
     /// Held in memory and lost on a restart. Docker keeps the whole run on
     /// stdout regardless; this is only the part an operator can reach without
-    /// a shell on the host.
+    /// a shell on the host - so the depth to ask for is however far back
+    /// somebody wants to scroll while the server is up, and the cost of it is
+    /// <see cref="LogMemory"/>.
     /// </remarks>
     public int LogHistory { get; init; } = 4000;
+
+    /// <summary>
+    /// How much memory the text of those lines may take, in megabytes.
+    /// </summary>
+    /// <remarks>
+    /// Zero derives it from the depth, at half a kilobyte of characters per
+    /// line, which is generous against real ones. Whichever runs out first
+    /// decides: a ring asked to be deep but given little memory holds short
+    /// lines to its depth and long ones to its budget.
+    /// </remarks>
+    public int LogMemory { get; init; }
 
     /// <summary>
     /// Whether what a lambda prints while serving a request is kept.
@@ -208,6 +221,23 @@ public sealed record LambdaOptions
     /// How many lines one request may contribute before the rest is dropped.
     /// </summary>
     public int MaxOutputLines { get; init; } = 200;
+
+    /// <summary>
+    /// Whether the address a request came from is recorded against its lines.
+    /// </summary>
+    /// <remarks>
+    /// On, because without it a path being hit five hundred times a minute is
+    /// a mystery rather than a question. It is personal data and it is held in
+    /// memory for as long as the ring is deep, so an installation that would
+    /// rather not keep it turns this off and still gets everything else - the
+    /// lines simply have no address on them.
+    ///
+    /// Only ever served behind the administration token, which is the same bar
+    /// as reading the code of somebody else's lambda. It is deliberately not
+    /// part of the figures next door: those are aggregates and name nobody,
+    /// and that is what makes them safe to serve to anyone.
+    /// </remarks>
+    public bool LogClientAddress { get; init; } = true;
 
     /// <summary>
     /// The port the server offers TLS on. Zero leaves the secure endpoint off.
@@ -314,8 +344,10 @@ public sealed record LambdaOptions
             TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
             TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),
             LogHistory = ReadInt("LAMBDA_LOG_HISTORY", defaults.LogHistory),
+            LogMemory = ReadInt("LAMBDA_LOG_MEMORY_MB", defaults.LogMemory),
             CaptureLambdaOutput = ReadBool("LAMBDA_LOG_LAMBDA_OUTPUT", defaults.CaptureLambdaOutput),
             MaxOutputLines = ReadInt("LAMBDA_LOG_MAX_LINES_PER_REQUEST", defaults.MaxOutputLines),
+            LogClientAddress = ReadBool("LAMBDA_LOG_CLIENT_ADDRESS", defaults.LogClientAddress),
             SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", defaults.SecurePort),
             CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),

@@ -20,7 +20,7 @@ var options = LambdaOptions.FromEnvironment();
  * below has to write into it, and that is made before there is a container to
  * take it from. Everything still goes to stdout exactly as it did.
  */
-var book = new LogBook(options.LogHistory);
+var book = new LogBook(options.LogHistory, options.LogMemory);
 
 /*
  * A note on disk about how this run is going, so that the next one can say how

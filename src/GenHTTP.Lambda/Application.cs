@@ -79,7 +79,7 @@ public sealed class Application : IAsyncDisposable
     {
         Migrator.Migrate(options, loggers.CreateLogger<Application>());
 
-        return new Application(options, loggers, book ?? new LogBook(options.LogHistory),
+        return new Application(options, loggers, book ?? new LogBook(options.LogHistory, options.LogMemory),
                                runs ?? new RunLog(options.DataDirectory));
     }
 
@@ -91,6 +91,7 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton(book);
         services.AddSingleton(runs);
+        services.AddSingleton<StringPool>();
 
         services.AddSingleton(loggers);
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
@@ -172,6 +173,14 @@ public sealed class Application : IAsyncDisposable
                .AddDependencyInjection(Services)
                .Add(Registry.Capture())
                .Add(new TelemetryConcernBuilder(Services.GetRequiredService<TelemetryService>()))
+               /*
+                * Outermost of ours, so every line anything below writes can
+                * name who it was written for - and so what it times is the
+                * whole answer rather than the part after the throttle.
+                */
+               .Add(new CallerConcernBuilder(Services.GetRequiredService<LogBook>(),
+                                             Services.GetRequiredService<StringPool>(),
+                                             Options))
                /*
                 * Compression is configured here rather than left to the
                 * defaults, and it offers gzip alone.

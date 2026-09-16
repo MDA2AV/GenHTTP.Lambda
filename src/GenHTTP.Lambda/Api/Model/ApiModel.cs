@@ -329,7 +329,8 @@ public sealed record ErrorResponse(int Status, string Error, string Message);
 /// <summary>
 /// One line from the run of the server.
 /// </summary>
-public sealed record LogEntry(long Seq, DateTime At, string Level, string Source, string? Lambda, string Text, string? Detail);
+public sealed record LogEntry(long Seq, DateTime At, string Level, string Source, string? Lambda, string Text,
+                              string? Detail, string? Client, string? Agent);
 
 /// <summary>
 /// A page of the log, and where to carry on from.
@@ -354,6 +355,8 @@ public sealed record LogResponse(
     int Capacity,
     long Written,
     bool Capturing,
+    /// <summary>Whether the address a request came from is being recorded.</summary>
+    bool Addresses,
     PreviousRun? Previous
 );
 

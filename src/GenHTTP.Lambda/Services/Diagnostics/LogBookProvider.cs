@@ -33,19 +33,16 @@ public sealed class LogBookProvider(LogBook book) : ILoggerProvider
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
         /// <summary>
-        /// Whether this line is the log being read.
+        /// Whether the book is already going to have this line, better.
         /// </summary>
         /// <remarks>
-        /// The panel asks for the tail every second and a half, and every one
-        /// of those is a request, and every request is logged. Left in, most
-        /// of what there is to read is the reading of it, and the ring fills
-        /// with its own echo while what somebody opened the page for falls off
-        /// the end. Matched on the path because that is what the record has:
-        /// by the time a request is logged the work that served it is over and
-        /// anything it might have marked has been unwound.
+        /// The engine writes one per request with the method, the path and the
+        /// status. CallerConcern writes its own with the address it came from
+        /// as well, which is the part anybody actually needs, so the engine's
+        /// would only be the same line without the useful field on it. Both
+        /// still reach stdout - this only decides what the ring keeps.
         /// </remarks>
-        private bool Polling(string text)
-            => source == "Requests" && text.Contains("/api/v1/logs", StringComparison.Ordinal);
+        private bool Duplicated() => source == "Requests";
 
         // what is worth keeping is decided by the filters on the factory, the
         // same ones that decide what reaches the console
@@ -58,21 +55,25 @@ public sealed class LogBookProvider(LogBook book) : ILoggerProvider
                 return;
             }
 
-            var text = format(state, error);
-
-            if (Polling(text))
+            if (Duplicated())
             {
                 return;
             }
+
+            var text = format(state, error);
 
             if (error != null)
             {
                 text = text.Length > 0 ? $"{text} — {error.GetType().Name}: {error.Message}" : $"{error.GetType().Name}: {error.Message}";
             }
 
+            var caller = Caller.Ambient;
+
             // a warning about a lambda, logged while that lambda was being
-            // served, belongs under it as well as in the general run
-            book.Append(LogBook.NameOf(level), source, LambdaOutput.Ambient?.PublicKey, text, error?.ToString());
+            // served, belongs under it as well as in the general run - and
+            // carries whoever was being answered at the time
+            book.Append(LogBook.NameOf(level), source, LambdaOutput.Ambient?.PublicKey, text, error?.ToString(),
+                        caller?.Client, caller?.Agent);
         }
 
     }

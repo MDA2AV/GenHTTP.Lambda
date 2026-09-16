@@ -55,17 +55,23 @@ public sealed class LogBook
     private long Held { get; set; }
 
     /// <summary>
-    /// How much it may hold before the oldest goes, whatever the line count.
+    /// How much text it may hold, in characters, before the oldest goes -
+    /// whatever the line count says.
     /// </summary>
     /// <remarks>
-    /// The line count alone is not a bound on memory. Four thousand lines of
-    /// four thousand characters each, every one carrying a stack trace, is
-    /// sixty megabytes - and a lambda throwing on every request is all it
-    /// takes to ask for that. Half a kilobyte a line on average is generous
-    /// for a log, so this is what the ring costs at the stated depth and long
-    /// lines simply mean fewer of them.
+    /// The line count alone is not a bound on memory: a line may be four
+    /// thousand characters and carry a stack trace of its own, and a lambda
+    /// throwing on every request is all it takes to ask for a ring of those.
+    /// So depth is what is asked for and this is what is actually spent -
+    /// long lines simply mean fewer of them fit.
+    ///
+    /// The default allows half a kilobyte of characters per line of depth,
+    /// which is generous against real log lines: a request line is about
+    /// seventy. A million of them at the default is therefore a ceiling of a
+    /// gigabyte of characters and a reality of a couple of hundred megabytes.
+    /// Set it explicitly where that guess is wrong for the installation.
     /// </remarks>
-    private long Budget { get; }
+    public long Budget { get; }
 
     /// <summary>
     /// Where the oldest line sits in the array.
@@ -76,10 +82,27 @@ public sealed class LogBook
 
     #region Initialization
 
-    public LogBook(int capacity = 4000)
+    /// <param name="capacity">How many lines to keep</param>
+    /// <param name="megabytes">
+    /// How much memory the text in them may take. Zero takes the default,
+    /// which is half a kilobyte of characters for every line of depth.
+    /// </param>
+    public LogBook(int capacity = 4000, int megabytes = 0)
     {
-        Capacity = Math.Clamp(capacity, 100, 200_000);
-        Budget = Math.Max(1_000_000, (long)Capacity * 512);
+        Capacity = Math.Clamp(capacity, 100, 1_000_000);
+
+        Budget = megabytes > 0
+            // a char is two bytes, and this is counted in chars
+            ? (long)Math.Clamp(megabytes, 1, 8192) * 1024 * 1024 / 2
+            : Math.Max(1_000_000, (long)Capacity * 512);
+
+        /*
+         * Allocated up front rather than grown. At a million lines this array
+         * alone is eight megabytes of references, which is the price of the
+         * depth being asked for - but it is paid once, at startup, rather
+         * than in a series of ever larger copies while the server is
+         * answering requests.
+         */
         Lines = new LogLine?[Capacity];
     }
 
@@ -101,7 +124,8 @@ public sealed class LogBook
     /// <summary>
     /// Writes a line and returns the sequence it was given.
     /// </summary>
-    public long Append(string level, string source, string? lambda, string text, string? detail = null)
+    public long Append(string level, string source, string? lambda, string text, string? detail = null,
+                       string? client = null, string? agent = null)
     {
         // cut outside the lock: every request the server serves is logged, so
         // what is held here is held across all of them
@@ -123,7 +147,7 @@ public sealed class LogBook
                 Drop();
             }
 
-            var line = new LogLine(seq, at, level, where, lambda, said, trace);
+            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent);
 
             Lines[(Head + Count) % Capacity] = line;
 
@@ -160,9 +184,10 @@ public sealed class LogBook
     /// The lines, the sequence to ask from next, and how many fell out of the
     /// ring or over the limit before the reader got to them.
     /// </returns>
-    public (IReadOnlyList<LogLine> Lines, long Cursor, int Missed) Read(long since, string? lambda, LogLevel minimum, int limit)
+    public (IReadOnlyList<LogLine> Lines, long Cursor, int Missed) Read(long since, string? lambda, LogLevel minimum, int limit,
+                                                                        string? client = null)
     {
-        var wanted = Math.Clamp(limit, 1, 5000);
+        var wanted = Math.Clamp(limit, 1, 50_000);
 
         var matched = new List<LogLine>();
 
@@ -190,6 +215,13 @@ public sealed class LogBook
                 }
 
                 if (lambda != null && !string.Equals(line.Lambda, lambda, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                // a caller that arrived through a proxy is recorded as the
+                // claim and the hop together, so asking for either finds it
+                if (client != null && (line.Client == null || !line.Client.Contains(client, StringComparison.OrdinalIgnoreCase)))
                 {
                     continue;
                 }
