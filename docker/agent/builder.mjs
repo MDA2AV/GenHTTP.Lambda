@@ -13,12 +13,45 @@
 
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 
 const PORT = Number(process.env.AGENT_PORT ?? 8401);
+
+/*
+ * What a build runs in.
+ *
+ * One container per request, thrown away afterwards. Nothing a prompt does
+ * survives it, nothing from the last build is in it, and the timeout is a
+ * docker kill rather than a signal to a process that may or may not take it.
+ *
+ * It is deliberately not this container. This one holds the docker socket,
+ * which is root on the machine to anything that can use it, so the rule that
+ * keeps that honest is that nothing a model wrote ever runs in here.
+ */
+const BUILD_IMAGE = process.env.AGENT_BUILD_IMAGE ?? 'genhttp-agent:latest';
+const BUILD_NETWORK = process.env.AGENT_BUILD_NETWORK ?? 'genhttp-build-net';
+const BUILD_MEMORY = process.env.AGENT_BUILD_MEMORY ?? '2g';
+const BUILD_CPUS = process.env.AGENT_BUILD_CPUS ?? '1.5';
+const BUILD_PIDS = process.env.AGENT_BUILD_PIDS ?? '256';
+
+// only needed while there is no token of its own: the credential the builds
+// share until CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY is set
+const CONFIG_VOLUME = process.env.AGENT_CONFIG_VOLUME ?? 'genhttplambda_agent-config';
+
+// read once; written into each build's working directory so the CLI takes it
+// as project context
+const GUIDE = await readFile('/app/AGENTS.md', 'utf8').catch(() => '');
+
+/*
+ * Written into the container rather than passed as arguments, so that neither
+ * the brief nor the credential shows up in the host's process list. "-e NAME"
+ * with no value tells docker to take it from our own environment.
+ */
+const INSIDE = `set -e
+printf '%s' "$AGENT_GUIDE" > /work/AGENTS.md
+printf '{"mcpServers":{"genhttp":{"type":"http","url":"%s"}}}' "$AGENT_MCP" > /work/mcp.json
+exec claude -p "$AGENT_BRIEF" --mcp-config /work/mcp.json "$@"`;
 const MCP_URL = process.env.AGENT_MCP_URL ?? "https://genhttp.dev/mcp";
 const MODEL = process.env.AGENT_MODEL ?? 'claude-opus-5';
 
@@ -208,16 +241,6 @@ async function run(job) {
 
   say(job, job.key ? 'Reading what is already there' : 'Reading the platform guide');
 
-  const cwd = await mkdtemp(join(tmpdir(), 'build-'));
-
-  // the MCP server it is allowed to talk to, and the only one: --strict-mcp-config
-  // means nothing from a settings file can add another
-  const config = join(cwd, 'mcp.json');
-
-  await writeFile(config, JSON.stringify({
-    mcpServers: { genhttp: { type: 'http', url: MCP_URL } }
-  }));
-
   let brief = job.key
     ? `${CHANGE}\n\nThe editor key of the application to change: ${job.key}\n\nWhat they asked for:\n\n${job.prompt}`
     : `${BRIEF}\n\nWhat they asked for:\n\n${job.prompt}`;
@@ -235,10 +258,10 @@ async function run(job) {
 
   const free = unbounded(job);
 
+  // the MCP server it is allowed to talk to, and the only one:
+  // --strict-mcp-config means nothing from a settings file can add another
   const args = [
-    '-p', brief,
     '--model', MODELS[job.model] ?? MODEL,
-    '--mcp-config', config,
     '--strict-mcp-config',
     '--permission-mode', 'dontAsk',
     // left off entirely rather than set high: there is no value that means
@@ -250,13 +273,51 @@ async function run(job) {
     '--disallowedTools', ...DENY
   ];
 
-  const child = spawn('claude', args, {
-    cwd,
-    env: { ...process.env, XDG_RUNTIME_DIR: join(process.env.HOME, 'run') },
+  const box = `build-${job.id.replace(/[^a-z0-9]/gi, '').slice(0, 24)}`;
+
+  /*
+   * Everything it is allowed, spelled out. What is not here it does not have:
+   * no capabilities, no privilege it can gain, a filesystem that is a tmpfs
+   * and a network that reaches the MCP and the proxy and nothing else.
+   */
+  const shared = process.env.CLAUDE_CODE_OAUTH_TOKEN || process.env.ANTHROPIC_API_KEY
+    ? []
+    // no token of its own yet, so it falls back to the copied credential -
+    // which is the one thing builds still share, and the reason to set a token
+    : ['-v', `${CONFIG_VOLUME}:/home/builder/.claude`];
+
+  const run = [
+    'run', '--rm', '--name', box,
+    '--network', BUILD_NETWORK,
+    '--memory', BUILD_MEMORY, '--cpus', BUILD_CPUS, '--pids-limit', BUILD_PIDS,
+    '--security-opt', 'no-new-privileges:true',
+    '--cap-drop', 'ALL',
+    '--tmpfs', '/work:rw,size=64m,mode=0700,uid=1002,gid=1002',
+    '--workdir', '/work',
+    '-e', 'AGENT_BRIEF', '-e', 'AGENT_GUIDE', '-e', 'AGENT_MCP',
+    '-e', 'CLAUDE_CODE_OAUTH_TOKEN', '-e', 'ANTHROPIC_API_KEY',
+    '-e', 'HTTPS_PROXY', '-e', 'HTTP_PROXY', '-e', 'NO_PROXY',
+    ...shared,
+    '--entrypoint', 'sh',
+    BUILD_IMAGE,
+    '-c', INSIDE, 'build', ...args
+  ];
+
+  const child = spawn('docker', run, {
+    env: {
+      ...process.env,
+      AGENT_BRIEF: brief,
+      AGENT_GUIDE: GUIDE,
+      AGENT_MCP: MCP_URL
+    },
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
-  const killer = free ? null : setTimeout(() => child.kill('SIGKILL'), TIMEOUT);
+  // killing the client leaves the container running, so the timeout kills the
+  // container and lets --rm take it away
+  const killer = free ? null : setTimeout(() => {
+    spawn('docker', ['kill', box], { stdio: 'ignore' }).on('error', () => {});
+  }, TIMEOUT);
 
   // a change already knows its own key: nothing in the run will announce one,
   // because create_lambda is not called. The public half is picked up from
@@ -339,7 +400,7 @@ async function run(job) {
 
   if (killer) clearTimeout(killer);
 
-  await rm(cwd, { recursive: true, force: true }).catch(() => {});
+  // nothing to clean up: the container took its filesystem with it
 
   /*
    * A fresh build that never wrote code is a failure however cheerfully it

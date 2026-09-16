@@ -4,19 +4,26 @@
 #                  -f docker-compose.agent.yml up -d
 #
 # It runs Claude Code against whatever a stranger typed, so it is put where it
-# cannot do much. Two networks do most of that work:
+# cannot do much.
 #
-#   agent-net   internal, no route off the machine. The agent and the lambda
-#               server share it, which is how the agent reaches the MCP - over
-#               the compose network rather than back out through the public
-#               address.
-#   egress      the ordinary bridge, which the agent is NOT on. Its only way
-#               to the model API is the proxy, and the proxy only resolves the
-#               hosts it is configured for.
+# A prompt does not run in the runner. The runner starts a container for it,
+# waits for it and throws it away, so every build gets a filesystem nobody
+# else has touched, caps of its own, and a timeout that is a kill rather than
+# a hope. What makes that possible is the docker socket, and what makes the
+# socket acceptable is that nothing a model writes ever executes beside it.
 #
-# Seed its credentials once with docker/agent/seed-credentials.sh. They live
-# on a volume of its own because the OAuth token refreshes itself, and a
-# read-only credential stops working the day it expires.
+# Three networks keep those halves apart:
+#
+#   agent-net   internal. The lambda server and the runner, nothing else.
+#               This is how a prompt gets in.
+#   build-net   internal. A build, the egress proxy, and the lambda server
+#               answering to its own public name. The runner is NOT on it, so
+#               a build cannot reach the thing holding the socket.
+#   default     the ordinary bridge. Neither the runner nor a build is on it.
+#               The proxy is, and it resolves only the hosts it is told to.
+#
+# Give it a token with docker/agent/set-token.sh. Without one it falls back to
+# a copy of this machine's login, which cannot last - see that script.
 
 services:
 
@@ -33,6 +40,7 @@ services:
     networks:
       default:
       agent-net:
+      build-net:
         aliases:
           # The agent talks to the MCP over this network, and the server
           # redirects plain HTTP to HTTPS - so it has to be HTTPS, and HTTPS
@@ -41,12 +49,20 @@ services:
           # valid certificate and the traffic still never leaves the machine.
           - genhttp.dev
 
+  # The runner. Holds the socket, starts a container per build, and runs
+  # nothing that came out of a model.
   agent:
     build:
       context: ./docker/agent
     image: genhttp-agent:latest
     environment:
       AGENT_PORT: 8401
+      # what to start for each build, and what to allow it
+      AGENT_BUILD_IMAGE: ${LAMBDA_AGENT_IMAGE:-genhttp-agent:latest}
+      AGENT_BUILD_NETWORK: genhttp-build-net
+      AGENT_BUILD_MEMORY: ${LAMBDA_AGENT_BUILD_MEMORY:-2g}
+      AGENT_BUILD_CPUS: ${LAMBDA_AGENT_BUILD_CPUS:-1.5}
+      AGENT_BUILD_PIDS: ${LAMBDA_AGENT_BUILD_PIDS:-256}
       AGENT_MCP_URL: ${LAMBDA_AGENT_MCP_URL:-https://genhttp.dev/mcp}
       AGENT_MODEL: ${LAMBDA_AGENT_MODEL:-claude-opus-5}
       AGENT_FABLE_MODEL: ${LAMBDA_AGENT_FABLE_MODEL:-claude-fable-5-1}
@@ -75,6 +91,15 @@ services:
       NO_PROXY: genhttp.dev,lambda,localhost,127.0.0.1
     volumes:
       - agent-config:/home/builder/.claude
+      # The one real privilege in here, and the reason for the split above.
+      # Anything that can create a container can create one that mounts the
+      # host and becomes root on it, so this belongs only to a process that
+      # never runs somebody else's code - which, since builds moved out of it,
+      # this one does not. If that ever stops being true, this line is the
+      # first thing to take away.
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-990}"
     networks:
       - agent-net
     # it holds nothing worth writing to and has no reason to grow one
@@ -94,7 +119,7 @@ services:
     depends_on:
       - agent
     networks:
-      - agent-net
+      - build-net
       - default
     security_opt:
       - no-new-privileges:true
@@ -106,5 +131,10 @@ volumes:
 
 networks:
   agent-net:
+    internal: true
+  # named rather than left to the project prefix, because the runner names it
+  # on a docker run and should not have to guess what compose called it
+  build-net:
+    name: genhttp-build-net
     internal: true
   default:
