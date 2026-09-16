@@ -1647,6 +1647,19 @@ void StartClock()
             {
                 StartClock();
             }
+            else
+            {
+                /*
+                 * The company goes when the last person does.
+                 *
+                 * This used to be done as a socket closed, which is right
+                 * until a socket faults instead of closing - and then a dozen
+                 * bots are left in an arena with nobody in it, frozen, until
+                 * somebody happens to arrive. Here it is tied to the clock
+                 * stopping, which happens however the last player left.
+                 */
+                bots.Clear();
+            }
         }
     });
 }

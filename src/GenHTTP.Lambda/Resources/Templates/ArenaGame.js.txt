@@ -611,16 +611,37 @@ function draw() {
 
   const pellets = now.pellets;
 
+  /*
+   * Gathered by colour and filled once each.
+   *
+   * There are fifteen hundred of these and the loop used to set fillStyle,
+   * open a path and fill it for every one - three thousand state changes a
+   * frame, which is most of what the canvas was doing. A path holds as many
+   * arcs as it likes and a fill costs the same whether it is one circle or
+   * four hundred, so the whole floor is a dozen fills now.
+   */
+  const heaps = new Map();
+
   for (let i = 0; i < pellets.length; i += 3) {
     const at = flat(pellets[i], pellets[i + 1]);
 
     // colour in the low four bits, how big it is above them
     const tag = pellets[i + 2];
+    const key = tag & 15;
 
-    ctx.fillStyle = palette[tag & 15] ?? '#9aa0a6';
-    ctx.beginPath();
-    ctx.arc(at.x, at.y, Math.max(2, (girths[tag >> 4] ?? girths[0]) * scale), 0, Math.PI * 2);
-    ctx.fill();
+    let heap = heaps.get(key);
+
+    if (!heap) heaps.set(key, heap = new Path2D());
+
+    const r = Math.max(2, (girths[tag >> 4] ?? girths[0]) * scale);
+
+    heap.moveTo(at.x + r, at.y);
+    heap.arc(at.x, at.y, r, 0, Math.PI * 2);
+  }
+
+  for (const [key, heap] of heaps) {
+    ctx.fillStyle = palette[key] ?? '#9aa0a6';
+    ctx.fill(heap);
   }
 
   ctx.globalAlpha = 1;
@@ -834,6 +855,16 @@ function drawSpace(put, scale, left, right, top, bottom) {
     ctx.fillRect(at.x - span, at.y - span, span * 2, span * 2);
   }
 
+  /*
+   * Three fills for the whole sky.
+   *
+   * A star is one or two pixels across, so it is drawn as a square: nobody
+   * can tell, and a rectangle costs a fraction of an arc. They are sorted
+   * into three brightnesses and each brightness is one path, so the sky is
+   * three fills rather than several hundred.
+   */
+  const sky = [new Path2D(), new Path2D(), new Path2D()];
+
   for (const s of STARS) {
     const x = s.x * w;
     const y = s.y * w;
@@ -842,23 +873,28 @@ function drawSpace(put, scale, left, right, top, bottom) {
 
     const at = put(x, y);
 
-    const r = Math.max(0.5, s.size * Math.min(1.6, scale * 1.4));
+    const r = Math.max(0.6, s.size * Math.min(1.5, scale * 1.2));
 
-    ctx.fillStyle = s.warm > 0.82
-      ? `rgba(255,214,170,${s.lit * 0.9})`
-      : s.warm > 0.62
-        ? `rgba(196,214,255,${s.lit * 0.85})`
-        : `rgba(226,232,246,${s.lit * 0.7})`;
+    const band = s.warm > 0.82 ? 0 : s.warm > 0.62 ? 1 : 2;
 
-    ctx.beginPath();
-    ctx.arc(at.x, at.y, r, 0, Math.PI * 2);
-    ctx.fill();
+    sky[band].rect(at.x - r, at.y - r, r * 2, r * 2);
+  }
+
+  const shades = ['rgba(255,214,170,0.78)', 'rgba(196,214,255,0.7)', 'rgba(226,232,246,0.55)'];
+
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = shades[i];
+    ctx.fill(sky[i]);
   }
 }
 
 requestAnimationFrame(draw);
 
+/** Whether this tab means to be in the arena, and how hard reconnecting is. */
+let playing = false, tries = 0;
+
 function connect(name) {
+  playing = true;
   const address = new URL('play', location.href.replace(/[^/]*$/, ''));
   address.protocol = address.protocol === 'https:' ? 'wss:' : 'ws:';
 
@@ -872,6 +908,7 @@ function connect(name) {
       me = m.id; world = m.world; palette = m.palette; wellSize = m.well ?? 40; girths = m.girths ?? [5];
       history.length = 0; camera = null;
       out = false;
+      tries = 0;
       $('gate').hidden = true; $('over').hidden = true;
       $('hud').hidden = false; $('board').hidden = false; $('crowd').hidden = false;
       return;
@@ -937,7 +974,32 @@ function connect(name) {
       `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
   };
 
-  socket.onclose = () => { $('here').textContent = 'disconnected'; };
+  /*
+   * A dropped socket is picked back up rather than being the end of it.
+   *
+   * The server faults a connection now and then - two writes landing on one
+   * socket at once, which is not something this side can prevent - and the
+   * arena carries on without you while you are looking at the word
+   * "disconnected". Coming straight back is a couple of seconds of being
+   * small again, which is a far better answer than reloading the page.
+   *
+   * Only while playing, and not after a deliberate close, or somebody who has
+   * closed the tab is reconnected to a game they have left.
+   */
+  socket.onclose = () => {
+    if (!playing) {
+      $('here').textContent = 'disconnected';
+      return;
+    }
+
+    $('here').textContent = 'reconnecting…';
+
+    // a little longer each time, so a server that is genuinely gone is not
+    // hammered by every tab that was watching it
+    tries = Math.min(tries + 1, 5);
+
+    setTimeout(() => { if (playing) connect(name); }, 250 * tries);
+  };
 }
 
 $('go').onclick = () => connect($('name').value);
