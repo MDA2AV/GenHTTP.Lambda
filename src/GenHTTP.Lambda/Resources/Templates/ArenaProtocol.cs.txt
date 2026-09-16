@@ -117,13 +117,21 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// </remarks>
 /// <param name="Cool">Seconds until this player may teleport again, nought if now</param>
 /// <param name="Draw">Seconds until this player may draw another line</param>
+/// <param name="Mine">What this player scores, worked out here rather than in
+/// the browser. A blob's radius travels rounded to a tenth of a unit, which
+/// is far finer than anything the drawing needs and nowhere near fine enough
+/// to score from: the exponent past the collapse is a hundred and fifty
+/// seven, so a twentieth of a unit of rounding at a radius of four thousand
+/// moves the score by a third of a per cent. The leaderboard had the exact
+/// figure and the player's own corner had the rounded one, and they visibly
+/// disagreed with each other about the same blob.</param>
 /// <param name="Hole">Whether this player has collapsed and can no longer move</param>
 /// <param name="V">Teleports crossing within sight, nought of them being null</param>
 /// <param name="E">Blobs eaten within sight this tick, nought of them being null</param>
 /// <param name="A">Who this player ate this tick, nobody being null</param>
 /// <param name="O">Whirls turning within sight, nought of them being null</param>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W,
-                    double Cool, double Draw, bool Hole,
+                    double Cool, double Draw, double Mine, bool Hole,
                     List<Mark> V, List<Feast> E, List<string> A, List<Eddy> O);
 
 /// <summary>

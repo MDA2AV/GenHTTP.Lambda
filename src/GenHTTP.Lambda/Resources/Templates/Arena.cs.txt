@@ -1353,7 +1353,8 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
     return JsonSerializer.Serialize(
         new Frame("f", near, crumbs, board.ToList(), alive, size,
                   Math.Round(Math.Max(0, viewer.WarpReady - at), 2),
-                  Math.Round(Math.Max(0, viewer.DrawReady - at), 2), World.IsHole(viewer.Radius),
+                  Math.Round(Math.Max(0, viewer.DrawReady - at), 2), World.ScoreOf(viewer.Radius),
+                  World.IsHole(viewer.Radius),
                   crossing, gone, viewer.Ate, eddies), json);
 }
 

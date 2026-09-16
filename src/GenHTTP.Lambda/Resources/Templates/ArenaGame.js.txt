@@ -545,7 +545,12 @@ function moment() {
 }
 
 /**
- * What a blob has grown into.
+ * What a blob has grown into, near enough to pick a tier with.
+ *
+ * Only ever used for the fire and the aura, which is all it is good for: it
+ * runs on the rounded radius that travels in a frame, and past the collapse
+ * that is a third of a per cent out. The numbers anybody reads - their own
+ * score and the leaderboard - both come from the server.
  *
  * Score rather than radius, because score is the number the player is
  * watching go up and radius is the square root of it - tiers picked on radius
@@ -1489,7 +1494,10 @@ function connect(name) {
 
     // the same sum as the board, which is the server's - the plain area it
     // used to be stops matching the moment anything collapses
-    $('score').textContent = self ? tally(SCORE(self.r)) : '0';
+    // the server's figure, not one worked out again from a rounded radius -
+    // the two disagree by a fraction of a per cent, which is invisible on a
+    // blob and glaring when the same number is printed twice on one screen
+    $('score').textContent = tally(m.mine ?? 0);
     $('here').textContent = `${m.alive} in the arena`;
     $('hold').hidden = !(self && ((self.g ?? 0) > 1 || collapsed));
 
