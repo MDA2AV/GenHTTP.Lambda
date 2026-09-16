@@ -1633,6 +1633,16 @@ let playing = false, tries = 0;
  */
 let chosen = localStorage.getItem('arena.name') || '';
 
+/*
+ * What the last welcome gave us, which claims this blob back if the socket
+ * dies under us.
+ *
+ * Kept in memory only, and thrown away the moment the round ends properly -
+ * being eaten costs the blob, as it should. This is for the case where the
+ * connection goes and the game did not.
+ */
+let ticket = null;
+
 function connect(name) {
   playing = true;
 
@@ -1647,12 +1657,13 @@ function connect(name) {
   address.protocol = address.protocol === 'https:' ? 'wss:' : 'ws:';
 
   socket = new WebSocket(address);
-  socket.onopen = () => socket.send(JSON.stringify({ kind: 'join', name }));
+  socket.onopen = () => socket.send(JSON.stringify({ kind: 'join', name, token: ticket }));
 
   socket.onmessage = (event) => {
     const m = JSON.parse(event.data);
 
     if (m.kind === 'welcome') {
+      ticket = m.token ?? null;
       me = m.id; world = m.world; palette = m.palette; wellSize = m.well ?? 40; girths = m.girths ?? [5];
       history.length = 0; camera = null;
       out = false;
@@ -1666,6 +1677,7 @@ function connect(name) {
     if (m.kind === 'won') {
       $('champion').textContent = `${m.who.replace(/[<&]/g, '')} took the arena`;
       $('tally').textContent = `${tally(m.score)} points.`;
+      ticket = null;
       $('over').hidden = true;
       $('won').hidden = false;
       history.length = 0;
@@ -1684,6 +1696,8 @@ function connect(name) {
     }
 
     if (m.kind === 'eaten') {
+      // a death is a death; only a broken connection is worth coming back from
+      ticket = null;
       out = true;
       $('verdict').textContent = `Eaten by ${m.by}`;
       $('final').textContent = `You got to ${tally(m.score)}.`;

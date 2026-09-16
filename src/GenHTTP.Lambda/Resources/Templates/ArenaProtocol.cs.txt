@@ -5,7 +5,9 @@
 // fields are one letter and the numbers are rounded before they leave.
 
 /// <summary>Sent by a browser as its first frame.</summary>
-public record Join(string Kind, string Name);
+/// <param name="Token">What the last welcome gave them, if they are coming
+/// back from a dropped connection rather than arriving new</param>
+public record Join(string Kind, string Name, string Token = null);
 
 /// <summary>
 /// Where a browser would like to be heading, sent continuously.
@@ -94,7 +96,7 @@ public record Feast(double X, double Y, double R, string C);
 public record Score(string N, double S);
 
 /// <summary>Who you are and how big the world is, sent once.</summary>
-public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette, double Well, double[] Girths);
+public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette, double Well, double[] Girths, string Token);
 
 /// <summary>
 /// What is near enough to matter, sent on every tick.

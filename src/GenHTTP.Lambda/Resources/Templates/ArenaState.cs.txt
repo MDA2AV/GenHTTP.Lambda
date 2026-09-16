@@ -123,6 +123,11 @@ sealed class Player
     public double Spoke;
 
     /// <summary>
+    /// The secret that lets a dropped connection claim this blob back.
+    /// </summary>
+    public string Ticket;
+
+    /// <summary>
     /// Where this blob's whirl is turning, and until when on the arena clock.
     /// Only a hole may open one, and only one at a time.
     /// </summary>

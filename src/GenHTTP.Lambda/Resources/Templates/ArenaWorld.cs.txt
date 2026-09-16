@@ -38,12 +38,10 @@ static class World
     /// always something worth steering at.
     /// </remarks>
     /// <remarks>
-    /// Capped, because the arena is now allowed to get large enough that the
-    /// density alone would ask for nearly three million of them - which is not
-    /// a floor, it is a memory leak with a rule attached. Past the cap the
-    /// floor thins out with distance rather than growing without end, which is
-    /// the right way round anyway: an arena that big is mostly empty space and
-    /// should feel like it.
+    /// Capped: the arena can get large enough that density alone would ask
+    /// for nearly three million, which is a memory leak with a rule attached.
+    /// Past the cap the floor thins with distance, which is the right way
+    /// round - an arena that big is mostly empty space.
     /// </remarks>
     public static int PelletsFor(double size) => (int)Math.Min(40_000, size * size / 20_000);
 
@@ -111,15 +109,12 @@ static class World
     /// What a hole scores at each of its grades.
     /// </summary>
     /// <remarks>
-    /// Chosen on radius and then read off as scores, which is why they are
-    /// not round: five hundred and sixty, eight hundred, eleven hundred,
-    /// fifteen hundred, nineteen hundred. Spacing them evenly in score would
-    /// crowd four of the five into the last few hundred units of growth.
-    /// The last of them is well below the ceiling rather than at it,
-    /// which was the trouble with the previous ladder: the top grade was
-    /// reached and the round ended in the same breath, so nobody ever saw
-    /// one. There is most of a grade's worth of arena left to eat after the
-    /// last step, which is long enough to be somewhere you have to live.
+    /// Radii, not scores: two hundred orders of magnitude between collapse
+    /// and ceiling means any score picked for a middle grade is an absurd
+    /// number between two other absurd ones.
+    /// The last is well below the ceiling rather than at it: the previous
+    /// ladder had the top grade and the win in the same breath, so nobody
+    /// ever saw one.
     /// </remarks>
     // the first of them is the collapse itself, taken from the same number
     // rather than written out again: a grade one that was not yet a hole is a
@@ -203,12 +198,9 @@ static class World
 
     /// <summary>How often the whole arena's positions go out, in beats.</summary>
     /// <remarks>
-    /// The minimap is the one thing in a frame that is not filtered by what
-    /// the player can see - that is the point of it - so it is the one thing
-    /// whose cost is the whole crowd rather than the part of it nearby. At a
-    /// hundred blobs it is about a kilobyte, which is worth sending six times
-    /// a second and not worth sending twenty: nothing crosses a map this size
-    /// in a sixth of a second.
+    /// The one thing in a frame not filtered by what the player can see, so
+    /// the one thing whose cost is the whole crowd. Worth six times a second
+    /// and not twenty: nothing crosses a map this size in a sixth of one.
     /// </remarks>
     public const int MapEvery = 3;
 
@@ -243,11 +235,9 @@ static class World
 
     /// <summary>The most blobs one frame will describe.</summary>
     /// <remarks>
-    /// The same budget the pellets have, for the same reason. A hole sees the
-    /// whole arena, and at a full house the whole arena is ten thousand blobs
-    /// - four hundred kilobytes twenty times a second to one player, for a
-    /// screen on which most of them are a pixel. The nearest are always kept;
-    /// the rest are thinned.
+    /// A hole sees the whole arena, and at a full house that is ten thousand
+    /// blobs - four hundred kilobytes twenty times a second to one player,
+    /// most of them a pixel wide.
     /// </remarks>
     public const int Faces = 700;
 
@@ -323,13 +313,10 @@ static class World
     /// <summary>How long a hole's whirl lasts, in seconds.</summary>
     /// <remarks>
     /// A hole is the strongest thing in the arena and cannot chase anything,
-    /// so the only way its round ends is if somebody volunteers. Calling
-    /// pellets down is an offer, and people decline offers.
-    ///
-    /// This does not pull towards the hole. It pulls towards a spot the hole
-    /// chooses, anywhere it can see: on yourself to feed, beside somebody to
-    /// take them off whatever they were doing. Either way, coming near a hole
-    /// stops being entirely their decision.
+    /// so its round ends only if somebody volunteers - and calling pellets
+    /// down is an offer people decline. This pulls towards a spot the hole
+    /// chooses: on itself to feed, beside somebody to take them off what
+    /// they were doing.
     /// </remarks>
     public const double WhirlTime = 4.0;
 
@@ -417,14 +404,11 @@ static class World
      * simply walk past, and it is the only thing in here that acts on a
      * player who is not touching anything.
      *
-     * It is a velocity rather than an acceleration on purpose. Nothing else
-     * in this arena stores momentum - a blob goes where it is pointed at the
-     * speed its size allows - and integrating an inverse square acceleration
-     * at twenty ticks a second with no substeps is the textbook way to get
-     * blobs slingshotting through each other and gaining energy. A velocity
-     * field cannot do that: what it adds in a tick is bounded by the cap
-     * below, so a blob can never move further in a tick than it could under
-     * its own steam.
+     * A velocity rather than an acceleration on purpose: nothing here stores
+     * momentum, and integrating an inverse square at twenty ticks a second
+     * with no substeps is the textbook way to get blobs slingshotting through
+     * each other. What a velocity field adds in a tick is bounded by the cap
+     * below.
      */
 
     /// <summary>How strong the pull is, before distance and size temper it.</summary>
@@ -594,9 +578,8 @@ static class World
     /// How far a blob of this size drags loose pellets.
     /// </summary>
     /// <remarks>
-    /// It widens with the grip, the same as the pull on players does - a
-    /// hold that reaches further for people and not for dust looks broken,
-    /// because the floor near you stays put while everything else comes in.
+    /// It widens with the grip, as the pull on players does: a hold that
+    /// reaches further for people and not dust looks broken.
     ///
     /// What is being tuned here is not the strength of anything, it is how
     /// many pellets are in the air at once - which is the inflow times how
@@ -732,11 +715,8 @@ static class World
 
     /// <summary>How long a kill leaves you charged, in seconds.</summary>
     /// <remarks>
-    /// Long enough to reach the next one and no longer. The whole of the
-    /// mechanic is in that: five seconds is not a reward for having eaten
-    /// somebody, it is an invitation to go and do it again immediately,
-    /// while whoever is near you has just watched what you did to the last
-    /// one and is deciding whether to run.
+    /// Long enough to reach the next one and no longer: not a reward for
+    /// having eaten somebody, an invitation to do it again at once.
     /// </remarks>
     /// <remarks>
     /// Not given to holes. A charge is extra speed and a hole has no legs, so
@@ -750,11 +730,8 @@ static class World
 
     /// <summary>What being charged does to your legs.</summary>
     /// <remarks>
-    /// Compounding with each kill taken while the last is still lit, which
-    /// is what makes a run a run: fourteen per cent for one, seventy for a
-    /// chain of five. Capped, because the arena is only so wide and a blob
-    /// crossing it faster than the frames can show it is a bug, not a
-    /// reward.
+    /// Compounding with each kill taken while the last is still lit:
+    /// fourteen per cent for one, seventy for a chain of five.
     /// </remarks>
     public static double SparkBoost(int sparks) => 1 + 0.14 * Math.Clamp(sparks, 0, SparkMost);
 
@@ -810,10 +787,9 @@ static class World
 
     /// <summary>How wide a square of the blob grid is, in units.</summary>
     /// <remarks>
-    /// A separate grid from the one the pellets live in, and a much coarser
-    /// one. There are two orders of magnitude fewer blobs than pellets and
-    /// they are far larger, so cells the size of a pellet's would mean walking
-    /// hundreds of empty ones per query.
+    /// Coarser than the pellets' grid: two orders of magnitude fewer blobs,
+    /// far larger, so pellet-sized cells would mean walking hundreds of empty
+    /// ones per query.
     ///
     /// This is what makes a crowd of ten thousand possible at all. Three
     /// things used to compare every blob against every other one, and three
@@ -824,12 +800,9 @@ static class World
 
     /// <summary>How far anything can have moved since the squares were filled.</summary>
     /// <remarks>
-    /// The grid is built at the top of a tick and asked after everybody has
-    /// moved, so a blob can be up to one tick's travel from the square it is
-    /// filed under. Every query is widened by this much rather than the grid
-    /// being rebuilt twice, which would cost more than it saves: the fastest
-    /// thing in the game is a drawn line at twenty six hundred units a second,
-    /// which is a hundred and thirty units in a beat.
+    /// The grid is filled at the top of a tick and asked after everybody has
+    /// moved, so a blob can be one tick's travel from the square it is filed
+    /// under. Widening every query beats rebuilding the grid twice.
     /// </remarks>
     public const double Slip = 200;
 
@@ -845,6 +818,18 @@ static class World
     /// The clock stops while it is empty, so this costs memory and no time.
     /// </remarks>
     public const double Linger = 90;
+
+    /// <summary>How long a blob waits for its player to come back, in seconds.</summary>
+    /// <remarks>
+    /// A dropped socket is not a death and should not be charged as one. The
+    /// engine faults connections now and then - not our doing; we never have
+    /// two writes in flight on one - and the browser reconnects within a
+    /// second, which until now meant arriving new at starting size.
+    ///
+    /// Being eaten still costs the blob: this keeps a size across a broken
+    /// connection, not a life across a death.
+    /// </remarks>
+    public const double Adrift = 45;
 
     /// <summary>The furthest anything drags loose pellets, in units.</summary>
     /// <remarks>
@@ -910,8 +895,6 @@ static class World
     /// hundred. A hundred quintillion of plain area would be a radius of five
     /// and a half billion, in an arena nine thousand across.
     ///
-    /// Steep, and meant to be: the thirteen orders of magnitude between the
-    /// collapse and the ceiling are the whole of what a hole has to look at.
     /// </remarks>
     public const double Steepen = 156.90;
 

@@ -4,16 +4,14 @@
 //   GET /lambda/{{KEY}}/api/best    the best runs it remembers
 //   WS  /lambda/{{KEY}}/play        everything that happens
 //
-// Seven files: this one is the socket, the clock and the storage, World.cs is
-// the rules, Protocol.cs is what the two halves say, State.cs is a player as
-// the server holds one, and index.html, game.js and style.css are shipped as
-// assets - served as they are, never compiled.
+// Seven files: this one is the socket, the clock and the storage, World.cs
+// the rules, Protocol.cs what the two halves say, State.cs a player as the
+// server holds one; index.html, game.js and style.css ship as assets.
 //
 // Written to be leaned on. Everything that moves is decided here and sent to
-// everybody twenty times a second, so the interesting number is not the frame
-// rate but how many people can be in the arena before the socket is the thing
-// that gives. Only what falls inside a player's view is sent to them, because
-// the alternative is most of a megabyte a second before anybody has moved.
+// everybody twenty times a second, so the number that matters is not the
+// frame rate but how many fit in before the socket gives. Only what falls
+// inside a player's view is sent to them.
 
 var json = new JsonSerializerOptions
 {
@@ -189,17 +187,26 @@ var herd = new Dictionary<long, List<Player>>();
 /*
  * The few blobs big enough to bend the floor around them.
  *
- * Kept separately because the only thing that ever wants the whole crowd at
- * once is the search for somewhere to put somebody, and what that search
- * actually cares about is whether the spot is inside somebody's pull -
- * which nothing under the well size has. At ten thousand blobs this is the
- * difference between reading a handful and reading all of them, twelve
- * times over, for every single spawn.
+ * The only thing that wants the whole crowd at once is the search for
+ * somewhere to put somebody, and all it asks is whether the spot is inside
+ * somebody's pull - which nothing under the well size has. At ten thousand
+ * blobs that is a handful read rather than all of them, twelve times, per
+ * spawn.
  */
 var heavies = new List<Player>();
 
 /// <summary>When the arena last had nobody in it at all.</summary>
 var emptied = DateTime.UtcNow;
+
+/*
+ * Blobs whose player is not connected just now.
+ *
+ * Keyed by a secret the welcome gave them, which is the only thing that can
+ * claim one back. They are out of the arena while they wait - not standing
+ * there to be eaten by whatever happens past - and they expire, so a size is
+ * a thing you come back to in the next few seconds rather than bank.
+ */
+var adrift = new ConcurrentDictionary<string, (double Radius, string Colour, DateTime Since)>();
 
 void Weigh(Player[] everyone)
 {
@@ -216,9 +223,8 @@ void Weigh(Player[] everyone)
 
 /// <summary>Puts the crowd back in its squares, once, at the top of a tick.</summary>
 /// <remarks>
-/// Everything that follows asks this rather than asking everybody. Rebuilt
-/// from scratch like the floor is: at ten thousand blobs it is ten thousand
-/// adds, against the hundred million comparisons it saves.
+/// Everything that follows asks this rather than everybody: ten thousand
+/// adds against the hundred million comparisons it saves.
 /// </remarks>
 void Reherd(Player[] everyone)
 {
@@ -251,10 +257,9 @@ void Reherd(Player[] everyone)
 
 /// <summary>Everybody within a square of this reach, without walking the rest.</summary>
 /// <remarks>
-/// Falls back to the whole crowd when the reach covers most of the arena.
-/// A hole's pull does reach that far, and walking sixty thousand empty
-/// squares to find ten thousand blobs is slower than walking the ten
-/// thousand.
+/// Falls back to the whole crowd when the reach covers most of the arena: a
+/// hole's pull does, and walking sixty thousand empty squares to find ten
+/// thousand blobs is slower than walking the blobs.
 /// </remarks>
 IEnumerable<Player> Around(double x, double y, double reach, Player[] everyone)
 {
@@ -855,6 +860,18 @@ void Step(double seconds)
      */
     feasts.Clear();
 
+    // blobs nobody came back for
+    if (tick % 40 == 0 && !adrift.IsEmpty)
+    {
+        foreach (var (ticket, waiting) in adrift)
+        {
+            if ((DateTime.UtcNow - waiting.Since).TotalSeconds > World.Adrift)
+            {
+                adrift.TryRemove(ticket, out _);
+            }
+        }
+    }
+
     foreach (var soul in everyone)
     {
         soul.Ate = null;
@@ -891,14 +908,11 @@ void Step(double seconds)
      * eighty eight, and the other four fifths of the machine sat watching
      * one core do it.
      *
-     * It parallelises because a bot shares nothing. It reads the two grids,
-     * which nothing writes until this pass is over, and it writes where it
-     * has decided to go - its own fields, on its own object, which no other
-     * bot has a reference to. The one thing that was not safe was the
-     * arena's random number generator, and that is a line further down.
-     *
-     * Chunked rather than one task per bot: the body is a few microseconds
-     * and handing ten thousand of those to the pool costs more than the work.
+     * It parallelises because a bot shares nothing: it reads the two grids,
+     * which nothing writes until this pass is over, and writes only its own
+     * fields. The one thing that was not safe was the arena's random number
+     * generator, which is a line further down. Chunked rather than one task
+     * per bot - the body is microseconds.
      */
     if (bots.Count >= 200)
     {
@@ -1376,14 +1390,10 @@ void Step(double seconds)
 /// </remarks>
 /// <summary>Where everybody is, small enough to send to everybody.</summary>
 /// <remarks>
-/// Built once for the whole arena rather than per viewer, because unlike
-/// everything else in a frame it is the same for all of them - a minimap
-/// that only showed what you could already see would be a picture of your
-/// own screen.
-///
-/// Whole units, and one number for the blob itself: below the collapse it is
-/// a rough size band, above it the grade of hole, which is all a dot a few
-/// pixels across can carry anyway.
+/// Built once for the whole arena rather than per viewer: a minimap showing
+/// only what you can already see is a picture of your own screen. One number
+/// for the blob - a size band below the collapse, a grade above - which is
+/// all a dot a few pixels across can carry.
 /// </remarks>
 void Chart(Player[] everyone)
 {
@@ -1801,16 +1811,10 @@ void StartClock()
          * nothing between them.
          *
          * The wait used to be a flat delay after the work, so the period was
-         * fifty plus however long the tick took - which is harmless while a
-         * tick is a millisecond and is not once the arena is nine thousand
-         * units across with a hundred blobs and thirty thousand pellets in
-         * it. At that size the work is twenty milliseconds and the rate had
-         * quietly fallen from twenty a second to fourteen.
-         *
-         * Subtracting the work keeps the rate flat until the work will not
-         * fit in the beat at all, and then it degrades by running late
-         * rather than by running slow, which the clock below already knows
-         * how to handle - it measures the gap rather than assuming it.
+         * fifty plus the tick - harmless at a millisecond, and not at twenty,
+         * where the rate had quietly fallen to fourteen a second. Subtracting
+         * the work keeps it flat until the work will not fit at all, and then
+         * it runs late rather than slow.
          */
         try
         {
@@ -1888,31 +1892,44 @@ var socket = Websocket.Functional()
 
                               var spot = Somewhere();
 
+                              /*
+                               * A token from a welcome, still within the
+                               * wait, gets that blob's size back. Anything
+                               * else - no token, a stale one, one already
+                               * claimed - starts over, so a guess is worth
+                               * nothing and being eaten still costs you.
+                               */
+                              var back = joining?.Token is { Length: 16 } was
+                                      && adrift.TryRemove(was, out var kept)
+                                      && (DateTime.UtcNow - kept.Since).TotalSeconds <= World.Adrift
+                                  ? kept
+                                  : default;
+
+                              var ticket = NewId() + NewId();
+
                               player = new Player
                               {
                                   Id = NewId(),
                                   Name = World.Called(joining?.Name),
-                                  Colour = World.ColourFor(Interlocked.Increment(ref seat)),
+                                  Colour = back.Colour ?? World.ColourFor(Interlocked.Increment(ref seat)),
                                   X = spot.X,
                                   Y = spot.Y,
-                                  Radius = World.Start
+                                  Radius = back.Radius > World.Start ? back.Radius : World.Start,
+                                  Ticket = ticket
                               };
 
                               player.WantX = player.X;
                               player.WantY = player.Y;
 
                               /*
-                               * The welcome goes out before they are put on
-                               * the books, and the order is the whole point.
-                               * The clock writes a frame to everybody on the
-                               * books twenty times a second, so registering
-                               * first leaves a window where it writes to
-                               * this socket while the welcome is still going
-                               * out of it - and two writes at once is not
-                               * something a connection survives.
+                               * The welcome goes out before they are on the
+                               * books, and the order is the point: the clock
+                               * writes to everybody on the books twenty times
+                               * a second, and a second write while this one
+                               * is going out is not survivable.
                                */
                               var greeted = await Send(connection, JsonSerializer.Serialize(
-                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize, World.Girths), json));
+                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize, World.Girths, ticket), json));
 
                               if (!greeted)
                               {
@@ -2092,6 +2109,17 @@ var socket = Websocket.Functional()
                           if (players.TryRemove(connection, out var leaving))
                           {
                               Remember(leaving);
+
+                              /*
+                               * Parked rather than discarded. The socket may
+                               * have been faulted rather than closed, and a
+                               * browser that reconnects in a second should
+                               * find the blob it had, not a new one.
+                               */
+                              if (!leaving.Gone && leaving.Radius > World.Start && leaving.Ticket != null)
+                              {
+                                  adrift[leaving.Ticket] = (leaving.Radius, leaving.Colour, DateTime.UtcNow);
+                              }
                           }
 
                           if (players.IsEmpty)
