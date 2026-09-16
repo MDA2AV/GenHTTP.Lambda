@@ -63,6 +63,9 @@ public record Path(string Kind, double[] X, double[] Y);
 /// <summary>Asking for company, when there is nobody about.</summary>
 public record Fill(string Kind, int Count);
 
+/// <summary>A hole asking for a whirl to open somewhere it can see.</summary>
+public record Haul(string Kind, double X, double Y);
+
 /// <summary>Somebody used what they were carrying.</summary>
 public record Use(string Kind);
 
@@ -80,6 +83,11 @@ public record Use(string Kind);
 /// travelling rather than as having slid</param>
 public record Mark(double X, double Y, double R, string C, double T, string I);
 
+/// <summary>A whirl in progress, and how far through it is.</summary>
+/// <param name="R">How far it reaches, so a browser can draw the edge of it
+/// rather than guess - which matters, because the edge is the escape</param>
+public record Eddy(double X, double Y, double R, string C, double T);
+
 /// <summary>A blob that has just been eaten, and how big it was.</summary>
 /// <remarks>
 /// Only worth a frame or two, but it has to come from the server: by the
@@ -90,7 +98,13 @@ public record Mark(double X, double Y, double R, string C, double T, string I);
 public record Feast(double X, double Y, double R, string C);
 
 /// <summary>One line of the leaderboard.</summary>
-public record Score(string N, int S);
+/// <remarks>
+/// A double, not an int. Scores run to a hundred quintillion now and an int
+/// stops at two billion and change - past which the board showed everybody
+/// the same figure, or a negative one. A double is exact to nine quadrillion
+/// and orderable the whole way up.
+/// </remarks>
+public record Score(string N, double S);
 
 /// <summary>Who you are and how big the world is, sent once.</summary>
 public record Welcome(string Kind, string Id, string Colour, double World, string[] Palette, double Well, double[] Girths);
@@ -133,9 +147,10 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// <param name="V">Teleports crossing within sight, nought of them being null</param>
 /// <param name="E">Blobs eaten within sight this tick, nought of them being null</param>
 /// <param name="A">Who this player ate this tick, nobody being null</param>
+/// <param name="O">Whirls turning within sight, nought of them being null</param>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W,
                     List<int> K, List<int> S, int Mine, double Fuse, double Cool, bool Hole,
-                    List<Mark> V, List<Feast> E, List<string> A);
+                    List<Mark> V, List<Feast> E, List<string> A, List<Eddy> O);
 
 /// <summary>
 /// Sent to everybody when somebody takes the whole arena.
@@ -145,7 +160,7 @@ public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int A
 /// everybody is back at the starting size somewhere fresh by the time this
 /// arrives, so it is an announcement rather than a question.
 /// </remarks>
-public record Won(string Kind, string Who, int Score);
+public record Won(string Kind, string Who, double Score);
 
 /// <summary>Sent to whoever has just been eaten.</summary>
-public record Eaten(string Kind, string By, int Score);
+public record Eaten(string Kind, string By, double Score);

@@ -189,6 +189,18 @@ sealed class Player
     public double WarpLands;
 
     /// <summary>
+    /// Where this blob's whirl is turning, and until when on the arena clock.
+    /// Only a hole may open one, and only one at a time.
+    /// </summary>
+    public double WhirlX;
+
+    /// <summary>The other half of <see cref="WhirlX"/>.</summary>
+    public double WhirlY;
+
+    /// <summary>When the whirl stops, or nought when there is not one.</summary>
+    public double WhirlEnds;
+
+    /// <summary>
     /// Who this blob has eaten since the last frame went out, which is worth
     /// saying on their screen and nowhere else.
     /// </summary>

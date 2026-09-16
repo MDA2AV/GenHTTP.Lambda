@@ -46,12 +46,17 @@ static class World
     /// The score that wins the arena and ends the round.
     /// </summary>
     /// <remarks>
-    /// A hundred times what it was, because rounds were ending too soon. Not
-    /// a hundred times the eating, though - the scale is steeper as well, so
-    /// what this actually costs is about seventy per cent more of the floor
-    /// than the old ceiling did. The rest of the change is in the number.
+    /// The round is as long as it was: what it costs is set by the radius it
+    /// ends at, which is as large as the arena can hold and still have a game
+    /// in it, and not by the number printed beside it. What this buys is the
+    /// number, and the number is the whole of the endgame - a blob past the
+    /// collapse cannot move and has nothing else to watch.
+    ///
+    /// Scores are doubles now, too. They were integers, which stop at two
+    /// billion and change, so anything past the old ceiling reached the
+    /// leaderboard as a negative number.
     /// </remarks>
-    public const double Win = 10_000_000_000;
+    public const double Win = 1e20;
 
     /// <summary>
     /// The score at which somebody stops being a player and becomes a hole.
@@ -65,22 +70,22 @@ static class World
     /// </remarks>
     public const double Collapse = 10_000_000;
 
-    /// <summary>The area at which score stops being area.</summary>
+    /// <summary>The plain area at which a blob collapses.</summary>
     /// <remarks>
-    /// This used to be the same number as the collapse, which only worked
-    /// while the two happened to want the same value. They do not: the
-    /// collapse is a score - a thing a player reads and aims at - and this is
-    /// an area, chosen entirely so that the two ends of the scale land at
-    /// radii the arena can hold. With a ten billion ceiling and the knee left
-    /// on the collapse, a winner would have a radius of six and a half
-    /// thousand in an arena nine thousand across.
-    ///
-    /// Fixed instead by where the two ends have to come out: the collapse at
-    /// a radius of about five hundred and sixty, which is where it has always
-    /// been and is a size the arena reads well at, and the ceiling at
-    /// twenty one hundred. Those two, with the exponent below, give this.
+    /// The collapse is one event with two numbers: an area, where it
+    /// physically happens - a radius of five hundred and sixty, which the
+    /// arena reads well at - and a score, which is what a player aims at.
+    /// Keeping both lets the score be anything without moving the event.
     /// </remarks>
-    public const double Knee = 242_000;
+    public const double Hole = 1_000_000;
+
+    /// <summary>What the score is multiplied by below the collapse.</summary>
+    /// <remarks>
+    /// Exactly the ratio of the two numbers above, so that a blob arriving at
+    /// the collapse from below and one leaving it from above agree about what
+    /// it scores. Anything else puts a step in the middle of the scale.
+    /// </remarks>
+    public const double Lift = Collapse / Hole;
 
     /// <summary>Whether this radius has collapsed.</summary>
     public static bool IsHole(double radius) => ScoreOf(radius) >= Collapse;
@@ -89,15 +94,17 @@ static class World
     /// What a hole scores at each of its grades.
     /// </summary>
     /// <remarks>
-    /// Five times apiece, so each one is a visible step rather than a slow
-    /// creep. The last of them is well below the ceiling rather than at it,
+    /// Chosen on radius and then read off as scores, which is why they are
+    /// not round: five hundred and sixty, eight hundred, eleven hundred,
+    /// fifteen hundred, nineteen hundred. Spacing them evenly in score would
+    /// crowd four of the five into the last few hundred units of growth.
+    /// The last of them is well below the ceiling rather than at it,
     /// which was the trouble with the previous ladder: the top grade was
     /// reached and the round ended in the same breath, so nobody ever saw
     /// one. There is most of a grade's worth of arena left to eat after the
     /// last step, which is long enough to be somewhere you have to live.
     /// </remarks>
-    public static readonly double[] Grades9 =
-        [10_000_000, 50_000_000, 250_000_000, 1_250_000_000, 6_250_000_000];
+    public static readonly double[] Grades9 = [1e7, 3e10, 4e13, 5e16, 1e19];
 
     /// <summary>Which grade of hole this is, nought for something still a blob.</summary>
     public static int HoleLevel(double radius)
@@ -164,15 +171,6 @@ static class World
     public static double SummonSpan(double radius) => radius * 2.6 + 460;
 
     /// <summary>
-    /// How long between one teleport and the next, in seconds.
-    /// </summary>
-    /// <remarks>
-    /// Everybody has this, always: it is the answer to being cornered, and a
-    /// game where the answer to being cornered is owned by whoever is already
-    /// winning is a game that is over early. Ten seconds is long enough that
-    /// it is a decision and short enough that it is not a last resort.
-    /// </remarks>
-    /// <summary>
     /// The most company an arena will keep.
     /// </summary>
     /// <remarks>
@@ -193,8 +191,6 @@ static class World
     /// that zoom the floor is texture rather than countable things.
     /// </remarks>
     public const int Crumbs = 1400;
-
-    public const double WarpEvery = 10.0;
 
     /// <summary>
     /// How long this blob waits between teleports.
@@ -247,6 +243,38 @@ static class World
     /// whole of the pickup: it is not a speed boost, it is a route decided in
     /// advance and then taken faster than anybody can react to.
     /// </remarks>
+    /// <summary>How long a hole's whirl lasts, in seconds.</summary>
+    /// <remarks>
+    /// A hole is the strongest thing in the arena and cannot chase anything,
+    /// so the only way its round ends is if somebody volunteers. Calling
+    /// pellets down is an offer, and people decline offers.
+    ///
+    /// This does not pull towards the hole. It pulls towards a spot the hole
+    /// chooses, anywhere it can see: on yourself to feed, beside somebody to
+    /// take them off whatever they were doing. Either way, coming near a hole
+    /// stops being entirely their decision.
+    /// </remarks>
+    public const double WhirlTime = 4.0;
+
+    /// <summary>How long between one whirl and the next, in seconds.</summary>
+    public const double WhirlWait = 11.0;
+
+    /// <summary>How far a whirl reaches, in units.</summary>
+    public const double WhirlReach = 2800;
+
+    /// <summary>How fast it hauls, at the middle of it, in units a second.</summary>
+    /// <remarks>
+    /// Several times what anything can walk, because half measures here are
+    /// worse than nothing: a pull somebody can walk out of is a nuisance that
+    /// teaches them the hole is harmless. It falls away to nothing at the
+    /// edge, so the escape is to already be near the edge.
+    /// </remarks>
+    public const double WhirlPull = 1700;
+
+    /// <summary>How hard a whirl hauls something this far from the middle.</summary>
+    public static double WhirlSpeed(double distance) =>
+        WhirlPull * Math.Pow(Math.Clamp(1 - distance / WhirlReach, 0, 1), 0.7);
+
     public const double StreakSpeed = 2600;
 
     /// <summary>The longest line that may be drawn, in units.</summary>
@@ -291,21 +319,8 @@ static class World
     /// <summary>The grades, as the browser needs them to draw one.</summary>
     public static double[] Girths => [.. Grades.Select((_, g) => Girth(g))];
 
-    /// <summary>
-    /// What a pellet adds to the area of whoever eats it.
-    /// </summary>
-    /// <remarks>
-    /// A blob sweeps a path as wide as it is, so the bigger it gets the more
-    /// it collects per second - which means the radius climbs at close to a
-    /// constant rate whatever this is set to, and this only decides how many
-    /// minutes the climb takes. At this value a player eating steadily and
-    /// nothing else takes something like ten minutes to win, and eating
-    /// somebody their own size is worth about as much as a minute of it.
-    /// </remarks>
-    public const double PelletArea = 300;
-
     /// <summary>How much bigger you have to be to eat somebody.</summary>
-    public const double EatRatio = 1.18;
+    public const double EatRatio = 1.10;
 
     #region Getting hurt
 
@@ -484,18 +499,17 @@ static class World
     #region Holding on
 
     /*
-     * The space bar. A player roots themselves to the floor, pulls everything
-     * near them far harder than standing there would, and burns themselves to
-     * do it. It is the one thing in the game a player presses rather than
-     * steers, and everything about it is arranged so that it is a trap to be
-     * set rather than a button that wins.
+     * The space bar. A player roots themselves to the floor and pulls
+     * everything near them far harder than standing there would. It is the
+     * one thing in the game a player presses rather than steers, and what it
+     * costs is standing still - which in an arena where everything is
+     * hunting everything is a great deal to give up.
      */
 
     /// <summary>How much harder a freshly held pull drags than an idle one.</summary>
     /// <remarks>
     /// Where it starts, not where it ends. A hold that arrives at full
-    /// strength in half a second is a button rather than a commitment - the
-    /// whole of the interest is in deciding whether to keep paying, and
+    /// strength in half a second is a button rather than a commitment, and
     /// there is no decision if the first moment is already the best one.
     /// </remarks>
     public const double Grasp = 1.8;
@@ -512,32 +526,6 @@ static class World
     /// nobody who wanders into it can ever leave.
     /// </remarks>
     public const double Clutch = 0.8;
-
-    /// <summary>
-    /// What fraction of your own area holding costs you a second.
-    /// </summary>
-    /// <remarks>
-    /// Of the area rather than the radius, because the score is the area, so
-    /// this reads as the same fraction of the score at every size: a blob of
-    /// radius a hundred holding for three seconds gives up about eleven per
-    /// cent of itself, or a dozen pellets.
-    ///
-    /// It does not scale with what is being caught. Holding on and catching
-    /// nothing has to be a straight loss, or there is no reason not to hold
-    /// it down for ever.
-    /// </remarks>
-    public const double Burn = 0.04;
-
-    /// <summary>
-    /// How hard a hold has to be pulling before it costs the full rate.
-    /// </summary>
-    /// <remarks>
-    /// The cost goes up with the pull rather than being flat, because the
-    /// pull no longer is: a hold that has been on long enough to be worth
-    /// nine of standing there costs three times what one just wound up does.
-    /// Without that, the right play would be to hold it down for ever.
-    /// </remarks>
-    public const double Toll = Grasp;
 
     /// <summary>
     /// How long a held pull takes to come up to full strength.
@@ -559,8 +547,7 @@ static class World
     /// The wind up is the warning; this is the commitment. A hold that is
     /// merely on is worth not quite two of standing there; ten seconds later
     /// it is worth nine. Ten seconds is a long time to spend rooted to one
-    /// spot with the floor caving in under you and the cost climbing with
-    /// the pull - which is exactly the decision the whole thing is for.
+    /// spot with the floor caving in under you, visibly, for everybody.
     /// </remarks>
     public const double Swell = 10.0;
 
@@ -573,42 +560,8 @@ static class World
     /// <summary>The fastest a held pull drags a pellet, in units a second.</summary>
     public const double HeldSweep = 60;
 
-    /// <summary>
-    /// How much of what is burned comes back to the arena as pellets.
-    /// </summary>
-    /// <remarks>
-    /// Half. All of it and holding on is a way of turning your own size into
-    /// food you then eat; none of it and a big blob bleeding itself dry is
-    /// area the arena simply loses. Half, scattered anywhere except within
-    /// reach of somebody holding, feeds the field rather than the holder.
-    /// </remarks>
-    public const double Refund = 0.5;
-
     /// <summary>How far past the usual count the arena will carry refunds.</summary>
     public const double Glut = 1.5;
-
-    /// <summary>
-    /// What holding costs this second, as a fraction of your own area.
-    /// </summary>
-    /// <remarks>
-    /// It rises with the pull rather than being flat, because the pull no
-    /// longer is: a hold that has been on long enough to be worth nine of
-    /// standing there costs three times what one just wound up does. Flat,
-    /// the right play would be to hold it down for ever.
-    /// </remarks>
-    /// <summary>
-    /// What holding on costs, which is nothing.
-    /// </summary>
-    /// <remarks>
-    /// It used to burn a share of the blob a second, on the reasoning that
-    /// the strongest pull in the game should be paid for. In practice it
-    /// meant the move that makes the arena interesting to watch was the move
-    /// that lost you the game, so nobody held on for long and the floor never
-    /// visibly drained into anything. The cost is gone; the risk of standing
-    /// still while something larger walks over is the price.
-    /// </remarks>
-    public static double Cost(double grip) => 0;
-
 
     /// <summary>
     /// How hard somebody is pulling, given whether and how long they have held.
@@ -647,10 +600,6 @@ static class World
     /// It widens with the grip, the same as the pull on players does - a
     /// hold that reaches further for people and not for dust looks broken,
     /// because the floor near you stays put while everything else comes in.
-    ///
-    /// What stops that being free money is the cost, which climbs with the
-    /// grip as well: the swept area grows with the grip and so does the
-    /// bill, and the bill grows faster.
     ///
     /// What is being tuned here is not the strength of anything, it is how
     /// many pellets are in the air at once - which is the inflow times how
@@ -753,11 +702,10 @@ static class World
     /// by the other without asking every frame.
     ///
     /// It climbs well short of the radius on purpose. Straight off the radius
-    /// and a blob near the cap is looking at nine thousand units of arena
-    /// through a window eight hundred pixels tall, where a starting blob is
-    /// two pixels across and the pellets are dust. At this exponent the same
-    /// blob sees three thousand, which is enough to fill the screen with the
-    /// arena and still leave everything in it a size you can aim at.
+    /// and a blob near the cap looks at nine thousand units through a window
+    /// eight hundred pixels tall, where a starter is two pixels across. At
+    /// this exponent it sees three thousand, which still fills the screen
+    /// and leaves everything in it a size you can aim at.
     /// </remarks>
     public static double Extent(double radius) => 260 + 224 * Math.Pow(radius / Start, 0.7);
 
@@ -792,6 +740,11 @@ static class World
     /// somebody, it is an invitation to go and do it again immediately,
     /// while whoever is near you has just watched what you did to the last
     /// one and is deciding whether to run.
+    /// </remarks>
+    /// <remarks>
+    /// Not given to holes. A charge is extra speed and a hole has no legs, so
+    /// on one it would be lightning drawn around something that cannot use it
+    /// - a warning about a danger that is not the danger.
     /// </remarks>
     public const double SparkTime = 5.0;
 
@@ -865,45 +818,43 @@ static class World
     public static double RadiusOf(double area) => Math.Min(Biggest, Math.Sqrt(area / Math.PI));
 
     /// <summary>What a blob is worth on the leaderboard.</summary>
-    /// <summary>
-    /// The number a blob is worth.
-    /// </summary>
     /// <remarks>
-    /// Area, up to the knee. Past it the two come apart on purpose: ten
-    /// billion of plain area is a radius of fifty six thousand, which is six
-    /// times the width of the arena it would be standing in, so the thing
-    /// would be very much bigger than the world. Above the knee the score
-    /// climbs far faster than the radius does - which is also the right shape
-    /// for the thing it is drawing, since what makes a hole frightening is
-    /// its mass and not how much of the floor it covers.
+    /// Ten times the area, up to the collapse, and far more than that past
+    /// it. The two have to come apart: a hundred quintillion of plain area
+    /// is a radius of five and a half billion in an arena nine thousand
+    /// across. It is also the right shape for the thing it draws, since what
+    /// makes a hole frightening is its mass and not its floor space.
     /// </remarks>
     public static double ScoreOf(double radius)
     {
         var plain = AreaOf(radius) - AreaOf(Start);
 
-        if (plain <= Knee)
+        if (plain <= Hole)
         {
-            return Math.Round(plain);
+            return Math.Round(plain * Lift);
         }
 
-        return Math.Round(Knee * Math.Pow(plain / Knee, Steepen));
+        return Math.Round(Collapse * Math.Pow(plain / Hole, Steepen));
     }
 
     /// <summary>How much faster score climbs than area, once collapsed.</summary>
     /// <remarks>
     /// Picked so both ends of the scale land at radii the arena can hold: the
     /// collapse at about five hundred and sixty, the ceiling at twenty one
-    /// hundred. Ten billion of plain area would be a radius of fifty six
-    /// thousand, in an arena nine thousand across.
+    /// hundred. A hundred quintillion of plain area would be a radius of five
+    /// and a half billion, in an arena nine thousand across.
+    ///
+    /// Steep, and meant to be: the thirteen orders of magnitude between the
+    /// collapse and the ceiling are the whole of what a hole has to look at.
     /// </remarks>
-    public const double Steepen = 2.627;
+    public const double Steepen = 11.3878;
 
     /// <summary>The radius that scores this much, which is ScoreOf run backwards.</summary>
     public static double RadiusScoring(double score)
     {
-        var plain = score <= Knee
-            ? score
-            : Knee * Math.Pow(score / Knee, 1 / Steepen);
+        var plain = score <= Collapse
+            ? score / Lift
+            : Hole * Math.Pow(score / Collapse, 1 / Steepen);
 
         return Math.Sqrt((plain + AreaOf(Start)) / Math.PI);
     }
@@ -936,7 +887,12 @@ static class World
         var dx = ax - bx;
         var dy = ay - by;
 
-        // the middle of the smaller one has to be inside the larger
+        // Half of the smaller one has to be inside the larger, which is what
+        // its middle being inside means: at that distance exactly half of its
+        // width is covered. It is the ratio above, not this, that used to
+        // make a capture feel like it had failed - at eighteen per cent
+        // bigger you could sit squarely on top of somebody nearly your size
+        // and nothing would happen.
         return dx * dx + dy * dy < ar * ar;
     }
 

@@ -6,11 +6,22 @@ body {
   background: #0b0d11;
   color: #e8eaed;
   overflow: hidden;
+  overscroll-behavior: none;
   font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   cursor: crosshair;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-canvas { display: block; }
+/*
+ * No browser gestures on the playing surface.
+ *
+ * Without this a drag scrolls the page, a second finger zooms it, and a long
+ * press brings up a menu over the arena - all three of which happen during
+ * ordinary play and none of which can be undone once they have started.
+ */
+canvas { display: block; touch-action: none; }
 [hidden] { display: none !important; }
 
 .dim { color: #9aa0a6; font-size: 13px; }
@@ -102,6 +113,69 @@ button { padding: 9px 20px; border: 0; background: #1a73e8; color: #fff; font: i
   10%  { opacity: 1; transform: none; }
   70%  { opacity: 1; transform: none; }
   100% { opacity: 0; transform: translateY(-18px); }
+}
+
+/*
+ * Thumb controls. Bottom right, where a hand already is, and large enough to
+ * hit without looking: everything else on this screen is being looked at.
+ */
+#thumbs {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  z-index: 6;
+}
+
+#thumbs button {
+  min-width: 96px;
+  padding: 18px 20px;
+  font: 600 15px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #e8eaed;
+  background: rgba(16, 20, 30, .82);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  touch-action: none;
+}
+
+#thumbs button.on {
+  color: #0b0d11;
+  background: #8adcff;
+  border-color: #8adcff;
+}
+
+#spend { color: #8adcff; border-color: rgba(138, 220, 255, .5) !important; }
+
+/*
+ * The bot button, out of the way of two things at once.
+ *
+ * It sat bottom right, which is where the thumbs now are, and moving it to
+ * the bottom left put it straight on top of the score. Top left is the only
+ * corner a phone has left - the board has the other one - and it gets a
+ * bigger target while it is there, since it is being hit with a thumb.
+ */
+body.touch #crowd {
+  right: auto;
+  bottom: auto;
+  left: 16px;
+  top: 16px;
+  padding: 14px 18px;
+}
+
+/*
+ * A phone is not a small desktop. The board is the thing that has to give -
+ * it is the only element that is both large and not needed to play.
+ */
+@media (max-width: 620px) {
+  #board { padding: 10px 12px; font-size: 13px; }
+  #board h2 { font-size: 11px; }
+  #board li { font-size: 12px; }
+  #hud b { font-size: 24px; }
+  #hint { display: none; }
+  #gate > div, #over > div, #won > div { padding: 20px; max-height: 88vh; overflow-y: auto; }
 }
 
 #crowd {

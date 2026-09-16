@@ -9,7 +9,7 @@
 
 <div id="hud" hidden>
   <b id="score">0</b>
-  <span class="dim">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport</span>
+  <span class="dim" id="hint">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport</span>
   <span id="perk" hidden></span>
   <span id="warp" class="ready">teleport ready</span>
   <span id="spark" hidden></span>
@@ -17,6 +17,18 @@
 </div>
 
 <div id="feed"></div>
+
+<!--
+  The controls for a screen with no keyboard on it. Hidden until the first
+  touch arrives, so a mouse never sees them: guessing from the user agent
+  gets laptops with touchscreens wrong in both directions, and the first
+  finger to land on the glass is not a guess.
+-->
+<div id="thumbs" hidden>
+  <button id="spend" hidden>use</button>
+  <button id="hop">teleport</button>
+  <button id="pull">pull</button>
+</div>
 
 <button id="crowd" hidden>add bots</button>
 
@@ -48,10 +60,16 @@
       up to five deep.
     </p>
     <p class="dim">
-      At <b>ten million</b> you collapse. You cannot move at all after that. You
-      pull the whole arena in instead, harder at every grade, and you call the floor
-      down around you so that people have some reason to come near a thing that
-      cannot chase them. <b>Ten billion</b> takes the arena and ends the round.
+      At <b>ten million</b> you collapse. You cannot move at all after that, and you
+      no longer have to hold anything down &mdash; you pull the whole arena in by
+      existing, harder at every grade, and you call the floor down around you.
+      Press anywhere you can see and a <b>whirl</b> opens there, dragging everything
+      smaller into it: it is how something that cannot chase anybody gets somebody to
+      come to it. <b>A hundred quintillion</b> takes the arena and ends the round.
+    </p>
+    <p class="dim">
+      On a phone, drag to move and use the buttons in the corner. There is nothing
+      here that needs a keyboard.
     </p>
     <p class="dim">
       Things worth picking up lie about the floor. A <b>harpoon</b> is thrown at

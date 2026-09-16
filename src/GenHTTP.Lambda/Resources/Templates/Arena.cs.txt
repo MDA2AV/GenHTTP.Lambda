@@ -92,12 +92,6 @@ var nextSlot = 0;
 
 var tick = 0L;
 
-/// <summary>
-/// Area burned by people holding on, waiting to be put back on the floor as
-/// pellets. Half of what is burned comes back; the rest leaves the arena.
-/// </summary>
-var owed = 0.0;
-
 /// <summary>The harpoons currently in the air.</summary>
 var spears = new List<Spear>();
 
@@ -244,49 +238,6 @@ void Rebucket()
 }
 
 /// <summary>
-/// Somewhere out of reach of anybody holding on.
-/// </summary>
-/// <remarks>
-/// A refunded pellet must not land where the person who paid for it can
-/// simply drag it back. A handful of tries is plenty - somebody holding has
-/// a grip on a small part of the arena, and if every try lands inside one
-/// the last is taken anyway rather than looping.
-/// </remarks>
-(double X, double Y) Clear()
-{
-    for (var attempt = 0; attempt < 10; attempt++)
-    {
-        var spot = Thinnest();
-
-        var free = true;
-
-        foreach (var soul in Souls())
-        {
-            if (!soul.Hold)
-            {
-                continue;
-            }
-
-            var reach = World.Reach(soul.Radius, World.Grip(soul.Radius, soul.Hold, soul.Wound));
-
-            if (Math.Abs(soul.X - spot.X) < reach && Math.Abs(soul.Y - spot.Y) < reach)
-            {
-                free = false;
-
-                break;
-            }
-        }
-
-        if (free)
-        {
-            return spot;
-        }
-    }
-
-    return Thinnest();
-}
-
-/// <summary>
 /// Takes area off somebody and puts most of it on the floor around them.
 /// </summary>
 /// <remarks>
@@ -419,38 +370,6 @@ void Scatter()
         {
             Drop(pellet);
         }
-    }
-
-    /*
-     * What people holding on have burned comes back to the floor here, over
-     * and above the usual count and up to half again. It is scattered well
-     * clear of anybody currently holding, which is what stops the whole
-     * thing being a way of turning your own size into food you then eat.
-     */
-    var ceiling = (int)(wanted * World.Glut);
-
-    while (owed >= World.Worth(0) && pellets.Count < ceiling)
-    {
-        var slot = TakeSlot();
-
-        var spot = Clear();
-
-        pellets[slot] = new Pellet
-        {
-            Slot = slot,
-            X = spot.X,
-            Y = spot.Y,
-            C = World.AnyTint(random),
-            Grade = 0
-        };
-
-        owed -= World.Worth(0);
-    }
-
-    if (pellets.Count >= ceiling)
-    {
-        // the floor is as full as it will get; the rest of the debt is lost
-        owed = 0;
     }
 
     while (pellets.Count < wanted)
@@ -633,6 +552,109 @@ bool Jump(Player player, double x, double y)
     player.Radius = Math.Max(World.Start, Math.Sqrt(area / Math.PI));
 
     return true;
+}
+
+/// <summary>
+/// Opens a whirl where a hole asks for one.
+/// </summary>
+/// <remarks>
+/// Only a hole, and only one at a time. It is refused rather than queued -
+/// a hole that presses twice should get the second one where it pressed the
+/// second time, not both at once - and it is clamped to the arena, since
+/// hauling things towards a point outside it would only pin them to a wall.
+/// </remarks>
+bool Open(Player hole, double x, double y)
+{
+    if (!World.IsHole(hole.Radius) || at < hole.WarpReady || hole.WhirlEnds > 0)
+    {
+        return false;
+    }
+
+    hole.WhirlX = World.Clamp(x, size);
+    hole.WhirlY = World.Clamp(y, size);
+    hole.WhirlEnds = at + World.WhirlTime;
+    hole.WarpReady = at + World.WhirlTime + World.WhirlWait;
+
+    return true;
+}
+
+/// <summary>
+/// Hauls everything smaller towards every whirl that is turning.
+/// </summary>
+/// <remarks>
+/// Applied before the blobs move rather than after, so that a tick spent in
+/// a whirl is a tick of being dragged and not a tick of walking followed by
+/// a correction. Nothing bigger than the hole that opened it is touched, and
+/// neither is the hole itself: a whirl is a thing done to the arena, not a
+/// thing the arena does back.
+/// </remarks>
+void Whirls(Player[] everyone, double seconds)
+{
+    foreach (var hole in everyone)
+    {
+        if (hole.WhirlEnds <= 0)
+        {
+            continue;
+        }
+
+        if (at >= hole.WhirlEnds || hole.Gone || !World.IsHole(hole.Radius))
+        {
+            hole.WhirlEnds = 0;
+
+            continue;
+        }
+
+        foreach (var soul in everyone)
+        {
+            if (ReferenceEquals(soul, hole) || soul.Gone || soul.Radius >= hole.Radius)
+            {
+                continue;
+            }
+
+            var dx = hole.WhirlX - soul.X;
+            var dy = hole.WhirlY - soul.Y;
+
+            var far = Math.Sqrt(dx * dx + dy * dy);
+
+            if (far < 1 || far > World.WhirlReach)
+            {
+                continue;
+            }
+
+            var haul = Math.Min(far, World.WhirlSpeed(far) * seconds);
+
+            soul.X = World.Clamp(soul.X + dx / far * haul, size);
+            soul.Y = World.Clamp(soul.Y + dy / far * haul, size);
+        }
+
+        // and the floor with them, because a whirl that moved the players
+        // and left the food where it was would look like a bug in the food
+        foreach (var key in World.KeysWithin(hole.WhirlX, hole.WhirlY, World.WhirlReach))
+        {
+            if (!floor.TryGetValue(key, out var bucket))
+            {
+                continue;
+            }
+
+            foreach (var pellet in bucket)
+            {
+                var dx = hole.WhirlX - pellet.X;
+                var dy = hole.WhirlY - pellet.Y;
+
+                var far = Math.Sqrt(dx * dx + dy * dy);
+
+                if (far < 1 || far > World.WhirlReach)
+                {
+                    continue;
+                }
+
+                var haul = Math.Min(far, World.WhirlSpeed(far) * seconds);
+
+                pellet.X = World.Clamp(pellet.X + dx / far * haul, size);
+                pellet.Y = World.Clamp(pellet.Y + dy / far * haul, size);
+            }
+        }
+    }
 }
 
 /// <summary>
@@ -852,9 +874,24 @@ void Step(double seconds)
     {
         soul.Ate = null;
 
-        if (soul.Sparks > 0 && at >= soul.Spark)
+        if (soul.Sparks > 0 && (at >= soul.Spark || World.IsHole(soul.Radius)))
         {
             soul.Sparks = 0;
+        }
+
+        /*
+         * A hole holds on always.
+         *
+         * It cannot move, cannot let go of anything, and the pull is the only
+         * thing it does - so asking somebody to keep a key down for the rest
+         * of the round in order to be what they already are is a control that
+         * does nothing except wear out a finger. On a phone it is worse than
+         * that: it is a control there is no finger spare for.
+         */
+        if (World.IsHole(soul.Radius))
+        {
+            soul.Hold = true;
+            soul.Rest = 0;
         }
     }
 
@@ -993,34 +1030,21 @@ void Step(double seconds)
     Rebucket();
 
     /*
-     * Who is holding on, what it is costing them, and what the floor is owed
-     * because of it. Done before the pulls are worked out, so that the grip
-     * everything is computed from is this tick's rather than last tick's.
+     * How long everybody holding on has been holding on, which is what the
+     * grip is computed from. Done before the pulls are worked out, so that
+     * the grip is this tick's rather than last tick's.
+     *
+     * It used to cost area, and this loop used to be the accounting for
+     * that: what each holder burned, whether it had burned them down to
+     * nothing, and what the floor was owed back. None of that survived
+     * holding on becoming free, and what was left of it was arithmetic on a
+     * quantity fixed at zero.
      */
     foreach (var player in everyone)
     {
         if (player.Hold && player.Rest <= 0)
         {
-            var pulling = World.Grip(player.Radius, true, player.Wound + seconds);
-
-            var burn = World.AreaOf(player.Radius) * World.Cost(pulling) * seconds;
-
-            var left = World.AreaOf(player.Radius) - burn;
-
-            if (left <= World.AreaOf(World.Start))
-            {
-                // nothing left to spend; let go rather than shrink away
-                player.Hold = false;
-                player.Wound = 0;
-                player.Rest = World.Rest;
-            }
-            else
-            {
-                player.Wound += seconds;
-                player.Radius = World.RadiusOf(left);
-
-                owed += burn * World.Refund;
-            }
+            player.Wound += seconds;
         }
         else
         {
@@ -1034,6 +1058,8 @@ void Step(double seconds)
             player.Rest = Math.Max(0, player.Rest - seconds);
         }
     }
+
+    Whirls(everyone, seconds);
 
     /*
      * What everybody is being dragged towards, worked out for all of them
@@ -1267,12 +1293,16 @@ void Step(double seconds)
     }
 
     /*
-     * What is lying about to be picked up. One goes out every fifteen
-     * seconds up to a handful, well clear of the walls and of anything large
+     * What is lying about to be picked up. One goes out every three seconds
+     * up to a couple of dozen, well clear of the walls and of anything large
      * enough to be sitting on the spawn - and they expire, so an arena
      * nobody is playing in does not slowly carpet itself.
+     *
+     * Far thicker than it was. A handful across nine thousand units meant
+     * most players finished a round without seeing one, which is a strange
+     * thing to be true of the part of the game with the most in it.
      */
-    var wanted_prizes = (int)Math.Clamp(size * size / 1_900_000, 3, 8);
+    var wanted_prizes = (int)Math.Clamp(size * size / 500_000, 12, 30);
 
     for (var i = prizes.Count - 1; i >= 0; i--)
     {
@@ -1284,7 +1314,10 @@ void Step(double seconds)
 
     if (--sowing <= 0 && prizes.Count < wanted_prizes)
     {
-        sowing = (int)(15 / seconds);
+        // quick while the floor is thin and slow once it is stocked, so a
+        // fresh round is not thirty seconds of bare arena before the first
+        // pickup and a long one does not carpet itself
+        sowing = (int)((prizes.Count < wanted_prizes / 2 ? 0.6 : 3.0) / seconds);
 
         for (var attempt = 0; attempt < 12; attempt++)
         {
@@ -1313,7 +1346,9 @@ void Step(double seconds)
                 Slot = nextPrize++,
                 X = x,
                 Y = y,
-                Perk = 1 + random.Next(Perk.Count),
+                // half of them are the drawn line, which is the one worth
+                // crossing the arena for and was the rarest of the three
+                Perk = random.Next(4) switch { 0 => Perk.Harpoon, 1 => Perk.Blast, _ => Perk.Streak },
                 Life = (int)(90 / seconds)
             });
 
@@ -1486,25 +1521,25 @@ void Step(double seconds)
             player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.AreaOf(other.Radius) * World.Spoils);
 
             /*
-             * A kill charges you.
-             *
-             * The teleport comes back at once - the moment after a kill is
-             * the moment you most want to be somewhere else, because
-             * everything that was circling the fight is now circling you -
-             * and for the next few seconds you are faster, faster again for
-             * each one taken while the last is still lit.
-             *
-             * It compounds deliberately. A blob that has just eaten two
-             * things in four seconds is the most dangerous thing on the
-             * floor and should look and feel like it; the way to stop it is
-             * to not be the third, which is a decision somebody gets to make
-             * because the charge is drawn on them for everybody to see.
+             * A kill charges you. The teleport comes back at once - the
+             * moment after a kill is the moment you most want to be
+             * elsewhere, since everything that was circling the fight is now
+             * circling you - and each kill taken while the last is still lit
+             * stacks. It compounds deliberately: the way to stop a run is to
+             * not be the next one, which is a decision people get to make
+             * because the charge is drawn for everybody to see.
              */
             player.WarpReady = at;
 
-            player.Sparks = at < player.Spark ? Math.Min(World.SparkMost, player.Sparks + 1) : 1;
+            // a hole gets neither: it has nowhere to teleport from and no
+            // legs to be made faster, so the charge would be lightning drawn
+            // around something that cannot use it
+            if (!World.IsHole(player.Radius))
+            {
+                player.Sparks = at < player.Spark ? Math.Min(World.SparkMost, player.Sparks + 1) : 1;
 
-            player.Spark = at + World.SparkTime;
+                player.Spark = at + World.SparkTime;
+            }
 
             feasts.Add(new Feast(Math.Round(other.X, 1), Math.Round(other.Y, 1),
                                  Math.Round(other.Radius, 1), other.Colour));
@@ -1528,7 +1563,7 @@ void Step(double seconds)
             continue;
         }
 
-        winner = new Won("won", player.Name, (int)World.ScoreOf(player.Radius));
+        winner = new Won("won", player.Name, World.ScoreOf(player.Radius));
 
         Remember(player);
 
@@ -1562,6 +1597,7 @@ void Step(double seconds)
             soul.WarpLands = 0;
             soul.Sparks = 0;
             soul.Spark = 0;
+            soul.WhirlEnds = 0;
         }
 
         pellets.Clear();
@@ -1594,7 +1630,7 @@ void Marks(Player[] everyone)
     }
 }
 
-string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
+string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] turning)
 {
     var near = new List<Blob>();
 
@@ -1714,6 +1750,19 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         }
     }
 
+    List<Eddy> eddies = null;
+
+    foreach (var hole in turning)
+    {
+        if (World.InView(viewer.X, viewer.Y, viewer.Radius, hole.WhirlX, hole.WhirlY))
+        {
+            var through = Math.Clamp(1 - (hole.WhirlEnds - at) / World.WhirlTime, 0, 1);
+
+            (eddies ??= []).Add(new Eddy(Math.Round(hole.WhirlX, 1), Math.Round(hole.WhirlY, 1),
+                                         World.WhirlReach, hole.Colour, Math.Round(through, 2)));
+        }
+    }
+
     List<Feast> gone = null;
 
     foreach (var feast in feasts)
@@ -1740,7 +1789,7 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         new Frame("f", near, crumbs, board.ToList(), alive, size,
                   loot, flying, viewer.Perk, Math.Round(viewer.Lit, 2),
                   Math.Round(Math.Max(0, viewer.WarpReady - at), 2), World.IsHole(viewer.Radius),
-                  crossing, gone, viewer.Ate), json);
+                  crossing, gone, viewer.Ate, eddies), json);
 }
 
 async ValueTask Broadcast()
@@ -1753,6 +1802,9 @@ async ValueTask Broadcast()
 
     Marks(souls);
 
+    // short, and usually empty: one per hole with a whirl open
+    var turning = souls.Where(p => p.WhirlEnds > 0).ToArray();
+
     var blobs = souls.Select(p => new Blob(p.Id, p.Name, p.Colour,
                                            Math.Round(p.X, 1), Math.Round(p.Y, 1),
                                            Math.Round(p.Radius, 1),
@@ -1764,7 +1816,7 @@ async ValueTask Broadcast()
 
     var board = souls.OrderByDescending(p => p.Radius)
                      .Take(8)
-                     .Select(p => new Score(p.Name, (int)World.ScoreOf(p.Radius)))
+                     .Select(p => new Score(p.Name, World.ScoreOf(p.Radius)))
                      .ToArray();
 
     // a bot that was eaten starts again rather than leaving the arena emptier
@@ -1801,7 +1853,7 @@ async ValueTask Broadcast()
         }
 
         await Send(connection, JsonSerializer.Serialize(
-            new Eaten("eaten", player.EatenBy ?? "somebody", (int)World.ScoreOf(player.Radius)), json));
+            new Eaten("eaten", player.EatenBy ?? "somebody", World.ScoreOf(player.Radius)), json));
 
         Remember(player);
 
@@ -1844,7 +1896,7 @@ async ValueTask Broadcast()
     var payloads = new string[living.Length];
 
     Parallel.For(0, living.Length,
-                 i => payloads[i] = Picture(living[i].Value, blobs, board, blobs.Length));
+                 i => payloads[i] = Picture(living[i].Value, blobs, board, blobs.Length, turning));
 
     var writes = new List<Task>(living.Length);
 
@@ -1973,24 +2025,14 @@ var socket = Websocket.Functional()
                               var joining = JsonSerializer.Deserialize<Join>(text, json);
 
                               /*
-                               * Only a join makes a player.
-                               *
-                               * This used to take whatever arrived, on the
-                               * reasoning that the first thing a browser
-                               * sends is the join. Which is true, and beside
-                               * the point: it is not the only thing a browser
-                               * sends while it is not on the books, and a
-                               * steer deserialises into a Join perfectly
-                               * happily - with no name at all, which the
-                               * server then quite correctly called "a blob".
-                               *
-                               * That is where they came from. Being eaten
-                               * takes a player off the books and leaves the
-                               * socket open, and the steer that goes out
-                               * twenty milliseconds later - long before
-                               * anybody has finished reading what killed
-                               * them - built a nameless player and put them
-                               * straight back into the arena as one.
+                               * Only a join makes a player. This used to
+                               * take whatever arrived, and a steer
+                               * deserialises into a Join perfectly happily
+                               * with no name at all - which the server then
+                               * correctly called "a blob". Being eaten takes
+                               * a player off the books and leaves the socket
+                               * open, so the steer twenty milliseconds later
+                               * put them back as one.
                                */
                               if (joining?.Kind != "join")
                               {
@@ -2015,17 +2057,12 @@ var socket = Websocket.Functional()
                               /*
                                * The welcome goes out before they are put on
                                * the books, and the order is the whole point.
-                               *
                                * The clock writes a frame to everybody on the
-                               * books twenty times a second. Registering
-                               * first leaves a window - short, but open
-                               * twenty times a second and once per death,
-                               * because dying and coming back is a fresh
-                               * join - where the clock writes a frame to
+                               * books twenty times a second, so registering
+                               * first leaves a window where it writes to
                                * this socket while the welcome is still going
-                               * out of it. Two writes at once is not
-                               * something a connection survives: it faults,
-                               * and the player is simply dropped.
+                               * out of it - and two writes at once is not
+                               * something a connection survives.
                                */
                               var greeted = await Send(connection, JsonSerializer.Serialize(
                                   new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize, World.Girths), json));
@@ -2042,6 +2079,18 @@ var socket = Websocket.Functional()
                               finally
                               {
                                   arriving.TryRemove(connection, out _);
+                              }
+
+                              return;
+                          }
+
+                          if (text.Contains("\"haul\""))
+                          {
+                              var wants = JsonSerializer.Deserialize<Haul>(text, json);
+
+                              if (wants != null)
+                              {
+                                  Open(player, wants.X, wants.Y);
                               }
 
                               return;

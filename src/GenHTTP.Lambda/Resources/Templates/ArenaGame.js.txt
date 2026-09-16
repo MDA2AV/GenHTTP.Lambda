@@ -99,6 +99,42 @@ let cool = 0, collapsed = false;
  */
 let marks = [];
 
+/** Whirls turning in view, replaced outright every frame like the marks. */
+let whirls = [];
+
+/*
+ * Whether this is being played with a finger.
+ *
+ * Latched on the first touch rather than sniffed from the user agent, which
+ * gets touchscreen laptops wrong in both directions. Once it is on it stays
+ * on - somebody who has picked the phone up is not going to put a mouse down
+ * halfway through a round.
+ */
+let touching = false;
+
+/** Whether the next press on the floor is a teleport rather than a steer. */
+let aiming = false;
+
+/*
+ * Whether a drag is meant to draw a line rather than to steer.
+ *
+ * Only on glass, and only ever true because somebody pressed the button that
+ * makes it true. A mouse has a spare button for this and a finger does not:
+ * without the arming step, the drag that moves you is the same gesture as
+ * the drag that spends the best pickup in the game, and everybody would lose
+ * one the first time they tried to turn a corner.
+ */
+let sketching = false;
+
+function touchy() {
+  if (touching) return;
+
+  touching = true;
+
+  document.body.classList.add('touch');
+  $('thumbs').hidden = false;
+}
+
 const deaths = [];
 
 // how long a blob spends coming apart, in milliseconds
@@ -138,6 +174,19 @@ function aim() {
   };
 }
 
+/** Teleports to wherever the pointer or the last finger was. */
+function hop() {
+  const to = aim();
+
+  if (to && socket?.readyState === 1 && cool <= 0 && !collapsed) {
+    socket.send(JSON.stringify({ kind: 'warp', x: to.x, y: to.y }));
+
+    return true;
+  }
+
+  return false;
+}
+
 addEventListener('keydown', (e) => {
   /*
    * Teleport. On its own key rather than on a mouse button, because both
@@ -145,11 +194,7 @@ addEventListener('keydown', (e) => {
    * not be the one thing that needs explaining.
    */
   if (e.code === 'KeyE' && !e.repeat) {
-    const to = aim();
-
-    if (to && socket?.readyState === 1 && cool <= 0 && !collapsed) {
-      socket.send(JSON.stringify({ kind: 'warp', x: to.x, y: to.y }));
-    }
+    hop();
 
     e.preventDefault();
     return;
@@ -173,17 +218,99 @@ addEventListener('blur', () => { hold = false; });
 // clicking spends whatever is in hand: a harpoon goes where the pointer is,
 // a blast lights a fuse under you, and a streak is drawn rather than thrown
 addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch') touchy();
+
+  // the buttons and the overlays are not the arena, and a press that lands
+  // on one of them has already been dealt with by whatever it landed on
+  if (e.target?.closest?.('button, #thumbs, #gate, #over, #won, #board')) return;
+
   if (e.button !== 0 || socket?.readyState !== 1 || !camera) return;
+
+  /*
+   * A finger reports where it is only while it is down, so the press is
+   * also the first move: without this the first tap would be aimed at
+   * wherever the previous one happened to end.
+   */
+  if (e.pointerType === 'touch') pointer = { x: e.clientX, y: e.clientY };
+
+  /*
+   * A hole has nowhere to walk to and nothing in hand to throw, so pressing
+   * the floor means the one thing it can do: open a whirl there. This is the
+   * whole of the endgame - it is how something that cannot chase anybody
+   * gets anybody to come to it.
+   */
+  if (collapsed) {
+    const to = aim();
+
+    if (to && cool <= 0) socket.send(JSON.stringify({ kind: 'haul', x: to.x, y: to.y }));
+
+    return;
+  }
+
+  // armed by the teleport button, which is how it is done without a keyboard
+  if (aiming) {
+    aiming = false;
+    $('hop').classList.remove('on');
+    hop();
+
+    return;
+  }
 
   /*
    * The streak is the one pickup that is not spent by pressing. Pressing
    * starts a line; it is spent when the line is let go of, so somebody who
    * presses and changes their mind has not thrown anything away.
    */
-  if (carrying === 3) {
+  if (carrying === 3 && (!touching || sketching)) {
     const at = aim();
 
     drawing = at ? [at] : null;
+
+    return;
+  }
+
+  // on glass a tap on the floor is how you steer, so spending what is in
+  // hand belongs to a button rather than to every press
+  if (e.pointerType === 'touch') return;
+
+  socket.send(JSON.stringify({ kind: 'use' }));
+});
+
+/*
+ * The three things a keyboard did, as things a thumb can do.
+ *
+ * Pull is held rather than toggled, because it is held on a keyboard and a
+ * toggle behaves differently in the one situation that matters - letting go
+ * in a hurry. Teleport arms rather than fires, because it needs a
+ * destination and a phone has no second pointer to say where.
+ */
+$('pull').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+
+  hold = true;
+  $('pull').classList.add('on');
+});
+
+for (const let_go of ['pointerup', 'pointercancel', 'pointerleave']) {
+  $('pull').addEventListener(let_go, () => {
+    hold = false;
+    $('pull').classList.remove('on');
+  });
+}
+
+$('hop').addEventListener('click', () => {
+  if (collapsed) return;
+
+  aiming = !aiming;
+  $('hop').classList.toggle('on', aiming);
+});
+
+$('spend').addEventListener('click', () => {
+  if (socket?.readyState !== 1 || !carrying) return;
+
+  if (carrying === 3) {
+    sketching = !sketching;
+    $('spend').classList.toggle('on', sketching);
 
     return;
   }
@@ -197,6 +324,9 @@ addEventListener('pointerup', () => {
   const line = drawing;
 
   drawing = null;
+
+  sketching = false;
+  $('spend').classList.remove('on');
 
   if (line.length > 1 && socket?.readyState === 1) {
     socket.send(JSON.stringify({
@@ -443,18 +573,43 @@ function moment() {
  * is an area and one is a score - and the two halves have to agree about
  * both or the fire comes on at the wrong size.
  */
-const KNEE = 242000;
-const STEEPEN = 2.627;
-const COLLAPSE = 1e7;
+const HOLE = 1e6;          // the plain area a blob collapses at
+const COLLAPSE = 1e7;      // and the score it has when it does
+const LIFT = COLLAPSE / HOLE;
+const STEEPEN = 11.3878;
 
 function SCORE(r) {
   const plain = Math.PI * (r * r - 14 * 14);
 
-  return plain <= KNEE ? plain : KNEE * Math.pow(plain / KNEE, STEEPEN);
+  return plain <= HOLE ? plain * LIFT : COLLAPSE * Math.pow(plain / HOLE, STEEPEN);
 }
 
 /** The grades a hole comes in, matching World.Grades9. */
-const GRADES = [1e7, 5e7, 2.5e8, 1.25e9, 6.25e9];
+const GRADES = [1e7, 3e10, 4e13, 5e16, 1e19];
+
+/**
+ * A score, short enough to read while something is chasing you.
+ *
+ * Nobody can take a nineteen digit number off a screen in the half second
+ * they have to look at it, and the leaderboard is eight of them stacked. Full
+ * digits up to a million, where they are still worth reading exactly, and
+ * three significant figures with a suffix above it.
+ */
+const SUFFIX = [[1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
+
+function tally(n) {
+  if (!(n > 0)) return '0';
+
+  for (const [at, tag] of SUFFIX) {
+    if (n >= at) {
+      const v = n / at;
+
+      return `${v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)}${tag}`;
+    }
+  }
+
+  return Math.round(n).toLocaleString();
+}
 
 function holeLevel(r) {
   const s = SCORE(r);
@@ -470,9 +625,9 @@ function stageOf(r) {
   const s = SCORE(r);
 
   if (s >= COLLAPSE) return 4;  // collapsed
-  if (s >= 2000000) return 3;   // black fire
-  if (s >= 300000) return 2;    // fire
-  if (s >= 40000) return 1;     // embers
+  if (s >= 5800000) return 3;   // black fire
+  if (s >= 2400000) return 2;   // fire
+  if (s >= 350000) return 1;    // embers
   return 0;
 }
 
@@ -648,6 +803,82 @@ function drawSpark(x, y, r, sparks, seed, now) {
   }
 
   ctx.restore();
+}
+
+/**
+ * A whirl, which is the only thing a hole can do to somebody at a distance.
+ *
+ * Drawn under everything, on the floor, because that is what it is: a patch
+ * of the arena that has stopped being safe to stand on. The edge is drawn as
+ * a hard line rather than a fade, since the edge is the escape and somebody
+ * deciding whether to run needs to know where it is rather than roughly
+ * where it is.
+ */
+function drawWhirls(flat, scale, now) {
+  if (!whirls.length) return;
+
+  const turn = now / 620;
+
+  for (const eddy of whirls) {
+    const at = flat(eddy.x, eddy.y);
+    const r = eddy.r * scale;
+
+    // nothing to draw if the whole of it is off the side of the screen
+    if (at.x + r < 0 || at.x - r > innerWidth || at.y + r < 0 || at.y - r > innerHeight) continue;
+
+    const bite = Math.min(1, (eddy.t ?? 0) * 4) * (1 - Math.max(0, (eddy.t ?? 0) - 0.85) / 0.15);
+
+    ctx.save();
+
+    // the dark of it, painted over the square it covers rather than the
+    // whole canvas - the same economy the wells are drawn with
+    const left = Math.max(0, at.x - r), top = Math.max(0, at.y - r);
+    const right = Math.min(innerWidth, at.x + r), bottom = Math.min(innerHeight, at.y + r);
+
+    if (right > left && bottom > top) {
+      const shade = ctx.createRadialGradient(at.x, at.y, 0, at.x, at.y, r);
+
+      shade.addColorStop(0, `rgba(0,0,0,${0.82 * bite})`);
+      shade.addColorStop(0.3, `rgba(10,4,24,${0.5 * bite})`);
+      shade.addColorStop(0.75, `rgba(14,8,30,${0.16 * bite})`);
+      shade.addColorStop(1, 'rgba(14,8,30,0)');
+
+      ctx.fillStyle = shade;
+      ctx.fillRect(left, top, right - left, bottom - top);
+    }
+
+    // arms, wound in. One path for all of them: this is drawn every frame
+    ctx.globalAlpha = 0.5 * bite;
+    ctx.strokeStyle = eddy.c;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    for (let arm = 0; arm < 6; arm++) {
+      const lead = turn + (arm / 6) * Math.PI * 2;
+
+      for (let s = 0; s <= 22; s++) {
+        const along = s / 22;
+        const rad = r * (0.06 + along * 0.94);
+        const a = lead + along * 3.4;
+        const x = at.x + Math.cos(a) * rad, y = at.y + Math.sin(a) * rad;
+
+        if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+    }
+
+    ctx.stroke();
+
+    // and the edge, which is the line worth being on the far side of
+    ctx.globalAlpha = 0.75 * bite;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([16, 12]);
+    ctx.lineDashOffset = -turn * 40;
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
 }
 
 function drawMarks(flat, scale) {
@@ -890,6 +1121,9 @@ function draw() {
             Math.max(0, mine.y - innerHeight / 2 / scale - FLOOR * TILT),
             Math.min(world, mine.y + innerHeight / 2 / scale + FLOOR * TILT));
 
+  // over the stars and under everything that stands on the floor
+  drawWhirls(flat, scale, performance.now());
+
   // pellets arrive flat - x, y, colour, x, y, colour - so they are walked
   // three at a time rather than unpacked into objects that live one frame
   ctx.globalAlpha = 0.75;
@@ -935,35 +1169,68 @@ function draw() {
   // where it is and the funnel bends around it rather than dragging it off
   const loot = now.loot;
 
+  const beat = performance.now();
+
   for (let i = 0; i < loot.length; i += 4) {
     const at = flat(loot[i + 1], loot[i + 2]);
-    const r = Math.max(5, 9 * scale);
-    const harpoon = loot[i + 3] === 1;
+
+    // a floor size as well as a world size, so one on the far side of a big
+    // player's screen is still a thing rather than three pixels of nothing
+    const r = Math.max(13, 15 * scale);
+    const perk = loot[i + 3];
+    const tint = perk === 1 ? '#8ab4f8' : perk === 2 ? '#ff8bcb' : '#8adcff';
+
+    const pulse = 0.5 + 0.5 * Math.sin(beat / 320 + i);
 
     ctx.save();
     ctx.translate(at.x, at.y);
-    ctx.rotate(performance.now() / 900);
 
-    ctx.strokeStyle = harpoon ? '#8ab4f8' : '#ff8bcb';
-    ctx.fillStyle = harpoon ? '#8ab4f81a' : '#ff8bcb1a';
-    ctx.lineWidth = 2;
+    // a halo that breathes, which is what carries across a screen. Without
+    // it these were small dark shapes on a small dark floor and most players
+    // finished a round without ever noticing one
+    ctx.globalAlpha = 0.16 + pulse * 0.22;
+    ctx.fillStyle = tint;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * (1.7 + pulse * 0.5), 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.7 + pulse * 0.3;
+    ctx.strokeStyle = tint;
+    ctx.fillStyle = `${tint}33`;
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
 
-    // a diamond for the harpoon, a ring of spikes for the blast, so the two
-    // can be told apart at a glance and at any zoom
-    if (harpoon) {
+    /*
+     * Three shapes for three pickups. There used to be two, and the drawn
+     * line - the one worth crossing the arena for - borrowed the blast's,
+     * so the rarest and best thing on the floor was indistinguishable from
+     * the one that kills you.
+     */
+    if (perk === 1) {
+      ctx.rotate(beat / 900);
       ctx.moveTo(0, -r); ctx.lineTo(r, 0); ctx.lineTo(0, r); ctx.lineTo(-r, 0);
       ctx.closePath();
-    } else {
+    } else if (perk === 2) {
+      ctx.rotate(beat / 900);
+
       for (let s = 0; s < 8; s++) {
         const a = s * Math.PI / 4;
         ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
         ctx.lineTo(Math.cos(a + Math.PI / 8) * r * 0.45, Math.sin(a + Math.PI / 8) * r * 0.45);
       }
+
       ctx.closePath();
+    } else {
+      // a stroke of the thing it does: a drawn line with an arrow on the end
+      ctx.moveTo(-r, r * 0.55);
+      ctx.bezierCurveTo(-r * 0.2, r * 0.9, -r * 0.1, -r * 0.9, r * 0.55, -r * 0.55);
+      ctx.moveTo(r * 0.05, -r * 0.72); ctx.lineTo(r * 0.7, -r * 0.62); ctx.lineTo(r * 0.42, -r * 0.05);
     }
 
-    ctx.fill();
+    if (perk !== 3) ctx.fill();
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.stroke();
     ctx.restore();
   }
@@ -1262,11 +1529,12 @@ function connect(name) {
 
     if (m.kind === 'won') {
       $('champion').textContent = `${m.who.replace(/[<&]/g, '')} took the arena`;
-      $('tally').textContent = `${m.score.toLocaleString()} points.`;
+      $('tally').textContent = `${tally(m.score)} points.`;
       $('over').hidden = true;
       $('won').hidden = false;
       history.length = 0;
       marks = [];
+      whirls = [];
       deaths.length = 0;
       feed.replaceChildren();
       return;
@@ -1275,10 +1543,11 @@ function connect(name) {
     if (m.kind === 'eaten') {
       out = true;
       $('verdict').textContent = `Eaten by ${m.by}`;
-      $('final').textContent = `You got to ${m.score}.`;
+      $('final').textContent = `You got to ${tally(m.score)}.`;
       $('over').hidden = false;
       camera = null;
       marks = [];
+      whirls = [];
       deaths.length = 0;
       feed.replaceChildren();
       return;
@@ -1289,6 +1558,7 @@ function connect(name) {
     history.push({ at: performance.now(), b: m.b, p: m.p, k: m.k, s: m.s });
 
     marks = m.v ?? [];
+    whirls = m.o ?? [];
 
     for (const gone of m.e ?? []) {
       deaths.push({
@@ -1320,9 +1590,9 @@ function connect(name) {
 
     // the same sum as the board, which is the server's - the plain area it
     // used to be stops matching the moment anything collapses
-    $('score').textContent = self ? Math.round(SCORE(self.r)).toLocaleString() : 0;
+    $('score').textContent = self ? tally(SCORE(self.r)) : '0';
     $('here').textContent = `${m.alive} in the arena`;
-    $('hold').hidden = !(self && (self.g ?? 0) > 1);
+    $('hold').hidden = !(self && ((self.g ?? 0) > 1 || collapsed));
 
     const perk = $('perk');
 
@@ -1336,12 +1606,47 @@ function connect(name) {
 
     const grade = self ? holeLevel(self.r) : 0;
 
+    /*
+     * One line for whatever this player's button does next, which is not the
+     * same button at both ends of a round: a blob teleports and a hole opens
+     * whirls, and neither of them can do the other.
+     */
     $('warp').textContent = collapsed
-      ? `collapsed, grade ${grade}. You cannot move. Everything comes to you.`
+      ? cool > 0
+        ? `whirl in ${cool.toFixed(1)}s`
+        : `whirl ready · ${touching ? 'tap' : 'click'} anywhere to open one`
       : cool > 0
         ? `teleport in ${cool.toFixed(1)}s`
-        : 'teleport ready';
+        : `teleport ready${touching ? '' : ' · E'}`;
     $('warp').className = collapsed ? 'collapsed' : cool > 0 ? 'cooling' : 'ready';
+
+    $('hold').textContent = collapsed
+      ? `collapsed, grade ${grade}. You cannot move, and everything near you is coming to you.`
+      : 'holding on. Everything nearby is coming to you, and it costs you nothing';
+
+    // a hole holds on by being one, so the pull button has nothing to do; the
+    // teleport button has nothing to do either, since the floor is the control
+    $('pull').hidden = collapsed;
+    $('hop').hidden = collapsed;
+    $('spend').hidden = !carrying;
+    $('spend').textContent = carrying === 3 ? (sketching ? 'drawing' : 'draw') : 'use';
+
+    if (!carrying && sketching) {
+      sketching = false;
+      $('spend').classList.remove('on');
+    }
+
+    // a hole cannot do any of the three things the hint offers, and the two
+    // lines under it already say what it can do instead
+    $('hint').hidden = collapsed;
+    $('hint').innerHTML = touching
+      ? 'drag to move &middot; eat anything smaller &middot; the buttons do the rest'
+      : 'move the mouse &middot; eat anything smaller &middot; hold <kbd>space</kbd> to pull &middot; <kbd>E</kbd> to teleport';
+
+    if (collapsed && aiming) {
+      aiming = false;
+      $('hop').classList.remove('on');
+    }
 
     const lit = self ? (self.s ?? 0) : 0;
 
@@ -1349,7 +1654,7 @@ function connect(name) {
     $('spark').textContent = lit === 0 ? '' :
       `charged ${'\u26a1'.repeat(lit)} ${Math.round(lit * 14)}% faster. Eat again before it goes out`;
     $('list').innerHTML = m.l.map((s) =>
-      `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
+      `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${tally(s.s)}</span></li>`).join('');
   };
 
   /*
