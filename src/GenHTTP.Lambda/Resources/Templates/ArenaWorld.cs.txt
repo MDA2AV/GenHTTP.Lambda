@@ -142,8 +142,8 @@ static class World
     /// </summary>
     /// <remarks>
     /// Large enough that it is not a strong player, it is weather. The reach
-    /// multiplier is the part that decides whether the arena feels it: a hole
-    /// that pulls enormously but only nearby is just a big blob.
+    /// decides whether the arena feels it: a hole that pulls enormously but
+    /// only nearby is a big blob.
     /// </remarks>
     // two and a half times what it was, on the same reasoning that made
     // holding free: the strongest thing in the game was being too polite
@@ -172,11 +172,8 @@ static class World
     /// How many pellets a hole calls down around itself each second.
     /// </summary>
     /// <remarks>
-    /// The point of it is not the food, it is the traffic. A hole cannot move
-    /// and cannot chase, so without something to draw people in it is a
-    /// hazard everybody simply walks around and the round never ends. A floor
-    /// thick with pellets is worth the risk of going near one, which is what
-    /// makes it dangerous again.
+    /// Not the food, the traffic: a hazard that cannot chase is one everybody
+    /// walks around, and that round never ends.
     /// </remarks>
     public static int Summons(double radius) => 34 * HoleLevel(radius) * HoleLevel(radius);
 
@@ -192,15 +189,13 @@ static class World
     /// puts it two hundred and forty thousand units across, which is a hundred
     /// times the area of a full house before.
     ///
-    /// A cap rather than a target: filling it is deliberate.
     /// </remarks>
     public const int Crowd = 10_000;
 
     /// <summary>How often the whole arena's positions go out, in beats.</summary>
     /// <remarks>
     /// The one thing in a frame not filtered by what the player can see, so
-    /// the one thing whose cost is the whole crowd. Worth six times a second
-    /// and not twenty: nothing crosses a map this size in a sixth of one.
+    /// the one whose cost is the whole crowd. Six times a second, not twenty.
     /// </remarks>
     public const int MapEvery = 3;
 
@@ -235,9 +230,8 @@ static class World
 
     /// <summary>The most blobs one frame will describe.</summary>
     /// <remarks>
-    /// A hole sees the whole arena, and at a full house that is ten thousand
-    /// blobs - four hundred kilobytes twenty times a second to one player,
-    /// most of them a pixel wide.
+    /// A hole sees the whole arena: ten thousand blobs at a full house, four
+    /// hundred kilobytes twenty times a second, most of them a pixel wide.
     /// </remarks>
     public const int Faces = 700;
 
@@ -489,9 +483,8 @@ static class World
 
     /// <summary>How much harder a freshly held pull drags than an idle one.</summary>
     /// <remarks>
-    /// Where it starts, not where it ends. A hold that arrives at full
-    /// strength in half a second is a button rather than a commitment, and
-    /// there is no decision if the first moment is already the best one.
+    /// Where it starts, not where it ends: there is no decision if the first
+    /// moment is already the best one.
     /// </remarks>
     public const double Grasp = 1.8;
 
@@ -715,8 +708,7 @@ static class World
 
     /// <summary>How long a kill leaves you charged, in seconds.</summary>
     /// <remarks>
-    /// Long enough to reach the next one and no longer: not a reward for
-    /// having eaten somebody, an invitation to do it again at once.
+    /// Long enough to reach the next one and no longer.
     /// </remarks>
     /// <remarks>
     /// Not given to holes. A charge is extra speed and a hole has no legs, so
@@ -730,8 +722,7 @@ static class World
 
     /// <summary>What being charged does to your legs.</summary>
     /// <remarks>
-    /// Compounding with each kill taken while the last is still lit:
-    /// fourteen per cent for one, seventy for a chain of five.
+    /// Compounding: fourteen per cent for one, seventy for five.
     /// </remarks>
     public static double SparkBoost(int sparks) => 1 + 0.14 * Math.Clamp(sparks, 0, SparkMost);
 
@@ -809,36 +800,39 @@ static class World
     /// <summary>How long an emptied arena keeps its company, in seconds.</summary>
     /// <remarks>
     /// It used to go the instant the last player did, which is right for
-    /// somebody leaving and wrong for somebody's connection blinking: a
-    /// sleeping tab or a bad second of wifi closed the socket, and if that
-    /// player was alone, an arena they had spent minutes filling was deleted
-    /// before the browser finished reconnecting. It read as the game having
-    /// restarted itself with nobody having won.
-    ///
-    /// The clock stops while it is empty, so this costs memory and no time.
+    /// somebody leaving and wrong for a connection blinking - and an arena
+    /// somebody spent minutes filling was deleted before their browser
+    /// finished reconnecting. The clock stops while it is empty, so keeping
+    /// it costs memory and no time.
     /// </remarks>
     public const double Linger = 90;
 
     /// <summary>How long a blob waits for its player to come back, in seconds.</summary>
     /// <remarks>
-    /// A dropped socket is not a death and should not be charged as one. The
-    /// engine faults connections now and then - not our doing; we never have
-    /// two writes in flight on one - and the browser reconnects within a
-    /// second, which until now meant arriving new at starting size.
-    ///
-    /// Being eaten still costs the blob: this keeps a size across a broken
-    /// connection, not a life across a death.
+    /// A dropped socket is not a death and should not be charged as one: the
+    /// browser reconnects within a second, which used to mean arriving new at
+    /// starting size. Being eaten still costs the blob - this keeps a size
+    /// across a broken connection, not a life across a death.
     /// </remarks>
     public const double Adrift = 45;
 
+    /// <summary>How long a write to one socket may hold up the arena, in ms.</summary>
+    /// <remarks>
+    /// The clock waits for every frame it sends before it starts the next
+    /// beat, so a socket that has stopped reading - a sleeping laptop, a
+    /// phone in a tunnel - stops the game for everybody. No exception, no
+    /// log line, nothing burning: the whole arena simply goes quiet with the
+    /// player count still showing five.
+    ///
+    /// </remarks>
+    public const int Patience = 5_000;
+
     /// <summary>The furthest anything drags loose pellets, in units.</summary>
     /// <remarks>
-    /// Both sweeps were bounded by the arena, which was right at nine thousand
-    /// units across and is not now it can be a quarter of a million: the grid
-    /// they walk has cells of two hundred and sixty, so that is three and a
-    /// half million squares for one blob in one tick to find forty thousand
-    /// pellets. Set to the largest the arena used to get, so nothing changes
-    /// at any size it reached before.
+    /// Both sweeps were bounded by the arena, right at nine thousand units
+    /// and not now it can be a quarter of a million: three and a half million
+    /// grid squares for one blob in one tick, to find forty thousand pellets.
+    /// Set to the largest the arena used to get.
     /// </remarks>
     public const double Dredge = 24_000;
 

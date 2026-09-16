@@ -1777,9 +1777,25 @@ async Task<bool> Send(IReactiveConnection connection, string payload)
 
     await gate.WaitAsync();
 
+    var ours = true;
+
     try
     {
-        await connection.WritePayloadAsync(payload);
+        var writing = connection.WritePayloadAsync(payload).AsTask();
+
+        // one socket that has stopped reading must not stop the arena
+        if (!writing.IsCompleted && await Task.WhenAny(writing, Task.Delay(World.Patience)) != writing)
+        {
+            // the write is still out there somewhere, so its gate is never
+            // handed back: nothing may touch this connection again
+            ours = false;
+
+            players.TryRemove(connection, out _);
+
+            return false;
+        }
+
+        await writing;
 
         return true;
     }
@@ -1791,7 +1807,10 @@ async Task<bool> Send(IReactiveConnection connection, string payload)
     }
     finally
     {
-        gate.Release();
+        if (ours)
+        {
+            gate.Release();
+        }
     }
 }
 
@@ -2145,11 +2164,14 @@ var api = Inline.Create()
                         return best.ToList();
                     }
                 })
-                .Get("here", () => new Here(players.Count, bots.Count, pellets.Count));
+                .Get("here", () => new Here(players.Count, bots.Count, pellets.Count, tick));
 
 return Layout.Create()
              .Add("api", api)
              .Add("play", socket)
              .Add(Assets.App());
 
-record Here(int Players, int Bots, int Pellets);
+// Ticks, because the difference between an arena that has stopped and one
+// that is running but not reaching you is two requests, and without it is an
+// afternoon.
+record Here(int Players, int Bots, int Pellets, long Ticks);
