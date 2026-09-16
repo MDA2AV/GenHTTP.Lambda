@@ -183,6 +183,102 @@ var size = World.Smallest;
 /// </remarks>
 var floor = new Dictionary<long, List<Pellet>>();
 
+/// <summary>The crowd, in the same shape and for the same reason.</summary>
+var herd = new Dictionary<long, List<Player>>();
+
+/*
+ * The few blobs big enough to bend the floor around them.
+ *
+ * Kept separately because the only thing that ever wants the whole crowd at
+ * once is the search for somewhere to put somebody, and what that search
+ * actually cares about is whether the spot is inside somebody's pull -
+ * which nothing under the well size has. At ten thousand blobs this is the
+ * difference between reading a handful and reading all of them, twelve
+ * times over, for every single spawn.
+ */
+var heavies = new List<Player>();
+
+void Weigh(Player[] everyone)
+{
+    heavies.Clear();
+
+    foreach (var soul in everyone)
+    {
+        if (!soul.Gone && soul.Radius >= World.WellSize)
+        {
+            heavies.Add(soul);
+        }
+    }
+}
+
+/// <summary>Puts the crowd back in its squares, once, at the top of a tick.</summary>
+/// <remarks>
+/// Everything that follows asks this rather than asking everybody. Rebuilt
+/// from scratch like the floor is: at ten thousand blobs it is ten thousand
+/// adds, against the hundred million comparisons it saves.
+/// </remarks>
+void Reherd(Player[] everyone)
+{
+    // emptied and refilled rather than rebuilt: at ten thousand blobs twenty
+    // times a second, throwing the squares away and making new ones is ten
+    // thousand allocations a tick for a dictionary that is nearly always the
+    // same shape as it was
+    foreach (var bucket in herd.Values)
+    {
+        bucket.Clear();
+    }
+
+    foreach (var soul in everyone)
+    {
+        if (soul.Gone)
+        {
+            continue;
+        }
+
+        var key = World.PatchOf(soul.X, soul.Y);
+
+        if (!herd.TryGetValue(key, out var bucket))
+        {
+            herd[key] = bucket = [];
+        }
+
+        bucket.Add(soul);
+    }
+}
+
+/// <summary>Everybody within a square of this reach, without walking the rest.</summary>
+/// <remarks>
+/// Falls back to the whole crowd when the reach covers most of the arena.
+/// A hole's pull does reach that far, and walking sixty thousand empty
+/// squares to find ten thousand blobs is slower than walking the ten
+/// thousand.
+/// </remarks>
+IEnumerable<Player> Around(double x, double y, double reach, Player[] everyone)
+{
+    if (reach >= size * 0.4)
+    {
+        return everyone;
+    }
+
+    return Gathered(x, y, reach);
+}
+
+IEnumerable<Player> Gathered(double x, double y, double reach)
+{
+    foreach (var key in World.PatchesWithin(x, y, reach + World.Slip))
+    {
+        if (!herd.TryGetValue(key, out var bucket))
+        {
+            continue;
+        }
+
+        foreach (var soul in bucket)
+        {
+            yield return soul;
+        }
+    }
+}
+
 void Rebucket()
 {
     var next = new Dictionary<long, List<Pellet>>();
@@ -293,13 +389,8 @@ Scatter();
 
         var clear = true;
 
-        foreach (var other in Souls())
+        foreach (var other in heavies)
         {
-            if (other.Radius < World.WellSize)
-            {
-                continue;
-            }
-
             var reach = World.Reach(other.Radius, 1);
 
             if (Math.Abs(other.X - x) < reach && Math.Abs(other.Y - y) < reach)
@@ -488,7 +579,7 @@ void Whirls(Player[] everyone, double seconds)
             continue;
         }
 
-        foreach (var soul in everyone)
+        foreach (var soul in Around(hole.WhirlX, hole.WhirlY, World.WhirlReach, everyone))
         {
             if (ReferenceEquals(soul, hole) || soul.Gone || soul.Radius >= hole.Radius)
             {
@@ -597,7 +688,10 @@ void Think(Player bot, Player[] everyone, double seconds)
     Player prey = null;
     var nearest = double.MaxValue;
 
-    foreach (var other in everyone)
+    // a bot never cared about anything further off than the larger of the two
+    // bounds below, so asking for that square rather than for the whole arena
+    // changes nothing about what it decides
+    foreach (var other in Gathered(bot.X, bot.Y, 1400))
     {
         if (ReferenceEquals(other, bot) || other.Gone)
         {
@@ -713,6 +807,8 @@ void Think(Player bot, Player[] everyone, double seconds)
 /// </remarks>
 void Populate(int wanted)
 {
+    Weigh(Souls());
+
     var names = new[] { "Mote", "Husk", "Drift", "Cinder", "Wisp", "Ember", "Shard", "Vessel", "Plume", "Quill", "Ash", "Fleck" };
 
     for (var i = 0; i < wanted && bots.Count < World.Crowd; i++)
@@ -911,6 +1007,10 @@ void Step(double seconds)
         }
     }
 
+    Reherd(everyone);
+
+    Weigh(everyone);
+
     Rebucket();
 
     /*
@@ -980,9 +1080,9 @@ void Step(double seconds)
         // blob in it is inside every other one's pull, which is not a game
         var reach = Math.Min(size, World.Reach(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleSpan(heavy.Radius) : 1));
 
-        foreach (var player in everyone)
+        foreach (var player in Around(heavy.X, heavy.Y, reach, everyone))
         {
-            if (ReferenceEquals(player, heavy))
+            if (ReferenceEquals(player, heavy) || player.Gone)
             {
                 continue;
             }
@@ -1112,7 +1212,20 @@ void Step(double seconds)
 
     foreach (var player in everyone)
     {
-        foreach (var other in everyone)
+        if (player.Gone)
+        {
+            continue;
+        }
+
+        /*
+         * Only what is close enough to be swallowed, rather than everybody.
+         *
+         * Eating needs the other one's middle inside this one, so the square
+         * asked for is this blob's own radius - which for the ten thousand
+         * blobs that are the size of a pellet is one square, and for the one
+         * that is a quarter of the arena wide is the arena.
+         */
+        foreach (var other in Around(player.X, player.Y, player.Radius, everyone))
         {
             if (ReferenceEquals(player, other) || other.Gone || player.Gone)
             {
@@ -1238,13 +1351,31 @@ void Chart(Player[] everyone)
         return;
     }
 
-    map = new List<int>(everyone.Length * 3);
+    /*
+     * Every hole, and as many of everybody else as the budget allows.
+     *
+     * Ten thousand dots is a hundred and ninety kilobytes six times a second
+     * to every player, for a picture a hundred and sixty pixels across on
+     * which they would be four to a pixel. The holes are never thinned: they
+     * are the thing the map is for.
+     */
+    var thin = Math.Max(1, (int)Math.Ceiling(everyone.Length / (double)World.Dots));
 
-    foreach (var soul in everyone)
+    map = new List<int>(Math.Min(everyone.Length, World.Dots + 64) * 3);
+
+    for (var i = 0; i < everyone.Length; i++)
     {
+        var soul = everyone[i];
+        var hole = World.IsHole(soul.Radius);
+
+        if (!hole && thin > 1 && i % thin != 0)
+        {
+            continue;
+        }
+
         map.Add((int)soul.X);
         map.Add((int)soul.Y);
-        map.Add(World.IsHole(soul.Radius) ? 3 + World.HoleLevel(soul.Radius) : World.Tier(soul.Radius));
+        map.Add(hole ? 3 + World.HoleLevel(soul.Radius) : World.Tier(soul.Radius));
     }
 }
 
@@ -1268,7 +1399,7 @@ void Marks(Player[] everyone)
 
 string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] turning)
 {
-    var near = new List<Blob>();
+    List<Blob> near = [];
 
     foreach (var blob in blobs)
     {
@@ -1292,6 +1423,30 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
                 near.Add(blob);
             }
         }
+    }
+
+    /*
+     * The same budget the floor has, for the same reason: a hole sees the
+     * whole arena, and at a full house that is ten thousand blobs. Anything
+     * heavy enough to bend the floor is kept whatever happens - a dent whose
+     * cause was thinned away looks like the floor is broken - and the rest
+     * are thinned evenly.
+     */
+    if (near.Count > World.Faces)
+    {
+        var every = (int)Math.Ceiling(near.Count / (double)World.Faces);
+
+        var kept = new List<Blob>(World.Faces + 64);
+
+        for (var i = 0; i < near.Count; i++)
+        {
+            if (near[i].G > 0 || i % every == 0)
+            {
+                kept.Add(near[i]);
+            }
+        }
+
+        near = kept;
     }
 
     // whole units. A pellet does move now, but only ever towards something,

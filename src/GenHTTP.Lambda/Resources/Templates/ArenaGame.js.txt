@@ -1847,10 +1847,25 @@ if (chosen) $('name').value = chosen;
  * can never be had to yourself, and the first thing anybody does on an empty
  * server is leave - so it is a button, and it is capped server side.
  */
+/*
+ * Ten on a press, and four times as many on each press that follows closely.
+ *
+ * The arena holds ten thousand now, and a button that adds ten is a ceiling
+ * nobody can reach - a thousand presses. Escalating means one press is still
+ * a little company and eight in a row is a full house, without a second
+ * control for the second thing.
+ */
+let batch = 10, lastFill = 0;
+
 $('crowd').onclick = () => {
   if (socket?.readyState !== 1) return;
 
-  socket.send(JSON.stringify({ kind: 'fill', count: 10 }));
+  const now = performance.now();
+
+  batch = now - lastFill < 2000 ? Math.min(2500, batch * 4) : 10;
+  lastFill = now;
+
+  socket.send(JSON.stringify({ kind: 'fill', count: batch }));
 };
 
 $('carry').onclick = () => {

@@ -37,7 +37,15 @@ static class World
     /// stays the same: about forty on screen, which is enough that there is
     /// always something worth steering at.
     /// </remarks>
-    public static int PelletsFor(double size) => (int)(size * size / 20_000);
+    /// <remarks>
+    /// Capped, because the arena is now allowed to get large enough that the
+    /// density alone would ask for nearly three million of them - which is not
+    /// a floor, it is a memory leak with a rule attached. Past the cap the
+    /// floor thins out with distance rather than growing without end, which is
+    /// the right way round anyway: an arena that big is mostly empty space and
+    /// should feel like it.
+    /// </remarks>
+    public static int PelletsFor(double size) => (int)Math.Min(40_000, size * size / 20_000);
 
     /// <summary>The radius everybody starts at.</summary>
     public const double Start = 14;
@@ -184,12 +192,15 @@ static class World
     /// The most company an arena will keep.
     /// </summary>
     /// <remarks>
-    /// A hundred is a crowd rather than a handful, and the arena grows to hold
-    /// them - it is sized by how many are in it, so a full house is about nine
-    /// thousand across with ten thousand pellets on the floor rather than
-    /// three and a half thousand with fifteen hundred.
+    /// The arena is sized by how many are in it, so this is a decision about
+    /// how large the world can get as much as about how busy: ten thousand
+    /// puts it two hundred and forty thousand units across, which is a hundred
+    /// times the area of a full house before.
+    ///
+    /// It is a cap rather than a target. Nobody has to fill it, and filling it
+    /// is a thing somebody does on purpose with the button.
     /// </remarks>
-    public const int Crowd = 100;
+    public const int Crowd = 10_000;
 
     /// <summary>How often the whole arena's positions go out, in beats.</summary>
     /// <remarks>
@@ -230,6 +241,23 @@ static class World
     /// thousand pellets fit inside one of them with room to spare.
     /// </remarks>
     public const double Beat = 0.05;
+
+    /// <summary>The most blobs one frame will describe.</summary>
+    /// <remarks>
+    /// The same budget the pellets have, for the same reason. A hole sees the
+    /// whole arena, and at a full house the whole arena is ten thousand blobs
+    /// - four hundred kilobytes twenty times a second to one player, for a
+    /// screen on which most of them are a pixel. The nearest are always kept;
+    /// the rest are thinned.
+    /// </remarks>
+    public const int Faces = 700;
+
+    /// <summary>The most blobs the minimap will mark.</summary>
+    /// <remarks>
+    /// Holes are never thinned out of it - they are the thing it exists to
+    /// show - so this is a budget for everybody else.
+    /// </remarks>
+    public const int Dots = 600;
 
     /// <summary>
     /// The most pellets one frame will describe.
@@ -771,6 +799,53 @@ static class World
         var toX = (long)(Math.Max(0, x + reach) / Cell);
         var fromY = (long)(Math.Max(0, y - reach) / Cell);
         var toY = (long)(Math.Max(0, y + reach) / Cell);
+
+        for (var cx = fromX; cx <= toX; cx++)
+        {
+            for (var cy = fromY; cy <= toY; cy++)
+            {
+                yield return (cx << 24) | cy;
+            }
+        }
+    }
+
+    /// <summary>How wide a square of the blob grid is, in units.</summary>
+    /// <remarks>
+    /// A separate grid from the one the pellets live in, and a much coarser
+    /// one. There are two orders of magnitude fewer blobs than pellets and
+    /// they are far larger, so cells the size of a pellet's would mean walking
+    /// hundreds of empty ones per query.
+    ///
+    /// This is what makes a crowd of ten thousand possible at all. Three
+    /// things used to compare every blob against every other one - who is
+    /// eating whom, who is being pulled by whom, and what each bot has decided
+    /// to do about it - and three times ten thousand squared is a hundred
+    /// million pairs a tick, which is about three seconds of arithmetic for
+    /// something that has to happen twenty times a second.
+    /// </remarks>
+    public const double Patch = 1400;
+
+    /// <summary>How far anything can have moved since the squares were filled.</summary>
+    /// <remarks>
+    /// The grid is built at the top of a tick and asked after everybody has
+    /// moved, so a blob can be up to one tick's travel from the square it is
+    /// filed under. Every query is widened by this much rather than the grid
+    /// being rebuilt twice, which would cost more than it saves: the fastest
+    /// thing in the game is a drawn line at twenty six hundred units a second,
+    /// which is a hundred and thirty units in a beat.
+    /// </remarks>
+    public const double Slip = 200;
+
+    /// <summary>Which square of the blob grid this position is in.</summary>
+    public static long PatchOf(double x, double y) => ((long)(x / Patch) << 24) | (long)(y / Patch);
+
+    /// <summary>Every square of the blob grid a reach around a point touches.</summary>
+    public static IEnumerable<long> PatchesWithin(double x, double y, double reach)
+    {
+        var fromX = (long)(Math.Max(0, x - reach) / Patch);
+        var toX = (long)(Math.Max(0, x + reach) / Patch);
+        var fromY = (long)(Math.Max(0, y - reach) / Patch);
+        var toY = (long)(Math.Max(0, y + reach) / Patch);
 
         for (var cx = fromX; cx <= toX; cx++)
         {
