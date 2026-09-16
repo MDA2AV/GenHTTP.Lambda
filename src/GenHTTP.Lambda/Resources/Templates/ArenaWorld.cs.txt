@@ -43,7 +43,7 @@ static class World
     /// Past the cap the floor thins with distance, which is the right way
     /// round - an arena that big is mostly empty space.
     /// </remarks>
-    public static int PelletsFor(double size) => (int)Math.Min(40_000, size * size / 20_000);
+    public static int PelletsFor(double size) => (int)Math.Min(60_000, size * size / 12_000);
 
     /// <summary>The radius everybody starts at.</summary>
     public const double Start = 14;
@@ -52,17 +52,19 @@ static class World
     /// The score that wins the arena and ends the round.
     /// </summary>
     /// <remarks>
-    /// The round is as long as it was: what it costs is set by the radius it
-    /// ends at, which is as large as the arena can hold and still have a game
-    /// in it, and not by the number printed beside it. What this buys is the
-    /// number, and the number is the whole of the endgame - a blob past the
-    /// collapse cannot move and has nothing else to watch.
+    /// Down from a hundred googol, which could not work and did not.
     ///
-    /// Scores are doubles now, too. They were integers, which stop at two
-    /// billion and change, so anything past the old ceiling reached the
-    /// leaderboard as a negative number.
+    /// A ceiling and a winning radius together fix the exponent below, and
+    /// the arena decides the radius - so asking for two hundred orders of
+    /// magnitude across a fourfold change in size asked for an exponent of a
+    /// hundred and fifty seven, and growing eleven per cent past the collapse
+    /// multiplied your score by ten to the fourteen. The number stopped
+    /// measuring anything about a minute after you collapsed.
+    ///
+    /// Five orders across the same range is an exponent of four, and that
+    /// same eleven per cent is now worth a little over double.
     /// </remarks>
-    public const double Win = 1e200;
+    public const double Win = 1e12;
 
     /// <summary>
     /// The score at which somebody stops being a player and becomes a hole.
@@ -251,7 +253,7 @@ static class World
     /// the two together had one player being sent a megabyte a second. At
     /// that zoom the floor is texture rather than countable things.
     /// </remarks>
-    public const int Crumbs = 1400;
+    public const int Crumbs = 700;
 
     /// <summary>
     /// How long this blob waits between teleports.
@@ -884,13 +886,11 @@ static class World
 
     /// <summary>How much faster score climbs than area, once collapsed.</summary>
     /// <remarks>
-    /// Picked so both ends of the scale land at radii the arena can hold: the
-    /// collapse at about five hundred and sixty, the ceiling at twenty one
-    /// hundred. A hundred quintillion of plain area would be a radius of five
-    /// and a half billion, in an arena nine thousand across.
-    ///
+    /// Not chosen so much as implied: the collapse and the ceiling are fixed,
+    /// and so are the radii they happen at, which leaves one exponent joining
+    /// them.
     /// </remarks>
-    public const double Steepen = 156.90;
+    public const double Steepen = 4.0648;
 
     /// <summary>The radius that scores this much, which is ScoreOf run backwards.</summary>
     public static double RadiusScoring(double score)

@@ -17,11 +17,23 @@ const ctx = canvas.getContext('2d', { alpha: false });
  * that the snapshot on the far side has almost always arrived by the time it
  * is wanted, so there is something to read between rather than nothing.
  *
- * A hundred milliseconds is two ticks and a margin. Shorter and a late
- * packet leaves nothing to interpolate towards, which shows up as a hitch;
- * much longer and steering starts to feel posted rather than driven.
+ * A hundred milliseconds is two ticks and a margin - when the server is
+ * sending every fifty. When it is not, that margin is gone: a busy arena
+ * sending every hundred and twenty, with a tail out to three hundred, leaves
+ * the browser with nothing to interpolate towards eighty per cent of the
+ * time. It holds the last position it knows and jumps when the next frame
+ * lands, twice a second, which is the stutter people describe - and which is
+ * not the browser struggling. It has nothing to draw.
+ *
+ * So the delay follows the server rather than assuming it. Twice the gap
+ * actually being seen covers all but the longest tail, which costs latency
+ * exactly when the server is already late and costs nothing when it is not.
  */
-const DELAY = 100;
+const SNAPPY = 100;
+const PATIENT = 400;
+
+let gap = 50;
+let delay = SNAPPY;
 
 /** The last few snapshots, oldest first. */
 const history = [];
@@ -564,7 +576,7 @@ function sink(x, y, wells, mine) {
 function moment() {
   if (history.length === 0) return null;
 
-  const want = performance.now() - DELAY;
+  const want = performance.now() - delay;
 
   // the newest pair whose older half is already behind us
   let i = history.length - 1;
@@ -657,7 +669,7 @@ function moment() {
 const HOLE = 5e6;          // the plain area a blob collapses at
 const COLLAPSE = 1e7;      // and the score it has when it does
 const LIFT = COLLAPSE / HOLE;
-const STEEPEN = 156.90;
+const STEEPEN = 4.0648;
 
 function SCORE(r) {
   const plain = Math.PI * (r * r - 14 * 14);
@@ -683,15 +695,10 @@ const GRADES = [1261.63, 1900, 2700, 3700, 4700];
  * digits up to a million, where they are still worth reading exactly, and
  * three significant figures with a suffix above it.
  */
-const SUFFIX = [[1e33, 'Dc'], [1e30, 'No'], [1e27, 'Oc'], [1e24, 'Sp'], [1e21, 'Sx'],
-                [1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
+const SUFFIX = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
 
 function tally(n) {
   if (!(n > 0)) return '0';
-
-  // past a decillion the names stop being names anybody knows, and the
-  // ceiling is a hundred and ninety three orders of magnitude further up
-  if (n >= 1e36) return n.toExponential(2).replace('e+', 'e');
 
   for (const [at, tag] of SUFFIX) {
     if (n >= at) {
@@ -1712,7 +1719,18 @@ function connect(name) {
 
     world = m.w ?? world;
 
-    history.push({ at: performance.now(), b: m.b, p: m.p, k: m.k, s: m.s });
+    const landed = performance.now();
+
+    /*
+     * What the server is actually managing, smoothed. Not what it intends:
+     * the beat is twenty a second and a full arena delivers half that.
+     */
+    if (history.length) {
+      gap = gap * 0.88 + Math.min(500, landed - history[history.length - 1].at) * 0.12;
+      delay = Math.max(SNAPPY, Math.min(PATIENT, gap * 2));
+    }
+
+    history.push({ at: landed, b: m.b, p: m.p, k: m.k, s: m.s });
 
     marks = m.v ?? [];
     whirls = m.o ?? [];
@@ -1741,7 +1759,7 @@ function connect(name) {
     // a line begun before the wait came back is not a line
     if (pen > 0) drawing = null;
 
-    // a couple of seconds is far more than DELAY ever reaches back for, and
+    // a couple of seconds is far more than the delay ever reaches back for, and
     // keeps this from growing for as long as somebody leaves the tab open
     while (history.length > 40) history.shift();
 
