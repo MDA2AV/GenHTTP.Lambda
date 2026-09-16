@@ -170,7 +170,11 @@ Everything is read from the environment on startup, see
 | `LAMBDA_LOG_HISTORY`                | `4000`           | log lines the panel can read back, to 10^6  |
 | `LAMBDA_LOG_MEMORY_MB`              | derived          | what their text may cost; whichever runs out first |
 | `LAMBDA_LOG_LAMBDA_OUTPUT`          | `true`           | keep what lambdas print, filed under them   |
+| `LAMBDA_LOG_REPEAT_WINDOW_SECONDS`  | `10`             | fold identical lines; zero writes every one |
 | `LAMBDA_LOG_CLIENT_ADDRESS`         | `true`           | record the address a request came from      |
+| `LAMBDA_LOG_GEO`                    | `true`           | say which country a range is registered in  |
+| `LAMBDA_LOG_GEO_REFRESH_HOURS`      | `168`            | how often the registry files are refetched  |
+| `LAMBDA_LOG_GEO_PLACES`             | `true`           | also fetch the town and network databases   |
 | `LAMBDA_LOG_MAX_LINES_PER_REQUEST`  | `200`            | before one request's output is cut off      |
 | `LAMBDA_MCP_ORIGINS`                | -                | hosts a browser may use `/mcp` from         |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
@@ -363,6 +367,28 @@ through every await into the code of the user, and the writer over the console
 reads it back to decide whose line it is. Constructing a lambda is marked the
 same way, so a print at the top of a snippet is filed under it as well.
 
+Identical lines are folded before they are ever written: the same request from
+the same caller answered the same way is counted rather than repeated, and one
+line every `LAMBDA_LOG_REPEAT_WINDOW_SECONDS` says how many there were. What
+the window bounds is how stale a count may be, not how many are folded into
+it - and a line already read never changes underneath the reader, which is what
+lets it work with a cursor that only moves forwards. A run that stops has its
+last count written when somebody next reads, because otherwise the tail of a
+burst would sit counted and unseen.
+
+**Fold repeats** in the panel does the same thing to what is already loaded,
+turning the list into one row per distinct line with a count on it, which is what makes a log worth reading when something is repeating: a
+scanner knocking on five paths every two seconds is five rows rather than
+fifteen hundred. Each survivor sits where it last happened rather than where it
+started, because a log is read from the bottom. The same line from two
+different callers stays two rows - which of them is doing it is usually the
+question.
+
+**Callers** lists everyone the log still holds something about - address, where
+from, how many requests, how many failed, first and last seen - over the whole
+ring rather than over the page on screen, because who is out there is a
+question about the run and not about the last screenful.
+
 The effect is that one lambda can be read on its own, which is what the **Log**
 button beside each row in `/admin` does, and so can one caller - clicking an
 address narrows to it. The find box takes bare words that must all appear,
@@ -372,7 +398,8 @@ what the server and the lambdas said. A warning the server logs *about* a
 lambda - the one the error handler writes when it throws - is filed under that
 lambda too, with the stack trace that was kept from the visitor.
 
-Every line says which address it was being written for. That is what turns a
+Every line says which protocol it arrived over, which country the address is
+registered in, and which address it was being written for. That is what turns a
 path being hit five hundred times a minute from a mystery into a question, and
 it applies to more than the request line: a lambda's print and an error the
 server logged both carry the caller, because the request is marked once at the
@@ -384,6 +411,40 @@ user agents are pooled, so a million lines from a few dozen callers is a few
 dozen strings rather than a million. It is personal data, it is only ever
 served behind the token, and `LAMBDA_LOG_CLIENT_ADDRESS=false` leaves every
 line in place with nothing personal on it.
+
+The country comes from the delegation files the five regional registries
+publish - the same records that say who was given which block - fetched weekly
+and cached on the data volume, so a server that restarts while they are
+unreachable still knows what it knew last week and one that has never reached
+them simply shows no countries. Nothing is asked of a third party, because
+doing this by lookup would mean handing somebody else the address of every
+visitor to the installation.
+
+On top of that country, `LAMBDA_LOG_GEO_PLACES` adds a town and the name of
+the network an address is on - "Aveiro, PT · MEO" rather than "PT" - from the
+free DB-IP databases. They are about 130 MB on the data volume, refetched
+monthly, and cost nothing in memory: the format is a search trie and the files
+are memory mapped, so what they use is page cache the kernel can drop rather
+than heap that has to be paid for. Lookups are remembered by address, because
+a scanner is one address and five hundred requests: measured, a fresh address
+costs about thirty-five microseconds and six hundred bytes, one already seen
+costs seven hundredths of a microsecond and nothing. So the price is paid per
+caller rather than per request - a thousand requests from fifty callers is two
+microseconds each, and from a thousand callers is thirty-five.
+
+Read it as the registration of a range and not the location of a person. Two
+results from this machine make the point: its IPv4 address is registered in
+Austria and its IPv6 address in Germany, and `1.1.1.1` - a resolver that
+answers from everywhere at once - reads as Australia, because that is where
+the block is registered. It tells a Portuguese visitor from a Singaporean
+scanner. It does not put anybody on a map, and `LAMBDA_LOG_GEO=false` stops it
+downloading anything at all.
+
+The town is a guess rather than a record - measured and inferred by a third
+party, right about most consumer connections and wrong about most
+infrastructure - so it is shown as one and never as a position. Country and
+town data by [DB-IP](https://db-ip.com) under CC BY 4.0, which the panel
+credits; the registry data is published by the RIRs themselves.
 
 Three bounds keep it honest. The ring holds `LAMBDA_LOG_HISTORY` lines, up to
 a million, with a cap on the length of each; `LAMBDA_LOG_MEMORY_MB` caps what

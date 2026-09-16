@@ -23,6 +23,29 @@ public static class LambdaOutput
     public static OutputScope? Ambient => Current.Value;
 
     /// <summary>
+    /// Where console output belongs when no lambda is being served.
+    /// </summary>
+    /// <remarks>
+    /// The engine prints its own lines - which reactor is listening on what,
+    /// which connection handler faulted and why - straight to the console
+    /// rather than through a logger, and they were being dropped: the tee only
+    /// copied a write while a lambda was the one making it. Those lines are
+    /// exactly what an operator opens a log to read, so they land here
+    /// instead, under no lambda at all.
+    /// </remarks>
+    public static OutputScope? Process { get; private set; }
+
+    /// <summary>
+    /// Says where the process's own console output should go.
+    /// </summary>
+    public static void Adopt(LogBook book)
+    {
+        // uncapped, unlike a request's: this is the server talking about
+        // itself, and the ring and the folding are what bound it
+        Process = new OutputScope(null, book, int.MaxValue);
+    }
+
+    /// <summary>
     /// Marks this request as belonging to a lambda until the scope is closed.
     /// </summary>
     public static IDisposable Enter(OutputScope scope)
@@ -58,15 +81,16 @@ public static class LambdaOutput
 /// one. The collecting is per request rather than per process because two
 /// lambdas printing at once would otherwise splice into each other.
 /// </remarks>
-public sealed class OutputScope(string publicKey, LogBook book, int most)
+public sealed class OutputScope(string? publicKey, LogBook book, int most)
 {
 
     #region Get-/Setters
 
     /// <summary>
-    /// The lambda every line gathered here is filed under.
+    /// The lambda every line gathered here is filed under, or nothing for the
+    /// process's own output.
     /// </summary>
-    public string PublicKey { get; } = publicKey;
+    public string? PublicKey { get; } = publicKey;
 
     /// <summary>
     /// How many lines one request may contribute before the rest is counted
@@ -169,13 +193,13 @@ public sealed class OutputScope(string publicKey, LogBook book, int most)
         {
             book.Append("warn", "stdout", PublicKey,
                         $"… this request printed more than {Most} lines; the rest was dropped.",
-                        null, caller?.Client, caller?.Agent);
+                        null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place);
 
             return;
         }
 
         book.Append(Stream ? "error" : "info", Stream ? "stderr" : "stdout", PublicKey, text,
-                    null, caller?.Client, caller?.Agent);
+                    null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place);
     }
 
     #endregion

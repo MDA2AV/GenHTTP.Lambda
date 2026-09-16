@@ -7,12 +7,18 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// printed.
 /// </summary>
 /// <remarks>
-/// It only takes a copy while a lambda is being served. The server's own
-/// logging reaches the book through its logger provider, and if this took
-/// everything that crossed stdout then every one of those lines would be in
-/// there twice - once as the record and once as the console writing it out.
-/// So the rule is: no lambda, no copy. Anything else printed to stdout goes
-/// where it always went and no further.
+/// A write while a lambda is being served is filed under that lambda;
+/// everything else is filed under the process. That second half matters more
+/// than it looks: the engine prints what its reactors are doing straight to
+/// the console rather than through a logger, and while the rule here was "no
+/// lambda, no copy" those lines existed only on stdout.
+///
+/// What it must not do is take the console logger's own output, or every
+/// record would be in the book twice - once as the record and once as the
+/// console writing it out. That is handled by when this is installed rather
+/// than by a check: the logger holds the writer it was given when it was
+/// built, so installing afterwards leaves it writing to the real console
+/// while everything that reaches Console.Out later comes through here.
 ///
 /// Only the four primitive writes are overridden. Every other overload of
 /// <see cref="TextWriter"/> is defined in terms of them, so this sees each
@@ -62,7 +68,7 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
     {
         inner.Write(value);
 
-        var scope = LambdaOutput.Ambient;
+        var scope = LambdaOutput.Ambient ?? LambdaOutput.Process;
 
         if (scope != null)
         {
@@ -78,7 +84,7 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 
         if (value != null)
         {
-            LambdaOutput.Ambient?.Feed(value, error);
+            (LambdaOutput.Ambient ?? LambdaOutput.Process)?.Feed(value, error);
         }
     }
 
@@ -86,14 +92,14 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
     {
         inner.Write(buffer, index, count);
 
-        LambdaOutput.Ambient?.Feed(buffer.AsSpan(index, count), error);
+        (LambdaOutput.Ambient ?? LambdaOutput.Process)?.Feed(buffer.AsSpan(index, count), error);
     }
 
     public override void Write(ReadOnlySpan<char> buffer)
     {
         inner.Write(buffer);
 
-        LambdaOutput.Ambient?.Feed(buffer, error);
+        (LambdaOutput.Ambient ?? LambdaOutput.Process)?.Feed(buffer, error);
     }
 
     public override void Flush() => inner.Flush();

@@ -330,7 +330,14 @@ public sealed record ErrorResponse(int Status, string Error, string Message);
 /// One line from the run of the server.
 /// </summary>
 public sealed record LogEntry(long Seq, DateTime At, string Level, string Source, string? Lambda, string Text,
-                              string? Detail, string? Client, string? Agent);
+                              string? Detail, string? Client, string? Agent, string? Country, string? Place,
+                              int Repeats);
+
+/// <summary>
+/// One caller the log still holds something about.
+/// </summary>
+public sealed record LogCaller(string Client, string? Place, string? Country, string? Agent,
+                               long Lines, long Failed, DateTime First, DateTime Last);
 
 /// <summary>
 /// A page of the log, and where to carry on from.

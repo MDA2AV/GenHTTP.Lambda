@@ -24,7 +24,7 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// and so the duration covers the whole answer rather than the part after the
 /// throttle let it through.
 /// </remarks>
-public sealed class CallerConcern(IHandler content, LogBook book, StringPool pool, LambdaOptions options) : IConcern
+public sealed class CallerConcern(IHandler content, LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, LambdaOptions options) : IConcern
 {
 
     public IHandler Content => content;
@@ -33,7 +33,8 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
 
     public async ValueTask<IResponse?> HandleAsync(IRequest request)
     {
-        var caller = CallerInfo.From(request, pool, options.LogClientAddress);
+        var caller = CallerInfo.From(request, pool, options.LogClientAddress, options.Geo ? geo : null,
+                                     options.GeoPlaces ? places : null);
 
         var started = Stopwatch.GetTimestamp();
 
@@ -56,6 +57,21 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
 
     private void Record(CallerInfo caller, IRequest request, IResponse? response, TimeSpan took)
     {
+        /*
+         * Reading the log does not fill the log.
+         *
+         * The panel asks for the tail every second and a half and each ask is
+         * a request like any other, so left in it becomes most of what there
+         * is to read - measured at four in every five lines - and pushes what
+         * somebody opened the page for out of the ring. It was suppressed
+         * when these lines came from the engine and the suppression was lost
+         * when they started coming from here.
+         */
+        if (caller.Path.StartsWith("/api/v1/logs", StringComparison.Ordinal))
+        {
+            return;
+        }
+
         // nothing answered is a not found by the time the client sees it
         var status = response != null ? (int)response.Status : 404;
 
@@ -67,12 +83,12 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
         // on its way back the request knows which lambda it reached
         book.Append(level, "Requests", request.GetLambda()?.PublicKey,
                     $"{caller.Method} {caller.Path} — {status} · {bytes:N0} B · {took.TotalMilliseconds:N2} ms",
-                    null, caller.Client, caller.Agent);
+                    null, caller.Client, caller.Agent, caller.Country, caller.Place);
     }
 
 }
 
-public sealed class CallerConcernBuilder(LogBook book, StringPool pool, LambdaOptions options) : IConcernBuilder
+public sealed class CallerConcernBuilder(LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, LambdaOptions options) : IConcernBuilder
 {
-    public IConcern Build(IHandler content) => new CallerConcern(content, book, pool, options);
+    public IConcern Build(IHandler content) => new CallerConcern(content, book, pool, geo, places, options);
 }

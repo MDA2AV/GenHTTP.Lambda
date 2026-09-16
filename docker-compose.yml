@@ -50,10 +50,24 @@ services:
       LAMBDA_LOG_HISTORY: ${LAMBDA_LOG_HISTORY:-1000000}
       LAMBDA_LOG_MEMORY_MB: ${LAMBDA_LOG_MEMORY_MB:-256}
       LAMBDA_LOG_LAMBDA_OUTPUT: ${LAMBDA_LOG_LAMBDA_OUTPUT:-true}
+      # How long identical lines are gathered into one rather than each being
+      # written. The same request, from the same caller, answered the same
+      # way, is one fact and a rate - and left alone it fills the ring.
+      LAMBDA_LOG_REPEAT_WINDOW_SECONDS: ${LAMBDA_LOG_REPEAT_WINDOW_SECONDS:-10}
       # the address a request came from, kept against its lines. Personal
       # data, admin-gated, never part of the public figures - false leaves
       # every line in place with nothing personal on it.
       LAMBDA_LOG_CLIENT_ADDRESS: ${LAMBDA_LOG_CLIENT_ADDRESS:-true}
+      # Which country a caller's range is registered in, read from the files
+      # the regional registries publish and cached on the data volume. No
+      # third party is asked, so no visitor's address leaves this machine.
+      LAMBDA_LOG_GEO: ${LAMBDA_LOG_GEO:-true}
+      LAMBDA_LOG_GEO_REFRESH_HOURS: ${LAMBDA_LOG_GEO_REFRESH_HOURS:-168}
+      # A town and a network on top of the country, from the free DB-IP
+      # databases: about 130 MB on the data volume, refetched monthly, and
+      # nothing in memory because the files are mapped rather than read.
+      # Still nobody is asked about a visitor - the database comes here.
+      LAMBDA_LOG_GEO_PLACES: ${LAMBDA_LOG_GEO_PLACES:-true}
     sysctls:
       # lets the unprivileged user bind 80 and 443 inside its own network
       # namespace, so the server keeps running as uid 1001

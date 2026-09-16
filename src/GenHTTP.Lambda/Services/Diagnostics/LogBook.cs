@@ -74,6 +74,48 @@ public sealed class LogBook
     public long Budget { get; }
 
     /// <summary>
+    /// How long identical lines are gathered together instead of each being
+    /// written. Zero writes every one.
+    /// </summary>
+    /// <remarks>
+    /// A scanner knocking on the same five paths every two seconds is not
+    /// fifteen hundred facts, it is five facts and a rate - and left alone it
+    /// fills the ring and pushes everything worth reading out of the far end.
+    /// Measured on this installation before it existed: the panel's own
+    /// polling was four lines in every five.
+    ///
+    /// What the window bounds is how stale a count may be, not how many are
+    /// folded into it. While one is open repeats are counted and nothing is
+    /// written; the next repeat after it closes is written once, carrying how
+    /// many it stands for. So a line already read never changes underneath
+    /// the reader - which is what lets this work at all with a cursor that
+    /// only ever moves forwards.
+    /// </remarks>
+    private TimeSpan Fold { get; }
+
+    /// <summary>
+    /// Runs of identical lines currently being gathered, by what makes them
+    /// identical.
+    /// </summary>
+    private Dictionary<string, Run> Runs { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// How many runs may be gathered at once. Past it, folding stops and lines
+    /// are written as they come - worse than folding, never worse than not
+    /// having it.
+    /// </summary>
+    private const int MostRuns = 4096;
+
+    private sealed class Run
+    {
+        public DateTime Opened;
+
+        public DateTime Last;
+
+        public int Held;
+    }
+
+    /// <summary>
     /// Where the oldest line sits in the array.
     /// </summary>
     private int Head { get; set; }
@@ -87,8 +129,14 @@ public sealed class LogBook
     /// How much memory the text in them may take. Zero takes the default,
     /// which is half a kilobyte of characters for every line of depth.
     /// </param>
-    public LogBook(int capacity = 4000, int megabytes = 0)
+    /// <param name="repeatWindow">
+    /// How long an identical line is folded into the one before it rather than
+    /// written again. Zero writes every line.
+    /// </param>
+    public LogBook(int capacity = 4000, int megabytes = 0, TimeSpan repeatWindow = default)
     {
+        Fold = repeatWindow > TimeSpan.Zero ? repeatWindow : TimeSpan.Zero;
+
         Capacity = Math.Clamp(capacity, 100, 1_000_000);
 
         Budget = megabytes > 0
@@ -124,9 +172,15 @@ public sealed class LogBook
     /// <summary>
     /// Writes a line and returns the sequence it was given.
     /// </summary>
+    /// <returns>
+    /// The sequence the line was given, or zero where it was folded into one
+    /// already written rather than written itself.
+    /// </returns>
     public long Append(string level, string source, string? lambda, string text, string? detail = null,
-                       string? client = null, string? agent = null)
+                       string? client = null, string? agent = null, string? country = null, string? place = null)
     {
+        var repeats = 1;
+
         // cut outside the lock: every request the server serves is logged, so
         // what is held here is held across all of them
         var at = DateTime.UtcNow;
@@ -139,6 +193,35 @@ public sealed class LogBook
 
         lock (Gate)
         {
+            if (Fold > TimeSpan.Zero)
+            {
+                var key = $"{level}\u0000{where}\u0000{lambda}\u0000{client}\u0000{said}";
+
+                if (Runs.TryGetValue(key, out var run))
+                {
+                    if (at - run.Opened < Fold)
+                    {
+                        // inside the window: counted, not written
+                        run.Held++;
+                        run.Last = at;
+
+                        return 0;
+                    }
+
+                    // the window closed, so this one is written and speaks for
+                    // the ones that were held back as well as itself
+                    repeats = run.Held + 1;
+
+                    run.Opened = at;
+                    run.Last = at;
+                    run.Held = 0;
+                }
+                else if (Runs.Count < MostRuns)
+                {
+                    Runs[key] = new Run { Opened = at, Last = at, Held = 0 };
+                }
+            }
+
             var seq = Next++;
 
             if (Count == Capacity)
@@ -147,7 +230,7 @@ public sealed class LogBook
                 Drop();
             }
 
-            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent);
+            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats);
 
             Lines[(Head + Count) % Capacity] = line;
 
@@ -197,6 +280,8 @@ public sealed class LogBook
 
         lock (Gate)
         {
+            Settle();
+
             cursor = Next - 1;
 
             var oldest = Next - Count;
@@ -270,6 +355,166 @@ public sealed class LogBook
 
     private static int Weigh(LogLine? line)
         => line == null ? 0 : line.Text.Length + (line.Detail?.Length ?? 0) + line.Source.Length;
+
+    /// <summary>
+    /// Writes out the counts of runs that have stopped, and forgets them.
+    /// </summary>
+    /// <remarks>
+    /// A run that is still going gets its count written by its next repeat.
+    /// One that has stopped never would, so the last few of a burst would sit
+    /// counted and unseen until the same line happened again - which for a
+    /// scanner that has moved on is never. Called on the way into a read,
+    /// because that is when somebody is there to care, and because the lock
+    /// is already held.
+    /// </remarks>
+    private void Settle()
+    {
+        if (Fold <= TimeSpan.Zero || Runs.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+
+        List<string>? done = null;
+
+        foreach (var (key, run) in Runs)
+        {
+            if (now - run.Opened < Fold)
+            {
+                continue;
+            }
+
+            if (run.Held > 0)
+            {
+                Write(run.Last, key, run.Held);
+
+                run.Held = 0;
+                run.Opened = now;
+            }
+            else if (now - run.Last > Fold + Fold)
+            {
+                // quiet for two windows: the run is over, and holding the key
+                // only costs memory
+                (done ??= []).Add(key);
+            }
+        }
+
+        if (done != null)
+        {
+            foreach (var key in done)
+            {
+                Runs.Remove(key);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes the tail of a finished run back out, from the key that made it.
+    /// </summary>
+    private void Write(DateTime at, string key, int repeats)
+    {
+        var parts = key.Split('\u0000');
+
+        if (parts.Length != 5)
+        {
+            return;
+        }
+
+        var seq = Next++;
+
+        if (Count == Capacity)
+        {
+            Drop();
+        }
+
+        var line = new LogLine(seq, at, parts[0], parts[1],
+                               parts[2].Length == 0 ? null : parts[2], parts[4], null,
+                               parts[3].Length == 0 ? null : parts[3], null, null, null, repeats);
+
+        Lines[(Head + Count) % Capacity] = line;
+
+        Count++;
+        Held += Weigh(line);
+
+        while (Count > 1 && Held > Budget)
+        {
+            Drop();
+        }
+    }
+
+    /// <summary>
+    /// Every caller the ring still holds, with what they have been doing.
+    /// </summary>
+    /// <remarks>
+    /// Over the whole ring rather than over the page somebody is looking at,
+    /// because the question this answers - who is out there and where from -
+    /// is about the run and not about the last screenful. One pass, under the
+    /// same lock as everything else, which at a million lines is a few
+    /// milliseconds: not something to do per request, and fine for a panel
+    /// that asks every second and a half.
+    ///
+    /// Grouped by address rather than by place: two callers in one town are
+    /// two callers, and it is the address that identifies one.
+    /// </remarks>
+    public IReadOnlyList<CallerSummary> Callers(int limit = 500)
+    {
+        var found = new Dictionary<string, Tally>(StringComparer.Ordinal);
+
+        lock (Gate)
+        {
+            for (var i = 0; i < Count; i++)
+            {
+                var line = Lines[(Head + i) % Capacity];
+
+                if (line?.Client == null)
+                {
+                    continue;
+                }
+
+                if (!found.TryGetValue(line.Client, out var tally))
+                {
+                    if (found.Count >= 20_000)
+                    {
+                        // a scan from more addresses than this is a number, not
+                        // a list, and building the list is the expensive part
+                        continue;
+                    }
+
+                    found[line.Client] = tally = new Tally { First = line.At };
+                }
+
+                tally.Lines += line.Repeats;
+                tally.Last = line.At;
+
+                if (line.Level is "error" or "critical")
+                {
+                    tally.Failed += line.Repeats;
+                }
+
+                tally.Place ??= line.Place;
+                tally.Country ??= line.Country;
+                tally.Agent ??= line.Agent;
+            }
+        }
+
+        return found.OrderByDescending(e => e.Value.Lines)
+                    .Take(Math.Clamp(limit, 1, 5000))
+                    .Select(e => new CallerSummary(e.Key, e.Value.Place, e.Value.Country, e.Value.Agent,
+                                                   e.Value.Lines, e.Value.Failed, e.Value.First, e.Value.Last))
+                    .ToList();
+    }
+
+    private sealed class Tally
+    {
+        public string? Place;
+        public string? Country;
+        public string? Agent;
+        public long Lines;
+        public long Failed;
+        public DateTime First;
+        public DateTime Last;
+    }
 
     /// <summary>
     /// The level names as they are served, lowest first.

@@ -33,6 +33,11 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// about itself, which is to say it tells a crawler from a browser and proves
 /// nothing.
 /// </param>
+/// <param name="Country">
+/// The two letter code the caller's range is registered under, where it is
+/// known. The registration of the range, not the location of the person - see
+/// <see cref="GeoTable"/>.
+/// </param>
 public sealed record LogLine(
     long Seq,
     DateTime At,
@@ -42,5 +47,29 @@ public sealed record LogLine(
     string Text,
     string? Detail,
     string? Client = null,
-    string? Agent = null
+    string? Agent = null,
+    string? Country = null,
+    string? Place = null,
+    /// <summary>
+    /// How many identical lines this one stands for. One is itself alone.
+    /// </summary>
+    int Repeats = 1
+);
+
+/// <summary>
+/// One caller, and everything the log still holds about them.
+/// </summary>
+/// <param name="Lines">
+/// Counting folded lines by what they stand for rather than as one, so this is
+/// requests and not rows.
+/// </param>
+public sealed record CallerSummary(
+    string Client,
+    string? Place,
+    string? Country,
+    string? Agent,
+    long Lines,
+    long Failed,
+    DateTime First,
+    DateTime Last
 );

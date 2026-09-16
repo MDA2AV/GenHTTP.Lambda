@@ -223,6 +223,60 @@ public sealed record LambdaOptions
     public int MaxOutputLines { get; init; } = 200;
 
     /// <summary>
+    /// How long identical lines are gathered into one rather than each being
+    /// written. Zero writes every one.
+    /// </summary>
+    /// <remarks>
+    /// The same request, from the same caller, answered the same way, is one
+    /// fact and a rate. Ten seconds is short enough that a burst is still
+    /// visible as it happens and long enough that a scanner knocking twice a
+    /// second becomes one line rather than twenty.
+    /// </remarks>
+    public TimeSpan RepeatWindow { get; init; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Whether log lines say which country the caller's address belongs to.
+    /// </summary>
+    /// <remarks>
+    /// Read from the delegation files the regional registries publish, which
+    /// are fetched on an interval and cached on the data volume. No third
+    /// party is asked anything: doing this by lookup would mean handing
+    /// somebody else the address of every visitor.
+    ///
+    /// It answers where a range is registered, which is not always where the
+    /// person using it is. Off, and nothing is downloaded at all.
+    /// </remarks>
+    public bool Geo { get; init; } = true;
+
+    /// <summary>
+    /// Whether the city and network databases are fetched as well.
+    /// </summary>
+    /// <remarks>
+    /// The registries say which country delegated a range and are exact about
+    /// it. This is the other kind of answer: a guess by a third party, from
+    /// measurement, that names a town and an internet provider. Right about
+    /// most consumer connections and wrong about most infrastructure.
+    ///
+    /// It costs about a hundred and thirty megabytes on the data volume,
+    /// refetched monthly, and nothing in memory - the files are mapped rather
+    /// than read. Still nobody is asked about a visitor: the database comes
+    /// here and the lookups happen here.
+    ///
+    /// Data by DB-IP under CC BY 4.0, which the panel credits.
+    /// </remarks>
+    public bool GeoPlaces { get; init; } = true;
+
+    /// <summary>
+    /// How often the registry files are asked for again.
+    /// </summary>
+    /// <remarks>
+    /// They are published daily and change slowly, so weekly is frequent
+    /// enough to stay useful and rare enough to be a good neighbour to
+    /// somebody else's public FTP.
+    /// </remarks>
+    public TimeSpan GeoRefresh { get; init; } = TimeSpan.FromDays(7);
+
+    /// <summary>
     /// Whether the address a request came from is recorded against its lines.
     /// </summary>
     /// <remarks>
@@ -348,6 +402,10 @@ public sealed record LambdaOptions
             CaptureLambdaOutput = ReadBool("LAMBDA_LOG_LAMBDA_OUTPUT", defaults.CaptureLambdaOutput),
             MaxOutputLines = ReadInt("LAMBDA_LOG_MAX_LINES_PER_REQUEST", defaults.MaxOutputLines),
             LogClientAddress = ReadBool("LAMBDA_LOG_CLIENT_ADDRESS", defaults.LogClientAddress),
+            RepeatWindow = TimeSpan.FromSeconds(ReadInt("LAMBDA_LOG_REPEAT_WINDOW_SECONDS", (int)defaults.RepeatWindow.TotalSeconds)),
+            Geo = ReadBool("LAMBDA_LOG_GEO", defaults.Geo),
+            GeoPlaces = ReadBool("LAMBDA_LOG_GEO_PLACES", defaults.GeoPlaces),
+            GeoRefresh = TimeSpan.FromHours(ReadInt("LAMBDA_LOG_GEO_REFRESH_HOURS", (int)defaults.GeoRefresh.TotalHours)),
             SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", defaults.SecurePort),
             CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),

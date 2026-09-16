@@ -6,14 +6,23 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// Files everything the server logs into the book as well as onto the console.
 /// </summary>
 /// <remarks>
-/// A provider beside the console one rather than a reader of it: the record
-/// still has its level, its category and its exception here, and reconstructing
-/// those from a formatted console line would be guesswork.
+/// It writes the console line as well, rather than sitting beside a provider
+/// that does.
+///
+/// That is not tidiness. The tee over the console has to copy what the engine
+/// prints - which is how anyone ever sees a reactor faulting - without copying
+/// the console logger's own output, or every record would be in the book
+/// twice. Which of those happens depends on whether that logger captured
+/// Console.Out before or after the tee replaced it, and arranging to be on the
+/// right side of that turned out to deadlock. So the console logger is gone
+/// and this writes the line itself, to a writer taken before the tee existed:
+/// a record goes to the book as a record and to the console as a line, and
+/// neither can become the other.
 /// </remarks>
-public sealed class LogBookProvider(LogBook book) : ILoggerProvider
+public sealed class LogBookProvider(LogBook book, TextWriter? console = null, LogLevel minimum = LogLevel.Information) : ILoggerProvider
 {
 
-    public ILogger CreateLogger(string categoryName) => new BookLogger(book, Shorten(categoryName));
+    public ILogger CreateLogger(string categoryName) => new BookLogger(book, Shorten(categoryName), console, minimum);
 
     public void Dispose() { }
 
@@ -27,7 +36,7 @@ public sealed class LogBookProvider(LogBook book) : ILoggerProvider
         return cut >= 0 && cut < category.Length - 1 ? category[(cut + 1)..] : category;
     }
 
-    private sealed class BookLogger(LogBook book, string source) : ILogger
+    private sealed class BookLogger(LogBook book, string source, TextWriter? console, LogLevel minimum) : ILogger
     {
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -73,7 +82,28 @@ public sealed class LogBookProvider(LogBook book) : ILoggerProvider
             // served, belongs under it as well as in the general run - and
             // carries whoever was being answered at the time
             book.Append(LogBook.NameOf(level), source, LambdaOutput.Ambient?.PublicKey, text, error?.ToString(),
-                        caller?.Client, caller?.Agent);
+                        caller?.Client, caller?.Agent, caller?.Country, caller?.Place);
+
+            if (console == null || level < minimum)
+            {
+                return;
+            }
+
+            try
+            {
+                // the same shape the console logger wrote, so whatever reads
+                // these logs does not have to learn a new one
+                console.WriteLine($"{DateTime.Now:HH:mm:ss} {LogBook.NameOf(level)}: {source}[{id.Id}] {text}");
+
+                if (error != null)
+                {
+                    console.WriteLine(error.ToString());
+                }
+            }
+            catch (Exception)
+            {
+                // a console that has gone away is not a reason to stop serving
+            }
         }
 
     }

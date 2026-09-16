@@ -137,6 +137,24 @@ export const IconSpinner = ({ className = 'h-4 w-4' }: IconProps) => (
   </svg>
 );
 
+/** A globe, for the callers and where they are. */
+export const IconGlobe = ({ className = 'h-4 w-4' }: IconProps) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z" />
+  </svg>
+);
+
+/** Stacked sheets, for folding identical lines into one. */
+export const IconLayers = ({ className = 'h-4 w-4' }: IconProps) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke}>
+    <path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z" />
+    <path d="m4 12 8 4.5 8-4.5" />
+    <path d="m4 16.5 8 4.5 8-4.5" />
+  </svg>
+);
+
 export function IconDownload(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"

@@ -42,7 +42,7 @@ public static class Caller
 /// <summary>
 /// The parts of a request worth keeping against every line it causes.
 /// </summary>
-public sealed record CallerInfo(string? Client, string? Agent, string Method, string Path)
+public sealed record CallerInfo(string? Client, string? Agent, string Method, string Path, string? Country = null, string? Place = null)
 {
 
     /// <summary>
@@ -54,7 +54,7 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
     /// face value would let anyone put any address in this log, and ignoring
     /// it would name the proxy on every line of a proxied installation.
     /// </remarks>
-    public static CallerInfo From(IRequest request, StringPool pool, bool addresses)
+    public static CallerInfo From(IRequest request, StringPool pool, bool addresses, GeoTable? geo = null, GeoPlaces? places = null)
     {
         string? client = null;
 
@@ -71,7 +71,13 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
             pool.Share(client),
             pool.Share(Trim(request.Header.Headers.GetEntry("User-Agent"), 200)),
             request.Header.Method.ToString(),
-            request.Header.Path.ToString()
+            request.Header.Path.ToString(),
+            // looked up once here rather than per line, and the codes are
+            // already shared by the table that produced them
+            geo?.CountryOf(client),
+            // a town and a network, where a database has one. Pooled: a busy
+            // server sees the same few hundred callers over and over
+            pool.Share(Empty(places?.Find(client)?.Describe()))
         );
     }
 
@@ -102,6 +108,8 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
 
         return Trim(cut < 0 ? forwarded : forwarded[..cut], 60);
     }
+
+    private static string? Empty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
     private static string? Trim(string? value, int most)
     {

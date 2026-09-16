@@ -279,6 +279,31 @@ export interface LogEntry {
   client?: string;
   /** What the caller said it was. */
   agent?: string;
+  /**
+   * Two letter code of the registry the caller's range is allocated under.
+   * Where the range is registered, which is not always where the caller is.
+   */
+  country?: string;
+  /**
+   * A town and a network, where a database has one — "Aveiro, PT · MEO". A
+   * guess from measurement, not a fact from a registry.
+   */
+  place?: string;
+  /** How many identical lines this one stands for; 1 is itself alone. */
+  repeats: number;
+}
+
+/** One caller the log still holds something about. */
+export interface LogCaller {
+  client: string;
+  place?: string;
+  country?: string;
+  agent?: string;
+  /** Requests, counting a folded line by what it stands for. */
+  lines: number;
+  failed: number;
+  first: string;
+  last: string;
 }
 
 /** How the run before this one ended, when it did not end cleanly. */
@@ -438,6 +463,10 @@ export const api = {
 
     return request<LogPage>(`/logs?${query}`, withToken(token));
   },
+
+  /** Everyone the log still holds something about, busiest first. */
+  logCallers: (token: string, limit = 500) =>
+    request<LogCaller[]>(`/logs/callers?limit=${limit}`, withToken(token)),
 
   telemetry: (minutes: number, token: string) =>
     request<Telemetry>(`/telemetry?minutes=${minutes}&days=30`, withToken(token)),

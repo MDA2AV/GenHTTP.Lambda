@@ -356,6 +356,314 @@ public sealed class LogTests
 
     #endregion
 
+    [TestMethod]
+    public void WhatTheEngineItselfPrintsIsKept()
+    {
+        var book = new LogBook(1000);
+
+        LambdaOutput.Adopt(book);
+        ConsoleTee.Install();
+
+        // the shape the ioxide engine writes: straight to the console, no
+        // logger, no lambda being served
+        Console.WriteLine("[r0] listening on 0.0.0.0:80,443 (incremental=False)");
+        Console.WriteLine("[r1] connection handler faulted: FlushAsync already in progress.");
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.IsTrue(lines.Any(l => l.Text.Contains("[r0] listening")), "a reactor coming up");
+        Assert.IsTrue(lines.Any(l => l.Text.Contains("[r1] connection handler faulted")),
+                      "and one faulting, which is the whole reason to want these");
+
+        Assert.IsTrue(lines.All(l => l.Lambda == null), "none of it belongs to a lambda");
+        Assert.IsTrue(lines.All(l => l.Source is "stdout" or "stderr"));
+    }
+
+    [TestMethod]
+    public void ARecordIsKeptOnceRatherThanAlsoAsConsoleOutput()
+    {
+        var book = new LogBook(1000);
+
+        LambdaOutput.Adopt(book);
+        ConsoleTee.Install();
+
+        // the console the provider writes to is taken before the tee, so its
+        // line goes to the console and not back through the tee
+        using var loggers = LoggerFactory.Create(b => b.AddProvider(new LogBookProvider(book, TextWriter.Null)));
+
+        loggers.CreateLogger("Probe").LogInformation("said once");
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(1, lines.Count(l => l.Text == "said once"));
+    }
+
+    #region Folding what repeats
+
+    [TestMethod]
+    public void IdenticalLinesAreGatheredRatherThanWrittenAgain()
+    {
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromMinutes(5));
+
+        for (var i = 0; i < 500; i++)
+        {
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        }
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(1, lines.Count, "five hundred of the same thing is one fact and a rate");
+        Assert.AreEqual(1, lines[0].Repeats, "the window has not closed, so nothing has been counted out yet");
+    }
+
+    [TestMethod]
+    public void TheCountIsWrittenOutWhenTheWindowCloses()
+    {
+        // a window already past, so the next repeat closes it
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromTicks(1));
+
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+
+        for (var i = 0; i < 9; i++)
+        {
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        }
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(10, lines.Sum(l => l.Repeats), "every request is accounted for, written or folded");
+    }
+
+    [TestMethod]
+    public void ARunThatStopsStillOwesItsCount()
+    {
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromMilliseconds(40));
+
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+
+        Thread.Sleep(80);
+
+        // nothing more arrives; reading is what closes it out
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(3, lines.Sum(l => l.Repeats),
+                        "a scanner that has moved on would otherwise leave its last few counted and unseen");
+    }
+
+    [TestMethod]
+    public void DifferentCallersDoingTheSameThingStayApart()
+    {
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromMinutes(5));
+
+        for (var i = 0; i < 20; i++)
+        {
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "198.51.100.4");
+        }
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(2, lines.Count, "which of them is doing it is the question");
+    }
+
+    [TestMethod]
+    public void NothingIsFoldedWhenTheWindowIsZero()
+    {
+        var book = new LogBook(1000);
+
+        for (var i = 0; i < 50; i++)
+        {
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        }
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(50, lines.Count);
+    }
+
+    [TestMethod]
+    public void EveryCallerIsSummarised()
+    {
+        var book = new LogBook(1000);
+
+        for (var i = 0; i < 30; i++)
+        {
+            book.Append("info", "Requests", null, $"GET /a/{i} — 200", null, "203.0.113.7", null, "PT", "Aveiro, PT · MEO");
+        }
+
+        book.Append("error", "Requests", null, "GET /b — 500", null, "198.51.100.4", null, "US", "Atlanta, US");
+        book.Append("info", "Requests", null, "GET /c — 200", null, "198.51.100.4", null, "US", "Atlanta, US");
+        book.Append("info", "Startup", null, "no caller here");
+
+        var callers = book.Callers();
+
+        Assert.AreEqual(2, callers.Count, "lines with no address are not a caller");
+
+        Assert.AreEqual("203.0.113.7", callers[0].Client, "busiest first");
+        Assert.AreEqual(30, callers[0].Lines);
+        Assert.AreEqual("Aveiro, PT · MEO", callers[0].Place);
+        Assert.AreEqual(0, callers[0].Failed);
+
+        Assert.AreEqual(2, callers[1].Lines);
+        Assert.AreEqual(1, callers[1].Failed, "and what went wrong for them");
+    }
+
+    [TestMethod]
+    public void ASummaryCountsWhatAFoldedLineStandsFor()
+    {
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromTicks(1));
+
+        for (var i = 0; i < 40; i++)
+        {
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        }
+
+        var callers = book.Callers();
+
+        Assert.AreEqual(1, callers.Count);
+        Assert.AreEqual(40, callers[0].Lines, "requests, not rows");
+    }
+
+    #endregion
+
+    #region Where a caller is registered
+
+    /// <summary>
+    /// A few rows in the format the registries publish, enough to test the
+    /// lookup without downloading fifty megabytes.
+    /// </summary>
+    private static readonly string[] Delegations =
+    [
+        "2.0|ripencc|1746057600|100|19830101|20260101|+0000",
+        "ripencc|*|ipv4|*|100782|summary",
+        "ripencc|AT|ipv4|152.53.0.0|65536|20220301|allocated|abc",
+        "ripencc|GB|ipv4|74.0.0.0|16777216|19910101|allocated|def",
+        "ripencc|PT|ipv6|2001:8a0::|29|20040101|allocated|ghi",
+        "ripencc|DE|ipv6|2a0a:4cc0::|29|20160101|allocated|jkl",
+        "arin|US|ipv4|8.8.8.0|256|20140101|assigned|mno",
+        "ripencc|XX|ipv4|9.9.9.0|256|20140101|reserved|pqr",
+    ];
+
+    [TestMethod]
+    public void AnAddressIsPlacedByTheRangeItBelongsTo()
+    {
+        var table = new GeoTable();
+
+        table.Load(Delegations);
+
+        Assert.AreEqual("AT", table.CountryOf("152.53.120.139"), "somewhere inside the range, not its first address");
+        Assert.AreEqual("AT", table.CountryOf("152.53.0.0"), "the first address of the range");
+        Assert.AreEqual("AT", table.CountryOf("152.53.255.255"), "the last one");
+        Assert.AreEqual("GB", table.CountryOf("74.7.227.5"));
+        Assert.AreEqual("US", table.CountryOf("8.8.8.8"), "assigned counts as well as allocated");
+    }
+
+    [TestMethod]
+    public void AnIPv6AddressIsPlacedTheSameWay()
+    {
+        var table = new GeoTable();
+
+        table.Load(Delegations);
+
+        Assert.AreEqual("PT", table.CountryOf("2001:8a0:d7a7:1e00:6b5b:90c1:bca4:c586"));
+        Assert.AreEqual("DE", table.CountryOf("2a0a:4cc0:c0:4fc0:54d0:b1ff:fe46:c896"));
+    }
+
+    [TestMethod]
+    public void WhatIsNotDelegatedHasNoCountry()
+    {
+        var table = new GeoTable();
+
+        table.Load(Delegations);
+
+        Assert.IsNull(table.CountryOf("10.0.0.5"), "private space is nobody's");
+        Assert.IsNull(table.CountryOf("127.0.0.1"), "nor is loopback");
+        Assert.IsNull(table.CountryOf("9.9.9.9"), "reserved is not a delegation");
+        Assert.IsNull(table.CountryOf("152.52.255.255"), "one below a range is outside it");
+        Assert.IsNull(table.CountryOf("not an address"));
+        Assert.IsNull(table.CountryOf(null));
+    }
+
+    [TestMethod]
+    public void AnEmptyTableAnswersNothingRatherThanFailing()
+    {
+        var table = new GeoTable();
+
+        Assert.AreEqual(0, table.Ranges);
+        Assert.IsNull(table.CountryOf("152.53.120.139"), "before anything has been downloaded");
+    }
+
+    [TestMethod]
+    public void AForwardedCallerIsPlacedByWhatItClaimed()
+    {
+        var table = new GeoTable();
+
+        table.Load(Delegations);
+
+        // recorded as "<claimed> via <peer>"; the claim is the one being placed
+        Assert.AreEqual("GB", table.CountryOf("74.7.227.5 via 152.53.120.139"));
+    }
+
+    [TestMethod]
+    public void AnIPv4MappedAddressIsPlacedAsIPv4()
+    {
+        var table = new GeoTable();
+
+        table.Load(Delegations);
+
+        // what a v4 client looks like arriving on a dual stack socket
+        Assert.AreEqual("AT", table.CountryOf("::ffff:152.53.120.139"));
+    }
+
+    [TestMethod]
+    public void WithNoDatabaseNothingIsClaimed()
+    {
+        using var places = new GeoPlaces();
+
+        Assert.IsFalse(places.Ready, "before anything has been downloaded");
+        Assert.IsNull(places.Find("152.53.120.139"));
+        Assert.IsNull(places.Find(null));
+        Assert.IsNull(places.Find("not an address"));
+    }
+
+    [TestMethod]
+    public void AMissingOrBrokenDatabaseIsNotAnError()
+    {
+        using var places = new GeoPlaces();
+
+        // a path that is not there, and one that is there but is not a database
+        var rubbish = Path.Combine(Path.GetTempPath(), $"not-a-database-{Guid.NewGuid():n}.mmdb");
+
+        File.WriteAllText(rubbish, "this is not the MaxMind DB format");
+
+        try
+        {
+            places.Open("/does/not/exist.mmdb", rubbish, null);
+
+            Assert.IsNull(places.Find("152.53.120.139"), "a server does not stop answering because a database is bad");
+        }
+        finally
+        {
+            File.Delete(rubbish);
+        }
+    }
+
+    [TestMethod]
+    public void OneLineOfIt()
+    {
+        Assert.AreEqual("Aveiro, PT · MEO", new Place("Aveiro", null, "PT", "MEO").Describe());
+        Assert.AreEqual("Aveiro, PT", new Place("Aveiro", null, "PT", null).Describe());
+        Assert.AreEqual("MEO", new Place(null, null, null, "MEO").Describe());
+        Assert.AreEqual("", new Place(null, null, null, null).Describe());
+
+        // a city that shares its name with its region is said once
+        Assert.AreEqual("Lisbon, PT · MEO", new Place("Lisbon", "Lisbon", "PT", "MEO").Describe());
+    }
+
+    #endregion
+
     #region The route
 
     [TestMethod]
@@ -413,6 +721,33 @@ public sealed class LogTests
 
         Assert.IsNotNull(printed);
         Assert.IsNotNull(printed.Client, "a print is attributable to the request that caused it");
+    }
+
+    [TestMethod]
+    public async Task ReadingTheLogDoesNotFillTheLog()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        using var first = await Send(fixture, "/api/v1/logs", Token);
+
+        var before = fixture.Book.Written;
+
+        for (var i = 0; i < 5; i++)
+        {
+            using var poll = await Send(fixture, "/api/v1/logs", Token);
+        }
+
+        var (lines, _, _) = fixture.Book.Read(0, null, LogLevel.Information, 50_000);
+
+        Assert.IsFalse(lines.Any(l => l.Source == "Requests" && l.Text.Contains("/api/v1/logs")),
+                       "the panel polls every second and a half; a line each would be most of the ring");
+
+        // and a request that is not the log being read is still recorded
+        using var other = await fixture.GetAsync("/api/v1/system");
+
+        var (after, _, _) = fixture.Book.Read(0, null, LogLevel.Information, 50_000);
+
+        Assert.IsTrue(after.Any(l => l.Source == "Requests" && l.Text.Contains("/api/v1/system")));
     }
 
     [TestMethod]

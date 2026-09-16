@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { useAdminToken } from '../admin';
-import { ApiError, api, type LogEntry, type PreviousRun } from '../api';
-import { IconPlay, IconStop, IconDownload, IconTrash, IconSpinner } from '../components/Icons';
+import { ApiError, api, type LogCaller, type LogEntry, type PreviousRun } from '../api';
+import { IconPlay, IconStop, IconDownload, IconTrash, IconSpinner, IconLayers, IconGlobe } from '../components/Icons';
 import { Locked } from '../components/Locked';
 
 /**
@@ -82,6 +82,47 @@ const TINT: Record<string, string> = {
   critical: 'text-red-700 dark:text-red-300',
 };
 
+/**
+ * Which protocol a caller arrived over, read off the address itself.
+ *
+ * Colons mean IPv6; there is nothing else it could be. Worth saying on every
+ * line rather than leaving to be inferred from the shape - the two families
+ * are different lengths, sort differently and, until the network was given
+ * IPv6 of its own, behaved differently, so knowing which one a request took
+ * is part of reading it.
+ */
+function family(client?: string): 'v4' | 'v6' | null {
+  if (client == null) {
+    return null;
+  }
+
+  // a forwarded caller is recorded as "<claimed> via <peer>"; the claim is
+  // the one being described
+  return client.split(' via ')[0].includes(':') ? 'v6' : 'v4';
+}
+
+/**
+ * An address short enough to sit in a column beside the other family.
+ *
+ * A v4 address is fifteen characters at most and a v6 one is thirty-nine, so
+ * showing both in full means either a column wide enough for the longer - most
+ * of it empty most of the time - or one that resizes and makes every line jump
+ * as the traffic changes. The head and tail of a v6 address identify it to a
+ * reader; the whole of it is on the title, and clicking still filters by the
+ * whole of it.
+ */
+function brief(client: string): string {
+  const claim = client.split(' via ')[0];
+
+  if (!claim.includes(':')) {
+    return client;
+  }
+
+  const groups = claim.split(':').filter((g) => g !== '');
+
+  return groups.length > 3 ? `${groups[0]}:${groups[1]}…${groups[groups.length - 1]}` : claim;
+}
+
 const SHORT: Record<string, string> = {
   trace: 'TRC',
   debug: 'DBG',
@@ -115,6 +156,9 @@ export function Logs() {
   const [opened, setOpened] = useState<number | null>(null);
   const [find, setFind] = useState('');
   const [held, setHeld] = useState(DEFAULT_WINDOW);
+  const [fold, setFold] = useState(false);
+  const [callers, setCallers] = useState<LogCaller[] | null>(null);
+  const [showCallers, setShowCallers] = useState(false);
   const [addresses, setAddresses] = useState(true);
 
   // the lambda and the level live in the address, so a link from the lambda
@@ -181,6 +225,22 @@ export function Logs() {
     }
   }, [token, lambda, level, client, held]);
 
+  useEffect(() => {
+    if (!showCallers || token === '') {
+      return;
+    }
+
+    const read = () => api.logCallers(token).then(setCallers).catch(() => setCallers(null));
+
+    read();
+
+    // far slower than the tail: this walks the whole ring, and who is out
+    // there changes by the minute rather than by the second
+    const timer = window.setInterval(read, 15000);
+
+    return () => window.clearInterval(timer);
+  }, [showCallers, token]);
+
   // a change of filter is a different question, so the answer starts over
   // rather than appending lines from one query onto lines from another
   useEffect(() => {
@@ -219,16 +279,49 @@ export function Logs() {
   const shown = useMemo(() => {
     const { must, not } = parse(find);
 
-    if (must.length === 0 && not.length === 0) {
-      return lines;
-    }
+    const matched = must.length === 0 && not.length === 0 ? lines : lines.filter((l) => {
+      // the protocol is searchable too, so !ipv6 is a filter like any other
+      const kind = family(l.client);
 
-    return lines.filter((l) => {
-      const hay = `${l.text} ${l.source} ${l.lambda ?? ''} ${l.client ?? ''} ${l.agent ?? ''}`.toLowerCase();
+      const hay = `${l.text} ${l.source} ${l.lambda ?? ''} ${l.client ?? ''} ${l.agent ?? ''} ${
+        l.country ?? ''
+      } ${l.place ?? ''} ${kind === null ? '' : `ip${kind} ip${kind === 'v4' ? '4' : '6'}`}`.toLowerCase();
 
       return must.every((w) => hay.includes(w)) && !not.some((w) => hay.includes(w));
     });
-  }, [lines, find]);
+
+    if (!fold) {
+      return matched;
+    }
+
+    /*
+     * One row per distinct line, carrying how many there were.
+     *
+     * Walked backwards so each survivor sits where it last happened rather
+     * than where it first did: a log is read from the bottom, and a request
+     * that has been repeating for an hour belongs at the end of the list
+     * beside everything else that just happened, not at the top where it
+     * started. The same line from two callers stays two rows, because which
+     * of them is doing it is usually the question.
+     */
+    const seen = new Map<string, LogEntry>();
+
+    for (let i = matched.length - 1; i >= 0; i--) {
+      const line = matched[i];
+      const key = `${line.level}\u0000${line.source}\u0000${line.lambda ?? ''}\u0000${line.client ?? ''}\u0000${line.text}`;
+      const already = seen.get(key);
+
+      if (already) {
+        // the server folds within its own window and says how many each line
+        // stands for, so these are summed rather than counted
+        already.repeats += line.repeats ?? 1;
+      } else {
+        seen.set(key, { ...line, repeats: line.repeats ?? 1 });
+      }
+    }
+
+    return [...seen.values()].reverse();
+  }, [lines, find, fold]);
 
   function only(key: 'lambda' | 'client', to: string) {
     const next = new URLSearchParams(params);
@@ -301,6 +394,32 @@ export function Logs() {
           <button type="button" onClick={save} className="btn-ghost" disabled={shown.length === 0} title="Save what is on screen">
             <IconDownload className="h-4 w-4" />
             Save
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowCallers((was) => !was)}
+            className={`btn-ghost ${showCallers ? 'bg-accent-500/10 dark:bg-accent-400/10' : ''}`}
+            title="Everyone the log still holds something about, and where from"
+            aria-pressed={showCallers}
+          >
+            <IconGlobe className="h-4 w-4" />
+            Callers
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFold((was) => !was)}
+            className={`btn-ghost ${fold ? 'bg-accent-500/10 dark:bg-accent-400/10' : ''}`}
+            title={
+              fold
+                ? 'Showing one row per distinct line, with how many there were'
+                : 'Collapse lines that are the same — same request, same caller, same answer'
+            }
+            aria-pressed={fold}
+          >
+            <IconLayers className="h-4 w-4" />
+            {fold ? 'Folded' : 'Fold repeats'}
           </button>
 
           <button
@@ -404,7 +523,14 @@ export function Logs() {
             onChange={(event) => setFind(event.target.value)}
             placeholder="Find — !word excludes"
             aria-label="Find. Bare words must appear, a word after an exclamation mark must not, quotes keep a phrase together."
-            title={'Bare words must all appear.\n!word excludes it.\n"two words" keeps the phrase together.\nMatches the text, the source, the lambda and the caller.'}
+            title={
+              'Bare words must all appear.\n' +
+              '!word excludes it.\n' +
+              '"two words" keeps the phrase together.\n' +
+              'Matches the text, the source, the lambda, the caller, its country\n' +
+              'and the protocol — so ipv6 keeps only those, PT keeps one country,\n' +
+              'and !ipv4 drops the rest.'
+            }
             className="field w-64 text-sm"
           />
         </div>
@@ -429,6 +555,64 @@ export function Logs() {
           <p className="mt-1 text-xs text-slate-500">
             Nothing above this point is from that run — the log is held in memory. The container’s stdout has it.
           </p>
+        </div>
+      )}
+
+      {showCallers && (
+        <div className="surface mt-4 overflow-x-auto">
+          <table className="w-full min-w-[46rem] text-left text-sm">
+            <thead className="border-b border-grey-300 text-xs uppercase tracking-wide text-slate-500 dark:border-ink-800">
+              <tr>
+                <th className="px-3 py-2 font-medium">Caller</th>
+                <th className="px-3 py-2 font-medium">Where</th>
+                <th className="px-3 py-2 text-right font-medium">Requests</th>
+                <th className="px-3 py-2 text-right font-medium">Failed</th>
+                <th className="px-3 py-2 font-medium">First seen</th>
+                <th className="px-3 py-2 font-medium">Last seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {callers === null ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-3 text-slate-500">
+                    <span className="inline-flex items-center gap-2">
+                      <IconSpinner /> Reading the whole log…
+                    </span>
+                  </td>
+                </tr>
+              ) : callers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-3 text-slate-500">
+                    Nothing with an address on it yet.
+                  </td>
+                </tr>
+              ) : (
+                callers.map((c) => (
+                  <tr key={c.client} className="border-b border-grey-300/40 last:border-0 dark:border-ink-800/60">
+                    <td className="px-3 py-1.5">
+                      <button
+                        type="button"
+                        onClick={() => only('client', c.client.split(' via ')[0])}
+                        title={[c.client, c.agent].filter(Boolean).join('\n')}
+                        className="font-mono text-xs text-accent-500 hover:underline dark:text-accent-400"
+                      >
+                        {c.client}
+                      </button>
+                    </td>
+                    <td className="px-3 py-1.5 text-slate-600 dark:text-slate-400">
+                      {c.place ?? c.country ?? <span className="text-slate-400">not known</span>}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{c.lines.toLocaleString()}</td>
+                    <td className={`px-3 py-1.5 text-right tabular-nums ${c.failed > 0 ? 'text-red-500' : 'text-slate-500'}`}>
+                      {c.failed.toLocaleString()}
+                    </td>
+                    <td className="px-3 py-1.5 text-slate-500">{new Date(c.first).toLocaleTimeString()}</td>
+                    <td className="px-3 py-1.5 text-slate-500">{new Date(c.last).toLocaleTimeString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -477,6 +661,15 @@ export function Logs() {
               >
                 <span className="shrink-0 text-grey-500 dark:text-grey-600">{clock(line.at)}</span>
 
+                {line.repeats > 1 && (
+                  <span
+                    className="shrink-0 rounded-sm bg-slate-200 px-1 text-[10px] font-semibold tabular-nums text-slate-700 dark:bg-ink-800 dark:text-grey-300"
+                    title="How many identical lines this one stands for"
+                  >
+                    ×{line.repeats.toLocaleString()}
+                  </span>
+                )}
+
                 <span className={`w-8 shrink-0 font-semibold ${TINT[line.level] ?? ''}`}>
                   {SHORT[line.level] ?? line.level}
                 </span>
@@ -506,25 +699,67 @@ export function Logs() {
                 <span className="shrink-0 text-grey-500 dark:text-grey-600">{line.source}</span>
 
                 {line.client != null && (
-                  <span
-                    role="link"
-                    tabIndex={0}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      // the hop, not the whole claim, is what narrows usefully
-                      only('client', line.client!.split(' via ')[0]);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') only('client', line.client!.split(' via ')[0]);
-                    }}
-                    title={line.agent ? `Only this caller · ${line.agent}` : 'Only this caller'}
-                    className="shrink-0 cursor-pointer text-grey-500 hover:text-accent-500 hover:underline dark:text-grey-600 dark:hover:text-accent-400"
-                  >
-                    {line.client}
+                  <span className="flex shrink-0 items-baseline gap-1">
+                    <span
+                      className={`w-5 shrink-0 text-[10px] font-semibold ${
+                        family(line.client) === 'v6'
+                          ? 'text-violet-600 dark:text-violet-400'
+                          : 'text-teal-700 dark:text-teal-400'
+                      }`}
+                      title={family(line.client) === 'v6' ? 'Arrived over IPv6' : 'Arrived over IPv4'}
+                    >
+                      {family(line.client)}
+                    </span>
+
+                    {/*
+                      * Where the range is registered. Held to two characters
+                      * whether or not there is an answer, so the addresses
+                      * beside it stay in one column.
+                      */}
+                    <span
+                      className="w-[2ch] shrink-0 text-grey-500 dark:text-grey-600"
+                      title={
+                        line.country
+                          ? `Registered in ${line.country} — where the address range is allocated, not necessarily where the caller is`
+                          : 'No registry entry for this address'
+                      }
+                    >
+                      {line.country ?? ''}
+                    </span>
+
+                    {/*
+                      * Fixed width, because the two families are different
+                      * lengths - an address can be fifteen characters or
+                      * thirty-nine - and a column that resizes to whichever
+                      * turned up makes the text beside it jump about. The
+                      * whole of it is on the title.
+                      */}
+                    <span
+                      role="link"
+                      tabIndex={0}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        // the hop, not the whole claim, is what narrows usefully
+                        only('client', line.client!.split(' via ')[0]);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') only('client', line.client!.split(' via ')[0]);
+                      }}
+                      title={[line.client, line.place, line.agent].filter(Boolean).join('\n')}
+                      className="w-[17ch] shrink-0 cursor-pointer truncate text-grey-500 hover:text-accent-500 hover:underline dark:text-grey-600 dark:hover:text-accent-400"
+                    >
+                      {brief(line.client)}
+                    </span>
                   </span>
                 )}
 
                 <span className="whitespace-pre-wrap break-all text-slate-800 dark:text-grey-200">{line.text}</span>
+
+                {line.place != null && (
+                  <span className="hidden shrink-0 truncate text-grey-500 xl:inline xl:max-w-[26ch] dark:text-grey-600" title={line.place}>
+                    {line.place}
+                  </span>
+                )}
 
                 {line.detail != null && (
                   <span className="ml-auto shrink-0 text-grey-500 dark:text-grey-600">
@@ -544,10 +779,23 @@ export function Logs() {
       </div>
 
       <p className="mt-2 text-xs text-slate-500">
-        {shown.length.toLocaleString()} of {lines.length.toLocaleString()} loaded, holding {held.toLocaleString()}
+        {shown.length.toLocaleString()} {fold ? 'distinct of' : 'of'} {lines.length.toLocaleString()} loaded, holding{' '}
+        {held.toLocaleString()}
         {following ? ' · following' : ' · paused'}
         {' · every line is also on the container’s stdout, which is what survives a restart'}
       </p>
+
+      {lines.some((l) => l.place != null) && (
+        <p className="mt-1 text-xs text-slate-500">
+          Places are where an address range is <em>registered or estimated</em>, not where anybody is — a VPN, a
+          phone on a roaming network and a cloud region all read as somewhere they are not. Country from the
+          regional registries; town and network by{' '}
+          <a href="https://db-ip.com" target="_blank" rel="noreferrer" className="underline hover:text-accent-500">
+            DB-IP
+          </a>{' '}
+          under CC BY 4.0.
+        </p>
+      )}
     </div>
   );
 }

@@ -36,6 +36,7 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
 
         <PackageReference Include="Evolve" />
+        <PackageReference Include="MaxMind.Db" />
 
     </ItemGroup>
 

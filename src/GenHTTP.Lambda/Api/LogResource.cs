@@ -49,7 +49,7 @@ public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options
         var (lines, cursor, missed) = book.Read(since ?? 0, Blank(lambda), Minimum(level), wanted, Blank(client));
 
         return new LogResponse(
-            lines.Select(l => new LogEntry(l.Seq, l.At, l.Level, l.Source, l.Lambda, l.Text, l.Detail, l.Client, l.Agent)).ToList(),
+            lines.Select(l => new LogEntry(l.Seq, l.At, l.Level, l.Source, l.Lambda, l.Text, l.Detail, l.Client, l.Agent, l.Country, l.Place, l.Repeats)).ToList(),
             cursor,
             missed,
             book.Capacity,
@@ -63,6 +63,23 @@ public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options
                                   last.Fault, last.WorkingSet, last.Requests, last.Sockets)
                 : null
         );
+    }
+
+    /// <summary>
+    /// Every caller the log still holds something about, busiest first.
+    /// </summary>
+    /// <remarks>
+    /// Its own route rather than part of the tail, because it is a pass over
+    /// the whole ring and the tail is asked for every second and a half.
+    /// </remarks>
+    [ResourceMethod("callers")]
+    public IReadOnlyList<LogCaller> GetCallers(int? limit, IRequest request)
+    {
+        AdminGate.Require(request, options);
+
+        return book.Callers(limit ?? 500)
+                   .Select(c => new LogCaller(c.Client, c.Place, c.Country, c.Agent, c.Lines, c.Failed, c.First, c.Last))
+                   .ToList();
     }
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

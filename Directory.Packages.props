@@ -16,6 +16,11 @@
 
         <PackageVersion Include="Evolve" Version="3.2.0" />
 
+        <!-- reads the MaxMind DB format, which is how the free DB-IP databases
+             ship: a memory mapped search trie rather than a table, so a
+             hundred and fifty megabyte file costs page cache and not heap -->
+        <PackageVersion Include="MaxMind.Db" Version="5.2.0" />
+
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
         <PackageVersion Include="MSTest" Version="4.4.0" />
 

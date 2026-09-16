@@ -79,7 +79,7 @@ public sealed class Application : IAsyncDisposable
     {
         Migrator.Migrate(options, loggers.CreateLogger<Application>());
 
-        return new Application(options, loggers, book ?? new LogBook(options.LogHistory, options.LogMemory),
+        return new Application(options, loggers, book ?? new LogBook(options.LogHistory, options.LogMemory, options.RepeatWindow),
                                runs ?? new RunLog(options.DataDirectory));
     }
 
@@ -92,6 +92,8 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton(book);
         services.AddSingleton(runs);
         services.AddSingleton<StringPool>();
+        services.AddSingleton<GeoTable>();
+        services.AddSingleton<GeoPlaces>();
 
         services.AddSingleton(loggers);
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
@@ -117,6 +119,7 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<IBackgroundJob, MaintenanceJob>();
         services.AddSingleton<IBackgroundJob, TelemetryJob>();
+        services.AddSingleton<IBackgroundJob, GeoJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();
@@ -209,6 +212,8 @@ public sealed class Application : IAsyncDisposable
                 */
                .Add(new CallerConcernBuilder(Services.GetRequiredService<LogBook>(),
                                              Services.GetRequiredService<StringPool>(),
+                                             Services.GetRequiredService<GeoTable>(),
+                                             Services.GetRequiredService<GeoPlaces>(),
                                              Options));
 
     /// <summary>
