@@ -83,6 +83,17 @@ static class World
     /// winning is a game that is over early. Ten seconds is long enough that
     /// it is a decision and short enough that it is not a last resort.
     /// </remarks>
+    /// <summary>
+    /// The most company an arena will keep.
+    /// </summary>
+    /// <remarks>
+    /// A hundred is a crowd rather than a handful, and the arena grows to hold
+    /// them - it is sized by how many are in it, so a full house is about nine
+    /// thousand across with ten thousand pellets on the floor rather than
+    /// three and a half thousand with fifteen hundred.
+    /// </remarks>
+    public const int Crowd = 100;
+
     public const double WarpEvery = 10.0;
 
     /// <summary>

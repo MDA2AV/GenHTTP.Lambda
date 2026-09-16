@@ -1016,7 +1016,7 @@ $('again').onclick = () => connect($('name').value);
 $('crowd').onclick = () => {
   if (socket?.readyState !== 1) return;
 
-  socket.send(JSON.stringify({ kind: 'fill', count: 4 }));
+  socket.send(JSON.stringify({ kind: 'fill', count: 10 }));
 };
 
 $('carry').onclick = () => {

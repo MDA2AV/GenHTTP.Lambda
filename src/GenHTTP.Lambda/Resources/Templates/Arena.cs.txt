@@ -737,7 +737,7 @@ void Populate(int wanted)
 {
     var names = new[] { "Mote", "Husk", "Drift", "Cinder", "Wisp", "Ember", "Shard", "Vessel", "Plume", "Quill", "Ash", "Fleck" };
 
-    for (var i = 0; i < wanted && bots.Count < 12; i++)
+    for (var i = 0; i < wanted && bots.Count < World.Crowd; i++)
     {
         var spot = Somewhere();
 
@@ -1810,7 +1810,7 @@ var socket = Websocket.Functional()
                           {
                               var asked = JsonSerializer.Deserialize<Fill>(text, json);
 
-                              Populate(Math.Clamp(asked?.Count ?? 3, 1, 12));
+                              Populate(Math.Clamp(asked?.Count ?? 10, 1, World.Crowd));
 
                               return;
                           }
