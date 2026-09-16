@@ -348,13 +348,26 @@ async function run(job) {
    * "My Lambda / It works". That was reported as a success, with a link,
    * to somebody who had asked for a game.
    */
+  /*
+   * Why it wrote nothing matters. A build that cannot sign in dies in a
+   * second or two having done nothing at all, and telling that person to
+   * "try asking for something smaller" blames their prompt for this server's
+   * expired credentials - which is what it did, to everybody who used the
+   * page, for the twelve hours the token was stale.
+   */
+  const unauthorised = /authenticat|oauth|401|revoked|invalid api key|credit balance/i
+    .test(`${summary} ${stderr}`);
+
   if (!job.key && !wrote) {
     job.state = 'failed';
     job.result = {
       ok: false,
-      error: 'It ran out of time before it wrote anything. Try asking for something smaller, or '
-           + 'ask again - it gets further some runs than others.',
-      detail: clip(summary, 400),
+      error: unauthorised
+        ? 'The builder could not sign in, so nothing ran. That is this server\u2019s credentials '
+        + 'rather than anything about what you asked for.'
+        : 'It ran out of time before it wrote anything. Try asking for something smaller, or '
+        + 'ask again - it gets further some runs than others.',
+      detail: clip(summary || stderr, 400),
       publicKey: created?.publicKey,
       privateKey: created?.privateKey
     };
