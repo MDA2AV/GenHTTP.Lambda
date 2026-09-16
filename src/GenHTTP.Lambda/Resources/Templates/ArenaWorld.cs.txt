@@ -45,7 +45,7 @@ static class World
     /// <summary>
     /// The score that wins the arena and ends the round.
     /// </summary>
-    public const double Win = 1_000_000;
+    public const double Win = 100_000_000;
 
     /// <summary>
     /// The score at which somebody stops being a player and becomes a hole.
@@ -57,10 +57,37 @@ static class World
     /// makes the end of a round a thing everybody else has to survive rather
     /// than a number going up somewhere they cannot see.
     /// </remarks>
-    public const double Singularity = 800_000;
+    public const double Singularity = 1_000_000;
 
     /// <summary>Whether this radius has collapsed.</summary>
     public static bool IsHole(double radius) => ScoreOf(radius) >= Singularity;
+
+    /// <summary>
+    /// What a hole scores at each of its grades.
+    /// </summary>
+    /// <remarks>
+    /// Roughly three times apiece, so each one is a visible step rather than
+    /// a slow creep, and the last of them is the ceiling.
+    /// </remarks>
+    public static readonly double[] Grades9 = [1_000_000, 3_000_000, 10_000_000, 30_000_000, 100_000_000];
+
+    /// <summary>Which grade of hole this is, nought for something still a blob.</summary>
+    public static int HoleLevel(double radius)
+    {
+        var score = ScoreOf(radius);
+
+        var level = 0;
+
+        foreach (var step in Grades9)
+        {
+            if (score >= step)
+            {
+                level++;
+            }
+        }
+
+        return level;
+    }
 
     /// <summary>
     /// How much harder a hole pulls than the same size merely holding on.
@@ -73,6 +100,36 @@ static class World
     public const double HoleGrip = 9.0;
 
     public const double HoleReach = 3.2;
+
+    /// <summary>
+    /// How much harder each grade of hole pulls than the one below it.
+    /// </summary>
+    /// <remarks>
+    /// Compounding, so the top of the scale is not a bigger version of the
+    /// bottom of it - a grade five pulls eighty one times what a grade one
+    /// does. The reach compounds far more gently, or the last grade would
+    /// simply own the whole arena from wherever it happened to be standing.
+    /// </remarks>
+    public const double HoleStep = 3.0;
+
+    public static double HolePull(double radius) => HoleGrip * Math.Pow(HoleStep, Math.Max(0, HoleLevel(radius) - 1));
+
+    public static double HoleSpan(double radius) => HoleReach * Math.Pow(1.22, Math.Max(0, HoleLevel(radius) - 1));
+
+    /// <summary>
+    /// How many pellets a hole calls down around itself each second.
+    /// </summary>
+    /// <remarks>
+    /// The point of it is not the food, it is the traffic. A hole cannot move
+    /// and cannot chase, so without something to draw people in it is a
+    /// hazard everybody simply walks around and the round never ends. A floor
+    /// thick with pellets is worth the risk of going near one, which is what
+    /// makes it dangerous again.
+    /// </remarks>
+    public static int Summons(double radius) => 14 * HoleLevel(radius) * HoleLevel(radius);
+
+    /// <summary>How far from a hole its summoned pellets land.</summary>
+    public static double SummonSpan(double radius) => radius * 2.2 + 320;
 
     /// <summary>
     /// How long between one teleport and the next, in seconds.
@@ -94,7 +151,34 @@ static class World
     /// </remarks>
     public const int Crowd = 100;
 
+    /// <summary>
+    /// The most pellets one frame will describe.
+    /// </summary>
+    /// <remarks>
+    /// A budget rather than a distance: how far somebody sees already grows
+    /// with how big they are, and holes make the floor under them dense, so
+    /// the two together had one player being sent a megabyte a second. At
+    /// that zoom the floor is texture rather than countable things.
+    /// </remarks>
+    public const int Crumbs = 1400;
+
     public const double WarpEvery = 10.0;
+
+    /// <summary>
+    /// How long this blob waits between teleports.
+    /// </summary>
+    /// <remarks>
+    /// A second when you are nothing, fifteen when you are about to collapse.
+    /// Being small is the state where an escape is worth the most and the
+    /// least worth defending against, and a fixed cooldown handed the same
+    /// escape to the thing everybody else was running from.
+    /// </remarks>
+    public static double WarpWait(double radius)
+    {
+        var through = Math.Clamp(ScoreOf(radius) / Singularity, 0, 1);
+
+        return 1 + 14 * Math.Sqrt(through);
+    }
 
     /// <summary>
     /// What a teleport costs, as a share of the blob.
@@ -134,7 +218,7 @@ static class World
     /// drift apart: a cap below the target is a game that can never be won,
     /// and one above it is a target reached while still growing.
     /// </remarks>
-    public static readonly double Biggest = Math.Sqrt(Win / Math.PI + Start * Start);
+    public static readonly double Biggest = RadiusScoring(Win);
 
     /// <summary>
     /// What a pellet is worth, by grade.
@@ -466,7 +550,18 @@ static class World
     /// standing there costs three times what one just wound up does. Flat,
     /// the right play would be to hold it down for ever.
     /// </remarks>
-    public static double Cost(double grip) => Burn * Math.Max(1, grip) / Toll;
+    /// <summary>
+    /// What holding on costs, which is nothing.
+    /// </summary>
+    /// <remarks>
+    /// It used to burn a share of the blob a second, on the reasoning that
+    /// the strongest pull in the game should be paid for. In practice it
+    /// meant the move that makes the arena interesting to watch was the move
+    /// that lost you the game, so nobody held on for long and the floor never
+    /// visibly drained into anything. The cost is gone; the risk of standing
+    /// still while something larger walks over is the price.
+    /// </remarks>
+    public static double Cost(double grip) => 0;
 
 
     /// <summary>
@@ -698,7 +793,47 @@ static class World
     public static double RadiusOf(double area) => Math.Min(Biggest, Math.Sqrt(area / Math.PI));
 
     /// <summary>What a blob is worth on the leaderboard.</summary>
-    public static int ScoreOf(double radius) => (int)Math.Round(AreaOf(radius) - AreaOf(Start));
+    /// <summary>
+    /// The number a blob is worth.
+    /// </summary>
+    /// <remarks>
+    /// Area, up to the collapse. Past it the two come apart on purpose: a
+    /// hundred million of plain area is a radius of five and a half thousand,
+    /// which is wider than the arena it is standing in, so the thing would be
+    /// bigger than the world. Above the collapse the score climbs far faster
+    /// than the radius does - which is also the right shape for the thing it
+    /// is drawing, since what makes a hole frightening is its mass and not
+    /// how much of the floor it covers.
+    /// </remarks>
+    public static double ScoreOf(double radius)
+    {
+        var plain = AreaOf(radius) - AreaOf(Start);
+
+        if (plain <= Singularity)
+        {
+            return Math.Round(plain);
+        }
+
+        return Math.Round(Singularity * Math.Pow(plain / Singularity, Steepen));
+    }
+
+    /// <summary>How much faster score climbs than area, once collapsed.</summary>
+    /// <remarks>
+    /// Picked so the ceiling lands at a radius the arena can hold: a hundred
+    /// million is reached at about sixteen hundred, against five and a half
+    /// thousand without it.
+    /// </remarks>
+    public const double Steepen = 2.21;
+
+    /// <summary>The radius that scores this much, which is ScoreOf run backwards.</summary>
+    public static double RadiusScoring(double score)
+    {
+        var plain = score <= Singularity
+            ? score
+            : Singularity * Math.Pow(score / Singularity, 1 / Steepen);
+
+        return Math.Sqrt((plain + AreaOf(Start)) / Math.PI);
+    }
 
     /// <summary>Whether this blob has just taken the whole arena.</summary>
     public static bool HasWon(double radius) => ScoreOf(radius) >= Win;

@@ -392,15 +392,42 @@ function moment() {
  * watching go up and radius is the square root of it - tiers picked on radius
  * land at sizes that mean nothing to anybody reading the board.
  */
-const SCORE = (r) => Math.PI * (r * r - 14 * 14);
+/*
+ * The same sum the server does, including the part where it stops being area.
+ *
+ * Past the collapse the score climbs far faster than the radius, or a hundred
+ * million would be a blob wider than the arena. The two halves have to agree
+ * about that or the fire comes on at the wrong size.
+ */
+const COLLAPSE = 1000000;
+const STEEPEN = 2.21;
+
+function SCORE(r) {
+  const plain = Math.PI * (r * r - 14 * 14);
+
+  return plain <= COLLAPSE ? plain : COLLAPSE * Math.pow(plain / COLLAPSE, STEEPEN);
+}
+
+/** The grades a hole comes in, matching World.Grades9. */
+const GRADES = [1e6, 3e6, 1e7, 3e7, 1e8];
+
+function holeLevel(r) {
+  const s = SCORE(r);
+
+  let level = 0;
+
+  for (const step of GRADES) if (s >= step) level++;
+
+  return level;
+}
 
 function stageOf(r) {
   const s = SCORE(r);
 
-  if (s >= 800000) return 4;   // collapsed
-  if (s >= 380000) return 3;   // black fire
-  if (s >= 120000) return 2;   // fire
-  if (s >= 24000) return 1;    // embers
+  if (s >= COLLAPSE) return 4;  // collapsed
+  if (s >= 400000) return 3;    // black fire
+  if (s >= 120000) return 2;    // fire
+  if (s >= 24000) return 1;     // embers
   return 0;
 }
 
@@ -412,15 +439,18 @@ function stageOf(r) {
  * more frame than the effect is worth. The arcs are seeded off the blob's own
  * position so two blobs of the same size do not flicker in step.
  */
-function drawAura(x, y, r, stage, id, spin) {
+function drawAura(x, y, r, stage, id, spin, level) {
   if (stage <= 0) return;
 
   const seed = (id.charCodeAt(0) + id.charCodeAt(1) * 7) % 100 / 100;
 
   if (stage === 4) {
+    const grade = Math.max(1, level || 1);
     // the hole: a rim of light round a disc of nothing, and the light is all
     // of it - the middle is painted out so it reads as absence
-    const halo = ctx.createRadialGradient(x, y, r * 0.86, x, y, r * 2.3);
+    const spread = r * (2.1 + grade * 0.45);
+
+    const halo = ctx.createRadialGradient(x, y, r * 0.86, x, y, spread);
 
     halo.addColorStop(0, 'rgba(255,238,200,0.85)');
     halo.addColorStop(0.12, 'rgba(255,150,60,0.55)');
@@ -429,14 +459,14 @@ function drawAura(x, y, r, stage, id, spin) {
 
     ctx.fillStyle = halo;
     ctx.beginPath();
-    ctx.arc(x, y, r * 2.3, 0, Math.PI * 2);
+    ctx.arc(x, y, spread, 0, Math.PI * 2);
     ctx.fill();
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2 + grade; i++) {
       ctx.strokeStyle = `rgba(255,${190 - i * 50},${120 - i * 40},${0.5 - i * 0.12})`;
       ctx.lineWidth = Math.max(1.5, r * (0.05 - i * 0.012));
       ctx.beginPath();
-      ctx.ellipse(x, y, r * (1.15 + i * 0.22), r * (0.34 + i * 0.1),
+      ctx.ellipse(x, y, r * (1.15 + i * 0.2), r * (0.3 + i * 0.09),
                   spin * (0.6 + i * 0.25) + seed * 6, 0, Math.PI * 2);
       ctx.stroke();
     }
@@ -750,7 +780,7 @@ function draw() {
 
     const stage = stageOf(b.r);
 
-    drawAura(at.x, y, r, stage, b.i, performance.now() / 1000);
+    drawAura(at.x, y, r, stage, b.i, performance.now() / 1000, holeLevel(b.r));
 
     // the body stays a circle whatever the sheet is doing, because how big
     // somebody is has to be readable at a glance and a squashed one is not
@@ -893,8 +923,24 @@ requestAnimationFrame(draw);
 /** Whether this tab means to be in the arena, and how hard reconnecting is. */
 let playing = false, tries = 0;
 
+/*
+ * The name this player chose, kept here rather than read back out of the box
+ * every time. Coming back from being eaten went through the input, and an
+ * input that has been emptied - by a reload, by the browser, by anything -
+ * sent nothing and the server quite correctly called them "a blob".
+ */
+let chosen = localStorage.getItem('arena.name') || '';
+
 function connect(name) {
   playing = true;
+
+  chosen = (name ?? '').trim() || chosen;
+
+  if (chosen) {
+    try { localStorage.setItem('arena.name', chosen); } catch { /* private mode */ }
+  }
+
+  name = chosen;
   const address = new URL('play', location.href.replace(/[^/]*$/, ''));
   address.protocol = address.protocol === 'https:' ? 'wss:' : 'ws:';
 
@@ -950,7 +996,9 @@ function connect(name) {
 
     const self = m.b.find((b) => b.i === me);
 
-    $('score').textContent = self ? Math.round(Math.PI * self.r * self.r - Math.PI * 196) : 0;
+    // the same sum as the board, which is the server's - the plain area it
+    // used to be stops matching the moment anything collapses
+    $('score').textContent = self ? Math.round(SCORE(self.r)).toLocaleString() : 0;
     $('here').textContent = `${m.alive} in the arena`;
     $('hold').hidden = !(self && (self.g ?? 0) > 1);
 
@@ -964,8 +1012,10 @@ function connect(name) {
         : 'streak in hand: hold the button and draw a line, let go and run it';
     perk.className = carrying === 1 ? 'harpoon' : carrying === 2 ? 'blast' : 'streak';
 
+    const grade = self ? holeLevel(self.r) : 0;
+
     $('warp').textContent = collapsed
-      ? 'collapsed. You cannot move. Everything comes to you.'
+      ? `collapsed, grade ${grade}. You cannot move. Everything comes to you.`
       : cool > 0
         ? `teleport in ${cool.toFixed(1)}s`
         : 'teleport ready · E';
@@ -1003,7 +1053,10 @@ function connect(name) {
 }
 
 $('go').onclick = () => connect($('name').value);
-$('again').onclick = () => connect($('name').value);
+$('again').onclick = () => connect($('name').value || chosen);
+
+// so the box is not empty for somebody who has played before
+if (chosen) $('name').value = chosen;
 
 // a win does not put anybody out - the next round is already running
 /*

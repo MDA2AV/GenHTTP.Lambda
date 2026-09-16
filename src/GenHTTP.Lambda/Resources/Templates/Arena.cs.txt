@@ -512,7 +512,7 @@ void Remember(Player player)
 
     lock (writing)
     {
-        best.Add(new Score(player.Name, score));
+        best.Add(new Score(player.Name, (int)score));
 
         var kept = best.OrderByDescending(s => s.S).Take(10).ToList();
 
@@ -608,7 +608,7 @@ bool Jump(Player player, double x, double y)
     player.WantX = player.X;
     player.WantY = player.Y;
 
-    player.WarpReady = at + World.WarpEvery;
+    player.WarpReady = at + World.WarpWait(player.Radius);
 
     var area = Math.PI * player.Radius * player.Radius * (1 - World.WarpToll);
 
@@ -694,6 +694,22 @@ void Think(Player bot, Player[] everyone, double seconds)
     bot.WantY = bot.AimY;
 }
 
+/// <summary>
+/// Somewhere near the middle, for everybody at once.
+/// </summary>
+/// <remarks>
+/// Used when a round restarts. The arena is sized for its population, so with
+/// a crowd in it a blob at starting size can see a few per cent of the floor -
+/// and being scattered uniformly across that is being alone in it.
+/// </remarks>
+(double X, double Y) Together()
+{
+    var span = size * 0.33;
+    var edge = (size - span) / 2;
+
+    return (edge + random.NextDouble() * span, edge + random.NextDouble() * span);
+}
+
 /// <summary>The closest pellet, or somewhere to wander if the floor is bare.</summary>
 (double X, double Y) Nearest(Player bot)
 {
@@ -776,6 +792,50 @@ void Step(double seconds)
         {
             Think(soul, everyone, seconds);
         }
+
+        /*
+         * A hole pulls the floor down around itself.
+         *
+         * Not for the food - it is already the biggest thing in the arena -
+         * but for the traffic. Something that cannot move and cannot chase is
+         * a hazard everybody walks around, and a round that nobody will
+         * approach does not end. A floor thick with pellets is worth the risk
+         * of going near one, which is what puts it back in the game.
+         */
+        if (!soul.Gone && World.IsHole(soul.Radius))
+        {
+            var owed = World.Summons(soul.Radius) * seconds;
+
+            var many = (int)owed + (random.NextDouble() < owed - (int)owed ? 1 : 0);
+
+            // capped against the floor it is adding to, or a grade five
+            // summoning a hundred and fifty a second with nobody coming to
+            // eat them fills the arena and never stops
+            var room = (int)(World.PelletsFor(size) * World.Glut * 2);
+
+            for (var i = 0; i < many && pellets.Count < room; i++)
+            {
+                var angle = random.NextDouble() * Math.Tau;
+                var far = soul.Radius + Math.Sqrt(random.NextDouble()) * World.SummonSpan(soul.Radius);
+
+                var slot = TakeSlot();
+
+                /*
+                 * Straight onto the floor. Drop is the other direction - it
+                 * takes one off - so calling it with a pellet that had never
+                 * been on there did nothing except hand the slot number
+                 * straight back, and the floor never grew at all.
+                 */
+                pellets[slot] = new Pellet
+                {
+                    Slot = slot,
+                    X = World.Clamp(soul.X + Math.Cos(angle) * far, size),
+                    Y = World.Clamp(soul.Y + Math.Sin(angle) * far, size),
+                    C = World.AnyTint(random),
+                    Grade = 0
+                };
+            }
+        }
     }
 
     // and the floor is made good and put into buckets before anybody walks
@@ -800,7 +860,7 @@ void Step(double seconds)
 
         if (World.IsHole(heavy.Radius))
         {
-            grip = Math.Max(grip, 1) * World.HoleGrip;
+            grip = Math.Max(grip, 1) * World.HolePull(heavy.Radius);
         }
 
         if (grip <= 0)
@@ -808,7 +868,20 @@ void Step(double seconds)
             continue;
         }
 
-        foreach (var key in World.KeysWithin(heavy.X, heavy.Y, World.Drag(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleReach : 1)))
+        /*
+         * Bounded by the arena, and it has to be.
+         *
+         * The sweep is the radius times the square root of the grip, and the
+         * grip of a high grade hole is hundreds - which put the sweep at a
+         * hundred and fifteen thousand units across a thirty six hundred
+         * arena, and the buckets inside it at three quarters of a million per
+         * tick. The server stopped sending frames at all. Nothing outside the
+         * arena can be pulled anyway, so clamping costs nothing and is the
+         * difference between a grade four working and the game hanging.
+         */
+        var sweep = Math.Min(size, World.Drag(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleSpan(heavy.Radius) : 1));
+
+        foreach (var key in World.KeysWithin(heavy.X, heavy.Y, sweep))
         {
             if (!floor.TryGetValue(key, out var dust))
             {
@@ -904,12 +977,12 @@ void Step(double seconds)
     {
         var grip = World.Grip(heavy.Radius, heavy.Hold, heavy.Wound);
 
-        // a collapsed blob is not a big player, it is weather: it pulls
-        // whatever the rest of the rules would have given it, several times
-        // over, and from much further away
+        // a collapsed blob is not a big player, it is weather: it pulls what
+        // the rest of the rules would have given it, several times over and
+        // compounding with its grade, from much further away
         if (World.IsHole(heavy.Radius))
         {
-            grip = Math.Max(grip, 1) * World.HoleGrip;
+            grip = Math.Max(grip, 1) * World.HolePull(heavy.Radius);
         }
 
         if (grip <= 0)
@@ -917,7 +990,10 @@ void Step(double seconds)
             continue;
         }
 
-        var reach = World.Reach(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleReach : 1);
+        // the same bound, for the same reason: this one is compared against
+        // rather than walked, but a reach larger than the arena means every
+        // blob in it is inside every other one's pull, which is not a game
+        var reach = Math.Min(size, World.Reach(heavy.Radius, grip) * (World.IsHole(heavy.Radius) ? World.HoleSpan(heavy.Radius) : 1));
 
         foreach (var player in everyone)
         {
@@ -1347,24 +1423,37 @@ void Step(double seconds)
             continue;
         }
 
-        winner = new Won("won", player.Name, World.ScoreOf(player.Radius));
+        winner = new Won("won", player.Name, (int)World.ScoreOf(player.Radius));
 
         Remember(player);
 
         // everybody starts again, including whoever just won - the alternative
         // is an arena that stops, and a game nobody can rejoin without
         // reloading the page
+        /*
+         * Everybody starts again in the middle third rather than anywhere at
+         * all. Scattered over the whole arena, a round began with every blob
+         * alone in a field it was far too small to see across - which read as
+         * everybody else having vanished, and was the most common thing
+         * anybody said about a reset.
+         */
         foreach (var soul in everyone)
         {
-            var spot = Somewhere();
+            var spot = Together();
 
             soul.Radius = World.Start;
             soul.X = spot.X;
             soul.Y = spot.Y;
-            soul.WantX = spot.X;
-            soul.WantY = spot.Y;
+            soul.WantX = soul.AimX = spot.X;
+            soul.WantY = soul.AimY = spot.Y;
             soul.Gone = false;
             soul.EatenBy = null;
+            soul.Perk = Perk.None;
+            soul.Hold = false;
+            soul.StreakX = null;
+            soul.StreakY = null;
+            soul.Wound = 0;
+            soul.WarpReady = 0;
         }
 
         pellets.Clear();
@@ -1406,6 +1495,22 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
     // pixel at any zoom the game is played at
     var crumbs = new List<int>();
 
+    /*
+     * How much of the floor to leave out, worked out from how much of it is
+     * in front of this viewer before any of it is gathered.
+     */
+    var sighted = 0;
+
+    foreach (var key in World.KeysWithin(viewer.X, viewer.Y, World.ViewOf(viewer.Radius)))
+    {
+        if (floor.TryGetValue(key, out var counted))
+        {
+            sighted += counted.Count;
+        }
+    }
+
+    var thin = Math.Max(1, (int)Math.Ceiling(sighted / (double)World.Crumbs));
+
     foreach (var key in World.KeysWithin(viewer.X, viewer.Y, World.ViewOf(viewer.Radius)))
     {
         if (!floor.TryGetValue(key, out var bucket))
@@ -1417,6 +1522,25 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         {
             if (World.InView(viewer.X, viewer.Y, viewer.Radius, pellet.X, pellet.Y))
             {
+                /*
+                 * Thinned, once there are more than a screen can say anything
+                 * with.
+                 *
+                 * How far somebody sees grows with how big they are, and a
+                 * hole calls a dense floor down around itself - so a large
+                 * one was being sent four thousand pellets a frame, sixty
+                 * kilobytes twenty times a second, better than a megabyte a
+                 * second to one player. At that zoom a pellet is a fraction
+                 * of a pixel and the floor reads as texture, so every second
+                 * or third one carries the same picture for a third of the
+                 * bytes. Deterministic by slot rather than random, or the
+                 * floor would seethe between frames.
+                 */
+                if (thin > 1 && pellet.Slot % thin != 0)
+                {
+                    continue;
+                }
+
                 crumbs.Add(pellet.Slot);
                 crumbs.Add((int)pellet.X);
                 crumbs.Add((int)pellet.Y);
@@ -1471,13 +1595,13 @@ async ValueTask Broadcast()
                                            Math.Round(p.X, 1), Math.Round(p.Y, 1),
                                            Math.Round(p.Radius, 1),
                                            Math.Round(World.IsHole(p.Radius)
-                                                      ? World.Grip(p.Radius, p.Hold, p.Wound) * World.HoleGrip
+                                                      ? World.Grip(p.Radius, p.Hold, p.Wound) * World.HolePull(p.Radius)
                                                       : World.Grip(p.Radius, p.Hold, p.Wound), 2)))
                      .ToArray();
 
     var board = souls.OrderByDescending(p => p.Radius)
                      .Take(8)
-                     .Select(p => new Score(p.Name, World.ScoreOf(p.Radius)))
+                     .Select(p => new Score(p.Name, (int)World.ScoreOf(p.Radius)))
                      .ToArray();
 
     // a bot that was eaten starts again rather than leaving the arena emptier
@@ -1514,7 +1638,7 @@ async ValueTask Broadcast()
         }
 
         await Send(connection, JsonSerializer.Serialize(
-            new Eaten("eaten", player.EatenBy ?? "somebody", World.ScoreOf(player.Radius)), json));
+            new Eaten("eaten", player.EatenBy ?? "somebody", (int)World.ScoreOf(player.Radius)), json));
 
         Remember(player);
 
