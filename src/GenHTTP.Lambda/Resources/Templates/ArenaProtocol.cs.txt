@@ -33,7 +33,12 @@ public record Steer(string Kind, double X, double Y, bool Hold);
 /// <param name="S">How charged this blob is from its recent kills, left out
 /// entirely when it is not - which is nearly every blob in nearly every
 /// frame, so it costs nothing to say</param>
-public record Blob(string I, string N, string C, double X, double Y, double R, double G, int? S);
+/// <param name="C">Which colour of the palette, not the colour itself. The
+/// browser was sent seven characters of hex per blob per frame for a value
+/// it already had a list of - at five hundred blobs and twenty frames a
+/// second that is most of a megabyte a minute of writing out the same eight
+/// strings.</param>
+public record Blob(string I, string N, int C, double X, double Y, double R, double G, int? S);
 
 /// <summary>Somebody asking to be somewhere else.</summary>
 public record Warp(string Kind, double X, double Y);
@@ -46,6 +51,19 @@ public record Fill(string Kind, int Count);
 
 /// <summary>A hole asking for a whirl to open somewhere it can see.</summary>
 public record Haul(string Kind, double X, double Y);
+
+/// <summary>Where everybody is, for the minimap.</summary>
+/// <remarks>
+/// Flat, three to a blob: x, y, and one number that is both how big they are
+/// and, past the collapse, which grade of hole.
+///
+/// Its own message rather than a field of a frame, because it is the one part
+/// of what a player is sent that is identical for all of them - and as a
+/// field it was built once and then serialised five hundred times, which is
+/// five hundred copies of the same few kilobytes made twenty times a second.
+/// Sent this way it is written once and handed to everybody.
+/// </remarks>
+public record Chart(string Kind, List<int> M);
 
 /// <summary>Somebody saying something to the whole arena.</summary>
 public record Say(string Kind, string Text);
@@ -143,14 +161,10 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// <param name="E">Blobs eaten within sight this tick, nought of them being null</param>
 /// <param name="A">Who this player ate this tick, nobody being null</param>
 /// <param name="O">Whirls turning within sight, nought of them being null</param>
-/// <param name="M">Where everybody is, for the minimap - flat, three to a
-/// blob: x, y, and one number that is both how big they are and, past the
-/// collapse, which grade of hole. The only part of a frame that is not
-/// filtered by what this player can see, and so the only part sent at a
-/// fraction of the frame rate. Null on the beats in between.</param>
+
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W,
                     double Cool, double Draw, double Mine, bool Hole,
-                    List<Mark> V, List<Feast> E, List<string> A, List<Eddy> O, List<int> M);
+                    List<Mark> V, List<Feast> E, List<string> A, List<Eddy> O);
 
 /// <summary>
 /// Sent to everybody when somebody takes the whole arena.

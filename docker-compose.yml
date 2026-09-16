@@ -29,6 +29,15 @@ services:
       # hosts a browser may drive the agent endpoint from. An agent speaking
       # HTTP sends no origin and is never checked against this.
       LAMBDA_MCP_ORIGINS: genhttp.dev,www.genhttp.dev
+      # How much source one lambda may hold, across all of its code files.
+      #
+      # A hundred and twenty eight kilobytes was the default and it stopped
+      # being enough: the arena, which is the example everything else is
+      # measured against, spent its last several changes having comments
+      # trimmed out of it to make room. That is the limit deciding how a
+      # program is written rather than how large it may be, which is the
+      # wrong job for it.
+      LAMBDA_MAX_CODE_LENGTH: ${LAMBDA_MAX_CODE_LENGTH:-262144}
     sysctls:
       # lets the unprivileged user bind 80 and 443 inside its own network
       # namespace, so the server keeps running as uid 1001

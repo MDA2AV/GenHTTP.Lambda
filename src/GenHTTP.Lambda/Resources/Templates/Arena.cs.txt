@@ -287,23 +287,33 @@ IEnumerable<Player> Gathered(double x, double y, double reach)
     }
 }
 
+/// <summary>Puts the floor back in its squares, once, at the top of a tick.</summary>
+/// <remarks>
+/// Emptied and refilled rather than rebuilt. Sixty thousand pellets is sixty
+/// thousand adds either way, but rebuilding also threw away the dictionary
+/// and every list in it and made them again - sixty thousand allocations a
+/// tick, twenty times a second, for a structure that is almost always the
+/// same shape it was. At five hundred players this and its sibling were
+/// sixty milliseconds of a tick that has fifty to spend.
+/// </remarks>
 void Rebucket()
 {
-    var next = new Dictionary<long, List<Pellet>>();
+    foreach (var bucket in floor.Values)
+    {
+        bucket.Clear();
+    }
 
     foreach (var pellet in pellets.Values)
     {
         var key = World.KeyOf(pellet.X, pellet.Y);
 
-        if (!next.TryGetValue(key, out var bucket))
+        if (!floor.TryGetValue(key, out var bucket))
         {
-            next[key] = bucket = [];
+            floor[key] = bucket = [];
         }
 
         bucket.Add(pellet);
     }
-
-    floor = next;
 }
 
 /// <summary>
@@ -1608,7 +1618,7 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
                   Math.Round(Math.Max(0, viewer.WarpReady - at), 2),
                   Math.Round(Math.Max(0, viewer.DrawReady - at), 2), World.ScoreOf(viewer.Radius),
                   World.IsHole(viewer.Radius),
-                  crossing, gone, viewer.Ate, eddies, map), json);
+                  crossing, gone, viewer.Ate, eddies), json);
 }
 
 async ValueTask Broadcast()
@@ -1626,7 +1636,7 @@ async ValueTask Broadcast()
     // short, and usually empty: one per hole with a whirl open
     var turning = souls.Where(p => p.WhirlEnds > 0).ToArray();
 
-    var blobs = souls.Select(p => new Blob(p.Id, p.Name, p.Colour,
+    var blobs = souls.Select(p => new Blob(p.Id, p.Name, World.TintOf(p.Colour),
                                            Math.Round(p.X, 1), Math.Round(p.Y, 1),
                                            Math.Round(p.Radius, 1),
                                            Math.Round(World.IsHole(p.Radius)
@@ -1727,6 +1737,23 @@ async ValueTask Broadcast()
     if (living.Length == 0)
     {
         return;
+    }
+
+    /*
+     * The map, written once and handed to everybody.
+     *
+     * It is the only thing in what a player receives that does not depend on
+     * who they are, so serialising it inside each of five hundred frames was
+     * five hundred copies of one picture, twenty times a second.
+     */
+    if (map != null)
+    {
+        var picture = JsonSerializer.Serialize(new Chart("chart", map), json);
+
+        foreach (var (connection, _) in living)
+        {
+            await Send(connection, picture);
+        }
     }
 
     /*

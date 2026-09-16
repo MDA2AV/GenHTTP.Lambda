@@ -695,6 +695,9 @@ static class World
 
     public static string ColourFor(int seat) => Palette[seat % Palette.Length];
 
+    /// <summary>Which of the palette a colour is, for sending it as a number.</summary>
+    public static int TintOf(string colour) => Math.Max(0, Array.IndexOf(Palette, colour));
+
     /// <summary>A colour to scatter a pellet in.</summary>
     public static int AnyTint(Random random) => random.Next(Palette.Length);
 

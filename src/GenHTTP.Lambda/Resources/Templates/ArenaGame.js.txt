@@ -41,6 +41,13 @@ const history = [];
 let socket = null, me = null, world = 2400;
 let palette = [], wellSize = 40, girths = [5];
 
+/*
+ * A blob's colour, which arrives as a place in the palette rather than as
+ * the colour itself - seven characters of hex per blob per frame, for a list
+ * the browser was handed with the welcome.
+ */
+const hue = (b) => palette[b.c] ?? '#9aa0a6';
+
 /** Seconds until this player may draw another line, nought if now. */
 let pen = 0;
 
@@ -1467,7 +1474,7 @@ function draw() {
         const at = flat(b.x, b.y);
 
         ctx.globalAlpha = fade;
-        ctx.fillStyle = b.c;
+        ctx.fillStyle = hue(b);
         ctx.beginPath();
         ctx.arc(at.x, at.y, b.r * scale * (0.5 + fade), 0, Math.PI * 2);
         ctx.fill();
@@ -1497,7 +1504,7 @@ function draw() {
 
     // the body stays a circle whatever the sheet is doing, because how big
     // somebody is has to be readable at a glance and a squashed one is not
-    ctx.fillStyle = stage === 4 ? '#0a0b12' : b.c;
+    ctx.fillStyle = stage === 4 ? '#0a0b12' : hue(b);
     ctx.beginPath();
     ctx.arc(at.x, y, r, 0, Math.PI * 2);
     ctx.fill();
@@ -1696,6 +1703,13 @@ function connect(name) {
       return;
     }
 
+    // the map, sent once to everybody rather than inside each frame
+    if (m.kind === 'chart') {
+      chart = m.m ?? [];
+
+      return;
+    }
+
     if (m.kind === 'said') {
       heard(m.who, m.text, m.who === chosen);
 
@@ -1735,8 +1749,7 @@ function connect(name) {
     marks = m.v ?? [];
     whirls = m.o ?? [];
 
-    // every third beat, and kept in between
-    if (m.m) chart = m.m;
+
 
     for (const gone of m.e ?? []) {
       deaths.push({
