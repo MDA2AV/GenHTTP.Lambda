@@ -191,6 +191,38 @@ static class World
     /// </remarks>
     public const int Crowd = 100;
 
+    /// <summary>How often the whole arena's positions go out, in beats.</summary>
+    /// <remarks>
+    /// The minimap is the one thing in a frame that is not filtered by what
+    /// the player can see - that is the point of it - so it is the one thing
+    /// whose cost is the whole crowd rather than the part of it nearby. At a
+    /// hundred blobs it is about a kilobyte, which is worth sending six times
+    /// a second and not worth sending twenty: nothing crosses a map this size
+    /// in a sixth of a second.
+    /// </remarks>
+    public const int MapEvery = 3;
+
+    /// <summary>The rough size band a blob shows as on the minimap.</summary>
+    public static int Tier(double radius)
+    {
+        if (radius >= Threshold * 0.75) return 3;
+        if (radius >= Threshold * 0.5) return 2;
+        if (radius >= Threshold * 0.25) return 1;
+
+        return 0;
+    }
+
+    /// <summary>The longest thing anybody may say, in characters.</summary>
+    public const int SayLength = 120;
+
+    /// <summary>The least time between one thing said and the next.</summary>
+    /// <remarks>
+    /// Slow enough that nobody can push the arena off anybody's screen, and
+    /// quick enough that a conversation is possible. It is per player rather
+    /// than per arena, so one person talking does not silence everybody.
+    /// </remarks>
+    public const double SayGap = 1.2;
+
     /// <summary>How long a beat of the arena clock is, in seconds.</summary>
     /// <remarks>
     /// Twenty a second: fast enough that the browser has something recent to

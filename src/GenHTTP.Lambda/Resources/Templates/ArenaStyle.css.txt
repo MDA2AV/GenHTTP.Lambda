@@ -26,6 +26,17 @@ canvas { display: block; touch-action: none; }
 
 .dim { color: #9aa0a6; font-size: 13px; }
 
+/*
+ * Everything that only reports goes transparent to the pointer.
+ *
+ * A panel with a bounding box over the arena is a patch of floor you cannot
+ * steer to, cannot draw a line through and, for a hole, cannot open a whirl
+ * on - and it is not obvious that is what is happening, it just feels like
+ * the game stopped listening in one corner.
+ */
+#hud, #rail, #chat, #feed { pointer-events: none; }
+#chatbox { pointer-events: auto; }
+
 #hud { position: fixed; left: 16px; bottom: 16px; }
 #hud b { font-size: 30px; font-variant-numeric: tabular-nums; display: block; }
 #hold { display: block; color: #fdd663; font-size: 13px; margin-top: 2px; }
@@ -33,8 +44,9 @@ canvas { display: block; touch-action: none; }
 kbd { font: inherit; border: 1px solid #3c4043; border-bottom-width: 2px; padding: 0 4px; border-radius: 3px; }
 
 #board {
-  position: fixed; top: 14px; right: 16px; width: 190px;
+  width: 190px;
   background: #12151add; padding: 10px 12px;
+  border-radius: 8px;
 }
 #board h2 { font-size: 11px; margin: 0 0 7px; color: #9aa0a6; text-transform: uppercase; letter-spacing: .07em; }
 #board ol { margin: 0 0 6px; padding: 0; list-style: none; }
@@ -117,6 +129,84 @@ button { padding: 9px 20px; border: 0; background: #1a73e8; color: #fff; font: i
  * Thumb controls. Bottom right, where a hand already is, and large enough to
  * hit without looking: everything else on this screen is being looked at.
  */
+/*
+ * The minimap, under the board because they are the same kind of thing: both
+ * are about the arena rather than about what is in front of you.
+ */
+#rail {
+  position: fixed;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  z-index: 4;
+}
+
+#map {
+  width: 160px;
+  height: 160px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 8px;
+  background: rgba(8, 10, 16, .72);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/*
+ * Chat, on the left above the score. The log is always there and always
+ * fading; the box is only there while somebody is typing, because a text
+ * field permanently on screen is a text field permanently catching keys that
+ * were meant for the game.
+ */
+#chat {
+  position: fixed;
+  left: 16px;
+  bottom: 122px;
+  width: min(360px, 42vw);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 5;
+}
+
+#chatlog {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 168px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#chatlog div {
+  font-size: 13px;
+  line-height: 1.35;
+  color: #e8eaed;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .95);
+  word-break: break-word;
+  animation: fades 24s linear forwards;
+}
+
+#chatlog b { color: #8adcff; font-weight: 600; }
+#chatlog .mine b { color: #fdd663; }
+
+@keyframes fades {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#chatbox {
+  padding: 8px 12px;
+  font: 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #e8eaed;
+  background: rgba(10, 13, 20, .92);
+  border: 1px solid rgba(138, 220, 255, .5);
+  border-radius: 8px;
+  outline: none;
+}
+
 #thumbs {
   position: fixed;
   right: 16px;
@@ -168,6 +258,10 @@ body.touch #crowd {
  * it is the only element that is both large and not needed to play.
  */
 @media (max-width: 620px) {
+  #map { width: 116px; height: 116px; }
+  #chat { width: min(300px, 62vw); bottom: 108px; }
+  #chatlog { max-height: 108px; }
+
   #board { padding: 10px 12px; font-size: 13px; }
   #board h2 { font-size: 11px; }
   #board li { font-size: 12px; }

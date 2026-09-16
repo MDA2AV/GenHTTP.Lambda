@@ -101,6 +101,17 @@ let marks = [];
 let whirls = [];
 
 /*
+ * Where everybody is, for the minimap.
+ *
+ * Kept between frames rather than replaced every one: it arrives every third
+ * beat, and a map that blinked out on the two in between would be unreadable.
+ */
+let chart = [];
+
+const mapped = $('map');
+const mapping = mapped.getContext('2d');
+
+/*
  * Whether this is being played with a finger.
  *
  * Latched on the first touch rather than sniffed from the user agent, which
@@ -123,6 +134,71 @@ let aiming = false;
  * one the first time they tried to turn a corner.
  */
 let sketching = false;
+
+/*
+ * Chat.
+ *
+ * The box is hidden until somebody asks for it, and while it is open the
+ * game's keys belong to it - otherwise typing "space" into a message roots
+ * you to the floor, and typing an E teleports you into whatever you were
+ * running from.
+ */
+const chatbox = $('chatbox');
+
+function talking() {
+  return !chatbox.hidden && document.activeElement === chatbox;
+}
+
+function speak(open) {
+  chatbox.hidden = !open;
+
+  if (open) {
+    chatbox.focus();
+  } else {
+    chatbox.value = '';
+    chatbox.blur();
+  }
+}
+
+function heard(who, what, mine) {
+  const line = document.createElement('div');
+
+  if (mine) line.className = 'mine';
+
+  // text, never markup: both halves of this came from somebody's keyboard
+  const name = document.createElement('b');
+
+  name.textContent = `${who} `;
+
+  line.append(name, document.createTextNode(what));
+  $('chatlog').append(line);
+
+  line.addEventListener('animationend', () => line.remove());
+
+  while ($('chatlog').childElementCount > 8) $('chatlog').firstElementChild.remove();
+}
+
+chatbox.addEventListener('keydown', (e) => {
+  e.stopPropagation();
+
+  if (e.key === 'Escape') {
+    speak(false);
+
+    return;
+  }
+
+  if (e.key !== 'Enter') return;
+
+  const said = chatbox.value.trim();
+
+  if (said && socket?.readyState === 1) {
+    socket.send(JSON.stringify({ kind: 'say', text: said.slice(0, 120) }));
+  }
+
+  speak(false);
+});
+
+chatbox.addEventListener('blur', () => { if (!chatbox.value.trim()) speak(false); });
 
 function touchy() {
   if (touching) return;
@@ -186,6 +262,16 @@ function hop() {
 }
 
 addEventListener('keydown', (e) => {
+  // Enter opens the box, and while it is open nothing here fires
+  if (talking()) return;
+
+  if (e.key === 'Enter' && !e.repeat) {
+    speak(true);
+    e.preventDefault();
+
+    return;
+  }
+
   /*
    * Teleport. On its own key rather than on a mouse button, because both
    * buttons already mean something and the one thing everybody has should
@@ -204,7 +290,7 @@ addEventListener('keydown', (e) => {
 });
 
 addEventListener('keyup', (e) => {
-  if (e.code !== 'Space') return;
+  if (talking() || e.code !== 'Space') return;
   hold = false;
   e.preventDefault();
 });
@@ -219,7 +305,7 @@ addEventListener('pointerdown', (e) => {
 
   // the buttons and the overlays are not the arena, and a press that lands
   // on one of them has already been dealt with by whatever it landed on
-  if (e.target?.closest?.('button, #thumbs, #gate, #over, #won, #board')) return;
+  if (e.target?.closest?.('button, input, #thumbs, #gate, #over, #won')) return;
 
   if (e.button !== 0 || socket?.readyState !== 1 || !camera) return;
 
@@ -290,6 +376,9 @@ for (const let_go of ['pointerup', 'pointercancel', 'pointerleave']) {
     $('pull').classList.remove('on');
   });
 }
+
+// there is no Enter key on a phone until something asks for one
+$('talk').addEventListener('click', () => speak(chatbox.hidden));
 
 $('hop').addEventListener('click', () => {
   if (collapsed) return;
@@ -816,6 +905,145 @@ function drawSpark(x, y, r, sparks, seed, now) {
  * deciding whether to run needs to know where it is rather than roughly
  * where it is.
  */
+/**
+ * The whole arena, small, in the corner.
+ *
+ * The one view in the game that is not about what you can see. A blob three
+ * screens away is a thing you can do nothing about and very much need to
+ * know the direction of, and before this the only way to find out was to
+ * grow until it came into view - which is exactly the wrong order.
+ *
+ * Holes get their own symbols, one per grade, rather than a bigger dot. The
+ * difference between a grade one and a grade five is the difference between
+ * something to be careful near and something that owns a third of the map,
+ * and a size ramp at this resolution is four pixels against six.
+ */
+function drawChart(world, self) {
+  const side = mapped.width;
+
+  mapping.clearRect(0, 0, side, side);
+
+  if (!chart.length || !world) return;
+
+  const span = side / world;
+
+  // the floor of the arena, so the edges read as edges
+  mapping.fillStyle = 'rgba(138, 180, 248, 0.05)';
+  mapping.fillRect(0, 0, side, side);
+
+  const spin = performance.now() / 1000;
+
+  for (let i = 0; i < chart.length; i += 3) {
+    const x = chart[i] * span;
+    const y = chart[i + 1] * span;
+    const mark = chart[i + 2];
+
+    if (mark < 4) {
+      // an ordinary blob: a dot that grows a little with the size band
+      mapping.globalAlpha = 0.5 + mark * 0.15;
+      mapping.fillStyle = '#9aa0a6';
+      mapping.beginPath();
+      mapping.arc(x, y, 3 + mark * 1.6, 0, Math.PI * 2);
+      mapping.fill();
+
+      continue;
+    }
+
+    grim(x, y, mark - 3, spin);
+  }
+
+  // and you, last and in white, because the one thing this has to answer
+  // instantly is where you are on it
+  if (self) {
+    mapping.globalAlpha = 1;
+    mapping.strokeStyle = '#fff';
+    mapping.lineWidth = 3;
+    mapping.beginPath();
+    mapping.arc(self.x * span, self.y * span, 7, 0, Math.PI * 2);
+    mapping.stroke();
+
+    mapping.fillStyle = '#fff';
+    mapping.beginPath();
+    mapping.arc(self.x * span, self.y * span, 2.5, 0, Math.PI * 2);
+    mapping.fill();
+  }
+
+  mapping.globalAlpha = 1;
+}
+
+/**
+ * A hole on the minimap: a different mark for each of the five grades.
+ *
+ * Meant to be told apart at a glance and at eight pixels, so they differ in
+ * shape before they differ in size - a ring, a ring with an eye, a
+ * crosshair, a star, and a black sun. Size and brightness climb with them as
+ * well, but the shape is what carries at this scale.
+ */
+function grim(x, y, grade, spin) {
+  const r = 5 + grade * 1.9;
+
+  mapping.save();
+  mapping.translate(x, y);
+  mapping.globalAlpha = 1;
+
+  // every grade sits in a dark well, which is what says "hole" before the
+  // shape says which one
+  mapping.fillStyle = `rgba(6, 2, 14, ${0.45 + grade * 0.1})`;
+  mapping.beginPath();
+  mapping.arc(0, 0, r + 3, 0, Math.PI * 2);
+  mapping.fill();
+
+  mapping.strokeStyle = grade >= 4 ? '#ffd66b' : '#c884ff';
+  mapping.fillStyle = mapping.strokeStyle;
+  mapping.lineWidth = 2;
+  mapping.lineCap = 'round';
+
+  mapping.beginPath();
+  mapping.arc(0, 0, r, 0, Math.PI * 2);
+  mapping.stroke();
+
+  if (grade >= 2) {
+    // an eye
+    mapping.beginPath();
+    mapping.arc(0, 0, grade >= 5 ? r * 0.5 : 2, 0, Math.PI * 2);
+    mapping.fill();
+  }
+
+  if (grade === 3 || grade === 4) {
+    // a crosshair at three, and the same turned into a star at four
+    const arms = grade === 3 ? 4 : 6;
+    const turn = grade === 4 ? spin * 0.6 : 0;
+
+    mapping.beginPath();
+
+    for (let a = 0; a < arms; a++) {
+      const t = turn + (a / arms) * Math.PI * 2;
+
+      mapping.moveTo(Math.cos(t) * r * 0.45, Math.sin(t) * r * 0.45);
+      mapping.lineTo(Math.cos(t) * (r + 4), Math.sin(t) * (r + 4));
+    }
+
+    mapping.stroke();
+  }
+
+  if (grade >= 5) {
+    // a corona, turning, which nothing else on the map has
+    mapping.beginPath();
+
+    for (let a = 0; a < 10; a++) {
+      const t = spin + (a / 10) * Math.PI * 2;
+
+      mapping.moveTo(Math.cos(t) * (r + 1), Math.sin(t) * (r + 1));
+      mapping.lineTo(Math.cos(t) * (r + 6), Math.sin(t) * (r + 6));
+    }
+
+    mapping.lineWidth = 1.5;
+    mapping.stroke();
+  }
+
+  mapping.restore();
+}
+
 function drawWhirls(flat, scale, now) {
   if (!whirls.length) return;
 
@@ -1296,6 +1524,8 @@ function draw() {
   }
 
   drawDeaths(flat, scale);
+
+  drawChart(world, mine);
 }
 
 /**
@@ -1429,6 +1659,7 @@ function connect(name) {
       tries = 0;
       $('gate').hidden = true; $('over').hidden = true;
       $('hud').hidden = false; $('board').hidden = false; $('crowd').hidden = false;
+      $('map').hidden = false; $('chat').hidden = false;
       return;
     }
 
@@ -1440,8 +1671,15 @@ function connect(name) {
       history.length = 0;
       marks = [];
       whirls = [];
+      chart = [];
       deaths.length = 0;
       feed.replaceChildren();
+      return;
+    }
+
+    if (m.kind === 'said') {
+      heard(m.who, m.text, m.who === chosen);
+
       return;
     }
 
@@ -1464,6 +1702,9 @@ function connect(name) {
 
     marks = m.v ?? [];
     whirls = m.o ?? [];
+
+    // every third beat, and kept in between
+    if (m.m) chart = m.m;
 
     for (const gone of m.e ?? []) {
       deaths.push({
@@ -1548,7 +1789,7 @@ function connect(name) {
     $('hint').hidden = collapsed;
     $('hint').innerHTML = touching
       ? 'drag to move &middot; eat anything smaller &middot; the buttons do the rest'
-      : 'move the mouse &middot; eat anything smaller &middot; hold <kbd>space</kbd> to pull &middot; <kbd>E</kbd> to teleport &middot; drag to draw a line';
+      : 'move the mouse &middot; eat anything smaller &middot; hold <kbd>space</kbd> to pull &middot; <kbd>E</kbd> to teleport &middot; drag to draw a line &middot; <kbd>enter</kbd> to talk';
 
     if (collapsed && aiming) {
       aiming = false;

@@ -119,6 +119,9 @@ sealed class Player
     /// </remarks>
     public double DrawReady;
 
+    /// <summary>When this player last said something, on the arena clock.</summary>
+    public double Spoke;
+
     /// <summary>
     /// Where this blob's whirl is turning, and until when on the arena clock.
     /// Only a hole may open one, and only one at a time.

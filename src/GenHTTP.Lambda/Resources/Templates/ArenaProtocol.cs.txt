@@ -45,6 +45,17 @@ public record Fill(string Kind, int Count);
 /// <summary>A hole asking for a whirl to open somewhere it can see.</summary>
 public record Haul(string Kind, double X, double Y);
 
+/// <summary>Somebody saying something to the whole arena.</summary>
+public record Say(string Kind, string Text);
+
+/// <summary>What somebody said, on its way back out to everybody.</summary>
+/// <remarks>
+/// Its own message rather than a field of a frame: a frame is what one
+/// player can see, and chat is the one thing in the game that is not. It is
+/// sent to everybody at once, and kept nowhere.
+/// </remarks>
+public record Said(string Kind, string Who, string Text);
+
 /// <summary>Ground that somebody is on their way to.</summary>
 /// <remarks>
 /// Sent for every teleport in flight that the reader could see the far end
@@ -130,9 +141,14 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// <param name="E">Blobs eaten within sight this tick, nought of them being null</param>
 /// <param name="A">Who this player ate this tick, nobody being null</param>
 /// <param name="O">Whirls turning within sight, nought of them being null</param>
+/// <param name="M">Where everybody is, for the minimap - flat, three to a
+/// blob: x, y, and one number that is both how big they are and, past the
+/// collapse, which grade of hole. The only part of a frame that is not
+/// filtered by what this player can see, and so the only part sent at a
+/// fraction of the frame rate. Null on the beats in between.</param>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W,
                     double Cool, double Draw, double Mine, bool Hole,
-                    List<Mark> V, List<Feast> E, List<string> A, List<Eddy> O);
+                    List<Mark> V, List<Feast> E, List<string> A, List<Eddy> O, List<int> M);
 
 /// <summary>
 /// Sent to everybody when somebody takes the whole arena.

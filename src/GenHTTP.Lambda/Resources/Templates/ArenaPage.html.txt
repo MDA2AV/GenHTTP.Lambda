@@ -9,7 +9,7 @@
 
 <div id="hud" hidden>
   <b id="score">0</b>
-  <span class="dim" id="hint">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport · drag to draw a line</span>
+  <span class="dim" id="hint">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport · drag to draw a line · <kbd>enter</kbd> to talk</span>
   <span id="perk" class="streak" hidden></span>
   <span id="warp" class="ready">teleport ready</span>
   <span id="spark" hidden></span>
@@ -25,6 +25,7 @@
   finger to land on the glass is not a guess.
 -->
 <div id="thumbs" hidden>
+  <button id="talk">chat</button>
   <button id="spend" hidden>use</button>
   <button id="hop">teleport</button>
   <button id="pull">pull</button>
@@ -32,10 +33,25 @@
 
 <button id="crowd" hidden>add bots</button>
 
-<div id="board" hidden>
-  <h2>Biggest</h2>
-  <ol id="list"></ol>
-  <div class="dim" id="here"></div>
+<div id="chat" hidden>
+  <div id="chatlog"></div>
+  <input id="chatbox" maxlength="120" placeholder="say something" hidden>
+</div>
+
+<!--
+  The board and the map stack rather than being placed one under the other,
+  because the board is as tall as the arena is busy: eight names and a count
+  at a full house, one name and a count on your own. Anything positioned
+  below a guess at its height lands on top of it at the wrong moment.
+-->
+<div id="rail">
+  <div id="board" hidden>
+    <h2>Biggest</h2>
+    <ol id="list"></ol>
+    <div class="dim" id="here"></div>
+  </div>
+
+  <canvas id="map" width="320" height="320" hidden></canvas>
 </div>
 
 <div id="gate">
@@ -68,6 +84,13 @@
       Press anywhere you can see and a <b>whirl</b> opens there, dragging everything
       smaller into it: it is how something that cannot chase anybody gets somebody to
       come to it. <b>A hundred quintillion</b> takes the arena and ends the round.
+    </p>
+    <p class="dim">
+      The map in the corner is the whole arena. Everybody is on it, and anybody who
+      has collapsed is marked with the symbol for their grade &mdash; a ring, an eye,
+      a crosshair, a star, a black sun &mdash; because knowing which direction the
+      worst thing in the arena is in matters long before you can see it.
+      <kbd>Enter</kbd> to talk to everybody.
     </p>
     <p class="dim">
       On a phone, drag to move and use the buttons in the corner. There is nothing

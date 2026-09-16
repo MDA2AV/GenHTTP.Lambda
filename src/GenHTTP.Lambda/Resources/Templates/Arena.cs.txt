@@ -100,6 +100,21 @@ var tick = 0L;
  */
 var marks = new List<Mark>();
 
+/*
+ * What has been said since the last broadcast, and where everybody is.
+ *
+ * Both are the same shape as the two above: built during a tick, read once
+ * by the broadcast that follows it, and kept nowhere afterwards.
+ */
+/*
+ * A queue rather than a list: this one is filled from whatever thread the
+ * socket happened to deliver on and drained by the clock, which is not true
+ * of the other two - they are both written and read inside a tick.
+ */
+var chatter = new ConcurrentQueue<Said>();
+
+List<int> map = null;
+
 var feasts = new List<Feast>();
 
 /// <summary>Seconds since the arena started, which is what the bruise window is measured against.</summary>
@@ -1203,6 +1218,36 @@ void Step(double seconds)
 /// mark is the same mark whoever is looking at it - the filtering by what
 /// each of them can see happens in <c>Picture</c>, on a list this short.
 /// </remarks>
+/// <summary>Where everybody is, small enough to send to everybody.</summary>
+/// <remarks>
+/// Built once for the whole arena rather than per viewer, because unlike
+/// everything else in a frame it is the same for all of them - a minimap
+/// that only showed what you could already see would be a picture of your
+/// own screen.
+///
+/// Whole units, and one number for the blob itself: below the collapse it is
+/// a rough size band, above it the grade of hole, which is all a dot a few
+/// pixels across can carry anyway.
+/// </remarks>
+void Chart(Player[] everyone)
+{
+    if (tick % World.MapEvery != 0)
+    {
+        map = null;
+
+        return;
+    }
+
+    map = new List<int>(everyone.Length * 3);
+
+    foreach (var soul in everyone)
+    {
+        map.Add((int)soul.X);
+        map.Add((int)soul.Y);
+        map.Add(World.IsHole(soul.Radius) ? 3 + World.HoleLevel(soul.Radius) : World.Tier(soul.Radius));
+    }
+}
+
 void Marks(Player[] everyone)
 {
     marks.Clear();
@@ -1355,7 +1400,7 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
                   Math.Round(Math.Max(0, viewer.WarpReady - at), 2),
                   Math.Round(Math.Max(0, viewer.DrawReady - at), 2), World.ScoreOf(viewer.Radius),
                   World.IsHole(viewer.Radius),
-                  crossing, gone, viewer.Ate, eddies), json);
+                  crossing, gone, viewer.Ate, eddies, map), json);
 }
 
 async ValueTask Broadcast()
@@ -1367,6 +1412,8 @@ async ValueTask Broadcast()
     var souls = Souls().Where(p => !p.Gone).ToArray();
 
     Marks(souls);
+
+    Chart(souls);
 
     // short, and usually empty: one per hole with a whirl open
     var turning = souls.Where(p => p.WhirlEnds > 0).ToArray();
@@ -1423,6 +1470,30 @@ async ValueTask Broadcast()
         Remember(player);
 
         players.TryRemove(connection, out _);
+    }
+
+    /*
+     * What anybody said goes to everybody, ahead of the frames, and is then
+     * forgotten. Nothing about chat is filtered by distance: an arena where
+     * you can only talk to what you can already eat is not one people talk
+     * in.
+     */
+    if (!chatter.IsEmpty)
+    {
+        var lines = new List<string>();
+
+        while (chatter.TryDequeue(out var said))
+        {
+            lines.Add(JsonSerializer.Serialize(said, json));
+        }
+
+        foreach (var (connection, _) in everyone)
+        {
+            foreach (var line in lines)
+            {
+                await Send(connection, line);
+            }
+        }
     }
 
     /*
@@ -1665,6 +1736,47 @@ var socket = Websocket.Functional()
                               {
                                   arriving.TryRemove(connection, out _);
                               }
+
+                              return;
+                          }
+
+                          if (text.Contains("\"say\""))
+                          {
+                              var spoken = JsonSerializer.Deserialize<Say>(text, json);
+
+                              /*
+                               * Trimmed, capped, stripped of anything that is
+                               * not printable, and refused if it arrives too
+                               * soon after the last one. None of that is about
+                               * taste - it is about a line being a line: a
+                               * message with newlines in it or three hundred
+                               * characters of nothing is a way of pushing the
+                               * arena off somebody else's screen.
+                               */
+                              var line = (spoken?.Text ?? "").Trim();
+
+                              if (line.Length == 0 || at - player.Spoke < World.SayGap)
+                              {
+                                  return;
+                              }
+
+                              if (line.Length > World.SayLength)
+                              {
+                                  line = line[..World.SayLength];
+                              }
+
+                              // a space rather than nothing, or "line\nbreak"
+                              // arrives as "linebreak"
+                              line = new string(line.Select(c => char.IsControl(c) ? ' ' : c).ToArray()).Trim();
+
+                              if (line.Length == 0)
+                              {
+                                  return;
+                              }
+
+                              player.Spoke = at;
+
+                              chatter.Enqueue(new Said("said", player.Name, line));
 
                               return;
                           }
