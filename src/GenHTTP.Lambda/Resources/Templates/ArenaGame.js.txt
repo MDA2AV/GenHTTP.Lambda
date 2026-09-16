@@ -89,6 +89,43 @@ let drawing = null;
 /** Seconds until the teleport is ready, and whether this blob has collapsed. */
 let cool = 0, collapsed = false;
 
+/*
+ * Two things the server tells us about that are not blobs.
+ *
+ * `marks` is whatever is mid-teleport and is replaced outright every frame -
+ * it is a picture of now, not a list of events. `deaths` is the opposite: a
+ * blob eaten is mentioned in exactly one frame and then never again, so each
+ * one is kept here until its animation has finished playing.
+ */
+let marks = [];
+
+const deaths = [];
+
+// how long a blob spends coming apart, in milliseconds
+const DEATH = 640;
+
+const feed = $('feed');
+
+/**
+ * Says something in the middle of the screen for a couple of seconds.
+ *
+ * Text, never markup: a name comes from whoever typed it, and the only
+ * reason this is safe to print at all is that it never becomes HTML.
+ */
+function say(text) {
+  const line = document.createElement('div');
+
+  line.className = 'said';
+  line.textContent = text;
+
+  feed.append(line);
+
+  // the fading out is the stylesheet's; this is only the tidying up after it
+  line.addEventListener('animationend', () => line.remove());
+
+  while (feed.childElementCount > 4) feed.firstElementChild.remove();
+}
+
 /** Where the pointer is, in world units. */
 function aim() {
   if (!camera) return null;
@@ -519,6 +556,142 @@ function drawAura(x, y, r, stage, id, spin, level) {
   ctx.restore();
 }
 
+/**
+ * A teleport that has not landed yet.
+ *
+ * The mark is drawn at the size of the thing arriving, which is the whole
+ * reason anybody else is told about it: a small one landing next to you is
+ * lunch and a large one is the end of your round, and a reticle that was the
+ * same either way would be noise. It fills as the crossing runs, so the
+ * question it answers is not only what is coming but how long there is.
+ *
+ * Flat, not put: the marker has to be exactly where the blob will be, and
+ * the floor under it may be bent by half a screen if a hole is nearby.
+ */
+function drawMarks(flat, scale) {
+  if (!marks.length) return;
+
+  const turn = performance.now() / 700;
+
+  for (const mark of marks) {
+    const at = flat(mark.x, mark.y);
+    const r = Math.max(7, mark.r * scale);
+    const t = Math.min(1, Math.max(0, mark.t ?? 0));
+
+    ctx.save();
+    ctx.translate(at.x, at.y);
+
+    // the ground it is taking, filling as it comes
+    ctx.globalAlpha = 0.1 + t * 0.24;
+    ctx.fillStyle = mark.c;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * t, 0, Math.PI * 2);
+    ctx.fill();
+
+    // the edge of it, turning, so a mark is never read as a blob
+    ctx.globalAlpha = 0.45 + t * 0.5;
+    ctx.strokeStyle = mark.c;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([r * 0.34, r * 0.26]);
+    ctx.lineDashOffset = -turn * r;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // four spokes closing on it, which is the part that reads as a
+    // countdown rather than as decoration
+    const out = r + 8 + 30 * (1 - t);
+    const arm = Math.max(5, r * 0.3);
+
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.25 + t * 0.65;
+    ctx.beginPath();
+
+    for (let q = 0; q < 4; q++) {
+      const a = q * Math.PI / 2 + Math.PI / 4;
+      const cx = Math.cos(a), cy = Math.sin(a);
+
+      ctx.moveTo(cx * (out + arm), cy * (out + arm));
+      ctx.lineTo(cx * out, cy * out);
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/**
+ * Blobs coming apart where they were eaten.
+ *
+ * This has to be told to us rather than noticed: by the time a browser could
+ * work out that somebody has stopped appearing in the frames, it has already
+ * drawn one they are simply absent from, and a blob that vanishes between
+ * two frames reads as a dropped connection rather than as a death.
+ *
+ * Drawn over the blobs rather than under them, including over whatever just
+ * ate this one - the swallowing is the thing being shown.
+ */
+function drawDeaths(flat, scale) {
+  if (!deaths.length) return;
+
+  const now = performance.now();
+
+  ctx.save();
+
+  // backwards, because finished ones are dropped on the way through
+  for (let i = deaths.length - 1; i >= 0; i--) {
+    const gone = deaths[i];
+    const age = (now - gone.at) / DEATH;
+
+    if (age >= 1) {
+      deaths.splice(i, 1);
+
+      continue;
+    }
+
+    const at = flat(gone.x, gone.y);
+    const r = Math.max(5, gone.r * scale);
+    const out = 1 - Math.pow(1 - age, 3);
+    const left = 1 - age;
+
+    // the shell of it, thrown outwards and thinning as it goes
+    ctx.globalAlpha = left * 0.85;
+    ctx.strokeStyle = gone.c;
+    ctx.lineWidth = Math.max(1, 6 * left);
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, r * (1 + out * 1.5), 0, Math.PI * 2);
+    ctx.stroke();
+
+    // and what it was made of, going with it. One path for all ten, because
+    // a crowded arena can have several of these at once
+    ctx.lineWidth = Math.max(1, 4 * left);
+    ctx.beginPath();
+
+    for (let s = 0; s < 10; s++) {
+      const a = gone.turn + s * Math.PI / 5;
+      const near = r * (0.7 + out * 1.5);
+      const far = near + r * 0.55 * left + 6;
+
+      ctx.moveTo(at.x + Math.cos(a) * near, at.y + Math.sin(a) * near);
+      ctx.lineTo(at.x + Math.cos(a) * far, at.y + Math.sin(a) * far);
+    }
+
+    ctx.stroke();
+
+    // the flash, which is over almost before it starts
+    if (age < 0.3) {
+      ctx.globalAlpha = (1 - age / 0.3) * 0.7;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(at.x, at.y, r * (1 + age), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
 function draw() {
   requestAnimationFrame(draw);
 
@@ -764,6 +937,46 @@ function draw() {
     ctx.restore();
   }
 
+  // under the blobs, because a mark is ground and something may be standing
+  // on it already - which is exactly what the person teleporting wants to see
+  drawMarks(flat, scale);
+
+  /*
+   * Ghosts behind anybody mid-teleport.
+   *
+   * A blob crossing a thousand units in four tenths of a second is drawn at
+   * six or seven places on the way and at no two of them does it overlap
+   * itself, so without this it reads as a series of jumps rather than as one
+   * fast movement. Sampling where it actually was, out of the frames already
+   * kept for interpolating, rather than guessing from a heading: the path is
+   * a straight line but the speed along it is the server's.
+   */
+  const crossing = marks.length ? new Set(marks.map((m) => m.i)) : null;
+
+  if (crossing) {
+    for (let back = 3; back >= 1; back--) {
+      const was = history[history.length - 1 - back];
+
+      if (!was) continue;
+
+      const fade = (4 - back) / 9;
+
+      for (const b of was.b) {
+        if (!crossing.has(b.i)) continue;
+
+        const at = flat(b.x, b.y);
+
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = b.c;
+        ctx.beginPath();
+        ctx.arc(at.x, at.y, b.r * scale * (0.5 + fade), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
   // smallest first, so being swallowed looks like being swallowed
   for (const b of [...now.blobs].sort((a, z) => a.r - z.r)) {
     const at = flat(b.x, b.y);
@@ -824,6 +1037,8 @@ function draw() {
       ctx.fillText(b.n, at.x, y);
     }
   }
+
+  drawDeaths(flat, scale);
 }
 
 /**
@@ -966,6 +1181,9 @@ function connect(name) {
       $('over').hidden = true;
       $('won').hidden = false;
       history.length = 0;
+      marks = [];
+      deaths.length = 0;
+      feed.replaceChildren();
       return;
     }
 
@@ -975,12 +1193,31 @@ function connect(name) {
       $('final').textContent = `You got to ${m.score}.`;
       $('over').hidden = false;
       camera = null;
+      marks = [];
+      deaths.length = 0;
+      feed.replaceChildren();
       return;
     }
 
     world = m.w ?? world;
 
     history.push({ at: performance.now(), b: m.b, p: m.p, k: m.k, s: m.s });
+
+    marks = m.v ?? [];
+
+    for (const gone of m.e ?? []) {
+      deaths.push({
+        x: gone.x, y: gone.y, r: gone.r, c: gone.c,
+        at: performance.now(),
+        // so that two at once are not the same picture twice
+        turn: Math.random() * Math.PI,
+      });
+    }
+
+    // a tab left in the background wakes to a pile of these
+    while (deaths.length > 40) deaths.shift();
+
+    for (const name of m.a ?? []) say(`You ate ${name}`);
 
     carrying = m.mine ?? 0;
     fuse = m.fuse ?? 0;
@@ -1018,7 +1255,7 @@ function connect(name) {
       ? `collapsed, grade ${grade}. You cannot move. Everything comes to you.`
       : cool > 0
         ? `teleport in ${cool.toFixed(1)}s`
-        : 'teleport ready · E';
+        : 'teleport ready';
     $('warp').className = collapsed ? 'collapsed' : cool > 0 ? 'cooling' : 'ready';
     $('list').innerHTML = m.l.map((s) =>
       `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');

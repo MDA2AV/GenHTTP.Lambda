@@ -63,6 +63,29 @@ public record Fill(string Kind, int Count);
 /// <summary>Somebody used what they were carrying.</summary>
 public record Use(string Kind);
 
+/// <summary>Ground that somebody is on their way to.</summary>
+/// <remarks>
+/// Sent for every teleport in flight that the reader could see the far end
+/// of, whoever is making it - including their own, so that one place draws
+/// it and the mark is in exactly the same state for the blob arriving and
+/// for whatever is standing where it is about to arrive.
+/// </remarks>
+/// <param name="R">How big the thing arriving is, which is the whole point of
+/// telling anybody: a mark is a warning or a nothing depending on it</param>
+/// <param name="T">How far through the crossing it is, nought to one</param>
+/// <param name="I">Whose crossing it is, so the browser can draw the blob as
+/// travelling rather than as having slid</param>
+public record Mark(double X, double Y, double R, string C, double T, string I);
+
+/// <summary>A blob that has just been eaten, and how big it was.</summary>
+/// <remarks>
+/// Only worth a frame or two, but it has to come from the server: by the
+/// time a browser notices somebody has stopped being in the frames it has
+/// already drawn one where they are simply not there, which reads as a
+/// dropped connection rather than as a death.
+/// </remarks>
+public record Feast(double X, double Y, double R, string C);
+
 /// <summary>One line of the leaderboard.</summary>
 public record Score(string N, int S);
 
@@ -104,8 +127,12 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// </remarks>
 /// <param name="Cool">Seconds until this player may teleport again, nought if now</param>
 /// <param name="Hole">Whether this player has collapsed and can no longer move</param>
+/// <param name="V">Teleports crossing within sight, nought of them being null</param>
+/// <param name="E">Blobs eaten within sight this tick, nought of them being null</param>
+/// <param name="A">Who this player ate this tick, nobody being null</param>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W,
-                    List<int> K, List<int> S, int Mine, double Fuse, double Cool, bool Hole);
+                    List<int> K, List<int> S, int Mine, double Fuse, double Cool, bool Hole,
+                    List<Mark> V, List<Feast> E, List<string> A);
 
 /// <summary>
 /// Sent to everybody when somebody takes the whole arena.

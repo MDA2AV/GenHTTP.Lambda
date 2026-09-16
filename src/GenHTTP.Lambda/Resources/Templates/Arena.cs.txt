@@ -18,6 +18,11 @@
 var json = new JsonSerializerOptions
 {
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+
+    // the three newest fields in a frame are empty on almost every tick -
+    // nobody is teleporting, nobody has just been eaten - and a null is left
+    // out altogether where an empty list still costs its name and brackets
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     PropertyNameCaseInsensitive = true
 };
 
@@ -98,6 +103,16 @@ var spears = new List<Spear>();
 
 /// <summary>What is lying on the floor waiting to be picked up.</summary>
 var prizes = new List<Prize>();
+
+/*
+ * Teleports part-way across, and blobs eaten, this tick.
+ *
+ * Both are moments rather than things, so both are built from scratch every
+ * tick and read once, by the broadcast that follows it.
+ */
+var marks = new List<Mark>();
+
+var feasts = new List<Feast>();
 
 /// <summary>Ticks until the next one is put out.</summary>
 var sowing = 0;
@@ -584,7 +599,7 @@ void Run(Player player, double seconds)
 /// </remarks>
 bool Jump(Player player, double x, double y)
 {
-    if (at < player.WarpReady || World.IsHole(player.Radius) || player.StreakX != null)
+    if (at < player.WarpReady || World.IsHole(player.Radius) || player.StreakX != null || player.WarpLands > 0)
     {
         return false;
     }
@@ -601,20 +616,61 @@ bool Jump(Player player, double x, double y)
 
     var reach = Math.Min(far, World.WarpReach(player.Radius));
 
-    player.X = World.Clamp(player.X + toX / far * reach, size);
-    player.Y = World.Clamp(player.Y + toY / far * reach, size);
+    // where, and from when: the ground is marked now and the blob crosses to
+    // it over the lead, rather than being somewhere else by the time the key
+    // comes back up
+    player.WarpToX = World.Clamp(player.X + toX / far * reach, size);
+    player.WarpToY = World.Clamp(player.Y + toY / far * reach, size);
 
-    // steering follows, or the blob turns round and walks straight back
-    player.WantX = player.X;
-    player.WantY = player.Y;
+    player.WarpLands = at + World.WarpLead;
 
-    player.WarpReady = at + World.WarpWait(player.Radius);
+    // both the toll and the wait are charged on the press rather than on the
+    // arrival, or the crossing would be a window to press it again in
+    player.WarpReady = at + World.WarpLead + World.WarpWait(player.Radius);
 
     var area = Math.PI * player.Radius * player.Radius * (1 - World.WarpToll);
 
     player.Radius = Math.Max(World.Start, Math.Sqrt(area / Math.PI));
 
     return true;
+}
+
+/// <summary>
+/// Carries a blob the next tick's worth of the way through a teleport.
+/// </summary>
+/// <remarks>
+/// The far end was fixed when the key went down, so this is not steering:
+/// it takes the share of what is left to cross that belongs to this tick,
+/// which puts the blob on its mark on the beat however long the tick
+/// happened to run for, and holds a steady speed while it does it.
+///
+/// Nothing is made untouchable on the way. Crossing at several thousand
+/// units a second there is nothing that can catch a blob mid-flight, but
+/// there is plenty it can be sent into, and landing on something that eats
+/// you is a consequence of where you aimed rather than of bad luck.
+/// </remarks>
+void Dash(Player player, double seconds)
+{
+    var left = player.WarpLands - at;
+
+    if (left <= seconds)
+    {
+        player.X = player.WarpToX;
+        player.Y = player.WarpToY;
+
+        // steering follows, or the blob turns round and walks straight back
+        player.WantX = player.X;
+        player.WantY = player.Y;
+
+        player.WarpLands = 0;
+
+        return;
+    }
+
+    var share = seconds / left;
+
+    player.X = World.Clamp(player.X + (player.WarpToX - player.X) * share, size);
+    player.Y = World.Clamp(player.Y + (player.WarpToY - player.Y) * share, size);
 }
 
 /// <summary>
@@ -782,6 +838,20 @@ void Step(double seconds)
     tick++;
 
     at += seconds;
+
+    /*
+     * Everything that is only true for one tick starts the tick empty.
+     *
+     * The broadcast that reads these runs after this returns, so a mark or a
+     * death recorded below is sent exactly once and then forgotten - which
+     * is the whole of their lifetime and the reason they are not state.
+     */
+    feasts.Clear();
+
+    foreach (var soul in everyone)
+    {
+        soul.Ate = null;
+    }
 
     // the arena is sized for whoever is in it, once, before anything moves
     size = World.SizeFor(everyone.Length);
@@ -1076,7 +1146,11 @@ void Step(double seconds)
          * in advance and the whole point is that it is taken exactly, so
          * whatever the pointer is doing meanwhile is ignored until it ends.
          */
-        if (player.StreakX != null)
+        if (player.WarpLands > 0)
+        {
+            Dash(player, seconds);
+        }
+        else if (player.StreakX != null)
         {
             Run(player, seconds);
         }
@@ -1406,6 +1480,11 @@ void Step(double seconds)
 
             player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.AreaOf(other.Radius) * World.Spoils);
 
+            feasts.Add(new Feast(Math.Round(other.X, 1), Math.Round(other.Y, 1),
+                                 Math.Round(other.Radius, 1), other.Colour));
+
+            (player.Ate ??= []).Add(other.Name);
+
             other.Gone = true;
             other.EatenBy = player.Name;
         }
@@ -1454,11 +1533,36 @@ void Step(double seconds)
             soul.StreakY = null;
             soul.Wound = 0;
             soul.WarpReady = 0;
+            soul.WarpLands = 0;
         }
 
         pellets.Clear();
 
         break;
+    }
+}
+
+/// <summary>Where every teleport still crossing is headed.</summary>
+/// <remarks>
+/// Gathered once for the whole arena rather than per viewer, because the
+/// mark is the same mark whoever is looking at it - the filtering by what
+/// each of them can see happens in <c>Picture</c>, on a list this short.
+/// </remarks>
+void Marks(Player[] everyone)
+{
+    marks.Clear();
+
+    foreach (var soul in everyone)
+    {
+        if (soul.WarpLands <= 0 || soul.Gone)
+        {
+            continue;
+        }
+
+        var through = Math.Clamp(1 - (soul.WarpLands - at) / World.WarpLead, 0, 1);
+
+        marks.Add(new Mark(Math.Round(soul.WarpToX, 1), Math.Round(soul.WarpToY, 1),
+                           Math.Round(soul.Radius, 1), soul.Colour, Math.Round(through, 2), soul.Id));
     }
 }
 
@@ -1565,6 +1669,33 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
         }
     }
 
+    /*
+     * The marks and the deaths, cut down to what this screen reaches.
+     *
+     * Null rather than an empty list when there is nothing, which on the
+     * overwhelming majority of ticks is the case: the serialiser leaves a
+     * null field out of the frame altogether.
+     */
+    List<Mark> crossing = null;
+
+    foreach (var mark in marks)
+    {
+        if (World.InView(viewer.X, viewer.Y, viewer.Radius, mark.X, mark.Y))
+        {
+            (crossing ??= []).Add(mark);
+        }
+    }
+
+    List<Feast> gone = null;
+
+    foreach (var feast in feasts)
+    {
+        if (World.InView(viewer.X, viewer.Y, viewer.Radius, feast.X, feast.Y))
+        {
+            (gone ??= []).Add(feast);
+        }
+    }
+
     var flying = new List<int>();
 
     foreach (var spear in spears)
@@ -1580,7 +1711,8 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive)
     return JsonSerializer.Serialize(
         new Frame("f", near, crumbs, board.ToList(), alive, size,
                   loot, flying, viewer.Perk, Math.Round(viewer.Lit, 2),
-                  Math.Round(Math.Max(0, viewer.WarpReady - at), 2), World.IsHole(viewer.Radius)), json);
+                  Math.Round(Math.Max(0, viewer.WarpReady - at), 2), World.IsHole(viewer.Radius),
+                  crossing, gone, viewer.Ate), json);
 }
 
 async ValueTask Broadcast()
@@ -1590,6 +1722,8 @@ async ValueTask Broadcast()
     // drawn from everybody rather than from the sockets: a bot is in the
     // arena and has to be seen, it simply has nowhere to be sent to
     var souls = Souls().Where(p => !p.Gone).ToArray();
+
+    Marks(souls);
 
     var blobs = souls.Select(p => new Blob(p.Id, p.Name, p.Colour,
                                            Math.Round(p.X, 1), Math.Round(p.Y, 1),

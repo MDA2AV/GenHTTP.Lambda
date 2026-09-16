@@ -165,6 +165,24 @@ sealed class Player
     /// <summary>When this blob may teleport again, on the arena clock.</summary>
     public double WarpReady;
 
+    /// <summary>Where a teleport already under way is taking this blob.</summary>
+    public double WarpToX;
+
+    /// <summary>The other half of <see cref="WarpToX"/>.</summary>
+    public double WarpToY;
+
+    /// <summary>
+    /// The arena clock reading at which a teleport already under way
+    /// finishes, or nought when there is not one.
+    /// </summary>
+    public double WarpLands;
+
+    /// <summary>
+    /// Who this blob has eaten since the last frame went out, which is worth
+    /// saying on their screen and nowhere else.
+    /// </summary>
+    public List<string> Ate;
+
     /// <summary>
     /// The line this blob is running, if it is running one.
     /// </summary>

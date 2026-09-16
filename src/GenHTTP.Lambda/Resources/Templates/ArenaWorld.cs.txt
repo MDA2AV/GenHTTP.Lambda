@@ -190,6 +190,20 @@ static class World
     /// </remarks>
     public const double WarpToll = 0.04;
 
+    /// <summary>How long a teleport takes to cross, in seconds.</summary>
+    /// <remarks>
+    /// A teleport that lands on the keypress is unanswerable, and worse than
+    /// that it is unreadable: the blob is simply somewhere else, and nobody
+    /// watching learns anything about what happened. Marking the ground
+    /// first and crossing to it over the next fraction of a second costs the
+    /// escape almost nothing - it is still an order of magnitude faster than
+    /// walking, and nothing in the arena can cover the ground in time - and
+    /// it buys the two things that make it a move rather than a trick: the
+    /// blob leaving is visibly the blob that arrives, and everybody near
+    /// where it is going gets a moment's warning that it is coming.
+    /// </remarks>
+    public const double WarpLead = 0.42;
+
     /// <summary>How far a teleport may carry somebody.</summary>
     public static double WarpReach(double radius) => 900 + radius * 6;
 

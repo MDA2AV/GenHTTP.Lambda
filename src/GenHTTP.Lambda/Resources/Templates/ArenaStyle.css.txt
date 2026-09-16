@@ -45,6 +45,9 @@ button { padding: 9px 20px; border: 0; background: #1a73e8; color: #fff; font: i
    than thrown. Kept to the same shape as the rest of the hud so the row reads
    as one line of state and not as three separate notices. */
 #warp {
+  display: block;
+  font-size: 13px;
+  margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -53,6 +56,44 @@ button { padding: 9px 20px; border: 0; background: #1a73e8; color: #fff; font: i
 #warp.collapsed { color: #c884ff; font-weight: 600; }
 
 #perk.streak { color: #8adcff; }
+
+/*
+ * What just happened, in the middle of the screen and briefly.
+ *
+ * Above the blob rather than below it: a kill is read out of the corner of
+ * an eye that is on its own blob, and anything down by the board is missed
+ * by the person it is about. It leaves on its own - there is nothing here to
+ * click, and a message that waits to be dismissed is in the way.
+ */
+#feed {
+  position: fixed;
+  left: 50%;
+  top: 17%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.said {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .9), 0 0 26px rgba(138, 220, 255, .45);
+  animation: said 2.4s cubic-bezier(.16, 1, .3, 1) forwards;
+  white-space: nowrap;
+}
+
+@keyframes said {
+  0%   { opacity: 0; transform: translateY(14px) scale(.86); }
+  10%  { opacity: 1; transform: none; }
+  70%  { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-18px); }
+}
 
 #crowd {
   position: fixed;
