@@ -92,12 +92,6 @@ var nextSlot = 0;
 
 var tick = 0L;
 
-/// <summary>The harpoons currently in the air.</summary>
-var spears = new List<Spear>();
-
-/// <summary>What is lying on the floor waiting to be picked up.</summary>
-var prizes = new List<Prize>();
-
 /*
  * Teleports part-way across, and blobs eaten, this tick.
  *
@@ -107,12 +101,6 @@ var prizes = new List<Prize>();
 var marks = new List<Mark>();
 
 var feasts = new List<Feast>();
-
-/// <summary>Ticks until the next one is put out.</summary>
-var sowing = 0;
-
-/// <summary>Numbers them, so the browser can tell one from another.</summary>
-var nextPrize = 0;
 
 /// <summary>Seconds since the arena started, which is what the bruise window is measured against.</summary>
 var at = 0.0;
@@ -237,125 +225,6 @@ void Rebucket()
     return (bestX, bestY);
 }
 
-/// <summary>
-/// Takes area off somebody and puts most of it on the floor around them.
-/// </summary>
-/// <remarks>
-/// The one way anything can hurt something too big to eat. It refuses to
-/// touch anything small, and it refuses to take more than a limited share
-/// off anybody in any ten seconds however many people are trying - so a
-/// crowd carves a giant down over a minute rather than deleting it between
-/// two frames.
-/// </remarks>
-/// <returns>How much was actually taken</returns>
-double Wound(Player victim, double asked, double now)
-{
-    if (victim.Radius < World.Tender || asked <= 0)
-    {
-        return 0;
-    }
-
-    var whole = World.AreaOf(victim.Radius);
-
-    if (now - victim.Bruising > World.Window)
-    {
-        victim.Bruising = now;
-        victim.Bruised = 0;
-    }
-
-    var room = whole * World.Bruise - victim.Bruised;
-
-    var taken = Math.Min(asked, room);
-
-    if (taken <= 0)
-    {
-        return 0;
-    }
-
-    victim.Bruised += taken;
-    victim.Radius = World.RadiusOf(whole - taken);
-
-    Shower(victim.X, victim.Y, victim.Radius, taken * World.Spill);
-
-    return taken;
-}
-
-/// <summary>
-/// Throws an amount of area onto the floor as pellets.
-/// </summary>
-/// <remarks>
-/// Broken into the biggest grades it will make and then the remainder into
-/// smaller ones, laid out on a turn of the golden angle so that they never
-/// line up, and with the heavy ones furthest out. That last part is the
-/// whole design of it: the best of what falls off a giant lands where the
-/// giant is slowest to reach and a small player is quickest.
-/// </remarks>
-void Shower(double x, double y, double radius, double area)
-{
-    /*
-     * A fight cannot leave more on the floor than the arena is willing to
-     * hold. The scatter only ever tops the count up, never down, so without
-     * this a long enough fight walks the pellet count up and never brings
-     * it back - and every frame, every bucket and every sweep pays for it
-     * from then on.
-     */
-    var room = (int)(World.PelletsFor(size) * World.Glut) - pellets.Count;
-
-    if (room <= 0)
-    {
-        return;
-    }
-
-    var pieces = new List<int>();
-
-    var most = Math.Min(World.Shards, room);
-
-    for (var grade = World.Grades.Length - 1; grade >= 0 && pieces.Count < most; grade--)
-    {
-        // never spend the whole lot on the largest grade, or a big hit comes
-        // back as four boulders and nothing a small player can chip at
-        var share = grade == 0 ? area : area * 0.5;
-
-        while (area >= World.Worth(grade) && share >= World.Worth(grade) && pieces.Count < most)
-        {
-            pieces.Add(grade);
-
-            area -= World.Worth(grade);
-            share -= World.Worth(grade);
-        }
-    }
-
-    // smallest first, so the heavy ones end up furthest out
-    pieces.Sort();
-
-    for (var i = 0; i < pieces.Count; i++)
-    {
-        var turn = i * 2.39996 + random.NextDouble() * Math.Tau;
-
-        /*
-         * Clear of whatever it came off, not merely outside it. A big blob
-         * drags loose pellets from three and a half times its own radius, so
-         * a shower that lands any closer is handed straight back: measured,
-         * a blast that took sixteen per cent off one left it down three by
-         * the time it had hoovered up the pieces.
-         */
-        var ring = Math.Max(radius + World.Splash, World.Drag(radius, 1));
-
-        var out_ = ring + World.Scatter * Math.Sqrt((i + 0.5) / pieces.Count);
-
-        var slot = TakeSlot();
-
-        pellets[slot] = new Pellet
-        {
-            Slot = slot,
-            X = World.Clamp(x + Math.Cos(turn) * out_, size),
-            Y = World.Clamp(y + Math.Sin(turn) * out_, size),
-            C = World.AnyTint(random),
-            Grade = pieces[i]
-        };
-    }
-}
-
 void Scatter()
 {
     var wanted = World.PelletsFor(size);
@@ -459,7 +328,7 @@ void Remember(Player player)
 
 
 /// <summary>
-/// Moves a blob along the line it was given, at the speed of the pickup.
+/// Moves a blob along the line it was given, far faster than it can walk.
 /// </summary>
 /// <remarks>
 /// Leg by leg rather than towards the far end, because the shape is the
@@ -1147,30 +1016,6 @@ void Step(double seconds)
         var goY = 0.0;
 
         /*
-         * A harpoon that lands hauls whoever threw it in towards what it hit,
-         * for a moment, whatever they were steering at. That is the point of
-         * it: the throw is also the claim on whatever just fell out, at the
-         * price of ending up next to something that would happily eat you.
-         */
-        if (player.Hauling > 0)
-        {
-            player.Hauling -= seconds;
-
-            var hx = player.HauledX - player.X;
-            var hy = player.HauledY - player.Y;
-
-            var far = Math.Sqrt(hx * hx + hy * hy);
-
-            if (far > player.Radius)
-            {
-                var haul = Math.Min(260 * seconds, far - player.Radius);
-
-                player.X = World.Clamp(player.X + hx / far * haul, size);
-                player.Y = World.Clamp(player.Y + hy / far * haul, size);
-            }
-        }
-
-        /*
          * Running a drawn line.
          *
          * It replaces steering rather than adding to it: the line was chosen
@@ -1248,260 +1093,6 @@ void Step(double seconds)
                 }
             }
         }
-    }
-
-    /*
-     * Anybody who pressed since the last tick spends what they are holding,
-     * here on the clock rather than on their own socket.
-     */
-    foreach (var player in everyone)
-    {
-        if (!player.Spending)
-        {
-            continue;
-        }
-
-        player.Spending = false;
-
-        if (player.Perk == Perk.Harpoon)
-        {
-            var aimX = player.WantX - player.X;
-            var aimY = player.WantY - player.Y;
-
-            var aim = Math.Sqrt(aimX * aimX + aimY * aimY);
-
-            if (aim > 1)
-            {
-                spears.Add(new Spear
-                {
-                    Owner = player.Id,
-                    X = player.X,
-                    Y = player.Y,
-                    DX = aimX / aim * 900,
-                    DY = aimY / aim * 900,
-                    Life = 16
-                });
-
-                player.Perk = Perk.None;
-            }
-        }
-        else if (player.Perk == Perk.Blast)
-        {
-            player.Lit = World.Fuse;
-            player.Perk = Perk.None;
-        }
-    }
-
-    /*
-     * What is lying about to be picked up. One goes out every three seconds
-     * up to a couple of dozen, well clear of the walls and of anything large
-     * enough to be sitting on the spawn - and they expire, so an arena
-     * nobody is playing in does not slowly carpet itself.
-     *
-     * Far thicker than it was. A handful across nine thousand units meant
-     * most players finished a round without seeing one, which is a strange
-     * thing to be true of the part of the game with the most in it.
-     */
-    var wanted_prizes = (int)Math.Clamp(size * size / 500_000, 12, 30);
-
-    for (var i = prizes.Count - 1; i >= 0; i--)
-    {
-        if (--prizes[i].Life <= 0)
-        {
-            prizes.RemoveAt(i);
-        }
-    }
-
-    if (--sowing <= 0 && prizes.Count < wanted_prizes)
-    {
-        // quick while the floor is thin and slow once it is stocked, so a
-        // fresh round is not thirty seconds of bare arena before the first
-        // pickup and a long one does not carpet itself
-        sowing = (int)((prizes.Count < wanted_prizes / 2 ? 0.6 : 3.0) / seconds);
-
-        for (var attempt = 0; attempt < 12; attempt++)
-        {
-            var x = 200 + random.NextDouble() * Math.Max(1, size - 400);
-            var y = 200 + random.NextDouble() * Math.Max(1, size - 400);
-
-            var lonely = true;
-
-            foreach (var soul in everyone)
-            {
-                if (soul.Radius >= 100 && Math.Abs(soul.X - x) < 300 && Math.Abs(soul.Y - y) < 300)
-                {
-                    lonely = false;
-
-                    break;
-                }
-            }
-
-            if (!lonely && attempt < 11)
-            {
-                continue;
-            }
-
-            prizes.Add(new Prize
-            {
-                Slot = nextPrize++,
-                X = x,
-                Y = y,
-                // half of them are the drawn line, which is the one worth
-                // crossing the arena for and was the rarest of the three
-                Perk = random.Next(4) switch { 0 => Perk.Harpoon, 1 => Perk.Blast, _ => Perk.Streak },
-                Life = (int)(90 / seconds)
-            });
-
-            break;
-        }
-    }
-
-    // picked up by covering it, and only by somebody still small enough for
-    // it to be the answer to something
-    foreach (var player in everyone)
-    {
-        if (player.Perk != Perk.None || player.Radius >= 200)
-        {
-            continue;
-        }
-
-        for (var i = prizes.Count - 1; i >= 0; i--)
-        {
-            var prize = prizes[i];
-
-            var dx = prize.X - player.X;
-            var dy = prize.Y - player.Y;
-
-            if (dx * dx + dy * dy < player.Radius * player.Radius)
-            {
-                player.Perk = prize.Perk;
-
-                prizes.RemoveAt(i);
-
-                break;
-            }
-        }
-    }
-
-    /*
-     * Harpoons in the air. They pass straight through anything too small to
-     * be worth hurting, so nobody is ever picked off at the starting size,
-     * and they fall short rather than travelling for ever.
-     */
-    for (var i = spears.Count - 1; i >= 0; i--)
-    {
-        var spear = spears[i];
-
-        spear.X = World.Clamp(spear.X + spear.DX * seconds, size);
-        spear.Y = World.Clamp(spear.Y + spear.DY * seconds, size);
-
-        Player struck = null;
-
-        foreach (var soul in everyone)
-        {
-            if (soul.Gone || soul.Id == spear.Owner || soul.Radius < World.Tender)
-            {
-                continue;
-            }
-
-            var dx = soul.X - spear.X;
-            var dy = soul.Y - spear.Y;
-
-            var touch = soul.Radius + 6;
-
-            if (dx * dx + dy * dy < touch * touch)
-            {
-                struck = soul;
-
-                break;
-            }
-        }
-
-        if (struck != null)
-        {
-            Wound(struck, World.AreaOf(struck.Radius) * World.Barb, at);
-
-            // and hauls whoever threw it in towards what it hit, which is how
-            // they get to whatever just fell out of it
-            foreach (var soul in everyone)
-            {
-                if (soul.Id == spear.Owner)
-                {
-                    soul.HauledX = struck.X;
-                    soul.HauledY = struck.Y;
-                    soul.Hauling = 0.8;
-
-                    break;
-                }
-            }
-
-            spears.RemoveAt(i);
-
-            continue;
-        }
-
-        if (--spear.Life <= 0)
-        {
-            spears.RemoveAt(i);
-        }
-    }
-
-    // fuses
-    foreach (var player in everyone)
-    {
-        if (player.Lit <= 0)
-        {
-            continue;
-        }
-
-        player.Lit -= seconds;
-
-        if (player.Lit > 0)
-        {
-            continue;
-        }
-
-        player.Lit = 0;
-
-        var spent = World.AreaOf(player.Radius);
-        var reach = World.Bang(player.Radius);
-
-        foreach (var soul in everyone)
-        {
-            if (ReferenceEquals(soul, player) || soul.Gone || soul.Radius < World.Tender)
-            {
-                continue;
-            }
-
-            var gap = Math.Sqrt((soul.X - player.X) * (soul.X - player.X)
-                              + (soul.Y - player.Y) * (soul.Y - player.Y));
-
-            var falling = Math.Clamp(gap / (reach + soul.Radius), 0, 1);
-
-            if (falling >= 1)
-            {
-                continue;
-            }
-
-            Wound(soul, Math.Min(World.Blast * (1 - falling) * World.AreaOf(soul.Radius),
-                                 World.Yield * spent), at);
-        }
-
-        // and what is left of them lands on the floor
-        Shower(player.X, player.Y, World.Start, spent * World.Remains);
-
-        Remember(player);
-
-        var fresh = Somewhere();
-
-        player.Radius = World.Start;
-        player.X = fresh.X;
-        player.Y = fresh.Y;
-        player.WantX = fresh.X;
-        player.WantY = fresh.Y;
-        player.Perk = Perk.None;
-        player.Hold = false;
-        player.Wound = 0;
     }
 
     foreach (var player in everyone)
@@ -1588,13 +1179,13 @@ void Step(double seconds)
             soul.WantY = soul.AimY = spot.Y;
             soul.Gone = false;
             soul.EatenBy = null;
-            soul.Perk = Perk.None;
             soul.Hold = false;
             soul.StreakX = null;
             soul.StreakY = null;
             soul.Wound = 0;
             soul.WarpReady = 0;
             soul.WarpLands = 0;
+            soul.DrawReady = 0;
             soul.Sparks = 0;
             soul.Spark = 0;
             soul.WhirlEnds = 0;
@@ -1719,20 +1310,6 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
         }
     }
 
-    // what is lying about within sight, and what is in the air
-    var loot = new List<int>();
-
-    foreach (var prize in prizes)
-    {
-        if (World.InView(viewer.X, viewer.Y, viewer.Radius, prize.X, prize.Y))
-        {
-            loot.Add(prize.Slot);
-            loot.Add((int)prize.X);
-            loot.Add((int)prize.Y);
-            loot.Add(prize.Perk);
-        }
-    }
-
     /*
      * The marks and the deaths, cut down to what this screen reaches.
      *
@@ -1773,22 +1350,10 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
         }
     }
 
-    var flying = new List<int>();
-
-    foreach (var spear in spears)
-    {
-        if (World.InView(viewer.X, viewer.Y, viewer.Radius, spear.X, spear.Y))
-        {
-            flying.Add((int)spear.X);
-            flying.Add((int)spear.Y);
-            flying.Add((int)Math.Round(Math.Atan2(spear.DY, spear.DX) * 100));
-        }
-    }
-
     return JsonSerializer.Serialize(
         new Frame("f", near, crumbs, board.ToList(), alive, size,
-                  loot, flying, viewer.Perk, Math.Round(viewer.Lit, 2),
-                  Math.Round(Math.Max(0, viewer.WarpReady - at), 2), World.IsHole(viewer.Radius),
+                  Math.Round(Math.Max(0, viewer.WarpReady - at), 2),
+                  Math.Round(Math.Max(0, viewer.DrawReady - at), 2), World.IsHole(viewer.Radius),
                   crossing, gone, viewer.Ate, eddies), json);
 }
 
@@ -1835,7 +1400,6 @@ async ValueTask Broadcast()
         bot.Radius = World.Start;
         bot.Gone = false;
         bot.EatenBy = null;
-        bot.Perk = Perk.None;
         bot.Hold = false;
         bot.StreakX = null;
         bot.StreakY = null;
@@ -1962,13 +1526,29 @@ void StartClock()
     {
         var last = DateTime.UtcNow;
 
+        /*
+         * Fifty milliseconds between beats, not fifty milliseconds of doing
+         * nothing between them.
+         *
+         * The wait used to be a flat delay after the work, so the period was
+         * fifty plus however long the tick took - which is harmless while a
+         * tick is a millisecond and is not once the arena is nine thousand
+         * units across with a hundred blobs and thirty thousand pellets in
+         * it. At that size the work is twenty milliseconds and the rate had
+         * quietly fallen from twenty a second to fourteen.
+         *
+         * Subtracting the work keeps the rate flat until the work will not
+         * fit in the beat at all, and then it degrades by running late
+         * rather than by running slow, which the clock below already knows
+         * how to handle - it measures the gap rather than assuming it.
+         */
         try
         {
             while (!players.IsEmpty)
             {
-                await Task.Delay(50);
+                var began = DateTime.UtcNow;
 
-                var now = DateTime.UtcNow;
+                var now = began;
                 var seconds = Math.Min((now - last).TotalSeconds, 0.25);
 
                 last = now;
@@ -1976,6 +1556,10 @@ void StartClock()
                 Step(seconds);
 
                 await Broadcast();
+
+                var spent = (DateTime.UtcNow - began).TotalMilliseconds;
+
+                await Task.Delay(Math.Max(1, (int)(World.Beat * 1000 - spent)));
             }
         }
         finally
@@ -2113,13 +1697,13 @@ var socket = Websocket.Functional()
                               /*
                                * A drawn line, spent on arrival rather than on
                                * the press that started it: somebody who draws
-                               * and then changes their mind has not used
-                               * anything, and the pickup is worth too much to
-                               * take for a gesture that never finished.
+                               * and then changes their mind has not spent
+                               * their wait on a gesture that never finished.
                                */
                               var drawn = JsonSerializer.Deserialize<Path>(text, json);
 
-                              if (player.Perk == Perk.Streak && drawn?.X is { Length: > 1 } && drawn.Y?.Length == drawn.X.Length)
+                              if (at >= player.DrawReady && !World.IsHole(player.Radius) && player.StreakX == null
+                                  && player.WarpLands <= 0 && drawn?.X is { Length: > 1 } && drawn.Y?.Length == drawn.X.Length)
                               {
                                   var count = Math.Min(drawn.X.Length, World.StreakPoints);
 
@@ -2159,8 +1743,8 @@ var socket = Websocket.Functional()
                                       player.StreakY = ys[..kept];
                                       player.StreakLeg = 0;
                                       player.StreakGone = 0;
-                                      player.Perk = Perk.None;
                                       player.Hold = false;
+                                      player.DrawReady = at + World.DrawWait;
                                   }
                               }
 
@@ -2172,20 +1756,6 @@ var socket = Websocket.Functional()
                               var asked = JsonSerializer.Deserialize<Fill>(text, json);
 
                               Populate(Math.Clamp(asked?.Count ?? 10, 1, World.Crowd));
-
-                              return;
-                          }
-
-                          if (text.Contains("\"use\""))
-                          {
-                              /*
-                               * Spending what you are carrying. A harpoon is
-                               * thrown at wherever the pointer was; a blast
-                               * lights a fuse that everybody can see and run
-                               * from. Either way it is gone from your hands
-                               * the moment you press.
-                               */
-                              player.Spending = true;
 
                               return;
                           }

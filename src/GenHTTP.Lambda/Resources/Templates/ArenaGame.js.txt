@@ -29,8 +29,8 @@ const history = [];
 let socket = null, me = null, world = 2400;
 let palette = [], wellSize = 40, girths = [5];
 
-/** What this player is carrying, and how long is left of their own fuse. */
-let carrying = 0, fuse = 0;
+/** Seconds until this player may draw another line, nought if now. */
+let pen = 0;
 
 /*
  * Whether this player is out and waiting to come back.
@@ -43,8 +43,6 @@ let carrying = 0, fuse = 0;
  * frozen, because from the inside it is indistinguishable from it.
  */
 let out = false;
-
-const PERKS = { 1: 'harpoon', 2: 'blast' };
 
 /*
  * The floor is a sheet, and anything heavy enough to eat you sits in a dent
@@ -215,8 +213,7 @@ addEventListener('keyup', (e) => {
 // alt-tabs mid pull comes back to find themselves still burning
 addEventListener('blur', () => { hold = false; });
 
-// clicking spends whatever is in hand: a harpoon goes where the pointer is,
-// a blast lights a fuse under you, and a streak is drawn rather than thrown
+// pressing draws a line, when the line is off its wait
 addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'touch') touchy();
 
@@ -257,23 +254,19 @@ addEventListener('pointerdown', (e) => {
   }
 
   /*
-   * The streak is the one pickup that is not spent by pressing. Pressing
-   * starts a line; it is spent when the line is let go of, so somebody who
-   * presses and changes their mind has not thrown anything away.
+   * A line is started by pressing and spent when it is let go of, so
+   * somebody who presses and changes their mind has not spent their wait
+   * on a gesture that never finished.
+   *
+   * On glass it has to be armed first. A tap on the floor is how you steer
+   * there, so without the arming step the drag that moves you would be the
+   * same gesture as the one that spends the best move in the game.
    */
-  if (carrying === 3 && (!touching || sketching)) {
+  if (pen <= 0 && (!touching || sketching)) {
     const at = aim();
 
     drawing = at ? [at] : null;
-
-    return;
   }
-
-  // on glass a tap on the floor is how you steer, so spending what is in
-  // hand belongs to a button rather than to every press
-  if (e.pointerType === 'touch') return;
-
-  socket.send(JSON.stringify({ kind: 'use' }));
 });
 
 /*
@@ -306,16 +299,10 @@ $('hop').addEventListener('click', () => {
 });
 
 $('spend').addEventListener('click', () => {
-  if (socket?.readyState !== 1 || !carrying) return;
+  if (socket?.readyState !== 1 || pen > 0 || collapsed) return;
 
-  if (carrying === 3) {
-    sketching = !sketching;
-    $('spend').classList.toggle('on', sketching);
-
-    return;
-  }
-
-  socket.send(JSON.stringify({ kind: 'use' }));
+  sketching = !sketching;
+  $('spend').classList.toggle('on', sketching);
 });
 
 addEventListener('pointerup', () => {
@@ -401,7 +388,7 @@ function scaleFor(radius) {
  * The server keeps the same curve, because it decides what to send from it.
  */
 function extentFor(radius) {
-  return 260 + 224 * Math.pow(radius / 14, 0.7);
+  return 600 + 260 * Math.pow(radius / 14, 0.7);
 }
 
 /** The blobs heavy enough to dent the floor, as the drawing wants them. */
@@ -554,7 +541,7 @@ function moment() {
     }
   }
 
-  return { blobs, pellets, loot: after.k ?? [], spears: after.s ?? [] };
+  return { blobs, pellets };
 }
 
 /**
@@ -573,10 +560,10 @@ function moment() {
  * is an area and one is a score - and the two halves have to agree about
  * both or the fire comes on at the wrong size.
  */
-const HOLE = 1e6;          // the plain area a blob collapses at
+const HOLE = 5e6;          // the plain area a blob collapses at
 const COLLAPSE = 1e7;      // and the score it has when it does
 const LIFT = COLLAPSE / HOLE;
-const STEEPEN = 11.3878;
+const STEEPEN = 156.90;
 
 function SCORE(r) {
   const plain = Math.PI * (r * r - 14 * 14);
@@ -585,7 +572,14 @@ function SCORE(r) {
 }
 
 /** The grades a hole comes in, matching World.Grades9. */
-const GRADES = [1e7, 3e10, 4e13, 5e16, 1e19];
+/*
+ * The grades a hole comes in, matching World.Grades9 - radii, not scores.
+ *
+ * Two hundred orders of magnitude between the collapse and the ceiling means
+ * any score you pick for a middle grade is an absurd number sitting between
+ * two other absurd numbers. The radii are what a player can actually see.
+ */
+const GRADES = [1261.63, 1900, 2700, 3700, 4700];
 
 /**
  * A score, short enough to read while something is chasing you.
@@ -595,10 +589,15 @@ const GRADES = [1e7, 3e10, 4e13, 5e16, 1e19];
  * digits up to a million, where they are still worth reading exactly, and
  * three significant figures with a suffix above it.
  */
-const SUFFIX = [[1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
+const SUFFIX = [[1e33, 'Dc'], [1e30, 'No'], [1e27, 'Oc'], [1e24, 'Sp'], [1e21, 'Sx'],
+                [1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
 
 function tally(n) {
   if (!(n > 0)) return '0';
+
+  // past a decillion the names stop being names anybody knows, and the
+  // ceiling is a hundred and ninety three orders of magnitude further up
+  if (n >= 1e36) return n.toExponential(2).replace('e+', 'e');
 
   for (const [at, tag] of SUFFIX) {
     if (n >= at) {
@@ -612,11 +611,9 @@ function tally(n) {
 }
 
 function holeLevel(r) {
-  const s = SCORE(r);
-
   let level = 0;
 
-  for (const step of GRADES) if (s >= step) level++;
+  for (const step of GRADES) if (r >= step) level++;
 
   return level;
 }
@@ -625,9 +622,9 @@ function stageOf(r) {
   const s = SCORE(r);
 
   if (s >= COLLAPSE) return 4;  // collapsed
-  if (s >= 5800000) return 3;   // black fire
-  if (s >= 2400000) return 2;   // fire
-  if (s >= 350000) return 1;    // embers
+  if (s >= 6000000) return 3;   // black fire
+  if (s >= 2500000) return 2;   // fire
+  if (s >= 400000) return 1;    // embers
   return 0;
 }
 
@@ -1165,92 +1162,6 @@ function draw() {
 
   ctx.globalAlpha = 1;
 
-  // what is lying about to be picked up: a fixture of the floor, so it sits
-  // where it is and the funnel bends around it rather than dragging it off
-  const loot = now.loot;
-
-  const beat = performance.now();
-
-  for (let i = 0; i < loot.length; i += 4) {
-    const at = flat(loot[i + 1], loot[i + 2]);
-
-    // a floor size as well as a world size, so one on the far side of a big
-    // player's screen is still a thing rather than three pixels of nothing
-    const r = Math.max(13, 15 * scale);
-    const perk = loot[i + 3];
-    const tint = perk === 1 ? '#8ab4f8' : perk === 2 ? '#ff8bcb' : '#8adcff';
-
-    const pulse = 0.5 + 0.5 * Math.sin(beat / 320 + i);
-
-    ctx.save();
-    ctx.translate(at.x, at.y);
-
-    // a halo that breathes, which is what carries across a screen. Without
-    // it these were small dark shapes on a small dark floor and most players
-    // finished a round without ever noticing one
-    ctx.globalAlpha = 0.16 + pulse * 0.22;
-    ctx.fillStyle = tint;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * (1.7 + pulse * 0.5), 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.globalAlpha = 0.7 + pulse * 0.3;
-    ctx.strokeStyle = tint;
-    ctx.fillStyle = `${tint}33`;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-
-    /*
-     * Three shapes for three pickups. There used to be two, and the drawn
-     * line - the one worth crossing the arena for - borrowed the blast's,
-     * so the rarest and best thing on the floor was indistinguishable from
-     * the one that kills you.
-     */
-    if (perk === 1) {
-      ctx.rotate(beat / 900);
-      ctx.moveTo(0, -r); ctx.lineTo(r, 0); ctx.lineTo(0, r); ctx.lineTo(-r, 0);
-      ctx.closePath();
-    } else if (perk === 2) {
-      ctx.rotate(beat / 900);
-
-      for (let s = 0; s < 8; s++) {
-        const a = s * Math.PI / 4;
-        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-        ctx.lineTo(Math.cos(a + Math.PI / 8) * r * 0.45, Math.sin(a + Math.PI / 8) * r * 0.45);
-      }
-
-      ctx.closePath();
-    } else {
-      // a stroke of the thing it does: a drawn line with an arrow on the end
-      ctx.moveTo(-r, r * 0.55);
-      ctx.bezierCurveTo(-r * 0.2, r * 0.9, -r * 0.1, -r * 0.9, r * 0.55, -r * 0.55);
-      ctx.moveTo(r * 0.05, -r * 0.72); ctx.lineTo(r * 0.7, -r * 0.62); ctx.lineTo(r * 0.42, -r * 0.05);
-    }
-
-    if (perk !== 3) ctx.fill();
-
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // harpoons in the air
-  const flying = now.spears;
-
-  for (let i = 0; i < flying.length; i += 3) {
-    const at = flat(flying[i], flying[i + 1]);
-    const heading = flying[i + 2] / 100;
-    const long = Math.max(10, 26 * scale);
-
-    ctx.strokeStyle = '#8ab4f8';
-    ctx.lineWidth = Math.max(2, 3 * scale);
-    ctx.beginPath();
-    ctx.moveTo(at.x - Math.cos(heading) * long, at.y - Math.sin(heading) * long);
-    ctx.lineTo(at.x, at.y);
-    ctx.stroke();
-  }
-
   /*
    * The line as it is being drawn.
    *
@@ -1357,17 +1268,6 @@ function draw() {
 
     // whoever has just eaten somebody, and is about to try it again
     if (b.s > 0) drawSpark(at.x, y, r, b.s, b.i.charCodeAt(0) * 13 + b.i.charCodeAt(1), performance.now());
-
-    // somebody with a lit fuse, which is the only warning anybody gets
-    if (b.i === me && fuse > 0) {
-      const left = Math.min(1, fuse / 0.6);
-
-      ctx.strokeStyle = `rgba(242,139,130,${0.4 + (1 - left) * 0.6})`;
-      ctx.lineWidth = 3 + (1 - left) * 6;
-      ctx.beginPath();
-      ctx.arc(at.x, y, r + (1 - left) * 5 * r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
 
     // a ring that tightens as the grip comes up, so it is obvious at a
     // glance who is rooted and how far along they are
@@ -1574,13 +1474,12 @@ function connect(name) {
 
     for (const name of m.a ?? []) say(`You ate ${name}`);
 
-    carrying = m.mine ?? 0;
-    fuse = m.fuse ?? 0;
+    pen = m.draw ?? 0;
     cool = m.cool ?? 0;
     collapsed = !!m.hole;
 
-    // whatever was being drawn belongs to a pickup that is no longer in hand
-    if (carrying !== 3) drawing = null;
+    // a line begun before the wait came back is not a line
+    if (pen > 0) drawing = null;
 
     // a couple of seconds is far more than DELAY ever reaches back for, and
     // keeps this from growing for as long as somebody leaves the tab open
@@ -1596,13 +1495,13 @@ function connect(name) {
 
     const perk = $('perk');
 
-    perk.hidden = !carrying;
-    perk.textContent = carrying === 1
-      ? 'harpoon in hand: click to throw it at something big'
-      : carrying === 2
-        ? 'blast in hand: click and everything large near you takes it with you'
-        : 'streak in hand: hold the button and draw a line, let go and run it';
-    perk.className = carrying === 1 ? 'harpoon' : carrying === 2 ? 'blast' : 'streak';
+    perk.hidden = collapsed;
+    perk.className = 'streak';
+    perk.textContent = pen > 0
+      ? `line in ${pen.toFixed(1)}s`
+      : touching
+        ? 'line ready: press draw, then trace where to go'
+        : 'line ready: hold the button and draw a line, let go and run it';
 
     const grade = self ? holeLevel(self.r) : 0;
 
@@ -1628,10 +1527,10 @@ function connect(name) {
     // teleport button has nothing to do either, since the floor is the control
     $('pull').hidden = collapsed;
     $('hop').hidden = collapsed;
-    $('spend').hidden = !carrying;
-    $('spend').textContent = carrying === 3 ? (sketching ? 'drawing' : 'draw') : 'use';
+    $('spend').hidden = collapsed;
+    $('spend').textContent = pen > 0 ? `${pen.toFixed(0)}s` : sketching ? 'drawing' : 'draw';
 
-    if (!carrying && sketching) {
+    if (pen > 0 && sketching) {
       sketching = false;
       $('spend').classList.remove('on');
     }
@@ -1641,7 +1540,7 @@ function connect(name) {
     $('hint').hidden = collapsed;
     $('hint').innerHTML = touching
       ? 'drag to move &middot; eat anything smaller &middot; the buttons do the rest'
-      : 'move the mouse &middot; eat anything smaller &middot; hold <kbd>space</kbd> to pull &middot; <kbd>E</kbd> to teleport';
+      : 'move the mouse &middot; eat anything smaller &middot; hold <kbd>space</kbd> to pull &middot; <kbd>E</kbd> to teleport &middot; drag to draw a line';
 
     if (collapsed && aiming) {
       aiming = false;

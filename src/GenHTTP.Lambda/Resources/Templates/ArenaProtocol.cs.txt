@@ -33,27 +33,6 @@ public record Steer(string Kind, double X, double Y, bool Hold);
 /// frame, so it costs nothing to say</param>
 public record Blob(string I, string N, string C, double X, double Y, double R, double G, int? S);
 
-/// <summary>
-/// What a pickup grants. Nought is nothing in hand.
-/// </summary>
-public static class Perk
-{
-    public const int None = 0;
-
-    /// <summary>Thrown at something large; takes a share of it off.</summary>
-    public const int Harpoon = 1;
-
-    /// <summary>Spends your own blob to hurt everything large nearby.</summary>
-    public const int Blast = 2;
-
-    /// <summary>
-    /// Draw a line, then run it far faster than anything can chase.
-    /// </summary>
-    public const int Streak = 3;
-
-    public const int Count = 3;
-}
-
 /// <summary>Somebody asking to be somewhere else.</summary>
 public record Warp(string Kind, double X, double Y);
 
@@ -65,9 +44,6 @@ public record Fill(string Kind, int Count);
 
 /// <summary>A hole asking for a whirl to open somewhere it can see.</summary>
 public record Haul(string Kind, double X, double Y);
-
-/// <summary>Somebody used what they were carrying.</summary>
-public record Use(string Kind);
 
 /// <summary>Ground that somebody is on their way to.</summary>
 /// <remarks>
@@ -126,12 +102,9 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// says: the low four bits are the colour, the rest is the grade. Both are
 /// small and neither is ever going to need more room than that.
 ///
-/// K is the pickups in sight, flat: which one, where, and which ability. S is
-/// the harpoons in the air, flat: where, and which way they are pointing, so
-/// they can be drawn as something thrown rather than as a dot. Mine and Fuse
-/// are the only things in a frame that are about the player reading it - what
-/// they are carrying and how long is left of their own fuse - because those
-/// two are the only things nobody else is entitled to see.
+/// Cool and Draw are the only things in a frame about the player reading it -
+/// how long until they can teleport and until they can draw another line -
+/// because those are the only two things nobody else is entitled to see.
 ///
 /// W is how big the arena currently is, which travels with every frame
 /// rather than only with the welcome because it grows and shrinks with the
@@ -143,13 +116,14 @@ public record Welcome(string Kind, string Id, string Colour, double World, strin
 /// The colour is a position in the palette sent with the welcome.
 /// </remarks>
 /// <param name="Cool">Seconds until this player may teleport again, nought if now</param>
+/// <param name="Draw">Seconds until this player may draw another line</param>
 /// <param name="Hole">Whether this player has collapsed and can no longer move</param>
 /// <param name="V">Teleports crossing within sight, nought of them being null</param>
 /// <param name="E">Blobs eaten within sight this tick, nought of them being null</param>
 /// <param name="A">Who this player ate this tick, nobody being null</param>
 /// <param name="O">Whirls turning within sight, nought of them being null</param>
 public record Frame(string Kind, List<Blob> B, List<int> P, List<Score> L, int Alive, double W,
-                    List<int> K, List<int> S, int Mine, double Fuse, double Cool, bool Hole,
+                    double Cool, double Draw, bool Hole,
                     List<Mark> V, List<Feast> E, List<string> A, List<Eddy> O);
 
 /// <summary>

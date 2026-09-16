@@ -9,8 +9,8 @@
 
 <div id="hud" hidden>
   <b id="score">0</b>
-  <span class="dim" id="hint">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport</span>
-  <span id="perk" hidden></span>
+  <span class="dim" id="hint">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport · drag to draw a line</span>
+  <span id="perk" class="streak" hidden></span>
   <span id="warp" class="ready">teleport ready</span>
   <span id="spark" hidden></span>
   <span id="hold" hidden>holding on. Everything nearby is coming to you, and it costs you nothing</span>
@@ -43,7 +43,9 @@
     <h1>Arena</h1>
     <p class="dim">
       Everybody who opens this is in the same arena. Eat the small things to grow,
-      eat anybody smaller than you, and keep away from anybody bigger.
+      eat anybody smaller than you, and keep away from anybody bigger. Nothing is
+      lying on the floor to find: everyone has the same three moves, and all that
+      separates you is when you use them.
     </p>
     <p class="dim">
       Hold <kbd>space</kbd> and you root to the spot and drag everything near you in.
@@ -72,11 +74,11 @@
       here that needs a keyboard.
     </p>
     <p class="dim">
-      Things worth picking up lie about the floor. A <b>harpoon</b> is thrown at
-      anything big and takes a share of it off. What comes off lands around it as
-      food, and the throw drags you in to claim it. A <b>blast</b> spends you, and
-      everything large nearby goes with you. Neither can touch anything small, and
-      neither can be picked up once you are large yourself.
+      Everybody can <b>draw a line</b>. Hold the button, trace a path, let go, and
+      you run it at several times your own speed &mdash; through gaps, around
+      something enormous, straight at somebody who thought they were safe. It is
+      the fastest thing in the arena and it is the same for everybody: what it
+      costs is the wait before you can draw the next one.
     </p>
     <p><input id="name" maxlength="12" placeholder="Your name"> <button id="go">Dive in</button></p>
   </div>

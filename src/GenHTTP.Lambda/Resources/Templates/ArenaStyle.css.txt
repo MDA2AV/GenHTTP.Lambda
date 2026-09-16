@@ -30,8 +30,6 @@ canvas { display: block; touch-action: none; }
 #hud b { font-size: 30px; font-variant-numeric: tabular-nums; display: block; }
 #hold { display: block; color: #fdd663; font-size: 13px; margin-top: 2px; }
 #perk { display: block; font-size: 13px; margin-top: 2px; }
-#perk.harpoon { color: #8ab4f8; }
-#perk.blast { color: #ff8bcb; }
 kbd { font: inherit; border: 1px solid #3c4043; border-bottom-width: 2px; padding: 0 4px; border-radius: 3px; }
 
 #board {

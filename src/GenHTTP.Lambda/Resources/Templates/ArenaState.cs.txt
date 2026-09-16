@@ -37,50 +37,6 @@ sealed class Pellet
     public int Grade;
 }
 
-/// <summary>
-/// A harpoon in the air.
-/// </summary>
-/// <remarks>
-/// It travels rather than simply hitting, which is what makes it a thing to
-/// aim rather than a button to press: it takes the better part of a second
-/// to cross its range, and anything it is thrown at can move.
-/// </remarks>
-sealed class Spear
-{
-    public string Owner;
-
-    public double X;
-    public double Y;
-
-    public double DX;
-    public double DY;
-
-    /// <summary>Ticks left before it falls short.</summary>
-    public int Life;
-}
-
-/// <summary>
-/// Something lying on the floor that grants an ability to whoever takes it.
-/// </summary>
-/// <remarks>
-/// Anchored: gravity does not move it and a large blob cannot take it. It is
-/// the small player's tool, and a giant that could hoover them up would
-/// simply be collecting the answers to itself.
-/// </remarks>
-sealed class Prize
-{
-    public int Slot;
-
-    public double X;
-    public double Y;
-
-    /// <summary>Which ability it grants.</summary>
-    public int Perk;
-
-    /// <summary>Ticks left before it goes somewhere else.</summary>
-    public int Life;
-}
-
 sealed class Player
 {
     public string Id;
@@ -121,42 +77,7 @@ sealed class Player
     /// </summary>
     public bool Clutched;
 
-    /// <summary>
-    /// What they are carrying, if anything: see Perk in Protocol.cs. One at
-    /// a time, and picking up a second while holding one does nothing.
-    /// </summary>
-    public int Perk;
 
-    /// <summary>How long is left of a lit fuse, or nought if none is lit.</summary>
-    public double Lit;
-
-    /// <summary>
-    /// Set by the socket when they press, and acted on by the clock.
-    /// </summary>
-    /// <remarks>
-    /// The socket does not spend the thing itself. Everything that changes
-    /// the world happens on the one thread that steps it, or a harpoon
-    /// thrown while the clock is halfway through walking the list of them
-    /// lands in a list being read by somebody else.
-    /// </remarks>
-    public bool Spending;
-
-    /// <summary>
-    /// How much area has been taken off them by abilities lately, and when
-    /// that tally was last started, so that no amount of coordination can
-    /// delete somebody in one go.
-    /// </summary>
-    public double Bruised;
-    public double Bruising;
-
-    /// <summary>
-    /// Where a harpoon is dragging them, and for how long. A hit hauls the
-    /// thrower in towards what they hit - which is the point of it: the
-    /// harpoon is also the claim ticket for what falls out.
-    /// </summary>
-    public double HauledX;
-    public double HauledY;
-    public double Hauling;
 
     /// <summary>Set when somebody has eaten them; the socket is told and closed.</summary>
     public bool Gone;
@@ -187,6 +108,16 @@ sealed class Player
     /// finishes, or nought when there is not one.
     /// </summary>
     public double WarpLands;
+
+    /// <summary>
+    /// When this blob may draw another line, on the arena clock.
+    /// </summary>
+    /// <remarks>
+    /// Everybody has the line now, on a wait, rather than one player in
+    /// twenty having found it lying on the floor. It was the best thing in
+    /// the game and it belonged to whoever happened to walk over it.
+    /// </remarks>
+    public double DrawReady;
 
     /// <summary>
     /// Where this blob's whirl is turning, and until when on the arena clock.

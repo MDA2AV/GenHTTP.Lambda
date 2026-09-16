@@ -3,7 +3,7 @@
 static class World
 {
     /// <summary>The smallest the arena ever is, which is how it starts.</summary>
-    public const double Smallest = 3600;
+    public const double Smallest = 9000;
 
     /// <summary>
     /// How much room one player is given.
@@ -15,7 +15,7 @@ static class World
     /// where nobody goes - so the middle wears bare and stays bare, while the
     /// total never drops far enough for the scatter to notice.
     /// </remarks>
-    public const double Elbow = 820_000;
+    public const double Elbow = 5_760_000;
 
     /// <summary>
     /// How big the arena is for this many people.
@@ -37,7 +37,7 @@ static class World
     /// stays the same: about forty on screen, which is enough that there is
     /// always something worth steering at.
     /// </remarks>
-    public static int PelletsFor(double size) => (int)(size * size / 8_229);
+    public static int PelletsFor(double size) => (int)(size * size / 20_000);
 
     /// <summary>The radius everybody starts at.</summary>
     public const double Start = 14;
@@ -56,7 +56,7 @@ static class World
     /// billion and change, so anything past the old ceiling reached the
     /// leaderboard as a negative number.
     /// </remarks>
-    public const double Win = 1e20;
+    public const double Win = 1e200;
 
     /// <summary>
     /// The score at which somebody stops being a player and becomes a hole.
@@ -77,7 +77,7 @@ static class World
     /// arena reads well at - and a score, which is what a player aims at.
     /// Keeping both lets the score be anything without moving the event.
     /// </remarks>
-    public const double Hole = 1_000_000;
+    public const double Hole = 5_000_000;
 
     /// <summary>What the score is multiplied by below the collapse.</summary>
     /// <remarks>
@@ -88,7 +88,16 @@ static class World
     public const double Lift = Collapse / Hole;
 
     /// <summary>Whether this radius has collapsed.</summary>
-    public static bool IsHole(double radius) => ScoreOf(radius) >= Collapse;
+    /// <remarks>
+    /// On the radius rather than on the score, and so is the win. The score
+    /// past the collapse is an exponent away from the radius, and the two
+    /// disagree in the last digits - a blob clamped to exactly the winning
+    /// radius scored a hair under the winning score, and so never won.
+    /// </remarks>
+    public static bool IsHole(double radius) => radius >= Threshold;
+
+    /// <summary>The radius the collapse happens at.</summary>
+    public static readonly double Threshold = Math.Sqrt((Hole + AreaOf(Start)) / Math.PI);
 
     /// <summary>
     /// What a hole scores at each of its grades.
@@ -104,18 +113,19 @@ static class World
     /// one. There is most of a grade's worth of arena left to eat after the
     /// last step, which is long enough to be somewhere you have to live.
     /// </remarks>
-    public static readonly double[] Grades9 = [1e7, 3e10, 4e13, 5e16, 1e19];
+    // the first of them is the collapse itself, taken from the same number
+    // rather than written out again: a grade one that was not yet a hole is a
+    // blob with a hole's aura and none of a hole's rules
+    public static readonly double[] Grades9 = [Threshold, 1900, 2700, 3700, 4700];
 
     /// <summary>Which grade of hole this is, nought for something still a blob.</summary>
     public static int HoleLevel(double radius)
     {
-        var score = ScoreOf(radius);
-
         var level = 0;
 
         foreach (var step in Grades9)
         {
-            if (score >= step)
+            if (radius >= step)
             {
                 level++;
             }
@@ -181,6 +191,14 @@ static class World
     /// </remarks>
     public const int Crowd = 100;
 
+    /// <summary>How long a beat of the arena clock is, in seconds.</summary>
+    /// <remarks>
+    /// Twenty a second: fast enough that the browser has something recent to
+    /// interpolate between, slow enough that a hundred blobs and thirty
+    /// thousand pellets fit inside one of them with room to spare.
+    /// </remarks>
+    public const double Beat = 0.05;
+
     /// <summary>
     /// The most pellets one frame will describe.
     /// </summary>
@@ -233,7 +251,7 @@ static class World
     public const double WarpLead = 0.42;
 
     /// <summary>How far a teleport may carry somebody.</summary>
-    public static double WarpReach(double radius) => 900 + radius * 6;
+    public static double WarpReach(double radius) => 2200 + radius * 6;
 
     /// <summary>
     /// How fast a drawn line is run, in units a second.
@@ -260,7 +278,7 @@ static class World
     public const double WhirlWait = 11.0;
 
     /// <summary>How far a whirl reaches, in units.</summary>
-    public const double WhirlReach = 2800;
+    public const double WhirlReach = 6000;
 
     /// <summary>How fast it hauls, at the middle of it, in units a second.</summary>
     /// <remarks>
@@ -275,10 +293,20 @@ static class World
     public static double WhirlSpeed(double distance) =>
         WhirlPull * Math.Pow(Math.Clamp(1 - distance / WhirlReach, 0, 1), 0.7);
 
+    /// <summary>How long between one drawn line and the next, in seconds.</summary>
+    /// <remarks>
+    /// It used to be a thing lying on the floor that one player in twenty
+    /// happened to walk over, which made the best move in the game a matter
+    /// of where you were standing. Everybody has it now, and what it costs
+    /// is the wait - the same bargain the teleport makes, and the reason
+    /// both of them are decisions rather than habits.
+    /// </remarks>
+    public const double DrawWait = 18.0;
+
     public const double StreakSpeed = 2600;
 
     /// <summary>The longest line that may be drawn, in units.</summary>
-    public const double StreakLength = 5200;
+    public const double StreakLength = 9000;
 
     /// <summary>The most points a drawn line may be made of.</summary>
     public const int StreakPoints = 64;
@@ -321,96 +349,6 @@ static class World
 
     /// <summary>How much bigger you have to be to eat somebody.</summary>
     public const double EatRatio = 1.10;
-
-    #region Getting hurt
-
-    /*
-     * Nothing small can eat anything large - that is the whole shape of the
-     * game - so hurting one has to be a separate channel that takes area off
-     * it directly. What comes off does not vanish: most of it lands on the
-     * floor around the victim as pellets, which is what turns a giant into
-     * something worth attacking rather than something to be avoided.
-     */
-
-    /// <summary>The smallest thing an ability can hurt.</summary>
-    /// <remarks>
-    /// The same size at which a blob starts bending the floor. Below it a
-    /// blob is somebody's lunch rather than somebody's problem, and letting
-    /// harpoons reach that far down would make spawning a hazard.
-    /// </remarks>
-    public const double Tender = WellSize;
-
-    /// <summary>What a harpoon takes off whatever it hits.</summary>
-    /// <remarks>
-    /// A share of the victim rather than an amount, so that a spawn's lever
-    /// does not shrink as its target grows - which is the only way a small
-    /// player is ever a threat to a large one. One hit on the largest
-    /// possible blob is worth a hundred and twenty thousand area, and it
-    /// would still take forty one of them alone.
-    /// </remarks>
-    public const double Barb = 0.12;
-
-    /// <summary>The most an ability can take off one blob in <see cref="Window" />.</summary>
-    /// <remarks>
-    /// Without this a crowd with harpoons deletes anything. With it they can
-    /// carve a giant down over a minute if they keep it up, which is a siege
-    /// rather than an execution.
-    /// </remarks>
-    public const double Bruise = 0.30;
-
-    /// <summary>How long that ceiling is measured over.</summary>
-    public const double Window = 10.0;
-
-    /// <summary>How much of what is taken off lands on the floor.</summary>
-    /// <remarks>
-    /// Most, not all. The rest leaves the arena - partly so that the victim
-    /// cannot simply hoover its own blood back and come out even, and partly
-    /// because a fight that conserves everything is a round that never ends.
-    /// </remarks>
-    public const double Spill = 0.70;
-
-    /// <summary>
-    /// The least a shower ever lands from the edge of whoever it came off.
-    /// </summary>
-    /// <remarks>
-    /// Only ever the floor for something small. What actually decides it is
-    /// how far the victim can drag pellets, because anything that lands
-    /// inside that is a gift back to them.
-    /// </remarks>
-    public const double Splash = 30;
-
-    /// <summary>And how far it reaches at its widest.</summary>
-    /// <remarks>
-    /// Past what anything large can move in the time it takes a small player
-    /// to get there. The heaviest pieces land furthest out for the same
-    /// reason: the loot is meant to be worth racing for.
-    /// </remarks>
-    public const double Scatter = 330;
-
-    /// <summary>How many pieces one shower may break into.</summary>
-    public const int Shards = 48;
-
-    /// <summary>What a self destruct takes off, at the centre of the blast.</summary>
-    public const double Blast = 0.22;
-
-    /// <summary>How far a blast reaches, for somebody of this size.</summary>
-    public static double Bang(double radius) => Math.Clamp(radius * 5, 150, 900);
-
-    /// <summary>The most a blast can take off, against what it cost to set off.</summary>
-    /// <remarks>
-    /// Eight times the area spent. It stops a spawn from setting off
-    /// something that hurts a giant, and makes this the middling player's
-    /// trade: theirs is the body big enough to be worth spending.
-    /// </remarks>
-    public const double Yield = 8;
-
-    /// <summary>How much of somebody who sets themselves off lands on the floor.</summary>
-    public const double Remains = 0.40;
-
-    /// <summary>How long the fuse burns, so that it can be read and run from.</summary>
-    public const double Fuse = 0.6;
-
-    #endregion
 
     #region Gravity
 
@@ -707,7 +645,7 @@ static class World
     /// this exponent it sees three thousand, which still fills the screen
     /// and leaves everything in it a size you can aim at.
     /// </remarks>
-    public static double Extent(double radius) => 260 + 224 * Math.Pow(radius / Start, 0.7);
+    public static double Extent(double radius) => 600 + 260 * Math.Pow(radius / Start, 0.7);
 
     /// <summary>
     /// Everything here is one of these nine colours, and the browser is told
@@ -847,7 +785,7 @@ static class World
     /// Steep, and meant to be: the thirteen orders of magnitude between the
     /// collapse and the ceiling are the whole of what a hole has to look at.
     /// </remarks>
-    public const double Steepen = 11.3878;
+    public const double Steepen = 156.90;
 
     /// <summary>The radius that scores this much, which is ScoreOf run backwards.</summary>
     public static double RadiusScoring(double score)
@@ -860,7 +798,7 @@ static class World
     }
 
     /// <summary>Whether this blob has just taken the whole arena.</summary>
-    public static bool HasWon(double radius) => ScoreOf(radius) >= Win;
+    public static bool HasWon(double radius) => radius >= Biggest - 0.001;
 
     /// <summary>Whether one blob may eat another.</summary>
     public static bool Eats(double mine, double theirs) => mine > theirs * EatRatio;
