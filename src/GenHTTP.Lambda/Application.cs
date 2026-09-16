@@ -174,14 +174,6 @@ public sealed class Application : IAsyncDisposable
                .Add(Registry.Capture())
                .Add(new TelemetryConcernBuilder(Services.GetRequiredService<TelemetryService>()))
                /*
-                * Outermost of ours, so every line anything below writes can
-                * name who it was written for - and so what it times is the
-                * whole answer rather than the part after the throttle.
-                */
-               .Add(new CallerConcernBuilder(Services.GetRequiredService<LogBook>(),
-                                             Services.GetRequiredService<StringPool>(),
-                                             Options))
-               /*
                 * Compression is configured here rather than left to the
                 * defaults, and it offers gzip alone.
                 *
@@ -197,7 +189,27 @@ public sealed class Application : IAsyncDisposable
                 * costs the response.
                 */
                .Defaults(compression: false)
-               .Compression(CompressedContent.Empty().Add(new GzipAlgorithm()));
+               .Compression(CompressedContent.Empty().Add(new GzipAlgorithm()))
+               /*
+                * Last, which puts it outside everything else, because a
+                * concern added later wraps the ones added before it.
+                *
+                * It has to be outside the defaults specifically. Those carry
+                * the upgrade from plain HTTP to HTTPS, which answers the
+                * request itself and never calls through - so from anywhere
+                * inside them, every visitor who typed the bare domain, every
+                * scanner knocking on port 80 and the container's own health
+                * check are simply not there. They were being logged by the
+                * engine and then dropped from the book as duplicates of a
+                * line that was never written.
+                *
+                * Outermost also means the mark is in place before anything
+                * below can log under it, and that what is timed is the whole
+                * answer rather than the part after the throttle.
+                */
+               .Add(new CallerConcernBuilder(Services.GetRequiredService<LogBook>(),
+                                             Services.GetRequiredService<StringPool>(),
+                                             Options));
 
     /// <summary>
     /// Starts the maintenance jobs. Call once the server is up.
