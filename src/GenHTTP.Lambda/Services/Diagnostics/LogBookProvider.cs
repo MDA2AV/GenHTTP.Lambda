@@ -82,7 +82,7 @@ public sealed class LogBookProvider(LogBook book, TextWriter? console = null, Lo
             // served, belongs under it as well as in the general run - and
             // carries whoever was being answered at the time
             book.Append(LogBook.NameOf(level), source, LambdaOutput.Ambient?.PublicKey, text, error?.ToString(),
-                        caller?.Client, caller?.Agent, caller?.Country, caller?.Place);
+                        caller?.Client, caller?.Agent, caller?.Country, caller?.Place, text);
 
             if (console == null || level < minimum)
             {

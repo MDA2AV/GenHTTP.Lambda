@@ -407,7 +407,7 @@ public sealed class LogTests
 
         for (var i = 0; i < 500; i++)
         {
-            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
         }
 
         var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
@@ -422,11 +422,11 @@ public sealed class LogTests
         // a window already past, so the next repeat closes it
         var book = new LogBook(1000, repeatWindow: TimeSpan.FromTicks(1));
 
-        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
 
         for (var i = 0; i < 9; i++)
         {
-            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
         }
 
         var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
@@ -435,13 +435,65 @@ public sealed class LogTests
     }
 
     [TestMethod]
+    public void WhatMeasuresALineDoesNotStopItFolding()
+    {
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromMinutes(5));
+
+        // the shape a request line really has: identical request, different
+        // duration every time. Keyed on the text, none of these would fold.
+        for (var i = 0; i < 60; i++)
+        {
+            book.Append("info", "Requests", null, $"GET /api/v1/examples — 200 · 0 B · {9 + i * 0.27:N2} ms",
+                        null, "203.0.113.7", folding: "GET /api/v1/examples 200");
+        }
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(1, lines.Count, "sixty requests, one line");
+    }
+
+    [TestMethod]
+    public void ALineWithNothingToFoldOnIsAlwaysWritten()
+    {
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromMinutes(5));
+
+        for (var i = 0; i < 5; i++)
+        {
+            book.Append("info", "Startup", null, "the same words every time");
+        }
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        Assert.AreEqual(5, lines.Count, "folding is opted into by whoever knows what identifies the line");
+    }
+
+    [TestMethod]
+    public void AFoldedLineShowsTheMostRecentOfWhatItStandsFor()
+    {
+        var book = new LogBook(1000, repeatWindow: TimeSpan.FromMilliseconds(40));
+
+        book.Append("info", "Requests", null, "GET /x — 200 · 0 B · 1.00 ms", null, "203.0.113.7", folding: "GET /x 200");
+        book.Append("info", "Requests", null, "GET /x — 200 · 0 B · 2.00 ms", null, "203.0.113.7", folding: "GET /x 200");
+        book.Append("info", "Requests", null, "GET /x — 200 · 0 B · 3.00 ms", null, "203.0.113.7", folding: "GET /x 200");
+
+        Thread.Sleep(80);
+
+        var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
+
+        var folded = lines.Last();
+
+        Assert.AreEqual(2, folded.Repeats);
+        Assert.Contains("3.00 ms", folded.Text, "the newest of them, not the one that opened the run");
+    }
+
+    [TestMethod]
     public void ARunThatStopsStillOwesItsCount()
     {
         var book = new LogBook(1000, repeatWindow: TimeSpan.FromMilliseconds(40));
 
-        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
-        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
-        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
+        book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
 
         Thread.Sleep(80);
 
@@ -459,8 +511,8 @@ public sealed class LogTests
 
         for (var i = 0; i < 20; i++)
         {
-            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
-            book.Append("info", "Requests", null, "GET /probe — 404", null, "198.51.100.4");
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "198.51.100.4", folding: "GET /probe 404");
         }
 
         var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
@@ -475,7 +527,7 @@ public sealed class LogTests
 
         for (var i = 0; i < 50; i++)
         {
-            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
         }
 
         var (lines, _, _) = book.Read(0, null, LogLevel.Information, 5000);
@@ -517,7 +569,7 @@ public sealed class LogTests
 
         for (var i = 0; i < 40; i++)
         {
-            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7");
+            book.Append("info", "Requests", null, "GET /probe — 404", null, "203.0.113.7", folding: "GET /probe 404");
         }
 
         var callers = book.Callers();

@@ -83,7 +83,10 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
         // on its way back the request knows which lambda it reached
         book.Append(level, "Requests", request.GetLambda()?.PublicKey,
                     $"{caller.Method} {caller.Path} — {status} · {bytes:N0} B · {took.TotalMilliseconds:N2} ms",
-                    null, caller.Client, caller.Agent, caller.Country, caller.Place);
+                    null, caller.Client, caller.Agent, caller.Country, caller.Place,
+                    // what it asked for and what it got back identifies the
+                    // line; how many microseconds it took measures it
+                    $"{caller.Method} {caller.Path} {status}");
     }
 
 }

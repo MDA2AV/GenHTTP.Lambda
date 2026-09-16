@@ -199,7 +199,11 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most)
         }
 
         book.Append(Stream ? "error" : "info", Stream ? "stderr" : "stdout", PublicKey, text,
-                    null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place);
+                    null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place,
+                    // a print is what it says, so the same print twice is the
+                    // same line - which is what folds a reactor faulting over
+                    // and over into one line and a count
+                    text);
     }
 
     #endregion

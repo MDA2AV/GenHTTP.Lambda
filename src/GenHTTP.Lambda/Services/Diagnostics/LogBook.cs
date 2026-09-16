@@ -113,6 +113,12 @@ public sealed class LogBook
         public DateTime Last;
 
         public int Held;
+
+        /// <summary>
+        /// The most recent line of the run, kept so that closing it writes a
+        /// real line rather than one rebuilt from its key.
+        /// </summary>
+        public LogLine Latest = null!;
     }
 
     /// <summary>
@@ -176,8 +182,14 @@ public sealed class LogBook
     /// The sequence the line was given, or zero where it was folded into one
     /// already written rather than written itself.
     /// </returns>
+    /// <param name="folding">
+    /// What makes this line the same as another for the purpose of gathering
+    /// repeats: the parts that identify it, without the parts that merely
+    /// measure it. Nothing means never fold this line.
+    /// </param>
     public long Append(string level, string source, string? lambda, string text, string? detail = null,
-                       string? client = null, string? agent = null, string? country = null, string? place = null)
+                       string? client = null, string? agent = null, string? country = null, string? place = null,
+                       string? folding = null)
     {
         var repeats = 1;
 
@@ -193,32 +205,51 @@ public sealed class LogBook
 
         lock (Gate)
         {
-            if (Fold > TimeSpan.Zero)
-            {
-                var key = $"{level}\u0000{where}\u0000{lambda}\u0000{client}\u0000{said}";
+            /*
+             * What makes two lines the same is given by whoever wrote them,
+             * not read off the text.
+             *
+             * A request line carries how long it took, and no two requests
+             * take the same number of microseconds - so keying on the text
+             * meant every line was unique and nothing ever folded. Sixty
+             * identical requests came out as fifty-eight lines. The caller
+             * knows which parts identify the thing and which parts are
+             * measurements of it; only the caller can.
+             */
+            var key = folding == null
+                ? null
+                : $"{level}\u0000{where}\u0000{lambda}\u0000{client}\u0000{folding}";
 
+            Run? open = null;
+
+            if (Fold > TimeSpan.Zero && key != null)
+            {
                 if (Runs.TryGetValue(key, out var run))
                 {
                     if (at - run.Opened < Fold)
                     {
-                        // inside the window: counted, not written
+                        // inside the window: counted, not written, but the
+                        // newest is kept so closing it says something current
                         run.Held++;
                         run.Last = at;
+                        run.Latest = new LogLine(0, at, level, where, lambda, said, trace, client, agent, country, place, 1);
 
                         return 0;
                     }
 
                     // the window closed, so this one is written and speaks for
-                    // the ones that were held back as well as itself
+                    // the ones held back as well as itself
                     repeats = run.Held + 1;
 
                     run.Opened = at;
                     run.Last = at;
                     run.Held = 0;
+
+                    open = run;
                 }
                 else if (Runs.Count < MostRuns)
                 {
-                    Runs[key] = new Run { Opened = at, Last = at, Held = 0 };
+                    Runs[key] = open = new Run { Opened = at, Last = at, Held = 0 };
                 }
             }
 
@@ -231,6 +262,11 @@ public sealed class LogBook
             }
 
             var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats);
+
+            if (open != null)
+            {
+                open.Latest = line;
+            }
 
             Lines[(Head + Count) % Capacity] = line;
 
@@ -385,9 +421,9 @@ public sealed class LogBook
                 continue;
             }
 
-            if (run.Held > 0)
+            if (run.Held > 0 && run.Latest != null)
             {
-                Write(run.Last, key, run.Held);
+                Write(run.Latest, run.Held);
 
                 run.Held = 0;
                 run.Opened = now;
@@ -410,17 +446,10 @@ public sealed class LogBook
     }
 
     /// <summary>
-    /// Writes the tail of a finished run back out, from the key that made it.
+    /// Writes the tail of a finished run back out.
     /// </summary>
-    private void Write(DateTime at, string key, int repeats)
+    private void Write(LogLine latest, int repeats)
     {
-        var parts = key.Split('\u0000');
-
-        if (parts.Length != 5)
-        {
-            return;
-        }
-
         var seq = Next++;
 
         if (Count == Capacity)
@@ -428,9 +457,7 @@ public sealed class LogBook
             Drop();
         }
 
-        var line = new LogLine(seq, at, parts[0], parts[1],
-                               parts[2].Length == 0 ? null : parts[2], parts[4], null,
-                               parts[3].Length == 0 ? null : parts[3], null, null, null, repeats);
+        var line = latest with { Seq = seq, Repeats = repeats };
 
         Lines[(Head + Count) % Capacity] = line;
 
