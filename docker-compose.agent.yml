@@ -54,6 +54,20 @@ services:
       AGENT_TIMEOUT_SECONDS: ${LAMBDA_AGENT_TIMEOUT_SECONDS:-600}
       AGENT_PUBLIC_ORIGIN: ${LAMBDA_AGENT_ORIGIN:-https://genhttp.dev}
       AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
+      # A credential of its own, if one has been given.
+      #
+      # Without one the agent runs on a copy of this machine's login, and
+      # that copy cannot last: both sides refresh, a refresh rotates the
+      # refresh token, and whichever goes first revokes the other. It
+      # worked for a day and then failed every few hours, in front of
+      # whoever happened to be using the build page.
+      #
+      # Either of these ends that. CLAUDE_CODE_OAUTH_TOKEN is what
+      # "claude setup-token" produces, made for exactly this;
+      # ANTHROPIC_API_KEY bills the API account rather than the
+      # subscription. Set one in .env and the copied file stops mattering.
+      CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # everything it says to the model goes through the proxy, because it has
       # no other way out
       HTTPS_PROXY: http://egress-proxy:3128

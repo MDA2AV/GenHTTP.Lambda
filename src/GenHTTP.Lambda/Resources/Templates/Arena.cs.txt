@@ -1756,18 +1756,20 @@ async ValueTask Broadcast()
 /// Sends one payload, and forgets whoever is no longer there to receive it.
 /// </summary>
 /// <remarks>
-/// Every write goes through here, one at a time per connection. Several
-/// things write to a player's socket - the welcome, the frame twenty times a
-/// second, the news that they have been eaten, the news that somebody has
-/// won - and they were ordered so that they could not overlap. The socket
-/// still faulted with "FlushAsync already in progress", which is what a
-/// connection says when a write starts before the previous one has finished
-/// flushing, so awaiting the write is evidently not the same as awaiting its
-/// flush.
+/// A websocket connection is not thread safe, and GenHTTP says so: keeping
+/// writes to one from colliding is the caller's job. This is that, per
+/// connection rather than the single static lock the documentation's example
+/// uses, so no two players are ever queued behind each other.
 ///
-/// The gate makes the question moot. A write that faults takes the player out
-/// of the arena rather than taking the connection handler down with it, which
-/// is what a player sees as being disconnected in the middle of a round.
+/// It holds. Ten thousand writes counted under load, never two at once on a
+/// connection - and the engine still faults them, which means the writer it
+/// faults against is not one of ours. Which one it is has not been pinned
+/// down: the two the framework performs by default are OnPing and OnClose,
+/// and this arena replaces OnClose with something that does not write while
+/// no ping arrived in any run.
+///
+/// Until it is, a faulted write costs that player their place rather than
+/// taking the connection handler down with it.
 /// </remarks>
 async Task<bool> Send(IReactiveConnection connection, string payload)
 {
