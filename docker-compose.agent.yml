@@ -137,4 +137,6 @@ networks:
   build-net:
     name: genhttp-build-net
     internal: true
-  default:
+  # `default` is deliberately not redeclared here: a bare key in a later file
+  # replaces the definition in an earlier one rather than adding to it, which
+  # silently dropped the IPv6 settings docker-compose.yml gives it.

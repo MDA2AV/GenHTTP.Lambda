@@ -63,5 +63,25 @@ services:
       - /opt/genhttp-lambda/certs:/certs:ro
     restart: unless-stopped
 
+networks:
+
+  # The bridge the server is published on, given IPv6 of its own.
+  #
+  # Without it, Docker cannot route an inbound IPv6 connection to an IPv4-only
+  # container, so it relays one through docker-proxy instead - which opens a
+  # fresh connection from the bridge gateway and loses the address it came
+  # from. Every IPv6 visitor then arrives as 172.18.0.1, and on a host with an
+  # AAAA record that is most of them: measured at 272 of 337 requests.
+  #
+  # A unique-local range, so there is nothing to route and nothing to collide
+  # with. Inbound is what this is for; outbound keeps using IPv4, because a
+  # ULA has no default route - which is why the egress proxy beside this one
+  # goes on reaching the model API exactly as it did.
+  default:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: fd00:c0de:1a::/64
+
 volumes:
   lambda-data:
