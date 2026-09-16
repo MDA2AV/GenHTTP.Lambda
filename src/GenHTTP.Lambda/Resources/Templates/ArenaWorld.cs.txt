@@ -696,6 +696,27 @@ static class World
     public static string ColourFor(int seat) => Palette[seat % Palette.Length];
 
     /// <summary>Which of the palette a colour is, for sending it as a number.</summary>
+    /// <summary>
+    /// Spreads a pellet's slot number evenly over the whole unsigned range.
+    /// </summary>
+    /// <remarks>
+    /// So that a fraction of the floor can be chosen by comparing this against
+    /// a threshold. Two properties matter and neither is randomness: the same
+    /// slot always gives the same number, so a pellet does not change its mind
+    /// between frames, and neighbouring slots give unrelated numbers, so the
+    /// kept ones are spread across the view instead of arriving in runs.
+    /// </remarks>
+    public static uint Scramble(int slot)
+    {
+        var x = (uint)slot * 2654435761u;
+
+        x ^= x >> 15;
+        x *= 2246822519u;
+        x ^= x >> 13;
+
+        return x;
+    }
+
     public static int TintOf(string colour) => Math.Max(0, Array.IndexOf(Palette, colour));
 
     /// <summary>A colour to scatter a pellet in.</summary>

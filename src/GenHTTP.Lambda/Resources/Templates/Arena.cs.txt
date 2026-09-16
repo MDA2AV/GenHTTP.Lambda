@@ -1531,7 +1531,38 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
         }
     }
 
-    var thin = Math.Max(1, (int)Math.Ceiling(sighted / (double)World.Crumbs));
+    /*
+     * Thinned by distance rather than by slot number.
+     *
+     * It used to keep every nth pellet, n being the sighted count over the
+     * budget. Deterministic, which was the point - but n is a whole number
+     * computed from a count that changes every tick, so whenever the count
+     * sat near a multiple of the budget, n flipped between one and two and
+     * the kept set changed almost entirely. Measured: five hundred and
+     * ninety nine of six hundred and fourteen pellets vanishing between one
+     * frame and the next, twenty times a second. That is the flicker.
+     *
+     * So keep a fixed share of them instead, chosen by scrambling the slot
+     * number and comparing it against a threshold. That has the property the
+     * modulo lacked: it is monotone. Lifting the share from a third to a
+     * third and a bit keeps everything it was already keeping and adds a few,
+     * so a share that drifts makes the floor thicken and thin rather than
+     * change its mind. Easing the share as well means it drifts even when the
+     * count does not.
+     *
+     * Not a radius, which was the first thing tried. A hole hauls the floor
+     * into itself, so the pellets near it are dense and the ones further out
+     * are what it is visibly dragging - and the radius holding the budget
+     * collapsed to inside the hole's own mouth, spending every pellet on the
+     * ones about to be eaten and drawing nothing anywhere else.
+     */
+    var want = sighted > World.Crumbs ? World.Crumbs / (double)sighted : 1.0;
+
+    viewer.Share = viewer.Share <= 0 ? want : viewer.Share * 0.85 + want * 0.15;
+
+    var share = Math.Clamp(viewer.Share, 0.02, 1.0);
+
+    var gate = (uint)(share * uint.MaxValue);
 
     foreach (var key in World.KeysWithin(viewer.X, viewer.Y, World.ViewOf(viewer.Radius)))
     {
@@ -1544,21 +1575,7 @@ string Picture(Player viewer, Blob[] blobs, Score[] board, int alive, Player[] t
         {
             if (World.InView(viewer.X, viewer.Y, viewer.Radius, pellet.X, pellet.Y))
             {
-                /*
-                 * Thinned, once there are more than a screen can say anything
-                 * with.
-                 *
-                 * How far somebody sees grows with how big they are, and a
-                 * hole calls a dense floor down around itself - so a large
-                 * one was being sent four thousand pellets a frame, sixty
-                 * kilobytes twenty times a second, better than a megabyte a
-                 * second to one player. At that zoom a pellet is a fraction
-                 * of a pixel and the floor reads as texture, so every second
-                 * or third one carries the same picture for a third of the
-                 * bytes. Deterministic by slot rather than random, or the
-                 * floor would seethe between frames.
-                 */
-                if (thin > 1 && pellet.Slot % thin != 0)
+                if (share < 1.0 && World.Scramble(pellet.Slot) > gate)
                 {
                     continue;
                 }

@@ -128,6 +128,18 @@ sealed class Player
     public string Ticket;
 
     /// <summary>
+    /// What fraction of the floor in view this player is being sent, smoothed.
+    /// </summary>
+    /// <remarks>
+    /// The share that lands on the pellet budget, which moves as the floor
+    /// under them changes - and under a hole, which is hauling the whole
+    /// floor towards itself and eating it, that count swings hard enough that
+    /// an instantaneous share pulses. Kept per player and eased towards the
+    /// answer, so what is drawn thickens and thins rather than blinking.
+    /// </remarks>
+    public double Share;
+
+    /// <summary>
     /// Where this blob's whirl is turning, and until when on the arena clock.
     /// Only a hole may open one, and only one at a time.
     /// </summary>
