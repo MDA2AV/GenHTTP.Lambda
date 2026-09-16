@@ -198,6 +198,9 @@ var herd = new Dictionary<long, List<Player>>();
  */
 var heavies = new List<Player>();
 
+/// <summary>When the arena last had nobody in it at all.</summary>
+var emptied = DateTime.UtcNow;
+
 void Weigh(Player[] everyone)
 {
     heavies.Clear();
@@ -1839,16 +1842,9 @@ void StartClock()
             }
             else
             {
-                /*
-                 * The company goes when the last person does.
-                 *
-                 * This used to be done as a socket closed, which is right
-                 * until a socket faults instead of closing - and then a dozen
-                 * bots are left in an arena with nobody in it, frozen, until
-                 * somebody happens to arrive. Here it is tied to the clock
-                 * stopping, which happens however the last player left.
-                 */
-                bots.Clear();
+                // the clock has stopped with nobody here; whether the company
+                // stays is decided by whoever arrives next, and how long after
+                emptied = DateTime.UtcNow;
             }
         }
     });
@@ -1921,6 +1917,18 @@ var socket = Websocket.Functional()
                               if (!greeted)
                               {
                                   return;
+                              }
+
+                              /*
+                               * Company nobody came back for. Cleared on the
+                               * way in rather than on the way out, so that a
+                               * socket which drops and reconnects finds the
+                               * arena it left rather than an empty one.
+                               */
+                              if (players.IsEmpty && !bots.IsEmpty
+                                  && (DateTime.UtcNow - emptied).TotalSeconds > World.Linger)
+                              {
+                                  bots.Clear();
                               }
 
                               players[connection] = player;
@@ -2086,10 +2094,9 @@ var socket = Websocket.Functional()
                               Remember(leaving);
                           }
 
-                          // the last person out takes the company with them
                           if (players.IsEmpty)
                           {
-                              bots.Clear();
+                              emptied = DateTime.UtcNow;
                           }
 
                           // not disposed: a write may still be holding it.

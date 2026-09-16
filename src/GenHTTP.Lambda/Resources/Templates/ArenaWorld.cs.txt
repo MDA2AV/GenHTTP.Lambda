@@ -197,8 +197,7 @@ static class World
     /// puts it two hundred and forty thousand units across, which is a hundred
     /// times the area of a full house before.
     ///
-    /// It is a cap rather than a target. Nobody has to fill it, and filling it
-    /// is a thing somebody does on purpose with the button.
+    /// A cap rather than a target: filling it is deliberate.
     /// </remarks>
     public const int Crowd = 10_000;
 
@@ -817,11 +816,9 @@ static class World
     /// hundreds of empty ones per query.
     ///
     /// This is what makes a crowd of ten thousand possible at all. Three
-    /// things used to compare every blob against every other one - who is
-    /// eating whom, who is being pulled by whom, and what each bot has decided
-    /// to do about it - and three times ten thousand squared is a hundred
-    /// million pairs a tick, which is about three seconds of arithmetic for
-    /// something that has to happen twenty times a second.
+    /// things used to compare every blob against every other one, and three
+    /// times ten thousand squared is a hundred million pairs a tick - about
+    /// three seconds of arithmetic, twenty times a second.
     /// </remarks>
     public const double Patch = 1400;
 
@@ -836,17 +833,27 @@ static class World
     /// </remarks>
     public const double Slip = 200;
 
+    /// <summary>How long an emptied arena keeps its company, in seconds.</summary>
+    /// <remarks>
+    /// It used to go the instant the last player did, which is right for
+    /// somebody leaving and wrong for somebody's connection blinking: a
+    /// sleeping tab or a bad second of wifi closed the socket, and if that
+    /// player was alone, an arena they had spent minutes filling was deleted
+    /// before the browser finished reconnecting. It read as the game having
+    /// restarted itself with nobody having won.
+    ///
+    /// The clock stops while it is empty, so this costs memory and no time.
+    /// </remarks>
+    public const double Linger = 90;
+
     /// <summary>The furthest anything drags loose pellets, in units.</summary>
     /// <remarks>
-    /// These two sweeps were bounded by the arena, which was right while the
-    /// arena was nine thousand units across and is not now it can be a
-    /// quarter of a million. The grid they walk has cells of two hundred and
-    /// sixty, so a sweep that wide is three and a half million squares for
-    /// one blob in one tick, to find forty thousand pellets.
-    ///
-    /// Set to the largest the arena used to get, so nothing changes at any
-    /// size it reached before, and a hole in a huge one stops hauling the
-    /// entire floor towards itself - which was never a thing worth doing.
+    /// Both sweeps were bounded by the arena, which was right at nine thousand
+    /// units across and is not now it can be a quarter of a million: the grid
+    /// they walk has cells of two hundred and sixty, so that is three and a
+    /// half million squares for one blob in one tick to find forty thousand
+    /// pellets. Set to the largest the arena used to get, so nothing changes
+    /// at any size it reached before.
     /// </remarks>
     public const double Dredge = 24_000;
 
