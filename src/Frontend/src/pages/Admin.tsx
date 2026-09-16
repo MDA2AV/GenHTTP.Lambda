@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { useAdminToken } from '../admin';
 import { ApiError, api, type AdminListing, type LambdaOverview } from '../api';
@@ -227,6 +228,14 @@ export function Admin() {
                         <button type="button" onClick={() => view(lambda)} disabled={busy !== null} className="btn-ghost !px-2 !py-1 text-xs">
                           Code
                         </button>
+
+                        <Link
+                          to={`/logs?lambda=${encodeURIComponent(lambda.publicKey)}`}
+                          className="btn-ghost !px-2 !py-1 text-xs"
+                          title="What this lambda has printed, and what the server said about it"
+                        >
+                          Log
+                        </Link>
 
                         {live && (
                           <button type="button" onClick={() => undeploy(lambda)} disabled={busy !== null} className="btn-ghost !px-2 !py-1 text-xs">

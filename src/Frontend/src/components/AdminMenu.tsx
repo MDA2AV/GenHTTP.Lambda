@@ -98,6 +98,7 @@ export function AdminMenu() {
             <>
               <Item to="/stats" label="Server" note="Memory, connections and what the engine is doing" onGo={() => setOpen(false)} />
               <Item to="/admin" label="Lambdas" note="Every lambda on the installation" onGo={() => setOpen(false)} />
+              <Item to="/logs" label="Log" note="What the server and the lambdas are printing, live" onGo={() => setOpen(false)} />
 
               <button
                 type="button"

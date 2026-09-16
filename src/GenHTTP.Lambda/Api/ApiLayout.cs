@@ -25,6 +25,7 @@ public static class ApiLayout
                             .AddDependentService<BuildResource>("build")
                             .AddDependentService<InvitationResource>("start")
                             .AddDependentService<AdminResource>("admin")
+                            .AddDependentService<LogResource>("logs")
                             .AddScalar(title: "GenHTTP Lambda API")
                             .AddOpenApi()
                             .Add(ErrorHandler.From(new ApiErrorMapper()));

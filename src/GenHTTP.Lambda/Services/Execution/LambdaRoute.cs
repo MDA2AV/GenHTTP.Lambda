@@ -2,6 +2,7 @@ using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Deployment;
+using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -25,13 +26,19 @@ public static class LambdaRoute
 {
 
     public static IHandler Create(IMetaService meta, IDeploymentService deployments, SpaResources spa, LambdaOptions options,
-                                  LambdaTelemetry telemetry, ILoggerFactory loggers)
+                                  LambdaTelemetry telemetry, LogBook book, ILoggerFactory loggers)
     {
         var execution = new LambdaExecutionHandler(deployments);
 
         return Concerns.Chain([
             new ThrottleConcernBuilder(options),
             ErrorHandler.From(new LambdaErrorMapper(loggers.CreateLogger<LambdaErrorMapper>())),
+            // outside the error handler and the timeout, so a lambda that
+            // printed and then failed keeps what it printed, and the warning
+            // the error handler writes is filed under it as well
+            .. options.CaptureLambdaOutput
+               ? new IConcernBuilder[] { new LambdaOutputConcernBuilder(book, options.MaxOutputLines) }
+               : [],
             // outside the error handler and the throttle, inside the lookup: so
             // it records the answer the visitor actually got, and knows which
             // lambda to file it under. Inside the throttle it saw neither the

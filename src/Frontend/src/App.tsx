@@ -9,6 +9,7 @@ import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
+import { Logs } from './pages/Logs';
 import { Example } from './pages/Example';
 import { Stats } from './pages/Stats';
 import { Guide } from './pages/Guide';
@@ -79,6 +80,7 @@ export function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/stats" element={<Stats dark={theme === 'dark'} />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/logs" element={<Logs />} />
                 <Route path="/guide" element={<Guide />} />
                 <Route path="/build" element={<Build />} />
                 <Route path="/agentic-coding" element={<AgenticCoding />} />

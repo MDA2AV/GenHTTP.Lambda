@@ -3,6 +3,7 @@ using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -32,6 +33,8 @@ public sealed class MetaService : IMetaService
 
     private LambdaOptions Options { get; }
 
+    private LogBook Book { get; }
+
     private ILogger Logger { get; }
 
     #endregion
@@ -39,13 +42,14 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaTelemetry activity, LambdaOptions options, ILogger<MetaService> logger)
+        LambdaTelemetry activity, LambdaOptions options, LogBook book, ILogger<MetaService> logger)
     {
         Databases = databases;
         Storage = storage;
         Deployments = deployments;
         Activity = activity;
         Options = options;
+        Book = book;
         Logger = logger;
     }
 
@@ -295,7 +299,21 @@ public sealed class MetaService : IMetaService
             throw LambdaException.NotFound($"Version {target} does not exist.");
         }
 
-        var outcome = await Deployments.ActivateAsync(lambda.Id, target, cancellation);
+        /*
+         * Under the lambda's own name, because activating it runs its code:
+         * everything outside the handler it returns happens once, here, and a
+         * print from there is how somebody watches their own start up. A
+         * request would carry this mark on its own - the concern that serves
+         * one sets it - but a deployment is not a request.
+         */
+        CompilationOutcome outcome;
+
+        using (Options.CaptureLambdaOutput
+               ? LambdaOutput.Enter(new OutputScope(lambda.PublicKey, Book, Options.MaxOutputLines))
+               : null)
+        {
+            outcome = await Deployments.ActivateAsync(lambda.Id, target, cancellation);
+        }
 
         if (!outcome.Success)
         {

@@ -183,6 +183,33 @@ public sealed record LambdaOptions
     public int TelemetrySamples { get; init; } = 2880;
 
     /// <summary>
+    /// How many log lines are kept for the panel to read back.
+    /// </summary>
+    /// <remarks>
+    /// Held in memory and lost on a restart. Docker keeps the whole run on
+    /// stdout regardless; this is only the part an operator can reach without
+    /// a shell on the host.
+    /// </remarks>
+    public int LogHistory { get; init; } = 4000;
+
+    /// <summary>
+    /// Whether what a lambda prints while serving a request is kept.
+    /// </summary>
+    /// <remarks>
+    /// On, because a lambda that cannot be watched can only be guessed at, and
+    /// the author of one has no other way to see a print. Off, the console of
+    /// a lambda still reaches stdout and simply is not gathered - which is the
+    /// setting for an installation where what strangers print is not something
+    /// the operator wants held in memory at all.
+    /// </remarks>
+    public bool CaptureLambdaOutput { get; init; } = true;
+
+    /// <summary>
+    /// How many lines one request may contribute before the rest is dropped.
+    /// </summary>
+    public int MaxOutputLines { get; init; } = 200;
+
+    /// <summary>
     /// The port the server offers TLS on. Zero leaves the secure endpoint off.
     /// </summary>
     public ushort SecurePort { get; init; }
@@ -286,6 +313,9 @@ public sealed record LambdaOptions
             PublicActivity = ReadBool("LAMBDA_PUBLIC_ACTIVITY", defaults.PublicActivity),
             TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
             TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),
+            LogHistory = ReadInt("LAMBDA_LOG_HISTORY", defaults.LogHistory),
+            CaptureLambdaOutput = ReadBool("LAMBDA_LOG_LAMBDA_OUTPUT", defaults.CaptureLambdaOutput),
+            MaxOutputLines = ReadInt("LAMBDA_LOG_MAX_LINES_PER_REQUEST", defaults.MaxOutputLines),
             SecurePort = (ushort)ReadInt("LAMBDA_TLS_PORT", defaults.SecurePort),
             CertificatePath = ReadOptional("LAMBDA_CERTIFICATE"),
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),

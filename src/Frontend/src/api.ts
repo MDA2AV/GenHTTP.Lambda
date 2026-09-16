@@ -262,6 +262,48 @@ export interface LambdaOverview {
   keptUntil: string;
 }
 
+/** One line of what the server, or a lambda on it, has said. */
+export interface LogEntry {
+  /** Counts from one and never repeats; the cursor is built from these. */
+  seq: number;
+  at: string;
+  level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'critical';
+  /** A logger category for the server, `stdout` or `stderr` for a lambda. */
+  source: string;
+  /** The lambda it belongs to, absent for the server itself. */
+  lambda?: string;
+  text: string;
+  /** The stack trace, when there is one. */
+  detail?: string;
+}
+
+/** How the run before this one ended, when it did not end cleanly. */
+export interface PreviousRun {
+  started: string;
+  lastSeen: string;
+  minutes: number;
+  /** Whether anything asked it to stop. */
+  signalled: boolean;
+  fault?: string;
+  workingSet: number;
+  requests: number;
+  sockets: number;
+}
+
+export interface LogPage {
+  lines: LogEntry[];
+  /** Ask from here next time. */
+  cursor: number;
+  /** Lines dropped before this reader reached them. */
+  missed: number;
+  capacity: number;
+  written: number;
+  /** Whether what lambdas print is being kept at all. */
+  capturing: boolean;
+  /** Absent when the run before this one stopped the way it meant to. */
+  previous?: PreviousRun;
+}
+
 export interface AdminListing {
   lambdas: LambdaOverview[];
   total: number;
@@ -368,6 +410,23 @@ export const api = {
     remove: (token: string, publicKey: string) =>
       request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}`,
         withToken(token, { method: 'DELETE' })),
+  },
+
+  /**
+   * The tail of the log. Behind the token without exception - unlike the
+   * figures, this is whatever somebody's code decided to print.
+   */
+  logs: (token: string, options: { since?: number; lambda?: string; level?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams();
+
+    // no cursor means "whatever is there now", which the server answers with
+    // the tail rather than the whole ring
+    if (options.since !== undefined) query.set('since', String(options.since));
+    if (options.lambda) query.set('lambda', options.lambda);
+    if (options.level) query.set('level', options.level);
+    if (options.limit) query.set('limit', String(options.limit));
+
+    return request<LogPage>(`/logs?${query}`, withToken(token));
   },
 
   telemetry: (minutes: number, token: string) =>

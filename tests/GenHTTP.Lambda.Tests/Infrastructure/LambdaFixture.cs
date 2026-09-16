@@ -12,8 +12,10 @@ using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Testing;
 
+using GenHTTP.Lambda.Services.Diagnostics;
+
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -47,6 +49,13 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// The configuration it was started with.
     /// </summary>
     public LambdaOptions Options { get; }
+
+    /// <summary>
+    /// What the server logged, as the panel reads it back.
+    /// </summary>
+    public LogBook Book => Application.Services.GetRequiredService<LogBook>();
+
+    private ILoggerFactory Loggers { get; }
 
     public IMetaService Meta => Application.Services.GetRequiredService<IMetaService>();
 
@@ -88,12 +97,13 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
     #region Initialization
 
-    private LambdaFixture(string root, LambdaOptions options, Application application, TestHost host)
+    private LambdaFixture(string root, LambdaOptions options, Application application, TestHost host, ILoggerFactory loggers)
     {
         Root = root;
         Options = options;
         Application = application;
         Host = host;
+        Loggers = loggers;
     }
 
     /// <summary>
@@ -121,7 +131,14 @@ internal sealed class LambdaFixture : IAsyncDisposable
             options = configure(options);
         }
 
-        var application = Application.Create(options, NullLoggerFactory.Instance);
+        var book = new LogBook(options.LogHistory);
+
+        // the book rather than nothing, and nothing else: a test that asks what
+        // the server logged has to have somewhere for it to have been logged,
+        // and a console provider here would print every line of every fixture
+        var loggers = LoggerFactory.Create(builder => builder.AddProvider(new LogBookProvider(book)));
+
+        var application = Application.Create(options, loggers, book);
 
         var host = new TestHost(application.Handler, false, false);
 
@@ -129,7 +146,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
         await host.StartAsync();
 
-        return new LambdaFixture(root, options, application, host);
+        return new LambdaFixture(root, options, application, host, loggers);
     }
 
     #endregion
@@ -196,6 +213,8 @@ internal sealed class LambdaFixture : IAsyncDisposable
         await Host.DisposeAsync();
 
         await Application.DisposeAsync();
+
+        Loggers.Dispose();
 
         Cleanup();
     }

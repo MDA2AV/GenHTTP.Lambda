@@ -167,6 +167,9 @@ Everything is read from the environment on startup, see
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
 | `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
 | `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel, and closes the figures   |
+| `LAMBDA_LOG_HISTORY`                | `4000`           | log lines the panel can read back           |
+| `LAMBDA_LOG_LAMBDA_OUTPUT`          | `true`           | keep what lambdas print, filed under them   |
+| `LAMBDA_LOG_MAX_LINES_PER_REQUEST`  | `200`            | before one request's output is cut off      |
 | `LAMBDA_MCP_ORIGINS`                | -                | hosts a browser may use `/mcp` from         |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
@@ -349,6 +352,47 @@ nothing to check a request against, so requiring one would only mean nobody
 could ever read them - there they stay public, as they were before there was a
 panel to put them behind, and `LAMBDA_PUBLIC_ACTIVITY` still decides the per
 lambda figures.
+
+`/logs` is the tail of this run, live. It holds everything the server logged
+and everything a lambda printed while it was serving a request - the two are
+told apart because the console is shared but the attribution is not: the
+concern that serves a lambda marks the request, the mark travels with it
+through every await into the code of the user, and the writer over the console
+reads it back to decide whose line it is. Constructing a lambda is marked the
+same way, so a print at the top of a snippet is filed under it as well.
+
+The effect is that one lambda can be read on its own, which is what the **Log**
+button beside each row in `/admin` does. A warning the server logs *about* a
+lambda - the one the error handler writes when it throws - is filed under that
+lambda too, with the stack trace that was kept from the visitor.
+
+Two bounds keep it honest. The whole thing is a ring of `LAMBDA_LOG_HISTORY`
+lines with a cap on the length of each, so a lambda in a print loop costs a
+fixed amount of memory rather than a growing one; and one request may only
+contribute `LAMBDA_LOG_MAX_LINES_PER_REQUEST` before the rest is counted and
+dropped, so it evicts its own output rather than everybody else's. Nothing
+here survives a restart. The container's stdout still has the whole run and is
+what to read when the question is about something that happened before the
+process started - reading the log through the panel is a convenience, not the
+record.
+
+The panel also says how the run before this one ended, where it did not end
+cleanly. The server cannot answer "did it just crash" about itself - whatever
+it would have said went down with it - so each run leaves a note on the data
+volume, refreshed on the telemetry tick, and the next one reads it. A note with
+no stop stamped on it is a process that went away between one heartbeat and the
+next, and the memory, socket count and request count it was carrying at that
+beat are usually most of the answer. Being asked to stop is stamped as the
+signal arrives rather than once the stopping is done, so a run that was told to
+go and died partway can be told from one that nothing asked at all. An
+unhandled exception is written into the note before the process goes down,
+because in a container that restarts immediately, stderr is easy to lose.
+
+`LAMBDA_LOG_LAMBDA_OUTPUT=false` turns off the gathering of what lambdas
+print, for an installation that would rather not hold a stranger's output in
+memory at all. Their console still reaches stdout; it is simply not collected.
+The route is behind the token without the exception the figures get: aggregates
+name nobody, and this is whatever somebody's code decided to print.
 
 The listing links the editor of each lambda, which is the whole of the editor
 key and therefore the whole of the credential. That is a deliberate trade: an

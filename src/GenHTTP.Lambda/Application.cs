@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Deployment;
+using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Execution;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Meta;
@@ -58,11 +59,11 @@ public sealed class Application : IAsyncDisposable
 
     #region Initialization
 
-    private Application(LambdaOptions options, ILoggerFactory loggers)
+    private Application(LambdaOptions options, ILoggerFactory loggers, LogBook book, RunLog runs)
     {
         Options = options;
 
-        Services = BuildServices(options, loggers);
+        Services = BuildServices(options, loggers, book, runs);
 
         Registry = Services.GetRequiredService<ServerRegistry>();
 
@@ -74,18 +75,22 @@ public sealed class Application : IAsyncDisposable
     /// <summary>
     /// Migrates the database and builds the application.
     /// </summary>
-    public static Application Create(LambdaOptions options, ILoggerFactory loggers)
+    public static Application Create(LambdaOptions options, ILoggerFactory loggers, LogBook? book = null, RunLog? runs = null)
     {
         Migrator.Migrate(options, loggers.CreateLogger<Application>());
 
-        return new Application(options, loggers);
+        return new Application(options, loggers, book ?? new LogBook(options.LogHistory),
+                               runs ?? new RunLog(options.DataDirectory));
     }
 
-    private static ServiceProvider BuildServices(LambdaOptions options, ILoggerFactory loggers)
+    private static ServiceProvider BuildServices(LambdaOptions options, ILoggerFactory loggers, LogBook book, RunLog runs)
     {
         var services = new ServiceCollection();
 
         services.AddSingleton(options);
+
+        services.AddSingleton(book);
+        services.AddSingleton(runs);
 
         services.AddSingleton(loggers);
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
@@ -131,6 +136,7 @@ public sealed class Application : IAsyncDisposable
             spa,
             options,
             services.GetRequiredService<LambdaTelemetry>(),
+            services.GetRequiredService<LogBook>(),
             loggers
         );
 

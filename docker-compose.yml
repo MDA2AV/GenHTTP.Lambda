@@ -38,6 +38,13 @@ services:
       # program is written rather than how large it may be, which is the
       # wrong job for it.
       LAMBDA_MAX_CODE_LENGTH: ${LAMBDA_MAX_CODE_LENGTH:-262144}
+      # The tail of the run, readable in the panel at /logs.
+      #
+      # In memory and lost on a restart; docker still has the whole of it on
+      # stdout, which is what to read when the question is about a process
+      # that is no longer running.
+      LAMBDA_LOG_HISTORY: ${LAMBDA_LOG_HISTORY:-4000}
+      LAMBDA_LOG_LAMBDA_OUTPUT: ${LAMBDA_LOG_LAMBDA_OUTPUT:-true}
     sysctls:
       # lets the unprivileged user bind 80 and 443 inside its own network
       # namespace, so the server keeps running as uid 1001
