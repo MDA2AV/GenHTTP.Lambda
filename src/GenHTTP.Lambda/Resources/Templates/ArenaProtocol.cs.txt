@@ -28,7 +28,10 @@ public record Steer(string Kind, double X, double Y, bool Hold);
 /// The browser draws a dent that deep, which is how everybody else finds out
 /// somebody is holding - before the pull reaches them, because it ramps.
 /// </remarks>
-public record Blob(string I, string N, string C, double X, double Y, double R, double G);
+/// <param name="S">How charged this blob is from its recent kills, left out
+/// entirely when it is not - which is nearly every blob in nearly every
+/// frame, so it costs nothing to say</param>
+public record Blob(string I, string N, string C, double X, double Y, double R, double G, int? S);
 
 /// <summary>
 /// What a pickup grants. Nought is nothing in hand.

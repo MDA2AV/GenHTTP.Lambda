@@ -165,6 +165,17 @@ sealed class Player
     /// <summary>When this blob may teleport again, on the arena clock.</summary>
     public double WarpReady;
 
+    /// <summary>
+    /// When the charge from the last kill runs out, on the arena clock.
+    /// </summary>
+    public double Spark;
+
+    /// <summary>
+    /// How many kills deep that charge is, nought for not charged. Each one
+    /// taken while the last is still lit stacks, up to the cap.
+    /// </summary>
+    public int Sparks;
+
     /// <summary>Where a teleport already under way is taking this blob.</summary>
     public double WarpToX;
 

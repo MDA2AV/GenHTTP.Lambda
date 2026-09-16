@@ -12,6 +12,7 @@
   <span class="dim">move the mouse · eat anything smaller · hold <kbd>space</kbd> to pull · <kbd>E</kbd> to teleport</span>
   <span id="perk" hidden></span>
   <span id="warp" class="ready">teleport ready</span>
+  <span id="spark" hidden></span>
   <span id="hold" hidden>holding on. Everything nearby is coming to you, and it costs you nothing</span>
 </div>
 
@@ -34,10 +35,23 @@
     </p>
     <p class="dim">
       Hold <kbd>space</kbd> and you root to the spot and drag everything near you in.
-      The longer you hold, the harder you pull and the further it reaches, and the
-      more it costs you, climbing to five times the rate you started at. A moment of
-      it is roughly free; ten seconds of it is most of you. The floor caves
-      in under you while you do it, so everybody can see it coming.
+      The longer you hold, the harder you pull and the further it reaches. It costs
+      you nothing but the standing still. The floor caves in under you while you do
+      it, so everybody can see it coming.
+    </p>
+    <p class="dim">
+      <kbd>E</kbd> teleports you. The ground is marked and you cross to it a moment
+      later, so everybody else sees it coming as well. The wait between goes is a
+      second while you are small and fifteen once you are nearly a hole &mdash; but
+      eating somebody clears it at once and leaves you <b>charged</b>: lit up,
+      faster, for five seconds. Eat again before it goes out and the charge stacks,
+      up to five deep.
+    </p>
+    <p class="dim">
+      At <b>ten million</b> you collapse. You cannot move at all after that. You
+      pull the whole arena in instead, harder at every grade, and you call the floor
+      down around you so that people have some reason to come near a thing that
+      cannot chase them. <b>Ten billion</b> takes the arena and ends the round.
     </p>
     <p class="dim">
       Things worth picking up lie about the floor. A <b>harpoon</b> is thrown at

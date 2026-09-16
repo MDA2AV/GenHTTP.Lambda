@@ -851,6 +851,11 @@ void Step(double seconds)
     foreach (var soul in everyone)
     {
         soul.Ate = null;
+
+        if (soul.Sparks > 0 && at >= soul.Spark)
+        {
+            soul.Sparks = 0;
+        }
     }
 
     // the arena is sized for whoever is in it, once, before anything moves
@@ -1163,7 +1168,7 @@ void Step(double seconds)
         // holding on roots you: the pull still moves you, your own legs do not
         else if (distance > 1 && !(player.Hold && player.Rest <= 0))
         {
-            var step = Math.Min(World.Speed(player.Radius) * seconds, distance);
+            var step = Math.Min(World.Legs(player.Radius, player.Sparks) * seconds, distance);
 
             goX = dx / distance * step;
             goY = dy / distance * step;
@@ -1180,7 +1185,7 @@ void Step(double seconds)
 
         if (drag > 0)
         {
-            var most = (player.Clutched ? World.Clutch : World.Hand) * World.Speed(player.Radius);
+            var most = (player.Clutched ? World.Clutch : World.Hand) * World.Legs(player.Radius, player.Sparks);
 
             var scale = drag > most ? most / drag : 1;
 
@@ -1480,6 +1485,27 @@ void Step(double seconds)
 
             player.Radius = World.RadiusOf(World.AreaOf(player.Radius) + World.AreaOf(other.Radius) * World.Spoils);
 
+            /*
+             * A kill charges you.
+             *
+             * The teleport comes back at once - the moment after a kill is
+             * the moment you most want to be somewhere else, because
+             * everything that was circling the fight is now circling you -
+             * and for the next few seconds you are faster, faster again for
+             * each one taken while the last is still lit.
+             *
+             * It compounds deliberately. A blob that has just eaten two
+             * things in four seconds is the most dangerous thing on the
+             * floor and should look and feel like it; the way to stop it is
+             * to not be the third, which is a decision somebody gets to make
+             * because the charge is drawn on them for everybody to see.
+             */
+            player.WarpReady = at;
+
+            player.Sparks = at < player.Spark ? Math.Min(World.SparkMost, player.Sparks + 1) : 1;
+
+            player.Spark = at + World.SparkTime;
+
             feasts.Add(new Feast(Math.Round(other.X, 1), Math.Round(other.Y, 1),
                                  Math.Round(other.Radius, 1), other.Colour));
 
@@ -1534,6 +1560,8 @@ void Step(double seconds)
             soul.Wound = 0;
             soul.WarpReady = 0;
             soul.WarpLands = 0;
+            soul.Sparks = 0;
+            soul.Spark = 0;
         }
 
         pellets.Clear();
@@ -1730,7 +1758,8 @@ async ValueTask Broadcast()
                                            Math.Round(p.Radius, 1),
                                            Math.Round(World.IsHole(p.Radius)
                                                       ? World.Grip(p.Radius, p.Hold, p.Wound) * World.HolePull(p.Radius)
-                                                      : World.Grip(p.Radius, p.Hold, p.Wound), 2)))
+                                                      : World.Grip(p.Radius, p.Hold, p.Wound), 2),
+                                           p.Sparks > 0 ? p.Sparks : null))
                      .ToArray();
 
     var board = souls.OrderByDescending(p => p.Radius)
@@ -1942,6 +1971,31 @@ var socket = Websocket.Functional()
                               try
                               {
                               var joining = JsonSerializer.Deserialize<Join>(text, json);
+
+                              /*
+                               * Only a join makes a player.
+                               *
+                               * This used to take whatever arrived, on the
+                               * reasoning that the first thing a browser
+                               * sends is the join. Which is true, and beside
+                               * the point: it is not the only thing a browser
+                               * sends while it is not on the books, and a
+                               * steer deserialises into a Join perfectly
+                               * happily - with no name at all, which the
+                               * server then quite correctly called "a blob".
+                               *
+                               * That is where they came from. Being eaten
+                               * takes a player off the books and leaves the
+                               * socket open, and the steer that goes out
+                               * twenty milliseconds later - long before
+                               * anybody has finished reading what killed
+                               * them - built a nameless player and put them
+                               * straight back into the arena as one.
+                               */
+                              if (joining?.Kind != "join")
+                              {
+                                  return;
+                              }
 
                               var spot = Somewhere();
 

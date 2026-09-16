@@ -45,7 +45,13 @@ static class World
     /// <summary>
     /// The score that wins the arena and ends the round.
     /// </summary>
-    public const double Win = 100_000_000;
+    /// <remarks>
+    /// A hundred times what it was, because rounds were ending too soon. Not
+    /// a hundred times the eating, though - the scale is steeper as well, so
+    /// what this actually costs is about seventy per cent more of the floor
+    /// than the old ceiling did. The rest of the change is in the number.
+    /// </remarks>
+    public const double Win = 10_000_000_000;
 
     /// <summary>
     /// The score at which somebody stops being a player and becomes a hole.
@@ -57,19 +63,41 @@ static class World
     /// makes the end of a round a thing everybody else has to survive rather
     /// than a number going up somewhere they cannot see.
     /// </remarks>
-    public const double Singularity = 1_000_000;
+    public const double Collapse = 10_000_000;
+
+    /// <summary>The area at which score stops being area.</summary>
+    /// <remarks>
+    /// This used to be the same number as the collapse, which only worked
+    /// while the two happened to want the same value. They do not: the
+    /// collapse is a score - a thing a player reads and aims at - and this is
+    /// an area, chosen entirely so that the two ends of the scale land at
+    /// radii the arena can hold. With a ten billion ceiling and the knee left
+    /// on the collapse, a winner would have a radius of six and a half
+    /// thousand in an arena nine thousand across.
+    ///
+    /// Fixed instead by where the two ends have to come out: the collapse at
+    /// a radius of about five hundred and sixty, which is where it has always
+    /// been and is a size the arena reads well at, and the ceiling at
+    /// twenty one hundred. Those two, with the exponent below, give this.
+    /// </remarks>
+    public const double Knee = 242_000;
 
     /// <summary>Whether this radius has collapsed.</summary>
-    public static bool IsHole(double radius) => ScoreOf(radius) >= Singularity;
+    public static bool IsHole(double radius) => ScoreOf(radius) >= Collapse;
 
     /// <summary>
     /// What a hole scores at each of its grades.
     /// </summary>
     /// <remarks>
-    /// Roughly three times apiece, so each one is a visible step rather than
-    /// a slow creep, and the last of them is the ceiling.
+    /// Five times apiece, so each one is a visible step rather than a slow
+    /// creep. The last of them is well below the ceiling rather than at it,
+    /// which was the trouble with the previous ladder: the top grade was
+    /// reached and the round ended in the same breath, so nobody ever saw
+    /// one. There is most of a grade's worth of arena left to eat after the
+    /// last step, which is long enough to be somewhere you have to live.
     /// </remarks>
-    public static readonly double[] Grades9 = [1_000_000, 3_000_000, 10_000_000, 30_000_000, 100_000_000];
+    public static readonly double[] Grades9 =
+        [10_000_000, 50_000_000, 250_000_000, 1_250_000_000, 6_250_000_000];
 
     /// <summary>Which grade of hole this is, nought for something still a blob.</summary>
     public static int HoleLevel(double radius)
@@ -97,24 +125,28 @@ static class World
     /// multiplier is the part that decides whether the arena feels it: a hole
     /// that pulls enormously but only nearby is just a big blob.
     /// </remarks>
-    public const double HoleGrip = 9.0;
+    // two and a half times what it was, on the same reasoning that made
+    // holding free: the strongest thing in the game was being too polite
+    public const double HoleGrip = 22.0;
 
-    public const double HoleReach = 3.2;
+    public const double HoleReach = 4.0;
 
     /// <summary>
     /// How much harder each grade of hole pulls than the one below it.
     /// </summary>
     /// <remarks>
     /// Compounding, so the top of the scale is not a bigger version of the
-    /// bottom of it - a grade five pulls eighty one times what a grade one
-    /// does. The reach compounds far more gently, or the last grade would
-    /// simply own the whole arena from wherever it happened to be standing.
+    /// bottom of it - a grade five pulls a hundred and thirty times what a
+    /// grade one does, and a grade one pulls twenty two times what the same
+    /// size holding on would. The reach compounds far more gently, or the
+    /// last grade would simply own the whole arena from wherever it happened
+    /// to be standing.
     /// </remarks>
-    public const double HoleStep = 3.0;
+    public const double HoleStep = 3.4;
 
     public static double HolePull(double radius) => HoleGrip * Math.Pow(HoleStep, Math.Max(0, HoleLevel(radius) - 1));
 
-    public static double HoleSpan(double radius) => HoleReach * Math.Pow(1.22, Math.Max(0, HoleLevel(radius) - 1));
+    public static double HoleSpan(double radius) => HoleReach * Math.Pow(1.28, Math.Max(0, HoleLevel(radius) - 1));
 
     /// <summary>
     /// How many pellets a hole calls down around itself each second.
@@ -126,10 +158,10 @@ static class World
     /// thick with pellets is worth the risk of going near one, which is what
     /// makes it dangerous again.
     /// </remarks>
-    public static int Summons(double radius) => 14 * HoleLevel(radius) * HoleLevel(radius);
+    public static int Summons(double radius) => 34 * HoleLevel(radius) * HoleLevel(radius);
 
     /// <summary>How far from a hole its summoned pellets land.</summary>
-    public static double SummonSpan(double radius) => radius * 2.2 + 320;
+    public static double SummonSpan(double radius) => radius * 2.6 + 460;
 
     /// <summary>
     /// How long between one teleport and the next, in seconds.
@@ -175,7 +207,7 @@ static class World
     /// </remarks>
     public static double WarpWait(double radius)
     {
-        var through = Math.Clamp(ScoreOf(radius) / Singularity, 0, 1);
+        var through = Math.Clamp(ScoreOf(radius) / Collapse, 0, 1);
 
         return 1 + 14 * Math.Sqrt(through);
     }
@@ -753,6 +785,32 @@ static class World
     /// </remarks>
     public static double Speed(double radius) => 260.0 / Math.Pow(radius / Start, 0.42);
 
+    /// <summary>How long a kill leaves you charged, in seconds.</summary>
+    /// <remarks>
+    /// Long enough to reach the next one and no longer. The whole of the
+    /// mechanic is in that: five seconds is not a reward for having eaten
+    /// somebody, it is an invitation to go and do it again immediately,
+    /// while whoever is near you has just watched what you did to the last
+    /// one and is deciding whether to run.
+    /// </remarks>
+    public const double SparkTime = 5.0;
+
+    /// <summary>The most kills a charge can be stacked to.</summary>
+    public const int SparkMost = 5;
+
+    /// <summary>What being charged does to your legs.</summary>
+    /// <remarks>
+    /// Compounding with each kill taken while the last is still lit, which
+    /// is what makes a run a run: fourteen per cent for one, seventy for a
+    /// chain of five. Capped, because the arena is only so wide and a blob
+    /// crossing it faster than the frames can show it is a bug, not a
+    /// reward.
+    /// </remarks>
+    public static double SparkBoost(int sparks) => 1 + 0.14 * Math.Clamp(sparks, 0, SparkMost);
+
+    /// <summary>How fast a blob of this size and this charge travels.</summary>
+    public static double Legs(double radius, int sparks) => Speed(radius) * SparkBoost(sparks);
+
     /// <summary>
     /// How big a square of the arena one bucket of the pellet grid covers.
     /// </summary>
@@ -811,40 +869,41 @@ static class World
     /// The number a blob is worth.
     /// </summary>
     /// <remarks>
-    /// Area, up to the collapse. Past it the two come apart on purpose: a
-    /// hundred million of plain area is a radius of five and a half thousand,
-    /// which is wider than the arena it is standing in, so the thing would be
-    /// bigger than the world. Above the collapse the score climbs far faster
-    /// than the radius does - which is also the right shape for the thing it
-    /// is drawing, since what makes a hole frightening is its mass and not
-    /// how much of the floor it covers.
+    /// Area, up to the knee. Past it the two come apart on purpose: ten
+    /// billion of plain area is a radius of fifty six thousand, which is six
+    /// times the width of the arena it would be standing in, so the thing
+    /// would be very much bigger than the world. Above the knee the score
+    /// climbs far faster than the radius does - which is also the right shape
+    /// for the thing it is drawing, since what makes a hole frightening is
+    /// its mass and not how much of the floor it covers.
     /// </remarks>
     public static double ScoreOf(double radius)
     {
         var plain = AreaOf(radius) - AreaOf(Start);
 
-        if (plain <= Singularity)
+        if (plain <= Knee)
         {
             return Math.Round(plain);
         }
 
-        return Math.Round(Singularity * Math.Pow(plain / Singularity, Steepen));
+        return Math.Round(Knee * Math.Pow(plain / Knee, Steepen));
     }
 
     /// <summary>How much faster score climbs than area, once collapsed.</summary>
     /// <remarks>
-    /// Picked so the ceiling lands at a radius the arena can hold: a hundred
-    /// million is reached at about sixteen hundred, against five and a half
-    /// thousand without it.
+    /// Picked so both ends of the scale land at radii the arena can hold: the
+    /// collapse at about five hundred and sixty, the ceiling at twenty one
+    /// hundred. Ten billion of plain area would be a radius of fifty six
+    /// thousand, in an arena nine thousand across.
     /// </remarks>
-    public const double Steepen = 2.21;
+    public const double Steepen = 2.627;
 
     /// <summary>The radius that scores this much, which is ScoreOf run backwards.</summary>
     public static double RadiusScoring(double score)
     {
-        var plain = score <= Singularity
+        var plain = score <= Knee
             ? score
-            : Singularity * Math.Pow(score / Singularity, 1 / Steepen);
+            : Knee * Math.Pow(score / Knee, 1 / Steepen);
 
         return Math.Sqrt((plain + AreaOf(Start)) / Math.PI);
     }

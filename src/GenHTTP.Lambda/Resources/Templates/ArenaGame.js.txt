@@ -241,7 +241,10 @@ addEventListener('pointermove', (e) => {
 // second - the same rate it answers at, because sending faster than it
 // replies only builds a queue
 setInterval(() => {
-  if (socket?.readyState !== 1 || !camera) return;
+  // `out` as well as the camera: being eaten empties the camera, but a frame
+  // still in the buffer fills it back in, and a steer sent after the server
+  // has taken you off its books is a steer from somebody who is not there
+  if (socket?.readyState !== 1 || !camera || out) return;
 
   const scale = scaleFor(camera.r);
   const x = camera.x + (pointer.x - innerWidth / 2) / scale;
@@ -382,6 +385,8 @@ function moment() {
       y: a.y + (b.y - a.y) * t,
       r: a.r + (b.r - a.r) * t,
       g: (a.g ?? 0) + ((b.g ?? 0) - (a.g ?? 0)) * t,
+      // a whole number of kills, which is not a thing to slide between
+      s: b.s ?? 0,
     };
   });
 
@@ -432,21 +437,24 @@ function moment() {
 /*
  * The same sum the server does, including the part where it stops being area.
  *
- * Past the collapse the score climbs far faster than the radius, or a hundred
- * million would be a blob wider than the arena. The two halves have to agree
- * about that or the fire comes on at the wrong size.
+ * Past the knee the score climbs far faster than the radius does, or ten
+ * billion would be a blob fifty six thousand units across in an arena nine
+ * thousand wide. The knee and the collapse are two different numbers - one
+ * is an area and one is a score - and the two halves have to agree about
+ * both or the fire comes on at the wrong size.
  */
-const COLLAPSE = 1000000;
-const STEEPEN = 2.21;
+const KNEE = 242000;
+const STEEPEN = 2.627;
+const COLLAPSE = 1e7;
 
 function SCORE(r) {
   const plain = Math.PI * (r * r - 14 * 14);
 
-  return plain <= COLLAPSE ? plain : COLLAPSE * Math.pow(plain / COLLAPSE, STEEPEN);
+  return plain <= KNEE ? plain : KNEE * Math.pow(plain / KNEE, STEEPEN);
 }
 
 /** The grades a hole comes in, matching World.Grades9. */
-const GRADES = [1e6, 3e6, 1e7, 3e7, 1e8];
+const GRADES = [1e7, 5e7, 2.5e8, 1.25e9, 6.25e9];
 
 function holeLevel(r) {
   const s = SCORE(r);
@@ -462,9 +470,9 @@ function stageOf(r) {
   const s = SCORE(r);
 
   if (s >= COLLAPSE) return 4;  // collapsed
-  if (s >= 400000) return 3;    // black fire
-  if (s >= 120000) return 2;    // fire
-  if (s >= 24000) return 1;     // embers
+  if (s >= 2000000) return 3;   // black fire
+  if (s >= 300000) return 2;    // fire
+  if (s >= 40000) return 1;     // embers
   return 0;
 }
 
@@ -568,6 +576,80 @@ function drawAura(x, y, r, stage, id, spin, level) {
  * Flat, not put: the marker has to be exactly where the blob will be, and
  * the floor under it may be bent by half a screen if a hole is nearby.
  */
+/**
+ * A number in, the same number out every time, between nought and one.
+ *
+ * Lightning has to be jagged and it has to hold still between redraws, or at
+ * sixty frames a second it is a strobe rather than an arc. Seeding it on the
+ * blob, the bolt and a slow counter gives both: a shape nobody can predict
+ * and one that survives long enough to be seen.
+ */
+function jolt(n) {
+  const x = Math.sin(n * 127.1) * 43758.5453;
+
+  return x - Math.floor(x);
+}
+
+/**
+ * The charge a kill leaves on whoever took it.
+ *
+ * Drawn on everybody, not only on the player: it is a warning, and a warning
+ * only their own screen can see is not one. The count is legible from the
+ * arcs - more of them, reaching further, brighter at the core - so that
+ * deciding whether to go near somebody does not require reading a number.
+ */
+function drawSpark(x, y, r, sparks, seed, now) {
+  const heat = Math.min(1, sparks / 5);
+  const bolts = 3 + sparks * 2;
+
+  // a new shape a dozen times a second. Every frame is a strobe; once a
+  // second is a diagram
+  const step = Math.floor(now / 75);
+
+  ctx.save();
+  ctx.lineCap = 'round';
+
+  // the air around it going, which is what carries at a distance where the
+  // arcs themselves are a pixel wide
+  ctx.globalAlpha = 0.12 + heat * 0.22;
+  ctx.strokeStyle = '#8adcff';
+  ctx.lineWidth = 2 + heat * 4;
+  ctx.beginPath();
+  ctx.arc(x, y, r + 5 + heat * 5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  for (let b = 0; b < bolts; b++) {
+    const seeded = seed + b * 31 + step * 7;
+    const a = (b / bolts) * Math.PI * 2 + jolt(seeded) * 0.7;
+    const tip = r + 8 + (14 + 16 * heat) * (0.4 + jolt(seeded + 3) * 0.6);
+
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9);
+
+    // three segments, each kicked sideways: a straight line from the rim is
+    // a spoke, and a spoke reads as a wheel rather than as electricity
+    for (let s = 1; s <= 3; s++) {
+      const along = r * 0.9 + (tip - r * 0.9) * (s / 3);
+      const off = (jolt(seeded + s * 17) - 0.5) * (0.42 + 0.3 * heat);
+
+      ctx.lineTo(x + Math.cos(a + off) * along, y + Math.sin(a + off) * along);
+    }
+
+    ctx.globalAlpha = 0.55 + heat * 0.45;
+    ctx.strokeStyle = '#8adcff';
+    ctx.lineWidth = 3 + heat * 2;
+    ctx.stroke();
+
+    // a white core inside the blue one, which is what makes it read as hot
+    ctx.globalAlpha = 0.5 + heat * 0.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1 + heat;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawMarks(flat, scale) {
   if (!marks.length) return;
 
@@ -601,7 +683,7 @@ function drawMarks(flat, scale) {
 
     // four spokes closing on it, which is the part that reads as a
     // countdown rather than as decoration
-    const out = r + 8 + 30 * (1 - t);
+    const ring = r + 8 + 30 * (1 - t);
     const arm = Math.max(5, r * 0.3);
 
     ctx.lineWidth = 3;
@@ -612,8 +694,8 @@ function drawMarks(flat, scale) {
       const a = q * Math.PI / 2 + Math.PI / 4;
       const cx = Math.cos(a), cy = Math.sin(a);
 
-      ctx.moveTo(cx * (out + arm), cy * (out + arm));
-      ctx.lineTo(cx * out, cy * out);
+      ctx.moveTo(cx * (ring + arm), cy * (ring + arm));
+      ctx.lineTo(cx * ring, cy * ring);
     }
 
     ctx.stroke();
@@ -652,7 +734,7 @@ function drawDeaths(flat, scale) {
 
     const at = flat(gone.x, gone.y);
     const r = Math.max(5, gone.r * scale);
-    const out = 1 - Math.pow(1 - age, 3);
+    const swell = 1 - Math.pow(1 - age, 3);
     const left = 1 - age;
 
     // the shell of it, thrown outwards and thinning as it goes
@@ -660,7 +742,7 @@ function drawDeaths(flat, scale) {
     ctx.strokeStyle = gone.c;
     ctx.lineWidth = Math.max(1, 6 * left);
     ctx.beginPath();
-    ctx.arc(at.x, at.y, r * (1 + out * 1.5), 0, Math.PI * 2);
+    ctx.arc(at.x, at.y, r * (1 + swell * 1.5), 0, Math.PI * 2);
     ctx.stroke();
 
     // and what it was made of, going with it. One path for all ten, because
@@ -670,7 +752,7 @@ function drawDeaths(flat, scale) {
 
     for (let s = 0; s < 10; s++) {
       const a = gone.turn + s * Math.PI / 5;
-      const near = r * (0.7 + out * 1.5);
+      const near = r * (0.7 + swell * 1.5);
       const far = near + r * 0.55 * left + 6;
 
       ctx.moveTo(at.x + Math.cos(a) * near, at.y + Math.sin(a) * near);
@@ -1006,6 +1088,9 @@ function draw() {
     ctx.lineWidth = b.i === me ? 3 : 2;
     ctx.stroke();
 
+    // whoever has just eaten somebody, and is about to try it again
+    if (b.s > 0) drawSpark(at.x, y, r, b.s, b.i.charCodeAt(0) * 13 + b.i.charCodeAt(1), performance.now());
+
     // somebody with a lit fuse, which is the only warning anybody gets
     if (b.i === me && fuse > 0) {
       const left = Math.min(1, fuse / 0.6);
@@ -1257,6 +1342,12 @@ function connect(name) {
         ? `teleport in ${cool.toFixed(1)}s`
         : 'teleport ready';
     $('warp').className = collapsed ? 'collapsed' : cool > 0 ? 'cooling' : 'ready';
+
+    const lit = self ? (self.s ?? 0) : 0;
+
+    $('spark').hidden = lit === 0;
+    $('spark').textContent = lit === 0 ? '' :
+      `charged ${'\u26a1'.repeat(lit)} ${Math.round(lit * 14)}% faster. Eat again before it goes out`;
     $('list').innerHTML = m.l.map((s) =>
       `<li class="${self && s.n === self.n ? 'me' : ''}"><span>${s.n.replace(/[<&]/g, '')}</span><span>${s.s}</span></li>`).join('');
   };

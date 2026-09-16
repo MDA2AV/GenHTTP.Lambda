@@ -51,6 +51,15 @@ button { padding: 9px 20px; border: 0; background: #1a73e8; color: #fff; font: i
   font-variant-numeric: tabular-nums;
 }
 
+#spark {
+  display: block;
+  font-size: 13px;
+  margin-top: 2px;
+  font-weight: 600;
+  color: #8adcff;
+  text-shadow: 0 0 14px rgba(138, 220, 255, .6);
+}
+
 #warp.ready { color: #8adcff; }
 #warp.cooling { color: #7c8698; }
 #warp.collapsed { color: #c884ff; font-weight: 600; }
