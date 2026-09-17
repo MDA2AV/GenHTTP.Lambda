@@ -37,7 +37,7 @@ export function LambdaMissing() {
         {exists === true ? (
           <>
             There is a lambda at <code className="font-mono text-sm">{publicKey}</code>, but it is not
-            deployed at the moment. Deployments in the free tier are taken down a day after they went
+            deployed at the moment. Deployments in the free tier stay up while they are used, and are taken down after a month with nobody visiting or editing, having gone
             live - whoever owns the editor link can put it back online.
           </>
         ) : (

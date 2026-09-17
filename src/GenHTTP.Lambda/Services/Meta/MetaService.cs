@@ -360,15 +360,79 @@ public sealed class MetaService : IMetaService
 
     #region Maintenance
 
+    /// <summary>
+    /// Writes what the counters in memory know about who has been called.
+    /// </summary>
+    /// <remarks>
+    /// Only forwards, and only for rows that would move: a restart empties the
+    /// counters, and a lambda that has had no traffic since should keep the
+    /// date it already had rather than be pushed back to the epoch.
+    /// </remarks>
+    private async ValueTask RecordUseAsync(LambdaDbContext database, CancellationToken cancellation)
+    {
+        var seen = Activity.Describe()
+                           .Where(a => a.LastSeen != null)
+                           .ToDictionary(a => a.PublicKey, a => a.LastSeen!.Value, StringComparer.Ordinal);
+
+        if (seen.Count == 0)
+        {
+            return;
+        }
+
+        var keys = seen.Keys.ToList();
+
+        var rows = await database.Lambdas.Where(l => keys.Contains(l.PublicKey)).ToListAsync(cancellation);
+
+        var moved = 0;
+
+        foreach (var row in rows)
+        {
+            if (seen.TryGetValue(row.PublicKey, out var last) && (row.LastSeen == null || last > row.LastSeen))
+            {
+                row.LastSeen = last;
+                moved++;
+            }
+        }
+
+        if (moved > 0)
+        {
+            await database.SaveChangesAsync(cancellation);
+        }
+    }
+
+    /// <summary>
+    /// When a lambda last had any attention of either kind.
+    /// </summary>
+    /// <remarks>
+    /// Both clocks run from here, so what a visitor is told about how long
+    /// something has left is measured the same way the sweep measures it.
+    /// Anything else would show a date that passes without anything happening.
+    /// </remarks>
+    private static DateTime Quiet(LambdaEntity lambda)
+        => lambda.LastSeen > lambda.Modified ? lambda.LastSeen.Value : lambda.Modified;
+
     public async ValueTask<MaintenanceReport> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        /*
+         * What counts as use, written down before anything is decided by it.
+         *
+         * Requests are counted in memory, because a database write per request
+         * to move a timestamp would be absurd; this is where the last of them
+         * reaches the row. It runs first so that a lambda busy right up to
+         * this moment is not swept by figures taken before its traffic was
+         * recorded.
+         */
+        await RecordUseAsync(database, cancellation);
 
         var abandoned = now - Options.Retention;
 
         // examples are the installation's own, and being untouched is their
         // normal state rather than a sign that nobody wants them
-        var expired = await database.Lambdas.Where(l => !l.IsExample && l.Modified < abandoned)
+        var expired = await database.Lambdas
+                                    .Where(l => !l.IsExample && l.Modified < abandoned
+                                             && (l.LastSeen == null || l.LastSeen < abandoned))
                                     .ToListAsync(cancellation);
 
         foreach (var lambda in expired)
@@ -376,7 +440,7 @@ public sealed class MetaService : IMetaService
             await RemoveAsync(database, lambda, cancellation);
         }
 
-        var stale = now - Options.DeploymentLifetime;
+        var quiet = now - Options.DeploymentLifetime;
 
         var running = await database.Lambdas.Where(l => !l.IsExample && l.ActiveVersion != null)
                                     .ToListAsync(cancellation);
@@ -393,7 +457,19 @@ public sealed class MetaService : IMetaService
                 continue;
             }
 
-            if (lambda.Deployed > stale)
+            /*
+             * The later of the two kinds of attention a lambda can get.
+             *
+             * Being edited counts and being visited counts, and it only goes
+             * offline once neither has happened for the whole window. The
+             * deployment's own age is deliberately not in here: how long ago
+             * something was put online says nothing about whether anybody
+             * wants it, and using it as the test is what used to take working
+             * lambdas down overnight.
+             */
+            var used = lambda.LastSeen > lambda.Modified ? lambda.LastSeen.Value : lambda.Modified;
+
+            if (used > quiet)
             {
                 continue;
             }
@@ -517,8 +593,8 @@ public sealed class MetaService : IMetaService
             l.ActiveVersion,
             latest.GetValueOrDefault(l.Id),
             counts.GetValueOrDefault(l.Id),
-            l.ActiveVersion != null ? l.Deployed + Options.DeploymentLifetime : null,
-            l.Modified + Options.Retention
+            l.ActiveVersion != null ? Quiet(l) + Options.DeploymentLifetime : null,
+            Quiet(l) + Options.Retention
         ))], matched, total, deployed);
     }
 
@@ -645,11 +721,11 @@ public sealed class MetaService : IMetaService
 
         // the two deadlines the maintenance job will act on, so the editor can
         // say when rather than leaving it to be discovered
-        var until = lambda.Deployed + Options.DeploymentLifetime;
+        var until = Quiet(lambda) + Options.DeploymentLifetime;
 
         return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, lambda.ActiveVersion != null ? until : null,
-                              lambda.Modified + Options.Retention);
+                              Quiet(lambda) + Options.Retention);
     }
 
     private static async ValueTask<IReadOnlyList<LambdaVersionInfo>> ListVersionsAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation)

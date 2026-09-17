@@ -44,7 +44,9 @@ public sealed class LifetimeTests
         var described = await response.GetContentAsync<LambdaResponse>();
 
         Assert.IsNotNull(described.DeployedAt);
-        Assert.AreEqual(described.DeployedAt + fixture.Options.DeploymentLifetime, described.DeployedUntil);
+        // measured from when it was last wanted rather than from when it was
+        // put online, which for a lambda just deployed is the same moment
+        Assert.AreEqual(described.Modified + fixture.Options.DeploymentLifetime, described.DeployedUntil);
     }
 
     [TestMethod]

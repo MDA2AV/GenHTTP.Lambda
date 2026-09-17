@@ -576,8 +576,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
         limits = new
         {
             code = $"{options.MaxCodeLength} characters across all files",
-            deployment = $"about {(int)options.DeploymentLifetime.TotalHours} hours online, extended by deploying again",
-            retention = $"removed about {(int)options.Retention.TotalDays} days after it was last touched"
+            deployment = $"online for as long as it is used; offline after {(int)options.DeploymentLifetime.TotalDays} days with no visits and no edits",
+            retention = $"removed about {(int)options.Retention.TotalDays} days after the last of either"
         },
         terms = SystemResource.Terms
     });

@@ -91,14 +91,31 @@ public sealed record LambdaOptions
     public string WebRoot { get; init; } = Path.Combine(AppContext.BaseDirectory, "wwwroot");
 
     /// <summary>
-    /// How long a deployment of a free tier lambda stays active.
+    /// How long a free tier lambda may go unused before it is taken offline.
     /// </summary>
-    public TimeSpan DeploymentLifetime { get; init; } = TimeSpan.FromDays(1);
+    /// <remarks>
+    /// Unused, not undeployed. This used to be the age of the deployment: a
+    /// lambda went offline a day after it was put online however many people
+    /// were using it, which meant anything built to be visited rather than
+    /// demonstrated stopped working overnight. What it measures now is the
+    /// later of when somebody last edited it and when somebody last asked it
+    /// for something, so a lambda stays up for as long as it is wanted and
+    /// goes quiet only once nobody is coming.
+    /// </remarks>
+    public TimeSpan DeploymentLifetime { get; init; } = TimeSpan.FromDays(30);
 
     /// <summary>
-    /// How long an untouched free tier lambda is kept before it is removed.
+    /// How long an unused free tier lambda is kept before it is removed.
     /// </summary>
-    public TimeSpan Retention { get; init; } = TimeSpan.FromDays(30);
+    /// <remarks>
+    /// Measured the same way and from the same moment, but further out, and
+    /// that gap is the point: the sweep removes before it retires, so a
+    /// retention equal to the lifetime deletes a lambda at the very moment it
+    /// would have gone quietly offline and the offline step never happens at
+    /// all. Two months of grace, in which it is down but its key, its code and
+    /// its versions are all still there to be deployed again.
+    /// </remarks>
+    public TimeSpan Retention { get; init; } = TimeSpan.FromDays(90);
 
     /// <summary>
     /// How often the maintenance job looks for expired lambdas.

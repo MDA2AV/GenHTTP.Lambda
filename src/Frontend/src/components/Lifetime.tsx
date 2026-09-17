@@ -48,8 +48,8 @@ export function Lifetime({ lambda }: { lambda: Lambda }) {
             <h2 className="text-base font-semibold">Everything here is free, so nothing here is forever</h2>
 
             <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              Two timers keep the shared machine tidy. Both reset when you use the lambda, so anything you
-              are actually working on stays.
+              Two timers keep the shared machine tidy. Both reset when anyone uses the lambda — a visit
+              counts as much as an edit — so anything anybody is actually using stays.
             </p>
 
             <dl className="mt-4 space-y-3 text-sm">
@@ -57,22 +57,22 @@ export function Lifetime({ lambda }: { lambda: Lambda }) {
                 <dt className="font-medium">
                   {deployHours === null
                     ? 'Nothing is online right now'
-                    : deployHours >= 23
-                      ? 'Online for about a day more'
+                    : deployHours >= 48
+                      ? `Online for another ${format(Math.round(deployHours / 24), 'day')} unless it is used`
                       : `Online for about ${format(deployHours, 'hour')} more`}
                 </dt>
                 <dd className="mt-0.5 text-slate-600 dark:text-slate-400">
                   {deployHours === null
-                    ? 'Once you deploy, it stays reachable for a day.'
-                    : 'A deployment runs for a day. Press Deploy again whenever you like and it starts over.'}
+                    ? 'Once you deploy, it stays reachable for as long as people are using it.'
+                    : 'A deployment stays up while it is being used. Every visit, save and deploy starts the clock again.'}
                 </dd>
               </div>
 
               <div className="border-l-2 border-accent-500 pl-3">
                 <dt className="font-medium">Kept for another {format(days, 'day')}</dt>
                 <dd className="mt-0.5 text-slate-600 dark:text-slate-400">
-                  A lambda nobody has touched for a month is removed with its versions. Saving or deploying
-                  counts as touching it, so the month starts again.
+                  A lambda nobody visits and nobody edits for a month is removed with its versions. Being
+                  visited counts, so something finished that people still use is never swept.
                 </dd>
               </div>
             </dl>

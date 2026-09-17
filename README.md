@@ -154,8 +154,8 @@ Everything is read from the environment on startup, see
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
 | `LAMBDA_WEB_ROOT`                   | `./wwwroot`      | the built frontend                          |
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
-| `LAMBDA_DEPLOYMENT_LIFETIME_HOURS`  | `24`             | how long a free tier deployment stays up    |
-| `LAMBDA_RETENTION_HOURS`            | `720`            | how long an untouched lambda is kept        |
+| `LAMBDA_DEPLOYMENT_LIFETIME_HOURS`  | `720`            | unused for this long and it goes offline       |
+| `LAMBDA_RETENTION_HOURS`            | `2160`           | unused for this long and it is removed        |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
 | `LAMBDA_MAX_ASSET_BYTES`            | `2097152`        | what the shipped assets may come to         |
 | `LAMBDA_MAX_CODE_LENGTH`            | `131072`         | largest snippet accepted                    |

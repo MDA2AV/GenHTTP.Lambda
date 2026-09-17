@@ -40,6 +40,17 @@ public sealed class LambdaEntity
     public DateTime? Deployed { get; set; }
 
     /// <summary>
+    /// When somebody last asked this lambda for something.
+    /// </summary>
+    /// <remarks>
+    /// Written by the maintenance pass from counters kept in memory, so it
+    /// trails real use by up to one interval - which is the right trade for a
+    /// figure whose only job is to decide what has been abandoned. Null for a
+    /// lambda nobody has called since the column existed.
+    /// </remarks>
+    public DateTime? LastSeen { get; set; }
+
+    /// <summary>
     /// Whether the installation maintains this one as an example.
     /// </summary>
     /// <remarks>

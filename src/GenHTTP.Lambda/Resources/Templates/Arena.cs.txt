@@ -1805,17 +1805,27 @@ async ValueTask Broadcast()
 /// connection rather than the single static lock the documentation's example
 /// uses, so no two players are ever queued behind each other.
 ///
-/// It holds. Ten thousand writes counted under load, never two at once on a
-/// connection - and the engine still faults them, which means the writer it
-/// faults against is not one of ours. Which one it is has not been pinned
-/// down: the two the framework performs by default are OnPing and OnClose,
-/// and this arena replaces OnClose with something that does not write while
-/// no ping arrived in any run.
+/// The other writer was the pong. Of the eight things a reactive handler can
+/// be asked to do, two write by default - OnPing answers with a pong and
+/// OnClose answers with a close - and both of them run on the read loop,
+/// which is a different thread from the one broadcasting. This arena replaced
+/// OnClose long ago and left OnPing alone, on the grounds that no ping had
+/// been seen; that was an argument about traffic rather than about the code,
+/// and traffic changes. A ping arriving while a frame is going out is two
+/// flushes on a writer that permits one, which the engine reports as
+/// "FlushAsync already in progress" and the player sees as a reconnect.
 ///
-/// Until it is, a faulted write costs that player their place rather than
-/// taking the connection handler down with it.
+/// So every write to a connection goes through here now, the pong included.
+/// A faulted write still costs that player their place rather than taking the
+/// connection handler down with it.
 /// </remarks>
-async Task<bool> Send(IReactiveConnection connection, string payload)
+Task<bool> Send(IReactiveConnection connection, string payload)
+    => Guarded(connection, c => c.WritePayloadAsync(payload));
+
+/// <summary>
+/// Performs one write on a connection, alone.
+/// </summary>
+async Task<bool> Guarded(IReactiveConnection connection, Func<IReactiveConnection, ValueTask> write)
 {
     var gate = gates.GetOrAdd(connection, _ => new SemaphoreSlim(1, 1));
 
@@ -1825,7 +1835,7 @@ async Task<bool> Send(IReactiveConnection connection, string payload)
 
     try
     {
-        var writing = connection.WritePayloadAsync(payload).AsTask();
+        var writing = write(connection).AsTask();
 
         // one socket that has stopped reading must not stop the arena
         if (!writing.IsCompleted && await Task.WhenAny(writing, Task.Delay(World.Patience)) != writing)
@@ -2168,6 +2178,26 @@ var socket = Websocket.Functional()
                           player.WantX = World.Clamp(steer.X, size);
                           player.WantY = World.Clamp(steer.Y, size);
                           player.Hold = steer.Hold;
+                      })
+                      .OnPing(async (connection, message) =>
+                      {
+                          /*
+                           * The pong the framework would send for us, sent
+                           * through the same gate as everything else.
+                           *
+                           * Left to the default it goes out from the read
+                           * loop while the broadcast may be halfway through a
+                           * frame to the same socket, and the engine's writer
+                           * takes one flush at a time. Copied first because
+                           * the frame's buffer belongs to the reader and is
+                           * handed back the moment this returns - and this
+                           * may wait on the gate before it writes. A ping
+                           * carries at most a hundred and twenty five bytes,
+                           * so the copy costs nothing worth counting.
+                           */
+                          var echo = message.Data.ToArray();
+
+                          await Guarded(connection, c => c.PongAsync(echo));
                       })
                       .OnClose((connection, _) =>
                       {

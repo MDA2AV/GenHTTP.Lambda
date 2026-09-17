@@ -11,10 +11,20 @@ services:
       - "443:443"
     environment:
       LAMBDA_PORT: 80
-      # the lifetime of a free tier deployment and how long an untouched
-      # lambda is kept, both in hours
-      LAMBDA_DEPLOYMENT_LIFETIME_HOURS: 24
-      LAMBDA_RETENTION_HOURS: 720
+      # How long a free tier lambda may go unused before it is taken offline,
+      # and how long before it is removed, both in hours.
+      #
+      # Unused, not undeployed. This was the age of the deployment and it took
+      # working lambdas down overnight however many people were visiting them.
+      # What it measures now is the later of the last edit and the last
+      # request, so something finished and popular stays up.
+      LAMBDA_DEPLOYMENT_LIFETIME_HOURS: 720
+      #
+      # Further out than the lifetime above, deliberately: the sweep removes
+      # before it retires, so equal values would delete a lambda at the moment
+      # it would have gone offline and there would be no offline step at all.
+      # The gap is grace - down, but still there to be deployed again.
+      LAMBDA_RETENTION_HOURS: 2160
       # TLS, terminated by the server itself - the certificate is published
       # into this directory by the certbot deploy hook
       # the administration panel, off unless the host supplies a token - the
