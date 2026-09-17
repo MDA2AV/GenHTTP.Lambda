@@ -1985,252 +1985,282 @@ void StartClock()
 var socket = Websocket.Functional()
                       .OnMessage(async (connection, message) =>
                       {
-                          var text = await message.ReadPayloadAsync<string>() ?? "";
+                            try
+                            {
+                              var text = await message.ReadPayloadAsync<string>() ?? "";
 
-                          if (text.Length is 0 or > 300)
-                          {
-                              return;
-                          }
-
-                          if (!players.TryGetValue(connection, out var player))
-                          {
-                              if (!arriving.TryAdd(connection, 0))
+                              if (text.Length is 0 or > 300)
                               {
                                   return;
                               }
 
-                              try
+                              if (!players.TryGetValue(connection, out var player))
                               {
-                              var joining = JsonSerializer.Deserialize<Join>(text, json);
-
-                              /*
-                               * Only a join makes a player. This used to
-                               * take whatever arrived, and a steer
-                               * deserialises into a Join perfectly happily
-                               * with no name at all - which the server then
-                               * correctly called "a blob". Being eaten takes
-                               * a player off the books and leaves the socket
-                               * open, so the steer twenty milliseconds later
-                               * put them back as one.
-                               */
-                              if (joining?.Kind != "join")
-                              {
-                                  return;
-                              }
-
-                              var spot = Somewhere();
-
-                              /*
-                               * A token from a welcome, still within the
-                               * wait, gets that blob's size back. Anything
-                               * else - no token, a stale one, one already
-                               * claimed - starts over, so a guess is worth
-                               * nothing and being eaten still costs you.
-                               */
-                              var back = joining?.Token is { Length: 16 } was
-                                      && adrift.TryRemove(was, out var kept)
-                                      && (DateTime.UtcNow - kept.Since).TotalSeconds <= World.Adrift
-                                  ? kept
-                                  : default;
-
-                              var ticket = NewId() + NewId();
-
-                              player = new Player
-                              {
-                                  Id = NewId(),
-                                  Name = World.Called(joining?.Name),
-                                  Colour = back.Colour ?? World.ColourFor(Interlocked.Increment(ref seat)),
-                                  X = spot.X,
-                                  Y = spot.Y,
-                                  Radius = back.Radius > World.Start ? back.Radius : World.Start,
-                                  Ticket = ticket
-                              };
-
-                              player.WantX = player.X;
-                              player.WantY = player.Y;
-
-                              /*
-                               * The welcome goes out before they are on the
-                               * books, and the order is the point: the clock
-                               * writes to everybody on the books twenty times
-                               * a second, and a second write while this one
-                               * is going out is not survivable.
-                               */
-                              var greeted = await Send(connection, JsonSerializer.Serialize(
-                                  new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize, World.Girths, ticket), json));
-
-                              if (!greeted)
-                              {
-                                  return;
-                              }
-
-                              /*
-                               * Company nobody came back for. Cleared on the
-                               * way in rather than on the way out, so that a
-                               * socket which drops and reconnects finds the
-                               * arena it left rather than an empty one.
-                               */
-                              if (players.IsEmpty && !bots.IsEmpty
-                                  && (DateTime.UtcNow - emptied).TotalSeconds > World.Linger)
-                              {
-                                  bots.Clear();
-                              }
-
-                              players[connection] = player;
-
-                              StartClock();
-                              }
-                              finally
-                              {
-                                  arriving.TryRemove(connection, out _);
-                              }
-
-                              return;
-                          }
-
-                          if (text.Contains("\"say\""))
-                          {
-                              var spoken = JsonSerializer.Deserialize<Say>(text, json);
-
-                              /*
-                               * Trimmed, capped, stripped of anything that is
-                               * not printable, and refused if it arrives too
-                               * soon after the last one. None of that is about
-                               * taste - it is about a line being a line: a
-                               * message with newlines in it or three hundred
-                               * characters of nothing is a way of pushing the
-                               * arena off somebody else's screen.
-                               */
-                              var line = (spoken?.Text ?? "").Trim();
-
-                              if (line.Length == 0 || at - player.Spoke < World.SayGap)
-                              {
-                                  return;
-                              }
-
-                              if (line.Length > World.SayLength)
-                              {
-                                  line = line[..World.SayLength];
-                              }
-
-                              // a space rather than nothing, or "line\nbreak"
-                              // arrives as "linebreak"
-                              line = new string(line.Select(c => char.IsControl(c) ? ' ' : c).ToArray()).Trim();
-
-                              if (line.Length == 0)
-                              {
-                                  return;
-                              }
-
-                              player.Spoke = at;
-
-                              chatter.Enqueue(new Said("said", player.Name, line));
-
-                              return;
-                          }
-
-                          if (text.Contains("\"haul\""))
-                          {
-                              var wants = JsonSerializer.Deserialize<Haul>(text, json);
-
-                              if (wants != null)
-                              {
-                                  Open(player, wants.X, wants.Y);
-                              }
-
-                              return;
-                          }
-
-                          if (text.Contains("\"warp\""))
-                          {
-                              var wants = JsonSerializer.Deserialize<Warp>(text, json);
-
-                              if (wants != null)
-                              {
-                                  Jump(player, wants.X, wants.Y);
-                              }
-
-                              return;
-                          }
-
-                          if (text.Contains("\"path\""))
-                          {
-                              /*
-                               * A drawn line, spent on arrival rather than on
-                               * the press that started it: somebody who draws
-                               * and then changes their mind has not spent
-                               * their wait on a gesture that never finished.
-                               */
-                              var drawn = JsonSerializer.Deserialize<Path>(text, json);
-
-                              if (at >= player.DrawReady && !World.IsHole(player.Radius) && player.StreakX == null
-                                  && player.WarpLands <= 0 && drawn?.X is { Length: > 1 } && drawn.Y?.Length == drawn.X.Length)
-                              {
-                                  var count = Math.Min(drawn.X.Length, World.StreakPoints);
-
-                                  var xs = new double[count];
-                                  var ys = new double[count];
-
-                                  var run = 0.0;
-                                  var kept = 0;
-
-                                  for (var i = 0; i < count; i++)
+                                  if (!arriving.TryAdd(connection, 0))
                                   {
-                                      var px = World.Clamp(drawn.X[i], size);
-                                      var py = World.Clamp(drawn.Y[i], size);
+                                      return;
+                                  }
 
-                                      if (kept > 0)
+                                  try
+                                  {
+                                  var joining = JsonSerializer.Deserialize<Join>(text, json);
+
+                                  /*
+                                   * Only a join makes a player. This used to
+                                   * take whatever arrived, and a steer
+                                   * deserialises into a Join perfectly happily
+                                   * with no name at all - which the server then
+                                   * correctly called "a blob". Being eaten takes
+                                   * a player off the books and leaves the socket
+                                   * open, so the steer twenty milliseconds later
+                                   * put them back as one.
+                                   */
+                                  if (joining?.Kind != "join")
+                                  {
+                                      return;
+                                  }
+
+                                  var spot = Somewhere();
+
+                                  /*
+                                   * A token from a welcome, still within the
+                                   * wait, gets that blob's size back. Anything
+                                   * else - no token, a stale one, one already
+                                   * claimed - starts over, so a guess is worth
+                                   * nothing and being eaten still costs you.
+                                   */
+                                  var back = joining?.Token is { Length: 16 } was
+                                          && adrift.TryRemove(was, out var kept)
+                                          && (DateTime.UtcNow - kept.Since).TotalSeconds <= World.Adrift
+                                      ? kept
+                                      : default;
+
+                                  var ticket = NewId() + NewId();
+
+                                  player = new Player
+                                  {
+                                      Id = NewId(),
+                                      Name = World.Called(joining?.Name),
+                                      Colour = back.Colour ?? World.ColourFor(Interlocked.Increment(ref seat)),
+                                      X = spot.X,
+                                      Y = spot.Y,
+                                      Radius = back.Radius > World.Start ? back.Radius : World.Start,
+                                      Ticket = ticket
+                                  };
+
+                                  player.WantX = player.X;
+                                  player.WantY = player.Y;
+
+                                  /*
+                                   * The welcome goes out before they are on the
+                                   * books, and the order is the point: the clock
+                                   * writes to everybody on the books twenty times
+                                   * a second, and a second write while this one
+                                   * is going out is not survivable.
+                                   */
+                                  var greeted = await Send(connection, JsonSerializer.Serialize(
+                                      new Welcome("welcome", player.Id, player.Colour, size, World.Palette, World.WellSize, World.Girths, ticket), json));
+
+                                  if (!greeted)
+                                  {
+                                      return;
+                                  }
+
+                                  /*
+                                   * Company nobody came back for. Cleared on the
+                                   * way in rather than on the way out, so that a
+                                   * socket which drops and reconnects finds the
+                                   * arena it left rather than an empty one.
+                                   */
+                                  if (players.IsEmpty && !bots.IsEmpty
+                                      && (DateTime.UtcNow - emptied).TotalSeconds > World.Linger)
+                                  {
+                                      bots.Clear();
+                                  }
+
+                                  players[connection] = player;
+
+                                  StartClock();
+                                  }
+                                  finally
+                                  {
+                                      arriving.TryRemove(connection, out _);
+                                  }
+
+                                  return;
+                              }
+
+                              if (text.Contains("\"say\""))
+                              {
+                                  var spoken = JsonSerializer.Deserialize<Say>(text, json);
+
+                                  /*
+                                   * Trimmed, capped, stripped of anything that is
+                                   * not printable, and refused if it arrives too
+                                   * soon after the last one. None of that is about
+                                   * taste - it is about a line being a line: a
+                                   * message with newlines in it or three hundred
+                                   * characters of nothing is a way of pushing the
+                                   * arena off somebody else's screen.
+                                   */
+                                  var line = (spoken?.Text ?? "").Trim();
+
+                                  if (line.Length == 0 || at - player.Spoke < World.SayGap)
+                                  {
+                                      return;
+                                  }
+
+                                  if (line.Length > World.SayLength)
+                                  {
+                                      line = line[..World.SayLength];
+                                  }
+
+                                  // a space rather than nothing, or "line\nbreak"
+                                  // arrives as "linebreak"
+                                  line = new string(line.Select(c => char.IsControl(c) ? ' ' : c).ToArray()).Trim();
+
+                                  if (line.Length == 0)
+                                  {
+                                      return;
+                                  }
+
+                                  player.Spoke = at;
+
+                                  chatter.Enqueue(new Said("said", player.Name, line));
+
+                                  return;
+                              }
+
+                              if (text.Contains("\"haul\""))
+                              {
+                                  var wants = JsonSerializer.Deserialize<Haul>(text, json);
+
+                                  if (wants != null)
+                                  {
+                                      Open(player, wants.X, wants.Y);
+                                  }
+
+                                  return;
+                              }
+
+                              if (text.Contains("\"warp\""))
+                              {
+                                  var wants = JsonSerializer.Deserialize<Warp>(text, json);
+
+                                  if (wants != null)
+                                  {
+                                      Jump(player, wants.X, wants.Y);
+                                  }
+
+                                  return;
+                              }
+
+                              if (text.Contains("\"path\""))
+                              {
+                                  /*
+                                   * A drawn line, spent on arrival rather than on
+                                   * the press that started it: somebody who draws
+                                   * and then changes their mind has not spent
+                                   * their wait on a gesture that never finished.
+                                   */
+                                  var drawn = JsonSerializer.Deserialize<Path>(text, json);
+
+                                  if (at >= player.DrawReady && !World.IsHole(player.Radius) && player.StreakX == null
+                                      && player.WarpLands <= 0 && drawn?.X is { Length: > 1 } && drawn.Y?.Length == drawn.X.Length)
+                                  {
+                                      var count = Math.Min(drawn.X.Length, World.StreakPoints);
+
+                                      var xs = new double[count];
+                                      var ys = new double[count];
+
+                                      var run = 0.0;
+                                      var kept = 0;
+
+                                      for (var i = 0; i < count; i++)
                                       {
-                                          run += Math.Sqrt((px - xs[kept - 1]) * (px - xs[kept - 1])
-                                                         + (py - ys[kept - 1]) * (py - ys[kept - 1]));
+                                          var px = World.Clamp(drawn.X[i], size);
+                                          var py = World.Clamp(drawn.Y[i], size);
 
-                                          // a line longer than the rules allow
-                                          // is cut, not refused: the drawing
-                                          // was honest, it just went too far
-                                          if (run > World.StreakLength)
+                                          if (kept > 0)
                                           {
-                                              break;
+                                              run += Math.Sqrt((px - xs[kept - 1]) * (px - xs[kept - 1])
+                                                             + (py - ys[kept - 1]) * (py - ys[kept - 1]));
+
+                                              // a line longer than the rules allow
+                                              // is cut, not refused: the drawing
+                                              // was honest, it just went too far
+                                              if (run > World.StreakLength)
+                                              {
+                                                  break;
+                                              }
                                           }
+
+                                          xs[kept] = px;
+                                          ys[kept] = py;
+                                          kept++;
                                       }
 
-                                      xs[kept] = px;
-                                      ys[kept] = py;
-                                      kept++;
+                                      if (kept > 1)
+                                      {
+                                          player.StreakX = xs[..kept];
+                                          player.StreakY = ys[..kept];
+                                          player.StreakLeg = 0;
+                                          player.StreakGone = 0;
+                                          player.Hold = false;
+                                          player.DrawReady = at + World.DrawWait;
+                                      }
                                   }
 
-                                  if (kept > 1)
-                                  {
-                                      player.StreakX = xs[..kept];
-                                      player.StreakY = ys[..kept];
-                                      player.StreakLeg = 0;
-                                      player.StreakGone = 0;
-                                      player.Hold = false;
-                                      player.DrawReady = at + World.DrawWait;
-                                  }
+                                  return;
                               }
 
-                              return;
-                          }
+                              if (text.Contains("\"fill\""))
+                              {
+                                  var asked = JsonSerializer.Deserialize<Fill>(text, json);
 
-                          if (text.Contains("\"fill\""))
-                          {
-                              var asked = JsonSerializer.Deserialize<Fill>(text, json);
+                                  Populate(Math.Clamp(asked?.Count ?? 10, 1, World.Crowd));
 
-                              Populate(Math.Clamp(asked?.Count ?? 10, 1, World.Crowd));
+                                  return;
+                              }
 
-                              return;
-                          }
+                              var steer = JsonSerializer.Deserialize<Steer>(text, json);
 
-                          var steer = JsonSerializer.Deserialize<Steer>(text, json);
+                              if (steer == null)
+                              {
+                                  return;
+                              }
 
-                          if (steer == null)
-                          {
-                              return;
-                          }
-
-                          player.WantX = World.Clamp(steer.X, size);
-                          player.WantY = World.Clamp(steer.Y, size);
-                          player.Hold = steer.Hold;
+                              player.WantX = World.Clamp(steer.X, size);
+                              player.WantY = World.Clamp(steer.Y, size);
+                              player.Hold = steer.Hold;
+                            }
+                            catch (Exception e)
+                            {
+                                /*
+                                 * A bad message costs the message, not the socket.
+                                 *
+                                 * Everything below the join deserialises without a net -
+                                 * a steer, a fill, a drawing - and a payload that is not
+                                 * what it claims throws out of here, out of the read loop
+                                 * and out of the handler. No OnClose, no OnError: the
+                                 * connection simply ends. Worse, the teardown that follows
+                                 * flushes into whatever the broadcast still had in flight
+                                 * and throws again, and an exception thrown from a finally
+                                 * replaces the one it was unwinding - so the reason was
+                                 * gone before anyone could read it. That is what
+                                 * "FlushAsync already in progress" has been standing in
+                                 * front of.
+                                 */
+                                var kind = e switch
+                                {
+                                    JsonException => "JsonException",
+                                    ArgumentException => "ArgumentException",
+                                    InvalidOperationException => "InvalidOperationException",
+                                    _ => "Exception"
+                                };
+                            
+                                Note(connection, $"message rejected — {kind}: {e.Message}");
+                            }
                       })
                       .OnError((connection, error) =>
                       {
@@ -2271,8 +2301,26 @@ var socket = Websocket.Functional()
 
                           await Guarded(connection, c => c.PongAsync(echo));
                       })
-                      .OnClose((connection, _) =>
+                      .OnClose((connection, frame) =>
                       {
+                          /*
+                           * Which way a socket ended.
+                           *
+                           * The first fault this instrumentation caught was a
+                           * connection that had been serving happily for two
+                           * minutes and three and a half thousand frames, and
+                           * no read error was recorded against it - so the
+                           * loop ended without one, and the only remaining
+                           * question was whether the peer said goodbye or the
+                           * connection simply stopped being there. That is
+                           * what this answers, and it is the difference
+                           * between a tab being closed and something taking
+                           * the socket away from us.
+                           */
+                          Note(connection, frame.Type == FrameType.Close
+                              ? "closed by the peer"
+                              : $"read loop ended on a {frame.Type} frame");
+
                           since.TryRemove(connection, out (DateTime, int) _);
 
                           if (players.TryRemove(connection, out var leaving))
