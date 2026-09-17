@@ -36,7 +36,7 @@ const BUILD_CPUS = process.env.AGENT_BUILD_CPUS ?? '1.5';
 const BUILD_PIDS = process.env.AGENT_BUILD_PIDS ?? '256';
 
 // only needed while there is no token of its own: the credential the builds
-// share until CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY is set
+// share until CLAUDE_CODE_OAUTH_TOKEN is set
 const CONFIG_VOLUME = process.env.AGENT_CONFIG_VOLUME ?? 'genhttplambda_agent-config';
 
 // read once; written into each build's working directory so the CLI takes it
@@ -280,7 +280,7 @@ async function run(job) {
    * no capabilities, no privilege it can gain, a filesystem that is a tmpfs
    * and a network that reaches the MCP and the proxy and nothing else.
    */
-  const shared = process.env.CLAUDE_CODE_OAUTH_TOKEN || process.env.ANTHROPIC_API_KEY
+  const shared = process.env.CLAUDE_CODE_OAUTH_TOKEN
     ? []
     // no token of its own yet, so it falls back to the copied credential -
     // which is the one thing builds still share, and the reason to set a token
@@ -295,7 +295,17 @@ async function run(job) {
     '--tmpfs', '/work:rw,size=64m,mode=0700,uid=1002,gid=1002',
     '--workdir', '/work',
     '-e', 'AGENT_BRIEF', '-e', 'AGENT_GUIDE', '-e', 'AGENT_MCP',
-    '-e', 'CLAUDE_CODE_OAUTH_TOKEN', '-e', 'ANTHROPIC_API_KEY',
+    '-e', 'CLAUDE_CODE_OAUTH_TOKEN',
+    /*
+     * Emptied rather than passed through.
+     *
+     * Builds run on the subscription and only on the subscription. An API key
+     * reaching a build container would be spent per run against a different
+     * account without anything saying so, and the one place it could come
+     * from is an environment nobody meant to export it into - so the variable
+     * is set empty here, which is stronger than not forwarding it.
+     */
+    '-e', 'ANTHROPIC_API_KEY=',
     '-e', 'HTTPS_PROXY', '-e', 'HTTP_PROXY', '-e', 'NO_PROXY',
     ...shared,
     '--entrypoint', 'sh',

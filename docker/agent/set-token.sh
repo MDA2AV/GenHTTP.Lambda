@@ -48,10 +48,20 @@ echo "Written to .env. Restarting the agent on it."
 
 docker compose -f docker-compose.yml -f docker-compose.ioxide.yml -f docker-compose.agent.yml up -d agent
 
-echo "Checking it can reach the model..."
+# Checked in a build container rather than in the agent.
+#
+# The agent sits on agent-net alone and shares no network with the egress
+# proxy, on purpose - it orchestrates and never talks to the model itself. A
+# check run inside it fails with a DNS error however good the token is, which
+# reads exactly like a rejected token and is not one.
+echo "Checking a build container can reach the model..."
 
-docker compose -f docker-compose.yml -f docker-compose.agent.yml exec -T agent \
-  sh -lc 'cd "$(mktemp -d)" && claude -p "Reply with exactly: ready" --model claude-haiku-4-5-20251001 --max-turns 1 --permission-mode dontAsk' < /dev/null
+docker run --rm --network "${LAMBDA_AGENT_BUILD_NETWORK:-genhttp-build-net}" \
+  -e CLAUDE_CODE_OAUTH_TOKEN -e "ANTHROPIC_API_KEY=" \
+  -e HTTPS_PROXY=http://egress-proxy:3128 -e HTTP_PROXY=http://egress-proxy:3128 \
+  -e NO_PROXY=genhttp.dev,lambda,localhost,127.0.0.1 \
+  --entrypoint sh "${LAMBDA_AGENT_IMAGE:-genhttp-agent:latest}" \
+  -c 'cd "$(mktemp -d)" && claude -p "Reply with exactly: ready" --model claude-haiku-4-5-20251001 --max-turns 1 --permission-mode dontAsk' < /dev/null
 
 echo
 echo "If that said 'ready', the copied credentials no longer matter and"

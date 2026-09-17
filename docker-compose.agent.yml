@@ -78,12 +78,17 @@ services:
       # worked for a day and then failed every few hours, in front of
       # whoever happened to be using the build page.
       #
-      # Either of these ends that. CLAUDE_CODE_OAUTH_TOKEN is what
-      # "claude setup-token" produces, made for exactly this;
-      # ANTHROPIC_API_KEY bills the API account rather than the
-      # subscription. Set one in .env and the copied file stops mattering.
+      # CLAUDE_CODE_OAUTH_TOKEN ends that. It is what "claude setup-token"
+      # produces, made for exactly this: a credential of its own, with its own
+      # refresh token, so nothing rotates it away from under the agent. Set it
+      # in .env and the copied file stops mattering.
+      #
+      # There is deliberately no API key here. Builds run on the subscription
+      # and only on the subscription; a key would spend per run against a
+      # different account with nothing on screen saying so. The build
+      # container clears the variable outright rather than merely not
+      # forwarding it - see builder.mjs.
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # everything it says to the model goes through the proxy, because it has
       # no other way out
       HTTPS_PROXY: http://egress-proxy:3128
