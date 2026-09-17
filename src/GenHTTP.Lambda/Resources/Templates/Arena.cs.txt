@@ -69,6 +69,33 @@ var arriving = new ConcurrentDictionary<IReactiveConnection, byte>();
 
 // one write at a time per socket, see Send
 var gates = new ConcurrentDictionary<IReactiveConnection, SemaphoreSlim>();
+
+/*
+ * When each socket arrived and how much has gone out on it.
+ *
+ * Only for saying what a connection was doing just before it stopped. The
+ * engine reports a faulted handler with the exception's message and nothing
+ * else - no socket, no age, no idea whether it had been serving happily for an
+ * hour or had never worked - and that one line is all there was to go on.
+ */
+var since = new ConcurrentDictionary<IReactiveConnection, (DateTime At, int Sent)>();
+
+/// <summary>
+/// Says something about one connection, once, in a form the panel can fold.
+/// </summary>
+/// <remarks>
+/// Deliberately not a line per frame. What is wanted is the handful of events
+/// around a failure - the write that threw, the error frame that arrived, the
+/// close that followed - and a running commentary would bury them.
+/// </remarks>
+void Note(IReactiveConnection connection, string what)
+{
+    var life = since.TryGetValue(connection, out var seen)
+        ? $"{(DateTime.UtcNow - seen.At).TotalSeconds:N1}s, {seen.Sent} sent"
+        : "unseen";
+
+    Console.WriteLine($"[socket {connection.GetHashCode():x8}] {what} ({life})");
+}
 var pellets = new ConcurrentDictionary<int, Pellet>();
 
 /*
@@ -1844,6 +1871,8 @@ async Task<bool> Guarded(IReactiveConnection connection, Func<IReactiveConnectio
             // handed back: nothing may touch this connection again
             ours = false;
 
+            Note(connection, $"write did not finish within {World.Patience / 1000}s; abandoned and the gate kept");
+
             players.TryRemove(connection, out _);
 
             return false;
@@ -1851,10 +1880,34 @@ async Task<bool> Guarded(IReactiveConnection connection, Func<IReactiveConnectio
 
         await writing;
 
+        since.AddOrUpdate(connection, _ => (DateTime.UtcNow, 1), (_, was) => (was.At, was.Sent + 1));
+
         return true;
     }
-    catch (Exception)
+    catch (Exception e)
     {
+        /*
+         * The kind and the message, because "the handler faulted" on its own
+         * never said which of the several things that can go wrong did.
+         *
+         * Matched rather than reflected: GetType is not available here, and
+         * rightly - this runs inside the guard that keeps a lambda from
+         * reaching for the runtime. The four below are the ones a socket
+         * actually produces; anything else is reported as what it says.
+         */
+        // the derived one first: ObjectDisposedException is an
+        // InvalidOperationException, and the other order never reaches it
+        var kind = e switch
+        {
+            ObjectDisposedException => "ObjectDisposedException",
+            InvalidOperationException => "InvalidOperationException",
+            OperationCanceledException => "OperationCanceledException",
+            IOException => "IOException",
+            _ => "Exception"
+        };
+
+        Note(connection, $"write failed — {kind}: {e.Message}");
+
         players.TryRemove(connection, out _);
 
         return false;
@@ -2179,6 +2232,25 @@ var socket = Websocket.Functional()
                           player.WantY = World.Clamp(steer.Y, size);
                           player.Hold = steer.Hold;
                       })
+                      .OnError((connection, error) =>
+                      {
+                          /*
+                           * Says what the default would have swallowed.
+                           *
+                           * Left alone, a frame error returns true, the read
+                           * loop calls OnClose and breaks, and what reaches
+                           * the log is a player leaving - identical to one who
+                           * closed the tab. Which of those it was is the first
+                           * question when sockets start dropping, and until
+                           * now the arena could not answer it.
+                           *
+                           * Still returns true: the behaviour is unchanged,
+                           * only now it is visible.
+                           */
+                          Note(connection, $"read error — {error.ErrorType}: {error.Message}");
+
+                          return ValueTask.FromResult(true);
+                      })
                       .OnPing(async (connection, message) =>
                       {
                           /*
@@ -2201,6 +2273,8 @@ var socket = Websocket.Functional()
                       })
                       .OnClose((connection, _) =>
                       {
+                          since.TryRemove(connection, out (DateTime, int) _);
+
                           if (players.TryRemove(connection, out var leaving))
                           {
                               Remember(leaving);
