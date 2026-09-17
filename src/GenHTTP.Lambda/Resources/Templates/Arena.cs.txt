@@ -78,7 +78,7 @@ var gates = new ConcurrentDictionary<IReactiveConnection, SemaphoreSlim>();
  * else - no socket, no age, no idea whether it had been serving happily for an
  * hour or had never worked - and that one line is all there was to go on.
  */
-var since = new ConcurrentDictionary<IReactiveConnection, (DateTime At, int Sent)>();
+var since = new ConcurrentDictionary<IReactiveConnection, (DateTime At, int Sent, int Widest)>();
 
 /// <summary>
 /// Says something about one connection, once, in a form the panel can fold.
@@ -91,7 +91,7 @@ var since = new ConcurrentDictionary<IReactiveConnection, (DateTime At, int Sent
 void Note(IReactiveConnection connection, string what)
 {
     var life = since.TryGetValue(connection, out var seen)
-        ? $"{(DateTime.UtcNow - seen.At).TotalSeconds:N1}s, {seen.Sent} sent"
+        ? $"{(DateTime.UtcNow - seen.At).TotalSeconds:N1}s, {seen.Sent} sent, widest {seen.Widest:N0}B"
         : "unseen";
 
     Console.WriteLine($"[socket {connection.GetHashCode():x8}] {what} ({life})");
@@ -1817,7 +1817,9 @@ async ValueTask Broadcast()
 
     for (var i = 0; i < living.Length; i++)
     {
-        writes.Add(Send(living[i].Key, payloads[i]));
+        // skippable: this is the world twenty times a second, and one frame
+        // that cannot go out now is better dropped than delivered late
+        writes.Add(Send(living[i].Key, payloads[i], skippable: true));
     }
 
     await Task.WhenAll(writes);
@@ -1846,17 +1848,48 @@ async ValueTask Broadcast()
 /// A faulted write still costs that player their place rather than taking the
 /// connection handler down with it.
 /// </remarks>
-Task<bool> Send(IReactiveConnection connection, string payload)
-    => Guarded(connection, c => c.WritePayloadAsync(payload));
+Task<bool> Send(IReactiveConnection connection, string payload, bool skippable = false)
+    => Guarded(connection, c => c.WritePayloadAsync(payload), payload.Length, skippable);
 
 /// <summary>
 /// Performs one write on a connection, alone.
 /// </summary>
-async Task<bool> Guarded(IReactiveConnection connection, Func<IReactiveConnection, ValueTask> write)
+async Task<bool> Guarded(IReactiveConnection connection, Func<IReactiveConnection, ValueTask> write,
+                        int size = 0, bool skippable = false)
 {
     var gate = gates.GetOrAdd(connection, _ => new SemaphoreSlim(1, 1));
 
-    await gate.WaitAsync();
+    /*
+     * A frame nobody can receive yet is dropped rather than queued behind the
+     * one that is stuck.
+     *
+     * A write only finishes once the kernel has taken the bytes, and it can
+     * only take what fits in the socket's send buffer - about two hundred
+     * kilobytes here. Past that it waits for the peer to read, which on a real
+     * link means waiting for someone a continent away. Meanwhile the arena
+     * produces another frame every fiftieth of a second, and waiting on the
+     * gate queues every one of them behind a write that is going nowhere.
+     *
+     * For a game at twenty frames a second a queued frame is worthless: by the
+     * time it could go out it describes a world that has moved on. Skipping is
+     * not a loss, it is the correct answer - the next frame will be along in
+     * fifty milliseconds and it will be current.
+     *
+     * Only broadcast frames are skippable. A welcome or a chart is a thing the
+     * client needs once and cannot infer from the next one, so those still
+     * wait their turn.
+     */
+    if (skippable)
+    {
+        if (!gate.Wait(0))
+        {
+            return true;
+        }
+    }
+    else
+    {
+        await gate.WaitAsync();
+    }
 
     var ours = true;
 
@@ -1880,7 +1913,19 @@ async Task<bool> Guarded(IReactiveConnection connection, Func<IReactiveConnectio
 
         await writing;
 
-        since.AddOrUpdate(connection, _ => (DateTime.UtcNow, 1), (_, was) => (was.At, was.Sent + 1));
+        /*
+         * The widest frame this socket has been sent, as well as how many.
+         *
+         * A player who keeps growing is sent more of the floor and more of
+         * everybody else, so the frames grow with them - and the three faults
+         * so far arrived after three and a half, six, and nearly ten thousand
+         * frames, which is the shape of something that gets worse the longer
+         * you play rather than something that strikes at random. If a size is
+         * behind it, this is what will show it.
+         */
+        since.AddOrUpdate(connection,
+            _ => (DateTime.UtcNow, 1, size),
+            (_, was) => (was.At, was.Sent + 1, size > was.Widest ? size : was.Widest));
 
         return true;
     }
@@ -2321,7 +2366,7 @@ var socket = Websocket.Functional()
                               ? "closed by the peer"
                               : $"read loop ended on a {frame.Type} frame");
 
-                          since.TryRemove(connection, out (DateTime, int) _);
+                          since.TryRemove(connection, out (DateTime, int, int) _);
 
                           if (players.TryRemove(connection, out var leaving))
                           {
