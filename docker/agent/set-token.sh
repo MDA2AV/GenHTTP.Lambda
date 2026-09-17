@@ -34,6 +34,25 @@ case "$TOKEN" in
   *[![:print:]]*) echo "That does not look like a token." >&2; exit 1 ;;
 esac
 
+# An authorization code is not a token, and it is the easy mistake to make:
+# the browser hands you "<code>#<state>", which goes back into the prompt that
+# setup-token is waiting at - and only then does it print the token this wants.
+# Written here unchecked, it lands in .env, the agent restarts on it happily,
+# and the first build fails with "401 Invalid bearer token" a long way from the
+# cause.
+case "$TOKEN" in
+  sk-ant-oat*) : ;;
+  *'#'*)
+    echo "That is the authorization code from the browser, not the token." >&2
+    echo "Paste it back into the 'claude setup-token' prompt; what that prints" >&2
+    echo "afterwards - starting sk-ant-oat - is what belongs here." >&2
+    exit 1 ;;
+  *)
+    echo "That does not start with sk-ant-oat, so it is not what" >&2
+    echo "'claude setup-token' produces. Nothing written." >&2
+    exit 1 ;;
+esac
+
 # replace any line that is already there rather than stacking them up
 if grep -q '^CLAUDE_CODE_OAUTH_TOKEN=' .env; then
   grep -v '^CLAUDE_CODE_OAUTH_TOKEN=' .env > .env.next
@@ -42,7 +61,6 @@ fi
 
 printf 'CLAUDE_CODE_OAUTH_TOKEN=%s\n' "$TOKEN" >> .env
 chmod 600 .env
-unset TOKEN
 
 echo "Written to .env. Restarting the agent on it."
 
@@ -57,7 +75,7 @@ docker compose -f docker-compose.yml -f docker-compose.ioxide.yml -f docker-comp
 echo "Checking a build container can reach the model..."
 
 docker run --rm --network "${LAMBDA_AGENT_BUILD_NETWORK:-genhttp-build-net}" \
-  -e CLAUDE_CODE_OAUTH_TOKEN -e "ANTHROPIC_API_KEY=" \
+  -e "CLAUDE_CODE_OAUTH_TOKEN=$TOKEN" -e "ANTHROPIC_API_KEY=" \
   -e HTTPS_PROXY=http://egress-proxy:3128 -e HTTP_PROXY=http://egress-proxy:3128 \
   -e NO_PROXY=genhttp.dev,lambda,localhost,127.0.0.1 \
   --entrypoint sh "${LAMBDA_AGENT_IMAGE:-genhttp-agent:latest}" \
@@ -66,3 +84,5 @@ docker run --rm --network "${LAMBDA_AGENT_BUILD_NETWORK:-genhttp-build-net}" \
 echo
 echo "If that said 'ready', the copied credentials no longer matter and"
 echo "seed-credentials.sh is not needed again."
+
+unset TOKEN
