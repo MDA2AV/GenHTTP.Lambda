@@ -35,17 +35,8 @@ const IDEAS = [
   'a countdown to a date everyone can see',
 ];
 
-const CHANGES = [
-  'make it dark',
-  'add a name field',
-  'sort the newest first',
-  'let people delete their own entry',
-];
-
 export function Build() {
   const [prompt, setPrompt] = useState('');
-  const [editor, setEditor] = useState('');
-  const [changing, setChanging] = useState(false);
   const [origin, setOrigin] = useState('');
   const [state, setState] = useState<'idle' | 'working' | 'done' | 'failed'>('idle');
   const [events, setEvents] = useState<string[]>([]);
@@ -87,7 +78,9 @@ export function Build() {
       id = (
         await api.build.start(
           prompt.trim(),
-          editor.trim() || undefined,
+          // this form only ever creates. Changing something that exists is the
+          // editor's job, or an agent's over MCP.
+          undefined,
           model === 'opus' ? undefined : model,
           model === 'opus' ? undefined : password,
         )
@@ -131,13 +124,11 @@ export function Build() {
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-16 sm:py-24">
       <h1 className="text-center text-4xl font-light tracking-tight sm:text-5xl">
-        {changing ? 'Say what to change.' : 'Say what you want.'}
+        Say what you want.
       </h1>
 
       <p className="mx-auto mt-4 max-w-lg text-center text-slate-500">
-        {changing
-          ? 'It reads what is there, makes the change and puts it back online. The link stays the same, so anything you have already shared keeps working.'
-          : 'It gets built, put online, and you get a link you can send to anyone. No account, no install, and it can remember things - scores, messages, entries - so everybody who opens it sees the same thing.'}
+        It gets built, put online, and you get a link you can send to anyone. No account, no install, and it can remember things - scores, messages, entries - so everybody who opens it sees the same thing.
       </p>
 
       <div className="surface mt-10 p-2">
@@ -150,34 +141,9 @@ export function Build() {
           rows={3}
           maxLength={2000}
           disabled={state === 'working'}
-          placeholder={changing ? 'change it so…' : 'build a…'}
+          placeholder="build a…"
           className="w-full resize-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-slate-400 disabled:opacity-60"
         />
-
-        {changing && (
-          <div className="border-t border-slate-200/70 px-4 py-2.5 dark:border-slate-700/60">
-            <label className="block text-xs uppercase tracking-widest text-slate-400">
-              The editor link of the one to change
-            </label>
-            <div className="mt-1 flex items-center gap-2">
-              <input
-                value={editor}
-                onChange={(e) => setEditor(e.target.value)}
-                disabled={state === 'working'}
-                spellCheck={false}
-                placeholder={`${origin}/editor/…`}
-                className="w-full bg-transparent py-1 font-mono text-sm outline-none placeholder:text-slate-400 disabled:opacity-60"
-              />
-              <button
-                type="button"
-                className="shrink-0 text-xs text-slate-400 underline"
-                onClick={() => { setEditor(''); setChanging(false); }}
-              >
-                cancel
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="flex items-center justify-between gap-3 px-2 pb-1">
           <span className="text-xs text-slate-400">
@@ -190,12 +156,11 @@ export function Build() {
             disabled={
               state === 'working' ||
               prompt.trim().length < 3 ||
-              (changing && editor.trim().length < 8) ||
               (model === 'fable' && password.length < 1)
             }
             className="btn btn-primary"
           >
-            {state === 'working' ? (changing ? 'Changing' : 'Building') : changing ? 'Change it' : 'Build it'}
+            {state === 'working' ? 'Building' : 'Build it'}
           </button>
         </div>
       </div>
@@ -242,19 +207,16 @@ export function Build() {
         </p>
       )}
 
-      {state === 'idle' && !changing && (
+      {state === 'idle' && (
         <p className="mt-4 text-center text-sm text-slate-500">
-          Already made one?{' '}
-          <button type="button" className="underline" onClick={() => setChanging(true)}>
-            Change it instead
-          </button>
-          {' '}by pasting its editor link.
+          This builds a new one from what you write here. To change something you have already made,
+          open its editor link.
         </p>
       )}
 
       {state === 'idle' && (
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          {(changing ? CHANGES : IDEAS).map((idea) => (
+          {IDEAS.map((idea) => (
             <button
               key={idea}
               type="button"
@@ -344,29 +306,19 @@ export function Build() {
           </p>
 
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
+            <a
+              href={result.editorUrl}
+              target="_blank"
+              rel="noreferrer"
               className="btn btn-primary"
-              onClick={() => {
-                // straight back into the box with the key already in it: the
-                // first thing anybody wants after seeing it work is one more
-                // change, and making them find the link again to do that is
-                // the difference between a conversation and a form
-                setEditor(result.editorUrl ?? '');
-                setChanging(true);
-                setPrompt('');
-                setState('idle');
-                setResult(null);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
             >
-              Change it
-            </button>
+              Open the editor to change it
+            </a>
 
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => { setState('idle'); setPrompt(''); setEditor(''); setChanging(false); }}
+              onClick={() => { setState('idle'); setPrompt(''); setResult(null); }}
             >
               Build something else
             </button>
