@@ -10,7 +10,7 @@ using GenHTTP.Modules.Webservices;
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
-/// The text box on the front page: a sentence in, an application out.
+/// The text box on the front page: a sentence in, a new application out.
 /// </summary>
 /// <remarks>
 /// Public and unauthenticated on purpose - the point of it is that somebody
@@ -45,7 +45,7 @@ public sealed class BuildResource(BuildService builds)
     /// </summary>
     [ResourceMethod(Method.Post)]
     public async ValueTask<JsonObject> Start(BuildRequest body, IRequest request)
-        => await builds.StartAsync(body?.Prompt, body?.Editor, body?.Model, body?.Password, request.Client.Address);
+        => await builds.StartAsync(body?.Prompt, body?.Model, body?.Password, request.Client.Address);
 
     /// <summary>
     /// How a build is getting on, polled while it runs.
@@ -56,8 +56,13 @@ public sealed class BuildResource(BuildService builds)
 }
 
 /// <summary>
-/// What the browser sends: one sentence, and optionally the editor link of
-/// something that already exists, to change that instead of making something
-/// new.
+/// What the browser sends: one sentence, and nothing else that identifies
+/// anything already made.
 /// </summary>
-public sealed record BuildRequest(string? Prompt, string? Editor = null, string? Model = null, string? Password = null);
+/// <remarks>
+/// There is deliberately no way to name an existing lambda here. This endpoint
+/// creates, and only creates; changing something that exists belongs to the
+/// editor, which already holds its key, or to an agent over MCP. Accepting a
+/// key here made one door do two jobs and blurred what the box is for.
+/// </remarks>
+public sealed record BuildRequest(string? Prompt, string? Model = null, string? Password = null);

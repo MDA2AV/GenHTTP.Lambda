@@ -78,9 +78,6 @@ export function Build() {
       id = (
         await api.build.start(
           prompt.trim(),
-          // this form only ever creates. Changing something that exists is the
-          // editor's job, or an agent's over MCP.
-          undefined,
           model === 'opus' ? undefined : model,
           model === 'opus' ? undefined : password,
         )

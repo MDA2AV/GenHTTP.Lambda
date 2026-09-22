@@ -413,8 +413,8 @@ export const api = {
   /** The text box on /build, and the agent behind it. */
   build: {
     available: () => request<{ available: boolean; perDay: number; secondModel: boolean }>('/build'),
-    start: (prompt: string, editor?: string, model?: string, password?: string) =>
-      request<{ id: string }>('/build', send({ prompt, editor, model, password })),
+    start: (prompt: string, model?: string, password?: string) =>
+      request<{ id: string }>('/build', send({ prompt, model, password })),
     progress: (id: string) =>
       request<{ state: string; events: string[]; result: BuildResult | null }>(`/build/${id}`),
   },
