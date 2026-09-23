@@ -5,6 +5,7 @@ import { ApiError, api, type Example as ExampleModel } from '../api';
 import { CSharp } from '../components/CSharp';
 import { IconCheck, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { usePageMeta } from '../meta';
 
 /**
  * One example: what it answers, and what it is made of.
@@ -25,6 +26,12 @@ export function Example() {
   const [calling, setCalling] = useState(false);
   const [frames, setFrames] = useState<string[] | null>(null);
   const [connecting, setConnecting] = useState(false);
+
+  usePageMeta(
+    example === null
+      ? { title: 'Example', index: !missing }
+      : { title: `${example.name} Example`, description: example.description },
+  );
 
   const load = useCallback(async () => {
     if (id === undefined) {

@@ -18,6 +18,7 @@ import { Workbench } from '../control/Workbench';
 import { LiveDot, Menu, menuItem, menuRule } from '../control/ui';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
+import { usePageMeta } from '../meta';
 
 interface Props {
   theme: Theme;
@@ -45,6 +46,8 @@ const SECTIONS: { id: SectionId; title: string }[] = [
  * screen is what is worth looking at.
  */
 export function Editor({ theme }: Props) {
+  usePageMeta({ title: 'Editor', index: false });
+
   const { privateKey = '', '*': rest = '' } = useParams();
   const navigate = useNavigate();
   const location = useLocation();

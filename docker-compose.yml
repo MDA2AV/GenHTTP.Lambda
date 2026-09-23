@@ -39,6 +39,8 @@ services:
       # hosts a browser may drive the agent endpoint from. An agent speaking
       # HTTP sends no origin and is never checked against this.
       LAMBDA_MCP_ORIGINS: genhttp.dev,www.genhttp.dev
+      # the address pages name as canonical and the sitemap lists them under
+      LAMBDA_PUBLIC_URL: https://genhttp.dev
       # How much source one lambda may hold, across all of its code files.
       #
       # A hundred and twenty eight kilobytes was the default and it stopped

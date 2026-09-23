@@ -3,12 +3,15 @@ import { Link, useParams } from 'react-router-dom';
 
 import { api } from '../api';
 import { IconAlert } from '../components/Icons';
+import { usePageMeta } from '../meta';
 
 /**
  * Reached when the server could not answer a /lambda/:publicKey request - the
  * key is unknown, or the lambda behind it is not deployed right now.
  */
 export function LambdaMissing() {
+  usePageMeta({ title: 'Nothing Is Running Here', index: false });
+
   const { publicKey = '' } = useParams();
   const [exists, setExists] = useState<boolean | null>(null);
 

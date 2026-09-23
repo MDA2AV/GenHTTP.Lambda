@@ -4,10 +4,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError, api, type KeyStatus, type Platform, type Template, type TemplateGroup } from '../api';
 import { IconCheck, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { usePageMeta } from '../meta';
 
 type Step = 'kind' | 'template' | 'key';
 
 export function Create() {
+  usePageMeta({ title: 'Create a Lambda', index: false });
+
   const navigate = useNavigate();
   const toast = useToast();
 

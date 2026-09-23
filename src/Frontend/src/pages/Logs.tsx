@@ -5,6 +5,7 @@ import { useAdminToken } from '../admin';
 import { ApiError, api, type LogCaller, type LogEntry, type PreviousRun } from '../api';
 import { IconPlay, IconStop, IconDownload, IconTrash, IconSpinner, IconLayers, IconGlobe } from '../components/Icons';
 import { Locked } from '../components/Locked';
+import { usePageMeta } from '../meta';
 
 /**
  * How often the tail is asked for while following.
@@ -141,6 +142,8 @@ const SHORT: Record<string, string> = {
  * lived response does.
  */
 export function Logs() {
+  usePageMeta({ title: 'Log', index: false });
+
   const [token] = useAdminToken();
   const [params, setParams] = useSearchParams();
 

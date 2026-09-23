@@ -343,6 +343,17 @@ public sealed record LambdaOptions
     public IReadOnlyList<string> McpOrigins { get; init; } = [];
 
     /// <summary>
+    /// The address the site is meant to be found at, such as <c>https://genhttp.dev</c>.
+    /// </summary>
+    /// <remarks>
+    /// Pages name it as their canonical address and the sitemap lists pages
+    /// under it. Left empty, neither is written: a canonical pointing at the
+    /// wrong host is worse than none, and an installation cannot tell which of
+    /// the names it answers to is the one that counts.
+    /// </remarks>
+    public string? PublicUrl { get; init; }
+
+    /// <summary>
     /// A directory holding further certificates, one subdirectory per name,
     /// each with a <c>fullchain.pem</c> and a <c>privkey.pem</c> beside it.
     /// </summary>
@@ -429,7 +440,8 @@ public sealed record LambdaOptions
             CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD"),
             CertificateDirectory = ReadOptional("LAMBDA_CERTIFICATE_DIRECTORY"),
             McpOrigins = (ReadOptional("LAMBDA_MCP_ORIGINS") ?? "")
-                         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            PublicUrl = ReadOptional("LAMBDA_PUBLIC_URL")?.TrimEnd('/')
         };
     }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { CopyField } from '../components/CopyField';
+import { PAGES, usePageMeta } from '../meta';
 
 /**
  * The page for somebody who has an agent and wants somewhere to put what it
@@ -58,6 +59,8 @@ const SHOWCASE = [
 ];
 
 export function AgenticCoding() {
+  usePageMeta(PAGES['/agentic-coding']);
+
   const [origin, setOrigin] = useState('');
 
   useEffect(() => setOrigin(window.location.origin), []);

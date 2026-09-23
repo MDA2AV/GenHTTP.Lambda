@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { CSharp } from '../components/CSharp';
+import { PAGES, usePageMeta } from '../meta';
 
 /**
  * How to use the thing, in the order somebody meets it.
@@ -33,6 +34,8 @@ const PARTS: Part[] = [
 ];
 
 export function Guide() {
+  usePageMeta(PAGES['/docs']);
+
   const [at, setAt] = useState(PARTS[0].id);
 
   // the contents follows the reading rather than the clicking, so somebody who

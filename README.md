@@ -211,6 +211,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_LOG_GEO_PLACES`             | `true`           | also fetch the town and network databases   |
 | `LAMBDA_LOG_MAX_LINES_PER_REQUEST`  | `200`            | before one request's output is cut off      |
 | `LAMBDA_MCP_ORIGINS`                | -                | hosts a browser may use `/mcp` from         |
+| `LAMBDA_PUBLIC_URL`                 | -                | canonical address, enables the sitemap      |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
