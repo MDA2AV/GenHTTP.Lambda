@@ -111,7 +111,7 @@ export function Landing() {
           </p>
 
           <h1
-            className="rise mt-5 text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
+            className="rise mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
             style={{ animationDelay: '60ms' }}
           >
             Describe an app.
@@ -120,7 +120,7 @@ export function Landing() {
           </h1>
 
           <p
-            className="rise mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-grey-800 dark:text-grey-200"
+            className="rise mx-auto mt-5 max-w-2xl text-base leading-relaxed text-grey-800 sm:mt-7 sm:text-lg dark:text-grey-200"
             style={{ animationDelay: '120ms' }}
           >
             Polls, guestbooks, leaderboards, small shops. Describe what you need to our agent or to the one
@@ -129,7 +129,7 @@ export function Landing() {
           </p>
 
           <div
-            className="rise mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3"
+            className="rise mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:mt-10"
             style={{ animationDelay: '200ms' }}
           >
             <Link to="/build" className="btn-primary px-7 py-3.5 text-base">
