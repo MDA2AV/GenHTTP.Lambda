@@ -58,10 +58,37 @@ port, each against its own temporary data directory.
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
-| `/api/v1/`           | everything the editor calls                               |
-| `/api/v1/lambdas/:privateKey/files` | the workspace of one lambda                |
-| `/api/v1/start`      | creates a lambda and redirects into its editor            |
+| `/start`             | opens the creation assistant with a template chosen      |
+| `/api/v1/`           | everything the editor calls, see below                    |
+| `/mcp`               | the same, for agents                                      |
 | `/admin`             | every lambda on the server, for whoever runs it            |
+
+### API
+
+Browsable at `/api/v1/scalar/`. A lambda is addressed by its editor key, which
+is also what authorizes the call. Things that can be listed, read, created or
+changed are resources; what is a process rather than a thing is a verb in the
+path.
+
+| Endpoint                                              | Does                                      |
+|-------------------------------------------------------|-------------------------------------------|
+| `POST /lambdas`                                       | creates a lambda                          |
+| `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key), removes it      |
+| `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
+| `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one           |
+| `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
+| `GET /lambdas/:privateKey/deployment`                 | what is online, and until when            |
+| `POST /lambdas/:privateKey/deployment/start` / `stop` | puts a version online, takes it off       |
+| `GET /lambdas/:privateKey/files`                      | lists the workspace                       |
+| `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`)  |
+| `PUT /lambdas/:privateKey/folders/:path`              | makes a folder                            |
+| `POST /lambdas/:privateKey/code/check`                | compiles without saving                   |
+| `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
+| `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
+| `GET /examples`, `/examples/:id`                      | the examples the installation runs        |
+| `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
+| `GET /system`                                         | terms, limits, templates, build agent     |
+| `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
 
 The assistant asks what the lambda should do before it asks for a key: a
 service that answers requests, or a socket that stays open - and then which of
@@ -71,12 +98,12 @@ to those, listed in `TemplateCatalog`.
 Another page can hand someone a working lambda with a link:
 
 ```html
-<a href="https://your.host/api/v1/start?template=websocket-functional">Try it online</a>
+<a href="https://your.host/start?template=websocket-functional">Try it online</a>
 ```
 
-That creates one with a generated key and redirects into the editor. Ask for
-`application/json` instead and the lambda is described rather than redirected
-to, for a caller that would rather send the browser itself.
+That opens the creation assistant with the template chosen. Nothing is created
+until the visitor has seen the terms and submitted it, so a crawler following
+the link leaves nothing behind.
 
 A lambda has two keys. The public one is part of its URL and may be changed;
 the private one is the editor link and is shown only to whoever created the

@@ -30,7 +30,7 @@ public sealed class InvitationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var response = await fixture.GetAsync("/api/v1/start", "text/html");
+        using var response = await fixture.GetAsync("/start", "text/html");
 
         Assert.AreEqual(HttpStatusCode.SeeOther, response.StatusCode);
 
@@ -46,7 +46,7 @@ public sealed class InvitationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
-        using var invited = await fixture.GetAsync("/api/v1/start?template=websocket-reactive", "text/html");
+        using var invited = await fixture.GetAsync("/start?template=websocket-reactive", "text/html");
 
         Assert.AreEqual(HttpStatusCode.SeeOther, invited.StatusCode);
 
@@ -64,7 +64,7 @@ public sealed class InvitationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var response = await fixture.GetAsync("/api/v1/start?template=websocket-reactive", "text/html");
+        using var response = await fixture.GetAsync("/start?template=websocket-reactive", "text/html");
 
         var location = response.Headers.Location?.ToString();
 
@@ -78,7 +78,7 @@ public sealed class InvitationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var response = await fixture.GetAsync("/api/v1/start?template=nope", "text/html");
+        using var response = await fixture.GetAsync("/start?template=nope", "text/html");
 
         Assert.AreEqual(HttpStatusCode.SeeOther, response.StatusCode,
                         "a link outlives the name it mentions, and an error page is a worse answer than the editor");
@@ -112,7 +112,7 @@ public sealed class InvitationTests
 
         foreach (var template in offered)
         {
-            using var linked = await fixture.GetAsync($"/api/v1/start?template={template.Id}", "text/html");
+            using var linked = await fixture.GetAsync($"/start?template={template.Id}", "text/html");
 
             Assert.AreEqual(HttpStatusCode.SeeOther, linked.StatusCode);
             Assert.Contains($"template={template.Id}", linked.Headers.Location?.ToString() ?? string.Empty,

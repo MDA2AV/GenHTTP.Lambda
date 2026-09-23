@@ -22,6 +22,7 @@ using GenHTTP.Modules.Compression;
 using GenHTTP.Modules.Compression.Algorithms;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
+using GenHTTP.Modules.Webservices;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -146,6 +147,8 @@ public sealed class Application : IAsyncDisposable
 
         var layout = Layout.Create()
                            .Add("api", ApiLayout.Create())
+                           // a link for other pages to carry, so part of the site rather than the API
+                           .AddService<Invitation>("start")
                            // one path, for agents rather than for browsers
                            .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
                            .Add("lambda", lambdas);

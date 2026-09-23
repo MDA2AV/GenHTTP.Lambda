@@ -10,9 +10,10 @@ public interface IMetaService
 {
 
     /// <summary>
-    /// Checks whether the given public key could be used for a new lambda.
+    /// Tells whether a public key could be claimed, and whether a lambda is
+    /// already answering there.
     /// </summary>
-    ValueTask<KeyAvailability> CheckKeyAsync(string? publicKey, CancellationToken cancellation = default);
+    ValueTask<KeyStatus> DescribeKeyAsync(string? publicKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Creates a new lambda, generating a public key if none was requested and
@@ -29,11 +30,6 @@ public interface IMetaService
     /// Looks up the deployed lambda behind a public key, if there is one.
     /// </summary>
     ValueTask<ResolvedLambda?> ResolveAsync(string publicKey, CancellationToken cancellation = default);
-
-    /// <summary>
-    /// Tells whether a public key exists and is currently serving.
-    /// </summary>
-    ValueTask<PublicStatus> GetStatusAsync(string publicKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Lists the stored versions of a lambda, newest first.

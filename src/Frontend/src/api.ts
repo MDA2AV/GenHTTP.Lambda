@@ -41,8 +41,7 @@ export interface LambdaFile {
 }
 
 export interface VersionContent extends VersionInfo {
-  /** The snippet, which is the first of the files. */
-  code: string;
+  /** Every file of the version, lambda.cs first. */
   files: LambdaFile[];
 }
 
@@ -65,6 +64,13 @@ export interface DeploymentResult extends CompilationResult {
   lambda?: Lambda;
 }
 
+export interface Deployment {
+  deployed: boolean;
+  version?: number;
+  deployedAt?: string;
+  deployedUntil?: string;
+}
+
 export interface BuildResult {
   ok: boolean;
   url?: string;
@@ -77,16 +83,20 @@ export interface BuildResult {
   deployed?: boolean;
 }
 
-export interface Availability {
+/** Everything anybody may know about a public key. */
+export interface KeyStatus {
+  /** The key the way it would be stored. */
   publicKey: string;
+  /** Whether it is a key a lambda could have at all. */
+  valid: boolean;
+  /** Whether a new lambda could be created with it. */
   available: boolean;
-  reason?: string;
-}
-
-export interface PublicStatus {
-  publicKey: string;
+  /** Whether a lambda has it. */
   exists: boolean;
+  /** Whether that lambda is online. */
   deployed: boolean;
+  /** Why it cannot be claimed, if it cannot. */
+  reason?: string;
 }
 
 export interface Completion {
@@ -120,6 +130,8 @@ export interface Platform {
   retentionDays: number;
   imports: string[];
   completions: Completion[];
+  /** Whether the box on /build has an agent behind it. */
+  build: { available: boolean; perDay: number; secondModel: boolean };
 }
 
 export interface TelemetrySample {
@@ -192,7 +204,6 @@ export interface Example {
   tryPath: string;
   /** Reached by opening a socket rather than by asking for a page. */
   socket: boolean;
-  code: string;
   /** Every file it is made of, the snippet first. */
   files: LambdaFile[];
   /** They are prepared after startup, so one can exist but not yet answer. */
@@ -200,7 +211,7 @@ export interface Example {
 }
 
 /** What the menu needs: everything but the code. */
-export type ExampleSummary = Omit<Example, 'code' | 'files'>;
+export type ExampleSummary = Omit<Example, 'files'>;
 
 export interface ExampleGroup {
   id: string;
@@ -401,6 +412,9 @@ async function describe(response: Response): Promise<string> {
 
 const send = (body: unknown) => ({ method: 'POST', body: JSON.stringify(body) });
 
+/** A lambda of one file, for the questions that are only ever about one. */
+const single = (code: string): LambdaFile[] => [{ name: 'lambda.cs', code }];
+
 /** The panel and the figures behind it are the parts of this API that authenticate. */
 const withToken = (token: string, init: RequestInit = {}) => ({
   ...init,
@@ -410,13 +424,12 @@ const withToken = (token: string, init: RequestInit = {}) => ({
 export const api = {
   platform: () => request<Platform>('/system'),
 
-  /** The text box on /build, and the agent behind it. */
-  build: {
-    available: () => request<{ available: boolean; perDay: number; secondModel: boolean }>('/build'),
+  /** The text box on /build, and the agent behind it. Whether there is one is in `platform`. */
+  builds: {
     start: (prompt: string, model?: string, password?: string) =>
-      request<{ id: string }>('/build', send({ prompt, model, password })),
+      request<{ id: string; queued: number }>('/builds', send({ prompt, model, password })),
     progress: (id: string) =>
-      request<{ state: string; events: string[]; result: BuildResult | null }>(`/build/${id}`),
+      request<{ state: string; events: string[]; result: BuildResult | null; waiting: number }>(`/builds/${id}`),
   },
 
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
@@ -428,15 +441,12 @@ export const api = {
         withToken(token),
       ),
 
-    code: (token: string, publicKey: string, version?: number) =>
-      request<VersionContent>(
-        `/admin/lambdas/${encodeURIComponent(publicKey)}/code${version ? `?version=${version}` : ''}`,
-        withToken(token),
-      ),
+    version: (token: string, publicKey: string, version: number) =>
+      request<VersionContent>(`/admin/lambdas/${encodeURIComponent(publicKey)}/versions/${version}`, withToken(token)),
 
     undeploy: (token: string, publicKey: string) =>
-      request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}/deployment`,
-        withToken(token, { method: 'DELETE' })),
+      request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}/deployment/stop`,
+        withToken(token, { method: 'POST' })),
 
     remove: (token: string, publicKey: string) =>
       request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}`,
@@ -475,35 +485,20 @@ export const api = {
 
   example: (id: string) => request<Example>(`/examples/${encodeURIComponent(id)}`),
 
-  checkKey: (key: string) => request<Availability>(`/lambdas/keys/${encodeURIComponent(key)}`),
-
-  publicStatus: (key: string) => request<PublicStatus>(`/lambdas/public/${encodeURIComponent(key)}`),
+  key: (key: string) => request<KeyStatus>(`/keys/${encodeURIComponent(key)}`),
 
   create: (publicKey: string | null, template: string | null = null) =>
     request<Lambda>('/lambdas', send({ publicKey, acceptedTerms: true, template })),
 
   get: (privateKey: string) => request<Lambda>(`/lambdas/${privateKey}`),
 
-  files: (privateKey: string) => request<WorkspaceListing>(`/lambdas/${privateKey}/files`),
+  changeKey: (privateKey: string, publicKey: string) =>
+    request<Lambda>(`/lambdas/${privateKey}`, { method: 'PATCH', body: JSON.stringify({ publicKey }) }),
 
-  createFolder: (privateKey: string, path: string) =>
-    request<WorkspaceListing>(
-      `/lambdas/${privateKey}/files/folder?path=${encodeURIComponent(path)}`,
-      { method: 'PUT' }),
+  remove: (privateKey: string) => request<void>(`/lambdas/${privateKey}`, { method: 'DELETE' }),
 
-  readFile: (privateKey: string, path: string) =>
-    request<{ path: string; content: string; size: number }>(
-      `/lambdas/${privateKey}/files/content?path=${encodeURIComponent(path)}`,
-    ),
-
-  writeFile: (privateKey: string, path: string, content: string) =>
-    request<WorkspaceEntry>(`/lambdas/${privateKey}/files/content?path=${encodeURIComponent(path)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ content }),
-    }),
-
-  deleteFile: (privateKey: string, path: string) =>
-    request<void>(`/lambdas/${privateKey}/files/content?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
+  /** Where the project zip is. A plain link, so the browser does the saving. */
+  exportUrl: (privateKey: string) => `${base}/lambdas/${privateKey}/export`,
 
   versions: (privateKey: string) => request<VersionInfo[]>(`/lambdas/${privateKey}/versions`),
 
@@ -513,32 +508,54 @@ export const api = {
   save: (privateKey: string, files: LambdaFile[]) =>
     request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files })),
 
-  completions: (privateKey: string, code: string, line: number, column: number) =>
-    request<{ completions: ResolvedCompletion[] }>(`/lambdas/${privateKey}/completions`,
-      send({ code, line, column })),
+  deployment: (privateKey: string) => request<Deployment>(`/lambdas/${privateKey}/deployment`),
 
-  /** Where the project zip is. A plain link, so the browser does the saving. */
-  downloadUrl: (privateKey: string) => `${base}/lambdas/${privateKey}/download`,
+  deploy: (privateKey: string, version?: number) =>
+    request<DeploymentResult>(`/lambdas/${privateKey}/deployment/start`, send({ version: version ?? null }), [422]),
+
+  undeploy: (privateKey: string) =>
+    request<Lambda>(`/lambdas/${privateKey}/deployment/stop`, { method: 'POST' }),
+
+  /*
+   * A workspace path travels as one segment with its slashes encoded, so
+   * "logs/today.txt" is asked for as "logs%2Ftoday.txt".
+   */
+  files: (privateKey: string) => request<WorkspaceListing>(`/lambdas/${privateKey}/files`),
+
+  createFolder: (privateKey: string, path: string) =>
+    request<WorkspaceListing>(`/lambdas/${privateKey}/folders/${encodeURIComponent(path)}`, { method: 'PUT' }),
+
+  readFile: (privateKey: string, path: string) =>
+    request<{ path: string; content: string; size: number }>(
+      `/lambdas/${privateKey}/files/${encodeURIComponent(path)}`,
+    ),
+
+  writeFile: (privateKey: string, path: string, content: string) =>
+    request<WorkspaceEntry>(`/lambdas/${privateKey}/files/${encodeURIComponent(path)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    }),
+
+  deleteFile: (privateKey: string, path: string) =>
+    request<void>(`/lambdas/${privateKey}/files/${encodeURIComponent(path)}`, { method: 'DELETE' }),
+
+  /*
+   * Questions for the compiler. They share one request shape; the ones about
+   * a single file are sent just that file, which is all the editor's
+   * providers have at hand.
+   */
+  check: (privateKey: string, files: LambdaFile[]) =>
+    request<CompilationResult>(`/lambdas/${privateKey}/code/check`, send({ files })),
+
+  semantics: (privateKey: string, code: string) =>
+    request<{ tokens: SemanticToken[] }>(`/lambdas/${privateKey}/code/semantics`, send({ files: single(code) })),
+
+  completions: (privateKey: string, code: string, line: number, column: number) =>
+    request<{ completions: ResolvedCompletion[] }>(`/lambdas/${privateKey}/code/completions`,
+      send({ files: single(code), line, column })),
 
   definition: (privateKey: string, files: LambdaFile[], file: string, line: number, column: number) =>
     request<{ file: string | null; line: number; column: number; length: number }>(
-      `/lambdas/${privateKey}/definition`,
+      `/lambdas/${privateKey}/code/definition`,
       send({ files, file, line, column })),
-
-  semantics: (privateKey: string, code: string) =>
-    request<{ tokens: SemanticToken[] }>(`/lambdas/${privateKey}/semantics`, send({ code })),
-
-  check: (privateKey: string, files: LambdaFile[]) =>
-    request<CompilationResult>(`/lambdas/${privateKey}/check`, send({ files })),
-
-  deploy: (privateKey: string, version?: number) =>
-    request<DeploymentResult>(`/lambdas/${privateKey}/deployment`, send({ version: version ?? null }), [422]),
-
-  undeploy: (privateKey: string) =>
-    request<Lambda>(`/lambdas/${privateKey}/deployment`, { method: 'DELETE' }),
-
-  changeKey: (privateKey: string, publicKey: string) =>
-    request<Lambda>(`/lambdas/${privateKey}/key`, { method: 'PUT', body: JSON.stringify({ publicKey }) }),
-
-  remove: (privateKey: string) => request<void>(`/lambdas/${privateKey}`, { method: 'DELETE' }),
 };

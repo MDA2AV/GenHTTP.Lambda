@@ -260,7 +260,7 @@ export function Example() {
         )}
 
         <pre className="overflow-x-auto px-4 py-3 font-mono text-[13px] leading-relaxed">
-          <CSharp code={(example.files.find((f) => f.name === (open ?? example.files[0]?.name)) ?? example.files[0])?.code ?? example.code} />
+          <CSharp code={(example.files.find((f) => f.name === (open ?? example.files[0]?.name)) ?? example.files[0])?.code ?? ''} />
         </pre>
       </section>
     </div>

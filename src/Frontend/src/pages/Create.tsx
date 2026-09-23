@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { ApiError, api, type Availability, type Platform, type Template, type TemplateGroup } from '../api';
+import { ApiError, api, type KeyStatus, type Platform, type Template, type TemplateGroup } from '../api';
 import { IconCheck, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
 
@@ -22,7 +22,7 @@ export function Create() {
   const [template, setTemplate] = useState<Template | null>(null);
   const [key, setKey] = useState('');
   const [accepted, setAccepted] = useState(false);
-  const [availability, setAvailability] = useState<Availability | null>(null);
+  const [availability, setAvailability] = useState<KeyStatus | null>(null);
   const [checking, setChecking] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -71,7 +71,7 @@ export function Create() {
 
     const timer = window.setTimeout(async () => {
       try {
-        const result = await api.checkKey(trimmed);
+        const result = await api.key(trimmed);
 
         if (attempt === check.current) {
           setAvailability(result);

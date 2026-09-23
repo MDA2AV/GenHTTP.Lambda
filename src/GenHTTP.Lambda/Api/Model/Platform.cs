@@ -12,7 +12,8 @@ public sealed record PlatformResponse(
     int DeploymentLifetimeHours,
     int RetentionDays,
     IReadOnlyList<string> Imports,
-    IReadOnlyList<CompletionItem> Completions
+    IReadOnlyList<CompletionItem> Completions,
+    BuildAvailability Build
 );
 
 /// <summary>

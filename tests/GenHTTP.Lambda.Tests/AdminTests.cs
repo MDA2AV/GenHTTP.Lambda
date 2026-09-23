@@ -111,11 +111,12 @@ public sealed class AdminTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => \"the source\");");
 
-        using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas/readable/code", Token);
+        // the template is version one, so what was deployed is the second
+        using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas/readable/versions/2", Token);
 
         var content = await response.GetContentAsync<VersionContentResponse>();
 
-        Assert.Contains("the source", content.Code);
+        Assert.Contains("the source", content.Files[0].Code);
     }
 
     [TestMethod]
@@ -131,7 +132,7 @@ public sealed class AdminTests
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
 
-        using var _ = await Send(fixture, HttpMethod.Delete, "/api/v1/admin/lambdas/noisy/deployment", Token);
+        using var _ = await Send(fixture, HttpMethod.Post, "/api/v1/admin/lambdas/noisy/deployment/stop", Token);
 
         using var after = await fixture.GetAsync("/lambda/noisy/");
 

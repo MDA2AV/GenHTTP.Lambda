@@ -349,7 +349,7 @@ export function Editor({ theme }: Props) {
         onDeploy={() => deploy()}
         onUndeploy={undeploy}
         onFiles={() => setStorage(true)}
-        downloadUrl={api.downloadUrl(privateKey)}
+        downloadUrl={api.exportUrl(privateKey)}
       />
 
       {storage && (

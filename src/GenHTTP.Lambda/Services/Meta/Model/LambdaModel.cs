@@ -48,14 +48,23 @@ public sealed record LambdaVersionContent(int Version, DateTime Created, string 
 public sealed record ResolvedLambda(long Id, string PublicKey, string Tier, int ActiveVersion, DateTime DeployedAt);
 
 /// <summary>
-/// What a visitor of a public key may know about it.
+/// Everything anybody may know about a public key: whether it could be
+/// claimed, and whether something is already answering there.
 /// </summary>
-public sealed record PublicStatus(string PublicKey, bool Exists, bool Deployed);
+/// <param name="PublicKey">The key as it would be stored</param>
+/// <param name="Valid">Whether the key is one a lambda could have</param>
+/// <param name="Exists">Whether a lambda has it</param>
+/// <param name="Deployed">Whether that lambda is online</param>
+/// <param name="Reason">Why it cannot be claimed, if it cannot</param>
+public sealed record KeyStatus(string PublicKey, bool Valid, bool Exists, bool Deployed, string? Reason)
+{
 
-/// <summary>
-/// The answer to "can I have this key?".
-/// </summary>
-public sealed record KeyAvailability(string PublicKey, bool Available, string? Reason);
+    /// <summary>
+    /// Whether a new lambda could be created with this key.
+    /// </summary>
+    public bool Available => Valid && !Exists;
+
+}
 
 /// <summary>
 /// The outcome of a deployment attempt - either the updated lambda or the

@@ -64,10 +64,10 @@ public sealed class ExampleTests
 
         var example = await response.GetContentAsync<ExampleResponse>();
 
-        Assert.IsNotEmpty(example.Code);
-        Assert.Contains("Inline.Create()", example.Code, "the page shows this instead of an editor");
+        Assert.IsNotEmpty(example.Files[0].Code);
+        Assert.Contains("Inline.Create()", example.Files[0].Code, "the page shows this instead of an editor");
         Assert.IsTrue(example.Files.Count >= 1);
-        Assert.Contains(example.PublicKey, example.Code, "and the key in its comments is the one it is hosted at");
+        Assert.Contains(example.PublicKey, example.Files[0].Code, "and the key in its comments is the one it is hosted at");
     }
 
     [TestMethod]
@@ -133,12 +133,12 @@ public sealed class ExampleTests
 
         await fixture.SeedExamplesAsync();
 
-        var status = await fixture.Meta.GetStatusAsync("example-gone-away");
+        var status = await fixture.Meta.DescribeKeyAsync("example-gone-away");
 
         Assert.IsFalse(status.Exists, "an example dropped from the catalogue would otherwise sit on its key for ever");
 
         // and the ones it does keep are untouched
-        Assert.IsTrue((await fixture.Meta.GetStatusAsync(ExampleCatalog.KeyFor("guestbook"))).Exists);
+        Assert.IsTrue((await fixture.Meta.DescribeKeyAsync(ExampleCatalog.KeyFor("guestbook"))).Exists);
     }
 
     [TestMethod]
@@ -153,7 +153,7 @@ public sealed class ExampleTests
         // far enough ahead that everything else would be long gone
         await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow.AddYears(1));
 
-        var status = await fixture.Meta.GetStatusAsync(key);
+        var status = await fixture.Meta.DescribeKeyAsync(key);
 
         Assert.IsTrue(status.Exists, "an example nobody has opened for a year is still wanted");
         Assert.IsTrue(status.Deployed, "and it should still be answering");

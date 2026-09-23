@@ -75,7 +75,7 @@ public sealed class ExampleResource(IMetaService meta)
     /// </remarks>
     private async ValueTask<ExampleResponse> DescribeAsync(LambdaExample example)
     {
-        var status = await meta.GetStatusAsync(example.PublicKey);
+        var status = await meta.DescribeKeyAsync(example.PublicKey);
 
         var files = ExampleCatalog.FilesFor(example);
 
@@ -87,7 +87,6 @@ public sealed class ExampleResource(IMetaService meta)
             $"/lambda/{example.PublicKey}/",
             $"/lambda/{example.PublicKey}/{example.TryPath}",
             example.Socket,
-            files[0].Code,
             files,
             status.Deployed
         );

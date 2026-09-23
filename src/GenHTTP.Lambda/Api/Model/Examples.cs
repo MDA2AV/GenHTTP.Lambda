@@ -35,7 +35,6 @@ public sealed record ExampleSummaryResponse(
 /// <param name="Path">Where it is hosted</param>
 /// <param name="TryPath">What is worth calling, which is rarely the root</param>
 /// <param name="Socket">Whether it is reached by opening a socket rather than asking for a page</param>
-/// <param name="Code">The snippet, for anything that wants one file</param>
 /// <param name="Files">Every file it is made of, the snippet first</param>
 /// <param name="Live">Whether it is answering right now - they are prepared after startup</param>
 public sealed record ExampleResponse(
@@ -46,7 +45,6 @@ public sealed record ExampleResponse(
     string Path,
     string TryPath,
     bool Socket,
-    string Code,
     IReadOnlyList<LambdaFile> Files,
     bool Live
 );

@@ -16,7 +16,7 @@ export function LambdaMissing() {
     let active = true;
 
     api
-      .publicStatus(publicKey)
+      .key(publicKey)
       .then((status) => active && setExists(status.exists))
       .catch(() => active && setExists(null));
 

@@ -9,9 +9,10 @@ namespace GenHTTP.Lambda.Api.Model;
 public sealed record CreateLambdaRequest(string? PublicKey, bool AcceptedTerms, string? Template = null);
 
 /// <summary>
-/// The key a lambda should move to.
+/// The changes to make to a lambda. What is left out stays as it is.
 /// </summary>
-public sealed record ChangeKeyRequest(string PublicKey);
+/// <param name="PublicKey">The key the lambda should move to</param>
+public sealed record UpdateLambdaRequest(string? PublicKey);
 
 /// <summary>
 /// A lambda as the editor sees it.
@@ -58,11 +59,12 @@ public static class LambdaDescription
 }
 
 /// <summary>
-/// Whether a key could be claimed.
+/// Everything anybody may know about a public key.
 /// </summary>
-public sealed record AvailabilityResponse(string PublicKey, bool Available, string? Reason);
-
-/// <summary>
-/// What is known publicly about a key.
-/// </summary>
-public sealed record StatusResponse(string PublicKey, bool Exists, bool Deployed);
+/// <param name="PublicKey">The key as it would be stored</param>
+/// <param name="Valid">Whether it is a key a lambda could have</param>
+/// <param name="Available">Whether a new lambda could be created with it</param>
+/// <param name="Exists">Whether a lambda has it</param>
+/// <param name="Deployed">Whether that lambda is online</param>
+/// <param name="Reason">Why it cannot be claimed, if it cannot</param>
+public sealed record KeyResponse(string PublicKey, bool Valid, bool Available, bool Exists, bool Deployed, string? Reason);

@@ -71,8 +71,13 @@ export function Admin() {
     setBusy(lambda.publicKey);
 
     try {
-      const content = await api.admin.code(token, lambda.publicKey);
-      setViewing({ key: lambda.publicKey, code: content.code });
+      if (lambda.latestVersion === undefined) {
+        toast(`"${lambda.publicKey}" has no code saved.`, 'error');
+        return;
+      }
+
+      const content = await api.admin.version(token, lambda.publicKey, lambda.latestVersion);
+      setViewing({ key: lambda.publicKey, code: content.files[0]?.code ?? '' });
     } catch {
       toast(`The code of "${lambda.publicKey}" could not be read.`, 'error');
     } finally {

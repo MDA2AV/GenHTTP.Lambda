@@ -71,30 +71,27 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     }
 
     /// <summary>
-    /// The code of one lambda, at the given version or the newest one.
+    /// The code of one version of a lambda.
     /// </summary>
-    [ResourceMethod("lambdas/:publicKey/code")]
-    public async ValueTask<VersionContentResponse> GetCode(string publicKey, int? version, IRequest request)
+    /// <remarks>
+    /// Which versions there are is in the listing, as the latest one each
+    /// lambda has.
+    /// </remarks>
+    [ResourceMethod("lambdas/:publicKey/versions/:version")]
+    public async ValueTask<VersionContentResponse> GetVersion(string publicKey, int version, IRequest request)
     {
         Authorize(request);
 
-        var privateKey = await meta.RequirePrivateKeyAsync(publicKey);
+        var content = await meta.GetVersionAsync(await meta.RequirePrivateKeyAsync(publicKey), version);
 
-        var target = version ?? (await meta.GetAsync(privateKey))?.LatestVersion
-                  ?? throw LambdaException.NotFound("This lambda has no versions.");
-
-        var content = await meta.GetVersionAsync(privateKey, target);
-
-        var files = LambdaSource.Parse(content.Code);
-
-        return new VersionContentResponse(content.Version, content.Created, files[0].Code, files);
+        return new VersionContentResponse(content.Version, content.Created, LambdaSource.Parse(content.Code));
     }
 
     /// <summary>
     /// Takes a lambda offline without removing it.
     /// </summary>
-    [ResourceMethod(Method.Delete, "lambdas/:publicKey/deployment")]
-    public async ValueTask<LambdaOverviewResponse> Undeploy(string publicKey, IRequest request)
+    [ResourceMethod(Method.Post, "lambdas/:publicKey/deployment/stop")]
+    public async ValueTask<LambdaOverviewResponse> StopDeployment(string publicKey, IRequest request)
     {
         Authorize(request);
 
@@ -114,16 +111,6 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
         await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey));
     }
 
-    /// <summary>
-    /// Refuses the request unless it carries the configured token.
-    /// </summary>
-    /// <remarks>
-    /// Compared in constant time: a token checked with an ordinary string
-    /// comparison tells anyone patient enough how much of their guess was
-    /// right. Answers not found rather than unauthorized, so an installation
-    /// with no panel is indistinguishable from one that simply has no such
-    /// route.
-    /// </remarks>
     /// <summary>
     /// How many lambdas a page of the listing holds.
     /// </summary>

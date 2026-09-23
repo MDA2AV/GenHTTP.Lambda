@@ -507,7 +507,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             },
             whyNotAStringConstant = "Because a raw string literal ends at the first \"\"\" inside it, which ordinary JavaScript contains, and because base64 in a string costs a third more than the bytes it carries."
         },
-        takingItAway = "GET /api/v1/lambdas/{privateKey}/download answers with the lambda as a zipped .NET project: one package reference, the snippet as the body of Program.cs inside a host that serves what it returns, the other files verbatim, and Workspace and Assets as two folders beside the code. Nothing in it refers back to this platform. Worth telling whoever you are acting for, because it is the difference between building something here and being stuck here.",
+        takingItAway = "GET /api/v1/lambdas/{privateKey}/export answers with the lambda as a zipped .NET project: one package reference, the snippet as the body of Program.cs inside a host that serves what it returns, the other files verbatim, and Workspace and Assets as two folders beside the code. Nothing in it refers back to this platform. Worth telling whoever you are acting for, because it is the difference between building something here and being stuck here.",
         importedForYou = ModuleCatalog.Imports,
         storage = new
         {

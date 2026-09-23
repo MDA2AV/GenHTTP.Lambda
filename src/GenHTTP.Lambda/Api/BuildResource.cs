@@ -1,7 +1,6 @@
-using System.Text.Json.Nodes;
-
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Building;
 
 using GenHTTP.Modules.Reflection;
@@ -27,42 +26,25 @@ public sealed class BuildResource(BuildService builds)
 {
 
     /// <summary>
-    /// Whether there is an agent here at all, so a page can decide whether to
-    /// offer the box rather than offering one that answers with an error.
-    /// </summary>
-    [ResourceMethod]
-    public JsonObject Get() => new()
-    {
-        ["available"] = builds.Available,
-        ["perDay"] = builds.PerDay,
-        // said, but never what it is: the page needs to know whether to offer
-        // the choice, not what the answer is
-        ["secondModel"] = builds.HasSecondModel
-    };
-
-    /// <summary>
     /// Asks for something to be built.
     /// </summary>
+    /// <remarks>
+    /// Whether this installation builds anything at all is part of
+    /// <c>/system</c>, so a page can decide whether to offer the box rather
+    /// than offering one that answers with an error.
+    /// </remarks>
     [ResourceMethod(Method.Post)]
-    public async ValueTask<JsonObject> Start(BuildRequest body, IRequest request)
-        => await builds.StartAsync(body?.Prompt, body?.Model, body?.Password, request.Client.Address);
+    public async ValueTask<Result<BuildStarted>> Create(BuildRequest body, IRequest request)
+    {
+        var started = await builds.StartAsync(body?.Prompt, body?.Model, body?.Password, request.Client.Address);
+
+        return new Result<BuildStarted>(started).Status(ResponseStatus.Accepted);
+    }
 
     /// <summary>
     /// How a build is getting on, polled while it runs.
     /// </summary>
     [ResourceMethod(":id")]
-    public async ValueTask<JsonObject> Progress(string id) => await builds.ProgressAsync(id);
+    public async ValueTask<BuildProgress> Get(string id) => await builds.ProgressAsync(id);
 
 }
-
-/// <summary>
-/// What the browser sends: one sentence, and nothing else that identifies
-/// anything already made.
-/// </summary>
-/// <remarks>
-/// There is deliberately no way to name an existing lambda here. This endpoint
-/// creates, and only creates; changing something that exists belongs to the
-/// editor, which already holds its key, or to an agent over MCP. Accepting a
-/// key here made one door do two jobs and blurred what the box is for.
-/// </remarks>
-public sealed record BuildRequest(string? Prompt, string? Model = null, string? Password = null);
