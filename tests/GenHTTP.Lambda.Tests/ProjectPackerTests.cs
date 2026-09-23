@@ -100,6 +100,20 @@ public sealed class ProjectPackerTests
         Assert.IsTrue(zip.Entries.All(e => !e.FullName.Contains('!')));
     }
 
+    [TestMethod]
+    public void OtherFilesKeepTheNamesThePlatformGaveThem()
+    {
+        using var zip = new ZipArchive(new MemoryStream(ProjectPacker.Pack("my-lambda", Files)));
+
+        var support = Read(zip, "my-lambda/Lambda.cs");
+
+        // Workspace may be named in any file on the platform, and code written
+        // before that reached it as LambdaEnvironment - both have to compile here
+        Assert.StartsWith("global using static LambdaScope;", support);
+        Assert.Contains("public static class LambdaScope", support);
+        Assert.Contains("public static class LambdaEnvironment", support);
+    }
+
     private static string Read(ZipArchive zip, string name)
     {
         using var stream = zip.GetEntry(name)!.Open();

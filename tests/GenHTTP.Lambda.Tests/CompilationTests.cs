@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -127,6 +128,64 @@ public sealed class CompilationTests
         var written = Directory.GetFiles(fixture.Options.WorkspaceDirectory, "note.txt", SearchOption.AllDirectories);
 
         Assert.HasCount(1, written, "the file stays inside the workspace of the lambda");
+    }
+
+    [TestMethod]
+    public async Task WorkspaceCanBeUsedFromEveryFile()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.Meta.CreateAsync(null);
+
+        // a store in a file of its own is the first thing an agent writes, and
+        // Workspace used to exist only in the top-level code of lambda.cs - so
+        // this failed to compile, and took a whole build down with it
+        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, """
+                new Note().Keep("from a type in lambda.cs");
+
+                return Content.From(Resource.FromString(Store.Read()));
+
+                class Note
+                {
+                    public void Keep(string text) => Store.Write(text);
+                }
+                """),
+            new LambdaFile("Store.cs", """
+                public static class Store
+                {
+                    public static void Write(string text) => Workspace.WriteText("kept.txt", text);
+
+                    public static string Read() => Workspace.ReadText("kept.txt");
+                }
+                """)
+        ]));
+
+        using var response = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+
+        Assert.AreEqual("from a type in lambda.cs", await response.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task AssetsOutsideTheSnippetSaysWhereTheyAre()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // in another file Assets is the Files module's type of that name, which
+        // has no ReadText - the message has to say what to write instead
+        var outcome = await fixture.Deployments.ValidateAsync(LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, "return Content.From(Resource.FromString(Shipped.Text()));"),
+            new LambdaFile("Shipped.cs", """
+                public static class Shipped
+                {
+                    public static string Text() => Assets.ReadText("notes.txt");
+                }
+                """)
+        ]));
+
+        Assert.IsFalse(outcome.Success);
+
+        Assert.Contains("LambdaEnvironment.Assets", string.Join(" ", outcome.Diagnostics.Select(d => d.Message)));
     }
 
     [TestMethod]

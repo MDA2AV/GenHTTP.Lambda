@@ -86,6 +86,71 @@ public sealed class McpTests
     }
 
     [TestMethod]
+    public async Task EveryToolSaysWhatItDoesToThePlatform()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
+
+        foreach (var tool in tools)
+        {
+            Assert.IsNotEmpty(tool!["title"]!.GetValue<string>());
+            Assert.IsNotNull(tool["annotations"]?["readOnlyHint"], "without hints a client has to assume the worst of every tool");
+        }
+
+        var reading = tools.Where(t => t!["annotations"]!["readOnlyHint"]!.GetValue<bool>())
+                           .Select(t => t!["name"]!.GetValue<string>())
+                           .Order()
+                           .ToList();
+
+        CollectionAssert.AreEqual(new[] { "check_code", "list_examples", "list_files", "platform_guide", "read_example", "read_lambda", "read_logs" },
+                                  reading, "these look and change nothing, so a client may call them without asking");
+
+        var delete = tools.Single(t => t!["name"]!.GetValue<string>() == "delete_file")!;
+
+        Assert.IsTrue(delete["annotations"]!["destructiveHint"]!.GetValue<bool>());
+    }
+
+    [TestMethod]
+    public async Task ALargeLambdaIsReadByNameUntilAFileIsAskedFor()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        // more than one answer carries: every file in full used to overflow
+        // what a client accepts, and then the agent saw nothing at all
+        var large = "public static class Lore\n{\n    public const string Text = \"" + new string('a', 40_000) + "\";\n}\n";
+
+        await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["files"] = new JsonArray(
+                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(Lore.Text));" },
+                new JsonObject { ["name"] = "Lore.cs", ["code"] = large })
+        });
+
+        var listed = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.IsTrue(listed["filesOmitted"]!.GetValue<bool>());
+        Assert.IsNotNull(listed["note"]);
+
+        var lore = ((JsonArray)listed["files"]!).Single(f => f!["name"]!.GetValue<string>() == "Lore.cs")!;
+
+        Assert.IsNull(lore["code"], "over the budget, the answer lists files rather than carrying them");
+        Assert.AreEqual(large.Length, lore["length"]!.GetValue<int>());
+
+        var one = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey, ["file"] = "Lore.cs" }));
+
+        var only = ((JsonArray)one["files"]!).Single()!;
+
+        Assert.AreEqual("Lore.cs", only["name"]!.GetValue<string>());
+        Assert.AreEqual(large, only["code"]!.GetValue<string>(), "a file asked for comes back in full, however large");
+    }
+
+    [TestMethod]
     public async Task AnUnknownMethodIsAProtocolError()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

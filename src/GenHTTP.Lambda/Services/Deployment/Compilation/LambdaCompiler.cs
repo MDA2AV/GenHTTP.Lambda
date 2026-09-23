@@ -250,8 +250,26 @@ internal static class LambdaCompiler
     {
         // raised on the generated entry point, so the raw message would point nowhere
         "CS0161" => "The code must end with a return statement that returns a handler.",
+        // outside the top-level code of lambda.cs, Assets is the type the Files
+        // module declares under that name, and the raw message says nothing about why
+        "CS0117" when MeantTheLambdaAssets(diagnostic) => diagnostic.GetMessage()
+            + ". Outside the top-level code of lambda.cs, Assets is the Files module's type; what the lambda shipped is LambdaEnvironment.Assets.",
         _ => diagnostic.GetMessage()
     };
+
+    /// <summary>
+    /// What the lambda's own Assets offers, which the Files module's type of the
+    /// same name does not.
+    /// </summary>
+    private static readonly string[] AssetMembers = ["Root", "Exists", "ReadText", "ReadBytes", "List", "Tree", "Files", "App", "Folders"];
+
+    private static bool MeantTheLambdaAssets(Diagnostic diagnostic)
+    {
+        var message = diagnostic.GetMessage();
+
+        return message.StartsWith("'Assets' does not contain a definition for '", StringComparison.Ordinal)
+            && AssetMembers.Any(member => message.EndsWith($"'{member}'", StringComparison.Ordinal));
+    }
 
     private sealed record LoadedLambda(Assembly Assembly, string Scope);
 
