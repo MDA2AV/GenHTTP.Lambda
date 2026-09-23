@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
+using GenHTTP.Engine.Ioxide;
+
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
 
@@ -93,13 +95,61 @@ public sealed class CertificateTests
         Assert.IsTrue(served!.HasPrivateKey, "the served certificate has to be able to answer a handshake");
     }
 
+    [TestMethod]
+    public void PemPairsAreHandedToTheEngineAsFiles()
+    {
+        using var workspace = new TemporaryDirectory();
+
+        var options = Write(workspace, "first.example");
+
+        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+
+        // through the interface, since that is the only way the io_uring engine asks
+        IFileCertificateProvider files = loader;
+
+        Assert.AreEqual(new CertificateFiles(options.CertificatePath!, options.CertificateKeyPath!), files.ProvideFiles(null));
+        Assert.AreEqual(new CertificateFiles(options.CertificatePath!, options.CertificateKeyPath!), files.ProvideFiles("first.example"));
+    }
+
+    [TestMethod]
+    public void FilesFollowTheNameTheClientAskedFor()
+    {
+        using var workspace = new TemporaryDirectory();
+
+        var options = Write(Path.Combine(workspace.Path, "default"), "default.example");
+
+        var second = Write(Path.Combine(workspace.Path, "hosts", "second.example"), "second.example");
+
+        using var loader = new CertificateLoader(options with { CertificateDirectory = Path.Combine(workspace.Path, "hosts") }, NullLogger<CertificateLoader>.Instance);
+
+        Assert.AreEqual(second.CertificatePath, loader.ProvideFiles("second.example")?.Certificate);
+        Assert.AreEqual(options.CertificatePath, loader.ProvideFiles("unknown.example")?.Certificate, "a name nothing covers gets the default");
+    }
+
+    [TestMethod]
+    public void ArchivesAreLeftToTheLoadedCertificate()
+    {
+        using var workspace = new TemporaryDirectory();
+
+        var options = WriteArchive(workspace, "archive.example");
+
+        using var loader = new CertificateLoader(options, NullLogger<CertificateLoader>.Instance);
+
+        Assert.IsNull(loader.ProvideFiles(null), "an archive has no key file to hand over, so the engine has to take the loaded certificate");
+        Assert.IsNull(loader.ProvideFiles("archive.example"));
+
+        Assert.AreEqual("CN=archive.example", loader.Provide(null)?.Subject);
+    }
+
     #region Helpers
 
     /// <summary>
     /// Writes a self signed certificate into the workspace and returns the
     /// options pointing at it.
     /// </summary>
-    private static LambdaOptions Write(TemporaryDirectory workspace, string name)
+    private static LambdaOptions Write(TemporaryDirectory workspace, string name) => Write(workspace.Path, name);
+
+    private static LambdaOptions Write(string directory, string name)
     {
         using var key = RSA.Create(2048);
 
@@ -107,8 +157,10 @@ public sealed class CertificateTests
 
         using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
 
-        var certificatePath = Path.Combine(workspace.Path, "fullchain.pem");
-        var keyPath = Path.Combine(workspace.Path, "privkey.pem");
+        Directory.CreateDirectory(directory);
+
+        var certificatePath = Path.Combine(directory, "fullchain.pem");
+        var keyPath = Path.Combine(directory, "privkey.pem");
 
         Touch(certificatePath, certificate.ExportCertificatePem());
         Touch(keyPath, key.ExportPkcs8PrivateKeyPem());
@@ -122,9 +174,24 @@ public sealed class CertificateTests
     }
 
     /// <summary>
-    /// Writes a file and stamps it, so a rewrite within the resolution of the
-    /// file system still reads as a change.
+    /// Writes a self signed certificate as an archive, key included, the way
+    /// it is configured when there is no separate key file.
     /// </summary>
+    private static LambdaOptions WriteArchive(TemporaryDirectory workspace, string name)
+    {
+        using var key = RSA.Create(2048);
+
+        var request = new CertificateRequest($"CN={name}", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+
+        var archivePath = Path.Combine(workspace.Path, "certificate.pfx");
+
+        File.WriteAllBytes(archivePath, certificate.Export(X509ContentType.Pfx));
+
+        return new LambdaOptions { SecurePort = 8443, CertificatePath = archivePath };
+    }
+
     /// <summary>
     /// Writes a leaf followed by its issuer, the way an ACME client does.
     /// </summary>
@@ -153,6 +220,10 @@ public sealed class CertificateTests
         return new LambdaOptions { SecurePort = 8443, CertificatePath = certificatePath, CertificateKeyPath = keyPath };
     }
 
+    /// <summary>
+    /// Writes a file and stamps it, so a rewrite within the resolution of the
+    /// file system still reads as a change.
+    /// </summary>
     private static void Touch(string path, string content)
     {
         File.WriteAllText(path, content);

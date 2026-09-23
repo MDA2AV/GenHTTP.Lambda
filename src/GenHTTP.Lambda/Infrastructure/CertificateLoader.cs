@@ -1,7 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
 
-using GenHTTP.Api.Infrastructure;
-
 using GenHTTP.Engine.Ioxide;
 
 using GenHTTP.Lambda.Configuration;
@@ -32,7 +30,7 @@ namespace GenHTTP.Lambda.Infrastructure;
 /// reads the PEM files directly, so it wants the names up front and a path per
 /// name instead - hence <see cref="Hosts" /> and <see cref="ProvideFiles" />.
 /// </remarks>
-public sealed class CertificateLoader : IHostCertificateProvider, IDisposable
+public sealed class CertificateLoader : IHostCertificateProvider, IFileCertificateProvider, IDisposable
 {
     private readonly ILogger<CertificateLoader> _logger;
 
@@ -147,7 +145,13 @@ public sealed class CertificateLoader : IHostCertificateProvider, IDisposable
     /// The files the certificate for a host is read from, for an engine that
     /// reads them itself rather than taking a loaded certificate.
     /// </summary>
-    public CertificateFiles ProvideFiles(string? host)
+    /// <remarks>
+    /// Chooses the same certificate <see cref="Provide" /> would. An archive
+    /// has no separate key file to hand over, so it answers with nothing and
+    /// the engine falls back to the loaded certificate - falling through to
+    /// the default files instead would serve that name someone else's.
+    /// </remarks>
+    public CertificateFiles? ProvideFiles(string? host)
     {
         lock (_lock)
         {
@@ -155,20 +159,19 @@ public sealed class CertificateLoader : IHostCertificateProvider, IDisposable
             {
                 foreach (var entry in _entries)
                 {
-                    if (Covers(entry, host) && entry.KeyPath != null)
+                    if (Covers(entry, host))
                     {
-                        return new CertificateFiles(entry.Path, entry.KeyPath);
+                        return Files(entry);
                     }
                 }
             }
 
-            // an archive has no separate key file and nothing to hand over; the
-            // engine is configured with PEM pairs, so this is a misconfiguration
-            // rather than something to paper over at handshake time
-            return new CertificateFiles(_default.Path, _default.KeyPath
-                ?? throw new InvalidOperationException($"The certificate '{_default.Path}' has no key file, which the io_uring engine requires."));
+            return Files(_default);
         }
     }
+
+    private static CertificateFiles? Files(Entry entry)
+        => !string.IsNullOrWhiteSpace(entry.KeyPath) ? new CertificateFiles(entry.Path, entry.KeyPath) : null;
 
     /// <summary>
     /// Whether a certificate names the host the client asked for, including
