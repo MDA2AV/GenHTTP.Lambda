@@ -105,6 +105,34 @@ public sealed class WebAssetTests
     }
 
     /// <summary>
+    /// The front page plays a video, and Safari will not play one from a server
+    /// that answers a range with the whole file.
+    /// </summary>
+    [TestMethod]
+    public async Task AVideoCanBeReadInRanges()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(options =>
+        {
+            var media = Path.Combine(options.WebRoot, "media");
+
+            Directory.CreateDirectory(media);
+
+            File.WriteAllBytes(Path.Combine(media, "clip.mp4"), Enumerable.Range(0, 1000).Select(i => (byte)i).ToArray());
+
+            return options;
+        });
+
+        using var request = fixture.Host.GetRequest("/media/clip.mp4");
+
+        request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 99);
+
+        using var response = await fixture.Host.GetResponseAsync(request);
+
+        Assert.AreEqual(HttpStatusCode.PartialContent, response.StatusCode);
+        Assert.AreEqual(100, (await response.Content.ReadAsByteArrayAsync()).Length);
+    }
+
+    /// <summary>
     /// A web root without a built frontend still starts, and the asset route is
     /// simply not there.
     /// </summary>

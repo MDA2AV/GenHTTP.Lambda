@@ -72,8 +72,11 @@ public sealed class SpaResources
             return Content.From(Placeholder());
         }
 
+        // ranges because the front page has a video, and Safari will not play
+        // one from a server that answers a range with the whole file
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .ServerSideRouting()
+                                    .Add(RangeSupport.Create())
                                     .Add(CacheControl.NoCache());
     }
 
