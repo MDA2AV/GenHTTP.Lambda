@@ -33,6 +33,10 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
             return await content.HandleAsync(request);
         }
 
+        // read before the lambda routes it: the target is a pointer that the
+        // handlers below move along, and afterwards it points at nothing
+        var path = PathOf(request);
+
         var started = Stopwatch.GetTimestamp();
 
         try
@@ -42,7 +46,7 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
             var status = response != null ? (int)response.Status : 404;
 
             telemetry.Record(lambda.Id, lambda.PublicKey, Stopwatch.GetElapsedTime(started), status,
-                             (long)(response?.Content?.Length ?? 0));
+                             (long)(response?.Content?.Length ?? 0), path);
 
             return response;
         }
@@ -50,9 +54,22 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
         {
             // the error handler above turns this into a response for the
             // visitor, but as far as the lambda is concerned it failed
-            telemetry.Record(lambda.Id, lambda.PublicKey, Stopwatch.GetElapsedTime(started), 500, 0);
+            telemetry.Record(lambda.Id, lambda.PublicKey, Stopwatch.GetElapsedTime(started), 500, 0, path);
             throw;
         }
+    }
+
+    /// <summary>
+    /// What was asked for, relative to the lambda and cut to a length worth
+    /// showing - the lookup above has already stepped past the key.
+    /// </summary>
+    private static string PathOf(IRequest request)
+    {
+        var remaining = request.Header.Target.AsString(decode: false, remainingOnly: true);
+
+        var path = remaining.Length == 0 ? "/" : remaining[0] == '/' ? remaining : "/" + remaining;
+
+        return path.Length <= 100 ? path : string.Concat(path.AsSpan(0, 99), "…");
     }
 
 }

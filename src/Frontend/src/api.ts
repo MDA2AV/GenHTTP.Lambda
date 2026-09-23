@@ -21,9 +21,123 @@ export interface Lambda {
   keptUntil: string;
 }
 
+/** Which door something came through. */
+export type Origin = 'template' | 'api' | 'agent' | 'admin' | 'system';
+
 export interface VersionInfo {
   version: number;
   created: string;
+  /** What was asked for, in the words it was asked in. */
+  prompt?: string | null;
+  /** What the version changed, in a line. */
+  change?: string | null;
+  origin?: Origin | null;
+}
+
+/** One stretch of time a version was online. */
+export interface Activation {
+  version: number;
+  started: string;
+  origin?: Origin | null;
+  /** Absent while it is still online. */
+  ended?: string | null;
+  endedBy?: 'replaced' | 'stopped' | 'expired' | 'admin' | null;
+  /** How long it was online, or has been so far. */
+  seconds: number;
+}
+
+/** One interval of a lambda's traffic. */
+export interface TrafficPoint {
+  at: string;
+  requests: number;
+  /** Answered with a server error. */
+  failed: number;
+  /** Answered with a client error, not found included. */
+  rejected: number;
+  upgrades: number;
+  averageMillis: number;
+  bytes: number;
+}
+
+export interface LambdaTraffic {
+  /** Absent for a lambda nobody has called since the server started. */
+  totals?: LambdaActivity | null;
+  /** The last hour by the minute, oldest first. */
+  minutes: TrafficPoint[];
+  /** The last day by the quarter hour, oldest first. */
+  quarters: TrafficPoint[];
+  statuses: { success: number; redirect: number; clientError: number; serverError: number };
+  paths: { path: string; requests: number; failed: number; averageMillis: number }[];
+  /** When counting started: the figures are held in memory and a restart begins them again. */
+  since: string;
+}
+
+/** A line of a lambda's own log. Without the visitor's address, on purpose. */
+export interface OwnerLogEntry {
+  seq: number;
+  at: string;
+  level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'critical';
+  /** Requests, stdout, stderr, or the part of the server that spoke. */
+  source: string;
+  text: string;
+  detail?: string | null;
+  country?: string | null;
+  agent?: string | null;
+  repeats: number;
+}
+
+export interface OwnerLogPage {
+  lines: OwnerLogEntry[];
+  cursor: number;
+  missed: number;
+  /** Whether what the lambda prints is kept at all on this installation. */
+  capturing: boolean;
+}
+
+/** The dashboard in one answer. */
+export interface LambdaSummary {
+  lambda: Lambda;
+  live?: VersionInfo | null;
+  latest?: VersionInfo | null;
+  versions: number;
+  activation?: Activation | null;
+  traffic: {
+    hourRequests: number;
+    hourFailed: number;
+    dayRequests: number;
+    dayFailed: number;
+    dayRejected: number;
+    averageMillis: number;
+    upgrades: number;
+    /** Requests per hour over the last day, oldest first. */
+    hourly: number[];
+    lastSeen?: string | null;
+    since: string;
+  };
+  recentProblems: OwnerLogEntry[];
+  storage: {
+    version?: number | null;
+    codeFiles: number;
+    codeCharacters: number;
+    assets: number;
+    assetBytes: number;
+    workspaceFiles: number;
+    workspaceBytes: number;
+    servesAssets: boolean;
+    servesWorkspace: boolean;
+  };
+  limits: {
+    codeCharacters: number;
+    codeFiles: number;
+    assetBytes: number;
+    assets: number;
+    workspaceBytes: number;
+    workspaceFiles: number;
+    workspaceFileBytes: number;
+    versions: number;
+    deploymentLifetimeHours: number;
+    retentionDays: number;
+  };
 }
 
 export interface LambdaFile {
@@ -505,10 +619,29 @@ export const api = {
   version: (privateKey: string, version: number) =>
     request<VersionContent>(`/lambdas/${privateKey}/versions/${version}`),
 
-  save: (privateKey: string, files: LambdaFile[]) =>
-    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files })),
+  /** Stores a version; the change and the prompt are the why, kept beside the what. */
+  save: (privateKey: string, files: LambdaFile[], change?: string, prompt?: string) =>
+    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, prompt: prompt || null })),
 
   deployment: (privateKey: string) => request<Deployment>(`/lambdas/${privateKey}/deployment`),
+
+  /** Every stretch of time something was online, newest first. */
+  deployments: (privateKey: string) => request<Activation[]>(`/lambdas/${privateKey}/deployment/history`),
+
+  summary: (privateKey: string) => request<LambdaSummary>(`/lambdas/${privateKey}/summary`),
+
+  traffic: (privateKey: string) => request<LambdaTraffic>(`/lambdas/${privateKey}/traffic`),
+
+  /** The lambda's own log. No cursor answers with the tail. */
+  lambdaLogs: (privateKey: string, options: { since?: number; level?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams();
+
+    if (options.since !== undefined) query.set('since', String(options.since));
+    if (options.level) query.set('level', options.level);
+    if (options.limit) query.set('limit', String(options.limit));
+
+    return request<OwnerLogPage>(`/lambdas/${privateKey}/logs?${query}`);
+  },
 
   deploy: (privateKey: string, version?: number) =>
     request<DeploymentResult>(`/lambdas/${privateKey}/deployment/start`, send({ version: version ?? null }), [422]),

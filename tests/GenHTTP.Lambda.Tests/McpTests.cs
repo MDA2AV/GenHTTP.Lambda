@@ -74,7 +74,7 @@ public sealed class McpTests
         var named = tools.Select(t => t!["name"]!.GetValue<string>()).ToList();
 
         foreach (var wanted in (string[])["create_lambda", "write_code", "check_code", "deploy", "read_lambda",
-                                          "upload_file", "list_files", "delete_file", "platform_guide"])
+                                          "read_logs", "upload_file", "list_files", "delete_file", "platform_guide"])
         {
             Assert.Contains(wanted, named);
         }
@@ -256,6 +256,107 @@ public sealed class McpTests
 
         Assert.IsTrue(answer["result"]!["isError"]!.GetValue<bool>());
         Assert.Contains("more than once", Structured(answer)["problem"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task AnAgentSaysWhyAndItIsKept()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var written = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["prompt"] = "a page that says hello",
+            ["change"] = "Answers every request with hello",
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Inline.Create().Get(() => \"hello\");" })
+        }));
+
+        Assert.IsTrue(written["ok"]!.GetValue<bool>(), written.ToJsonString());
+
+        var versions = await fixture.Meta.GetVersionsAsync(privateKey);
+
+        Assert.AreEqual("a page that says hello", versions[0].Prompt);
+        Assert.AreEqual("Answers every request with hello", versions[0].Change);
+        Assert.AreEqual("agent", versions[0].Origin, "what came through MCP says so");
+
+        // and the next agent to open it can read why
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.AreEqual("Answers every request with hello", read["change"]!.GetValue<string>());
+        Assert.AreEqual("Answers every request with hello", read["history"]![0]!["change"]!.GetValue<string>());
+
+        Structured(await CallToolAsync(fixture, "deploy", new JsonObject { ["privateKey"] = privateKey }));
+
+        var history = await fixture.Meta.GetActivationsAsync(privateKey);
+
+        Assert.AreEqual("agent", history[0].Origin);
+    }
+
+    [TestMethod]
+    public async Task AnAgentCanReadHowItsLambdaIsDoing()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["acceptTerms"] = true,
+            ["publicKey"] = "observed"
+        }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["files"] = new JsonArray(new JsonObject
+            {
+                ["name"] = "lambda.cs",
+                ["code"] = "return Inline.Create().Get(() => { throw new InvalidOperationException(\"it broke here\"); return \"never\"; });"
+            })
+        }));
+
+        Structured(await CallToolAsync(fixture, "deploy", new JsonObject { ["privateKey"] = privateKey }));
+
+        using (var _ = await fixture.GetAsync("/lambda/observed/")) { }
+
+        var logs = Structured(await CallToolAsync(fixture, "read_logs", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.IsTrue(logs["ok"]!.GetValue<bool>(), logs.ToJsonString());
+        Assert.AreEqual(1, logs["traffic"]!["lastHour"]!["serverErrors"]!.GetValue<int>());
+        Assert.Contains("it broke here", logs["lines"]!.ToJsonString(), "the exception is what an agent needs to see");
+        Assert.DoesNotContain("\"client\"", logs.ToJsonString());
+
+        var refused = await CallToolAsync(fixture, "read_logs", new JsonObject { ["privateKey"] = "not-a-key" });
+
+        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
+    }
+
+    [TestMethod]
+    public async Task AChangeKeepsItsNoteToo()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var changed = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["change"] = "Adds a readme",
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "readme.txt", ["code"] = "hello" })
+        }));
+
+        Assert.IsTrue(changed["ok"]!.GetValue<bool>(), changed.ToJsonString());
+
+        var versions = await fixture.Meta.GetVersionsAsync(privateKey);
+
+        Assert.AreEqual("Adds a readme", versions[0].Change);
+        Assert.AreEqual("agent", versions[0].Origin);
     }
 
     [TestMethod]

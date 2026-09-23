@@ -44,7 +44,8 @@ public interface IMetaService
     /// <summary>
     /// Stores the given code as a new version.
     /// </summary>
-    ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, CancellationToken cancellation = default);
+    /// <param name="note">Why it was written, and which door it came through</param>
+    ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Compiles the given code without deploying it.
@@ -54,12 +55,19 @@ public interface IMetaService
     /// <summary>
     /// Builds the given version (or the latest one) and makes it the active deployment.
     /// </summary>
-    ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, CancellationToken cancellation = default);
+    /// <param name="origin">Who is putting it online, for the deployment history</param>
+    ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, string? origin = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Takes the lambda off the air, keeping its code.
     /// </summary>
-    ValueTask<LambdaInfo> UndeployAsync(string privateKey, CancellationToken cancellation = default);
+    /// <param name="endedBy">Why, for the deployment history: stopped by the owner unless said otherwise</param>
+    ValueTask<LambdaInfo> UndeployAsync(string privateKey, string? endedBy = null, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Every stretch of time the lambda was online, newest first.
+    /// </summary>
+    ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
     /// Moves the lambda to another public key.

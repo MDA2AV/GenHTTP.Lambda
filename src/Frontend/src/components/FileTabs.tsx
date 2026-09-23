@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { LambdaFile } from '../api';
-import { IconPlus, IconTrash } from './Icons';
+import { encodeBytes, readable } from '../bytes';
+import { pill } from '../control/ui';
+import { IconPlus, IconTrash, IconUpload } from './Icons';
 
 /**
  * The file the snippet lives in, which cannot be renamed or removed: it is the
@@ -9,8 +11,11 @@ import { IconPlus, IconTrash } from './Icons';
  */
 export const ENTRY = 'lambda.cs';
 
-/** As many as the server will store for one lambda. */
+/** As many C# files as the server will store for one lambda. */
 const MAX_FILES = 12;
+
+/** As many other files, which are counted apart. */
+const MAX_ASSETS = 60;
 
 interface Props {
   files: LambdaFile[];
@@ -105,6 +110,7 @@ function starterFor(name: string): string {
 
 export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
   const [adding, setAdding] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -125,6 +131,11 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
 
     if (wrong) {
       setProblem(wrong);
+      return;
+    }
+
+    if (wanted.endsWith('.cs') && files.filter((file) => file.name.endsWith('.cs')).length >= MAX_FILES) {
+      setProblem(`A lambda has at most ${MAX_FILES} C# files.`);
       return;
     }
 
@@ -159,66 +170,126 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
     }
   }
 
+  /*
+   * Anything that is not text - an image, a font - cannot be typed into the
+   * editor, so it comes in here. It lands beside the file that is open when
+   * that is an asset in a folder, which is where a picture for a page goes.
+   */
+  async function upload(chosen: FileList | null) {
+    if (!chosen) {
+      return;
+    }
+
+    const folder = !active.endsWith('.cs') && active.includes('/') ? active.slice(0, active.lastIndexOf('/') + 1) : '';
+
+    const added: LambdaFile[] = [];
+
+    for (const file of Array.from(chosen)) {
+      const wanted = `${folder}${file.name}`;
+
+      if ([...files, ...added].some((one) => one.name.toLowerCase() === wanted.toLowerCase())) {
+        setProblem(`${wanted} is already there.`);
+        continue;
+      }
+
+      const bytes = new Uint8Array(await file.arrayBuffer());
+
+      added.push(readable(bytes)
+        ? { name: wanted, code: new TextDecoder().decode(bytes) }
+        : { name: wanted, code: encodeBytes(bytes), encoding: 'base64' });
+    }
+
+    if (picker.current) {
+      picker.current.value = '';
+    }
+
+    if (added.length > 0) {
+      onChange([...files, ...added]);
+      onSelect(added[0].name);
+    }
+  }
+
+  const code = files.filter((file) => file.name.endsWith('.cs')).length;
+  const assets = files.length - code;
+
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-ink-800 dark:bg-ink-950">
+    <div className="flex flex-wrap items-center gap-1.5">
       {files.map((file) => {
         const open = file.name === active;
 
         return (
-          <div key={file.name} className="flex items-center">
+          <span key={file.name} className={`${pill(open)} !py-0.5 !pr-1.5`}>
             <button
               type="button"
               onClick={() => onSelect(file.name)}
-              className={`px-3 py-1 font-mono text-xs ${
-                open
-                  ? 'bg-white text-slate-900 dark:bg-ink-900 dark:text-slate-100'
-                  : 'text-slate-500 hover:bg-white/70 dark:hover:bg-ink-900/70'
-              }`}
-              title={file.name === ENTRY ? 'The snippet: what this returns is what gets hosted' : file.name}
+              className="py-0.5 font-mono text-[12.5px]"
+              title={file.name === ENTRY ? 'The snippet: what it returns is what gets served' : file.name}
             >
               {file.name}
               {faulty?.has(file.name) && <span className="ml-1.5 text-red-500" aria-label="has errors">•</span>}
             </button>
 
-            {file.name !== ENTRY && open && (
+            {/* the same room on every pill, shown or not, so opening a file
+                does not widen its pill and push the others along */}
+            {file.name !== ENTRY ? (
               <button
                 type="button"
                 onClick={() => remove(file.name)}
-                className="px-1.5 py-1 text-slate-400 hover:text-red-500"
+                className={`rounded-full p-0.5 text-slate-400 hover:text-red-500 ${open ? '' : 'invisible'}`}
                 aria-label={`Remove ${file.name}`}
+                title="Remove this file"
+                tabIndex={open ? 0 : -1}
               >
-                <IconTrash className="h-3.5 w-3.5" />
+                <IconTrash className="h-3 w-3" />
               </button>
+            ) : (
+              <span className="w-4" aria-hidden="true" />
             )}
-          </div>
+          </span>
         );
       })}
 
       {adding ? (
-        <form onSubmit={add} className="flex items-center gap-1">
+        <form onSubmit={add} className="flex items-center gap-2">
           <input
             autoFocus
             value={name}
             onChange={(event) => setName(event.target.value)}
             onBlur={() => { setAdding(false); setProblem(null); }}
             placeholder="Types.cs or site/index.html"
-            className="w-32 border border-slate-300 bg-white px-2 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
+            className="w-48 rounded-full border border-slate-300 bg-white px-3 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
           />
-          {problem && <span className="text-xs text-red-500">{problem}</span>}
         </form>
       ) : (
-        files.length < MAX_FILES && (
+        (code < MAX_FILES || assets < MAX_ASSETS) && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="px-2 py-1 text-slate-400 hover:text-accent-500"
-            title="Add a file"
-            aria-label="Add a file"
+            className="rounded-full p-1.5 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
+            title="New file"
+            aria-label="New file"
           >
             <IconPlus className="h-3.5 w-3.5" />
           </button>
         )
       )}
+
+      {assets < MAX_ASSETS && (
+        <>
+          <input ref={picker} type="file" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
+          <button
+            type="button"
+            onClick={() => picker.current?.click()}
+            className="rounded-full p-1.5 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
+            title="Upload a file - an image, a font, a page"
+            aria-label="Upload a file"
+          >
+            <IconUpload className="h-3.5 w-3.5" />
+          </button>
+        </>
+      )}
+
+      {problem && <span className="text-xs text-red-500">{problem}</span>}
     </div>
   );
 }

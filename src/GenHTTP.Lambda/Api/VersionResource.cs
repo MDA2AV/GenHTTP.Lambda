@@ -3,8 +3,10 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Meta.Model;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -18,6 +20,9 @@ namespace GenHTTP.Lambda.Api;
 /// Versions are never changed once they are stored and never removed one by
 /// one, so there is nothing to put or delete here: a change to the code is a
 /// new version, and the history goes with the lambda.
+///
+/// Every way of storing one takes an optional prompt and change: what was
+/// asked for and what was done about it, which the code alone cannot say.
 /// </remarks>
 public sealed class VersionResource(IMetaService meta, LambdaOptions options)
 {
@@ -30,7 +35,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     {
         var versions = await meta.GetVersionsAsync(privateKey);
 
-        return versions.Select(v => new VersionResponse(v.Version, v.Created)).ToList();
+        return versions.Select(Describe).ToList();
     }
 
     /// <summary>
@@ -38,11 +43,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/versions/:version")]
     public async ValueTask<VersionContentResponse> Get(string privateKey, int version)
-    {
-        var content = await meta.GetVersionAsync(privateKey, version);
-
-        return new VersionContentResponse(content.Version, content.Created, LambdaSource.Parse(content.Code));
-    }
+        => Describe(await meta.GetVersionAsync(privateKey, version));
 
     /// <summary>
     /// Downloads the files of a single version as a zip archive.
@@ -75,12 +76,14 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     /// folders are skipped, and a single top level folder is removed.
     /// </remarks>
     /// <param name="deploy">Whether to put the new version online as well</param>
+    /// <param name="prompt">What was asked for, in the words it was asked in</param>
+    /// <param name="change">What this version changes, in a line</param>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/zip")]
-    public async ValueTask<Result<SavedVersionResponse>> CreateFromArchive(string privateKey, bool? deploy, Stream body)
+    public async ValueTask<Result<SavedVersionResponse>> CreateFromArchive(string privateKey, bool? deploy, string? prompt, string? change, Stream body)
     {
         var files = await LambdaArchive.UnpackAsync(body, options.MaxCodeLength * 4L + options.MaxAssetBytes);
 
-        return await SaveAsync(privateKey, files, deploy);
+        return await SaveAsync(privateKey, files, deploy, prompt, change);
     }
 
     /// <summary>
@@ -96,7 +99,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     {
         var files = LambdaChanges.Apply(await LatestAsync(meta, privateKey), request.Files, request.Remove, request.Edits);
 
-        return await SaveAsync(privateKey, files, deploy);
+        return await SaveAsync(privateKey, files, deploy, request.Prompt, request.Change);
     }
 
     /// <summary>
@@ -105,7 +108,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     /// <param name="deploy">Whether to put the new version online as well</param>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions")]
     public async ValueTask<Result<SavedVersionResponse>> Create(string privateKey, bool? deploy, VersionRequest request)
-        => await SaveAsync(privateKey, request.Files, deploy);
+        => await SaveAsync(privateKey, request.Files, deploy, request.Prompt, request.Change);
 
     /// <summary>
     /// Stores the files as a new version and deploys it if asked to.
@@ -114,20 +117,25 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     /// Answers with 201 either way, because the version was stored; whether
     /// it went online is in the deployment it carries.
     /// </remarks>
-    private async ValueTask<Result<SavedVersionResponse>> SaveAsync(string privateKey, IReadOnlyList<LambdaFile>? files, bool? deploy)
+    private async ValueTask<Result<SavedVersionResponse>> SaveAsync(string privateKey, IReadOnlyList<LambdaFile>? files, bool? deploy,
+                                                                     string? prompt, string? change)
     {
-        var version = await meta.SaveAsync(privateKey, Serialize(files));
+        var note = new VersionNote(prompt, change, VersionOrigins.Api);
+
+        var version = await meta.SaveAsync(privateKey, Serialize(files), note);
 
         DeploymentOutcomeResponse? deployment = null;
 
         if (deploy == true)
         {
-            var result = await meta.DeployAsync(privateKey, version.Version);
+            var result = await meta.DeployAsync(privateKey, version.Version, VersionOrigins.Api);
 
             deployment = new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
         }
 
-        return new Result<SavedVersionResponse>(new SavedVersionResponse(version.Version, version.Created, deployment)).Status(ResponseStatus.Created);
+        var saved = new SavedVersionResponse(version.Version, version.Created, version.Prompt, version.Change, version.Origin, deployment);
+
+        return new Result<SavedVersionResponse>(saved).Status(ResponseStatus.Created);
     }
 
     /// <summary>
@@ -144,6 +152,12 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
 
         return LambdaSource.Parse((await meta.GetVersionAsync(privateKey, latest)).Code);
     }
+
+    internal static VersionResponse Describe(LambdaVersionInfo version)
+        => new(version.Version, version.Created, version.Prompt, version.Change, version.Origin);
+
+    internal static VersionContentResponse Describe(LambdaVersionContent content)
+        => new(content.Version, content.Created, content.Prompt, content.Change, content.Origin, LambdaSource.Parse(content.Code));
 
     /// <summary>
     /// Turns what was submitted into the single blob a version is stored as.

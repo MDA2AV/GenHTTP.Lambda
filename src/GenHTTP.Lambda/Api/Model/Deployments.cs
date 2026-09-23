@@ -22,3 +22,17 @@ public sealed record DeploymentResponse(bool Deployed, int? Version, DateTime? D
 /// <param name="Lambda">The lambda afterwards, where the attempt succeeded</param>
 /// <param name="Diagnostics">What the compiler said on the way</param>
 public sealed record DeploymentOutcomeResponse(bool Success, LambdaResponse? Lambda, IReadOnlyList<CompilationDiagnostic> Diagnostics);
+
+/// <summary>
+/// One stretch of time a version was online.
+/// </summary>
+/// <param name="Version">What was online</param>
+/// <param name="Started">When it went online</param>
+/// <param name="Origin">Who put it online: api, agent, admin or system</param>
+/// <param name="Ended">When it went offline, absent while it is still online</param>
+/// <param name="EndedBy">
+/// Why it went offline: replaced by another deployment, stopped by the owner,
+/// expired because nobody used it, or taken down by the operator
+/// </param>
+/// <param name="Seconds">How long it was online, or has been so far</param>
+public sealed record ActivationResponse(int Version, DateTime Started, string? Origin, DateTime? Ended, string? EndedBy, long Seconds);

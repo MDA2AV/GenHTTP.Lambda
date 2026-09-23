@@ -35,7 +35,7 @@ const STEPS = [
     title: 'Keep improving it',
     body: 'Every app comes with a private editor link. Hand it to your agent along with the next change, or open it yourself. Each change becomes a new version, and the address stays the same.',
     image: '/media/editor.webp',
-    alt: 'The editor for the poll, with its files and versions',
+    alt: 'The poll\'s control center: its versions, each with what was asked for, what it changed and the difference to the one before',
   },
 ];
 

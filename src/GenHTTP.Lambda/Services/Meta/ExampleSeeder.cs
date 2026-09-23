@@ -103,7 +103,7 @@ public sealed class ExampleSeeder(IMetaService meta, IDbContextFactory<LambdaDbC
 
             await MarkAsExampleAsync(created.PublicKey, cancellation);
 
-            await meta.DeployAsync(created.PrivateKey, null, cancellation);
+            await meta.DeployAsync(created.PrivateKey, null, VersionOrigins.System, cancellation);
 
             logger.LogInformation("Created the example '{Example}' at '{Key}'", example.Id, example.PublicKey);
 
@@ -127,12 +127,12 @@ public sealed class ExampleSeeder(IMetaService meta, IDbContextFactory<LambdaDbC
 
         if (current != wanted)
         {
-            await meta.SaveAsync(privateKey, wanted, cancellation);
+            await meta.SaveAsync(privateKey, wanted, new VersionNote(Change: "Brought up to date with its template", Origin: VersionOrigins.System), cancellation);
 
             logger.LogInformation("The example '{Example}' was behind its template and has been updated", example.Id);
         }
 
-        await meta.DeployAsync(privateKey, null, cancellation);
+        await meta.DeployAsync(privateKey, null, VersionOrigins.System, cancellation);
 
         return true;
     }

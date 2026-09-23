@@ -56,16 +56,16 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
 
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {actions}
-          <Link to="/guide" className="btn-ghost hidden min-[360px]:inline-flex">
-            Guide
-          </Link>
-
           <Link to="/build" className="btn-ghost whitespace-nowrap max-[359px]:!px-3">
             Build one
           </Link>
 
           <Link to="/agentic-coding" className="btn-ghost hidden sm:inline-flex">
             For agents
+          </Link>
+
+          <Link to="/docs" className="btn-ghost hidden min-[360px]:inline-flex">
+            Docs
           </Link>
 
           <ExamplesMenu />

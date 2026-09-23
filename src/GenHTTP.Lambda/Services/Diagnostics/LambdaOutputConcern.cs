@@ -33,7 +33,7 @@ public sealed class LambdaOutputConcern(IHandler content, LogBook book, int most
             return await content.HandleAsync(request);
         }
 
-        using (LambdaOutput.Enter(new OutputScope(lambda.PublicKey, book, most)))
+        using (LambdaOutput.Enter(new OutputScope(lambda.PublicKey, book, most, lambda.Id)))
         {
             return await content.HandleAsync(request);
         }

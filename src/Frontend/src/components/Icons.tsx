@@ -135,6 +135,18 @@ export const IconKey = (p: IconProps) => (
   <Svg {...p}><circle cx="8" cy="12" r="4" /><path d="M12 12h9M17 12v4M20 12v3" /></Svg>
 );
 
+export const IconDots = (p: IconProps) => (
+  <Svg {...p}><path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth={3} /></Svg>
+);
+
+export const IconInfo = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5M12 7.5v.01" /></Svg>
+);
+
+export const IconUpload = (p: IconProps) => (
+  <Svg {...p}><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></Svg>
+);
+
 export const IconSpark = (p: IconProps) => (
   <Svg {...p}><path d="M12 3.5 13.8 9l5.7 1.8-5.7 1.8L12 18.5l-1.8-5.9L4.5 10.8 10.2 9Z" /></Svg>
 );

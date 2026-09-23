@@ -34,6 +34,7 @@ public static class ApiLayout
                             .Add(Resource<DeploymentResource>())
                             .Add(Resource<FileResource>())
                             .Add(Resource<CodeResource>())
+                            .Add(Resource<MonitoringResource>())
                             .AddScalar(title: "GenHTTP Lambda API")
                             .AddOpenApi()
                             .Add(ErrorHandler.From(new ApiErrorMapper()));

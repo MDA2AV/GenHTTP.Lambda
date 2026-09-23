@@ -231,7 +231,7 @@ export function AgenticCoding() {
 
       <div className="mt-10 flex flex-wrap items-center gap-3">
         <Link to="/build" className="btn btn-primary">Have one built for you</Link>
-        <Link to="/guide" className="btn btn-ghost">Or read how it works</Link>
+        <Link to="/docs" className="btn btn-ghost">Or read how it works</Link>
       </div>
     </main>
   );

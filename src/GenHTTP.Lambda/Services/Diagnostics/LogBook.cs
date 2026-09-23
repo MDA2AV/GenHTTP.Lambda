@@ -187,9 +187,10 @@ public sealed class LogBook
     /// repeats: the parts that identify it, without the parts that merely
     /// measure it. Nothing means never fold this line.
     /// </param>
+    /// <param name="lambdaId">The identity of the lambda named by <paramref name="lambda"/></param>
     public long Append(string level, string source, string? lambda, string text, string? detail = null,
                        string? client = null, string? agent = null, string? country = null, string? place = null,
-                       string? folding = null)
+                       string? folding = null, long? lambdaId = null)
     {
         var repeats = 1;
 
@@ -218,7 +219,7 @@ public sealed class LogBook
              */
             var key = folding == null
                 ? null
-                : $"{level}\u0000{where}\u0000{lambda}\u0000{client}\u0000{folding}";
+                : $"{level}\u0000{where}\u0000{lambda}\u0000{lambdaId}\u0000{client}\u0000{folding}";
 
             Run? open = null;
 
@@ -232,7 +233,7 @@ public sealed class LogBook
                         // newest is kept so closing it says something current
                         run.Held++;
                         run.Last = at;
-                        run.Latest = new LogLine(0, at, level, where, lambda, said, trace, client, agent, country, place, 1);
+                        run.Latest = new LogLine(0, at, level, where, lambda, said, trace, client, agent, country, place, 1, lambdaId);
 
                         return 0;
                     }
@@ -261,7 +262,7 @@ public sealed class LogBook
                 Drop();
             }
 
-            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats);
+            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats, lambdaId);
 
             if (open != null)
             {
@@ -303,8 +304,12 @@ public sealed class LogBook
     /// The lines, the sequence to ask from next, and how many fell out of the
     /// ring or over the limit before the reader got to them.
     /// </returns>
+    /// <param name="lambdaId">
+    /// Only the lines of the lambda with this identity, if given. What an
+    /// owner's view reads by, since a public key can change hands.
+    /// </param>
     public (IReadOnlyList<LogLine> Lines, long Cursor, int Missed) Read(long since, string? lambda, LogLevel minimum, int limit,
-                                                                        string? client = null)
+                                                                        string? client = null, long? lambdaId = null)
     {
         var wanted = Math.Clamp(limit, 1, 50_000);
 
@@ -336,6 +341,11 @@ public sealed class LogBook
                 }
 
                 if (lambda != null && !string.Equals(line.Lambda, lambda, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (lambdaId != null && line.LambdaId != lambdaId)
                 {
                     continue;
                 }

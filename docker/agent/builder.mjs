@@ -87,7 +87,7 @@ const TOKEN = process.env.AGENT_TOKEN ?? '';
 const ALLOW = [
   'mcp__genhttp__platform_guide', 'mcp__genhttp__list_examples', 'mcp__genhttp__read_example',
   'mcp__genhttp__create_lambda', 'mcp__genhttp__write_code', 'mcp__genhttp__check_code',
-  'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda',
+  'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda', 'mcp__genhttp__read_logs',
   'mcp__genhttp__upload_file', 'mcp__genhttp__list_files', 'mcp__genhttp__delete_file'
 ];
 
@@ -116,9 +116,12 @@ How to work:
    keep the parts they did not mention, and keep anything the application has
    stored: rewriting a file that reads saved data into one that reads it
    differently throws away what people have already put in.
-3. Call write_code with the full set of files. Then check_code, and fix
+3. Call write_code with the full set of files. Pass what they asked for,
+   word for word, as prompt, and one line on what this version changes as
+   change - they read both in the version history. Then check_code, and fix
    whatever it complains about.
-4. Call deploy. The change is not live until you do.
+4. Call deploy. The change is not live until you do. If there is time, call
+   read_logs to see that it answers without errors.
 
 If what they asked for does not make sense for this application, do the
 closest reasonable thing and say so at the end.
@@ -140,10 +143,13 @@ How to work:
    key that suits what they asked for.
 3. Write the code with write_code. One page that works beats four that do
    not. If it wants a front end, serve it and make it look deliberate rather
-   than default.
+   than default. Pass what they asked for, word for word, as prompt, and one
+   line on what the version does as change - they read both in the version
+   history, and every later write_code gets its own.
 4. Call check_code and fix whatever it complains about. Do not deploy code
    that does not compile.
-5. Call deploy. Nothing is online until you do.
+5. Call deploy. Nothing is online until you do. If there is time, call
+   read_logs to see that it answers without errors.
 
 You have about ten minutes and then you are stopped, wherever you have got
 to. Aim at something that works end to end within that rather than something
@@ -561,6 +567,7 @@ const WORDS = {
   check_code: 'Compiling it',
   deploy: 'Putting it online',
   read_lambda: 'Checking what is there',
+  read_logs: 'Checking how it answers',
   upload_file: 'Uploading a file',
   list_files: 'Listing the files',
   delete_file: 'Removing a file'

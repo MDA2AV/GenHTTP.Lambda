@@ -9,34 +9,70 @@ interface Props {
   language: string;
   theme: Theme;
   diagnostics: Diagnostic[];
+  /**
+   * Which document this is. Changing it swaps the document shown rather
+   * than building a new editor, and each document keeps its own undo history,
+   * caret and scroll position for when it is shown again.
+   */
+  path?: string;
   reveal?: { line: number; column: number; nonce: number };
-  onChange: (value: string) => void;
-  onSave: () => void;
+  onChange?: (value: string) => void;
+  onSave?: () => void;
   onDefinition?: (line: number, column: number) => void;
+  /** Shown rather than edited - the files section reads code, it does not change it. */
+  readOnly?: boolean;
 }
 
+const SINGLE = '\u0000single';
+
 /**
- * A thin wrapper around Monaco. The editor keeps its own model, so `value` is
- * only pushed in when it differs - otherwise every keystroke would reset the
- * cursor.
+ * A thin wrapper around Monaco.
+ *
+ * One editor for as long as the component lives, and one model per document
+ * behind it. Building a new editor for every file meant a frame with nothing
+ * in it and a layout pass on every switch, which is what made the page jump -
+ * and threw away the undo history of the file that was left. `value` is only
+ * pushed into the model when it differs, otherwise every keystroke would
+ * reset the caret.
  */
-export function CodeEditor({ value, language, theme, diagnostics, reveal, onChange, onSave, onDefinition }: Props) {
+export function CodeEditor({ value, language, theme, diagnostics, path, reveal, onChange, onSave, onDefinition, readOnly = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const save = useRef(onSave);
   const jump = useRef(onDefinition);
+  const change = useRef(onChange);
+
+  const models = useRef(new Map<string, monaco.editor.ITextModel>());
+  const views = useRef(new Map<string, monaco.editor.ICodeEditorViewState | null>());
+  const shown = useRef<string>('');
 
   save.current = onSave;
   jump.current = onDefinition;
+  change.current = onChange;
+
+  const document = path ?? SINGLE;
+
+  /** The model of a document, made the first time it is shown. */
+  function modelFor(key: string) {
+    let model = models.current.get(key);
+
+    if (!model || model.isDisposed()) {
+      model = monaco.editor.createModel(value, language);
+      models.current.set(key, model);
+    }
+
+    return model;
+  }
 
   useEffect(() => {
     if (!host.current) {
       return;
     }
 
+    shown.current = document;
+
     const instance = monaco.editor.create(host.current, {
-      value,
-      language,
+      model: modelFor(document),
       theme: theme === 'dark' ? 'lambda-dark' : 'lambda-light',
       automaticLayout: true,
       minimap: { enabled: false },
@@ -54,23 +90,24 @@ export function CodeEditor({ value, language, theme, diagnostics, reveal, onChan
       // the grammar colours every keystroke, the compiler refines it on a pause
       'semanticHighlighting.enabled': true,
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
+      readOnly,
+      domReadOnly: readOnly,
     });
 
     editor.current = instance;
 
-    const changed = instance.onDidChangeModelContent(() => onChange(instance.getValue()));
+    const changed = instance.onDidChangeModelContent(() => change.current?.(instance.getValue()));
 
-    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => save.current());
+    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => save.current?.());
 
     /*
      * Control-click, and F12, go to where a name was declared.
      *
-     * Done by hand rather than through a definition provider because the
-     * editor keeps one model and swaps it as the file changes: Monaco's own
-     * navigation wants a model per file behind a URI, and there is no second
-     * model for it to open. Asking the server where the name was declared and
-     * then switching files through the page that owns them does the same
-     * thing without pretending to be a workspace.
+     * Done by hand rather than through a definition provider: Monaco's own
+     * navigation wants every file registered behind a URI it can open, and
+     * the page that owns the files already knows how to switch between them.
+     * Asking the server where the name was declared and switching through
+     * that page does the same thing without pretending to be a workspace.
      */
     const clicked = instance.onMouseDown((event) => {
       const held = event.event.ctrlKey || event.event.metaKey;
@@ -102,15 +139,42 @@ export function CodeEditor({ value, language, theme, diagnostics, reveal, onChan
       },
     });
 
+    const held = models.current;
+
     return () => {
       clicked.dispose();
       changed.dispose();
       instance.dispose();
       editor.current = null;
+
+      for (const model of held.values()) {
+        model.dispose();
+      }
+
+      held.clear();
     };
     // the editor is created once and driven through its own API afterwards
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // another document: the one being left remembers where it was, the one
+  // being shown is put back where it was left
+  useEffect(() => {
+    const instance = editor.current;
+
+    if (!instance || shown.current === document) {
+      return;
+    }
+
+    views.current.set(shown.current, instance.saveViewState());
+
+    instance.setModel(modelFor(document));
+    instance.restoreViewState(views.current.get(document) ?? null);
+
+    shown.current = document;
+    // modelFor reads the props of this render, which is the point
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document]);
 
   useEffect(() => {
     const instance = editor.current;
@@ -118,21 +182,19 @@ export function CodeEditor({ value, language, theme, diagnostics, reveal, onChan
     if (instance && instance.getValue() !== value) {
       instance.setValue(value);
     }
-  }, [value]);
+  }, [value, document]);
 
   useEffect(() => {
     monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
   }, [theme]);
 
-  // one model outlives a change of file, so the grammar has to be moved with
-  // it or a page of markup goes on being coloured as if it were C#
   useEffect(() => {
     const model = editor.current?.getModel();
 
-    if (model) {
+    if (model && model.getLanguageId() !== language) {
       monaco.editor.setModelLanguage(model, language);
     }
-  }, [language]);
+  }, [language, document]);
 
   useEffect(() => {
     const model = editor.current?.getModel();
@@ -140,7 +202,7 @@ export function CodeEditor({ value, language, theme, diagnostics, reveal, onChan
     if (model) {
       showDiagnostics(model, diagnostics);
     }
-  }, [diagnostics]);
+  }, [diagnostics, document]);
 
   useEffect(() => {
     if (!reveal || !editor.current) {
