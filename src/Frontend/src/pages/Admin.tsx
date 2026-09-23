@@ -7,6 +7,7 @@ import { Dialog } from '../components/Dialog';
 import { Locked } from '../components/Locked';
 import { IconSpinner, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { usePageMeta } from '../meta';
 
 /**
  * Every lambda on the installation.
@@ -15,6 +16,8 @@ import { useToast } from '../components/Toast';
  * the server figures together.
  */
 export function Admin() {
+  usePageMeta({ title: 'Lambdas', index: false });
+
   const toast = useToast();
 
   const [token, setToken] = useAdminToken();

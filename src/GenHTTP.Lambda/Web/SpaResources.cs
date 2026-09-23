@@ -38,12 +38,16 @@ public sealed class SpaResources
 
     private string AssetDirectory { get; }
 
+    private SiteMeta Meta { get; }
+
     #endregion
 
     #region Initialization
 
-    public SpaResources(LambdaOptions options, ILogger<SpaResources> logger)
+    public SpaResources(LambdaOptions options, SiteMeta meta, ILogger<SpaResources> logger)
     {
+        Meta = meta;
+
         Root = options.WebRoot;
         IndexFile = Path.Combine(Root, "index.html");
         AssetDirectory = Path.Combine(Root, "assets");
@@ -77,6 +81,7 @@ public sealed class SpaResources
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .ServerSideRouting()
                                     .Add(RangeSupport.Create())
+                                    .Add(new SiteMetaConcernBuilder(Meta, ReadIndexAsync))
                                     .Add(CacheControl.NoCache());
     }
 
@@ -100,7 +105,7 @@ public sealed class SpaResources
     /// </summary>
     public async ValueTask<IResponse> RenderAsync(IRequest request, ResponseStatus status)
     {
-        var markup = Available ? await File.ReadAllTextAsync(IndexFile) : PlaceholderMarkup;
+        var markup = Available ? await ReadIndexAsync() : PlaceholderMarkup;
 
         return request.Respond()
                       .Status(status)
@@ -108,6 +113,8 @@ public sealed class SpaResources
                       .Header("Cache-Control", "no-cache")
                       .Build();
     }
+
+    private async ValueTask<string> ReadIndexAsync() => await File.ReadAllTextAsync(IndexFile);
 
     /// <summary>
     /// Whether the client would rather see a page than a JSON document.

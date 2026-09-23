@@ -5,6 +5,7 @@ import { CopyField } from '../components/CopyField';
 import { ReportAbuse } from '../components/ReportAbuse';
 import { IconChat, IconChevronDown, IconMail } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
+import { PAGES, usePageMeta } from '../meta';
 
 const CONTACT_MAIL = 'solutions@genhttp.dev';
 const DISCORD = 'https://discord.gg/PRkwKrnrB4';
@@ -57,6 +58,8 @@ const AGENTS = [
 ];
 
 export function Landing() {
+  usePageMeta(PAGES['/']);
+
   const location = useLocation();
   const rest = useRef<HTMLDivElement>(null);
   const agents = useRef<HTMLDivElement>(null);

@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Describe an app to an AI agent and get it online with a link you can share. Use the agent built in or bring your own - Claude, Claude Code or anything that speaks MCP - and keep changing the app afterwards. Free, no account, nothing to install." />
     <meta name="keywords" content="agentic coding platform, build an app with ai, claude mcp server, host ai generated app, no code app builder, vibe coding hosting, share an app with a link, poll, guestbook, leaderboard" />
-    <!-- set rel="canonical" and og:url here once the public address is fixed;
-         a canonical pointing at the wrong host is worse than none at all -->
+    <!-- the server rewrites the title and the tags below for each public page
+         (src/pages.json) and adds rel="canonical" and og:url when
+         LAMBDA_PUBLIC_URL is set - a canonical pointing at the wrong host is
+         worse than none at all -->
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Describe an app, your agent puts it online" />

@@ -1,0 +1,22 @@
+{
+  "/": {
+    "title": "Agentic Coding Platform",
+    "description": "Describe an app to an AI agent and get it online with a link you can share. Use the agent built in or bring your own - Claude, Claude Code or anything that speaks MCP. Free, no account, nothing to install."
+  },
+  "/build": {
+    "title": "Build an App with AI",
+    "description": "Say what you want and an AI agent builds it, puts it online and gives you a link to share. Polls, guestbooks, leaderboards and more - free, no account."
+  },
+  "/agentic-coding": {
+    "title": "Hosting for Your Coding Agent",
+    "description": "Give Claude, Claude Code or any MCP client one address and it can write a web app, put it online and hand you back a shareable link. No account, no server, nothing to install."
+  },
+  "/docs": {
+    "title": "How It Works",
+    "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."
+  },
+  "/terms": {
+    "title": "Terms of Service",
+    "description": "The rules for using GenHTTP Lambda: what may not be hosted here, how long apps stay online and how abuse is handled."
+  }
+}

@@ -5,6 +5,7 @@ import { ApiError, api, type Activity, type Telemetry, type TelemetrySample } fr
 import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
 import { Locked } from '../components/Locked';
+import { usePageMeta } from '../meta';
 
 /** What each kind of event is called on screen. */
 const KINDS: Record<string, string> = {
@@ -50,6 +51,8 @@ const GEN1: [string, string] = ['#4285f4', '#669df6'];
 const GEN2: [string, string] = ['#174ea6', '#1a73e8'];
 
 export function Stats({ dark }: { dark: boolean }) {
+  usePageMeta({ title: 'Server', index: false });
+
   const [token] = useAdminToken();
   const [denied, setDenied] = useState(false);
   const [data, setData] = useState<Telemetry | null>(null);

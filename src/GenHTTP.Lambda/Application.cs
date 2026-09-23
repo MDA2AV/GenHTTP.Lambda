@@ -112,6 +112,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<BuildService>();
         services.AddSingleton<EventReader>();
 
+        services.AddSingleton<SiteMeta>();
         services.AddSingleton<SpaResources>();
 
         services.AddSingleton<LambdaTelemetry>();

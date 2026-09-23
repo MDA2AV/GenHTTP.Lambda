@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { api, ApiError } from '../api';
 import { CopyField } from '../components/CopyField';
+import { PAGES, usePageMeta } from '../meta';
 
 /**
  * One text box.
@@ -36,6 +37,8 @@ const IDEAS = [
 ];
 
 export function Build() {
+  usePageMeta(PAGES['/build']);
+
   const [prompt, setPrompt] = useState('');
   const [origin, setOrigin] = useState('');
   const [state, setState] = useState<'idle' | 'working' | 'done' | 'failed'>('idle');
