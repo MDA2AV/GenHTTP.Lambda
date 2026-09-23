@@ -39,8 +39,11 @@ export function Reveal({
           observer.disconnect();
         }
       },
-      // a little before the edge, so it has arrived by the time it is read
-      { rootMargin: '0px 0px -12% 0px' },
+      // a little before the edge, so it has arrived by the time it is read -
+      // and everything above the view counts too, because a fast fling can
+      // carry an element from below the screen to above it without it ever
+      // being reported as inside, which left it invisible for good in Safari
+      { rootMargin: '100000px 0px -12% 0px' },
     );
 
     observer.observe(element);

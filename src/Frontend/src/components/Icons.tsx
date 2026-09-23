@@ -87,6 +87,14 @@ export const IconSun = (p: IconProps) => (
 
 export const IconMoon = (p: IconProps) => <Svg {...p}><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" /></Svg>;
 
+export const IconMail = (p: IconProps) => (
+  <Svg {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m4 7 8 6 8-6" /></Svg>
+);
+
+export const IconChat = (p: IconProps) => (
+  <Svg {...p}><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /><path d="M9 11h.01M12 11h.01M15 11h.01" /></Svg>
+);
+
 export const IconPlay = (p: IconProps) => <Svg {...p}><path d="M7 4.5v15l13-7.5Z" /></Svg>;
 
 export const IconStop = (p: IconProps) => <Svg {...p}><rect x="6" y="6" width="12" height="12" rx="2" /></Svg>;

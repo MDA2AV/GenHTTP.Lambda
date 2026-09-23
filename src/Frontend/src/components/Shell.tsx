@@ -42,7 +42,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
           moved || fixed ? 'bg-white/70 backdrop-blur-md dark:bg-ink-950/70' : 'bg-transparent'
         }`}
       >
-        <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5 whitespace-nowrap font-semibold tracking-tight">
           <IconLogo />
           {/* the name is the mark plus the letter the thing is named after */}
           <span>
@@ -54,13 +54,13 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
           </span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {actions}
-          <Link to="/guide" className="btn-ghost">
+          <Link to="/guide" className="btn-ghost hidden min-[360px]:inline-flex">
             Guide
           </Link>
 
-          <Link to="/build" className="btn-ghost hidden sm:inline-flex">
+          <Link to="/build" className="btn-ghost whitespace-nowrap max-[359px]:!px-3">
             Build one
           </Link>
 
