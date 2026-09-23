@@ -20,9 +20,10 @@ These, and nothing else:
 | `platform_guide` | how lambdas work here - read it first |
 | `list_examples`, `read_example` | worked code to copy from |
 | `create_lambda` | claims an address and a private key |
-| `write_code` | puts source into it |
+| `write_code` | puts source into it, with a `prompt` and a `change` note saying why |
 | `check_code` | compiles without deploying |
 | `deploy` | makes it live |
+| `read_logs` | how the live lambda is answering, errors with stack traces |
 | `read_lambda`, `list_files`, `upload_file`, `delete_file` | the rest of one |
 
 There is no shell, no file access, no editor, no search, no fetching pages,

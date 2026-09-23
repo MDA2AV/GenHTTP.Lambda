@@ -19,7 +19,8 @@ interface Part {
 const PARTS: Part[] = [
   { id: 'what', title: 'What a lambda is' },
   { id: 'first', title: 'Your first one' },
-  { id: 'editor', title: 'Around the editor' },
+  { id: 'editor', title: 'The control center' },
+  { id: 'why', title: 'Saying why' },
   { id: 'files', title: 'More than one file' },
   { id: 'page', title: 'Serving a page' },
   { id: 'spa', title: 'A front end, step by step' },
@@ -120,12 +121,14 @@ export function Guide() {
                   is the only way back in, so keep it. Nobody can recover it for you.
                 </>,
                 <>
-                  You land in the editor with a small REST service already written. Read it or
-                  delete it; it is only a starting point.
+                  You land in its control center, with a small REST service already written as the
+                  first version. It is only a starting point.
                 </>,
                 <>
-                  Press <b>Check</b>. It compiles without storing anything and tells you what the
-                  compiler thinks, with the file and line of each complaint.
+                  Hand the editor key to an agent and tell it what to build - it writes new
+                  versions through <Link to="/agentic-coding" className="text-accent-500 hover:underline">MCP</Link>.
+                  Or open <b>Code</b> and write it yourself: <b>Check</b> compiles without
+                  storing anything and tells you what the compiler thinks, file and line.
                 </>,
                 <>
                   Press <b>Deploy</b>. Now it is online. Nothing is reachable before that, and
@@ -135,23 +138,61 @@ export function Guide() {
             />
           </Section>
 
-          <Section id="editor" title="Around the editor">
+          <Section id="editor" title="The control center">
+            <p>
+              The editor link opens a control center rather than a text box: most of the code here is
+              written by agents, so the first thing on the screen is how your lambda is doing. The sidebar
+              holds the lambda - whether it is online, its address, and a button when a newer version is
+              waiting to go online - and its sections. Anything done rarely, like changing the address or
+              deleting it, is behind the <b>⋯</b> menu there.
+            </p>
             <Bits
               bits={[
-                ['The tabs', <>Every file of your lambda. <Code>lambda.cs</Code> is the snippet that runs; the rest are yours to name.</>],
-                ['Check', <>Compiles and shows diagnostics. Costs nothing and changes nothing.</>],
-                ['Deploy', <>Builds it and puts it online at your address.</>],
-                ['Storage', <>Everything on disk: the files saved with your code, and the workspace. More on that below.</>],
-                ['Ctrl-click', <>Or <Code>F12</Code> on a name goes to where it was declared, across files.</>],
-                ['Ctrl-S', <>Saves a version without deploying it. Versions can be rolled back.</>],
+                ['Overview', <>Whether it is online, how many requests it had today and how many failed, the latest change, and how much room is left.</>],
+                ['Files', <>The files of a version, and its data - what the lambda saves while it runs. A lock or a globe says whether the public can reach them.</>],
+                ['Versions', <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here.</>],
+                ['Deployments', <>What was online when, and what took it down.</>],
+                ['Stats', <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
+                ['Logs', <>Its requests, what it printed, and the stack trace of anything that went wrong, as it happens.</>],
+                ['Code', <>Writing it by hand. <b>Check</b> compiles, <b>Save</b> makes a version, <b>Deploy</b> puts it online. <Code>Ctrl-S</Code> saves; <Code>F12</Code> goes to a declaration.</>],
               ]}
             />
+            <p>
+              Every section works the same way: its title, an <b>ⓘ</b> that explains it, its actions on the
+              right, and - where it has more than one view - a row of pills underneath. The pills of the code
+              are its files.
+            </p>
+            <Aside>
+              The traffic and the log are held in memory, for watching rather than keeping: a restart of the
+              server begins them again. Versions and the deployment history are stored.
+            </Aside>
+          </Section>
+
+          <Section id="why" title="Saying why">
+            <p>
+              A version is the code, and optionally two notes about it: <b>the prompt</b>, what was asked
+              for in the words it was asked in, and <b>the change</b>, one line on what the version does.
+              They are shown beside the diff in the version history, so the <em>why</em> survives next to
+              the <em>what</em> - for you, and for the next agent that reads the history before changing
+              anything.
+            </p>
+            <Sample code={`POST /api/v1/lambdas/{editorKey}/versions
+{
+  "files": [ { "name": "lambda.cs", "code": "..." } ],
+  "prompt": "a guest book people can sign",
+  "change": "Keeps entries in the workspace so they survive a restart"
+}`} />
+            <p>
+              Agents pass the same two fields to <Code>write_code</Code>. In <b>Code</b>, saving asks
+              for the change. Both are optional; a long prompt is cut at 4000
+              characters and a change at 500 rather than refused.
+            </p>
           </Section>
 
           <Section id="files" title="More than one file">
             <p>
-              Types do not have to sit underneath the code that uses them. Add a file in the tabs
-              and it is compiled beside the snippet, in the same namespace, so nothing has to be
+              Types do not have to sit underneath the code that uses them. In <b>Code</b>, press{' '}
+              <b>+</b> beside the files and it is compiled beside the snippet, in the same namespace, so nothing has to be
               imported to be reached. A name with no extension is taken to be C#.
             </p>
 
@@ -221,7 +262,7 @@ return Content.From(page);`} />
             <Steps
               steps={[
                 <>
-                  In the tabs, press <b>+</b> and type <Code>site/index.html</Code>. A name with a
+                  In <b>Code</b>, press <b>+</b> beside the files and type <Code>site/index.html</Code>. A name with a
                   slash in it puts the file in a folder; a name with an extension is taken as the
                   file it says it is.
                 </>,
@@ -231,9 +272,9 @@ return Content.From(page);`} />
                   the root of what gets served rather than part of the address.
                 </>,
                 <>
-                  For anything that is not text, like an image or a font, open <b>Storage</b>, go into{' '}
-                  <Code>site</Code>, and upload it. A PNG cannot be typed into a text editor, so
-                  that is the only way in.
+                  For anything that is not text, like an image or a font, open a file in{' '}
+                  <Code>site</Code> and press the upload button beside the files: it lands in the same
+                  folder. A PNG cannot be typed into a text editor, so that is the way in.
                 </>,
                 <>
                   In <Code>lambda.cs</Code>, serve the folder:
@@ -259,9 +300,10 @@ return Layout.Create()
 
           <Section id="storage" title="The two places files live">
             <p>
-              Both are in the <b>Storage</b> panel, as two tabs. They behave the same way: a trail
-              back to the top, upload lands where you are, one button makes a folder. They are not
-              the same thing though, and the difference is <em>when each changes</em>.
+              The <b>Files</b> section shows both - the files of a version, and the workspace as{' '}
+              <b>Data</b> - and says which of them the public can reach. Files of the code are changed in{' '}
+              <b>Code</b>; data can be uploaded and deleted in <b>Files</b>. They are not the same thing
+              though, and the difference is <em>when each changes</em>.
             </p>
 
             <div className="overflow-x-auto">
@@ -394,6 +436,13 @@ return Layout.Create().Add("chat", socket);`} />
               There is an MCP endpoint at <Code>/mcp</Code>. Point an agent at it and it can do
               everything the editor does: read the guide, read an example in full, write files,
               compile them, and deploy. It is the same API underneath.
+            </p>
+            <p>
+              It says why as it goes - <Code>write_code</Code> takes the prompt and the change - and
+              it can look at what it deployed: <Code>read_logs</Code> answers with the lambda's recent
+              requests, what it printed and the stack trace of anything it threw, which is how an agent
+              finds out its code works rather than assuming it. You watch the same thing in the
+              control center.
             </p>
             <p>
               <Link to="/#agents" className="text-accent-500 hover:underline">

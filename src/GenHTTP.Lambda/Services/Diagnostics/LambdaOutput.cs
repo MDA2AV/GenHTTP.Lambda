@@ -81,7 +81,7 @@ public static class LambdaOutput
 /// one. The collecting is per request rather than per process because two
 /// lambdas printing at once would otherwise splice into each other.
 /// </remarks>
-public sealed class OutputScope(string? publicKey, LogBook book, int most)
+public sealed class OutputScope(string? publicKey, LogBook book, int most, long? lambdaId = null)
 {
 
     #region Get-/Setters
@@ -91,6 +91,11 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most)
     /// process's own output.
     /// </summary>
     public string? PublicKey { get; } = publicKey;
+
+    /// <summary>
+    /// The identity of that lambda, which is what its owner's view reads by.
+    /// </summary>
+    public long? LambdaId { get; } = lambdaId;
 
     /// <summary>
     /// How many lines one request may contribute before the rest is counted
@@ -193,7 +198,7 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most)
         {
             book.Append("warn", "stdout", PublicKey,
                         $"… this request printed more than {Most} lines; the rest was dropped.",
-                        null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place);
+                        null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place, lambdaId: LambdaId);
 
             return;
         }
@@ -203,7 +208,7 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most)
                     // a print is what it says, so the same print twice is the
                     // same line - which is what folds a reactor faulting over
                     // and over into one line and a count
-                    text);
+                    text, LambdaId);
     }
 
     #endregion

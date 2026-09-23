@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -84,7 +85,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var content = await meta.GetVersionAsync(await meta.RequirePrivateKeyAsync(publicKey), version);
 
-        return new VersionContentResponse(content.Version, content.Created, LambdaSource.Parse(content.Code));
+        return VersionResource.Describe(content);
     }
 
     /// <summary>
@@ -95,7 +96,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     {
         Authorize(request);
 
-        var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey));
+        var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey), ActivationEndings.Admin);
 
         return Summarize(lambda);
     }

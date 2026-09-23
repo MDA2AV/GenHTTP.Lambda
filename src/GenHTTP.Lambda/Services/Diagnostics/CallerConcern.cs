@@ -55,6 +55,21 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
         }
     }
 
+    /// <summary>
+    /// Whether this is an owner's control center asking how their lambda is
+    /// doing, which it does every few seconds for as long as it is open.
+    /// </summary>
+    /// <remarks>
+    /// The same reasoning as the panel's tail, for the same reason: a page
+    /// that polls would otherwise become most of what the log holds.
+    /// </remarks>
+    private static bool Watching(CallerInfo caller)
+        => caller.Method == "GET"
+        && caller.Path.StartsWith("/api/v1/lambdas/", StringComparison.Ordinal)
+        && (caller.Path.EndsWith("/logs", StringComparison.Ordinal)
+         || caller.Path.EndsWith("/traffic", StringComparison.Ordinal)
+         || caller.Path.EndsWith("/summary", StringComparison.Ordinal));
+
     private void Record(CallerInfo caller, IRequest request, IResponse? response, TimeSpan took)
     {
         /*
@@ -67,7 +82,7 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
          * when these lines came from the engine and the suppression was lost
          * when they started coming from here.
          */
-        if (caller.Path.StartsWith("/api/v1/logs", StringComparison.Ordinal))
+        if (caller.Path.StartsWith("/api/v1/logs", StringComparison.Ordinal) || Watching(caller))
         {
             return;
         }
@@ -81,12 +96,15 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
 
         // resolved by a concern below this one, so by the time the answer is
         // on its way back the request knows which lambda it reached
-        book.Append(level, "Requests", request.GetLambda()?.PublicKey,
+        var lambda = request.GetLambda();
+
+        book.Append(level, "Requests", lambda?.PublicKey,
                     $"{caller.Method} {caller.Path} — {status} · {bytes:N0} B · {took.TotalMilliseconds:N2} ms",
                     null, caller.Client, caller.Agent, caller.Country, caller.Place,
                     // what it asked for and what it got back identifies the
                     // line; how many microseconds it took measures it
-                    $"{caller.Method} {caller.Path} {status}");
+                    $"{caller.Method} {caller.Path} {status}",
+                    lambda?.Id);
     }
 
 }

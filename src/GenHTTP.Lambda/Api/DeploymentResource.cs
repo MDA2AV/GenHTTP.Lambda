@@ -2,6 +2,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
@@ -42,7 +43,7 @@ public sealed class DeploymentResource(IMetaService meta)
     [ResourceMethod(Method.Post, "lambdas/:privateKey/deployment/start")]
     public async ValueTask<Result<DeploymentOutcomeResponse>> Start(string privateKey, DeploymentRequest? request)
     {
-        var result = await meta.DeployAsync(privateKey, request?.Version);
+        var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigins.Api);
 
         var payload = new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
 
@@ -53,6 +54,27 @@ public sealed class DeploymentResource(IMetaService meta)
     /// Takes the lambda off the air, keeping its code.
     /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/deployment/stop")]
-    public async ValueTask<LambdaResponse> Stop(string privateKey) => LambdaDescription.Of(await meta.UndeployAsync(privateKey));
+    public async ValueTask<LambdaResponse> Stop(string privateKey)
+        => LambdaDescription.Of(await meta.UndeployAsync(privateKey, ActivationEndings.Stopped));
+
+    /// <summary>
+    /// Every stretch of time the lambda was online, newest first.
+    /// </summary>
+    /// <remarks>
+    /// Which version, who put it up, how long it stayed and what ended it -
+    /// the next deployment, the owner, the sweep that takes down what nobody
+    /// uses, or the operator. The newest entry has no end while it is live.
+    /// </remarks>
+    [ResourceMethod("lambdas/:privateKey/deployment/history")]
+    public async ValueTask<List<ActivationResponse>> History(string privateKey)
+    {
+        var now = DateTime.UtcNow;
+
+        var activations = await meta.GetActivationsAsync(privateKey);
+
+        return activations.Select(a => new ActivationResponse(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy,
+                                                              (long)((a.Ended ?? now) - a.Started).TotalSeconds))
+                          .ToList();
+    }
 
 }

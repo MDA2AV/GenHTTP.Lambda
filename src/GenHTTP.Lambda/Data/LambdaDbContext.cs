@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Data.Entities;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace GenHTTP.Lambda.Data;
 
@@ -16,6 +17,31 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
     public DbSet<DeploymentEntity> Deployments => Set<DeploymentEntity>();
 
     public DbSet<EventEntity> Events => Set<EventEntity>();
+
+    public DbSet<ActivationEntity> Activations => Set<ActivationEntity>();
+
+    /// <summary>
+    /// Every date is written in UTC, and read back as UTC.
+    /// </summary>
+    /// <remarks>
+    /// SQLite keeps a date as text and forgets which zone it was in, so it
+    /// came back unspecified and went out as JSON without a zone - which a
+    /// browser reads as its own local time, and a version saved a minute ago
+    /// in Vienna was shown as two hours old.
+    /// </remarks>
+    protected override void ConfigureConventions(ModelConfigurationBuilder builder)
+    {
+        builder.Properties<DateTime>().HaveConversion<UtcConverter>();
+        builder.Properties<DateTime?>().HaveConversion<NullableUtcConverter>();
+    }
+
+    private sealed class UtcConverter() : ValueConverter<DateTime, DateTime>(
+        value => value,
+        value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+
+    private sealed class NullableUtcConverter() : ValueConverter<DateTime?, DateTime?>(
+        value => value,
+        value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null);
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -49,6 +75,9 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.LambdaId).HasColumnName("lambda_id");
         deployments.Property(d => d.Version).HasColumnName("version");
         deployments.Property(d => d.Created).HasColumnName("created");
+        deployments.Property(d => d.Prompt).HasColumnName("prompt");
+        deployments.Property(d => d.Change).HasColumnName("change");
+        deployments.Property(d => d.Origin).HasColumnName("origin");
 
         deployments.HasIndex(d => new { d.LambdaId, d.Version }).IsUnique();
 
@@ -66,6 +95,27 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
         events.HasIndex(e => e.Occurred);
         events.HasIndex(e => new { e.Kind, e.Occurred });
+
+        var activations = builder.Entity<ActivationEntity>();
+
+        activations.ToTable("activations");
+
+        activations.HasKey(a => a.Id);
+
+        activations.Property(a => a.Id).HasColumnName("id");
+        activations.Property(a => a.LambdaId).HasColumnName("lambda_id");
+        activations.Property(a => a.Version).HasColumnName("version");
+        activations.Property(a => a.Started).HasColumnName("started");
+        activations.Property(a => a.Origin).HasColumnName("origin");
+        activations.Property(a => a.Ended).HasColumnName("ended");
+        activations.Property(a => a.EndedBy).HasColumnName("ended_by");
+
+        activations.HasIndex(a => new { a.LambdaId, a.Started });
+
+        activations.HasOne(a => a.Lambda)
+                   .WithMany()
+                   .HasForeignKey(a => a.LambdaId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

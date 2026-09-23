@@ -75,13 +75,17 @@ path.
 | `POST /lambdas`                                       | creates a lambda                          |
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key), removes it      |
 | `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
-| `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one           |
+| `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `prompt` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
 | `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
 | `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
 | `POST /lambdas/:privateKey/versions/changes`          | changes some files of the newest version  |
 | `GET /lambdas/:privateKey/deployment`                 | what is online, and until when            |
 | `POST /lambdas/:privateKey/deployment/start` / `stop` | puts a version online, takes it off       |
+| `GET /lambdas/:privateKey/deployment/history`         | every stretch it was online, and what ended it |
+| `GET /lambdas/:privateKey/summary`                    | the dashboard: state, traffic, problems, storage |
+| `GET /lambdas/:privateKey/traffic`                    | requests by minute and quarter hour, statuses, paths |
+| `GET /lambdas/:privateKey/logs`                       | its own log, followed with `?since=`; no visitor addresses |
 | `GET /lambdas/:privateKey/files`                      | lists the workspace                       |
 | `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`)  |
 | `PUT /lambdas/:privateKey/folders/:path`              | makes a folder                            |
@@ -353,10 +357,16 @@ https://genhttp.dev/mcp
 ```
 
 The tools are the shape of the job: `create_lambda`, `write_code`, `check_code`,
-`deploy`, `read_lambda`, and `list_examples` / `read_example` for reading
-something that already works. `platform_guide` is the one to call first - it
-says what a snippet has to return, what is imported, what is refused, and the
+`deploy`, `read_lambda`, `read_logs`, and `list_examples` / `read_example` for
+reading something that already works. `platform_guide` is the one to call first -
+it says what a snippet has to return, what is imported, what is refused, and the
 handful of things that catch people out.
+
+`write_code` takes an optional `prompt` (what was asked for) and `change` (one
+line on what the version does). They are kept with the version and shown next
+to its diff in the control center, and `read_lambda` hands the recent history
+back so the next agent can read why before it changes anything. `read_logs`
+lets an agent see how what it deployed is answering, stack traces included.
 
 Nothing is created until `acceptTerms` is true, and the editor key that comes
 back is the only way into what was made. There is no session and nothing is

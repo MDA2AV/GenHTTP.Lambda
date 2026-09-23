@@ -35,12 +35,49 @@ public sealed record LambdaPage(
 /// <summary>
 /// A stored version of the code of a lambda.
 /// </summary>
-public sealed record LambdaVersionInfo(int Version, DateTime Created);
+/// <param name="Prompt">What was asked for, where whoever saved it said</param>
+/// <param name="Change">What it changed, in a line</param>
+/// <param name="Origin">Where it came from: template, api or agent</param>
+public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Prompt = null, string? Change = null, string? Origin = null);
 
 /// <summary>
 /// A stored version, including the code itself.
 /// </summary>
-public sealed record LambdaVersionContent(int Version, DateTime Created, string Code);
+public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Prompt = null, string? Change = null, string? Origin = null);
+
+/// <summary>
+/// Why a version was written, as whoever wrote it tells it.
+/// </summary>
+/// <remarks>
+/// Both parts are optional and neither is checked against the code: they are
+/// the account of the author, kept beside what the author did. The origin is
+/// not theirs to give - it is filled in by the door the version came through.
+/// </remarks>
+/// <param name="Prompt">The request the version answers, in the words it was asked in</param>
+/// <param name="Change">What the version changed, in a line</param>
+/// <param name="Origin">Which door it came through</param>
+public sealed record VersionNote(string? Prompt = null, string? Change = null, string? Origin = null)
+{
+
+    /// <summary>
+    /// How long a prompt may be before the rest of it is cut.
+    /// </summary>
+    public const int MaxPrompt = 4000;
+
+    /// <summary>
+    /// How long the line about the change may be.
+    /// </summary>
+    public const int MaxChange = 500;
+
+}
+
+/// <summary>
+/// One stretch of time a version was online.
+/// </summary>
+/// <param name="Origin">Who put it online: api, agent or admin</param>
+/// <param name="Ended">When it went offline, or nothing while it is online</param>
+/// <param name="EndedBy">replaced, stopped, expired or admin</param>
+public sealed record LambdaActivation(int Version, DateTime Started, string? Origin, DateTime? Ended, string? EndedBy);
 
 /// <summary>
 /// A lambda that has been looked up by its public key and is ready to run.

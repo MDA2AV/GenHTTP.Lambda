@@ -2,9 +2,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
 
 namespace GenHTTP.Lambda.Api.Mcp;
@@ -21,7 +25,7 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// Every tool answers with an object rather than prose. A model reads the text
 /// and a program reads the structured copy, and both are the same thing.
 /// </remarks>
-public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, LambdaOptions options)
+public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
 {
 
     #region Catalogue
@@ -46,13 +50,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
              }),
 
         Tool("write_code",
-             "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
+             "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. Say why with prompt and change - the owner reads them in the version history. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
              new JsonObject
              {
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key from create_lambda."),
+                     ["prompt"] = Field("string", $"What you were asked to do, in the words of whoever asked - the request this version answers. Kept with the version so the owner can see why it exists. Optional, up to {VersionNote.MaxPrompt} characters."),
+                     ["change"] = Field("string", $"What this version changes, in one line written for the owner - 'Adds a leaderboard that keeps the ten best scores', not 'updated lambda.cs'. Optional, up to {VersionNote.MaxChange} characters."),
                      ["files"] = new JsonObject
                      {
                          ["type"] = "array",
@@ -82,6 +88,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key."),
+                     ["prompt"] = Field("string", $"What you were asked to do, in the words of whoever asked. Kept with the version. Optional, up to {VersionNote.MaxPrompt} characters."),
+                     ["change"] = Field("string", $"What this version changes, in one line written for the owner. Optional, up to {VersionNote.MaxChange} characters."),
                      ["files"] = new JsonObject
                      {
                          ["type"] = "array",
@@ -167,7 +175,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
              }),
 
         Tool("read_lambda",
-             "A lambda's status (online version, latest version, expiry) and the files of one version.",
+             "A lambda's status (online version, latest version, expiry), the recent versions with what each was asked for and changed, and the files of one version. Read the history before changing what you did not write.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -175,6 +183,21 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  {
                      ["privateKey"] = Field("string", "The editor key."),
                      ["version"] = Field("integer", "Defaults to the newest.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
+             }),
+
+        Tool("read_logs",
+             "What a deployed lambda has been doing: its recent requests and how they were answered, what it printed, the errors it threw with their stack traces, and how much traffic it has had in the last hour and day. Call it after deploying to see that it works, and first when something is reported broken.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["level"] = Field("string", "The lowest level worth reading: 'info' for everything, 'warn' for problems, 'error' for failures. Left out, 'info'."),
+                     ["since"] = Field("integer", "The cursor a previous call answered with, to read only what is new since then."),
+                     ["limit"] = Field("integer", "At most this many lines, the newest. Left out, 100.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -260,6 +283,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                 "check_code" => await CheckAsync(arguments),
                 "deploy" => await DeployAsync(arguments, origin),
                 "read_lambda" => await ReadAsync(arguments, origin),
+                "read_logs" => await LogsAsync(arguments),
                 "upload_file" => await UploadAsync(arguments),
                 "list_files" => await FilesAsync(arguments),
                 "delete_file" => await RemoveAsync(arguments),
@@ -350,7 +374,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
     {
         var privateKey = Required(arguments, "privateKey");
 
-        var version = await meta.SaveAsync(privateKey, LambdaSource.Serialize(files));
+        var note = new VersionNote(Text(arguments, "prompt"), Text(arguments, "change"), VersionOrigins.Agent);
+
+        var version = await meta.SaveAsync(privateKey, LambdaSource.Serialize(files), note);
+
+        // said only when it is missing, and as a request rather than a
+        // refusal: the code matters more than the note about it
+        var reminder = version.Change == null
+            ? "Pass change (one line on what the version does) and prompt (what you were asked) next time; the owner reads them in the version history."
+            : null;
 
         if (Flag(arguments, "deploy") != true)
         {
@@ -358,11 +390,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             {
                 ok = true,
                 version = version.Version,
-                next = "deploy"
+                next = "deploy",
+                note = reminder
             });
         }
 
-        return await DeployAsync(privateKey, version.Version, origin);
+        return await DeployAsync(privateKey, version.Version, origin, reminder);
     }
 
     private async ValueTask<JsonObject> CheckAsync(JsonObject arguments)
@@ -477,9 +510,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
     private ValueTask<JsonObject> DeployAsync(JsonObject arguments, string origin)
         => DeployAsync(Required(arguments, "privateKey"), Number(arguments, "version"), origin);
 
-    private async ValueTask<JsonObject> DeployAsync(string privateKey, int? version, string origin)
+    private async ValueTask<JsonObject> DeployAsync(string privateKey, int? version, string origin, string? reminder = null)
     {
-        var result = await meta.DeployAsync(privateKey, version);
+        var result = await meta.DeployAsync(privateKey, version, VersionOrigins.Agent);
 
         if (!result.Success)
         {
@@ -500,9 +533,65 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             version = lambda.ActiveVersion,
             onlineUntil = lambda.DeployedUntil,
-            note = "Deploying again extends onlineUntil."
+            note = reminder ?? "Deploying again extends onlineUntil. Once it has been called, read_logs shows how it answered."
         });
     }
+
+    /// <summary>
+    /// What a deployed lambda has been saying and how much it is used.
+    /// </summary>
+    /// <remarks>
+    /// An agent that deploys and never looks has no way to tell working code
+    /// from code that throws on the first request. This is the same view the
+    /// owner gets in the control center, with the same thing left out: who
+    /// the visitors were.
+    /// </remarks>
+    private async ValueTask<JsonObject> LogsAsync(JsonObject arguments)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        var id = await meta.GetIdAsync(privateKey)
+              ?? throw LambdaException.NotFound("There is no lambda with that editor key.");
+
+        var lambda = await meta.GetAsync(privateKey);
+
+        var since = arguments.TryGetPropertyValue("since", out var cursor) && cursor is JsonValue value && value.TryGetValue<long>(out var from)
+                  ? from
+                  : 0;
+
+        var (lines, next, missed) = book.Read(since, null, Level(Text(arguments, "level")),
+                                              Math.Clamp(Number(arguments, "limit") ?? 100, 1, 1000), lambdaId: id);
+
+        var traffic = telemetry.Describe(id);
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            online = lambda?.ActiveVersion != null,
+            version = lambda?.ActiveVersion,
+            traffic = new
+            {
+                lastHour = new { requests = traffic.Minutes.Sum(m => m.Requests), serverErrors = traffic.Minutes.Sum(m => m.Failed), clientErrors = traffic.Minutes.Sum(m => m.Rejected) },
+                lastDay = new { requests = traffic.Quarters.Sum(m => m.Requests), serverErrors = traffic.Quarters.Sum(m => m.Failed), clientErrors = traffic.Quarters.Sum(m => m.Rejected) },
+                countedSince = traffic.Since
+            },
+            lines = lines.Select(l => new { l.At, l.Level, l.Source, l.Text, detail = l.Detail, repeats = l.Repeats > 1 ? l.Repeats : (int?)null }),
+            cursor = next,
+            missed,
+            capturingOutput = options.CaptureLambdaOutput,
+            note = lines.Count == 0
+                ? "Nothing yet. Requests appear here once somebody calls the lambda - call its public address and read again."
+                : "Requests are the source 'Requests'; what the lambda printed is 'stdout' and 'stderr'; a handler that threw appears with its stack trace in detail. Pass cursor as since to read only what is new."
+        });
+    }
+
+    private static Microsoft.Extensions.Logging.LogLevel Level(string? level) => level?.Trim().ToLowerInvariant() switch
+    {
+        "debug" => Microsoft.Extensions.Logging.LogLevel.Debug,
+        "warn" or "warning" => Microsoft.Extensions.Logging.LogLevel.Warning,
+        "error" => Microsoft.Extensions.Logging.LogLevel.Error,
+        _ => Microsoft.Extensions.Logging.LogLevel.Information
+    };
 
     private async ValueTask<JsonObject> ReadAsync(JsonObject arguments, string origin)
     {
@@ -515,10 +604,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
 
         IReadOnlyList<LambdaFile> files = [];
 
+        LambdaVersionContent? content = null;
+
         if (version is { } wanted)
         {
-            files = LambdaSource.Parse((await meta.GetVersionAsync(privateKey, wanted)).Code);
+            content = await meta.GetVersionAsync(privateKey, wanted);
+
+            files = LambdaSource.Parse(content.Code);
         }
+
+        var history = await meta.GetVersionsAsync(privateKey);
 
         return McpProtocol.Say(new
         {
@@ -531,6 +626,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             lambda.DeployedUntil,
             lambda.KeptUntil,
             version,
+            prompt = content?.Prompt,
+            change = content?.Change,
+            // the why of the recent past, so a change made on top of somebody
+            // else's work can follow what they were trying to do - the one line
+            // each, since a prompt can be a page and this is read every time
+            history = history.Take(10).Select(v => new { v.Version, v.Created, v.Change, v.Origin }),
             files = files.Select(f => new { f.Name, f.Code })
         });
     }
@@ -644,6 +745,19 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
         {
             tree = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory.",
             singlePage = "Content.From(Resource.FromString(html).Type(new ContentType(\"text/html; charset=utf-8\")))"
+        },
+        sayWhy = new
+        {
+            what = "Every write_code takes two optional notes that are kept with the version: prompt, the request you were answering in the words it was asked in, and change, one line on what this version does. The owner reads them in the version history of the control center, next to the code and a diff against the version before.",
+            why = "The code says what was done. Only you know why, and the next agent to touch this lambda - or you, a week later - reads the history with read_lambda before changing anything.",
+            goodChange = "Adds a leaderboard that keeps the ten best scores on the server",
+            badChange = "Updated lambda.cs",
+            limits = new { prompt = VersionNote.MaxPrompt, change = VersionNote.MaxChange }
+        },
+        afterDeploying = new
+        {
+            what = "read_logs shows what the lambda has been doing: each request and its status, what it printed, and any exception it threw with the stack trace, plus its traffic over the last hour and day.",
+            when = "After a deploy, call the public address and read the logs to see that it answered. When somebody says it is broken, read the logs before reading the code."
         },
         whenThingsAreChecked = new
         {

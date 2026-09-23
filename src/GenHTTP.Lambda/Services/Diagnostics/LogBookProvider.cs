@@ -81,8 +81,10 @@ public sealed class LogBookProvider(LogBook book, TextWriter? console = null, Lo
             // a warning about a lambda, logged while that lambda was being
             // served, belongs under it as well as in the general run - and
             // carries whoever was being answered at the time
-            book.Append(LogBook.NameOf(level), source, LambdaOutput.Ambient?.PublicKey, text, error?.ToString(),
-                        caller?.Client, caller?.Agent, caller?.Country, caller?.Place, text);
+            var scope = LambdaOutput.Ambient;
+
+            book.Append(LogBook.NameOf(level), source, scope?.PublicKey, text, error?.ToString(),
+                        caller?.Client, caller?.Agent, caller?.Country, caller?.Place, text, scope?.LambdaId);
 
             if (console == null || level < minimum)
             {
