@@ -27,24 +27,15 @@ public sealed record LambdaOptions
     /// Which HTTP versions a port answers on.
     /// </summary>
     /// <remarks>
-    /// HTTP/1.1 only, and deliberately.
+    /// This was HTTP/1.1 only for a while: the ioxide engine's HTTP/2 driver
+    /// stopped writing once it had filled the window the client advertised,
+    /// so Firefox, which advertises a hundred and twenty eight kilobytes,
+    /// never finished loading the editor. Fixed in ioxide since.
     ///
-    /// The ioxide engine's HTTP/2 driver stops writing once it has filled the
-    /// window the client advertised and does not act on the WINDOW_UPDATE
-    /// frames that follow, so any response larger than that window arrives
-    /// truncated and the request never completes. Chrome advertises several
-    /// megabytes and so never notices; Firefox advertises a hundred and
-    /// twenty eight kilobytes, which the editor's script exceeds several
-    /// times over, so the editor never finished loading in it at all.
-    ///
-    /// HTTP/1.1 has no flow control to get wrong. The cost is multiplexing,
-    /// which a browser makes up for by opening more connections, and it is
-    /// a far smaller cost than a whole browser being unable to use the site.
-    ///
-    /// Set LAMBDA_HTTP_PROTOCOLS=Http1AndHttp2 to put it back once the engine
-    /// is fixed.
+    /// If a browser hangs on a large response again, check this first: set
+    /// LAMBDA_HTTP_PROTOCOLS=Http1 to fall back without a release.
     /// </remarks>
-    public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1;
+    public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1AndHttp2;
 
     /// <summary>
     /// Where the build agent listens, or nothing to do without one.
