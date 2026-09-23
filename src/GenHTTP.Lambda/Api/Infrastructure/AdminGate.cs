@@ -6,7 +6,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Meta;
 
-namespace GenHTTP.Lambda.Api;
+namespace GenHTTP.Lambda.Api.Infrastructure;
 
 /// <summary>
 /// The one check that stands between a request and everything an operator can

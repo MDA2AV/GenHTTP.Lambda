@@ -1,5 +1,6 @@
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Configuration;
@@ -77,7 +78,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     {
         Authorize(request);
 
-        var privateKey = await RequireAsync(publicKey);
+        var privateKey = await meta.RequirePrivateKeyAsync(publicKey);
 
         var target = version ?? (await meta.GetAsync(privateKey))?.LatestVersion
                   ?? throw LambdaException.NotFound("This lambda has no versions.");
@@ -97,7 +98,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     {
         Authorize(request);
 
-        var lambda = await meta.UndeployAsync(await RequireAsync(publicKey));
+        var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey));
 
         return Summarize(lambda);
     }
@@ -110,7 +111,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     {
         Authorize(request);
 
-        await meta.DeleteAsync(await RequireAsync(publicKey));
+        await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey));
     }
 
     /// <summary>
@@ -129,10 +130,6 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     private const int PageSize = 20;
 
     private void Authorize(IRequest request) => AdminGate.Require(request, options);
-
-    private async ValueTask<string> RequireAsync(string publicKey)
-        => await meta.GetPrivateKeyAsync(publicKey)
-        ?? throw LambdaException.NotFound($"There is no lambda at '{publicKey}'.");
 
     private static LambdaOverviewResponse Summarize(LambdaInfo lambda)
         => new(lambda.PublicKey, lambda.ActiveVersion, lambda.DeployedUntil);

@@ -9,7 +9,7 @@ using GenHTTP.Modules.Conversion.Serializers.Json;
 
 using JsonContent = GenHTTP.Modules.Conversion.Serializers.Json.JsonContent;
 
-namespace GenHTTP.Lambda.Api;
+namespace GenHTTP.Lambda.Api.Infrastructure;
 
 /// <summary>
 /// Translates the errors the service layer raises into the status codes and

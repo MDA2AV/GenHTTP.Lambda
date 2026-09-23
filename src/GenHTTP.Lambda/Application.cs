@@ -1,7 +1,7 @@
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 
-using GenHTTP.Lambda.Api;
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Mcp;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;

@@ -1,12 +1,14 @@
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Api;
+
 using GenHTTP.Modules.ApiBrowsing;
 using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.ErrorHandling;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.OpenApi;
 
-namespace GenHTTP.Lambda.Api;
+namespace GenHTTP.Lambda.Api.Infrastructure;
 
 /// <summary>
 /// The versioned API the single page application talks to, described by an

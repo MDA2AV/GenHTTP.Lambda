@@ -1,6 +1,7 @@
 using System.Runtime;
 using System.Runtime.InteropServices;
 
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Api.Protocol;
 

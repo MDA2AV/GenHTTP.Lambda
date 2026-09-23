@@ -1,5 +1,6 @@
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -71,7 +72,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(":privateKey")]
     public async ValueTask<LambdaResponse> Get(string privateKey)
     {
-        var lambda = await meta.GetAsync(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+        var lambda = await meta.RequireAsync(privateKey);
 
         return LambdaDescription.Of(lambda);
     }
@@ -139,7 +140,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(Method.Post, ":privateKey/semantics")]
     public async ValueTask<SemanticsResponse> Semantics(string privateKey, CodeRequest request)
     {
-        await RequireAsync(privateKey);
+        _ = await meta.RequireIdAsync(privateKey);
 
         var tokens = SemanticClassifier.Classify(request.Code ?? string.Empty);
 
@@ -154,7 +155,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(Method.Post, ":privateKey/completions")]
     public async ValueTask<CompletionsResponse> Completions(string privateKey, CompletionRequest request)
     {
-        await RequireAsync(privateKey);
+        _ = await meta.RequireIdAsync(privateKey);
 
         var found = CompletionResolver.Resolve(request.Code, request.Line, request.Column);
 
@@ -174,8 +175,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(":privateKey/download")]
     public async ValueTask<IResponse> Download(string privateKey, IRequest request)
     {
-        var lambda = await meta.GetAsync(privateKey)
-                  ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+        var lambda = await meta.RequireAsync(privateKey);
 
         if (lambda.LatestVersion is not { } latest)
         {
@@ -206,7 +206,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(Method.Post, ":privateKey/definition")]
     public async ValueTask<DefinitionResponse> Definition(string privateKey, DefinitionRequest request)
     {
-        await RequireAsync(privateKey);
+        _ = await meta.RequireIdAsync(privateKey);
 
         var files = request.Files is { Count: > 0 } sent ? sent : [];
 
@@ -291,7 +291,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     /// </summary>
     [ResourceMethod(":privateKey/files")]
     public async ValueTask<WorkspaceListing> GetFiles(string privateKey)
-        => await workspace.ListAsync(await ResolveIdAsync(privateKey));
+        => await workspace.ListAsync(await meta.RequireIdAsync(privateKey));
 
     /// <summary>
     /// Reads one file.
@@ -305,7 +305,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(":privateKey/files/content")]
     public async ValueTask<FileResponse> GetFile(string privateKey, string path)
     {
-        var file = await workspace.ReadAsync(await ResolveIdAsync(privateKey), path)
+        var file = await workspace.ReadAsync(await meta.RequireIdAsync(privateKey), path)
                 ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
 
         return new FileResponse(file.Path, Convert.ToBase64String(file.Content), file.Content.Length);
@@ -331,7 +331,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
 
         using var stream = new MemoryStream(content);
 
-        return await workspace.WriteAsync(await ResolveIdAsync(privateKey), path, stream);
+        return await workspace.WriteAsync(await meta.RequireIdAsync(privateKey), path, stream);
     }
 
     /// <summary>
@@ -341,7 +341,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     [ResourceMethod(Method.Put, ":privateKey/files/folder")]
     public async ValueTask<WorkspaceListing> CreateFolder(string privateKey, string path)
     {
-        var id = await ResolveIdAsync(privateKey);
+        var id = await meta.RequireIdAsync(privateKey);
 
         await workspace.CreateFolderAsync(id, path);
 
@@ -354,19 +354,7 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     /// <param name="path">The name of the file, relative to the workspace</param>
     [ResourceMethod(Method.Delete, ":privateKey/files/content")]
     public async ValueTask DeleteFile(string privateKey, string path)
-        => await workspace.DeleteAsync(await ResolveIdAsync(privateKey), path);
-
-    /// <summary>
-    /// Turns the editor key into the identity the workspace is filed under,
-    /// which doubles as the check that the caller owns the lambda.
-    /// </summary>
-    private async ValueTask RequireAsync(string privateKey)
-        => _ = await meta.GetIdAsync(privateKey)
-        ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
-
-    private async ValueTask<long> ResolveIdAsync(string privateKey)
-        => await meta.GetIdAsync(privateKey)
-        ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+        => await workspace.DeleteAsync(await meta.RequireIdAsync(privateKey), path);
 
         #endregion
 
