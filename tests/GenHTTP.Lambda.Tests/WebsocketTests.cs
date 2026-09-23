@@ -116,6 +116,23 @@ public sealed class WebsocketTests
         Assert.AreEqual("second", await RoundtripAsync(client, "second"));
     }
 
+    [TestMethod]
+    public async Task TheUpgradeRequestCanStillBeRead()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("upgraded");
+
+        // what the guide tells people to do: a browser cannot set a header on
+        // the handshake, so whatever the socket needs travels in the query
+        await fixture.DeployAsync(lambda.PrivateKey, """
+            return Websocket.Functional()
+                            .OnMessage(async (c, m) => await c.WritePayloadAsync(c.Request.Header.Query.GetEntry("room") + ": " + await m.ReadPayloadAsync<string>()));
+            """);
+
+        Assert.AreEqual("lobby: hello", await RoundtripAsync(fixture, "/lambda/upgraded/?room=lobby", "hello"));
+    }
+
     #region Helpers
 
     private static async Task<ClientWebSocket> ConnectAsync(LambdaFixture fixture, string path)
