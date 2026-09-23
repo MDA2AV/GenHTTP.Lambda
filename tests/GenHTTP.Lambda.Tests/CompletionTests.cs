@@ -72,7 +72,7 @@ public sealed class CompletionTests
 
         Assert.DoesNotContain("File", labels, "suggesting what will not compile is worse than suggesting nothing");
         Assert.DoesNotContain("Process", labels);
-        Assert.DoesNotContain("HttpClient", labels);
+        Assert.DoesNotContain("Thread", labels);
     }
 
     [TestMethod]
