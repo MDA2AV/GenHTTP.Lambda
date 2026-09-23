@@ -23,7 +23,6 @@ public sealed record BuildProgress(string State, IReadOnlyList<string> Events, B
 /// <param name="Detail">What went wrong, in the words of whatever it went wrong in</param>
 public sealed record BuildResult(
     bool Ok,
-    bool Changed,
     bool? Deployed,
     string? PublicKey,
     string? PrivateKey,
