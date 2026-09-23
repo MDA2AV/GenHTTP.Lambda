@@ -130,7 +130,8 @@ export function SummaryTab({ control }: { control: Control }) {
               extra={<Exposure open={false} why="C# is compiled, never served." />}
               used={storage.codeCharacters}
               of={limits.codeCharacters}
-              format={(n) => `${count(n)} ch`}
+              format={count}
+              unit="characters"
             />
             <Meter
               label="Assets"

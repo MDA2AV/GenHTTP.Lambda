@@ -148,12 +148,19 @@ export function Figure({ value, label, tone = 'default', title }: {
   );
 }
 
-/** How much of an allowance is spent. Amber, then red, as it fills. */
-export function Meter({ label, used, of, format, extra }: {
+/**
+ * How much of an allowance is spent. Amber, then red, as it fills.
+ *
+ * A unit that is the same on both sides is named once, after the pair, rather
+ * than abbreviated onto each number: "30.4k / 262k characters" says what it
+ * counts, where "30.4k ch / 262k ch" leaves the reader guessing.
+ */
+export function Meter({ label, used, of, format, unit, extra }: {
   label: ReactNode;
   used: number;
   of: number;
   format: (n: number) => string;
+  unit?: string;
   extra?: ReactNode;
 }) {
   const share = of > 0 ? Math.min(1, used / of) : 0;
@@ -167,8 +174,8 @@ export function Meter({ label, used, of, format, extra }: {
           {label}
           {extra}
         </span>
-        <span className="shrink-0 tabular-nums text-slate-500" title={`${format(used)} of ${format(of)}`}>
-          {format(used)} <span className="text-slate-400">/ {format(of)}</span>
+        <span className="shrink-0 tabular-nums text-slate-500" title={`${format(used)} of ${format(of)}${unit ? ` ${unit}` : ''}`}>
+          {format(used)} <span className="text-slate-400">/ {format(of)}{unit ? ` ${unit}` : ''}</span>
         </span>
       </div>
       <div className="mt-1.5 h-1 w-full bg-slate-200 dark:bg-ink-800" role="meter" aria-valuemin={0} aria-valuemax={of} aria-valuenow={used}>
