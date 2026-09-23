@@ -53,7 +53,7 @@ printf '%s' "$AGENT_GUIDE" > /work/AGENTS.md
 printf '{"mcpServers":{"genhttp":{"type":"http","url":"%s"}}}' "$AGENT_MCP" > /work/mcp.json
 exec claude -p "$AGENT_BRIEF" --mcp-config /work/mcp.json "$@"`;
 const MCP_URL = process.env.AGENT_MCP_URL ?? "https://genhttp.dev/mcp";
-const MODEL = process.env.AGENT_MODEL ?? 'claude-opus-5';
+const MODEL = process.env.AGENT_MODEL ?? 'claude-opus-5-5';
 
 /*
  * Which models a caller may ask for, by short name.

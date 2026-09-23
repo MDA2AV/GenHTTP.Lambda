@@ -167,7 +167,7 @@ export function Build() {
           <span className="text-slate-400">Built by</span>
 
           {[
-            ['opus', 'Opus 5'],
+            ['opus', 'Opus 5.5'],
             ['fable', 'Fable 5.1'],
           ].map(([id, label]) => (
             <button
