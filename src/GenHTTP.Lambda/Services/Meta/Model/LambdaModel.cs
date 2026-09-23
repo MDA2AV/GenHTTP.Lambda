@@ -124,12 +124,12 @@ public sealed record LambdaCounts(int Lambdas, int Deployed, int Versions);
 /// acts on lambdas it does not own, and handing out the editor link of every
 /// lambda on the server would make that irreversible for their owners.
 /// </summary>
+/// <param name="PrivateKey">
+/// The editor key. Only ever leaves the process through the panel, which is
+/// behind the administration token.
+/// </param>
 public sealed record LambdaOverview(
     string PublicKey,
-    /// <summary>
-    /// The editor key. Only ever leaves the process through the panel, which
-    /// is behind the administration token.
-    /// </summary>
     string PrivateKey,
     string Tier,
     DateTime Created,

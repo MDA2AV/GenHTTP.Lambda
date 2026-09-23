@@ -150,7 +150,6 @@ public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions optio
 
                     File.Move(scratch, target, true);
 
-                    Edition = $"{month:yyyy-MM}";
                     opened = true;
 
                     logger.LogInformation("Fetched the {Kind} database for {Month:yyyy-MM}", kind, month);
@@ -166,11 +165,9 @@ public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions optio
 
         if (opened)
         {
-            places.Open(Path.Combine(directory, "dbip-city.mmdb"), Path.Combine(directory, "dbip-asn.mmdb"), Edition);
+            places.Open(Path.Combine(directory, "dbip-city.mmdb"), Path.Combine(directory, "dbip-asn.mmdb"));
         }
     }
-
-    private string? Edition;
 
     private bool Rebuild(string directory)
     {

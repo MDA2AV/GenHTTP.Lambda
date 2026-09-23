@@ -32,14 +32,7 @@ public sealed class GeoTable
     /// <summary>
     /// How many ranges are loaded. Zero means nothing has been read yet.
     /// </summary>
-    public int Ranges => Current?.Count ?? 0;
-
-    /// <summary>
-    /// When the table was last built.
-    /// </summary>
-    public DateTime? Built => Current?.Built;
-
-    private Snapshot? Current { get; set; }
+    public int Ranges => Volatile.Read(ref _snapshot)?.Count ?? 0;
 
     #endregion
 
@@ -51,7 +44,7 @@ public sealed class GeoTable
     /// </summary>
     public string? CountryOf(string? address)
     {
-        var table = Volatile.Read(ref Backing);
+        var table = Volatile.Read(ref _snapshot);
 
         if (table == null || address == null)
         {
@@ -158,16 +151,13 @@ public sealed class GeoTable
 
         var table = new Snapshot(
             four.Select(r => r.Start).ToArray(), four.Select(r => r.End).ToArray(), four.Select(r => r.Code).ToArray(),
-            six.Select(r => r.Start).ToArray(), six.Select(r => r.End).ToArray(), six.Select(r => r.Code).ToArray(),
-            DateTime.UtcNow
+            six.Select(r => r.Start).ToArray(), six.Select(r => r.End).ToArray(), six.Select(r => r.Code).ToArray()
         );
 
-        Volatile.Write(ref Backing, table);
-
-        Current = table;
+        Volatile.Write(ref _snapshot, table);
     }
 
-    private Snapshot? Backing;
+    private Snapshot? _snapshot;
 
     private static string? Find<T>(T[] starts, T[] ends, string[] codes, T address) where T : IComparable<T>
     {
@@ -211,8 +201,7 @@ public sealed class GeoTable
 
     private sealed record Snapshot(
         uint[] FourStart, uint[] FourEnd, string[] FourCode,
-        UInt128[] SixStart, UInt128[] SixEnd, string[] SixCode,
-        DateTime Built
+        UInt128[] SixStart, UInt128[] SixEnd, string[] SixCode
     )
     {
         public int Count => FourStart.Length + SixStart.Length;

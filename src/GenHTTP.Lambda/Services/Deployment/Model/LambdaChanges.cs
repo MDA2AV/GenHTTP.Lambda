@@ -94,7 +94,7 @@ public static class LambdaChanges
                 throw LambdaException.Invalid($"The text to find occurs more than once in '{edit.File}'. Include more of the surrounding text.");
             }
 
-            result[index] = file with { Code = string.Concat(file.Code.AsSpan(0, first), edit.Replace ?? string.Empty,file.Code.AsSpan(first + edit.Find.Length)) };
+            result[index] = file with { Code = string.Concat(file.Code.AsSpan(0, first), edit.Replace ?? string.Empty, file.Code.AsSpan(first + edit.Find.Length)) };
         }
 
         return result;

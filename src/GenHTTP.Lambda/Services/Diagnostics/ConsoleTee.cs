@@ -44,12 +44,12 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
     {
         lock (Guard)
         {
-            if (Installed)
+            if (_installed)
             {
                 return;
             }
 
-            Installed = true;
+            _installed = true;
 
             Console.SetOut(new ConsoleTee(Console.Out, false));
             Console.SetError(new ConsoleTee(Console.Error, true));
@@ -58,7 +58,7 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 
     private static readonly Lock Guard = new();
 
-    private static bool Installed;
+    private static bool _installed;
 
     public override Encoding Encoding => inner.Encoding;
 

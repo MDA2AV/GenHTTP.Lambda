@@ -1,7 +1,6 @@
 using System.Net;
 
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Tests.Infrastructure;
 

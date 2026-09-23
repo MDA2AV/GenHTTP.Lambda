@@ -8,6 +8,31 @@ public interface ITelemetryService
 {
 
     /// <summary>
+    /// When the service was created, which is as good as when the server came up.
+    /// </summary>
+    DateTime Started { get; }
+
+    /// <summary>
+    /// Every request the server has answered since it started.
+    /// </summary>
+    long TotalRequests { get; }
+
+    /// <summary>
+    /// Every request that was answered with a server error.
+    /// </summary>
+    long TotalFailed { get; }
+
+    /// <summary>
+    /// Every connection that was upgraded rather than answered.
+    /// </summary>
+    long TotalUpgrades { get; }
+
+    /// <summary>
+    /// How many connections are open right now.
+    /// </summary>
+    int OpenSockets { get; }
+
+    /// <summary>
     /// Records a finished request.
     /// </summary>
     /// <param name="elapsed">How long the handler took</param>

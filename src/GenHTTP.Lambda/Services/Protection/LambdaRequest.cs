@@ -1,4 +1,3 @@
-using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Services.Meta.Model;
 
@@ -16,7 +15,7 @@ public static class LambdaRequest
 
     public static ResolvedLambda RequireLambda(this IRequest request)
         => request.Properties.TryGet<ResolvedLambda>(Key, out var lambda)
-         ? lambda!
+         ? lambda
          : throw new InvalidOperationException("The request has not been resolved to a lambda.");
 
     public static ResolvedLambda? GetLambda(this IRequest request)

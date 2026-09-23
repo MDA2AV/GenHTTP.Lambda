@@ -1,8 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using GenHTTP.Lambda.Services.Meta;
-
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>

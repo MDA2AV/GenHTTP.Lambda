@@ -62,15 +62,15 @@ public sealed class EventReader(IDbContextFactory<LambdaDbContext> databases)
             }
         }
 
-        var days_ = new List<string>(span);
+        var labels = new List<string>(span);
 
         for (var i = 0; i < span; i++)
         {
-            days_.Add(from.AddDays(i).ToString("yyyy-MM-dd"));
+            labels.Add(from.AddDays(i).ToString("yyyy-MM-dd"));
         }
 
         return new EventHistory(
-            days_,
+            labels,
             [.. LambdaEvents.All.Select(kind => new EventSeries(
                 kind,
                 buckets[kind],

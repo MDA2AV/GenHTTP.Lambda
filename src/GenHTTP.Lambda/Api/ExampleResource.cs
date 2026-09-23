@@ -1,5 +1,4 @@
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Webservices;

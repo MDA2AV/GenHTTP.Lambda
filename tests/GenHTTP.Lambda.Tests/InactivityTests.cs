@@ -1,6 +1,5 @@
 using System.Net;
 
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Tests.Infrastructure;
 

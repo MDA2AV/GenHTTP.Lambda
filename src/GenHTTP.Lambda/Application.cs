@@ -115,8 +115,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<SpaResources>();
 
         services.AddSingleton<LambdaTelemetry>();
-        services.AddSingleton<TelemetryService>();
-        services.AddSingleton<ITelemetryService>(p => p.GetRequiredService<TelemetryService>());
+        services.AddSingleton<ITelemetryService, TelemetryService>();
 
         services.AddSingleton<IBackgroundJob, MaintenanceJob>();
         services.AddSingleton<IBackgroundJob, TelemetryJob>();
@@ -178,7 +177,7 @@ public sealed class Application : IAsyncDisposable
                .Development(Options.Development)
                .AddDependencyInjection(Services)
                .Add(Registry.Capture())
-               .Add(new TelemetryConcernBuilder(Services.GetRequiredService<TelemetryService>()))
+               .Add(new TelemetryConcernBuilder(Services.GetRequiredService<ITelemetryService>()))
                /*
                 * Compression is configured here rather than left to the
                 * defaults, and it offers gzip alone.

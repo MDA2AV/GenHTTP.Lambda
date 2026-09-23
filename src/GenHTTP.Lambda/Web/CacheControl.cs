@@ -58,14 +58,14 @@ public sealed class CacheControlConcern : IConcern
 public sealed class CacheControlBuilder : IConcernBuilder
 {
 
-    private readonly string _Value;
+    private readonly string _value;
 
     public CacheControlBuilder(string value)
     {
-        _Value = value;
+        _value = value;
     }
 
-    public IConcern Build(IHandler content) => new CacheControlConcern(content, _Value);
+    public IConcern Build(IHandler content) => new CacheControlConcern(content, _value);
 
 }
 

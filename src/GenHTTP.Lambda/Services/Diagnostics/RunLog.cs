@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -28,7 +27,7 @@ public sealed class RunLog
     /// <summary>
     /// How the run before this one ended, or nothing if this is the first.
     /// </summary>
-    public LastRun? Previous { get; private set; }
+    public LastRun? Previous { get; }
 
     private string Path { get; }
 
