@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { AdminMenu } from '../components/AdminMenu';
 import { CopyField } from '../components/CopyField';
 import { ReportAbuse } from '../components/ReportAbuse';
 import { IconChat, IconChevronDown, IconMail } from '../components/Icons';
@@ -400,6 +401,9 @@ export function Landing() {
           >
             Source
           </a>
+
+          {/* the header carries this on anything wider than a phone */}
+          <AdminMenu placement="footer" />
         </footer>
       </div>
     </div>

@@ -10,8 +10,12 @@ import { IconChevronDown, IconLock, IconUnlock } from './Icons';
  * Both pages behind this ask the server for the token as well, so this is a
  * door rather than a disguise - hiding the links while the API answered anyone
  * who asked would be worth nothing.
+ *
+ * The header has no room for it on a phone, so there it sits at the foot of
+ * the front page instead, quietly, and opens as a sheet along the bottom of
+ * the screen rather than a dropdown that would run off the edge.
  */
-export function AdminMenu() {
+export function AdminMenu({ placement = 'header' }: { placement?: 'header' | 'footer' }) {
   const [token, setToken] = useAdminToken();
   const [open, setOpen] = useState(false);
   const [entered, setEntered] = useState('');
@@ -72,27 +76,39 @@ export function AdminMenu() {
     setOpen(false);
   }
 
+  const footer = placement === 'footer';
+
   return (
-    <div ref={box} className="relative hidden sm:block">
+    <div ref={box} className={footer ? 'sm:hidden' : 'relative hidden sm:block'}>
       <button
         type="button"
         onClick={() => setOpen((was) => !was)}
-        className="btn-ghost inline-flex items-center gap-1.5"
+        className={
+          footer
+            ? 'inline-flex items-center gap-1 text-xs text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400'
+            : 'btn-ghost inline-flex items-center gap-1.5'
+        }
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={open ? menu : undefined}
         title={unlocked ? 'Administration, unlocked for this tab' : 'Administration, needs the token'}
       >
-        {unlocked ? <IconUnlock className="h-4 w-4" /> : <IconLock className="h-4 w-4" />}
+        {unlocked ? (
+          <IconUnlock className={footer ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+        ) : (
+          <IconLock className={footer ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+        )}
         Admin
-        <IconChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+        {!footer && <IconChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />}
       </button>
 
       {open && (
         <div
           id={menu}
           role="menu"
-          className="absolute right-0 z-40 mt-1 w-72 border border-slate-200 bg-white p-1 shadow-lg dark:border-ink-800 dark:bg-ink-900"
+          className={`${
+            footer ? 'fixed inset-x-4 bottom-4 text-left' : 'absolute right-0 mt-1 w-72'
+          } z-40 border border-slate-200 bg-white p-1 shadow-lg dark:border-ink-800 dark:bg-ink-900`}
         >
           {unlocked ? (
             <>
