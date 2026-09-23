@@ -40,6 +40,7 @@ export function Build() {
   const [origin, setOrigin] = useState('');
   const [state, setState] = useState<'idle' | 'working' | 'done' | 'failed'>('idle');
   const [events, setEvents] = useState<string[]>([]);
+  const [waiting, setWaiting] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [secondModel, setSecondModel] = useState(false);
@@ -70,6 +71,7 @@ export function Build() {
 
     setState('working');
     setEvents([]);
+    setWaiting(0);
     setResult(null);
 
     let id: string;
@@ -88,11 +90,12 @@ export function Build() {
       return;
     }
 
-    polling.current = window.setInterval(async () => {
+    const poll = async () => {
       try {
         const job = await api.builds.progress(id);
 
         setEvents(job.events ?? []);
+        setWaiting(job.waiting ?? 0);
 
         if (job.state === 'done' || job.state === 'failed') {
           if (polling.current) window.clearInterval(polling.current);
@@ -102,7 +105,11 @@ export function Build() {
       } catch {
         /* a poll that fails is a poll; the next one will do */
       }
-    }, 2500);
+    };
+
+    // asked once straight away, so a queue shows up without a wait of its own
+    void poll();
+    polling.current = window.setInterval(poll, 2500);
   }
 
   if (available === false) {
@@ -240,7 +247,18 @@ export function Build() {
               {event}
             </li>
           ))}
-          {events.length === 0 && <li className="px-5 py-2.5 text-slate-500">Starting…</li>}
+          {events.length === 0 && waiting > 0 && (
+            <li className="flex items-center gap-3 px-5 py-2.5 text-slate-500">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+              {/* one build runs at a time, so everyone else waits their turn */}
+              {waiting === 1
+                ? 'One build ahead of yours - you are next.'
+                : `${waiting} builds ahead of yours.`}
+            </li>
+          )}
+          {events.length === 0 && waiting === 0 && (
+            <li className="px-5 py-2.5 text-slate-500">Starting…</li>
+          )}
         </ol>
       )}
 
