@@ -35,7 +35,7 @@ public sealed class TelemetryTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var telemetry = fixture.Application.Services.GetRequiredService<TelemetryService>();
+        var telemetry = fixture.Application.Services.GetRequiredService<ITelemetryService>();
 
         var before = telemetry.TotalRequests;
 
@@ -49,7 +49,7 @@ public sealed class TelemetryTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var telemetry = fixture.Application.Services.GetRequiredService<TelemetryService>();
+        var telemetry = fixture.Application.Services.GetRequiredService<ITelemetryService>();
 
         var before = telemetry.TotalFailed;
 
@@ -64,7 +64,7 @@ public sealed class TelemetryTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var telemetry = fixture.Application.Services.GetRequiredService<TelemetryService>();
+        var telemetry = fixture.Application.Services.GetRequiredService<ITelemetryService>();
 
         telemetry.Sample();
         telemetry.Sample();
@@ -93,7 +93,7 @@ public sealed class TelemetryTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var telemetry = fixture.Application.Services.GetRequiredService<TelemetryService>();
+        var telemetry = fixture.Application.Services.GetRequiredService<ITelemetryService>();
 
         var lambda = await fixture.CreateLambdaAsync("sockets", template: "websocket-functional");
 

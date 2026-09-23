@@ -3,11 +3,11 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <summary>
 /// Every lambda on the installation, for the administration panel.
 /// </summary>
+/// <param name="Matched">How many the search matched, which is what the pages count from</param>
 public sealed record AdminListingResponse(
     IReadOnlyList<AdminLambda> Lambdas,
     int Total,
     int Deployed,
-    /// <summary>How many the search matched, which is what the pages count from.</summary>
     int Matched,
     int Page,
     int Pages

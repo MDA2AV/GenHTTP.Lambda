@@ -1,7 +1,5 @@
 using GenHTTP.Api.Content;
 
-using GenHTTP.Lambda.Api;
-
 using GenHTTP.Modules.ApiBrowsing;
 using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.DependencyInjection.Infrastructure;

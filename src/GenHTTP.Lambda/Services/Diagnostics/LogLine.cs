@@ -38,6 +38,16 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// known. The registration of the range, not the location of the person - see
 /// <see cref="GeoTable"/>.
 /// </param>
+/// <param name="Repeats">
+/// How many identical lines this one stands for. One is itself alone.
+/// </param>
+/// <param name="LambdaId">
+/// The identity of the lambda the line belongs to, beside its public key. The
+/// key is what a person reads; this is what an owner's view filters by. A key
+/// can be given up and claimed by somebody else, and lines written under it
+/// before that belong to the lambda that wrote them, not to whoever holds the
+/// name now.
+/// </param>
 public sealed record LogLine(
     long Seq,
     DateTime At,
@@ -50,19 +60,7 @@ public sealed record LogLine(
     string? Agent = null,
     string? Country = null,
     string? Place = null,
-    /// <summary>
-    /// How many identical lines this one stands for. One is itself alone.
-    /// </summary>
     int Repeats = 1,
-    /// <summary>
-    /// The identity of the lambda the line belongs to, beside its public key.
-    /// </summary>
-    /// <remarks>
-    /// The key is what a person reads; this is what an owner's view filters
-    /// by. A key can be given up and claimed by somebody else, and lines
-    /// written under it before that belong to the lambda that wrote them, not
-    /// to whoever holds the name now.
-    /// </remarks>
     long? LambdaId = null
 );
 

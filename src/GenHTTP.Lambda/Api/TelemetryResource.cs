@@ -23,7 +23,7 @@ namespace GenHTTP.Lambda.Api;
 /// leaves through this resource, which is what makes it safe to serve without
 /// asking who is looking.
 /// </remarks>
-public sealed class TelemetryResource(TelemetryService telemetry, LambdaTelemetry lambdas, ServerRegistry registry, IMetaService meta, EventReader events, LambdaOptions options)
+public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemetry lambdas, ServerRegistry registry, IMetaService meta, EventReader events, LambdaOptions options)
 {
 
     /// <summary>

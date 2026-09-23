@@ -56,29 +56,14 @@ public sealed class TelemetryService : ITelemetryService
 
     #region Get-/Setters
 
-    /// <summary>
-    /// When the service was created, which is as good as when the server came up.
-    /// </summary>
     public DateTime Started { get; }
 
-    /// <summary>
-    /// Every request the server has answered since it started.
-    /// </summary>
     public long TotalRequests => Interlocked.Read(ref _requests);
 
-    /// <summary>
-    /// Every request that was answered with a server error.
-    /// </summary>
     public long TotalFailed => Interlocked.Read(ref _failed);
 
-    /// <summary>
-    /// Every connection that was upgraded rather than answered.
-    /// </summary>
     public long TotalUpgrades => Interlocked.Read(ref _upgrades);
 
-    /// <summary>
-    /// How many connections are open right now.
-    /// </summary>
     /// <remarks>
     /// Read from the operating system rather than counted here, because a
     /// counter cannot be made to work: a concern sees the upgrade and
@@ -161,7 +146,7 @@ public sealed class TelemetryService : ITelemetryService
                 GC.CollectionCount(0),
                 GC.CollectionCount(1),
                 GC.CollectionCount(2),
-                GC.GetTotalAllocatedBytes(false),
+                GC.GetTotalAllocatedBytes(),
                 info.PauseTimePercentage,
                 wall > 0 ? Math.Round(busy / wall / Environment.ProcessorCount * 100, 2) : 0,
                 _process.Threads.Count,

@@ -118,7 +118,7 @@ public sealed class LogBook
         /// The most recent line of the run, kept so that closing it writes a
         /// real line rather than one rebuilt from its key.
         /// </summary>
-        public LogLine Latest = null!;
+        public LogLine? Latest;
     }
 
     /// <summary>

@@ -2,11 +2,9 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
@@ -94,14 +92,14 @@ public sealed class BuildService : IDisposable
             wanted = wanted[..2000];
         }
 
-        var wanted_model = (model ?? "").Trim().ToLowerInvariant();
+        var wantedModel = (model ?? "").Trim().ToLowerInvariant();
 
-        if (wanted_model is not ("" or "opus" or "fable"))
+        if (wantedModel is not ("" or "opus" or "fable"))
         {
             throw new ProviderException(ResponseStatus.BadRequest, "There is no such model here.");
         }
 
-        if (wanted_model == "fable")
+        if (wantedModel == "fable")
         {
             /*
              * Compared in full rather than short-circuiting on the first wrong
@@ -132,7 +130,7 @@ public sealed class BuildService : IDisposable
         try
         {
             // no key travels with it: this endpoint only ever creates
-            using var response = await agent.PostAsJsonAsync("build", new { prompt = wanted, model = wanted_model });
+            using var response = await agent.PostAsJsonAsync("build", new { prompt = wanted, model = wantedModel });
 
             if (!response.IsSuccessStatusCode)
             {

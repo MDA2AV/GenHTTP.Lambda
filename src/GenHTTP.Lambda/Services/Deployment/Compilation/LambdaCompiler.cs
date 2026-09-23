@@ -45,8 +45,8 @@ internal static class LambdaCompiler
     #region Functionality
 
     /// <summary>
-    /// Compiles the snippet and, unless <paramref name="run" /> is disabled,
-    /// loads and invokes it to obtain the handler.
+    /// Compiles the snippet and, unless <see cref="CompilationRequest.Run" /> is
+    /// disabled, loads and invokes it to obtain the handler.
     /// </summary>
     /// <param name="request">What to compile and where to put it</param>
     internal static async ValueTask<(CompilationOutcome Outcome, IHandler? Handler)> CompileAsync(CompilationRequest request)
@@ -262,8 +262,9 @@ internal static class LambdaCompiler
 /// <summary>
 /// What the compiler needs to build a snippet.
 /// </summary>
-/// <param name="Code">The snippet as written by the user</param>
+/// <param name="Files">The source files as written by the user</param>
 /// <param name="Workspace">The directory the lambda may read and write</param>
+/// <param name="Assets">The directory the lambda's static assets were written to</param>
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>

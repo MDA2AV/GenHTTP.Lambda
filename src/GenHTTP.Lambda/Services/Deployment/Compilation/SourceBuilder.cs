@@ -100,6 +100,7 @@ internal static class SourceBuilder
     /// </summary>
     /// <param name="snippet">The parsed snippet of the user</param>
     /// <param name="workspace">The directory this lambda may read and write</param>
+    /// <param name="assets">The directory this lambda's static assets were written to</param>
     /// <param name="scope">The namespace everything generated for this lambda lives in</param>
     internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string assets, string scope)
     {
@@ -240,12 +241,6 @@ internal static class SourceBuilder
 
     #region Workspace
 
-    /// <summary>
-    /// The only door a lambda has to the file system: a private directory,
-    /// handed to the snippet as <c>Workspace</c>. Generated into the lambda
-    /// rather than referenced, so the assembly of this application stays
-    /// invisible to the code being compiled.
-    /// </summary>
     /// <summary>
     /// What a lambda shipped, as it can read it back.
     /// </summary>
@@ -391,6 +386,12 @@ internal static class SourceBuilder
         }
         """;
 
+    /// <summary>
+    /// The only door a lambda has to the file system: a private directory,
+    /// handed to the snippet as <c>Workspace</c>. Generated into the lambda
+    /// rather than referenced, so the assembly of this application stays
+    /// invisible to the code being compiled.
+    /// </summary>
     private static readonly string WorkspaceSource = $$"""
         internal sealed class {{WorkspaceType}}
         {

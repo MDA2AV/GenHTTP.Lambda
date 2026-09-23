@@ -24,6 +24,7 @@ public sealed record LogCaller(string Client, string? Place, string? Country, st
 /// <param name="Capacity">How many lines the ring holds in total</param>
 /// <param name="Written">Everything said since the server came up</param>
 /// <param name="Capturing">Whether what lambdas print is being kept</param>
+/// <param name="Addresses">Whether the address a request came from is being recorded</param>
 /// <param name="Previous">
 /// How the run before this one ended. Nothing on a first start - and on any
 /// start where the run before stopped the way it meant to, since a clean stop
@@ -36,7 +37,6 @@ public sealed record LogResponse(
     int Capacity,
     long Written,
     bool Capturing,
-    /// <summary>Whether the address a request came from is being recorded.</summary>
     bool Addresses,
     PreviousRun? Previous
 );

@@ -96,9 +96,6 @@ public interface IMetaService
     ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Every lambda on this installation, newest first.
-    /// </summary>
-    /// <summary>
     /// One page of the lambdas on the installation, newest first.
     /// </summary>
     /// <param name="search">Narrows the listing to public keys containing this</param>

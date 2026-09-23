@@ -692,7 +692,7 @@ public sealed class LogTests
 
         try
         {
-            places.Open("/does/not/exist.mmdb", rubbish, null);
+            places.Open("/does/not/exist.mmdb", rubbish);
 
             Assert.IsNull(places.Find("152.53.120.139"), "a server does not stop answering because a database is bad");
         }
@@ -781,8 +781,6 @@ public sealed class LogTests
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
         using var first = await Send(fixture, "/api/v1/logs", Token);
-
-        var before = fixture.Book.Written;
 
         for (var i = 0; i < 5; i++)
         {

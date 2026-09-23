@@ -15,7 +15,7 @@ namespace GenHTTP.Lambda.Services.Telemetry;
 /// leaves the handler in milliseconds and then lives for as long as the socket
 /// does, so averaging it in with the others would say nothing about either.
 /// </remarks>
-public sealed class TelemetryConcern(IHandler content, TelemetryService telemetry) : IConcern
+public sealed class TelemetryConcern(IHandler content, ITelemetryService telemetry) : IConcern
 {
 
     public IHandler Content => content;
@@ -56,7 +56,7 @@ public sealed class TelemetryConcern(IHandler content, TelemetryService telemetr
 
 }
 
-public sealed class TelemetryConcernBuilder(TelemetryService telemetry) : IConcernBuilder
+public sealed class TelemetryConcernBuilder(ITelemetryService telemetry) : IConcernBuilder
 {
     public IConcern Build(IHandler content) => new TelemetryConcern(content, telemetry);
 }

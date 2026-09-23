@@ -31,16 +31,11 @@ public sealed class GeoPlaces : IDisposable
     /// <summary>
     /// Whether a database is open and can be asked.
     /// </summary>
-    public bool Ready => Volatile.Read(ref Cities) != null || Volatile.Read(ref Networks) != null;
+    public bool Ready => Volatile.Read(ref _cities) != null || Volatile.Read(ref _networks) != null;
 
-    /// <summary>
-    /// The month the open databases were published for, if it is known.
-    /// </summary>
-    public string? Edition { get; private set; }
+    private Reader? _cities;
 
-    private Reader? Cities;
-
-    private Reader? Networks;
+    private Reader? _networks;
 
     /// <summary>
     /// Answers already worked out, by address.
@@ -72,9 +67,9 @@ public sealed class GeoPlaces : IDisposable
     /// </remarks>
     private const int MostFreshPerSecond = 250;
 
-    private long Window;
+    private long _window;
 
-    private int Fresh;
+    private int _fresh;
 
     /// <summary>
     /// How many lookups have been skipped because they arrived too fast.
@@ -89,17 +84,15 @@ public sealed class GeoPlaces : IDisposable
     /// Opens what is present. Either file may be missing; the answers are
     /// simply thinner.
     /// </summary>
-    public void Open(string? cityFile, string? networkFile, string? edition)
+    public void Open(string? cityFile, string? networkFile)
     {
         var cities = OpenOne(cityFile);
         var networks = OpenOne(networkFile);
 
         // swapped in, then the old pair closed, so a lookup in flight during a
         // monthly refresh finishes against the file it started on
-        var oldCities = Interlocked.Exchange(ref Cities, cities);
-        var oldNetworks = Interlocked.Exchange(ref Networks, networks);
-
-        Edition = edition;
+        var oldCities = Interlocked.Exchange(ref _cities, cities);
+        var oldNetworks = Interlocked.Exchange(ref _networks, networks);
 
         // last month's answers are not this month's
         Known.Clear();
@@ -152,13 +145,13 @@ public sealed class GeoPlaces : IDisposable
     {
         var second = DateTime.UtcNow.Ticks / TimeSpan.TicksPerSecond;
 
-        if (Volatile.Read(ref Window) != second)
+        if (Volatile.Read(ref _window) != second)
         {
-            Volatile.Write(ref Window, second);
-            Volatile.Write(ref Fresh, 0);
+            Volatile.Write(ref _window, second);
+            Volatile.Write(ref _fresh, 0);
         }
 
-        return Interlocked.Increment(ref Fresh) <= MostFreshPerSecond;
+        return Interlocked.Increment(ref _fresh) <= MostFreshPerSecond;
     }
 
     private Place? Look(string address)
@@ -187,14 +180,14 @@ public sealed class GeoPlaces : IDisposable
              * forty microseconds and six kilobytes of garbage per address;
              * the reader skips what nothing asks for.
              */
-            if (Volatile.Read(ref Cities) is { } cities && cities.Find<CityRecord>(parsed) is { } found)
+            if (Volatile.Read(ref _cities) is { } cities && cities.Find<CityRecord>(parsed) is { } found)
             {
                 city = found.City?.Names?.English;
                 country = found.Country?.IsoCode;
                 region = found.Subdivisions is { Count: > 0 } ? found.Subdivisions[0].Names?.English : null;
             }
 
-            if (Volatile.Read(ref Networks) is { } networks && networks.Find<NetworkRecord>(parsed) is { } owner)
+            if (Volatile.Read(ref _networks) is { } networks && networks.Find<NetworkRecord>(parsed) is { } owner)
             {
                 network = owner.Organisation;
             }
@@ -211,8 +204,8 @@ public sealed class GeoPlaces : IDisposable
 
     public void Dispose()
     {
-        Interlocked.Exchange(ref Cities, null)?.Dispose();
-        Interlocked.Exchange(ref Networks, null)?.Dispose();
+        Interlocked.Exchange(ref _cities, null)?.Dispose();
+        Interlocked.Exchange(ref _networks, null)?.Dispose();
 
         Known.Clear();
     }

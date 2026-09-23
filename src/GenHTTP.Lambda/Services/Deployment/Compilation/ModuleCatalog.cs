@@ -64,24 +64,19 @@ public static class ModuleCatalog
     /// Loads every module assembly so it can be referenced by the compiler,
     /// even if the host itself never touches it.
     /// </summary>
-    /// <returns>The assemblies that could be loaded</returns>
-    public static IReadOnlyList<Assembly> LoadModules()
+    public static void LoadModules()
     {
-        var loaded = new List<Assembly>();
-
         foreach (var module in Modules)
         {
             try
             {
-                loaded.Add(Assembly.Load(new AssemblyName($"GenHTTP.Modules.{module}")));
+                Assembly.Load(new AssemblyName($"GenHTTP.Modules.{module}"));
             }
             catch (Exception)
             {
                 // a module that is not part of the deployment simply cannot be used
             }
         }
-
-        return loaded;
     }
 
     private static string[] BuildImports()
