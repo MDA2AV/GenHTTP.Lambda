@@ -3,7 +3,11 @@
  *
  * One endpoint takes a sentence a visitor typed, runs Claude Code against the
  * lambda server's own MCP, and reports back the two links that matter: where
- * the thing is, and where to go to change it.
+ * the thing is, and the editor link to take it further with.
+ *
+ * It only ever creates. Changing something that already exists is left to
+ * the person's own agent over MCP, or to the editor: a second brief for
+ * changes lived here once and never worked well enough to keep.
  *
  * It is deliberately boring. No streaming to the browser, no websockets: a
  * job goes on a queue, one runs at a time, and the caller polls. A build is
@@ -102,34 +106,6 @@ const DENY = [
   'Skill', 'ToolSearch', 'ReportFindings', 'Workflow'
 ];
 
-const CHANGE = `You are changing a web application that already exists, for somebody who asked in
-a sentence and is not a programmer. They cannot answer questions: there is no
-one to ask, so make reasonable choices and change something rather than
-stopping to clarify.
-
-How to work:
-
-1. Call read_lambda with the editor key you were given. Read what is there
-   before you change any of it - you are editing somebody's working
-   application, not starting again.
-2. Make the change they asked for and nothing else. Keep what already works,
-   keep the parts they did not mention, and keep anything the application has
-   stored: rewriting a file that reads saved data into one that reads it
-   differently throws away what people have already put in.
-3. Call write_code with the full set of files. Pass what they asked for,
-   word for word, as prompt, and one line on what this version changes as
-   change - they read both in the version history. Then check_code, and fix
-   whatever it complains about.
-4. Call deploy. The change is not live until you do. If there is time, call
-   read_logs to see that it answers without errors.
-
-If what they asked for does not make sense for this application, do the
-closest reasonable thing and say so at the end.
-
-Finish by writing two or three sentences for the person who asked: what you
-changed. Do not list the links, they are picked up automatically. Do not
-describe your process.`;
-
 const BRIEF = `You are building one small web application for somebody who asked for it in a
 sentence and is not a programmer. They cannot answer questions: there is no
 one to ask, so make reasonable choices and build something rather than
@@ -193,10 +169,10 @@ const unbounded = job => job.model === 'fable';
 
 const clip = (s, n) => (s.length > n ? s.slice(0, n) + '…' : s);
 
-function enqueue(prompt, key, model) {
+function enqueue(prompt, model) {
   const id = randomUUID();
 
-  jobs.set(id, { id, state: 'queued', prompt, key, model, events: [], created: Date.now(), result: null });
+  jobs.set(id, { id, state: 'queued', prompt, model, events: [], created: Date.now(), result: null });
 
   const lane = model === 'fable' ? lanes.long : lanes.quick;
 
@@ -245,11 +221,9 @@ async function run(job) {
   job.state = 'running';
   job.started = Date.now();
 
-  say(job, job.key ? 'Reading what is already there' : 'Reading the platform guide');
+  say(job, 'Reading the platform guide');
 
-  let brief = job.key
-    ? `${CHANGE}\n\nThe editor key of the application to change: ${job.key}\n\nWhat they asked for:\n\n${job.prompt}`
-    : `${BRIEF}\n\nWhat they asked for:\n\n${job.prompt}`;
+  let brief = `${BRIEF}\n\nWhat they asked for:\n\n${job.prompt}`;
 
   // the brief tells it how long it has, so it must not keep saying ten
   // minutes to a build that has no clock on it at all
@@ -335,10 +309,7 @@ async function run(job) {
     spawn('docker', ['kill', box], { stdio: 'ignore' }).on('error', () => {});
   }, TIMEOUT);
 
-  // a change already knows its own key: nothing in the run will announce one,
-  // because create_lambda is not called. The public half is picked up from
-  // read_lambda the same way as everything else.
-  let created = job.key ? { privateKey: job.key } : null;
+  let created = null;
   let deployed = false;
   let wrote = false;
 
@@ -435,7 +406,7 @@ async function run(job) {
   const unauthorised = /authenticat|oauth|401|revoked|invalid api key|credit balance/i
     .test(`${summary} ${stderr}`);
 
-  if (!job.key && !wrote) {
+  if (!wrote) {
     job.state = 'failed';
     job.result = {
       ok: false,
@@ -457,9 +428,7 @@ async function run(job) {
       ok: false,
       error: !free && (code === null || child.killed)
         ? 'The build ran out of time.'
-        : job.key
-          ? 'Nothing was changed. The editor key may be wrong, or the change could not be made.'
-          : 'The build did not produce anything that could be put online.',
+        : 'The build did not produce anything that could be put online.',
       detail: clip(summary || stderr, 600)
     };
     return;
@@ -468,7 +437,6 @@ async function run(job) {
   job.state = 'done';
   job.result = {
     ok: true,
-    changed: !!job.key,
     // said plainly because it cannot be recovered: this key is the only way
     // back into what was just built
     keep: 'The editor link is the only way back in. There is no way to recover it.',
@@ -500,7 +468,6 @@ function record(job) {
     id: job.id.slice(0, 8),
     model: job.model || 'opus',
     unbounded: unbounded(job) || undefined,
-    changing: !!job.key,
     seconds,
     state: job.state,
     wrote: r.ok === true || undefined,
@@ -627,14 +594,6 @@ createServer((req, res) => {
         return send(res, 503, { error: 'Too many builds waiting. Try again shortly.' });
       }
 
-      let key = '';
-
-      try { key = String(JSON.parse(body).key ?? '').trim(); } catch { key = ''; }
-
-      if (key && !/^[a-z0-9]{8,64}$/.test(key)) {
-        return send(res, 400, { error: 'That does not look like an editor key.' });
-      }
-
       let model = '';
 
       try { model = String(JSON.parse(body).model ?? '').trim(); } catch { model = ''; }
@@ -643,7 +602,7 @@ createServer((req, res) => {
         return send(res, 400, { error: 'There is no such model here.' });
       }
 
-      const id = enqueue(clip(prompt, 2000), key, model);
+      const id = enqueue(clip(prompt, 2000), model);
 
       const lane = model === 'fable' ? lanes.long : lanes.quick;
 

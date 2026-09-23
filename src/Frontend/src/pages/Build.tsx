@@ -11,8 +11,12 @@ import { PAGES, usePageMeta } from '../meta';
  * This is the whole page on purpose. Everything else this site offers - the
  * editor, the files, the versions - is for somebody who wants to write the
  * code. This is for somebody who wants the thing to exist, so there is one
- * field, one button, and afterwards two links: where it is, and where to go
- * to change it.
+ * field, one button, and afterwards two links: where it is, and the editor
+ * link to take it further with.
+ *
+ * It only ever makes new things. Changing one afterwards is a job for the
+ * person's own agent over MCP, holding the editor link - the box used to try
+ * that too, and it never did it well.
  */
 
 type Result = {
@@ -25,7 +29,6 @@ type Result = {
   error?: string;
   detail?: string;
   deployed?: boolean;
-  changed?: boolean;
 };
 
 const IDEAS = [
@@ -216,8 +219,8 @@ export function Build() {
 
       {state === 'idle' && (
         <p className="mt-4 text-center text-sm text-slate-500">
-          This builds a new one from what you write here. To change something you have already made,
-          open its editor link.
+          This only builds new ones. To take something you have already made further, give its
+          editor link to your own coding agent - see below.
         </p>
       )}
 
@@ -279,7 +282,7 @@ export function Build() {
           >
             <span>
               <span className="block text-xs uppercase tracking-widest text-slate-400">
-                {result.changed ? 'Changed, and back online' : 'Your app'}
+                Your app
               </span>
               <span className="block truncate font-medium">{result.url}</span>
             </span>
@@ -288,7 +291,7 @@ export function Build() {
 
           <div className="surface px-5 py-4">
             <span className="block text-xs uppercase tracking-widest text-slate-400">
-              To change it later
+              To take it further
             </span>
 
             <a
@@ -303,6 +306,11 @@ export function Build() {
             <p className="mt-3 text-sm text-slate-500">
               Keep that one. It is the only way back in and it cannot be recovered - not by us
               either. Bookmark it before you close this tab.
+            </p>
+
+            <p className="mt-3 text-sm text-slate-500">
+              This page only builds new things. To change this one, connect your own coding agent
+              as described below, hand it the editor link and tell it what you want different.
             </p>
 
             <button
@@ -330,7 +338,7 @@ export function Build() {
               rel="noreferrer"
               className="btn btn-primary"
             >
-              Open the editor to change it
+              Open the editor
             </a>
 
             <button
@@ -344,9 +352,11 @@ export function Build() {
         </section>
       )}
 
-      {state === 'idle' && (
+      {(state === 'idle' || (state === 'done' && result?.ok)) && (
         <section className="mt-16 border-t border-slate-200 pt-10 dark:border-slate-800">
-          <h2 className="text-xl font-light tracking-tight">Or use your own agent</h2>
+          <h2 className="text-xl font-light tracking-tight">
+            {state === 'done' ? 'Keep going with your own agent' : 'Or use your own agent'}
+          </h2>
 
           <p className="mt-3 max-w-xl text-sm text-slate-500">
             The box above is a Claude running on this machine. If you already have one of your own,
@@ -379,8 +389,8 @@ export function Build() {
           </div>
 
           <p className="mt-4 text-sm text-slate-500">
-            It works the same way for changing something: give your agent the editor link and tell
-            it what to do.{' '}
+            That is also how to change something once it is built: give your agent the editor link
+            and tell it what to do.{' '}
             <Link to="/agentic-coding" className="underline">More about using an agent here</Link>.
           </p>
         </section>
