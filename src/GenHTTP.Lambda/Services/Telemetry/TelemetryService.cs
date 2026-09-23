@@ -77,9 +77,6 @@ public sealed class TelemetryService : ITelemetryService
     public long TotalUpgrades => Interlocked.Read(ref _upgrades);
 
     /// <summary>
-    /// Connections that were upgraded and have not closed again.
-    /// </summary>
-    /// <summary>
     /// How many connections are open right now.
     /// </summary>
     /// <remarks>
