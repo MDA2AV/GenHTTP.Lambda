@@ -234,6 +234,33 @@ the default profile of the runtime with `io_uring_setup`, `io_uring_enter` and
 is real: io_uring reaches further into the kernel than ordinary sockets, and
 this platform runs code written by strangers in the same process.
 
+### Redeploying
+
+An installation that also runs the build agent is spread over three compose
+files, and leaving one out does not fail loudly - it produces a server that
+looks healthy while some part of it is switched off. Drop the agent overlay and
+`/build` reports "no build agent"; drop the ioxide overlay and the engine
+quietly falls back to Kestrel. So there is a script that knows the list and
+checks the result:
+
+```bash
+sudo ./deploy.sh              # rebuild and restart what is on disk
+sudo ./deploy.sh --pull       # fetch origin/main first, then do that
+sudo ./deploy.sh --check      # verify the running server, change nothing
+```
+
+`--check` is safe at any time and is the quickest way to answer "is the build
+agent actually up?". A deploy with nothing to change recreates nothing, so it
+costs no downtime; when there is something to change it restarts the container,
+which drops every open connection - including anyone using a hosted lambda at
+that moment.
+
+Linking it onto the path makes it available to anyone with sudo:
+
+```bash
+sudo ln -sf "$PWD/deploy.sh" /usr/local/bin/genhttp-deploy
+```
+
 ## Telemetry
 
 `/stats` shows what the process is doing, and `/api/v1/telemetry` is where it
