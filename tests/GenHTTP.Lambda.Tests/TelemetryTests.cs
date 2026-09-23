@@ -109,8 +109,9 @@ public sealed class TelemetryTests
 
         await client.ConnectAsync(new UriBuilder(probe.RequestUri!) { Scheme = "ws" }.Uri, timeout.Token);
 
+        // open sockets are read from /proc and leave loopback out, so the
+        // socket opened here is never among them - only the upgrade is ours
         Assert.IsGreaterThan(before, telemetry.TotalUpgrades);
-        Assert.IsGreaterThanOrEqualTo(1, telemetry.OpenSockets);
     }
 
 }
