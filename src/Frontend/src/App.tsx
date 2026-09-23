@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
 import { IconSpinner } from './components/Icons';
@@ -82,7 +82,6 @@ export function App() {
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/logs" element={<Logs />} />
                 <Route path="/docs" element={<Guide />} />
-                <Route path="/guide" element={<Navigate to="/docs" replace />} />
                 <Route path="/build" element={<Build />} />
                 <Route path="/agentic-coding" element={<AgenticCoding />} />
                 <Route path="/terms" element={<Terms />} />
