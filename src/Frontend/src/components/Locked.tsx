@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import { IconLock } from './Icons';
 
 /**
@@ -21,7 +23,10 @@ export function Locked({ title, what, denied }: { title: string; what: string; d
       </p>
 
       <p className="mt-4 text-sm text-slate-500">
-        Open <strong className="font-medium">Admin</strong> at the top of the page and enter the token.
+        Open <strong className="font-medium">Admin</strong>{' '}
+        <span className="hidden sm:inline">at the top of the page</span>
+        <span className="sm:hidden">at the foot of the <Link to="/" className="underline">front page</Link></span>{' '}
+        and enter the token.
       </p>
     </div>
   );
