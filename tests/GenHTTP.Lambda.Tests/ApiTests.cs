@@ -1,6 +1,7 @@
 using System.Net;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -100,6 +101,31 @@ public sealed class ApiTests
     }
 
     [TestMethod]
+    public async Task ChangesApplyToTheNewestVersionAndCanDeployAtOnce()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
+                                                  LambdaFixture.Version("return Content.From(Resource.FromString(\"before\"));"));
+
+        using var changed = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/changes?deploy=true",
+                                                    new VersionChangeRequest(null, null, [new FileEdit("lambda.cs", "before", "after")]));
+
+        Assert.AreEqual(HttpStatusCode.Created, changed.StatusCode, await changed.Content.ReadAsStringAsync());
+
+        var result = await changed.GetContentAsync<SavedVersionResponse>();
+
+        Assert.AreEqual(3, result.Version);
+        Assert.IsTrue(result.Deployment?.Success);
+
+        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+
+        Assert.AreEqual("after", await served.GetContentAsync());
+    }
+
+    [TestMethod]
     public async Task CodeCanBeCheckedBeforeItIsSaved()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
@@ -193,7 +219,7 @@ public sealed class ApiTests
 
         // one path of each resource, so a resource that is routed but not
         // discovered shows up here rather than as a gap in the browser
-        foreach (var path in new[] { "/lambdas", "/versions", "/deployment/start", "/files", "/folders", "/code/check", "/keys", "/builds", "/system" })
+        foreach (var path in new[] { "/lambdas", "/versions", "/versions/zip", "/deployment/start", "/files", "/folders", "/code/check", "/keys", "/builds", "/system" })
         {
             Assert.Contains(path, specification, $"'{path}' is missing from the specification");
         }

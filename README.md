@@ -77,6 +77,9 @@ path.
 | `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one           |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
+| `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
+| `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
+| `POST /lambdas/:privateKey/versions/changes`          | changes some files of the newest version  |
 | `GET /lambdas/:privateKey/deployment`                 | what is online, and until when            |
 | `POST /lambdas/:privateKey/deployment/start` / `stop` | puts a version online, takes it off       |
 | `GET /lambdas/:privateKey/files`                      | lists the workspace                       |

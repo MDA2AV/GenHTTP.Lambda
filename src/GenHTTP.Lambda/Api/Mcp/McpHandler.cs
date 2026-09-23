@@ -123,12 +123,12 @@ public sealed class McpHandler : IHandler
 
         var parameters = call["params"] as JsonObject ?? [];
 
-        var answer = await AnswerAsync(method, id, parameters);
+        var answer = await AnswerAsync(method, id, parameters, Origin(request));
 
         return Json(request, ResponseStatus.Ok, answer);
     }
 
-    private async ValueTask<JsonObject> AnswerAsync(string method, JsonNode id, JsonObject parameters)
+    private async ValueTask<JsonObject> AnswerAsync(string method, JsonNode id, JsonObject parameters, string origin)
     {
         switch (method)
         {
@@ -152,7 +152,7 @@ public sealed class McpHandler : IHandler
 
                     var arguments = parameters["arguments"] as JsonObject ?? [];
 
-                    return McpProtocol.Result(id, await _tools.CallAsync(name, arguments));
+                    return McpProtocol.Result(id, await _tools.CallAsync(name, arguments, origin));
                 }
 
             case "resources/list":
@@ -194,21 +194,46 @@ public sealed class McpHandler : IHandler
             },
             ["instructions"] = string.Join('\n',
             [
-                "This platform hosts small web services written in C#. You write a snippet that returns a",
-                "GenHTTP handler, and whatever it returns is served at a public address.",
+                "Hosts small C# web services: a snippet returns a GenHTTP handler, which is served at a public address.",
                 "",
-                "Start by calling platform_guide, which says what a snippet has to return, what is imported",
-                "for you, what is refused, and the handful of things that catch people out. Then read an",
-                "example with list_examples and read_example - they are running code, not documentation.",
+                "Start with platform_guide, then read a running example (list_examples, read_example).",
                 "",
-                "The way through is: create_lambda, write_code, check_code if you want the compiler's",
-                "opinion first, then deploy. Nothing is reachable until deploy succeeds.",
+                "Flow: create_lambda, then write_code with deploy: true (check_code first if unsure). Nothing is",
+                "reachable before deploy. For later changes use change_code, which takes only the files or the",
+                "lines that change.",
                 "",
-                "create_lambda hands back an editor key. It is the only way back into that lambda, nobody",
-                "can recover it, and anyone who has it can change the code - give it to the person you are",
-                "acting for and do not put it anywhere public."
+                "create_lambda returns an editor key. It cannot be recovered and grants write access:",
+                "give it to the user and do not publish it.",
+                "",
+                "If you can make HTTP requests, prefer the REST API at https://genhttp.dev/api/v1/openapi.json:",
+                "same functionality, fewer tokens, since files are sent directly. A version can be downloaded",
+                "and uploaded as a zip, so you can edit locally and push once. Many environments cannot",
+                "reach it; then use these tools."
             ])
         };
+    }
+
+    /// <summary>
+    /// The scheme and host the caller used, so the links handed back can be followed as they are.
+    /// </summary>
+    /// <remarks>
+    /// A proxy in front terminates TLS and says so in its forwarding headers;
+    /// without one, the connection itself tells.
+    /// </remarks>
+    private static string Origin(IRequest request)
+    {
+        var forwarded = request.Header.Headers.GetForwardings().FirstOrDefault();
+
+        var host = forwarded?.Host ?? request.Header.Headers.GetEntry("Host");
+
+        if (string.IsNullOrEmpty(host))
+        {
+            return string.Empty;
+        }
+
+        var protocol = forwarded?.Protocol ?? request.Client.Protocol;
+
+        return $"{(protocol == ClientProtocol.Https ? "https" : "http")}://{host}";
     }
 
     private bool Allowed(string origin)
