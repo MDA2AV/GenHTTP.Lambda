@@ -20,7 +20,7 @@
 # verify-tools.sh and reading what it prints before changing this number.
 FROM node:22-slim
 
-ARG CLAUDE_VERSION=2.1.273
+ARG CLAUDE_VERSION=2.1.280
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
