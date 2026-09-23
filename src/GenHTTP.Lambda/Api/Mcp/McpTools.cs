@@ -771,7 +771,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
         thingsThatCatchPeopleOut = new[]
         {
             "Request bodies bind by type: a bare string parameter is null. Take a record.",
-            "A websocket cannot read the request it was upgraded from (the query throws). Send what it needs as the first frame.",
+            "A browser cannot set headers on a websocket handshake. Pass what the socket needs in the query (connection.Request.Header.Query) or, for secrets, as the first frame.",
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore.",
             "REST routes serialize camel case; match that on sockets.",
             "Your own type called e.g. File is fine; only the refused framework type of that name is blocked.",

@@ -9,11 +9,11 @@ namespace GenHTTP.Lambda.Tests;
 /// What the server is allowed to do to a response on the way out.
 /// </summary>
 /// <remarks>
-/// Brotli and zstd truncate generated content: past roughly twelve kilobytes
-/// the answer arrives cut short. Every browser asks for brotli first and curl
-/// asks for nothing, so the broken response is the one people get and the
-/// whole one is what anybody checking by hand sees - which is how it went
-/// unnoticed until a menu quietly stopped filling in.
+/// Brotli and zstd used to truncate generated content, fixed in GenHTTP
+/// 11.0.3. Every browser asks for brotli first and curl asks for nothing, so
+/// the broken response was the one people got and the whole one was what
+/// anybody checking by hand saw - which is how it went unnoticed until a menu
+/// quietly stopped filling in. Kept so it cannot come back unseen.
 /// </remarks>
 [TestClass]
 public sealed class CompressionTests
@@ -66,7 +66,7 @@ public sealed class CompressionTests
         {
             "gzip" => new GZipStream(stream, CompressionMode.Decompress),
             "br" => new BrotliStream(stream, CompressionMode.Decompress),
-            "zstd" => new ZLibStream(stream, CompressionMode.Decompress),
+            "zstd" => new ZstandardStream(stream, CompressionMode.Decompress),
             _ => stream
         };
 

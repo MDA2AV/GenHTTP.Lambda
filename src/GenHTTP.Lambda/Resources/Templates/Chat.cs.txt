@@ -129,10 +129,10 @@ var socket = Websocket.Functional()
 
                           /*
                            * The first frame is the token and every frame after
-                           * it is talk. The token cannot travel in the query or
-                           * a header: once a socket is upgraded the request is
-                           * gone, and reading it here throws. A browser cannot
-                           * set a header on a handshake anyway.
+                           * it is talk. A browser cannot set a header on a
+                           * handshake, and a token in the query would end up
+                           * in every log the address passes through - so it
+                           * travels inside the socket instead.
                            */
                           if (!room.TryGetValue(connection, out var speaker))
                           {

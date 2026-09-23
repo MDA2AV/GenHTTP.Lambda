@@ -399,8 +399,9 @@ var socket = Websocket.Functional()
 return Layout.Create().Add("chat", socket);`} />
 
             <Aside>
-              One thing catches everybody: a websocket handler cannot read the request it was
-              upgraded from. Whatever it needs has to arrive as the first message.
+              One thing catches everybody: a browser cannot set headers on a websocket handshake.
+              Pass what the handler needs in the query, where it reads it
+              from <Code>connection.Request.Header.Query</Code>, or send secrets as the first message.
             </Aside>
           </Section>
 

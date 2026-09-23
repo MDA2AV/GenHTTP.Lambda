@@ -104,8 +104,8 @@ async function enter(path) {
   const address = new URL(`${base}/room`, location.href);
   address.protocol = address.protocol === 'https:' ? 'wss:' : 'ws:';
   socket = new WebSocket(address);
-  // the first frame is the token; the request is gone by the time the socket
-  // is open, so there is nowhere else to put it
+  // the first frame is the token; a browser cannot set a header on the
+  // handshake, and in the address it would be logged along with it
   socket.onopen = () => socket.send(answer.token);
   socket.onmessage = (event) => add(JSON.parse(event.data));
   socket.onclose = () => { $('status').textContent = 'disconnected'; };
