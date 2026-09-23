@@ -19,6 +19,7 @@ set -euo pipefail
 
 REPO=/root/GenHTTP.Lambda
 SITE=https://genhttp.dev
+CONTAINER=genhttplambda-lambda-1
 FILES=(-f docker-compose.yml -f docker-compose.ioxide.yml -f docker-compose.agent.yml)
 
 pull=no; check_only=no; assume_yes=no
@@ -48,7 +49,7 @@ verify() {
   local failed=0
 
   local status
-  status=$(docker inspect genhttplambda-lambda-1 --format '{{.State.Health.Status}}' 2>/dev/null || echo missing)
+  status=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null || echo missing)
   [ "$status" = healthy ] && ok "container healthy" || { bad "container is '$status'"; failed=1; }
 
   local code
@@ -74,7 +75,7 @@ verify() {
   fi
 
   local engine
-  engine=$(docker inspect genhttplambda-lambda-1 --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+  engine=$(docker inspect "$CONTAINER" --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
            | grep -i '^LAMBDA_ENGINE=' | cut -d= -f2 || true)
   [ -n "$engine" ] && ok "engine: $engine" || printf '  ---- engine not pinned in env (compose default)\n'
 
@@ -109,8 +110,15 @@ say "Building and restarting (the image builds the frontend too, so this takes a
 docker compose "${FILES[@]}" up -d --build lambda
 
 say "Waiting for it to come back"
+# Wait for the health status as well as the site, not just the site. The server
+# answers HTTP well before Docker records its first health probe, so waiting on
+# HTTP alone makes the check below report "container is 'starting'" on a deploy
+# that is in fact perfectly fine - a false alarm every time, which is the kind
+# that teaches you to ignore the real one.
 for _ in $(seq 1 60); do
-  [ "$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "$SITE/" || echo 000)" = 200 ] && break
+  code=$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "$SITE/" || echo 000)
+  health=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null || echo missing)
+  [ "$code" = 200 ] && [ "$health" = healthy ] && break
   sleep 3
 done
 
