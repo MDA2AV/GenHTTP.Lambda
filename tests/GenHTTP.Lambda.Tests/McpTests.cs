@@ -175,11 +175,87 @@ public sealed class McpTests
 
         Assert.IsTrue(deployed["ok"]!.GetValue<bool>(), deployed.ToJsonString());
 
-        // and the thing it built actually answers
-        using var served = await fixture.GetAsync(deployed["publicUrl"]!.GetValue<string>());
+        // and the thing it built actually answers, at a link that can be followed as it is
+        var address = new Uri(deployed["publicUrl"]!.GetValue<string>());
+
+        Assert.IsTrue(address.IsAbsoluteUri);
+
+        using var served = await fixture.GetAsync(address.PathAndQuery);
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
         Assert.Contains("built by an agent", await served.Content.ReadAsStringAsync());
+    }
+
+    [TestMethod]
+    public async Task AChangeSendsOnlyWhatChangesAndCanDeployAtOnce()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["acceptTerms"] = true,
+            ["publicKey"] = "changed-by-agent"
+        }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var written = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(
+                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(Greeter.Text));" },
+                new JsonObject { ["name"] = "Greeter.cs", ["code"] = "static class Greeter { public const string Text = \"first\"; }" },
+                new JsonObject { ["name"] = "notes.txt", ["code"] = "to be removed" })
+        }));
+
+        Assert.IsTrue(written["ok"]!.GetValue<bool>(), written.ToJsonString());
+        Assert.IsNotNull(written["publicUrl"], "deploy: true answers the way deploy does");
+
+        var changed = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["remove"] = new JsonArray("notes.txt"),
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "Greeter.cs", ["find"] = "\"first\"", ["replace"] = "\"second\"" })
+        }));
+
+        Assert.IsTrue(changed["ok"]!.GetValue<bool>(), changed.ToJsonString());
+
+        using var served = await fixture.GetAsync("/lambda/changed-by-agent/");
+
+        Assert.AreEqual("second", await served.Content.ReadAsStringAsync());
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        var names = ((JsonArray)read["files"]!).Select(f => f!["name"]!.GetValue<string>()).ToList();
+
+        CollectionAssert.AreEqual(new[] { "lambda.cs", "Greeter.cs" }, names, "the file not named stays, the removed one is gone");
+    }
+
+    [TestMethod]
+    public async Task AnEditThatMatchesTwiceIsRefused()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "// a\n// a\nreturn Content.From(Resource.FromString(\"x\"));" })
+        });
+
+        var answer = await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = "// a", ["replace"] = "// b" })
+        });
+
+        Assert.IsTrue(answer["result"]!["isError"]!.GetValue<bool>());
+        Assert.Contains("more than once", Structured(answer)["problem"]!.GetValue<string>());
     }
 
     [TestMethod]
