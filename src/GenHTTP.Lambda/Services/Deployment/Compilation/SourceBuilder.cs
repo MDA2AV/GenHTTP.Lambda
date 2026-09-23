@@ -36,6 +36,20 @@ internal static class SourceBuilder
 
     internal const string AssetType = "__LambdaAssets";
 
+    /// <summary>
+    /// Holds what every file of a lambda may name without qualifying it.
+    /// </summary>
+    /// <remarks>
+    /// Imported into every file with a using static, so Workspace means the
+    /// same thing in a type in Store.cs as it does in the top-level code of
+    /// lambda.cs - it used to exist only there, and the first thing an agent
+    /// writes is a store class in a file of its own that calls Workspace and
+    /// fails to compile. Assets stays out: GenHTTP.Modules.Files, which every
+    /// lambda imports, has a type of that name, and a using static member and
+    /// an imported type sharing a name is an ambiguity the compiler refuses.
+    /// </remarks>
+    internal const string ScopeType = "__LambdaScope";
+
     internal static CSharpParseOptions ScriptOptions { get; } = new(LanguageVersion.Latest, DocumentationMode.None, SourceCodeKind.Script);
 
     internal static CSharpParseOptions RegularOptions { get; } = new(LanguageVersion.Latest, DocumentationMode.None);
@@ -80,6 +94,8 @@ internal static class SourceBuilder
         {
             builder.AppendLine(import.NormalizeWhitespace().ToFullString());
         }
+
+        builder.AppendLine($"using static {scope}.{ScopeType};");
 
         builder.AppendLine();
         builder.AppendLine($"namespace {scope};");
@@ -130,6 +146,10 @@ internal static class SourceBuilder
             builder.AppendLine(import.NormalizeWhitespace().ToFullString());
         }
 
+        // types declared in lambda.cs sit outside the entry class, so they
+        // need the import as much as the other files do
+        builder.AppendLine($"using static {scope}.{ScopeType};");
+
         builder.AppendLine();
         builder.AppendLine($"namespace {scope};");
         builder.AppendLine();
@@ -137,6 +157,11 @@ internal static class SourceBuilder
         builder.AppendLine("{");
         builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
         builder.AppendLine($"    internal static readonly {AssetType} Assets = new {AssetType}({Literal(assets)});");
+        builder.AppendLine("}");
+        builder.AppendLine();
+        builder.AppendLine($"internal static class {ScopeType}");
+        builder.AppendLine("{");
+        builder.AppendLine($"    internal static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {EntryType}");

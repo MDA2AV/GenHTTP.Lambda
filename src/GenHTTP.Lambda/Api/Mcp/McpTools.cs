@@ -34,7 +34,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
     /// </summary>
     public JsonArray Describe() =>
     [
-        Tool("create_lambda",
+        Tool("create_lambda", "Create a lambda", Effect.Create,
              "Create a lambda. Returns its public address and a private editor key, the only way back in. Nothing is online until deploy.",
              new JsonObject
              {
@@ -48,7 +48,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("acceptTerms")
              }),
 
-        Tool("write_code",
+        Tool("write_code", "Save all files", Effect.Save,
              "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. Say why with prompt and change - the owner reads them in the version history. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
              new JsonObject
              {
@@ -79,7 +79,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey", "files")
              }),
 
-        Tool("change_code",
+        Tool("change_code", "Change some files", Effect.Save,
              "Change some files of the newest version and save the result as a new version: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. Pass deploy: true to publish it in the same call.",
              new JsonObject
              {
@@ -132,7 +132,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("check_code",
+        Tool("check_code", "Check that code compiles", Effect.Read,
              "Compile without saving or deploying; returns diagnostics with file and line. Does not build the handler, so deploy can still refuse a route whose return type cannot be served.",
              new JsonObject
              {
@@ -160,7 +160,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey", "files")
              }),
 
-        Tool("deploy",
+        Tool("deploy", "Deploy a version", Effect.Replace,
              "Deploy (publish) a saved version so it goes live at its public address. Returns diagnostics on failure.",
              new JsonObject
              {
@@ -173,20 +173,21 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("read_lambda",
-             "A lambda's status (online version, latest version, expiry), the recent versions with what each was asked for and changed, and the files of one version. Read the history before changing what you did not write.",
+        Tool("read_lambda", "Read a lambda", Effect.Read,
+             $"A lambda's status (online version, latest version, expiry), the recent versions with what each was asked for and changed, and the files of one version - in full when they come to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one. Read the history before changing what you did not write.",
              new JsonObject
              {
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key."),
-                     ["version"] = Field("integer", "Defaults to the newest.")
+                     ["version"] = Field("integer", "Defaults to the newest."),
+                     ["file"] = Field("string", "Return only this file of the version, in full, however large the rest is.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("read_logs",
+        Tool("read_logs", "Read a lambda's logs", Effect.Read,
              "What a deployed lambda has been doing: its recent requests and how they were answered, what it printed, the errors it threw with their stack traces, and how much traffic it has had in the last hour and day. Call it after deploying to see that it works, and first when something is reported broken.",
              new JsonObject
              {
@@ -201,7 +202,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("upload_file",
+        Tool("upload_file", "Upload a workspace file", Effect.Replace,
              "Write a file to the lambda's workspace, a runtime directory it can read, write and serve. Takes effect immediately without a deploy - the way to ship a front end that changes independently of the code.",
              new JsonObject
              {
@@ -216,7 +217,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey", "path", "content")
              }),
 
-        Tool("list_files",
+        Tool("list_files", "List workspace files", Effect.Read,
              "List the lambda's workspace with size and last write per file. Runtime files only; the code is in read_lambda.",
              new JsonObject
              {
@@ -228,7 +229,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("delete_file",
+        Tool("delete_file", "Delete a workspace file", Effect.Replace,
              "Remove a file, or a folder with its contents, from the workspace.",
              new JsonObject
              {
@@ -241,11 +242,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey", "path")
              }),
 
-        Tool("list_examples",
+        Tool("list_examples", "List the examples", Effect.Read,
              "Running example lambdas, basic and advanced. Read one before writing code.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
 
-        Tool("read_example",
+        Tool("read_example", "Read an example", Effect.Read,
              "All files of one running example.",
              new JsonObject
              {
@@ -257,7 +258,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("id")
              }),
 
-        Tool("platform_guide",
+        Tool("platform_guide", "Read the platform guide", Effect.Read,
              "Rules for writing a lambda: what the snippet returns, what is imported, what is refused, limits and terms.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() })
     ];
@@ -614,6 +615,30 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
 
         var history = await meta.GetVersionsAsync(privateKey);
 
+        var only = Text(arguments, "file");
+
+        object listing;
+
+        var omitted = false;
+
+        if (only != null)
+        {
+            var one = files.FirstOrDefault(f => f.Name == only)
+                   ?? throw LambdaException.NotFound($"Version {version} has no file '{only}'. It has: {string.Join(", ", files.Select(f => f.Name))}.");
+
+            listing = new[] { new { one.Name, one.Code } };
+        }
+        else if (files.Sum(f => f.Code.Length) <= ReadBudget)
+        {
+            listing = files.Select(f => new { f.Name, f.Code });
+        }
+        else
+        {
+            listing = files.Select(f => new { f.Name, length = f.Code.Length });
+
+            omitted = true;
+        }
+
         return McpProtocol.Say(new
         {
             ok = true,
@@ -631,9 +656,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             // else's work can follow what they were trying to do - the one line
             // each, since a prompt can be a page and this is read every time
             history = history.Take(10).Select(v => new { v.Version, v.Created, v.Change, v.Origin }),
-            files = files.Select(f => new { f.Name, f.Code })
+            files = listing,
+            filesOmitted = omitted ? true : (bool?)null,
+            note = omitted
+                ? $"The files come to {files.Sum(f => f.Code.Length):N0} characters, more than one answer carries. Pass file to read one of them."
+                : null
         });
     }
+
+    /// <summary>
+    /// How much file content read_lambda sends in one answer.
+    /// </summary>
+    /// <remarks>
+    /// Clients cap what a tool may answer, and a lambda of any size went over:
+    /// the answer failed as a whole and the agent saw nothing at all, not even
+    /// the status. Under the budget every file comes back as before; over it
+    /// the answer lists names and lengths, and file fetches one in full.
+    /// </remarks>
+    private const int ReadBudget = 30_000;
 
     private static JsonObject Examples(string origin) => McpProtocol.Say(new
     {
@@ -694,6 +734,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             shipping = "Send with the code: { name: \"www/app.css\", code: \"body { margin: 0 }\" }. Binary files as base64 with encoding \"base64\".",
             reading = "Assets.Tree(), Assets.Files(), Assets.App() (single page application: index.html answers unmatched paths), Assets.Exists / ReadText / ReadBytes / List / Folders.",
             folders = "Each takes an optional folder: Assets.App(\"site\") serves site/ at the root, so site/app.css is requested as /app.css.",
+            inOtherFiles = "Assets means this only in the top-level code of lambda.cs. In other files, and in types, Assets is the Files module's type of the same name - use LambdaEnvironment.Assets there.",
             serving = "return Layout.Create().Add(\"api\", api).Add(Assets.App(\"site\"));",
             contentTypes = "Inferred from the file extension.",
             limits = new
@@ -719,6 +760,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                 "Workspace.Folders() / CreateFolder(name)",
                 "Workspace.Root - where it is on disk"
             },
+            reach = "Workspace can be used from every file, including types in other .cs files.",
             note = "Nothing else on the file system is reachable. There is no Append."
         },
         servingAFrontEnd = new
@@ -790,12 +832,45 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
 
     #region Arguments
 
-    private static JsonObject Tool(string name, string description, JsonObject schema) => new()
+    private static JsonObject Tool(string name, string title, Effect effect, string description, JsonObject schema) => new()
     {
         ["name"] = name,
+        ["title"] = title,
         ["description"] = description,
-        ["inputSchema"] = schema
+        ["inputSchema"] = schema,
+        ["annotations"] = new JsonObject
+        {
+            ["title"] = title,
+            ["readOnlyHint"] = effect.ReadOnly,
+            ["destructiveHint"] = effect.Destructive,
+            ["idempotentHint"] = effect.Idempotent,
+            // every tool acts on this platform and nothing beyond it
+            ["openWorldHint"] = false
+        }
     };
+
+    /// <summary>
+    /// What calling a tool does to the platform, as the protocol's hints say it.
+    /// </summary>
+    /// <remarks>
+    /// Clients read these to decide what to ask the user before a call - a
+    /// read can go through, a deploy is worth a question. Without them every
+    /// tool looks like the worst case, which is what the defaults assume.
+    /// </remarks>
+    private readonly record struct Effect(bool ReadOnly, bool Destructive, bool Idempotent)
+    {
+        /// <summary>Looks and changes nothing.</summary>
+        public static Effect Read => new(true, false, true);
+
+        /// <summary>Adds something new and replaces nothing.</summary>
+        public static Effect Create => new(false, false, false);
+
+        /// <summary>Adds a version, and with deploy: true replaces what is online.</summary>
+        public static Effect Save => new(false, true, false);
+
+        /// <summary>Replaces or removes what was there, the same way however often.</summary>
+        public static Effect Replace => new(false, true, true);
+    }
 
     private static JsonObject Field(string type, string description) => new()
     {
