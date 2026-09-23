@@ -115,7 +115,7 @@ public sealed class ProjectPackerTests
 
         var lambda = await fixture.CreateLambdaAsync("takeaway");
 
-        using var answer = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/download");
+        using var answer = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/export");
 
         Assert.AreEqual(System.Net.HttpStatusCode.OK, answer.StatusCode);
         Assert.AreEqual("application/zip", answer.Content.Headers.ContentType?.MediaType);

@@ -57,18 +57,25 @@ public sealed class MetaService : IMetaService
 
     #region Keys
 
-    public async ValueTask<KeyAvailability> CheckKeyAsync(string? publicKey, CancellationToken cancellation = default)
+    public async ValueTask<KeyStatus> DescribeKeyAsync(string? publicKey, CancellationToken cancellation = default)
     {
-        if (!LambdaKeys.TryNormalize(publicKey, out var normalized, out var reason))
-        {
-            return new KeyAvailability(normalized, false, reason);
-        }
+        // looked up even when it could not be claimed: a key that is refused
+        // today may still belong to a lambda from before the rule was made
+        var valid = LambdaKeys.TryNormalize(publicKey, out var normalized, out var reason);
 
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var taken = await database.Lambdas.AnyAsync(l => l.PublicKey == normalized, cancellation);
+        var lambda = await database.Lambdas.AsNoTracking()
+                                   .Where(l => l.PublicKey == normalized)
+                                   .Select(l => new { l.ActiveVersion })
+                                   .FirstOrDefaultAsync(cancellation);
 
-        return new KeyAvailability(normalized, !taken, taken ? "This key is already in use." : null);
+        if (valid && lambda != null)
+        {
+            reason = "This key is already in use.";
+        }
+
+        return new KeyStatus(normalized, valid, lambda != null, lambda?.ActiveVersion != null, reason);
     }
 
     public async ValueTask<LambdaInfo> ChangeKeyAsync(string privateKey, string? publicKey, CancellationToken cancellation = default)
@@ -217,16 +224,6 @@ public sealed class MetaService : IMetaService
         }
 
         return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier.ToString(), deployment.Version, deployment.Created);
-    }
-
-    public async ValueTask<PublicStatus> GetStatusAsync(string publicKey, CancellationToken cancellation = default)
-    {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
-
-        var lambda = await database.Lambdas.AsNoTracking()
-                                   .FirstOrDefaultAsync(l => l.PublicKey == publicKey, cancellation);
-
-        return new PublicStatus(publicKey, lambda != null, lambda?.ActiveVersion != null);
     }
 
     public async ValueTask<IReadOnlyList<LambdaVersionInfo>> GetVersionsAsync(string privateKey, CancellationToken cancellation = default)

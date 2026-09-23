@@ -134,7 +134,8 @@ public sealed class SourceTests
 
         Assert.HasCount(2, content.Files);
         Assert.AreEqual("Greeting.cs", content.Files[1].Name);
-        Assert.Contains("Inline.Create()", content.Code, "and the snippet is still where a client that knows nothing of files looks");
+        Assert.AreEqual("lambda.cs", content.Files[0].Name);
+        Assert.Contains("Inline.Create()", content.Files[0].Code, "the snippet comes first");
     }
 
     [TestMethod]

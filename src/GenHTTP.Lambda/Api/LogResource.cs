@@ -1,5 +1,6 @@
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Diagnostics;

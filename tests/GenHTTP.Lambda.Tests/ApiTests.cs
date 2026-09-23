@@ -49,9 +49,9 @@ public sealed class ApiTests
 
         await fixture.CreateLambdaAsync("occupied");
 
-        using var check = await fixture.GetAsync("/api/v1/lambdas/keys/occupied");
+        using var check = await fixture.GetAsync("/api/v1/keys/occupied");
 
-        var availability = await check.GetContentAsync<AvailabilityResponse>();
+        var availability = await check.GetContentAsync<KeyResponse>();
 
         Assert.IsFalse(availability.Available);
 
@@ -82,7 +82,7 @@ public sealed class ApiTests
         var lambda = await fixture.CreateLambdaAsync();
 
         using var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                                  new CodeRequest("return Content.From(Resource.FromString(\"v2\"));"));
+                                                  LambdaFixture.Version("return Content.From(Resource.FromString(\"v2\"));"));
 
         Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
 
@@ -96,7 +96,7 @@ public sealed class ApiTests
 
         var content = await read.GetContentAsync<VersionContentResponse>();
 
-        Assert.Contains("v2", content.Code);
+        Assert.Contains("v2", content.Files[0].Code);
     }
 
     [TestMethod]
@@ -106,8 +106,8 @@ public sealed class ApiTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/check",
-                                                     new CodeRequest("return Content.From(Resource.FromString(File.ReadAllText(\"/etc/passwd\")));"));
+        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/code/check",
+                                                     LambdaFixture.Code("return Content.From(Resource.FromString(File.ReadAllText(\"/etc/passwd\")));"));
 
         var outcome = await response.GetContentAsync<CompilationResponse>();
 
@@ -126,15 +126,15 @@ public sealed class ApiTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        using var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions", new CodeRequest("return;"));
+        using var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions", LambdaFixture.Version("return;"));
 
         Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
 
-        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment", new DeployRequest(2));
+        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/start", new DeploymentRequest(2));
 
         Assert.AreEqual(422, (int)response.StatusCode);
 
-        var deployment = await response.GetContentAsync<DeploymentResponse>();
+        var deployment = await response.GetContentAsync<DeploymentOutcomeResponse>();
 
         Assert.IsFalse(deployment.Success);
         Assert.IsNotEmpty(deployment.Diagnostics);
@@ -147,13 +147,13 @@ public sealed class ApiTests
 
         var lambda = await fixture.CreateLambdaAsync("first-key");
 
-        using var moved = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/key", new ChangeKeyRequest("second-key"));
+        using var moved = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest("second-key"));
 
         Assert.AreEqual("second-key", (await moved.GetContentAsync<LambdaResponse>()).PublicKey);
 
-        using var status = await fixture.GetAsync("/api/v1/lambdas/public/first-key");
+        using var status = await fixture.GetAsync("/api/v1/keys/first-key");
 
-        Assert.IsFalse((await status.GetContentAsync<StatusResponse>()).Exists);
+        Assert.IsFalse((await status.GetContentAsync<KeyResponse>()).Exists);
 
         using var deleted = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}");
 
@@ -189,7 +189,126 @@ public sealed class ApiTests
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
-        Assert.Contains("/lambdas", await response.GetContentAsync());
+        var specification = await response.GetContentAsync();
+
+        // one path of each resource, so a resource that is routed but not
+        // discovered shows up here rather than as a gap in the browser
+        foreach (var path in new[] { "/lambdas", "/versions", "/deployment/start", "/files", "/folders", "/code/check", "/keys", "/builds", "/system" })
+        {
+            Assert.Contains(path, specification, $"'{path}' is missing from the specification");
+        }
+    }
+
+    [TestMethod]
+    public async Task AKeyIsDescribedInOneAnswer()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("live-key");
+
+        await fixture.DeployAsync(lambda.PrivateKey);
+
+        var free = await DescribeAsync(fixture, "Free-Key");
+
+        Assert.AreEqual("free-key", free.PublicKey, "the key comes back the way it would be stored");
+        Assert.IsTrue(free.Valid);
+        Assert.IsTrue(free.Available);
+        Assert.IsFalse(free.Exists);
+
+        var taken = await DescribeAsync(fixture, "live-key");
+
+        Assert.IsFalse(taken.Available);
+        Assert.IsTrue(taken.Exists);
+        Assert.IsTrue(taken.Deployed);
+        Assert.IsNotNull(taken.Reason);
+
+        var invalid = await DescribeAsync(fixture, "no");
+
+        Assert.IsFalse(invalid.Valid);
+        Assert.IsFalse(invalid.Available);
+        Assert.IsNotNull(invalid.Reason);
+    }
+
+    [TestMethod]
+    public async Task TheDeploymentCanBeReadStartedAndStopped()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        Assert.IsFalse((await DeploymentOfAsync(fixture, lambda)).Deployed);
+
+        await fixture.DeployAsync(lambda.PrivateKey);
+
+        var online = await DeploymentOfAsync(fixture, lambda);
+
+        Assert.IsTrue(online.Deployed);
+        Assert.AreEqual(1, online.Version);
+        Assert.IsNotNull(online.DeployedUntil);
+
+        using var stopped = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/stop");
+
+        Assert.AreEqual(HttpStatusCode.OK, stopped.StatusCode);
+
+        Assert.IsFalse((await DeploymentOfAsync(fixture, lambda)).Deployed);
+    }
+
+    [TestMethod]
+    public async Task AnUpdateChangesOnlyWhatItNames()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("stays-put");
+
+        using var response = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest(null));
+
+        Assert.AreEqual("stays-put", (await response.GetContentAsync<LambdaResponse>()).PublicKey);
+    }
+
+    [TestMethod]
+    public async Task PathsBelowALambdaNobodyServesAreNotFound()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // asked of every resource below /lambdas in turn, and none of them has it
+        using var unknown = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/nothing");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, unknown.StatusCode);
+
+        // a path that is served, with a method it is not served with
+        using var wrong = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/versions");
+
+        Assert.AreEqual(HttpStatusCode.MethodNotAllowed, wrong.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task ThePlatformSaysWhetherItBuilds()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        using var response = await fixture.GetAsync("/api/v1/system");
+
+        var platform = await response.GetContentAsync<PlatformResponse>();
+
+        Assert.IsFalse(platform.Build.Available, "there is no agent in the tests");
+    }
+
+    private static async Task<KeyResponse> DescribeAsync(LambdaFixture fixture, string key)
+    {
+        using var response = await fixture.GetAsync($"/api/v1/keys/{key}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+        return await response.GetContentAsync<KeyResponse>();
+    }
+
+    private static async Task<DeploymentResponse> DeploymentOfAsync(LambdaFixture fixture, LambdaResponse lambda)
+    {
+        using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/deployment");
+
+        return await response.GetContentAsync<DeploymentResponse>();
     }
 
 }

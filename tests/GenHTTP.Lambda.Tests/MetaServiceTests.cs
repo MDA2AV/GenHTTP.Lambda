@@ -33,7 +33,7 @@ public sealed class MetaServiceTests
 
         await fixture.Meta.CreateAsync("taken");
 
-        var availability = await fixture.Meta.CheckKeyAsync("taken");
+        var availability = await fixture.Meta.DescribeKeyAsync("taken");
 
         Assert.IsFalse(availability.Available);
         Assert.IsNotNull(availability.Reason);
@@ -95,7 +95,7 @@ public sealed class MetaServiceTests
         Assert.IsNull(retired.ActiveVersion);
         Assert.IsNull(await fixture.Meta.ResolveAsync(lambda.PublicKey), "an undeployed lambda no longer resolves");
 
-        var status = await fixture.Meta.GetStatusAsync(lambda.PublicKey);
+        var status = await fixture.Meta.DescribeKeyAsync(lambda.PublicKey);
 
         Assert.IsTrue(status.Exists);
         Assert.IsFalse(status.Deployed);
@@ -127,7 +127,7 @@ public sealed class MetaServiceTests
         var moved = await fixture.Meta.ChangeKeyAsync(lambda.PrivateKey, "after");
 
         Assert.AreEqual("after", moved.PublicKey);
-        Assert.IsFalse((await fixture.Meta.GetStatusAsync("before")).Exists);
+        Assert.IsFalse((await fixture.Meta.DescribeKeyAsync("before")).Exists);
 
         await fixture.Meta.CreateAsync("occupied");
 
@@ -146,7 +146,7 @@ public sealed class MetaServiceTests
         await fixture.Meta.DeleteAsync(lambda.PrivateKey);
 
         Assert.IsNull(await fixture.Meta.GetAsync(lambda.PrivateKey));
-        Assert.IsFalse((await fixture.Meta.GetStatusAsync(lambda.PublicKey)).Exists);
+        Assert.IsFalse((await fixture.Meta.DescribeKeyAsync(lambda.PublicKey)).Exists);
     }
 
     [TestMethod]

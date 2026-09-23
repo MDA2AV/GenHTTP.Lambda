@@ -1,7 +1,6 @@
-using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Services.Deployment.Compilation;
+using GenHTTP.Lambda.Services.Deployment.Model;
 
-namespace GenHTTP.Lambda.Api;
+namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
 /// The suggestions the code editor offers: every type a lambda can reach

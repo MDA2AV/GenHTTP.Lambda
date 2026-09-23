@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Data;
 
 using Microsoft.EntityFrameworkCore;
 using GenHTTP.Lambda.Services.Deployment;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Testing;
@@ -188,20 +189,30 @@ internal sealed class LambdaFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// A version made of nothing but the given snippet.
+    /// </summary>
+    public static VersionRequest Version(string code) => new([new LambdaFile(LambdaSource.EntryName, code)]);
+
+    /// <summary>
+    /// A question about nothing but the given snippet.
+    /// </summary>
+    public static CodeRequest Code(string code) => new([new LambdaFile(LambdaSource.EntryName, code)]);
+
+    /// <summary>
     /// Stores the given code and puts it online, expecting it to build.
     /// </summary>
-    public async Task<DeploymentResponse> DeployAsync(string privateKey, string? code = null)
+    public async Task<DeploymentOutcomeResponse> DeployAsync(string privateKey, string? code = null)
     {
         if (code != null)
         {
-            using var saved = await SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/versions", new CodeRequest(code));
+            using var saved = await SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/versions", LambdaFixture.Version(code));
 
             Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
         }
 
-        using var response = await SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/deployment", new DeployRequest(null));
+        using var response = await SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/deployment/start", new DeploymentRequest(null));
 
-        var deployment = await response.GetContentAsync<DeploymentResponse>();
+        var deployment = await response.GetContentAsync<DeploymentOutcomeResponse>();
 
         Assert.IsTrue(deployment.Success, string.Join("; ", deployment.Diagnostics.Select(d => d.Message)));
 

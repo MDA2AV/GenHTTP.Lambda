@@ -52,11 +52,11 @@ export function Build() {
   useEffect(() => {
     setOrigin(window.location.origin);
 
-    api.build
-      .available()
-      .then((r) => {
-        setAvailable(r.available);
-        setSecondModel(r.secondModel);
+    api
+      .platform()
+      .then(({ build }) => {
+        setAvailable(build.available);
+        setSecondModel(build.secondModel);
       })
       .catch(() => setAvailable(false));
 
@@ -76,7 +76,7 @@ export function Build() {
 
     try {
       id = (
-        await api.build.start(
+        await api.builds.start(
           prompt.trim(),
           model === 'opus' ? undefined : model,
           model === 'opus' ? undefined : password,
@@ -90,7 +90,7 @@ export function Build() {
 
     polling.current = window.setInterval(async () => {
       try {
-        const job = await api.build.progress(id);
+        const job = await api.builds.progress(id);
 
         setEvents(job.events ?? []);
 

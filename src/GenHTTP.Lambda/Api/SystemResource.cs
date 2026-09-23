@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Meta;
 
@@ -9,9 +10,9 @@ namespace GenHTTP.Lambda.Api;
 
 /// <summary>
 /// What the editor needs to know about the platform: the terms, the example it
-/// starts from and the vocabulary it can suggest.
+/// starts from, the vocabulary it can suggest and whether it can build things.
 /// </summary>
-public sealed class SystemResource(LambdaOptions options)
+public sealed class SystemResource(LambdaOptions options, BuildService builds)
 {
 
     internal const string Terms = """
@@ -36,7 +37,8 @@ public sealed class SystemResource(LambdaOptions options)
         (int)options.DeploymentLifetime.TotalHours,
         (int)options.Retention.TotalDays,
         ModuleCatalog.Imports,
-        CompletionCatalog.Items
+        CompletionCatalog.Items,
+        new BuildAvailability(builds.Available, builds.PerDay, builds.HasSecondModel)
     );
 
     /// <summary>

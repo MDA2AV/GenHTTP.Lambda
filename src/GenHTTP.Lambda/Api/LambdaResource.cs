@@ -1,12 +1,10 @@
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
-using GenHTTP.Lambda.Services.Meta.Model;
-using GenHTTP.Lambda.Services.Deployment;
-using GenHTTP.Lambda.Services.Deployment.Compilation;
-using GenHTTP.Lambda.Services.Workspace;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -14,18 +12,21 @@ using GenHTTP.Modules.Webservices;
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
-/// Everything the editor does, one endpoint at a time. The private key in the
-/// path is what authorizes a call - whoever has it may edit the lambda.
+/// The lambdas themselves: made, read, renamed, removed.
 /// </summary>
-public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspace)
+/// <remarks>
+/// A lambda is addressed by its editor key rather than its public one, because
+/// the key in the path is what authorizes the call - whoever has it may edit
+/// the lambda. Its versions, deployment, files and code live in resources of
+/// their own below the same path.
+/// </remarks>
+public sealed class LambdaResource(IMetaService meta)
 {
-
-    #region Creation
 
     /// <summary>
     /// Creates a new lambda and returns its keys.
     /// </summary>
-    [ResourceMethod(Method.Post)]
+    [ResourceMethod(Method.Post, "lambdas")]
     public async ValueTask<Result<LambdaResponse>> Create(CreateLambdaRequest request)
     {
         if (!request.AcceptedTerms)
@@ -39,127 +40,35 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     }
 
     /// <summary>
-    /// Checks whether a key is free before a lambda is created.
-    /// </summary>
-    [ResourceMethod("keys/:publicKey")]
-    public async ValueTask<AvailabilityResponse> CheckKey(string publicKey)
-    {
-        var availability = await meta.CheckKeyAsync(publicKey);
-
-        return new AvailabilityResponse(availability.PublicKey, availability.Available, availability.Reason);
-    }
-
-    /// <summary>
-    /// Tells whether a public key is serving, so the frontend can explain an
-    /// empty lambda page.
-    /// </summary>
-    [ResourceMethod("public/:publicKey")]
-    public async ValueTask<StatusResponse> GetStatus(string publicKey)
-    {
-        var status = await meta.GetStatusAsync(publicKey);
-
-        return new StatusResponse(status.PublicKey, status.Exists, status.Deployed);
-    }
-
-    #endregion
-
-    #region Lambda
-
-    /// <summary>
     /// Reads a lambda by the private key of its editor.
     /// </summary>
-    [ResourceMethod(":privateKey")]
+    [ResourceMethod("lambdas/:privateKey")]
     public async ValueTask<LambdaResponse> Get(string privateKey)
+        => LambdaDescription.Of(await meta.RequireAsync(privateKey));
+
+    /// <summary>
+    /// Changes a lambda. What the request leaves out stays as it is.
+    /// </summary>
+    /// <remarks>
+    /// The public key is the only thing there is to change so far. Moving it
+    /// moves the address the lambda answers at, and the old one is free for
+    /// anybody to claim afterwards.
+    /// </remarks>
+    [ResourceMethod(Method.Patch, "lambdas/:privateKey")]
+    public async ValueTask<LambdaResponse> Update(string privateKey, UpdateLambdaRequest request)
     {
-        var lambda = await meta.GetAsync(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+        var lambda = request.PublicKey is { } publicKey
+                   ? await meta.ChangeKeyAsync(privateKey, publicKey)
+                   : await meta.RequireAsync(privateKey);
 
         return LambdaDescription.Of(lambda);
     }
 
     /// <summary>
-    /// Moves the lambda to another public key.
-    /// </summary>
-    [ResourceMethod(Method.Put, ":privateKey/key")]
-    public async ValueTask<LambdaResponse> ChangeKey(string privateKey, ChangeKeyRequest request)
-        => LambdaDescription.Of(await meta.ChangeKeyAsync(privateKey, request.PublicKey));
-
-    /// <summary>
     /// Removes the lambda for good.
     /// </summary>
-    [ResourceMethod(Method.Delete, ":privateKey")]
+    [ResourceMethod(Method.Delete, "lambdas/:privateKey")]
     public async ValueTask Delete(string privateKey) => await meta.DeleteAsync(privateKey);
-
-    #endregion
-
-    #region Versions
-
-    /// <summary>
-    /// Lists the stored versions, newest first.
-    /// </summary>
-    [ResourceMethod(":privateKey/versions")]
-    public async ValueTask<List<VersionResponse>> GetVersions(string privateKey)
-    {
-        var versions = await meta.GetVersionsAsync(privateKey);
-
-        return versions.Select(v => new VersionResponse(v.Version, v.Created)).ToList();
-    }
-
-    /// <summary>
-    /// Reads the code of a single version.
-    /// </summary>
-    [ResourceMethod(":privateKey/versions/:version")]
-    public async ValueTask<VersionContentResponse> GetVersion(string privateKey, int version)
-    {
-        var content = await meta.GetVersionAsync(privateKey, version);
-
-        var files = LambdaSource.Parse(content.Code);
-
-        return new VersionContentResponse(content.Version, content.Created, files[0].Code, files);
-    }
-
-    /// <summary>
-    /// Stores the code as a new version, without putting it online.
-    /// </summary>
-    [ResourceMethod(Method.Post, ":privateKey/versions")]
-    public async ValueTask<Result<VersionResponse>> Save(string privateKey, CodeRequest request)
-    {
-        var version = await meta.SaveAsync(privateKey, Combine(request));
-
-        return new Result<VersionResponse>(new VersionResponse(version.Version, version.Created)).Status(ResponseStatus.Created);
-    }
-
-    /// <summary>
-    /// What every name in the given code means, for the colours in the editor.
-    /// </summary>
-    /// <remarks>
-    /// Behind the editor key like the check below it, because it runs the
-    /// compiler: an endpoint that binds arbitrary C# for anyone who asks is a
-    /// way to spend a server.
-    /// </remarks>
-    [ResourceMethod(Method.Post, ":privateKey/semantics")]
-    public async ValueTask<SemanticsResponse> Semantics(string privateKey, CodeRequest request)
-    {
-        await RequireAsync(privateKey);
-
-        var tokens = SemanticClassifier.Classify(request.Code ?? string.Empty);
-
-        return new SemanticsResponse([.. tokens.Select(t => new SemanticToken(t.Line, t.Column, t.Length, t.Kind))]);
-    }
-
-    /// <summary>
-    /// What could be written where the caret is.
-    /// </summary>
-    /// <param name="privateKey">The lambda being edited</param>
-    /// <param name="request">The code and where in it the caret sits</param>
-    [ResourceMethod(Method.Post, ":privateKey/completions")]
-    public async ValueTask<CompletionsResponse> Completions(string privateKey, CompletionRequest request)
-    {
-        await RequireAsync(privateKey);
-
-        var found = CompletionResolver.Resolve(request.Code, request.Line, request.Column);
-
-        return new CompletionsResponse([.. found.Select(c => new ResolvedCompletionResponse(c.Label, c.Kind, c.Detail, c.Documentation))]);
-    }
 
     /// <summary>
     /// The lambda as a project that can be opened and run.
@@ -171,11 +80,10 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
     /// stuck.
     /// </remarks>
     /// <param name="privateKey">The lambda being taken away</param>
-    [ResourceMethod(":privateKey/download")]
-    public async ValueTask<IResponse> Download(string privateKey, IRequest request)
+    [ResourceMethod("lambdas/:privateKey/export")]
+    public async ValueTask<IResponse> Export(string privateKey, IRequest request)
     {
-        var lambda = await meta.GetAsync(privateKey)
-                  ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+        var lambda = await meta.RequireAsync(privateKey);
 
         if (lambda.LatestVersion is not { } latest)
         {
@@ -191,183 +99,5 @@ public sealed class LambdaResource(IMetaService meta, IWorkspaceService workspac
                       .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}.zip\"")
                       .Build();
     }
-
-    /// <summary>
-    /// Where the name under the caret was declared.
-    /// </summary>
-    /// <remarks>
-    /// Only ever answers with a file of this lambda. A name that came from the
-    /// framework has a declaration, but not one anybody here can be shown, and
-    /// sending the editor to a file that does not exist is worse than telling
-    /// it there is nowhere to go.
-    /// </remarks>
-    /// <param name="privateKey">The lambda being edited</param>
-    /// <param name="request">The files and where in them the caret sits</param>
-    [ResourceMethod(Method.Post, ":privateKey/definition")]
-    public async ValueTask<DefinitionResponse> Definition(string privateKey, DefinitionRequest request)
-    {
-        await RequireAsync(privateKey);
-
-        var files = request.Files is { Count: > 0 } sent ? sent : [];
-
-        var found = DefinitionResolver.Resolve(files,
-                                               request.File ?? LambdaSource.EntryName,
-                                               request.Line,
-                                               request.Column);
-
-        return found == null
-             ? new DefinitionResponse(null, 0, 0, 0)
-             : new DefinitionResponse(found.File, found.Line, found.Column, found.Length);
-    }
-
-    /// <summary>
-    /// Compiles the code without storing or deploying it.
-    /// </summary>
-    [ResourceMethod(Method.Post, ":privateKey/check")]
-    public async ValueTask<CompilationResponse> Check(string privateKey, CodeRequest request)
-    {
-        var outcome = await meta.CheckAsync(privateKey, Combine(request));
-
-        return new CompilationResponse(outcome.Success, outcome.Diagnostics);
-    }
-
-    /// <summary>
-    /// Turns what was submitted into the single blob a version is stored as.
-    /// </summary>
-    /// <remarks>
-    /// A caller may send files or the one snippet it used to send, and older
-    /// clients still send only the snippet. Sending both is answered by the
-    /// files, because a client that knows about them meant them.
-    /// </remarks>
-    private static string Combine(CodeRequest request)
-    {
-        if (request.Files is not { Count: > 0 } files)
-        {
-            return request.Code ?? string.Empty;
-        }
-
-        if (LambdaSource.Validate(files) is { } complaint)
-        {
-            throw LambdaException.Invalid(complaint);
-        }
-
-        return LambdaSource.Serialize(files);
-    }
-
-    #endregion
-
-    #region Deployment
-
-    /// <summary>
-    /// Builds a version and makes it the one that is served.
-    /// </summary>
-    [ResourceMethod(Method.Post, ":privateKey/deployment")]
-    public async ValueTask<Result<DeploymentResponse>> Deploy(string privateKey, DeployRequest? request)
-    {
-        var result = await meta.DeployAsync(privateKey, request?.Version);
-
-        var payload = new DeploymentResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
-
-        return new Result<DeploymentResponse>(payload).Status(result.Success ? ResponseStatus.Ok : ResponseStatus.UnprocessableEntity);
-    }
-
-    /// <summary>
-    /// Takes the lambda off the air, keeping its code.
-    /// </summary>
-    [ResourceMethod(Method.Delete, ":privateKey/deployment")]
-    public async ValueTask<LambdaResponse> Undeploy(string privateKey) => LambdaDescription.Of(await meta.UndeployAsync(privateKey));
-
-    #endregion
-
-    #region Mapping
-
-
-    #endregion
-
-    #region Workspace
-
-    /// <summary>
-    /// Lists the files a lambda keeps in its private directory.
-    /// </summary>
-    [ResourceMethod(":privateKey/files")]
-    public async ValueTask<WorkspaceListing> GetFiles(string privateKey)
-        => await workspace.ListAsync(await ResolveIdAsync(privateKey));
-
-    /// <summary>
-    /// Reads one file.
-    /// </summary>
-    /// <param name="path">The name of the file, relative to the workspace</param>
-    /// <remarks>
-    /// The content travels base64 encoded in a JSON document like everything
-    /// else this API answers, so a workspace holding an image or an archive
-    /// reads the same way as one holding text.
-    /// </remarks>
-    [ResourceMethod(":privateKey/files/content")]
-    public async ValueTask<FileResponse> GetFile(string privateKey, string path)
-    {
-        var file = await workspace.ReadAsync(await ResolveIdAsync(privateKey), path)
-                ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
-
-        return new FileResponse(file.Path, Convert.ToBase64String(file.Content), file.Content.Length);
-    }
-
-    /// <summary>
-    /// Writes a file, replacing it if it is already there.
-    /// </summary>
-    /// <param name="path">The name of the file, relative to the workspace</param>
-    [ResourceMethod(Method.Put, ":privateKey/files/content")]
-    public async ValueTask<WorkspaceEntry> PutFile(string privateKey, string path, FileRequest request)
-    {
-        byte[] content;
-
-        try
-        {
-            content = Convert.FromBase64String(request.Content ?? string.Empty);
-        }
-        catch (FormatException)
-        {
-            throw LambdaException.Invalid("The content of a file has to be base64 encoded.");
-        }
-
-        using var stream = new MemoryStream(content);
-
-        return await workspace.WriteAsync(await ResolveIdAsync(privateKey), path, stream);
-    }
-
-    /// <summary>
-    /// Makes a folder, so files can be put into it.
-    /// </summary>
-    /// <param name="path">Where it goes, relative to the workspace</param>
-    [ResourceMethod(Method.Put, ":privateKey/files/folder")]
-    public async ValueTask<WorkspaceListing> CreateFolder(string privateKey, string path)
-    {
-        var id = await ResolveIdAsync(privateKey);
-
-        await workspace.CreateFolderAsync(id, path);
-
-        return await workspace.ListAsync(id);
-    }
-
-    /// <summary>
-    /// Removes a file, or a folder and everything in it.
-    /// </summary>
-    /// <param name="path">The name of the file, relative to the workspace</param>
-    [ResourceMethod(Method.Delete, ":privateKey/files/content")]
-    public async ValueTask DeleteFile(string privateKey, string path)
-        => await workspace.DeleteAsync(await ResolveIdAsync(privateKey), path);
-
-    /// <summary>
-    /// Turns the editor key into the identity the workspace is filed under,
-    /// which doubles as the check that the caller owns the lambda.
-    /// </summary>
-    private async ValueTask RequireAsync(string privateKey)
-        => _ = await meta.GetIdAsync(privateKey)
-        ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
-
-    private async ValueTask<long> ResolveIdAsync(string privateKey)
-        => await meta.GetIdAsync(privateKey)
-        ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
-
-        #endregion
 
 }

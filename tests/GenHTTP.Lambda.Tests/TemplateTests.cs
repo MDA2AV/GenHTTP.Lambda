@@ -88,8 +88,8 @@ public sealed class TemplateTests
 
         var version = await response.GetContentAsync<VersionContentResponse>();
 
-        Assert.Contains("Websocket.Imperative()", version.Code);
-        Assert.Contains(lambda.PublicKey, version.Code, "the key belongs in the comments");
+        Assert.Contains("Websocket.Imperative()", version.Files[0].Code);
+        Assert.Contains(lambda.PublicKey, version.Files[0].Code, "the key belongs in the comments");
     }
 
     [TestMethod]
@@ -103,7 +103,7 @@ public sealed class TemplateTests
 
         var version = await response.GetContentAsync<VersionContentResponse>();
 
-        Assert.Contains("Inline.Create()", version.Code);
+        Assert.Contains("Inline.Create()", version.Files[0].Code);
     }
 
     [TestMethod]

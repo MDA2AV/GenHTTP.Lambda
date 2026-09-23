@@ -4,7 +4,6 @@ using System.Text;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
@@ -79,7 +78,7 @@ public sealed class BuildService : IDisposable
     /// Which of the offered models to use. The second one needs the password.
     /// </param>
     /// <param name="password">The password for the second model, where one was asked for.</param>
-    public async ValueTask<JsonObject> StartAsync(string? prompt, string? model, string? password, IPAddress? caller)
+    public async ValueTask<BuildStarted> StartAsync(string? prompt, string? model, string? password, IPAddress? caller)
     {
         var agent = Required();
 
@@ -135,19 +134,20 @@ public sealed class BuildService : IDisposable
             // no key travels with it: this endpoint only ever creates
             using var response = await agent.PostAsJsonAsync("build", new { prompt = wanted, model = wanted_model });
 
-            var body = await ReadAsync(response);
-
             if (!response.IsSuccessStatusCode)
             {
                 // a refusal from the agent is not this server's fault, but it
                 // is this server's job to say it in the same shape as the rest
                 throw new ProviderException((ResponseStatus)(int)response.StatusCode,
-                                            body?["error"]?.GetValue<string>() ?? "The build agent would not take that.");
+                                            (await ReadAsync<AgentRefusal>(response))?.Error ?? "The build agent would not take that.");
             }
 
-            _logger.LogInformation("Build {Id} started", body?["id"]);
+            var started = await ReadAsync<BuildStarted>(response)
+                       ?? throw new ProviderException(ResponseStatus.BadGateway, "The build agent answered with nothing.");
 
-            return body ?? [];
+            _logger.LogInformation("Build {Id} started", started.Id);
+
+            return started;
         }
         catch (HttpRequestException e)
         {
@@ -161,7 +161,7 @@ public sealed class BuildService : IDisposable
     /// <summary>
     /// How a build is getting on.
     /// </summary>
-    public async ValueTask<JsonObject> ProgressAsync(string id)
+    public async ValueTask<BuildProgress> ProgressAsync(string id)
     {
         var agent = Required();
 
@@ -179,7 +179,8 @@ public sealed class BuildService : IDisposable
                 throw new ProviderException(ResponseStatus.NotFound, "There is no build by that name any more.");
             }
 
-            return await ReadAsync(response) ?? [];
+            return await ReadAsync<BuildProgress>(response)
+                ?? throw new ProviderException(ResponseStatus.BadGateway, "The build agent answered with nothing.");
         }
         catch (HttpRequestException)
         {
@@ -195,11 +196,13 @@ public sealed class BuildService : IDisposable
         => _client ?? throw new ProviderException(ResponseStatus.NotFound,
                                                   "This installation does not have a build agent.");
 
-    private static async ValueTask<JsonObject?> ReadAsync(HttpResponseMessage response)
+    private static readonly JsonSerializerOptions AgentFormat = new(JsonSerializerDefaults.Web);
+
+    private static async ValueTask<T?> ReadAsync<T>(HttpResponseMessage response) where T : class
     {
         try
         {
-            return JsonNode.Parse(await response.Content.ReadAsStringAsync()) as JsonObject;
+            return JsonSerializer.Deserialize<T>(await response.Content.ReadAsStringAsync(), AgentFormat);
         }
         catch (JsonException)
         {
@@ -258,5 +261,10 @@ public sealed class BuildService : IDisposable
     #endregion
 
     public void Dispose() => _client?.Dispose();
+
+    /// <summary>
+    /// What the agent says when it will not do something.
+    /// </summary>
+    private sealed record AgentRefusal(string? Error);
 
 }

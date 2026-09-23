@@ -1,12 +1,11 @@
 using GenHTTP.Api.Protocol;
 
-using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
-namespace GenHTTP.Lambda.Api;
+namespace GenHTTP.Lambda.Web;
 
 /// <summary>
 /// Sends whoever asked into the editor with a template already chosen, so a
@@ -23,11 +22,10 @@ namespace GenHTTP.Lambda.Api;
 /// that screen - which is also the only point at which they have been shown
 /// the terms to accept.
 ///
-/// It lives beside the lambdas rather than under them: every single segment
-/// there is already read as a private key, and a route that means something
-/// else would be ambiguous with every lambda that exists.
+/// It is a link for pages elsewhere rather than something a client calls,
+/// so it lives with the site at <c>/start</c> and not in the API.
 /// </remarks>
-public sealed class InvitationResource
+public sealed class Invitation
 {
 
     /// <summary>

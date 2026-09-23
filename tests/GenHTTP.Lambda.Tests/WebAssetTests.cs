@@ -170,7 +170,7 @@ public sealed class WebAssetTests
         var version = System.Text.Json.Nodes.JsonNode.Parse(await again.GetContentAsync())!["version"]!.GetValue<int>();
 
         using var deployed = await fixture.SendAsync(HttpMethod.Post,
-            $"/api/v1/lambdas/{lambda.PrivateKey}/deployment", new { version });
+            $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/start", new { version });
 
         Assert.AreEqual(HttpStatusCode.OK, deployed.StatusCode, await deployed.GetContentAsync());
 
@@ -206,7 +206,7 @@ public sealed class WebAssetTests
                            "an empty workspace is not an error, just an empty site");
 
         using var written = await fixture.SendAsync(HttpMethod.Put,
-            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=index.html",
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/index.html",
             new { content = Convert.ToBase64String("<!doctype html><title>up</title><h1>uploaded</h1>"u8.ToArray()) });
 
         Assert.AreEqual(HttpStatusCode.OK, written.StatusCode);

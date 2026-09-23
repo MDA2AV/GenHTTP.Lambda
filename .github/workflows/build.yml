@@ -124,15 +124,15 @@ jobs:
 
           call -X POST "http://localhost:8080/api/v1/lambdas/$private/versions" \
                -H 'Content-Type: application/json' \
-               -d '{"code":"return Inline.Create().Get(() => \"ci\");"}' > /dev/null
+               -d '{"files":[{"name":"lambda.cs","code":"return Inline.Create().Get(() => \"ci\");"}]}' > /dev/null
 
-          call -X POST "http://localhost:8080/api/v1/lambdas/$private/deployment" \
+          call -X POST "http://localhost:8080/api/v1/lambdas/$private/deployment/start" \
                -H 'Content-Type: application/json' -d '{}' | jq -e .success > /dev/null
 
           served=$(call http://localhost:8080/lambda/citest/)
           test "$served" = "ci" || { echo "expected 'ci', got '$served'"; exit 1; }
 
-          call -X DELETE "http://localhost:8080/api/v1/lambdas/$private/deployment" > /dev/null
+          call -X POST "http://localhost:8080/api/v1/lambdas/$private/deployment/stop" > /dev/null
 
           status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/lambda/citest/)
           test "$status" = "404" || { echo "expected 404 after undeploy, got $status"; exit 1; }

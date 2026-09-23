@@ -37,14 +37,14 @@ public sealed class ArenaCompileTests
         var lambda = await fixture.CreateLambdaAsync("arena-live");
 
         var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                            new CodeRequest(TemplateCatalog.ForKey("arena", "arena-live")));
+                                            LambdaFixture.Version(TemplateCatalog.ForKey("arena", "arena-live")));
 
         saved.Dispose();
 
-        var deployment = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment",
-                                                 new DeployRequest(null));
+        var deployment = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/start",
+                                                 new DeploymentRequest(null));
 
-        var result = await deployment.GetContentAsync<DeploymentResponse>();
+        var result = await deployment.GetContentAsync<DeploymentOutcomeResponse>();
 
         deployment.Dispose();
 

@@ -45,7 +45,7 @@ public sealed class WorkspaceTests
         Assert.AreEqual("notes.txt", written.Path);
         Assert.AreEqual(content.Length, written.Size);
 
-        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=notes.txt");
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files/notes.txt");
 
         var file = await read.GetContentAsync<FileResponse>();
 
@@ -81,7 +81,7 @@ public sealed class WorkspaceTests
         await WriteAsync(fixture, lambda.PrivateKey, "gone.txt", "bye"u8.ToArray());
 
         using var removed = await fixture.SendAsync(HttpMethod.Delete,
-            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=gone.txt");
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/gone.txt");
 
         Assert.IsTrue(removed.IsSuccessStatusCode);
         Assert.IsEmpty((await ListAsync(fixture, lambda.PrivateKey)).Files);
@@ -184,7 +184,7 @@ public sealed class WorkspaceTests
 
     private static async Task<HttpResponseMessage> Put(LambdaFixture fixture, string privateKey, string path, byte[] content)
         => await fixture.SendAsync(HttpMethod.Put,
-               $"/api/v1/lambdas/{privateKey}/files/content?path={Uri.EscapeDataString(path)}",
+               $"/api/v1/lambdas/{privateKey}/files/{Uri.EscapeDataString(path)}",
                new FileRequest(Convert.ToBase64String(content)));
 
     #endregion
@@ -198,7 +198,7 @@ public sealed class WorkspaceTests
         var lambda = await fixture.CreateLambdaAsync();
 
         using var made = await fixture.SendAsync(HttpMethod.Put,
-            $"/api/v1/lambdas/{lambda.PrivateKey}/files/folder?path=logs");
+            $"/api/v1/lambdas/{lambda.PrivateKey}/folders/logs");
 
         Assert.AreEqual(HttpStatusCode.OK, made.StatusCode);
 
@@ -210,9 +210,30 @@ public sealed class WorkspaceTests
 
         // and it can be put back where it came from
         using var gone = await fixture.SendAsync(HttpMethod.Delete,
-            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=logs");
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/logs");
 
         Assert.IsTrue(gone.IsSuccessStatusCode, $"removing a folder answered {(int)gone.StatusCode}");
+    }
+
+    [TestMethod]
+    public async Task AFileInAFolderIsAddressedByItsEncodedPath()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var written = await fixture.SendAsync(HttpMethod.Put,
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/logs%2Ftoday.txt",
+            new { content = Convert.ToBase64String("hello"u8.ToArray()) });
+
+        Assert.AreEqual(HttpStatusCode.OK, written.StatusCode);
+
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files/logs%2Ftoday.txt");
+
+        var file = await read.GetContentAsync<FileResponse>();
+
+        Assert.AreEqual("logs/today.txt", file.Path);
+        Assert.AreEqual("hello", Encoding.UTF8.GetString(Convert.FromBase64String(file.Content)));
     }
 
     [TestMethod]
@@ -223,13 +244,13 @@ public sealed class WorkspaceTests
         var lambda = await fixture.CreateLambdaAsync();
 
         using var written = await fixture.SendAsync(HttpMethod.Put,
-            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=logs%2Ftoday.txt",
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/logs%2Ftoday.txt",
             new { content = Convert.ToBase64String("hello"u8.ToArray()) });
 
         Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, "writing into a folder makes the folder");
 
         using var gone = await fixture.SendAsync(HttpMethod.Delete,
-            $"/api/v1/lambdas/{lambda.PrivateKey}/files/content?path=logs");
+            $"/api/v1/lambdas/{lambda.PrivateKey}/files/logs");
 
         Assert.IsTrue(gone.IsSuccessStatusCode, $"removing a folder answered {(int)gone.StatusCode}");
 

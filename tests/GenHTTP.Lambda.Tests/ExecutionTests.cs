@@ -47,7 +47,7 @@ public sealed class ExecutionTests
         await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"live\"));");
 
         using var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                                  new Api.Model.CodeRequest("return Content.From(Resource.FromString(\"draft\"));"));
+                                                  LambdaFixture.Version("return Content.From(Resource.FromString(\"draft\"));"));
 
         Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
 
@@ -71,7 +71,7 @@ public sealed class ExecutionTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var undeployed = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment");
+        using var undeployed = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/stop");
 
         Assert.AreEqual(HttpStatusCode.OK, undeployed.StatusCode);
 

@@ -1,6 +1,6 @@
 using GenHTTP.Api.Protocol;
 
-namespace GenHTTP.Lambda.Api.Model;
+namespace GenHTTP.Lambda.Api.Infrastructure;
 
 /// <summary>
 /// Bytes already in hand, answered as they are.

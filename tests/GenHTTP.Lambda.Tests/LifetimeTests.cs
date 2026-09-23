@@ -58,7 +58,7 @@ public sealed class LifetimeTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var undeployed = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment");
+        using var undeployed = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/stop");
 
         var described = await undeployed.GetContentAsync<LambdaResponse>();
 

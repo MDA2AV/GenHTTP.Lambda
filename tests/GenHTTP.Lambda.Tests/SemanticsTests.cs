@@ -80,8 +80,8 @@ public sealed class SemanticsTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var response = await fixture.SendAsync(HttpMethod.Post, "/api/v1/lambdas/nosuchkey/semantics",
-            new CodeRequest("var x = 1;"));
+        using var response = await fixture.SendAsync(HttpMethod.Post, "/api/v1/lambdas/nosuchkey/code/semantics",
+            LambdaFixture.Code("var x = 1;"));
 
         Assert.AreEqual(System.Net.HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -93,8 +93,8 @@ public sealed class SemanticsTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/semantics",
-            new CodeRequest("return Inline.Create().Get(() => 1);"));
+        using var response = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/code/semantics",
+            LambdaFixture.Code("return Inline.Create().Get(() => 1);"));
 
         var semantics = await response.GetContentAsync<SemanticsResponse>();
 
