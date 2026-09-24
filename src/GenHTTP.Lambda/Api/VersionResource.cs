@@ -62,7 +62,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
         var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code));
 
         return request.Respond()
-                      .Content(new ZippedProject(zip))
+                      .Content(new BinaryContent(zip, "application/zip"))
                       .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}-v{version}.zip\"")
                       .Build();
     }

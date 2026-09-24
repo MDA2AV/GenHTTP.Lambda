@@ -7,16 +7,17 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 /// </summary>
 /// <remarks>
 /// Written out because the resource helpers all read from somewhere - a file,
-/// an assembly, a string - and this is none of those: the zip was built in
-/// memory a moment ago and writing it to a temporary file so that something
-/// could read it back would be a worse way to say the same thing.
+/// an assembly, a string - and this is none of those: a zip built in memory
+/// a moment ago, or a picture read from the database. Writing either to a
+/// temporary file so that something could read it back would be a worse way
+/// to say the same thing.
 /// </remarks>
-public sealed class ZippedProject(byte[] content) : IResponseContent
+public sealed class BinaryContent(byte[] content, string type) : IResponseContent
 {
 
     public ulong? Length => (ulong)content.Length;
 
-    public ContentType? Type => new("application/zip");
+    public ContentType? Type => new(type);
 
     public ReadOnlyMemory<byte>? Encoding => null;
 

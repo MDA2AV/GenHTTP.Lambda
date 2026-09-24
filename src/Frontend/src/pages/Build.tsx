@@ -391,7 +391,7 @@ export function Build() {
           <p className="mt-4 text-sm text-slate-500">
             That is also how to change something once it is built: give your agent the editor link
             and tell it what to do.{' '}
-            <Link to="/agentic-coding" className="underline">More about using an agent here</Link>.
+            <Link to="/#agents" className="underline">More about using an agent here</Link>.
           </p>
         </section>
       )}

@@ -817,6 +817,8 @@ public sealed class MetaService : IMetaService
         // foreign keys switched on - said here so it does not depend on that
         await database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
 
+        await database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+
         database.Lambdas.Remove(lambda);
 
         await database.SaveChangesAsync(cancellation);

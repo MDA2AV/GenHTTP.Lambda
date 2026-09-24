@@ -20,6 +20,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<ActivationEntity> Activations => Set<ActivationEntity>();
 
+    public DbSet<ShowcaseEntity> Showcases => Set<ShowcaseEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -116,6 +118,25 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
                    .WithMany()
                    .HasForeignKey(a => a.LambdaId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+        var showcases = builder.Entity<ShowcaseEntity>();
+
+        showcases.ToTable("showcases");
+
+        showcases.HasKey(s => s.LambdaId);
+
+        showcases.Property(s => s.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        showcases.Property(s => s.Title).HasColumnName("title");
+        showcases.Property(s => s.Description).HasColumnName("description");
+        showcases.Property(s => s.Image).HasColumnName("image");
+        showcases.Property(s => s.ImageType).HasColumnName("image_type");
+        showcases.Property(s => s.Created).HasColumnName("created");
+        showcases.Property(s => s.Updated).HasColumnName("updated");
+
+        showcases.HasOne(s => s.Lambda)
+                 .WithOne()
+                 .HasForeignKey<ShowcaseEntity>(s => s.LambdaId)
+                 .OnDelete(DeleteBehavior.Cascade);
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

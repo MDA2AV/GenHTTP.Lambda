@@ -484,6 +484,44 @@ export interface ResolvedCompletion {
   documentation?: string;
 }
 
+/** A lambda as its owner presents it on the showcase page. */
+export interface ShowcaseEntry {
+  publicKey: string;
+  title: string;
+  description: string;
+  /** Where it answers. */
+  path: string;
+  /** Its picture, versioned so it can be cached for good. */
+  imagePath: string;
+  imageType: string;
+  imageBytes: number;
+  /** Only online lambdas are listed; the owner sees theirs either way. */
+  online: boolean;
+  created: string;
+  updated: string;
+}
+
+export interface ShowcaseListing {
+  entries: ShowcaseEntry[];
+  total: number;
+  /** Where the next page starts; absent after the last one. */
+  next?: number | null;
+}
+
+export interface ShowcaseLimits {
+  title: number;
+  description: number;
+  imageBytes: number;
+  imageTypes: string[];
+  /** How an entry should read. */
+  tone: string;
+}
+
+export interface OwnShowcase {
+  showcase?: ShowcaseEntry | null;
+  limits: ShowcaseLimits;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -598,6 +636,16 @@ export const api = {
   examples: () => request<ExampleListing>('/examples'),
 
   example: (id: string) => request<Example>(`/examples/${encodeURIComponent(id)}`),
+
+  showcases: (skip = 0, take = 12) => request<ShowcaseListing>(`/showcases/?skip=${skip}&take=${take}`),
+
+  showcase: (privateKey: string) => request<OwnShowcase>(`/lambdas/${privateKey}/showcase`),
+
+  /** Leave the image out to keep the one there is. */
+  saveShowcase: (privateKey: string, entry: { title: string; description: string; image?: string }) =>
+    request<ShowcaseEntry>(`/lambdas/${privateKey}/showcase`, { method: 'PUT', body: JSON.stringify(entry) }),
+
+  removeShowcase: (privateKey: string) => request<void>(`/lambdas/${privateKey}/showcase`, { method: 'DELETE' }),
 
   key: (key: string) => request<KeyStatus>(`/keys/${encodeURIComponent(key)}`),
 

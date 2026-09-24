@@ -138,6 +138,15 @@ public sealed record LambdaOptions
     public int MaxAssetBytes { get; init; } = 2 * 1024 * 1024;
 
     /// <summary>
+    /// How large the picture promoting a lambda in the showcase may be.
+    /// </summary>
+    /// <remarks>
+    /// Room for a short animated recording, which is what shows a lambda best,
+    /// and not for a video: every visitor of the showcase page downloads it.
+    /// </remarks>
+    public int MaxShowcaseImageBytes { get; init; } = 3 * 1024 * 1024;
+
+    /// <summary>
     /// The number of versions kept per lambda (older ones are pruned).
     /// </summary>
     public int MaxVersions { get; init; } = 50;
@@ -408,6 +417,7 @@ public sealed record LambdaOptions
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
             MaxCodeLength = ReadInt("LAMBDA_MAX_CODE_LENGTH", defaults.MaxCodeLength),
             MaxAssetBytes = ReadInt("LAMBDA_MAX_ASSET_BYTES", defaults.MaxAssetBytes),
+            MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),

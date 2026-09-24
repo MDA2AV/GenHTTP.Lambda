@@ -7,9 +7,9 @@
     "title": "Build an App with AI",
     "description": "Say what you want and an AI agent builds it, puts it online and gives you a link to share. Polls, guestbooks, leaderboards and more - free, no account."
   },
-  "/agentic-coding": {
-    "title": "Hosting for Your Coding Agent",
-    "description": "Give Claude, Claude Code or any MCP client one address and it can write a web app, put it online and hand you back a shareable link. No account, no server, nothing to install."
+  "/showcase": {
+    "title": "Showcase",
+    "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser."
   },
   "/docs": {
     "title": "How It Works",
