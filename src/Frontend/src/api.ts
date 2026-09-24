@@ -27,8 +27,8 @@ export type Origin = 'template' | 'api' | 'agent' | 'admin' | 'system';
 export interface VersionInfo {
   version: number;
   created: string;
-  /** What was asked for, in the words it was asked in. */
-  prompt?: string | null;
+  /** What the user wanted from the version and why, in their words where possible. */
+  specification?: string | null;
   /** What the version changed, in a line. */
   change?: string | null;
   origin?: Origin | null;
@@ -619,9 +619,9 @@ export const api = {
   version: (privateKey: string, version: number) =>
     request<VersionContent>(`/lambdas/${privateKey}/versions/${version}`),
 
-  /** Stores a version; the change and the prompt are the why, kept beside the what. */
-  save: (privateKey: string, files: LambdaFile[], change?: string, prompt?: string) =>
-    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, prompt: prompt || null })),
+  /** Stores a version; the change and the specification are the why, kept beside the what. */
+  save: (privateKey: string, files: LambdaFile[], change?: string, specification?: string) =>
+    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, specification: specification || null })),
 
   deployment: (privateKey: string) => request<Deployment>(`/lambdas/${privateKey}/deployment`),
 

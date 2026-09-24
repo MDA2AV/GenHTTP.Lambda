@@ -19,10 +19,10 @@ public sealed class DeploymentEntity
     public DateTime Created { get; set; }
 
     /// <summary>
-    /// What was asked for, in the words of whoever asked - usually the request
-    /// an agent was answering when it wrote this version.
+    /// What the user wanted from this version and why - their requirements,
+    /// usually as an agent restated them when it wrote this version.
     /// </summary>
-    public string? Prompt { get; set; }
+    public string? Specification { get; set; }
 
     /// <summary>
     /// What this version changed, in a line.

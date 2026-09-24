@@ -140,7 +140,7 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
 
   return (
     <div className="space-y-4 pb-5 pl-7 sm:pl-[3.75rem]">
-      {version.prompt && <Quote>{version.prompt}</Quote>}
+      {version.specification && <Quote>{version.specification}</Quote>}
 
       {failure ? (
         <p className="text-sm text-red-500">{failure}</p>

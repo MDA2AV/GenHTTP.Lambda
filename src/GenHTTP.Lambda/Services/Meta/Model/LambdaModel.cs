@@ -35,15 +35,15 @@ public sealed record LambdaPage(
 /// <summary>
 /// A stored version of the code of a lambda.
 /// </summary>
-/// <param name="Prompt">What was asked for, where whoever saved it said</param>
+/// <param name="Specification">What the user wanted and why, where whoever saved it said</param>
 /// <param name="Change">What it changed, in a line</param>
 /// <param name="Origin">Where it came from: template, api or agent</param>
-public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Prompt = null, string? Change = null, string? Origin = null);
+public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Specification = null, string? Change = null, string? Origin = null);
 
 /// <summary>
 /// A stored version, including the code itself.
 /// </summary>
-public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Prompt = null, string? Change = null, string? Origin = null);
+public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Specification = null, string? Change = null, string? Origin = null);
 
 /// <summary>
 /// Why a version was written, as whoever wrote it tells it.
@@ -53,16 +53,16 @@ public sealed record LambdaVersionContent(int Version, DateTime Created, string 
 /// the account of the author, kept beside what the author did. The origin is
 /// not theirs to give - it is filled in by the door the version came through.
 /// </remarks>
-/// <param name="Prompt">The request the version answers, in the words it was asked in</param>
+/// <param name="Specification">What the user wants from the version and why, in their words where possible</param>
 /// <param name="Change">What the version changed, in a line</param>
 /// <param name="Origin">Which door it came through</param>
-public sealed record VersionNote(string? Prompt = null, string? Change = null, string? Origin = null)
+public sealed record VersionNote(string? Specification = null, string? Change = null, string? Origin = null)
 {
 
     /// <summary>
-    /// How long a prompt may be before the rest of it is cut.
+    /// How long a specification may be before the rest of it is cut.
     /// </summary>
-    public const int MaxPrompt = 4000;
+    public const int MaxSpecification = 4000;
 
     /// <summary>
     /// How long the line about the change may be.

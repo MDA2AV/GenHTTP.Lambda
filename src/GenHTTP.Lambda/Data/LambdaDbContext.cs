@@ -75,7 +75,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.LambdaId).HasColumnName("lambda_id");
         deployments.Property(d => d.Version).HasColumnName("version");
         deployments.Property(d => d.Created).HasColumnName("created");
-        deployments.Property(d => d.Prompt).HasColumnName("prompt");
+        deployments.Property(d => d.Specification).HasColumnName("specification");
         deployments.Property(d => d.Change).HasColumnName("change");
         deployments.Property(d => d.Origin).HasColumnName("origin");
 

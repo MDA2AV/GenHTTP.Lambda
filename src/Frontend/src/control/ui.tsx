@@ -250,7 +250,7 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="py-10 text-center text-sm text-slate-500">{children}</p>;
 }
 
-/** A prompt, set apart as somebody else's words. */
+/** A specification, set apart as somebody else's words. */
 export function Quote({ children }: { children: ReactNode }) {
   return (
     <blockquote className="whitespace-pre-line border-l-2 border-slate-300 pl-3 text-sm text-slate-600 dark:border-ink-700 dark:text-slate-400">

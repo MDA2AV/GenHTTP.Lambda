@@ -75,7 +75,7 @@ path.
 | `POST /lambdas`                                       | creates a lambda                          |
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key), removes it      |
 | `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
-| `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `prompt` and `change`) |
+| `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
 | `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
 | `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
@@ -390,7 +390,7 @@ reading something that already works. `platform_guide` is the one to call first 
 it says what a snippet has to return, what is imported, what is refused, and the
 handful of things that catch people out.
 
-`write_code` takes an optional `prompt` (what was asked for) and `change` (one
+`write_code` takes an optional `specification` (what the user wants and why) and `change` (one
 line on what the version does). They are kept with the version and shown next
 to its diff in the control center, and `read_lambda` hands the recent history
 back so the next agent can read why before it changes anything. `read_logs`

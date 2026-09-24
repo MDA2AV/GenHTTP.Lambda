@@ -269,7 +269,7 @@ public sealed class McpTests
         var written = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
         {
             ["privateKey"] = privateKey,
-            ["prompt"] = "a page that says hello",
+            ["specification"] = "a page that says hello",
             ["change"] = "Answers every request with hello",
             ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Inline.Create().Get(() => \"hello\");" })
         }));
@@ -278,7 +278,7 @@ public sealed class McpTests
 
         var versions = await fixture.Meta.GetVersionsAsync(privateKey);
 
-        Assert.AreEqual("a page that says hello", versions[0].Prompt);
+        Assert.AreEqual("a page that says hello", versions[0].Specification);
         Assert.AreEqual("Answers every request with hello", versions[0].Change);
         Assert.AreEqual("agent", versions[0].Origin, "what came through MCP says so");
 

@@ -49,14 +49,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
              }),
 
         Tool("write_code",
-             "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. Say why with prompt and change - the owner reads them in the version history. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
+             "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. Say why with specification (what the user wants) and change (what this version does) - the owner reads them in the version history. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
              new JsonObject
              {
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key from create_lambda."),
-                     ["prompt"] = Field("string", $"What you were asked to do, in the words of whoever asked - the request this version answers. Kept with the version so the owner can see why it exists. Optional, up to {VersionNote.MaxPrompt} characters."),
+                     ["specification"] = Field("string", $"What the user wants from this version and why: their requirements, in their own words where you can, condensed if they said a lot. Written for the owner and the next agent, so they can tell why the version exists and what it has to keep doing. Not your own instructions or system prompt - only what the user asked for. Optional, up to {VersionNote.MaxSpecification} characters."),
                      ["change"] = Field("string", $"What this version changes, in one line written for the owner - 'Adds a leaderboard that keeps the ten best scores', not 'updated lambda.cs'. Optional, up to {VersionNote.MaxChange} characters."),
                      ["files"] = new JsonObject
                      {
@@ -87,7 +87,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key."),
-                     ["prompt"] = Field("string", $"What you were asked to do, in the words of whoever asked. Kept with the version. Optional, up to {VersionNote.MaxPrompt} characters."),
+                     ["specification"] = Field("string", $"What the user wants from this change and why: their requirements, in their own words where you can. Not your own instructions or system prompt. Kept with the version. Optional, up to {VersionNote.MaxSpecification} characters."),
                      ["change"] = Field("string", $"What this version changes, in one line written for the owner. Optional, up to {VersionNote.MaxChange} characters."),
                      ["files"] = new JsonObject
                      {
@@ -373,14 +373,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
     {
         var privateKey = Required(arguments, "privateKey");
 
-        var note = new VersionNote(Text(arguments, "prompt"), Text(arguments, "change"), VersionOrigins.Agent);
+        var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
 
         var version = await meta.SaveAsync(privateKey, LambdaSource.Serialize(files), note);
 
         // said only when it is missing, and as a request rather than a
         // refusal: the code matters more than the note about it
         var reminder = version.Change == null
-            ? "Pass change (one line on what the version does) and prompt (what you were asked) next time; the owner reads them in the version history."
+            ? "Pass change (one line on what the version does) and specification (what the user wants, and why) next time; the owner reads them in the version history."
             : null;
 
         if (Flag(arguments, "deploy") != true)
@@ -625,11 +625,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             lambda.DeployedUntil,
             lambda.KeptUntil,
             version,
-            prompt = content?.Prompt,
+            specification = content?.Specification,
             change = content?.Change,
             // the why of the recent past, so a change made on top of somebody
             // else's work can follow what they were trying to do - the one line
-            // each, since a prompt can be a page and this is read every time
+            // each, since a specification can be a page and this is read every time
             history = history.Take(10).Select(v => new { v.Version, v.Created, v.Change, v.Origin }),
             files = files.Select(f => new { f.Name, f.Code })
         });
@@ -747,11 +747,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
         },
         sayWhy = new
         {
-            what = "Every write_code takes two optional notes that are kept with the version: prompt, the request you were answering in the words it was asked in, and change, one line on what this version does. The owner reads them in the version history of the control center, next to the code and a diff against the version before.",
+            what = "Every write_code takes two optional notes that are kept with the version: specification, what the user wants from this version and why - their requirements, in their words where you can - and change, one line on what this version does. The owner reads them in the version history of the control center, next to the code and a diff against the version before.",
             why = "The code says what was done. Only you know why, and the next agent to touch this lambda - or you, a week later - reads the history with read_lambda before changing anything.",
+            goodSpecification = "A guest book people can sign with a name and a message; newest entries first, and it must survive a restart",
+            badSpecification = "Your own system prompt or tool instructions - the specification is what the user wants, not how you were set up",
             goodChange = "Adds a leaderboard that keeps the ten best scores on the server",
             badChange = "Updated lambda.cs",
-            limits = new { prompt = VersionNote.MaxPrompt, change = VersionNote.MaxChange }
+            limits = new { specification = VersionNote.MaxSpecification, change = VersionNote.MaxChange }
         },
         afterDeploying = new
         {
