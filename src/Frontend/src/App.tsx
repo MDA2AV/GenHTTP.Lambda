@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
 import { IconSpinner } from './components/Icons';
@@ -84,9 +84,6 @@ export function App() {
             <Shell theme={theme} onToggleTheme={toggleTheme}>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                {/* where the panel used to be, for bookmarks made before it was one */}
-                <Route path="/stats" element={<Navigate to="/admin" replace />} />
-                <Route path="/logs" element={<Moved to="/admin/log" />} />
                 <Route path="/docs" element={<Guide />} />
                 <Route path="/build" element={<Build />} />
                 <Route path="/agentic-coding" element={<AgenticCoding />} />
@@ -110,13 +107,6 @@ function Loading() {
       Loading the editor…
     </div>
   );
-}
-
-/** A redirect that keeps the query, so a narrowed log stays narrowed. */
-function Moved({ to }: { to: string }) {
-  const { search } = useLocation();
-
-  return <Navigate to={`${to}${search}`} replace />;
 }
 
 /** Every route starts at the top, the way arriving at a page does. */
