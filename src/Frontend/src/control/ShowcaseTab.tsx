@@ -270,15 +270,6 @@ export function ShowcaseTab({ control }: { control: Control }) {
               />
             </Field>
 
-            <div className="border-l-2 border-slate-300 pl-3 text-[13px] leading-relaxed text-slate-600 dark:border-ink-700 dark:text-slate-400">
-              <p>{limits.tone}</p>
-              <p className="mt-1.5">
-                <span className="text-emerald-600 dark:text-emerald-400">Plain:</span> “A shared whiteboard. Everyone who opens the link draws on the same canvas.”
-                <br />
-                <span className="text-red-500 dark:text-red-400">Hype:</span> “The ultimate collaborative experience you won’t believe!”
-              </p>
-            </div>
-
             <Picture
               current={entry?.imagePath ?? null}
               picked={picked}

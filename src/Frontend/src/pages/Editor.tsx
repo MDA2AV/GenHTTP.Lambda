@@ -29,13 +29,13 @@ type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | '
 
 const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'overview', title: 'Overview' },
+  { id: 'showcase', title: 'Showcase' },
   { id: 'files', title: 'Files' },
   { id: 'versions', title: 'Versions' },
   { id: 'deployments', title: 'Deployments' },
   { id: 'stats', title: 'Stats' },
   { id: 'logs', title: 'Logs' },
   { id: 'code', title: 'Code' },
-  { id: 'showcase', title: 'Showcase' },
 ];
 
 /**
