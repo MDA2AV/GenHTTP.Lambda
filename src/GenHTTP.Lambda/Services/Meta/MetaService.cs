@@ -248,7 +248,7 @@ public sealed class MetaService : IMetaService
         var code = await Storage.ReadAsync(lambda.Id, version, cancellation)
                 ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
-        return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Prompt, deployment.Change, deployment.Origin);
+        return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Specification, deployment.Change, deployment.Origin);
     }
 
     public async ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default)
@@ -662,7 +662,7 @@ public sealed class MetaService : IMetaService
         var version = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
                                     .MaxAsync(d => (int?)d.Version, cancellation) + 1 ?? 1;
 
-        var prompt = Tidy(note.Prompt, VersionNote.MaxPrompt);
+        var specification = Tidy(note.Specification, VersionNote.MaxSpecification);
 
         var change = Tidy(note.Change, VersionNote.MaxChange);
 
@@ -673,7 +673,7 @@ public sealed class MetaService : IMetaService
             LambdaId = lambda.Id,
             Version = version,
             Created = now,
-            Prompt = prompt,
+            Specification = specification,
             Change = change,
             Origin = note.Origin
         });
@@ -686,7 +686,7 @@ public sealed class MetaService : IMetaService
 
         await PruneAsync(database, lambda, cancellation);
 
-        return new LambdaVersionInfo(version, now, prompt, change, note.Origin);
+        return new LambdaVersionInfo(version, now, specification, change, note.Origin);
     }
 
     /// <summary>
@@ -842,7 +842,7 @@ public sealed class MetaService : IMetaService
         => await database.Deployments.AsNoTracking()
                          .Where(d => d.LambdaId == lambdaId)
                          .OrderByDescending(d => d.Version)
-                         .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Prompt, d.Change, d.Origin))
+                         .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, d.Origin))
                          .ToListAsync(cancellation);
 
     #endregion

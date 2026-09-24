@@ -43,7 +43,7 @@ public sealed class ControlCenterTests
 
         var created = await saved.GetContentAsync<VersionResponse>();
 
-        Assert.AreEqual("Make it say hi", created.Prompt, "kept trimmed");
+        Assert.AreEqual("Make it say hi", created.Specification, "kept trimmed");
         Assert.AreEqual("Says hi instead of the example", created.Change);
         Assert.AreEqual("api", created.Origin);
 
@@ -61,7 +61,7 @@ public sealed class ControlCenterTests
 
         var content = await read.GetContentAsync<VersionContentResponse>();
 
-        Assert.AreEqual("Make it say hi", content.Prompt);
+        Assert.AreEqual("Make it say hi", content.Specification);
         Assert.AreEqual("Says hi instead of the example", content.Change);
     }
 
@@ -77,7 +77,7 @@ public sealed class ControlCenterTests
 
         var created = await saved.GetContentAsync<VersionResponse>();
 
-        Assert.IsNull(created.Prompt);
+        Assert.IsNull(created.Specification);
         Assert.IsNull(created.Change);
     }
 
@@ -96,7 +96,7 @@ public sealed class ControlCenterTests
 
         var created = await saved.GetContentAsync<VersionResponse>();
 
-        Assert.IsLessThanOrEqualTo(VersionNote.MaxPrompt, created.Prompt!.Length);
+        Assert.IsLessThanOrEqualTo(VersionNote.MaxSpecification, created.Specification!.Length);
         Assert.IsLessThanOrEqualTo(VersionNote.MaxChange, created.Change!.Length);
     }
 
@@ -521,7 +521,7 @@ public sealed class ControlCenterTests
         await using (var database = await databases.CreateDbContextAsync())
         {
             // what V6 found when it ran: nothing about why, nothing about when
-            await database.Database.ExecuteSqlRawAsync("UPDATE deployments SET prompt = NULL, change = NULL, origin = NULL");
+            await database.Database.ExecuteSqlRawAsync("UPDATE deployments SET specification = NULL, change = NULL, origin = NULL");
             await database.Database.ExecuteSqlRawAsync("DELETE FROM activations");
         }
 

@@ -119,7 +119,7 @@ How to work:
    key that suits what they asked for.
 3. Write the code with write_code. One page that works beats four that do
    not. If it wants a front end, serve it and make it look deliberate rather
-   than default. Pass what they asked for, word for word, as prompt, and one
+   than default. Pass what they asked for, word for word, as specification, and one
    line on what the version does as change - they read both in the version
    history, and every later write_code gets its own.
 4. Call check_code and fix whatever it complains about. Do not deploy code

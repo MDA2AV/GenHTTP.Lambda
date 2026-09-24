@@ -173,8 +173,8 @@ export function Guide() {
 
           <Section id="why" title="Saying why">
             <p>
-              A version is the code, and optionally two notes about it: <b>the prompt</b>, what was asked
-              for in the words it was asked in, and <b>the change</b>, one line on what the version does.
+              A version is the code, and optionally two notes about it: <b>the specification</b>, what the
+              user wants and why, in their words where possible, and <b>the change</b>, one line on what the version does.
               They are shown beside the diff in the version history, so the <em>why</em> survives next to
               the <em>what</em> - for you, and for the next agent that reads the history before changing
               anything.
@@ -182,12 +182,12 @@ export function Guide() {
             <Sample code={`POST /api/v1/lambdas/{editorKey}/versions
 {
   "files": [ { "name": "lambda.cs", "code": "..." } ],
-  "prompt": "a guest book people can sign",
+  "specification": "A guest book people can sign; entries must survive a restart",
   "change": "Keeps entries in the workspace so they survive a restart"
 }`} />
             <p>
               Agents pass the same two fields to <Code>write_code</Code>. In <b>Code</b>, saving asks
-              for the change. Both are optional; a long prompt is cut at 4000
+              for the change. Both are optional; a long specification is cut at 4000
               characters and a change at 500 rather than refused.
             </p>
           </Section>
@@ -442,7 +442,7 @@ return Layout.Create().Add("chat", socket);`} />
               compile them, and deploy. It is the same API underneath.
             </p>
             <p>
-              It says why as it goes - <Code>write_code</Code> takes the prompt and the change - and
+              It says why as it goes - <Code>write_code</Code> takes the specification and the change - and
               it can look at what it deployed: <Code>read_logs</Code> answers with the lambda's recent
               requests, what it printed and the stack trace of anything it threw, which is how an agent
               finds out its code works rather than assuming it. You watch the same thing in the
