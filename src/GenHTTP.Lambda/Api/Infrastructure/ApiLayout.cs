@@ -22,6 +22,7 @@ public static class ApiLayout
         var version = Layout.Create()
                             .AddDependentService<KeyResource>("keys")
                             .AddDependentService<ExampleResource>("examples")
+                            .AddDependentService<ShowcaseResource>("showcases")
                             .AddDependentService<BuildResource>("builds")
                             .AddDependentService<SystemResource>("system")
                             .AddDependentService<TelemetryResource>("telemetry")
@@ -33,6 +34,7 @@ public static class ApiLayout
                             .Add(Resource<FileResource>())
                             .Add(Resource<CodeResource>())
                             .Add(Resource<MonitoringResource>())
+                            .Add(Resource<LambdaShowcaseResource>())
                             .AddScalar(title: "GenHTTP Lambda API")
                             .AddOpenApi()
                             .Add(ErrorHandler.From(new ApiErrorMapper()));

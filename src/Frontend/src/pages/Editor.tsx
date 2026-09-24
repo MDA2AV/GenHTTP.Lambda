@@ -12,6 +12,7 @@ import { DeploymentsTab } from '../control/DeploymentsTab';
 import { FilesTab } from '../control/FilesTab';
 import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
+import { ShowcaseTab } from '../control/ShowcaseTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
@@ -24,10 +25,11 @@ interface Props {
   theme: Theme;
 }
 
-type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code';
+type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase';
 
 const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'overview', title: 'Overview' },
+  { id: 'showcase', title: 'Showcase' },
   { id: 'files', title: 'Files' },
   { id: 'versions', title: 'Versions' },
   { id: 'deployments', title: 'Deployments' },
@@ -433,6 +435,8 @@ export function Editor({ theme }: Props) {
           <StatsTab control={control} />
         ) : section === 'logs' ? (
           <LogsTab control={control} />
+        ) : section === 'showcase' ? (
+          <ShowcaseTab control={control} />
         ) : (
           <SummaryTab control={control} />
         )}

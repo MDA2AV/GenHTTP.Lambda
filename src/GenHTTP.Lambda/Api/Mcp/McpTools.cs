@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -24,7 +25,8 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// Every tool answers with an object rather than prose. A model reads the text
 /// and a program reads the structured copy, and both are the same thing.
 /// </remarks>
-public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
+public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IShowcaseService showcases, LambdaTelemetry telemetry,
+                              LogBook book, LambdaOptions options)
 {
 
     #region Catalogue
@@ -241,6 +243,22 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                  ["required"] = new JsonArray("privateKey", "path")
              }),
 
+        Tool("showcase",
+             $"List a lambda on the public showcase page, change its entry, or take it off. Not part of building: only do this when the user asks for it. With only privateKey it returns the current entry. An entry needs a title, a description and a picture (a screenshot or short GIF of the lambda in use); it is listed while the lambda is online. {ShowcaseLimits.Tone}",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["title"] = Field("string", $"What it is, in a few words - 'Pub quiz scoreboard', not 'The ultimate quiz experience'. Up to {ShowcaseLimits.MaxTitle} characters."),
+                     ["description"] = Field("string", $"One to three plain sentences on what a visitor can do with it. Up to {ShowcaseLimits.MaxDescription} characters."),
+                     ["image"] = Field("string", $"The picture, base64: PNG, JPEG, GIF or WebP, up to {options.MaxShowcaseImageBytes / 1024 / 1024} MB. Needed for a new entry; left out, the current one is kept."),
+                     ["remove"] = Field("boolean", "Take the lambda off the showcase instead.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
+             }),
+
         Tool("list_examples",
              "Running example lambdas, basic and advanced. Read one before writing code.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
@@ -286,6 +304,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
                 "upload_file" => await UploadAsync(arguments),
                 "list_files" => await FilesAsync(arguments),
                 "delete_file" => await RemoveAsync(arguments),
+                "showcase" => await ShowcaseAsync(arguments, origin),
                 "list_examples" => Examples(origin),
                 "read_example" => Example(arguments, origin),
                 "platform_guide" => Guide(),
@@ -635,6 +654,79 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
         });
     }
 
+    /// <summary>
+    /// Reads, writes or removes the showcase entry of a lambda.
+    /// </summary>
+    /// <remarks>
+    /// One tool rather than three: it is used rarely, and each tool listed is
+    /// read by every agent on every conversation whether it showcases
+    /// anything or not.
+    /// </remarks>
+    private async ValueTask<JsonObject> ShowcaseAsync(JsonObject arguments, string origin)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        if (Flag(arguments, "remove") == true)
+        {
+            await showcases.RemoveAsync(privateKey);
+
+            return McpProtocol.Say(new { ok = true, showcased = false });
+        }
+
+        var title = Text(arguments, "title");
+        var description = Text(arguments, "description");
+        var encoded = Text(arguments, "image");
+
+        ShowcaseInfo? entry;
+
+        if (title == null && description == null && encoded == null)
+        {
+            entry = await showcases.GetAsync(privateKey);
+        }
+        else
+        {
+            byte[]? image = null;
+
+            if (!string.IsNullOrEmpty(encoded))
+            {
+                try
+                {
+                    image = Convert.FromBase64String(encoded);
+                }
+                catch (FormatException)
+                {
+                    return McpProtocol.Refuse("The image is not valid base64.");
+                }
+            }
+
+            // a change of one field keeps the others, as the tool promises
+            var current = await showcases.GetAsync(privateKey);
+
+            entry = await showcases.SaveAsync(privateKey, new ShowcaseDraft(title ?? current?.Title, description ?? current?.Description, image));
+        }
+
+        if (entry == null)
+        {
+            return McpProtocol.Say(new
+            {
+                ok = true,
+                showcased = false,
+                note = "Not in the showcase. Pass title, description and image to add it - only if the user asked for that."
+            });
+        }
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            showcased = true,
+            entry.Title,
+            entry.Description,
+            entry.Online,
+            page = $"{origin}/showcase",
+            note = entry.Online ? null : "Listed once the lambda is online again - deploy it."
+        });
+    }
+
     private static JsonObject Examples(string origin) => McpProtocol.Say(new
     {
         ok = true,
@@ -754,6 +846,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, Lam
             goodChange = "Adds a leaderboard that keeps the ten best scores on the server",
             badChange = "Updated lambda.cs",
             limits = new { specification = VersionNote.MaxSpecification, change = VersionNote.MaxChange }
+        },
+        showcase = new
+        {
+            what = "The owner can list a lambda on the public showcase page with a title, a short description and a picture. The showcase tool does it.",
+            when = "Only when the user asks. It is not part of building or deploying.",
+            tone = ShowcaseLimits.Tone
         },
         afterDeploying = new
         {

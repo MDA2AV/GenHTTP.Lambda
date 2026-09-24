@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
 import { IconSpinner } from './components/Icons';
@@ -12,7 +12,7 @@ import { Admin } from './pages/Admin';
 import { Example } from './pages/Example';
 import { Guide } from './pages/Guide';
 import { Build } from './pages/Build';
-import { AgenticCoding } from './pages/AgenticCoding';
+import { Showcase } from './pages/Showcase';
 import { Terms } from './pages/Terms';
 import { useTheme } from './theme';
 
@@ -86,7 +86,9 @@ export function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/docs" element={<Guide />} />
                 <Route path="/build" element={<Build />} />
-                <Route path="/agentic-coding" element={<AgenticCoding />} />
+                <Route path="/showcase" element={<Showcase />} />
+                {/* the page this replaced, which is linked from elsewhere */}
+                <Route path="/agentic-coding" element={<Navigate to="/showcase" replace />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/examples/:id" element={<Example />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />

@@ -59,8 +59,8 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
             Build one
           </Link>
 
-          <Link to="/agentic-coding" className="btn-ghost hidden sm:inline-flex">
-            For agents
+          <Link to="/showcase" className="btn-ghost hidden sm:inline-flex">
+            Showcase
           </Link>
 
           <Link to="/docs" className="btn-ghost hidden min-[360px]:inline-flex">

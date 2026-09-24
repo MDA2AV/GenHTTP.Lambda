@@ -301,10 +301,7 @@ export function Landing() {
 
         <Reveal delay={300}>
           <p className="mt-6 text-center text-sm text-grey-700 dark:text-grey-300">
-            Then simply ask: <em>build a sign-up sheet for our team event and put it online</em>.{' '}
-            <Link to="/agentic-coding" className="text-accent-500 hover:underline dark:text-accent-400">
-              Learn more about using your own agent
-            </Link>
+            Then simply ask: <em>build a sign-up sheet for our team event and put it online</em>.
           </p>
         </Reveal>
       </div>

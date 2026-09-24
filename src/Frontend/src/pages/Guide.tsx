@@ -129,7 +129,7 @@ export function Guide() {
                 </>,
                 <>
                   Hand the editor key to an agent and tell it what to build - it writes new
-                  versions through <Link to="/agentic-coding" className="text-accent-500 hover:underline">MCP</Link>.
+                  versions through <Link to="/#agents" className="text-accent-500 hover:underline">MCP</Link>.
                   Or open <b>Code</b> and write it yourself: <b>Check</b> compiles without
                   storing anything and tells you what the compiler thinks, file and line.
                 </>,
