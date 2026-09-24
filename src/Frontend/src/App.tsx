@@ -9,9 +9,7 @@ import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
-import { Logs } from './pages/Logs';
 import { Example } from './pages/Example';
-import { Stats } from './pages/Stats';
 import { Guide } from './pages/Guide';
 import { Build } from './pages/Build';
 import { AgenticCoding } from './pages/AgenticCoding';
@@ -73,14 +71,19 @@ export function App() {
           }
         />
         <Route
+          path="/admin/*"
+          element={
+            <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
+              <Admin theme={theme} />
+            </Shell>
+          }
+        />
+        <Route
           path="*"
           element={
             <Shell theme={theme} onToggleTheme={toggleTheme}>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/stats" element={<Stats dark={theme === 'dark'} />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/logs" element={<Logs />} />
                 <Route path="/docs" element={<Guide />} />
                 <Route path="/build" element={<Build />} />
                 <Route path="/agentic-coding" element={<AgenticCoding />} />

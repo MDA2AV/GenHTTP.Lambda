@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { useAdminToken } from '../admin';
 import { ApiError, api, type Activity, type Telemetry, type TelemetrySample } from '../api';
 import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
-import { Locked } from '../components/Locked';
-import { usePageMeta } from '../meta';
+import { Pills, Section } from '../control/ui';
+import type { Access } from './context';
 
 /** What each kind of event is called on screen. */
 const KINDS: Record<string, string> = {
@@ -62,11 +61,10 @@ const GEN0: [string, string] = ['#8ab4f8', '#aecbfa'];
 const GEN1: [string, string] = ['#4285f4', '#669df6'];
 const GEN2: [string, string] = ['#174ea6', '#1a73e8'];
 
-export function Stats({ dark }: { dark: boolean }) {
-  usePageMeta({ title: 'Server', index: false });
+/** Memory, connections and what the engine is doing. */
+export function ServerSection({ access }: { access: Access }) {
+  const { token, deny, dark } = access;
 
-  const [token] = useAdminToken();
-  const [denied, setDenied] = useState(false);
   const [data, setData] = useState<Telemetry | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [minutes, setMinutes] = useState(readWindow);
@@ -81,27 +79,21 @@ export function Stats({ dark }: { dark: boolean }) {
   }, [minutes]);
 
   const load = useCallback(async () => {
-    if (token === '') {
-      return;
-    }
-
     try {
       setData(await api.telemetry(minutes, token));
       // absent when the installation keeps the per lambda figures to itself
       setActivity(await api.activity(token).catch(() => null));
-      setDenied(false);
       setError(null);
     } catch (problem) {
       // a wrong token and an installation with no administration answer the
       // same way, so this page cannot tell them apart either
       if (problem instanceof ApiError && problem.status === 404) {
-        setDenied(true);
-        setData(null);
+        deny();
       } else {
         setError('The telemetry could not be read.');
       }
     }
-  }, [minutes, token]);
+  }, [minutes, token, deny]);
 
   useEffect(() => {
     load();
@@ -111,25 +103,26 @@ export function Stats({ dark }: { dark: boolean }) {
     return () => window.clearInterval(timer);
   }, [load]);
 
-  if (token === '' || denied) {
-    return (
-      <Locked
-        title="Server"
-        denied={denied}
-        what="What the process is holding and what the engine is carrying, which is nobody's business but the operator's."
-      />
-    );
-  }
-
-  if (error !== null) {
-    return <div className="mx-auto max-w-5xl px-5 py-14 text-sm text-red-500">{error}</div>;
-  }
+  const pills = (
+    <Pills
+      label="Time range"
+      value={minutes}
+      onChange={setMinutes}
+      options={WINDOWS.map((window) => ({ value: window.minutes, label: window.label }))}
+    />
+  );
 
   if (data === null) {
     return (
-      <div className="mx-auto flex max-w-5xl items-center gap-2 px-5 py-14 text-sm text-slate-500">
-        <IconSpinner /> Reading the server…
-      </div>
+      <Section title="Server" pills={pills}>
+        {error !== null ? (
+          <p className="text-sm text-red-500">{error}</p>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <IconSpinner /> Reading the server…
+          </div>
+        )}
+      </Section>
     );
   }
 
@@ -151,36 +144,20 @@ export function Stats({ dark }: { dark: boolean }) {
     samples.map((s, i) => (i === 0 ? 0 : Math.max(0, pick(s) - pick(samples[i - 1]))));
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Server</h1>
-          <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-            Running on <strong className="font-medium">{server.engine}</strong>, GenHTTP {server.version},{' '}
-            {server.runtime}. Sampled every {data.intervalSeconds}s
-            {latest?.taken ? <> · figures below as of {time(latest.taken)}</> : null}.
-          </p>
-        </div>
+    <Section
+      title="Server"
+      hint={
+        <>
+          Running on <strong className="font-medium">{server.engine}</strong>, GenHTTP {server.version},{' '}
+          {server.runtime}. Sampled every {data.intervalSeconds}s
+          {latest?.taken ? <>, the figures as of {time(latest.taken)}</> : null}.
+        </>
+      }
+      pills={pills}
+    >
+      {error !== null && <p className="mb-4 text-sm text-red-500">{error}</p>}
 
-        <div className="flex border border-slate-200 dark:border-ink-800" role="group" aria-label="Time range">
-          {WINDOWS.map((window) => (
-            <button
-              key={window.minutes}
-              type="button"
-              onClick={() => setMinutes(window.minutes)}
-              className={`px-3 py-1.5 text-sm ${
-                window.minutes === minutes
-                  ? 'bg-accent-500 text-white dark:bg-accent-400 dark:text-ink-950'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-ink-850'
-              }`}
-            >
-              {window.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-7 grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
+      <div className="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200 sm:grid-cols-4 dark:border-ink-800 dark:bg-ink-800">
         <Tile label="Uptime" value={duration(server.uptimeSeconds)} />
         <Tile label="Managed heap" value={bytes(latest.managedBytes)} />
         <Tile label="Working set" value={bytes(latest.workingSetBytes)} />
@@ -419,7 +396,7 @@ export function Stats({ dark }: { dark: boolean }) {
         <Fact label="Upgrades" value={count(traffic.upgrades)} />
         <Fact label="Versions stored" value={count(platform.versions)} />
       </dl>
-    </div>
+    </Section>
   );
 }
 

@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { useAdminToken } from '../admin';
 import { ApiError, api, type LogCaller, type LogEntry, type PreviousRun } from '../api';
 import { IconPlay, IconStop, IconDownload, IconTrash, IconSpinner, IconLayers, IconGlobe } from '../components/Icons';
-import { Locked } from '../components/Locked';
-import { usePageMeta } from '../meta';
+import { Pills, Section } from '../control/ui';
+import type { Access } from './context';
 
 /**
  * How often the tail is asked for while following.
@@ -141,14 +140,12 @@ const SHORT: Record<string, string> = {
  * reconnect, a sleeping laptop and a proxy that buffers - none of which a long
  * lived response does.
  */
-export function Logs() {
-  usePageMeta({ title: 'Log', index: false });
+export function LogSection({ access }: { access: Access }) {
+  const { token, deny } = access;
 
-  const [token] = useAdminToken();
   const [params, setParams] = useSearchParams();
 
   const [lines, setLines] = useState<LogEntry[]>([]);
-  const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [following, setFollowing] = useState(true);
@@ -182,10 +179,6 @@ export function Logs() {
   const pinned = useRef(true);
 
   const load = useCallback(async () => {
-    if (token === '') {
-      return;
-    }
-
     try {
       const page = await api.logs(token, {
         since: cursor.current ?? undefined,
@@ -203,7 +196,6 @@ export function Logs() {
       setCapacity(page.capacity);
       setAddresses(page.addresses);
       setPrevious(page.previous ?? null);
-      setDenied(false);
       setError(null);
       setReady(true);
 
@@ -220,16 +212,15 @@ export function Logs() {
       }
     } catch (problem) {
       if (problem instanceof ApiError && problem.status === 404) {
-        setDenied(true);
-        setLines([]);
+        deny();
       } else {
         setError('The log could not be read.');
       }
     }
-  }, [token, lambda, level, client, held]);
+  }, [token, deny, lambda, level, client, held]);
 
   useEffect(() => {
-    if (!showCallers || token === '') {
+    if (!showCallers) {
       return;
     }
 
@@ -359,31 +350,21 @@ export function Logs() {
     URL.revokeObjectURL(url);
   }
 
-  if (token === '' || denied) {
-    return (
-      <Locked
-        title="Log"
-        denied={denied}
-        what="Whatever this server and the code running on it decided to print, which can be anything either of them saw."
-      />
-    );
-  }
-
   return (
-    <div className="mx-auto w-full max-w-6xl px-5 py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Log</h1>
-          <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-            The last {capacity.toLocaleString()} lines of this run, held in memory and lost on a restart.
-            {capturing
-              ? ' What a lambda prints while it is serving a request is filed under it.'
-              : ' What lambdas print is not being kept on this installation.'}
-            {addresses ? '' : ' Caller addresses are not being recorded.'}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1">
+    <Section
+      title="Log"
+      hint={
+        <>
+          The last {capacity.toLocaleString()} lines of this run, held in memory and lost on a restart.
+          {capturing
+            ? ' What a lambda prints while it is serving a request is filed under it.'
+            : ' What lambdas print is not being kept on this installation.'}
+          {addresses ? '' : ' Caller addresses are not being recorded.'}
+        </>
+      }
+      pills={<Pills label="Level" value={level} onChange={choose} options={LEVELS} />}
+      actions={
+        <div className="flex flex-wrap items-center gap-1">
           <button
             type="button"
             onClick={() => setFollowing((was) => !was)}
@@ -438,26 +419,9 @@ export function Logs() {
             Clear
           </button>
         </div>
-      </div>
-
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <div className="flex border border-grey-300 dark:border-ink-800" role="group" aria-label="Level">
-          {LEVELS.map((choice) => (
-            <button
-              key={choice.value}
-              type="button"
-              onClick={() => choose(choice.value)}
-              className={`px-3 py-1.5 text-sm ${
-                choice.value === level
-                  ? 'bg-accent-500 text-white dark:bg-accent-400 dark:text-ink-950'
-                  : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-ink-850'
-              }`}
-            >
-              {choice.label}
-            </button>
-          ))}
-        </div>
-
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -503,23 +467,16 @@ export function Logs() {
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="flex border border-grey-300 dark:border-ink-800" role="group" aria-label="How many lines to hold">
-            {WINDOWS.map((size) => (
-              <button
-                key={size}
-                type="button"
-                onClick={() => setHeld(size)}
-                title={`Hold and ask for ${size.toLocaleString()} lines`}
-                className={`px-3 py-1.5 text-sm tabular-nums ${
-                  size === held
-                    ? 'bg-accent-500 text-white dark:bg-accent-400 dark:text-ink-950'
-                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-ink-850'
-                }`}
-              >
-                {size >= 1000 ? `${size / 1000}k` : size}
-              </button>
-            ))}
-          </div>
+          <Pills
+            label="How many lines to hold"
+            value={held}
+            onChange={setHeld}
+            options={WINDOWS.map((size) => ({
+              value: size,
+              label: size >= 1000 ? `${size / 1000}k` : String(size),
+              title: `Hold and ask for ${size.toLocaleString()} lines`,
+            }))}
+          />
 
           <input
             value={find}
@@ -799,7 +756,7 @@ export function Logs() {
           under CC BY 4.0.
         </p>
       )}
-    </div>
+    </Section>
   );
 }
 

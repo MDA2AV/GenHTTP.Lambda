@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import { AdminMenu } from '../components/AdminMenu';
 import { CopyField } from '../components/CopyField';
 import { ReportAbuse } from '../components/ReportAbuse';
 import { IconChat, IconChevronDown, IconMail } from '../components/Icons';
@@ -393,17 +392,10 @@ export function Landing() {
             Discord
           </a>
 
-          <a
-            href="https://github.com/MDA2AV/GenHTTP.Lambda"
-            target="_blank"
-            rel="noreferrer"
-            className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
-          >
-            Source
-          </a>
-
           {/* the header carries this on anything wider than a phone */}
-          <AdminMenu placement="footer" />
+          <Link to="/admin" className="text-slate-500 hover:text-accent-600 hover:underline sm:hidden dark:hover:text-accent-400">
+            Admin
+          </Link>
         </footer>
       </div>
     </div>
