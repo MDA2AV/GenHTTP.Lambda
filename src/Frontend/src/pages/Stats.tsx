@@ -31,6 +31,18 @@ const WINDOWS = [
   { minutes: 1440, label: '24h' },
 ];
 
+const WINDOW_KEY = 'lambda-stats-window';
+
+/** The last range chosen in this browser, or an hour. */
+function readWindow(): number {
+  try {
+    const stored = Number(localStorage.getItem(WINDOW_KEY));
+    return WINDOWS.some((window) => window.minutes === stored) ? stored : 60;
+  } catch {
+    return 60;
+  }
+}
+
 // validated against each surface with the palette checker, not picked by eye
 const BLUE: [string, string] = ['#1a73e8', '#4285f4'];
 const ORANGE: [string, string] = ['#e8710a', '#d56e0c'];
@@ -57,8 +69,16 @@ export function Stats({ dark }: { dark: boolean }) {
   const [denied, setDenied] = useState(false);
   const [data, setData] = useState<Telemetry | null>(null);
   const [activity, setActivity] = useState<Activity | null>(null);
-  const [minutes, setMinutes] = useState(60);
+  const [minutes, setMinutes] = useState(readWindow);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(WINDOW_KEY, String(minutes));
+    } catch {
+      /* private mode */
+    }
+  }, [minutes]);
 
   const load = useCallback(async () => {
     if (token === '') {
