@@ -62,6 +62,10 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
             Showcase
           </Link>
 
+          <Link to="/enterprise" className="btn-ghost hidden md:inline-flex">
+            Enterprise
+          </Link>
+
           <Link to="/docs" className="btn-ghost hidden min-[360px]:inline-flex">
             Docs
           </Link>
