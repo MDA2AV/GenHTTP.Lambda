@@ -17,7 +17,7 @@ import { ShowcaseTab } from '../control/ShowcaseTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
-import { LiveDot, Menu, TierBadge, menuItem, menuRule } from '../control/ui';
+import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 import { usePageMeta } from '../meta';
@@ -279,6 +279,7 @@ export function Editor({ theme }: Props) {
 
   const live = lambda.activeVersion != null;
   const publicUrl = `${window.location.origin}${lambda.publicPath}`;
+  const domainUrl = lambda.domainServed && lambda.domain ? `https://${lambda.domain}/` : null;
   const editorUrl = `${window.location.origin}${lambda.editorPath}`;
   const latest = lambda.latestVersion;
   const ahead = latest != null && latest !== lambda.activeVersion;
@@ -299,14 +300,11 @@ export function Editor({ theme }: Props) {
         <div className="px-4 pb-3 pt-4 md:px-3 md:pt-6">
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <LiveDot live={live} />
-                <span className="truncate font-mono text-[15px] font-semibold" title={lambda.publicKey}>{lambda.publicKey}</span>
-              </div>
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-500">
-                <span className="whitespace-nowrap">{live ? `Online, version ${lambda.activeVersion}` : 'Offline'}</span>
+              <span className="block truncate font-mono text-[15px] font-semibold" title={lambda.publicKey}>{lambda.publicKey}</span>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <StatusBadge version={lambda.activeVersion} />
                 <TierBadge tier={lambda.tier} />
-              </p>
+              </div>
             </div>
 
             <Menu label="More actions" align="left">
@@ -342,45 +340,12 @@ export function Editor({ theme }: Props) {
             </Menu>
           </div>
 
-          <div className="mt-3 flex items-center gap-1 text-[13px]">
-            <a
-              href={live ? publicUrl : undefined}
-              target="_blank"
-              rel="noreferrer"
-              title={publicUrl}
-              className={`min-w-0 flex-1 truncate ${live ? 'text-accent-600 hover:underline dark:text-accent-400' : 'text-slate-400'}`}
-            >
-              {publicUrl.replace(/^https?:\/\//, '')}
-            </a>
-            <CopyButton value={publicUrl} />
-            {live && (
-              <a href={publicUrl} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                 title="Open in a new tab" aria-label="Open in a new tab">
-                <IconExternal className="h-3.5 w-3.5" />
-              </a>
-            )}
+          {/* where it answers: its own domain first when it has one, since
+              that is the address its visitors know */}
+          <div className="mt-3 space-y-0.5">
+            {domainUrl && <Address url={domainUrl} live={live} primary />}
+            <Address url={publicUrl} live={live} primary={!domainUrl} />
           </div>
-
-          {lambda.domainServed && lambda.domain && (
-            <div className="mt-1 flex items-center gap-1 text-[13px]">
-              <a
-                href={live ? `https://${lambda.domain}/` : undefined}
-                target="_blank"
-                rel="noreferrer"
-                title={`Also answers at https://${lambda.domain}/`}
-                className={`min-w-0 flex-1 truncate ${live ? 'text-accent-600 hover:underline dark:text-accent-400' : 'text-slate-400'}`}
-              >
-                {lambda.domain}
-              </a>
-              <CopyButton value={`https://${lambda.domain}/`} />
-              {live && (
-                <a href={`https://${lambda.domain}/`} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                   title="Open in a new tab" aria-label="Open the domain in a new tab">
-                  <IconExternal className="h-3.5 w-3.5" />
-                </a>
-              )}
-            </div>
-          )}
 
           {ahead && latest != null && (
             <button
@@ -559,6 +524,42 @@ export function Editor({ theme }: Props) {
           with it. This cannot be undone.
         </p>
       </Dialog>
+    </div>
+  );
+}
+
+/**
+ * One address the lambda answers at, with copying and opening beside it. The
+ * main one is the link to follow; any other is there to be found, not to
+ * compete with it.
+ */
+function Address({ url, live, primary }: { url: string; live: boolean; primary: boolean }) {
+  const shown = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  return (
+    <div className={`flex items-center gap-1 ${primary ? 'text-[13px]' : 'text-xs'}`}>
+      <a
+        href={live ? url : undefined}
+        target="_blank"
+        rel="noreferrer"
+        title={url}
+        className={`min-w-0 flex-1 truncate ${
+          !live
+            ? 'text-slate-400'
+            : primary
+              ? 'font-medium text-accent-600 hover:underline dark:text-accent-400'
+              : 'text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400'
+        }`}
+      >
+        {shown}
+      </a>
+      <CopyButton value={url} />
+      {live && (
+        <a href={url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+           title="Open in a new tab" aria-label={`Open ${shown} in a new tab`}>
+          <IconExternal className="h-3.5 w-3.5" />
+        </a>
+      )}
     </div>
   );
 }

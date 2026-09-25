@@ -5,7 +5,7 @@ import { ApiError, TIERS, api, type AdminListing, type LambdaOverview } from '..
 import { Dialog } from '../components/Dialog';
 import { IconSpinner, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
-import { Ago, Empty, Pills, Section, TierBadge } from '../control/ui';
+import { Ago, Empty, Pills, Section, StatusBadge, TierBadge } from '../control/ui';
 import type { Access } from './context';
 
 /**
@@ -157,18 +157,7 @@ export function LambdasSection({ access }: { access: Access }) {
                         {lambda.publicKey}
                       </Link>
                     </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`chip ${
-                          live
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-slate-400/10 text-slate-500'
-                        }`}
-                      >
-                        <span className={`h-1.5 w-1.5 ${live ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                        {live ? `live · v${lambda.activeVersion}` : 'offline'}
-                      </span>
-                    </td>
+                    <td className="px-4 py-2"><StatusBadge version={lambda.activeVersion} /></td>
                     <td className="px-4 py-2"><TierBadge tier={lambda.tier} /></td>
                     <td className="max-w-[14rem] truncate px-4 py-2 font-mono text-[13px]">
                       {lambda.domain ? (

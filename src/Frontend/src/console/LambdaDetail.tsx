@@ -7,7 +7,7 @@ import { Dialog } from '../components/Dialog';
 import { IconExternal, IconPlay, IconSpinner, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { Entrances } from '../control/StatsTab';
-import { AgentMark, Ago, Empty, Figure, LiveDot, Section, TierBadge } from '../control/ui';
+import { AgentMark, Ago, Empty, Figure, Section, StatusBadge, TierBadge } from '../control/ui';
 import { clock, count, ending, millis, origin, percent, span } from '../control/format';
 import type { Access } from './context';
 
@@ -168,8 +168,8 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
     <Section
       title={
         <span className="flex items-center gap-2">
-          <LiveDot live={live} />
           <span className="font-mono">{lambda.publicKey}</span>
+          <StatusBadge version={lambda.activeVersion} />
           <TierBadge tier={lambda.tier} />
         </span>
       }
