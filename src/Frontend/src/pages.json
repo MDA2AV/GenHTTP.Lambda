@@ -11,6 +11,10 @@
     "title": "Showcase",
     "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser."
   },
+  "/enterprise": {
+    "title": "Enterprise",
+    "description": "Free to try with no account. Enterprise for an installation of your own with your own sign-in - in the cloud or on premises."
+  },
   "/docs": {
     "title": "How It Works",
     "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."

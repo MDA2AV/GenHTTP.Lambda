@@ -5,6 +5,7 @@ import { Shell } from './components/Shell';
 import { IconSpinner } from './components/Icons';
 import { ToastHost } from './components/Toast';
 import { Create } from './pages/Create';
+import { Enterprise } from './pages/Enterprise';
 import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
@@ -86,6 +87,7 @@ export function App() {
                 <Route path="/docs" element={<Guide />} />
                 <Route path="/build" element={<Build />} />
                 <Route path="/showcase" element={<Showcase />} />
+                <Route path="/enterprise" element={<Enterprise />} />
                 {/* the page this replaced, which is linked from elsewhere */}
                 <Route path="/agentic-coding" element={<Navigate to="/showcase" replace />} />
                 <Route path="/terms" element={<Terms />} />
