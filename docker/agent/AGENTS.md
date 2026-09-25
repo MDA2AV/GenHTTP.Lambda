@@ -66,6 +66,14 @@ link and nothing else. So:
 - do not hand back scaffolding and call it done
 - if the request is vague, pick the most obvious useful reading of it
 
+## Link with relative paths
+
+Every link, script, stylesheet, image, `fetch`, form action and websocket
+address the lambda serves is relative: `api/items`, `app.css`, `./`. No
+leading slash, and never `/lambda/<key>/` or the full address. The same lambda
+may also answer at the root of a domain of its own, where both of those point
+at nothing. `platform_guide` says more under `paths`.
+
 ## What not to build
 
 Refuse and say why, in one sentence, if the request is for a phishing page, a

@@ -58,6 +58,7 @@ port, each against its own temporary data directory.
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
+| any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
 | `/start`             | opens the creation assistant with a template chosen      |
 | `/api/v1/`           | everything the editor calls, see below                    |
 | `/mcp`               | the same, for agents                                      |
@@ -217,6 +218,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
 | `LAMBDA_CERTIFICATE_PASSWORD`       | -                | password of the PKCS#12 archive             |
 | `LAMBDA_CERTIFICATE_DIRECTORY`      | -                | further certificates, one folder per name   |
+| `LAMBDA_ACME_DIRECTORY`             | -                | web root an ACME client writes challenges to |
 
 The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so the image defaults to
@@ -372,6 +374,47 @@ install -m 0640 -o root -g 1001 /etc/letsencrypt/live/your.host.name/privkey.pem
 Because the server holds port 80, the standalone authenticator needs it back
 for the few seconds a renewal takes - a pre hook stops the container and a post
 hook starts it again.
+
+### Issuing certificates while it runs
+
+The server can answer the challenges itself instead. Point
+`LAMBDA_ACME_DIRECTORY` at the folder the ACME client writes them into, and
+`GET /.well-known/acme-challenge/{token}` is served from
+`{folder}/.well-known/acme-challenge/{token}` - for every host the server
+receives, a lambda's own domain included, where the path would otherwise be
+the lambda's. Nothing else in the folder is served.
+
+```bash
+mkdir -p /opt/genhttp-lambda/acme     # mounted read only at /acme, see docker-compose.yml
+
+certbot certonly --webroot -w /opt/genhttp-lambda/acme -d your.host.name
+```
+
+The challenge is asked for over plain HTTP, and it is the one request the
+upgrade to HTTPS lets through rather than redirecting.
+
+### Custom domains
+
+A lambda in the premium tier can answer at a domain of its own, which its owner
+sets in the editor after pointing the domain's A and AAAA records at the
+server. Plain requests to it are redirected to HTTPS on the same domain like
+every other request, so it needs a certificate - issued by hand for now, with
+the web root above, into a folder of its own:
+
+```bash
+certbot certonly --webroot -w /opt/genhttp-lambda/acme -d shop.example.com
+
+mkdir -p /opt/genhttp-lambda/certs/shop.example.com
+install -m 0644 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/fullchain.pem /opt/genhttp-lambda/certs/shop.example.com/
+install -m 0640 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/privkey.pem   /opt/genhttp-lambda/certs/shop.example.com/
+```
+
+The folder is only looked through on startup - the io_uring engine learns the
+names it holds certificates for when it opens the TLS port - so a new
+certificate is served after the next restart of the container. Renewals of a
+certificate the server knows are picked up without one. Until the certificate is there, visitors of the
+domain are redirected to HTTPS and shown the default certificate, which does
+not carry their name.
 
 ## For agents
 

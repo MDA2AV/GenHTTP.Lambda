@@ -11,7 +11,9 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Execution;
 using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -69,7 +71,10 @@ public sealed class Application : IAsyncDisposable
 
         Scheduler = Services.GetRequiredService<BackgroundScheduler>();
 
-        Handler = BuildHandler(Services, options, loggers);
+        // before the first request, which is asked about against it
+        Services.GetRequiredService<DomainRegistry>().ReloadAsync().AsTask().GetAwaiter().GetResult();
+
+        Handler = BuildHandler(Services, options);
     }
 
     /// <summary>
@@ -102,6 +107,10 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<ServerRegistry>();
 
+        services.AddSingleton<DomainRegistry>();
+        services.AddSingleton<LambdaThrottle>();
+        services.AddSingleton<LambdaRateLimiter>();
+
         services.AddSingleton<IStorageService, FileSystemStorageService>();
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<IMetaService, MetaService>();
@@ -127,26 +136,37 @@ public sealed class Application : IAsyncDisposable
     }
 
     /// <summary>
-    /// Builds the routes of the system: the API, the deployed lambdas, the
+    /// Builds the routes of the system: a lambda's own domain goes straight to
+    /// the lambda, and everything else to the platform.
+    /// </summary>
+    private static IHandler BuildHandler(IServiceProvider services, LambdaOptions options)
+    {
+        var meta = services.GetRequiredService<IMetaService>();
+
+        var domains = LambdaRoute.Create(services, new DomainLocator(meta));
+
+        var router = new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, BuildPlatform(services, options));
+
+        // ahead of the router, so a challenge for a lambda's own domain is
+        // answered here rather than handed to the lambda
+        return options.AcmeDirectory is { } acme
+             ? Concerns.Chain([new AcmeChallengeConcernBuilder(acme)], router)
+             : router;
+    }
+
+    /// <summary>
+    /// The platform itself: the API, the deployed lambdas below their keys, the
     /// frontend's own assets and the single page application, which serves both
     /// the landing page and the editor and catches every other path.
     /// </summary>
-    private static IHandler BuildHandler(IServiceProvider services, LambdaOptions options, ILoggerFactory loggers)
+    private static IHandler BuildPlatform(IServiceProvider services, LambdaOptions options)
     {
         var spa = services.GetRequiredService<SpaResources>();
 
-        var lambdas = LambdaRoute.Create(
-            services.GetRequiredService<IMetaService>(),
-            services.GetRequiredService<IDeploymentService>(),
-            spa,
-            options,
-            services.GetRequiredService<LambdaTelemetry>(),
-            services.GetRequiredService<LogBook>(),
-            loggers
-        );
+        var lambdas = LambdaRoute.Create(services, new KeyLocator(services.GetRequiredService<IMetaService>(), spa));
 
         var layout = Layout.Create()
-                           .Add("api", ApiLayout.Create())
+                           .Add("api", ApiLayout.Create(options))
                            // a link for other pages to carry, so part of the site rather than the API
                            .AddService<Invitation>("start")
                            // one path, for agents rather than for browsers
@@ -179,6 +199,13 @@ public sealed class Application : IAsyncDisposable
                .AddDependencyInjection(Services)
                .Add(Registry.Capture())
                .Add(new TelemetryConcernBuilder(Services.GetRequiredService<ITelemetryService>()))
+               /*
+                * The upgrade to the secure endpoint covers a lambda's own
+                * domain as well: it redirects to the host that was asked for,
+                * so http://shop.example.com goes to https://shop.example.com.
+                * The certificate for such a domain is put beside the others
+                * by the operator (see CertificateLoader).
+                */
                .Defaults()
                /*
                 * Last, which puts it outside everything else, because a
@@ -201,6 +228,7 @@ public sealed class Application : IAsyncDisposable
                                              Services.GetRequiredService<StringPool>(),
                                              Services.GetRequiredService<GeoTable>(),
                                              Services.GetRequiredService<GeoPlaces>(),
+                                             Services.GetRequiredService<DomainRegistry>(),
                                              Options));
 
     /// <summary>

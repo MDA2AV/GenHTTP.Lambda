@@ -5,6 +5,7 @@ import { useAdminToken } from '../admin';
 import { ApiError, api } from '../api';
 import { IconLock, IconSpinner } from '../components/Icons';
 import type { Access } from '../console/context';
+import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
 import { LogSection } from '../console/LogSection';
 import { ServerSection } from '../console/ServerSection';
@@ -32,7 +33,7 @@ export function Admin({ theme }: { theme: Theme }) {
 
   const { '*': rest = '' } = useParams();
 
-  const segment = rest.split('/')[0];
+  const [segment, detail] = rest.split('/');
   const section: SectionId = SECTIONS.find((s) => s.id === segment)?.id ?? 'server';
 
   const [token, setToken] = useAdminToken();
@@ -106,7 +107,9 @@ export function Admin({ theme }: { theme: Theme }) {
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col">
-          {section === 'lambdas' ? (
+          {section === 'lambdas' && detail ? (
+            <LambdaDetail key={detail} access={access} publicKey={decodeURIComponent(detail)} />
+          ) : section === 'lambdas' ? (
             <LambdasSection access={access} />
           ) : section === 'log' ? (
             <LogSection access={access} />

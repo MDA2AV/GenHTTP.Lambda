@@ -4,6 +4,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 using GenHTTP.Modules.ErrorHandling;
 
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
 
 using GenHTTP.Modules.IO;
@@ -35,8 +36,10 @@ public sealed class LambdaErrorMapper(ILogger<LambdaErrorMapper> logger) : IErro
 
         var lambda = request.GetLambda();
 
-        logger.LogWarning(error, "Lambda '{PublicKey}' failed while handling {Method} {Path}",
-            lambda?.PublicKey ?? "?", request.Header.Method, request.Header.Path);
+        // the path alone reads as one of the platform's when the lambda was
+        // reached at a domain of its own
+        logger.LogWarning(error, "Lambda '{PublicKey}' failed while handling {Method} {Host}{Path}",
+            lambda?.PublicKey ?? "?", request.Header.Method, request.GetDomain()?.Name ?? "", request.Header.Path);
 
         return new ValueTask<IResponse?>(Render(request, ResponseStatus.InternalServerError, "Lambda Error",
             $"The lambda threw {error.GetType().Name}: {error.Message}", null));
@@ -45,7 +48,12 @@ public sealed class LambdaErrorMapper(ILogger<LambdaErrorMapper> logger) : IErro
     public ValueTask<IResponse?> GetNotFound(IRequest request, IHandler handler, ByteString? acceptedFormat)
         => new(Render(request, ResponseStatus.NotFound, "Not Found", "This lambda does not serve the requested path.", null));
 
-    private static IResponse Render(IRequest request, ResponseStatus status, string title, string message, Action<IResponseBuilder>? modifications)
+    /// <summary>
+    /// A page for a visitor of a lambda - markup for a browser, JSON for
+    /// anything else - that says what went wrong without saying anything
+    /// about the platform around it.
+    /// </summary>
+    internal static IResponse Render(IRequest request, ResponseStatus status, string title, string message, Action<IResponseBuilder>? modifications)
     {
         var accepted = request.Header.Headers.GetEntry("Accept");
 

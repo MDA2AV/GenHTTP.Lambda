@@ -188,9 +188,10 @@ public sealed class LogBook
     /// measure it. Nothing means never fold this line.
     /// </param>
     /// <param name="lambdaId">The identity of the lambda named by <paramref name="lambda"/></param>
+    /// <param name="domain">The lambda's own domain the request being served was addressed to</param>
     public long Append(string level, string source, string? lambda, string text, string? detail = null,
                        string? client = null, string? agent = null, string? country = null, string? place = null,
-                       string? folding = null, long? lambdaId = null)
+                       string? folding = null, long? lambdaId = null, string? domain = null)
     {
         var repeats = 1;
 
@@ -219,7 +220,7 @@ public sealed class LogBook
              */
             var key = folding == null
                 ? null
-                : $"{level}\u0000{where}\u0000{lambda}\u0000{lambdaId}\u0000{client}\u0000{folding}";
+                : $"{level}\u0000{where}\u0000{lambda}\u0000{lambdaId}\u0000{domain}\u0000{client}\u0000{folding}";
 
             Run? open = null;
 
@@ -233,7 +234,7 @@ public sealed class LogBook
                         // newest is kept so closing it says something current
                         run.Held++;
                         run.Last = at;
-                        run.Latest = new LogLine(0, at, level, where, lambda, said, trace, client, agent, country, place, 1, lambdaId);
+                        run.Latest = new LogLine(0, at, level, where, lambda, said, trace, client, agent, country, place, 1, lambdaId, domain);
 
                         return 0;
                     }
@@ -262,7 +263,7 @@ public sealed class LogBook
                 Drop();
             }
 
-            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats, lambdaId);
+            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats, lambdaId, domain);
 
             if (open != null)
             {

@@ -21,6 +21,17 @@ public sealed class LambdaEntity
     public LambdaTier Tier { get; set; }
 
     /// <summary>
+    /// The domain the lambda answers at besides its path, such as
+    /// <c>shop.example.com</c>.
+    /// </summary>
+    /// <remarks>
+    /// Kept in the form it is matched in (see <c>DomainNames</c>) and only
+    /// honoured in the premium tier - a lambda demoted keeps it, unserved,
+    /// until it is promoted again.
+    /// </remarks>
+    public string? Domain { get; set; }
+
+    /// <summary>
     /// The version that is currently deployed, if any.
     /// </summary>
     public int? ActiveVersion { get; set; }

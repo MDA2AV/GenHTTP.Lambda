@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -35,6 +36,8 @@ public sealed class MetaService : IMetaService
 
     private LogBook Book { get; }
 
+    private DomainRegistry Domains { get; }
+
     private ILogger Logger { get; }
 
     #endregion
@@ -42,8 +45,9 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaTelemetry activity, LambdaOptions options, LogBook book, ILogger<MetaService> logger)
+        LambdaTelemetry activity, LambdaOptions options, LogBook book, DomainRegistry domains, ILogger<MetaService> logger)
     {
+        Domains = domains;
         Databases = databases;
         Storage = storage;
         Deployments = deployments;
@@ -110,6 +114,100 @@ public sealed class MetaService : IMetaService
 
         return await DescribeAsync(database, lambda, cancellation);
     }
+
+    #endregion
+
+    #region Hosting
+
+    public async ValueTask<LambdaInfo> ChangeTierAsync(string privateKey, LambdaTier tier, CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        if (lambda.Tier != tier)
+        {
+            var previous = lambda.Tier;
+
+            lambda.Tier = tier;
+            lambda.Modified = DateTime.UtcNow;
+
+            await database.SaveChangesAsync(cancellation);
+
+            // a domain is served or not by the tier, so the tier moving can
+            // take one on or off the air without the domain itself changing
+            await Domains.ReloadAsync(cancellation);
+
+            Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' moved from the {Previous} to the {Current} tier",
+                                  lambda.Id, lambda.PublicKey, previous, tier);
+        }
+
+        return await DescribeAsync(database, lambda, cancellation);
+    }
+
+    public async ValueTask<LambdaInfo> ChangeDomainAsync(string privateKey, string? domain, CancellationToken cancellation = default)
+    {
+        string? normalized = null;
+
+        if (!string.IsNullOrWhiteSpace(domain) && !DomainNames.TryNormalize(domain, Options, out normalized, out var reason))
+        {
+            throw LambdaException.Invalid(reason!);
+        }
+
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        if (lambda.Domain == normalized)
+        {
+            return await DescribeAsync(database, lambda, cancellation);
+        }
+
+        if (normalized != null)
+        {
+            if (lambda.Tier != LambdaTier.Premium)
+            {
+                throw LambdaException.Forbidden("A domain of its own is part of the premium tier, which this lambda is not in.");
+            }
+
+            if (await database.Lambdas.AnyAsync(l => l.Domain == normalized && l.Id != lambda.Id, cancellation))
+            {
+                throw LambdaException.Conflict("This domain is already used by another lambda.");
+            }
+        }
+
+        var previous = lambda.Domain;
+
+        lambda.Domain = normalized;
+        lambda.Modified = DateTime.UtcNow;
+
+        try
+        {
+            await database.SaveChangesAsync(cancellation);
+        }
+        catch (DbUpdateException)
+        {
+            // claimed by somebody else between the check above and now
+            throw LambdaException.Conflict("This domain is already used by another lambda.");
+        }
+
+        await Domains.ReloadAsync(cancellation);
+
+        Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' changed its domain from '{Previous}' to '{Current}'",
+                              lambda.Id, lambda.PublicKey, previous ?? "-", normalized ?? "-");
+
+        return await DescribeAsync(database, lambda, cancellation);
+    }
+
+    /// <summary>
+    /// Whether the tier of a lambda keeps it, rather than the sweeps deciding.
+    /// </summary>
+    /// <remarks>
+    /// Examples because they are the installation's own; premium lambdas
+    /// because they answer at somebody's domain, and a site going offline
+    /// because it had a quiet month is not something anybody would pay for.
+    /// </remarks>
+    private static bool Kept(LambdaEntity lambda) => lambda.IsExample || lambda.Tier == LambdaTier.Premium;
 
     #endregion
 
@@ -210,6 +308,21 @@ public sealed class MetaService : IMetaService
         var lambda = await database.Lambdas.AsNoTracking()
                                    .FirstOrDefaultAsync(l => l.PublicKey == publicKey, cancellation);
 
+        return await ResolveAsync(database, lambda, cancellation);
+    }
+
+    public async ValueTask<ResolvedLambda?> ResolveAsync(long id, CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var lambda = await database.Lambdas.AsNoTracking()
+                                   .FirstOrDefaultAsync(l => l.Id == id, cancellation);
+
+        return await ResolveAsync(database, lambda, cancellation);
+    }
+
+    private static async ValueTask<ResolvedLambda?> ResolveAsync(LambdaDbContext database, LambdaEntity? lambda, CancellationToken cancellation)
+    {
         if (lambda?.ActiveVersion == null)
         {
             return null;
@@ -456,9 +569,10 @@ public sealed class MetaService : IMetaService
         var abandoned = now - Options.Retention;
 
         // examples are the installation's own, and being untouched is their
-        // normal state rather than a sign that nobody wants them
+        // normal state rather than a sign that nobody wants them; premium
+        // lambdas are kept by their tier (see Kept)
         var expired = await database.Lambdas
-                                    .Where(l => !l.IsExample && l.Modified < abandoned
+                                    .Where(l => !l.IsExample && l.Tier != LambdaTier.Premium && l.Modified < abandoned
                                              && (l.LastSeen == null || l.LastSeen < abandoned))
                                     .ToListAsync(cancellation);
 
@@ -469,7 +583,7 @@ public sealed class MetaService : IMetaService
 
         var quiet = now - Options.DeploymentLifetime;
 
-        var running = await database.Lambdas.Where(l => !l.IsExample && l.ActiveVersion != null)
+        var running = await database.Lambdas.Where(l => !l.IsExample && l.Tier != LambdaTier.Premium && l.ActiveVersion != null)
                                     .ToListAsync(cancellation);
 
         var undeployed = 0;
@@ -577,7 +691,8 @@ public sealed class MetaService : IMetaService
                              .FirstOrDefaultAsync(cancellation);
     }
 
-    public async ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, CancellationToken cancellation = default)
+    public async ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null,
+                                                 CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
@@ -591,9 +706,15 @@ public sealed class MetaService : IMetaService
         {
             var term = search.Trim();
 
-            // the public key is the only thing an administrator has to go on
-            // that is not the code itself, and it is what the panel shows
-            query = query.Where(l => EF.Functions.Like(l.PublicKey, $"%{term}%"));
+            // the key and the domain are what an administrator has to go on
+            // that is not the code itself, and what the panel shows
+            query = query.Where(l => EF.Functions.Like(l.PublicKey, $"%{term}%")
+                                  || (l.Domain != null && EF.Functions.Like(l.Domain, $"%{term}%")));
+        }
+
+        if (tier is { } wanted)
+        {
+            query = query.Where(l => l.Tier == wanted);
         }
 
         var matched = await query.CountAsync(cancellation);
@@ -622,8 +743,9 @@ public sealed class MetaService : IMetaService
             l.ActiveVersion,
             latest.GetValueOrDefault(l.Id),
             counts.GetValueOrDefault(l.Id),
-            l.ActiveVersion != null ? Quiet(l) + Options.DeploymentLifetime : null,
-            Quiet(l) + Options.Retention
+            DeployedUntil(l),
+            KeptUntil(l),
+            l.Domain
         ))], matched, total, deployed);
     }
 
@@ -823,6 +945,11 @@ public sealed class MetaService : IMetaService
 
         await database.SaveChangesAsync(cancellation);
 
+        if (lambda.Domain != null)
+        {
+            await Domains.ReloadAsync(cancellation);
+        }
+
         await Storage.DeleteAsync(lambda.Id, cancellation);
     }
 
@@ -833,12 +960,22 @@ public sealed class MetaService : IMetaService
 
         // the two deadlines the maintenance job will act on, so the editor can
         // say when rather than leaving it to be discovered
-        var until = Quiet(lambda) + Options.DeploymentLifetime;
-
         return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
-                              lambda.ActiveVersion, latest, lambda.Deployed, lambda.ActiveVersion != null ? until : null,
-                              Quiet(lambda) + Options.Retention);
+                              lambda.ActiveVersion, latest, lambda.Deployed, DeployedUntil(lambda), KeptUntil(lambda),
+                              lambda.Domain);
     }
+
+    /// <summary>
+    /// When the sweep takes the lambda offline unless it is used before then.
+    /// </summary>
+    private DateTime? DeployedUntil(LambdaEntity lambda)
+        => lambda.ActiveVersion != null && !Kept(lambda) ? Quiet(lambda) + Options.DeploymentLifetime : null;
+
+    /// <summary>
+    /// When the sweep removes the lambda unless it is used before then.
+    /// </summary>
+    private DateTime? KeptUntil(LambdaEntity lambda)
+        => !Kept(lambda) ? Quiet(lambda) + Options.Retention : null;
 
     private static async ValueTask<IReadOnlyList<LambdaVersionInfo>> ListVersionsAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation)
         => await database.Deployments.AsNoTracking()

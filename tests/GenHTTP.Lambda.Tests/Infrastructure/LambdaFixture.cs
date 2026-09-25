@@ -4,6 +4,7 @@ using System.Text.Json;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
+using GenHTTP.Lambda.Data.Entities;
 
 using Microsoft.EntityFrameworkCore;
 using GenHTTP.Lambda.Services.Deployment;
@@ -156,9 +157,16 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// Runs a request against the application.
     /// </summary>
-    public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? payload = null, string? accept = null)
+    /// <param name="host">The Host header to send, to reach a lambda at a domain of its own</param>
+    public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? payload = null, string? accept = null,
+                                                     string? host = null)
     {
         using var request = Host.GetRequest(path, method);
+
+        if (host != null)
+        {
+            request.Headers.Host = host;
+        }
 
         if (payload != null)
         {
@@ -173,7 +181,13 @@ internal sealed class LambdaFixture : IAsyncDisposable
         return await Host.GetResponseAsync(request);
     }
 
-    public Task<HttpResponseMessage> GetAsync(string path, string? accept = null) => SendAsync(HttpMethod.Get, path, accept: accept);
+    public Task<HttpResponseMessage> GetAsync(string path, string? accept = null, string? host = null)
+        => SendAsync(HttpMethod.Get, path, accept: accept, host: host);
+
+    /// <summary>
+    /// Moves a lambda to a tier, which only an administrator can do.
+    /// </summary>
+    public async ValueTask ChangeTierAsync(string privateKey, LambdaTier tier) => await Meta.ChangeTierAsync(privateKey, tier);
 
     /// <summary>
     /// Creates a lambda through the API, the way the creation assistant does.

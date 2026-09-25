@@ -226,10 +226,54 @@ export function AgentMark({ origin }: { origin?: string | null }) {
   );
 }
 
+/**
+ * The shape every badge about a lambda shares, so the ones that sit next to
+ * each other read as one row rather than three styles.
+ */
+function Badge({ tone, title, children }: { tone: string; title?: string; children: ReactNode }) {
+  return (
+    <span title={title} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>
+      {children}
+    </span>
+  );
+}
+
+/** Whether a lambda is online, and with which version. */
+export function StatusBadge({ version }: { version?: number | null }) {
+  const live = version != null;
+
+  return (
+    <Badge
+      tone={live ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-400/10 text-slate-500'}
+      title={live ? `Online, serving version ${version}` : 'Offline: nothing is being served'}
+    >
+      <LiveDot live={live} />
+      {live ? `Online · v${version}` : 'Offline'}
+    </Badge>
+  );
+}
+
+/**
+ * The tier a lambda is in. Quiet for the tier everybody starts in, in the
+ * colour of the logo for the one somebody was given.
+ */
+export function TierBadge({ tier }: { tier: string }) {
+  const premium = tier === 'Premium';
+
+  return (
+    <Badge
+      tone={premium ? 'bg-logo-500/15 text-logo-700 dark:text-logo-400' : 'bg-slate-400/10 text-slate-500'}
+      title={premium ? 'Premium: may answer at a domain of its own, and is kept online however quiet it gets' : `${tier} tier`}
+    >
+      {tier}
+    </Badge>
+  );
+}
+
 export function LiveDot({ live }: { live: boolean }) {
   return (
     <span
-      className={`inline-block h-2 w-2 shrink-0 rounded-full ${live ? 'bg-emerald-500' : 'bg-slate-400'}`}
+      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${live ? 'bg-emerald-500' : 'bg-slate-400'}`}
       aria-hidden="true"
     />
   );

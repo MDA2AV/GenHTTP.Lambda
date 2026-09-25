@@ -15,10 +15,32 @@ export interface Lambda {
   editorPath: string;
   /** When the live version went online; absent while nothing is deployed. */
   deployedAt?: string;
-  /** When the deployment will be taken offline again. */
+  /** When the deployment will be taken offline again; absent when its tier keeps it online. */
   deployedUntil?: string;
-  /** When an untouched lambda is removed altogether. */
-  keptUntil: string;
+  /** When an untouched lambda is removed altogether; absent when its tier keeps it. */
+  keptUntil?: string;
+  /** The domain it is configured to answer at, whether or not its tier lets it. */
+  domain?: string;
+  /** Whether it actually answers at that domain right now. */
+  domainServed: boolean;
+}
+
+/** The tiers there are. Only an administrator moves a lambda between them. */
+export const TIERS = ['Free', 'Premium'] as const;
+
+/** Whether a tier includes a domain of its own. */
+export const allowsDomain = (tier: string) => tier === 'Premium';
+
+/** The domain of a lambda, as its owner sees it. */
+export interface DomainState {
+  domain?: string;
+  tier: string;
+  /** Whether the tier includes a domain. */
+  allowed: boolean;
+  /** Whether requests to the domain reach the lambda now. */
+  served: boolean;
+  /** What the domain resolves to, as the server sees it. Absent without a domain. */
+  dns?: { addresses: string[]; problem?: string };
 }
 
 /** Which door something came through. */
@@ -68,6 +90,8 @@ export interface LambdaTraffic {
   quarters: TrafficPoint[];
   statuses: { success: number; redirect: number; clientError: number; serverError: number };
   paths: { path: string; requests: number; failed: number; averageMillis: number }[];
+  /** Where it was reached: its own domain, or its path on the platform (no domain). Busiest first. */
+  entrances: { domain?: string | null; requests: number }[];
   /** When counting started: the figures are held in memory and a restart begins them again. */
   since: string;
 }
@@ -84,6 +108,8 @@ export interface OwnerLogEntry {
   country?: string | null;
   agent?: string | null;
   repeats: number;
+  /** The lambda's own domain the request was addressed to; absent for its path on the platform. */
+  domain?: string | null;
 }
 
 export interface OwnerLogPage {
@@ -384,7 +410,18 @@ export interface LambdaOverview {
   latestVersion?: number;
   versions: number;
   deployedUntil?: string;
-  keptUntil: string;
+  keptUntil?: string;
+  domain?: string;
+  domainServed: boolean;
+}
+
+/** One lambda in full, for the page the panel shows it on. */
+export interface AdminLambdaDetail {
+  lambda: Lambda;
+  traffic: LambdaTraffic;
+  versions: VersionInfo[];
+  activations: Activation[];
+  tiers: string[];
 }
 
 /** One line of what the server, or a lambda on it, has said. */
@@ -416,6 +453,8 @@ export interface LogEntry {
   place?: string;
   /** How many identical lines this one stands for; 1 is itself alone. */
   repeats: number;
+  /** The lambda's own domain the request was addressed to; absent for the platform. */
+  domain?: string;
 }
 
 /** One caller the log still holds something about. */
@@ -587,11 +626,26 @@ export const api = {
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
 
   admin: {
-    list: (token: string, search: string, page: number) =>
+    list: (token: string, search: string, page: number, tier = '') =>
       request<AdminListing>(
-        `/admin/lambdas?page=${page}${search === '' ? '' : `&search=${encodeURIComponent(search)}`}`,
+        `/admin/lambdas?page=${page}${search === '' ? '' : `&search=${encodeURIComponent(search)}`}${tier === '' ? '' : `&tier=${tier}`}`,
         withToken(token),
       ),
+
+    lambda: (token: string, publicKey: string) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}`, withToken(token)),
+
+    tier: (token: string, publicKey: string, tier: string) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/tier`,
+        withToken(token, { method: 'PUT', body: JSON.stringify({ tier }) })),
+
+    domain: (token: string, publicKey: string, domain: string | null) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/domain`,
+        withToken(token, { method: 'PUT', body: JSON.stringify({ domain }) })),
+
+    deploy: (token: string, publicKey: string, version?: number) =>
+      request<DeploymentResult>(`/admin/lambdas/${encodeURIComponent(publicKey)}/deployment/start`,
+        withToken(token, { method: 'POST', body: JSON.stringify({ version: version ?? null }) }), [422]),
 
     version: (token: string, publicKey: string, version: number) =>
       request<VersionContent>(`/admin/lambdas/${encodeURIComponent(publicKey)}/versions/${version}`, withToken(token)),
@@ -646,6 +700,13 @@ export const api = {
     request<ShowcaseEntry>(`/lambdas/${privateKey}/showcase`, { method: 'PUT', body: JSON.stringify(entry) }),
 
   removeShowcase: (privateKey: string) => request<void>(`/lambdas/${privateKey}/showcase`, { method: 'DELETE' }),
+
+  domain: (privateKey: string) => request<DomainState>(`/lambdas/${privateKey}/domain`),
+
+  setDomain: (privateKey: string, domain: string) =>
+    request<DomainState>(`/lambdas/${privateKey}/domain`, { method: 'PUT', body: JSON.stringify({ domain }) }),
+
+  removeDomain: (privateKey: string) => request<DomainState>(`/lambdas/${privateKey}/domain`, { method: 'DELETE' }),
 
   key: (key: string) => request<KeyStatus>(`/keys/${encodeURIComponent(key)}`),
 

@@ -382,6 +382,24 @@ public sealed class McpTests
     }
 
     [TestMethod]
+    public async Task AgentsAreToldToLinkRelatively()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        // a lambda can answer at the root of a domain of its own, where a
+        // path starting with /lambda/ or / points at nothing of the lambda's
+        Assert.Contains("relative", guide["paths"]!["rule"]!.GetValue<string>());
+        Assert.Contains("domain", guide["paths"]!["why"]!.GetValue<string>());
+
+        var initialized = await CallAsync(fixture, "initialize", new JsonObject());
+
+        Assert.Contains("relative paths", initialized["result"]!["instructions"]!.GetValue<string>(),
+                        "and the instructions every agent reads say it before the guide does");
+    }
+
+    [TestMethod]
     public async Task TheGuideSaysTheThingsThatCatchPeopleOut()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
