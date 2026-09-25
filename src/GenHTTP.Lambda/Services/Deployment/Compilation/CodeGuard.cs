@@ -8,8 +8,9 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
 /// Rejects snippets that reach for capabilities a hosted lambda has no business
-/// using: the file system of the host, other processes, the network or the
-/// reflection APIs that would route around those rules.
+/// using: the file system of the host, other processes, or the reflection APIs
+/// that would route around those rules. Outbound network access is not among
+/// them - a lambda may use HttpClient and sockets directly.
 /// </summary>
 /// <remarks>
 /// This is governance, not a sandbox - the compiled code still runs in process.
@@ -28,8 +29,6 @@ public static class CodeGuard
     private static readonly HashSet<string> BannedNamespaces = new(StringComparer.Ordinal)
     {
         "System.Diagnostics",
-        "System.Net.Sockets",
-        "System.Net.NetworkInformation",
         "System.Reflection",
         "System.Runtime.CompilerServices",
         "System.Runtime.InteropServices",
@@ -300,10 +299,6 @@ public static class CodeGuard
             "DllImport", "DllImportAttribute", "LibraryImport", "LibraryImportAttribute", "UnmanagedCallersOnly");
 
         Add("runtime internals are off limits", "GC", "RuntimeHelpers", "Thread", "ThreadPool", "Unsafe");
-
-        Add("outbound network access is disabled", "HttpClient", "HttpClientHandler", "HttpMessageInvoker",
-            "SocketsHttpHandler", "WebClient", "WebRequest", "HttpWebRequest", "HttpListener", "Socket",
-            "TcpClient", "TcpListener", "UdpClient", "Dns", "SmtpClient", "ServicePointManager");
 
         // these all accept a plain path and would hand out a resource tree pointing
         // anywhere on the host - Listing, StaticWebsite and SinglePageApplication only

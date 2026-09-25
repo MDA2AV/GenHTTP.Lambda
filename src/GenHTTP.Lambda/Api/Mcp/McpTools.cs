@@ -784,6 +784,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         },
         takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the lambda as a standalone zipped .NET project with no dependency on this platform. Worth telling the user.",
         importedForYou = ModuleCatalog.Imports,
+        network = "A lambda can make outbound calls with HttpClient and sockets. System.Net.Http and System.Net.Sockets are not imported by default, so write the full type name or add a using. It runs in the shared server process, so give requests a timeout.",
         storage = new
         {
             what = "Workspace: a private directory the lambda can read and write at runtime, for anything that must outlive a request.",

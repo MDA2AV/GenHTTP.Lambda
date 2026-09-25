@@ -91,6 +91,26 @@ public sealed class CompilationTests
     }
 
     [TestMethod]
+    public async Task OutboundNetworkIsAllowed()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // HttpClient and sockets used to be refused; a lambda may now reach the
+        // network directly. This only has to compile.
+        var outcome = await fixture.Deployments.ValidateAsync("""
+            using System.Net.Http;
+            using System.Net.Sockets;
+
+            var http = new HttpClient();
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            return Content.From(Resource.FromString("networking is available"));
+            """);
+
+        Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
+    }
+
+    [TestMethod]
     public async Task AMemberThatSharesItsNameWithABannedTypeIsAllowed()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
