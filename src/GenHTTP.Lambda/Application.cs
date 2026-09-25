@@ -145,7 +145,13 @@ public sealed class Application : IAsyncDisposable
 
         var domains = LambdaRoute.Create(services, new DomainLocator(meta));
 
-        return new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, BuildPlatform(services, options));
+        var router = new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, BuildPlatform(services, options));
+
+        // ahead of the router, so a challenge for a lambda's own domain is
+        // answered here rather than handed to the lambda
+        return options.AcmeDirectory is { } acme
+             ? Concerns.Chain([new AcmeChallengeConcernBuilder(acme)], router)
+             : router;
     }
 
     /// <summary>

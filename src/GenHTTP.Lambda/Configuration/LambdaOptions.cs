@@ -365,6 +365,17 @@ public sealed record LambdaOptions
     /// </remarks>
     public string? CertificateDirectory { get; init; }
 
+    /// <summary>
+    /// The web root an ACME client writes its HTTP challenges into, such as
+    /// the folder given to <c>certbot --webroot -w</c>.
+    /// </summary>
+    /// <remarks>
+    /// Answered for every host the server receives, a lambda's own domain
+    /// included, so a certificate can be issued for a name while the server
+    /// keeps running. Left empty, challenges are not answered at all.
+    /// </remarks>
+    public string? AcmeDirectory { get; init; }
+
     #region Derived
 
     public string DatabaseFile => Path.Combine(DataDirectory, "lambda.db");
@@ -440,6 +451,7 @@ public sealed record LambdaOptions
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),
             CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD"),
             CertificateDirectory = ReadOptional("LAMBDA_CERTIFICATE_DIRECTORY"),
+            AcmeDirectory = ReadOptional("LAMBDA_ACME_DIRECTORY"),
             McpOrigins = (ReadOptional("LAMBDA_MCP_ORIGINS") ?? "")
                          .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             PublicUrl = ReadOptional("LAMBDA_PUBLIC_URL")?.TrimEnd('/')

@@ -218,6 +218,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
 | `LAMBDA_CERTIFICATE_PASSWORD`       | -                | password of the PKCS#12 archive             |
 | `LAMBDA_CERTIFICATE_DIRECTORY`      | -                | further certificates, one folder per name   |
+| `LAMBDA_ACME_DIRECTORY`             | -                | web root an ACME client writes challenges to |
 
 The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so the image defaults to
@@ -374,16 +375,37 @@ Because the server holds port 80, the standalone authenticator needs it back
 for the few seconds a renewal takes - a pre hook stops the container and a post
 hook starts it again.
 
+### Issuing certificates while it runs
+
+The server can answer the challenges itself instead. Point
+`LAMBDA_ACME_DIRECTORY` at the folder the ACME client writes them into, and
+`GET /.well-known/acme-challenge/{token}` is served from
+`{folder}/.well-known/acme-challenge/{token}` - for every host the server
+receives, a lambda's own domain included, where the path would otherwise be
+the lambda's. Nothing else in the folder is served.
+
+```bash
+mkdir -p /opt/genhttp-lambda/acme     # mounted read only at /acme, see docker-compose.yml
+
+certbot certonly --webroot -w /opt/genhttp-lambda/acme -d your.host.name
+```
+
+The challenge is asked for over plain HTTP. GenHTTP up to 11.0.3 redirects it to
+HTTPS like any other request; Let's Encrypt follows a redirect to port 443 without
+checking the certificate on the other side, and the answer is the same there,
+so this works either way. From 11.0.4 on the challenge is let through
+unredirected.
+
 ### Custom domains
 
 A lambda in the premium tier can answer at a domain of its own, which its owner
 sets in the editor after pointing the domain's A and AAAA records at the
 server. Plain requests to it are redirected to HTTPS on the same domain like
-every other request, so it needs a certificate - issued by hand for now, the
-same way as above, into a folder of its own:
+every other request, so it needs a certificate - issued by hand for now, with
+the web root above, into a folder of its own:
 
 ```bash
-certbot certonly --standalone -d shop.example.com
+certbot certonly --webroot -w /opt/genhttp-lambda/acme -d shop.example.com
 
 mkdir -p /opt/genhttp-lambda/certs/shop.example.com
 install -m 0644 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/fullchain.pem /opt/genhttp-lambda/certs/shop.example.com/
@@ -392,9 +414,8 @@ install -m 0640 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/privkey.p
 
 The folder is only looked through on startup - the io_uring engine learns the
 names it holds certificates for when it opens the TLS port - so a new
-certificate is served after the next restart, which the hooks around the
-standalone authenticator already do. Renewals of a certificate the server knows
-are picked up without one. Until the certificate is there, visitors of the
+certificate is served after the next restart of the container. Renewals of a
+certificate the server knows are picked up without one. Until the certificate is there, visitors of the
 domain are redirected to HTTPS and shown the default certificate, which does
 not carry their name.
 
