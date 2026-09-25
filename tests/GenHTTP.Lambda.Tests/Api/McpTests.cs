@@ -517,36 +517,66 @@ public sealed class McpTests
     }
 
     [TestMethod]
-    public async Task TheExampleOfAFolderServedAsASiteCanBeRead()
+    public async Task ADemoIsReadWithTheToolsAnAgentUsesOnItsOwnLambda()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var read = Structured(await CallToolAsync(fixture, "read_example", new JsonObject { ["id"] = "site" }));
+        await fixture.SeedDemosAsync();
 
-        var files = (JsonArray)read["files"]!;
+        var listed = Structured(await CallToolAsync(fixture, "list_demos", new JsonObject()));
 
-        var names = files.Select(f => f!["name"]!.GetValue<string>()).ToList();
+        var demo = ((JsonArray)listed["demos"]!).Select(d => (JsonObject)d!).First(d => d["id"]!.GetValue<string>() == "demo-crud");
 
-        Assert.Contains("site/index.html", names, "an agent should see the folder, not just the code");
-        Assert.Contains("site/app.css", names);
-        Assert.Contains("site/app.js", names);
+        var key = demo["privateKey"]!.GetValue<string>();
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = key }));
+
+        var names = ((JsonArray)read["files"]!).Select(f => f!["name"]!.GetValue<string>()).ToList();
+
+        Assert.Contains("Store.cs", names, "an agent should see every file, not just the snippet");
+        Assert.Contains("web/index.html", names, "and the front end in its folder");
+        Assert.AreEqual("Demo", read["tier"]!.GetValue<string>());
+
+        var files = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = key }));
+
+        Assert.IsNotNull(files["files"], "what it stores at runtime is readable too");
     }
 
     [TestMethod]
-    public async Task AnExampleCanBeReadInFull()
+    public async Task ADemoCannotBeChangedByAnAgent()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var listed = Structured(await CallToolAsync(fixture, "list_examples", new JsonObject()));
+        await fixture.SeedDemosAsync();
 
-        Assert.IsNotEmpty((JsonArray)listed["examples"]!);
+        var write = await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = "demo-crud",
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = "limit: 200", ["replace"] = "limit: 1" }),
+            ["deploy"] = true
+        });
 
-        var read = Structured(await CallToolAsync(fixture, "read_example", new JsonObject { ["id"] = "shop" }));
+        Assert.IsTrue(write["result"]!["isError"]!.GetValue<bool>());
+        Assert.Contains("create_lambda", Structured(write)["problem"]!.GetValue<string>(), "the refusal says what to do instead");
 
-        var files = (JsonArray)read["files"]!;
+        var upload = await CallToolAsync(fixture, "upload_file", new JsonObject
+        {
+            ["privateKey"] = "demo-crud",
+            ["path"] = "tasks.json",
+            ["content"] = "[]"
+        });
 
-        Assert.IsTrue(files.Count > 1, "the shop is several files and an agent should see all of them");
-        Assert.IsNotEmpty(files[0]!["code"]!.GetValue<string>());
+        Assert.IsTrue(upload["result"]!["isError"]!.GetValue<bool>(), "nor can what it stores be replaced");
+
+        var copy = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["template"] = "demo-crud",
+            ["acceptTerms"] = true
+        }));
+
+        var own = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = copy["privateKey"]!.GetValue<string>() }));
+
+        Assert.AreEqual("Free", own["tier"]!.GetValue<string>(), "a copy of a demo is an ordinary lambda of one's own");
     }
 
     [TestMethod]

@@ -78,6 +78,13 @@ public sealed class MetaService : IMetaService
         {
             reason = "This key is already in use.";
         }
+        else if (valid && LambdaKeys.IsDemo(normalized))
+        {
+            // said here as well as refused on creation, so the page that
+            // checks a key while it is typed says why before anybody submits
+            valid = false;
+            reason = LambdaKeys.DemoReason;
+        }
 
         return new KeyStatus(normalized, valid, lambda != null, lambda?.ActiveVersion != null, reason);
     }
@@ -93,9 +100,16 @@ public sealed class MetaService : IMetaService
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
 
+        EnsureEditable(lambda);
+
         if (lambda.PublicKey == normalized)
         {
             return await DescribeAsync(database, lambda, cancellation);
+        }
+
+        if (LambdaKeys.IsDemo(normalized))
+        {
+            throw LambdaException.Invalid(LambdaKeys.DemoReason);
         }
 
         if (await database.Lambdas.AnyAsync(l => l.PublicKey == normalized, cancellation))
@@ -124,6 +138,14 @@ public sealed class MetaService : IMetaService
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        if (lambda.Tier != tier && (tier == LambdaTier.Demo || lambda.Tier == LambdaTier.Demo))
+        {
+            // the seeder retires every demo it no longer knows, so a lambda
+            // moved in by hand would be deleted on the next start; one moved
+            // out would be moved back
+            throw LambdaException.Forbidden("The demo tier belongs to the installation's own demos. Nothing is moved into it or out of it by hand.");
+        }
 
         if (lambda.Tier != tier)
         {
@@ -157,6 +179,8 @@ public sealed class MetaService : IMetaService
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        EnsureEditable(lambda);
 
         if (lambda.Domain == normalized)
         {
@@ -203,11 +227,37 @@ public sealed class MetaService : IMetaService
     /// Whether the tier of a lambda keeps it, rather than the sweeps deciding.
     /// </summary>
     /// <remarks>
-    /// Examples because they are the installation's own; premium lambdas
+    /// Demos because they are the installation's own; premium lambdas
     /// because they answer at somebody's domain, and a site going offline
     /// because it had a quiet month is not something anybody would pay for.
     /// </remarks>
-    private static bool Kept(LambdaEntity lambda) => lambda.IsExample || lambda.Tier == LambdaTier.Premium;
+    private static bool Kept(LambdaEntity lambda) => lambda.Tier is LambdaTier.Demo or LambdaTier.Premium;
+
+    /// <summary>
+    /// Refuses a change to a demo unless the installation itself is making it.
+    /// </summary>
+    /// <remarks>
+    /// The editor key of a demo is announced so that anybody can read it, which
+    /// makes holding the key mean nothing about being allowed to change it.
+    /// Checked here rather than in front of the API, so that no door into a
+    /// lambda - the editor, the REST API or an agent - can forget it.
+    /// </remarks>
+    /// <param name="origin">Who is asking: the seeder and the operator may, nobody else</param>
+    private static void EnsureEditable(LambdaEntity lambda, string? origin = null)
+    {
+        if (lambda.Tier == LambdaTier.Demo && origin is not (VersionOrigins.System or VersionOrigins.Admin))
+        {
+            throw LambdaException.Forbidden(ReadOnly(lambda.PublicKey));
+        }
+    }
+
+    /// <summary>
+    /// What somebody is told who tries to change a demo, which is also what
+    /// to do instead.
+    /// </summary>
+    internal static string ReadOnly(string publicKey)
+        => $"'{publicKey}' is a demo and read only: read its code, files and logs as much as you like. " +
+           $"To change it, create a lambda of your own from it - create_lambda (POST /api/v1/lambdas) with template '{publicKey}'.";
 
     #endregion
 
@@ -219,12 +269,20 @@ public sealed class MetaService : IMetaService
 
         if (template != null && !TemplateCatalog.Exists(template))
         {
-            throw LambdaException.Invalid($"There is no template called '{template}'.");
+            throw LambdaException.Invalid($"There is nothing called '{template}' to start from. Leave it out for an empty lambda, or name a demo: {string.Join(", ", DemoCatalog.All.Select(d => d.Id))}.");
         }
 
-        if (requested && !LambdaKeys.TryNormalize(publicKey, out _, out var reason))
+        if (requested)
         {
-            throw LambdaException.Invalid(reason!);
+            if (!LambdaKeys.TryNormalize(publicKey, out var wanted, out var reason))
+            {
+                throw LambdaException.Invalid(reason!);
+            }
+
+            if (LambdaKeys.IsDemo(wanted))
+            {
+                throw LambdaException.Invalid(LambdaKeys.DemoReason);
+            }
         }
 
         await using var database = await Databases.CreateDbContextAsync(cancellation);
@@ -282,6 +340,8 @@ public sealed class MetaService : IMetaService
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        EnsureEditable(lambda);
 
         await RemoveAsync(database, lambda, cancellation);
 
@@ -390,7 +450,11 @@ public sealed class MetaService : IMetaService
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
 
-        var version = await AppendAsync(database, lambda, code, DateTime.UtcNow, note ?? new VersionNote(Origin: VersionOrigins.Api), cancellation);
+        note ??= new VersionNote(Origin: VersionOrigins.Api);
+
+        EnsureEditable(lambda, note.Origin);
+
+        var version = await AppendAsync(database, lambda, code, DateTime.UtcNow, note, cancellation);
 
         Logger.LogInformation("Saved version {Version} of lambda {LambdaId}", version.Version, lambda.Id);
 
@@ -413,6 +477,8 @@ public sealed class MetaService : IMetaService
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        EnsureEditable(lambda, origin);
 
         var target = version ?? await database.Deployments.Where(d => d.LambdaId == lambda.Id)
                                               .MaxAsync(d => (int?)d.Version, cancellation)
@@ -476,6 +542,8 @@ public sealed class MetaService : IMetaService
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        EnsureEditable(lambda, endedBy == ActivationEndings.Admin ? VersionOrigins.Admin : null);
 
         if (lambda.ActiveVersion != null)
         {
@@ -568,11 +636,11 @@ public sealed class MetaService : IMetaService
 
         var abandoned = now - Options.Retention;
 
-        // examples are the installation's own, and being untouched is their
+        // demos are the installation's own, and being untouched is their
         // normal state rather than a sign that nobody wants them; premium
         // lambdas are kept by their tier (see Kept)
         var expired = await database.Lambdas
-                                    .Where(l => !l.IsExample && l.Tier != LambdaTier.Premium && l.Modified < abandoned
+                                    .Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.Modified < abandoned
                                              && (l.LastSeen == null || l.LastSeen < abandoned))
                                     .ToListAsync(cancellation);
 
@@ -583,7 +651,7 @@ public sealed class MetaService : IMetaService
 
         var quiet = now - Options.DeploymentLifetime;
 
-        var running = await database.Lambdas.Where(l => !l.IsExample && l.Tier != LambdaTier.Premium && l.ActiveVersion != null)
+        var running = await database.Lambdas.Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.ActiveVersion != null)
                                     .ToListAsync(cancellation);
 
         var undeployed = 0;
@@ -681,6 +749,18 @@ public sealed class MetaService : IMetaService
         );
     }
 
+    public async ValueTask<long> RequireEditableAsync(string privateKey, CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var lambda = await database.Lambdas.AsNoTracking().FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
+                  ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+
+        EnsureEditable(lambda);
+
+        return lambda.Id;
+    }
+
     public async ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
@@ -770,10 +850,9 @@ public sealed class MetaService : IMetaService
 
     private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, string? template, DateTime now, CancellationToken cancellation)
     {
-        var name = TemplateCatalog.Groups.SelectMany(g => g.Templates)
-                                  .FirstOrDefault(t => t.Id == template)?.Name;
+        var demo = DemoCatalog.Find(template);
 
-        var note = new VersionNote(Change: name != null ? $"Started from the template '{name}'" : "Started from the default template",
+        var note = new VersionNote(Change: demo != null ? $"Started as a copy of the demo '{demo.Id}'" : "Started empty",
                                    Origin: VersionOrigins.Template);
 
         await AppendAsync(database, lambda, TemplateCatalog.ForKey(template, lambda.PublicKey), now, note, cancellation);
@@ -906,12 +985,12 @@ public sealed class MetaService : IMetaService
     /// in the same transaction: an event recorded for a save that then failed
     /// would be a lie, and one written separately could be lost on its own.
     ///
-    /// Examples are skipped. The installation seeds its own on every boot, and
+    /// Demos are skipped. The installation seeds its own on every boot, and
     /// counting those would bury the activity the figures are meant to show.
     /// </remarks>
     private static void Record(LambdaDbContext database, LambdaEntity lambda, string kind)
     {
-        if (lambda.IsExample)
+        if (lambda.Tier == LambdaTier.Demo)
         {
             return;
         }

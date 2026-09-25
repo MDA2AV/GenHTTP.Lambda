@@ -35,7 +35,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': { target: apiTarget, changeOrigin: true },
-      '/lambda': { target: apiTarget, changeOrigin: true },
+      // ws: lambdas open websockets too, and without it the upgrade is never
+      // passed on - the browser waits in CONNECTING for ever
+      '/lambda': { target: apiTarget, changeOrigin: true, ws: true },
     },
   },
 });

@@ -18,7 +18,7 @@ These, and nothing else:
 | tool | what it does |
 | --- | --- |
 | `platform_guide` | how lambdas work here - read it first |
-| `list_examples`, `read_example` | worked code to copy from |
+| `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
 | `create_lambda` | claims an address and a private key |
 | `write_code` | puts source into it, with a `specification` and a `change` note saying why |
 | `check_code` | compiles without deploying |

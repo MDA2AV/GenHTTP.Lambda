@@ -200,7 +200,7 @@ public sealed class ApiTests
         var platform = await response.GetContentAsync<PlatformResponse>();
 
         Assert.IsNotEmpty(platform.Terms);
-        Assert.IsNotEmpty(platform.Templates);
+        Assert.IsNotEmpty(platform.Starters);
         Assert.IsNotEmpty(platform.Imports);
         Assert.IsNotEmpty(platform.Completions);
         Assert.AreEqual(fixture.Options.MaxCodeLength, platform.MaxCodeLength);

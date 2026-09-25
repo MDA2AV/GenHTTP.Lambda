@@ -116,7 +116,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         services.AddSingleton<IShowcaseService, ShowcaseService>();
-        services.AddSingleton<ExampleSeeder>();
+        services.AddSingleton<DemoSeeder>();
         services.AddSingleton<McpTools>();
         services.AddSingleton<BuildService>();
         services.AddSingleton<EventReader>();
@@ -167,8 +167,6 @@ public sealed class Application : IAsyncDisposable
 
         var layout = Layout.Create()
                            .Add("api", ApiLayout.Create(options))
-                           // a link for other pages to carry, so part of the site rather than the API
-                           .AddService<Invitation>("start")
                            // one path, for agents rather than for browsers
                            .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
                            .Add("lambda", lambdas);
@@ -237,16 +235,16 @@ public sealed class Application : IAsyncDisposable
     public void StartBackgroundJobs() => Scheduler.Start();
 
     /// <summary>
-    /// Brings the examples online, once the server is already answering.
+    /// Brings the demos online, once the server is already answering.
     /// </summary>
     /// <remarks>
-    /// Deliberately not awaited by the caller: every example has to be
+    /// Deliberately not awaited by the caller: every demo has to be
     /// compiled, and that is seconds the installation would otherwise spend
     /// refusing connections. They appear shortly after startup instead.
     /// </remarks>
-    public void SeedExamples()
+    public void SeedDemos()
     {
-        var seeder = Services.GetRequiredService<ExampleSeeder>();
+        var seeder = Services.GetRequiredService<DemoSeeder>();
 
         _ = Task.Run(async () =>
         {
@@ -256,7 +254,7 @@ public sealed class Application : IAsyncDisposable
             }
             catch (Exception e)
             {
-                Services.GetRequiredService<ILoggerFactory>().CreateLogger<Application>().LogWarning(e, "The examples could not be prepared");
+                Services.GetRequiredService<ILoggerFactory>().CreateLogger<Application>().LogWarning(e, "The demos could not be prepared");
             }
         });
     }

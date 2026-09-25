@@ -1,0 +1,54 @@
+// Tic-tac-toe against whoever else opens the page, or against the house when
+// nobody is around. The server holds every board and decides every move; the
+// browser only draws what it is told and asks to play a cell.
+//
+//   GET  ./            the game, a single page application in web/
+//   WS   play          the socket the page opens; JSON messages both ways
+//   GET  api/stats     games played and how they ended
+//
+// The files:
+//
+//   lambda.cs      this one: the wiring, and the only file that touches Workspace
+//   Lobby.cs       the websocket handler: pairs players, runs games, talks to sockets
+//   Board.cs       the rules and the house's moves - no sockets, easy to reason about
+//   Protocol.cs    every message that goes over the socket, in both directions
+//   web/           the page and its script
+// [demo]
+//
+// This is a read-only demo. To build on it, create a lambda of your own from
+// it - a copy is yours to change.
+// [/demo]
+
+var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+var stats = Workspace.Exists("stats.json")
+          ? JsonSerializer.Deserialize<Stats>(Workspace.ReadText("stats.json"), json)
+          : new Stats(0, 0, 0, 0);
+
+var writing = new object();
+
+// the lobby calls this whenever a game ends; the counts outlive a restart
+void Record(string winner)
+{
+    lock (writing)
+    {
+        stats = winner switch
+        {
+            "X" => stats with { Games = stats.Games + 1, X = stats.X + 1 },
+            "O" => stats with { Games = stats.Games + 1, O = stats.O + 1 },
+            _ => stats with { Games = stats.Games + 1, Draws = stats.Draws + 1 }
+        };
+
+        Workspace.WriteText("stats.json", JsonSerializer.Serialize(stats, json));
+    }
+}
+
+var lobby = new Lobby(Record);
+
+var api = Inline.Create()
+                .Get("stats", () => stats);
+
+return Layout.Create()
+             .Add("play", Websocket.Reactive().Handler(lobby))
+             .Add("api", api)
+             .Add(Assets.App("web"));

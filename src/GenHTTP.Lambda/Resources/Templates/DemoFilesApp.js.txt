@@ -1,0 +1,75 @@
+// Uploads a file as the raw body of a POST, and shows what is there.
+// Relative addresses only: the lambda may answer below /lambda/demo-files/
+// or at the root of a domain of its own.
+
+const drop = document.getElementById('drop');
+const input = document.getElementById('file');
+const error = document.getElementById('error');
+const gallery = document.getElementById('gallery');
+
+// the keys this browser got for its uploads - whoever holds one may remove it
+const KEYS = 'demo-files-keys';
+const keys = () => JSON.parse(localStorage.getItem(KEYS) ?? '{}');
+const keep = (id, key) => localStorage.setItem(KEYS, JSON.stringify({ ...keys(), [id]: key }));
+
+const escape = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const size = (n) => (n < 1024 ? `${n} B` : `${Math.round(n / 1024)} KB`);
+
+async function refused(response) {
+  try { return (await response.json()).message; } catch { return `${response.status} ${response.statusText}`; }
+}
+
+async function upload(file) {
+  error.textContent = '';
+
+  // the file is the body, as it is - no form, no encoding
+  const response = await fetch(`api/files?name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file });
+
+  if (!response.ok) {
+    error.textContent = await refused(response);
+    return;
+  }
+
+  const { upload, key } = await response.json();
+  keep(upload.id, key);
+  await load();
+}
+
+async function remove(id) {
+  const response = await fetch(`api/files/${id}?key=${encodeURIComponent(keys()[id])}`, { method: 'DELETE' });
+
+  if (!response.ok) error.textContent = await refused(response);
+
+  await load();
+}
+
+async function load() {
+  const uploads = await (await fetch('api/files')).json();
+  const mine = keys();
+
+  gallery.innerHTML = uploads.map((u) => {
+    const image = u.type.startsWith('image/');
+    return `
+      <div class="card item">
+        <a class="preview" href="${u.url}" target="_blank" rel="noopener"
+           ${image ? `style="background-image:url('${u.url}')"` : ''}>${image ? '' : escape(u.type.split('/')[1].toUpperCase())}</a>
+        <span class="name" title="${escape(u.name)}">${escape(u.name)}</span>
+        <span class="row small dim"><span class="grow">${size(u.size)}</span>
+          ${mine[u.id] ? `<button class="link" data-remove="${u.id}">Remove</button>` : ''}</span>
+      </div>`;
+  }).join('');
+}
+
+input.addEventListener('change', () => input.files[0] && upload(input.files[0]));
+
+drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
+});
+
+gallery.addEventListener('click', (e) => e.target.dataset.remove && remove(e.target.dataset.remove));
+
+load();

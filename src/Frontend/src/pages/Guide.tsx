@@ -255,8 +255,9 @@ return Content.From(page);`} />
 
           <Section id="spa" title="A front end, step by step">
             <p>
-              The second of those, in full. The finished thing is the <Code>site</Code> example,
-              which you can clone.
+              The second of those, in full. Every demo serves its page this way from a folder
+              called <Code>web</Code> - open <Link to="/editor/demo-crud" className="text-accent-500 hover:underline">demo-crud</Link> to read one.
+              Demos are read only; their editor key is their name.
             </p>
 
             <Steps
@@ -372,8 +373,8 @@ return Inline.Create()
 
           <Section id="sockets" title="Websockets">
             <p>
-              Supported, and not an afterthought. The <Code>arena</Code> example holds a world and
-              broadcasts to everybody twenty times a second. The simplest
+              Supported, and not an afterthought. The <Link to="/editor/demo-game" className="text-accent-500 hover:underline">demo-game</Link> demo
+              pairs players and runs every game on the server. The simplest
               form is three callbacks:
             </p>
 
@@ -432,7 +433,7 @@ return Layout.Create().Add("chat", socket);`} />
           <Section id="agents" title="Letting an agent do it">
             <p>
               There is an MCP endpoint at <Code>/mcp</Code>. Point an agent at it and it can do
-              everything the editor does: read the guide, read an example in full, write files,
+              everything the editor does: read the guide, read a demo in full, write files,
               compile them, and deploy. It is the same API underneath.
             </p>
             <p>

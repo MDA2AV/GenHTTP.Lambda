@@ -98,8 +98,27 @@ public static class CodeGuard
         return findings;
     }
 
+    /// <summary>
+    /// Namespaces inside a banned one that a lambda may use all the same.
+    /// </summary>
+    /// <remarks>
+    /// Only the namespace itself and not what is below it: hashing a password
+    /// or making a token is something every lambda with accounts has to do,
+    /// while System.Security.Cryptography.X509Certificates reads the stores of
+    /// the host. The types in here that reach the host are banned by name.
+    /// </remarks>
+    private static readonly HashSet<string> AllowedNamespaces = new(StringComparer.Ordinal)
+    {
+        "System.Security.Cryptography"
+    };
+
     private static void CheckNamespace(string name, Location location, List<CompilationDiagnostic> findings)
     {
+        if (AllowedNamespaces.Contains(name) || AllowedNamespaces.Any(a => IsTypeOf(name, a)))
+        {
+            return;
+        }
+
         foreach (var banned in BannedNamespaces)
         {
             if (name.Equals(banned, StringComparison.Ordinal) || name.StartsWith(banned + ".", StringComparison.Ordinal))
@@ -108,6 +127,22 @@ public static class CodeGuard
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// Whether a qualified name is a type directly inside the given namespace
+    /// - one segment more, and not the certificates namespace below it.
+    /// </summary>
+    private static bool IsTypeOf(string name, string space)
+    {
+        if (!name.StartsWith(space + ".", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var rest = name[(space.Length + 1)..];
+
+        return !rest.Contains('.') && rest != "X509Certificates";
     }
 
     /// <summary>
@@ -278,6 +313,11 @@ public static class CodeGuard
         Add("use Workspace.Tree() or Assets.Tree() to serve files", "FromFile", "FromDirectory", "FromWeb", "FromAssembly");
 
         Add("outbound proxying is disabled", "Proxy", "ReverseProxy");
+
+        // cryptography is available, its ways into the certificates and key
+        // containers of the host are not - several take a path or a store
+        Add("certificates and key stores of the host are off limits", "X509Store", "X509Certificate", "X509Certificate2",
+            "X509Certificate2Collection", "X509CertificateLoader", "X509Chain", "CspParameters", "CngKey", "CngProvider");
 
         return banned;
 

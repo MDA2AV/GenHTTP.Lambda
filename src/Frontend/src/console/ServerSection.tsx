@@ -16,7 +16,7 @@ const KINDS: Record<string, string> = {
 };
 
 const NOTES: Record<string, string> = {
-  created: 'Lambdas people have made, examples excluded. Counted from the beginning: the older half of this was recovered from the timestamps already stored rather than started from zero when the counting began.',
+  created: 'Lambdas people have made, demos excluded. Counted from the beginning: the older half of this was recovered from the timestamps already stored rather than started from zero when the counting began.',
   saved: 'Versions written. One per save, so a lambda worked on all afternoon contributes many.',
   deployed: 'Times something was put online, including redeployments of the same lambda. Only this one and the two below begin from the day they started being recorded - a redeploy used to overwrite the timestamp of the one before it.',
   undeployed: 'Times something was taken offline by hand, rather than by expiring.',

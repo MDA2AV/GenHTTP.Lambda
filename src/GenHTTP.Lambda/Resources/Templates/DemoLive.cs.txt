@@ -1,0 +1,70 @@
+// A poll whose bars move for everybody the moment anybody votes, with a count
+// of who is watching - pushed to the browsers with server-sent events.
+//
+//   GET  api/poll       the question and the counts right now
+//   POST api/votes      { "option": "tabs" }  -> 204, and every listener is told
+//   GET  events         text/event-stream:
+//                         messages   the counts as JSON, when you connect and after every vote
+//                         watchers   an event of its own: how many are listening, when that changes
+//   anything else       the page in web/
+//
+// Server-sent events are the simple way to push: one long response the server
+// keeps writing to, and in the browser new EventSource('events'), which also
+// reconnects on its own. Reach for a websocket instead when the browser has to
+// talk back a lot - here it votes with an ordinary POST.
+//
+// The files:
+//
+//   lambda.cs     this one: the wiring, and the only file that touches Workspace
+//   Poll.cs       the question, the counts, and everybody who is listening
+//   web/          the page and its script
+// [demo]
+//
+// This is a read-only demo. To build on it, create a lambda of your own from
+// it - a copy is yours to change.
+// [/demo]
+
+var poll = new Poll(
+    read: () => Workspace.Exists("votes.json") ? Workspace.ReadText("votes.json") : null,
+    write: text => Workspace.WriteText("votes.json", text));
+
+var api = Inline.Create()
+                .Get("poll", () => poll.Results())
+                .Post("votes", (Vote vote) => poll.Cast(vote));
+
+/*
+ * The generator runs once per browser, for as long as it stays connected:
+ * whatever it writes arrives as an event. It returns - and the response ends -
+ * when it stops writing, or when a write fails because the browser left.
+ */
+var events = EventSource.Create()
+                        .Generator(async connection =>
+                        {
+                            using var listener = poll.Listen();
+
+                            // an object is sent as JSON; without an event type it arrives
+                            // as an ordinary message, which is what onmessage listens to
+                            await connection.DataAsync(poll.Results());
+
+                            while (connection.Connected)
+                            {
+                                var update = await listener.NextAsync(TimeSpan.FromSeconds(20));
+
+                                // nothing happened for a while: a comment keeps proxies
+                                // from closing a response that looks idle, and tells
+                                // us when the browser is gone
+                                var sent = update == null
+                                         ? await connection.CommentAsync("still here")
+                                         : await connection.DataAsync(update.Data, update.Event);
+
+                                if (!sent)
+                                {
+                                    break;
+                                }
+                            }
+                        });
+
+return Layout.Create()
+             .Add("api", api)
+             .Add("events", events)
+             .Add(Assets.App("web"));

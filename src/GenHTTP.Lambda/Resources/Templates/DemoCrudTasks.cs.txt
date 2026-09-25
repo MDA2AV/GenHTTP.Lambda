@@ -1,0 +1,127 @@
+// The API, as a class whose methods are the routes.
+//
+// [ResourceMethod] names the HTTP method and the path of each one. A parameter
+// named like a segment of the path (:id) is taken from the path, a record from
+// the JSON body, anything else from the query. What a method returns is sent
+// back as JSON in camel case - the page reads task.title, not task.Title.
+//
+// Problems are thrown as ProviderException with the status to answer, which
+// the platform turns into a response with that status and the message.
+
+/// <summary>A stored task.</summary>
+public record TaskItem(string Id, string Title, string Notes, bool Done, DateTime Created, DateTime Updated);
+
+/// <summary>What a client sends to add or change a task.</summary>
+public record TaskInput(string Title, string Notes, bool Done);
+
+public class Tasks(JsonStore<TaskItem> store)
+{
+    private const int MaxTitle = 120;
+
+    private const int MaxNotes = 1000;
+
+    [ResourceMethod]
+    public List<TaskItem> List(string search = null)
+    {
+        var tasks = store.All();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+
+            tasks = tasks.Where(t => t.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+                                  || t.Notes.Contains(term, StringComparison.OrdinalIgnoreCase))
+                         .ToList();
+        }
+
+        return tasks.OrderBy(t => t.Done).ThenByDescending(t => t.Created).ToList();
+    }
+
+    [ResourceMethod(":id")]
+    public TaskItem Get(string id) => store.Find(t => t.Id == id) ?? throw Missing(id);
+
+    [ResourceMethod(Method.Post)]
+    public Result<TaskItem> Create(TaskInput input)
+    {
+        var (title, notes) = Validate(input);
+
+        var now = DateTime.UtcNow;
+
+        var task = new TaskItem(Guid.NewGuid().ToString("n")[..10], title, notes, input.Done, now, now);
+
+        store.Add(task);
+
+        // 201 rather than 200: something new exists now
+        return new Result<TaskItem>(task).Status(ResponseStatus.Created);
+    }
+
+    [ResourceMethod(Method.Put, ":id")]
+    public TaskItem Update(string id, TaskInput input)
+    {
+        var (title, notes) = Validate(input);
+
+        var existing = Get(id);
+
+        var changed = existing with { Title = title, Notes = notes, Done = input.Done, Updated = DateTime.UtcNow };
+
+        if (!store.Replace(t => t.Id == id, changed))
+        {
+            // removed by somebody else between the read above and now
+            throw Missing(id);
+        }
+
+        return changed;
+    }
+
+    [ResourceMethod(Method.Delete, ":id")]
+    public void Delete(string id)
+    {
+        // nothing returned is answered with 204 No Content
+        if (!store.Remove(t => t.Id == id))
+        {
+            throw Missing(id);
+        }
+    }
+
+    /// <summary>
+    /// Checks what was sent, and answers 400 with the reason where it is wrong.
+    /// </summary>
+    private static (string Title, string Notes) Validate(TaskInput input)
+    {
+        var title = (input?.Title ?? "").Trim();
+
+        var notes = (input?.Notes ?? "").Trim();
+
+        if (title.Length == 0)
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, "A task needs a title.");
+        }
+
+        if (title.Length > MaxTitle)
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, $"A title has at most {MaxTitle} characters.");
+        }
+
+        if (notes.Length > MaxNotes)
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, $"Notes have at most {MaxNotes} characters.");
+        }
+
+        return (title, notes);
+    }
+
+    private static ProviderException Missing(string id)
+        => new(ResponseStatus.NotFound, $"There is no task '{id}'.");
+
+    /// <summary>
+    /// Something to look at on the very first start.
+    /// </summary>
+    public static void Seed(JsonStore<TaskItem> store)
+    {
+        var now = DateTime.UtcNow;
+
+        store.Add(new TaskItem("welcome1", "Read Tasks.cs to see the routes", "Every public method with [ResourceMethod] is one of them.", false, now, now));
+        store.Add(new TaskItem("welcome2", "Try the API in scalar/", "", false, now.AddSeconds(1), now.AddSeconds(1)));
+        store.Add(new TaskItem("welcome3", "Open the page", "", true, now.AddSeconds(2), now.AddSeconds(2)));
+    }
+}

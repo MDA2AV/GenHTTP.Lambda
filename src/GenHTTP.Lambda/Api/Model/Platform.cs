@@ -7,7 +7,7 @@ namespace GenHTTP.Lambda.Api.Model;
 /// </summary>
 public sealed record PlatformResponse(
     string Terms,
-    IReadOnlyList<TemplateGroupResponse> Templates,
+    IReadOnlyList<StarterResponse> Starters,
     int MaxCodeLength,
     int DeploymentLifetimeHours,
     int RetentionDays,
@@ -17,9 +17,10 @@ public sealed record PlatformResponse(
 );
 
 /// <summary>
-/// One example a new lambda can be started from, with the code it would be
-/// seeded with so the assistant can show it before anything is created.
+/// Something a new lambda can be started from.
 /// </summary>
-public sealed record TemplateResponse(string Id, string Name, string Description, string Code, bool Hidden);
-
-public sealed record TemplateGroupResponse(string Id, string Name, string Description, IReadOnlyList<TemplateResponse> Templates);
+/// <param name="Id">What to pass as the template when creating the lambda</param>
+/// <param name="Title">What somebody would want to build, in their words</param>
+/// <param name="Description">What they would get</param>
+/// <param name="Demo">Where the demo it copies is running, to look at first; null for the empty lambda</param>
+public sealed record StarterResponse(string Id, string Title, string Description, string? Demo);

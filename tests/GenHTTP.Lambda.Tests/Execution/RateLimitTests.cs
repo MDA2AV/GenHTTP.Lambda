@@ -81,7 +81,7 @@ public sealed class RateLimitTests
         // is not a visitor and must not be throttled out of its own session
         for (var attempt = 0; attempt < 4; attempt++)
         {
-            using var response = await fixture.GetAsync("/api/v1/examples");
+            using var response = await fixture.GetAsync("/api/v1/demos");
 
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         }

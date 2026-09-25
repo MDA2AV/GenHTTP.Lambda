@@ -1,0 +1,99 @@
+// The browser side: draws what the server says and asks it to play a cell.
+// It never decides anything - the server would refuse an illegal move anyway.
+
+const board = document.getElementById('board');
+const status = document.getElementById('status');
+const house = document.getElementById('house');
+const again = document.getElementById('again');
+
+const cells = [...Array(9)].map((_, i) => {
+  const cell = document.createElement('button');
+  cell.disabled = true;
+  cell.setAttribute('aria-label', `Cell ${i + 1}`);
+  cell.addEventListener('click', () => send({ type: 'move', cell: i }));
+  board.append(cell);
+  return cell;
+});
+
+// the socket's address from the page's own: relative, with the scheme swapped,
+// so it works below /lambda/demo-game/ and at the root of a domain alike
+const address = new URL('play', location.href);
+address.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+let socket;
+
+function connect() {
+  socket = new WebSocket(address);
+
+  // a socket that neither opens nor fails is usually something in between -
+  // a proxy - that does not pass websockets on; say so rather than wait quietly
+  const slow = setTimeout(() => {
+    status.textContent = 'Still connecting... if this stays, something between you and the server does not pass websockets on.';
+  }, 5000);
+
+  socket.addEventListener('open', () => clearTimeout(slow));
+
+  socket.addEventListener('message', (event) => show(JSON.parse(event.data)));
+
+  socket.addEventListener('close', () => {
+    clearTimeout(slow);
+    status.textContent = 'Connection lost. Reconnecting...';
+    house.hidden = again.hidden = true;
+    setTimeout(connect, 2000);
+  });
+}
+
+const send = (message) => socket.send(JSON.stringify(message));
+
+function draw(text = '.........', playable = false, line = []) {
+  cells.forEach((cell, i) => {
+    const mark = text[i];
+    cell.textContent = mark === '.' ? '' : mark;
+    cell.disabled = !playable || mark !== '.';
+    cell.classList.toggle('win', line?.includes(i) ?? false);
+  });
+}
+
+function show(message) {
+  house.hidden = again.hidden = true;
+
+  switch (message.type) {
+    case 'waiting':
+      draw();
+      status.textContent = 'Waiting for somebody to play with...';
+      house.hidden = false;
+      break;
+
+    case 'left':
+      status.textContent = 'Your opponent left.';
+      again.hidden = false;
+      break;
+
+    case 'board': {
+      const mine = message.turn === message.you && !message.winner;
+      draw(message.cells, mine, message.line);
+
+      if (message.winner) {
+        status.textContent = message.winner === 'draw' ? 'A draw.'
+          : message.winner === message.you ? 'You won!' : `You lost to ${message.opponent}.`;
+        again.hidden = false;
+        stats();
+      } else {
+        status.textContent = mine ? `Your move - you are ${message.you}.` : `${message.opponent} is thinking...`;
+      }
+      break;
+    }
+  }
+}
+
+async function stats() {
+  const s = await (await fetch('api/stats')).json();
+  document.getElementById('stats').textContent =
+    `${s.games} games so far: X won ${s.x}, O won ${s.o}, ${s.draws} draws.`;
+}
+
+house.addEventListener('click', () => send({ type: 'house' }));
+again.addEventListener('click', () => send({ type: 'again' }));
+
+connect();
+stats();

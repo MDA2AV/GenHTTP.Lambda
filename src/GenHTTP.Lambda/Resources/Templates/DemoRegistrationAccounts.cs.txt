@@ -1,0 +1,261 @@
+// Accounts, passwords and sessions.
+//
+// Passwords are never stored: an account keeps a random salt and a PBKDF2
+// hash of the password with it, and signing in hashes the attempt the same way
+// and compares. Sessions are random tokens the browser keeps in a cookie; only
+// a hash of each is stored, so the file on disk cannot be used to sign in as
+// anybody.
+//
+// Both live in JSON files. Only lambda.cs can see Workspace, so this class is
+// handed functions to read and write a file by name.
+
+using System.Security.Cryptography;
+
+using GenHTTP.Api.Content.Authentication;
+
+/// <summary>What is sent to register or to sign in.</summary>
+public record Credentials(string Name, string Password);
+
+/// <summary>What a successful registration or sign in answers with - the token travels in the cookie.</summary>
+public record SignedIn(string Name);
+
+/// <summary>What the members page shows about you.</summary>
+public record Profile(string Name, DateTime Joined, int Members);
+
+/// <summary>Somebody on the members page's list.</summary>
+public record Newcomer(string Name, DateTime Joined);
+
+/// <summary>A stored account. The password itself is not kept anywhere.</summary>
+public record Account(string Name, string Salt, string Hash, DateTime Joined);
+
+/// <summary>A stored session: the hash of the token, whose it is, and until when.</summary>
+public record StoredSession(string TokenHash, string Name, DateTime Expires);
+
+/// <summary>
+/// The cookie a session travels in.
+/// </summary>
+public static class Session
+{
+    public const string Cookie = "session";
+
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(7);
+
+    /// <summary>
+    /// HttpOnly: no script can read it, so a script injected into a page cannot
+    /// steal it. SameSite Lax: another site cannot make the browser send it with
+    /// a form of its own. Secure where the page came over HTTPS, so it never
+    /// travels in the clear. No path: see lambda.cs.
+    /// </summary>
+    public static CookieOptions Options(IRequest request, bool expire = false) => new()
+    {
+        HttpOnly = true,
+        SameSite = SameSite.Lax,
+        Secure = request.Client.Protocol == ClientProtocol.Https,
+        MaxAge = expire ? TimeSpan.Zero : Lifetime
+    };
+}
+
+/// <summary>
+/// The signed in user, as the Authentication module hands it to a route.
+/// </summary>
+public record Member(string Name) : IUser
+{
+    public string DisplayName => Name;
+}
+
+public sealed class Accounts
+{
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    // anybody can register on a demo, so it keeps the newest accounts only;
+    // your own lambda would rather refuse than forget somebody
+    private const int MaxAccounts = 300;
+
+    private readonly Func<string, string> _read;
+
+    private readonly Action<string, string> _write;
+
+    private readonly Dictionary<string, Account> _accounts;
+
+    private readonly Dictionary<string, StoredSession> _sessions;
+
+    private readonly object _lock = new();
+
+    public Accounts(Func<string, string> read, Action<string, string> write)
+    {
+        _read = read;
+        _write = write;
+
+        _accounts = Load<Account>("accounts.json").ToDictionary(a => a.Name, StringComparer.OrdinalIgnoreCase);
+
+        _sessions = Load<StoredSession>("sessions.json").Where(s => s.Expires > DateTime.UtcNow)
+                                                  .ToDictionary(s => s.TokenHash, StringComparer.Ordinal);
+    }
+
+    #region Routes
+
+    public (SignedIn Member, string Token) Register(Credentials credentials)
+    {
+        var name = (credentials?.Name ?? "").Trim();
+        var password = credentials?.Password ?? "";
+
+        if (name.Length is < 2 or > 24 || !name.All(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.'))
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, "A name has 2 to 24 letters, digits, dashes, dots or underscores.");
+        }
+
+        if (password.Length is < 8 or > 200)
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, "A password needs at least 8 characters.");
+        }
+
+        var salt = RandomNumberGenerator.GetBytes(16);
+
+        var account = new Account(name, Convert.ToBase64String(salt), Hash(password, salt), DateTime.UtcNow);
+
+        lock (_lock)
+        {
+            if (!_accounts.TryAdd(name, account))
+            {
+                // 409: the request was fine, it just clashes with what is there
+                throw new ProviderException(ResponseStatus.Conflict, "That name is taken.");
+            }
+
+            Forget();
+
+            Save("accounts.json", _accounts.Values);
+
+            return Open(account.Name);
+        }
+    }
+
+    public (SignedIn Member, string Token) Login(Credentials credentials)
+    {
+        var name = (credentials?.Name ?? "").Trim();
+
+        lock (_lock)
+        {
+            // an unknown name and a wrong password get the same answer, so
+            // this cannot be used to find out who has an account
+            if (!_accounts.TryGetValue(name, out var account) || !Matches(account, credentials?.Password ?? ""))
+            {
+                throw new ProviderException(ResponseStatus.Unauthorized, "That name and password do not go together.");
+            }
+
+            return Open(account.Name);
+        }
+    }
+
+    public Profile Describe(Member member)
+    {
+        lock (_lock)
+        {
+            var account = _accounts[member.Name];
+
+            return new Profile(account.Name, account.Joined, _accounts.Count);
+        }
+    }
+
+    public List<Newcomer> Newest()
+    {
+        lock (_lock)
+        {
+            return _accounts.Values.OrderByDescending(a => a.Joined)
+                            .Take(10)
+                            .Select(a => new Newcomer(a.Name, a.Joined))
+                            .ToList();
+        }
+    }
+
+    /// <summary>Ends the session of the token presented, if it is one.</summary>
+    public void Logout(string token)
+    {
+        lock (_lock)
+        {
+            if (_sessions.Remove(HashToken(token)))
+            {
+                Save("sessions.json", _sessions.Values);
+            }
+        }
+    }
+
+    #endregion
+
+    #region Sessions
+
+    /// <summary>
+    /// The member a session cookie belongs to, or null - which the
+    /// Authentication module answers with 403.
+    /// </summary>
+    public Member Authenticate(string token)
+    {
+        lock (_lock)
+        {
+            if (_sessions.TryGetValue(HashToken(token), out var session) && session.Expires > DateTime.UtcNow
+                && _accounts.ContainsKey(session.Name))
+            {
+                return new Member(session.Name);
+            }
+
+            return null;
+        }
+    }
+
+    private (SignedIn Member, string Token) Open(string name)
+    {
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+        _sessions[HashToken(token)] = new StoredSession(HashToken(token), name, DateTime.UtcNow + Session.Lifetime);
+
+        foreach (var expired in _sessions.Values.Where(s => s.Expires <= DateTime.UtcNow).ToList())
+        {
+            _sessions.Remove(expired.TokenHash);
+        }
+
+        Save("sessions.json", _sessions.Values);
+
+        return (new SignedIn(name), token);
+    }
+
+    /// <summary>Drops the oldest accounts once there are too many - a demo's housekeeping.</summary>
+    private void Forget()
+    {
+        foreach (var account in _accounts.Values.OrderBy(a => a.Joined).Take(Math.Max(0, _accounts.Count - MaxAccounts)).ToList())
+        {
+            _accounts.Remove(account.Name);
+        }
+    }
+
+    #endregion
+
+    #region Hashing
+
+    // slow on purpose: a stolen file of hashes should take years to guess, not minutes
+    private static string Hash(string password, byte[] salt)
+        => Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(password, salt, 100_000, HashAlgorithmName.SHA256, 32));
+
+    // compared in constant time, so how long the answer takes says nothing about how close a guess was
+    private static bool Matches(Account account, string password)
+        => CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(Hash(password, Convert.FromBase64String(account.Salt))),
+                                                   Convert.FromBase64String(account.Hash));
+
+    // a token is already random and long, so a fast hash is enough here
+    private static string HashToken(string token)
+        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token ?? "")));
+
+    #endregion
+
+    #region Storage
+
+    private List<T> Load<T>(string file)
+    {
+        var text = _read(file);
+
+        return string.IsNullOrWhiteSpace(text) ? [] : JsonSerializer.Deserialize<List<T>>(text, Json) ?? [];
+    }
+
+    private void Save<T>(string file, IEnumerable<T> items) => _write(file, JsonSerializer.Serialize(items, Json));
+
+    #endregion
+
+}

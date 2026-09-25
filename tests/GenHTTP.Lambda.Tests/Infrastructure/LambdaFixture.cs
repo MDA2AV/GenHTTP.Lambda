@@ -63,23 +63,16 @@ internal sealed class LambdaFixture : IAsyncDisposable
     public IDeploymentService Deployments => Application.Services.GetRequiredService<IDeploymentService>();
 
     /// <summary>
-    /// Brings the examples into existence, which the application does in the
+    /// Brings the demos into existence, which the application does in the
     /// background at startup and a test has to ask for so it can wait for it.
     /// </summary>
-    public ValueTask SeedExamplesAsync()
-        => Application.Services.GetRequiredService<ExampleSeeder>().SeedAsync();
+    public ValueTask SeedDemosAsync()
+        => Application.Services.GetRequiredService<DemoSeeder>().SeedAsync();
 
     /// <summary>
-    /// The editor key of a lambda, which only the installation itself knows
-    /// for an example.
+    /// Puts a lambda into the demo tier, the way only the seeder would.
     /// </summary>
-    public ValueTask<string?> PrivateKeyOfAsync(string publicKey) => Meta.GetPrivateKeyAsync(publicKey);
-
-    /// <summary>
-    /// Flags a lambda as one the installation maintains, which is what the
-    /// seeder and the maintenance sweeps go by.
-    /// </summary>
-    public async ValueTask MarkAsExampleAsync(string publicKey)
+    public async ValueTask MakeDemoAsync(string publicKey)
     {
         var databases = Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
@@ -87,7 +80,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
         var entity = await database.Lambdas.FirstAsync(l => l.PublicKey == publicKey);
 
-        entity.IsExample = true;
+        entity.Tier = LambdaTier.Demo;
 
         await database.SaveChangesAsync();
     }

@@ -26,7 +26,10 @@ export interface Lambda {
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */
-export const TIERS = ['Free', 'Premium'] as const;
+export const TIERS = ['Free', 'Premium', 'Demo'] as const;
+
+/** Whether a lambda is one of the installation's demos, which nobody can change. */
+export const isDemo = (tier: string) => tier === 'Demo';
 
 /** Whether a tier includes a domain of its own. */
 export const allowsDomain = (tier: string) => tier === 'Premium';
@@ -246,25 +249,19 @@ export interface Completion {
   insert?: string;
 }
 
-export interface Template {
+/** Something a new lambda can be started from: a demo to copy, or nothing much. */
+export interface Starter {
   id: string;
-  name: string;
+  /** What somebody would want to build, in their words. */
+  title: string;
   description: string;
-  code: string;
-  /** Reachable by link, but not offered in the picker. */
-  hidden: boolean;
-}
-
-export interface TemplateGroup {
-  id: string;
-  name: string;
-  description: string;
-  templates: Template[];
+  /** Where the demo it copies runs, to look at first; left out for the empty lambda. */
+  demo?: string | null;
 }
 
 export interface Platform {
   terms: string;
-  templates: TemplateGroup[];
+  starters: Starter[];
   maxCodeLength: number;
   deploymentLifetimeHours: number;
   retentionDays: number;

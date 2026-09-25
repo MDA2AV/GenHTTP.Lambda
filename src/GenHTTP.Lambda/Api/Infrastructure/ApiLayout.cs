@@ -23,7 +23,7 @@ public static class ApiLayout
     {
         var version = Layout.Create()
                             .AddDependentService<KeyResource>("keys")
-                            .AddDependentService<ExampleResource>("examples")
+                            .AddDependentService<DemoResource>("demos")
                             .AddDependentService<ShowcaseResource>("showcases")
                             .AddDependentService<BuildResource>("builds")
                             .AddDependentService<SystemResource>("system")
