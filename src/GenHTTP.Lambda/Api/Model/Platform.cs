@@ -24,3 +24,9 @@ public sealed record PlatformResponse(
 /// <param name="Description">What they would get</param>
 /// <param name="Demo">Where the demo it copies is running, to look at first; null for the empty lambda</param>
 public sealed record StarterResponse(string Id, string Title, string Description, string? Demo);
+
+/// <summary>
+/// Which pages the site links to.
+/// </summary>
+/// <param name="Enterprise">Whether the header links to the enterprise page, which is reachable either way</param>
+public sealed record FeaturesResponse(bool Enterprise);

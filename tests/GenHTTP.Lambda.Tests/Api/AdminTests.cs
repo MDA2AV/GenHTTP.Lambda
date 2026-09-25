@@ -268,6 +268,54 @@ public sealed class AdminTests
         Assert.AreEqual("admin", (await detail.GetContentAsync<AdminLambdaDetail>()).Activations[0].Origin);
     }
 
+    [TestMethod]
+    public async Task TheEnterprisePageIsLinkedByDefault()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        using var response = await fixture.GetAsync("/api/v1/system/features");
+
+        Assert.IsTrue((await response.GetContentAsync<FeaturesResponse>()).Enterprise);
+    }
+
+    [TestMethod]
+    public async Task TheEnterprisePageCanBeUnlinked()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        using var change = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", Token, new SettingsModel(false));
+
+        Assert.AreEqual(HttpStatusCode.OK, change.StatusCode);
+        Assert.IsFalse((await change.GetContentAsync<SettingsModel>()).EnterprisePage);
+
+        using var features = await fixture.GetAsync("/api/v1/system/features");
+
+        Assert.IsFalse((await features.GetContentAsync<FeaturesResponse>()).Enterprise);
+
+        using var settings = await Send(fixture, HttpMethod.Get, "/api/v1/admin/settings", Token);
+
+        Assert.IsFalse((await settings.GetContentAsync<SettingsModel>()).EnterprisePage);
+
+        // unlinked, not removed
+        using var page = await fixture.GetAsync("/enterprise", "text/html");
+
+        Assert.AreEqual(HttpStatusCode.OK, page.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task TheSettingsNeedTheToken()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", "not-the-token", new SettingsModel(false));
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+
+        using var features = await fixture.GetAsync("/api/v1/system/features");
+
+        Assert.IsTrue((await features.GetContentAsync<FeaturesResponse>()).Enterprise);
+    }
+
     #region Helpers
 
     private static async Task<AdminListingResponse> ListAsync(LambdaFixture fixture)

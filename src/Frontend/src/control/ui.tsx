@@ -375,3 +375,23 @@ export function Menu({ label = 'More', children, align = 'right' }: {
 export const menuItem = 'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-ink-850';
 
 export const menuRule = <div className="my-1 border-t border-slate-200 dark:border-ink-800" />;
+
+/** An on and off, named by the element it points at. */
+export function Switch({ on, onToggle, labelledBy }: { on: boolean; onToggle: () => void; labelledBy: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-labelledby={labelledBy}
+      onClick={onToggle}
+      className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 ${
+        on ? 'bg-accent-500 dark:bg-accent-400' : 'bg-grey-300 dark:bg-ink-700'
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[1.375rem]' : 'translate-x-0.5'}`}
+      />
+    </button>
+  );
+}

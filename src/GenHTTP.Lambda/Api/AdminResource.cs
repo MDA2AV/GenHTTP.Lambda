@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
 
 using GenHTTP.Modules.Reflection;
@@ -30,7 +31,7 @@ namespace GenHTTP.Lambda.Api;
 /// action is then the same one the owner would take - so a deployment started
 /// here is the same deployment, recorded as the operator's.
 /// </remarks>
-public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry)
+public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, SettingsService settings)
 {
 
     #region Listing
@@ -180,6 +181,32 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry)
     {
 
         await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey));
+    }
+
+    #endregion
+
+    #region Settings
+
+    /// <summary>
+    /// What the operator has switched on or off.
+    /// </summary>
+    [ResourceMethod("settings")]
+    public async ValueTask<SettingsModel> GetSettings()
+    {
+        var current = await settings.GetAsync();
+
+        return new SettingsModel(current.EnterprisePage);
+    }
+
+    /// <summary>
+    /// Replaces the settings. They apply to the next page anybody opens.
+    /// </summary>
+    [ResourceMethod(Method.Put, "settings")]
+    public async ValueTask<SettingsModel> ChangeSettings(SettingsModel body)
+    {
+        var saved = await settings.SaveAsync(new SiteSettings(body.EnterprisePage));
+
+        return new SettingsModel(saved.EnterprisePage);
     }
 
     #endregion

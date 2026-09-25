@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { IconLock, IconLogo, IconMoon, IconSun } from './Icons';
+import { useFeatures } from '../features';
 import type { Theme } from '../theme';
 
 interface Props {
@@ -18,6 +19,8 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
   // background belongs to the whole screen, and a tinted strip across the top
   // is exactly the seam this is meant not to have
   const [moved, setMoved] = useState(false);
+
+  const features = useFeatures();
 
   useEffect(() => {
     const onScroll = () => setMoved(window.scrollY > 8);
@@ -62,9 +65,12 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
             Showcase
           </Link>
 
-          <Link to="/enterprise" className="btn-ghost hidden md:inline-flex">
-            Enterprise
-          </Link>
+          {/* switched off in the panel, the page is still there - just not linked */}
+          {features.enterprise && (
+            <Link to="/enterprise" className="btn-ghost hidden md:inline-flex">
+              Enterprise
+            </Link>
+          )}
 
           <Link to="/docs" className="btn-ghost hidden min-[360px]:inline-flex">
             Docs

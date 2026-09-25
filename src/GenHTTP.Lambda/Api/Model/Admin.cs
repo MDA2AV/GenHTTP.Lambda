@@ -73,3 +73,9 @@ public sealed record DomainChangeRequest(string? Domain);
 /// What is left of a lambda after the panel acted on it.
 /// </summary>
 public sealed record LambdaOverviewResponse(string PublicKey, int? ActiveVersion, DateTime? DeployedUntil);
+
+/// <summary>
+/// What the operator can switch on or off.
+/// </summary>
+/// <param name="EnterprisePage">Whether the header links to the enterprise page</param>
+public sealed record SettingsModel(bool EnterprisePage);

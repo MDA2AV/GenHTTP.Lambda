@@ -9,15 +9,17 @@ import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
 import { LogSection } from '../console/LogSection';
 import { ServerSection } from '../console/ServerSection';
+import { SettingsSection } from '../console/SettingsSection';
 import { usePageMeta } from '../meta';
 import type { Theme } from '../theme';
 
-type SectionId = 'server' | 'lambdas' | 'log';
+type SectionId = 'server' | 'lambdas' | 'log' | 'settings';
 
 const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'server', title: 'Server', note: 'Memory, connections and what the engine is doing' },
   { id: 'lambdas', title: 'Lambdas', note: 'Every lambda on the installation' },
   { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
+  { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
 ];
 
 /**
@@ -113,6 +115,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <LambdasSection access={access} />
           ) : section === 'log' ? (
             <LogSection access={access} />
+          ) : section === 'settings' ? (
+            <SettingsSection access={access} />
           ) : (
             <ServerSection access={access} />
           )}
