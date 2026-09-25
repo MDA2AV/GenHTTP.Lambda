@@ -299,7 +299,7 @@ export function Editor({ theme }: Props) {
    */
   return (
     <div className={code ? 'flex min-h-0 flex-1 flex-col' : 'min-h-0 flex-1 overflow-y-auto'}>
-    <div className={`mx-auto flex w-full max-w-7xl flex-col md:flex-row md:gap-6 md:px-6 ${code ? 'min-h-0 flex-1' : ''}`}>
+    <div className={`mx-auto flex w-full max-w-[max(80rem,90%)] flex-col md:flex-row md:gap-6 md:px-6 ${code ? 'min-h-0 flex-1' : ''}`}>
       <aside className="shrink-0 border-b border-slate-200 dark:border-ink-800 md:sticky md:top-0 md:flex md:w-56 md:flex-col md:self-start md:border-b-0">
         <div className="px-4 pb-3 pt-4 md:px-3 md:pt-6">
           <div className="flex items-start gap-2">

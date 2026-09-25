@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { isDemo } from '../api';
 import { IconDots, IconInfo, IconSpark } from '../components/Icons';
 import { ago } from './format';
 
@@ -255,15 +256,29 @@ export function StatusBadge({ version }: { version?: number | null }) {
 
 /**
  * The tier a lambda is in. Quiet for the tier everybody starts in, in the
- * colour of the logo for the one somebody was given.
+ * colour of the logo for the one somebody was given, and in the link blue for
+ * the demos this installation keeps.
  */
 export function TierBadge({ tier }: { tier: string }) {
   const premium = tier === 'Premium';
+  const demo = isDemo(tier);
 
   return (
     <Badge
-      tone={premium ? 'bg-logo-500/15 text-logo-700 dark:text-logo-400' : 'bg-slate-400/10 text-slate-500'}
-      title={premium ? 'Premium: may answer at a domain of its own, and is kept online however quiet it gets' : `${tier} tier`}
+      tone={
+        premium
+          ? 'bg-logo-500/15 text-logo-700 dark:text-logo-400'
+          : demo
+            ? 'bg-accent-500/15 text-accent-700 dark:text-accent-400'
+            : 'bg-slate-400/10 text-slate-500'
+      }
+      title={
+        premium
+          ? 'Premium: may answer at a domain of its own, and is kept online however quiet it gets'
+          : demo
+            ? 'Demo: kept online by this installation and read only'
+            : `${tier} tier`
+      }
     >
       {tier}
     </Badge>

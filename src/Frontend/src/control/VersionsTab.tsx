@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { ApiError, api, type VersionContent, type VersionInfo } from '../api';
+import { ApiError, api, type LambdaFile, type VersionContent, type VersionInfo } from '../api';
 import { IconChevronDown, IconSpinner } from '../components/Icons';
+import { languageFor, monaco } from '../monaco';
+import type { Theme } from '../theme';
 import type { Control } from './context';
 import { compare, type DiffLine, type FileDiff } from './diff';
 import { AgentMark, Ago, Empty, Quote, Section } from './ui';
@@ -107,6 +109,7 @@ function Row({
 
 function Detail({ control, version, previous }: { control: Control; version: VersionInfo; previous?: VersionInfo }) {
   const [diffs, setDiffs] = useState<FileDiff[] | null>(null);
+  const [sides, setSides] = useState<{ before: LambdaFile[]; after: LambdaFile[] }>({ before: [], after: [] });
   const [failure, setFailure] = useState<string | null>(null);
   const [shown, setShown] = useState<string | null>(null);
 
@@ -125,6 +128,7 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
         const result = compare(before?.files ?? [], after.files);
 
         setDiffs(result);
+        setSides({ before: before?.files ?? [], after: after.files });
 
         // the first file that changed is usually the one to read
         setShown(result.find((d) => d.status !== 'same')?.name ?? null);
@@ -173,7 +177,14 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
                   )}
                 </button>
 
-                {shown === diff.name && <Patch diff={diff} />}
+                {shown === diff.name && (
+                  <Patch
+                    diff={diff}
+                    before={sides.before.find((f) => f.name === diff.name)?.code ?? ''}
+                    after={sides.after.find((f) => f.name === diff.name)?.code ?? ''}
+                    theme={control.theme}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -192,7 +203,43 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
   );
 }
 
-function Patch({ diff }: { diff: FileDiff }) {
+/**
+ * Each side coloured as a whole by the editor's own grammar and theme, then
+ * cut into lines - a line coloured on its own would not know it sits inside a
+ * comment or a string that began above it. Monaco is already loaded for the
+ * code view, so this costs nothing more than the tokenising.
+ */
+function useColoured(code: string, language: string, theme: Theme): string[] | null {
+  const [lines, setLines] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+
+    setLines(null);
+
+    // the theme is global to monaco; the code view sets it the same way
+    monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
+
+    monaco.editor
+      .colorize(code.replace(/\r\n/g, '\n'), language, { tabSize: 4 })
+      .then((html) => alive && setLines(html.split('<br/>')))
+      .catch(() => {
+        // uncoloured is still readable
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [code, language, theme]);
+
+  return lines;
+}
+
+function Patch({ diff, before, after, theme }: { diff: FileDiff; before: string; after: string; theme: Theme }) {
+  const language = languageFor(diff.name);
+  const old = useColoured(before, language, theme);
+  const now = useColoured(after, language, theme);
+
   if (diff.binary || !diff.hunks) {
     return (
       <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500 dark:border-ink-800">
@@ -206,7 +253,7 @@ function Patch({ diff }: { diff: FileDiff }) {
       <table className="w-full border-collapse font-mono text-[12.5px] leading-5">
         <tbody>
           {diff.hunks.map((hunk, h) => (
-            <Hunk key={h} lines={hunk.lines} separator={h > 0} />
+            <Hunk key={h} lines={hunk.lines} separator={h > 0} old={old} now={now} />
           ))}
         </tbody>
       </table>
@@ -214,7 +261,7 @@ function Patch({ diff }: { diff: FileDiff }) {
   );
 }
 
-function Hunk({ lines, separator }: { lines: DiffLine[]; separator: boolean }) {
+function Hunk({ lines, separator, old, now }: { lines: DiffLine[]; separator: boolean; old: string[] | null; now: string[] | null }) {
   return (
     <>
       {separator && (
@@ -228,9 +275,19 @@ function Hunk({ lines, separator }: { lines: DiffLine[]; separator: boolean }) {
           <td className="w-4 select-none align-top text-slate-500">
             {line.kind === 'added' ? '+' : line.kind === 'removed' ? '−' : ''}
           </td>
-          <td className="whitespace-pre pr-4">{line.text || ' '}</td>
+          <Code text={line.text} html={(line.kind === 'removed' ? old : now)?.[line.number - 1]} />
         </tr>
       ))}
     </>
   );
+}
+
+function Code({ text, html }: { text: string; html?: string }) {
+  // an empty line has no text to hold the row open, coloured or not
+  if (text === '' || html === undefined) {
+    return <td className="whitespace-pre pr-4">{text || ' '}</td>;
+  }
+
+  // monaco escapes the source as it renders it
+  return <td className="whitespace-pre pr-4" dangerouslySetInnerHTML={{ __html: html }} />;
 }
