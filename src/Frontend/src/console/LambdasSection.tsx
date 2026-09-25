@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { ApiError, api, type AdminListing, type LambdaOverview } from '../api';
+import { ApiError, TIERS, api, type AdminListing, type LambdaOverview } from '../api';
 import { Dialog } from '../components/Dialog';
 import { IconSpinner, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
-import { Empty, Section } from '../control/ui';
+import { Ago, Empty, Pills, Section, TierBadge } from '../control/ui';
 import type { Access } from './context';
 
-/** Every lambda on the installation. */
+/**
+ * Every lambda on the installation, to find the one that needs looking at.
+ *
+ * A row says enough to decide - whether it is up, how busy it is, whether it
+ * is failing, which tier it is in and where it answers - and opens the page
+ * of the lambda, where everything else about it is. The two things done in a
+ * hurry, taking something offline and removing it, stay on the row.
+ */
 export function LambdasSection({ access }: { access: Access }) {
   const { token, deny } = access;
 
@@ -17,14 +24,14 @@ export function LambdasSection({ access }: { access: Access }) {
   const [listing, setListing] = useState<AdminListing | null>(null);
   const [search, setSearch] = useState('');
   const [typed, setTyped] = useState('');
+  const [tier, setTier] = useState('');
   const [page, setPage] = useState(1);
   const [busy, setBusy] = useState<string | null>(null);
-  const [viewing, setViewing] = useState<{ key: string; code: string } | null>(null);
   const [removing, setRemoving] = useState<LambdaOverview | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setListing(await api.admin.list(token, search, page));
+      setListing(await api.admin.list(token, search, page, tier));
     } catch (error) {
       // a wrong token and a missing panel answer the same way on purpose
       if (error instanceof ApiError && error.status === 404) {
@@ -33,7 +40,7 @@ export function LambdasSection({ access }: { access: Access }) {
         toast('The lambdas could not be read.', 'error');
       }
     }
-  }, [token, search, page, toast, deny]);
+  }, [token, search, page, tier, toast, deny]);
 
   useEffect(() => {
     load();
@@ -49,24 +56,6 @@ export function LambdasSection({ access }: { access: Access }) {
 
     return () => clearTimeout(timer);
   }, [typed]);
-
-  async function view(lambda: LambdaOverview) {
-    setBusy(lambda.publicKey);
-
-    try {
-      if (lambda.latestVersion === undefined) {
-        toast(`"${lambda.publicKey}" has no code saved.`, 'error');
-        return;
-      }
-
-      const content = await api.admin.version(token, lambda.publicKey, lambda.latestVersion);
-      setViewing({ key: lambda.publicKey, code: content.files[0]?.code ?? '' });
-    } catch {
-      toast(`The code of "${lambda.publicKey}" could not be read.`, 'error');
-    } finally {
-      setBusy(null);
-    }
-  }
 
   async function undeploy(lambda: LambdaOverview) {
     setBusy(lambda.publicKey);
@@ -100,15 +89,26 @@ export function LambdasSection({ access }: { access: Access }) {
   return (
     <Section
       title="Lambdas"
-      hint="Every lambda on this server, whoever made it. The request figures count since the server came up."
+      hint="Every lambda on this server, whoever made it. Open one to see all of it and to change its tier or domain. The request figures count since the server came up."
       actions={
         <input
           type="search"
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
-          placeholder="Search by key"
-          aria-label="Search by key"
-          className="field w-56 py-1.5 font-mono text-sm"
+          placeholder="Search by key or domain"
+          aria-label="Search by key or domain"
+          className="field w-64 py-1.5 font-mono text-sm"
+        />
+      }
+      pills={
+        <Pills
+          label="Tier"
+          value={tier}
+          onChange={(value) => {
+            setTier(value);
+            setPage(1);
+          }}
+          options={[{ value: '', label: 'All tiers' }, ...TIERS.map((t) => ({ value: t as string, label: t }))]}
         />
       }
     >
@@ -124,20 +124,21 @@ export function LambdasSection({ access }: { access: Access }) {
         </div>
       ) : listing.lambdas.length === 0 ? (
         <Empty>
-          {search === '' ? 'There are no lambdas on this server.' : `Nothing here matches "${search}".`}
+          {search === '' && tier === '' ? 'There are no lambdas on this server.' : 'Nothing here matches.'}
         </Empty>
       ) : (
         <div className="surface overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full whitespace-nowrap text-left text-sm">
             <thead className="text-xs text-slate-500">
               <tr className="border-b border-slate-200 dark:border-ink-800">
                 <th className="px-4 py-2 font-medium">Key</th>
                 <th className="px-4 py-2 font-medium">State</th>
-                <th className="px-4 py-2 font-medium">Created</th>
+                <th className="px-4 py-2 font-medium">Tier</th>
+                <th className="px-4 py-2 font-medium">Domain</th>
                 <th className="px-4 py-2 text-right font-medium" title="Since the server came up">Requests</th>
                 <th className="px-4 py-2 text-right font-medium" title="Since the server came up">Errors</th>
                 <th className="px-4 py-2 font-medium">Last seen</th>
-                <th className="px-4 py-2 text-right font-medium">Versions</th>
+                <th className="px-4 py-2 font-medium">Created</th>
                 <th className="px-4 py-2 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -146,16 +147,15 @@ export function LambdasSection({ access }: { access: Access }) {
                 const live = lambda.activeVersion != null;
 
                 return (
-                  <tr key={lambda.publicKey} className="border-b border-slate-200 last:border-0 dark:border-ink-800">
+                  <tr key={lambda.publicKey} className="border-b border-slate-200 last:border-0 hover:bg-slate-50 dark:border-ink-800 dark:hover:bg-ink-850/50">
                     <td className="px-4 py-2">
-                      <a
-                        href={`/lambda/${lambda.publicKey}/`}
-                        target="_blank"
-                        rel="noreferrer"
+                      <Link
+                        to={`/admin/lambdas/${encodeURIComponent(lambda.publicKey)}`}
                         className="font-mono text-accent-500 hover:underline dark:text-accent-400"
+                        title="Open this lambda"
                       >
                         {lambda.publicKey}
-                      </a>
+                      </Link>
                     </td>
                     <td className="px-4 py-2">
                       <span
@@ -169,21 +169,29 @@ export function LambdasSection({ access }: { access: Access }) {
                         {live ? `live · v${lambda.activeVersion}` : 'offline'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-slate-500">{new Date(lambda.created).toLocaleString()}</td>
+                    <td className="px-4 py-2"><TierBadge tier={lambda.tier} /></td>
+                    <td className="max-w-[14rem] truncate px-4 py-2 font-mono text-[13px]">
+                      {lambda.domain ? (
+                        <span
+                          className={lambda.domainServed ? '' : 'text-slate-400 line-through'}
+                          title={lambda.domainServed ? `Answers at ${lambda.domain}` : 'Configured, but not served outside the premium tier'}
+                        >
+                          {lambda.domain}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-right tabular-nums text-slate-500">
                       {lambda.requests.toLocaleString()}
                     </td>
-                    <td
-                      className={`px-4 py-2 text-right tabular-nums ${
-                        lambda.failed > 0 ? 'text-red-500' : 'text-slate-500'
-                      }`}
-                    >
+                    <td className={`px-4 py-2 text-right tabular-nums ${lambda.failed > 0 ? 'text-red-500' : 'text-slate-500'}`}>
                       {lambda.failed.toLocaleString()}
                     </td>
                     <td className="px-4 py-2 text-slate-500">
-                      {lambda.lastSeen ? new Date(lambda.lastSeen).toLocaleTimeString() : '—'}
+                      {lambda.lastSeen ? <Ago at={lambda.lastSeen} /> : '—'}
                     </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-slate-500">{lambda.versions}</td>
+                    <td className="px-4 py-2 text-slate-500"><Ago at={lambda.created} /></td>
                     <td className="px-4 py-2">
                       <div className="flex items-center justify-end gap-1.5">
                         {busy === lambda.publicKey && <IconSpinner className="h-4 w-4 text-slate-400" />}
@@ -197,10 +205,6 @@ export function LambdasSection({ access }: { access: Access }) {
                         >
                           Editor
                         </a>
-
-                        <button type="button" onClick={() => view(lambda)} disabled={busy !== null} className="btn-ghost !px-2 !py-1 text-xs">
-                          Code
-                        </button>
 
                         <Link
                           to={`/admin/log?lambda=${encodeURIComponent(lambda.publicKey)}`}
@@ -262,40 +266,14 @@ export function LambdasSection({ access }: { access: Access }) {
         </div>
       )}
 
-      {viewing !== null && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setViewing(null)}
-          role="presentation"
-        >
-          <div
-            className="surface flex max-h-[80vh] w-full max-w-3xl flex-col shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Code of ${viewing.key}`}
-          >
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-ink-800">
-              <h2 className="font-mono text-sm">{viewing.key}</h2>
-              <button type="button" onClick={() => setViewing(null)} className="btn-ghost !px-2 !py-1 text-xs">
-                Close
-              </button>
-            </div>
-            <pre className="min-h-0 flex-1 overflow-auto px-5 py-4 font-mono text-[12.5px] leading-relaxed">
-              {viewing.code}
-            </pre>
-          </div>
-        </div>
-      )}
-
       <Dialog
         open={removing !== null}
         title={`Remove "${removing?.publicKey}"?`}
         onClose={() => setRemoving(null)}
       >
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Its code, its versions and its files go with it. Whoever holds the editor link will find nothing there,
-          and there is no undo.
+          Its code, its versions, its files{removing?.domain ? ' and its domain' : ''} go with it. Whoever holds the
+          editor link will find nothing there, and there is no undo.
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={() => setRemoving(null)} className="btn-ghost">

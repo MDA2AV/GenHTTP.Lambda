@@ -9,6 +9,7 @@ import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpinner } f
 import { useToast } from '../components/Toast';
 import type { Busy, Control, Rejection } from '../control/context';
 import { DeploymentsTab } from '../control/DeploymentsTab';
+import { DomainTab } from '../control/DomainTab';
 import { FilesTab } from '../control/FilesTab';
 import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
@@ -16,7 +17,7 @@ import { ShowcaseTab } from '../control/ShowcaseTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
-import { LiveDot, Menu, menuItem, menuRule } from '../control/ui';
+import { LiveDot, Menu, TierBadge, menuItem, menuRule } from '../control/ui';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 import { usePageMeta } from '../meta';
@@ -25,11 +26,12 @@ interface Props {
   theme: Theme;
 }
 
-type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase';
+type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
 
 const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'overview', title: 'Overview' },
   { id: 'showcase', title: 'Showcase' },
+  { id: 'domain', title: 'Domain' },
   { id: 'files', title: 'Files' },
   { id: 'versions', title: 'Versions' },
   { id: 'deployments', title: 'Deployments' },
@@ -288,8 +290,9 @@ export function Editor({ theme }: Props) {
                 <LiveDot live={live} />
                 <span className="truncate font-mono text-[15px] font-semibold" title={lambda.publicKey}>{lambda.publicKey}</span>
               </div>
-              <p className="mt-1 text-[13px] text-slate-500">
-                {live ? `Online, version ${lambda.activeVersion}` : 'Offline'}
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-500">
+                <span className="whitespace-nowrap">{live ? `Online, version ${lambda.activeVersion}` : 'Offline'}</span>
+                <TierBadge tier={lambda.tier} />
               </p>
             </div>
 
@@ -344,6 +347,27 @@ export function Editor({ theme }: Props) {
               </a>
             )}
           </div>
+
+          {lambda.domainServed && lambda.domain && (
+            <div className="mt-1 flex items-center gap-1 text-[13px]">
+              <a
+                href={live ? `https://${lambda.domain}/` : undefined}
+                target="_blank"
+                rel="noreferrer"
+                title={`Also answers at https://${lambda.domain}/`}
+                className={`min-w-0 flex-1 truncate ${live ? 'text-accent-600 hover:underline dark:text-accent-400' : 'text-slate-400'}`}
+              >
+                {lambda.domain}
+              </a>
+              <CopyButton value={`https://${lambda.domain}/`} />
+              {live && (
+                <a href={`https://${lambda.domain}/`} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                   title="Open in a new tab" aria-label="Open the domain in a new tab">
+                  <IconExternal className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+          )}
 
           {ahead && latest != null && (
             <button
@@ -437,6 +461,8 @@ export function Editor({ theme }: Props) {
           <LogsTab control={control} />
         ) : section === 'showcase' ? (
           <ShowcaseTab control={control} />
+        ) : section === 'domain' ? (
+          <DomainTab control={control} />
         ) : (
           <SummaryTab control={control} />
         )}

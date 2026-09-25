@@ -137,6 +137,8 @@ export function StatsTab({ control }: { control: Control }) {
         </div>
       )}
 
+      <Entrances traffic={traffic} publicKey={control.lambda.publicKey} />
+
       {traffic.paths.length > 0 && (
         <section className="mt-8">
           <h2 className="text-sm font-medium">Most asked for</h2>
@@ -164,6 +166,43 @@ export function StatsTab({ control }: { control: Control }) {
         </section>
       )}
     </Section>
+  );
+}
+
+/**
+ * Which way visitors came in - the lambda's own domain or its path here -
+ * for a lambda that has been reached at a domain at all. For every other
+ * lambda there is only the one way, and nothing to say about it.
+ */
+export function Entrances({ traffic, publicKey }: { traffic: LambdaTraffic; publicKey: string }) {
+  const entrances = traffic.entrances ?? [];
+
+  if (!entrances.some((entrance) => entrance.domain)) {
+    return null;
+  }
+
+  const all = entrances.reduce((total, entrance) => total + entrance.requests, 0);
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-sm font-medium">Reached through</h2>
+      <ul className="mt-2 divide-y divide-slate-100 text-[13px] dark:divide-ink-850">
+        {entrances.map((entrance) => (
+          <li key={entrance.domain ?? ''} className="flex items-center gap-3 py-2">
+            <span className="min-w-0 flex-1 truncate font-mono">
+              {entrance.domain ?? `/lambda/${publicKey}/`}
+            </span>
+            <span className="w-24 shrink-0">
+              <span className="block h-1 bg-slate-200 dark:bg-ink-800">
+                <span className="block h-full bg-accent-500 dark:bg-accent-400" style={{ width: `${(entrance.requests / Math.max(1, all)) * 100}%` }} />
+              </span>
+            </span>
+            <span className="w-16 shrink-0 text-right tabular-nums">{count(entrance.requests)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-slate-400">Since the server started, websocket connections included.</p>
+    </section>
   );
 }
 

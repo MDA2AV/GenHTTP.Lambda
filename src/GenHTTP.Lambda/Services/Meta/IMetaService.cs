@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 
@@ -30,6 +31,15 @@ public interface IMetaService
     /// Looks up the deployed lambda behind a public key, if there is one.
     /// </summary>
     ValueTask<ResolvedLambda?> ResolveAsync(string publicKey, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Looks up the deployed lambda with the given identity, if it is deployed.
+    /// </summary>
+    /// <remarks>
+    /// For the routes that know a lambda by something other than its key -
+    /// its domain - and so should not care when the key changes.
+    /// </remarks>
+    ValueTask<ResolvedLambda?> ResolveAsync(long id, CancellationToken cancellation = default);
 
     /// <summary>
     /// Lists the stored versions of a lambda, newest first.
@@ -75,6 +85,20 @@ public interface IMetaService
     ValueTask<LambdaInfo> ChangeKeyAsync(string privateKey, string? publicKey, CancellationToken cancellation = default);
 
     /// <summary>
+    /// Moves the lambda to another tier. Only ever done by an administrator.
+    /// </summary>
+    ValueTask<LambdaInfo> ChangeTierAsync(string privateKey, LambdaTier tier, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Sets the domain the lambda answers at, or removes it when nothing is given.
+    /// </summary>
+    /// <remarks>
+    /// Only a premium lambda may be given one. Removing one is always allowed,
+    /// so a lambda that dropped out of the tier can still let go of it.
+    /// </remarks>
+    ValueTask<LambdaInfo> ChangeDomainAsync(string privateKey, string? domain, CancellationToken cancellation = default);
+
+    /// <summary>
     /// Removes the lambda, its versions and its workspace.
     /// </summary>
     ValueTask DeleteAsync(string privateKey, CancellationToken cancellation = default);
@@ -98,8 +122,10 @@ public interface IMetaService
     /// <summary>
     /// One page of the lambdas on the installation, newest first.
     /// </summary>
-    /// <param name="search">Narrows the listing to public keys containing this</param>
-    ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, CancellationToken cancellation = default);
+    /// <param name="search">Narrows the listing to public keys or domains containing this</param>
+    /// <param name="tier">Narrows the listing to one tier</param>
+    ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null,
+                                    CancellationToken cancellation = default);
 
     /// <summary>
     /// The editor key behind a public one, for the operations that act on a

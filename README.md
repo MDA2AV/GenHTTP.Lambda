@@ -58,6 +58,7 @@ port, each against its own temporary data directory.
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
+| any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
 | `/start`             | opens the creation assistant with a template chosen      |
 | `/api/v1/`           | everything the editor calls, see below                    |
 | `/mcp`               | the same, for agents                                      |
@@ -372,6 +373,30 @@ install -m 0640 -o root -g 1001 /etc/letsencrypt/live/your.host.name/privkey.pem
 Because the server holds port 80, the standalone authenticator needs it back
 for the few seconds a renewal takes - a pre hook stops the container and a post
 hook starts it again.
+
+### Custom domains
+
+A lambda in the premium tier can answer at a domain of its own, which its owner
+sets in the editor after pointing the domain's A and AAAA records at the
+server. Plain requests to it are redirected to HTTPS on the same domain like
+every other request, so it needs a certificate - issued by hand for now, the
+same way as above, into a folder of its own:
+
+```bash
+certbot certonly --standalone -d shop.example.com
+
+mkdir -p /opt/genhttp-lambda/certs/shop.example.com
+install -m 0644 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/fullchain.pem /opt/genhttp-lambda/certs/shop.example.com/
+install -m 0640 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/privkey.pem   /opt/genhttp-lambda/certs/shop.example.com/
+```
+
+The folder is only looked through on startup - the io_uring engine learns the
+names it holds certificates for when it opens the TLS port - so a new
+certificate is served after the next restart, which the hooks around the
+standalone authenticator already do. Renewals of a certificate the server knows
+are picked up without one. Until the certificate is there, visitors of the
+domain are redirected to HTTPS and shown the default certificate, which does
+not carry their name.
 
 ## For agents
 

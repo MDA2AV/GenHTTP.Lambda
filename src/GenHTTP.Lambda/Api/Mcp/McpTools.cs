@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 
+using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -549,6 +550,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             ok = true,
             publicKey = lambda.PublicKey,
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
+            domainUrl = DomainUrl(lambda),
             version = lambda.ActiveVersion,
             onlineUntil = lambda.DeployedUntil,
             note = reminder ?? "Deploying again extends onlineUntil. Once it has been called, read_logs shows how it answered."
@@ -638,6 +640,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             ok = true,
             lambda.PublicKey,
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
+            domainUrl = DomainUrl(lambda),
+            lambda.Tier,
             lambda.ActiveVersion,
             lambda.LatestVersion,
             online = lambda.ActiveVersion != null,
@@ -763,11 +767,28 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         });
     }
 
+    /// <summary>
+    /// Where the lambda answers besides its path, for an agent to call and to
+    /// tell the user about. Always HTTPS, which plain requests are redirected
+    /// to - the operator installs a certificate for the domain.
+    /// somebody else's domain.
+    /// </summary>
+    private static string? DomainUrl(LambdaInfo lambda)
+        => LambdaDescription.Serves(lambda.Tier, lambda.Domain) ? $"https://{lambda.Domain}/" : null;
+
     private JsonObject Guide() => McpProtocol.Say(new
     {
         ok = true,
         preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version, POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip of all files as a new version - so edit locally and push once. Every endpoint that saves a version takes ?deploy=true. Many environments cannot reach it; then use these tools.",
         whatALambdaIs = "C# that returns a GenHTTP handler, served at /lambda/{publicKey}/. No Main and no project: the snippet is the program.",
+        paths = new
+        {
+            rule = "Use relative paths for every link, script, stylesheet, image, fetch, form action, websocket and redirect: \"api/items\", \"app.css\", \"./\". No leading slash, and never /lambda/{publicKey}/ or the full address.",
+            why = "The same lambda answers at /lambda/{publicKey}/ on this platform and, in the premium tier, at the root of a domain of its own. A path starting with / leaves the lambda on the platform; a hard-coded /lambda/{publicKey}/ does not exist on the domain.",
+            pages = "A page at the root of the lambda resolves \"api/items\" against the lambda. A page one level deeper needs \"../api/items\" - or keep the pages at the root.",
+            websockets = "Build the address from the page: new URL(\"play\", location.href) with the scheme swapped to ws: or wss:.",
+            inCSharp = "Redirect.To(\"other\") and Location headers take relative paths too. Never build an absolute URL from the request's host and /lambda/."
+        },
         theSnippet = new
         {
             file = LambdaSource.EntryName,

@@ -4,6 +4,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
 
 namespace GenHTTP.Lambda.Services.Telemetry;
@@ -37,6 +38,8 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
         // handlers below move along, and afterwards it points at nothing
         var path = PathOf(request);
 
+        var domain = request.GetDomain()?.Name;
+
         var started = Stopwatch.GetTimestamp();
 
         try
@@ -46,7 +49,7 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
             var status = response != null ? (int)response.Status : 404;
 
             telemetry.Record(lambda.Id, lambda.PublicKey, Stopwatch.GetElapsedTime(started), status,
-                             (long)(response?.Content?.Length ?? 0), path);
+                             (long)(response?.Content?.Length ?? 0), path, domain);
 
             return response;
         }
@@ -54,14 +57,15 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
         {
             // the error handler above turns this into a response for the
             // visitor, but as far as the lambda is concerned it failed
-            telemetry.Record(lambda.Id, lambda.PublicKey, Stopwatch.GetElapsedTime(started), 500, 0, path);
+            telemetry.Record(lambda.Id, lambda.PublicKey, Stopwatch.GetElapsedTime(started), 500, 0, path, domain);
             throw;
         }
     }
 
     /// <summary>
     /// What was asked for, relative to the lambda and cut to a length worth
-    /// showing - the lookup above has already stepped past the key.
+    /// showing - the lookup above has already stepped past the key, where
+    /// there was one.
     /// </summary>
     private static string PathOf(IRequest request)
     {

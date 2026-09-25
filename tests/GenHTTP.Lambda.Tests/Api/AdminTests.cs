@@ -160,6 +160,114 @@ public sealed class AdminTests
         Assert.AreEqual(HttpStatusCode.NotFound, gone.StatusCode);
     }
 
+    [TestMethod]
+    public async Task ALambdaCanBeMovedToAnotherTier()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        await fixture.CreateLambdaAsync("promoted");
+
+        using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/promoted/tier", Token, new TierRequest("premium"));
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+        var detail = await response.GetContentAsync<AdminLambdaDetail>();
+
+        Assert.AreEqual("Premium", detail.Lambda.Tier);
+        Assert.IsNull(detail.Lambda.KeptUntil, "the tier keeps it");
+        CollectionAssert.AreEqual(new[] { "Free", "Premium" }, detail.Tiers.ToArray());
+    }
+
+    [TestMethod]
+    public async Task ATierThatDoesNotExistIsRefused()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        await fixture.CreateLambdaAsync("hopeful");
+
+        using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/hopeful/tier", Token, new TierRequest("platinum"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task TheListingCanBeNarrowedToATierAndSearchedByDomain()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        await fixture.CreateLambdaAsync("plain");
+
+        var premium = await fixture.CreateLambdaAsync("fancy");
+
+        using (await Send(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/fancy/tier", Token, new TierRequest("Premium"))) { }
+        using (await Send(fixture, HttpMethod.Put, "/api/v1/admin/lambdas/fancy/domain", Token, new DomainChangeRequest("fancy.example.org"))) { }
+
+        using var byTier = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas?tier=Premium", Token);
+
+        var listed = await byTier.GetContentAsync<AdminListingResponse>();
+
+        Assert.AreEqual(1, listed.Matched);
+        Assert.AreEqual("fancy.example.org", listed.Lambdas[0].Domain);
+        Assert.IsTrue(listed.Lambdas[0].DomainServed);
+
+        using var byDomain = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas?search=example.org", Token);
+
+        Assert.AreEqual(premium.PublicKey, (await byDomain.GetContentAsync<AdminListingResponse>()).Lambdas.Single().PublicKey);
+    }
+
+    [TestMethod]
+    public async Task OneLambdaCanBeLookedAtInFull()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        var lambda = await fixture.CreateLambdaAsync("detailed");
+
+        await fixture.DeployAsync(lambda.PrivateKey);
+
+        using (await fixture.GetAsync("/lambda/detailed/")) { }
+
+        using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas/detailed", Token);
+
+        var detail = await response.GetContentAsync<AdminLambdaDetail>();
+
+        Assert.AreEqual(lambda.PrivateKey, detail.Lambda.PrivateKey);
+        Assert.AreEqual(1, detail.Versions.Count);
+        Assert.AreEqual(1, detail.Activations.Count);
+        Assert.AreEqual(1, detail.Traffic.Totals?.Requests);
+    }
+
+    [TestMethod]
+    public async Task TheDetailIsBehindTheTokenToo()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        await fixture.CreateLambdaAsync("hidden");
+
+        using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas/hidden", "not-the-token");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task ALambdaCanBePutOnlineByTheOperator()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
+
+        await fixture.CreateLambdaAsync("revived");
+
+        using var response = await Send(fixture, HttpMethod.Post, "/api/v1/admin/lambdas/revived/deployment/start", Token, new DeploymentRequest(null));
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+        using var served = await fixture.GetAsync("/lambda/revived/");
+
+        Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
+
+        using var detail = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas/revived", Token);
+
+        Assert.AreEqual("admin", (await detail.GetContentAsync<AdminLambdaDetail>()).Activations[0].Origin);
+    }
+
     #region Helpers
 
     private static async Task<AdminListingResponse> ListAsync(LambdaFixture fixture)
@@ -171,11 +279,16 @@ public sealed class AdminTests
         return await response.GetContentAsync<AdminListingResponse>();
     }
 
-    private static async Task<HttpResponseMessage> Send(LambdaFixture fixture, HttpMethod method, string path, string token)
+    private static async Task<HttpResponseMessage> Send(LambdaFixture fixture, HttpMethod method, string path, string token, object? payload = null)
     {
         using var request = fixture.Host.GetRequest(path, method);
 
         request.Headers.Add("X-Admin-Token", token);
+
+        if (payload != null)
+        {
+            request.Content = System.Net.Http.Json.JsonContent.Create(payload, options: new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        }
 
         return await fixture.Host.GetResponseAsync(request);
     }

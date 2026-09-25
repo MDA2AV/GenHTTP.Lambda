@@ -42,7 +42,13 @@ public static class Caller
 /// <summary>
 /// The parts of a request worth keeping against every line it causes.
 /// </summary>
-public sealed record CallerInfo(string? Client, string? Agent, string Method, string Path, string? Country = null, string? Place = null)
+/// <param name="Domain">
+/// The lambda's own domain the request was addressed to, or nothing for a
+/// request to the platform - whose host is the same on every line and would
+/// say nothing.
+/// </param>
+public sealed record CallerInfo(string? Client, string? Agent, string Method, string Path, string? Country = null, string? Place = null,
+                                string? Domain = null)
 {
 
     /// <summary>
@@ -54,7 +60,8 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
     /// face value would let anyone put any address in this log, and ignoring
     /// it would name the proxy on every line of a proxied installation.
     /// </remarks>
-    public static CallerInfo From(IRequest request, StringPool pool, bool addresses, GeoTable? geo = null, GeoPlaces? places = null)
+    public static CallerInfo From(IRequest request, StringPool pool, bool addresses, GeoTable? geo = null, GeoPlaces? places = null,
+                                  string? domain = null)
     {
         string? client = null;
 
@@ -77,7 +84,9 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
             geo?.CountryOf(client),
             // a town and a network, where a database has one. Pooled: a busy
             // server sees the same few hundred callers over and over
-            pool.Share(Empty(places?.Find(client)?.Describe()))
+            pool.Share(Empty(places?.Find(client)?.Describe())),
+            // one of the few names the registry holds, so already shared
+            domain
         );
     }
 

@@ -5,6 +5,9 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <summary>
 /// Everything the editor needs to know about a lambda.
 /// </summary>
+/// <param name="DeployedUntil">When it goes offline unless used, or nothing while it is offline or its tier keeps it online</param>
+/// <param name="KeptUntil">When it is removed unless used, or nothing when its tier keeps it</param>
+/// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
@@ -15,7 +18,8 @@ public sealed record LambdaInfo(
     int? LatestVersion,
     DateTime? DeployedAt,
     DateTime? DeployedUntil,
-    DateTime KeptUntil
+    DateTime? KeptUntil,
+    string? Domain
 );
 
 /// <summary>
@@ -138,5 +142,6 @@ public sealed record LambdaOverview(
     int? LatestVersion,
     int Versions,
     DateTime? DeployedUntil,
-    DateTime KeptUntil
+    DateTime? KeptUntil,
+    string? Domain
 );

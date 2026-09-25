@@ -226,6 +226,27 @@ export function AgentMark({ origin }: { origin?: string | null }) {
   );
 }
 
+/**
+ * The tier a lambda is in. Quiet for the tier everybody starts in, marked for
+ * the one somebody was given.
+ */
+export function TierBadge({ tier, className = '' }: { tier: string; className?: string }) {
+  const premium = tier === 'Premium';
+
+  return (
+    <span
+      title={premium ? 'Premium: may answer at a domain of its own, and is kept online however quiet it gets' : `${tier} tier`}
+      className={`chip !px-1.5 !py-0 text-[11px] uppercase tracking-wide ${
+        premium
+          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+          : 'bg-slate-400/10 text-slate-500'
+      } ${className}`}
+    >
+      {tier}
+    </span>
+  );
+}
+
 export function LiveDot({ live }: { live: boolean }) {
   return (
     <span

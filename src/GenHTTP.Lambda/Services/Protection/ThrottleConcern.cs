@@ -10,13 +10,15 @@ namespace GenHTTP.Lambda.Services.Protection;
 /// same time, and how long a single one may take.
 /// </summary>
 /// <remarks>
+/// The slots are those of <see cref="LambdaThrottle"/>, shared by every route
+/// a lambda can be reached through.
+///
 /// The timeout is cooperative - a lambda that ignores its cancellation token and
 /// spins forever still occupies its slot. Containing that needs process
 /// isolation, which is where the deployment service is headed.
 /// </remarks>
-public sealed class ThrottleConcern(IHandler content, LambdaOptions options) : IConcern
+public sealed class ThrottleConcern(IHandler content, LambdaThrottle throttle, LambdaOptions options) : IConcern
 {
-    private readonly SemaphoreSlim _slots = new(options.MaxConcurrency, options.MaxConcurrency);
 
     #region Get-/Setters
 
@@ -30,7 +32,7 @@ public sealed class ThrottleConcern(IHandler content, LambdaOptions options) : I
 
     public async ValueTask<IResponse?> HandleAsync(IRequest request)
     {
-        if (!await _slots.WaitAsync(TimeSpan.FromSeconds(5)))
+        if (!await throttle.EnterAsync())
         {
             throw new ProviderException(ResponseStatus.ServiceUnavailable, "The server is currently busy, please try again.");
         }
@@ -50,7 +52,7 @@ public sealed class ThrottleConcern(IHandler content, LambdaOptions options) : I
         }
         finally
         {
-            _slots.Release();
+            throttle.Leave();
         }
     }
 
@@ -58,7 +60,7 @@ public sealed class ThrottleConcern(IHandler content, LambdaOptions options) : I
 
 }
 
-public sealed class ThrottleConcernBuilder(LambdaOptions options) : IConcernBuilder
+public sealed class ThrottleConcernBuilder(LambdaThrottle throttle, LambdaOptions options) : IConcernBuilder
 {
-    public IConcern Build(IHandler content) => new ThrottleConcern(content, options);
+    public IConcern Build(IHandler content) => new ThrottleConcern(content, throttle, options);
 }

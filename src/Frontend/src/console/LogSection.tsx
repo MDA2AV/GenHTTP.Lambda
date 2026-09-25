@@ -658,6 +658,13 @@ export function LogSection({ access }: { access: Access }) {
 
                 <span className="shrink-0 text-grey-500 dark:text-grey-600">{line.source}</span>
 
+                {/* a request line names its domain in its text already */}
+                {line.domain != null && line.source !== 'Requests' && (
+                  <span className="shrink-0 text-grey-500 dark:text-grey-600" title="Served at the lambda's own domain">
+                    {line.domain}
+                  </span>
+                )}
+
                 {line.client != null && (
                   <span className="flex shrink-0 items-baseline gap-1">
                     <span
