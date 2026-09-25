@@ -177,8 +177,6 @@ export function DomainTab({ control }: { control: Control }) {
         <Records domain={visible} configured={state.domain != null} state={state} checking={checking} onCheck={() => load()} />
       </>
 
-      <Notes />
-
       <Dialog
         title="Remove the domain?"
         open={removing}
@@ -332,25 +330,5 @@ function Copy({ value }: { value: string }) {
     >
       {copied ? <IconCheck className="h-3.5 w-3.5 text-emerald-500" /> : <IconCopy className="h-3.5 w-3.5" />}
     </button>
-  );
-}
-
-/** What is true of every domain here, whatever its state. */
-function Notes() {
-  return (
-    <section className="mt-8 space-y-3 border-t border-slate-200 pt-6 text-[13px] text-slate-600 dark:border-ink-800 dark:text-slate-400">
-      <p>
-        <strong className="font-medium text-slate-800 dark:text-slate-200">HTTPS only.</strong> Visitors who open{' '}
-        <span className="font-mono">http://</span> are sent to <span className="font-mono">https://</span> on the same
-        domain. The certificate for it is set up by whoever runs this installation, once the records above point here -
-        until then, browsers warn about the connection.
-      </p>
-      <p>
-        <strong className="font-medium text-slate-800 dark:text-slate-200">Relative links.</strong> At the domain the
-        lambda answers from the root, and here below <span className="font-mono">/lambda/…/</span>. Links written as{' '}
-        <span className="font-mono">api/items</span> work at both; <span className="font-mono">/api/items</span> or{' '}
-        <span className="font-mono">/lambda/…/api/items</span> work at only one. Agents building here are told so.
-      </p>
-    </section>
   );
 }
