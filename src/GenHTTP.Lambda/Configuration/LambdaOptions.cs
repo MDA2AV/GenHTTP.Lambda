@@ -30,12 +30,14 @@ public sealed record LambdaOptions
     /// This was HTTP/1.1 only for a while: the ioxide engine's HTTP/2 driver
     /// stopped writing once it had filled the window the client advertised,
     /// so Firefox, which advertises a hundred and twenty eight kilobytes,
-    /// never finished loading the editor. Fixed in ioxide since.
+    /// never finished loading the editor. That was fixed in ioxide, and HTTP/2
+    /// turned out to be buggy again afterwards, so it is HTTP/1.1 only once
+    /// more.
     ///
-    /// If a browser hangs on a large response again, check this first: set
-    /// LAMBDA_HTTP_PROTOCOLS=Http1 to fall back without a release.
+    /// Set LAMBDA_HTTP_PROTOCOLS=Http1AndHttp2 to try HTTP/2 again without a
+    /// release.
     /// </remarks>
-    public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1AndHttp2;
+    public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1;
 
     /// <summary>
     /// Where the build agent listens, or nothing to do without one.
