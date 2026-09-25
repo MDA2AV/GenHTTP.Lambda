@@ -84,10 +84,11 @@ export function Enterprise() {
           delay={80}
           features={[
             'Your own instance, cloud or on premises',
+            'One service runs every app - no cluster to set up',
             'Sign in with your own SSO',
+            'Your governance and compliance rules, built into what agents are told',
             'Apps stay online for good, nothing is ever removed',
             'Bring your own agent over MCP',
-            'Isolated from everybody else, data included',
             'Priority support',
           ]}
         >
@@ -257,6 +258,7 @@ function Comparison({ offline, removed }: { offline: number; removed: number }) 
         { feature: 'Removed when unused', cells: [`After ${removed} days`, 'Never'] },
         { feature: 'Instance', cells: ['Shared', 'Your own'] },
         { feature: 'Runs', cells: ['In our cloud', 'Cloud or on premises'] },
+        { feature: 'What you operate', cells: ['Nothing', 'A single service'] },
         { feature: 'Custom domains', cells: [false, true] },
       ],
     },
@@ -264,6 +266,7 @@ function Comparison({ offline, removed }: { offline: number; removed: number }) 
       title: 'Control',
       rows: [
         { feature: 'Sign-in', cells: ['None needed', 'Your own SSO'] },
+        { feature: 'Your governance and compliance rules for agents', cells: [false, true] },
         { feature: 'Administration console', cells: [false, true] },
         { feature: 'Data kept apart from other customers', cells: [false, true] },
         { feature: 'Support', cells: ['Community', 'Priority'] },
@@ -366,6 +369,14 @@ function Questions() {
     [
       'Is the built-in agent included in Enterprise?',
       'No. Your team brings its own agent - Claude, Claude Code or anything else that speaks MCP - and connects it to your installation, on whatever plan you already have with its vendor.',
+    ],
+    [
+      'How do agents learn our compliance rules?',
+      'We build your governance and compliance rules into what the platform tells agents over MCP. Every agent your team connects gets them while it writes code, so the apps come out following your rules without everybody having to know them by heart.',
+    ],
+    [
+      'Do we need Kubernetes or a cluster?',
+      'No. Every app runs inside one service, so there are no pods to spread out and nothing to orchestrate per app. Running the installation means running that one service.',
     ],
     [
       'Where does an Enterprise installation run?',
