@@ -22,6 +22,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<ShowcaseEntity> Showcases => Set<ShowcaseEntity>();
 
+    public DbSet<SettingEntity> Settings => Set<SettingEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -138,6 +140,15 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
                  .WithOne()
                  .HasForeignKey<ShowcaseEntity>(s => s.LambdaId)
                  .OnDelete(DeleteBehavior.Cascade);
+
+        var settings = builder.Entity<SettingEntity>();
+
+        settings.ToTable("settings");
+
+        settings.HasKey(s => s.Key);
+
+        settings.Property(s => s.Key).HasColumnName("key");
+        settings.Property(s => s.Value).HasColumnName("value");
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

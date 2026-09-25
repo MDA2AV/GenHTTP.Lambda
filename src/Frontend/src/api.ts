@@ -529,6 +529,16 @@ export interface OwnShowcase {
   limits: ShowcaseLimits;
 }
 
+/** Which pages the site links to, as the operator switched them. */
+export interface Features {
+  enterprise: boolean;
+}
+
+/** What the operator can switch on or off in the panel. */
+export interface AdminSettings {
+  enterprisePage: boolean;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -583,6 +593,8 @@ const withToken = (token: string, init: RequestInit = {}) => ({
 export const api = {
   platform: () => request<Platform>('/system'),
 
+  features: () => request<Features>('/system/features'),
+
   /** The text box on /build, and the agent behind it. Whether there is one is in `platform`. */
   builds: {
     start: (prompt: string, model?: string, password?: string) =>
@@ -625,6 +637,11 @@ export const api = {
     remove: (token: string, publicKey: string) =>
       request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}`,
         withToken(token, { method: 'DELETE' })),
+
+    settings: (token: string) => request<AdminSettings>('/admin/settings', withToken(token)),
+
+    saveSettings: (token: string, settings: AdminSettings) =>
+      request<AdminSettings>('/admin/settings', withToken(token, { method: 'PUT', body: JSON.stringify(settings) })),
   },
 
   /**

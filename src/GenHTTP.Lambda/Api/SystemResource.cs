@@ -3,6 +3,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Settings;
 
 using GenHTTP.Modules.Webservices;
 
@@ -12,7 +13,7 @@ namespace GenHTTP.Lambda.Api;
 /// What the editor needs to know about the platform: the terms, the example it
 /// starts from, the vocabulary it can suggest and whether it can build things.
 /// </summary>
-public sealed class SystemResource(LambdaOptions options, BuildService builds)
+public sealed class SystemResource(LambdaOptions options, BuildService builds, SettingsService settings)
 {
 
     internal const string Terms = """
@@ -40,6 +41,21 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds)
         CompletionCatalog.Items,
         new BuildAvailability(builds.Available, builds.PerDay, builds.HasSecondModel)
     );
+
+    /// <summary>
+    /// Which pages the site links to, as the operator switched them.
+    /// </summary>
+    /// <remarks>
+    /// Apart from the platform description, which carries the whole editor
+    /// vocabulary and is too much to ask for on every page.
+    /// </remarks>
+    [ResourceMethod("features")]
+    public async ValueTask<FeaturesResponse> GetFeatures()
+    {
+        var current = await settings.GetAsync();
+
+        return new FeaturesResponse(current.EnterprisePage);
+    }
 
     /// <summary>
     /// What a new lambda can be started from: nothing much, or a copy of a

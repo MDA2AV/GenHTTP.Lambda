@@ -8,7 +8,7 @@ import { ShowcaseCard } from '../components/ShowcaseCard';
 import { useToast } from '../components/Toast';
 import type { Control } from './context';
 import { bytes } from './format';
-import { Section } from './ui';
+import { Section, Switch } from './ui';
 
 /** A picture chosen here and not saved yet. */
 interface Picked {
@@ -342,25 +342,6 @@ export function ShowcaseTab({ control }: { control: Control }) {
         </p>
       </Dialog>
     </Section>
-  );
-}
-
-function Switch({ on, onToggle, labelledBy }: { on: boolean; onToggle: () => void; labelledBy: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-labelledby={labelledBy}
-      onClick={onToggle}
-      className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 ${
-        on ? 'bg-accent-500 dark:bg-accent-400' : 'bg-grey-300 dark:bg-ink-700'
-      }`}
-    >
-      <span
-        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[1.375rem]' : 'translate-x-0.5'}`}
-      />
-    </button>
   );
 }
 
