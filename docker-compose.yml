@@ -11,6 +11,10 @@ services:
       - "443:443"
     environment:
       LAMBDA_PORT: 80
+      # HTTP/1.1 only, on both ports. HTTP/2 misbehaves again, and this is the
+      # switch LambdaOptions names for falling back without a release -
+      # Http1AndHttp2 turns it back on once the engine is fixed.
+      LAMBDA_HTTP_PROTOCOLS: ${LAMBDA_HTTP_PROTOCOLS:-Http1}
       # How long a free tier lambda may go unused before it is taken offline,
       # and how long before it is removed, both in hours.
       #
