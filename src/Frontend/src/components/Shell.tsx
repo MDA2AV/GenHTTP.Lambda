@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { ExamplesMenu } from './ExamplesMenu';
 import { IconLock, IconLogo, IconMoon, IconSun } from './Icons';
 import type { Theme } from '../theme';
 
@@ -67,7 +66,6 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
             Docs
           </Link>
 
-          <ExamplesMenu />
           <Link to="/admin" className="btn-ghost hidden items-center gap-1.5 sm:inline-flex">
             <IconLock className="h-4 w-4" />
             Admin

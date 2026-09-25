@@ -9,7 +9,6 @@ import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
-import { Example } from './pages/Example';
 import { Guide } from './pages/Guide';
 import { Build } from './pages/Build';
 import { Showcase } from './pages/Showcase';
@@ -90,7 +89,6 @@ export function App() {
                 {/* the page this replaced, which is linked from elsewhere */}
                 <Route path="/agentic-coding" element={<Navigate to="/showcase" replace />} />
                 <Route path="/terms" element={<Terms />} />
-                <Route path="/examples/:id" element={<Example />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

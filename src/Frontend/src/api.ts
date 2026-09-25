@@ -334,35 +334,6 @@ export interface EventHistory {
   series: { kind: string; counts: number[]; total: number }[];
 }
 
-export interface Example {
-  id: string;
-  name: string;
-  description: string;
-  publicKey: string;
-  path: string;
-  /** What is worth calling underneath it, which is rarely the root. */
-  tryPath: string;
-  /** Reached by opening a socket rather than by asking for a page. */
-  socket: boolean;
-  /** Every file it is made of, the snippet first. */
-  files: LambdaFile[];
-  /** They are prepared after startup, so one can exist but not yet answer. */
-  live: boolean;
-}
-
-/** What the menu needs: everything but the code. */
-export type ExampleSummary = Omit<Example, 'files'>;
-
-export interface ExampleGroup {
-  id: string;
-  name: string;
-  examples: ExampleSummary[];
-}
-
-export interface ExampleListing {
-  groups: ExampleGroup[];
-}
-
 export interface WorkspaceEntry {
   path: string;
   size: number;
@@ -686,10 +657,6 @@ export const api = {
 
   telemetry: (minutes: number, token: string) =>
     request<Telemetry>(`/telemetry?minutes=${minutes}&days=30`, withToken(token)),
-
-  examples: () => request<ExampleListing>('/examples'),
-
-  example: (id: string) => request<Example>(`/examples/${encodeURIComponent(id)}`),
 
   showcases: (skip = 0, take = 12) => request<ShowcaseListing>(`/showcases/?skip=${skip}&take=${take}`),
 
