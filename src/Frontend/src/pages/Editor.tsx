@@ -301,7 +301,9 @@ export function Editor({ theme }: Props) {
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
               <span className="block truncate font-mono text-[15px] font-semibold" title={lambda.publicKey}>{lambda.publicKey}</span>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {/* pulled left by the padding of a badge, so what they say lines
+                  up with the name above and the addresses below */}
+              <div className="-ml-2 mt-2 flex flex-wrap items-center gap-1.5">
                 <StatusBadge version={lambda.activeVersion} />
                 <TierBadge tier={lambda.tier} />
               </div>
