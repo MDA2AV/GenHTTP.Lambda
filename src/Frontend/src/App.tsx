@@ -89,8 +89,6 @@ export function App() {
                 {/* the page this replaced, which is linked from elsewhere */}
                 <Route path="/agentic-coding" element={<Navigate to="/showcase" replace />} />
                 <Route path="/terms" element={<Terms />} />
-                {/* the examples had pages of their own, which are still linked from elsewhere */}
-                <Route path="/examples/*" element={<Navigate to="/showcase" replace />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
