@@ -1,6 +1,7 @@
 using System.Net;
 
 using GenHTTP.Lambda.Data;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using Microsoft.EntityFrameworkCore;
@@ -84,7 +85,7 @@ public sealed class InactivityTests
     }
 
     [TestMethod]
-    public async Task ExamplesAreTheInstallationsOwnAndAreLeftAlone()
+    public async Task DemosAreTheInstallationsOwnAndAreLeftAlone()
     {
         await using var fixture = await LambdaFixture.CreateAsync(o => o with
         {
@@ -98,7 +99,7 @@ public sealed class InactivityTests
 
         var old = DateTime.UtcNow.AddDays(-400);
 
-        await Touch(fixture, "an-example", deployed: old, modified: old, lastSeen: old, example: true);
+        await Touch(fixture, "an-example", deployed: old, modified: old, lastSeen: old, demo: true);
 
         var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
 
@@ -132,7 +133,7 @@ public sealed class InactivityTests
         => fixture.Application.Services.GetRequiredService<IDbContextFactory<LambdaDbContext>>();
 
     private static async Task Touch(LambdaFixture fixture, string key, DateTime deployed, DateTime modified,
-                                    DateTime? lastSeen, bool example = false)
+                                    DateTime? lastSeen, bool demo = false)
     {
         await using var database = await Databases(fixture).CreateDbContextAsync();
 
@@ -141,7 +142,10 @@ public sealed class InactivityTests
         row.Deployed = deployed;
         row.Modified = modified;
         row.LastSeen = lastSeen;
-        row.IsExample = example;
+        if (demo)
+        {
+            row.Tier = LambdaTier.Demo;
+        }
 
         await database.SaveChangesAsync();
     }

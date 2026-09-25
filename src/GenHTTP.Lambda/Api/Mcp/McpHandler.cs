@@ -192,7 +192,9 @@ public sealed class McpHandler : IHandler
             [
                 "Hosts small C# web services: a snippet returns a GenHTTP handler, which is served at a public address.",
                 "",
-                "Start with platform_guide, then read a running example (list_examples, read_example).",
+                "Start with platform_guide. Then list_demos and read the demo closest to what the user wants:",
+                "demos are finished lambdas whose keys are public and read only, so read_lambda, list_files and",
+                "read_logs work on them as on your own. Follow their patterns.",
                 "",
                 "Flow: create_lambda, then write_code with deploy: true (check_code first if unsure). Nothing is",
                 "reachable before deploy. For later changes use change_code, which takes only the files or the",

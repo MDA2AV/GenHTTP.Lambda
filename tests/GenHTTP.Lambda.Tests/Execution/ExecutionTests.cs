@@ -14,7 +14,7 @@ public sealed class ExecutionTests
 {
 
     [TestMethod]
-    public async Task TheExampleWorksOutOfTheBox()
+    public async Task ANewLambdaWorksOutOfTheBox()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -25,16 +25,7 @@ public sealed class ExecutionTests
         using var index = await fixture.GetAsync("/lambda/example/");
 
         Assert.AreEqual(HttpStatusCode.OK, index.StatusCode);
-        Assert.Contains("It works", await index.GetContentAsync());
-
-        using var books = await fixture.GetAsync("/lambda/example/books/", "application/json");
-
-        Assert.AreEqual(HttpStatusCode.OK, books.StatusCode);
-        Assert.Contains("Dune", await books.GetContentAsync());
-
-        using var specification = await fixture.GetAsync("/lambda/example/openapi.json");
-
-        Assert.AreEqual(HttpStatusCode.OK, specification.StatusCode);
+        Assert.Contains("Hello", await index.GetContentAsync());
     }
 
     [TestMethod]
@@ -133,6 +124,38 @@ public sealed class ExecutionTests
 
         Assert.Contains("the lambda is broken", content);
         Assert.DoesNotContain("at GenHTTP", content, "stack traces stay on the server");
+    }
+
+    [TestMethod]
+    public async Task ARouteThatReadTheBodyStillAnswersWithItsOwnStatus()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        await fixture.DeployAsync(lambda.PrivateKey, """
+            return Inline.Create()
+                         .Post((Note note) => Refuse(note));
+
+            Note Refuse(Note note) => throw new ProviderException(ResponseStatus.BadRequest, "a note needs a text");
+
+            record Note(string Text);
+            """);
+
+        /*
+         * Once a route has read the body, the headers of the request are gone,
+         * and the error page used to look for Accept there - so every refusal
+         * of a route with a body became a 500 about headers.
+         */
+        using var json = await fixture.SendAsync(HttpMethod.Post, $"/lambda/{lambda.PublicKey}/", new { text = "" }, "application/json");
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, json.StatusCode);
+        Assert.Contains("a note needs a text", await json.GetContentAsync());
+
+        using var html = await fixture.SendAsync(HttpMethod.Post, $"/lambda/{lambda.PublicKey}/", new { text = "" }, "text/html");
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, html.StatusCode);
+        Assert.AreEqual("text/html", html.Content.Headers.ContentType?.MediaType, "a browser still gets a page");
     }
 
     [TestMethod]

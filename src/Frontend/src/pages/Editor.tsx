@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import { ApiError, allowsDomain, api, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
+import { ApiError, allowsDomain, api, isDemo, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
@@ -68,15 +68,12 @@ export function Editor({ theme }: Props) {
   const [rejection, setRejection] = useState<Rejection | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [terms, setTerms] = useState<string | null>(null);
 
   /** Whether the code view holds something unsaved, so leaving it can ask first. */
   const dirty = useRef(false);
 
-  // the assistant navigates with router state; a lambda created from a link
-  // elsewhere arrives by redirect, which carries none - so the query says so
-  const invited = new URLSearchParams(location.search).get('created') === '1';
-  const fresh = (location.state as { created?: boolean } | null)?.created === true || invited;
+  // the creation page says so in the router state
+  const fresh = (location.state as { created?: boolean } | null)?.created === true;
   const [welcome, setWelcome] = useState(fresh);
 
   const base = `/editor/${privateKey}`;
@@ -87,7 +84,6 @@ export function Editor({ theme }: Props) {
       .platform()
       .then((platform) => {
         registerCompletions(platform.completions);
-        setTerms(platform.terms);
       })
       .catch(() => undefined);
   }, []);
@@ -233,11 +229,19 @@ export function Editor({ theme }: Props) {
    */
   const hidden = lambda != null && !allowsDomain(lambda.tier);
 
+  // a demo is read by anybody holding its announced key, and changed by nobody
+  const demo = lambda != null && isDemo(lambda.tier);
+
+  // sections that only change the lambda, which a demo does not have
+  const absent = (id: SectionId) => (hidden && id === 'domain') || (demo && id === 'showcase');
+
+  const away = absent(section);
+
   useEffect(() => {
-    if (hidden && section === 'domain') {
+    if (away) {
       navigate(base, { replace: true });
     }
-  }, [hidden, section, base, navigate]);
+  }, [away, base, navigate]);
 
   if (failure) {
     return (
@@ -312,31 +316,35 @@ export function Editor({ theme }: Props) {
             <Menu label="More actions" align="left">
               {(close) => (
                 <>
-                  {live && (
+                  {live && !demo && (
                     <button type="button" role="menuitem" className={menuItem} disabled={busy !== null}
                             onClick={() => { close(); deploy(lambda.activeVersion!); }}>
                       Redeploy version {lambda.activeVersion}
                     </button>
                   )}
-                  {live && (
+                  {live && !demo && (
                     <button type="button" role="menuitem" className={menuItem} disabled={busy !== null}
                             onClick={() => { close(); undeploy(); }}>
                       Take offline
                     </button>
                   )}
-                  {live && menuRule}
-                  <CopyItem value={editorUrl} label="Copy the private link" onDone={close} />
-                  <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); setRenaming(true); }}>
-                    Change the address
-                  </button>
+                  {live && !demo && menuRule}
+                  <CopyItem value={editorUrl} label={demo ? 'Copy the link' : 'Copy the private link'} onDone={close} />
+                  {!demo && (
+                    <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); setRenaming(true); }}>
+                      Change the address
+                    </button>
+                  )}
                   <a role="menuitem" href={api.exportUrl(privateKey)} className={menuItem} onClick={close}>
                     Download as a .NET project
                   </a>
-                  {menuRule}
-                  <button type="button" role="menuitem" className={`${menuItem} text-red-500`}
-                          onClick={() => { close(); setRemoving(true); }}>
-                    Delete this lambda
-                  </button>
+                  {!demo && menuRule}
+                  {!demo && (
+                    <button type="button" role="menuitem" className={`${menuItem} text-red-500`}
+                            onClick={() => { close(); setRemoving(true); }}>
+                      Delete this lambda
+                    </button>
+                  )}
                 </>
               )}
             </Menu>
@@ -349,7 +357,7 @@ export function Editor({ theme }: Props) {
             <Address url={publicUrl} live={live} primary={!domainUrl} />
           </div>
 
-          {ahead && latest != null && (
+          {ahead && latest != null && !demo && (
             <button
               type="button"
               onClick={() => deploy(latest)}
@@ -364,7 +372,7 @@ export function Editor({ theme }: Props) {
         </div>
 
         <nav aria-label="Sections" className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-          {SECTIONS.filter((item) => !(hidden && item.id === 'domain')).map((item) => {
+          {SECTIONS.filter((item) => !absent(item.id)).map((item) => {
             const to = item.id === 'overview' ? base : `${base}/${item.id}`;
             const current = section === item.id;
 
@@ -404,7 +412,17 @@ export function Editor({ theme }: Props) {
       </aside>
 
       <main className={`flex min-w-0 flex-1 flex-col ${code ? 'min-h-0' : ''}`}>
-        {welcome && (
+        {demo && (
+          <div className="mx-4 mt-6 border border-accent-500/30 bg-accent-500/5 px-4 py-3 text-sm md:mx-0">
+            <p className="font-medium">A demo, kept online by this installation and read only.</p>
+            <p className="mt-1 text-slate-600 dark:text-slate-400">
+              Read its code, its history, what it stores and its logs - that is what it is here for. To change
+              it, <Link to={`/editor/create?from=${encodeURIComponent(lambda.publicKey)}`} className="text-accent-500 hover:underline">start
+              a lambda of your own from it</Link>.
+            </p>
+          </div>
+        )}
+        {welcome && !demo && (
           <div className="mx-4 mt-6 border border-accent-500/30 bg-accent-500/5 px-4 py-3 md:mx-0">
             <div className="flex items-start justify-between gap-4">
               <p className="text-sm font-medium">Keep this link. It is the only way back into this lambda.</p>
@@ -416,14 +434,6 @@ export function Editor({ theme }: Props) {
               <CopyField value={editorUrl} tone="accent" />
             </div>
 
-            {/* someone who arrived from a link elsewhere never saw the terms, so
-                they are shown here rather than assumed */}
-            {invited && (
-              <details className="mt-2.5 max-w-xl text-xs text-slate-600 dark:text-slate-400">
-                <summary className="cursor-pointer select-none">What you agree to by using it</summary>
-                <p className="mt-2 whitespace-pre-line leading-relaxed">{terms ?? 'Loading the terms…'}</p>
-              </details>
-            )}
           </div>
         )}
 
@@ -439,7 +449,7 @@ export function Editor({ theme }: Props) {
           <StatsTab control={control} />
         ) : section === 'logs' ? (
           <LogsTab control={control} />
-        ) : section === 'showcase' ? (
+        ) : section === 'showcase' && !demo ? (
           <ShowcaseTab control={control} />
         ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />

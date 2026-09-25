@@ -119,9 +119,9 @@ await host.StartAsync();
 
 application.StartBackgroundJobs();
 
-// after the server is up: the examples have to be compiled, and doing it first
+// after the server is up: the demos have to be compiled, and doing it first
 // would be seconds spent refusing connections
-application.SeedExamples();
+application.SeedDemos();
 
 if (certificates != null)
 {

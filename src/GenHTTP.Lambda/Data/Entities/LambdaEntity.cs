@@ -61,15 +61,6 @@ public sealed class LambdaEntity
     /// </remarks>
     public DateTime? LastSeen { get; set; }
 
-    /// <summary>
-    /// Whether the installation maintains this one as an example.
-    /// </summary>
-    /// <remarks>
-    /// Neither sweep touches it: an example nobody has opened for a month is
-    /// still wanted, and one deployed yesterday should still be answering.
-    /// </remarks>
-    public bool IsExample { get; set; }
-
     public List<DeploymentEntity> Deployments { get; set; } = [];
 
 }

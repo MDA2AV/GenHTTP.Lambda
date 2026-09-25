@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Uploads</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    #drop {
+      border: 2px dashed var(--line);
+      border-radius: var(--radius);
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+    }
+    #drop.over { border-color: var(--accent); background: var(--card); }
+    #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .75rem; margin-top: .75rem; }
+    #gallery:empty::after { content: "Nothing uploaded yet."; color: var(--dim); }
+    .item { padding: .5rem; display: grid; gap: .35rem; align-content: start; }
+    .item .preview {
+      aspect-ratio: 4 / 3;
+      border-radius: 6px;
+      background: var(--page) center / cover no-repeat;
+      display: grid;
+      place-items: center;
+      color: var(--dim);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .item .name { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Uploads</h1>
+  <p class="lead">Put up a picture or a document - PNG, JPEG, GIF, WebP, PDF or text, up to 512 KB.
+    Everybody sees it; only you can take yours down again.</p>
+
+  <label id="drop">
+    <input type="file" id="file" hidden accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.txt">
+    Drop a file here, or click to choose one.
+  </label>
+  <p class="error" id="error"></p>
+
+  <h2>Gallery</h2>
+  <div id="gallery"></div>
+
+  <!-- [demo] -->
+  <footer>
+    A read-only demo of GenHTTP Lambda. Its editor key is <code>demo-files</code>: open it in the editor, or read it
+    with any agent, to see how this is built. Keeps the newest 24 uploads.
+  </footer>
+  <!-- [/demo] -->
+</main>
+<script src="app.js" type="module"></script>
+</body>
+</html>

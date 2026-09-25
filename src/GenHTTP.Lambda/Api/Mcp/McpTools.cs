@@ -19,9 +19,10 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// </summary>
 /// <remarks>
 /// The set is the shape of the job: make a lambda, write code into it, check
-/// that it compiles, put it online. Reading the examples is in here too,
-/// because the fastest way to learn what this platform will accept is to read
-/// something it is already running.
+/// that it compiles, put it online. Listing the demos is in here too, because
+/// the fastest way to learn what this platform will accept is to read
+/// something it is already running - and a demo is read with the same tools
+/// an agent then uses on its own lambda, since its editor key is public.
 ///
 /// Every tool answers with an object rather than prose. A model reads the text
 /// and a program reads the structured copy, and both are the same thing.
@@ -45,7 +46,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                  ["properties"] = new JsonObject
                  {
                      ["publicKey"] = Field("string", "Requested address: lower case letters, digits and dashes. Generated if omitted."),
-                     ["template"] = Field("string", $"Starting point, one of: {string.Join(", ", TemplateCatalog.Groups.SelectMany(g => g.Templates).Select(t => t.Id))}."),
+                     ["template"] = Field("string", $"Left out, the lambda starts empty. The id of a demo ({string.Join(", ", DemoCatalog.All.Select(d => d.Id))}) starts it as a copy of that demo, which is yours to change."),
                      ["acceptTerms"] = Field("boolean", "Must be true: the user accepts the terms in platform_guide (free shared machine, deployments may be removed, nothing malicious).")
                  },
                  ["required"] = new JsonArray("acceptTerms")
@@ -177,13 +178,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              }),
 
         Tool("read_lambda",
-             "A lambda's status (online version, latest version, expiry), the recent versions with what each was asked for and changed, and the files of one version. Read the history before changing what you did not write.",
+             "A lambda's status (online version, latest version, expiry), the recent versions with what each was asked for and changed, and the files of one version. Read the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
              new JsonObject
              {
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
-                     ["privateKey"] = Field("string", "The editor key."),
+                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
                      ["version"] = Field("integer", "Defaults to the newest.")
                  },
                  ["required"] = new JsonArray("privateKey")
@@ -196,7 +197,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
-                     ["privateKey"] = Field("string", "The editor key."),
+                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
                      ["level"] = Field("string", "The lowest level worth reading: 'info' for everything, 'warn' for problems, 'error' for failures. Left out, 'info'."),
                      ["since"] = Field("integer", "The cursor a previous call answered with, to read only what is new since then."),
                      ["limit"] = Field("integer", "At most this many lines, the newest. Left out, 100.")
@@ -226,7 +227,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
-                     ["privateKey"] = Field("string", "The editor key.")
+                     ["privateKey"] = Field("string", "The editor key, or the key of a demo.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -260,21 +261,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("list_examples",
-             "Running example lambdas, basic and advanced. Read one before writing code.",
+        Tool("list_demos",
+             "Demos this platform keeps online, each a finished lambda showing one way to build something: a REST API over records, registration and login, a websocket game, uploads, live updates. Their keys are public and read only: read the closest one with read_lambda (and list_files, read_logs) before writing similar code. create_lambda with a demo's id as template starts from a copy.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
-
-        Tool("read_example",
-             "All files of one running example.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["id"] = Field("string", $"One of: {string.Join(", ", ExampleCatalog.All.Select(e => e.Id))}.")
-                 },
-                 ["required"] = new JsonArray("id")
-             }),
 
         Tool("platform_guide",
              "Rules for writing a lambda: what the snippet returns, what is imported, what is refused, limits and terms.",
@@ -306,8 +295,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 "list_files" => await FilesAsync(arguments),
                 "delete_file" => await RemoveAsync(arguments),
                 "showcase" => await ShowcaseAsync(arguments, origin),
-                "list_examples" => Examples(origin),
-                "read_example" => Example(arguments, origin),
+                "list_demos" => Demos(origin),
                 "platform_guide" => Guide(),
                 _ => McpProtocol.Refuse($"There is no tool called '{name}'.")
             };
@@ -452,12 +440,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         var content = Required(arguments, "content");
 
-        var id = await meta.GetIdAsync(privateKey);
-
-        if (id == null)
-        {
-            return McpProtocol.Refuse("There is no lambda with that editor key.");
-        }
+        var id = await meta.RequireEditableAsync(privateKey);
 
         byte[] bytes;
 
@@ -479,7 +462,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         using var stream = new MemoryStream(bytes);
 
-        var written = await workspace.WriteAsync(id.Value, path, stream);
+        var written = await workspace.WriteAsync(id, path, stream);
 
         return McpProtocol.Say(new
         {
@@ -512,16 +495,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
     private async ValueTask<JsonObject> RemoveAsync(JsonObject arguments)
     {
-        var id = await meta.GetIdAsync(Required(arguments, "privateKey"));
-
-        if (id == null)
-        {
-            return McpProtocol.Refuse("There is no lambda with that editor key.");
-        }
+        var id = await meta.RequireEditableAsync(Required(arguments, "privateKey"));
 
         var path = Required(arguments, "path");
 
-        await workspace.DeleteAsync(id.Value, path);
+        await workspace.DeleteAsync(id, path);
 
         return McpProtocol.Say(new { ok = true, path });
     }
@@ -731,41 +709,23 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         });
     }
 
-    private static JsonObject Examples(string origin) => McpProtocol.Say(new
+    private static JsonObject Demos(string origin) => McpProtocol.Say(new
     {
         ok = true,
-        examples = ExampleCatalog.All.Select(e => new
+        demos = DemoCatalog.All.Select(d => new
         {
-            e.Id,
-            level = e.Level,
-            e.Name,
-            e.Description,
-            url = $"{origin}/lambda/{e.PublicKey}/",
-            files = TemplateCatalog.FilesFor(e.Id, e.PublicKey).Select(f => f.Name)
-        })
+            d.Id,
+            d.Name,
+            d.Description,
+            shows = d.Shows,
+            readWhen = d.ReadWhen,
+            privateKey = d.Key,
+            url = $"{origin}/lambda/{d.Key}/",
+            files = DemoCatalog.FilesFor(d).Select(f => f.Name)
+        }),
+        howToRead = "read_lambda with the demo's privateKey returns every file and the version history; list_files shows what it stores at runtime; read_logs shows how it answers real traffic. Open the url to use it.",
+        readOnly = "Anything that would change a demo is refused. To build on one, create_lambda with its id as template - that gives a lambda of your own with the same files."
     });
-
-    private static JsonObject Example(JsonObject arguments, string origin)
-    {
-        var id = Text(arguments, "id");
-
-        var example = ExampleCatalog.Find(id);
-
-        if (example == null)
-        {
-            return McpProtocol.Refuse($"No example '{id}'. See list_examples.");
-        }
-
-        return McpProtocol.Say(new
-        {
-            ok = true,
-            example.Id,
-            example.Name,
-            example.Description,
-            url = $"{origin}/lambda/{example.PublicKey}/",
-            files = ExampleCatalog.FilesFor(example).Select(f => new { f.Name, f.Code })
-        });
-    }
 
     /// <summary>
     /// Where the lambda answers besides its path, for an agent to call and to
@@ -781,6 +741,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         ok = true,
         preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version, POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip of all files as a new version - so edit locally and push once. Every endpoint that saves a version takes ?deploy=true. Many environments cannot reach it; then use these tools.",
         whatALambdaIs = "C# that returns a GenHTTP handler, served at /lambda/{publicKey}/. No Main and no project: the snippet is the program.",
+        demos = new
+        {
+            what = "Finished lambdas this platform keeps online, each showing one way to build something. list_demos says what each one shows and when to read it.",
+            which = DemoCatalog.All.Select(d => $"{d.Id}: {d.Name}"),
+            how = "Their editor keys are public and read only. read_lambda with a demo's key gives its files and history; read the closest one before writing similar code, and follow its patterns. create_lambda with its id as template starts from a copy."
+        },
         paths = new
         {
             rule = "Use relative paths for every link, script, stylesheet, image, fetch, form action, websocket and redirect: \"api/items\", \"app.css\", \"./\". No leading slash, and never /lambda/{publicKey}/ or the full address.",
@@ -798,7 +764,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         },
         moreThanOneFile = new
         {
-            howItWorks = "Other .cs files hold types, compiled into the same namespace as the snippet.",
+            howItWorks = "Other .cs files hold types, compiled into the same namespace as the snippet. Only lambda.cs sees Workspace and Assets: hand the other files what they need (demo-crud's Store.cs takes read and write functions).",
             limit = LambdaSource.MaxFiles
         },
         assets = new
@@ -841,14 +807,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 how = "write_code with the files (slashes make folders), deploy, serve with Assets.App() or Assets.App(\"site\").",
                 whenToPreferIt = "The front end is part of the program: versioned, rolled back and cloned together with the code. Simplest to write in one pass.",
                 mind = "Counts against the code budget; every change needs a deploy.",
-                example = "read_example \"site\""
+                example = "Every demo serves its front end like this, from web/ - read_lambda demo-crud"
             },
             inTheWorkspace = new
             {
                 how = "Deploy a lambda returning Layout.Create().Add(Workspace.App()), then upload_file index.html and the rest. Served immediately.",
                 whenToPreferIt = "The files change more often than the code, someone else replaces them, or there are many. No redeploys, no code budget.",
-                mind = "Not versioned and not cloned. Workspace.App() without a folder serves everything the lambda writes - use a folder if it writes anything else.",
-                example = "read_example \"uploads\""
+                mind = "Not versioned and not cloned. Workspace.App() without a folder serves everything the lambda writes - use a folder if it writes anything else."
             },
             underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree() or Workspace.Tree().",
             doNotDoBoth = "Serving both at the same address makes it unclear which one answers."
@@ -892,6 +857,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         thingsThatCatchPeopleOut = new[]
         {
             "Request bodies bind by type: a bare string parameter is null. Take a record.",
+            "Once a route has read the body, the request's headers are gone. Check a header (a token, say) in a concern in front of the route - the Authentication module does exactly that, see demo-registration - or in a route that takes no body.",
+            "Only lambda.cs sees Workspace and Assets. Other .cs files get what they need handed in, as functions or values.",
             "A browser cannot set headers on a websocket handshake. Pass what the socket needs in the query (connection.Request.Header.Query) or, for secrets, as the first frame.",
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore.",
             "REST routes serialize camel case; match that on sockets.",

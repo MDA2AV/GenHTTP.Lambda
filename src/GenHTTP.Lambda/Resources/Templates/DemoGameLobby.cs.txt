@@ -1,0 +1,284 @@
+// The websocket handler. One instance serves every socket: the platform calls
+// OnConnected, OnMessage and OnClose, and this class keeps who is waiting,
+// who plays whom, and each game's board.
+//
+// Two things matter with sockets that are easy to get wrong:
+//
+//   - The callbacks of different sockets run at the same time, so everything
+//     shared here is changed under one lock.
+//   - Two writes to the same socket at once corrupt it. Every player has a
+//     semaphore, and nothing writes to a socket without holding it.
+//
+// Writing happens outside the lock: a slow browser must not stop every other
+// game while its frame is on its way.
+
+public sealed class Lobby(Action<string> finished) : IReactiveHandler
+{
+    private readonly object _lock = new();
+
+    private readonly Dictionary<IReactiveConnection, Player> _players = [];
+
+    private Player _waiting;
+
+    public async ValueTask OnConnected(IReactiveConnection connection)
+    {
+        var player = new Player(connection);
+
+        lock (_lock)
+        {
+            _players[connection] = player;
+        }
+
+        await Find(player);
+    }
+
+    public async ValueTask OnMessage(IReactiveConnection connection, IWebsocketFrame frame)
+    {
+        Incoming message;
+
+        try
+        {
+            message = await frame.ReadPayloadAsync<Incoming>();
+        }
+        catch (Exception)
+        {
+            // a frame that is not ours is ignored rather than dropping the player
+            return;
+        }
+
+        Player player;
+
+        lock (_lock)
+        {
+            if (message == null || !_players.TryGetValue(connection, out player))
+            {
+                return;
+            }
+        }
+
+        switch (message.Type)
+        {
+            case "move":
+                await Move(player, message.Cell);
+                break;
+
+            case "house":
+                await House(player);
+                break;
+
+            case "again":
+                await Find(player);
+                break;
+        }
+    }
+
+    public async ValueTask OnClose(IReactiveConnection connection, IWebsocketFrame frame)
+    {
+        Player opponent = null;
+
+        lock (_lock)
+        {
+            if (_players.Remove(connection, out var player))
+            {
+                if (_waiting == player)
+                {
+                    _waiting = null;
+                }
+
+                if (player.Game is { Over: false } game && game.Other(player) is { IsHouse: false } other)
+                {
+                    opponent = other;
+                    opponent.Game = null;
+                }
+            }
+        }
+
+        if (opponent != null)
+        {
+            await opponent.Send(new Left());
+        }
+
+        await connection.CloseAsync();
+    }
+
+    /// <summary>
+    /// Pairs a player with whoever is waiting, or makes them the one who waits.
+    /// </summary>
+    private async ValueTask Find(Player player)
+    {
+        Game game = null;
+
+        lock (_lock)
+        {
+            if (player.Game is { Over: false })
+            {
+                // already playing - "again" in the middle of a game means nothing
+                return;
+            }
+
+            player.Game = null;
+
+            if (_waiting != null && _waiting != player)
+            {
+                game = new Game(_waiting, player);
+
+                _waiting = null;
+            }
+            else
+            {
+                _waiting = player;
+            }
+        }
+
+        if (game == null)
+        {
+            await player.Send(new Waiting());
+        }
+        else
+        {
+            await Publish(game);
+        }
+    }
+
+    /// <summary>
+    /// Stops waiting and starts a game against the house, which plays O.
+    /// </summary>
+    private async ValueTask House(Player player)
+    {
+        Game game;
+
+        lock (_lock)
+        {
+            if (_waiting != player)
+            {
+                return;
+            }
+
+            _waiting = null;
+
+            game = new Game(player, Player.House());
+        }
+
+        await Publish(game);
+    }
+
+    private async ValueTask Move(Player player, int cell)
+    {
+        Game game;
+
+        lock (_lock)
+        {
+            game = player.Game;
+
+            // the board refuses anything that is not a legal move of this player
+            if (game == null || !game.Board.Play(player.Mark, cell))
+            {
+                return;
+            }
+
+            // the house answers straight away, under the same lock
+            if (!game.Board.Over && game.Other(player) is { IsHouse: true } house)
+            {
+                game.Board.Play(house.Mark, game.Board.HouseMove(house.Mark));
+            }
+        }
+
+        await Publish(game);
+    }
+
+    /// <summary>
+    /// Sends the board to both players, and counts the game once it is over.
+    /// </summary>
+    private async ValueTask Publish(Game game)
+    {
+        BoardState forX, forO;
+
+        lock (_lock)
+        {
+            var board = game.Board;
+
+            forX = new BoardState("X", board.Cells, board.Turn.ToString(), game.O.Name, board.Winner, board.Line);
+            forO = forX with { You = "O", Opponent = game.X.Name };
+
+            if (board.Over && !game.Counted)
+            {
+                game.Counted = true;
+
+                finished(board.Winner);
+            }
+        }
+
+        await game.X.Send(forX);
+        await game.O.Send(forO);
+    }
+}
+
+public sealed class Game
+{
+    public Game(Player x, Player o)
+    {
+        X = x;
+        O = o;
+
+        x.Mark = 'X';
+        o.Mark = 'O';
+
+        x.Game = this;
+        o.Game = this;
+    }
+
+    public Player X { get; }
+
+    public Player O { get; }
+
+    public Board Board { get; } = new();
+
+    public bool Over => Board.Over;
+
+    /// <summary>Whether the result has been recorded, so it is recorded once.</summary>
+    public bool Counted { get; set; }
+
+    public Player Other(Player player) => player == X ? O : X;
+}
+
+public sealed class Player(IReactiveConnection connection)
+{
+    private readonly SemaphoreSlim _sending = new(1, 1);
+
+    public static Player House() => new(null);
+
+    public bool IsHouse => connection == null;
+
+    public string Name => IsHouse ? "the house" : "a player";
+
+    public char Mark { get; set; }
+
+    public Game Game { get; set; }
+
+    /// <summary>
+    /// Writes one message to this player's socket - one write at a time.
+    /// </summary>
+    public async ValueTask Send(object message)
+    {
+        if (IsHouse)
+        {
+            return;
+        }
+
+        await _sending.WaitAsync();
+
+        try
+        {
+            // serialized as whatever the message really is, as JSON
+            await connection.WritePayloadAsync(message);
+        }
+        catch (Exception)
+        {
+            // gone already; OnClose cleans up after it
+        }
+        finally
+        {
+            _sending.Release();
+        }
+    }
+}

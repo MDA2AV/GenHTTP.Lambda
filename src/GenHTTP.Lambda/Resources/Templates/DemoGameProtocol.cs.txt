@@ -1,0 +1,30 @@
+// Every message on the socket, as JSON. Each has a "type" so the other side
+// knows what it got. The websocket module does the JSON itself - WritePayloadAsync
+// and ReadPayloadAsync<T> in Lobby.cs - in camel case, the same as the REST API.
+//
+// Browser -> server
+//
+//   { "type": "move", "cell": 4 }     play a cell, 0 to 8, left to right and top to bottom
+//   { "type": "house" }               stop waiting and play against the house
+//   { "type": "again" }               after a game: find the next one
+//
+// Server -> browser
+//
+//   { "type": "waiting" }                                         nobody to play yet
+//   { "type": "board", "you": "X", "cells": "X...O....",          the board after every move;
+//     "turn": "O", "opponent": "a player", "winner": null,        winner is "X", "O", "draw" or null,
+//     "line": null }                                              line the three winning cells;
+//                                                                 what is null is left out
+//   { "type": "left" }                                            your opponent went away
+
+/// <summary>Anything the browser sends. Only what its type needs is filled in.</summary>
+public record Incoming(string Type, int Cell);
+
+public record Waiting(string Type = "waiting");
+
+public record BoardState(string You, string Cells, string Turn, string Opponent, string Winner, int[] Line, string Type = "board");
+
+public record Left(string Type = "left");
+
+/// <summary>How the games so far have ended.</summary>
+public record Stats(int Games, int X, int O, int Draws);

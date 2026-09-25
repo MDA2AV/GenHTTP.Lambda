@@ -120,6 +120,16 @@ public interface IMetaService
     ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
+    /// The identity of a lambda its owner may change, for the services that
+    /// store things beside the database - its workspace, say.
+    /// </summary>
+    /// <remarks>
+    /// Refuses a demo, whose editor key is announced: reading one is the
+    /// point, and anybody could otherwise replace what it serves.
+    /// </remarks>
+    ValueTask<long> RequireEditableAsync(string privateKey, CancellationToken cancellation = default);
+
+    /// <summary>
     /// One page of the lambdas on the installation, newest first.
     /// </summary>
     /// <param name="search">Narrows the listing to public keys or domains containing this</param>

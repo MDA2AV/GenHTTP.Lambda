@@ -89,7 +89,7 @@ const TOKEN = process.env.AGENT_TOKEN ?? '';
  * version has more.
  */
 const ALLOW = [
-  'mcp__genhttp__platform_guide', 'mcp__genhttp__list_examples', 'mcp__genhttp__read_example',
+  'mcp__genhttp__platform_guide', 'mcp__genhttp__list_demos',
   'mcp__genhttp__create_lambda', 'mcp__genhttp__write_code', 'mcp__genhttp__check_code',
   'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda', 'mcp__genhttp__read_logs',
   'mcp__genhttp__upload_file', 'mcp__genhttp__list_files', 'mcp__genhttp__delete_file'
@@ -527,8 +527,7 @@ function harvest(content) {
 
 const WORDS = {
   platform_guide: 'Reading the platform guide',
-  list_examples: 'Looking at the examples',
-  read_example: 'Reading an example',
+  list_demos: 'Looking at the demos',
   create_lambda: 'Claiming an address',
   write_code: 'Writing the code',
   check_code: 'Compiling it',

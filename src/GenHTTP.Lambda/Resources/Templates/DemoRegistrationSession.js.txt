@@ -1,0 +1,31 @@
+// What both pages share: how the API is called.
+//
+// There is no token to keep here. The session is a cookie the server sets on
+// register and login, HttpOnly so this script cannot even see it, and the
+// browser sends it with every request to this lambda by itself. Relative
+// addresses throughout: the lambda may answer below /lambda/... or at the
+// root of a domain of its own.
+
+/** Calls the API; throws with the server's message when it refuses. */
+export async function call(path, { method = 'GET', body } = {}) {
+  const response = await fetch(path, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body && JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    let message = `${response.status} ${response.statusText}`;
+    try { message = (await response.json()).message ?? message; } catch { }
+
+    const error = new Error(message);
+    // 401: no session cookie at all, 403: one that is not (or no longer) valid
+    error.signedOut = response.status === 401 || response.status === 403;
+    throw error;
+  }
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+export const escape = (text) => String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);

@@ -95,9 +95,12 @@ public sealed class TelemetryTests
 
         var telemetry = fixture.Application.Services.GetRequiredService<ITelemetryService>();
 
-        var lambda = await fixture.CreateLambdaAsync("sockets", template: "websocket-functional");
+        var lambda = await fixture.CreateLambdaAsync("sockets");
 
-        await fixture.DeployAsync(lambda.PrivateKey);
+        await fixture.DeployAsync(lambda.PrivateKey, """
+            return Websocket.Functional()
+                            .OnMessage((connection, message) => connection.WritePayloadAsync("hello"));
+            """);
 
         var before = telemetry.TotalUpgrades;
 

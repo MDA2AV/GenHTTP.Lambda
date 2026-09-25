@@ -59,7 +59,6 @@ port, each against its own temporary data directory.
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
 | any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
-| `/start`             | opens the creation assistant with a template chosen      |
 | `/api/v1/`           | everything the editor calls, see below                    |
 | `/mcp`               | the same, for agents                                      |
 | `/admin`             | every lambda on the server, for whoever runs it            |
@@ -93,25 +92,15 @@ path.
 | `POST /lambdas/:privateKey/code/check`                | compiles without saving                   |
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
-| `GET /examples`, `/examples/:id`                      | the examples the installation runs        |
+| `GET /demos`                                          | the demos, and the keys to read them with |
 | `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
-| `GET /system`                                         | terms, limits, templates, build agent     |
+| `GET /system`                                         | terms, limits, starters, build agent      |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
 
-The assistant asks what the lambda should do before it asks for a key: a
-service that answers requests, or a socket that stays open - and then which of
-the examples in `Resources/Templates` to start from. A new one is a file next
-to those, listed in `TemplateCatalog`.
-
-Another page can hand someone a working lambda with a link:
-
-```html
-<a href="https://your.host/start?template=websocket-functional">Try it online</a>
-```
-
-That opens the creation assistant with the template chosen. Nothing is created
-until the visitor has seen the terms and submitted it, so a crawler following
-the link leaves nothing behind.
+Creating a lambda asks what somebody would like to build and offers the demos
+in those words - "Keep track of things", "Let people sign up" - next to an empty
+lambda. Picking a demo starts the new lambda as a copy of it, which is theirs to
+change. The files are in `Resources/Templates` and listed in `TemplateCatalog`.
 
 A lambda has two keys. The public one is part of its URL and may be changed;
 the private one is the editor link and is shown only to whoever created the
@@ -428,8 +417,8 @@ https://genhttp.dev/mcp
 ```
 
 The tools are the shape of the job: `create_lambda`, `write_code`, `check_code`,
-`deploy`, `read_lambda`, `read_logs`, and `list_examples` / `read_example` for
-reading something that already works. `platform_guide` is the one to call first -
+`deploy`, `read_lambda`, `read_logs`, and `list_demos` for reading something that
+already works. `platform_guide` is the one to call first -
 it says what a snippet has to return, what is imported, what is refused, and the
 handful of things that catch people out.
 
@@ -438,6 +427,26 @@ line on what the version does). They are kept with the version and shown next
 to its diff in the control center, and `read_lambda` hands the recent history
 back so the next agent can read why before it changes anything. `read_logs`
 lets an agent see how what it deployed is answering, stack traces included.
+
+### Demos
+
+The installation keeps a handful of finished lambdas online in the `Demo` tier,
+each showing one way to build something: `demo-crud` (a REST API over records in
+a JSON file), `demo-registration` (accounts, login and a members page),
+`demo-game` (a websocket game), `demo-files` (uploads) and `demo-live`
+(server-sent events). Their editor key is their public key, and it is meant to
+be announced: `read_lambda`, `list_files` and `read_logs` work on a demo exactly
+as on an agent's own lambda, and the editor at `/editor/demo-crud` shows it.
+
+Everything that would change a demo - saving, deploying, stopping, moving,
+deleting, the workspace, the showcase - is refused by its tier, whichever way
+the request comes in. `create_lambda` with a demo's id as its template starts a
+lambda of one's own from a copy. Keys starting with `demo-` cannot be claimed.
+
+The demos are seeded in the background after startup from the hidden templates
+of the same name in `Resources/Templates`, redeployed when their template
+changes, and retired when they leave `DemoCatalog`. Nobody can move a lambda
+into the tier or out of it, the operator included.
 
 Nothing is created until `acceptTerms` is true, and the editor key that comes
 back is the only way into what was made. There is no session and nothing is

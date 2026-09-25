@@ -75,7 +75,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
         var entry = await database.Showcases.FirstOrDefaultAsync(s => s.LambdaId == lambda.Id, cancellation);
 
@@ -125,7 +125,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
     {
         await using var database = await databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = await RequireEditableAsync(database, privateKey, cancellation);
 
         if (await database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation) > 0)
         {
@@ -232,6 +232,22 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
     private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
         => await database.Lambdas.AsNoTracking().FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound(Missing);
+
+    /// <summary>
+    /// The lambda behind an editor key, as long as its owner may list it.
+    /// </summary>
+    /// <remarks>
+    /// A demo's key is announced, so holding it says nothing about being the
+    /// one who decides what the showcase says about it.
+    /// </remarks>
+    private static async ValueTask<LambdaEntity> RequireEditableAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
+    {
+        var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        return lambda.Tier == LambdaTier.Demo
+             ? throw LambdaException.Forbidden(MetaService.ReadOnly(lambda.PublicKey))
+             : lambda;
+    }
 
     /// <summary>
     /// Trimmed, with the line breaks of any system made one kind, and nothing
