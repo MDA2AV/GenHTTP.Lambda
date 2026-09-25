@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import { ApiError, api, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
+import { ApiError, allowsDomain, api, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
@@ -226,6 +226,19 @@ export function Editor({ theme }: Props) {
     [base, navigate, section],
   );
 
+  /*
+   * A domain of its own is part of the premium tier, so the section is not
+   * there for any other: a link to it, or a lambda moved out of the tier
+   * while it was open, lands on the overview instead.
+   */
+  const hidden = lambda != null && !allowsDomain(lambda.tier);
+
+  useEffect(() => {
+    if (hidden && section === 'domain') {
+      navigate(base, { replace: true });
+    }
+  }, [hidden, section, base, navigate]);
+
   if (failure) {
     return (
       <div className="mx-auto flex w-full max-w-xl flex-col items-start px-5 py-24">
@@ -384,7 +397,7 @@ export function Editor({ theme }: Props) {
         </div>
 
         <nav aria-label="Sections" className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-          {SECTIONS.map((item) => {
+          {SECTIONS.filter((item) => !(hidden && item.id === 'domain')).map((item) => {
             const to = item.id === 'overview' ? base : `${base}/${item.id}`;
             const current = section === item.id;
 
@@ -461,7 +474,7 @@ export function Editor({ theme }: Props) {
           <LogsTab control={control} />
         ) : section === 'showcase' ? (
           <ShowcaseTab control={control} />
-        ) : section === 'domain' ? (
+        ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />
         ) : (
           <SummaryTab control={control} />

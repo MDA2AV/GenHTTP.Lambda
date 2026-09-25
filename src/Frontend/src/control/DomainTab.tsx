@@ -25,9 +25,8 @@ const CANONICAL = 'genhttp.dev';
 /**
  * A domain of the lambda's own.
  *
- * Part of the premium tier, which only the operator assigns: a lambda in any
- * other tier is told what it would get and why it does not have it, rather
- * than being shown a form that can only fail. Once a domain is set the page
+ * Part of the premium tier, which only the operator assigns - the editor
+ * only offers this section to a lambda in it. Once a domain is set the page
  * is mostly about DNS - what to set, and whether it has been set - since that
  * is the part only the owner can do.
  */
@@ -142,45 +141,41 @@ export function DomainTab({ control }: { control: Control }) {
         ) : undefined
       }
     >
-      {!state.allowed && <NotIncluded tier={state.tier} kept={state.domain} onRemove={() => setRemoving(true)} />}
+      <>
+        <form onSubmit={save} className="surface p-4">
+          <label htmlFor="domain" className="text-[15px] font-medium">The domain it answers at</label>
+          <p className="mt-1 text-[13px] text-slate-500">
+            {state.served && state.domain
+              ? <>Serving <span className="font-mono">{state.domain}</span> now, besides its address here.</>
+              : 'None yet. A subdomain such as shop.example.com, or a whole domain such as example.com.'}
+          </p>
 
-      {state.allowed && (
-        <>
-          <form onSubmit={save} className="surface p-4">
-            <label htmlFor="domain" className="text-[15px] font-medium">The domain it answers at</label>
-            <p className="mt-1 text-[13px] text-slate-500">
-              {state.served && state.domain
-                ? <>Serving <span className="font-mono">{state.domain}</span> now, besides its address here.</>
-                : 'None yet. A subdomain such as shop.example.com, or a whole domain such as example.com.'}
-            </p>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <input
-                id="domain"
-                value={typed}
-                onChange={(event) => setTyped(event.target.value)}
-                placeholder="shop.example.com"
-                spellCheck={false}
-                autoComplete="off"
-                className="field min-w-0 flex-1 font-mono sm:max-w-md"
-              />
-              <button type="submit" disabled={!changed || saving} className="btn-primary">
-                {saving && <IconSpinner />}
-                {state.domain ? 'Change' : 'Use this domain'}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <input
+              id="domain"
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              placeholder="shop.example.com"
+              spellCheck={false}
+              autoComplete="off"
+              className="field min-w-0 flex-1 font-mono sm:max-w-md"
+            />
+            <button type="submit" disabled={!changed || saving} className="btn-primary">
+              {saving && <IconSpinner />}
+              {state.domain ? 'Change' : 'Use this domain'}
+            </button>
+            {state.domain && (
+              <button type="button" onClick={() => setRemoving(true)} className="btn-ghost">
+                Remove
               </button>
-              {state.domain && (
-                <button type="button" onClick={() => setRemoving(true)} className="btn-ghost">
-                  Remove
-                </button>
-              )}
-            </div>
+            )}
+          </div>
 
-            {problem && <p className="mt-2 text-xs text-red-500">{problem}</p>}
-          </form>
+          {problem && <p className="mt-2 text-xs text-red-500">{problem}</p>}
+        </form>
 
-          <Records domain={visible} configured={state.domain != null} state={state} checking={checking} onCheck={() => load()} />
-        </>
-      )}
+        <Records domain={visible} configured={state.domain != null} state={state} checking={checking} onCheck={() => load()} />
+      </>
 
       <Notes />
 
@@ -201,30 +196,6 @@ export function DomainTab({ control }: { control: Control }) {
         </p>
       </Dialog>
     </Section>
-  );
-}
-
-/** For a lambda outside the tier: what the tier would give it, and a domain it kept from before. */
-function NotIncluded({ tier, kept, onRemove }: { tier: string; kept?: string; onRemove: () => void }) {
-  return (
-    <div className="surface p-4">
-      <p className="text-[15px] font-medium">A domain of its own is part of the Premium tier</p>
-      <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">
-        This lambda is in the {tier} tier. Premium lambdas answer at a domain of their own and stay online and stored
-        however long nobody visits them. The tier is assigned by whoever runs this installation.
-      </p>
-
-      {kept && (
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-4 text-[13px] dark:border-ink-800">
-          <IconAlert className="h-4 w-4 shrink-0 text-amber-500" />
-          <span className="min-w-0 flex-1">
-            <span className="font-mono">{kept}</span> is still configured, but not served while the lambda is outside
-            the tier. It is served again if the lambda returns to it.
-          </span>
-          <button type="button" onClick={onRemove} className="btn-ghost !px-3 !py-1 text-[13px]">Remove it</button>
-        </div>
-      )}
-    </div>
   );
 }
 
