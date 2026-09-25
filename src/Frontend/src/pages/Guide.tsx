@@ -255,11 +255,8 @@ return Content.From(page);`} />
 
           <Section id="spa" title="A front end, step by step">
             <p>
-              The second of those, in full. The finished thing is the{' '}
-              <Link to="/examples/site" className="text-accent-500 hover:underline">
-                front end in a folder
-              </Link>{' '}
-              example, which you can clone.
+              The second of those, in full. The finished thing is the <Code>site</Code> example,
+              which you can clone.
             </p>
 
             <Steps
@@ -375,11 +372,8 @@ return Inline.Create()
 
           <Section id="sockets" title="Websockets">
             <p>
-              Supported, and not an afterthought. The{' '}
-              <Link to="/examples/arena" className="text-accent-500 hover:underline">
-                arena
-              </Link>{' '}
-              example holds a world and broadcasts to everybody twenty times a second. The simplest
+              Supported, and not an afterthought. The <Code>arena</Code> example holds a world and
+              broadcasts to everybody twenty times a second. The simplest
               form is three callbacks:
             </p>
 

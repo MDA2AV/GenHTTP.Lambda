@@ -180,7 +180,6 @@ function Nothing() {
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
         <Link to="/build" className="btn-primary">Build one</Link>
-        <Link to="/examples/game" className="btn-ghost">See an example</Link>
       </div>
     </div>
   );

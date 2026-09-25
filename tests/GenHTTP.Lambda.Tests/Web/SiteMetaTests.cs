@@ -89,26 +89,13 @@ public sealed class SiteMetaTests
         StringAssert.Contains(body, "href=\"https://genhttp.dev/\"");
     }
 
-    [TestMethod]
-    public async Task AnExampleIsNamedFromTheCatalogue()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync(Site());
-
-        using var response = await fixture.GetAsync("/examples/guestbook", accept: "text/html");
-
-        var body = await response.Content.ReadAsStringAsync();
-
-        StringAssert.Contains(body, "<title>Guestbook Example - GenHTTP Lambda</title>");
-        StringAssert.Contains(body, "href=\"https://genhttp.dev/examples/guestbook\"");
-    }
-
     /// <summary>
-    /// The editor, an unknown example and a path that does not exist are left
-    /// alone - the client marks them as not to be indexed.
+    /// The editor, the pages the examples used to have and a path that does not
+    /// exist are left alone - the client marks them as not to be indexed.
     /// </summary>
     [TestMethod]
     [DataRow("/editor/create")]
-    [DataRow("/examples/no-such-thing")]
+    [DataRow("/examples/guestbook")]
     [DataRow("/nowhere")]
     public async Task AnythingElseIsTheIndexPageUntouched(string path)
     {
@@ -160,7 +147,7 @@ public sealed class SiteMetaTests
     }
 
     [TestMethod]
-    public async Task TheSitemapListsThePagesAndTheExamples()
+    public async Task TheSitemapListsThePages()
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
@@ -177,7 +164,7 @@ public sealed class SiteMetaTests
 
         CollectionAssert.Contains(locations, "https://genhttp.dev/");
         CollectionAssert.Contains(locations, "https://genhttp.dev/docs");
-        CollectionAssert.Contains(locations, "https://genhttp.dev/examples/guestbook");
+        Assert.IsFalse(locations.Any(l => l.Contains("/examples/")));
     }
 
 }
