@@ -49,7 +49,7 @@ public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options
         var (lines, cursor, missed) = book.Read(since ?? 0, Blank(lambda), Minimum(level), wanted, Blank(client));
 
         return new LogResponse(
-            lines.Select(l => new LogEntry(l.Seq, l.At, l.Level, l.Source, l.Lambda, l.Text, l.Detail, l.Client, l.Agent, l.Country, l.Place, l.Repeats)).ToList(),
+            lines.Select(l => new LogEntry(l.Seq, l.At, l.Level, l.Source, l.Lambda, l.Text, l.Detail, l.Client, l.Agent, l.Country, l.Place, l.Repeats, l.Domain)).ToList(),
             cursor,
             missed,
             book.Capacity,

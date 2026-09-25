@@ -5,6 +5,7 @@ using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
 
 namespace GenHTTP.Lambda.Services.Diagnostics;
@@ -24,7 +25,8 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// and so the duration covers the whole answer rather than the part after the
 /// throttle let it through.
 /// </remarks>
-public sealed class CallerConcern(IHandler content, LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, LambdaOptions options) : IConcern
+public sealed class CallerConcern(IHandler content, LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, DomainRegistry domains,
+                                  LambdaOptions options) : IConcern
 {
 
     public IHandler Content => content;
@@ -33,8 +35,12 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
 
     public async ValueTask<IResponse?> HandleAsync(IRequest request)
     {
+        // decided here, before anything below can read a body and take the
+        // headers with it, and remembered on the request for the router
+        var domain = request.ResolveDomain(domains);
+
         var caller = CallerInfo.From(request, pool, options.LogClientAddress, options.Geo ? geo : null,
-                                     options.GeoPlaces ? places : null);
+                                     options.GeoPlaces ? places : null, domain?.Name);
 
         var started = Stopwatch.GetTimestamp();
 
@@ -64,7 +70,8 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
     /// that polls would otherwise become most of what the log holds.
     /// </remarks>
     private static bool Watching(CallerInfo caller)
-        => caller.Method == "GET"
+        => caller.Domain == null
+        && caller.Method == "GET"
         && caller.Path.StartsWith("/api/v1/lambdas/", StringComparison.Ordinal)
         && (caller.Path.EndsWith("/logs", StringComparison.Ordinal)
          || caller.Path.EndsWith("/traffic", StringComparison.Ordinal)
@@ -82,7 +89,7 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
          * when these lines came from the engine and the suppression was lost
          * when they started coming from here.
          */
-        if (caller.Path.StartsWith("/api/v1/logs", StringComparison.Ordinal) || Watching(caller))
+        if ((caller.Domain == null && caller.Path.StartsWith("/api/v1/logs", StringComparison.Ordinal)) || Watching(caller))
         {
             return;
         }
@@ -98,18 +105,23 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
         // on its way back the request knows which lambda it reached
         var lambda = request.GetLambda();
 
+        // a lambda's own domain is named in front of the path: its paths are
+        // its own, and "/api/v1/logs" there is not the platform's
+        var target = caller.Domain != null ? caller.Domain + caller.Path : caller.Path;
+
         book.Append(level, "Requests", lambda?.PublicKey,
-                    $"{caller.Method} {caller.Path} — {status} · {bytes:N0} B · {took.TotalMilliseconds:N2} ms",
+                    $"{caller.Method} {target} — {status} · {bytes:N0} B · {took.TotalMilliseconds:N2} ms",
                     null, caller.Client, caller.Agent, caller.Country, caller.Place,
                     // what it asked for and what it got back identifies the
                     // line; how many microseconds it took measures it
-                    $"{caller.Method} {caller.Path} {status}",
-                    lambda?.Id);
+                    $"{caller.Method} {target} {status}",
+                    lambda?.Id, caller.Domain);
     }
 
 }
 
-public sealed class CallerConcernBuilder(LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, LambdaOptions options) : IConcernBuilder
+public sealed class CallerConcernBuilder(LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, DomainRegistry domains,
+                                         LambdaOptions options) : IConcernBuilder
 {
-    public IConcern Build(IHandler content) => new CallerConcern(content, book, pool, geo, places, options);
+    public IConcern Build(IHandler content) => new CallerConcern(content, book, pool, geo, places, domains, options);
 }

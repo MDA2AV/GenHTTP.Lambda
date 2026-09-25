@@ -301,10 +301,7 @@ export function Landing() {
 
         <Reveal delay={300}>
           <p className="mt-6 text-center text-sm text-grey-700 dark:text-grey-300">
-            Then simply ask: <em>build a sign-up sheet for our team event and put it online</em>.{' '}
-            <Link to="/agentic-coding" className="text-accent-500 hover:underline dark:text-accent-400">
-              Learn more about using your own agent
-            </Link>
+            Then simply ask: <em>build a sign-up sheet for our team event and put it online</em>.
           </p>
         </Reveal>
       </div>
@@ -392,14 +389,10 @@ export function Landing() {
             Discord
           </a>
 
-          <a
-            href="https://github.com/MDA2AV/GenHTTP.Lambda"
-            target="_blank"
-            rel="noreferrer"
-            className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
-          >
-            Source
-          </a>
+          {/* the header carries this on anything wider than a phone */}
+          <Link to="/admin" className="text-slate-500 hover:text-accent-600 hover:underline sm:hidden dark:hover:text-accent-400">
+            Admin
+          </Link>
         </footer>
       </div>
     </div>

@@ -198,7 +198,7 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most, long?
         {
             book.Append("warn", "stdout", PublicKey,
                         $"… this request printed more than {Most} lines; the rest was dropped.",
-                        null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place, lambdaId: LambdaId);
+                        null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place, lambdaId: LambdaId, domain: caller?.Domain);
 
             return;
         }
@@ -208,7 +208,7 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most, long?
                     // a print is what it says, so the same print twice is the
                     // same line - which is what folds a reactor faulting over
                     // and over into one line and a count
-                    text, LambdaId);
+                    text, LambdaId, caller?.Domain);
     }
 
     #endregion

@@ -1,0 +1,9 @@
+// Whatever this snippet returns is served at /lambda/{{KEY}}/. The GenHTTP
+// modules are imported for you, so there is nothing to set up.
+//
+// Want to see how something is done? The demos are finished lambdas you can
+// read in the editor: /editor/demo-crud, demo-registration, demo-game,
+// demo-files and demo-live.
+
+return Inline.Create()
+             .Get(() => "Hello from GenHTTP Lambda!");

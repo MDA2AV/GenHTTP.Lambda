@@ -15,10 +15,35 @@ export interface Lambda {
   editorPath: string;
   /** When the live version went online; absent while nothing is deployed. */
   deployedAt?: string;
-  /** When the deployment will be taken offline again. */
+  /** When the deployment will be taken offline again; absent when its tier keeps it online. */
   deployedUntil?: string;
-  /** When an untouched lambda is removed altogether. */
-  keptUntil: string;
+  /** When an untouched lambda is removed altogether; absent when its tier keeps it. */
+  keptUntil?: string;
+  /** The domain it is configured to answer at, whether or not its tier lets it. */
+  domain?: string;
+  /** Whether it actually answers at that domain right now. */
+  domainServed: boolean;
+}
+
+/** The tiers there are. Only an administrator moves a lambda between them. */
+export const TIERS = ['Free', 'Premium', 'Demo'] as const;
+
+/** Whether a lambda is one of the installation's demos, which nobody can change. */
+export const isDemo = (tier: string) => tier === 'Demo';
+
+/** Whether a tier includes a domain of its own. */
+export const allowsDomain = (tier: string) => tier === 'Premium';
+
+/** The domain of a lambda, as its owner sees it. */
+export interface DomainState {
+  domain?: string;
+  tier: string;
+  /** Whether the tier includes a domain. */
+  allowed: boolean;
+  /** Whether requests to the domain reach the lambda now. */
+  served: boolean;
+  /** What the domain resolves to, as the server sees it. Absent without a domain. */
+  dns?: { addresses: string[]; problem?: string };
 }
 
 /** Which door something came through. */
@@ -27,8 +52,8 @@ export type Origin = 'template' | 'api' | 'agent' | 'admin' | 'system';
 export interface VersionInfo {
   version: number;
   created: string;
-  /** What was asked for, in the words it was asked in. */
-  prompt?: string | null;
+  /** What the user wanted from the version and why, in their words where possible. */
+  specification?: string | null;
   /** What the version changed, in a line. */
   change?: string | null;
   origin?: Origin | null;
@@ -68,6 +93,8 @@ export interface LambdaTraffic {
   quarters: TrafficPoint[];
   statuses: { success: number; redirect: number; clientError: number; serverError: number };
   paths: { path: string; requests: number; failed: number; averageMillis: number }[];
+  /** Where it was reached: its own domain, or its path on the platform (no domain). Busiest first. */
+  entrances: { domain?: string | null; requests: number }[];
   /** When counting started: the figures are held in memory and a restart begins them again. */
   since: string;
 }
@@ -84,6 +111,8 @@ export interface OwnerLogEntry {
   country?: string | null;
   agent?: string | null;
   repeats: number;
+  /** The lambda's own domain the request was addressed to; absent for its path on the platform. */
+  domain?: string | null;
 }
 
 export interface OwnerLogPage {
@@ -220,25 +249,19 @@ export interface Completion {
   insert?: string;
 }
 
-export interface Template {
+/** Something a new lambda can be started from: a demo to copy, or nothing much. */
+export interface Starter {
   id: string;
-  name: string;
+  /** What somebody would want to build, in their words. */
+  title: string;
   description: string;
-  code: string;
-  /** Reachable by link, but not offered in the picker. */
-  hidden: boolean;
-}
-
-export interface TemplateGroup {
-  id: string;
-  name: string;
-  description: string;
-  templates: Template[];
+  /** Where the demo it copies runs, to look at first; left out for the empty lambda. */
+  demo?: string | null;
 }
 
 export interface Platform {
   terms: string;
-  templates: TemplateGroup[];
+  starters: Starter[];
   maxCodeLength: number;
   deploymentLifetimeHours: number;
   retentionDays: number;
@@ -308,35 +331,6 @@ export interface EventHistory {
   series: { kind: string; counts: number[]; total: number }[];
 }
 
-export interface Example {
-  id: string;
-  name: string;
-  description: string;
-  publicKey: string;
-  path: string;
-  /** What is worth calling underneath it, which is rarely the root. */
-  tryPath: string;
-  /** Reached by opening a socket rather than by asking for a page. */
-  socket: boolean;
-  /** Every file it is made of, the snippet first. */
-  files: LambdaFile[];
-  /** They are prepared after startup, so one can exist but not yet answer. */
-  live: boolean;
-}
-
-/** What the menu needs: everything but the code. */
-export type ExampleSummary = Omit<Example, 'files'>;
-
-export interface ExampleGroup {
-  id: string;
-  name: string;
-  examples: ExampleSummary[];
-}
-
-export interface ExampleListing {
-  groups: ExampleGroup[];
-}
-
 export interface WorkspaceEntry {
   path: string;
   size: number;
@@ -384,7 +378,18 @@ export interface LambdaOverview {
   latestVersion?: number;
   versions: number;
   deployedUntil?: string;
-  keptUntil: string;
+  keptUntil?: string;
+  domain?: string;
+  domainServed: boolean;
+}
+
+/** One lambda in full, for the page the panel shows it on. */
+export interface AdminLambdaDetail {
+  lambda: Lambda;
+  traffic: LambdaTraffic;
+  versions: VersionInfo[];
+  activations: Activation[];
+  tiers: string[];
 }
 
 /** One line of what the server, or a lambda on it, has said. */
@@ -416,6 +421,8 @@ export interface LogEntry {
   place?: string;
   /** How many identical lines this one stands for; 1 is itself alone. */
   repeats: number;
+  /** The lambda's own domain the request was addressed to; absent for the platform. */
+  domain?: string;
 }
 
 /** One caller the log still holds something about. */
@@ -484,6 +491,44 @@ export interface ResolvedCompletion {
   documentation?: string;
 }
 
+/** A lambda as its owner presents it on the showcase page. */
+export interface ShowcaseEntry {
+  publicKey: string;
+  title: string;
+  description: string;
+  /** Where it answers. */
+  path: string;
+  /** Its picture, versioned so it can be cached for good. */
+  imagePath: string;
+  imageType: string;
+  imageBytes: number;
+  /** Only online lambdas are listed; the owner sees theirs either way. */
+  online: boolean;
+  created: string;
+  updated: string;
+}
+
+export interface ShowcaseListing {
+  entries: ShowcaseEntry[];
+  total: number;
+  /** Where the next page starts; absent after the last one. */
+  next?: number | null;
+}
+
+export interface ShowcaseLimits {
+  title: number;
+  description: number;
+  imageBytes: number;
+  imageTypes: string[];
+  /** How an entry should read. */
+  tone: string;
+}
+
+export interface OwnShowcase {
+  showcase?: ShowcaseEntry | null;
+  limits: ShowcaseLimits;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -549,11 +594,26 @@ export const api = {
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),
 
   admin: {
-    list: (token: string, search: string, page: number) =>
+    list: (token: string, search: string, page: number, tier = '') =>
       request<AdminListing>(
-        `/admin/lambdas?page=${page}${search === '' ? '' : `&search=${encodeURIComponent(search)}`}`,
+        `/admin/lambdas?page=${page}${search === '' ? '' : `&search=${encodeURIComponent(search)}`}${tier === '' ? '' : `&tier=${tier}`}`,
         withToken(token),
       ),
+
+    lambda: (token: string, publicKey: string) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}`, withToken(token)),
+
+    tier: (token: string, publicKey: string, tier: string) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/tier`,
+        withToken(token, { method: 'PUT', body: JSON.stringify({ tier }) })),
+
+    domain: (token: string, publicKey: string, domain: string | null) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/domain`,
+        withToken(token, { method: 'PUT', body: JSON.stringify({ domain }) })),
+
+    deploy: (token: string, publicKey: string, version?: number) =>
+      request<DeploymentResult>(`/admin/lambdas/${encodeURIComponent(publicKey)}/deployment/start`,
+        withToken(token, { method: 'POST', body: JSON.stringify({ version: version ?? null }) }), [422]),
 
     version: (token: string, publicKey: string, version: number) =>
       request<VersionContent>(`/admin/lambdas/${encodeURIComponent(publicKey)}/versions/${version}`, withToken(token)),
@@ -595,9 +655,22 @@ export const api = {
   telemetry: (minutes: number, token: string) =>
     request<Telemetry>(`/telemetry?minutes=${minutes}&days=30`, withToken(token)),
 
-  examples: () => request<ExampleListing>('/examples'),
+  showcases: (skip = 0, take = 12) => request<ShowcaseListing>(`/showcases/?skip=${skip}&take=${take}`),
 
-  example: (id: string) => request<Example>(`/examples/${encodeURIComponent(id)}`),
+  showcase: (privateKey: string) => request<OwnShowcase>(`/lambdas/${privateKey}/showcase`),
+
+  /** Leave the image out to keep the one there is. */
+  saveShowcase: (privateKey: string, entry: { title: string; description: string; image?: string }) =>
+    request<ShowcaseEntry>(`/lambdas/${privateKey}/showcase`, { method: 'PUT', body: JSON.stringify(entry) }),
+
+  removeShowcase: (privateKey: string) => request<void>(`/lambdas/${privateKey}/showcase`, { method: 'DELETE' }),
+
+  domain: (privateKey: string) => request<DomainState>(`/lambdas/${privateKey}/domain`),
+
+  setDomain: (privateKey: string, domain: string) =>
+    request<DomainState>(`/lambdas/${privateKey}/domain`, { method: 'PUT', body: JSON.stringify({ domain }) }),
+
+  removeDomain: (privateKey: string) => request<DomainState>(`/lambdas/${privateKey}/domain`, { method: 'DELETE' }),
 
   key: (key: string) => request<KeyStatus>(`/keys/${encodeURIComponent(key)}`),
 
@@ -619,9 +692,9 @@ export const api = {
   version: (privateKey: string, version: number) =>
     request<VersionContent>(`/lambdas/${privateKey}/versions/${version}`),
 
-  /** Stores a version; the change and the prompt are the why, kept beside the what. */
-  save: (privateKey: string, files: LambdaFile[], change?: string, prompt?: string) =>
-    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, prompt: prompt || null })),
+  /** Stores a version; the change and the specification are the why, kept beside the what. */
+  save: (privateKey: string, files: LambdaFile[], change?: string, specification?: string) =>
+    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, specification: specification || null })),
 
   deployment: (privateKey: string) => request<Deployment>(`/lambdas/${privateKey}/deployment`),
 

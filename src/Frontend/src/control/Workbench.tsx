@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { ApiError, api, type Diagnostic, type LambdaFile } from '../api';
+import { ApiError, api, isDemo, type Diagnostic, type LambdaFile } from '../api';
 import { CodeEditor } from '../components/CodeEditor';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
@@ -209,6 +209,8 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   }
 
   const online = loaded != null && loaded === lambda.activeVersion;
+  // a demo is there to be read: its files open, nothing in them changes
+  const demo = isDemo(lambda.tier);
   const newer = lambda.latestVersion != null && loaded != null && lambda.latestVersion > loaded && !dirty;
   const showDiagnostics = diagnostics.length > 0 || built === 'clean';
 
@@ -226,7 +228,9 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       }
       hint={
         <>
-          Edit the code by hand. Saving makes a new version and leaves what is online alone; deploying puts it online.
+          {demo
+            ? 'A demo, so everything here is read only. Create a lambda of your own from it to change it. '
+            : 'Edit the code by hand. Saving makes a new version and leaves what is online alone; deploying puts it online. '}
           <code className="font-mono">lambda.cs</code> returns what gets served, other <code className="font-mono">.cs</code> files
           hold types, and any other file is served as it is. Ctrl-S saves, F12 goes to a declaration.
           {newer && ` Version ${lambda.latestVersion} is newer than the one open here.`}
@@ -238,14 +242,18 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
             {busy === 'check' && <IconSpinner />}
             Check
           </button>
-          <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Ctrl+S">
-            {busy === 'save' && <IconSpinner />}
-            Save
-          </button>
-          <button type="button" onClick={deploy} disabled={busy !== null || (!dirty && online)} className="btn-primary !px-4 !py-1.5 text-[13px]">
-            {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
-            Deploy
-          </button>
+          {!demo && (
+            <>
+              <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Ctrl+S">
+                {busy === 'save' && <IconSpinner />}
+                Save
+              </button>
+              <button type="button" onClick={deploy} disabled={busy !== null || (!dirty && online)} className="btn-primary !px-4 !py-1.5 text-[13px]">
+                {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
+                Deploy
+              </button>
+            </>
+          )}
         </>
       }
       pills={
@@ -253,7 +261,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           files={files}
           active={active}
           onSelect={setActive}
-          onChange={setFiles}
+          onChange={demo ? undefined : setFiles}
           faulty={new Set(diagnostics.filter((d) => d.file).map((d) => d.file!))}
         />
       }
@@ -268,8 +276,9 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           theme={control.theme}
           diagnostics={diagnostics.filter((d) => (d.file ?? ENTRY) === active)}
           reveal={reveal}
-          onChange={current?.encoding === 'base64' ? undefined : setCode}
+          onChange={current?.encoding === 'base64' || demo ? undefined : setCode}
           onSave={save}
+          readOnly={demo}
           onDefinition={goToDefinition}
         />
 

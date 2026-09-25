@@ -42,17 +42,11 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds)
     );
 
     /// <summary>
-    /// The template catalogue, with a stand in key so the assistant can show
-    /// the code of a template before a lambda exists to fill it with.
+    /// What a new lambda can be started from: nothing much, or a copy of a
+    /// demo - described by what somebody would want to build with it.
     /// </summary>
-    /// <remarks>
-    /// Hidden templates are described here rather than left out: a link that
-    /// names one still has to arrive at an editor that can say what it is. It
-    /// is the assistant's list they are kept out of, not the catalogue.
-    /// </remarks>
-    private static IReadOnlyList<TemplateGroupResponse> Describe()
-        => [.. TemplateCatalog.Groups.Select(g => new TemplateGroupResponse(g.Id, g.Name, g.Description,
-               [.. g.Templates.Select(t => new TemplateResponse(t.Id, t.Name, t.Description,
-                   TemplateCatalog.ForKey(t.Id, "your-key"), t.Hidden))]))];
+    private static IReadOnlyList<StarterResponse> Describe()
+        => [.. DemoCatalog.All.Select(d => new StarterResponse(d.Id, d.Goal, d.Pitch, $"/lambda/{d.Key}/")),
+            new StarterResponse(TemplateCatalog.EmptyId, "Something else", "Start from an empty lambda and build whatever you have in mind.", null)];
 
 }

@@ -11,15 +11,16 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Execution;
 using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Protection;
+using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.DependencyInjection;
-using GenHTTP.Modules.Compression;
-using GenHTTP.Modules.Compression.Algorithms;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.Practices;
 using GenHTTP.Modules.Webservices;
@@ -70,7 +71,10 @@ public sealed class Application : IAsyncDisposable
 
         Scheduler = Services.GetRequiredService<BackgroundScheduler>();
 
-        Handler = BuildHandler(Services, options, loggers);
+        // before the first request, which is asked about against it
+        Services.GetRequiredService<DomainRegistry>().ReloadAsync().AsTask().GetAwaiter().GetResult();
+
+        Handler = BuildHandler(Services, options);
     }
 
     /// <summary>
@@ -103,11 +107,16 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<ServerRegistry>();
 
+        services.AddSingleton<DomainRegistry>();
+        services.AddSingleton<LambdaThrottle>();
+        services.AddSingleton<LambdaRateLimiter>();
+
         services.AddSingleton<IStorageService, FileSystemStorageService>();
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
-        services.AddSingleton<ExampleSeeder>();
+        services.AddSingleton<IShowcaseService, ShowcaseService>();
+        services.AddSingleton<DemoSeeder>();
         services.AddSingleton<McpTools>();
         services.AddSingleton<BuildService>();
         services.AddSingleton<EventReader>();
@@ -127,28 +136,37 @@ public sealed class Application : IAsyncDisposable
     }
 
     /// <summary>
-    /// Builds the routes of the system: the API, the deployed lambdas, the
+    /// Builds the routes of the system: a lambda's own domain goes straight to
+    /// the lambda, and everything else to the platform.
+    /// </summary>
+    private static IHandler BuildHandler(IServiceProvider services, LambdaOptions options)
+    {
+        var meta = services.GetRequiredService<IMetaService>();
+
+        var domains = LambdaRoute.Create(services, new DomainLocator(meta));
+
+        var router = new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, BuildPlatform(services, options));
+
+        // ahead of the router, so a challenge for a lambda's own domain is
+        // answered here rather than handed to the lambda
+        return options.AcmeDirectory is { } acme
+             ? Concerns.Chain([new AcmeChallengeConcernBuilder(acme)], router)
+             : router;
+    }
+
+    /// <summary>
+    /// The platform itself: the API, the deployed lambdas below their keys, the
     /// frontend's own assets and the single page application, which serves both
     /// the landing page and the editor and catches every other path.
     /// </summary>
-    private static IHandler BuildHandler(IServiceProvider services, LambdaOptions options, ILoggerFactory loggers)
+    private static IHandler BuildPlatform(IServiceProvider services, LambdaOptions options)
     {
         var spa = services.GetRequiredService<SpaResources>();
 
-        var lambdas = LambdaRoute.Create(
-            services.GetRequiredService<IMetaService>(),
-            services.GetRequiredService<IDeploymentService>(),
-            spa,
-            options,
-            services.GetRequiredService<LambdaTelemetry>(),
-            services.GetRequiredService<LogBook>(),
-            loggers
-        );
+        var lambdas = LambdaRoute.Create(services, new KeyLocator(services.GetRequiredService<IMetaService>(), spa));
 
         var layout = Layout.Create()
-                           .Add("api", ApiLayout.Create())
-                           // a link for other pages to carry, so part of the site rather than the API
-                           .AddService<Invitation>("start")
+                           .Add("api", ApiLayout.Create(options))
                            // one path, for agents rather than for browsers
                            .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
                            .Add("lambda", lambdas);
@@ -180,22 +198,13 @@ public sealed class Application : IAsyncDisposable
                .Add(Registry.Capture())
                .Add(new TelemetryConcernBuilder(Services.GetRequiredService<ITelemetryService>()))
                /*
-                * Compression is configured here rather than left to the
-                * defaults, and it offers gzip alone.
-                *
-                * Brotli and zstd truncate a generated response: anything much
-                * past twelve kilobytes arrives cut short, and since every
-                * browser asks for brotli first, every visitor gets the broken
-                * one while curl - which asks for nothing - sees a whole
-                * answer. Files served from disk are unaffected, so this is
-                * about content produced per request, which is what every
-                * lambda here returns.
-                *
-                * Losing brotli costs some bandwidth. Serving half a response
-                * costs the response.
+                * The upgrade to the secure endpoint covers a lambda's own
+                * domain as well: it redirects to the host that was asked for,
+                * so http://shop.example.com goes to https://shop.example.com.
+                * The certificate for such a domain is put beside the others
+                * by the operator (see CertificateLoader).
                 */
-               .Defaults(compression: false)
-               .Compression(CompressedContent.Empty().Add(new GzipAlgorithm()))
+               .Defaults()
                /*
                 * Last, which puts it outside everything else, because a
                 * concern added later wraps the ones added before it.
@@ -217,6 +226,7 @@ public sealed class Application : IAsyncDisposable
                                              Services.GetRequiredService<StringPool>(),
                                              Services.GetRequiredService<GeoTable>(),
                                              Services.GetRequiredService<GeoPlaces>(),
+                                             Services.GetRequiredService<DomainRegistry>(),
                                              Options));
 
     /// <summary>
@@ -225,16 +235,16 @@ public sealed class Application : IAsyncDisposable
     public void StartBackgroundJobs() => Scheduler.Start();
 
     /// <summary>
-    /// Brings the examples online, once the server is already answering.
+    /// Brings the demos online, once the server is already answering.
     /// </summary>
     /// <remarks>
-    /// Deliberately not awaited by the caller: every example has to be
+    /// Deliberately not awaited by the caller: every demo has to be
     /// compiled, and that is seconds the installation would otherwise spend
     /// refusing connections. They appear shortly after startup instead.
     /// </remarks>
-    public void SeedExamples()
+    public void SeedDemos()
     {
-        var seeder = Services.GetRequiredService<ExampleSeeder>();
+        var seeder = Services.GetRequiredService<DemoSeeder>();
 
         _ = Task.Run(async () =>
         {
@@ -244,7 +254,7 @@ public sealed class Application : IAsyncDisposable
             }
             catch (Exception e)
             {
-                Services.GetRequiredService<ILoggerFactory>().CreateLogger<Application>().LogWarning(e, "The examples could not be prepared");
+                Services.GetRequiredService<ILoggerFactory>().CreateLogger<Application>().LogWarning(e, "The demos could not be prepared");
             }
         });
     }

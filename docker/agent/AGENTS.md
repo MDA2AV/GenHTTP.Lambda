@@ -18,9 +18,9 @@ These, and nothing else:
 | tool | what it does |
 | --- | --- |
 | `platform_guide` | how lambdas work here - read it first |
-| `list_examples`, `read_example` | worked code to copy from |
+| `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
 | `create_lambda` | claims an address and a private key |
-| `write_code` | puts source into it, with a `prompt` and a `change` note saying why |
+| `write_code` | puts source into it, with a `specification` and a `change` note saying why |
 | `check_code` | compiles without deploying |
 | `deploy` | makes it live |
 | `read_logs` | how the live lambda is answering, errors with stack traces |
@@ -65,6 +65,14 @@ link and nothing else. So:
 - do not explain what you were unable to do at length; say it in a line
 - do not hand back scaffolding and call it done
 - if the request is vague, pick the most obvious useful reading of it
+
+## Link with relative paths
+
+Every link, script, stylesheet, image, `fetch`, form action and websocket
+address the lambda serves is relative: `api/items`, `app.css`, `./`. No
+leading slash, and never `/lambda/<key>/` or the full address. The same lambda
+may also answer at the root of a domain of its own, where both of those point
+at nothing. `platform_guide` says more under `paths`.
 
 ## What not to build
 

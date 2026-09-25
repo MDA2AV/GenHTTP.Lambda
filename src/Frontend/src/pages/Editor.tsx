@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
-import { ApiError, api, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
+import { ApiError, allowsDomain, api, isDemo, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
@@ -9,13 +9,15 @@ import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpinner } f
 import { useToast } from '../components/Toast';
 import type { Busy, Control, Rejection } from '../control/context';
 import { DeploymentsTab } from '../control/DeploymentsTab';
+import { DomainTab } from '../control/DomainTab';
 import { FilesTab } from '../control/FilesTab';
 import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
+import { ShowcaseTab } from '../control/ShowcaseTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
-import { LiveDot, Menu, menuItem, menuRule } from '../control/ui';
+import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 import { usePageMeta } from '../meta';
@@ -24,10 +26,12 @@ interface Props {
   theme: Theme;
 }
 
-type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code';
+type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
 
 const SECTIONS: { id: SectionId; title: string }[] = [
   { id: 'overview', title: 'Overview' },
+  { id: 'showcase', title: 'Showcase' },
+  { id: 'domain', title: 'Domain' },
   { id: 'files', title: 'Files' },
   { id: 'versions', title: 'Versions' },
   { id: 'deployments', title: 'Deployments' },
@@ -64,15 +68,12 @@ export function Editor({ theme }: Props) {
   const [rejection, setRejection] = useState<Rejection | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [terms, setTerms] = useState<string | null>(null);
 
   /** Whether the code view holds something unsaved, so leaving it can ask first. */
   const dirty = useRef(false);
 
-  // the assistant navigates with router state; a lambda created from a link
-  // elsewhere arrives by redirect, which carries none - so the query says so
-  const invited = new URLSearchParams(location.search).get('created') === '1';
-  const fresh = (location.state as { created?: boolean } | null)?.created === true || invited;
+  // the creation page says so in the router state
+  const fresh = (location.state as { created?: boolean } | null)?.created === true;
   const [welcome, setWelcome] = useState(fresh);
 
   const base = `/editor/${privateKey}`;
@@ -83,7 +84,6 @@ export function Editor({ theme }: Props) {
       .platform()
       .then((platform) => {
         registerCompletions(platform.completions);
-        setTerms(platform.terms);
       })
       .catch(() => undefined);
   }, []);
@@ -222,6 +222,27 @@ export function Editor({ theme }: Props) {
     [base, navigate, section],
   );
 
+  /*
+   * A domain of its own is part of the premium tier, so the section is not
+   * there for any other: a link to it, or a lambda moved out of the tier
+   * while it was open, lands on the overview instead.
+   */
+  const hidden = lambda != null && !allowsDomain(lambda.tier);
+
+  // a demo is read by anybody holding its announced key, and changed by nobody
+  const demo = lambda != null && isDemo(lambda.tier);
+
+  // sections that only change the lambda, which a demo does not have
+  const absent = (id: SectionId) => (hidden && id === 'domain') || (demo && id === 'showcase');
+
+  const away = absent(section);
+
+  useEffect(() => {
+    if (away) {
+      navigate(base, { replace: true });
+    }
+  }, [away, base, navigate]);
+
   if (failure) {
     return (
       <div className="mx-auto flex w-full max-w-xl flex-col items-start px-5 py-24">
@@ -262,6 +283,7 @@ export function Editor({ theme }: Props) {
 
   const live = lambda.activeVersion != null;
   const publicUrl = `${window.location.origin}${lambda.publicPath}`;
+  const domainUrl = lambda.domainServed && lambda.domain ? `https://${lambda.domain}/` : null;
   const editorUrl = `${window.location.origin}${lambda.editorPath}`;
   const latest = lambda.latestVersion;
   const ahead = latest != null && latest !== lambda.activeVersion;
@@ -282,68 +304,60 @@ export function Editor({ theme }: Props) {
         <div className="px-4 pb-3 pt-4 md:px-3 md:pt-6">
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <LiveDot live={live} />
-                <span className="truncate font-mono text-[15px] font-semibold" title={lambda.publicKey}>{lambda.publicKey}</span>
+              <span className="block truncate font-mono text-[15px] font-semibold" title={lambda.publicKey}>{lambda.publicKey}</span>
+              {/* pulled left by the padding of a badge, so what they say lines
+                  up with the name above and the addresses below */}
+              <div className="-ml-2 mt-2 flex flex-wrap items-center gap-1.5">
+                <StatusBadge version={lambda.activeVersion} />
+                <TierBadge tier={lambda.tier} />
               </div>
-              <p className="mt-1 text-[13px] text-slate-500">
-                {live ? `Online, version ${lambda.activeVersion}` : 'Offline'}
-              </p>
             </div>
 
             <Menu label="More actions" align="left">
               {(close) => (
                 <>
-                  {live && (
+                  {live && !demo && (
                     <button type="button" role="menuitem" className={menuItem} disabled={busy !== null}
                             onClick={() => { close(); deploy(lambda.activeVersion!); }}>
                       Redeploy version {lambda.activeVersion}
                     </button>
                   )}
-                  {live && (
+                  {live && !demo && (
                     <button type="button" role="menuitem" className={menuItem} disabled={busy !== null}
                             onClick={() => { close(); undeploy(); }}>
                       Take offline
                     </button>
                   )}
-                  {live && menuRule}
-                  <CopyItem value={editorUrl} label="Copy the private link" onDone={close} />
-                  <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); setRenaming(true); }}>
-                    Change the address
-                  </button>
+                  {live && !demo && menuRule}
+                  <CopyItem value={editorUrl} label={demo ? 'Copy the link' : 'Copy the private link'} onDone={close} />
+                  {!demo && (
+                    <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); setRenaming(true); }}>
+                      Change the address
+                    </button>
+                  )}
                   <a role="menuitem" href={api.exportUrl(privateKey)} className={menuItem} onClick={close}>
                     Download as a .NET project
                   </a>
-                  {menuRule}
-                  <button type="button" role="menuitem" className={`${menuItem} text-red-500`}
-                          onClick={() => { close(); setRemoving(true); }}>
-                    Delete this lambda
-                  </button>
+                  {!demo && menuRule}
+                  {!demo && (
+                    <button type="button" role="menuitem" className={`${menuItem} text-red-500`}
+                            onClick={() => { close(); setRemoving(true); }}>
+                      Delete this lambda
+                    </button>
+                  )}
                 </>
               )}
             </Menu>
           </div>
 
-          <div className="mt-3 flex items-center gap-1 text-[13px]">
-            <a
-              href={live ? publicUrl : undefined}
-              target="_blank"
-              rel="noreferrer"
-              title={publicUrl}
-              className={`min-w-0 flex-1 truncate ${live ? 'text-accent-600 hover:underline dark:text-accent-400' : 'text-slate-400'}`}
-            >
-              {publicUrl.replace(/^https?:\/\//, '')}
-            </a>
-            <CopyButton value={publicUrl} />
-            {live && (
-              <a href={publicUrl} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                 title="Open in a new tab" aria-label="Open in a new tab">
-                <IconExternal className="h-3.5 w-3.5" />
-              </a>
-            )}
+          {/* where it answers: its own domain first when it has one, since
+              that is the address its visitors know */}
+          <div className="mt-3 space-y-0.5">
+            {domainUrl && <Address url={domainUrl} live={live} primary />}
+            <Address url={publicUrl} live={live} primary={!domainUrl} />
           </div>
 
-          {ahead && latest != null && (
+          {ahead && latest != null && !demo && (
             <button
               type="button"
               onClick={() => deploy(latest)}
@@ -358,7 +372,7 @@ export function Editor({ theme }: Props) {
         </div>
 
         <nav aria-label="Sections" className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-          {SECTIONS.map((item) => {
+          {SECTIONS.filter((item) => !absent(item.id)).map((item) => {
             const to = item.id === 'overview' ? base : `${base}/${item.id}`;
             const current = section === item.id;
 
@@ -398,7 +412,17 @@ export function Editor({ theme }: Props) {
       </aside>
 
       <main className={`flex min-w-0 flex-1 flex-col ${code ? 'min-h-0' : ''}`}>
-        {welcome && (
+        {demo && (
+          <div className="mx-4 mt-6 border border-accent-500/30 bg-accent-500/5 px-4 py-3 text-sm md:mx-0">
+            <p className="font-medium">A demo, kept online by this installation and read only.</p>
+            <p className="mt-1 text-slate-600 dark:text-slate-400">
+              Read its code, its history, what it stores and its logs - that is what it is here for. To change
+              it, <Link to={`/editor/create?from=${encodeURIComponent(lambda.publicKey)}`} className="text-accent-500 hover:underline">start
+              a lambda of your own from it</Link>.
+            </p>
+          </div>
+        )}
+        {welcome && !demo && (
           <div className="mx-4 mt-6 border border-accent-500/30 bg-accent-500/5 px-4 py-3 md:mx-0">
             <div className="flex items-start justify-between gap-4">
               <p className="text-sm font-medium">Keep this link. It is the only way back into this lambda.</p>
@@ -410,14 +434,6 @@ export function Editor({ theme }: Props) {
               <CopyField value={editorUrl} tone="accent" />
             </div>
 
-            {/* someone who arrived from a link elsewhere never saw the terms, so
-                they are shown here rather than assumed */}
-            {invited && (
-              <details className="mt-2.5 max-w-xl text-xs text-slate-600 dark:text-slate-400">
-                <summary className="cursor-pointer select-none">What you agree to by using it</summary>
-                <p className="mt-2 whitespace-pre-line leading-relaxed">{terms ?? 'Loading the terms…'}</p>
-              </details>
-            )}
           </div>
         )}
 
@@ -433,6 +449,10 @@ export function Editor({ theme }: Props) {
           <StatsTab control={control} />
         ) : section === 'logs' ? (
           <LogsTab control={control} />
+        ) : section === 'showcase' && !demo ? (
+          <ShowcaseTab control={control} />
+        ) : section === 'domain' && !hidden ? (
+          <DomainTab control={control} />
         ) : (
           <SummaryTab control={control} />
         )}
@@ -516,6 +536,42 @@ export function Editor({ theme }: Props) {
           with it. This cannot be undone.
         </p>
       </Dialog>
+    </div>
+  );
+}
+
+/**
+ * One address the lambda answers at, with copying and opening beside it. The
+ * main one is the link to follow; any other is there to be found, not to
+ * compete with it.
+ */
+function Address({ url, live, primary }: { url: string; live: boolean; primary: boolean }) {
+  const shown = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  return (
+    <div className={`flex items-center gap-1 ${primary ? 'text-[13px]' : 'text-xs'}`}>
+      <a
+        href={live ? url : undefined}
+        target="_blank"
+        rel="noreferrer"
+        title={url}
+        className={`min-w-0 flex-1 truncate ${
+          !live
+            ? 'text-slate-400'
+            : primary
+              ? 'font-medium text-accent-600 hover:underline dark:text-accent-400'
+              : 'text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400'
+        }`}
+      >
+        {shown}
+      </a>
+      <CopyButton value={url} />
+      {live && (
+        <a href={url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+           title="Open in a new tab" aria-label={`Open ${shown} in a new tab`}>
+          <IconExternal className="h-3.5 w-3.5" />
+        </a>
+      )}
     </div>
   );
 }

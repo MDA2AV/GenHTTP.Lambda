@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Services.Meta;
 
 namespace GenHTTP.Lambda.Web;
 
@@ -26,8 +25,6 @@ namespace GenHTTP.Lambda.Web;
 public sealed class SiteMeta
 {
     private const string Site = "GenHTTP Lambda";
-
-    private const string ExamplePrefix = "/examples/";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -61,16 +58,7 @@ public sealed class SiteMeta
     /// </summary>
     public SitePage? Find(string path)
     {
-        path = Normalize(path);
-
-        if (path.StartsWith(ExamplePrefix, StringComparison.Ordinal))
-        {
-            var example = ExampleCatalog.Find(path[ExamplePrefix.Length..]);
-
-            return example == null ? null : new SitePage($"{example.Name} Example", example.Description);
-        }
-
-        return ReadPages().GetValueOrDefault(path);
+        return ReadPages().GetValueOrDefault(Normalize(path));
     }
 
     /// <summary>
@@ -142,7 +130,7 @@ public sealed class SiteMeta
 
         XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
 
-        var paths = ReadPages().Keys.Concat(ExampleCatalog.All.Select(e => ExamplePrefix + e.Id));
+        var paths = ReadPages().Keys;
 
         var sitemap = new XDocument(
             new XDeclaration("1.0", "utf-8", null),

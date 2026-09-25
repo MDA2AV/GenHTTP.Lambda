@@ -27,22 +27,15 @@ public sealed record LambdaOptions
     /// Which HTTP versions a port answers on.
     /// </summary>
     /// <remarks>
-    /// HTTP/1.1 only, and deliberately.
+    /// This was HTTP/1.1 only for a while: the ioxide engine's HTTP/2 driver
+    /// stopped writing once it had filled the window the client advertised,
+    /// so Firefox, which advertises a hundred and twenty eight kilobytes,
+    /// never finished loading the editor. That was fixed in ioxide, and HTTP/2
+    /// turned out to be buggy again afterwards, so it is HTTP/1.1 only once
+    /// more.
     ///
-    /// The ioxide engine's HTTP/2 driver stops writing once it has filled the
-    /// window the client advertised and does not act on the WINDOW_UPDATE
-    /// frames that follow, so any response larger than that window arrives
-    /// truncated and the request never completes. Chrome advertises several
-    /// megabytes and so never notices; Firefox advertises a hundred and
-    /// twenty eight kilobytes, which the editor's script exceeds several
-    /// times over, so the editor never finished loading in it at all.
-    ///
-    /// HTTP/1.1 has no flow control to get wrong. The cost is multiplexing,
-    /// which a browser makes up for by opening more connections, and it is
-    /// a far smaller cost than a whole browser being unable to use the site.
-    ///
-    /// Set LAMBDA_HTTP_PROTOCOLS=Http1AndHttp2 to put it back once the engine
-    /// is fixed.
+    /// Set LAMBDA_HTTP_PROTOCOLS=Http1AndHttp2 to try HTTP/2 again without a
+    /// release.
     /// </remarks>
     public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1;
 
@@ -145,6 +138,15 @@ public sealed record LambdaOptions
     /// the program that serves it is the wrong ceiling for both.
     /// </remarks>
     public int MaxAssetBytes { get; init; } = 2 * 1024 * 1024;
+
+    /// <summary>
+    /// How large the picture promoting a lambda in the showcase may be.
+    /// </summary>
+    /// <remarks>
+    /// Room for a short animated recording, which is what shows a lambda best,
+    /// and not for a video: every visitor of the showcase page downloads it.
+    /// </remarks>
+    public int MaxShowcaseImageBytes { get; init; } = 3 * 1024 * 1024;
 
     /// <summary>
     /// The number of versions kept per lambda (older ones are pruned).
@@ -365,6 +367,17 @@ public sealed record LambdaOptions
     /// </remarks>
     public string? CertificateDirectory { get; init; }
 
+    /// <summary>
+    /// The web root an ACME client writes its HTTP challenges into, such as
+    /// the folder given to <c>certbot --webroot -w</c>.
+    /// </summary>
+    /// <remarks>
+    /// Answered for every host the server receives, a lambda's own domain
+    /// included, so a certificate can be issued for a name while the server
+    /// keeps running. Left empty, challenges are not answered at all.
+    /// </remarks>
+    public string? AcmeDirectory { get; init; }
+
     #region Derived
 
     public string DatabaseFile => Path.Combine(DataDirectory, "lambda.db");
@@ -417,6 +430,7 @@ public sealed record LambdaOptions
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
             MaxCodeLength = ReadInt("LAMBDA_MAX_CODE_LENGTH", defaults.MaxCodeLength),
             MaxAssetBytes = ReadInt("LAMBDA_MAX_ASSET_BYTES", defaults.MaxAssetBytes),
+            MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
@@ -439,6 +453,7 @@ public sealed record LambdaOptions
             CertificateKeyPath = ReadOptional("LAMBDA_CERTIFICATE_KEY"),
             CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD"),
             CertificateDirectory = ReadOptional("LAMBDA_CERTIFICATE_DIRECTORY"),
+            AcmeDirectory = ReadOptional("LAMBDA_ACME_DIRECTORY"),
             McpOrigins = (ReadOptional("LAMBDA_MCP_ORIGINS") ?? "")
                          .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             PublicUrl = ReadOptional("LAMBDA_PUBLIC_URL")?.TrimEnd('/')

@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
 import { IconSpinner } from './components/Icons';
@@ -9,12 +9,9 @@ import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
-import { Logs } from './pages/Logs';
-import { Example } from './pages/Example';
-import { Stats } from './pages/Stats';
 import { Guide } from './pages/Guide';
 import { Build } from './pages/Build';
-import { AgenticCoding } from './pages/AgenticCoding';
+import { Showcase } from './pages/Showcase';
 import { Terms } from './pages/Terms';
 import { useTheme } from './theme';
 
@@ -73,19 +70,25 @@ export function App() {
           }
         />
         <Route
+          path="/admin/*"
+          element={
+            <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
+              <Admin theme={theme} />
+            </Shell>
+          }
+        />
+        <Route
           path="*"
           element={
             <Shell theme={theme} onToggleTheme={toggleTheme}>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/stats" element={<Stats dark={theme === 'dark'} />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/logs" element={<Logs />} />
                 <Route path="/docs" element={<Guide />} />
                 <Route path="/build" element={<Build />} />
-                <Route path="/agentic-coding" element={<AgenticCoding />} />
+                <Route path="/showcase" element={<Showcase />} />
+                {/* the page this replaced, which is linked from elsewhere */}
+                <Route path="/agentic-coding" element={<Navigate to="/showcase" replace />} />
                 <Route path="/terms" element={<Terms />} />
-                <Route path="/examples/:id" element={<Example />} />
                 <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

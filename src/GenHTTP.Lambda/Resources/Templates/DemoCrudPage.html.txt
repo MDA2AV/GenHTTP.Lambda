@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tasks</title>
+  <!-- relative, like every link here: the lambda may answer below /lambda/demo-crud/ or at the root of a domain -->
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .task { display: flex; gap: .75rem; align-items: flex-start; padding: .75rem 0; border-bottom: 1px solid var(--line); }
+    .task:last-child { border-bottom: 0; }
+    .task input[type=checkbox] { margin-top: .35rem; width: 1.1rem; height: 1.1rem; }
+    .task.done .title { text-decoration: line-through; color: var(--dim); }
+    .task .notes { white-space: pre-wrap; font-size: .9rem; color: var(--dim); margin: .15rem 0 0; }
+    .task .actions { display: flex; gap: .75rem; }
+    #tasks:empty::after { content: "Nothing here."; color: var(--dim); }
+    dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink); width: min(30rem, 92vw); }
+    dialog::backdrop { background: rgb(0 0 0 / .35); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Tasks</h1>
+  <p class="lead">Add, tick off, change and remove tasks. Everything goes through the API, which you can also
+    <a href="scalar/">try on its own</a>.</p>
+
+  <form id="add" class="card">
+    <input type="text" name="title" placeholder="What needs doing?" maxlength="120" required>
+    <textarea name="notes" placeholder="Notes (optional)" maxlength="1000"></textarea>
+    <div class="row"><button class="primary">Add</button><p class="error grow" id="add-error"></p></div>
+  </form>
+
+  <h2>Your tasks</h2>
+  <input type="search" id="search" placeholder="Search">
+  <div id="tasks" class="card" style="margin-top:.6rem"></div>
+
+  <dialog id="edit">
+    <form method="dialog" id="edit-form">
+      <h2 style="margin-top:0">Change task</h2>
+      <input type="text" name="title" maxlength="120" required>
+      <textarea name="notes" maxlength="1000"></textarea>
+      <p class="error" id="edit-error"></p>
+      <div class="row"><button class="primary" value="save">Save</button><button value="cancel" formnovalidate>Cancel</button></div>
+    </form>
+  </dialog>
+
+  <!-- [demo] -->
+  <footer>
+    A read-only demo of GenHTTP Lambda. Its editor key is <code>demo-crud</code>: open it in the editor, or read it
+    with any agent, to see how this is built. Keeps the latest 200 tasks.
+  </footer>
+  <!-- [/demo] -->
+</main>
+<script src="app.js" type="module"></script>
+</body>
+</html>

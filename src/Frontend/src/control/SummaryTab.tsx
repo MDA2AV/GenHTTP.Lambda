@@ -33,8 +33,10 @@ export function SummaryTab({ control }: { control: Control }) {
       title="Overview"
       hint={
         <>
-          Traffic is counted since the server last started ({ago(traffic.since)}). A lambda stays online while
-          people use it, and is removed after {limits.retentionDays} days with no visits and no changes.
+          Traffic is counted since the server last started ({ago(traffic.since)}).{' '}
+          {lambda.keptUntil
+            ? <>A lambda stays online while people use it, and is removed after {limits.retentionDays} days with no visits and no changes.</>
+            : <>This lambda is in the {lambda.tier} tier, which keeps it online and stored however quiet it gets.</>}
         </>
       }
     >
@@ -104,12 +106,12 @@ export function SummaryTab({ control }: { control: Control }) {
                 <Ago at={latest.created} />
                 {latest.version !== lambda.activeVersion && <span className="text-amber-600 dark:text-amber-400">not online yet</span>}
               </p>
-              {latest.prompt && (
+              {latest.specification && (
                 <details className="text-[13px]">
                   <summary className="cursor-pointer select-none text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                    What was asked
+                    What was wanted
                   </summary>
-                  <div className="mt-2"><Quote>{latest.prompt}</Quote></div>
+                  <div className="mt-2"><Quote>{latest.specification}</Quote></div>
                 </details>
               )}
             </div>

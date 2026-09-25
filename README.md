@@ -58,7 +58,7 @@ port, each against its own temporary data directory.
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
-| `/start`             | opens the creation assistant with a template chosen      |
+| any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
 | `/api/v1/`           | everything the editor calls, see below                    |
 | `/mcp`               | the same, for agents                                      |
 | `/admin`             | every lambda on the server, for whoever runs it            |
@@ -75,7 +75,7 @@ path.
 | `POST /lambdas`                                       | creates a lambda                          |
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key), removes it      |
 | `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
-| `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `prompt` and `change`) |
+| `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
 | `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
 | `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
@@ -92,25 +92,15 @@ path.
 | `POST /lambdas/:privateKey/code/check`                | compiles without saving                   |
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
-| `GET /examples`, `/examples/:id`                      | the examples the installation runs        |
+| `GET /demos`                                          | the demos, and the keys to read them with |
 | `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
-| `GET /system`                                         | terms, limits, templates, build agent     |
+| `GET /system`                                         | terms, limits, starters, build agent      |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
 
-The assistant asks what the lambda should do before it asks for a key: a
-service that answers requests, or a socket that stays open - and then which of
-the examples in `Resources/Templates` to start from. A new one is a file next
-to those, listed in `TemplateCatalog`.
-
-Another page can hand someone a working lambda with a link:
-
-```html
-<a href="https://your.host/start?template=websocket-functional">Try it online</a>
-```
-
-That opens the creation assistant with the template chosen. Nothing is created
-until the visitor has seen the terms and submitted it, so a crawler following
-the link leaves nothing behind.
+Creating a lambda asks what somebody would like to build and offers the demos
+in those words - "Keep track of things", "Let people sign up" - next to an empty
+lambda. Picking a demo starts the new lambda as a copy of it, which is theirs to
+change. The files are in `Resources/Templates` and listed in `TemplateCatalog`.
 
 A lambda has two keys. The public one is part of its URL and may be changed;
 the private one is the editor link and is shown only to whoever created the
@@ -217,6 +207,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
 | `LAMBDA_CERTIFICATE_PASSWORD`       | -                | password of the PKCS#12 archive             |
 | `LAMBDA_CERTIFICATE_DIRECTORY`      | -                | further certificates, one folder per name   |
+| `LAMBDA_ACME_DIRECTORY`             | -                | web root an ACME client writes challenges to |
 
 The io_uring engine is the default and the faster one, but container runtimes
 block the syscall in their default seccomp profile - so the image defaults to
@@ -373,6 +364,47 @@ Because the server holds port 80, the standalone authenticator needs it back
 for the few seconds a renewal takes - a pre hook stops the container and a post
 hook starts it again.
 
+### Issuing certificates while it runs
+
+The server can answer the challenges itself instead. Point
+`LAMBDA_ACME_DIRECTORY` at the folder the ACME client writes them into, and
+`GET /.well-known/acme-challenge/{token}` is served from
+`{folder}/.well-known/acme-challenge/{token}` - for every host the server
+receives, a lambda's own domain included, where the path would otherwise be
+the lambda's. Nothing else in the folder is served.
+
+```bash
+mkdir -p /opt/genhttp-lambda/acme     # mounted read only at /acme, see docker-compose.yml
+
+certbot certonly --webroot -w /opt/genhttp-lambda/acme -d your.host.name
+```
+
+The challenge is asked for over plain HTTP, and it is the one request the
+upgrade to HTTPS lets through rather than redirecting.
+
+### Custom domains
+
+A lambda in the premium tier can answer at a domain of its own, which its owner
+sets in the editor after pointing the domain's A and AAAA records at the
+server. Plain requests to it are redirected to HTTPS on the same domain like
+every other request, so it needs a certificate - issued by hand for now, with
+the web root above, into a folder of its own:
+
+```bash
+certbot certonly --webroot -w /opt/genhttp-lambda/acme -d shop.example.com
+
+mkdir -p /opt/genhttp-lambda/certs/shop.example.com
+install -m 0644 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/fullchain.pem /opt/genhttp-lambda/certs/shop.example.com/
+install -m 0640 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/privkey.pem   /opt/genhttp-lambda/certs/shop.example.com/
+```
+
+The folder is only looked through on startup - the io_uring engine learns the
+names it holds certificates for when it opens the TLS port - so a new
+certificate is served after the next restart of the container. Renewals of a
+certificate the server knows are picked up without one. Until the certificate is there, visitors of the
+domain are redirected to HTTPS and shown the default certificate, which does
+not carry their name.
+
 ## For agents
 
 There is a Model Context Protocol endpoint at `/mcp`, so an agent can build
@@ -385,16 +417,36 @@ https://genhttp.dev/mcp
 ```
 
 The tools are the shape of the job: `create_lambda`, `write_code`, `check_code`,
-`deploy`, `read_lambda`, `read_logs`, and `list_examples` / `read_example` for
-reading something that already works. `platform_guide` is the one to call first -
+`deploy`, `read_lambda`, `read_logs`, and `list_demos` for reading something that
+already works. `platform_guide` is the one to call first -
 it says what a snippet has to return, what is imported, what is refused, and the
 handful of things that catch people out.
 
-`write_code` takes an optional `prompt` (what was asked for) and `change` (one
+`write_code` takes an optional `specification` (what the user wants and why) and `change` (one
 line on what the version does). They are kept with the version and shown next
 to its diff in the control center, and `read_lambda` hands the recent history
 back so the next agent can read why before it changes anything. `read_logs`
 lets an agent see how what it deployed is answering, stack traces included.
+
+### Demos
+
+The installation keeps a handful of finished lambdas online in the `Demo` tier,
+each showing one way to build something: `demo-crud` (a REST API over records in
+a JSON file), `demo-registration` (accounts, login and a members page),
+`demo-game` (a websocket game), `demo-files` (uploads) and `demo-live`
+(server-sent events). Their editor key is their public key, and it is meant to
+be announced: `read_lambda`, `list_files` and `read_logs` work on a demo exactly
+as on an agent's own lambda, and the editor at `/editor/demo-crud` shows it.
+
+Everything that would change a demo - saving, deploying, stopping, moving,
+deleting, the workspace, the showcase - is refused by its tier, whichever way
+the request comes in. `create_lambda` with a demo's id as its template starts a
+lambda of one's own from a copy. Keys starting with `demo-` cannot be claimed.
+
+The demos are seeded in the background after startup from the hidden templates
+of the same name in `Resources/Templates`, redeployed when their template
+changes, and retired when they leave `DemoCatalog`. Nobody can move a lambda
+into the tier or out of it, the operator included.
 
 Nothing is created until `acceptTerms` is true, and the editor key that comes
 back is the only way into what was made. There is no session and nothing is

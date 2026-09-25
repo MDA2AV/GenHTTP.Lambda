@@ -11,6 +11,10 @@ services:
       - "443:443"
     environment:
       LAMBDA_PORT: 80
+      # HTTP/1.1 only, on both ports. HTTP/2 misbehaves again, and this is the
+      # switch LambdaOptions names for falling back without a release -
+      # Http1AndHttp2 turns it back on once the engine is fixed.
+      LAMBDA_HTTP_PROTOCOLS: ${LAMBDA_HTTP_PROTOCOLS:-Http1}
       # How long a free tier lambda may go unused before it is taken offline,
       # and how long before it is removed, both in hours.
       #
@@ -36,6 +40,10 @@ services:
       # further certificates, a subdirectory per name, for the other hostnames
       # the server answers to - the one above answers for anything not named
       LAMBDA_CERTIFICATE_DIRECTORY: /certs
+      # the web root certbot writes its HTTP challenges into (--webroot -w
+      # /opt/genhttp-lambda/acme), answered for every host - a lambda's own
+      # domain included - so a certificate is issued without stopping this
+      LAMBDA_ACME_DIRECTORY: /acme
       # hosts a browser may drive the agent endpoint from. An agent speaking
       # HTTP sends no origin and is never checked against this.
       LAMBDA_MCP_ORIGINS: genhttp.dev,www.genhttp.dev
@@ -87,6 +95,7 @@ services:
     volumes:
       - lambda-data:/data
       - /opt/genhttp-lambda/certs:/certs:ro
+      - /opt/genhttp-lambda/acme:/acme:ro
     restart: unless-stopped
 
 networks:

@@ -2,24 +2,21 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
-using GenHTTP.Lambda.Services.Meta;
-using GenHTTP.Lambda.Services.Meta.Model;
-using GenHTTP.Lambda.Web;
-
-using GenHTTP.Modules.IO;
-
 namespace GenHTTP.Lambda.Services.Protection;
 
 /// <summary>
-/// Reads the public key from the path, looks up the lambda behind it and puts
-/// it into the request, so the handler below only has to run it.
+/// Finds the lambda a request is for and puts it into the request, so the
+/// handler below only has to run it.
 /// </summary>
 /// <remarks>
-/// Requests for a key that does not exist (or is not deployed) never reach the
-/// execution layer - browsers are sent to the single page application, which
-/// explains the situation and offers to create a lambda.
+/// How it is found is up to the locator - by the key in the path, or by the
+/// domain the request was addressed to. Everything around this concern is the
+/// same either way, which is what makes a lambda behave identically at both.
+///
+/// Requests for a lambda that does not exist (or is not deployed) never reach
+/// the execution layer; the locator decides what they are told instead.
 /// </remarks>
-public sealed class LambdaResolutionConcern(IHandler content, IMetaService meta, SpaResources spa) : IConcern
+public sealed class LambdaResolutionConcern(IHandler content, ILambdaLocator locator) : IConcern
 {
 
     #region Get-/Setters
@@ -34,52 +31,23 @@ public sealed class LambdaResolutionConcern(IHandler content, IMetaService meta,
 
     public async ValueTask<IResponse?> HandleAsync(IRequest request)
     {
-        var target = request.Header.Target;
-
-        if (target.Current == null)
-        {
-            return await Unavailable(request, null);
-        }
-
-        var key = target.Current.Value.Decode();
-
-        ResolvedLambda? lambda = null;
-
-        if (LambdaKeys.TryNormalize(key, out var normalized, out _))
-        {
-            lambda = await meta.ResolveAsync(normalized);
-        }
+        var lambda = await locator.LocateAsync(request);
 
         if (lambda == null)
         {
-            return await Unavailable(request, key);
+            return await locator.UnavailableAsync(request);
         }
 
         request.SetLambda(lambda);
 
-        target.Advance();
-
         return await content.HandleAsync(request);
-    }
-
-    private async ValueTask<IResponse> Unavailable(IRequest request, string? key)
-    {
-        if (spa.PrefersMarkup(request))
-        {
-            return await spa.RenderAsync(request, ResponseStatus.NotFound);
-        }
-
-        return request.Respond()
-                      .Status(ResponseStatus.NotFound)
-                      .Content($$"""{"error":"There is no lambda deployed at '{{key}}'."}""", ContentType.ApplicationJson)
-                      .Build();
     }
 
     #endregion
 
 }
 
-public sealed class LambdaResolutionConcernBuilder(IMetaService meta, SpaResources spa) : IConcernBuilder
+public sealed class LambdaResolutionConcernBuilder(ILambdaLocator locator) : IConcernBuilder
 {
-    public IConcern Build(IHandler content) => new LambdaResolutionConcern(content, meta, spa);
+    public IConcern Build(IHandler content) => new LambdaResolutionConcern(content, locator);
 }

@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta.Model;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -17,6 +18,10 @@ public sealed record UpdateLambdaRequest(string? PublicKey);
 /// <summary>
 /// A lambda as the editor sees it.
 /// </summary>
+/// <param name="DeployedUntil">When it goes offline unless used; absent while offline, or when its tier keeps it online</param>
+/// <param name="KeptUntil">When it is removed unless used; absent when its tier keeps it</param>
+/// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
+/// <param name="DomainServed">Whether it actually answers at that domain - it has one, and its tier includes it</param>
 public sealed record LambdaResponse(
     string PublicKey,
     string PrivateKey,
@@ -29,7 +34,9 @@ public sealed record LambdaResponse(
     string EditorPath,
     DateTime? DeployedAt,
     DateTime? DeployedUntil,
-    DateTime KeptUntil
+    DateTime? KeptUntil,
+    string? Domain,
+    bool DomainServed
 );
 
 /// <summary>
@@ -54,8 +61,20 @@ public static class LambdaDescription
         $"/editor/{lambda.PrivateKey}",
         lambda.DeployedAt,
         lambda.DeployedUntil,
-        lambda.KeptUntil
+        lambda.KeptUntil,
+        lambda.Domain,
+        Serves(lambda.Tier, lambda.Domain)
     );
+
+    /// <summary>
+    /// Whether a lambda of this tier may answer at a domain of its own.
+    /// </summary>
+    public static bool AllowsDomain(string tier) => tier == nameof(LambdaTier.Premium);
+
+    /// <summary>
+    /// Whether a lambda of this tier with this domain is answering at it.
+    /// </summary>
+    public static bool Serves(string tier, string? domain) => domain != null && AllowsDomain(tier);
 }
 
 /// <summary>

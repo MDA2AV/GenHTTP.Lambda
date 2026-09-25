@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Live poll</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .option { display: grid; gap: .3rem; margin-bottom: .9rem; }
+    .option:last-child { margin-bottom: 0; }
+    .option button { justify-self: start; }
+    .bar { height: .7rem; background: var(--page); border-radius: 999px; overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .4s ease; }
+    .counts { display: flex; justify-content: space-between; font-size: .85rem; color: var(--dim); }
+    #live::before { content: ""; display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; background: var(--dim); margin-right: .4rem; }
+    #live.on::before { background: var(--good); }
+  </style>
+</head>
+<body>
+<main>
+  <h1 id="question">Live poll</h1>
+  <p class="lead">Vote, and watch the bars move - here and in every other open browser, the moment anybody votes.</p>
+
+  <div class="card" id="options"></div>
+  <p class="small dim" id="live">Connecting...</p>
+
+  <!-- [demo] -->
+  <footer>
+    A read-only demo of GenHTTP Lambda. Its editor key is <code>demo-live</code>: open it in the editor, or read it
+    with any agent, to see how this is built.
+  </footer>
+  <!-- [/demo] -->
+</main>
+<script src="app.js" type="module"></script>
+</body>
+</html>

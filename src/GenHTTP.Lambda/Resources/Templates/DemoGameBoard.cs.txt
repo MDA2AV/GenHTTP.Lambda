@@ -1,0 +1,89 @@
+// The rules of the game, and the house's way of playing it. Nothing in here
+// knows about sockets, which keeps the part that decides who won easy to
+// read on its own.
+
+public sealed class Board
+{
+    private static readonly int[][] Lines =
+    [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+    ];
+
+    private readonly char[] _cells = ".........".ToCharArray();
+
+    /// <summary>Whose move it is: X always starts.</summary>
+    public char Turn { get; private set; } = 'X';
+
+    /// <summary>"X", "O", "draw", or null while the game is on.</summary>
+    public string Winner { get; private set; }
+
+    /// <summary>The three cells that won, if any did.</summary>
+    public int[] Line { get; private set; }
+
+    public string Cells => new(_cells);
+
+    public bool Over => Winner != null;
+
+    /// <summary>
+    /// Plays a cell for a side, if that is a legal move - the server checks
+    /// every move, because anything could be sent down a socket.
+    /// </summary>
+    public bool Play(char mark, int cell)
+    {
+        if (Over || mark != Turn || cell is < 0 or > 8 || _cells[cell] != '.')
+        {
+            return false;
+        }
+
+        _cells[cell] = mark;
+
+        Line = Array.Find(Lines, l => l.All(i => _cells[i] == mark));
+
+        if (Line != null)
+        {
+            Winner = mark.ToString();
+        }
+        else if (!_cells.Contains('.'))
+        {
+            Winner = "draw";
+        }
+
+        Turn = mark == 'X' ? 'O' : 'X';
+
+        return true;
+    }
+
+    /// <summary>
+    /// Where the house plays: win if it can, block if it must, otherwise the
+    /// centre, a corner or whatever is left. Good enough to lose to sometimes.
+    /// </summary>
+    public int HouseMove(char mark)
+    {
+        var other = mark == 'X' ? 'O' : 'X';
+
+        return Completing(mark) ?? Completing(other) ?? Free(4) ?? Free(0, 2, 6, 8) ?? Free(1, 3, 5, 7) ?? -1;
+    }
+
+    // a cell that finishes a line for the given side
+    private int? Completing(char mark)
+    {
+        foreach (var line in Lines)
+        {
+            if (line.Count(i => _cells[i] == mark) == 2 && line.Count(i => _cells[i] == '.') == 1)
+            {
+                return line.First(i => _cells[i] == '.');
+            }
+        }
+
+        return null;
+    }
+
+    private int? Free(params int[] cells)
+    {
+        var free = cells.Where(i => _cells[i] == '.').ToArray();
+
+        return free.Length == 0 ? null : free[Random.Shared.Next(free.Length)];
+    }
+}
