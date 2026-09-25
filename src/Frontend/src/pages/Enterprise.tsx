@@ -84,9 +84,9 @@ export function Enterprise() {
           delay={80}
           features={[
             'Your own instance, cloud or on premises',
-            'One service runs every app - no cluster to set up',
+            'A single service runs all apps',
             'Sign in with your own SSO',
-            'Your governance and compliance rules, built into what agents are told',
+            'Your governance and compliance rules built in',
             'Apps stay online for good, nothing is ever removed',
             'Bring your own agent over MCP',
             'Priority support',
