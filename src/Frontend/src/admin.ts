@@ -8,15 +8,15 @@ const KEY = 'lambda-admin-token';
  * own state - otherwise unlocking in the header leaves whatever is already on
  * screen still locked until it is navigated to again.
  *
- * Session storage rather than anything longer lived: this token takes other
- * people's lambdas down, and closing the tab should not leave it behind on a
- * shared machine.
+ * Local storage, so that an admin link opened in a new tab is unlocked too and
+ * the token survives closing the browser. It stays until "Lock again" is used
+ * or the server rejects it - which is the way to leave a shared machine.
  */
 const CHANGED = 'lambda-admin-token-changed';
 
 export function readToken(): string {
   try {
-    return sessionStorage.getItem(KEY) ?? '';
+    return localStorage.getItem(KEY) ?? '';
   } catch {
     // storage is unavailable in a locked down browser; the panel then asks
     // once per page rather than not working at all
@@ -27,9 +27,9 @@ export function readToken(): string {
 export function writeToken(token: string) {
   try {
     if (token === '') {
-      sessionStorage.removeItem(KEY);
+      localStorage.removeItem(KEY);
     } else {
-      sessionStorage.setItem(KEY, token);
+      localStorage.setItem(KEY, token);
     }
   } catch {
     // as above
@@ -46,7 +46,7 @@ export function useAdminToken(): [string, (token: string) => void] {
     const sync = () => setToken(readToken());
 
     window.addEventListener(CHANGED, sync);
-    // another tab of the same session unlocking counts too
+    // another tab unlocking or locking counts too
     window.addEventListener('storage', sync);
 
     return () => {
