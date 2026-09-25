@@ -390,11 +390,8 @@ mkdir -p /opt/genhttp-lambda/acme     # mounted read only at /acme, see docker-c
 certbot certonly --webroot -w /opt/genhttp-lambda/acme -d your.host.name
 ```
 
-The challenge is asked for over plain HTTP. GenHTTP up to 11.0.3 redirects it to
-HTTPS like any other request; Let's Encrypt follows a redirect to port 443 without
-checking the certificate on the other side, and the answer is the same there,
-so this works either way. From 11.0.4 on the challenge is let through
-unredirected.
+The challenge is asked for over plain HTTP, and it is the one request the
+upgrade to HTTPS lets through rather than redirecting.
 
 ### Custom domains
 
