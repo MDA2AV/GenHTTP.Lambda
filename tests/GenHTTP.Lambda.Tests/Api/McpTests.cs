@@ -768,6 +768,29 @@ public sealed class McpTests
         Assert.AreEqual(JsonValueKind.String, guide["assets"]!["limits"]!["count"]!.GetValueKind(), "nor the assets");
     }
 
+    [TestMethod]
+    public async Task AgentsAreToldToKeepLargeDataInTheWorkspace()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // an agent decides where a model goes while it reads the guide and
+        // while it picks a tool, so both have to say it
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        var rule = guide["whereFilesGo"]!["rule"]!.GetValue<string>();
+
+        Assert.Contains("model", rule);
+        Assert.Contains("workspace", rule);
+        Assert.Contains("upload_file", guide["whereFilesGo"]!["how"]!.GetValue<string>());
+
+        var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
+
+        string Describe(string name) => tools.Single(t => t!["name"]!.GetValue<string>() == name)!["description"]!.GetValue<string>();
+
+        Assert.Contains("upload_file", Describe("write_code"));
+        Assert.Contains("model", Describe("upload_file"));
+    }
+
     #region Plumbing
 
     private static JsonObject Structured(JsonObject answer) => (JsonObject)answer["result"]!["structuredContent"]!;

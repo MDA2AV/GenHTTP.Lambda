@@ -105,7 +105,11 @@ public sealed class TierAllowanceTests
         using (var refused = await SaveAsync(fixture, lambda.PrivateKey, Shipping(2048)))
         {
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "two kilobytes is more than a free lambda may ship");
-            Assert.Contains("1 KB", await refused.Content.ReadAsStringAsync());
+
+            var said = await refused.Content.ReadAsStringAsync();
+
+            Assert.Contains("1 KB", said);
+            Assert.Contains("workspace", said, "and says where a large file that is not code belongs");
         }
 
         await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);

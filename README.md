@@ -470,7 +470,10 @@ characters, and names them with their lengths beyond that; `file` then fetches
 one in full, up to a megabyte, and anything larger is left to the zip of the
 version - a hundred megabytes of base64 is nothing an agent can read. It also
 says which tier the lambda is in and what that allows, and `platform_guide`
-lays out both tiers.
+lays out both tiers. The guide, `write_code` and `upload_file` also steer a
+large file that is data rather than program - a model, a dataset, media - into
+the workspace, where it is kept once instead of in every version, and a
+refusal for assets over the limit says the same.
 
 ### Demos
 

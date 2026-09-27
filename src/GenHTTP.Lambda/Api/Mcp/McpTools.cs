@@ -53,7 +53,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              }),
 
         Tool("write_code", "Save all files", Effect.Save,
-             "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. Say why with specification (what the user wants) and change (what this version does) - the owner reads them in the version history. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
+             "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. A large file that is data rather than program - a model, a dataset, media - goes in the workspace with upload_file instead. Say why with specification (what the user wants) and change (what this version does) - the owner reads them in the version history. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -207,7 +207,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              }),
 
         Tool("upload_file", "Upload a workspace file", Effect.Replace,
-             "Write a file to the lambda's workspace, a runtime directory it can read, write and serve. Takes effect immediately without a deploy - the way to ship a front end that changes independently of the code.",
+             "Write a file to the lambda's workspace, a runtime directory it can read, write and serve. Takes effect immediately without a deploy - the way to ship a front end that changes independently of the code, and the place for large files that are not code, such as a model or a dataset.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -861,6 +861,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 count = "Any number: only what they come to is counted.",
                 names = "Letters, digits, dashes, underscores, dots and slashes. No leading slash, no .."
             }
+        },
+        whereFilesGo = new
+        {
+            rule = "Assets are the program's own files: pages, scripts, stylesheets, icons, small data it cannot run without. A large file that is data rather than program - a machine learning model, a dataset, video, a library of pictures - belongs in the workspace.",
+            why = "Every version keeps its own copy of the assets and is read whole to be saved and deployed, so a large asset costs memory and disk on every change, however small. A workspace file is kept once, as a file, and a new version leaves it alone.",
+            how = "upload_file puts one there. Over HTTP, for more than a tool call carries: PUT /api/v1/lambdas/{privateKey}/files/{path} with {\"content\": \"<base64>\"}, the slashes of the path encoded as %2F. Or let the lambda fetch it once with HttpClient and keep it with Workspace.WriteBytes.",
+            use = "Workspace.ReadBytes(\"models/model.onnx\") reads it; Workspace.Files(\"media\") serves a folder of them.",
+            mind = "The workspace is not versioned, rolled back or cloned with the lambda: have the code notice a file that is missing and say so, rather than fail. Its size is limited by tier too - see storage.limits."
         },
         takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the lambda as a standalone zipped .NET project with no dependency on this platform. Worth telling the user.",
         importedForYou = ModuleCatalog.Imports,

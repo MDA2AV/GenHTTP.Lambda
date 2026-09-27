@@ -760,7 +760,7 @@ public sealed class MetaService : IMetaService
 
         if (LambdaSource.AssetBytes(files) > assets)
         {
-            throw LambdaException.Invalid($"The assets must not exceed {Readable(assets)} in total.{Beyond(tier, assets, Options.MaxAssetBytesOf(LambdaTier.Premium), Readable(Options.MaxAssetBytesOf(LambdaTier.Premium)))}");
+            throw LambdaException.Invalid($"The assets must not exceed {Readable(assets)} in total.{Beyond(tier, assets, Options.MaxAssetBytesOf(LambdaTier.Premium), Readable(Options.MaxAssetBytesOf(LambdaTier.Premium)))} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
         }
     }
 
