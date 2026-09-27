@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 
 namespace GenHTTP.Lambda.Services.Meta.Model;
@@ -86,7 +87,8 @@ public sealed record LambdaActivation(int Version, DateTime Started, string? Ori
 /// <summary>
 /// A lambda that has been looked up by its public key and is ready to run.
 /// </summary>
-public sealed record ResolvedLambda(long Id, string PublicKey, string Tier, int ActiveVersion, DateTime DeployedAt);
+/// <param name="Tier">Read on every request, so a lambda moved to another tier runs under its limits from the next one on</param>
+public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt);
 
 /// <summary>
 /// Everything anybody may know about a public key: whether it could be

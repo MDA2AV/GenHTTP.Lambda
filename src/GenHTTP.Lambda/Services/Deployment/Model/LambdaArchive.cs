@@ -91,11 +91,6 @@ public static class LambdaArchive
             }
 
             entries.Add((name, entry));
-
-            if (entries.Count > LambdaSource.MaxFiles + LambdaSource.MaxAssets)
-            {
-                throw LambdaException.Invalid($"The archive holds more files than a lambda may have ({LambdaSource.MaxFiles} C# files and {LambdaSource.MaxAssets} assets).");
-            }
         }
 
         var prefix = CommonFolder(entries.Select(e => e.Name).ToList());

@@ -15,13 +15,12 @@ public sealed record WorkspaceEntry(string Path, long Size, DateTime Modified);
 /// can be made before there is anything to put in it - and inferring them
 /// would make it vanish the moment it was created.
 /// </remarks>
+/// <param name="UsedBytes">The room the files and folders take, counted in blocks as the quota is</param>
 public sealed record WorkspaceListing(
     IReadOnlyList<WorkspaceEntry> Files,
     IReadOnlyList<string> Folders,
     long UsedBytes,
-    long QuotaBytes,
-    int MaxFiles,
-    int MaxFileSize
+    long QuotaBytes
 );
 
 /// <summary>

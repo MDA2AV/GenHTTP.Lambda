@@ -118,7 +118,11 @@ internal static class SourceBuilder
     /// <param name="workspace">The directory this lambda may read and write</param>
     /// <param name="assets">The directory this lambda's static assets were written to</param>
     /// <param name="scope">The namespace everything generated for this lambda lives in</param>
-    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string assets, string scope)
+    /// <param name="limits">
+    /// What the lambda may keep in its workspace, which its tier decides. Left
+    /// out where nothing is going to run, such as for the editor's questions.
+    /// </param>
+    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string assets, string scope, WorkspaceLimits? limits = null)
     {
         var root = (CompilationUnitSyntax)snippet.GetRoot();
 
@@ -188,7 +192,7 @@ internal static class SourceBuilder
 
         builder.AppendLine("#line default");
         builder.AppendLine();
-        builder.AppendLine(WorkspaceSource);
+        builder.AppendLine(WorkspaceSource(limits ?? WorkspaceLimits.Standard));
         builder.AppendLine(AssetSource);
 
         return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
@@ -417,12 +421,18 @@ internal static class SourceBuilder
     /// rather than referenced, so the assembly of this application stays
     /// invisible to the code being compiled.
     /// </summary>
-    private static readonly string WorkspaceSource = $$"""
+    /// <remarks>
+    /// The quota is written in as a constant, so the code of the lambda can
+    /// read it and cannot change it. Only the room is limited, counted in
+    /// blocks as <see cref="WorkspaceLimits"/> explains; reading never creates
+    /// anything, and a folder is only made once there is room for it.
+    /// </remarks>
+    private static string WorkspaceSource(WorkspaceLimits limits) => $$"""
         internal sealed class {{WorkspaceType}}
         {
-            private const int MaxFileSize = {{WorkspaceLimits.MaxFileSize}};
+            private const long Quota = {{limits.Quota}};
 
-            private const int MaxFiles = {{WorkspaceLimits.MaxFiles}};
+            private const long Block = {{WorkspaceLimits.Block}};
 
             private readonly string _root;
 
@@ -441,16 +451,16 @@ internal static class SourceBuilder
             public bool Exists(string name) => global::System.IO.File.Exists(Resolve(name));
 
             /// <summary>Reads a file as UTF-8 text.</summary>
-            public string ReadText(string name) => global::System.IO.File.ReadAllText(Resolve(name));
+            public string ReadText(string name) => global::System.IO.File.ReadAllText(Existing(name));
 
             /// <summary>Reads a file as bytes.</summary>
-            public byte[] ReadBytes(string name) => global::System.IO.File.ReadAllBytes(Resolve(name));
+            public byte[] ReadBytes(string name) => global::System.IO.File.ReadAllBytes(Existing(name));
 
             /// <summary>Writes UTF-8 text into a file, replacing it if it exists.</summary>
             public void WriteText(string name, string content)
             {
                 var path = Resolve(name);
-                Reserve(path, content == null ? 0 : content.Length);
+                Reserve(path, content == null ? 0 : global::System.Text.Encoding.UTF8.GetByteCount(content));
                 global::System.IO.File.WriteAllText(path, content);
             }
 
@@ -522,7 +532,21 @@ internal static class SourceBuilder
 
             /// <summary>Makes a folder, so files can be written into it.</summary>
             public void CreateFolder(string name)
-                => global::System.IO.Directory.CreateDirectory(Resolve(name));
+            {
+                var path = Resolve(name);
+
+                if (global::System.IO.Directory.Exists(path))
+                {
+                    return;
+                }
+
+                if (Used() + (Missing(path) + 1) * Block > Quota)
+                {
+                    throw new global::System.InvalidOperationException("A workspace must not hold more than " + Quota + " bytes.");
+                }
+
+                global::System.IO.Directory.CreateDirectory(path);
+            }
 
             /// <summary>The folders of this workspace, relative to its root.</summary>
             public string[] Folders()
@@ -581,26 +605,93 @@ internal static class SourceBuilder
                     throw new global::System.UnauthorizedAccessException("'" + name + "' is outside of the workspace of this lambda.");
                 }
 
-                var directory = global::System.IO.Path.GetDirectoryName(resolved);
+                return resolved;
+            }
+
+            private string Existing(string name)
+            {
+                var path = Resolve(name);
+
+                if (!global::System.IO.File.Exists(path))
+                {
+                    throw new global::System.IO.FileNotFoundException("There is no file called '" + name + "' in the workspace.", name);
+                }
+
+                return path;
+            }
+
+            /// <summary>
+            /// Makes sure what is about to be written fits, and then makes the
+            /// folders it goes into.
+            /// </summary>
+            private void Reserve(string path, long size)
+            {
+                // the room this write takes: the file in whole blocks, and a
+                // block for each folder it goes into that is not there yet
+                var added = Footprint(size) + Missing(path) * Block;
+
+                // a file being replaced is not counted a second time
+                var replaced = global::System.IO.File.Exists(path) ? Footprint(Size(path)) : 0;
+
+                // a write taking no more room than what it replaces goes
+                // through even past the quota, which is where a workspace is
+                // once its lambda leaves the tier that filled it: it can still
+                // rewrite what it holds, only not grow
+                if (Used() - replaced + added > Quota && added > replaced)
+                {
+                    throw new global::System.InvalidOperationException("A workspace must not hold more than " + Quota + " bytes.");
+                }
+
+                var directory = global::System.IO.Path.GetDirectoryName(path);
 
                 if (directory != null)
                 {
                     global::System.IO.Directory.CreateDirectory(directory);
                 }
-
-                return resolved;
             }
 
-            private void Reserve(string path, int size)
+            /// <summary>The room everything in the workspace takes.</summary>
+            private long Used()
             {
-                if (size > MaxFileSize)
+                var used = 0L;
+
+                foreach (var file in global::System.IO.Directory.GetFiles(_root, "*", global::System.IO.SearchOption.AllDirectories))
                 {
-                    throw new global::System.InvalidOperationException("A workspace file must not exceed " + MaxFileSize + " bytes.");
+                    used += Footprint(Size(file));
                 }
 
-                if (!global::System.IO.File.Exists(path) && List().Length >= MaxFiles)
+                return used + global::System.IO.Directory.GetDirectories(_root, "*", global::System.IO.SearchOption.AllDirectories).LongLength * Block;
+            }
+
+            /// <summary>How many folders between the root and a path are not there yet.</summary>
+            private long Missing(string path)
+            {
+                var missing = 0L;
+
+                var directory = global::System.IO.Path.GetDirectoryName(path);
+
+                while (directory != null && directory.Length >= _root.Length && !global::System.IO.Directory.Exists(directory))
                 {
-                    throw new global::System.InvalidOperationException("A workspace must not hold more than " + MaxFiles + " files.");
+                    missing++;
+
+                    directory = global::System.IO.Path.GetDirectoryName(directory);
+                }
+
+                return missing;
+            }
+
+            private static long Footprint(long size) => global::System.Math.Max(1, (size + Block - 1) / Block) * Block;
+
+            private static long Size(string file)
+            {
+                try
+                {
+                    return new global::System.IO.FileInfo(file).Length;
+                }
+                catch (global::System.IO.IOException)
+                {
+                    // removed since the directory was read
+                    return 0;
                 }
             }
         }

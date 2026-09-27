@@ -274,7 +274,7 @@ export function TierBadge({ tier }: { tier: string }) {
       }
       title={
         premium
-          ? 'Premium: may answer at a domain of its own, and is kept online however quiet it gets'
+          ? 'Premium: may answer at a domain of its own, has more room for code, assets and data, and is kept online however quiet it gets'
           : demo
             ? 'Demo: kept online by this installation and read only'
             : `${tier} tier`

@@ -27,9 +27,16 @@ public interface IWorkspaceService
     ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, CancellationToken cancellation = default);
 
     /// <summary>
+    /// Finds a single file to stream as it is, or null if there is none by
+    /// that name.
+    /// </summary>
+    ValueTask<FileInfo?> FindAsync(long lambdaId, string path, CancellationToken cancellation = default);
+
+    /// <summary>
     /// Writes a file, replacing it if it exists.
     /// </summary>
-    ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, CancellationToken cancellation = default);
+    /// <param name="expected">How many bytes the sender said it would send. An upload that ends short of it broke off, and is not kept</param>
+    ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a file, if it is there.

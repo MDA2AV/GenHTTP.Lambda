@@ -12,7 +12,11 @@ export function bytes(value: number): string {
     return `${(value / 1024).toFixed(1)} kB`;
   }
 
-  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  if (value < 1024 * 1024 * 1024) {
+    return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  return `${(value / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
 /** Counts that can get large, shortened only once they do. */

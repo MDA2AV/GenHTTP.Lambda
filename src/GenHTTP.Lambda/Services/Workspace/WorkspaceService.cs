@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Storage;
 
@@ -8,13 +10,15 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// <summary>
 /// Reads and writes the private directory of a lambda on behalf of its owner.
 /// </summary>
-public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceService> logger) : IWorkspaceService
+public sealed class WorkspaceService(IStorageService storage, IMetaService meta, LambdaOptions options, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
 
     #region Functionality
 
-    public ValueTask<WorkspaceListing> ListAsync(long lambdaId, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceListing> ListAsync(long lambdaId, CancellationToken cancellation = default)
     {
+        var limits = await LimitsAsync(lambdaId, cancellation);
+
         var root = Root(lambdaId);
 
         var files = new List<WorkspaceEntry>();
@@ -27,7 +31,7 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
 
             files.Add(new WorkspaceEntry(Relative(root, path), info.Length, info.LastWriteTimeUtc));
 
-            used += info.Length;
+            used += WorkspaceLimits.Footprint(info.Length);
         }
 
         files.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
@@ -37,12 +41,20 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
         foreach (var path in Directory.GetDirectories(root, "*", SearchOption.AllDirectories))
         {
             folders.Add(Relative(root, path));
+
+            used += WorkspaceLimits.Block;
         }
 
         folders.Sort(string.CompareOrdinal);
 
-        return ValueTask.FromResult(new WorkspaceListing(files, folders, used, WorkspaceLimits.Quota,
-                                                         WorkspaceLimits.MaxFiles, WorkspaceLimits.MaxFileSize));
+        return new WorkspaceListing(files, folders, used, limits.Quota);
+    }
+
+    public ValueTask<FileInfo?> FindAsync(long lambdaId, string path, CancellationToken cancellation = default)
+    {
+        var resolved = Resolve(Root(lambdaId), path);
+
+        return ValueTask.FromResult(File.Exists(resolved) ? new FileInfo(resolved) : null);
     }
 
     public async ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, CancellationToken cancellation = default)
@@ -59,35 +71,54 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
         return new WorkspaceContent(Relative(root, resolved), await File.ReadAllBytesAsync(resolved, cancellation));
     }
 
-    public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, CancellationToken cancellation = default)
     {
+        var limits = await LimitsAsync(lambdaId, cancellation);
+
         var root = Root(lambdaId);
 
         var resolved = Resolve(root, path);
 
         var existing = File.Exists(resolved);
 
-        if (!existing && Directory.GetFiles(root, "*", SearchOption.AllDirectories).Length >= WorkspaceLimits.MaxFiles)
-        {
-            throw LambdaException.Invalid($"A workspace must not hold more than {WorkspaceLimits.MaxFiles} files.");
-        }
+        var replaced = existing ? WorkspaceLimits.Footprint(Size(resolved)) : 0;
 
-        var directory = Path.GetDirectoryName(resolved);
+        // the folders this file goes into that are not there yet take room too
+        var missing = Missing(root, resolved);
 
-        if (directory != null)
-        {
-            Directory.CreateDirectory(directory);
-        }
+        // what the rest of the workspace takes already - the file being
+        // replaced is not counted, since it will not be there beside this one
+        var others = Used(root) - replaced + missing.Count * WorkspaceLimits.Block;
+
+        // never less than what is being replaced: a workspace is over its
+        // quota once its lambda leaves the tier that filled it, and should
+        // still be able to rewrite what it holds, only not to grow
+        var room = Math.Max(limits.Quota - others, replaced);
 
         // written through a temporary file so a rejected upload cannot leave a
-        // half written one behind in place of what was there
+        // half written one behind in place of what was there - nor the folders
+        // it would have gone into
         var staging = resolved + ".uploading";
 
         try
         {
+            foreach (var folder in missing)
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            long received;
+
             await using (var target = File.Create(staging))
             {
-                await CopyAsync(content, target, cancellation);
+                received = await CopyAsync(content, target, limits, room, cancellation);
+            }
+
+            // a connection the engine dropped looks like a body that ended -
+            // kept, it would be a truncated file passing for the whole one
+            if (expected is { } length && received != length)
+            {
+                throw LambdaException.Invalid($"The upload ended after {received:N0} of {length:N0} bytes and was not kept.");
             }
 
             File.Move(staging, resolved, true);
@@ -95,6 +126,12 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
         catch (Exception)
         {
             Delete(staging);
+
+            foreach (var folder in missing.AsEnumerable().Reverse())
+            {
+                RemoveIfEmpty(folder);
+            }
+
             throw;
         }
 
@@ -105,8 +142,10 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
         return new WorkspaceEntry(Relative(root, resolved), info.Length, info.LastWriteTimeUtc);
     }
 
-    public ValueTask CreateFolderAsync(long lambdaId, string path, CancellationToken cancellation = default)
+    public async ValueTask CreateFolderAsync(long lambdaId, string path, CancellationToken cancellation = default)
     {
+        var limits = await LimitsAsync(lambdaId, cancellation);
+
         var root = Root(lambdaId);
 
         var resolved = Resolve(root, path);
@@ -117,22 +156,20 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
         }
 
         /*
-         * Counted against the file limit even though it holds none. A folder
-         * is a thing on the disk and making a thousand of them is the same
-         * nuisance as making a thousand empty files, which the limit exists
-         * to stop.
+         * A folder takes a block of the quota even though it holds nothing. It
+         * is a thing on the disk, and making a thousand of them is the same
+         * nuisance as making a thousand empty files, which counting in blocks
+         * exists to stop.
          */
         if (!Directory.Exists(resolved)
-         && Directory.GetDirectories(root, "*", SearchOption.AllDirectories).Length >= WorkspaceLimits.MaxFiles)
+         && Used(root) + (Missing(root, resolved).Count + 1) * WorkspaceLimits.Block > limits.Quota)
         {
-            throw LambdaException.Invalid($"A workspace must not hold more than {WorkspaceLimits.MaxFiles} folders.");
+            throw LambdaException.Invalid($"A workspace must not hold more than {limits.Quota} bytes.");
         }
 
         Directory.CreateDirectory(resolved);
 
         logger.LogInformation("Workspace of lambda {LambdaId} gained folder '{Path}'", lambdaId, path);
-
-        return ValueTask.CompletedTask;
     }
 
     public ValueTask DeleteAsync(long lambdaId, string path, CancellationToken cancellation = default)
@@ -148,7 +185,9 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
     /// Copies the upload over, refusing it the moment it grows past what a
     /// lambda would be allowed to write itself.
     /// </summary>
-    private static async ValueTask CopyAsync(Stream content, Stream target, CancellationToken cancellation)
+    /// <param name="room">How large the file may grow before the workspace is past its quota</param>
+    /// <returns>How many bytes arrived</returns>
+    private static async ValueTask<long> CopyAsync(Stream content, Stream target, WorkspaceLimits limits, long room, CancellationToken cancellation)
     {
         var buffer = new byte[81920];
 
@@ -160,12 +199,94 @@ public sealed class WorkspaceService(IStorageService storage, ILogger<WorkspaceS
         {
             total += read;
 
-            if (total > WorkspaceLimits.MaxFileSize)
+            if (WorkspaceLimits.Footprint(total) > room)
             {
-                throw LambdaException.Invalid($"A workspace file must not exceed {WorkspaceLimits.MaxFileSize} bytes.");
+                throw LambdaException.Invalid($"A workspace must not hold more than {limits.Quota} bytes.");
             }
 
             await target.WriteAsync(buffer.AsMemory(0, read), cancellation);
+        }
+
+        // an empty file still takes a block
+        if (WorkspaceLimits.Footprint(total) > room)
+        {
+            throw LambdaException.Invalid($"A workspace must not hold more than {limits.Quota} bytes.");
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    /// The room everything in the workspace takes, counted as the quota is.
+    /// </summary>
+    private static long Used(string root)
+    {
+        var used = 0L;
+
+        foreach (var file in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
+        {
+            used += WorkspaceLimits.Footprint(Size(file));
+        }
+
+        return used + Directory.GetDirectories(root, "*", SearchOption.AllDirectories).LongLength * WorkspaceLimits.Block;
+    }
+
+    /// <summary>
+    /// The folders between the root and a path that are not there yet,
+    /// outermost first.
+    /// </summary>
+    private static List<string> Missing(string root, string path)
+    {
+        var missing = new List<string>();
+
+        var directory = Path.GetDirectoryName(path);
+
+        while (directory != null && directory.Length >= root.Length && !Directory.Exists(directory))
+        {
+            missing.Insert(0, directory);
+
+            directory = Path.GetDirectoryName(directory);
+        }
+
+        return missing;
+    }
+
+    private static void RemoveIfEmpty(string folder)
+    {
+        try
+        {
+            if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
+            {
+                Directory.Delete(folder);
+            }
+        }
+        catch (IOException)
+        {
+            // something arrived in it meanwhile, which may keep it
+        }
+    }
+
+    /// <summary>
+    /// What the workspace of the lambda may hold, which its tier decides.
+    /// </summary>
+    /// <remarks>
+    /// Asked every time rather than remembered, so a lambda that was just
+    /// moved to another tier is held to the limits of the new one - the same
+    /// ones its own code will be compiled with on its next request.
+    /// </remarks>
+    private async ValueTask<WorkspaceLimits> LimitsAsync(long lambdaId, CancellationToken cancellation)
+        => options.WorkspaceOf(await meta.GetTierAsync(lambdaId, cancellation) ?? LambdaTier.Free);
+
+    private static long Size(string path)
+    {
+        try
+        {
+            return new FileInfo(path).Length;
+        }
+        catch (IOException)
+        {
+            // removed since the directory was read
+            return 0;
         }
     }
 

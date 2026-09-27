@@ -1,3 +1,4 @@
+using System.Buffers.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,7 +10,7 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 /// <param name="Name">What it is called, which is also what diagnostics name</param>
 /// <param name="Code">Its contents, base64 when <paramref name="Encoding" /> says so</param>
 /// <param name="Encoding">"base64" for a file that is not text, absent otherwise</param>
-public sealed record LambdaFile(string Name, string Code, string? Encoding = null)
+public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(LongStringConverter))] string Code, string? Encoding = null)
 {
 
     /// <summary>Whether this is C# rather than something to serve.</summary>
@@ -50,17 +51,6 @@ public static class LambdaSource
     /// The file the snippet lives in, which is the one that returns a handler.
     /// </summary>
     public const string EntryName = "lambda.cs";
-
-    /// <summary>
-    /// How many C# files one lambda may be split into. Assets are not counted:
-    /// a frontend is many small files and none of them is a reason to run out.
-    /// </summary>
-    public const int MaxFiles = 12;
-
-    /// <summary>
-    /// How many assets one lambda may ship.
-    /// </summary>
-    public const int MaxAssets = 60;
 
     /// <summary>Whether a name is C# rather than something to serve.</summary>
     public static bool IsCode(string? name) => name?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) == true;
@@ -156,23 +146,31 @@ public static class LambdaSource
     /// <summary>
     /// How many bytes of assets are shipped, decoded rather than as sent.
     /// </summary>
+    /// <remarks>
+    /// Measured without decoding anything: this is asked of every version on
+    /// its way in, and a premium lambda may ship a hundred megabytes that
+    /// would otherwise be decoded just to be counted and thrown away.
+    /// </remarks>
     public static long AssetBytes(IReadOnlyList<LambdaFile> files)
     {
         long total = 0;
 
         foreach (var file in files)
         {
-            if (!file.IsCode)
+            if (file.IsCode)
             {
-                try
-                {
-                    total += file.Bytes.Length;
-                }
-                catch (FormatException)
-                {
-                    // a file that is not the base64 it claims to be is caught
-                    // by Validate; here it simply counts for nothing
-                }
+                continue;
+            }
+
+            if (file.Encoding == "base64")
+            {
+                // a file that is not the base64 it claims to be is caught by
+                // Validate; here it simply counts for nothing
+                total += Base64.IsValid(file.Code, out var decoded) ? decoded : 0;
+            }
+            else
+            {
+                total += System.Text.Encoding.UTF8.GetByteCount(file.Code);
             }
         }
 
@@ -188,16 +186,6 @@ public static class LambdaSource
         if (files is not { Count: > 0 })
         {
             return "A lambda needs at least one file.";
-        }
-
-        if (files.Count(f => f.IsCode) > MaxFiles)
-        {
-            return $"A lambda may be split into at most {MaxFiles} C# files. Assets do not count towards that.";
-        }
-
-        if (files.Count(f => !f.IsCode) > MaxAssets)
-        {
-            return $"A lambda may ship at most {MaxAssets} assets.";
         }
 
         if (files[0].Name != EntryName)
@@ -226,16 +214,10 @@ public static class LambdaSource
                 return $"'{file.Name}' asks for encoding '{file.Encoding}'. Only 'base64' is understood; leave it out for text.";
             }
 
-            if (file.Encoding == "base64")
+            // the same test Convert.FromBase64String makes, without the copy
+            if (file.Encoding == "base64" && !Base64.IsValid(file.Code))
             {
-                try
-                {
-                    _ = Convert.FromBase64String(file.Code);
-                }
-                catch (FormatException)
-                {
-                    return $"'{file.Name}' says it is base64 and is not.";
-                }
+                return $"'{file.Name}' says it is base64 and is not.";
             }
 
             if (!seen.Add(file.Name))

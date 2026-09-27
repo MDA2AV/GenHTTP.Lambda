@@ -120,6 +120,12 @@ public interface IMetaService
     ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
+    /// The tier of the lambda filed under the given identity, for the services
+    /// whose allowance depends on it. Null when there is no such lambda.
+    /// </summary>
+    ValueTask<LambdaTier?> GetTierAsync(long lambdaId, CancellationToken cancellation = default);
+
+    /// <summary>
     /// The identity of a lambda its owner may change, for the services that
     /// store things beside the database - its workspace, say.
     /// </summary>

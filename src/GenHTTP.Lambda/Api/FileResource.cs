@@ -1,8 +1,11 @@
+using GenHTTP.Api.Protocol;
+
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Workspace;
 
+using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
@@ -28,6 +31,18 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
         => await workspace.ListAsync(await meta.RequireIdAsync(privateKey));
 
     /// <summary>
+    /// The largest file that travels as base64 in a JSON document.
+    /// </summary>
+    /// <remarks>
+    /// That way a file is in memory several times over while the request runs
+    /// - its bytes, the text they become, the characters of that text. The
+    /// workspace does not limit how large one file may be, only the room they
+    /// take together, so anything larger goes through <c>…/content</c>, which
+    /// streams the bytes as they are.
+    /// </remarks>
+    private const long EncodedLimit = 32 * 1024 * 1024;
+
+    /// <summary>
     /// Reads one file.
     /// </summary>
     /// <param name="path">The path of the file within the workspace</param>
@@ -39,10 +54,64 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
     [ResourceMethod("lambdas/:privateKey/files/:path")]
     public async ValueTask<FileResponse> Get(string privateKey, string path)
     {
-        var file = await workspace.ReadAsync(await meta.RequireIdAsync(privateKey), path)
+        var id = await meta.RequireIdAsync(privateKey);
+
+        var found = await workspace.FindAsync(id, path)
+                 ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
+
+        if (found.Length > EncodedLimit)
+        {
+            throw LambdaException.Invalid($"'{path}' is {found.Length:N0} bytes, more than is sent as base64. GET /api/v1/lambdas/{{privateKey}}/files/{{path}}/content sends it as it is.");
+        }
+
+        var file = await workspace.ReadAsync(id, path)
                 ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
 
         return new FileResponse(file.Path, Convert.ToBase64String(file.Content), file.Content.Length);
+    }
+
+    /// <summary>
+    /// Reads one file as it is, streamed from the disk, however large.
+    /// </summary>
+    /// <param name="path">The path of the file within the workspace</param>
+    [ResourceMethod("lambdas/:privateKey/files/:path/content")]
+    public async ValueTask<IResponse> GetContent(string privateKey, string path, IRequest request)
+    {
+        var found = await workspace.FindAsync(await meta.RequireIdAsync(privateKey), path)
+                 ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
+
+        // a name in the workspace may hold anything but a slash, a quote or a
+        // line break included, and must not be able to end the header
+        var plain = new string(found.Name.Select(c => c is >= ' ' and < (char)127 and not '"' and not '\\' ? c : '_').ToArray());
+
+        return request.Respond()
+                      .Content(new FileContent(found))
+                      .Header("Content-Disposition", $"attachment; filename=\"{plain}\"; filename*=UTF-8''{Uri.EscapeDataString(found.Name)}")
+                      .Header("X-Content-Type-Options", "nosniff")
+                      .Build();
+    }
+
+    /// <summary>
+    /// Writes a file from the body as it is, replacing it if it is already
+    /// there.
+    /// </summary>
+    /// <param name="path">The path of the file within the workspace</param>
+    /// <remarks>
+    /// Written to the disk as it arrives, so a file of any size costs the
+    /// server a buffer rather than itself - the way in for a model, a dataset
+    /// or anything else too large for a JSON document.
+    /// </remarks>
+    [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path/content")]
+    public async ValueTask<WorkspaceEntry> PutContent(string privateKey, string path, IRequest request)
+    {
+        // read before the body is, which releases the headers
+        var expected = long.TryParse(request.Header.Headers.GetEntry("Content-Length"), out var length) ? length : (long?)null;
+
+        var id = await meta.RequireEditableAsync(privateKey);
+
+        var body = request.GetBody(HeaderAccess.Release)?.AsStream() ?? Stream.Null;
+
+        return await workspace.WriteAsync(id, path, body, expected);
     }
 
     /// <summary>

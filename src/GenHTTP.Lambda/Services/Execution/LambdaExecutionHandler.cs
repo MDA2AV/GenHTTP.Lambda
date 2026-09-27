@@ -2,6 +2,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Protection;
 
@@ -12,7 +13,7 @@ namespace GenHTTP.Lambda.Services.Execution;
 /// by the protection layer, so all that is left is to fetch the compiled
 /// handler and let it answer the request.
 /// </summary>
-public sealed class LambdaExecutionHandler(IDeploymentService deployments) : IHandler
+public sealed class LambdaExecutionHandler(IDeploymentService deployments, LambdaOptions options) : IHandler
 {
 
     public ValueTask PrepareAsync(IServer server) => ValueTask.CompletedTask;
@@ -21,7 +22,7 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments) : IHa
     {
         var lambda = request.RequireLambda();
 
-        var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion);
+        var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, options.WorkspaceOf(lambda.Tier));
 
         return await handler.HandleAsync(request);
     }

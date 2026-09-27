@@ -2,10 +2,13 @@ using System.Net;
 using System.Text;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
+
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GenHTTP.Lambda.Tests.Workspaces;
 
@@ -27,8 +30,7 @@ public sealed class WorkspaceTests
 
         Assert.IsEmpty(listing.Files);
         Assert.AreEqual(0, listing.UsedBytes);
-        Assert.AreEqual(WorkspaceLimits.MaxFiles, listing.MaxFiles);
-        Assert.AreEqual(WorkspaceLimits.MaxFileSize, listing.MaxFileSize);
+        Assert.AreEqual(fixture.Options.WorkspaceOf(Data.Entities.LambdaTier.Free).Quota, listing.QuotaBytes);
     }
 
     [TestMethod]
@@ -67,7 +69,7 @@ public sealed class WorkspaceTests
 
         Assert.AreEqual("a/deep/file.bin", entry.Path, "nested files keep their path");
         Assert.AreEqual(1234, entry.Size);
-        Assert.AreEqual(1234, listing.UsedBytes);
+        Assert.AreEqual(3 * WorkspaceLimits.Block, listing.UsedBytes, "the room it takes: a block for the file, and one for each of its folders");
         Assert.IsGreaterThan(DateTime.UtcNow.AddMinutes(-5), entry.Modified);
     }
 
@@ -90,14 +92,114 @@ public sealed class WorkspaceTests
     [TestMethod]
     public async Task AFileTooLargeIsRefused()
     {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var response = await Put(fixture, lambda.PrivateKey, "deep/er/big.bin", new byte[4 * WorkspaceLimits.Block]);
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, "it would fit alone, not with the two folders it goes into");
+
+        var listing = await ListAsync(fixture, lambda.PrivateKey);
+
+        Assert.IsEmpty(listing.Files, "and nothing half written is left behind");
+        Assert.IsEmpty(listing.Folders, "nor the folders made for it");
+    }
+
+    [TestMethod]
+    public async Task OneFileMayTakeTheWholeQuota()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // there is no limit on the size of a file, only on the room they take
+        await WriteAsync(fixture, lambda.PrivateKey, "all.bin", new byte[4 * WorkspaceLimits.Block]);
+
+        Assert.AreEqual(4 * WorkspaceLimits.Block, (await ListAsync(fixture, lambda.PrivateKey)).UsedBytes);
+    }
+
+    [TestMethod]
+    public async Task EmptyFilesAndFoldersAreNotFree()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // however many files there are is up to the room they take - and an
+        // empty one takes a block, or a loop could make them without end
+        for (var i = 0; i < 3; i++)
+        {
+            await WriteAsync(fixture, lambda.PrivateKey, $"{i}.txt", []);
+        }
+
+        using (var folder = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/folders/empty"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, folder.StatusCode, "a folder takes the fourth block");
+        }
+
+        using var refused = await Put(fixture, lambda.PrivateKey, "3.txt", []);
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "and a fourth empty file does not fit");
+    }
+
+    [TestMethod]
+    public async Task AnUploadThatBreaksOffIsNotKept()
+    {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        using var response = await Put(fixture, lambda.PrivateKey, "big.bin", new byte[WorkspaceLimits.MaxFileSize + 1]);
+        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.IsEmpty((await ListAsync(fixture, lambda.PrivateKey)).Files, "and nothing half written is left behind");
+        var workspace = fixture.Application.Services.GetRequiredService<IWorkspaceService>();
+
+        // what an engine that dropped the connection hands on: a body that
+        // simply ends, a thousand bytes into the five thousand announced
+        await Assert.ThrowsExactlyAsync<LambdaException>(async () =>
+            await workspace.WriteAsync(id, "models/model.bin", new MemoryStream(new byte[1000]), expected: 5000));
+
+        var listing = await workspace.ListAsync(id);
+
+        Assert.IsEmpty(listing.Files, "the part that arrived is not taken for the whole");
+        Assert.IsEmpty(listing.Folders);
+    }
+
+    [TestMethod]
+    public async Task ALargeFileTravelsAsItIs()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // past what is sent as base64, which only the streamed route carries
+        var content = new byte[32 * 1024 * 1024 + 1];
+
+        Random.Shared.NextBytes(content);
+
+        using (var request = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}/files/{Uri.EscapeDataString("models/large.bin")}/content", HttpMethod.Put))
+        {
+            request.Content = new ByteArrayContent(content);
+            request.Content.Headers.ContentType = new("application/octet-stream");
+
+            using var written = await fixture.Host.GetResponseAsync(request);
+
+            Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, await written.Content.ReadAsStringAsync());
+        }
+
+        using (var encoded = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files/{Uri.EscapeDataString("models/large.bin")}"))
+        {
+            Assert.AreEqual(HttpStatusCode.BadRequest, encoded.StatusCode, "too large to send as base64");
+            Assert.Contains("/content", await encoded.Content.ReadAsStringAsync(), "and the caller is told where it is");
+        }
+
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files/{Uri.EscapeDataString("models/large.bin")}/content");
+
+        Assert.AreEqual(HttpStatusCode.OK, read.StatusCode);
+        Assert.AreEqual("application/octet-stream", read.Content.Headers.ContentType?.MediaType, "never rendered, whatever it holds");
+        Assert.AreEqual("attachment", read.Content.Headers.ContentDisposition?.DispositionType);
+
+        CollectionAssert.AreEqual(content, await read.Content.ReadAsByteArrayAsync());
     }
 
     [TestMethod]
