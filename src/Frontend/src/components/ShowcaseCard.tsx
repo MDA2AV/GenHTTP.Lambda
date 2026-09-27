@@ -1,9 +1,11 @@
+import { shownAddress } from '../address';
 import { IconExternal } from './Icons';
 
 interface Props {
   title: string;
   description: string;
-  publicKey: string;
+  /** Where the lambda answers, shown on the card whether or not it links there. */
+  address: string;
   /** Where the picture is, or a data address while it has not been saved yet. */
   image?: string | null;
   /** Where the card leads; none for the preview in the editor. */
@@ -19,7 +21,9 @@ interface Props {
  * The editor draws its preview with the same card, so what an owner sees
  * while writing is exactly what everybody else will see.
  */
-export function ShowcaseCard({ title, description, publicKey, image, href }: Props) {
+export function ShowcaseCard({ title, description, address, image, href }: Props) {
+  const shown = shownAddress(address);
+
   const body = (
     <>
       <div className="relative aspect-[16/10] overflow-hidden bg-grey-100 dark:bg-ink-850">
@@ -46,7 +50,7 @@ export function ShowcaseCard({ title, description, publicKey, image, href }: Pro
         </p>
 
         <p className="mt-3 flex items-center gap-1.5 font-mono text-xs text-slate-500">
-          <span className="truncate">/lambda/{publicKey}/</span>
+          <span className="truncate">{shown}</span>
           <IconExternal className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
         </p>
       </div>
@@ -65,7 +69,7 @@ export function ShowcaseCard({ title, description, publicKey, image, href }: Pro
       target="_blank"
       rel="noreferrer"
       className={`${frame} hover:border-accent-500/60 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 dark:hover:border-accent-400/50`}
-      aria-label={`${title}, opens /lambda/${publicKey}/ in a new tab`}
+      aria-label={`${title}, opens ${shown} in a new tab`}
     >
       {body}
     </a>

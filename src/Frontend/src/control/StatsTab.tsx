@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { platformPath } from '../address';
 import { ApiError, api, type LambdaTraffic, type TrafficPoint } from '../api';
 import { Chart } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
@@ -190,7 +191,7 @@ export function Entrances({ traffic, publicKey }: { traffic: LambdaTraffic; publ
         {entrances.map((entrance) => (
           <li key={entrance.domain ?? ''} className="flex items-center gap-3 py-2">
             <span className="min-w-0 flex-1 truncate font-mono">
-              {entrance.domain ?? `/lambda/${publicKey}/`}
+              {entrance.domain ?? platformPath(publicKey)}
             </span>
             <span className="w-24 shrink-0">
               <span className="block h-1 bg-slate-200 dark:bg-ink-800">

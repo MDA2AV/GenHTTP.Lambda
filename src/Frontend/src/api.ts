@@ -23,6 +23,8 @@ export interface Lambda {
   domain?: string;
   /** Whether it actually answers at that domain right now. */
   domainServed: boolean;
+  /** Where to link to it: its domain while that is served, its path otherwise. See address.ts. */
+  address: string;
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */
@@ -496,7 +498,7 @@ export interface ShowcaseEntry {
   publicKey: string;
   title: string;
   description: string;
-  /** Where it answers. */
+  /** Where to link to it: its domain while that is served, its path otherwise. See address.ts. */
   path: string;
   /** Its picture, versioned so it can be cached for good. */
   imagePath: string;

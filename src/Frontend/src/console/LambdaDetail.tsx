@@ -5,6 +5,7 @@ import { ApiError, allowsDomain, api, type AdminLambdaDetail, type LambdaFile } 
 import { Chart } from '../components/Chart';
 import { Dialog } from '../components/Dialog';
 import { IconExternal, IconPlay, IconSpinner, IconTrash } from '../components/Icons';
+import { LambdaLink } from '../components/LambdaLink';
 import { useToast } from '../components/Toast';
 import { Entrances } from '../control/StatsTab';
 import { AgentMark, Ago, Empty, Figure, Section, StatusBadge, TierBadge } from '../control/ui';
@@ -210,17 +211,13 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
           {live ? <>Online, version {lambda.activeVersion}{lambda.deployedAt && <> since <Ago at={lambda.deployedAt} /></>}</> : 'Offline'}
         </Fact>
         <Fact label="Address">
-          <a href={lambda.publicPath} target="_blank" rel="noreferrer" className="font-mono text-accent-500 hover:underline dark:text-accent-400">
-            {lambda.publicPath}
-          </a>
+          <LambdaLink address={lambda.publicPath} className="font-mono text-accent-500 hover:underline dark:text-accent-400" />
         </Fact>
         <Fact label="Domain">
           {lambda.domain ? (
             <span className="font-mono">
               {lambda.domainServed ? (
-                <a href={`https://${lambda.domain}/`} target="_blank" rel="noreferrer" className="text-accent-500 hover:underline dark:text-accent-400">
-                  {lambda.domain}
-                </a>
+                <LambdaLink address={lambda.address} className="text-accent-500 hover:underline dark:text-accent-400" />
               ) : (
                 <span title="Configured, but not served outside the premium tier" className="text-slate-400 line-through">{lambda.domain}</span>
               )}

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { platformPath } from '../address';
 import { ApiError, api, type Activity, type Telemetry, type TelemetrySample } from '../api';
 import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
+import { LambdaLink } from '../components/LambdaLink';
 import { Pills, Section } from '../control/ui';
 import type { Access } from './context';
 
@@ -355,9 +357,9 @@ export function ServerSection({ access }: { access: Access }) {
                 {activity.lambdas.map((entry) => (
                   <tr key={entry.publicKey} className="border-b border-slate-200 last:border-0 dark:border-ink-800">
                     <td className="px-4 py-2">
-                      <a href={`/lambda/${entry.publicKey}/`} className="font-mono text-accent-500 hover:underline dark:text-accent-400">
+                      <LambdaLink address={platformPath(entry.publicKey)} className="font-mono text-accent-500 hover:underline dark:text-accent-400">
                         {entry.publicKey}
-                      </a>
+                      </LambdaLink>
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">{count(entry.requests)}</td>
                     <td className={`px-4 py-2 text-right tabular-nums ${entry.failed > 0 ? 'text-red-500' : 'text-slate-500'}`}>

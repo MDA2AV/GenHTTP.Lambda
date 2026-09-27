@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { absoluteAddress, isDomain, platformPath } from '../address';
 import { ApiError, allowsDomain, api, isDemo, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
@@ -282,8 +283,8 @@ export function Editor({ theme }: Props) {
   };
 
   const live = lambda.activeVersion != null;
-  const publicUrl = `${window.location.origin}${lambda.publicPath}`;
-  const domainUrl = lambda.domainServed && lambda.domain ? `https://${lambda.domain}/` : null;
+  const publicUrl = absoluteAddress(lambda.publicPath);
+  const domainUrl = isDomain(lambda.address) ? lambda.address : null;
   const editorUrl = `${window.location.origin}${lambda.editorPath}`;
   const latest = lambda.latestVersion;
   const ahead = latest != null && latest !== lambda.activeVersion;
@@ -500,7 +501,7 @@ export function Editor({ theme }: Props) {
           setLambda(updated);
           setRenaming(false);
           refresh().catch(() => undefined);
-          toast(`Now at /lambda/${updated.publicKey}/.`);
+          toast(`Now at ${platformPath(updated.publicKey)}.`);
         }}
         privateKey={privateKey}
       />
