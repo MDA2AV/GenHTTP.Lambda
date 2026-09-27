@@ -208,11 +208,11 @@ public sealed class TierAllowanceTests
     [TestMethod]
     public async Task APremiumWorkspaceHasMoreRoom()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block, PremiumWorkspaceBytes = 16 * WorkspaceLimits.Block });
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        var file = new byte[WorkspaceLimits.Standard.MaxFileSize + 1];
+        var file = new byte[8 * WorkspaceLimits.Block];
 
         using (var refused = await PutAsync(fixture, lambda.PrivateKey, "big.bin", file))
         {
@@ -228,9 +228,7 @@ public sealed class TierAllowanceTests
 
         var listing = await ListAsync(fixture, lambda.PrivateKey);
 
-        Assert.AreEqual(2048L * 1024 * 1024, listing.QuotaBytes);
-        Assert.AreEqual(128 * 1024 * 1024, listing.MaxFileSize);
-        Assert.AreEqual(WorkspaceLimits.Standard.MaxFiles, listing.MaxFiles);
+        Assert.AreEqual(16 * WorkspaceLimits.Block, listing.QuotaBytes);
 
         using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files/big.bin");
 
@@ -248,17 +246,17 @@ public sealed class TierAllowanceTests
 
         await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
 
-        using (var first = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2000]))
+        using (var first = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block]))
         {
             Assert.AreEqual(HttpStatusCode.OK, first.StatusCode);
         }
 
-        using (var second = await PutAsync(fixture, lambda.PrivateKey, "b.bin", new byte[2000]))
+        using (var second = await PutAsync(fixture, lambda.PrivateKey, "b.bin", new byte[2 * WorkspaceLimits.Block]))
         {
             Assert.AreEqual(HttpStatusCode.BadRequest, second.StatusCode, "each file fits, both together do not");
         }
 
-        using (var replaced = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2000]))
+        using (var replaced = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block]))
         {
             Assert.AreEqual(HttpStatusCode.OK, replaced.StatusCode, "a file being replaced is not counted twice");
         }
@@ -270,7 +268,7 @@ public sealed class TierAllowanceTests
 
         var listing = await ListAsync(fixture, lambda.PrivateKey);
 
-        Assert.AreEqual(3000, listing.UsedBytes);
+        Assert.AreEqual(3 * WorkspaceLimits.Block, listing.UsedBytes, "a thousand bytes take a whole block");
 
         CollectionAssert.AreEquivalent(new[] { "a.bin", "c.bin" }, listing.Files.Select(f => f.Path).ToArray(),
                                        "and nothing that was refused is left behind");
@@ -287,15 +285,15 @@ public sealed class TierAllowanceTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
-        using (var _ = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2000])) { }
+        using (var _ = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block])) { }
 
         // how a workspace ends up past its quota: filled under a larger one,
         // which is what leaving the premium tier does to it
         var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
 
-        await File.WriteAllBytesAsync(Path.Combine(fixture.Options.WorkspaceDirectory, id.ToString(), "x.bin"), new byte[2500]);
+        await File.WriteAllBytesAsync(Path.Combine(fixture.Options.WorkspaceDirectory, id.ToString(), "x.bin"), new byte[2 * WorkspaceLimits.Block]);
 
-        using (var same = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2000]))
+        using (var same = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block]))
         {
             Assert.AreEqual(HttpStatusCode.OK, same.StatusCode, "rewriting a file at its size takes no more room");
         }
@@ -305,7 +303,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.OK, smaller.StatusCode, "and neither does the lambda shrinking it");
         }
 
-        using (var grown = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[1500]))
+        using (var grown = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[WorkspaceLimits.Block + 1]))
         {
             Assert.AreEqual(HttpStatusCode.BadRequest, grown.StatusCode, "growing it back does");
         }
@@ -326,29 +324,64 @@ public sealed class TierAllowanceTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
-        using (var first = await fixture.GetAsync("/lambda/hoarder/write?name=a.bin&size=2000"))
+        using (var first = await fixture.GetAsync($"/lambda/hoarder/write?name=a.bin&size={2 * WorkspaceLimits.Block}"))
         {
             Assert.AreEqual(HttpStatusCode.OK, first.StatusCode, await first.Content.ReadAsStringAsync());
         }
 
-        using var second = await fixture.GetAsync("/lambda/hoarder/write?name=b.bin&size=2000");
+        using var second = await fixture.GetAsync($"/lambda/hoarder/write?name=b.bin&size={2 * WorkspaceLimits.Block}");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, second.StatusCode);
-        Assert.Contains("3000 bytes", await second.Content.ReadAsStringAsync(), "the lambda is told what its quota is");
+        Assert.Contains($"{3 * WorkspaceLimits.Block} bytes", await second.Content.ReadAsStringAsync(), "the lambda is told what its quota is");
+    }
+
+    [TestMethod]
+    public async Task ALambdaCannotMakeRoomOutOfNothing()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });
+
+        var lambda = await fixture.CreateLambdaAsync("mason");
+
+        // reading makes nothing, however deep the name; making folders and
+        // empty files takes room until there is none
+        await fixture.DeployAsync(lambda.PrivateKey, """
+            return Inline.Create().Get(() =>
+            {
+                var seen = Workspace.Exists("a/b/c/nothing.txt");
+
+                var made = 0;
+
+                try
+                {
+                    for (var i = 0; i < 100; i++)
+                    {
+                        if (i % 2 == 0) Workspace.CreateFolder($"f{i}"); else Workspace.WriteText($"e{i}.txt", "");
+                        made++;
+                    }
+                }
+                catch (InvalidOperationException) { }
+
+                return $"{seen} {made} {Workspace.Folders().Length}";
+            });
+            """);
+
+        using var response = await fixture.GetAsync("/lambda/mason/");
+
+        Assert.AreEqual("False 4 2", await response.GetContentAsync(), "four blocks: two folders and two empty files, and no folders from reading");
     }
 
     [TestMethod]
     public async Task TextIsCountedInBytes()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 2 * WorkspaceLimits.Block });
 
         var lambda = await fixture.CreateLambdaAsync("scribe");
 
-        // fewer characters than a file may have bytes, more bytes once written
+        // two blocks in characters, more than two once written as bytes
         await fixture.DeployAsync(lambda.PrivateKey, $$"""
             return Inline.Create().Get(() =>
             {
-                Workspace.WriteText("accents.txt", new string('é', {{WorkspaceLimits.Standard.MaxFileSize / 2 + 1}}));
+                Workspace.WriteText("accents.txt", new string('é', {{WorkspaceLimits.Block + 1}}));
                 return "written";
             });
             """);
@@ -361,13 +394,13 @@ public sealed class TierAllowanceTests
     [TestMethod]
     public async Task MovingTheTierMovesTheLimitsOfTheRunningLambda()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block, PremiumWorkspaceBytes = 32 * WorkspaceLimits.Block });
 
         var lambda = await fixture.CreateLambdaAsync("mover");
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
-        var size = WorkspaceLimits.Standard.MaxFileSize + 1;
+        var size = 8 * WorkspaceLimits.Block;
 
         using (var refused = await fixture.GetAsync($"/lambda/mover/write?name=big.bin&size={size}"))
         {
@@ -443,8 +476,6 @@ public sealed class TierAllowanceTests
         Assert.AreEqual(1024 * 1024, free.Limits.CodeCharacters);
         Assert.AreEqual(32 * 1024 * 1024, free.Limits.AssetBytes);
         Assert.AreEqual(256L * 1024 * 1024, free.Limits.WorkspaceBytes);
-        Assert.AreEqual(32 * 1024 * 1024, free.Limits.WorkspaceFileBytes);
-        Assert.AreEqual(64, free.Limits.WorkspaceFiles);
 
         await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
 
@@ -453,8 +484,6 @@ public sealed class TierAllowanceTests
         Assert.AreEqual(10 * 1024 * 1024, premium.Limits.CodeCharacters);
         Assert.AreEqual(128 * 1024 * 1024, premium.Limits.AssetBytes);
         Assert.AreEqual(2048L * 1024 * 1024, premium.Limits.WorkspaceBytes);
-        Assert.AreEqual(128 * 1024 * 1024, premium.Limits.WorkspaceFileBytes);
-        Assert.AreEqual(64, premium.Limits.WorkspaceFiles);
     }
 
     #endregion
@@ -462,11 +491,10 @@ public sealed class TierAllowanceTests
     #region Helpers
 
     /// <summary>
-    /// A premium workspace small enough to fill in a test: two thousand bytes
-    /// a file, and three thousand for all of them.
+    /// A premium workspace small enough to fill in a test: three blocks.
     /// </summary>
     private static LambdaOptions Small(LambdaOptions options)
-        => options with { PremiumWorkspaceFileBytes = 2000, PremiumWorkspaceBytes = 3000 };
+        => options with { PremiumWorkspaceBytes = 3 * WorkspaceLimits.Block };
 
     /// <summary>
     /// Writes as many bytes as it is asked for, under the name it is given.

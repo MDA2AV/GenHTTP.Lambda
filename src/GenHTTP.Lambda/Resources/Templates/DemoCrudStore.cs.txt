@@ -8,7 +8,7 @@
 //     the same moment cannot lose each other's change or interleave their writes.
 //   - At most `limit` records are kept, the oldest going first. Anybody can
 //     write to a demo, so it must not grow without bound. For your own, the
-//     real limit is how large a workspace file may be, which list_files says.
+//     real limit is the room the workspace may take, which list_files says.
 //
 // The store is handed a way to read and write its file rather than reaching
 // for Workspace itself, so it does not care where that file lives.

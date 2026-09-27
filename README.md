@@ -87,7 +87,8 @@ path.
 | `GET /lambdas/:privateKey/traffic`                    | requests by minute and quarter hour, statuses, paths |
 | `GET /lambdas/:privateKey/logs`                       | its own log, followed with `?since=`; no visitor addresses |
 | `GET /lambdas/:privateKey/files`                      | lists the workspace                       |
-| `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`)  |
+| `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`), as base64 up to 32 MB |
+| `GET / PUT /lambdas/:privateKey/files/:path/content`  | one file as it is, streamed, however large |
 | `PUT /lambdas/:privateKey/folders/:path`              | makes a folder                            |
 | `POST /lambdas/:privateKey/code/check`                | compiles without saving                   |
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
@@ -135,10 +136,11 @@ services that the API resources talk to through interfaces:
 - **Workspace** (`Services/Workspace`) - the private directory of a lambda,
   reached from the editor. The same directory the generated `Workspace` class
   writes to from inside a lambda, under the same limits, so a file put there by
-  hand behaves like one the lambda wrote itself. The tier sets them: 64 files,
-  32 MB each and 256 MB in all for most lambdas, 128 MB each and 2 GB in all
-  for a premium one. They are compiled into the lambda, so moving it to another
-  tier builds it again on its next request.
+  hand behaves like one the lambda wrote itself. Only the room it takes is
+  limited - 256 MB for most lambdas and 2 GB for a premium one, in any number
+  of files of any size - counted in blocks of 4 KB as the disk counts it, so
+  an empty file or a folder is not free. The quota is compiled into the
+  lambda, so moving it to another tier builds it again on its next request.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached.
@@ -178,7 +180,7 @@ Everything is read from the environment on startup, see
 |-------------------------------------|------------------|---------------------------------------------|
 | `LAMBDA_PORT`                       | `8080`           | port of the root server                     |
 | `LAMBDA_ENGINE`                     | `ioxide`         | `ioxide` or `kestrel` (see below)           |
-| `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `1024`           | reads of 32 KB a connection may have waiting on io_uring |
+| `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `4096`           | reads of 32 KB a connection may have waiting on io_uring |
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
 | `LAMBDA_WEB_ROOT`                   | `./wwwroot`      | the built frontend                          |
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
@@ -189,10 +191,8 @@ Everything is read from the environment on startup, see
 | `LAMBDA_PREMIUM_MAX_CODE_LENGTH`    | `10485760`       | the same for a premium lambda, never less   |
 | `LAMBDA_MAX_ASSET_BYTES`            | `33554432`       | what the shipped assets may come to         |
 | `LAMBDA_PREMIUM_MAX_ASSET_BYTES`    | `134217728`      | the same for a premium lambda, never less   |
-| `LAMBDA_WORKSPACE_BYTES`            | `268435456`      | what a workspace may hold in all            |
-| `LAMBDA_WORKSPACE_FILE_BYTES`       | `33554432`       | the largest file a workspace holds          |
-| `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | what a premium workspace may hold in all    |
-| `LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES` | `134217728`    | the largest file a premium workspace holds  |
+| `LAMBDA_WORKSPACE_BYTES`            | `268435456`      | the room a workspace may take in all        |
+| `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | the same for a premium lambda               |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
@@ -240,11 +240,20 @@ than it arrives. It keeps what came in, and once `LAMBDA_RECEIVE_QUEUE_ENTRIES`
 reads are waiting it drops the connection with `recv queue overflow` on stderr.
 Its own default of 64 is two megabytes, which a JSON body of a few megabytes
 outruns while it is being parsed - an upload of 24 MB was dropped even at
-5 MB/s. 1024 carried 100 MB at 40 MB/s; the reads come out of the 4096 each
-reactor shares, and when those run out it waits for them rather than dropping
-anybody. It is not enough for everything the premium tier allows - 171 MB sent
-at 50 MB/s was still dropped. Kestrel slows the sender down and needs none of
-this.
+5 MB/s. The reads come out of the 4096 each reactor shares, and when those run
+out it waits for them rather than dropping anybody - so the default here is
+4096, at which a connection is only ever slowed down: 200 MB went through at
+the full speed of the loopback, where 1024 dropped 100 MB sent at 50 MB/s. The
+price is that one large upload can hold the reads of its reactor while it is
+consumed, and the other connections on that reactor wait for them. Kestrel
+slows the sender down and needs none of this.
+
+A workspace file sent as it is, to `…/files/:path/content`, is written to the
+disk as it arrives: 200 MB went through with the server growing by 160 MB,
+where base64 in JSON costs several times the file. A connection dropped in the
+middle of a body looks like a body that ended, so such an upload is checked
+against its `Content-Length` and not kept unless all of it arrived - with 1024
+reads, the partial file had been kept as if it were the whole.
 
 ### Redeploying
 

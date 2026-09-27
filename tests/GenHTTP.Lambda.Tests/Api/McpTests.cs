@@ -739,7 +739,6 @@ public sealed class McpTests
         Assert.AreEqual(fixture.Options.MaxCodeLengthOf(LambdaTier.Premium), premium["codeCharacters"]!.GetValue<int>());
         Assert.AreEqual(fixture.Options.MaxAssetBytesOf(LambdaTier.Premium), premium["assetBytes"]!.GetValue<int>());
         Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Premium).Quota, premium["workspaceBytes"]!.GetValue<long>());
-        Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Premium).MaxFileSize, premium["workspaceFileBytes"]!.GetValue<int>());
     }
 
     [TestMethod]

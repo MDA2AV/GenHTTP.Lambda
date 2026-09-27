@@ -92,8 +92,6 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                 options.MaxCodeLengthOf(tier),
                 options.MaxAssetBytesOf(tier),
                 allowance.Quota,
-                allowance.MaxFiles,
-                allowance.MaxFileSize,
                 options.MaxVersions,
                 (int)options.DeploymentLifetime.TotalHours,
                 (int)options.Retention.TotalDays

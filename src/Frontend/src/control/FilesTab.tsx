@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiError, api, isDemo, type LambdaFile, type VersionContent, type WorkspaceListing } from '../api';
-import { decode, download, encode, encodeBytes, readable } from '../bytes';
+import { decode, download, encodeBytes, readable } from '../bytes';
 import { CodeEditor } from '../components/CodeEditor';
 import { IconChevronDown, IconDownload, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
 import { useToast } from '../components/Toast';
@@ -363,7 +363,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
       const path = into ? `${into}/${file.name}` : file.name;
 
       try {
-        await api.writeFile(control.privateKey, path, await encode(file));
+        await api.uploadFile(control.privateKey, path, file);
       } catch (error) {
         toast(error instanceof ApiError ? error.message : `${path} could not be uploaded.`, 'error');
       }
@@ -401,7 +401,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
     }
   }
 
-  const full = listing !== null && listing.files.length >= listing.maxFiles;
+  const full = listing !== null && listing.usedBytes >= listing.quotaBytes;
 
   // what a demo keeps is there to be read, not replaced
   const demo = isDemo(control.lambda.tier);
@@ -410,7 +410,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
     <GroupList
       title="Data"
       exposure={<Exposure open={publicly} why={publicly ? 'Public: this version serves it with Workspace.' : 'Private to the lambda. Not part of any version.'} />}
-      usage={listing ? `${listing.files.length} of ${listing.maxFiles} files, ${bytes(listing.usedBytes)} of ${bytes(listing.quotaBytes)}` : undefined}
+      usage={listing ? `${listing.files.length} ${listing.files.length === 1 ? 'file' : 'files'}, ${bytes(listing.usedBytes)} of ${bytes(listing.quotaBytes)}` : undefined}
       action={demo ? undefined : (
         <>
           <input ref={picker} type="file" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
@@ -453,6 +453,9 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
   );
 }
 
+/** Past this a data file is not read into the page to be shown, only offered to download. */
+const PREVIEW_BYTES = 2 * 1024 * 1024;
+
 /** What is selected, shown as what it is: code as code, pictures as pictures. */
 function Viewer({ control, selection, files, listing }: {
   control: Control;
@@ -471,7 +474,7 @@ function Viewer({ control, selection, files, listing }: {
     setLoaded(null);
     setFailure(null);
 
-    if (!entry) {
+    if (!entry || entry.size > PREVIEW_BYTES) {
       return;
     }
 
@@ -500,6 +503,21 @@ function Viewer({ control, selection, files, listing }: {
 
   if (selection.group === 'data') {
     size = entry?.size ?? 0;
+
+    // a model or a dataset: the workspace does not limit how large a file
+    // may be, and nothing is gained by pulling one into the page
+    if (entry && entry.size > PREVIEW_BYTES) {
+      return (
+        <div className={`${frame} items-center justify-center gap-3 p-6 text-center text-sm text-slate-500`}>
+          <p>
+            <span className="font-mono">{name}</span> is {bytes(entry.size)}, too large to show here.
+          </p>
+          <a href={api.fileUrl(control.privateKey, entry.path)} download={name.split('/').pop()} className={pill(false)}>
+            <IconDownload className="h-3.5 w-3.5" /> Download
+          </a>
+        </div>
+      );
+    }
 
     if (failure) {
       return <div className={`${frame} p-6 text-sm text-red-500`}>{failure}</div>;
@@ -541,15 +559,27 @@ function Viewer({ control, selection, files, listing }: {
           {bytes(size)}
           {entry?.modified && <>, saved <Ago at={entry.modified} /></>}
         </span>
-        <button
-          type="button"
-          onClick={() => download(name, text !== null ? new TextEncoder().encode(text) : new Uint8Array(decode(base64!)))}
-          className="ml-auto rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
-          title="Download"
-          aria-label="Download"
-        >
-          <IconDownload className="h-3.5 w-3.5" />
-        </button>
+        {entry ? (
+          <a
+            href={api.fileUrl(control.privateKey, entry.path)}
+            download={name.split('/').pop()}
+            className="ml-auto rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
+            title="Download"
+            aria-label="Download"
+          >
+            <IconDownload className="h-3.5 w-3.5" />
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={() => download(name, text !== null ? new TextEncoder().encode(text) : new Uint8Array(decode(base64!)))}
+            className="ml-auto rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
+            title="Download"
+            aria-label="Download"
+          >
+            <IconDownload className="h-3.5 w-3.5" />
+          </button>
+        )}
       </header>
 
       {text !== null ? (

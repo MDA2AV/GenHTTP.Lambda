@@ -162,8 +162,6 @@ export interface LambdaSummary {
     codeCharacters: number;
     assetBytes: number;
     workspaceBytes: number;
-    workspaceFiles: number;
-    workspaceFileBytes: number;
     versions: number;
     deploymentLifetimeHours: number;
     retentionDays: number;
@@ -341,10 +339,9 @@ export interface WorkspaceEntry {
 export interface WorkspaceListing {
   files: WorkspaceEntry[];
   folders: string[];
+  /** The room the files and folders take, counted in blocks of 4 KB as the quota is. */
   usedBytes: number;
   quotaBytes: number;
-  maxFiles: number;
-  maxFileSize: number;
 }
 
 export interface LambdaActivity {
@@ -754,10 +751,15 @@ export const api = {
       `/lambdas/${privateKey}/files/${encodeURIComponent(path)}`,
     ),
 
-  writeFile: (privateKey: string, path: string, content: string) =>
-    request<WorkspaceEntry>(`/lambdas/${privateKey}/files/${encodeURIComponent(path)}`, {
+  /** A file as it is, streamed: for a download link, and for anything too large to send as base64. */
+  fileUrl: (privateKey: string, path: string) => `${base}/lambdas/${privateKey}/files/${encodeURIComponent(path)}/content`,
+
+  /** Sends a file as it is, streamed to the disk however large it is. */
+  uploadFile: (privateKey: string, path: string, content: Blob) =>
+    request<WorkspaceEntry>(`/lambdas/${privateKey}/files/${encodeURIComponent(path)}/content`, {
       method: 'PUT',
-      body: JSON.stringify({ content }),
+      body: content,
+      headers: { 'Content-Type': 'application/octet-stream' },
     }),
 
   deleteFile: (privateKey: string, path: string) =>

@@ -82,14 +82,13 @@ public sealed record StorageSummary(
 /// The allowances a lambda on this installation has, in its tier.
 /// </summary>
 /// <remarks>
-/// Nothing counts the C# files or the assets: only what they come to.
+/// Nothing counts files - C#, assets or the workspace - only what they come
+/// to, and for the workspace the room they take.
 /// </remarks>
 public sealed record SummaryLimits(
     int CodeCharacters,
     long AssetBytes,
     long WorkspaceBytes,
-    int WorkspaceFiles,
-    int WorkspaceFileBytes,
     int Versions,
     int DeploymentLifetimeHours,
     int RetentionDays

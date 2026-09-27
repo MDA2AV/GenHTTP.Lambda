@@ -52,13 +52,15 @@ public sealed record LambdaOptions
     /// and, once this many reads are waiting, closes the connection. Its own
     /// default of 64 is two megabytes, which a JSON body of a few megabytes
     /// outruns while it is being parsed - uploads of 24 MB were dropped even
-    /// at 5 MB/s, which the assets of a premium lambda far exceed. 1024 is 32
-    /// MB, and carried 100 MB at 40 MB/s. The reads come out of the ones a
-    /// reactor shares between its connections, 4096 of them; when those run
-    /// out, the engine waits for them to come back rather than dropping
-    /// anybody.
+    /// at 5 MB/s. The reads come out of the ones a reactor shares between its
+    /// connections, 4096 of them, and when those run out the engine waits for
+    /// them to come back rather than dropping anybody. At 4096 a connection is
+    /// therefore only ever slowed down: 200 MB went through at the full speed
+    /// of the loopback, where 1024 dropped 100 MB sent at 50 MB/s. The price
+    /// is that one large upload can hold the reads of its reactor while it is
+    /// consumed, and the other connections on that reactor wait for them.
     /// </remarks>
-    public int ReceiveQueueEntries { get; init; } = 1024;
+    public int ReceiveQueueEntries { get; init; } = 4096;
 
     /// <summary>
     /// Where the build agent listens, or nothing to do without one.
@@ -181,26 +183,15 @@ public sealed record LambdaOptions
     public int PremiumMaxAssetBytes { get; init; } = 128 * 1024 * 1024;
 
     /// <summary>
-    /// What the workspace of a lambda outside the premium tier may hold, all
-    /// of it together.
+    /// How much room the workspace of a lambda outside the premium tier may
+    /// take, however many files it is in and however large each is.
     /// </summary>
     public long WorkspaceBytes { get; init; } = WorkspaceLimits.Standard.Quota;
 
     /// <summary>
-    /// The largest single file a lambda outside the premium tier may keep in
-    /// its workspace.
-    /// </summary>
-    public int WorkspaceFileBytes { get; init; } = WorkspaceLimits.Standard.MaxFileSize;
-
-    /// <summary>
-    /// What the workspace of a premium lambda may hold, all of it together.
+    /// How much room the workspace of a premium lambda may take.
     /// </summary>
     public long PremiumWorkspaceBytes { get; init; } = 2048L * 1024 * 1024;
-
-    /// <summary>
-    /// The largest single file a premium lambda may keep in its workspace.
-    /// </summary>
-    public int PremiumWorkspaceFileBytes { get; init; } = 128 * 1024 * 1024;
 
     /// <summary>
     /// How large the picture promoting a lambda in the showcase may be.
@@ -481,9 +472,7 @@ public sealed record LambdaOptions
     /// What a lambda in the given tier may keep in its workspace.
     /// </summary>
     public WorkspaceLimits WorkspaceOf(LambdaTier tier)
-        => tier == LambdaTier.Premium
-         ? new WorkspaceLimits(PremiumWorkspaceFileBytes, WorkspaceLimits.Standard.MaxFiles, PremiumWorkspaceBytes)
-         : new WorkspaceLimits(WorkspaceFileBytes, WorkspaceLimits.Standard.MaxFiles, WorkspaceBytes);
+        => new(tier == LambdaTier.Premium ? PremiumWorkspaceBytes : WorkspaceBytes);
 
     #endregion
 
@@ -517,9 +506,7 @@ public sealed record LambdaOptions
             MaxAssetBytes = ReadInt("LAMBDA_MAX_ASSET_BYTES", defaults.MaxAssetBytes),
             PremiumMaxAssetBytes = ReadInt("LAMBDA_PREMIUM_MAX_ASSET_BYTES", defaults.PremiumMaxAssetBytes),
             WorkspaceBytes = ReadLong("LAMBDA_WORKSPACE_BYTES", defaults.WorkspaceBytes),
-            WorkspaceFileBytes = ReadInt("LAMBDA_WORKSPACE_FILE_BYTES", defaults.WorkspaceFileBytes),
             PremiumWorkspaceBytes = ReadLong("LAMBDA_PREMIUM_WORKSPACE_BYTES", defaults.PremiumWorkspaceBytes),
-            PremiumWorkspaceFileBytes = ReadInt("LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES", defaults.PremiumWorkspaceFileBytes),
             MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),

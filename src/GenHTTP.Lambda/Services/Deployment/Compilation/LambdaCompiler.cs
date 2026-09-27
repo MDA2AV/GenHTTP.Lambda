@@ -199,7 +199,7 @@ internal static class LambdaCompiler
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
         Append(hash, request.Workspace);
-        Append(hash, $"\n{request.Limits.MaxFileSize}/{request.Limits.MaxFiles}/{request.Limits.Quota}");
+        Append(hash, $"\n{request.Limits.Quota}");
 
         foreach (var file in request.Files)
         {

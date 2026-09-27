@@ -708,9 +708,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         {
             codeCharacters = options.MaxCodeLengthOf(tier),
             assetBytes = options.MaxAssetBytesOf(tier),
-            workspaceBytes = workspace.Quota,
-            workspaceFileBytes = workspace.MaxFileSize,
-            workspaceFiles = workspace.MaxFiles
+            workspaceBytes = workspace.Quota
         };
     }
 
@@ -866,7 +864,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         {
             rule = "Assets are the program's own files: pages, scripts, stylesheets, icons, small data it cannot run without. A large file that is data rather than program - a machine learning model, a dataset, video, a library of pictures - belongs in the workspace.",
             why = "Every version keeps its own copy of the assets and is read whole to be saved and deployed, so a large asset costs memory and disk on every change, however small. A workspace file is kept once, as a file, and a new version leaves it alone.",
-            how = "upload_file puts one there. Over HTTP, for more than a tool call carries: PUT /api/v1/lambdas/{privateKey}/files/{path} with {\"content\": \"<base64>\"}, the slashes of the path encoded as %2F. Or let the lambda fetch it once with HttpClient and keep it with Workspace.WriteBytes.",
+            how = "upload_file puts one there. Over HTTP, for more than a tool call carries: PUT /api/v1/lambdas/{privateKey}/files/{path}/content with the file itself as the body (curl -T model.onnx ...), the slashes of the path encoded as %2F - streamed to the disk, however large. Or let the lambda fetch it once with HttpClient and keep it with Workspace.WriteBytes.",
             use = "Workspace.ReadBytes(\"models/model.onnx\") reads it; Workspace.Files(\"media\") serves a folder of them.",
             mind = "The workspace is not versioned, rolled back or cloned with the lambda: have the code notice a file that is missing and say so, rather than fail. Its size is limited by tier too - see storage.limits."
         },
@@ -891,11 +889,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             limits = new
             {
                 bytes = options.WorkspaceOf(LambdaTier.Free).Quota,
-                fileBytes = options.WorkspaceOf(LambdaTier.Free).MaxFileSize,
-                files = options.WorkspaceOf(LambdaTier.Free).MaxFiles,
                 premiumBytes = options.WorkspaceOf(LambdaTier.Premium).Quota,
-                premiumFileBytes = options.WorkspaceOf(LambdaTier.Premium).MaxFileSize,
-                premiumFiles = options.WorkspaceOf(LambdaTier.Premium).MaxFiles,
+                counted = $"Only the room all files take together: any number of files, each as large as the room allows. Every file takes whole blocks of {WorkspaceLimits.Block} bytes, at least one, and so does every folder.",
                 exact = "list_files answers with the quota of the lambda at hand."
             },
             note = "Nothing else on the file system is reachable. There is no Append."
@@ -986,7 +981,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         return $"Code: {options.MaxCodeLengthOf(tier):N0} characters, in any number of .cs files. "
              + $"Assets: {Size(options.MaxAssetBytesOf(tier))} in all, any number of them. "
-             + $"Workspace: {Size(workspace.Quota)} in all, {Size(workspace.MaxFileSize)} per file, {workspace.MaxFiles} files.";
+             + $"Workspace: {Size(workspace.Quota)} in all, in any number of files.";
     }
 
     private static string Size(long bytes) => bytes switch

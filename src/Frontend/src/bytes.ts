@@ -33,17 +33,6 @@ export function encodeBytes(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-/** Reads a file as base64, without the data URL prefix the reader adds. */
-export function encode(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
 export function decode(content: string): ArrayBuffer {
   const binary = atob(content);
   const buffer = new ArrayBuffer(binary.length);
