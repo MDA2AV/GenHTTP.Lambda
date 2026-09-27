@@ -99,6 +99,11 @@ public sealed class SiteMeta
             markup = InHead(markup, $"<link rel=\"canonical\" href=\"{address}\" />");
         }
 
+        if (Normalize(path) == "/")
+        {
+            markup = InHead(markup, StructuredData.Render(Site, page.Description));
+        }
+
         return markup;
     }
 

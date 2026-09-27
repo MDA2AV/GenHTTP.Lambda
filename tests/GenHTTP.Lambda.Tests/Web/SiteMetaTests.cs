@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using GenHTTP.Lambda.Configuration;
@@ -163,6 +165,47 @@ public sealed class SiteMetaTests
 
         StringAssert.Contains(await response.Content.ReadAsStringAsync(),
                               "<meta property=\"og:image\" content=\"/social/docs.png\" />");
+    }
+
+    [TestMethod]
+    [DataRow("https://genhttp.dev")]
+    [DataRow(null)]
+    public async Task TheFrontPageDescribesTheSiteUnderItsOwnAddress(string? publicUrl)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl));
+
+        using var response = await fixture.GetAsync("/", accept: "text/html");
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        var script = Regex.Match(body, "<script type=\"application/ld\\+json\">(.*?)</script>", RegexOptions.Singleline);
+
+        Assert.IsTrue(script.Success, "the front page carries no structured data");
+
+        var graph = JsonDocument.Parse(script.Groups[1].Value).RootElement.GetProperty("@graph").EnumerateArray().ToList();
+
+        var types = graph.Select(node => node.GetProperty("@type").GetString()).ToList();
+
+        CollectionAssert.AreEquivalent(new[] { "Organization", "WebSite", "WebApplication" }, types);
+
+        var website = graph.Single(node => node.GetProperty("@type").GetString() == "WebSite");
+
+        Assert.AreEqual("GenHTTP Lambda", website.GetProperty("name").GetString());
+        Assert.AreEqual("https://genhttp.dev/", website.GetProperty("url").GetString());
+
+        var application = graph.Single(node => node.GetProperty("@type").GetString() == "WebApplication");
+
+        Assert.AreEqual("The front page.", application.GetProperty("description").GetString());
+    }
+
+    [TestMethod]
+    public async Task OnlyTheFrontPageDescribesTheSite()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/docs", accept: "text/html");
+
+        Assert.DoesNotContain("application/ld+json", await response.Content.ReadAsStringAsync());
     }
 
     [TestMethod]
