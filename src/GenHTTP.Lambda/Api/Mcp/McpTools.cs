@@ -804,7 +804,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         },
         moreThanOneFile = new
         {
-            howItWorks = "Other .cs files hold types, compiled into the same namespace as the snippet. Only lambda.cs sees Workspace and Assets: hand the other files what they need (demo-crud's Store.cs takes read and write functions).",
+            howItWorks = "Other .cs files hold types, compiled into the same namespace as the snippet. Workspace works in all of them. Assets means the lambda's own files only in lambda.cs - elsewhere it is LambdaEnvironment.Assets.",
             limit = LambdaSource.MaxFiles
         },
         assets = new
@@ -901,7 +901,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         {
             "Request bodies bind by type: a bare string parameter is null. Take a record.",
             "Once a route has read the body, the request's headers are gone. Check a header (a token, say) in a concern in front of the route - the Authentication module does exactly that, see demo-registration - or in a route that takes no body.",
-            "Only lambda.cs sees Workspace and Assets. Other .cs files get what they need handed in, as functions or values.",
+            "In other .cs files, Assets is the Files module's type of that name: use LambdaEnvironment.Assets there. Workspace works in every file.",
             "A browser cannot set headers on a websocket handshake. Pass what the socket needs in the query (connection.Request.Header.Query) or, for secrets, as the first frame.",
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore.",
             "REST routes serialize camel case; match that on sockets.",

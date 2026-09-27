@@ -10,8 +10,8 @@
 //     write to a demo, so it must not grow without bound; a workspace file can
 //     be up to 1 MB, which is the real limit for your own.
 //
-// The store is handed a way to read and write its file instead of Workspace,
-// which only lambda.cs can see.
+// The store is handed a way to read and write its file rather than reaching
+// for Workspace itself, so it does not care where that file lives.
 
 public sealed class JsonStore<T>
 {
