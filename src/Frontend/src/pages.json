@@ -9,7 +9,8 @@
   },
   "/ship": {
     "title": "Ship Your App",
-    "description": "Built something with your AI agent? Ask it to publish here and get a public link in minutes - with live shared data for games, chat and more. Free, no account, nothing to install."
+    "description": "Built something with your AI agent? Ask it to publish here and get a public link in minutes - with live shared data for games, chat and more. Free, no account, nothing to install.",
+    "image": "/social/ship.png"
   },
   "/showcase": {
     "title": "Showcase",
