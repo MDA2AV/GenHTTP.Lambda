@@ -185,3 +185,13 @@ export function IconDownload(props: IconProps) {
     </svg>
   );
 }
+
+/** Three lines, for the menu that holds what a phone has no room for. */
+export const IconMenu = (p: IconProps) => <Svg {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Svg>;
+
+export const IconClose = (p: IconProps) => <Svg {...p}><path d="M6 6l12 12M18 6 6 18" /></Svg>;
+
+/** A paper plane, for sending something out into the world. */
+export const IconSend = (p: IconProps) => (
+  <Svg {...p}><path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z" /></Svg>
+);
