@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.genhttp/lambda",
+  "title": "GenHTTP Lambda",
+  "description": "Write, deploy and host small C# web services and sites at a public address.",
+  "websiteUrl": "https://genhttp.dev",
+  "repository": {
+    "url": "https://github.com/MDA2AV/GenHTTP.Lambda",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://genhttp.dev/mcp"
+    }
+  ]
+}
