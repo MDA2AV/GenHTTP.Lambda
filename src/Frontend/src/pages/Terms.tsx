@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
-
 import { ABUSE_MAILBOX } from '../abuse';
-import { PAGES, usePageMeta } from '../meta';
+import { useT } from '../i18n';
+import { Link } from '../i18n/links';
+import { usePublicPage } from '../meta';
 import { useLifetimes } from '../site';
+
+const LINK = 'text-accent-600 hover:underline dark:text-accent-400';
 
 /**
  * The terms in full, as their own page so they can be linked to.
@@ -11,81 +13,73 @@ import { useLifetimes } from '../site';
  * text above a button is not read by anyone. This is what that short version
  * is short for, and the two have to agree - the limits here are read from the
  * installation rather than written down twice.
+ *
+ * Every language has them, and every translation says that the English ones
+ * are the ones that apply.
  */
 export function Terms() {
-  usePageMeta(PAGES['/terms']);
+  usePublicPage('/terms');
+
+  const said = useT().terms;
+  const part = said.sections;
 
   const { lifetimeHours: hours, retentionDays: days } = useLifetimes();
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-14 sm:py-20">
-      <h1 className="text-2xl font-bold tracking-tight">Terms of service</h1>
+      <h1 className="text-2xl font-bold tracking-tight">{said.title}</h1>
 
-      <p className="mt-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
-        This is a free service for trying things out. It runs code written by strangers on shared
-        infrastructure, which is only workable if everybody keeps to a few rules.
-      </p>
-
-      <Section title="What you may not put here">
-        <p>
-          No malware, no phishing, no crypto miners. Nothing that attacks, scans, floods or otherwise
-          interferes with other systems, here or anywhere else. Nothing that harasses anybody. Nothing you
-          have no right to publish - that includes other people's code, text, images and trademarks.
+      {said.binding && (
+        <p className="mt-4 border-l-2 border-accent-500/50 pl-4 text-sm text-slate-500 dark:border-accent-400/50">
+          {said.binding((text) => (
+            // a link to the other language, which has to leave this one
+            <a className={LINK} href="/en/terms" hrefLang="en" lang="en">
+              {text}
+            </a>
+          ))}
         </p>
+      )}
+
+      <p className="mt-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">{said.intro}</p>
+
+      <Section title={part.forbiddenTitle}>
+        {part.forbidden.map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+      </Section>
+
+      <Section title={part.actionTitle}>
+        <p>{part.action}</p>
+      </Section>
+
+      <Section title={part.lastingTitle}>
+        <p>{part.lasting(hours, days)}</p>
+      </Section>
+
+      <Section title={part.keyTitle}>
+        <p>{part.key}</p>
+      </Section>
+
+      <Section title={part.warrantyTitle}>
+        <p>{part.warranty}</p>
+      </Section>
+
+      <Section title={part.reportTitle}>
         <p>
-          Do not use a lambda to store or forward personal data about other people. There is nothing private
-          about a public address, and this platform offers you no way to keep such data safe.
+          {part.report(
+            <a className={LINK} href={`mailto:${ABUSE_MAILBOX}`}>
+              {ABUSE_MAILBOX}
+            </a>,
+            (text) => (
+              <Link className={LINK} to="/">
+                {text}
+              </Link>
+            ),
+          )}
         </p>
       </Section>
 
-      <Section title="What we may do about it">
-        <p>
-          Anything deployed here can be taken offline or removed at any time, with no notice and no
-          obligation to explain. In practice that happens when something breaks the rules above, when it
-          threatens the machine everybody else is sharing, or when somebody reports it and they turn out to
-          be right.
-        </p>
-      </Section>
-
-      <Section title="How long anything lasts">
-        <p>
-          A deployment stays reachable for about {hours} hours. A lambda you have not opened is removed,
-          with every version of its code, about {days} days after you last touched it. Saving or deploying
-          counts as touching it, so anything you are working on stays. Nothing here is a backup: keep your
-          own copy of code you care about.
-        </p>
-      </Section>
-
-      <Section title="Your editor link is your password">
-        <p>
-          Anybody who has the editor link can read and change that lambda, and there is no account and no
-          password behind it. If you publish the link, you have published the ability to change it. There is
-          no way to recover one that is lost.
-        </p>
-      </Section>
-
-      <Section title="No warranty">
-        <p>
-          The service is provided as it is, with no guarantee that it works, keeps working, or keeps
-          anything you put into it. It may be restarted, changed or switched off at any time. Do not build
-          anything on it that matters to you or to anybody else.
-        </p>
-      </Section>
-
-      <Section title="Reporting something">
-        <p>
-          If a lambda hosted here is doing something it should not, write to{' '}
-          <a className="text-accent-600 hover:underline dark:text-accent-400" href={`mailto:${ABUSE_MAILBOX}`}>
-            {ABUSE_MAILBOX}
-          </a>{' '}
-          with its address. See <Link className="text-accent-600 hover:underline dark:text-accent-400" to="/">the front page</Link> for
-          what to include.
-        </p>
-      </Section>
-
-      <p className="mt-10 text-xs text-slate-500">
-        These terms can change. The version that applies is the one on this page.
-      </p>
+      <p className="mt-10 text-xs text-slate-500">{said.change}</p>
     </div>
   );
 }

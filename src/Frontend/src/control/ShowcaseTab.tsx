@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
-import { Link } from 'react-router-dom';
 
 import { shownAddress } from '../address';
 import { ApiError, api, type OwnShowcase } from '../api';
@@ -7,6 +6,8 @@ import { Dialog } from '../components/Dialog';
 import { IconAlert, IconExternal, IconSpinner, IconUpload } from '../components/Icons';
 import { ShowcaseCard } from '../components/ShowcaseCard';
 import { useToast } from '../components/Toast';
+import { useEditorT } from '../i18n';
+import { Link } from '../i18n/links';
 import type { Control } from './context';
 import { bytes } from './format';
 import { Section, Switch } from './ui';
@@ -31,6 +32,10 @@ interface Picked {
  */
 export function ShowcaseTab({ control }: { control: Control }) {
   const { privateKey, lambda } = control;
+
+  const t = useEditorT();
+  const said = t.showcase;
+  const heading = t.frame.sections.showcase;
 
   const toast = useToast();
 
@@ -62,16 +67,16 @@ export function ShowcaseTab({ control }: { control: Control }) {
         setTitle(own.showcase?.title ?? '');
         setDescription(own.showcase?.description ?? '');
       })
-      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : 'The showcase could not be loaded.'));
+      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : said.loadFailed));
 
     return () => {
       alive = false;
     };
-  }, [privateKey]);
+  }, [privateKey, said]);
 
   if (failure) {
     return (
-      <Section title="Showcase">
+      <Section title={heading}>
         <p className="py-10 text-sm text-slate-500">{failure}</p>
       </Section>
     );
@@ -79,9 +84,9 @@ export function ShowcaseTab({ control }: { control: Control }) {
 
   if (!state) {
     return (
-      <Section title="Showcase">
+      <Section title={heading}>
         <div className="flex items-center gap-2 py-10 text-sm text-slate-500">
-          <IconSpinner /> Loading…
+          <IconSpinner /> {said.loading}
         </div>
       </Section>
     );
@@ -100,9 +105,9 @@ export function ShowcaseTab({ control }: { control: Control }) {
     || trimmedDescription !== entry.description;
 
   const missing = [
-    trimmedTitle === '' && 'a title',
-    trimmedDescription === '' && 'a description',
-    entry === null && picked === null && 'a picture',
+    trimmedTitle === '' && said.title,
+    trimmedDescription === '' && said.description,
+    entry === null && picked === null && said.picture,
   ].filter(Boolean) as string[];
 
   const tooLong = title.length > limits.title || description.length > limits.description;
@@ -123,9 +128,9 @@ export function ShowcaseTab({ control }: { control: Control }) {
       setDescription(saved.description);
       setPicked(null);
 
-      toast(entry ? 'The showcase entry is updated.' : live ? 'It is on the showcase page now.' : 'Saved. It appears on the showcase page once the lambda is online.', 'success');
+      toast(entry ? said.updated : live ? said.listed : said.waiting, 'success');
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The showcase entry could not be saved.', 'error');
+      toast(error instanceof ApiError ? error.message : said.saveFailed, 'error');
     } finally {
       setSaving(false);
     }
@@ -142,9 +147,9 @@ export function ShowcaseTab({ control }: { control: Control }) {
       setPicked(null);
       setConfirming(false);
 
-      toast('Taken off the showcase page.');
+      toast(said.removed);
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The showcase entry could not be removed.', 'error');
+      toast(error instanceof ApiError ? error.message : said.removeFailed, 'error');
     } finally {
       setRemoving(false);
     }
@@ -170,12 +175,12 @@ export function ShowcaseTab({ control }: { control: Control }) {
     }
 
     if (!limits.imageTypes.includes(file.type)) {
-      setPictureError('That is not a PNG, JPEG, GIF or WebP image.');
+      setPictureError(said.wrongType);
       return;
     }
 
     if (file.size > limits.imageBytes) {
-      setPictureError(`That is ${bytes(file.size)}; a picture can be ${bytes(limits.imageBytes)} at most.`);
+      setPictureError(said.tooLarge(bytes(file.size), bytes(limits.imageBytes)));
       return;
     }
 
@@ -186,7 +191,7 @@ export function ShowcaseTab({ control }: { control: Control }) {
       setPicked({ url, base64: url.slice(url.indexOf(',') + 1), name: file.name, size: file.size });
     };
 
-    reader.onerror = () => setPictureError('That file could not be read.');
+    reader.onerror = () => setPictureError(said.unreadable);
 
     reader.readAsDataURL(file);
   }
@@ -195,18 +200,12 @@ export function ShowcaseTab({ control }: { control: Control }) {
 
   return (
     <Section
-      title="Showcase"
-      hint={
-        <>
-          The showcase page lists lambdas their owners chose to show, the ones in use lately first. Only
-          whoever holds the editor key can put a lambda there or take it down, and it is only listed while
-          it is online. An agent can do the same with its <code className="font-mono">showcase</code> tool.
-        </>
-      }
+      title={heading}
+      hint={said.hint(<code className="font-mono">showcase</code>)}
       actions={
         entry && live ? (
           <Link to="/showcase" target="_blank" className="btn-ghost !px-3 !py-1.5 text-[13px]">
-            Open the showcase
+            {said.open}
             <IconExternal className="h-3.5 w-3.5" />
           </Link>
         ) : undefined
@@ -216,14 +215,8 @@ export function ShowcaseTab({ control }: { control: Control }) {
 
       <div className="surface flex items-start gap-4 p-4">
         <div className="min-w-0 flex-1">
-          <p id="showcase-switch" className="text-[15px] font-medium">Show this lambda on the showcase page</p>
-          <p className="mt-1 text-[13px] text-slate-500">
-            {entry
-              ? live
-                ? 'Listed now. Anyone browsing the showcase can open it.'
-                : 'Saved, but not listed: the lambda is offline. It reappears once it is deployed again.'
-              : 'Off. Nothing about this lambda is shown anywhere until you switch this on and save.'}
-          </p>
+          <p id="showcase-switch" className="text-[15px] font-medium">{said.switch}</p>
+          <p className="mt-1 text-[13px] text-slate-500">{entry ? (live ? said.listedNow : said.notListed) : said.off}</p>
         </div>
 
         <Switch on={enabled} onToggle={toggle} labelledBy="showcase-switch" />
@@ -232,7 +225,7 @@ export function ShowcaseTab({ control }: { control: Control }) {
       {enabled && !live && (
         <p className="mt-4 flex items-start gap-2 border-l-2 border-amber-500 pl-3 text-[13px] text-slate-600 dark:text-slate-400">
           <IconAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-          The lambda is offline, so the entry will wait until it is deployed. Only lambdas that answer are listed.
+          {said.offline}
         </p>
       )}
 
@@ -249,24 +242,24 @@ export function ShowcaseTab({ control }: { control: Control }) {
               }
             }}
           >
-            <Field label="Title" used={title.length} of={limits.title} htmlFor="showcase-title">
+            <Field label={said.titleLabel} used={title.length} of={limits.title} htmlFor="showcase-title">
               <input
                 id="showcase-title"
                 value={title}
                 onChange={(event) => setTitle(event.target.value.replace(/\n/g, ' '))}
-                placeholder="Pub quiz scoreboard"
+                placeholder={said.titlePlaceholder}
                 className="field"
                 autoComplete="off"
               />
             </Field>
 
-            <Field label="Description" used={description.length} of={limits.description} htmlFor="showcase-description">
+            <Field label={said.descriptionLabel} used={description.length} of={limits.description} htmlFor="showcase-description">
               <textarea
                 id="showcase-description"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={4}
-                placeholder="Teams enter their answers on their phones, the host marks them, and the scoreboard updates for everyone in the room."
+                placeholder={said.descriptionPlaceholder}
                 className="field resize-y leading-relaxed"
               />
             </Field>
@@ -286,29 +279,23 @@ export function ShowcaseTab({ control }: { control: Control }) {
             <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 pt-5 dark:border-ink-800">
               <button type="submit" className="btn-primary" disabled={!ready || saving}>
                 {saving && <IconSpinner />}
-                {entry ? 'Save changes' : 'Add to the showcase'}
+                {entry ? said.save : said.add}
               </button>
 
               {entry && (
                 <button type="button" className="btn-danger" onClick={() => setConfirming(true)}>
-                  Take it off
+                  {said.takeOff}
                 </button>
               )}
 
               <span className="text-[13px] text-slate-500">
-                {missing.length > 0
-                  ? `Still needs ${missing.join(', ').replace(/, ([^,]*)$/, ' and $1')}.`
-                  : tooLong
-                    ? 'Some of it is too long.'
-                    : !changed
-                      ? 'Everything is saved.'
-                      : ''}
+                {missing.length > 0 ? said.needs(missing) : tooLong ? said.tooLong : !changed ? said.allSaved : ''}
               </span>
             </div>
           </form>
 
           <aside className="lg:sticky lg:top-20 lg:self-start">
-            <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Preview</p>
+            <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">{said.preview}</p>
             <ShowcaseCard
               title={trimmedTitle}
               description={trimmedDescription}
@@ -316,31 +303,29 @@ export function ShowcaseTab({ control }: { control: Control }) {
               image={preview}
             />
             <p className="mt-3 text-[13px] text-slate-500">
-              This is the card visitors see. It opens <span className="font-mono">{shownAddress(lambda.address)}</span>.
+              {said.card(<span className="font-mono">{shownAddress(lambda.address)}</span>)}
             </p>
           </aside>
         </div>
       )}
 
       <Dialog
-        title="Take it off the showcase?"
+        title={said.confirm}
         open={confirming}
         onClose={() => setConfirming(false)}
         footer={
           <>
             <button type="button" onClick={() => setConfirming(false)} className="btn-ghost">
-              Keep it
+              {said.keep}
             </button>
             <button type="button" onClick={remove} disabled={removing} className="btn-danger">
               {removing && <IconSpinner />}
-              Take it off
+              {said.takeOff}
             </button>
           </>
         }
       >
-        <p className="text-slate-600 dark:text-slate-400">
-          The title, description and picture are deleted. The lambda itself stays exactly as it is.
-        </p>
+        <p className="text-slate-600 dark:text-slate-400">{said.confirmText}</p>
       </Dialog>
     </Section>
   );
@@ -380,6 +365,7 @@ function Picture({ current, picked, error, limit, onChoose, onReset }: {
   onChoose: (file: File | undefined) => void;
   onReset: () => void;
 }) {
+  const said = useEditorT().showcase;
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
 
@@ -394,8 +380,8 @@ function Picture({ current, picked, error, limit, onChoose, onReset }: {
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-        <span className="font-medium">Picture</span>
-        <span className="text-xs text-slate-400">PNG, JPEG, GIF or WebP, up to {bytes(limit)}</span>
+        <span className="font-medium">{said.pictureLabel}</span>
+        <span className="text-xs text-slate-400">{said.formats(bytes(limit))}</span>
       </div>
 
       <div
@@ -416,23 +402,22 @@ function Picture({ current, picked, error, limit, onChoose, onReset }: {
         <div className="min-w-0 flex-1 text-[13px]">
           {picked ? (
             <p className="truncate" title={picked.name}>
-              {picked.name} <span className="text-slate-500">· {bytes(picked.size)} · not saved yet</span>
+              {picked.name} <span className="text-slate-500">· {bytes(picked.size)} · {said.notSaved}</span>
             </p>
           ) : (
             <p className="text-slate-600 dark:text-slate-400">
-              {current ? 'Drop a new one here to replace it.' : 'Drop a picture here.'} A screenshot, or a short
-              GIF of it in use, works best at 16:10.
+              {current ? said.replace : said.drop} {said.advice}
             </p>
           )}
 
           <div className="mt-2 flex flex-wrap gap-1.5">
             <button type="button" className="btn-ghost !px-3 !py-1 text-[13px]" onClick={() => input.current?.click()}>
               <IconUpload className="h-3.5 w-3.5" />
-              {shown ? 'Choose another' : 'Choose a file'}
+              {shown ? said.another : said.choose}
             </button>
             {picked && (
               <button type="button" className="btn-ghost !px-3 !py-1 text-[13px]" onClick={onReset}>
-                {current ? 'Keep the saved one' : 'Clear'}
+                {current ? said.keepSaved : said.clear}
               </button>
             )}
           </div>

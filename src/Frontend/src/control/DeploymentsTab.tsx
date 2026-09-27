@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type Activation } from '../api';
 import { IconPlay, IconSpinner, IconStop } from '../components/Icons';
+import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { ending, origin, span, stamp } from './format';
 import { AgentMark, Ago, Empty, Section } from './ui';
@@ -10,6 +11,9 @@ import { AgentMark, Ago, Empty, Section } from './ui';
  * When each version was online, and what took it down.
  */
 export function DeploymentsTab({ control }: { control: Control }) {
+  const t = useEditorT();
+  const said = t.deployments;
+
   const { lambda, versions, busy } = control;
 
   const [history, setHistory] = useState<Activation[] | null>(null);
@@ -23,12 +27,12 @@ export function DeploymentsTab({ control }: { control: Control }) {
     api
       .deployments(control.privateKey)
       .then((found) => alive && setHistory(found))
-      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : 'The history could not be read.'));
+      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : said.readFailed));
 
     return () => {
       alive = false;
     };
-  }, [control.privateKey, lambda.activeVersion, lambda.deployedAt]);
+  }, [control.privateKey, lambda.activeVersion, lambda.deployedAt, said]);
 
   const live = lambda.activeVersion != null;
   const change = (version: number) => versions.find((v) => v.version === version)?.change;
@@ -36,19 +40,13 @@ export function DeploymentsTab({ control }: { control: Control }) {
 
   return (
     <Section
-      title="Deployments"
-      hint={
-        <>
-          A deployment stays online while people use it
-          {lambda.deployedUntil && <> - if nobody does, until {stamp(lambda.deployedUntil)}</>}. Deploying again, or any
-          visit, restarts that clock.
-        </>
-      }
+      title={t.frame.sections.deployments}
+      hint={said.hint(lambda.deployedUntil ? stamp(lambda.deployedUntil) : null)}
       actions={
         live && (
           <button type="button" onClick={control.undeploy} disabled={busy !== null} className="btn-ghost !px-3 !py-1.5 text-[13px]">
             {busy === 'undeploy' ? <IconSpinner /> : <IconStop className="h-3.5 w-3.5" />}
-            Take offline
+            {said.takeOffline}
           </button>
         )
       }
@@ -57,10 +55,10 @@ export function DeploymentsTab({ control }: { control: Control }) {
         <p className="text-sm text-red-500">{failure}</p>
       ) : history === null ? (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <IconSpinner /> Reading the history…
+          <IconSpinner /> {said.reading}
         </div>
       ) : history.length === 0 ? (
-        <Empty>Nothing has been deployed yet.</Empty>
+        <Empty>{said.none}</Empty>
       ) : (
         <>
           <Timeline history={history} />
@@ -75,32 +73,32 @@ export function DeploymentsTab({ control }: { control: Control }) {
 
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[15px]" title={change(entry.version) ?? undefined}>
-                      {change(entry.version) ?? <span className="text-slate-400">No description</span>}
+                      {change(entry.version) ?? <span className="text-slate-400">{said.noDescription}</span>}
                     </span>
                   </span>
 
                   <AgentMark origin={entry.origin} />
 
-                  <span className="hidden w-24 shrink-0 text-right text-slate-500 sm:block" title={`Deployed ${stamp(entry.started)} by ${origin(entry.origin)}`}>
+                  <span className="hidden w-24 shrink-0 text-right text-slate-500 sm:block" title={said.deployed(stamp(entry.started), origin(entry.origin, t.shared))}>
                     <Ago at={entry.started} />
                   </span>
 
-                  <span className="w-16 shrink-0 text-right tabular-nums text-slate-500" title="How long it was online">
-                    {span(entry.seconds)}
+                  <span className="w-16 shrink-0 text-right tabular-nums text-slate-500" title={said.duration}>
+                    {span(entry.seconds, t.shared)}
                   </span>
 
                   <span className="w-28 shrink-0 text-right">
                     {now ? (
                       <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        online
+                        {said.online}
                       </span>
                     ) : (
                       <span
                         className={entry.endedBy === 'expired' || entry.endedBy === 'admin' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}
-                        title={`${ending(entry.endedBy)}${entry.ended ? `, ${stamp(entry.ended)}` : ''}`}
+                        title={`${ending(entry.endedBy, t.shared)}${entry.ended ? `, ${stamp(entry.ended)}` : ''}`}
                       >
-                        {short(entry.endedBy)}
+                        {(entry.endedBy && said.short[entry.endedBy]) || said.short.ended}
                       </span>
                     )}
                   </span>
@@ -112,8 +110,8 @@ export function DeploymentsTab({ control }: { control: Control }) {
                         onClick={() => control.deploy(entry.version)}
                         disabled={busy !== null}
                         className="rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500 disabled:opacity-40"
-                        title={`Put version ${entry.version} back online`}
-                        aria-label={`Put version ${entry.version} back online`}
+                        title={said.putBack(entry.version)}
+                        aria-label={said.putBack(entry.version)}
                       >
                         <IconPlay className="h-3.5 w-3.5" />
                       </button>
@@ -129,27 +127,13 @@ export function DeploymentsTab({ control }: { control: Control }) {
   );
 }
 
-function short(endedBy?: string | null): string {
-  switch (endedBy) {
-    case 'replaced':
-      return 'replaced';
-    case 'stopped':
-      return 'taken offline';
-    case 'expired':
-      return 'expired';
-    case 'admin':
-      return 'by the operator';
-    default:
-      return 'ended';
-  }
-}
-
 /**
  * The last week as a strip: a block for every stretch a version was online,
  * a gap wherever nothing was. What a list of dates takes a minute to add up,
  * this shows at once.
  */
 function Timeline({ history }: { history: Activation[] }) {
+  const said = useEditorT().deployments;
   const now = Date.now();
   const from = now - 7 * 24 * 3600_000;
 
@@ -168,11 +152,11 @@ function Timeline({ history }: { history: Activation[] }) {
 
   return (
     <div>
-      <div className="relative h-5 w-full bg-slate-100 dark:bg-ink-850" role="img" aria-label="What was online over the last seven days">
+      <div className="relative h-5 w-full bg-slate-100 dark:bg-ink-850" role="img" aria-label={said.timeline}>
         {blocks.map((block, index) => (
           <div
             key={index}
-            title={`Version ${block.entry.version}, ${stamp(block.entry.started)} to ${block.entry.ended ? stamp(block.entry.ended) : 'now'}`}
+            title={said.block(block.entry.version, stamp(block.entry.started), block.entry.ended ? stamp(block.entry.ended) : null)}
             className={`absolute top-0 h-full border-r border-white dark:border-ink-950 ${
               order.indexOf(block.entry.version) % 2 === 0 ? 'bg-emerald-500/70' : 'bg-emerald-600/45 dark:bg-emerald-400/45'
             }`}
@@ -181,8 +165,8 @@ function Timeline({ history }: { history: Activation[] }) {
         ))}
       </div>
       <div className="mt-1 flex justify-between text-xs text-slate-400">
-        <span>a week ago</span>
-        <span>now</span>
+        <span>{said.weekAgo}</span>
+        <span>{said.now}</span>
       </div>
     </div>
   );

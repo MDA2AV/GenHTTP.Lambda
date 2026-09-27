@@ -4,12 +4,21 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError, api, type KeyStatus, type Platform, type Starter } from '../api';
 import { IconExternal, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { useT } from '../i18n';
+import { useLocalize } from '../i18n/links';
 import { usePageMeta } from '../meta';
 
 type Step = 'what' | 'key';
 
 export function Create() {
-  usePageMeta({ title: 'Create a Lambda', index: false });
+  const t = useT();
+  const said = t.create;
+  const localize = useLocalize();
+
+  usePageMeta({ title: said.title, index: false });
+
+  /** A starter in the words of this language, where there are any for it. */
+  const named = (starter: Starter) => said.starters[starter.id] ?? starter;
 
   const navigate = useNavigate();
   const toast = useToast();
@@ -104,7 +113,7 @@ export function Create() {
 
       navigate(`/editor/${lambda.privateKey}`, { state: { created: true } });
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The lambda could not be created.', 'error');
+      toast(error instanceof ApiError ? error.message : said.failed, 'error');
       setCreating(false);
     }
   }
@@ -117,15 +126,12 @@ export function Create() {
     <div className="mx-auto w-full max-w-3xl px-5 py-14 sm:py-20">
       {step === 'what' && (
         <>
-          <h1 className="text-2xl font-bold tracking-tight">What would you like to build?</h1>
-          <p className="mt-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
-            Pick the closest one and you start with a copy of something that already works - yours to change. Or
-            start from nothing.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{said.whatTitle}</h1>
+          <p className="mt-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">{said.whatText}</p>
 
           {platform === null ? (
             <div className="surface mt-8 flex items-center gap-2 px-5 py-4 text-sm text-slate-500">
-              <IconSpinner /> Loading…
+              <IconSpinner /> {t.common.loading}
             </div>
           ) : (
             <>
@@ -136,9 +142,9 @@ export function Create() {
                     className="surface flex flex-col transition-colors hover:border-accent-500 dark:hover:border-accent-400"
                   >
                     <button type="button" onClick={() => choose(candidate)} className="flex-1 px-5 pb-2 pt-4 text-left">
-                      <span className="block text-[15px] font-medium">{candidate.title}</span>
+                      <span className="block text-[15px] font-medium">{named(candidate).title}</span>
                       <span className="mt-1 block text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                        {candidate.description}
+                        {named(candidate).description}
                       </span>
                     </button>
                     <div className="flex items-center justify-between gap-3 px-5 pb-3.5 pt-1 text-[13px]">
@@ -148,14 +154,14 @@ export function Create() {
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
                       >
-                        See it running <IconExternal className="h-3 w-3" />
+                        {said.seeIt} <IconExternal className="h-3 w-3" />
                       </a>
                       <button
                         type="button"
                         onClick={() => choose(candidate)}
                         className="font-medium text-accent-600 hover:underline dark:text-accent-400"
                       >
-                        Start from this
+                        {said.startFrom}
                       </button>
                     </div>
                   </div>
@@ -168,8 +174,8 @@ export function Create() {
                   onClick={() => choose(blank)}
                   className="mt-3 block w-full border border-dashed border-slate-300 px-5 py-4 text-left transition-colors hover:border-accent-500 dark:border-ink-700 dark:hover:border-accent-400"
                 >
-                  <span className="block text-[15px] font-medium">{blank.title}</span>
-                  <span className="mt-1 block text-sm text-slate-600 dark:text-slate-400">{blank.description}</span>
+                  <span className="block text-[15px] font-medium">{named(blank).title}</span>
+                  <span className="mt-1 block text-sm text-slate-600 dark:text-slate-400">{named(blank).description}</span>
                 </button>
               )}
             </>
@@ -179,25 +185,20 @@ export function Create() {
 
       {step === 'key' && starter !== null && (
         <>
-          <h1 className="text-2xl font-bold tracking-tight">Give it an address</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{said.addressTitle}</h1>
           <p className="mt-2.5 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
-            {starter.demo ? (
-              <>
-                <strong className="font-medium text-ink-900 dark:text-slate-100">{starter.title}</strong> - your lambda
-                starts as a copy of the demo, and everything in it is yours to change.
-              </>
-            ) : (
-              <>Your lambda starts empty, ready for whatever you have in mind.</>
-            )}{' '}
+            {starter.demo
+              ? said.fromDemo(<strong className="font-medium text-ink-900 dark:text-slate-100">{named(starter).title}</strong>)
+              : said.fromNothing}{' '}
             <button type="button" onClick={() => setStep('what')} className="text-accent-600 hover:underline dark:text-accent-400">
-              Pick something else
+              {said.pickAgain}
             </button>
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-6">
             <div>
               <label htmlFor="key" className="mb-1.5 block text-sm font-medium">
-                Public key
+                {said.publicKey}
               </label>
 
               <div className="flex items-center gap-2">
@@ -229,8 +230,8 @@ export function Create() {
                 {blocked
                   ? availability?.reason
                   : availability?.available
-                    ? `"${availability.publicKey}" is free.`
-                    : 'Lower case letters, digits and dashes. Three characters or more. Leave it empty for a random one.'}
+                    ? said.free(availability.publicKey)
+                    : said.keyHint}
               </p>
             </div>
 
@@ -242,37 +243,37 @@ export function Create() {
                   onChange={(event) => setAccepted(event.target.checked)}
                   className="mt-0.5 h-4 w-4 shrink-0 accent-accent-500"
                 />
-                <span className="text-sm font-medium">I accept the terms of service</span>
+                <span className="text-sm font-medium">{said.accept}</span>
               </label>
 
               <p className="mt-3 whitespace-pre-line text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">
-                {platform?.terms ?? 'Loading the terms…'}
+                {t.terms.short}
               </p>
 
               {/* the short version is what gets read; the full one has to be
                   reachable without losing what has been filled in so far */}
               <a
-                href="/terms"
+                href={localize('/terms')}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 inline-block text-[13px] text-accent-600 hover:underline dark:text-accent-400"
               >
-                Read the full terms of service
+                {said.fullTerms}
               </a>
             </div>
 
             <div className="flex gap-2">
               <button type="button" onClick={() => setStep('what')} className="btn-ghost">
-                Back
+                {said.back}
               </button>
               <button type="submit" disabled={!canSubmit} className="btn-primary flex-1 py-2.5 text-[15px]">
                 {creating && <IconSpinner />}
-                {creating ? 'Creating…' : 'Create my lambda'}
+                {creating ? said.creating : said.submit}
               </button>
             </div>
 
             <p className="text-center text-xs text-slate-500">
-              The next screen shows your editor link. It is the only way back in, so keep it.
+              {said.keepLink}
             </p>
           </form>
         </>

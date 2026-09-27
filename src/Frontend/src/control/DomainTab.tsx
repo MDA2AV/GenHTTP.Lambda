@@ -6,6 +6,7 @@ import { Dialog } from '../components/Dialog';
 import { IconAlert, IconCheck, IconCopy, IconExternal, IconSpinner } from '../components/Icons';
 import { LambdaLink } from '../components/LambdaLink';
 import { useToast } from '../components/Toast';
+import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { Section } from './ui';
 
@@ -35,6 +36,10 @@ const CANONICAL = 'genhttp.dev';
 export function DomainTab({ control }: { control: Control }) {
   const { privateKey, lambda } = control;
 
+  const t = useEditorT();
+  const said = t.domain;
+  const title = t.frame.sections.domain;
+
   const toast = useToast();
 
   const [state, setState] = useState<DomainState | null>(null);
@@ -57,7 +62,7 @@ export function DomainTab({ control }: { control: Control }) {
       setFailure(null);
       setTyped((was) => (was === '' ? found.domain ?? '' : was));
     } catch (error) {
-      setFailure(error instanceof ApiError ? error.message : 'The domain could not be read.');
+      setFailure(error instanceof ApiError ? error.message : said.readFailed);
     } finally {
       setChecking(false);
     }
@@ -83,9 +88,9 @@ export function DomainTab({ control }: { control: Control }) {
 
       await control.refresh();
 
-      toast(`Requests to ${saved.domain} now reach this lambda.`, 'success');
+      toast(said.reaching(saved.domain ?? ''), 'success');
     } catch (error) {
-      setProblem(error instanceof ApiError ? error.message : 'The domain could not be saved.');
+      setProblem(error instanceof ApiError ? error.message : said.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -102,42 +107,37 @@ export function DomainTab({ control }: { control: Control }) {
 
       await control.refresh();
 
-      toast('The domain is removed. The lambda still answers at its address here.');
+      toast(said.removed);
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The domain could not be removed.', 'error');
+      toast(error instanceof ApiError ? error.message : said.removeFailed, 'error');
     }
   }
 
-  const hint = (
-    <>
-      A premium lambda can answer at a domain of its own - the whole of it, from the root down - as well as at its
-      address here. Point the domain at this server, enter it here, and requests to it reach the lambda.
-    </>
-  );
+  const hint = said.hint;
 
   if (!state) {
     return (
-      <Section title="Domain" hint={hint}>
+      <Section title={title} hint={hint}>
         {failure ? (
           <p className="py-10 text-sm text-red-500">{failure}</p>
         ) : (
-          <div className="flex items-center gap-2 py-10 text-sm text-slate-500"><IconSpinner /> Loading…</div>
+          <div className="flex items-center gap-2 py-10 text-sm text-slate-500"><IconSpinner /> {said.loading}</div>
         )}
       </Section>
     );
   }
 
   const changed = typed.trim() !== (state.domain ?? '') && typed.trim() !== '';
-  const visible = state.domain ?? (typed.trim() || 'your-domain.com');
+  const visible = state.domain ?? (typed.trim() || said.example);
 
   return (
     <Section
-      title="Domain"
+      title={title}
       hint={hint}
       actions={
         state.served && state.domain ? (
           <LambdaLink address={domainAddress(state.domain)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-            Open {state.domain}
+            {said.open(state.domain)}
             <IconExternal className="h-3.5 w-3.5" />
           </LambdaLink>
         ) : undefined
@@ -145,11 +145,9 @@ export function DomainTab({ control }: { control: Control }) {
     >
       <>
         <form onSubmit={save} className="surface p-4">
-          <label htmlFor="domain" className="text-[15px] font-medium">The domain it answers at</label>
+          <label htmlFor="domain" className="text-[15px] font-medium">{said.label}</label>
           <p className="mt-1 text-[13px] text-slate-500">
-            {state.served && state.domain
-              ? <>Serving <span className="font-mono">{state.domain}</span> now, besides its address here.</>
-              : 'None yet. A subdomain such as shop.example.com, or a whole domain such as example.com.'}
+            {state.served && state.domain ? said.serving(<span className="font-mono">{state.domain}</span>) : said.none}
           </p>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -164,11 +162,11 @@ export function DomainTab({ control }: { control: Control }) {
             />
             <button type="submit" disabled={!changed || saving} className="btn-primary">
               {saving && <IconSpinner />}
-              {state.domain ? 'Change' : 'Use this domain'}
+              {state.domain ? said.change : said.use}
             </button>
             {state.domain && (
               <button type="button" onClick={() => setRemoving(true)} className="btn-ghost">
-                Remove
+                {said.remove}
               </button>
             )}
           </div>
@@ -180,19 +178,18 @@ export function DomainTab({ control }: { control: Control }) {
       </>
 
       <Dialog
-        title="Remove the domain?"
+        title={said.confirm}
         open={removing}
         onClose={() => setRemoving(false)}
         footer={
           <>
-            <button type="button" onClick={() => setRemoving(false)} className="btn-ghost">Keep it</button>
-            <button type="button" onClick={remove} className="btn-danger">Remove</button>
+            <button type="button" onClick={() => setRemoving(false)} className="btn-ghost">{said.keep}</button>
+            <button type="button" onClick={remove} className="btn-danger">{said.remove}</button>
           </>
         }
       >
         <p className="text-slate-600 dark:text-slate-400">
-          Requests to <span className="font-mono">{state.domain}</span> stop reaching this lambda at once. Its address
-          here stays as it is, and so does whatever the domain's DNS says.
+          {said.confirmText(<span className="font-mono">{state.domain}</span>)}
         </p>
       </Dialog>
     </Section>
@@ -210,6 +207,7 @@ function Records({ domain, configured, state, checking, onCheck }: {
   checking: boolean;
   onCheck: () => void;
 }) {
+  const said = useEditorT().domain;
   const resolved = state.dns?.addresses ?? [];
   const ours = new Set([ADDRESSES.v4, ADDRESSES.v6]);
   const pointsHere = resolved.some((address) => ours.has(address));
@@ -218,27 +216,24 @@ function Records({ domain, configured, state, checking, onCheck }: {
   return (
     <section className="mt-8">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-medium">Point the domain at this server</h2>
+        <h2 className="text-sm font-medium">{said.point}</h2>
         {configured && (
           <button type="button" onClick={onCheck} disabled={checking} className="btn-ghost !px-3 !py-1 text-[13px]">
             {checking && <IconSpinner />}
-            Check again
+            {said.check}
           </button>
         )}
       </div>
 
-      <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">
-        At whoever manages the DNS of the domain, add these two records. Leave out the AAAA record if you would rather
-        not be reachable over IPv6.
-      </p>
+      <p className="mt-1 text-[13px] text-slate-600 dark:text-slate-400">{said.records}</p>
 
       <div className="surface mt-3 overflow-x-auto">
         <table className="w-full text-left text-[13px]">
           <thead className="text-slate-500">
             <tr className="border-b border-slate-200 dark:border-ink-800">
-              <th className="px-4 py-2 font-normal">Type</th>
-              <th className="px-4 py-2 font-normal">Name</th>
-              <th className="px-4 py-2 font-normal">Value</th>
+              <th className="px-4 py-2 font-normal">{said.type}</th>
+              <th className="px-4 py-2 font-normal">{said.name}</th>
+              <th className="px-4 py-2 font-normal">{said.value}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-ink-850">
@@ -254,18 +249,15 @@ function Records({ domain, configured, state, checking, onCheck }: {
             <>
               <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
               <span>
-                <span className="font-mono">{domain}</span> points here.
-                {elsewhere.length > 0 && <> It also resolves to {elsewhere.join(', ')}, which is not this server - visitors sent there will not reach the lambda.</>}
+                {said.pointsHere(<span className="font-mono">{domain}</span>)}
+                {elsewhere.length > 0 && said.alsoElsewhere(elsewhere.join(', '))}
               </span>
             </>
           ) : (
             <>
               <IconAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
               <span className="text-slate-600 dark:text-slate-400">
-                {resolved.length > 0
-                  ? <>It resolves to {resolved.join(', ')}, which is not this server yet.</>
-                  : state.dns.problem}{' '}
-                A change can take a while to be seen everywhere - up to the time to live of the old record.
+                {resolved.length > 0 ? said.elsewhere(resolved.join(', ')) : state.dns.problem} {said.wait}
               </span>
             </>
           )}
@@ -274,21 +266,14 @@ function Records({ domain, configured, state, checking, onCheck }: {
 
       <details className="mt-5 text-[13px]">
         <summary className="cursor-pointer select-none text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200">
-          Using a CNAME record instead
+          {said.cname}
         </summary>
         <div className="mt-2 space-y-2 text-slate-600 dark:text-slate-400">
-          <p>
-            A subdomain can point at <span className="font-mono">{CANONICAL}</span> with a CNAME record instead, and then
-            follows this server if its addresses ever change. It has drawbacks:
-          </p>
+          <p>{said.cnameText(<span className="font-mono">{CANONICAL}</span>)}</p>
           <ul className="list-disc space-y-1 pl-5">
-            <li>
-              It cannot be used for a whole domain (<span className="font-mono">example.com</span> itself): the
-              standard does not allow a CNAME next to the records every domain has at its root. Some providers offer
-              an ALIAS, ANAME or "flattened" record that works there instead.
-            </li>
-            <li>Nothing else can sit on the same name - no MX record for mail, no TXT record for verifications.</li>
-            <li>Visitors' resolvers make one more lookup before they arrive.</li>
+            <li>{said.cnameRoot(<span className="font-mono">example.com</span>)}</li>
+            <li>{said.cnameAlone}</li>
+            <li>{said.cnameLookup}</li>
           </ul>
         </div>
       </details>
@@ -312,6 +297,7 @@ function Record({ type, name, value }: { type: string; name: string; value: stri
 }
 
 function Copy({ value }: { value: string }) {
+  const said = useEditorT().domain;
   const [copied, setCopied] = useState(false);
 
   return (
@@ -327,8 +313,8 @@ function Copy({ value }: { value: string }) {
         }
       }}
       className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-      title="Copy"
-      aria-label={`Copy ${value}`}
+      title={said.copy}
+      aria-label={said.copyValue(value)}
     >
       {copied ? <IconCheck className="h-3.5 w-3.5 text-emerald-500" /> : <IconCopy className="h-3.5 w-3.5" />}
     </button>

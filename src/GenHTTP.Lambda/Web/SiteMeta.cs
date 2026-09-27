@@ -1,5 +1,5 @@
-using System.Net;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -10,8 +10,9 @@ namespace GenHTTP.Lambda.Web;
 
 /// <summary>
 /// What a search engine and a link preview are told about the site: the title
-/// and description of each public page, where it canonically lives, what may
-/// be crawled and the sitemap listing the rest.
+/// and description of each public page in each language, where it canonically
+/// lives and where it lives in the other languages, what may be crawled and the
+/// sitemap listing the rest.
 /// </summary>
 /// <remarks>
 /// Every route is answered with the same index page, and the client names the
@@ -34,6 +35,18 @@ public sealed class SiteMeta
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private static readonly Regex TitleTag = new("<title>.*?</title>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+    private static readonly Regex HtmlTag = new("<html\\b[^>]*>", RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Escapes what markup needs escaped and leaves every language's letters
+    /// as they are - a title reads "veröffentlichen", not "ver&amp;#246;ffentlichen".
+    /// </summary>
+    private static readonly HtmlEncoder Html = HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All);
+
+    private static string Encode(string value) => Html.Encode(value);
+
+    private static readonly Regex LangAttribute = new("\\slang=\"[^\"]*\"", RegexOptions.IgnoreCase);
 
     #region Get-/Setters
 
@@ -59,20 +72,42 @@ public sealed class SiteMeta
     #region Functionality
 
     /// <summary>
-    /// The public page at the given path, if it is one.
+    /// The public page at the given path, in the language the path names - or
+    /// nothing, for a path that has no language or is no page.
     /// </summary>
     public SitePage? Find(string path)
     {
-        return ReadPages().GetValueOrDefault(Normalize(path));
+        var normalized = Normalize(path);
+
+        if (SiteLanguages.Of(normalized) is not { } language)
+        {
+            return null;
+        }
+
+        var bare = SiteLanguages.Without(normalized);
+
+        if (!ReadPages().TryGetValue(bare, out var entry) || !entry.Text.TryGetValue(language, out var text))
+        {
+            return null;
+        }
+
+        return new SitePage(language, bare, text.Title, text.Description, entry.Image);
     }
 
     /// <summary>
-    /// The index page, named as the given page.
+    /// Whether the path is a public page asked for without a language.
     /// </summary>
-    public string Render(string markup, string path, SitePage page)
+    public bool IsPage(string path) => ReadPages().ContainsKey(Normalize(path));
+
+    /// <summary>
+    /// The index page, named as the given page and in its language.
+    /// </summary>
+    public string Render(string markup, SitePage page)
     {
-        var title = WebUtility.HtmlEncode($"{page.Title} - {Site}");
-        var description = WebUtility.HtmlEncode(page.Description);
+        var title = Encode($"{page.Title} - {Site}");
+        var description = Encode(page.Description);
+
+        markup = HtmlTag.Replace(markup, tag => Lang(tag.Value, page.Language), 1);
 
         markup = TitleTag.Replace(markup, _ => $"<title>{title}</title>", 1);
 
@@ -82,10 +117,16 @@ public sealed class SiteMeta
         markup = SetMeta(markup, "name", "twitter:title", title);
         markup = SetMeta(markup, "name", "twitter:description", description);
 
+        // which language the preview is in, and which others there are
+        markup = SetMeta(markup, "property", "og:locale", SiteLanguages.Locales[page.Language]);
+
+        markup = InHead(markup, string.Join("\n", SiteLanguages.All.Where(l => l != page.Language)
+                                                               .Select(l => $"<meta property=\"og:locale:alternate\" content=\"{SiteLanguages.Locales[l]}\" />")));
+
         // a preview needs the full address of the picture, which only the
         // public address can give - without it, the path is still better than
         // the front page's picture on every page
-        var image = WebUtility.HtmlEncode((PublicUrl ?? string.Empty) + (page.Image ?? DefaultImage));
+        var image = Encode((PublicUrl ?? string.Empty) + (page.Image ?? DefaultImage));
 
         markup = SetMeta(markup, "property", "og:image", image);
         markup = SetMeta(markup, "property", "og:image:alt", title);
@@ -93,18 +134,32 @@ public sealed class SiteMeta
 
         if (PublicUrl != null)
         {
-            var address = WebUtility.HtmlEncode(PublicUrl + Normalize(path));
+            var address = Encode(PublicUrl + SiteLanguages.In(page.Language, page.Path));
 
             markup = SetMeta(markup, "property", "og:url", address);
             markup = InHead(markup, $"<link rel=\"canonical\" href=\"{address}\" />");
+            markup = InHead(markup, Alternates(page.Path));
         }
 
-        if (Normalize(path) == "/")
+        if (page.Path == "/")
         {
-            markup = InHead(markup, StructuredData.Render(Site, page.Description));
+            markup = InHead(markup, StructuredData.Render(Site, page.Description, page.Language));
         }
 
         return markup;
+    }
+
+    /// <summary>
+    /// The page in every language, and without one for a visitor matching none
+    /// of them - where they are sent on to the language they prefer.
+    /// </summary>
+    private string Alternates(string path)
+    {
+        var links = SiteLanguages.All.Select(language => (language, SiteLanguages.In(language, path)))
+                                 .Append(("x-default", path))
+                                 .Select(link => $"<link rel=\"alternate\" hreflang=\"{link.Item1}\" href=\"{Encode(PublicUrl + link.Item2)}\" />");
+
+        return string.Join("\n", links);
     }
 
     /// <summary>
@@ -137,8 +192,9 @@ public sealed class SiteMeta
     }
 
     /// <summary>
-    /// Every public page, under the public address - or nothing, when there is
-    /// no public address to list them under.
+    /// Every public page in every language, under the public address, each
+    /// with the addresses of its translations - or nothing, when there is no
+    /// public address to list them under.
     /// </summary>
     public string? Sitemap()
     {
@@ -148,29 +204,43 @@ public sealed class SiteMeta
         }
 
         XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
+        XNamespace xhtml = "http://www.w3.org/1999/xhtml";
 
-        var paths = ReadPages().Keys;
+        var pages = ReadPages();
+
+        XElement Alternate(string language, string path)
+            => new(xhtml + "link",
+                   new XAttribute("rel", "alternate"),
+                   new XAttribute("hreflang", language),
+                   new XAttribute("href", PublicUrl + path));
+
+        var urls = pages.SelectMany(page => SiteLanguages.All.Where(page.Value.Text.ContainsKey)
+                                                         .Select(language => new XElement(ns + "url",
+                                                             new XElement(ns + "loc", PublicUrl + SiteLanguages.In(language, page.Key)),
+                                                             SiteLanguages.All.Where(page.Value.Text.ContainsKey)
+                                                                         .Select(other => Alternate(other, SiteLanguages.In(other, page.Key))),
+                                                             Alternate("x-default", page.Key))));
 
         var sitemap = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
-            new XElement(ns + "urlset", paths.Select(path => new XElement(ns + "url", new XElement(ns + "loc", PublicUrl + path))))
+            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls)
         );
 
         return sitemap.Declaration + "\n" + sitemap;
     }
 
-    private IReadOnlyDictionary<string, SitePage> ReadPages()
+    private IReadOnlyDictionary<string, SiteEntry> ReadPages()
     {
         // read every time, because "npm run build" updates a running server;
-        // it is a few hundred bytes, and only public pages ask for it
+        // it is a few kilobytes, and only public pages ask for it
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, SitePage>>(File.ReadAllText(PageFile), Json) ?? [];
+            return JsonSerializer.Deserialize<Dictionary<string, SiteEntry>>(File.ReadAllText(PageFile), Json) ?? [];
         }
         catch (Exception e) when (e is IOException or JsonException)
         {
             // no build, or a broken one: the pages are still served, unnamed
-            return new Dictionary<string, SitePage>();
+            return new Dictionary<string, SiteEntry>();
         }
     }
 
@@ -179,6 +249,16 @@ public sealed class SiteMeta
     /// </summary>
     public static string Normalize(string path)
         => path.Length > 1 ? path.TrimEnd('/') : path;
+
+    /// <summary>
+    /// The opening tag of the document, in the given language.
+    /// </summary>
+    private static string Lang(string tag, string language)
+    {
+        var attribute = $" lang=\"{language}\"";
+
+        return LangAttribute.IsMatch(tag) ? LangAttribute.Replace(tag, attribute, 1) : tag.Insert("<html".Length, attribute);
+    }
 
     /// <summary>
     /// Replaces the content of a meta tag, or adds the tag if the page has none.
@@ -204,7 +284,20 @@ public sealed class SiteMeta
 }
 
 /// <summary>
-/// A page a search engine should find, and what it should say about it - with
-/// the path of the picture a link preview shows, if it has one of its own.
+/// A page a search engine should find, in one of its languages, and what it
+/// should say about it there - with the path of the picture a link preview
+/// shows, if it has one of its own.
 /// </summary>
-public sealed record SitePage(string Title, string Description, string? Image = null);
+/// <param name="Language">The language it is shown in</param>
+/// <param name="Path">Its path without a language, as <c>pages.json</c> spells it</param>
+public sealed record SitePage(string Language, string Path, string Title, string Description, string? Image = null);
+
+/// <summary>
+/// A page as <c>pages.json</c> has it: its picture, and its words by language.
+/// </summary>
+public sealed record SiteEntry(string? Image, Dictionary<string, SiteText> Text);
+
+/// <summary>
+/// The name and description of a page in one language.
+/// </summary>
+public sealed record SiteText(string Title, string Description);

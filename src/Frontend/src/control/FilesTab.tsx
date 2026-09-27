@@ -6,6 +6,7 @@ import { decode, download, encodeBytes, readable } from '../bytes';
 import { CodeEditor } from '../components/CodeEditor';
 import { IconChevronDown, IconDownload, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { useEditorT } from '../i18n';
 import { languageFor } from '../monaco';
 import type { Control } from './context';
 import { bytes, servesAssets, servesWorkspace } from './format';
@@ -34,6 +35,8 @@ interface Selection {
  * version is picked.
  */
 export function FilesTab({ control }: { control: Control }) {
+  const t = useEditorT();
+  const said = t.files;
   const toast = useToast();
   const [params, setParams] = useSearchParams();
 
@@ -70,20 +73,20 @@ export function FilesTab({ control }: { control: Control }) {
             ? was
             : { group: 'code', path: found.files[0]?.name ?? 'lambda.cs' });
       })
-      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : 'That version could not be read.'));
+      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : said.readFailed));
 
     return () => {
       alive = false;
     };
-  }, [control.privateKey, wanted]);
+  }, [control.privateKey, wanted, said]);
 
   const reload = useCallback(async () => {
     try {
       setListing(await api.files(control.privateKey));
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The data could not be read.', 'error');
+      toast(error instanceof ApiError ? error.message : said.dataFailed, 'error');
     }
-  }, [control.privateKey, toast]);
+  }, [control.privateKey, toast, said]);
 
   useEffect(() => {
     reload();
@@ -100,29 +103,20 @@ export function FilesTab({ control }: { control: Control }) {
 
   return (
     <Section
-      title="Files"
-      hint={
-        <>
-          <b>Code</b> is compiled and never served. <b>Assets</b> - pages, styles, images - are saved with each version
-          and are public if the code serves them. <b>Data</b> is what the lambda writes while it runs; it is not part of
-          any version, and is public only if the code serves it.
-        </>
-      }
+      title={t.frame.sections.files}
+      hint={said.hint((text) => <b>{text}</b>)}
       actions={
         wanted != null && (
           <button type="button" onClick={() => control.edit(wanted)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-            Edit this version
+            {said.edit}
           </button>
         )
       }
       pills={
         versions.length > 0 && (
           <label className={`${pill(true)} relative cursor-pointer pr-7`}>
-            <span className="sr-only">Version</span>
-            <span>
-              Version {wanted}
-              {wanted === lambda.activeVersion ? ', online' : wanted === lambda.latestVersion ? ', newest' : ''}
-            </span>
+            <span className="sr-only">{said.version}</span>
+            <span>{said.shown(wanted, wanted === lambda.activeVersion, wanted === lambda.latestVersion)}</span>
             <IconChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5" />
             <select
               value={wanted}
@@ -132,7 +126,7 @@ export function FilesTab({ control }: { control: Control }) {
               {versions.map((v) => (
                 <option key={v.version} value={v.version}>
                   {v.version}
-                  {v.version === lambda.activeVersion ? ' (online)' : ''}
+                  {v.version === lambda.activeVersion ? said.optionOnline : ''}
                   {v.change ? ` - ${v.change.slice(0, 60)}` : ''}
                 </option>
               ))}
@@ -142,42 +136,45 @@ export function FilesTab({ control }: { control: Control }) {
       }
     >
       {wanted == null ? (
-        <p className="text-sm text-slate-500">There is no version to show yet.</p>
+        <p className="text-sm text-slate-500">{said.noVersion}</p>
       ) : (
         <>
           {version?.change && <p className="-mt-1 mb-4 text-[13px] text-slate-500">{version.change}</p>}
           {failure && <p className="mb-4 text-sm text-red-500">{failure}</p>}
 
           <div className="grid gap-5 lg:grid-cols-[17rem,1fr]">
-            <nav aria-label="Files" className="space-y-5 lg:max-h-[40rem] lg:overflow-y-auto">
+            <nav aria-label={said.label} className="space-y-5 lg:max-h-[40rem] lg:overflow-y-auto">
               <GroupList
-                title="Code"
-                exposure={<Exposure open={false} why="Compiled into the lambda, never served." />}
-                usage={limits && `${code.length} ${code.length === 1 ? 'file' : 'files'}, ${code.reduce((t, f) => t + f.code.length, 0).toLocaleString()} of ${limits.codeCharacters.toLocaleString()} characters`}
+                title={said.code}
+                exposure={<Exposure open={false} why={said.codeWhy} />}
+                usage={limits && said.codeUsage(
+                  said.count(code.length),
+                  code.reduce((total, f) => total + f.code.length, 0).toLocaleString(),
+                  limits.codeCharacters.toLocaleString(),
+                )}
               >
                 <Tree
                   entries={code.map((f) => ({ path: f.name, size: sizeOf(f) }))}
                   selected={selected?.group === 'code' ? selected.path : null}
                   onSelect={(path) => setSelected({ group: 'code', path })}
-                  empty="No code in this version."
+                  empty={said.noCode}
                 />
               </GroupList>
 
               <GroupList
-                title="Assets"
-                exposure={
-                  <Exposure
-                    open={servesAssets(source)}
-                    why={servesAssets(source) ? 'Public: this version serves them with Assets.' : 'Saved with the code, but this version does not serve them.'}
-                  />
-                }
-                usage={limits && `${assets.length} ${assets.length === 1 ? 'file' : 'files'}, ${bytes(assets.reduce((t, f) => t + sizeOf(f), 0))} of ${bytes(limits.assetBytes)}`}
+                title={said.assets}
+                exposure={<Exposure open={servesAssets(source)} why={servesAssets(source) ? said.assetsPublic : said.assetsPrivate} />}
+                usage={limits && said.usage(
+                  said.count(assets.length),
+                  bytes(assets.reduce((total, f) => total + sizeOf(f), 0)),
+                  bytes(limits.assetBytes),
+                )}
               >
                 <Tree
                   entries={assets.map((f) => ({ path: f.name, size: sizeOf(f) }))}
                   selected={selected?.group === 'assets' ? selected.path : null}
                   onSelect={(path) => setSelected({ group: 'assets', path })}
-                  empty="None in this version."
+                  empty={said.noAssets}
                 />
               </GroupList>
 
@@ -341,6 +338,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
   onSelect: (path: string | null) => void;
   onChanged: () => Promise<void>;
 }) {
+  const said = useEditorT().files;
   const toast = useToast();
   const picker = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -365,7 +363,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
       try {
         await api.uploadFile(control.privateKey, path, file);
       } catch (error) {
-        toast(error instanceof ApiError ? error.message : `${path} could not be uploaded.`, 'error');
+        toast(error instanceof ApiError ? error.message : said.uploadFailed(path), 'error');
       }
     }
 
@@ -380,9 +378,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
   async function remove(path: string, folder: boolean) {
     const held = listing?.files.filter((f) => f.path.startsWith(`${path}/`)).length ?? 0;
 
-    const question = folder
-      ? held > 0 ? `Delete ${path} and the ${held} file${held === 1 ? '' : 's'} in it?` : `Delete the folder ${path}?`
-      : `Delete ${path}? The lambda will not find it any more.`;
+    const question = folder ? said.deleteFolder(path, held) : said.deleteFile(path);
 
     if (!window.confirm(question)) {
       return;
@@ -397,7 +393,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
 
       await onChanged();
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'It could not be deleted.', 'error');
+      toast(error instanceof ApiError ? error.message : said.deleteFailed, 'error');
     }
   }
 
@@ -408,9 +404,9 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
 
   return (
     <GroupList
-      title="Data"
-      exposure={<Exposure open={publicly} why={publicly ? 'Public: this version serves it with Workspace.' : 'Private to the lambda. Not part of any version.'} />}
-      usage={listing ? `${listing.files.length} ${listing.files.length === 1 ? 'file' : 'files'}, ${bytes(listing.usedBytes)} of ${bytes(listing.quotaBytes)}` : undefined}
+      title={said.data}
+      exposure={<Exposure open={publicly} why={publicly ? said.dataPublic : said.dataPrivate} />}
+      usage={listing ? said.usage(said.count(listing.files.length), bytes(listing.usedBytes), bytes(listing.quotaBytes)) : undefined}
       action={demo ? undefined : (
         <>
           <input ref={picker} type="file" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
@@ -419,8 +415,8 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
             onClick={() => picker.current?.click()}
             disabled={busy || listing === null || full}
             className="rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500 disabled:opacity-40"
-            title={full ? 'The data is full' : into ? `Upload into ${into}` : 'Upload'}
-            aria-label="Upload"
+            title={full ? said.full : into ? said.uploadInto(into) : said.upload}
+            aria-label={said.upload}
           >
             {busy ? <IconSpinner className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
           </button>
@@ -428,21 +424,21 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
       )}
     >
       {listing === null ? (
-        <div className="flex items-center gap-2 px-1 text-[13px] text-slate-500"><IconSpinner className="h-3.5 w-3.5" /> Reading…</div>
+        <div className="flex items-center gap-2 px-1 text-[13px] text-slate-500"><IconSpinner className="h-3.5 w-3.5" /> {said.reading}</div>
       ) : (
         <Tree
           entries={listing.files}
           folders={listing.folders}
           selected={selected}
           onSelect={onSelect}
-          empty="Nothing yet. What the lambda saves while it runs appears here."
+          empty={said.noData}
           action={demo ? undefined : (node) => (
             <button
               type="button"
               onClick={() => remove(node.path, node.folder)}
               className="p-0.5 text-slate-400 hover:text-red-500"
-              aria-label={`Delete ${node.path}`}
-              title="Delete"
+              aria-label={said.delete(node.path)}
+              title={said.deleteShort}
             >
               <IconTrash className="h-3.5 w-3.5" />
             </button>
@@ -463,6 +459,7 @@ function Viewer({ control, selection, files, listing }: {
   files: LambdaFile[];
   listing: WorkspaceListing | null;
 }) {
+  const said = useEditorT().files;
   const [loaded, setLoaded] = useState<{ path: string; bytes: Uint8Array<ArrayBuffer> } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -483,17 +480,17 @@ function Viewer({ control, selection, files, listing }: {
     api
       .readFile(control.privateKey, entry.path)
       .then((file) => alive && setLoaded({ path: file.path, bytes: new Uint8Array(decode(file.content)) }))
-      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : 'The file could not be read.'));
+      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : said.fileFailed));
 
     return () => {
       alive = false;
     };
-  }, [control.privateKey, entry?.path, entry?.modified]);
+  }, [control.privateKey, entry?.path, entry?.modified, said]);
 
   const frame = 'surface flex min-h-[20rem] flex-col';
 
   if (!selection || (selection.group === 'data' && !entry)) {
-    return <div className={`${frame} items-center justify-center p-6 text-sm text-slate-500`}>Pick a file to see what is in it.</div>;
+    return <div className={`${frame} items-center justify-center p-6 text-sm text-slate-500`}>{said.pick}</div>;
   }
 
   let name = selection.path;
@@ -509,11 +506,9 @@ function Viewer({ control, selection, files, listing }: {
     if (entry && entry.size > PREVIEW_BYTES) {
       return (
         <div className={`${frame} items-center justify-center gap-3 p-6 text-center text-sm text-slate-500`}>
-          <p>
-            <span className="font-mono">{name}</span> is {bytes(entry.size)}, too large to show here.
-          </p>
+          <p>{said.tooLarge(<span className="font-mono">{name}</span>, bytes(entry.size))}</p>
           <a href={api.fileUrl(control.privateKey, entry.path)} download={name.split('/').pop()} className={pill(false)}>
-            <IconDownload className="h-3.5 w-3.5" /> Download
+            <IconDownload className="h-3.5 w-3.5" /> {said.download}
           </a>
         </div>
       );
@@ -524,7 +519,7 @@ function Viewer({ control, selection, files, listing }: {
     }
 
     if (!loaded || loaded.path !== selection.path) {
-      return <div className={`${frame} items-center justify-center gap-2 text-sm text-slate-500`}><IconSpinner /> Reading {name}…</div>;
+      return <div className={`${frame} items-center justify-center gap-2 text-sm text-slate-500`}><IconSpinner /> {said.readingFile(name)}</div>;
     }
 
     if (readable(loaded.bytes)) {
@@ -536,7 +531,7 @@ function Viewer({ control, selection, files, listing }: {
     const file = files.find((f) => f.name === selection.path);
 
     if (!file) {
-      return <div className={`${frame} p-6 text-sm text-slate-500`}>This version has no file called {name}.</div>;
+      return <div className={`${frame} p-6 text-sm text-slate-500`}>{said.missing(name)}</div>;
     }
 
     name = file.name;
@@ -557,15 +552,15 @@ function Viewer({ control, selection, files, listing }: {
         <span className="min-w-0 truncate font-mono text-[13px]" title={name}>{name}</span>
         <span className="text-xs text-slate-400">
           {bytes(size)}
-          {entry?.modified && <>, saved <Ago at={entry.modified} /></>}
+          {entry?.modified && <>, {said.saved} <Ago at={entry.modified} /></>}
         </span>
         {entry ? (
           <a
             href={api.fileUrl(control.privateKey, entry.path)}
             download={name.split('/').pop()}
             className="ml-auto rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
-            title="Download"
-            aria-label="Download"
+            title={said.download}
+            aria-label={said.download}
           >
             <IconDownload className="h-3.5 w-3.5" />
           </a>
@@ -574,8 +569,8 @@ function Viewer({ control, selection, files, listing }: {
             type="button"
             onClick={() => download(name, text !== null ? new TextEncoder().encode(text) : new Uint8Array(decode(base64!)))}
             className="ml-auto rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
-            title="Download"
-            aria-label="Download"
+            title={said.download}
+            aria-label={said.download}
           >
             <IconDownload className="h-3.5 w-3.5" />
           </button>
@@ -591,7 +586,7 @@ function Viewer({ control, selection, files, listing }: {
           <img src={`data:${image};base64,${base64}`} alt={name} className="max-h-[30rem] max-w-full" />
         </div>
       ) : (
-        <p className="flex flex-1 items-center justify-center p-6 text-sm text-slate-500">Not text. Download it to look inside.</p>
+        <p className="flex flex-1 items-center justify-center p-6 text-sm text-slate-500">{said.notText}</p>
       )}
     </div>
   );

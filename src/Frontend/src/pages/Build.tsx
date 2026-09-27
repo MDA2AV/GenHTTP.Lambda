@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import { api, ApiError } from '../api';
 import { CopyField } from '../components/CopyField';
-import { PAGES, usePageMeta } from '../meta';
-import { useOrigin } from '../site';
+import { useT } from '../i18n';
+import { Link } from '../i18n/links';
+import { usePublicPage } from '../meta';
+import { useLifetimes, useOrigin } from '../site';
 
 /**
  * One text box.
@@ -32,16 +33,12 @@ type Result = {
   deployed?: boolean;
 };
 
-const IDEAS = [
-  'a wall where anyone can leave a one line message',
-  'a highscore board for a dice game',
-  'a poll where people vote and see the totals',
-  'a guestbook for my wedding',
-  'a countdown to a date everyone can see',
-];
-
 export function Build() {
-  usePageMeta(PAGES['/build']);
+  usePublicPage('/build');
+
+  const t = useT();
+  const said = t.build;
+  const { offlineDays, retentionDays } = useLifetimes();
 
   const [prompt, setPrompt] = useState('');
   const { origin } = useOrigin();
@@ -91,7 +88,7 @@ export function Build() {
       ).id;
     } catch (e) {
       setState('failed');
-      setResult({ ok: false, error: e instanceof ApiError ? e.message : 'That did not go through.' });
+      setResult({ ok: false, error: e instanceof ApiError ? e.message : said.failedToStart });
       return;
     }
 
@@ -104,7 +101,7 @@ export function Build() {
 
         if (job.state === 'done' || job.state === 'failed') {
           if (polling.current) window.clearInterval(polling.current);
-          setResult(job.result ?? { ok: false, error: 'It finished without saying what happened.' });
+          setResult(job.result ?? { ok: false, error: said.noAnswer });
           setState(job.state === 'done' && job.result?.ok ? 'done' : 'failed');
         }
       } catch {
@@ -120,11 +117,16 @@ export function Build() {
   if (available === false) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-24 text-center">
-        <h1 className="text-3xl font-light tracking-tight">Not switched on here</h1>
+        <h1 className="text-3xl font-light tracking-tight">{said.offTitle}</h1>
         <p className="mt-4 text-slate-500">
-          This installation has no build agent. You can still{' '}
-          <a className="underline" href="/editor/create">write it yourself</a>, or point your own
-          Claude at <code>/mcp</code>.
+          {said.off(
+            (text) => (
+              <a className="underline" href="/editor/create">
+                {text}
+              </a>
+            ),
+            <code>/mcp</code>,
+          )}
         </p>
       </main>
     );
@@ -133,12 +135,10 @@ export function Build() {
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-16 sm:py-24">
       <h1 className="text-center text-4xl font-light tracking-tight sm:text-5xl">
-        Say what you want.
+        {said.title}
       </h1>
 
-      <p className="mx-auto mt-4 max-w-lg text-center text-slate-500">
-        It gets built, put online, and you get a link you can send to anyone. No account, no install, and it can remember things - scores, messages, entries - so everybody who opens it sees the same thing.
-      </p>
+      <p className="mx-auto mt-4 max-w-lg text-center text-slate-500">{said.intro}</p>
 
       <div className="surface mt-10 p-2">
         <textarea
@@ -150,13 +150,13 @@ export function Build() {
           rows={3}
           maxLength={2000}
           disabled={state === 'working'}
-          placeholder="build a…"
+          placeholder={said.placeholder}
           className="w-full resize-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-slate-400 disabled:opacity-60"
         />
 
         <div className="flex items-center justify-between gap-3 px-2 pb-1">
           <span className="text-xs text-slate-400">
-            {state === 'working' ? 'working…' : 'ctrl + enter'}
+            {state === 'working' ? said.working : said.shortcut}
           </span>
 
           <button
@@ -169,14 +169,14 @@ export function Build() {
             }
             className="btn btn-primary"
           >
-            {state === 'working' ? 'Building' : 'Build it'}
+            {state === 'working' ? said.building : said.buildIt}
           </button>
         </div>
       </div>
 
       {state === 'idle' && secondModel && (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
-          <span className="text-slate-400">Built by</span>
+          <span className="text-slate-400">{said.builtBy}</span>
 
           {[
             ['opus', 'Opus 5.5'],
@@ -201,7 +201,7 @@ export function Build() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="password"
+              placeholder={said.password}
               autoComplete="off"
               className="field !h-auto !w-36 !py-1 text-sm"
             />
@@ -210,22 +210,16 @@ export function Build() {
       )}
 
       {state === 'idle' && model === 'fable' && (
-        <p className="mt-2 text-center text-xs text-slate-400">
-          Fable is behind a password while it is being tried out. It runs with no time limit,
-          so it will keep going until the thing is finished rather than until the clock runs out.
-        </p>
+        <p className="mt-2 text-center text-xs text-slate-400">{said.fable}</p>
       )}
 
       {state === 'idle' && (
-        <p className="mt-4 text-center text-sm text-slate-500">
-          This only builds new ones. To take something you have already made further, give its
-          editor link to your own coding agent - see below.
-        </p>
+        <p className="mt-4 text-center text-sm text-slate-500">{said.onlyNew}</p>
       )}
 
       {state === 'idle' && (
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          {IDEAS.map((idea) => (
+          {said.ideas.map((idea) => (
             <button
               key={idea}
               type="button"
@@ -256,13 +250,11 @@ export function Build() {
             <li className="flex items-center gap-3 px-5 py-2.5 text-slate-500">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
               {/* one build runs at a time, so everyone else waits their turn */}
-              {waiting === 1
-                ? 'One build ahead of yours - you are next.'
-                : `${waiting} builds ahead of yours.`}
+              {said.ahead(waiting)}
             </li>
           )}
           {events.length === 0 && waiting === 0 && (
-            <li className="px-5 py-2.5 text-slate-500">Starting…</li>
+            <li className="px-5 py-2.5 text-slate-500">{said.starting}</li>
           )}
         </ol>
       )}
@@ -280,18 +272,14 @@ export function Build() {
             className="surface flex items-center justify-between gap-4 px-5 py-4 transition hover:opacity-80"
           >
             <span>
-              <span className="block text-xs uppercase tracking-widest text-slate-400">
-                Your app
-              </span>
+              <span className="block text-xs uppercase tracking-widest text-slate-400">{said.yourApp}</span>
               <span className="block truncate font-medium">{result.url}</span>
             </span>
             <span aria-hidden>→</span>
           </a>
 
           <div className="surface px-5 py-4">
-            <span className="block text-xs uppercase tracking-widest text-slate-400">
-              To take it further
-            </span>
+            <span className="block text-xs uppercase tracking-widest text-slate-400">{said.further}</span>
 
             <a
               href={result.editorUrl}
@@ -302,15 +290,9 @@ export function Build() {
               {result.editorUrl}
             </a>
 
-            <p className="mt-3 text-sm text-slate-500">
-              Keep that one. It is the only way back in and it cannot be recovered - not by us
-              either. Bookmark it before you close this tab.
-            </p>
+            <p className="mt-3 text-sm text-slate-500">{said.keep}</p>
 
-            <p className="mt-3 text-sm text-slate-500">
-              This page only builds new things. To change this one, connect your own coding agent
-              as described below, hand it the editor link and tell it what you want different.
-            </p>
+            <p className="mt-3 text-sm text-slate-500">{said.change}</p>
 
             <button
               type="button"
@@ -321,14 +303,11 @@ export function Build() {
                 window.setTimeout(() => setCopied(false), 1600);
               }}
             >
-              {copied ? 'Copied' : 'Copy the editor link'}
+              {copied ? t.common.copied : said.copyLink}
             </button>
           </div>
 
-          <p className="text-sm text-slate-500">
-            It stays online for a day and is kept for thirty. Open the editor and press deploy to
-            put it back up.
-          </p>
+          <p className="text-sm text-slate-500">{said.lifetime(offlineDays, retentionDays)}</p>
 
           <div className="flex flex-wrap gap-3">
             <a
@@ -337,7 +316,7 @@ export function Build() {
               rel="noreferrer"
               className="btn btn-primary"
             >
-              Open the editor
+              {said.openEditor}
             </a>
 
             <button
@@ -345,7 +324,7 @@ export function Build() {
               className="btn btn-ghost"
               onClick={() => { setState('idle'); setPrompt(''); setResult(null); }}
             >
-              Build something else
+              {said.another}
             </button>
           </div>
         </section>
@@ -354,14 +333,10 @@ export function Build() {
       {(state === 'idle' || (state === 'done' && result?.ok)) && (
         <section className="mt-16 border-t border-slate-200 pt-10 dark:border-slate-800">
           <h2 className="text-xl font-light tracking-tight">
-            {state === 'done' ? 'Keep going with your own agent' : 'Or use your own agent'}
+            {state === 'done' ? said.keepGoing : said.orOwn}
           </h2>
 
-          <p className="mt-3 max-w-xl text-sm text-slate-500">
-            The box above is a Claude running on this machine. If you already have one of your own,
-            point it here instead and it can do the same things - make a lambda, write the code,
-            put it online - without a daily limit and without going through this page.
-          </p>
+          <p className="mt-3 max-w-xl text-sm text-slate-500">{said.ownText}</p>
 
           <div className="mt-5">
             <CopyField value={`${origin}/mcp`} tone="accent" />
@@ -373,38 +348,35 @@ export function Build() {
               <pre className="mt-2 whitespace-pre-wrap break-all rounded-md bg-slate-900 p-3 text-xs text-slate-100 dark:bg-black/40">
 {`claude mcp add --transport http genhttp ${origin}/mcp`}
               </pre>
-              <p className="mt-2 text-xs text-slate-500">
-                Then ask it for what you want, the same way you would here.
-              </p>
+              <p className="mt-2 text-xs text-slate-500">{said.thenAsk}</p>
             </div>
 
             <div className="surface p-4">
-              <h3 className="text-sm font-medium">Claude on the web</h3>
-              <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                Settings, then Connectors, then Add custom connector. Paste the address above as
-                the remote MCP server URL. There is no key and no sign in step.
-              </p>
+              <h3 className="text-sm font-medium">{said.claudeWeb}</h3>
+              <p className="mt-2 text-xs leading-relaxed text-slate-500">{said.claudeWebHow}</p>
             </div>
           </div>
 
           <p className="mt-4 text-sm text-slate-500">
-            That is also how to change something once it is built: give your agent the editor link
-            and tell it what to do.{' '}
-            <Link to="/#agents" className="underline">More about using an agent here</Link>.
+            {said.howToChange}{' '}
+            <Link to="/#agents" className="underline">
+              {said.more}
+            </Link>
+            .
           </p>
         </section>
       )}
 
       {state === 'failed' && (
         <section className="surface mt-8 px-5 py-4">
-          <p className="font-medium">{result?.error ?? 'That did not work.'}</p>
+          <p className="font-medium">{result?.error ?? said.failed}</p>
           {result?.detail && <p className="mt-2 text-sm text-slate-500">{result.detail}</p>}
           <button
             type="button"
             className="btn btn-ghost mt-4"
             onClick={() => setState('idle')}
           >
-            Try again
+            {t.common.tryAgain}
           </button>
         </section>
       )}

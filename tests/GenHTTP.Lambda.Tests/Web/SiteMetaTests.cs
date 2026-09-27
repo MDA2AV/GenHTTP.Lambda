@@ -10,7 +10,9 @@ namespace GenHTTP.Lambda.Tests.Web;
 
 /// <summary>
 /// What crawlers and link previews are told: each public page named in the
-/// markup itself, a canonical address, robots.txt and the sitemap.
+/// markup itself, in the language its address names, with its canonical
+/// address and the addresses of its translations, robots.txt and the sitemap
+/// - and where a visitor is sent who asked for a page in no language.
 /// </summary>
 [TestClass]
 public sealed class SiteMetaTests
@@ -18,7 +20,7 @@ public sealed class SiteMetaTests
 
     private const string Index = """
         <!doctype html>
-        <html>
+        <html lang="en" class="dark">
         <head>
         <meta name="description" content="The front page." />
         <meta property="og:title" content="Front" />
@@ -30,8 +32,19 @@ public sealed class SiteMetaTests
 
     private const string Pages = """
         {
-          "/": { "title": "Home", "description": "The front page." },
-          "/docs": { "title": "How It Works", "description": "Snippets & \"handlers\", hosted.", "image": "/social/docs.png" }
+          "/": {
+            "text": {
+              "en": { "title": "Home", "description": "The front page." },
+              "de": { "title": "Start", "description": "Die Startseite." }
+            }
+          },
+          "/docs": {
+            "image": "/social/docs.png",
+            "text": {
+              "en": { "title": "How It Works", "description": "Snippets & \"handlers\", hosted." },
+              "de": { "title": "So funktioniert es", "description": "Schnipsel & \"Handler\", gehostet." }
+            }
+          }
         }
         """;
 
@@ -48,24 +61,49 @@ public sealed class SiteMetaTests
     };
 
     [TestMethod]
-    public async Task APublicPageIsNamedBeforeItIsSent()
+    public async Task APublicPageIsNamedInItsLanguageBeforeItIsSent()
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        using var response = await fixture.GetAsync("/docs", accept: "text/html");
+        using var response = await fixture.GetAsync("/de/docs", accept: "text/html");
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
         var body = await response.Content.ReadAsStringAsync();
 
-        StringAssert.Contains(body, "<title>How It Works - GenHTTP Lambda</title>");
-        StringAssert.Contains(body, "<meta name=\"description\" content=\"Snippets &amp; &quot;handlers&quot;, hosted.\" />");
-        StringAssert.Contains(body, "<meta property=\"og:title\" content=\"How It Works - GenHTTP Lambda\" />");
-        StringAssert.Contains(body, "<link rel=\"canonical\" href=\"https://genhttp.dev/docs\" />");
-        StringAssert.Contains(body, "<meta property=\"og:url\" content=\"https://genhttp.dev/docs\" />");
+        StringAssert.Contains(body, "<html lang=\"de\" class=\"dark\">");
+        StringAssert.Contains(body, "<title>So funktioniert es - GenHTTP Lambda</title>");
+        StringAssert.Contains(body, "<meta name=\"description\" content=\"Schnipsel &amp; &quot;Handler&quot;, gehostet.\" />");
+        StringAssert.Contains(body, "<meta property=\"og:title\" content=\"So funktioniert es - GenHTTP Lambda\" />");
+        StringAssert.Contains(body, "<meta property=\"og:locale\" content=\"de_DE\" />");
+        StringAssert.Contains(body, "<meta property=\"og:locale:alternate\" content=\"en_US\" />");
+        StringAssert.Contains(body, "<link rel=\"canonical\" href=\"https://genhttp.dev/de/docs\" />");
+        StringAssert.Contains(body, "<meta property=\"og:url\" content=\"https://genhttp.dev/de/docs\" />");
 
         Assert.DoesNotContain("The front page.", body, "the front page's description was left in place");
+        Assert.DoesNotContain("og:locale:alternate\" content=\"de_DE", body, "a page is not an alternate of itself");
         Assert.AreEqual(true, response.Headers.CacheControl?.NoCache, "a named page names the bundle as well, so it must not be kept");
+    }
+
+    /// <summary>
+    /// Every language of a page names all of them, itself included, and the
+    /// address without a language for whoever matches none - the way a search
+    /// engine expects a set of translations to be described.
+    /// </summary>
+    [TestMethod]
+    [DataRow("/en/docs")]
+    [DataRow("/de/docs")]
+    public async Task EveryLanguageOfAPageNamesAllOfThem(string path)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync(path, accept: "text/html");
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"en\" href=\"https://genhttp.dev/en/docs\" />");
+        StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"de\" href=\"https://genhttp.dev/de/docs\" />");
+        StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://genhttp.dev/docs\" />");
     }
 
     [TestMethod]
@@ -73,32 +111,97 @@ public sealed class SiteMetaTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        using var response = await fixture.GetAsync("/docs/", accept: "text/html");
+        using var response = await fixture.GetAsync("/de/docs/", accept: "text/html");
 
-        StringAssert.Contains(await response.Content.ReadAsStringAsync(), "href=\"https://genhttp.dev/docs\"");
+        StringAssert.Contains(await response.Content.ReadAsStringAsync(), "<link rel=\"canonical\" href=\"https://genhttp.dev/de/docs\" />");
     }
 
     [TestMethod]
-    public async Task TheFrontPageIsCanonicalAtTheRoot()
+    [DataRow("/en")]
+    [DataRow("/en/")]
+    public async Task TheFrontPageIsCanonicalAtItsLanguage(string path)
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        using var response = await fixture.GetAsync("/", accept: "text/html");
+        using var response = await fixture.GetAsync(path, accept: "text/html");
 
         var body = await response.Content.ReadAsStringAsync();
 
         StringAssert.Contains(body, "<title>Home - GenHTTP Lambda</title>");
-        StringAssert.Contains(body, "href=\"https://genhttp.dev/\"");
+        StringAssert.Contains(body, "<link rel=\"canonical\" href=\"https://genhttp.dev/en\" />");
+        StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://genhttp.dev/\" />");
     }
 
     /// <summary>
-    /// The editor, the pages the examples used to have and a path that does not
-    /// exist are left alone - the client marks them as not to be indexed.
+    /// A page asked for without a language is sent on to the one the visitor
+    /// chose here before, or the best one their browser accepts - and to the
+    /// default for a crawler, which asks in none.
+    /// </summary>
+    [TestMethod]
+    [DataRow("de-CH,de;q=0.9,en;q=0.8", null, "/de/docs")]
+    [DataRow("ja, fr;q=0, en;q=0.5", null, "/en/docs")]
+    [DataRow("it;q=0.4, de;q=0.7", null, "/de/docs")]
+    [DataRow("PT-br", null, "/pt/docs")]
+    [DataRow("*", null, "/en/docs")]
+    [DataRow(null, null, "/en/docs")]
+    [DataRow("de", "lang=es", "/es/docs")]
+    [DataRow("de", "theme=dark; lang=xx", "/de/docs")]
+    public async Task APageWithoutALanguageIsSentOnToThePreferredOne(string? accepted, string? cookie, string expected)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await RequestAsync(fixture, "/docs", accepted, cookie);
+
+        Assert.AreEqual(HttpStatusCode.Found, response.StatusCode);
+        Assert.AreEqual(expected, response.Headers.Location?.OriginalString);
+
+        CollectionAssert.IsSubsetOf(new[] { "Accept-Language", "Cookie" }, response.Headers.Vary.ToList(),
+                                    "a cache would hand one visitor's language to the next");
+    }
+
+    [TestMethod]
+    public async Task TheFrontPageWithoutALanguageIsSentOn()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await RequestAsync(fixture, "/", "fr-FR,fr;q=0.9");
+
+        Assert.AreEqual(HttpStatusCode.Found, response.StatusCode);
+        Assert.AreEqual("/fr", response.Headers.Location?.OriginalString);
+    }
+
+    [TestMethod]
+    public async Task TheQueryGoesAlong()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await RequestAsync(fixture, "/docs/?utm_source=mail&q=a%20b", "de");
+
+        Assert.AreEqual("/de/docs?utm_source=mail&q=a%20b", response.Headers.Location?.OriginalString);
+    }
+
+    [TestMethod]
+    public async Task ThePageThatMovedIsFoundInTheLanguageAsWell()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await RequestAsync(fixture, "/agentic-coding", "it");
+
+        Assert.AreEqual(HttpStatusCode.Found, response.StatusCode);
+        Assert.AreEqual("/it/showcase", response.Headers.Location?.OriginalString);
+    }
+
+    /// <summary>
+    /// The editor, the pages the examples used to have, a path that does not
+    /// exist - in a language or in none - and a language the site is not
+    /// written in are left alone: the client marks them as not to be indexed.
     /// </summary>
     [TestMethod]
     [DataRow("/editor/create")]
     [DataRow("/examples/guestbook")]
     [DataRow("/nowhere")]
+    [DataRow("/de/nowhere")]
+    [DataRow("/nl/docs")]
     public async Task AnythingElseIsTheIndexPageUntouched(string path)
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
@@ -114,12 +217,13 @@ public sealed class SiteMetaTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl: null));
 
-        using var page = await fixture.GetAsync("/docs", accept: "text/html");
+        using var page = await fixture.GetAsync("/en/docs", accept: "text/html");
 
         var body = await page.Content.ReadAsStringAsync();
 
         StringAssert.Contains(body, "<title>How It Works - GenHTTP Lambda</title>");
         Assert.DoesNotContain("canonical", body);
+        Assert.DoesNotContain("hreflang", body);
         Assert.DoesNotContain("og:url", body);
 
         using var sitemap = await fixture.GetAsync("/sitemap.xml");
@@ -136,7 +240,7 @@ public sealed class SiteMetaTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        using var response = await fixture.GetAsync("/docs", accept: "text/html");
+        using var response = await fixture.GetAsync("/en/docs", accept: "text/html");
 
         var body = await response.Content.ReadAsStringAsync();
 
@@ -150,7 +254,7 @@ public sealed class SiteMetaTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        using var response = await fixture.GetAsync("/", accept: "text/html");
+        using var response = await fixture.GetAsync("/en", accept: "text/html");
 
         StringAssert.Contains(await response.Content.ReadAsStringAsync(),
                               "<meta property=\"og:image\" content=\"https://genhttp.dev/social/default.png\" />");
@@ -161,7 +265,7 @@ public sealed class SiteMetaTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl: null));
 
-        using var response = await fixture.GetAsync("/docs", accept: "text/html");
+        using var response = await fixture.GetAsync("/en/docs", accept: "text/html");
 
         StringAssert.Contains(await response.Content.ReadAsStringAsync(),
                               "<meta property=\"og:image\" content=\"/social/docs.png\" />");
@@ -174,15 +278,9 @@ public sealed class SiteMetaTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl));
 
-        using var response = await fixture.GetAsync("/", accept: "text/html");
+        using var response = await fixture.GetAsync("/de", accept: "text/html");
 
-        var body = await response.Content.ReadAsStringAsync();
-
-        var script = Regex.Match(body, "<script type=\"application/ld\\+json\">(.*?)</script>", RegexOptions.Singleline);
-
-        Assert.IsTrue(script.Success, "the front page carries no structured data");
-
-        var graph = JsonDocument.Parse(script.Groups[1].Value).RootElement.GetProperty("@graph").EnumerateArray().ToList();
+        var graph = Graph(await response.Content.ReadAsStringAsync());
 
         var types = graph.Select(node => node.GetProperty("@type").GetString()).ToList();
 
@@ -192,10 +290,13 @@ public sealed class SiteMetaTests
 
         Assert.AreEqual("GenHTTP Lambda", website.GetProperty("name").GetString());
         Assert.AreEqual("https://genhttp.dev/", website.GetProperty("url").GetString());
+        Assert.AreEqual(6, website.GetProperty("inLanguage").GetArrayLength(), "the site is written in every language it has");
 
         var application = graph.Single(node => node.GetProperty("@type").GetString() == "WebApplication");
 
-        Assert.AreEqual("The front page.", application.GetProperty("description").GetString());
+        Assert.AreEqual("Die Startseite.", application.GetProperty("description").GetString());
+        Assert.AreEqual("de", application.GetProperty("inLanguage").GetString());
+        Assert.AreEqual("https://genhttp.dev/de", application.GetProperty("url").GetString());
     }
 
     [TestMethod]
@@ -203,7 +304,7 @@ public sealed class SiteMetaTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        using var response = await fixture.GetAsync("/docs", accept: "text/html");
+        using var response = await fixture.GetAsync("/en/docs", accept: "text/html");
 
         Assert.DoesNotContain("application/ld+json", await response.Content.ReadAsStringAsync());
     }
@@ -226,7 +327,7 @@ public sealed class SiteMetaTests
     }
 
     [TestMethod]
-    public async Task TheSitemapListsThePages()
+    public async Task TheSitemapListsEveryPageInEveryLanguage()
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
@@ -238,12 +339,53 @@ public sealed class SiteMetaTests
         var sitemap = XDocument.Parse(await response.Content.ReadAsStringAsync());
 
         XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
+        XNamespace xhtml = "http://www.w3.org/1999/xhtml";
 
-        var locations = sitemap.Descendants(ns + "loc").Select(l => l.Value).ToList();
+        var urls = sitemap.Descendants(ns + "url").ToList();
 
-        CollectionAssert.Contains(locations, "https://genhttp.dev/");
-        CollectionAssert.Contains(locations, "https://genhttp.dev/docs");
-        Assert.IsFalse(locations.Any(l => l.Contains("/examples/")));
+        var locations = urls.Select(url => url.Element(ns + "loc")!.Value).ToList();
+
+        CollectionAssert.AreEquivalent(new[]
+        {
+            "https://genhttp.dev/en", "https://genhttp.dev/de",
+            "https://genhttp.dev/en/docs", "https://genhttp.dev/de/docs"
+        }, locations, "only the pages themselves, not the addresses that send a visitor on");
+
+        var docs = urls.Single(url => url.Element(ns + "loc")!.Value == "https://genhttp.dev/de/docs");
+
+        var alternates = docs.Elements(xhtml + "link").ToDictionary(link => link.Attribute("hreflang")!.Value, link => link.Attribute("href")!.Value);
+
+        Assert.AreEqual("https://genhttp.dev/en/docs", alternates["en"]);
+        Assert.AreEqual("https://genhttp.dev/de/docs", alternates["de"]);
+        Assert.AreEqual("https://genhttp.dev/docs", alternates["x-default"]);
+    }
+
+    private static async Task<HttpResponseMessage> RequestAsync(LambdaFixture fixture, string path, string? accepted, string? cookie = null)
+    {
+        using var request = fixture.Host.GetRequest(path);
+
+        request.Headers.TryAddWithoutValidation("Accept", "text/html");
+
+        if (accepted != null)
+        {
+            request.Headers.TryAddWithoutValidation("Accept-Language", accepted);
+        }
+
+        if (cookie != null)
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", cookie);
+        }
+
+        return await fixture.Host.GetResponseAsync(request);
+    }
+
+    private static List<JsonElement> Graph(string body)
+    {
+        var script = Regex.Match(body, "<script type=\"application/ld\\+json\">(.*?)</script>", RegexOptions.Singleline);
+
+        Assert.IsTrue(script.Success, "the front page carries no structured data");
+
+        return JsonDocument.Parse(script.Groups[1].Value).RootElement.GetProperty("@graph").EnumerateArray().ToList();
     }
 
 }

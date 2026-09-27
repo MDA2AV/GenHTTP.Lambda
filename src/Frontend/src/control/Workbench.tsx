@@ -8,6 +8,7 @@ import { Dialog } from '../components/Dialog';
 import { ENTRY, FileTabs } from '../components/FileTabs';
 import { IconPlay, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { useEditorT } from '../i18n';
 import { languageFor } from '../monaco';
 import type { Control } from './context';
 import { Section } from './ui';
@@ -25,6 +26,7 @@ type Busy = 'save' | 'check' | 'deploy' | null;
 export function Workbench({ control, onDirty }: { control: Control; onDirty: (dirty: boolean) => void }) {
   const { privateKey, lambda } = control;
 
+  const said = useEditorT().code;
   const toast = useToast();
   const [params] = useSearchParams();
 
@@ -83,7 +85,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           setBuilt('idle');
         }
       })
-      .catch((error) => toast(error instanceof ApiError ? error.message : 'That version could not be loaded.', 'error'));
+      .catch((error) => toast(error instanceof ApiError ? error.message : said.loadFailed, 'error'));
 
     return () => {
       alive = false;
@@ -139,9 +141,9 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       setDiagnostics(result.diagnostics);
       setBuilt(result.success ? 'clean' : 'idle');
 
-      toast(result.success ? 'It compiles.' : 'It does not compile yet.', result.success ? 'success' : 'error');
+      toast(result.success ? said.compiles : said.notYet, result.success ? 'success' : 'error');
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The code could not be checked.', 'error');
+      toast(error instanceof ApiError ? error.message : said.checkFailed, 'error');
     } finally {
       setBusy(null);
     }
@@ -167,7 +169,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
 
       if (!thenDeploy) {
         await control.refresh();
-        toast(`Saved as version ${target}.`);
+        toast(said.saved(target));
         return;
       }
 
@@ -178,10 +180,10 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
 
       await control.refresh();
 
-      toast(result.success ? `Version ${result.lambda?.activeVersion ?? target} is online.` : 'It did not go online. See what the compiler said below.',
+      toast(result.success ? said.isOnline(result.lambda?.activeVersion ?? target) : said.notOnline,
             result.success ? 'success' : 'error');
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'That did not work.', 'error');
+      toast(error instanceof ApiError ? error.message : said.failed, 'error');
     } finally {
       setBusy(null);
     }
@@ -193,12 +195,12 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
 
     if (!dirty) {
-      toast('Nothing has changed since the last save.');
+      toast(said.unchanged);
       return;
     }
 
     setSaving('save');
-  }, [busy, dirty, toast]);
+  }, [busy, dirty, toast, said]);
 
   function deploy() {
     if (dirty) {
@@ -219,38 +221,35 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       flush
       title={
         <>
-          Code
+          {said.title}
           <span className="ml-2 text-sm font-normal text-slate-500">
-            {loaded != null ? `version ${loaded}` : ''}
-            {dirty ? ', edited' : online ? ', online' : ''}
+            {loaded != null ? said.version(loaded) : ''}
+            {dirty ? said.edited : online ? said.online : ''}
           </span>
         </>
       }
       hint={
         <>
-          {demo
-            ? 'A demo, so everything here is read only. Create a lambda of your own from it to change it. '
-            : 'Edit the code by hand. Saving makes a new version and leaves what is online alone; deploying puts it online. '}
-          <code className="font-mono">lambda.cs</code> returns what gets served, other <code className="font-mono">.cs</code> files
-          hold types, and any other file is served as it is. Ctrl-S saves, F12 goes to a declaration.
-          {newer && ` Version ${lambda.latestVersion} is newer than the one open here.`}
+          {demo ? said.demo : said.edit}
+          {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>)}
+          {newer && said.newer(lambda.latestVersion!)}
         </>
       }
       actions={
         <>
           <button type="button" onClick={check} disabled={busy !== null} className="btn-ghost !px-3 !py-1.5 text-[13px]">
             {busy === 'check' && <IconSpinner />}
-            Check
+            {said.check}
           </button>
           {!demo && (
             <>
               <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Ctrl+S">
                 {busy === 'save' && <IconSpinner />}
-                Save
+                {said.save}
               </button>
               <button type="button" onClick={deploy} disabled={busy !== null || (!dirty && online)} className="btn-primary !px-4 !py-1.5 text-[13px]">
                 {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
-                Deploy
+                {said.deploy}
               </button>
             </>
           )}
@@ -285,9 +284,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
         {current?.encoding === 'base64' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white px-6 text-center dark:bg-ink-900">
             <p className="font-mono text-sm">{active}</p>
-            <p className="text-sm text-slate-500">
-              Not text, so there is nothing to edit. It is served as it is and weighs {Math.round((code.length * 3) / 4 / 1024) || 1} kB.
-            </p>
+            <p className="text-sm text-slate-500">{said.binary(Math.round((code.length * 3) / 4 / 1024) || 1)}</p>
           </div>
         )}
       </div>
@@ -309,29 +306,29 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       )}
 
       <Dialog
-        title={saving === 'deploy' ? 'Save and deploy' : 'Save a new version'}
+        title={saving === 'deploy' ? said.saveAndDeploy : said.saveVersion}
         open={saving !== null}
         onClose={() => setSaving(null)}
         footer={
           <>
             <button type="button" onClick={() => setSaving(null)} className="btn-ghost">
-              Cancel
+              {said.cancel}
             </button>
             <button type="button" onClick={() => commit(saving === 'deploy')} className="btn-primary">
-              {saving === 'deploy' ? 'Save and deploy' : 'Save'}
+              {saving === 'deploy' ? said.saveAndDeploy : said.save}
             </button>
           </>
         }
       >
         <label className="block text-sm">
-          <span className="text-slate-600 dark:text-slate-400">What does it change? Optional - it is shown in the history.</span>
+          <span className="text-slate-600 dark:text-slate-400">{said.what}</span>
           <input
             autoFocus
             value={change}
             onChange={(event) => setChange(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && commit(saving === 'deploy')}
             maxLength={500}
-            placeholder="Adds a contact form"
+            placeholder={said.placeholder}
             className="field mt-2"
           />
         </label>

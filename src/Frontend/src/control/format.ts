@@ -1,6 +1,11 @@
+import { SHARED, type SharedWords } from './words';
+
 /**
  * How the control center says numbers and times. One place, so a byte count
  * reads the same on every tab and "3 min ago" means the same thing twice.
+ *
+ * What is said in words takes them from the caller, in the language it is
+ * showing - the console leaves them out and is English.
  */
 
 export function bytes(value: number): string {
@@ -56,46 +61,47 @@ export function percent(part: number, whole: number): string {
 }
 
 /** A span of time as somebody would say it: 3 d 4 h, 12 min, 40 s. */
-export function span(seconds: number): string {
+export function span(seconds: number, words: SharedWords = SHARED): string {
+  const { s: sec, min, h, d } = words.units;
   const s = Math.max(0, Math.round(seconds));
 
   if (s < 60) {
-    return `${s} s`;
+    return `${s} ${sec}`;
   }
 
   const minutes = Math.floor(s / 60);
 
   if (minutes < 60) {
-    return `${minutes} min`;
+    return `${minutes} ${min}`;
   }
 
   const hours = Math.floor(minutes / 60);
 
   if (hours < 48) {
     const rest = minutes % 60;
-    return rest > 0 && hours < 10 ? `${hours} h ${rest} min` : `${hours} h`;
+    return rest > 0 && hours < 10 ? `${hours} ${h} ${rest} ${min}` : `${hours} ${h}`;
   }
 
   const days = Math.floor(hours / 24);
   const rest = hours % 24;
 
-  return rest > 0 && days < 10 ? `${days} d ${rest} h` : `${days} d`;
+  return rest > 0 && days < 10 ? `${days} ${d} ${rest} ${h}` : `${days} ${d}`;
 }
 
 /** How long ago, or how long from now, in the same words. */
-export function ago(when: string | Date | null | undefined, now = Date.now()): string {
+export function ago(when: string | Date | null | undefined, words: SharedWords = SHARED, now = Date.now()): string {
   if (!when) {
-    return 'never';
+    return words.never;
   }
 
   const at = typeof when === 'string' ? new Date(when).getTime() : when.getTime();
   const seconds = (now - at) / 1000;
 
   if (Math.abs(seconds) < 10) {
-    return 'just now';
+    return words.justNow;
   }
 
-  return seconds > 0 ? `${span(seconds)} ago` : `in ${span(-seconds)}`;
+  return seconds > 0 ? words.ago(span(seconds, words)) : words.in(span(-seconds, words));
 }
 
 export function stamp(when: string | Date): string {
@@ -116,37 +122,13 @@ export function clock(when: string | Date, seconds = false): string {
 }
 
 /** The words for where something came from. */
-export function origin(value?: string | null): string {
-  switch (value) {
-    case 'agent':
-      return 'agent';
-    case 'template':
-      return 'template';
-    case 'admin':
-      return 'operator';
-    case 'system':
-      return 'platform';
-    case 'api':
-      return 'API / editor';
-    default:
-      return 'unknown';
-  }
+export function origin(value?: string | null, words: SharedWords = SHARED): string {
+  return (value && words.origins[value]) || words.origins.unknown;
 }
 
 /** The words for why something stopped being online. */
-export function ending(value?: string | null): string {
-  switch (value) {
-    case 'replaced':
-      return 'replaced by a newer deployment';
-    case 'stopped':
-      return 'taken offline';
-    case 'expired':
-      return 'expired after going unused';
-    case 'admin':
-      return 'taken offline by the operator';
-    default:
-      return 'ended';
-  }
+export function ending(value?: string | null, words: SharedWords = SHARED): string {
+  return (value && words.endings[value]) || words.endings.ended;
 }
 
 /**

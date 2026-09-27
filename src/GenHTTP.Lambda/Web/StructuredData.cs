@@ -14,7 +14,9 @@ namespace GenHTTP.Lambda.Web;
 /// but it says in so many words that this is a free tool for developers.
 ///
 /// Always under genhttp.dev, whatever address the page was asked for at: this
-/// describes the site, and that is where the site is.
+/// describes the site, and that is where the site is. The site is written in
+/// every language it has; the application is described in the language of the
+/// front page it is found on, which is where it links to.
 /// </remarks>
 public static class StructuredData
 {
@@ -24,7 +26,7 @@ public static class StructuredData
 
     private const string Organization = Home + "#organization";
 
-    public static string Render(string site, string description)
+    public static string Render(string site, string description, string language)
     {
         var graph = new JsonObject
         {
@@ -53,7 +55,7 @@ public static class StructuredData
                     ["@id"] = Home + "#website",
                     ["name"] = site,
                     ["url"] = Home,
-                    ["inLanguage"] = "en",
+                    ["inLanguage"] = new JsonArray([.. SiteLanguages.All.Select(l => JsonValue.Create(l))]),
                     ["publisher"] = new JsonObject { ["@id"] = Organization }
                 },
                 new JsonObject
@@ -61,7 +63,8 @@ public static class StructuredData
                     ["@type"] = "WebApplication",
                     ["@id"] = Home + "#application",
                     ["name"] = site,
-                    ["url"] = Home,
+                    ["url"] = Home + language,
+                    ["inLanguage"] = language,
                     ["description"] = description,
                     ["applicationCategory"] = "DeveloperApplication",
                     ["operatingSystem"] = "Any",

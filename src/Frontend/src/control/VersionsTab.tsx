@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { ApiError, api, type LambdaFile, type VersionContent, type VersionInfo } from '../api';
 import { IconChevronDown, IconSpinner } from '../components/Icons';
+import { useEditorT } from '../i18n';
 import { languageFor, monaco } from '../monaco';
 import type { Theme } from '../theme';
 import type { Control } from './context';
@@ -13,21 +14,14 @@ import { AgentMark, Ago, Empty, Quote, Section } from './ui';
  * was asked for and the difference to the one before.
  */
 export function VersionsTab({ control }: { control: Control }) {
+  const t = useEditorT();
   const { versions, lambda } = control;
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <Section
-      title="Versions"
-      hint={
-        <>
-          Each version keeps what was asked for and what it changed, where whoever wrote it said so. The oldest are
-          removed once there are more than {control.summary?.limits.versions ?? 50}; the one online never is.
-        </>
-      }
-    >
+    <Section title={t.frame.sections.versions} hint={t.versions.hint(control.summary?.limits.versions ?? 50)}>
       {versions.length === 0 ? (
-        <Empty>No versions yet.</Empty>
+        <Empty>{t.versions.none}</Empty>
       ) : (
         <ol className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-ink-800 dark:border-ink-800">
           {versions.map((version, index) => (
@@ -65,6 +59,8 @@ function Row({
   open: boolean;
   onToggle: () => void;
 }) {
+  const said = useEditorT().versions;
+
   return (
     <li>
       <div className="group flex items-center gap-3 py-3">
@@ -72,7 +68,7 @@ function Row({
           <IconChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? '' : '-rotate-90'}`} />
           <span className="w-8 shrink-0 text-[13px] tabular-nums text-slate-500">{version.version}</span>
           <span className="min-w-0 flex-1 truncate text-[15px]" title={version.change ?? undefined}>
-            {version.change ?? <span className="text-slate-400">No description</span>}
+            {version.change ?? <span className="text-slate-400">{said.noDescription}</span>}
           </span>
         </button>
 
@@ -80,7 +76,7 @@ function Row({
           {live && (
             <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              online
+              {said.online}
             </span>
           )}
           <AgentMark origin={version.origin} />
@@ -94,9 +90,9 @@ function Row({
               onClick={() => control.deploy(version.version)}
               disabled={control.busy !== null}
               className="text-[13px] font-medium text-accent-500 opacity-70 hover:underline group-hover:opacity-100 disabled:opacity-40"
-              title={latest ? 'Put this version online' : 'Put this older version back online'}
+              title={latest ? said.putOnline : said.rollBackTitle}
             >
-              {latest ? 'Deploy' : 'Roll back'}
+              {latest ? said.deploy : said.rollBack}
             </button>
           )}
         </span>
@@ -108,6 +104,7 @@ function Row({
 }
 
 function Detail({ control, version, previous }: { control: Control; version: VersionInfo; previous?: VersionInfo }) {
+  const said = useEditorT().versions;
   const [diffs, setDiffs] = useState<FileDiff[] | null>(null);
   const [sides, setSides] = useState<{ before: LambdaFile[]; after: LambdaFile[] }>({ before: [], after: [] });
   const [failure, setFailure] = useState<string | null>(null);
@@ -133,12 +130,12 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
         // the first file that changed is usually the one to read
         setShown(result.find((d) => d.status !== 'same')?.name ?? null);
       })
-      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : 'This version could not be read.'));
+      .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : said.readFailed));
 
     return () => {
       alive = false;
     };
-  }, [control.privateKey, version.version, previous]);
+  }, [control.privateKey, version.version, previous, said]);
 
   const changed = diffs?.filter((d) => d.status !== 'same') ?? [];
 
@@ -150,10 +147,10 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
         <p className="text-sm text-red-500">{failure}</p>
       ) : diffs === null ? (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <IconSpinner /> Comparing…
+          <IconSpinner /> {said.comparing}
         </div>
       ) : changed.length === 0 ? (
-        <p className="text-sm text-slate-500">{previous ? 'Nothing changed from the version before.' : 'The first version.'}</p>
+        <p className="text-sm text-slate-500">{previous ? said.unchanged : said.first}</p>
       ) : (
         <div className="surface overflow-hidden">
           <ul className="divide-y divide-slate-200 dark:divide-ink-800">
@@ -167,7 +164,7 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
                 >
                   <span className="min-w-0 flex-1 truncate font-mono text-[13px]">
                     {diff.name}
-                    {diff.status !== 'changed' && <span className="ml-2 font-sans text-xs text-slate-500">{diff.status}</span>}
+                    {diff.status !== 'changed' && <span className="ml-2 font-sans text-xs text-slate-500">{said.status[diff.status]}</span>}
                   </span>
                   {!diff.binary && (
                     <span className="shrink-0 font-mono text-xs">
@@ -193,10 +190,10 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
 
       <div className="flex gap-4 text-[13px]">
         <button type="button" onClick={() => control.browse(version.version)} className="text-accent-500 hover:underline">
-          Browse its files
+          {said.browse}
         </button>
         <button type="button" onClick={() => control.edit(version.version)} className="text-accent-500 hover:underline">
-          Edit from here
+          {said.edit}
         </button>
       </div>
     </div>
@@ -236,6 +233,7 @@ function useColoured(code: string, language: string, theme: Theme): string[] | n
 }
 
 function Patch({ diff, before, after, theme }: { diff: FileDiff; before: string; after: string; theme: Theme }) {
+  const said = useEditorT().versions;
   const language = languageFor(diff.name);
   const old = useColoured(before, language, theme);
   const now = useColoured(after, language, theme);
@@ -243,7 +241,7 @@ function Patch({ diff, before, after, theme }: { diff: FileDiff; before: string;
   if (diff.binary || !diff.hunks) {
     return (
       <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500 dark:border-ink-800">
-        {diff.binary ? 'Not text, so there are no lines to compare.' : 'Too large to compare line by line.'}
+        {diff.binary ? said.binary : said.tooLarge}
       </p>
     );
   }

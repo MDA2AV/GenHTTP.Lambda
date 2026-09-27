@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ApiError, api, type OwnerLogEntry } from '../api';
 import { IconChevronDown, IconSpinner } from '../components/Icons';
+import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { clock, local } from './format';
 import { Empty, LevelMark, Pills, Section } from './ui';
@@ -17,6 +18,9 @@ type View = 'all' | 'requests' | 'output' | 'problems';
  * stack trace. Newest first, so what just happened is where the eye is.
  */
 export function LogsTab({ control }: { control: Control }) {
+  const t = useEditorT();
+  const said = t.logs;
+
   const [lines, setLines] = useState<OwnerLogEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -65,7 +69,7 @@ export function LogsTab({ control }: { control: Control }) {
         }
       } catch (error) {
         if (alive) {
-          setFailure(error instanceof ApiError ? error.message : 'The log could not be read.');
+          setFailure(error instanceof ApiError ? error.message : said.readFailed);
           setLoaded(true);
         }
       }
@@ -79,7 +83,7 @@ export function LogsTab({ control }: { control: Control }) {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [control.privateKey, level, paused]);
+  }, [control.privateKey, level, paused, said]);
 
   const needle = search.trim().toLowerCase();
 
@@ -93,45 +97,38 @@ export function LogsTab({ control }: { control: Control }) {
 
   return (
     <Section
-      title="Logs"
-      hint={
-        <>
-          Requests, what the lambda printed and what went wrong, as it happens.
-          {!capturing && ' This installation does not keep what lambdas print, so only requests and errors appear.'} Held
-          in memory and shared with every lambda here, so it reaches back minutes to hours, and is empty after a
-          restart. Visitors' addresses are not shown.
-        </>
-      }
+      title={t.frame.sections.logs}
+      hint={said.hint(capturing)}
       actions={
         <>
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
+            placeholder={said.search}
             className="field !w-40 !py-1 text-[13px] sm:!w-52"
-            aria-label="Search the log"
+            aria-label={said.searchLabel}
           />
           <button
             type="button"
             onClick={() => setPaused((was) => !was)}
             className="btn-ghost !px-3 !py-1 text-[13px]"
-            title={paused ? 'Show new lines as they come' : 'Stop adding new lines while you read'}
+            title={paused ? said.resume : said.pause}
           >
             <span className={`h-1.5 w-1.5 rounded-full ${paused ? 'bg-slate-400' : 'animate-pulse bg-emerald-500'}`} />
-            {paused ? 'Paused' : 'Live'}
+            {paused ? said.paused : said.live}
           </button>
         </>
       }
       pills={
         <Pills
-          label="Show"
+          label={said.show}
           value={view}
           onChange={setView}
           options={[
-            { value: 'all', label: 'Everything' },
-            { value: 'requests', label: 'Requests' },
-            { value: 'output', label: 'What it printed' },
-            { value: 'problems', label: 'Problems' },
+            { value: 'all', label: said.all },
+            { value: 'requests', label: said.requests },
+            { value: 'output', label: said.output },
+            { value: 'problems', label: said.problems },
           ]}
         />
       }
@@ -139,15 +136,9 @@ export function LogsTab({ control }: { control: Control }) {
       {failure ? (
         <p className="text-sm text-red-500">{failure}</p>
       ) : !loaded ? (
-        <div className="flex items-center gap-2 text-sm text-slate-500"><IconSpinner /> Reading the log…</div>
+        <div className="flex items-center gap-2 text-sm text-slate-500"><IconSpinner /> {said.reading}</div>
       ) : shown.length === 0 ? (
-        <Empty>
-          {lines.length === 0
-            ? view === 'problems'
-              ? 'Nothing has gone wrong that the log still remembers.'
-              : 'Nothing yet. Open the lambda\'s address and its requests appear here.'
-            : 'Nothing matches.'}
-        </Empty>
+        <Empty>{lines.length === 0 ? (view === 'problems' ? said.noProblems : said.nothing) : said.noMatch}</Empty>
       ) : (
         <ul className="divide-y divide-slate-100 border-y border-slate-200 font-mono text-[12.5px] dark:divide-ink-850 dark:border-ink-800">
           {shown.map((line) => {
@@ -169,7 +160,7 @@ export function LogsTab({ control }: { control: Control }) {
                   <LevelMark level={line.level} />
                   <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
                     {local(line.text, control.lambda.publicKey)}
-                    {line.repeats > 1 && <span className="ml-2 text-slate-400" title={`${line.repeats} identical lines`}>×{line.repeats}</span>}
+                    {line.repeats > 1 && <span className="ml-2 text-slate-400" title={said.identical(line.repeats)}>×{line.repeats}</span>}
                   </span>
                   {expandable && (
                     <IconChevronDown className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-300 transition-transform dark:text-ink-700 ${expanded ? '' : '-rotate-90'}`} />
@@ -180,8 +171,8 @@ export function LogsTab({ control }: { control: Control }) {
                   <div className="space-y-2 bg-slate-50 px-3 py-2 pl-[4.75rem] dark:bg-ink-950/50">
                     <p className="font-sans text-xs text-slate-500">
                       {line.source}
-                      {line.domain && `, at ${line.domain}`}
-                      {line.country && `, from ${line.country}`}
+                      {line.domain && said.at(line.domain)}
+                      {line.country && said.from(line.country)}
                       {line.agent && `, ${line.agent}`}
                     </p>
                     {line.detail && <pre className="max-h-80 overflow-auto whitespace-pre text-[12px] text-slate-700 dark:text-slate-300">{line.detail}</pre>}

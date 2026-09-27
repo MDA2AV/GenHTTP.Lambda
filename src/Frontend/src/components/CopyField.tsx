@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { IconCheck, IconCopy, IconExternal } from './Icons';
+import { useT } from '../i18n';
 
 interface Props {
   value: string;
@@ -12,6 +13,7 @@ interface Props {
 /** A read-only URL with a copy button, and optionally a link to open it. */
 export function CopyField({ value, href, label, tone = 'default' }: Props) {
   const [copied, setCopied] = useState(false);
+  const t = useT();
 
   async function copy() {
     try {
@@ -40,8 +42,8 @@ export function CopyField({ value, href, label, tone = 'default' }: Props) {
         <button
           type="button"
           onClick={copy}
-          title="Copy to clipboard"
-          aria-label="Copy to clipboard"
+          title={t.common.copyToClipboard}
+          aria-label={t.common.copyToClipboard}
           className="border-l border-slate-200 px-3 text-slate-500 transition-colors hover:bg-slate-100 hover:text-ink-800 dark:border-ink-700 dark:hover:bg-ink-800 dark:hover:text-slate-100"
         >
           {copied ? <IconCheck className="h-4 w-4 text-emerald-500" /> : <IconCopy />}
@@ -51,8 +53,8 @@ export function CopyField({ value, href, label, tone = 'default' }: Props) {
             href={href}
             target="_blank"
             rel="noreferrer"
-            title="Open in a new tab"
-            aria-label="Open in a new tab"
+            title={t.common.openInNewTab}
+            aria-label={t.common.openInNewTab}
             className="flex items-center border-l border-slate-200 px-3 text-slate-500 transition-colors hover:bg-slate-100 hover:text-ink-800 dark:border-ink-700 dark:hover:bg-ink-800 dark:hover:text-slate-100"
           >
             <IconExternal />

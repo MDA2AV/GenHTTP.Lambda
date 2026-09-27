@@ -4,9 +4,11 @@ import { platformPath } from '../address';
 import { ApiError, api, type LambdaTraffic, type TrafficPoint } from '../api';
 import { Chart } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
+import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { ago, bytes, clock, count, millis, percent, stamp } from './format';
 import { Empty, Figure, Pills, Section } from './ui';
+import { useShared } from './words';
 
 // the admin panel's palette, so a request is the same colour on both pages
 const BLUE: [string, string] = ['#1a73e8', '#4285f4'];
@@ -20,6 +22,10 @@ type Window = 'hour' | 'day';
  * How much it is asked, how it answers, how fast, and what for.
  */
 export function StatsTab({ control }: { control: Control }) {
+  const t = useEditorT();
+  const said = t.stats;
+  const title = t.frame.sections.stats;
+
   const [traffic, setTraffic] = useState<LambdaTraffic | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [range, setRange] = useState<Window>('hour');
@@ -37,7 +43,7 @@ export function StatsTab({ control }: { control: Control }) {
         }
       } catch (error) {
         if (alive) {
-          setFailure(error instanceof ApiError ? error.message : 'The figures could not be read.');
+          setFailure(error instanceof ApiError ? error.message : said.readFailed);
         }
       }
     }
@@ -50,31 +56,29 @@ export function StatsTab({ control }: { control: Control }) {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [control.privateKey]);
+  }, [control.privateKey, said]);
 
   const pills = (
     <Pills
-      label="Time range"
+      label={said.range}
       value={range}
       onChange={setRange}
       options={[
-        { value: 'hour', label: 'Last hour' },
-        { value: 'day', label: 'Last day' },
+        { value: 'hour', label: said.lastHour },
+        { value: 'day', label: said.lastDay },
       ]}
     />
   );
 
-  const hint = traffic && (
-    <>Counted in memory since the server last started, {ago(traffic.since)}. A restart begins these figures again.</>
-  );
+  const hint = traffic && said.hint(ago(traffic.since, t.shared));
 
   if (!traffic) {
     return (
-      <Section title="Stats" pills={pills}>
+      <Section title={title} pills={pills}>
         {failure ? (
           <p className="text-sm text-red-500">{failure}</p>
         ) : (
-          <div className="flex items-center gap-2 text-sm text-slate-500"><IconSpinner /> Reading the figures…</div>
+          <div className="flex items-center gap-2 text-sm text-slate-500"><IconSpinner /> {said.reading}</div>
         )}
       </Section>
     );
@@ -91,49 +95,49 @@ export function StatsTab({ control }: { control: Control }) {
   const average = total > 0 ? sum(points, (p) => p.averageMillis * p.requests) / total : 0;
 
   const dark = control.theme === 'dark';
-  const unit = range === 'hour' ? 'minute' : '15 minutes';
+  const hourly = range === 'hour';
 
   return (
-    <Section title="Stats" hint={hint} pills={pills}>
+    <Section title={title} hint={hint} pills={pills}>
       <div className="surface grid grid-cols-2 gap-6 p-5 lg:grid-cols-4">
-        <Figure value={count(total)} label="requests" title={upgrades > 0 ? `and ${upgrades} websocket connections` : undefined} />
+        <Figure value={count(total)} label={said.requests} title={upgrades > 0 ? said.websockets(upgrades) : undefined} />
         <Figure
           value={total > 0 ? percent(failed, total) : '-'}
-          label="failed"
+          label={said.failed}
           tone={failed === 0 ? 'default' : 'bad'}
-          title={`${failed} server errors`}
+          title={said.serverErrors(failed)}
         />
-        <Figure value={count(rejected)} label="not found or refused" tone={rejected > 0 ? 'warn' : 'default'} />
-        <Figure value={total > 0 ? millis(average) : '-'} label="to answer, on average" title={`${bytes(sent)} sent`} />
+        <Figure value={count(rejected)} label={said.rejected} tone={rejected > 0 ? 'warn' : 'default'} />
+        <Figure value={total > 0 ? millis(average) : '-'} label={said.average} title={said.sent(bytes(sent))} />
       </div>
 
       {total === 0 ? (
-        <Empty>Nobody has called it in the last {range}.</Empty>
+        <Empty>{said.nobody(hourly)}</Empty>
       ) : (
         <div className="mt-6 space-y-6">
           <Chart
-            title="Requests"
-            hint={`Per ${unit}.`}
+            title={said.requestsTitle}
+            hint={said.per(hourly)}
             labels={labels}
             dark={dark}
             shape="stacked"
             format={(v) => count(Math.round(v))}
             series={[
-              { label: 'Answered', color: BLUE, values: points.map((p) => Math.max(0, p.requests - p.failed - p.rejected)) },
-              { label: 'Not found or refused', color: AMBER, values: points.map((p) => p.rejected) },
-              { label: 'Failed', color: RED, values: points.map((p) => p.failed) },
+              { label: said.answered, color: BLUE, values: points.map((p) => Math.max(0, p.requests - p.failed - p.rejected)) },
+              { label: said.rejectedSeries, color: AMBER, values: points.map((p) => p.rejected) },
+              { label: said.failedSeries, color: RED, values: points.map((p) => p.failed) },
             ]}
           />
 
           <Chart
-            title="Time to answer"
-            hint={`The average per ${unit}.`}
+            title={said.timeTitle}
+            hint={said.averagePer(hourly)}
             labels={labels}
             dark={dark}
             shape="step"
             height={150}
             format={(v) => millis(v)}
-            series={[{ label: 'Average', color: PURPLE, values: points.map((p) => p.averageMillis) }]}
+            series={[{ label: said.averageSeries, color: PURPLE, values: points.map((p) => p.averageMillis) }]}
           />
         </div>
       )}
@@ -142,14 +146,14 @@ export function StatsTab({ control }: { control: Control }) {
 
       {traffic.paths.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-sm font-medium">Most asked for</h2>
+          <h2 className="text-sm font-medium">{said.mostAsked}</h2>
           <table className="mt-2 w-full text-left text-[13px]">
             <thead className="text-slate-500">
               <tr className="border-b border-slate-200 dark:border-ink-800">
-                <th className="py-2 pr-3 font-normal">Path</th>
-                <th className="py-2 pr-3 text-right font-normal">Requests</th>
-                <th className="py-2 pr-3 text-right font-normal">Failed</th>
-                <th className="py-2 text-right font-normal">Average</th>
+                <th className="py-2 pr-3 font-normal">{said.path}</th>
+                <th className="py-2 pr-3 text-right font-normal">{said.requestsColumn}</th>
+                <th className="py-2 pr-3 text-right font-normal">{said.failedColumn}</th>
+                <th className="py-2 text-right font-normal">{said.averageColumn}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-ink-850">
@@ -163,7 +167,7 @@ export function StatsTab({ control }: { control: Control }) {
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-xs text-slate-400">Since the server started.</p>
+          <p className="mt-2 text-xs text-slate-400">{said.since}</p>
         </section>
       )}
     </Section>
@@ -176,6 +180,7 @@ export function StatsTab({ control }: { control: Control }) {
  * lambda there is only the one way, and nothing to say about it.
  */
 export function Entrances({ traffic, publicKey }: { traffic: LambdaTraffic; publicKey: string }) {
+  const said = useShared().entrances;
   const entrances = traffic.entrances ?? [];
 
   if (!entrances.some((entrance) => entrance.domain)) {
@@ -186,7 +191,7 @@ export function Entrances({ traffic, publicKey }: { traffic: LambdaTraffic; publ
 
   return (
     <section className="mt-8">
-      <h2 className="text-sm font-medium">Reached through</h2>
+      <h2 className="text-sm font-medium">{said.title}</h2>
       <ul className="mt-2 divide-y divide-slate-100 text-[13px] dark:divide-ink-850">
         {entrances.map((entrance) => (
           <li key={entrance.domain ?? ''} className="flex items-center gap-3 py-2">
@@ -202,7 +207,7 @@ export function Entrances({ traffic, publicKey }: { traffic: LambdaTraffic; publ
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-slate-400">Since the server started, websocket connections included.</p>
+      <p className="mt-2 text-xs text-slate-400">{said.note}</p>
     </section>
   );
 }

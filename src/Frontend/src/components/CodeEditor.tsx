@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import type { Diagnostic } from '../api';
+import { useEditorT } from '../i18n';
 import { monaco, showDiagnostics } from '../monaco';
 import type { Theme } from '../theme';
 
@@ -38,6 +39,9 @@ const SINGLE = '\u0000single';
 export function CodeEditor({ value, language, theme, diagnostics, path, reveal, onChange, onSave, onDefinition, readOnly = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+
+  // the editor is built once, so its menu keeps the words it was built with
+  const definition = useEditorT().code.goToDefinition;
   const save = useRef(onSave);
   const jump = useRef(onDefinition);
   const change = useRef(onChange);
@@ -125,7 +129,7 @@ export function CodeEditor({ value, language, theme, diagnostics, path, reveal, 
 
     instance.addAction({
       id: 'lambda.goToDefinition',
-      label: 'Go to definition',
+      label: definition,
       keybindings: [monaco.KeyCode.F12],
       contextMenuGroupId: 'navigation',
       run: (target) => {

@@ -1,4 +1,5 @@
 import { shownAddress } from '../address';
+import { useT } from '../i18n';
 import { IconExternal } from './Icons';
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
  */
 export function ShowcaseCard({ title, description, address, image, href }: Props) {
   const shown = shownAddress(address);
+  const said = useT().card;
 
   const body = (
     <>
@@ -36,17 +38,17 @@ export function ShowcaseCard({ title, description, address, image, href }: Props
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-slate-400">No picture yet</div>
+          <div className="flex h-full items-center justify-center text-sm text-slate-400">{said.noPicture}</div>
         )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">
         <h3 className="line-clamp-1 font-semibold tracking-tight transition-colors group-hover:text-accent-600 dark:group-hover:text-accent-400">
-          {title || <span className="text-slate-400">Title</span>}
+          {title || <span className="text-slate-400">{said.title}</span>}
         </h3>
 
         <p className="mt-1.5 line-clamp-3 flex-1 whitespace-pre-line text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-          {description || <span className="text-slate-400">What a visitor can do with it.</span>}
+          {description || <span className="text-slate-400">{said.description}</span>}
         </p>
 
         <p className="mt-3 flex items-center gap-1.5 font-mono text-xs text-slate-500">
@@ -69,7 +71,7 @@ export function ShowcaseCard({ title, description, address, image, href }: Props
       target="_blank"
       rel="noreferrer"
       className={`${frame} hover:border-accent-500/60 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 dark:hover:border-accent-400/50`}
-      aria-label={`${title}, opens ${shown} in a new tab`}
+      aria-label={said.opens(title, shown)}
     >
       {body}
     </a>

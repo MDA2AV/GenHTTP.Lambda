@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { isDemo } from '../api';
 import { IconDots, IconInfo, IconSpark } from '../components/Icons';
 import { ago } from './format';
+import { useShared } from './words';
 
 /**
  * The parts every section of the control center is built from.
@@ -99,9 +100,11 @@ export function Pills<T extends string | number>({
  * anybody who is not using a pointer.
  */
 export function Hint({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const words = useShared();
+
   return (
     <span className={`group relative inline-flex ${className}`}>
-      <button type="button" className="rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" aria-label="What this is">
+      <button type="button" className="rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" aria-label={words.whatThisIs}>
         <IconInfo className="h-4 w-4" />
       </button>
       <span
@@ -116,13 +119,15 @@ export function Hint({ children, className = '' }: { children: ReactNode; classN
 
 /** A moment as people say it - "3 min ago" - with the exact time on hover. */
 export function Ago({ at, className = '' }: { at?: string | null; className?: string }) {
+  const words = useShared();
+
   if (!at) {
-    return <span className={className}>never</span>;
+    return <span className={className}>{words.never}</span>;
   }
 
   return (
     <time dateTime={at} title={new Date(at).toLocaleString()} className={className}>
-      {ago(at)}
+      {ago(at, words)}
     </time>
   );
 }
@@ -164,6 +169,7 @@ export function Meter({ label, used, of, format, unit, extra }: {
   unit?: string;
   extra?: ReactNode;
 }) {
+  const words = useShared();
   const share = of > 0 ? Math.min(1, used / of) : 0;
 
   const bar = share > 0.9 ? 'bg-red-500' : share > 0.7 ? 'bg-amber-500' : 'bg-accent-500 dark:bg-accent-400';
@@ -175,7 +181,7 @@ export function Meter({ label, used, of, format, unit, extra }: {
           {label}
           {extra}
         </span>
-        <span className="shrink-0 tabular-nums text-slate-500" title={`${format(used)} of ${format(of)}${unit ? ` ${unit}` : ''}`}>
+        <span className="shrink-0 tabular-nums text-slate-500" title={words.of(format(used), `${format(of)}${unit ? ` ${unit}` : ''}`)}>
           {format(used)} <span className="text-slate-400">/ {format(of)}{unit ? ` ${unit}` : ''}</span>
         </span>
       </div>
@@ -215,14 +221,16 @@ export function Sparkline({ values, label }: { values: number[]; label: string }
  * the template, the owner, the platform - are what anybody would assume.
  */
 export function AgentMark({ origin }: { origin?: string | null }) {
+  const words = useShared();
+
   if (origin !== 'agent') {
     return null;
   }
 
   return (
-    <span title="Written by an agent" className="inline-flex text-accent-500 dark:text-accent-400">
+    <span title={words.writtenByAgent} className="inline-flex text-accent-500 dark:text-accent-400">
       <IconSpark className="h-3.5 w-3.5" />
-      <span className="sr-only">by an agent</span>
+      <span className="sr-only">{words.byAgent}</span>
     </span>
   );
 }
@@ -241,15 +249,16 @@ function Badge({ tone, title, children }: { tone: string; title?: string; childr
 
 /** Whether a lambda is online, and with which version. */
 export function StatusBadge({ version }: { version?: number | null }) {
+  const words = useShared();
   const live = version != null;
 
   return (
     <Badge
       tone={live ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-400/10 text-slate-500'}
-      title={live ? `Online, serving version ${version}` : 'Offline: nothing is being served'}
+      title={live ? words.onlineTitle(version) : words.offlineTitle}
     >
       <LiveDot live={live} />
-      {live ? `Online · v${version}` : 'Offline'}
+      {live ? words.online(version) : words.offline}
     </Badge>
   );
 }
@@ -260,6 +269,7 @@ export function StatusBadge({ version }: { version?: number | null }) {
  * the demos this installation keeps.
  */
 export function TierBadge({ tier }: { tier: string }) {
+  const words = useShared();
   const premium = tier === 'Premium';
   const demo = isDemo(tier);
 
@@ -272,13 +282,7 @@ export function TierBadge({ tier }: { tier: string }) {
             ? 'bg-accent-500/15 text-accent-700 dark:text-accent-400'
             : 'bg-slate-400/10 text-slate-500'
       }
-      title={
-        premium
-          ? 'Premium: may answer at a domain of its own, has more room for code, assets and data, and is kept online however quiet it gets'
-          : demo
-            ? 'Demo: kept online by this installation and read only'
-            : `${tier} tier`
-      }
+      title={premium ? words.premium : demo ? words.demo : words.tier(tier)}
     >
       {tier}
     </Badge>
@@ -319,11 +323,13 @@ export function Quote({ children }: { children: ReactNode }) {
 }
 
 /** A quiet button that opens a list of the things done rarely enough not to need a button each. */
-export function Menu({ label = 'More', children, align = 'right' }: {
+export function Menu({ label, children, align = 'right' }: {
   label?: string;
   children: (close: () => void) => ReactNode;
   align?: 'left' | 'right';
 }) {
+  const words = useShared();
+  const named = label ?? words.more;
   const [open, setOpen] = useState(false);
   const holder = useRef<HTMLDivElement>(null);
 
@@ -357,8 +363,8 @@ export function Menu({ label = 'More', children, align = 'right' }: {
         className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-ink-850 dark:hover:text-slate-100"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={label}
-        title={label}
+        aria-label={named}
+        title={named}
       >
         <IconDots className="h-5 w-5" />
       </button>

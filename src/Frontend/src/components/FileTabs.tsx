@@ -3,7 +3,11 @@ import { useRef, useState } from 'react';
 import type { LambdaFile } from '../api';
 import { encodeBytes, readable } from '../bytes';
 import { pill } from '../control/ui';
+import { useEditorT } from '../i18n';
+import type { EditorMessages } from '../locales/en/editor';
 import { IconPlus, IconTrash, IconUpload } from './Icons';
+
+type Said = EditorMessages['tabs'];
 
 /**
  * The file the snippet lives in, which cannot be renamed or removed: it is the
@@ -31,10 +35,8 @@ interface Props {
  */
 /** What a C# file may be called, which is narrow because the name reaches a
  *  line directive and a diagnostic. */
-function checkCode(name: string): string | null {
-  return /^[A-Za-z][A-Za-z0-9_-]*\.cs$/.test(name)
-    ? null
-    : 'Letters, digits, dashes and underscores, ending in .cs';
+function checkCode(name: string, said: Said): string | null {
+  return /^[A-Za-z][A-Za-z0-9_-]*\.cs$/.test(name) ? null : said.codeName;
 }
 
 /**
@@ -42,24 +44,24 @@ function checkCode(name: string): string | null {
  * a real directory - which is the point - so what matters is where it can end
  * up rather than how it reads. The same rule the server applies.
  */
-function checkAsset(name: string): string | null {
+function checkAsset(name: string, said: Said): string | null {
   if (name.length > 120 || name.startsWith('/') || name.endsWith('/')) {
-    return 'No leading or trailing slash, and under 120 characters.';
+    return said.slashes;
   }
 
   const parts = name.split('/');
 
   if (parts.length > 6) {
-    return 'At most six folders deep.';
+    return said.deep;
   }
 
   for (const part of parts) {
     if (!part || part.length > 60 || part.startsWith('.') || !/^[A-Za-z0-9._-]+$/.test(part)) {
-      return 'Letters, digits, dashes, underscores and dots, separated by slashes.';
+      return said.characters;
     }
   }
 
-  return /\.[A-Za-z0-9]+$/.test(name) ? null : 'It needs an extension, so it can be served as the right thing.';
+  return /\.[A-Za-z0-9]+$/.test(name) ? null : said.extension;
 }
 
 /**
@@ -104,6 +106,7 @@ function starterFor(name: string): string {
 }
 
 export function FileTabs({ files, active, onSelect, onChange: change, faulty }: Props) {
+  const said = useEditorT().tabs;
   const editable = change !== undefined;
   const onChange = (next: LambdaFile[]) => change?.(next);
 
@@ -125,7 +128,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
 
     const wanted = typed.includes('.') ? typed : `${typed}.cs`;
 
-    const wrong = wanted.endsWith('.cs') ? checkCode(wanted) : checkAsset(wanted);
+    const wrong = wanted.endsWith('.cs') ? checkCode(wanted, said) : checkAsset(wanted, said);
 
     if (wrong) {
       setProblem(wrong);
@@ -133,7 +136,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
     }
 
     if (files.some((file) => file.name.toLowerCase() === wanted.toLowerCase())) {
-      setProblem('There is already a file with that name.');
+      setProblem(said.exists);
       return;
     }
 
@@ -152,7 +155,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
       return;
     }
 
-    if (!window.confirm(`Remove ${target}? Its contents go with it.`)) {
+    if (!window.confirm(said.remove(target))) {
       return;
     }
 
@@ -181,7 +184,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
       const wanted = `${folder}${file.name}`;
 
       if ([...files, ...added].some((one) => one.name.toLowerCase() === wanted.toLowerCase())) {
-        setProblem(`${wanted} is already there.`);
+        setProblem(said.there(wanted));
         continue;
       }
 
@@ -213,10 +216,10 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
               type="button"
               onClick={() => onSelect(file.name)}
               className="py-0.5 font-mono text-[12.5px]"
-              title={file.name === ENTRY ? 'The snippet: what it returns is what gets served' : file.name}
+              title={file.name === ENTRY ? said.entry : file.name}
             >
               {file.name}
-              {faulty?.has(file.name) && <span className="ml-1.5 text-red-500" aria-label="has errors">•</span>}
+              {faulty?.has(file.name) && <span className="ml-1.5 text-red-500" aria-label={said.errors}>•</span>}
             </button>
 
             {/* the same room on every pill, shown or not, so opening a file
@@ -226,8 +229,8 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
                 type="button"
                 onClick={() => remove(file.name)}
                 className={`rounded-full p-0.5 text-slate-400 hover:text-red-500 ${open ? '' : 'invisible'}`}
-                aria-label={`Remove ${file.name}`}
-                title="Remove this file"
+                aria-label={said.removeFile(file.name)}
+                title={said.removeTitle}
                 tabIndex={open ? 0 : -1}
               >
                 <IconTrash className="h-3 w-3" />
@@ -246,7 +249,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
             value={name}
             onChange={(event) => setName(event.target.value)}
             onBlur={() => { setAdding(false); setProblem(null); }}
-            placeholder="Types.cs or site/index.html"
+            placeholder={said.placeholder}
             className="w-48 rounded-full border border-slate-300 bg-white px-3 py-1 font-mono text-xs dark:border-ink-700 dark:bg-ink-900"
           />
         </form>
@@ -255,8 +258,8 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
           type="button"
           onClick={() => setAdding(true)}
           className="rounded-full p-1.5 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
-          title="New file"
-          aria-label="New file"
+          title={said.newFile}
+          aria-label={said.newFile}
         >
           <IconPlus className="h-3.5 w-3.5" />
         </button>
@@ -269,8 +272,8 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
             type="button"
             onClick={() => picker.current?.click()}
             className="rounded-full p-1.5 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
-            title="Upload a file - an image, a font, a page"
-            aria-label="Upload a file"
+            title={said.uploadTitle}
+            aria-label={said.upload}
           >
             <IconUpload className="h-3.5 w-3.5" />
           </button>
