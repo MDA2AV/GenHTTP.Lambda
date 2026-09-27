@@ -6,8 +6,7 @@
 // done, and each stream writes at its own pace. A queue that falls behind
 // forgets its oldest updates, which is fine: only the newest counts matter.
 //
-// Only lambda.cs sees Workspace, so the counts are read and written through
-// the functions it hands in.
+// The counts are read and written through the functions lambda.cs hands in.
 
 using System.Threading.Channels;
 

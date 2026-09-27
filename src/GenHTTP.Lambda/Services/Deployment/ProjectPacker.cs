@@ -278,6 +278,8 @@ public static class ProjectPacker
     /// somebody's own machine has no reason to inherit them.
     /// </remarks>
     private static string Support() => """
+        global using static LambdaScope;
+
         using GenHTTP.Api.Content.IO;
         using GenHTTP.Modules.IO;
         using GenHTTP.Modules.Files;
@@ -375,6 +377,29 @@ public static class ProjectPacker
             public static readonly Folder Workspace = new("workspace");
         }
 
+        /// <summary>
+        /// Lets every file say Workspace, the way the platform did.
+        /// </summary>
+        /// <remarks>
+        /// Only Workspace: Assets is also the name of a type in GenHTTP.Modules.Files,
+        /// and importing a member of that name as well would make every use of either
+        /// ambiguous. Outside Program.cs, the assets are LambdaEnvironment.Assets.
+        /// </remarks>
+        public static class LambdaScope
+        {
+            public static Folder Workspace => Lambda.Workspace;
+        }
+
+        /// <summary>
+        /// The platform's name for the two folders, for code that used it.
+        /// </summary>
+        public static class LambdaEnvironment
+        {
+            public static Folder Workspace => Lambda.Workspace;
+
+            public static Folder Assets => Lambda.Assets;
+        }
+
         """;
 
     private static string Readme(string name, string publicKey, IReadOnlyList<LambdaFile> files) => $"""
@@ -404,8 +429,10 @@ public static class ProjectPacker
 
         `Workspace` and `Assets` were provided by the platform. Here they are
         `Lambda.Workspace` and `Lambda.Assets`, over the two folders above. The
-        top of `Program.cs` brings them into scope under their old names, so
-        your code did not have to change.
+        top of `Program.cs` brings them into scope under their old names, and
+        `Lambda.cs` does the same for `Workspace` in your other files and keeps
+        `LambdaEnvironment` for code that used it, so your code did not have to
+        change.
 
         The limits the hosted version applied - how large a file may be, how
         many there may be, what the compiler would refuse - were its own. This

@@ -6,8 +6,8 @@
 // extension. Accept an .html or .svg from a stranger and serve it from here,
 // and their script runs on this lambda's address, with its users' tokens.
 //
-// Only lambda.cs sees Workspace, so this class is handed the few things it
-// needs to do with it.
+// This class is handed the few things it needs to do with the workspace
+// rather than all of it.
 
 using System.Security.Cryptography;
 

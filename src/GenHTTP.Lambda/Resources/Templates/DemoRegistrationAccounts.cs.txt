@@ -6,8 +6,8 @@
 // a hash of each is stored, so the file on disk cannot be used to sign in as
 // anybody.
 //
-// Both live in JSON files. Only lambda.cs can see Workspace, so this class is
-// handed functions to read and write a file by name.
+// Both live in JSON files, which this class reads and writes through the
+// functions it is handed.
 
 using System.Security.Cryptography;
 
