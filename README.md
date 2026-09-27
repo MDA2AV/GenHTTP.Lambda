@@ -136,7 +136,7 @@ services that the API resources talk to through interfaces:
   reached from the editor. The same directory the generated `Workspace` class
   writes to from inside a lambda, under the same limits, so a file put there by
   hand behaves like one the lambda wrote itself. The tier sets them: 64 files,
-  32 MB each and 256 MB in all for most lambdas, 512 MB each and 2 GB in all
+  32 MB each and 256 MB in all for most lambdas, 128 MB each and 2 GB in all
   for a premium one. They are compiled into the lambda, so moving it to another
   tier builds it again on its next request.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
@@ -188,11 +188,11 @@ Everything is read from the environment on startup, see
 | `LAMBDA_MAX_CODE_LENGTH`            | `1048576`        | characters of C# a lambda may have, in all  |
 | `LAMBDA_PREMIUM_MAX_CODE_LENGTH`    | `10485760`       | the same for a premium lambda, never less   |
 | `LAMBDA_MAX_ASSET_BYTES`            | `33554432`       | what the shipped assets may come to         |
-| `LAMBDA_PREMIUM_MAX_ASSET_BYTES`    | `536870912`      | the same for a premium lambda, never less   |
+| `LAMBDA_PREMIUM_MAX_ASSET_BYTES`    | `134217728`      | the same for a premium lambda, never less   |
 | `LAMBDA_WORKSPACE_BYTES`            | `268435456`      | what a workspace may hold in all            |
 | `LAMBDA_WORKSPACE_FILE_BYTES`       | `33554432`       | the largest file a workspace holds          |
 | `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | what a premium workspace may hold in all    |
-| `LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES` | `536870912`    | the largest file a premium workspace holds  |
+| `LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES` | `134217728`    | the largest file a premium workspace holds  |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
@@ -348,13 +348,12 @@ Budget the disk for the premium tier. Assets are kept inside every version, as
 base64 in JSON, so each version saved at the limit takes nearly half as much
 again on disk - 184 MB for 128 MB of assets - and `LAMBDA_MAX_VERSIONS` of them
 are kept: at the defaults, a premium lambda that is saved over and over with
-all 512 MB of its assets can come to around 36 GB of history.
+all 128 MB of its assets can come to around 9 GB of history.
 
-Budget the memory too. A version is read and written whole: with 128 MB of
-assets, saving one took the server to 2.3 GB and deploying it to 2.8 GB, and
-what the premium tier allows by default needs several times that. Even the
-32 MB of a free lambda took a server idling at 350 MB to 950 MB to save, and
-anybody can create a free lambda. Set `LAMBDA_MAX_ASSET_BYTES` and
+Budget the memory too. A version is read and written whole: with the 128 MB
+of assets the premium tier allows, saving one took the server to 2.3 GB and
+deploying it to 2.8 GB. Even the 32 MB of a free lambda took a server idling
+at 350 MB to 950 MB to save, and anybody can create a free lambda. Set `LAMBDA_MAX_ASSET_BYTES` and
 `LAMBDA_PREMIUM_MAX_ASSET_BYTES` to what the machine can carry until assets are
 stored apart from the versions.
 

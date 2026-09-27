@@ -688,7 +688,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
     /// The largest file read_lambda sends when it is asked for one by name.
     /// </summary>
     /// <remarks>
-    /// A premium lambda may ship hundreds of megabytes. An answer is built
+    /// A premium lambda may ship a hundred megabytes. An answer is built
     /// whole before any of it is sent, and past a megabyte it is more than an
     /// agent reads in one piece anyway - the zip of the version has every file,
     /// and streams it.

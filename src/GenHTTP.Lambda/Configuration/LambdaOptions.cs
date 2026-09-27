@@ -178,7 +178,7 @@ public sealed record LambdaOptions
     /// version is read and written whole, in memory. Never less than what
     /// every other lambda may ship, however the two are set.
     /// </remarks>
-    public int PremiumMaxAssetBytes { get; init; } = 512 * 1024 * 1024;
+    public int PremiumMaxAssetBytes { get; init; } = 128 * 1024 * 1024;
 
     /// <summary>
     /// What the workspace of a lambda outside the premium tier may hold, all
@@ -200,7 +200,7 @@ public sealed record LambdaOptions
     /// <summary>
     /// The largest single file a premium lambda may keep in its workspace.
     /// </summary>
-    public int PremiumWorkspaceFileBytes { get; init; } = 512 * 1024 * 1024;
+    public int PremiumWorkspaceFileBytes { get; init; } = 128 * 1024 * 1024;
 
     /// <summary>
     /// How large the picture promoting a lambda in the showcase may be.

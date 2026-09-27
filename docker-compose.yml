@@ -51,7 +51,7 @@ services:
       LAMBDA_PUBLIC_URL: https://genhttp.dev
       # What a lambda may hold, by tier. Left empty, each is the platform's
       # own default (see LambdaOptions): 1 MB of code, 32 MB of assets and a
-      # 256 MB workspace, and 10 MB, 512 MB and 2 GB for a premium lambda.
+      # 256 MB workspace, and 10 MB, 128 MB and 2 GB for a premium lambda.
       #
       # Set any of them lower in .env where this machine cannot carry it. A
       # version is read and written whole, in memory, so a premium save with

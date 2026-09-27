@@ -761,7 +761,7 @@ public sealed class McpTests
         Assert.Contains("Workspace: 256 MB", free);
 
         Assert.Contains("10,485,760 characters", premium);
-        Assert.Contains("Assets: 512 MB", premium);
+        Assert.Contains("Assets: 128 MB", premium);
         Assert.Contains("Workspace: 2 GB", premium);
 
         Assert.IsNull(guide["moreThanOneFile"]!["limit"], "nothing counts the C# files any more");

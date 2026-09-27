@@ -225,7 +225,7 @@ public sealed class TierAllowanceTests
         var listing = await ListAsync(fixture, lambda.PrivateKey);
 
         Assert.AreEqual(2048L * 1024 * 1024, listing.QuotaBytes);
-        Assert.AreEqual(512 * 1024 * 1024, listing.MaxFileSize);
+        Assert.AreEqual(128 * 1024 * 1024, listing.MaxFileSize);
         Assert.AreEqual(WorkspaceLimits.Standard.MaxFiles, listing.MaxFiles);
 
         using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/files/big.bin");
@@ -433,7 +433,7 @@ public sealed class TierAllowanceTests
 
         // the allowances as they were decided: a megabyte of code, 32 MB of
         // assets and a 256 MB workspace for everybody, and ten megabytes,
-        // 512 MB and two gigabytes in the premium tier
+        // 128 MB and two gigabytes in the premium tier
         var free = await SummaryAsync(fixture, lambda.PrivateKey);
 
         Assert.AreEqual(1024 * 1024, free.Limits.CodeCharacters);
@@ -447,9 +447,9 @@ public sealed class TierAllowanceTests
         var premium = await SummaryAsync(fixture, lambda.PrivateKey);
 
         Assert.AreEqual(10 * 1024 * 1024, premium.Limits.CodeCharacters);
-        Assert.AreEqual(512 * 1024 * 1024, premium.Limits.AssetBytes);
+        Assert.AreEqual(128 * 1024 * 1024, premium.Limits.AssetBytes);
         Assert.AreEqual(2048L * 1024 * 1024, premium.Limits.WorkspaceBytes);
-        Assert.AreEqual(512 * 1024 * 1024, premium.Limits.WorkspaceFileBytes);
+        Assert.AreEqual(128 * 1024 * 1024, premium.Limits.WorkspaceFileBytes);
         Assert.AreEqual(64, premium.Limits.WorkspaceFiles);
     }
 
