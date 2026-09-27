@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Welcome</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
+    .tabs button[aria-selected=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    label { display: grid; gap: .25rem; font-size: .9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Welcome</h1>
+  <p class="lead">The members area is for members only. Register, or sign in if you already have an account.</p>
+
+  <div class="card">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-mode="register">Register</button>
+      <button role="tab" aria-selected="false" data-mode="login">Sign in</button>
+    </div>
+
+    <form id="form">
+      <label>Name <input type="text" name="name" autocomplete="username" required minlength="2" maxlength="24"></label>
+      <label>Password <input type="password" name="password" autocomplete="new-password" required minlength="8"></label>
+      <div class="row"><button class="primary" id="submit">Register</button><p class="error grow" id="error"></p></div>
+    </form>
+  </div>
+
+  <!-- [demo] -->
+  <footer>
+    A read-only demo of GenHTTP Lambda. Its editor key is <code>demo-registration</code>: open it in the editor, or
+    read it with any agent, to see how this is built. Keeps the newest 300 accounts.
+  </footer>
+  <!-- [/demo] -->
+</main>
+
+<script type="module">
+  import { call } from './session.js';
+
+  // somebody signed in has no business here - the cookie says whether they are
+  try {
+    await call('api/me');
+    location.replace('members.html');
+  } catch { }
+
+  const form = document.getElementById('form');
+  const submit = document.getElementById('submit');
+  const error = document.getElementById('error');
+
+  let mode = 'register';
+
+  document.querySelectorAll('[data-mode]').forEach((tab) => tab.addEventListener('click', () => {
+    mode = tab.dataset.mode;
+    document.querySelectorAll('[data-mode]').forEach((t) => t.setAttribute('aria-selected', t === tab));
+    submit.textContent = tab.textContent;
+    form.password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+    error.textContent = '';
+  }));
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    error.textContent = '';
+    submit.disabled = true;
+
+    try {
+      // the answer sets the session cookie; nothing to keep on this side
+      await call(mode, {
+        method: 'POST',
+        body: { name: form.name.value, password: form.password.value }
+      });
+
+      location.replace('members.html');
+    } catch (e) {
+      error.textContent = e.message;
+    } finally {
+      submit.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

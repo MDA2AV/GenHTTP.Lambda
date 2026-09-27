@@ -31,6 +31,18 @@ public sealed class LambdaTelemetry
 
     private const string OtherPaths = "(other)";
 
+    /// <summary>
+    /// How many domains are told apart per lambda. A lambda has one at a
+    /// time; this only has to hold the ones it had since the server came up.
+    /// </summary>
+    private const int MostDomains = 8;
+
+    /// <summary>
+    /// Where a request that came through the platform's own path is counted,
+    /// among the domains.
+    /// </summary>
+    private const string PlatformPath = "";
+
     #region Get-/Setters
 
     /// <summary>
@@ -51,7 +63,8 @@ public sealed class LambdaTelemetry
     /// <param name="status">The status it answered with</param>
     /// <param name="bytes">What the response carried, where that is known</param>
     /// <param name="path">What was asked for, relative to the lambda</param>
-    public void Record(long id, string publicKey, TimeSpan elapsed, int status, long bytes, string? path = null)
+    /// <param name="domain">The lambda's own domain it was reached at, or nothing for its path on the platform</param>
+    public void Record(long id, string publicKey, TimeSpan elapsed, int status, long bytes, string? path = null, string? domain = null)
     {
         var counters = _lambdas.GetOrAdd(id, _ => new Counters());
 
@@ -66,6 +79,13 @@ public sealed class LambdaTelemetry
 
             counters.Minutes.Add(now, elapsed, status, bytes);
             counters.Quarters.Add(now, elapsed, status, bytes);
+
+            var entrance = domain ?? PlatformPath;
+
+            if (counters.Entrances.Count < MostDomains || counters.Entrances.ContainsKey(entrance))
+            {
+                counters.Entrances[entrance] = counters.Entrances.GetValueOrDefault(entrance) + 1;
+            }
 
             if (status == 101)
             {
@@ -160,7 +180,7 @@ public sealed class LambdaTelemetry
         if (!_lambdas.TryGetValue(id, out var counters))
         {
             return new LambdaTraffic(null, Ring.Empty(now, MinuteRing), Ring.Empty(now, QuarterRing),
-                                     new StatusClasses(0, 0, 0, 0), [], Started);
+                                     new StatusClasses(0, 0, 0, 0), [], [], Started);
         }
 
         lock (counters)
@@ -171,12 +191,18 @@ public sealed class LambdaTelemetry
                                 .OrderByDescending(p => p.Requests)
                                 .ToList();
 
+            var entrances = counters.Entrances
+                                    .Select(e => new EntranceTraffic(e.Key == PlatformPath ? null : e.Key, e.Value))
+                                    .OrderByDescending(e => e.Requests)
+                                    .ToList();
+
             return new LambdaTraffic(
                 Totals(counters),
                 counters.Minutes.Read(now),
                 counters.Quarters.Read(now),
                 new StatusClasses(counters.Successes, counters.Redirects, counters.ClientErrors, counters.ServerErrors),
                 paths,
+                entrances,
                 Started
             );
         }
@@ -219,6 +245,8 @@ public sealed class LambdaTelemetry
         internal readonly Ring Quarters = new(QuarterRing.Length, QuarterRing.Width);
 
         internal readonly Dictionary<string, PathTally> Paths = new(StringComparer.Ordinal);
+
+        internal readonly Dictionary<string, long> Entrances = new(StringComparer.Ordinal);
     }
 
     private sealed class PathTally

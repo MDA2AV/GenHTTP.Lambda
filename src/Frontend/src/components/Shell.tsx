@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
-import { AdminMenu } from './AdminMenu';
-import { ExamplesMenu } from './ExamplesMenu';
-import { IconLogo, IconMoon, IconSun } from './Icons';
+import { IconClose, IconLock, IconLogo, IconMenu, IconMoon, IconSun } from './Icons';
+import { useFeatures } from '../features';
 import type { Theme } from '../theme';
 
 interface Props {
@@ -15,11 +14,17 @@ interface Props {
   fixed?: boolean;
 }
 
+/** A link in the bar, tinted while it is the page being looked at. */
+const tab = ({ isActive }: { isActive: boolean }) =>
+  `btn-ghost whitespace-nowrap !px-3.5 ${isActive ? 'bg-accent-500/10 dark:bg-accent-400/10' : ''}`;
+
 export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props) {
   // nothing behind the bar until the page has moved under it: at rest the
   // background belongs to the whole screen, and a tinted strip across the top
   // is exactly the seam this is meant not to have
   const [moved, setMoved] = useState(false);
+
+  const features = useFeatures();
 
   useEffect(() => {
     const onScroll = () => setMoved(window.scrollY > 8);
@@ -29,6 +34,8 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
 
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const themeLabel = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
 
   return (
     <div className={fixed ? 'flex h-screen flex-col overflow-hidden' : 'flex min-h-screen flex-col'}>
@@ -54,35 +61,160 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
           </span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <nav className="ml-auto flex items-center gap-1" aria-label="Main">
           {actions}
-          <Link to="/build" className="btn-ghost whitespace-nowrap max-[359px]:!px-3">
+
+          {/* on the narrowest phones this one moves into the menu, the other stays */}
+          <NavLink to="/build" className={(state) => `${tab(state)} hidden min-[380px]:inline-flex`}>
             Build one
-          </Link>
+          </NavLink>
 
-          <Link to="/agentic-coding" className="btn-ghost hidden sm:inline-flex">
-            For agents
-          </Link>
+          <NavLink to="/ship" className={tab}>
+            Ship
+          </NavLink>
 
-          <Link to="/docs" className="btn-ghost hidden min-[360px]:inline-flex">
+          <NavLink to="/showcase" className={(state) => `${tab(state)} hidden sm:inline-flex`}>
+            Showcase
+          </NavLink>
+
+          {/* switched off in the panel, the page is still there - just not linked */}
+          {features.enterprise && (
+            <NavLink to="/enterprise" className={(state) => `${tab(state)} hidden md:inline-flex`}>
+              Enterprise
+            </NavLink>
+          )}
+
+          <NavLink to="/docs" className={(state) => `${tab(state)} hidden sm:inline-flex`}>
             Docs
-          </Link>
+          </NavLink>
 
-          <ExamplesMenu />
-          <AdminMenu />
+          <NavLink to="/admin" className={(state) => `${tab(state)} hidden items-center gap-1.5 lg:inline-flex`}>
+            <IconLock className="h-4 w-4" />
+            Admin
+          </NavLink>
+
           <button
             type="button"
             onClick={onToggleTheme}
-            className="btn-ghost !px-2"
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="btn-ghost hidden !px-2 sm:inline-flex"
+            aria-label={themeLabel}
+            title={themeLabel}
           >
             {theme === 'dark' ? <IconSun /> : <IconMoon />}
           </button>
-        </div>
+
+          <Menu
+            theme={theme}
+            themeLabel={themeLabel}
+            onToggleTheme={onToggleTheme}
+            enterprise={features.enterprise}
+          />
+        </nav>
       </header>
 
       <main className={fixed ? 'flex min-h-0 flex-1 flex-col' : 'flex-1'}>{children}</main>
+    </div>
+  );
+}
+
+interface MenuProps {
+  theme: Theme;
+  themeLabel: string;
+  onToggleTheme: () => void;
+  enterprise: boolean;
+}
+
+/**
+ * Everything the bar has no room for, behind one button. It shows up as soon
+ * as the first link has to leave the bar, and holds all of the ones that did -
+ * so the pages are all one tap away on a phone, just not all at once.
+ */
+function Menu({ theme, themeLabel, onToggleTheme, enterprise }: MenuProps) {
+  const [open, setOpen] = useState(false);
+  const host = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+
+  // going somewhere is the end of choosing where to go
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
+
+    const onPointer = (event: PointerEvent) => {
+      if (!host.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, [open]);
+
+  const item = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-2 px-5 py-3 text-[15px] font-medium transition-colors ${
+      isActive
+        ? 'bg-accent-500/10 text-accent-600 dark:bg-accent-400/10 dark:text-accent-400'
+        : 'text-grey-800 hover:bg-grey-100 dark:text-grey-200 dark:hover:bg-ink-850'
+    }`;
+
+  return (
+    <div ref={host} className="lg:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        className="btn-ghost !px-2"
+        aria-expanded={open}
+        aria-controls="site-menu"
+        aria-label={open ? 'Close the menu' : 'Open the menu'}
+      >
+        {open ? <IconClose className="h-5 w-5" /> : <IconMenu className="h-5 w-5" />}
+      </button>
+
+      {open && (
+        <div
+          id="site-menu"
+          className="absolute inset-x-0 top-full border-y border-grey-200 bg-white py-2 shadow-lg sm:left-auto sm:right-4 sm:w-64 sm:border-x dark:border-ink-800 dark:bg-ink-900"
+        >
+          <NavLink to="/build" className={(state) => `${item(state)} min-[380px]:hidden`}>
+            Build one
+          </NavLink>
+          <NavLink to="/showcase" className={(state) => `${item(state)} sm:hidden`}>
+            Showcase
+          </NavLink>
+          {enterprise && (
+            <NavLink to="/enterprise" className={(state) => `${item(state)} md:hidden`}>
+              Enterprise
+            </NavLink>
+          )}
+          <NavLink to="/docs" className={(state) => `${item(state)} sm:hidden`}>
+            Docs
+          </NavLink>
+          <NavLink to="/admin" className={item}>
+            <IconLock className="h-4 w-4" />
+            Admin
+          </NavLink>
+
+          <div className="mx-5 my-2 border-t border-grey-200 sm:hidden dark:border-ink-800" />
+
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className="flex w-full items-center gap-2 px-5 py-3 text-left text-[15px] font-medium text-grey-800 hover:bg-grey-100 sm:hidden dark:text-grey-200 dark:hover:bg-ink-850"
+          >
+            {theme === 'dark' ? <IconSun /> : <IconMoon />}
+            {themeLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

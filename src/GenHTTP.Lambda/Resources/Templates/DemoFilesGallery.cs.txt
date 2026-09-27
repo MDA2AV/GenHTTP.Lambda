@@ -1,0 +1,178 @@
+// What may be uploaded, where it is kept, and the list of everything that is.
+//
+// Only a fixed list of file types is accepted, and a file is stored under a
+// name this class makes up, ending in the extension of its type. That is the
+// important part: the content type a file is served with comes from that
+// extension. Accept an .html or .svg from a stranger and serve it from here,
+// and their script runs on this lambda's address, with its users' tokens.
+//
+// Only lambda.cs sees Workspace, so this class is handed the few things it
+// needs to do with it.
+
+using System.Security.Cryptography;
+
+/// <summary>What the gallery may do with the workspace.</summary>
+public record Storage(Func<string, string> ReadText, Action<string, string> WriteText, Action<string, byte[]> WriteBytes, Action<string> Delete);
+
+/// <summary>One upload as everybody sees it.</summary>
+/// <param name="Url">Where it is served, relative to the lambda</param>
+public record Upload(string Id, string Name, long Size, string Type, DateTime Uploaded, string Url);
+
+/// <summary>What the uploader gets back: the entry, and the key to remove it with.</summary>
+public record Uploaded(Upload Upload, string Key);
+
+/// <summary>An upload as it is kept: with a hash of its key.</summary>
+public record Entry(Upload Upload, string KeyHash);
+
+public sealed class Gallery(Storage storage)
+{
+    // under the workspace's limit of 1 MB a file, and small enough for a demo
+    private const int MaxBytes = 512 * 1024;
+
+    // anybody can upload to a demo, so it keeps the newest ones only
+    private const int MaxUploads = 24;
+
+    private static readonly Dictionary<string, string> Types = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".png"] = "image/png",
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".gif"] = "image/gif",
+        [".webp"] = "image/webp",
+        [".pdf"] = "application/pdf",
+        [".txt"] = "text/plain"
+    };
+
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    private readonly object _lock = new();
+
+    private List<Entry> _entries;
+
+    public List<Upload> List()
+    {
+        lock (_lock)
+        {
+            return Entries().OrderByDescending(e => e.Upload.Uploaded).Select(e => e.Upload).ToList();
+        }
+    }
+
+    public async Task<Uploaded> UploadAsync(string name, Stream body)
+    {
+        // what the browser calls the file, without any folders in front of it
+        name = (name ?? "").Trim().Split('/', '\\')[^1];
+
+        var dot = name.LastIndexOf('.');
+
+        var extension = dot < 0 ? "" : name[dot..].ToLowerInvariant();
+
+        if (!Types.TryGetValue(extension, out var type))
+        {
+            throw new ProviderException(ResponseStatus.UnsupportedMediaType,
+                $"Only {string.Join(", ", Types.Keys)} files can be uploaded here.");
+        }
+
+        var content = await ReadAsync(body);
+
+        if (content.Length == 0)
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, "The file is empty.");
+        }
+
+        var id = Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
+
+        var key = Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
+
+        // the stored name is ours; the uploader's name is only ever shown as text
+        var stored = id + (extension == ".jpeg" ? ".jpg" : extension);
+
+        var upload = new Upload(id, name.Length > 80 ? name[..80] : name, content.Length, type, DateTime.UtcNow, $"files/{stored}");
+
+        lock (_lock)
+        {
+            storage.WriteBytes($"uploads/{stored}", content);
+
+            var entries = Entries();
+
+            entries.Add(new Entry(upload, Hash(key)));
+
+            while (entries.Count > MaxUploads)
+            {
+                Drop(entries, entries.MinBy(e => e.Upload.Uploaded));
+            }
+
+            Save();
+        }
+
+        return new Uploaded(upload, key);
+    }
+
+    public void Remove(string id, string key)
+    {
+        lock (_lock)
+        {
+            var entries = Entries();
+
+            var entry = entries.Find(e => e.Upload.Id == id)
+                     ?? throw new ProviderException(ResponseStatus.NotFound, "There is no such upload.");
+
+            if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entry.KeyHash), Encoding.UTF8.GetBytes(Hash(key ?? ""))))
+            {
+                throw new ProviderException(ResponseStatus.Forbidden, "Only whoever uploaded this can remove it.");
+            }
+
+            Drop(entries, entry);
+
+            Save();
+        }
+    }
+
+    /// <summary>
+    /// Reads the body, but never more than the limit - a request announcing a
+    /// small file and sending a large one is cut off all the same.
+    /// </summary>
+    private static async Task<byte[]> ReadAsync(Stream body)
+    {
+        using var buffer = new MemoryStream();
+
+        var chunk = new byte[16 * 1024];
+
+        int read;
+
+        while ((read = await body.ReadAsync(chunk)) > 0)
+        {
+            if (buffer.Length + read > MaxBytes)
+            {
+                throw new ProviderException(ResponseStatus.RequestEntityTooLarge,
+                    $"A file can be {MaxBytes / 1024} KB at most.");
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.ToArray();
+    }
+
+    private void Drop(List<Entry> entries, Entry entry)
+    {
+        entries.Remove(entry);
+
+        storage.Delete(entry.Upload.Url.Replace("files/", "uploads/"));
+    }
+
+    private List<Entry> Entries()
+    {
+        if (_entries == null)
+        {
+            var text = storage.ReadText("uploads.json");
+
+            _entries = string.IsNullOrWhiteSpace(text) ? [] : JsonSerializer.Deserialize<List<Entry>>(text, Json) ?? [];
+        }
+
+        return _entries;
+    }
+
+    private void Save() => storage.WriteText("uploads.json", JsonSerializer.Serialize(_entries, Json));
+
+    private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
+}

@@ -1,0 +1,117 @@
+// A list of records kept in one JSON file: all the storage a lambda needs for
+// a few hundred of them. Nothing in here is specific to tasks - copy the file
+// into your own lambda as it is.
+//
+//   - The file is read once, when the lambda starts, and every read after that
+//     is answered from memory.
+//   - Every change is made and written back under one lock, so two requests at
+//     the same moment cannot lose each other's change or interleave their writes.
+//   - At most `limit` records are kept, the oldest going first. Anybody can
+//     write to a demo, so it must not grow without bound; a workspace file can
+//     be up to 1 MB, which is the real limit for your own.
+//
+// The store is handed a way to read and write its file instead of Workspace,
+// which only lambda.cs can see.
+
+public sealed class JsonStore<T>
+{
+    // the same shape the API answers with, so the file reads like the responses
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    private readonly List<T> _items;
+
+    private readonly Action<string> _write;
+
+    private readonly int _limit;
+
+    private readonly object _lock = new();
+
+    public JsonStore(Func<string> read, Action<string> write, int limit)
+    {
+        _write = write;
+        _limit = limit;
+
+        var text = read();
+
+        _items = string.IsNullOrWhiteSpace(text) ? [] : JsonSerializer.Deserialize<List<T>>(text, Json) ?? [];
+    }
+
+    public int Count
+    {
+        get { lock (_lock) { return _items.Count; } }
+    }
+
+    /// <summary>A copy of every record, safe to filter and sort outside the lock.</summary>
+    public List<T> All()
+    {
+        lock (_lock)
+        {
+            return [.. _items];
+        }
+    }
+
+    public T Find(Func<T, bool> match)
+    {
+        lock (_lock)
+        {
+            return _items.FirstOrDefault(match);
+        }
+    }
+
+    public void Add(T item)
+    {
+        lock (_lock)
+        {
+            _items.Add(item);
+
+            if (_items.Count > _limit)
+            {
+                _items.RemoveRange(0, _items.Count - _limit);
+            }
+
+            Save();
+        }
+    }
+
+    /// <summary>Replaces the first record that matches, and says whether there was one.</summary>
+    public bool Replace(Func<T, bool> match, T item)
+    {
+        lock (_lock)
+        {
+            var index = _items.FindIndex(i => match(i));
+
+            if (index < 0)
+            {
+                return false;
+            }
+
+            _items[index] = item;
+
+            Save();
+
+            return true;
+        }
+    }
+
+    /// <summary>Removes the first record that matches, and says whether there was one.</summary>
+    public bool Remove(Func<T, bool> match)
+    {
+        lock (_lock)
+        {
+            var index = _items.FindIndex(i => match(i));
+
+            if (index < 0)
+            {
+                return false;
+            }
+
+            _items.RemoveAt(index);
+
+            Save();
+
+            return true;
+        }
+    }
+
+    private void Save() => _write(JsonSerializer.Serialize(_items, Json));
+}

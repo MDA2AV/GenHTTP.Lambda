@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Members</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    body:not(.ready) main { visibility: hidden; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { display: flex; justify-content: space-between; padding: .4rem 0; border-bottom: 1px solid var(--line); }
+    li:last-child { border-bottom: 0; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="row">
+    <h1 class="grow">Hello, <span id="name"></span></h1>
+    <button id="logout">Sign out</button>
+  </div>
+  <p class="lead" id="joined"></p>
+
+  <div class="card">
+    <p style="margin-top:0">
+      You only see this page with a valid session. The page itself is a plain file anybody could download -
+      what is protected is the API it reads, which answers <code>401</code> without a session and <code>403</code>
+      with one it does not know.
+    </p>
+    <h2>Newest members</h2>
+    <ul id="members"></ul>
+  </div>
+
+  <!-- [demo] -->
+  <footer>
+    A read-only demo of GenHTTP Lambda. Its editor key is <code>demo-registration</code>: open it in the editor, or
+    read it with any agent, to see how this is built.
+  </footer>
+  <!-- [/demo] -->
+</main>
+
+<script type="module">
+  import { call, escape } from './session.js';
+
+  const back = () => location.replace('./');
+
+  try {
+    const [me, members] = await Promise.all([call('api/me'), call('api/members')]);
+
+    document.getElementById('name').textContent = me.name;
+    document.getElementById('joined').textContent =
+      `Member since ${new Date(me.joined).toLocaleString()}, one of ${me.members}.`;
+
+    document.getElementById('members').innerHTML = members
+      .map((m) => `<li><span>${escape(m.name)}</span><span class="dim small">${new Date(m.joined).toLocaleDateString()}</span></li>`)
+      .join('');
+
+    document.body.classList.add('ready');
+  } catch (e) {
+    // no session, or one that has expired: back to the landing page
+    if (e.signedOut) back();
+    else document.body.textContent = e.message;
+  }
+
+  document.getElementById('logout').addEventListener('click', async () => {
+    try { await call('logout', { method: 'POST' }); } finally { back(); }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+// A task list: records you can list, search, add, change and remove.
+//
+//   GET    tasks/           every task, newest first; tasks/?search=milk narrows it down
+//   GET    tasks/{id}       one task                       404 if there is none
+//   POST   tasks/           add one, JSON body             201, or 400 when it is not valid
+//   PUT    tasks/{id}       change one, JSON body          404 if there is none
+//   DELETE tasks/{id}      remove one                     204
+//
+//   openapi.json            the generated description of the API
+//   scalar/                 a page to try the API in the browser
+//   anything else           the page in web/, which uses the API
+//
+// The files:
+//
+//   lambda.cs     this one: the wiring, and the only file that touches Workspace
+//   Tasks.cs      the API - a class whose methods are the routes
+//   Store.cs      a list kept in a JSON file; copy it into your own lambda as it is
+//   web/          the front end, shipped with the code and served as it is
+// [demo]
+//
+// This is a read-only demo. To build on it, create a lambda of your own from
+// it - a copy is yours to change.
+// [/demo]
+
+// Workspace is the lambda's private folder and outlives every deployment. The
+// store is handed a way to read and write its file rather than Workspace
+// itself, because only this file can see Workspace - the others hold types.
+var store = new JsonStore<TaskItem>(
+    read: () => Workspace.Exists("tasks.json") ? Workspace.ReadText("tasks.json") : null,
+    write: text => Workspace.WriteText("tasks.json", text),
+    limit: 200);
+
+if (store.Count == 0)
+{
+    Tasks.Seed(store);
+}
+
+return Layout.Create()
+             .AddService("tasks", new Tasks(store))
+             .AddOpenApi()
+             .AddScalar()
+             // last, so that it only answers what nothing above did
+             .Add(Assets.App("web"));

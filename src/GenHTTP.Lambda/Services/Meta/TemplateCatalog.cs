@@ -5,127 +5,145 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
-/// The examples a new lambda can start from, in the groups the creation
-/// assistant offers: a service that answers requests, a socket that stays
-/// open, or a whole application to take apart.
+/// The code a lambda starts with: nothing much, or a copy of one of the demos.
 /// </summary>
+/// <remarks>
+/// The files live in the assembly under <c>Resources/Templates</c>. A demo's
+/// files are both what the demo runs and what a copy of it starts with, with
+/// one difference: lines between a <c>[demo]</c> and a <c>[/demo]</c> marker
+/// only belong to the demo. They say it is read only and where to read it,
+/// which a copy - an ordinary lambda of somebody's own - must not claim.
+/// </remarks>
 public static class TemplateCatalog
 {
     private const string Placeholder = "{{KEY}}";
 
+    private const string DemoStart = "[demo]";
+
+    private const string DemoEnd = "[/demo]";
+
     /// <summary>
-    /// The template a lambda is seeded with when none was asked for.
+    /// What a lambda is started from when nothing is chosen.
     /// </summary>
-    public const string DefaultId = "rest-service";
+    public const string EmptyId = "empty";
 
     private static readonly LambdaTemplate[] All =
     [
-        new("rest-service", "rest", "REST service", "A small book API with an OpenAPI document and a browser to try it out.", "RestService"),
-        new("rest-minimal", "rest", "Minimal service", "A handful of inline routes and nothing else.", "RestMinimal"),
-        new("rest-webservice", "rest", "Class based service", "The same routes as methods of a class, described by attributes.", "RestWebservice"),
-        new("websocket-functional", "websocket", "Functional", "Three callbacks for connect, message and close.", "WebsocketFunctional"),
-        new("websocket-reactive", "websocket", "Reactive", "A class the platform calls when something happens.", "WebsocketReactive"),
-        new("websocket-imperative", "websocket", "Imperative", "A loop that owns the connection and reads it frame by frame.", "WebsocketImperative"),
-        new("chat", "app", "Chat room", "Accounts, a sign in, and a room that stays open. Passwords hashed, messages kept.", "Chat",
-            false, ("Accounts.cs", "ChatAccounts"), ("Page.cs", "ChatPage")),
-        new("game", "app", "Game with a scoreboard", "A three.js runner in the browser, and a scoreboard this lambda keeps.", "Game",
-            false, ("Scores.cs", "GameScores"), ("Page.cs", "GamePage")),
+        new(EmptyId, "Empty"),
 
-        // the examples. Hidden, because the picker is for somewhere to start
-        // from and these are finished things to look at - they are reached by
-        // name, from the examples menu and from a clone.
-        new("shortener", "app", "Link shortener", "Paste a long address, get a short one. Follows are counted.", "Shortener",
-            true, ("Links.cs", "ShortenerLinks"), ("Page.cs", "ShortenerPage")),
-        new("guestbook", "app", "Guestbook", "Anyone can sign it, everyone can read it, and it is still there tomorrow.", "Guestbook",
-            true, ("Entries.cs", "GuestbookEntries"), ("Page.cs", "GuestbookPage")),
-        new("inspector", "app", "Request inspector", "Answers every request with a description of itself.", "Inspector",
-            true, ("Page.cs", "InspectorPage")),
-        new("shop", "app", "Shop", "A shelf, a basket and a checkout, with stock that actually comes off.", "Shop",
-            true, ("Catalogue.cs", "ShopCatalogue"), ("Carts.cs", "ShopCarts"), ("Orders.cs", "ShopOrders"),
-                  ("Page.cs", "ShopPage")),
-        new("tanks", "app", "Tanks in a labyrinth", "Drive, aim and shoot in a maze everybody shares, with the server deciding all of it.", "Tanks",
-            true, ("Maze.cs", "TanksMaze"), ("Battle.cs", "TanksBattle"), ("Protocol.cs", "TanksProtocol"),
-                  ("State.cs", "TanksState"), ("Page.cs", "TanksPage")),
-        new("uploads", "app", "A site you upload", "The single page application module pointed straight at the workspace, so the files it serves can be replaced without redeploying.", "Uploads", true),
-        new("site", "app", "Front end in a folder", "A page, a stylesheet and a script in a folder called site, served from it with one line.", "Site",
-            true, ("site/index.html", "SitePage"), ("site/app.css", "SiteStyle"), ("site/app.js", "SiteApp")),
-        new("arena", "app", "Arena", "Everybody in one arena, eating each other, with gravity that bends the floor. The page is shipped as files rather than as strings.", "Arena",
-            true, ("World.cs", "ArenaWorld"), ("Protocol.cs", "ArenaProtocol"), ("State.cs", "ArenaState"),
-                  ("index.html", "ArenaPage"), ("game.js", "ArenaGame"), ("style.css", "ArenaStyle")),
-        new("shoot", "app", "Headwall", "An aim map in the browser: two sides, boxes to hide behind and a wall only your head clears. The server judges every shot, rewinding to the moment the browser drew.", "Shoot",
-            true, ("World.cs", "ShootWorld"), ("Protocol.cs", "ShootProtocol"), ("State.cs", "ShootState"),
-                  ("index.html", "ShootPage"), ("game.js", "ShootGame"), ("style.css", "ShootStyle"))
-    ];
+        new("demo-crud", "DemoCrud",
+            ("Tasks.cs", "DemoCrudTasks"), ("Store.cs", "DemoCrudStore"),
+            ("web/index.html", "DemoCrudPage"), ("web/app.js", "DemoCrudApp"), ("web/base.css", "DemoStyle")),
 
+        new("demo-registration", "DemoRegistration",
+            ("Accounts.cs", "DemoRegistrationAccounts"),
+            ("web/index.html", "DemoRegistrationLanding"), ("web/members.html", "DemoRegistrationMembers"),
+            ("web/session.js", "DemoRegistrationSession"), ("web/base.css", "DemoStyle")),
 
-    private static readonly LambdaTemplateGroup[] GroupList =
-    [
-        new("rest", "Answers requests", "A service, a page, a document - anything a client asks for and gets back.", [.. All.Where(t => t.Group == "rest")]),
-        new("websocket", "Keeps a connection", "A websocket that stays open, in each of the three flavours the module offers.", [.. All.Where(t => t.Group == "websocket")]),
-        new("app", "A whole application", "Something finished rather than something to start from: a page, an API and whatever it needs to remember.", [.. All.Where(t => t.Group == "app")])
+        new("demo-game", "DemoGame",
+            ("Lobby.cs", "DemoGameLobby"), ("Board.cs", "DemoGameBoard"), ("Protocol.cs", "DemoGameProtocol"),
+            ("web/index.html", "DemoGamePage"), ("web/game.js", "DemoGameScript"), ("web/base.css", "DemoStyle")),
+
+        new("demo-files", "DemoFiles",
+            ("Gallery.cs", "DemoFilesGallery"),
+            ("web/index.html", "DemoFilesPage"), ("web/app.js", "DemoFilesApp"), ("web/base.css", "DemoStyle")),
+
+        new("demo-live", "DemoLive",
+            ("Poll.cs", "DemoLivePoll"),
+            ("web/index.html", "DemoLivePage"), ("web/app.js", "DemoLiveApp"), ("web/base.css", "DemoStyle"))
     ];
 
     #region Functionality
 
     /// <summary>
-    /// The groups a lambda can be started from, in the order they are offered.
-    /// </summary>
-    public static IReadOnlyList<LambdaTemplateGroup> Groups => GroupList;
-
-    /// <summary>
-    /// Whether the given identifier belongs to a template, hidden or not.
+    /// Whether a lambda can be started from the given identifier.
     /// </summary>
     public static bool Exists(string id) => Array.Exists(All, t => t.Id == id);
 
     /// <summary>
-    /// The template a name refers to, or null where nothing does.
+    /// The files a lambda starts with, as the blob a version is stored as.
     /// </summary>
-    public static LambdaTemplate? Find(string? id) => id == null ? null : Array.Find(All, t => t.Id == id);
-
-    /// <summary>
-    /// The code of a template, with the public key filled into its comments.
-    /// </summary>
-    /// <param name="id">The template to read, falling back to the default one</param>
+    /// <param name="id">What to start from, the empty lambda when nothing or nothing known is given</param>
     /// <param name="publicKey">The key the lambda will be hosted at</param>
-    /// <remarks>
-    /// A template of several files is returned as the blob a version is stored
-    /// as, which is what every caller of this wants: something to save.
-    /// </remarks>
-    public static string ForKey(string? id, string publicKey)
-        => LambdaSource.Serialize(FilesFor(id, publicKey));
+    /// <param name="demo">Whether this is the demo itself rather than a copy of it</param>
+    public static string ForKey(string? id, string publicKey, bool demo = false)
+        => LambdaSource.Serialize(FilesFor(id, publicKey, demo));
 
     /// <summary>
-    /// The files a template starts a lambda with, the snippet first.
+    /// The files a lambda starts with, the snippet first.
     /// </summary>
-    public static IReadOnlyList<LambdaFile> FilesFor(string? id, string publicKey)
+    /// <param name="demo">Whether this is the demo itself, which keeps the lines marked as its own</param>
+    public static IReadOnlyList<LambdaFile> FilesFor(string? id, string publicKey, bool demo = false)
     {
         var template = Array.Find(All, t => t.Id == id)
-                    ?? Array.Find(All, t => t.Id == DefaultId)!;
+                    ?? Array.Find(All, t => t.Id == EmptyId)!;
 
         var files = new List<LambdaFile>
         {
-            new(LambdaSource.EntryName, Fill(template.Source, publicKey))
+            new(LambdaSource.EntryName, Fill(template.Source, publicKey, demo))
         };
 
         foreach (var part in template.Parts)
         {
-            files.Add(new LambdaFile(part.Name, Fill(part.Source, publicKey)));
+            files.Add(new LambdaFile(part.Name, Fill(part.Source, publicKey, demo)));
         }
 
         return files;
     }
 
-    private static string Fill(string source, string publicKey)
-        => source.Replace(Placeholder, publicKey, StringComparison.Ordinal);
+    private static string Fill(string source, string publicKey, bool demo)
+        => Mark(source, demo).Replace(Placeholder, publicKey, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Drops the marker lines, and for a copy what is between them too.
+    /// </summary>
+    /// <remarks>
+    /// A marker is a line of its own, in whatever comment the file type has -
+    /// <c>// [demo]</c>, <c>&lt;!-- [demo] --&gt;</c> - so the file reads and
+    /// runs as it is either way.
+    /// </remarks>
+    private static string Mark(string source, bool demo)
+    {
+        if (!source.Contains(DemoStart, StringComparison.Ordinal))
+        {
+            return source;
+        }
+
+        var kept = new List<string>();
+
+        var inside = false;
+
+        foreach (var line in source.Split('\n'))
+        {
+            if (line.Contains(DemoStart, StringComparison.Ordinal))
+            {
+                inside = true;
+                continue;
+            }
+
+            if (line.Contains(DemoEnd, StringComparison.Ordinal))
+            {
+                inside = false;
+                continue;
+            }
+
+            if (!inside || demo)
+            {
+                kept.Add(line);
+            }
+        }
+
+        return string.Join('\n', kept);
+    }
 
     #endregion
 
 }
 
 /// <summary>
-/// One example, read from the assembly the first time it is asked for.
+/// The files of one starting point, read from the assembly the first time they are asked for.
 /// </summary>
-public sealed class LambdaTemplate(string id, string group, string name, string description, string resource, bool hidden = false, params (string Name, string Resource)[] parts)
+public sealed class LambdaTemplate(string id, string resource, params (string Name, string Resource)[] parts)
 {
     private readonly Lazy<string> _source = new(() => Read(resource), LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -133,33 +151,15 @@ public sealed class LambdaTemplate(string id, string group, string name, string 
         () => [.. parts.Select(p => new TemplatePart(p.Name, p.Resource))],
         LazyThreadSafetyMode.ExecutionAndPublication);
 
+    public string Id => id;
+
     /// <summary>
     /// The files beside the snippet, in the order they are offered.
     /// </summary>
     public IReadOnlyList<TemplatePart> Parts => _parts.Value;
 
-    public string Id => id;
-
     /// <summary>
-    /// Whether this one is reachable by name but left out of the listing.
-    /// </summary>
-    /// <remarks>
-    /// A page elsewhere - the GenHTTP documentation, say - can send somebody
-    /// here with a template chosen to match what they were just reading. That
-    /// example belongs to that page rather than to this catalogue, so it is
-    /// reachable by name and left out of the assistant, which would otherwise
-    /// grow an entry every time anything linked here.
-    /// </remarks>
-    public bool Hidden => hidden;
-
-    public string Group => group;
-
-    public string Name => name;
-
-    public string Description => description;
-
-    /// <summary>
-    /// The code of this template, still carrying its key placeholder.
+    /// The snippet, still carrying its key placeholder and demo markers.
     /// </summary>
     public string Source => _source.Value;
 
@@ -169,8 +169,8 @@ public sealed class LambdaTemplate(string id, string group, string name, string 
     /// <param name="resource">Its name in the assembly, without extensions</param>
     /// <param name="kind">
     /// The extension it is stored under, which is the extension of the file it
-    /// becomes. Parts are not all C#: an example that ships a page keeps that
-    /// page as a page, so that what is read in the editor is what is served.
+    /// becomes: a page is kept as a page, so what is read in the editor is what
+    /// is served.
     /// </param>
     internal static string Read(string resource, string kind = "cs")
     {
@@ -205,8 +205,3 @@ public sealed class TemplatePart(string name, string resource)
 
     public string Source => _source.Value;
 }
-
-/// <summary>
-/// The first choice of the creation assistant.
-/// </summary>
-public sealed record LambdaTemplateGroup(string Id, string Name, string Description, IReadOnlyList<LambdaTemplate> Templates);

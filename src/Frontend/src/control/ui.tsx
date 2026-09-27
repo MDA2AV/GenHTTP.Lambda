@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+import { isDemo } from '../api';
 import { IconDots, IconInfo, IconSpark } from '../components/Icons';
 import { ago } from './format';
 
@@ -226,10 +227,68 @@ export function AgentMark({ origin }: { origin?: string | null }) {
   );
 }
 
+/**
+ * The shape every badge about a lambda shares, so the ones that sit next to
+ * each other read as one row rather than three styles.
+ */
+function Badge({ tone, title, children }: { tone: string; title?: string; children: ReactNode }) {
+  return (
+    <span title={title} className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>
+      {children}
+    </span>
+  );
+}
+
+/** Whether a lambda is online, and with which version. */
+export function StatusBadge({ version }: { version?: number | null }) {
+  const live = version != null;
+
+  return (
+    <Badge
+      tone={live ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-400/10 text-slate-500'}
+      title={live ? `Online, serving version ${version}` : 'Offline: nothing is being served'}
+    >
+      <LiveDot live={live} />
+      {live ? `Online · v${version}` : 'Offline'}
+    </Badge>
+  );
+}
+
+/**
+ * The tier a lambda is in. Quiet for the tier everybody starts in, in the
+ * colour of the logo for the one somebody was given, and in the link blue for
+ * the demos this installation keeps.
+ */
+export function TierBadge({ tier }: { tier: string }) {
+  const premium = tier === 'Premium';
+  const demo = isDemo(tier);
+
+  return (
+    <Badge
+      tone={
+        premium
+          ? 'bg-logo-500/15 text-logo-700 dark:text-logo-400'
+          : demo
+            ? 'bg-accent-500/15 text-accent-700 dark:text-accent-400'
+            : 'bg-slate-400/10 text-slate-500'
+      }
+      title={
+        premium
+          ? 'Premium: may answer at a domain of its own, and is kept online however quiet it gets'
+          : demo
+            ? 'Demo: kept online by this installation and read only'
+            : `${tier} tier`
+      }
+    >
+      {tier}
+    </Badge>
+  );
+}
+
 export function LiveDot({ live }: { live: boolean }) {
   return (
     <span
-      className={`inline-block h-2 w-2 shrink-0 rounded-full ${live ? 'bg-emerald-500' : 'bg-slate-400'}`}
+      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${live ? 'bg-emerald-500' : 'bg-slate-400'}`}
       aria-hidden="true"
     />
   );
@@ -250,7 +309,7 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="py-10 text-center text-sm text-slate-500">{children}</p>;
 }
 
-/** A prompt, set apart as somebody else's words. */
+/** A specification, set apart as somebody else's words. */
 export function Quote({ children }: { children: ReactNode }) {
   return (
     <blockquote className="whitespace-pre-line border-l-2 border-slate-300 pl-3 text-sm text-slate-600 dark:border-ink-700 dark:text-slate-400">
@@ -316,3 +375,23 @@ export function Menu({ label = 'More', children, align = 'right' }: {
 export const menuItem = 'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-ink-850';
 
 export const menuRule = <div className="my-1 border-t border-slate-200 dark:border-ink-800" />;
+
+/** An on and off, named by the element it points at. */
+export function Switch({ on, onToggle, labelledBy }: { on: boolean; onToggle: () => void; labelledBy: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-labelledby={labelledBy}
+      onClick={onToggle}
+      className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 ${
+        on ? 'bg-accent-500 dark:bg-accent-400' : 'bg-grey-300 dark:bg-ink-700'
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[1.375rem]' : 'translate-x-0.5'}`}
+      />
+    </button>
+  );
+}

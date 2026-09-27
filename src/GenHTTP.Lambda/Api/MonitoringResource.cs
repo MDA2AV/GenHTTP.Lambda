@@ -141,7 +141,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     #region Helpers
 
     internal static OwnerLogEntry Describe(LogLine line)
-        => new(line.Seq, line.At, line.Level, line.Source, line.Text, line.Detail, line.Country, line.Agent, line.Repeats);
+        => new(line.Seq, line.At, line.Level, line.Source, line.Text, line.Detail, line.Country, line.Agent, line.Repeats, line.Domain);
 
     private static TrafficSummary Summarize(LambdaTraffic traffic)
     {

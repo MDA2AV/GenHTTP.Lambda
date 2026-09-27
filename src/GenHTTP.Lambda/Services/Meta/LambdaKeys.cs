@@ -20,7 +20,26 @@ public static class LambdaKeys
         "admin", "api", "assets", "create", "editor", "health", "index", "lambda", "new", "static", "www"
     };
 
+    /// <summary>
+    /// What every demo is hosted at the start of.
+    /// </summary>
+    public const string DemoPrefix = "demo-";
+
+    /// <summary>
+    /// Why a key for a demo cannot be claimed.
+    /// </summary>
+    public const string DemoReason = "Keys starting with 'demo-' are kept for the demos of this installation.";
+
     #region Functionality
+
+    /// <summary>
+    /// Whether a normalized key is one only a demo may have.
+    /// </summary>
+    /// <remarks>
+    /// The whole prefix rather than the keys the catalogue holds today, so a
+    /// demo added later does not find its key already taken by somebody else.
+    /// </remarks>
+    public static bool IsDemo(string normalized) => normalized.StartsWith(DemoPrefix, StringComparison.Ordinal);
 
     /// <summary>
     /// Creates a short, pronounceable key to host a lambda at.

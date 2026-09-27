@@ -89,7 +89,7 @@ const TOKEN = process.env.AGENT_TOKEN ?? '';
  * version has more.
  */
 const ALLOW = [
-  'mcp__genhttp__platform_guide', 'mcp__genhttp__list_examples', 'mcp__genhttp__read_example',
+  'mcp__genhttp__platform_guide', 'mcp__genhttp__list_demos',
   'mcp__genhttp__create_lambda', 'mcp__genhttp__write_code', 'mcp__genhttp__check_code',
   'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda', 'mcp__genhttp__read_logs',
   'mcp__genhttp__upload_file', 'mcp__genhttp__list_files', 'mcp__genhttp__delete_file'
@@ -119,7 +119,7 @@ How to work:
    key that suits what they asked for.
 3. Write the code with write_code. One page that works beats four that do
    not. If it wants a front end, serve it and make it look deliberate rather
-   than default. Pass what they asked for, word for word, as prompt, and one
+   than default. Pass what they asked for, word for word, as specification, and one
    line on what the version does as change - they read both in the version
    history, and every later write_code gets its own.
 4. Call check_code and fix whatever it complains about. Do not deploy code
@@ -527,8 +527,7 @@ function harvest(content) {
 
 const WORDS = {
   platform_guide: 'Reading the platform guide',
-  list_examples: 'Looking at the examples',
-  read_example: 'Reading an example',
+  list_demos: 'Looking at the demos',
   create_lambda: 'Claiming an address',
   write_code: 'Writing the code',
   check_code: 'Compiling it',

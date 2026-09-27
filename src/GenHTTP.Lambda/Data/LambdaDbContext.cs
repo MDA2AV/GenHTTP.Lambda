@@ -20,6 +20,10 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<ActivationEntity> Activations => Set<ActivationEntity>();
 
+    public DbSet<ShowcaseEntity> Showcases => Set<ShowcaseEntity>();
+
+    public DbSet<SettingEntity> Settings => Set<SettingEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -60,10 +64,11 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.Modified).HasColumnName("modified");
         lambdas.Property(l => l.Deployed).HasColumnName("deployed");
         lambdas.Property(l => l.LastSeen).HasColumnName("last_seen");
-        lambdas.Property(l => l.IsExample).HasColumnName("is_example");
+        lambdas.Property(l => l.Domain).HasColumnName("domain");
 
         lambdas.HasIndex(l => l.PublicKey).IsUnique();
         lambdas.HasIndex(l => l.PrivateKey).IsUnique();
+        lambdas.HasIndex(l => l.Domain).IsUnique().HasFilter("domain IS NOT NULL");
 
         var deployments = builder.Entity<DeploymentEntity>();
 
@@ -75,7 +80,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.LambdaId).HasColumnName("lambda_id");
         deployments.Property(d => d.Version).HasColumnName("version");
         deployments.Property(d => d.Created).HasColumnName("created");
-        deployments.Property(d => d.Prompt).HasColumnName("prompt");
+        deployments.Property(d => d.Specification).HasColumnName("specification");
         deployments.Property(d => d.Change).HasColumnName("change");
         deployments.Property(d => d.Origin).HasColumnName("origin");
 
@@ -116,6 +121,34 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
                    .WithMany()
                    .HasForeignKey(a => a.LambdaId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+        var showcases = builder.Entity<ShowcaseEntity>();
+
+        showcases.ToTable("showcases");
+
+        showcases.HasKey(s => s.LambdaId);
+
+        showcases.Property(s => s.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        showcases.Property(s => s.Title).HasColumnName("title");
+        showcases.Property(s => s.Description).HasColumnName("description");
+        showcases.Property(s => s.Image).HasColumnName("image");
+        showcases.Property(s => s.ImageType).HasColumnName("image_type");
+        showcases.Property(s => s.Created).HasColumnName("created");
+        showcases.Property(s => s.Updated).HasColumnName("updated");
+
+        showcases.HasOne(s => s.Lambda)
+                 .WithOne()
+                 .HasForeignKey<ShowcaseEntity>(s => s.LambdaId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+        var settings = builder.Entity<SettingEntity>();
+
+        settings.ToTable("settings");
+
+        settings.HasKey(s => s.Key);
+
+        settings.Property(s => s.Key).HasColumnName("key");
+        settings.Property(s => s.Value).HasColumnName("value");
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

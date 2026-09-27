@@ -3,9 +3,10 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <summary>
 /// One line from the run of the server.
 /// </summary>
+/// <param name="Domain">The lambda's own domain the request was addressed to, absent for the platform</param>
 public sealed record LogEntry(long Seq, DateTime At, string Level, string Source, string? Lambda, string Text,
                               string? Detail, string? Client, string? Agent, string? Country, string? Place,
-                              int Repeats);
+                              int Repeats, string? Domain);
 
 /// <summary>
 /// One caller the log still holds something about.

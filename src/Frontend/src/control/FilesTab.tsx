@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { ApiError, api, type LambdaFile, type VersionContent, type WorkspaceListing } from '../api';
+import { ApiError, api, isDemo, type LambdaFile, type VersionContent, type WorkspaceListing } from '../api';
 import { decode, download, encode, encodeBytes, readable } from '../bytes';
 import { CodeEditor } from '../components/CodeEditor';
 import { IconChevronDown, IconDownload, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
@@ -403,12 +403,15 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
 
   const full = listing !== null && listing.files.length >= listing.maxFiles;
 
+  // what a demo keeps is there to be read, not replaced
+  const demo = isDemo(control.lambda.tier);
+
   return (
     <GroupList
       title="Data"
       exposure={<Exposure open={publicly} why={publicly ? 'Public: this version serves it with Workspace.' : 'Private to the lambda. Not part of any version.'} />}
       usage={listing ? `${listing.files.length} of ${listing.maxFiles} files, ${bytes(listing.usedBytes)} of ${bytes(listing.quotaBytes)}` : undefined}
-      action={
+      action={demo ? undefined : (
         <>
           <input ref={picker} type="file" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
           <button
@@ -422,7 +425,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
             {busy ? <IconSpinner className="h-3.5 w-3.5" /> : <IconUpload className="h-3.5 w-3.5" />}
           </button>
         </>
-      }
+      )}
     >
       {listing === null ? (
         <div className="flex items-center gap-2 px-1 text-[13px] text-slate-500"><IconSpinner className="h-3.5 w-3.5" /> Reading…</div>
@@ -433,7 +436,7 @@ function Data({ control, listing, publicly, selected, onSelect, onChanged }: {
           selected={selected}
           onSelect={onSelect}
           empty="Nothing yet. What the lambda saves while it runs appears here."
-          action={(node) => (
+          action={demo ? undefined : (node) => (
             <button
               type="button"
               onClick={() => remove(node.path, node.folder)}

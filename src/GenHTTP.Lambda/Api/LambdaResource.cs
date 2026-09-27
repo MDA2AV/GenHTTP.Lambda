@@ -95,7 +95,7 @@ public sealed class LambdaResource(IMetaService meta)
         var zip = ProjectPacker.Pack(lambda.PublicKey, LambdaSource.Parse(content.Code));
 
         return request.Respond()
-                      .Content(new ZippedProject(zip))
+                      .Content(new BinaryContent(zip, "application/zip"))
                       .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}.zip\"")
                       .Build();
     }

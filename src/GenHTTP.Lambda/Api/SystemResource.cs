@@ -3,6 +3,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Settings;
 
 using GenHTTP.Modules.Webservices;
 
@@ -12,7 +13,7 @@ namespace GenHTTP.Lambda.Api;
 /// What the editor needs to know about the platform: the terms, the example it
 /// starts from, the vocabulary it can suggest and whether it can build things.
 /// </summary>
-public sealed class SystemResource(LambdaOptions options, BuildService builds)
+public sealed class SystemResource(LambdaOptions options, BuildService builds, SettingsService settings)
 {
 
     internal const string Terms = """
@@ -42,17 +43,26 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds)
     );
 
     /// <summary>
-    /// The template catalogue, with a stand in key so the assistant can show
-    /// the code of a template before a lambda exists to fill it with.
+    /// Which pages the site links to, as the operator switched them.
     /// </summary>
     /// <remarks>
-    /// Hidden templates are described here rather than left out: a link that
-    /// names one still has to arrive at an editor that can say what it is. It
-    /// is the assistant's list they are kept out of, not the catalogue.
+    /// Apart from the platform description, which carries the whole editor
+    /// vocabulary and is too much to ask for on every page.
     /// </remarks>
-    private static IReadOnlyList<TemplateGroupResponse> Describe()
-        => [.. TemplateCatalog.Groups.Select(g => new TemplateGroupResponse(g.Id, g.Name, g.Description,
-               [.. g.Templates.Select(t => new TemplateResponse(t.Id, t.Name, t.Description,
-                   TemplateCatalog.ForKey(t.Id, "your-key"), t.Hidden))]))];
+    [ResourceMethod("features")]
+    public async ValueTask<FeaturesResponse> GetFeatures()
+    {
+        var current = await settings.GetAsync();
+
+        return new FeaturesResponse(current.EnterprisePage);
+    }
+
+    /// <summary>
+    /// What a new lambda can be started from: nothing much, or a copy of a
+    /// demo - described by what somebody would want to build with it.
+    /// </summary>
+    private static IReadOnlyList<StarterResponse> Describe()
+        => [.. DemoCatalog.All.Select(d => new StarterResponse(d.Id, d.Goal, d.Pitch, $"/lambda/{d.Key}/")),
+            new StarterResponse(TemplateCatalog.EmptyId, "Something else", "Start from an empty lambda and build whatever you have in mind.", null)];
 
 }

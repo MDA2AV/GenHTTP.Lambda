@@ -129,7 +129,7 @@ export function Guide() {
                 </>,
                 <>
                   Hand the editor key to an agent and tell it what to build - it writes new
-                  versions through <Link to="/agentic-coding" className="text-accent-500 hover:underline">MCP</Link>.
+                  versions through <Link to="/#agents" className="text-accent-500 hover:underline">MCP</Link>.
                   Or open <b>Code</b> and write it yourself: <b>Check</b> compiles without
                   storing anything and tells you what the compiler thinks, file and line.
                 </>,
@@ -173,8 +173,8 @@ export function Guide() {
 
           <Section id="why" title="Saying why">
             <p>
-              A version is the code, and optionally two notes about it: <b>the prompt</b>, what was asked
-              for in the words it was asked in, and <b>the change</b>, one line on what the version does.
+              A version is the code, and optionally two notes about it: <b>the specification</b>, what the
+              user wants and why, in their words where possible, and <b>the change</b>, one line on what the version does.
               They are shown beside the diff in the version history, so the <em>why</em> survives next to
               the <em>what</em> - for you, and for the next agent that reads the history before changing
               anything.
@@ -182,12 +182,12 @@ export function Guide() {
             <Sample code={`POST /api/v1/lambdas/{editorKey}/versions
 {
   "files": [ { "name": "lambda.cs", "code": "..." } ],
-  "prompt": "a guest book people can sign",
+  "specification": "A guest book people can sign; entries must survive a restart",
   "change": "Keeps entries in the workspace so they survive a restart"
 }`} />
             <p>
               Agents pass the same two fields to <Code>write_code</Code>. In <b>Code</b>, saving asks
-              for the change. Both are optional; a long prompt is cut at 4000
+              for the change. Both are optional; a long specification is cut at 4000
               characters and a change at 500 rather than refused.
             </p>
           </Section>
@@ -255,11 +255,9 @@ return Content.From(page);`} />
 
           <Section id="spa" title="A front end, step by step">
             <p>
-              The second of those, in full. The finished thing is the{' '}
-              <Link to="/examples/site" className="text-accent-500 hover:underline">
-                front end in a folder
-              </Link>{' '}
-              example, which you can clone.
+              The second of those, in full. Every demo serves its page this way from a folder
+              called <Code>web</Code> - open <Link to="/editor/demo-crud" className="text-accent-500 hover:underline">demo-crud</Link> to read one.
+              Demos are read only; their editor key is their name.
             </p>
 
             <Steps
@@ -375,11 +373,8 @@ return Inline.Create()
 
           <Section id="sockets" title="Websockets">
             <p>
-              Supported, and not an afterthought. The{' '}
-              <Link to="/examples/arena" className="text-accent-500 hover:underline">
-                arena
-              </Link>{' '}
-              example holds a world and broadcasts to everybody twenty times a second. The simplest
+              Supported, and not an afterthought. The <Link to="/editor/demo-game" className="text-accent-500 hover:underline">demo-game</Link> demo
+              pairs players and runs every game on the server. The simplest
               form is three callbacks:
             </p>
 
@@ -399,8 +394,9 @@ var socket = Websocket.Functional()
 return Layout.Create().Add("chat", socket);`} />
 
             <Aside>
-              One thing catches everybody: a websocket handler cannot read the request it was
-              upgraded from. Whatever it needs has to arrive as the first message.
+              One thing catches everybody: a browser cannot set headers on a websocket handshake.
+              Pass what the handler needs in the query, where it reads it
+              from <Code>connection.Request.Header.Query</Code>, or send secrets as the first message.
             </Aside>
           </Section>
 
@@ -437,11 +433,11 @@ return Layout.Create().Add("chat", socket);`} />
           <Section id="agents" title="Letting an agent do it">
             <p>
               There is an MCP endpoint at <Code>/mcp</Code>. Point an agent at it and it can do
-              everything the editor does: read the guide, read an example in full, write files,
+              everything the editor does: read the guide, read a demo in full, write files,
               compile them, and deploy. It is the same API underneath.
             </p>
             <p>
-              It says why as it goes - <Code>write_code</Code> takes the prompt and the change - and
+              It says why as it goes - <Code>write_code</Code> takes the specification and the change - and
               it can look at what it deployed: <Code>read_logs</Code> answers with the lambda's recent
               requests, what it printed and the stack trace of anything it threw, which is how an agent
               finds out its code works rather than assuming it. You watch the same thing in the

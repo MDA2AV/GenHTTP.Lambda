@@ -151,7 +151,7 @@ export function LogsTab({ control }: { control: Control }) {
       ) : (
         <ul className="divide-y divide-slate-100 border-y border-slate-200 font-mono text-[12.5px] dark:divide-ink-850 dark:border-ink-800">
           {shown.map((line) => {
-            const expandable = !!line.detail || !!line.agent || !!line.country;
+            const expandable = !!line.detail || !!line.agent || !!line.country || !!line.domain;
             const expanded = open === line.seq;
 
             return (
@@ -180,6 +180,7 @@ export function LogsTab({ control }: { control: Control }) {
                   <div className="space-y-2 bg-slate-50 px-3 py-2 pl-[4.75rem] dark:bg-ink-950/50">
                     <p className="font-sans text-xs text-slate-500">
                       {line.source}
+                      {line.domain && `, at ${line.domain}`}
                       {line.country && `, from ${line.country}`}
                       {line.agent && `, ${line.agent}`}
                     </p>

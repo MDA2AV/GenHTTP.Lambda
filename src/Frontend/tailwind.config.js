@@ -54,6 +54,21 @@ export default {
           600: '#1765cc',
           700: '#174ea6',
         },
+        // the purple of the logo, for what is special rather than what is
+        // interactive - the premium tier. The dark shade carries text on the
+        // light theme, the light one on the dark theme.
+        logo: {
+          400: '#c99bff',
+          500: '#aa55ff',
+          700: '#7b2fd1',
+        },
+        // Google cyan, for the enterprise tier: an installation of its own
+        // rather than a place on the shared one, so a colour of its own too
+        enterprise: {
+          400: '#78d9ec',
+          500: '#12b5cb',
+          700: '#007b83',
+        },
         // the greys the light theme is drawn with
         slate: grey,
         // the remaining three brand colours, standing in for the status palette

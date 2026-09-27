@@ -1,0 +1,79 @@
+// Registration and login: a landing page that asks you to register or sign in,
+// and a members page that only a signed in user gets to see.
+//
+//   POST register         { name, password }   -> sets the session cookie   400 / 409 with the reason
+//   POST login            { name, password }   -> sets the session cookie   401 when they do not match
+//   POST logout                                -> clears it
+//
+//   GET  api/me           who you are           \  need the session cookie:
+//   GET  api/members      who else is here      /  401 without one, 403 with one that is not valid
+//
+//   index.html            the landing page; sends you on when you are signed in
+//   members.html          the members page; sends you back when you are not
+//
+// The files:
+//
+//   lambda.cs     this one: the wiring, and the only file that touches Workspace
+//   Accounts.cs   accounts, password hashes and sessions, kept in JSON files
+//   web/          the two pages and the script they share
+//
+// The session is a cookie the browser keeps and sends by itself: HttpOnly, so
+// no script on the page can read it, and SameSite, so another site cannot make
+// the browser send it along. Everything below api/ is behind the Authentication
+// module, which reads that cookie and hands the signed in member to the routes.
+// [demo]
+//
+// This is a read-only demo. To build on it, create a lambda of your own from
+// it - a copy is yours to change.
+// [/demo]
+
+using GenHTTP.Api.Content.Authentication;
+using GenHTTP.Modules.Reflection.Injectors;
+
+var accounts = new Accounts(
+    read: name => Workspace.Exists(name) ? Workspace.ReadText(name) : null,
+    write: (name, text) => Workspace.WriteText(name, text));
+
+/*
+ * At the root of the lambda rather than below a folder, and for a reason: a
+ * cookie set without a path belongs to the folder of the address that set it.
+ * Set by "login" it covers the whole lambda - wherever the lambda is mounted,
+ * below /lambda/... or at the root of a domain. Set by "auth/login" it would
+ * only ever be sent back to auth/.
+ */
+var account = Inline.Create()
+                    .Post("register", (Credentials body, IRequest request) => SignIn(accounts.Register(body), request))
+                    .Post("login", (Credentials body, IRequest request) => SignIn(accounts.Login(body), request))
+                    .Post("logout", (IRequest request) =>
+                    {
+                        accounts.Logout(request.Header.Headers.GetCookie(Session.Cookie));
+
+                        // an empty answer that tells the browser to forget the cookie
+                        return request.Respond()
+                                      .Status(ResponseStatus.NoContent)
+                                      .Cookie(Session.Cookie, "", Session.Options(request, expire: true));
+                    });
+
+/*
+ * Every request below api/ passes the authentication concern first. It reads
+ * the session cookie, and the authenticator turns it into a member or null. A
+ * route then simply asks for a Member parameter: the user injector fills it in.
+ */
+var session = ApiKeyAuthentication.Create()
+                                  .Extractor(request => request.Header.Headers.GetCookie(Session.Cookie))
+                                  .Authenticator((_, token) => ValueTask.FromResult<IUser>(accounts.Authenticate(token)));
+
+var api = Inline.Create()
+                .Injectors(Injection.Default().Add(new UserInjector<Member>()))
+                .Get("me", (Member member) => accounts.Describe(member))
+                .Get("members", () => accounts.Newest())
+                .Authentication(session);
+
+return Layout.Create()
+             .Add("api", api)
+             .Add(account)
+             .Add(Assets.App("web"));
+
+// the answer to a successful registration or sign in: who you are, and the cookie
+static Result<SignedIn> SignIn((SignedIn Member, string Token) signed, IRequest request)
+    => new Result<SignedIn>(signed.Member).Cookie(Session.Cookie, signed.Token, Session.Options(request));

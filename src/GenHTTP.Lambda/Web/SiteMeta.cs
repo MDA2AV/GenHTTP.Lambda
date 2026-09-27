@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Services.Meta;
 
 namespace GenHTTP.Lambda.Web;
 
@@ -27,7 +26,10 @@ public sealed class SiteMeta
 {
     private const string Site = "GenHTTP Lambda";
 
-    private const string ExamplePrefix = "/examples/";
+    /// <summary>
+    /// The picture shown for a page that has none of its own.
+    /// </summary>
+    private const string DefaultImage = "/social/default.png";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -61,16 +63,7 @@ public sealed class SiteMeta
     /// </summary>
     public SitePage? Find(string path)
     {
-        path = Normalize(path);
-
-        if (path.StartsWith(ExamplePrefix, StringComparison.Ordinal))
-        {
-            var example = ExampleCatalog.Find(path[ExamplePrefix.Length..]);
-
-            return example == null ? null : new SitePage($"{example.Name} Example", example.Description);
-        }
-
-        return ReadPages().GetValueOrDefault(path);
+        return ReadPages().GetValueOrDefault(Normalize(path));
     }
 
     /// <summary>
@@ -88,6 +81,15 @@ public sealed class SiteMeta
         markup = SetMeta(markup, "property", "og:description", description);
         markup = SetMeta(markup, "name", "twitter:title", title);
         markup = SetMeta(markup, "name", "twitter:description", description);
+
+        // a preview needs the full address of the picture, which only the
+        // public address can give - without it, the path is still better than
+        // the front page's picture on every page
+        var image = WebUtility.HtmlEncode((PublicUrl ?? string.Empty) + (page.Image ?? DefaultImage));
+
+        markup = SetMeta(markup, "property", "og:image", image);
+        markup = SetMeta(markup, "property", "og:image:alt", title);
+        markup = SetMeta(markup, "name", "twitter:image", image);
 
         if (PublicUrl != null)
         {
@@ -142,7 +144,7 @@ public sealed class SiteMeta
 
         XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
 
-        var paths = ReadPages().Keys.Concat(ExampleCatalog.All.Select(e => ExamplePrefix + e.Id));
+        var paths = ReadPages().Keys;
 
         var sitemap = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
@@ -197,6 +199,7 @@ public sealed class SiteMeta
 }
 
 /// <summary>
-/// A page a search engine should find, and what it should say about it.
+/// A page a search engine should find, and what it should say about it - with
+/// the path of the picture a link preview shows, if it has one of its own.
 /// </summary>
-public sealed record SitePage(string Title, string Description);
+public sealed record SitePage(string Title, string Description, string? Image = null);

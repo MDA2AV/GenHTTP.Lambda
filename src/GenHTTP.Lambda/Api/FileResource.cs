@@ -65,7 +65,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
 
         using var stream = new MemoryStream(content);
 
-        return await workspace.WriteAsync(await meta.RequireIdAsync(privateKey), path, stream);
+        return await workspace.WriteAsync(await meta.RequireEditableAsync(privateKey), path, stream);
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
     /// <param name="path">The path within the workspace</param>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/files/:path")]
     public async ValueTask Delete(string privateKey, string path)
-        => await workspace.DeleteAsync(await meta.RequireIdAsync(privateKey), path);
+        => await workspace.DeleteAsync(await meta.RequireEditableAsync(privateKey), path);
 
     /// <summary>
     /// Makes a folder, so files can be put into it.
@@ -84,7 +84,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
     [ResourceMethod(Method.Put, "lambdas/:privateKey/folders/:path")]
     public async ValueTask<WorkspaceListing> PutFolder(string privateKey, string path)
     {
-        var id = await meta.RequireIdAsync(privateKey);
+        var id = await meta.RequireEditableAsync(privateKey);
 
         await workspace.CreateFolderAsync(id, path);
 

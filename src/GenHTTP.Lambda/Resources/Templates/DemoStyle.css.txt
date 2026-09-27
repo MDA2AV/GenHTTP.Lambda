@@ -1,0 +1,103 @@
+/* The look every demo shares. Plain CSS, light and dark, no framework. */
+
+:root {
+  color-scheme: light dark;
+  --page: #f6f7f9;
+  --card: #ffffff;
+  --ink: #1d2330;
+  --dim: #667085;
+  --line: #dde1e8;
+  --accent: #3b5bdb;
+  --accent-ink: #ffffff;
+  --good: #2b8a3e;
+  --bad: #c92a2a;
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0f1117;
+    --card: #181b24;
+    --ink: #e7e9ee;
+    --dim: #9098a9;
+    --line: #2a2f3b;
+    --accent: #748ffc;
+    --accent-ink: #0f1117;
+    --good: #69db7c;
+    --bad: #ff8787;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1rem 3rem; }
+
+h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; }
+
+.lead { color: var(--dim); margin: 0 0 1.5rem; }
+
+a { color: var(--accent); }
+.dim { color: var(--dim); }
+.small { font-size: .875rem; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+form { display: grid; gap: .6rem; }
+
+input, textarea, select, button { font: inherit; color: inherit; }
+
+input[type=text], input[type=password], input[type=search], textarea {
+  width: 100%;
+  padding: .55rem .7rem;
+  background: var(--page);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+textarea { resize: vertical; min-height: 4rem; }
+
+button {
+  padding: .5rem .9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  cursor: pointer;
+}
+
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.link { border: 0; background: none; padding: 0; color: var(--accent); }
+button:disabled { opacity: .55; cursor: default; }
+
+.row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+
+.error { color: var(--bad); min-height: 1.4em; margin: 0; font-size: .9rem; }
+
+code {
+  font: .85em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: .05em .35em;
+}
+
+footer {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: .85rem;
+}

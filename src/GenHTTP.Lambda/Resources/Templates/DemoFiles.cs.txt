@@ -1,0 +1,54 @@
+// Uploads: put a picture or a document up, everybody sees it in the gallery,
+// and whoever uploaded something can take it down again.
+//
+//   POST   api/files?name=cat.png    the file itself as the request body   -> 201 with its entry
+//   GET    api/files                 everything uploaded, newest first
+//   DELETE api/files/{id}?key=...    remove one - key is what the upload answered with
+//   GET    files/{stored name}       the file, served straight from the workspace
+//   anything else                    the page in web/
+//
+// The body is taken as a Stream and read no further than the size limit, so
+// nobody can make the lambda hold a gigabyte in memory. No multipart form: the
+// browser sends the file as it is, with fetch(url, { method: 'POST', body: file }).
+//
+// The files:
+//
+//   lambda.cs     this one: the wiring, and the only file that touches Workspace
+//   Gallery.cs    what may be uploaded, where it is kept and the list of it all
+//   web/          the page and its script
+// [demo]
+//
+// This is a read-only demo. To build on it, create a lambda of your own from
+// it - a copy is yours to change.
+// [/demo]
+
+using GenHTTP.Modules.Security.Providers;
+
+// uploads go into their own folder, so that serving it cannot hand out
+// anything else this lambda keeps - like the list of uploads with its keys
+Workspace.CreateFolder("uploads");
+
+var gallery = new Gallery(new Storage(
+    ReadText: name => Workspace.Exists(name) ? Workspace.ReadText(name) : null,
+    WriteText: Workspace.WriteText,
+    WriteBytes: Workspace.WriteBytes,
+    Delete: Workspace.Delete));
+
+var api = Inline.Create()
+                .Get("files", () => gallery.List())
+                .Post("files", async (string name, Stream body) =>
+                {
+                    var uploaded = await gallery.UploadAsync(name, body);
+
+                    return new Result<Uploaded>(uploaded).Status(ResponseStatus.Created);
+                })
+                .Delete("files/:id", (string id, string key) => gallery.Remove(id, key));
+
+return Layout.Create()
+             .Add("api", api)
+             // only files Gallery accepted are in here, each named by an id and one of
+             // the extensions it allows - which decides the content type it is served
+             // with. nosniff tells the browser to believe that type rather than guess
+             // one from what the file contains
+             .Add("files", Workspace.Files("uploads").Add(new SnifferPreventionConcernBuilder()))
+             .Add(Assets.App("web"));

@@ -1,5 +1,7 @@
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Configuration;
+
 using GenHTTP.Modules.ApiBrowsing;
 using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.DependencyInjection.Infrastructure;
@@ -17,22 +19,28 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 public static class ApiLayout
 {
 
-    public static IHandlerBuilder Create()
+    public static IHandlerBuilder Create(LambdaOptions options)
     {
         var version = Layout.Create()
                             .AddDependentService<KeyResource>("keys")
-                            .AddDependentService<ExampleResource>("examples")
+                            .AddDependentService<DemoResource>("demos")
+                            .AddDependentService<ShowcaseResource>("showcases")
                             .AddDependentService<BuildResource>("builds")
                             .AddDependentService<SystemResource>("system")
                             .AddDependentService<TelemetryResource>("telemetry")
                             .AddDependentService<LogResource>("logs")
-                            .AddDependentService<AdminResource>("admin")
+                            // the token is checked in front of the resource, see AdminGateConcern
+                            .Add("admin", Layout.Create()
+                                                .Add(Resource<AdminResource>())
+                                                .Add(new AdminGateConcernBuilder(options)))
                             .Add(Resource<LambdaResource>())
                             .Add(Resource<VersionResource>())
                             .Add(Resource<DeploymentResource>())
                             .Add(Resource<FileResource>())
                             .Add(Resource<CodeResource>())
                             .Add(Resource<MonitoringResource>())
+                            .Add(Resource<LambdaShowcaseResource>())
+                            .Add(Resource<LambdaDomainResource>())
                             .AddScalar(title: "GenHTTP Lambda API")
                             .AddOpenApi()
                             .Add(ErrorHandler.From(new ApiErrorMapper()));

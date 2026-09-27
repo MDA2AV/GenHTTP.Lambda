@@ -21,7 +21,8 @@ interface Props {
   files: LambdaFile[];
   active: string;
   onSelect: (name: string) => void;
-  onChange: (files: LambdaFile[]) => void;
+  /** Left out where the files cannot be changed, which hides adding, removing and uploading. */
+  onChange?: (files: LambdaFile[]) => void;
   /** Files a diagnostic points at, so a mistake is visible before it is opened. */
   faulty?: Set<string>;
 }
@@ -108,7 +109,10 @@ function starterFor(name: string): string {
   return '';
 }
 
-export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
+export function FileTabs({ files, active, onSelect, onChange: change, faulty }: Props) {
+  const editable = change !== undefined;
+  const onChange = (next: LambdaFile[]) => change?.(next);
+
   const [adding, setAdding] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
@@ -231,7 +235,7 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
 
             {/* the same room on every pill, shown or not, so opening a file
                 does not widen its pill and push the others along */}
-            {file.name !== ENTRY ? (
+            {file.name !== ENTRY && editable ? (
               <button
                 type="button"
                 onClick={() => remove(file.name)}
@@ -249,7 +253,7 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
         );
       })}
 
-      {adding ? (
+      {!editable ? null : adding ? (
         <form onSubmit={add} className="flex items-center gap-2">
           <input
             autoFocus
@@ -274,7 +278,7 @@ export function FileTabs({ files, active, onSelect, onChange, faulty }: Props) {
         )
       )}
 
-      {assets < MAX_ASSETS && (
+      {editable && assets < MAX_ASSETS && (
         <>
           <input ref={picker} type="file" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
           <button

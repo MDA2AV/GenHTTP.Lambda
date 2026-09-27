@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tic-tac-toe</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .5rem;
+      width: min(20rem, 100%);
+      margin: 1.25rem auto;
+    }
+    #board button {
+      aspect-ratio: 1;
+      font-size: 2.6rem;
+      font-weight: 700;
+      padding: 0;
+      border-radius: var(--radius);
+    }
+    #board button.win { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    #board button:disabled { opacity: 1; }
+    #status { text-align: center; font-size: 1.1rem; min-height: 1.6em; margin: 0; }
+    #actions { justify-content: center; min-height: 2.5rem; }
+    #stats { text-align: center; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Tic-tac-toe</h1>
+  <p class="lead">You play whoever else opens this page. Nobody around? Play the house.</p>
+
+  <p id="status">Connecting...</p>
+  <div id="board"></div>
+  <div id="actions" class="row">
+    <button id="house" hidden>Play the house</button>
+    <button id="again" class="primary" hidden>Play again</button>
+  </div>
+  <p id="stats" class="dim small"></p>
+
+  <!-- [demo] -->
+  <footer>
+    A read-only demo of GenHTTP Lambda. Its editor key is <code>demo-game</code>: open it in the editor, or read it
+    with any agent, to see how this is built.
+  </footer>
+  <!-- [/demo] -->
+</main>
+<script src="game.js" type="module"></script>
+</body>
+</html>

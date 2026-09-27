@@ -84,7 +84,7 @@ public sealed class LogBookProvider(LogBook book, TextWriter? console = null, Lo
             var scope = LambdaOutput.Ambient;
 
             book.Append(LogBook.NameOf(level), source, scope?.PublicKey, text, error?.ToString(),
-                        caller?.Client, caller?.Agent, caller?.Country, caller?.Place, text, scope?.LambdaId);
+                        caller?.Client, caller?.Agent, caller?.Country, caller?.Place, text, scope?.LambdaId, caller?.Domain);
 
             if (console == null || level < minimum)
             {

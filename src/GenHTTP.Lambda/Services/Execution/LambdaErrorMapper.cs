@@ -4,6 +4,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 using GenHTTP.Modules.ErrorHandling;
 
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
 
 using GenHTTP.Modules.IO;
@@ -30,25 +31,35 @@ public sealed class LambdaErrorMapper(ILogger<LambdaErrorMapper> logger) : IErro
     {
         if (error is ProviderException provided)
         {
-            return new ValueTask<IResponse?>(Render(request, provided.Status, provided.Status.ToString(), provided.Message, provided.Modifications));
+            return new ValueTask<IResponse?>(Render(request, acceptedFormat?.ToString(), provided.Status, provided.Status.ToString(), provided.Message, provided.Modifications));
         }
 
         var lambda = request.GetLambda();
 
-        logger.LogWarning(error, "Lambda '{PublicKey}' failed while handling {Method} {Path}",
-            lambda?.PublicKey ?? "?", request.Header.Method, request.Header.Path);
+        // the path alone reads as one of the platform's when the lambda was
+        // reached at a domain of its own
+        logger.LogWarning(error, "Lambda '{PublicKey}' failed while handling {Method} {Host}{Path}",
+            lambda?.PublicKey ?? "?", request.Header.Method, request.GetDomain()?.Name ?? "", request.Header.Path);
 
-        return new ValueTask<IResponse?>(Render(request, ResponseStatus.InternalServerError, "Lambda Error",
+        return new ValueTask<IResponse?>(Render(request, acceptedFormat?.ToString(), ResponseStatus.InternalServerError, "Lambda Error",
             $"The lambda threw {error.GetType().Name}: {error.Message}", null));
     }
 
     public ValueTask<IResponse?> GetNotFound(IRequest request, IHandler handler, ByteString? acceptedFormat)
-        => new(Render(request, ResponseStatus.NotFound, "Not Found", "This lambda does not serve the requested path.", null));
+        => new(Render(request, acceptedFormat?.ToString(), ResponseStatus.NotFound, "Not Found", "This lambda does not serve the requested path.", null));
 
-    private static IResponse Render(IRequest request, ResponseStatus status, string title, string message, Action<IResponseBuilder>? modifications)
+    /// <summary>
+    /// A page for a visitor of a lambda - markup for a browser, JSON for
+    /// anything else - that says what went wrong without saying anything
+    /// about the platform around it.
+    /// </summary>
+    /// <param name="accepted">
+    /// The Accept header, as read before the handler ran. Never read here: once a
+    /// route has taken the body, asking the request for a header throws - which
+    /// turned every ProviderException of a route with a body into a 500.
+    /// </param>
+    internal static IResponse Render(IRequest request, string? accepted, ResponseStatus status, string title, string message, Action<IResponseBuilder>? modifications)
     {
-        var accepted = request.Header.Headers.GetEntry("Accept");
-
         var wantsMarkup = accepted == null || accepted.Contains("text/html", StringComparison.OrdinalIgnoreCase);
 
         var response = request.Respond().Status(status);

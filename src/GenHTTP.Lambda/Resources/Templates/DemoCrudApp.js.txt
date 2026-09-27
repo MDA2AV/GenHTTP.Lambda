@@ -1,0 +1,111 @@
+// Talks to the API in Tasks.cs. Every address is relative, so this works
+// wherever the lambda is mounted.
+
+const list = document.getElementById('tasks');
+const search = document.getElementById('search');
+const add = document.getElementById('add');
+const edit = document.getElementById('edit');
+const editForm = document.getElementById('edit-form');
+
+let editing = null;
+
+/** Calls the API and throws the message the server sent when it refuses. */
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    headers: options.body ? { 'Content-Type': 'application/json' } : {}
+  });
+
+  if (!response.ok) {
+    // ProviderException answers with its message in the body
+    let message = `${response.status} ${response.statusText}`;
+    try { message = (await response.json()).message ?? message; } catch { }
+    throw new Error(message);
+  }
+
+  return response.status === 204 ? null : response.json();
+}
+
+const escape = (text) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+async function load() {
+  const query = search.value.trim();
+  const tasks = await api(query ? `tasks/?search=${encodeURIComponent(query)}` : 'tasks/');
+
+  list.innerHTML = tasks.map((task) => `
+    <div class="task ${task.done ? 'done' : ''}" data-id="${task.id}">
+      <input type="checkbox" ${task.done ? 'checked' : ''} aria-label="Done">
+      <div class="grow">
+        <div class="title">${escape(task.title)}</div>
+        ${task.notes ? `<p class="notes">${escape(task.notes)}</p>` : ''}
+      </div>
+      <div class="actions small">
+        <button class="link" data-action="edit">Change</button>
+        <button class="link" data-action="delete">Remove</button>
+      </div>
+    </div>`).join('');
+
+  list.tasks = new Map(tasks.map((t) => [t.id, t]));
+}
+
+add.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const error = document.getElementById('add-error');
+  error.textContent = '';
+
+  try {
+    await api('tasks/', {
+      method: 'POST',
+      body: JSON.stringify({ title: add.title.value, notes: add.notes.value, done: false })
+    });
+    add.reset();
+    await load();
+  } catch (e) {
+    error.textContent = e.message;
+  }
+});
+
+list.addEventListener('click', async (event) => {
+  const row = event.target.closest('.task');
+  if (!row) return;
+
+  const task = list.tasks.get(row.dataset.id);
+
+  if (event.target.type === 'checkbox') {
+    await api(`tasks/${task.id}`, { method: 'PUT', body: JSON.stringify({ ...task, done: event.target.checked }) });
+    await load();
+  } else if (event.target.dataset.action === 'delete') {
+    await api(`tasks/${task.id}`, { method: 'DELETE' });
+    await load();
+  } else if (event.target.dataset.action === 'edit') {
+    editing = task;
+    editForm.title.value = task.title;
+    editForm.notes.value = task.notes;
+    document.getElementById('edit-error').textContent = '';
+    edit.showModal();
+  }
+});
+
+editForm.addEventListener('submit', async (event) => {
+  if (event.submitter?.value !== 'save') return;
+  event.preventDefault();
+
+  try {
+    await api(`tasks/${editing.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title: editForm.title.value, notes: editForm.notes.value, done: editing.done })
+    });
+    edit.close();
+    await load();
+  } catch (e) {
+    document.getElementById('edit-error').textContent = e.message;
+  }
+});
+
+let typing;
+search.addEventListener('input', () => {
+  clearTimeout(typing);
+  typing = setTimeout(load, 200);
+});
+
+load();

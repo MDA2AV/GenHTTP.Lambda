@@ -48,6 +48,11 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// before that belong to the lambda that wrote them, not to whoever holds the
 /// name now.
 /// </param>
+/// <param name="Domain">
+/// The lambda's own domain the request was addressed to, when it was not the
+/// platform. Without it a request line of a lambda reached at its domain
+/// reads like one of the platform's paths.
+/// </param>
 public sealed record LogLine(
     long Seq,
     DateTime At,
@@ -61,7 +66,8 @@ public sealed record LogLine(
     string? Country = null,
     string? Place = null,
     int Repeats = 1,
-    long? LambdaId = null
+    long? LambdaId = null,
+    string? Domain = null
 );
 
 /// <summary>

@@ -1,0 +1,62 @@
+// Listens to the event stream and votes with a plain POST.
+
+const options = document.getElementById('options');
+const live = document.getElementById('live');
+
+// one vote per browser. The server cannot tell browsers apart without
+// accounts (see demo-registration), so this is a courtesy, not a rule
+const VOTED = 'demo-live-voted';
+
+let watchers = 0;
+
+function draw(results) {
+  document.getElementById('question').textContent = results.question;
+
+  const voted = localStorage.getItem(VOTED);
+
+  options.innerHTML = results.options.map((o) => {
+    const share = results.total ? Math.round((o.votes / results.total) * 100) : 0;
+    return `
+      <div class="option">
+        <button data-option="${o.id}" ${voted ? 'disabled' : ''}>${o.label}${voted === o.id ? ' - your vote' : ''}</button>
+        <div class="bar"><span style="width:${share}%"></span></div>
+        <div class="counts"><span>${o.votes} vote${o.votes === 1 ? '' : 's'}</span><span>${share}%</span></div>
+      </div>`;
+  }).join('');
+}
+
+options.addEventListener('click', async (event) => {
+  const option = event.target.dataset.option;
+  if (!option) return;
+
+  const response = await fetch('api/votes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ option })
+  });
+
+  // no need to redraw: the new counts arrive on the stream, like everybody else's
+  if (response.ok) localStorage.setItem(VOTED, option);
+});
+
+// relative, like every address here - and EventSource reconnects by itself
+const stream = new EventSource('events');
+
+// the counts are ordinary messages; the number watching has an event type of its own
+stream.addEventListener('message', (event) => draw(JSON.parse(event.data)));
+
+stream.addEventListener('watchers', (event) => {
+  watchers = Number(event.data);
+  status();
+});
+
+stream.addEventListener('open', status);
+stream.addEventListener('error', status);
+
+function status() {
+  const on = stream.readyState === EventSource.OPEN;
+  live.classList.toggle('on', on);
+  live.textContent = on
+    ? `Live - ${watchers} ${watchers === 1 ? 'browser is' : 'browsers are'} watching.`
+    : 'Reconnecting...';
+}

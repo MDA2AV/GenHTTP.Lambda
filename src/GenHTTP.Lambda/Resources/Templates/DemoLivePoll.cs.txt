@@ -1,0 +1,169 @@
+// The question, the counts, and everybody who is listening.
+//
+// Every browser on the events stream gets a Listener: a small queue that the
+// poll puts updates into and that stream takes them out of. A vote therefore
+// never waits on a slow browser - it drops the update into every queue and is
+// done, and each stream writes at its own pace. A queue that falls behind
+// forgets its oldest updates, which is fine: only the newest counts matter.
+//
+// Only lambda.cs sees Workspace, so the counts are read and written through
+// the functions it hands in.
+
+using System.Threading.Channels;
+
+/// <summary>What the browser sends to vote.</summary>
+public record Vote(string Option);
+
+public record Option(string Id, string Label, int Votes);
+
+public record Results(string Question, List<Option> Options, int Total);
+
+/// <summary>
+/// One event for the stream: what to send, and the event type - null for an
+/// ordinary message.
+/// </summary>
+public record Update(string Event, object Data);
+
+public sealed class Poll
+{
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
+    private const string Question = "Tabs or spaces?";
+
+    private static readonly (string Id, string Label)[] Choices =
+    [
+        ("tabs", "Tabs"),
+        ("spaces", "Spaces"),
+        ("formatter", "Whatever the formatter says")
+    ];
+
+    private readonly Action<string> _write;
+
+    private readonly Dictionary<string, int> _votes;
+
+    private readonly List<Listener> _listeners = [];
+
+    private readonly object _lock = new();
+
+    public Poll(Func<string> read, Action<string> write)
+    {
+        _write = write;
+
+        var text = read();
+
+        _votes = string.IsNullOrWhiteSpace(text) ? [] : JsonSerializer.Deserialize<Dictionary<string, int>>(text, Json) ?? [];
+    }
+
+    public Results Results()
+    {
+        lock (_lock)
+        {
+            var options = Choices.Select(c => new Option(c.Id, c.Label, _votes.GetValueOrDefault(c.Id))).ToList();
+
+            return new Results(Question, options, options.Sum(o => o.Votes));
+        }
+    }
+
+    public void Cast(Vote vote)
+    {
+        var option = vote?.Option;
+
+        if (!Choices.Any(c => c.Id == option))
+        {
+            throw new ProviderException(ResponseStatus.BadRequest, $"Vote for one of: {string.Join(", ", Choices.Select(c => c.Id))}.");
+        }
+
+        lock (_lock)
+        {
+            _votes[option] = _votes.GetValueOrDefault(option) + 1;
+
+            _write(JsonSerializer.Serialize(_votes, Json));
+        }
+
+        Tell(new Update(null, Results()));
+    }
+
+    /// <summary>
+    /// Starts listening. Dispose the listener when the browser is gone, which
+    /// the stream does with <c>using</c>.
+    /// </summary>
+    public Listener Listen()
+    {
+        var listener = new Listener(this);
+
+        lock (_lock)
+        {
+            _listeners.Add(listener);
+        }
+
+        Watchers();
+
+        return listener;
+    }
+
+    internal void Forget(Listener listener)
+    {
+        lock (_lock)
+        {
+            _listeners.Remove(listener);
+        }
+
+        Watchers();
+    }
+
+    private void Watchers()
+    {
+        int count;
+
+        lock (_lock)
+        {
+            count = _listeners.Count;
+        }
+
+        // a number is sent as it is, under an event type of its own
+        Tell(new Update("watchers", count));
+    }
+
+    private void Tell(Update update)
+    {
+        Listener[] listeners;
+
+        lock (_lock)
+        {
+            listeners = [.. _listeners];
+        }
+
+        foreach (var listener in listeners)
+        {
+            listener.Post(update);
+        }
+    }
+}
+
+public sealed class Listener(Poll poll) : IDisposable
+{
+    // a few updates at most; when full, the oldest is dropped for the newest
+    private readonly Channel<Update> _queue = Channel.CreateBounded<Update>(
+        new BoundedChannelOptions(8) { FullMode = BoundedChannelFullMode.DropOldest });
+
+    internal void Post(Update update) => _queue.Writer.TryWrite(update);
+
+    /// <summary>
+    /// The next update, or null when there was none for as long as given.
+    /// </summary>
+    public async Task<Update> NextAsync(TimeSpan patience)
+    {
+        using var timeout = new CancellationTokenSource(patience);
+
+        try
+        {
+            return await _queue.Reader.ReadAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    public void Dispose() => poll.Forget(this);
+}
