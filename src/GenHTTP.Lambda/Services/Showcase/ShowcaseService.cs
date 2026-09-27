@@ -225,7 +225,8 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                     .Select(s => new Entry(
                        s.LambdaId,
                        new ShowcaseInfo(s.Lambda!.PublicKey, s.Title, s.Description, s.ImageType, s.Image.Length,
-                                        s.Lambda.ActiveVersion != null, s.Created, s.Updated),
+                                        s.Lambda.ActiveVersion != null, s.Created, s.Updated,
+                                        s.Lambda.Tier, s.Lambda.Domain),
                        s.Lambda.LastSeen,
                        s.Lambda.Modified));
 

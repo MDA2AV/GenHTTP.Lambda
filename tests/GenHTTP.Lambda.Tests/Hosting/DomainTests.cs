@@ -185,6 +185,47 @@ public sealed class DomainTests
 
     #endregion
 
+    #region Linking to it
+
+    [TestMethod]
+    public async Task TheLambdaIsLinkedToAtItsDomainWhileItIsServed()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await ServeAsync(fixture, "shop");
+
+        var served = await ReadAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual($"https://{Domain}/", served.Address);
+        Assert.AreEqual("/lambda/shop/", served.PublicPath, "the path is still where it answers on the platform");
+
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Free);
+
+        Assert.AreEqual("/lambda/shop/", (await ReadAsync(fixture, lambda.PrivateKey)).Address, "a domain that is not served is no place to send anybody");
+    }
+
+    [TestMethod]
+    public async Task TheShowcaseLinksToTheDomain()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await ServeAsync(fixture, "shop");
+
+        using (var saved = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/showcase",
+                                                   new ShowcaseRequest("Shop", "Things to buy.", Convert.ToBase64String("GIF89a-and-then-some"u8.ToArray()))))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, saved.StatusCode, await saved.Content.ReadAsStringAsync());
+        }
+
+        using var listing = await fixture.GetAsync("/api/v1/showcases/");
+
+        var entry = (await listing.GetContentAsync<ShowcaseListingResponse>()).Entries.Single();
+
+        Assert.AreEqual($"https://{Domain}/", entry.Path);
+    }
+
+    #endregion
+
     #region Configuring it
 
     [TestMethod]
@@ -421,6 +462,13 @@ public sealed class DomainTests
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, await response.Content.ReadAsStringAsync());
 
         return await response.GetContentAsync<DomainResponse>();
+    }
+
+    private static async Task<LambdaResponse> ReadAsync(LambdaFixture fixture, string privateKey)
+    {
+        using var response = await fixture.GetAsync($"/api/v1/lambdas/{privateKey}");
+
+        return await response.GetContentAsync<LambdaResponse>();
     }
 
     private static async Task<DomainResponse> DescribeAsync(LambdaFixture fixture, string privateKey)

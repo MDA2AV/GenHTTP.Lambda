@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 
+import { domainAddress } from '../address';
 import { ApiError, api, type DomainState } from '../api';
 import { Dialog } from '../components/Dialog';
 import { IconAlert, IconCheck, IconCopy, IconExternal, IconSpinner } from '../components/Icons';
+import { LambdaLink } from '../components/LambdaLink';
 import { useToast } from '../components/Toast';
 import type { Control } from './context';
 import { Section } from './ui';
@@ -134,10 +136,10 @@ export function DomainTab({ control }: { control: Control }) {
       hint={hint}
       actions={
         state.served && state.domain ? (
-          <a href={`https://${state.domain}/`} target="_blank" rel="noreferrer" className="btn-ghost !px-3 !py-1.5 text-[13px]">
+          <LambdaLink address={domainAddress(state.domain)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
             Open {state.domain}
             <IconExternal className="h-3.5 w-3.5" />
-          </a>
+          </LambdaLink>
         ) : undefined
       }
     >

@@ -116,7 +116,7 @@ export function Showcase() {
               <ShowcaseCard
                 title={entry.title}
                 description={entry.description}
-                publicKey={entry.publicKey}
+                address={entry.path}
                 image={entry.imagePath}
                 href={entry.path}
               />

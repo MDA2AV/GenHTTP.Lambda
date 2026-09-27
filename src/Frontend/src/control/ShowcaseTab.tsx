@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link } from 'react-router-dom';
 
+import { shownAddress } from '../address';
 import { ApiError, api, type OwnShowcase } from '../api';
 import { Dialog } from '../components/Dialog';
 import { IconAlert, IconExternal, IconSpinner, IconUpload } from '../components/Icons';
@@ -311,11 +312,11 @@ export function ShowcaseTab({ control }: { control: Control }) {
             <ShowcaseCard
               title={trimmedTitle}
               description={trimmedDescription}
-              publicKey={lambda.publicKey}
+              address={lambda.address}
               image={preview}
             />
             <p className="mt-3 text-[13px] text-slate-500">
-              This is the card visitors see. It opens <span className="font-mono">/lambda/{lambda.publicKey}/</span>.
+              This is the card visitors see. It opens <span className="font-mono">{shownAddress(lambda.address)}</span>.
             </p>
           </aside>
         </div>

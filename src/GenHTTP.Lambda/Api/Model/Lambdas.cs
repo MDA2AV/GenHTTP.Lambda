@@ -22,6 +22,7 @@ public sealed record UpdateLambdaRequest(string? PublicKey);
 /// <param name="KeptUntil">When it is removed unless used; absent when its tier keeps it</param>
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
 /// <param name="DomainServed">Whether it actually answers at that domain - it has one, and its tier includes it</param>
+/// <param name="Address">Where to link to it: its domain while that is served, its path otherwise</param>
 public sealed record LambdaResponse(
     string PublicKey,
     string PrivateKey,
@@ -36,7 +37,8 @@ public sealed record LambdaResponse(
     DateTime? DeployedUntil,
     DateTime? KeptUntil,
     string? Domain,
-    bool DomainServed
+    bool DomainServed,
+    string Address
 );
 
 /// <summary>
@@ -63,7 +65,8 @@ public static class LambdaDescription
         lambda.DeployedUntil,
         lambda.KeptUntil,
         lambda.Domain,
-        Serves(lambda.Tier, lambda.Domain)
+        Serves(lambda.Tier, lambda.Domain),
+        Address(lambda.PublicKey, lambda.Tier, lambda.Domain)
     );
 
     /// <summary>
@@ -75,6 +78,14 @@ public static class LambdaDescription
     /// Whether a lambda of this tier with this domain is answering at it.
     /// </summary>
     public static bool Serves(string tier, string? domain) => domain != null && AllowsDomain(tier);
+
+    /// <summary>
+    /// Where anything linking to a lambda should point: the root of its own
+    /// domain while it answers there, since that is the address its visitors
+    /// know, and its path on the platform otherwise.
+    /// </summary>
+    public static string Address(string publicKey, string tier, string? domain)
+        => Serves(tier, domain) ? $"https://{domain}/" : $"/lambda/{publicKey}/";
 }
 
 /// <summary>
