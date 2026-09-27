@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { CopyField } from '../components/CopyField';
 import { ReportAbuse } from '../components/ReportAbuse';
 import { IconChat, IconChevronDown, IconMail } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
-import { PAGES, usePageMeta } from '../meta';
+import { useT } from '../i18n';
+import { Link } from '../i18n/links';
+import { usePublicPage } from '../meta';
 import { useOrigin } from '../site';
 
 const CONTACT_MAIL = 'solutions@genhttp.dev';
@@ -19,47 +21,21 @@ const DISCORD = 'https://discord.gg/PRkwKrnrB4';
  * keep coming back to change it.
  */
 
-/** How one app goes, from the sentence to the third change. */
-const STEPS = [
-  {
-    title: 'Say what you want',
-    body: 'Describe it in plain language, either to the agent on this site or to the one you already use. No code, no setup and no account required.',
-    image: '/media/prompt.webp',
-    alt: 'The build page with a request for a lunch poll typed in',
-  },
-  {
-    title: 'Get a working app and a link',
-    body: 'The app is built, deployed and returned as a public address you can share. It keeps its data - votes, scores, messages - so everyone who opens it sees the same state.',
-    image: '/media/app.webp',
-    alt: 'The finished lunch poll, open in a browser',
-  },
-  {
-    title: 'Keep improving it',
-    body: 'Every app comes with a private editor link. Hand it to your agent along with the next change, or open it yourself. Each change becomes a new version, and the address stays the same.',
-    image: '/media/editor.webp',
-    alt: 'The poll\'s control center: its versions, each with what was asked for, what it changed and the difference to the one before',
-  },
-];
+/** The pictures of the three steps, in the order the words are in. */
+const STEP_IMAGES = ['/media/prompt.webp', '/media/app.webp', '/media/editor.webp'];
 
-/** Where to paste the address, for the agents people actually have. */
-const AGENTS = [
-  {
-    name: 'Claude on the web or desktop',
-    how: 'Open Settings, then Connectors, and choose Add custom connector. Paste the address above - no API key or sign-in required.',
-  },
-  {
-    name: 'Claude Code',
-    how: 'Run this once in a terminal:',
-    command: (origin: string) => `claude mcp add --transport http genhttp ${origin}/mcp`,
-  },
-  {
-    name: 'Other MCP clients',
-    how: 'Cursor, VS Code, Codex and other MCP clients support remote servers. Configure them with the same address.',
-  },
+/** What each agent is set up with, beside its words; only Claude Code has a command. */
+const AGENT_COMMANDS: (((origin: string) => string) | undefined)[] = [
+  undefined,
+  (origin) => `claude mcp add --transport http genhttp ${origin}/mcp`,
+  undefined,
 ];
 
 export function Landing() {
-  usePageMeta(PAGES['/']);
+  usePublicPage('/');
+
+  const t = useT();
+  const said = t.landing;
 
   const location = useLocation();
   const rest = useRef<HTMLDivElement>(null);
@@ -111,25 +87,23 @@ export function Landing() {
       <section className="snap-stop relative z-10 -mt-[3.75rem] flex min-h-screen flex-col justify-center px-5 pb-24 pt-[3.75rem]">
         <div className="relative mx-auto w-full max-w-4xl text-center">
           <p className="rise text-xs font-medium uppercase tracking-[0.2em] text-accent-600 dark:text-accent-400">
-            An agentic coding platform
+            {said.eyebrow}
           </p>
 
           <h1
             className="rise mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
             style={{ animationDelay: '60ms' }}
           >
-            Describe an app.
+            {said.headline}
             <br />
-            <span className="text-accent-700 dark:text-accent-400">Your agent puts it online.</span>
+            <span className="text-accent-700 dark:text-accent-400">{said.headlineAccent}</span>
           </h1>
 
           <p
             className="rise mx-auto mt-5 max-w-2xl text-base leading-relaxed text-grey-800 sm:mt-7 sm:text-lg dark:text-grey-200"
             style={{ animationDelay: '120ms' }}
           >
-            Polls, guestbooks, leaderboards, small shops. Describe what you need to our agent or to the one
-            you already use, and receive a working app with a shareable link. Your app stays editable, so you
-            can keep refining it long after the first version.
+            {said.intro}
           </p>
 
           <div
@@ -137,7 +111,7 @@ export function Landing() {
             style={{ animationDelay: '200ms' }}
           >
             <Link to="/build" className="btn-primary px-7 py-3.5 text-base">
-              Build something
+              {said.build}
             </Link>
 
             <button
@@ -145,7 +119,7 @@ export function Landing() {
               onClick={() => agents.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               className="btn-ghost px-5 py-3.5 text-base"
             >
-              Use your own agent
+              {said.ownAgent}
             </button>
           </div>
 
@@ -153,7 +127,7 @@ export function Landing() {
             className="rise mt-5 text-sm text-grey-700 dark:text-grey-300"
             style={{ animationDelay: '260ms' }}
           >
-            Free to use. No account, nothing to install.
+            {said.free}
           </p>
         </div>
 
@@ -164,7 +138,7 @@ export function Landing() {
           className="rise group absolute inset-x-0 bottom-8 mx-auto flex w-fit flex-col items-center gap-2 text-xs text-grey-700 hover:text-accent-500 dark:text-grey-300 dark:hover:text-accent-400"
           style={{ animationDelay: '320ms' }}
         >
-          See it in action
+          {said.seeIt}
           <IconChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
         </button>
       </section>
@@ -174,11 +148,10 @@ export function Landing() {
       <div ref={rest} className="snap-stop relative z-10 mx-auto w-full max-w-5xl px-5 pb-24 pt-10">
         <Reveal>
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
-            From a sentence to a live app
+            {said.videoTitle}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            A private browser window, no account, and a single request on the build page - followed by the
-            finished app, opened from its link just as any visitor would.
+            {said.videoText}
           </p>
         </Reveal>
 
@@ -197,14 +170,14 @@ export function Landing() {
             />
           </figure>
           <p className="mt-3 text-center text-xs text-grey-500">
-            The build is shown sped up. Everything else is in real time.
+            {said.videoNote}
           </p>
         </Reveal>
 
         <Reveal delay={200}>
           <div className="mt-8 flex justify-center">
             <Link to="/build" className="btn-primary px-6 py-3">
-              Try it yourself
+              {said.tryIt}
             </Link>
           </div>
         </Reveal>
@@ -215,20 +188,19 @@ export function Landing() {
       <div className="snap-stop relative z-10 mx-auto w-full max-w-6xl px-5 pb-24 pt-10">
         <Reveal>
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
-            Not a one-shot
+            {said.oneShotTitle}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            Most generators produce a result and leave you with it. Here the app keeps running where it
-            was built, so you and your agent can continue working on it.
+            {said.oneShotText}
           </p>
         </Reveal>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {STEPS.map((step, i) => (
+          {said.steps.map((step, i) => (
             <Reveal key={step.title} delay={100 + i * 90}>
               <figure className="surface flex h-full flex-col overflow-hidden rounded-xl">
                 <img
-                  src={step.image}
+                  src={STEP_IMAGES[i]}
                   alt={step.alt}
                   loading="lazy"
                   className="aspect-[16/10] w-full border-b border-grey-300 object-cover object-top dark:border-ink-800"
@@ -248,14 +220,12 @@ export function Landing() {
         {/* what the third step sounds like, since it is the part people do not expect */}
         <Reveal delay={200}>
           <div className="mx-auto mt-10 max-w-2xl space-y-3">
-            <p className="text-center text-xs uppercase tracking-wide text-grey-500">A week later</p>
+            <p className="text-center text-xs uppercase tracking-wide text-grey-500">{said.weekLater}</p>
             <div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-br-sm bg-accent-500 px-4 py-2.5 text-sm text-white">
-              Here is the editor link for my lunch poll. Please close voting at 11 on Fridays and show
-              the winner at the top.
+              {said.weekAsk}
             </div>
             <div className="surface w-fit max-w-[90%] rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm text-grey-800 dark:text-grey-200">
-              Done. Version 4 is live at the same address, and version 3 is still available if you
-              want to roll back.
+              {said.weekAnswer}
             </div>
           </div>
         </Reveal>
@@ -270,11 +240,10 @@ export function Landing() {
       >
         <Reveal>
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
-            Bring your favourite agent
+            {said.agentsTitle}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            Already working with Claude or another assistant? Connect it to this address and it can
-            build, deploy and update apps here - directly from the conversation you already have open.
+            {said.agentsText}
           </p>
         </Reveal>
 
@@ -285,14 +254,14 @@ export function Landing() {
         </Reveal>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {AGENTS.map((agent, i) => (
+          {said.agents.map((agent, i) => (
             <Reveal key={agent.name} delay={160 + i * 80}>
               <div className="surface h-full rounded-xl p-5">
                 <h3 className="font-semibold">{agent.name}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{agent.how}</p>
-                {agent.command && (
+                {AGENT_COMMANDS[i] && (
                   <pre className="mt-3 whitespace-pre-wrap break-all rounded-md bg-ink-950 p-3 text-xs text-grey-200">
-                    {agent.command(origin)}
+                    {AGENT_COMMANDS[i](origin)}
                   </pre>
                 )}
               </div>
@@ -302,7 +271,7 @@ export function Landing() {
 
         <Reveal delay={300}>
           <p className="mt-6 text-center text-sm text-grey-700 dark:text-grey-300">
-            Then simply ask: <em>build a sign-up sheet for our team event and put it online</em>.
+            {said.thenAsk((text) => <em>{text}</em>)}
           </p>
         </Reveal>
       </div>
@@ -311,10 +280,9 @@ export function Landing() {
 
       <div className="snap-stop relative z-10 mx-auto w-full max-w-4xl px-5 pb-16 pt-10">
         <Reveal>
-          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">Talk to us</h2>
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">{said.contactTitle}</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-[15px] leading-relaxed text-grey-700 dark:text-grey-300">
-            Need help, planning something larger, or looking for a solution built for you? We would be
-            glad to hear from you.
+            {said.contactText}
           </p>
         </Reveal>
 
@@ -326,10 +294,8 @@ export function Landing() {
             >
               <IconMail className="mt-0.5 h-6 w-6 shrink-0 text-accent-500 dark:text-accent-400" />
               <span>
-                <span className="block font-semibold">Email us</span>
-                <span className="mt-1 block text-sm text-grey-700 dark:text-grey-300">
-                  For projects, enquiries and anything you would prefer to discuss privately.
-                </span>
+                <span className="block font-semibold">{said.mailTitle}</span>
+                <span className="mt-1 block text-sm text-grey-700 dark:text-grey-300">{said.mailText}</span>
                 <span className="mt-2 block text-sm text-accent-500 group-hover:underline dark:text-accent-400">
                   {CONTACT_MAIL}
                 </span>
@@ -346,12 +312,10 @@ export function Landing() {
             >
               <IconChat className="mt-0.5 h-6 w-6 shrink-0 text-accent-500 dark:text-accent-400" />
               <span>
-                <span className="block font-semibold">Join the Discord</span>
-                <span className="mt-1 block text-sm text-grey-700 dark:text-grey-300">
-                  Share what you have built, get help with the next step, and talk directly with the team.
-                </span>
+                <span className="block font-semibold">{said.discordTitle}</span>
+                <span className="mt-1 block text-sm text-grey-700 dark:text-grey-300">{said.discordText}</span>
                 <span className="mt-2 block text-sm text-accent-500 group-hover:underline dark:text-accent-400">
-                  The GenHTTP Discord
+                  {said.discordLink}
                 </span>
               </span>
             </a>
@@ -367,18 +331,18 @@ export function Landing() {
           <ReportAbuse />
 
           <Link to="/terms" className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400">
-            Terms of service
+            {said.terms}
           </Link>
 
           <Link to="/editor/create" className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400">
-            Write the code yourself
+            {said.writeCode}
           </Link>
 
           <a
             href={`mailto:${CONTACT_MAIL}`}
             className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
           >
-            Contact
+            {said.contact}
           </a>
 
           <a
@@ -392,7 +356,7 @@ export function Landing() {
 
           {/* the header carries this on anything wider than a phone */}
           <Link to="/admin" className="text-slate-500 hover:text-accent-600 hover:underline sm:hidden dark:hover:text-accent-400">
-            Admin
+            {t.shell.admin}
           </Link>
         </footer>
       </div>

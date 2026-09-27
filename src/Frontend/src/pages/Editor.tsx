@@ -19,6 +19,8 @@ import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
 import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui';
+import { SharedWordsContext } from '../control/words';
+import { useEditorT } from '../i18n';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 import { usePageMeta } from '../meta';
@@ -29,17 +31,7 @@ interface Props {
 
 type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
 
-const SECTIONS: { id: SectionId; title: string }[] = [
-  { id: 'overview', title: 'Overview' },
-  { id: 'showcase', title: 'Showcase' },
-  { id: 'domain', title: 'Domain' },
-  { id: 'files', title: 'Files' },
-  { id: 'versions', title: 'Versions' },
-  { id: 'deployments', title: 'Deployments' },
-  { id: 'stats', title: 'Stats' },
-  { id: 'logs', title: 'Logs' },
-  { id: 'code', title: 'Code' },
-];
+const SECTIONS: SectionId[] = ['overview', 'showcase', 'domain', 'files', 'versions', 'deployments', 'stats', 'logs', 'code'];
 
 /**
  * The control center of one lambda.
@@ -51,7 +43,10 @@ const SECTIONS: { id: SectionId; title: string }[] = [
  * screen is what is worth looking at.
  */
 export function Editor({ theme }: Props) {
-  usePageMeta({ title: 'Editor', index: false });
+  const t = useEditorT();
+  const said = t.frame;
+
+  usePageMeta({ title: said.title, index: false });
 
   const { privateKey = '', '*': rest = '' } = useParams();
   const navigate = useNavigate();
@@ -59,7 +54,7 @@ export function Editor({ theme }: Props) {
   const toast = useToast();
 
   const segment = rest.split('/')[0];
-  const section: SectionId = segment === 'edit' ? 'code' : (SECTIONS.find((s) => s.id === segment)?.id ?? 'overview');
+  const section: SectionId = segment === 'edit' ? 'code' : (SECTIONS.find((id) => id === segment) ?? 'overview');
 
   const [lambda, setLambda] = useState<Lambda | null>(null);
   const [summary, setSummary] = useState<LambdaSummary | null>(null);
@@ -117,14 +112,14 @@ export function Editor({ theme }: Props) {
 
     refresh().catch((error) => {
       if (alive) {
-        setFailure(error instanceof ApiError ? error.message : 'This lambda could not be loaded.');
+        setFailure(error instanceof ApiError ? error.message : said.loadFailed);
       }
     });
 
     return () => {
       alive = false;
     };
-  }, [refresh]);
+  }, [refresh, said]);
 
   /*
    * An agent can deploy while this is open, so the lambda is read again every
@@ -184,16 +179,16 @@ export function Editor({ theme }: Props) {
           return false;
         }
 
-        toast(`Version ${result.lambda?.activeVersion ?? version} is online.`, 'success');
+        toast(said.online(result.lambda?.activeVersion ?? version ?? ''), 'success');
         return true;
       } catch (error) {
-        toast(error instanceof ApiError ? error.message : 'The lambda could not be deployed.', 'error');
+        toast(error instanceof ApiError ? error.message : said.deployFailed, 'error');
         return false;
       } finally {
         setBusy(null);
       }
     },
-    [privateKey, refresh, toast],
+    [privateKey, refresh, toast, said],
   );
 
   const undeploy = useCallback(async () => {
@@ -202,25 +197,25 @@ export function Editor({ theme }: Props) {
     try {
       setLambda(await api.undeploy(privateKey));
       await refresh();
-      toast('Taken offline. The code is still here.');
+      toast(said.offline);
     } catch (error) {
-      toast(error instanceof ApiError ? error.message : 'The lambda could not be taken offline.', 'error');
+      toast(error instanceof ApiError ? error.message : said.offlineFailed, 'error');
     } finally {
       setBusy(null);
     }
-  }, [privateKey, refresh, toast]);
+  }, [privateKey, refresh, toast, said]);
 
   const go = useCallback(
     (to: string) => {
       if (section === 'code' && dirty.current && !to.startsWith(`${base}/code`)
-          && !window.confirm('Your unsaved changes in the code will be lost. Leave anyway?')) {
+          && !window.confirm(said.leave)) {
         return;
       }
 
       dirty.current = false;
       navigate(to);
     },
-    [base, navigate, section],
+    [base, navigate, section, said],
   );
 
   /*
@@ -250,10 +245,10 @@ export function Editor({ theme }: Props) {
         <div className="flex h-11 w-11 items-center justify-center bg-red-500/10 text-red-500">
           <IconAlert className="h-5 w-5" />
         </div>
-        <h1 className="mt-5 text-2xl font-bold tracking-tight">This link does not open anything</h1>
+        <h1 className="mt-5 text-2xl font-bold tracking-tight">{said.nothingTitle}</h1>
         <p className="mt-3 text-[15px] text-slate-600 dark:text-slate-400">{failure}</p>
         <button type="button" onClick={() => navigate('/editor/create')} className="btn-primary mt-8 px-5 py-2.5">
-          Create a new lambda
+          {said.createNew}
         </button>
       </div>
     );
@@ -263,7 +258,7 @@ export function Editor({ theme }: Props) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 text-sm text-slate-500">
         <IconSpinner />
-        Loading your lambda…
+        {said.loading}
       </div>
     );
   }
@@ -299,6 +294,7 @@ export function Editor({ theme }: Props) {
    * where it is - except in the code, which is an editor and fills the height.
    */
   return (
+    <SharedWordsContext.Provider value={t.shared}>
     <div className={code ? 'flex min-h-0 flex-1 flex-col' : 'min-h-0 flex-1 overflow-y-auto'}>
     <div className={`mx-auto flex w-full max-w-[max(80rem,90%)] flex-col md:flex-row md:gap-6 md:px-6 ${code ? 'min-h-0 flex-1' : ''}`}>
       <aside className="shrink-0 border-b border-slate-200 dark:border-ink-800 md:sticky md:top-0 md:flex md:w-56 md:flex-col md:self-start md:border-b-0">
@@ -314,36 +310,36 @@ export function Editor({ theme }: Props) {
               </div>
             </div>
 
-            <Menu label="More actions" align="left">
+            <Menu label={said.moreActions} align="left">
               {(close) => (
                 <>
                   {live && !demo && (
                     <button type="button" role="menuitem" className={menuItem} disabled={busy !== null}
                             onClick={() => { close(); deploy(lambda.activeVersion!); }}>
-                      Redeploy version {lambda.activeVersion}
+                      {said.redeploy(lambda.activeVersion!)}
                     </button>
                   )}
                   {live && !demo && (
                     <button type="button" role="menuitem" className={menuItem} disabled={busy !== null}
                             onClick={() => { close(); undeploy(); }}>
-                      Take offline
+                      {said.takeOffline}
                     </button>
                   )}
                   {live && !demo && menuRule}
-                  <CopyItem value={editorUrl} label={demo ? 'Copy the link' : 'Copy the private link'} onDone={close} />
+                  <CopyItem value={editorUrl} label={demo ? said.copyLink : said.copyPrivate} title={said.privateLink} onDone={close} />
                   {!demo && (
                     <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); setRenaming(true); }}>
-                      Change the address
+                      {said.rename}
                     </button>
                   )}
                   <a role="menuitem" href={api.exportUrl(privateKey)} className={menuItem} onClick={close}>
-                    Download as a .NET project
+                    {said.download}
                   </a>
                   {!demo && menuRule}
                   {!demo && (
                     <button type="button" role="menuitem" className={`${menuItem} text-red-500`}
                             onClick={() => { close(); setRemoving(true); }}>
-                      Delete this lambda
+                      {said.delete}
                     </button>
                   )}
                 </>
@@ -367,19 +363,19 @@ export function Editor({ theme }: Props) {
               title={versions[0]?.change ?? undefined}
             >
               {busy === 'deploy' ? <IconSpinner /> : <IconPlay />}
-              Deploy version {latest}
+              {said.deploy(latest)}
             </button>
           )}
         </div>
 
-        <nav aria-label="Sections" className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-          {SECTIONS.filter((item) => !absent(item.id)).map((item) => {
-            const to = item.id === 'overview' ? base : `${base}/${item.id}`;
-            const current = section === item.id;
+        <nav aria-label={said.sectionsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
+          {SECTIONS.filter((id) => !absent(id)).map((id) => {
+            const to = id === 'overview' ? base : `${base}/${id}`;
+            const current = section === id;
 
             return (
               <Link
-                key={item.id}
+                key={id}
                 to={to}
                 onClick={(event) => {
                   event.preventDefault();
@@ -399,12 +395,12 @@ export function Editor({ theme }: Props) {
                     : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
               >
-                {item.title}
-                {item.id === 'versions' && versions.length > 0 && (
+                {said.sections[id]}
+                {id === 'versions' && versions.length > 0 && (
                   <span className="ml-auto text-xs tabular-nums text-slate-400">{versions.length}</span>
                 )}
-                {item.id === 'logs' && problems && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title="Something went wrong recently" />
+                {id === 'logs' && problems && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
                 )}
               </Link>
             );
@@ -415,20 +411,22 @@ export function Editor({ theme }: Props) {
       <main className={`flex min-w-0 flex-1 flex-col ${code ? 'min-h-0' : ''}`}>
         {demo && (
           <div className="mx-4 mt-6 border border-accent-500/30 bg-accent-500/5 px-4 py-3 text-sm md:mx-0">
-            <p className="font-medium">A demo, kept online by this installation and read only.</p>
+            <p className="font-medium">{said.demoTitle}</p>
             <p className="mt-1 text-slate-600 dark:text-slate-400">
-              Read its code, its history, what it stores and its logs - that is what it is here for. To change
-              it, <Link to={`/editor/create?from=${encodeURIComponent(lambda.publicKey)}`} className="text-accent-500 hover:underline">start
-              a lambda of your own from it</Link>.
+              {said.demo((text) => (
+                <Link to={`/editor/create?from=${encodeURIComponent(lambda.publicKey)}`} className="text-accent-500 hover:underline">
+                  {text}
+                </Link>
+              ))}
             </p>
           </div>
         )}
         {welcome && !demo && (
           <div className="mx-4 mt-6 border border-accent-500/30 bg-accent-500/5 px-4 py-3 md:mx-0">
             <div className="flex items-start justify-between gap-4">
-              <p className="text-sm font-medium">Keep this link. It is the only way back into this lambda.</p>
+              <p className="text-sm font-medium">{said.keep}</p>
               <button type="button" onClick={() => setWelcome(false)} className="text-xs text-slate-500 hover:underline">
-                Got it
+                {said.gotIt}
               </button>
             </div>
             <div className="mt-2 max-w-xl">
@@ -461,7 +459,7 @@ export function Editor({ theme }: Props) {
     </div>
 
       <Dialog
-        title={rejection?.version != null ? `Version ${rejection.version} did not go online` : 'The deployment was refused'}
+        title={rejection?.version != null ? said.rejected(rejection.version) : said.refused}
         open={rejection !== null}
         onClose={() => setRejection(null)}
         footer={
@@ -476,18 +474,16 @@ export function Editor({ theme }: Props) {
                   control.edit(version);
                 }}
               >
-                Open the code
+                {said.openCode}
               </button>
             )}
             <button type="button" onClick={() => setRejection(null)} className="btn-primary">
-              Close
+              {said.close}
             </button>
           </>
         }
       >
-        <p className="text-slate-600 dark:text-slate-400">
-          It does not compile. Whatever was online before is still online.
-        </p>
+        <p className="text-slate-600 dark:text-slate-400">{said.notCompiling}</p>
         <div className="max-h-72 overflow-y-auto border border-slate-200 dark:border-ink-800">
           <Diagnostics diagnostics={rejection?.diagnostics ?? []} state="idle" onSelect={() => undefined} />
         </div>
@@ -501,19 +497,19 @@ export function Editor({ theme }: Props) {
           setLambda(updated);
           setRenaming(false);
           refresh().catch(() => undefined);
-          toast(`Now at ${platformPath(updated.publicKey)}.`);
+          toast(said.moved(platformPath(updated.publicKey)));
         }}
         privateKey={privateKey}
       />
 
       <Dialog
-        title="Delete this lambda?"
+        title={said.deleteTitle}
         open={removing}
         onClose={() => setRemoving(false)}
         footer={
           <>
             <button type="button" onClick={() => setRemoving(false)} className="btn-ghost">
-              Cancel
+              {said.cancel}
             </button>
             <button
               type="button"
@@ -523,21 +519,21 @@ export function Editor({ theme }: Props) {
                   await api.remove(privateKey);
                   navigate('/', { replace: true });
                 } catch (error) {
-                  toast(error instanceof ApiError ? error.message : 'The lambda could not be deleted.', 'error');
+                  toast(error instanceof ApiError ? error.message : said.deleteFailed, 'error');
                 }
               }}
             >
-              Delete for good
+              {said.deleteForGood}
             </button>
           </>
         }
       >
         <p className="text-slate-600 dark:text-slate-400">
-          Every version, its files, its history and the address <code className="font-mono">{lambda.publicKey}</code> go
-          with it. This cannot be undone.
+          {said.deleteText(<code className="font-mono">{lambda.publicKey}</code>)}
         </p>
       </Dialog>
     </div>
+    </SharedWordsContext.Provider>
   );
 }
 
@@ -547,6 +543,7 @@ export function Editor({ theme }: Props) {
  * compete with it.
  */
 function Address({ url, live, primary }: { url: string; live: boolean; primary: boolean }) {
+  const said = useEditorT().frame;
   const shown = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
   return (
@@ -569,7 +566,7 @@ function Address({ url, live, primary }: { url: string; live: boolean; primary: 
       <CopyButton value={url} />
       {live && (
         <a href={url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-           title="Open in a new tab" aria-label={`Open ${shown} in a new tab`}>
+           title={said.openInTab} aria-label={said.open(shown)}>
           <IconExternal className="h-3.5 w-3.5" />
         </a>
       )}
@@ -578,6 +575,7 @@ function Address({ url, live, primary }: { url: string; live: boolean; primary: 
 }
 
 function CopyButton({ value }: { value: string }) {
+  const said = useEditorT().frame;
   const [copied, setCopied] = useState(false);
 
   return (
@@ -593,15 +591,15 @@ function CopyButton({ value }: { value: string }) {
         }
       }}
       className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-      title="Copy the address"
-      aria-label="Copy the address"
+      title={said.copyAddress}
+      aria-label={said.copyAddress}
     >
       {copied ? <IconCheck className="h-3.5 w-3.5 text-emerald-500" /> : <IconCopy className="h-3.5 w-3.5" />}
     </button>
   );
 }
 
-function CopyItem({ value, label, onDone }: { value: string; label: string; onDone: () => void }) {
+function CopyItem({ value, label, title, onDone }: { value: string; label: string; title: string; onDone: () => void }) {
   return (
     <button
       type="button"
@@ -616,7 +614,7 @@ function CopyItem({ value, label, onDone }: { value: string; label: string; onDo
 
         onDone();
       }}
-      title="Anyone with this link can change the lambda. Keep it private."
+      title={title}
     >
       {label}
     </button>
@@ -636,6 +634,7 @@ function RenameDialog({
   onClose: () => void;
   onRenamed: (lambda: Lambda) => void;
 }) {
+  const said = useEditorT().frame;
   const [value, setValue] = useState(current);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
@@ -654,7 +653,7 @@ function RenameDialog({
     try {
       onRenamed(await api.changeKey(privateKey, value.trim()));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'The address could not be changed.');
+      setError(caught instanceof ApiError ? caught.message : said.renameFailed);
     } finally {
       setWorking(false);
     }
@@ -662,24 +661,22 @@ function RenameDialog({
 
   return (
     <Dialog
-      title="Change the address"
+      title={said.rename}
       open={open}
       onClose={onClose}
       footer={
         <>
           <button type="button" onClick={onClose} className="btn-ghost">
-            Cancel
+            {said.cancel}
           </button>
           <button type="button" onClick={submit} disabled={working} className="btn-primary">
             {working && <IconSpinner />}
-            Move it
+            {said.moveIt}
           </button>
         </>
       }
     >
-      <p className="text-slate-600 dark:text-slate-400">
-        The old address stops working right away, so update anything that links to it.
-      </p>
+      <p className="text-slate-600 dark:text-slate-400">{said.renameText}</p>
 
       <div className="flex items-center gap-2">
         <span className="shrink-0 font-mono text-sm text-slate-500">/lambda/</span>

@@ -1,5 +1,7 @@
 import { useId, useState } from 'react';
 
+import { useShared } from '../control/words';
+
 export interface Series {
   label: string;
   /** Light and dark steps, each validated against its own surface. */
@@ -37,6 +39,7 @@ const PAD = { top: 12, right: 12, bottom: 22, left: 56 };
  */
 export function Chart({ title, hint, labels, series, format, dark, height = 190, shape = 'line' }: Props) {
   const clip = useId();
+  const words = useShared();
   const [hover, setHover] = useState<number | null>(null);
   const [table, setTable] = useState(false);
 
@@ -72,7 +75,7 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
     return (
       <figure className="surface p-4">
         <Caption title={title} hint={hint} />
-        <p className="py-10 text-center text-sm text-slate-500">No readings yet.</p>
+        <p className="py-10 text-center text-sm text-slate-500">{words.chart.none}</p>
       </figure>
     );
   }
@@ -86,7 +89,7 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
           onClick={() => setTable((open) => !open)}
           className="shrink-0 text-xs text-accent-500 hover:underline dark:text-accent-400"
         >
-          {table ? 'Show chart' : 'Show values'}
+          {table ? words.chart.showChart : words.chart.showValues}
         </button>
       </div>
 
@@ -106,7 +109,7 @@ export function Chart({ title, hint, labels, series, format, dark, height = 190,
           <table className="w-full text-left text-xs">
             <thead className="sticky top-0 bg-white text-slate-500 dark:bg-ink-900">
               <tr>
-                <th className="py-1 pr-3 font-medium">Time</th>
+                <th className="py-1 pr-3 font-medium">{words.chart.time}</th>
                 {series.map((s) => (
                   <th key={s.label} className="py-1 pr-3 font-medium">{s.label}</th>
                 ))}

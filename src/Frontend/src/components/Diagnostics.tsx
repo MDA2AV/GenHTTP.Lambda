@@ -1,4 +1,5 @@
 import type { Diagnostic } from '../api';
+import { useShared } from '../control/words';
 import { IconAlert, IconCheck } from './Icons';
 
 interface Props {
@@ -9,16 +10,18 @@ interface Props {
 
 /** The build output of the last check or deployment. */
 export function Diagnostics({ diagnostics, state, onSelect }: Props) {
+  const words = useShared().diagnostics;
+
   if (diagnostics.length === 0) {
     return (
       <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-500">
         {state === 'clean' ? (
           <>
             <IconCheck className="h-4 w-4 text-emerald-500" />
-            The code compiles.
+            {words.compiles}
           </>
         ) : (
-          'No messages yet. Check or deploy to compile your code.'
+          words.none
         )}
       </div>
     );
@@ -44,7 +47,7 @@ export function Diagnostics({ diagnostics, state, onSelect }: Props) {
                 <span className="break-words">{diagnostic.message}</span>
                 <span className="ml-2 whitespace-nowrap font-mono text-xs text-slate-500">
                   {diagnostic.id}
-                  {diagnostic.line > 0 && ` · line ${diagnostic.line}`}
+                  {diagnostic.line > 0 && ` · ${words.line(diagnostic.line)}`}
                 </span>
               </span>
             </button>

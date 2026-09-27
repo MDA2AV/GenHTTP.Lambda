@@ -18,8 +18,9 @@ namespace GenHTTP.Lambda.Web;
 /// runs no script reads what the page says rather than an empty element.
 /// </summary>
 /// <remarks>
-/// The pages are rendered when the frontend is built, into <c>prerender.json</c>
-/// next to the index page (see <c>src/Frontend/prerender.mjs</c>). What the build
+/// The pages are rendered when the frontend is built, once for every language,
+/// into <c>prerender.json</c> next to the index page (see
+/// <c>src/Frontend/prerender.mjs</c>). What the build
 /// cannot know - the address the page is answered from, how long this
 /// installation keeps a lambda, what is in the showcase right now - it renders
 /// as placeholders, which are filled in here. The same values go along with
@@ -31,6 +32,8 @@ public sealed partial class SitePrerender
     private const string Root = "<div id=\"root\"></div>";
 
     private const string Showcase = "/showcase";
+
+    private const string Total = "__LAMBDA_SHOWCASE_TOTAL__";
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -69,10 +72,10 @@ public sealed partial class SitePrerender
     #region Functionality
 
     /// <summary>
-    /// The index page with the content of the page at the given path in it,
-    /// or as it is if there is none to put there.
+    /// The index page with the content of the given page in it, or as it is if
+    /// there is none to put there.
     /// </summary>
-    public async ValueTask<string> RenderAsync(string markup, string path, IRequest request)
+    public async ValueTask<string> RenderAsync(string markup, SitePage page, IRequest request)
     {
         var prerendered = Read();
 
@@ -98,14 +101,14 @@ public sealed partial class SitePrerender
         string content;
 
         // the showcase as it is right now, or as it is drawn while it loads
-        if (path == Showcase && await ListShowcaseAsync() is { } listing && RenderShowcase(prerendered, listing, facts) is { } showcase)
+        if (page.Path == Showcase && await ListShowcaseAsync() is { } listing && RenderShowcase(prerendered, page.Language, listing, facts) is { } showcase)
         {
             content = showcase;
             facts = facts with { Showcase = listing };
         }
-        else if (prerendered.Pages.TryGetValue(path, out var page))
+        else if (prerendered.Pages.TryGetValue(SiteLanguages.In(page.Language, page.Path), out var rendered))
         {
-            content = Fill(page, facts);
+            content = Fill(rendered, facts);
         }
         else
         {
@@ -120,25 +123,35 @@ public sealed partial class SitePrerender
     }
 
     /// <summary>
-    /// The showcase with the entries of its first page in it, or nothing if the
-    /// build did not render the shape this listing takes.
+    /// The showcase in a language with the entries of its first page in it, or
+    /// nothing if the build did not render the shape this listing takes.
     /// </summary>
-    private static string? RenderShowcase(Prerendered prerendered, ShowcaseListingResponse listing, SiteFacts facts)
+    /// <remarks>
+    /// A single lambda is a shape of its own, since every language counts one
+    /// in other words than several - the words are the build's, and only the
+    /// number is written in here.
+    /// </remarks>
+    private static string? RenderShowcase(Prerendered prerendered, string language, ShowcaseListingResponse listing, SiteFacts facts)
     {
-        var shape = listing.Entries.Count == 0 ? "empty" : listing.Next == null ? "complete" : "partial";
+        var shape = listing.Entries.Count == 0 ? "empty"
+                  : listing.Next != null ? "partial"
+                  : listing.Total == 1 ? "one"
+                  : "complete";
 
-        if (!prerendered.Showcase.TryGetValue(shape, out var page) || (shape != "empty" && !page.Contains(prerendered.Entry, StringComparison.Ordinal)))
+        if (!prerendered.Showcase.TryGetValue(language, out var shapes) || !shapes.TryGetValue(shape, out var page)
+            || !prerendered.Entry.TryGetValue(language, out var entry)
+            || (shape != "empty" && !page.Contains(entry, StringComparison.Ordinal)))
         {
             return null;
         }
 
         // the site's own placeholders first, so nothing an owner wrote into an
         // entry is ever taken for one
-        page = Fill(page, facts).Replace("__LAMBDA_SHOWCASE_TOTAL__ lambdas", Counted(listing.Total), StringComparison.Ordinal);
+        page = Fill(page, facts).Replace(Total, listing.Total.ToString(), StringComparison.Ordinal);
 
-        var entries = string.Concat(listing.Entries.Select((entry, index) => RenderEntry(prerendered.Entry, entry, index)));
+        var entries = string.Concat(listing.Entries.Select((item, index) => RenderEntry(entry, item, index)));
 
-        return page.Replace(prerendered.Entry, entries, StringComparison.Ordinal);
+        return page.Replace(entry, entries, StringComparison.Ordinal);
     }
 
     private static string RenderEntry(string template, ShowcaseResponse entry, int index)
@@ -168,11 +181,6 @@ public sealed partial class SitePrerender
             "__LAMBDA_RETENTION_DAYS__" => facts.RetentionDays.ToString(),
             _ => match.Value
         });
-
-    /// <summary>
-    /// The same as <c>counted</c> on the showcase page.
-    /// </summary>
-    private static string Counted(int total) => total == 1 ? "1 lambda" : $"{total} lambdas";
 
     /// <summary>
     /// The same as <c>shownAddress</c> in the frontend: a domain bare, a path as it is.
@@ -229,11 +237,16 @@ public sealed partial class SitePrerender
 }
 
 /// <summary>
-/// What the frontend build rendered: every public page by its path, the
-/// showcase by the shape of its first page, and one entry of the showcase as
-/// it appears in there.
+/// What the frontend build rendered: every public page in every language by
+/// the path it has in that language, the showcase by language and by the shape
+/// of its first page, and one entry of the showcase by language, as it appears
+/// in there.
 /// </summary>
-public sealed record Prerendered(Dictionary<string, string> Pages, Dictionary<string, string> Showcase, string Entry);
+public sealed record Prerendered(
+    Dictionary<string, string> Pages,
+    Dictionary<string, Dictionary<string, string>> Showcase,
+    Dictionary<string, string> Entry
+);
 
 /// <summary>
 /// What the server knows and the build could not, as <c>SiteFacts</c> in <c>site.ts</c>.

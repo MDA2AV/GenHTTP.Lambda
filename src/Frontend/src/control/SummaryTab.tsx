@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import { IconAlert, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
+import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { ago, bytes, count, local, millis, percent, span } from './format';
 import { AgentMark, Ago, Figure, Meter, Quote, Section, Sparkline } from './ui';
@@ -10,14 +11,18 @@ import { AgentMark, Ago, Figure, Meter, Quote, Section, Sparkline } from './ui';
  * using it, is it failing, what changed last, and is there room left.
  */
 export function SummaryTab({ control }: { control: Control }) {
+  const t = useEditorT();
+  const said = t.summary;
+  const title = t.frame.sections.overview;
+
   const { lambda, summary } = control;
   const base = `/editor/${control.privateKey}`;
 
   if (!summary) {
     return (
-      <Section title="Overview">
+      <Section title={title}>
         <div className="flex items-center gap-2 py-10 text-sm text-slate-500">
-          <IconSpinner /> Reading how it is doing…
+          <IconSpinner /> {said.reading}
         </div>
       </Section>
     );
@@ -30,42 +35,33 @@ export function SummaryTab({ control }: { control: Control }) {
 
   return (
     <Section
-      title="Overview"
-      hint={
-        <>
-          Traffic is counted since the server last started ({ago(traffic.since)}).{' '}
-          {lambda.keptUntil
-            ? <>A lambda stays online while people use it, and is removed after {limits.retentionDays} days with no visits and no changes.</>
-            : <>This lambda is in the {lambda.tier} tier, which keeps it online and stored however quiet it gets.</>}
-        </>
-      }
+      title={title}
+      hint={said.hint(ago(traffic.since, t.shared), !!lambda.keptUntil, limits.retentionDays, lambda.tier)}
     >
       <p className="text-[15px]">
-        {live ? (
-          <>
-            Online for <strong className="font-semibold">{activation ? span(activation.seconds) : 'a while'}</strong>,
-            serving version {lambda.activeVersion}.
-          </>
-        ) : latest ? (
-          'Offline. Nothing is being served until a version is deployed.'
-        ) : (
-          'Nothing has been written yet.'
-        )}
+        {live
+          ? said.onlineFor(
+              (fallback) => <strong className="font-semibold">{activation ? span(activation.seconds, t.shared) : fallback}</strong>,
+              lambda.activeVersion!,
+            )
+          : latest
+            ? said.offline
+            : said.nothing}
       </p>
 
       <div className="surface mt-5 grid grid-cols-2 gap-6 p-5 lg:grid-cols-4">
         <div>
-          <Figure value={count(traffic.dayRequests)} label="requests today" title={`${traffic.hourRequests} in the last hour`} />
-          <div className="mt-2"><Sparkline values={traffic.hourly} label="Requests per hour over the last day" /></div>
+          <Figure value={count(traffic.dayRequests)} label={said.requestsToday} title={said.lastHour(traffic.hourRequests)} />
+          <div className="mt-2"><Sparkline values={traffic.hourly} label={said.hourly} /></div>
         </div>
         <Figure
           value={traffic.dayRequests > 0 ? percent(traffic.dayFailed, traffic.dayRequests) : '-'}
-          label="failed"
+          label={said.failed}
           tone={errorTone}
-          title={`${traffic.dayFailed} server errors, ${traffic.dayRejected} not found or refused, over the last day`}
+          title={said.failedTitle(traffic.dayFailed, traffic.dayRejected)}
         />
-        <Figure value={traffic.dayRequests > 0 ? millis(traffic.averageMillis) : '-'} label="to answer, on average" />
-        <Figure value={traffic.lastSeen ? ago(traffic.lastSeen) : 'none yet'} label="last visit" />
+        <Figure value={traffic.dayRequests > 0 ? millis(traffic.averageMillis) : '-'} label={said.average} />
+        <Figure value={traffic.lastSeen ? ago(traffic.lastSeen, t.shared) : said.noneYet} label={said.lastVisit} />
       </div>
 
       {summary.recentProblems.length > 0 && (
@@ -73,9 +69,9 @@ export function SummaryTab({ control }: { control: Control }) {
           <div className="flex items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-sm font-medium">
               <IconAlert className="h-4 w-4 text-red-500" />
-              Something went wrong recently
+              {said.problems}
             </h2>
-            <Link to={`${base}/logs`} className="text-[13px] text-accent-500 hover:underline">Open the log</Link>
+            <Link to={`${base}/logs`} className="text-[13px] text-accent-500 hover:underline">{said.openLog}</Link>
           </div>
           <ul className="mt-2 space-y-1.5">
             {distinct(summary.recentProblems).slice(0, 3).map((problem) => (
@@ -91,60 +87,60 @@ export function SummaryTab({ control }: { control: Control }) {
       <div className="mt-8 grid gap-8 lg:grid-cols-5">
         <section className="lg:col-span-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium">Latest change</h2>
-            <Link to={`${base}/versions`} className="text-[13px] text-accent-500 hover:underline">All versions</Link>
+            <h2 className="text-sm font-medium">{said.latest}</h2>
+            <Link to={`${base}/versions`} className="text-[13px] text-accent-500 hover:underline">{said.allVersions}</Link>
           </div>
 
           {latest ? (
             <div className="mt-3 space-y-2">
               <p className="text-[15px]">
-                {latest.change ?? <span className="text-slate-500">No description</span>}
+                {latest.change ?? <span className="text-slate-500">{said.noDescription}</span>}
               </p>
               <p className="flex items-center gap-2 text-[13px] text-slate-500">
-                <span>Version {latest.version}</span>
+                <span>{said.version(latest.version)}</span>
                 <AgentMark origin={latest.origin} />
                 <Ago at={latest.created} />
-                {latest.version !== lambda.activeVersion && <span className="text-amber-600 dark:text-amber-400">not online yet</span>}
+                {latest.version !== lambda.activeVersion && <span className="text-amber-600 dark:text-amber-400">{said.notOnline}</span>}
               </p>
               {latest.specification && (
                 <details className="text-[13px]">
                   <summary className="cursor-pointer select-none text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                    What was wanted
+                    {said.wanted}
                   </summary>
                   <div className="mt-2"><Quote>{latest.specification}</Quote></div>
                 </details>
               )}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-slate-500">No versions yet.</p>
+            <p className="mt-3 text-sm text-slate-500">{said.noVersions}</p>
           )}
         </section>
 
         <section className="lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium">Storage</h2>
-            <Link to={`${base}/files`} className="text-[13px] text-accent-500 hover:underline">Browse</Link>
+            <h2 className="text-sm font-medium">{said.storage}</h2>
+            <Link to={`${base}/files`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
           </div>
 
           <div className="mt-3 space-y-4">
             <Meter
-              label="Code"
-              extra={<Exposure open={false} why="C# is compiled, never served." />}
+              label={said.code}
+              extra={<Exposure open={false} why={said.codeWhy} />}
               used={storage.codeCharacters}
               of={limits.codeCharacters}
               format={count}
-              unit="characters"
+              unit={said.characters}
             />
             <Meter
-              label="Assets"
-              extra={<Exposure open={storage.servesAssets} why={storage.servesAssets ? 'Public: the code serves them.' : 'Not served by the code.'} />}
+              label={said.assets}
+              extra={<Exposure open={storage.servesAssets} why={storage.servesAssets ? said.assetsPublic : said.assetsPrivate} />}
               used={storage.assetBytes}
               of={limits.assetBytes}
               format={bytes}
             />
             <Meter
-              label="Data"
-              extra={<Exposure open={storage.servesWorkspace} why={storage.servesWorkspace ? 'Public: the code serves the workspace.' : 'Private to the lambda.'} />}
+              label={said.data}
+              extra={<Exposure open={storage.servesWorkspace} why={storage.servesWorkspace ? said.dataPublic : said.dataPrivate} />}
               used={storage.workspaceBytes}
               of={limits.workspaceBytes}
               format={bytes}

@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 import { IconClose, IconLock, IconLogo, IconMenu, IconMoon, IconSun } from './Icons';
+import { LanguageMenu, LanguageSwitch } from './LanguageSwitch';
 import { useFeatures } from '../features';
+import { useT } from '../i18n';
+import { Link, NavLink } from '../i18n/links';
 import type { Theme } from '../theme';
 
 interface Props {
@@ -25,6 +28,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
   const [moved, setMoved] = useState(false);
 
   const features = useFeatures();
+  const t = useT();
 
   useEffect(() => {
     const onScroll = () => setMoved(window.scrollY > 8);
@@ -35,7 +39,7 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const themeLabel = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  const themeLabel = theme === 'dark' ? t.shell.lightMode : t.shell.darkMode;
 
   return (
     <div className={fixed ? 'flex h-screen flex-col overflow-hidden' : 'flex min-h-screen flex-col'}>
@@ -61,37 +65,39 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
           </span>
         </Link>
 
-        <nav className="ml-auto flex items-center gap-1" aria-label="Main">
+        <nav className="ml-auto flex items-center gap-1" aria-label={t.shell.main}>
           {actions}
 
           {/* on the narrowest phones this one moves into the menu, the other stays */}
-          <NavLink to="/build" className={(state) => `${tab(state)} hidden min-[380px]:inline-flex`}>
-            Build one
+          <NavLink to="/build" className={(state) => `${tab(state)} hidden min-[460px]:inline-flex`}>
+            {t.shell.build}
           </NavLink>
 
           <NavLink to="/ship" className={tab}>
-            Ship
+            {t.shell.ship}
           </NavLink>
 
           <NavLink to="/showcase" className={(state) => `${tab(state)} hidden sm:inline-flex`}>
-            Showcase
+            {t.shell.showcase}
           </NavLink>
 
           {/* switched off in the panel, the page is still there - just not linked */}
           {features.enterprise && (
             <NavLink to="/enterprise" className={(state) => `${tab(state)} hidden md:inline-flex`}>
-              Enterprise
+              {t.shell.enterprise}
             </NavLink>
           )}
 
           <NavLink to="/docs" className={(state) => `${tab(state)} hidden sm:inline-flex`}>
-            Docs
+            {t.shell.docs}
           </NavLink>
 
           <NavLink to="/admin" className={(state) => `${tab(state)} hidden items-center gap-1.5 lg:inline-flex`}>
             <IconLock className="h-4 w-4" />
-            Admin
+            {t.shell.admin}
           </NavLink>
+
+          <LanguageSwitch />
 
           <button
             type="button"
@@ -133,6 +139,7 @@ function Menu({ theme, themeLabel, onToggleTheme, enterprise }: MenuProps) {
   const [open, setOpen] = useState(false);
   const host = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
+  const t = useT();
 
   // going somewhere is the end of choosing where to go
   useEffect(() => setOpen(false), [pathname]);
@@ -174,7 +181,7 @@ function Menu({ theme, themeLabel, onToggleTheme, enterprise }: MenuProps) {
         className="btn-ghost !px-2"
         aria-expanded={open}
         aria-controls="site-menu"
-        aria-label={open ? 'Close the menu' : 'Open the menu'}
+        aria-label={open ? t.shell.closeMenu : t.shell.openMenu}
       >
         {open ? <IconClose className="h-5 w-5" /> : <IconMenu className="h-5 w-5" />}
       </button>
@@ -184,23 +191,23 @@ function Menu({ theme, themeLabel, onToggleTheme, enterprise }: MenuProps) {
           id="site-menu"
           className="absolute inset-x-0 top-full border-y border-grey-200 bg-white py-2 shadow-lg sm:left-auto sm:right-4 sm:w-64 sm:border-x dark:border-ink-800 dark:bg-ink-900"
         >
-          <NavLink to="/build" className={(state) => `${item(state)} min-[380px]:hidden`}>
-            Build one
+          <NavLink to="/build" className={(state) => `${item(state)} min-[460px]:hidden`}>
+            {t.shell.build}
           </NavLink>
           <NavLink to="/showcase" className={(state) => `${item(state)} sm:hidden`}>
-            Showcase
+            {t.shell.showcase}
           </NavLink>
           {enterprise && (
             <NavLink to="/enterprise" className={(state) => `${item(state)} md:hidden`}>
-              Enterprise
+              {t.shell.enterprise}
             </NavLink>
           )}
           <NavLink to="/docs" className={(state) => `${item(state)} sm:hidden`}>
-            Docs
+            {t.shell.docs}
           </NavLink>
           <NavLink to="/admin" className={item}>
             <IconLock className="h-4 w-4" />
-            Admin
+            {t.shell.admin}
           </NavLink>
 
           <div className="mx-5 my-2 border-t border-grey-200 sm:hidden dark:border-ink-800" />
@@ -213,6 +220,12 @@ function Menu({ theme, themeLabel, onToggleTheme, enterprise }: MenuProps) {
             {theme === 'dark' ? <IconSun /> : <IconMoon />}
             {themeLabel}
           </button>
+
+          {/* the bar has the switcher from here up */}
+          <div className="sm:hidden">
+            <div className="mx-5 my-2 border-t border-grey-200 dark:border-ink-800" />
+            <LanguageMenu />
+          </div>
         </div>
       )}
     </div>

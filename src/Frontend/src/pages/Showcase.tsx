@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import { ApiError, api, type ShowcaseEntry } from '../api';
 import { IconSpinner } from '../components/Icons';
 import { ShowcaseCard } from '../components/ShowcaseCard';
-import { PAGES, usePageMeta } from '../meta';
+import { useT } from '../i18n';
+import { Link } from '../i18n/links';
+import { usePublicPage } from '../meta';
 import { forgetShowcase, sentShowcase } from '../site';
 
 const PAGE = 12;
@@ -19,7 +20,10 @@ const PAGE = 12;
  * use anyway, so a page number would not name the same thing twice.
  */
 export function Showcase() {
-  usePageMeta(PAGES['/showcase']);
+  usePublicPage('/showcase');
+
+  const t = useT();
+  const said = t.showcase;
 
   // the first page comes with the page when the server rendered it, so it
   // is there for a crawler and does not have to be asked for again
@@ -56,12 +60,12 @@ export function Showcase() {
       setTotal(page.total);
       setNext(page.next ?? null);
     } catch (error) {
-      setFailure(error instanceof ApiError ? error.message : 'The showcase could not be loaded.');
+      setFailure(error instanceof ApiError ? error.message : said.failed);
     } finally {
       busy.current = false;
       setLoading(false);
     }
-  }, [next]);
+  }, [next, said]);
 
   useEffect(forgetShowcase, []);
 
@@ -95,16 +99,15 @@ export function Showcase() {
     <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-12 sm:px-6 sm:pt-16">
       <header className="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
         <div className="max-w-2xl">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent-500 dark:text-accent-400">Showcase</p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Built here, running now</h1>
-          <p className="mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
-            Lambdas their owners chose to show. Every one of them is online, so each card opens the real
-            thing. The ones in use lately come first.
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent-500 dark:text-accent-400">
+            {said.eyebrow}
           </p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">{said.title}</h1>
+          <p className="mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">{said.intro}</p>
         </div>
 
         {total !== null && total !== 0 && (
-          <p className="text-sm tabular-nums text-slate-500">{counted(total)}</p>
+          <p className="text-sm tabular-nums text-slate-500">{said.counted(total)}</p>
         )}
       </header>
 
@@ -128,7 +131,7 @@ export function Showcase() {
         <div className="mt-10 flex flex-col items-center gap-3 text-center">
           <p className="text-sm text-slate-600 dark:text-slate-400">{failure}</p>
           <button type="button" className="btn-ghost" onClick={() => more()}>
-            Try again
+            {t.common.tryAgain}
           </button>
         </div>
       )}
@@ -138,7 +141,7 @@ export function Showcase() {
           {/* the observer does this on its own; the button is for anybody it does not reach */}
           <button type="button" className="btn-ghost" onClick={() => more()} disabled={loading}>
             {loading && <IconSpinner />}
-            {loading ? 'Loading more…' : 'Show more'}
+            {loading ? said.loadingMore : said.showMore}
           </button>
         </div>
       )}
@@ -167,9 +170,6 @@ export function Entry({ entry, index }: { entry: ShowcaseEntry; index: number })
   );
 }
 
-/** One string, which the server can write in for a page it renders. */
-export const counted = (total: number) => (total === 1 ? '1 lambda' : `${total} lambdas`);
-
 function Grid({ children }: { children: React.ReactNode }) {
   return <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;
 }
@@ -190,15 +190,18 @@ function Placeholder() {
 
 /** An empty showcase, which is an invitation rather than an error. */
 function Nothing() {
+  const said = useT().showcase;
+
   return (
     <div className="surface mt-10 px-6 py-14 text-center">
-      <h2 className="text-lg font-semibold tracking-tight">Nothing on show yet</h2>
+      <h2 className="text-lg font-semibold tracking-tight">{said.nothingTitle}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-        Built something that works? Open its control center, choose <b>Showcase</b>, and add a title, a few
-        words and a picture. It appears here while it is online.
+        {said.nothing((text) => <b>{text}</b>)}
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
-        <Link to="/build" className="btn-primary">Build one</Link>
+        <Link to="/build" className="btn-primary">
+          {said.buildOne}
+        </Link>
       </div>
     </div>
   );
@@ -206,16 +209,19 @@ function Nothing() {
 
 /** How to be on this page, for whoever has just scrolled through it. */
 function Yours() {
+  const said = useT().showcase;
+
   return (
     <aside className="mt-20 grid gap-6 border-t border-slate-200 pt-10 dark:border-ink-800 md:grid-cols-[1fr_auto] md:items-center">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight">Want yours here?</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{said.yoursTitle}</h2>
         <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-          Open the control center of your lambda and choose <b>Showcase</b>, or ask the agent that built it to
-          showcase it. Only whoever holds the editor key can, and it can be taken down again at any time.
+          {said.yours((text) => <b>{text}</b>)}
         </p>
       </div>
-      <Link to="/build" className="btn-primary justify-self-start">Build something</Link>
+      <Link to="/build" className="btn-primary justify-self-start">
+        {said.buildSomething}
+      </Link>
     </aside>
   );
 }

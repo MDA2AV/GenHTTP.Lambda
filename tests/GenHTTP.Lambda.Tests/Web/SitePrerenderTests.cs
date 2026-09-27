@@ -28,9 +28,9 @@ public sealed class SitePrerenderTests
 
     private const string Pages = """
         {
-          "/": { "title": "Home", "description": "The front page." },
-          "/terms": { "title": "Terms", "description": "The rules." },
-          "/showcase": { "title": "Showcase", "description": "What people built." }
+          "/": { "text": { "en": { "title": "Home", "description": "The front page." }, "de": { "title": "Start", "description": "Die Startseite." } } },
+          "/terms": { "text": { "en": { "title": "Terms", "description": "The rules." }, "de": { "title": "Regeln", "description": "Die Regeln." } } },
+          "/showcase": { "text": { "en": { "title": "Showcase", "description": "What people built." }, "de": { "title": "Showcase", "description": "Was gebaut wurde." } } }
         }
         """;
 
@@ -39,21 +39,44 @@ public sealed class SitePrerenderTests
     /// </summary>
     private const string Entry = """<div class="rise" style="animation-delay:0ms"><a href="__LAMBDA_ENTRY_PATH__" aria-label="__LAMBDA_ENTRY_TITLE__, opens __LAMBDA_ENTRY_PATH__"><img src="__LAMBDA_ENTRY_IMAGE__"/><h3>__LAMBDA_ENTRY_TITLE__</h3><p>__LAMBDA_ENTRY_DESCRIPTION__</p><span>__LAMBDA_ENTRY_PATH__</span></a></div>""";
 
+    /// <summary>
+    /// The same entry in German, which says in German that it opens a new tab.
+    /// </summary>
+    private static readonly string GermanEntry = Entry.Replace(", opens ", ", öffnet ");
+
     private static readonly string Prerendered = JsonSerializer.Serialize(new
     {
         pages = new Dictionary<string, string>
         {
-            ["/"] = "<main><h1>Describe an app.</h1><code>claude mcp add genhttp __LAMBDA_ORIGIN__/mcp</code></main>",
-            ["/terms"] = "<main>Online for about __LAMBDA_LIFETIME_HOURS__ hours, kept for __LAMBDA_RETENTION_DAYS__ days, offline after __LAMBDA_OFFLINE_DAYS__ days at __LAMBDA_HOST__.</main>",
-            ["/showcase"] = "<main>Loading the showcase</main>"
+            ["/en"] = "<main><h1>Describe an app.</h1><code>claude mcp add genhttp __LAMBDA_ORIGIN__/mcp</code></main>",
+            ["/de"] = "<main><h1>Beschreibe eine App.</h1></main>",
+            ["/en/terms"] = "<main>Online for about __LAMBDA_LIFETIME_HOURS__ hours, kept for __LAMBDA_RETENTION_DAYS__ days, offline after __LAMBDA_OFFLINE_DAYS__ days at __LAMBDA_HOST__.</main>",
+            ["/de/terms"] = "<main>Etwa __LAMBDA_LIFETIME_HOURS__ Stunden online.</main>",
+            ["/en/showcase"] = "<main>Loading the showcase</main>",
+            ["/de/showcase"] = "<main>Die Showcase lädt</main>"
         },
-        showcase = new Dictionary<string, string>
+        showcase = new Dictionary<string, Dictionary<string, string>>
         {
-            ["empty"] = "<main>Nothing on show yet</main>",
-            ["complete"] = $"<main><p>__LAMBDA_SHOWCASE_TOTAL__ lambdas</p><div class=\"grid\">{Entry}</div></main>",
-            ["partial"] = $"<main><p>__LAMBDA_SHOWCASE_TOTAL__ lambdas</p><div class=\"grid\">{Entry}</div><button>Show more</button></main>"
+            ["en"] = new()
+            {
+                ["empty"] = "<main>Nothing on show yet</main>",
+                ["one"] = $"<main><p>1 lambda</p><div class=\"grid\">{Entry}</div></main>",
+                ["complete"] = $"<main><p>__LAMBDA_SHOWCASE_TOTAL__ lambdas</p><div class=\"grid\">{Entry}</div></main>",
+                ["partial"] = $"<main><p>__LAMBDA_SHOWCASE_TOTAL__ lambdas</p><div class=\"grid\">{Entry}</div><button>Show more</button></main>"
+            },
+            ["de"] = new()
+            {
+                ["empty"] = "<main>Noch nichts zu sehen</main>",
+                ["one"] = $"<main><p>1 Lambda</p><div class=\"grid\">{GermanEntry}</div></main>",
+                ["complete"] = $"<main><p>__LAMBDA_SHOWCASE_TOTAL__ Lambdas</p><div class=\"grid\">{GermanEntry}</div></main>",
+                ["partial"] = $"<main><p>__LAMBDA_SHOWCASE_TOTAL__ Lambdas</p><div class=\"grid\">{GermanEntry}</div><button>Mehr</button></main>"
+            }
         },
-        entry = Entry
+        entry = new Dictionary<string, string>
+        {
+            ["en"] = Entry,
+            ["de"] = GermanEntry
+        }
     });
 
     private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
@@ -81,9 +104,18 @@ public sealed class SitePrerenderTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        var body = await ReadAsync(fixture, "/");
+        var body = await ReadAsync(fixture, "/en");
 
         StringAssert.Contains(body, "<div id=\"root\"><main><h1>Describe an app.</h1><code>claude mcp add genhttp https://genhttp.dev/mcp</code></main></div>");
+    }
+
+    [TestMethod]
+    public async Task APageArrivesWithTheContentOfItsLanguage()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        StringAssert.Contains(await ReadAsync(fixture, "/de"), "<div id=\"root\"><main><h1>Beschreibe eine App.</h1></main></div>");
+        StringAssert.Contains(await ReadAsync(fixture, "/de/terms"), "<main>Etwa 36 Stunden online.</main>");
     }
 
     [TestMethod]
@@ -91,7 +123,7 @@ public sealed class SitePrerenderTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        var body = await ReadAsync(fixture, "/terms/");
+        var body = await ReadAsync(fixture, "/en/terms/");
 
         // 36 hours are a day and a half, rounded up the way the browser does
         StringAssert.Contains(body, "Online for about 36 hours, kept for 45 days, offline after 2 days at genhttp.dev.");
@@ -112,7 +144,7 @@ public sealed class SitePrerenderTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl: null));
 
-        var body = await ReadAsync(fixture, "/", host: "lambda.example:8080");
+        var body = await ReadAsync(fixture, "/en", host: "lambda.example:8080");
 
         StringAssert.Contains(body, "claude mcp add genhttp http://lambda.example:8080/mcp");
         Assert.AreEqual("lambda.example:8080", Facts(body).GetProperty("host").GetString());
@@ -124,7 +156,7 @@ public sealed class SitePrerenderTests
         await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl: null));
 
         // a proxy passes on what it was told, and the address is read from there
-        using var request = fixture.Host.GetRequest("/");
+        using var request = fixture.Host.GetRequest("/en");
 
         request.Headers.TryAddWithoutValidation("X-Forwarded-Host", "evil\"><script>alert(1)</script>");
 
@@ -141,7 +173,7 @@ public sealed class SitePrerenderTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
-        var body = await ReadAsync(fixture, "/showcase");
+        var body = await ReadAsync(fixture, "/en/showcase");
 
         StringAssert.Contains(body, "<main>Nothing on show yet</main>");
         Assert.AreEqual(0, Facts(body).GetProperty("showcase").GetProperty("total").GetInt32());
@@ -155,7 +187,7 @@ public sealed class SitePrerenderTests
         await ShowAsync(fixture, "quiz", "Pub quiz", "Scores for the Tuesday quiz.");
         await ShowAsync(fixture, "poll", "Lunch poll", "Where we eat on Friday.");
 
-        var body = await ReadAsync(fixture, "/showcase");
+        var body = await ReadAsync(fixture, "/en/showcase");
 
         StringAssert.Contains(body, "<p>2 lambdas</p>");
 
@@ -182,7 +214,25 @@ public sealed class SitePrerenderTests
 
         await ShowAsync(fixture, "quiz", "Pub quiz", "Scores.");
 
-        StringAssert.Contains(await ReadAsync(fixture, "/showcase"), "<p>1 lambda</p>");
+        var body = await ReadAsync(fixture, "/en/showcase");
+
+        StringAssert.Contains(body, "<p>1 lambda</p>");
+        StringAssert.Contains(body, "<h3>Pub quiz</h3>");
+    }
+
+    [TestMethod]
+    public async Task TheShowcaseIsFilledInInItsLanguage()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        await ShowAsync(fixture, "quiz", "Pub quiz", "Scores.");
+        await ShowAsync(fixture, "poll", "Lunch poll", "Where we eat on Friday.");
+
+        var body = await ReadAsync(fixture, "/de/showcase");
+
+        StringAssert.Contains(body, "<p>2 Lambdas</p>");
+        StringAssert.Contains(body, "aria-label=\"Pub quiz, öffnet /lambda/quiz/\"");
+        Assert.DoesNotContain("__LAMBDA_", body);
     }
 
     /// <summary>
@@ -196,7 +246,7 @@ public sealed class SitePrerenderTests
 
         await ShowAsync(fixture, "quiz", "</script><script>alert(1)</script>", "Visit __LAMBDA_ORIGIN__ & win");
 
-        var body = await ReadAsync(fixture, "/showcase");
+        var body = await ReadAsync(fixture, "/en/showcase");
 
         Assert.DoesNotContain("<script>alert(1)", body);
         StringAssert.Contains(body, "<h3>&lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;</h3>");
@@ -222,7 +272,7 @@ public sealed class SitePrerenderTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site(prerendered: false));
 
-        var body = await ReadAsync(fixture, "/terms");
+        var body = await ReadAsync(fixture, "/en/terms");
 
         StringAssert.Contains(body, "<title>Terms - GenHTTP Lambda</title>");
         StringAssert.Contains(body, "<div id=\"root\"></div>");

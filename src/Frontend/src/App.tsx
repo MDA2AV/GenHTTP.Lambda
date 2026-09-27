@@ -1,5 +1,5 @@
 import { Component, Suspense, lazy, useEffect, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 
 import { Shell } from './components/Shell';
 import { IconSpinner } from './components/Icons';
@@ -16,6 +16,9 @@ import { Showcase } from './pages/Showcase';
 import { Ship } from './pages/Ship';
 import { Terms } from './pages/Terms';
 import { useTheme } from './theme';
+import { loadEditor, useLanguage, useT } from './i18n';
+import { inLanguage, isLanguage, preferredLanguage } from './i18n/languages';
+import pages from './pages.json';
 
 // Monaco is most of the bundle, so the landing page never downloads it
 const RELOADED = 'lambda-reloaded-for-chunk';
@@ -28,8 +31,8 @@ const RELOADED = 'lambda-reloaded-for-chunk';
  * that into a loop.
  */
 const Editor = lazy(() =>
-  import('./pages/Editor')
-    .then((module) => {
+  Promise.all([import('./pages/Editor'), loadEditor(preferredLanguage())])
+    .then(([module]) => {
       sessionStorage.removeItem(RELOADED);
       return { default: module.Editor };
     })
@@ -50,65 +53,114 @@ export function App() {
 
   return (
     <ToastHost>
-      <Routes>
-        <Route
-          path="/editor/create"
-          element={
-            <Shell theme={theme} onToggleTheme={toggleTheme}>
-              <Create />
-            </Shell>
-          }
-        />
-        <Route
-          path="/editor/:privateKey/*"
-          element={
-            <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
-              <ChunkBoundary>
-                <Suspense fallback={<Loading />}>
-                  <Editor theme={theme} />
-                </Suspense>
-              </ChunkBoundary>
-            </Shell>
-          }
-        />
-        <Route
-          path="/admin/*"
-          element={
-            <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
-              <Admin theme={theme} />
-            </Shell>
-          }
-        />
-        <Route
-          path="*"
-          element={
-            <Shell theme={theme} onToggleTheme={toggleTheme}>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/docs" element={<Guide />} />
-                <Route path="/build" element={<Build />} />
-                <Route path="/ship" element={<Ship />} />
-                <Route path="/showcase" element={<Showcase />} />
-                <Route path="/enterprise" element={<Enterprise />} />
-                {/* the page this replaced, which is linked from elsewhere */}
-                <Route path="/agentic-coding" element={<Navigate to="/showcase" replace />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Shell>
-          }
-        />
-      </Routes>
+      {/* catalogs are fetched before a page is drawn, so this is a net rather than a wait */}
+      <Suspense fallback={null}>
+        <Routes>
+          <Route
+            path="/editor/create"
+            element={
+              <Shell theme={theme} onToggleTheme={toggleTheme}>
+                <Create />
+              </Shell>
+            }
+          />
+          <Route
+            path="/editor/:privateKey/*"
+            element={
+              <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
+                <ChunkBoundary>
+                  <Suspense fallback={<Loading />}>
+                    <Editor theme={theme} />
+                  </Suspense>
+                </ChunkBoundary>
+              </Shell>
+            }
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <Shell theme={theme} onToggleTheme={toggleTheme} fixed>
+                <Admin theme={theme} />
+              </Shell>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <Shell theme={theme} onToggleTheme={toggleTheme}>
+                <Routes>
+                  <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
+                  <Route path="/:language/*" element={<Localized />} />
+                  <Route path="*" element={<Unlocalized />} />
+                </Routes>
+              </Shell>
+            }
+          />
+        </Routes>
+      </Suspense>
     </ToastHost>
   );
 }
 
+/**
+ * The public pages, in the language their address names - "/de/build" is the
+ * German build page. A first segment that is no language is an address
+ * without one.
+ */
+function Localized() {
+  const { language } = useParams();
+
+  if (!isLanguage(language)) {
+    return <Unlocalized />;
+  }
+
+  return (
+    <Routes>
+      <Route index element={<Landing />} />
+      <Route path="docs" element={<Guide />} />
+      <Route path="build" element={<Build />} />
+      <Route path="ship" element={<Ship />} />
+      <Route path="showcase" element={<Showcase />} />
+      <Route path="enterprise" element={<Enterprise />} />
+      {/* the page this replaced, which is linked from elsewhere */}
+      <Route path="agentic-coding" element={<Navigate to={`/${language}/showcase`} replace />} />
+      <Route path="terms" element={<Terms />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
+/** Paths that are a public page without a language, and where they go. */
+const UNLOCALIZED: Record<string, string> = {
+  ...Object.fromEntries(Object.keys(pages).map((path) => [path, path])),
+  '/agentic-coding': '/showcase',
+};
+
+/**
+ * A public page asked for without a language. The server answers those with
+ * a redirect to the language the visitor prefers; this is the same for a link
+ * followed inside the application, and for the development server.
+ */
+function Unlocalized() {
+  const { pathname, search, hash } = useLocation();
+  const language = useLanguage();
+
+  const page = UNLOCALIZED[pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname];
+
+  if (page === undefined) {
+    return <NotFound />;
+  }
+
+  return <Navigate to={inLanguage(language, page) + search + hash} replace />;
+}
+
 function Loading() {
+  const t = useT();
+
   return (
     <div className="flex flex-1 items-center justify-center gap-2 text-sm text-slate-500">
       <IconSpinner />
-      Loading the editor…
+      {t.common.loadingEditor}
     </div>
   );
 }
@@ -138,23 +190,27 @@ class ChunkBoundary extends Component<{ children: ReactNode }, { failed: boolean
       return this.props.children;
     }
 
-    return (
-      <div className="mx-auto max-w-md px-5 py-20 text-center">
-        <h1 className="text-lg font-semibold">The editor could not be loaded</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          This usually means the site was updated while this tab was open.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            sessionStorage.removeItem(RELOADED);
-            window.location.reload();
-          }}
-          className="btn-primary mt-6"
-        >
-          Reload the page
-        </button>
-      </div>
-    );
+    return <ChunkFailure />;
   }
+}
+
+function ChunkFailure() {
+  const t = useT();
+
+  return (
+    <div className="mx-auto max-w-md px-5 py-20 text-center">
+      <h1 className="text-lg font-semibold">{t.common.editorFailed}</h1>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{t.common.editorFailedWhy}</p>
+      <button
+        type="button"
+        onClick={() => {
+          sessionStorage.removeItem(RELOADED);
+          window.location.reload();
+        }}
+        className="btn-primary mt-6"
+      >
+        {t.common.reload}
+      </button>
+    </div>
+  );
 }
