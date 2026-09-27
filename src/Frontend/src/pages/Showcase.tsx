@@ -5,6 +5,7 @@ import { ApiError, api, type ShowcaseEntry } from '../api';
 import { IconSpinner } from '../components/Icons';
 import { ShowcaseCard } from '../components/ShowcaseCard';
 import { PAGES, usePageMeta } from '../meta';
+import { forgetShowcase, sentShowcase } from '../site';
 
 const PAGE = 12;
 
@@ -20,9 +21,13 @@ const PAGE = 12;
 export function Showcase() {
   usePageMeta(PAGES['/showcase']);
 
-  const [entries, setEntries] = useState<ShowcaseEntry[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [next, setNext] = useState<number | null>(0);
+  // the first page comes with the page when the server rendered it, so it
+  // is there for a crawler and does not have to be asked for again
+  const [sent] = useState(sentShowcase);
+
+  const [entries, setEntries] = useState<ShowcaseEntry[]>(sent?.entries ?? []);
+  const [total, setTotal] = useState<number | null>(sent?.total ?? null);
+  const [next, setNext] = useState<number | null>(sent ? (sent.next ?? null) : 0);
   const [loading, setLoading] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -57,6 +62,8 @@ export function Showcase() {
       setLoading(false);
     }
   }, [next]);
+
+  useEffect(forgetShowcase, []);
 
   // the first page
   useEffect(() => {
@@ -96,10 +103,8 @@ export function Showcase() {
           </p>
         </div>
 
-        {total !== null && total > 0 && (
-          <p className="text-sm tabular-nums text-slate-500">
-            {total} {total === 1 ? 'lambda' : 'lambdas'}
-          </p>
+        {total !== null && total !== 0 && (
+          <p className="text-sm tabular-nums text-slate-500">{counted(total)}</p>
         )}
       </header>
 
@@ -112,15 +117,7 @@ export function Showcase() {
       ) : (
         <Grid>
           {entries.map((entry, i) => (
-            <div key={entry.publicKey} className="rise" style={{ animationDelay: `${(i % PAGE) * 40}ms` }}>
-              <ShowcaseCard
-                title={entry.title}
-                description={entry.description}
-                address={entry.path}
-                image={entry.imagePath}
-                href={entry.path}
-              />
-            </div>
+            <Entry key={entry.publicKey} entry={entry} index={i} />
           ))}
         </Grid>
       )}
@@ -146,10 +143,32 @@ export function Showcase() {
         </div>
       )}
 
-      {total !== null && total > 0 && <Yours />}
+      {total !== null && total !== 0 && <Yours />}
     </div>
   );
 }
+
+/**
+ * One lambda in the grid, arriving a little after the one before it. The
+ * build renders one on its own as well, which the server fills in for every
+ * entry of a page it renders.
+ */
+export function Entry({ entry, index }: { entry: ShowcaseEntry; index: number }) {
+  return (
+    <div className="rise" style={{ animationDelay: `${(index % PAGE) * 40}ms` }}>
+      <ShowcaseCard
+        title={entry.title}
+        description={entry.description}
+        address={entry.path}
+        image={entry.imagePath}
+        href={entry.path}
+      />
+    </div>
+  );
+}
+
+/** One string, which the server can write in for a page it renders. */
+export const counted = (total: number) => (total === 1 ? '1 lambda' : `${total} lambdas`);
 
 function Grid({ children }: { children: React.ReactNode }) {
   return <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{children}</div>;

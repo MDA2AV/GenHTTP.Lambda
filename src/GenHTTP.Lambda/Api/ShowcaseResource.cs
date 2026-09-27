@@ -21,7 +21,7 @@ namespace GenHTTP.Lambda.Api;
 public sealed class ShowcaseResource(IShowcaseService showcases)
 {
 
-    private const int PageSize = 12;
+    public const int PageSize = 12;
 
     /// <summary>
     /// One page of the showcase, the most active lambdas first.

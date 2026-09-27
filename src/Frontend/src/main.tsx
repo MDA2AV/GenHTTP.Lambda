@@ -1,5 +1,5 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
 import { App } from './App';
@@ -16,10 +16,20 @@ if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
 }
 
-createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root')!;
+
+const app = (
   <React.StrictMode>
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </React.StrictMode>,
+  </React.StrictMode>
 );
+
+// the public pages arrive rendered, for whoever reads them without running
+// this (see prerender.tsx) - those are taken over rather than drawn again
+if (root.firstElementChild !== null) {
+  hydrateRoot(root, app);
+} else {
+  createRoot(root).render(app);
+}

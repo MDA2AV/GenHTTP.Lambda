@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import { api, type Features } from './api';
+import { useBrowserValue } from './site';
 
 const KEY = 'lambda-features';
 
@@ -23,6 +24,11 @@ let current: Features = remembered();
 let pending: Promise<void> | null = null;
 
 function remembered(): Features {
+  // nothing is remembered where the pages are rendered for crawlers
+  if (typeof window === 'undefined') {
+    return NONE;
+  }
+
   try {
     const stored = localStorage.getItem(KEY);
     return stored ? { ...NONE, ...JSON.parse(stored) } : NONE;
@@ -44,20 +50,17 @@ export function publishFeatures(features: Features) {
   window.dispatchEvent(new Event(CHANGED));
 }
 
+function subscribe(changed: () => void) {
+  window.addEventListener(CHANGED, changed);
+  return () => window.removeEventListener(CHANGED, changed);
+}
+
+/** A prerendered page links nothing optional, and the remembered answer right after. */
 export function useFeatures(): Features {
-  const [features, setFeatures] = useState(current);
+  const features = useBrowserValue(() => current, NONE, subscribe);
 
   useEffect(() => {
-    const sync = () => setFeatures(current);
-
-    window.addEventListener(CHANGED, sync);
-
     pending ??= api.features().then(publishFeatures, () => undefined);
-
-    // an answer that came in before this header was listening
-    sync();
-
-    return () => window.removeEventListener(CHANGED, sync);
   }, []);
 
   return features;

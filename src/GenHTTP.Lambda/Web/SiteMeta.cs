@@ -99,6 +99,11 @@ public sealed class SiteMeta
             markup = InHead(markup, $"<link rel=\"canonical\" href=\"{address}\" />");
         }
 
+        if (Normalize(path) == "/")
+        {
+            markup = InHead(markup, StructuredData.Render(Site, page.Description));
+        }
+
         return markup;
     }
 
@@ -172,7 +177,7 @@ public sealed class SiteMeta
     /// <summary>
     /// A path the way the table spells it: "/docs/" is "/docs".
     /// </summary>
-    private static string Normalize(string path)
+    public static string Normalize(string path)
         => path.Length > 1 ? path.TrimEnd('/') : path;
 
     /// <summary>
