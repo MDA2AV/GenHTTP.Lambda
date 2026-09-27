@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import { CopyField } from '../components/CopyField';
 import { PAGES, usePageMeta } from '../meta';
+import { useOrigin } from '../site';
 
 /**
  * One text box.
@@ -43,7 +44,7 @@ export function Build() {
   usePageMeta(PAGES['/build']);
 
   const [prompt, setPrompt] = useState('');
-  const [origin, setOrigin] = useState('');
+  const { origin } = useOrigin();
   const [state, setState] = useState<'idle' | 'working' | 'done' | 'failed'>('idle');
   const [events, setEvents] = useState<string[]>([]);
   const [waiting, setWaiting] = useState(0);
@@ -57,8 +58,6 @@ export function Build() {
   const polling = useRef<number | null>(null);
 
   useEffect(() => {
-    setOrigin(window.location.origin);
-
     api
       .platform()
       .then(({ build }) => {

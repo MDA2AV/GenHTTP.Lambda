@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { api, type Platform } from '../api';
 import { IconCheck, IconLayers, IconMail, IconSpark } from '../components/Icons';
 import { PAGES, usePageMeta } from '../meta';
+import { useLifetimes } from '../site';
 
 /** What an enterprise seat costs, per month. */
 const SEAT = 5;
@@ -31,17 +31,10 @@ type Tone = 'free' | 'enterprise';
 export function Enterprise() {
   usePageMeta(PAGES['/enterprise']);
 
-  const [platform, setPlatform] = useState<Platform | null>(null);
-
-  useEffect(() => {
-    api.platform().then(setPlatform).catch(() => undefined);
-  }, []);
-
   // both counted from the last visit or edit, not from the deployment: a free
   // lambda stays up while it is used, goes offline once it is not, and is
   // removed a while after that
-  const offline = Math.round((platform?.deploymentLifetimeHours ?? 30 * 24) / 24);
-  const removed = platform?.retentionDays ?? 90;
+  const { offlineDays: offline, retentionDays: removed } = useLifetimes();
 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-12 sm:px-6 sm:pt-16">

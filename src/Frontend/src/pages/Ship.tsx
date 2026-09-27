@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { api, type Platform } from '../api';
 import { CopyField } from '../components/CopyField';
 import { IconCheck, IconCopy, IconGlobe, IconLock, IconMail, IconSend } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
 import { PAGES, usePageMeta } from '../meta';
+import { useBrowserValue, useLifetimes, useOrigin } from '../site';
 
 const SOLUTIONS = 'solutions@genhttp.dev';
 
@@ -20,16 +20,9 @@ export function Ship() {
   usePageMeta(PAGES['/ship']);
 
   const connect = useRef<HTMLElement>(null);
-  const origin = window.location.origin;
+  const { origin, host } = useOrigin();
 
-  const [platform, setPlatform] = useState<Platform | null>(null);
-
-  useEffect(() => {
-    api.platform().then(setPlatform).catch(() => undefined);
-  }, []);
-
-  const offline = Math.round((platform?.deploymentLifetimeHours ?? 30 * 24) / 24);
-  const removed = platform?.retentionDays ?? 90;
+  const { offlineDays: offline, retentionDays: removed } = useLifetimes();
 
   const toConnect = () => connect.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -83,7 +76,7 @@ export function Ship() {
           </div>
 
           <div className="rise" style={{ animationDelay: '260ms' }}>
-            <GoingPublic host={window.location.host} />
+            <GoingPublic host={host} />
           </div>
         </div>
       </section>
@@ -219,7 +212,7 @@ export function Ship() {
             </div>
 
             <div aria-hidden="true" className="space-y-3">
-              <AddressBar muted>{window.location.host}/lambda/q7x2k9</AddressBar>
+              <AddressBar muted>{host}/lambda/q7x2k9</AddressBar>
               <div className="flex justify-center text-logo-500 dark:text-logo-400">
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M12 4v16M6 14l6 6 6-6" />
@@ -565,8 +558,8 @@ function Avatar({ initial, colour, shown }: { initial: string; colour: string; s
 }
 
 function usePrefersStill(): boolean {
-  const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  return still;
+  // a prerendered page is drawn in motion, and stilled right after
+  return useBrowserValue(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, false);
 }
 
 function AddressBar({ children, secure, muted }: { children: React.ReactNode; secure?: boolean; muted?: boolean }) {

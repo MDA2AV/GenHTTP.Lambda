@@ -24,12 +24,14 @@ function pageTable(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [react(), pageTable()],
   build: {
     outDir: '../GenHTTP.Lambda/wwwroot',
     emptyOutDir: true,
     chunkSizeWarningLimit: 4096,
+    // rendering the pages for crawlers (prerender.mjs) needs no copy of the pictures
+    ...(isSsrBuild ? { copyPublicDir: false } : {}),
   },
   server: {
     port: 5173,
@@ -40,4 +42,4 @@ export default defineConfig({
       '/lambda': { target: apiTarget, changeOrigin: true, ws: true },
     },
   },
-});
+}));

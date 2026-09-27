@@ -124,6 +124,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<EventReader>();
 
         services.AddSingleton<SiteMeta>();
+        services.AddSingleton<SitePrerender>();
         services.AddSingleton<SpaResources>();
 
         services.AddSingleton<LambdaTelemetry>();

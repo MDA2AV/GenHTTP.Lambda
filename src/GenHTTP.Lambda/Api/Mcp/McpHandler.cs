@@ -5,6 +5,8 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Web;
+
 using GenHTTP.Modules.IO;
 
 namespace GenHTTP.Lambda.Api.Mcp;
@@ -119,7 +121,7 @@ public sealed class McpHandler : IHandler
 
         var parameters = call["params"] as JsonObject ?? [];
 
-        var answer = await AnswerAsync(method, id, parameters, Origin(request));
+        var answer = await AnswerAsync(method, id, parameters, RequestOrigin.Of(request));
 
         return Json(request, ResponseStatus.Ok, answer);
     }
@@ -216,29 +218,6 @@ public sealed class McpHandler : IHandler
                 "reach it; then use these tools."
             ])
         };
-    }
-
-    /// <summary>
-    /// The scheme and host the caller used, so the links handed back can be followed as they are.
-    /// </summary>
-    /// <remarks>
-    /// A proxy in front terminates TLS and says so in its forwarding headers;
-    /// without one, the connection itself tells.
-    /// </remarks>
-    private static string Origin(IRequest request)
-    {
-        var forwarded = request.Header.Headers.GetForwardings().FirstOrDefault();
-
-        var host = forwarded?.Host ?? request.Header.Headers.GetEntry("Host");
-
-        if (string.IsNullOrEmpty(host))
-        {
-            return string.Empty;
-        }
-
-        var protocol = forwarded?.Protocol ?? request.Client.Protocol;
-
-        return $"{(protocol == ClientProtocol.Https ? "https" : "http")}://{host}";
     }
 
     private bool Allowed(string origin)

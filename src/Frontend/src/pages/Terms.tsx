@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { api, type Platform } from '../api';
 import { ABUSE_MAILBOX } from '../abuse';
 import { PAGES, usePageMeta } from '../meta';
+import { useLifetimes } from '../site';
 
 /**
  * The terms in full, as their own page so they can be linked to.
@@ -16,14 +15,7 @@ import { PAGES, usePageMeta } from '../meta';
 export function Terms() {
   usePageMeta(PAGES['/terms']);
 
-  const [platform, setPlatform] = useState<Platform | null>(null);
-
-  useEffect(() => {
-    api.platform().then(setPlatform).catch(() => undefined);
-  }, []);
-
-  const hours = platform?.deploymentLifetimeHours ?? 24;
-  const days = platform?.retentionDays ?? 30;
+  const { lifetimeHours: hours, retentionDays: days } = useLifetimes();
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-14 sm:py-20">

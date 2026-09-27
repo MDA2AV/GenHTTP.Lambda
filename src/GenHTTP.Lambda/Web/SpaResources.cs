@@ -40,13 +40,16 @@ public sealed class SpaResources
 
     private SiteMeta Meta { get; }
 
+    private SitePrerender Prerender { get; }
+
     #endregion
 
     #region Initialization
 
-    public SpaResources(LambdaOptions options, SiteMeta meta, ILogger<SpaResources> logger)
+    public SpaResources(LambdaOptions options, SiteMeta meta, SitePrerender prerender, ILogger<SpaResources> logger)
     {
         Meta = meta;
+        Prerender = prerender;
 
         Root = options.WebRoot;
         IndexFile = Path.Combine(Root, "index.html");
@@ -81,7 +84,7 @@ public sealed class SpaResources
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .ServerSideRouting()
                                     .Add(RangeSupport.Create())
-                                    .Add(new SiteMetaConcernBuilder(Meta, ReadIndexAsync))
+                                    .Add(new SiteMetaConcernBuilder(Meta, Prerender, ReadIndexAsync))
                                     .Add(CacheControl.NoCache());
     }
 
