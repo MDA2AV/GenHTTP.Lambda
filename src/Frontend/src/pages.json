@@ -1,23 +1,28 @@
 {
   "/": {
     "title": "Agentic Coding Platform",
-    "description": "Describe an app to an AI agent and get it online with a link you can share. Use the agent built in or bring your own - Claude, Claude Code or anything that speaks MCP. Free, no account, nothing to install."
+    "description": "Describe an app to an AI agent and get it online with a link you can share. Use the agent built in or bring your own - Claude, Claude Code or anything that speaks MCP. Free, no account, nothing to install.",
+    "image": "/social/default.png"
   },
   "/build": {
     "title": "Build an App with AI",
-    "description": "Say what you want and an AI agent builds it, puts it online and gives you a link to share. Polls, guestbooks, leaderboards and more - free, no account."
+    "description": "Say what you want and an AI agent builds it, puts it online and gives you a link to share. Polls, guestbooks, leaderboards and more - free, no account.",
+    "image": "/social/build.png"
   },
   "/showcase": {
     "title": "Showcase",
-    "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser."
+    "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser.",
+    "image": "/social/showcase.png"
   },
   "/enterprise": {
     "title": "Enterprise",
-    "description": "Free to try with no account. Enterprise for an installation of your own with your own sign-in - in the cloud or on premises."
+    "description": "Free to try with no account. Enterprise for an installation of your own with your own sign-in - in the cloud or on premises.",
+    "image": "/social/enterprise.png"
   },
   "/docs": {
     "title": "How It Works",
-    "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."
+    "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it.",
+    "image": "/social/docs.png"
   },
   "/terms": {
     "title": "Terms of Service",

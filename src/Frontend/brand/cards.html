@@ -1,0 +1,211 @@
+<!doctype html>
+<!--
+  The pictures a chat or a feed shows when somebody shares a page: one per
+  public page, 1200 by 630. Rendered by render.mjs, which opens this file with
+  ?page=/path and keeps what is on the screen - so opening it in a browser
+  shows exactly what will be written.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  :root {
+    --ink: #202124;
+    --ink-900: #292a2d;
+    --ink-800: #3c4043;
+    --text: #e8eaed;
+    --muted: #bdc1c6;
+    --faint: #9aa0a6;
+    --blue: #8ab4f8;
+    --blue-solid: #1a73e8;
+    --purple: #aa55ff;
+    --green: #81c995;
+    --green-solid: #1e8e3e;
+    --amber: #f9ab00;
+    --red: #d93025;
+  }
+
+  * { box-sizing: border-box; margin: 0; }
+
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+
+  body {
+    position: relative;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Inter, system-ui, Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* the colour behind the front page, held still */
+  .aurora { position: absolute; inset: -120px; filter: blur(70px); pointer-events: none; }
+  .aurora i { position: absolute; display: block; border-radius: 50%; }
+  .aurora .a { width: 760px; height: 420px; left: 620px; top: -40px; background: rgb(66 133 244 / .55); transform: rotate(-18deg); }
+  .aurora .b { width: 620px; height: 380px; left: -140px; top: 420px; background: rgb(170 85 255 / .45); transform: rotate(14deg); }
+  .aurora .c { width: 520px; height: 300px; left: 860px; top: 560px; background: rgb(52 168 83 / .30); }
+  .veil { position: absolute; inset: 0; background: linear-gradient(90deg, rgb(32 33 36 / .92) 0%, rgb(32 33 36 / .72) 55%, rgb(32 33 36 / .35) 100%); }
+
+  .frame { position: absolute; inset: 0; padding: 64px 72px; display: flex; gap: 56px; }
+
+  .copy { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+
+  .brand { display: flex; align-items: center; gap: 18px; font-size: 34px; font-weight: 600; letter-spacing: -.01em; }
+  .brand img { width: 56px; height: 56px; }
+  .brand .l { color: var(--blue); font-size: 1.15em; line-height: 1; }
+
+  h1 { margin-top: auto; font-size: 60px; line-height: 1.04; font-weight: 700; letter-spacing: -.025em; }
+  h1 span { display: block; color: var(--blue); }
+
+  .sub { margin-top: 20px; font-size: 24px; line-height: 1.4; color: var(--muted); max-width: 600px; }
+
+  .facts { margin-top: auto; padding-top: 28px; display: flex; gap: 28px; font-size: 22px; font-weight: 600; color: var(--text); }
+  .facts li { white-space: nowrap; list-style: none; display: flex; align-items: center; gap: 9px; }
+  .facts svg { width: 22px; height: 22px; color: var(--green); }
+  ul { padding: 0; }
+
+  /* ------------------------------------------------------------ the scene */
+
+  .scene { flex: 0 0 420px; align-self: center; }
+
+  .card { background: var(--ink-900); border: 1px solid var(--ink-800); box-shadow: 0 30px 80px rgb(0 0 0 / .45); }
+  .chat { padding: 22px; background: rgb(48 49 52 / .75); border-bottom: 1px solid var(--ink-800); display: grid; gap: 12px; }
+  .me { justify-self: end; max-width: 88%; background: var(--blue); color: #202124; padding: 12px 16px; font-size: 19px; line-height: 1.35; }
+  .it { justify-self: start; display: flex; align-items: center; gap: 9px; border: 1px solid var(--ink-800); background: var(--ink-900); padding: 11px 15px; font-size: 19px; }
+  .it svg { width: 18px; height: 18px; color: var(--green); }
+
+  .body { padding: 22px; display: grid; gap: 16px; }
+
+  .bar { display: flex; align-items: center; gap: 11px; border: 1px solid var(--ink-800); background: var(--ink); padding: 12px 14px; font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-size: 18px; }
+  .bar svg { width: 18px; height: 18px; flex: none; }
+  .bar .url { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar.live { border-color: rgb(129 201 149 / .55); background: #0d2b16; }
+  .bar.live svg { color: var(--green); }
+  .bar.local { color: var(--faint); }
+  .bar.local .url { text-decoration: line-through; text-decoration-color: rgb(154 160 166 / .6); }
+  .bar.own { border-color: rgb(201 155 255 / .6); }
+  .bar.own svg { color: #c99bff; }
+  .pill { flex: none; border-radius: 999px; padding: 3px 10px; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; font-weight: 700; background: var(--green); color: #202124; }
+  .pill.own { background: #c99bff; }
+
+  .people { display: flex; align-items: center; justify-content: space-between; }
+  .faces { display: flex; }
+  .faces b { width: 42px; height: 42px; margin-left: -9px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; color: #fff; box-shadow: 0 0 0 3px var(--ink-900); }
+  .faces b:first-child { margin-left: 0; }
+  .count { display: flex; align-items: center; gap: 8px; font-size: 17px; color: var(--muted); }
+  .count i { width: 10px; height: 10px; border-radius: 50%; background: var(--green-solid); }
+
+  .bars { display: grid; gap: 10px; }
+  .bars div { height: 10px; background: #303134; }
+  .bars div i { display: block; height: 100%; }
+
+  .code { padding: 22px; font-family: 'Cascadia Mono', Consolas, ui-monospace, monospace; font-size: 18px; line-height: 1.6; color: var(--text); background: #1b1c1f; border-bottom: 1px solid var(--ink-800); white-space: pre; }
+  .code .k { color: #c99bff; } .code .s { color: var(--green); } .code .f { color: var(--blue); } .code .c { color: var(--faint); }
+
+  .arrow { display: flex; justify-content: center; color: #c99bff; }
+  .arrow svg { width: 26px; height: 26px; }
+
+  .tiers { display: grid; gap: 14px; }
+  .tier { display: flex; align-items: baseline; justify-content: space-between; padding: 18px 20px; border: 1px solid var(--ink-800); background: var(--ink-900); border-top: 4px solid var(--blue-solid); }
+  .tier.ent { border-top-color: #12b5cb; }
+  .tier b { font-size: 22px; }
+  .tier span { font-size: 17px; color: var(--muted); }
+  .tier strong { font-size: 34px; }
+</style>
+</head>
+<body>
+<div class="aurora"><i class="a"></i><i class="b"></i><i class="c"></i></div>
+<div class="veil"></div>
+
+<div class="frame">
+  <div class="copy">
+    <div class="brand"><img src="logo.svg" alt="" /> <span>GenHTTP <span class="l">λ</span></span></div>
+    <h1 id="title"></h1>
+    <p class="sub" id="sub"></p>
+    <ul class="facts" id="facts"></ul>
+  </div>
+  <div class="scene" id="scene"></div>
+</div>
+
+<script>
+  const check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>';
+  const lock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  const globe = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>';
+  const down = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v16M6 14l6 6 6-6"/></svg>';
+
+  const HOST = 'genhttp.dev';
+
+  const bar = (url, kind = 'live', pill = 'Public') =>
+    `<div class="bar ${kind}">${kind === 'local' ? globe : lock}<span class="url">${url}</span>${pill ? `<span class="pill ${kind === 'own' ? 'own' : ''}">${pill}</span>` : ''}</div>`;
+
+  const people = (count, label) => {
+    const colours = ['#5f6368', '#1a73e8', '#aa55ff', '#1e8e3e', '#f9ab00', '#d93025'];
+    const initials = ['You', 'M', 'J', 'S', 'A', 'K'];
+    const faces = initials.slice(0, count).map((initial, i) =>
+      `<b style="background:${colours[i]};${initial.length > 1 ? 'width:auto;padding:0 12px;border-radius:999px' : ''}">${initial}</b>`).join('');
+    return `<div class="people"><div class="faces">${faces}</div><div class="count"><i></i>${count} ${label}</div></div>`;
+  };
+
+  const scores = (widths) => `<div class="bars">${widths.map((w, i) =>
+    `<div><i style="width:${w}%;background:${['#1a73e8', '#aa55ff', '#1e8e3e'][i]}"></i></div>`).join('')}</div>`;
+
+  const conversation = (ask, reply) =>
+    `<div class="chat"><div class="me">${ask}</div><div class="it">${check}${reply}</div></div>`;
+
+  const CARDS = {
+    '/': {
+      title: ['Describe an app.', 'Your agent puts it online.'],
+      sub: 'Polls, games, guestbooks and more, built by an AI agent and shared with a link.',
+      scene: `<div class="card">${conversation('Build a lunch poll for the office.', 'It’s live. Here’s your link.')}
+        <div class="body">${bar(`${HOST}/lambda/q7x2k9`)}${people(5, 'voting')}${scores([74, 52, 30])}</div></div>`,
+    },
+    '/build': {
+      title: ['Say what you want.', 'Share the link.'],
+      sub: 'Type a sentence, and an AI agent builds it, puts it online and hands you the address.',
+      scene: `<div class="card">${conversation('A guestbook for our wedding, please.', 'Done. Share this link.')}
+        <div class="body">${bar(`${HOST}/lambda/w3dd1n`)}${people(4, 'signed')}</div></div>`,
+    },
+    '/ship': {
+      title: ['From your laptop', 'to everyone’s screen.'],
+      sub: 'Tell your coding agent to publish it. A public link in minutes, with live shared data built in.',
+      scene: `<div class="card">${conversation('Put my quiz game online so my friends can join.', 'It’s live. Here’s your link.')}
+        <div class="body">${bar('localhost:5173', 'local', '')}${bar(`${HOST}/lambda/q7x2k9`)}${people(6, 'playing')}</div></div>`,
+    },
+    '/showcase': {
+      title: ['Built with an agent.', 'Running right now.'],
+      sub: 'Games, tools and pages people made here and chose to show. Open any of them in your browser.',
+      scene: `<div class="card"><div class="body">
+        ${bar('Friday quiz night', 'live', 'Live')}${bar('Team lunch poll', 'live', 'Live')}${bar('Pixel canvas', 'live', 'Live')}${bar('Book club guestbook', 'live', 'Live')}
+        ${people(6, 'online')}</div></div>`,
+    },
+    '/enterprise': {
+      title: ['Free to try.', 'Yours to run.'],
+      sub: 'An installation of your own, with your own sign-in, in the cloud or on premises.',
+      facts: ['Your own SSO', 'On premises too', 'Priority support'],
+      scene: `<div class="tiers">
+        <div class="tier"><div><b>Free</b><br><span>No account, no card</span></div><strong>$0</strong></div>
+        <div class="tier ent"><div><b>Enterprise</b><br><span>per user / month</span></div><strong>$5</strong></div>
+        ${bar('apps.yourcompany.com', 'own', 'Yours')}</div>`,
+    },
+    '/docs': {
+      title: ['A snippet of C#.', 'A public address in seconds.'],
+      sub: 'Whatever the snippet returns is served at its own HTTPS address, ready to share.',
+      facts: ['Free', 'No account', 'Open source'],
+      scene: `<div class="card"><div class="code"><span class="k">return</span> <span class="f">Inline</span>.Create()
+    .Get(() =&gt; <span class="s">"Hello, world"</span>);</div>
+        <div class="body">${bar(`${HOST}/lambda/h3ll0w`)}<div class="it" style="font-size:19px">${check}Deployed. It’s live.</div></div></div>`,
+    },
+  };
+
+  const page = new URLSearchParams(location.search).get('page') ?? '/';
+  const card = CARDS[page] ?? CARDS['/'];
+
+  document.getElementById('title').innerHTML = `${card.title[0]}<span>${card.title[1]}</span>`;
+  document.getElementById('sub').textContent = card.sub;
+  document.getElementById('facts').innerHTML = (card.facts ?? ['Free', 'No account', 'Nothing to install'])
+    .map((fact) => `<li>${check}${fact}</li>`).join('');
+  document.getElementById('scene').innerHTML = card.scene;
+
+  window.CARDS = Object.keys(CARDS);
+</script>
+</body>
+</html>
