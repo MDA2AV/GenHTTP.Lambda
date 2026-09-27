@@ -29,7 +29,7 @@ public sealed class SiteMetaTests
     private const string Pages = """
         {
           "/": { "title": "Home", "description": "The front page." },
-          "/docs": { "title": "How It Works", "description": "Snippets & \"handlers\", hosted." }
+          "/docs": { "title": "How It Works", "description": "Snippets & \"handlers\", hosted.", "image": "/social/docs.png" }
         }
         """;
 
@@ -127,6 +127,42 @@ public sealed class SiteMetaTests
         using var robots = await fixture.GetAsync("/robots.txt");
 
         Assert.DoesNotContain("Sitemap:", await robots.Content.ReadAsStringAsync());
+    }
+
+    [TestMethod]
+    public async Task APageIsPreviewedWithItsOwnPicture()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/docs", accept: "text/html");
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        StringAssert.Contains(body, "<meta property=\"og:image\" content=\"https://genhttp.dev/social/docs.png\" />");
+        StringAssert.Contains(body, "<meta name=\"twitter:image\" content=\"https://genhttp.dev/social/docs.png\" />");
+        StringAssert.Contains(body, "<meta property=\"og:image:alt\" content=\"How It Works - GenHTTP Lambda\" />");
+    }
+
+    [TestMethod]
+    public async Task APageWithoutAPictureIsPreviewedWithTheSites()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/", accept: "text/html");
+
+        StringAssert.Contains(await response.Content.ReadAsStringAsync(),
+                              "<meta property=\"og:image\" content=\"https://genhttp.dev/social/default.png\" />");
+    }
+
+    [TestMethod]
+    public async Task WithoutAPublicAddressThePictureIsNamedByItsPath()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl: null));
+
+        using var response = await fixture.GetAsync("/docs", accept: "text/html");
+
+        StringAssert.Contains(await response.Content.ReadAsStringAsync(),
+                              "<meta property=\"og:image\" content=\"/social/docs.png\" />");
     }
 
     [TestMethod]

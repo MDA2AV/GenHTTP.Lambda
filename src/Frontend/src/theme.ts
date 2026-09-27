@@ -19,6 +19,12 @@ export function useTheme(): [Theme, () => void] {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
 
+    // the bar a phone draws above the page, so it does not stay dark over a light one
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute(
+      'content',
+      theme === 'dark' ? '#202124' : '#ffffff',
+    );
+
     try {
       localStorage.setItem(key, theme);
     } catch {
