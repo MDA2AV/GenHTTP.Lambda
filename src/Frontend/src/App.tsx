@@ -13,6 +13,7 @@ import { Admin } from './pages/Admin';
 import { Guide } from './pages/Guide';
 import { Build } from './pages/Build';
 import { Showcase } from './pages/Showcase';
+import { Ship } from './pages/Ship';
 import { Terms } from './pages/Terms';
 import { useTheme } from './theme';
 
@@ -86,6 +87,7 @@ export function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/docs" element={<Guide />} />
                 <Route path="/build" element={<Build />} />
+                <Route path="/ship" element={<Ship />} />
                 <Route path="/showcase" element={<Showcase />} />
                 <Route path="/enterprise" element={<Enterprise />} />
                 {/* the page this replaced, which is linked from elsewhere */}

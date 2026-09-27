@@ -7,6 +7,10 @@
     "title": "Build an App with AI",
     "description": "Say what you want and an AI agent builds it, puts it online and gives you a link to share. Polls, guestbooks, leaderboards and more - free, no account."
   },
+  "/ship": {
+    "title": "Ship Your App",
+    "description": "Built something with your AI agent? Ask it to publish here and get a public link in minutes - with live shared data for games, chat and more. Free, no account, nothing to install."
+  },
   "/showcase": {
     "title": "Showcase",
     "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser."
