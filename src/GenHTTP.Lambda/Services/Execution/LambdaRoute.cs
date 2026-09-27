@@ -39,7 +39,7 @@ public static class LambdaRoute
     {
         var options = services.GetRequiredService<LambdaOptions>();
 
-        var execution = new LambdaExecutionHandler(services.GetRequiredService<IDeploymentService>());
+        var execution = new LambdaExecutionHandler(services.GetRequiredService<IDeploymentService>(), options);
 
         return Concerns.Chain([
             new ThrottleConcernBuilder(services.GetRequiredService<LambdaThrottle>(), options),

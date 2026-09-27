@@ -49,15 +49,21 @@ services:
       LAMBDA_MCP_ORIGINS: genhttp.dev,www.genhttp.dev
       # the address pages name as canonical and the sitemap lists them under
       LAMBDA_PUBLIC_URL: https://genhttp.dev
-      # How much source one lambda may hold, across all of its code files.
+      # What a lambda may hold, by tier. Left empty, each is the platform's
+      # own default (see LambdaOptions): 1 MB of code, 32 MB of assets and a
+      # 256 MB workspace, and 10 MB, 512 MB and 2 GB for a premium lambda.
       #
-      # A hundred and twenty eight kilobytes was the default and it stopped
-      # being enough: the arena, which is the example everything else is
-      # measured against, spent its last several changes having comments
-      # trimmed out of it to make room. That is the limit deciding how a
-      # program is written rather than how large it may be, which is the
-      # wrong job for it.
-      LAMBDA_MAX_CODE_LENGTH: ${LAMBDA_MAX_CODE_LENGTH:-262144}
+      # Set any of them lower in .env where this machine cannot carry it. A
+      # version is read and written whole, in memory, so a premium save with
+      # hundreds of megabytes of assets needs several gigabytes to go through.
+      LAMBDA_MAX_CODE_LENGTH: ${LAMBDA_MAX_CODE_LENGTH:-}
+      LAMBDA_PREMIUM_MAX_CODE_LENGTH: ${LAMBDA_PREMIUM_MAX_CODE_LENGTH:-}
+      LAMBDA_MAX_ASSET_BYTES: ${LAMBDA_MAX_ASSET_BYTES:-}
+      LAMBDA_PREMIUM_MAX_ASSET_BYTES: ${LAMBDA_PREMIUM_MAX_ASSET_BYTES:-}
+      LAMBDA_WORKSPACE_BYTES: ${LAMBDA_WORKSPACE_BYTES:-}
+      LAMBDA_WORKSPACE_FILE_BYTES: ${LAMBDA_WORKSPACE_FILE_BYTES:-}
+      LAMBDA_PREMIUM_WORKSPACE_BYTES: ${LAMBDA_PREMIUM_WORKSPACE_BYTES:-}
+      LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES: ${LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES:-}
       # The tail of the run, readable in the panel at /logs.
       #
       # In memory and lost on a restart; docker still has the whole of it on

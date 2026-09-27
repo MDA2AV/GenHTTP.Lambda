@@ -11,12 +11,6 @@ import { IconPlus, IconTrash, IconUpload } from './Icons';
  */
 export const ENTRY = 'lambda.cs';
 
-/** As many C# files as the server will store for one lambda. */
-const MAX_FILES = 12;
-
-/** As many other files, which are counted apart. */
-const MAX_ASSETS = 60;
-
 interface Props {
   files: LambdaFile[];
   active: string;
@@ -138,11 +132,6 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
       return;
     }
 
-    if (wanted.endsWith('.cs') && files.filter((file) => file.name.endsWith('.cs')).length >= MAX_FILES) {
-      setProblem(`A lambda has at most ${MAX_FILES} C# files.`);
-      return;
-    }
-
     if (files.some((file) => file.name.toLowerCase() === wanted.toLowerCase())) {
       setProblem('There is already a file with that name.');
       return;
@@ -213,9 +202,6 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
     }
   }
 
-  const code = files.filter((file) => file.name.endsWith('.cs')).length;
-  const assets = files.length - code;
-
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {files.map((file) => {
@@ -265,20 +251,18 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
           />
         </form>
       ) : (
-        (code < MAX_FILES || assets < MAX_ASSETS) && (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="rounded-full p-1.5 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
-            title="New file"
-            aria-label="New file"
-          >
-            <IconPlus className="h-3.5 w-3.5" />
-          </button>
-        )
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="rounded-full p-1.5 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
+          title="New file"
+          aria-label="New file"
+        >
+          <IconPlus className="h-3.5 w-3.5" />
+        </button>
       )}
 
-      {editable && assets < MAX_ASSETS && (
+      {editable && (
         <>
           <input ref={picker} type="file" multiple className="hidden" onChange={(event) => upload(event.target.files)} />
           <button

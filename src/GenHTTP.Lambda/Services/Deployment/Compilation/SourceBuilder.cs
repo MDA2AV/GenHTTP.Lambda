@@ -118,7 +118,11 @@ internal static class SourceBuilder
     /// <param name="workspace">The directory this lambda may read and write</param>
     /// <param name="assets">The directory this lambda's static assets were written to</param>
     /// <param name="scope">The namespace everything generated for this lambda lives in</param>
-    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string assets, string scope)
+    /// <param name="limits">
+    /// What the lambda may keep in its workspace, which its tier decides. Left
+    /// out where nothing is going to run, such as for the editor's questions.
+    /// </param>
+    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string assets, string scope, WorkspaceLimits? limits = null)
     {
         var root = (CompilationUnitSyntax)snippet.GetRoot();
 
@@ -188,7 +192,7 @@ internal static class SourceBuilder
 
         builder.AppendLine("#line default");
         builder.AppendLine();
-        builder.AppendLine(WorkspaceSource);
+        builder.AppendLine(WorkspaceSource(limits ?? WorkspaceLimits.Standard));
         builder.AppendLine(AssetSource);
 
         return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
@@ -417,12 +421,18 @@ internal static class SourceBuilder
     /// rather than referenced, so the assembly of this application stays
     /// invisible to the code being compiled.
     /// </summary>
-    private static readonly string WorkspaceSource = $$"""
+    /// <remarks>
+    /// The limits are written in as constants, so the code of the lambda can
+    /// read them and cannot change them.
+    /// </remarks>
+    private static string WorkspaceSource(WorkspaceLimits limits) => $$"""
         internal sealed class {{WorkspaceType}}
         {
-            private const int MaxFileSize = {{WorkspaceLimits.MaxFileSize}};
+            private const int MaxFileSize = {{limits.MaxFileSize}};
 
-            private const int MaxFiles = {{WorkspaceLimits.MaxFiles}};
+            private const int MaxFiles = {{limits.MaxFiles}};
+
+            private const long Quota = {{limits.Quota}};
 
             private readonly string _root;
 
@@ -450,7 +460,7 @@ internal static class SourceBuilder
             public void WriteText(string name, string content)
             {
                 var path = Resolve(name);
-                Reserve(path, content == null ? 0 : content.Length);
+                Reserve(path, content == null ? 0 : global::System.Text.Encoding.UTF8.GetByteCount(content));
                 global::System.IO.File.WriteAllText(path, content);
             }
 
@@ -591,16 +601,58 @@ internal static class SourceBuilder
                 return resolved;
             }
 
-            private void Reserve(string path, int size)
+            private void Reserve(string path, long size)
             {
                 if (size > MaxFileSize)
                 {
                     throw new global::System.InvalidOperationException("A workspace file must not exceed " + MaxFileSize + " bytes.");
                 }
 
-                if (!global::System.IO.File.Exists(path) && List().Length >= MaxFiles)
+                var files = global::System.IO.Directory.GetFiles(_root, "*", global::System.IO.SearchOption.AllDirectories);
+
+                if (!global::System.IO.File.Exists(path) && files.Length >= MaxFiles)
                 {
                     throw new global::System.InvalidOperationException("A workspace must not hold more than " + MaxFiles + " files.");
+                }
+
+                // what the workspace holds once this is written, so a file
+                // being replaced is not counted a second time
+                var used = size;
+
+                var replaced = 0L;
+
+                foreach (var file in files)
+                {
+                    if (file == path)
+                    {
+                        replaced = Size(file);
+                    }
+                    else
+                    {
+                        used += Size(file);
+                    }
+                }
+
+                // a write taking no more room than what it replaces goes
+                // through even past the quota, which is where a workspace is
+                // once its lambda leaves the tier that filled it: it can still
+                // rewrite what it holds, only not grow
+                if (used > Quota && size > replaced)
+                {
+                    throw new global::System.InvalidOperationException("A workspace must not hold more than " + Quota + " bytes.");
+                }
+            }
+
+            private static long Size(string file)
+            {
+                try
+                {
+                    return new global::System.IO.FileInfo(file).Length;
+                }
+                catch (global::System.IO.IOException)
+                {
+                    // removed since the directory was read
+                    return 0;
                 }
             }
         }

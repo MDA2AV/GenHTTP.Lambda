@@ -1,6 +1,10 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -684,6 +688,84 @@ public sealed class McpTests
         using var response = await fixture.Host.GetResponseAsync(request);
 
         Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task AFileTooLargeToSendIsLeftToTheArchive()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // well within what any lambda may ship, and more than an answer should
+        // carry however it is asked for
+        var large = new string('a', 1024 * 1024 + 1);
+
+        using (var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions", new VersionRequest([
+                   new LambdaFile(LambdaSource.EntryName, "return Assets.Files();"),
+                   new LambdaFile("large.txt", large)
+               ])))
+        {
+            Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode, await saved.Content.ReadAsStringAsync());
+        }
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["file"] = "large.txt" }));
+
+        var file = ((JsonArray)read["files"]!).Single()!;
+
+        Assert.IsNull(file["code"], "a file this large is named rather than sent");
+        Assert.AreEqual(large.Length, file["length"]!.GetValue<int>());
+        Assert.IsTrue(read["filesOmitted"]!.GetValue<bool>());
+        Assert.Contains("/zip", read["note"]!.GetValue<string>(), "and the agent is told where to get it");
+    }
+
+    [TestMethod]
+    public async Task ReadingALambdaSaysWhatItsTierAllows()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        var free = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
+
+        Assert.AreEqual(fixture.Options.MaxCodeLengthOf(LambdaTier.Free), free["codeCharacters"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Options.MaxAssetBytesOf(LambdaTier.Free), free["assetBytes"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Free).Quota, free["workspaceBytes"]!.GetValue<long>());
+
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+
+        var premium = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
+
+        Assert.AreEqual(fixture.Options.MaxCodeLengthOf(LambdaTier.Premium), premium["codeCharacters"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Options.MaxAssetBytesOf(LambdaTier.Premium), premium["assetBytes"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Premium).Quota, premium["workspaceBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Premium).MaxFileSize, premium["workspaceFileBytes"]!.GetValue<int>());
+    }
+
+    [TestMethod]
+    public async Task TheGuideExplainsWhatEachTierAllows()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        var limits = guide["limits"]!;
+
+        Assert.Contains("premium", limits["tiers"]!.GetValue<string>(), "which tier a lambda is in, and who decides it");
+
+        var free = limits["free"]!.GetValue<string>();
+        var premium = limits["premium"]!.GetValue<string>();
+
+        Assert.Contains("1,048,576 characters", free);
+        Assert.Contains("Assets: 32 MB", free);
+        Assert.Contains("Workspace: 256 MB", free);
+
+        Assert.Contains("10,485,760 characters", premium);
+        Assert.Contains("Assets: 512 MB", premium);
+        Assert.Contains("Workspace: 2 GB", premium);
+
+        Assert.IsNull(guide["moreThanOneFile"]!["limit"], "nothing counts the C# files any more");
+        Assert.AreEqual(JsonValueKind.String, guide["assets"]!["limits"]!["count"]!.GetValueKind(), "nor the assets");
     }
 
     #region Plumbing

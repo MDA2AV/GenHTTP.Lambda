@@ -178,7 +178,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              }),
 
         Tool("read_lambda", "Read a lambda", Effect.Read,
-             $"A lambda's status (online version, latest version, expiry), the recent versions with what each was asked for and changed, and the files of one version - in full when they come to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one. Read the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
+             $"A lambda's status (online version, latest version, expiry, its tier and what it may use there), the recent versions with what each was asked for and changed, and the files of one version - in full when they come to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one. Read the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -186,7 +186,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                  {
                      ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
                      ["version"] = Field("integer", "Defaults to the newest."),
-                     ["file"] = Field("string", "Return only this file of the version, in full, however large the rest is.")
+                     ["file"] = Field("string", $"Return only this file of the version, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the version's zip has it.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -616,18 +616,27 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         var only = Text(arguments, "file");
 
-        object listing;
+        IEnumerable<object> listing;
 
-        var omitted = false;
+        string? note = null;
 
         if (only != null)
         {
             var one = files.FirstOrDefault(f => f.Name == only)
                    ?? throw LambdaException.NotFound($"Version {version} has no file '{only}'. It has: {string.Join(", ", files.Select(f => f.Name))}.");
 
-            listing = new[] { new { one.Name, one.Code } };
+            if (one.Code.Length <= ReadFileLimit)
+            {
+                listing = [new { one.Name, one.Code }];
+            }
+            else
+            {
+                listing = [new { one.Name, length = one.Code.Length }];
+
+                note = $"{one.Name} comes to {one.Code.Length:N0} characters, more than is sent here. {Archive(version)} has every file of this version.";
+            }
         }
-        else if (files.Sum(f => f.Code.Length) <= ReadBudget)
+        else if (files.Sum(f => (long)f.Code.Length) <= ReadBudget)
         {
             listing = files.Select(f => new { f.Name, f.Code });
         }
@@ -635,7 +644,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         {
             listing = files.Select(f => new { f.Name, length = f.Code.Length });
 
-            omitted = true;
+            note = $"The files come to {files.Sum(f => (long)f.Code.Length):N0} characters, more than one answer carries. Pass file to read one of them, up to {ReadFileLimit:N0} characters; {Archive(version)} has every file.";
         }
 
         return McpProtocol.Say(new
@@ -645,6 +654,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             domainUrl = DomainUrl(lambda),
             lambda.Tier,
+            limits = Limits(Enum.Parse<LambdaTier>(lambda.Tier)),
             lambda.ActiveVersion,
             lambda.LatestVersion,
             online = lambda.ActiveVersion != null,
@@ -658,10 +668,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             // each, since a specification can be a page and this is read every time
             history = history.Take(10).Select(v => new { v.Version, v.Created, v.Change, v.Origin }),
             files = listing,
-            filesOmitted = omitted ? true : (bool?)null,
-            note = omitted
-                ? $"The files come to {files.Sum(f => f.Code.Length):N0} characters, more than one answer carries. Pass file to read one of them."
-                : null
+            filesOmitted = note != null ? true : (bool?)null,
+            note
         });
     }
 
@@ -675,6 +683,36 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
     /// the answer lists names and lengths, and file fetches one in full.
     /// </remarks>
     private const int ReadBudget = 30_000;
+
+    /// <summary>
+    /// The largest file read_lambda sends when it is asked for one by name.
+    /// </summary>
+    /// <remarks>
+    /// A premium lambda may ship hundreds of megabytes. An answer is built
+    /// whole before any of it is sent, and past a megabyte it is more than an
+    /// agent reads in one piece anyway - the zip of the version has every file,
+    /// and streams it.
+    /// </remarks>
+    private const int ReadFileLimit = 1024 * 1024;
+
+    private static string Archive(int? version) => $"GET /api/v1/lambdas/{{privateKey}}/versions/{version}/zip";
+
+    /// <summary>
+    /// What a lambda in the given tier may use, as read_lambda reports it.
+    /// </summary>
+    private object Limits(LambdaTier tier)
+    {
+        var workspace = options.WorkspaceOf(tier);
+
+        return new
+        {
+            codeCharacters = options.MaxCodeLengthOf(tier),
+            assetBytes = options.MaxAssetBytesOf(tier),
+            workspaceBytes = workspace.Quota,
+            workspaceFileBytes = workspace.MaxFileSize,
+            workspaceFiles = workspace.MaxFiles
+        };
+    }
 
     /// <summary>
     /// Reads, writes or removes the showcase entry of a lambda.
@@ -805,7 +843,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         moreThanOneFile = new
         {
             howItWorks = "Other .cs files hold types, compiled into the same namespace as the snippet. Workspace works in all of them. Assets means the lambda's own files only in lambda.cs - elsewhere it is LambdaEnvironment.Assets.",
-            limit = LambdaSource.MaxFiles
+            howMany = "Any number. Only what the C# comes to together is limited - see limits."
         },
         assets = new
         {
@@ -818,8 +856,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             contentTypes = "Inferred from the file extension.",
             limits = new
             {
-                bytes = options.MaxAssetBytes,
-                count = LambdaSource.MaxAssets,
+                bytes = options.MaxAssetBytesOf(LambdaTier.Free),
+                premiumBytes = options.MaxAssetBytesOf(LambdaTier.Premium),
+                count = "Any number: only what they come to is counted.",
                 names = "Letters, digits, dashes, underscores, dots and slashes. No leading slash, no .."
             }
         },
@@ -841,6 +880,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 "Workspace.Root - where it is on disk"
             },
             reach = "Workspace can be used from every file, including types in other .cs files.",
+            limits = new
+            {
+                bytes = options.WorkspaceOf(LambdaTier.Free).Quota,
+                fileBytes = options.WorkspaceOf(LambdaTier.Free).MaxFileSize,
+                files = options.WorkspaceOf(LambdaTier.Free).MaxFiles,
+                premiumBytes = options.WorkspaceOf(LambdaTier.Premium).Quota,
+                premiumFileBytes = options.WorkspaceOf(LambdaTier.Premium).MaxFileSize,
+                premiumFiles = options.WorkspaceOf(LambdaTier.Premium).MaxFiles,
+                exact = "list_files answers with the quota of the lambda at hand."
+            },
             note = "Nothing else on the file system is reachable. There is no Append."
         },
         servingAFrontEnd = new
@@ -849,13 +898,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             {
                 how = "write_code with the files (slashes make folders), deploy, serve with Assets.App() or Assets.App(\"site\").",
                 whenToPreferIt = "The front end is part of the program: versioned, rolled back and cloned together with the code. Simplest to write in one pass.",
-                mind = "Counts against the code budget; every change needs a deploy.",
+                mind = "Counts against the assets limit of the tier; every change needs a deploy.",
                 example = "Every demo serves its front end like this, from web/ - read_lambda demo-crud"
             },
             inTheWorkspace = new
             {
                 how = "Deploy a lambda returning Layout.Create().Add(Workspace.App()), then upload_file index.html and the rest. Served immediately.",
-                whenToPreferIt = "The files change more often than the code, someone else replaces them, or there are many. No redeploys, no code budget.",
+                whenToPreferIt = "The files change more often than the code, someone else replaces them, or there are many. No redeploys, and they use the workspace quota rather than the assets limit.",
                 mind = "Not versioned and not cloned. Workspace.App() without a folder serves everything the lambda writes - use a folder if it writes anything else."
             },
             underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree() or Workspace.Tree().",
@@ -910,12 +959,34 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         },
         limits = new
         {
-            code = $"{options.MaxCodeLength} characters across all files",
-            deployment = $"online while used; offline after {(int)options.DeploymentLifetime.TotalDays} days without visits or edits",
-            retention = $"removed about {(int)options.Retention.TotalDays} days after the last of either"
+            tiers = "What a lambda may use depends on its tier. Every lambda is free unless whoever runs this installation made it premium - its owner cannot choose. read_lambda says which tier a lambda is in and what it may use there; a refusal for size says what the premium tier allows.",
+            free = Allowance(LambdaTier.Free),
+            premium = Allowance(LambdaTier.Premium),
+            code = $"{options.MaxCodeLengthOf(LambdaTier.Free):N0} characters across all .cs files; {options.MaxCodeLengthOf(LambdaTier.Premium):N0} for a premium lambda",
+            deployment = $"A free lambda is online while used, and offline after {(int)options.DeploymentLifetime.TotalDays} days without visits or edits. A premium one stays online.",
+            retention = $"A free lambda is removed about {(int)options.Retention.TotalDays} days after the last of either. A premium one is kept."
         },
         terms = SystemResource.Terms
     });
+
+    /// <summary>
+    /// What a lambda in the given tier may use, as the guide says it.
+    /// </summary>
+    private string Allowance(LambdaTier tier)
+    {
+        var workspace = options.WorkspaceOf(tier);
+
+        return $"Code: {options.MaxCodeLengthOf(tier):N0} characters, in any number of .cs files. "
+             + $"Assets: {Size(options.MaxAssetBytesOf(tier))} in all, any number of them. "
+             + $"Workspace: {Size(workspace.Quota)} in all, {Size(workspace.MaxFileSize)} per file, {workspace.MaxFiles} files.";
+    }
+
+    private static string Size(long bytes) => bytes switch
+    {
+        >= 1L << 30 when bytes % (1L << 30) == 0 => $"{bytes >> 30} GB",
+        >= 1L << 20 when bytes % (1L << 20) == 0 => $"{bytes >> 20} MB",
+        _ => $"{bytes >> 10:N0} KB"
+    };
 
     #endregion
 

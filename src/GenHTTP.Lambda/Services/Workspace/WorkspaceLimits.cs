@@ -4,29 +4,30 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// What a lambda may keep in its workspace.
 /// </summary>
 /// <remarks>
-/// Compile time constants because the generated workspace class enforces them
-/// from inside the lambda, where nothing of this application is reachable - so
-/// the numbers are baked into that source rather than read from a service. This
-/// is the one place they are written down, and both the generated code and the
-/// editor read them from here.
+/// Baked into the generated workspace class as constants, because that class
+/// enforces them from inside the lambda, where nothing of this application is
+/// reachable - and a constant is also something the code of the lambda cannot
+/// change. Which numbers are baked in depends on the tier of the lambda, so
+/// they are chosen when it is compiled, and a lambda whose tier moves is
+/// compiled again with the new ones (see <see cref="GenHTTP.Lambda.Configuration.LambdaOptions.WorkspaceOf"/>).
 /// </remarks>
-public static class WorkspaceLimits
+/// <param name="MaxFileSize">The largest single file a lambda may write</param>
+/// <param name="MaxFiles">How many files a workspace may hold</param>
+/// <param name="Quota">What all of them may come to together</param>
+public sealed record WorkspaceLimits(int MaxFileSize, int MaxFiles, long Quota)
 {
 
     /// <summary>
-    /// The largest single file a lambda may write.
+    /// The workspace of every lambda that is not in the premium tier, unless
+    /// configured otherwise.
     /// </summary>
-    public const int MaxFileSize = 1024 * 1024;
-
-    /// <summary>
-    /// How many files a workspace may hold.
-    /// </summary>
-    public const int MaxFiles = 64;
-
-    /// <summary>
-    /// Everything a workspace could hold at once, which is what the editor
-    /// draws its quota bar against.
-    /// </summary>
-    public const long Quota = (long)MaxFileSize * MaxFiles;
+    /// <remarks>
+    /// A file may be as large as everything the tier may ship as assets, and
+    /// eight of them reach the quota. The number of files stays bounded
+    /// because they are created by code that runs here: without a bound, a
+    /// loop writing empty files would run the host out of them long before
+    /// any byte limit noticed.
+    /// </remarks>
+    public static WorkspaceLimits Standard { get; } = new(32 * 1024 * 1024, 64, 256L * 1024 * 1024);
 
 }

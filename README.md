@@ -135,7 +135,10 @@ services that the API resources talk to through interfaces:
 - **Workspace** (`Services/Workspace`) - the private directory of a lambda,
   reached from the editor. The same directory the generated `Workspace` class
   writes to from inside a lambda, under the same limits, so a file put there by
-  hand behaves like one the lambda wrote itself.
+  hand behaves like one the lambda wrote itself. The tier sets them: 64 files,
+  32 MB each and 256 MB in all for most lambdas, 512 MB each and 2 GB in all
+  for a premium one. They are compiled into the lambda, so moving it to another
+  tier builds it again on its next request.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached.
@@ -175,14 +178,21 @@ Everything is read from the environment on startup, see
 |-------------------------------------|------------------|---------------------------------------------|
 | `LAMBDA_PORT`                       | `8080`           | port of the root server                     |
 | `LAMBDA_ENGINE`                     | `ioxide`         | `ioxide` or `kestrel` (see below)           |
+| `LAMBDA_RECEIVE_QUEUE_ENTRIES`      | `1024`           | reads of 32 KB a connection may have waiting on io_uring |
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
 | `LAMBDA_WEB_ROOT`                   | `./wwwroot`      | the built frontend                          |
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
 | `LAMBDA_DEPLOYMENT_LIFETIME_HOURS`  | `720`            | unused for this long and it goes offline       |
 | `LAMBDA_RETENTION_HOURS`            | `2160`           | unused for this long and it is removed        |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
-| `LAMBDA_MAX_ASSET_BYTES`            | `2097152`        | what the shipped assets may come to         |
-| `LAMBDA_MAX_CODE_LENGTH`            | `131072`         | largest snippet accepted                    |
+| `LAMBDA_MAX_CODE_LENGTH`            | `1048576`        | characters of C# a lambda may have, in all  |
+| `LAMBDA_PREMIUM_MAX_CODE_LENGTH`    | `10485760`       | the same for a premium lambda, never less   |
+| `LAMBDA_MAX_ASSET_BYTES`            | `33554432`       | what the shipped assets may come to         |
+| `LAMBDA_PREMIUM_MAX_ASSET_BYTES`    | `536870912`      | the same for a premium lambda, never less   |
+| `LAMBDA_WORKSPACE_BYTES`            | `268435456`      | what a workspace may hold in all            |
+| `LAMBDA_WORKSPACE_FILE_BYTES`       | `33554432`       | the largest file a workspace holds          |
+| `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | what a premium workspace may hold in all    |
+| `LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES` | `536870912`    | the largest file a premium workspace holds  |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
@@ -224,6 +234,17 @@ the default profile of the runtime with `io_uring_setup`, `io_uring_enter` and
 `io_uring_setup failed: -1` before the first request. The hole is small but it
 is real: io_uring reaches further into the kernel than ordinary sockets, and
 this platform runs code written by strangers in the same process.
+
+The engine does not slow a sender down while a request is read more slowly
+than it arrives. It keeps what came in, and once `LAMBDA_RECEIVE_QUEUE_ENTRIES`
+reads are waiting it drops the connection with `recv queue overflow` on stderr.
+Its own default of 64 is two megabytes, which a JSON body of a few megabytes
+outruns while it is being parsed - an upload of 24 MB was dropped even at
+5 MB/s. 1024 carried 100 MB at 40 MB/s; the reads come out of the 4096 each
+reactor shares, and when those run out it waits for them rather than dropping
+anybody. It is not enough for everything the premium tier allows - 171 MB sent
+at 50 MB/s was still dropped. Kestrel slows the sender down and needs none of
+this.
 
 ### Redeploying
 
@@ -318,7 +339,24 @@ come from the extension.
 
 The directory is rewritten from the version being deployed, so an asset dropped
 from a version stops being served rather than lingering. `LAMBDA_MAX_ASSET_BYTES`
-is what they may come to in total.
+is what they may come to in total, and `LAMBDA_PREMIUM_MAX_ASSET_BYTES` the same
+for a lambda in the premium tier. How many there are is not limited, and
+neither is the number of C# files - only what the code comes to, by
+`LAMBDA_MAX_CODE_LENGTH` and `LAMBDA_PREMIUM_MAX_CODE_LENGTH`.
+
+Budget the disk for the premium tier. Assets are kept inside every version, as
+base64 in JSON, so each version saved at the limit takes nearly half as much
+again on disk - 184 MB for 128 MB of assets - and `LAMBDA_MAX_VERSIONS` of them
+are kept: at the defaults, a premium lambda that is saved over and over with
+all 512 MB of its assets can come to around 36 GB of history.
+
+Budget the memory too. A version is read and written whole: with 128 MB of
+assets, saving one took the server to 2.3 GB and deploying it to 2.8 GB, and
+what the premium tier allows by default needs several times that. Even the
+32 MB of a free lambda took a server idling at 350 MB to 950 MB to save, and
+anybody can create a free lambda. Set `LAMBDA_MAX_ASSET_BYTES` and
+`LAMBDA_PREMIUM_MAX_ASSET_BYTES` to what the machine can carry until assets are
+stored apart from the versions.
 
 ### More than one hostname
 
@@ -427,6 +465,13 @@ line on what the version does). They are kept with the version and shown next
 to its diff in the control center, and `read_lambda` hands the recent history
 back so the next agent can read why before it changes anything. `read_logs`
 lets an agent see how what it deployed is answering, stack traces included.
+
+`read_lambda` sends every file of a version while together they come to 30,000
+characters, and names them with their lengths beyond that; `file` then fetches
+one in full, up to a megabyte, and anything larger is left to the zip of the
+version - a hundred megabytes of base64 is nothing an agent can read. It also
+says which tier the lambda is in and what that allows, and `platform_guide`
+lays out both tiers.
 
 ### Demos
 

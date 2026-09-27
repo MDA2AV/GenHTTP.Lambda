@@ -153,7 +153,7 @@ export function FilesTab({ control }: { control: Control }) {
               <GroupList
                 title="Code"
                 exposure={<Exposure open={false} why="Compiled into the lambda, never served." />}
-                usage={limits && `${code.length} of ${limits.codeFiles} files, ${code.reduce((t, f) => t + f.code.length, 0).toLocaleString()} of ${limits.codeCharacters.toLocaleString()} characters`}
+                usage={limits && `${code.length} ${code.length === 1 ? 'file' : 'files'}, ${code.reduce((t, f) => t + f.code.length, 0).toLocaleString()} of ${limits.codeCharacters.toLocaleString()} characters`}
               >
                 <Tree
                   entries={code.map((f) => ({ path: f.name, size: sizeOf(f) }))}
@@ -171,7 +171,7 @@ export function FilesTab({ control }: { control: Control }) {
                     why={servesAssets(source) ? 'Public: this version serves them with Assets.' : 'Saved with the code, but this version does not serve them.'}
                   />
                 }
-                usage={limits && `${assets.length} of ${limits.assets} files, ${bytes(assets.reduce((t, f) => t + sizeOf(f), 0))} of ${bytes(limits.assetBytes)}`}
+                usage={limits && `${assets.length} ${assets.length === 1 ? 'file' : 'files'}, ${bytes(assets.reduce((t, f) => t + sizeOf(f), 0))} of ${bytes(limits.assetBytes)}`}
               >
                 <Tree
                   entries={assets.map((f) => ({ path: f.name, size: sizeOf(f) }))}

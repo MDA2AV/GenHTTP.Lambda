@@ -81,7 +81,13 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/zip")]
     public async ValueTask<Result<SavedVersionResponse>> CreateFromArchive(string privateKey, bool? deploy, string? specification, string? change, Stream body)
     {
-        var files = await LambdaArchive.UnpackAsync(body, options.MaxCodeLength * 4L + options.MaxAssetBytes);
+        // looked up before the body is read, because how much of it may be
+        // read depends on the tier - and a key that names nothing needs none
+        var lambda = await meta.RequireAsync(privateKey);
+
+        var tier = Enum.Parse<LambdaTier>(lambda.Tier);
+
+        var files = await LambdaArchive.UnpackAsync(body, options.MaxCodeLengthOf(tier) * 4L + options.MaxAssetBytesOf(tier));
 
         return await SaveAsync(privateKey, files, deploy, specification, change);
     }

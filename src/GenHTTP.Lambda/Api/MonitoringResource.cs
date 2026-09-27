@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
@@ -57,6 +58,10 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var traffic = telemetry.Describe(id);
 
+        var tier = Enum.Parse<LambdaTier>(lambda.Tier);
+
+        var allowance = options.WorkspaceOf(tier);
+
         /*
          * A request answered with a client error is written as a warning, and
          * a browser asking for a favicon that is not there is not a problem
@@ -84,13 +89,11 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             [.. problems.Select(Describe)],
             await MeasureAsync(privateKey, id, live?.Version ?? latest?.Version),
             new SummaryLimits(
-                options.MaxCodeLength,
-                LambdaSource.MaxFiles,
-                options.MaxAssetBytes,
-                LambdaSource.MaxAssets,
-                WorkspaceLimits.Quota,
-                WorkspaceLimits.MaxFiles,
-                WorkspaceLimits.MaxFileSize,
+                options.MaxCodeLengthOf(tier),
+                options.MaxAssetBytesOf(tier),
+                allowance.Quota,
+                allowance.MaxFiles,
+                allowance.MaxFileSize,
                 options.MaxVersions,
                 (int)options.DeploymentLifetime.TotalHours,
                 (int)options.Retention.TotalDays

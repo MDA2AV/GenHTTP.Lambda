@@ -1,11 +1,12 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
-using System.Text;
 
 using GenHTTP.Api.Content;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -110,7 +111,7 @@ internal static class LambdaCompiler
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
 
-        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Assets, scope) };
+        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Assets, scope, request.Limits) };
 
         foreach (var other in others)
         {
@@ -186,19 +187,32 @@ internal static class LambdaCompiler
     /// Identifies a snippet by what it compiles to, so redeploying unchanged
     /// code does not add another assembly to the process.
     /// </summary>
+    /// <remarks>
+    /// The limits are part of it because they are compiled in: the same code
+    /// in another tier is another assembly. Hashed piece by piece rather than
+    /// joined first, because the files include the assets, and joining a
+    /// hundred megabytes of them into one string to hash it would copy them
+    /// twice for nothing.
+    /// </remarks>
     private static string Identify(CompilationRequest request)
     {
-        var builder = new StringBuilder(request.Workspace);
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+
+        Append(hash, request.Workspace);
+        Append(hash, $"\n{request.Limits.MaxFileSize}/{request.Limits.MaxFiles}/{request.Limits.Quota}");
 
         foreach (var file in request.Files)
         {
-            builder.Append('\n').Append(file.Name).Append('\n').Append(file.Code);
+            Append(hash, "\n");
+            Append(hash, file.Name);
+            Append(hash, "\n");
+            Append(hash, file.Code);
         }
 
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString()));
-
-        return Convert.ToHexStringLower(bytes);
+        return Convert.ToHexStringLower(hash.GetHashAndReset());
     }
+
+    private static void Append(IncrementalHash hash, string text) => hash.AppendData(MemoryMarshal.AsBytes(text.AsSpan()));
 
     private static void TryDelete(string file)
     {
@@ -286,4 +300,6 @@ internal static class LambdaCompiler
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
-internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Assets, string AssemblyDirectory, string Name, bool Run);
+/// <param name="Limits">What the lambda may keep in its workspace, compiled into it</param>
+internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Assets, string AssemblyDirectory, string Name, bool Run,
+                                          WorkspaceLimits Limits);

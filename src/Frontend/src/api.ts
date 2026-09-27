@@ -157,11 +157,10 @@ export interface LambdaSummary {
     servesAssets: boolean;
     servesWorkspace: boolean;
   };
+  /** What this lambda may use in its tier. Nothing counts its C# files or assets, only what they come to. */
   limits: {
     codeCharacters: number;
-    codeFiles: number;
     assetBytes: number;
-    assets: number;
     workspaceBytes: number;
     workspaceFiles: number;
     workspaceFileBytes: number;

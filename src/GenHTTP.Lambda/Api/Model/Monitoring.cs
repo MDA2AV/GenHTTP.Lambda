@@ -79,13 +79,14 @@ public sealed record StorageSummary(
 );
 
 /// <summary>
-/// The allowances a lambda on this installation has.
+/// The allowances a lambda on this installation has, in its tier.
 /// </summary>
+/// <remarks>
+/// Nothing counts the C# files or the assets: only what they come to.
+/// </remarks>
 public sealed record SummaryLimits(
     int CodeCharacters,
-    int CodeFiles,
     long AssetBytes,
-    int Assets,
     long WorkspaceBytes,
     int WorkspaceFiles,
     int WorkspaceFileBytes,

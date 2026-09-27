@@ -396,7 +396,7 @@ public sealed class MetaService : IMetaService
             return null;
         }
 
-        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier.ToString(), deployment.Version, deployment.Created);
+        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created);
     }
 
     public async ValueTask<IReadOnlyList<LambdaVersionInfo>> GetVersionsAsync(string privateKey, CancellationToken cancellation = default)
@@ -444,7 +444,7 @@ public sealed class MetaService : IMetaService
 
     public async ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, CancellationToken cancellation = default)
     {
-        Validate(code);
+        var files = Validate(code);
 
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
@@ -453,6 +453,8 @@ public sealed class MetaService : IMetaService
         note ??= new VersionNote(Origin: VersionOrigins.Api);
 
         EnsureEditable(lambda, note.Origin);
+
+        ValidateAllowance(files, lambda.Tier);
 
         var version = await AppendAsync(database, lambda, code, DateTime.UtcNow, note, cancellation);
 
@@ -463,13 +465,15 @@ public sealed class MetaService : IMetaService
 
     public async ValueTask<CompilationOutcome> CheckAsync(string privateKey, string code, CancellationToken cancellation = default)
     {
-        Validate(code);
+        var files = Validate(code);
 
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
 
-        return await Deployments.ValidateAsync(code, lambda.Id, cancellation);
+        ValidateAllowance(files, lambda.Tier);
+
+        return await Deployments.ValidateAsync(code, lambda.Id, Options.WorkspaceOf(lambda.Tier), cancellation);
     }
 
     public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, string? origin = null, CancellationToken cancellation = default)
@@ -502,7 +506,7 @@ public sealed class MetaService : IMetaService
                ? LambdaOutput.Enter(new OutputScope(lambda.PublicKey, Book, Options.MaxOutputLines, lambda.Id))
                : null)
         {
-            outcome = await Deployments.ActivateAsync(lambda.Id, target, cancellation);
+            outcome = await Deployments.ActivateAsync(lambda.Id, target, Options.WorkspaceOf(lambda.Tier), cancellation);
         }
 
         if (!outcome.Success)
@@ -710,7 +714,11 @@ public sealed class MetaService : IMetaService
 
     #region Helpers
 
-    private void Validate(string? code)
+    /// <summary>
+    /// Checks what can be checked without knowing whose code it is.
+    /// </summary>
+    /// <returns>The files, for the checks that do need to know</returns>
+    private IReadOnlyList<LambdaFile> Validate(string? code)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -724,19 +732,43 @@ public sealed class MetaService : IMetaService
             throw LambdaException.Invalid(complaint);
         }
 
+        return files;
+    }
+
+    /// <summary>
+    /// Holds the code and the assets to what the tier of the lambda allows.
+    /// </summary>
+    /// <remarks>
+    /// Only ever when a version is written. A lambda that leaves the premium
+    /// tier keeps the versions it has, and can put any of them online again;
+    /// what it cannot do is save a new one until it fits. A refusal names
+    /// what the premium tier allows, so whoever reads it knows there is more.
+    /// </remarks>
+    private void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier)
+    {
         // the limit counts what was written rather than what it is stored as,
         // so splitting a lambda into files does not spend any of it on the
         // envelope those files are kept in
-        if (LambdaSource.Length(files) > Options.MaxCodeLength)
+        var code = Options.MaxCodeLengthOf(tier);
+
+        if (LambdaSource.Length(files) > code)
         {
-            throw LambdaException.Invalid($"The code must not exceed {Options.MaxCodeLength} characters.");
+            throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, Options.MaxCodeLengthOf(LambdaTier.Premium), $"{Options.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
         }
 
-        if (LambdaSource.AssetBytes(files) > Options.MaxAssetBytes)
+        var assets = Options.MaxAssetBytesOf(tier);
+
+        if (LambdaSource.AssetBytes(files) > assets)
         {
-            throw LambdaException.Invalid($"The assets must not exceed {Options.MaxAssetBytes / 1024} KB in total.");
+            throw LambdaException.Invalid($"The assets must not exceed {Readable(assets)} in total.{Beyond(tier, assets, Options.MaxAssetBytesOf(LambdaTier.Premium), Readable(Options.MaxAssetBytesOf(LambdaTier.Premium)))}");
         }
     }
+
+    private static string Beyond(LambdaTier tier, long allowed, long premium, string readable)
+        => tier != LambdaTier.Premium && premium > allowed ? $" A lambda in the premium tier may have {readable}." : string.Empty;
+
+    private static string Readable(long bytes)
+        => bytes % (1024 * 1024) == 0 ? $"{bytes / 1024 / 1024} MB" : $"{bytes / 1024} KB";
 
     public async ValueTask<LambdaCounts> CountAsync(CancellationToken cancellation = default)
     {
@@ -768,6 +800,16 @@ public sealed class MetaService : IMetaService
         return await database.Lambdas.AsNoTracking()
                              .Where(l => l.PrivateKey == privateKey)
                              .Select(l => (long?)l.Id)
+                             .FirstOrDefaultAsync(cancellation);
+    }
+
+    public async ValueTask<LambdaTier?> GetTierAsync(long lambdaId, CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        return await database.Lambdas.AsNoTracking()
+                             .Where(l => l.Id == lambdaId)
+                             .Select(l => (LambdaTier?)l.Tier)
                              .FirstOrDefaultAsync(cancellation);
     }
 

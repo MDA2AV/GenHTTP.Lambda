@@ -27,8 +27,8 @@ public sealed class WorkspaceTests
 
         Assert.IsEmpty(listing.Files);
         Assert.AreEqual(0, listing.UsedBytes);
-        Assert.AreEqual(WorkspaceLimits.MaxFiles, listing.MaxFiles);
-        Assert.AreEqual(WorkspaceLimits.MaxFileSize, listing.MaxFileSize);
+        Assert.AreEqual(WorkspaceLimits.Standard.MaxFiles, listing.MaxFiles);
+        Assert.AreEqual(WorkspaceLimits.Standard.MaxFileSize, listing.MaxFileSize);
     }
 
     [TestMethod]
@@ -94,7 +94,7 @@ public sealed class WorkspaceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        using var response = await Put(fixture, lambda.PrivateKey, "big.bin", new byte[WorkspaceLimits.MaxFileSize + 1]);
+        using var response = await Put(fixture, lambda.PrivateKey, "big.bin", new byte[WorkspaceLimits.Standard.MaxFileSize + 1]);
 
         Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.IsEmpty((await ListAsync(fixture, lambda.PrivateKey)).Files, "and nothing half written is left behind");

@@ -1,5 +1,8 @@
 using GenHTTP.Api.Infrastructure;
 
+using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Workspace;
+
 namespace GenHTTP.Lambda.Configuration;
 
 /// <summary>
@@ -38,6 +41,24 @@ public sealed record LambdaOptions
     /// release.
     /// </remarks>
     public HttpProtocols Protocols { get; init; } = HttpProtocols.Http1;
+
+    /// <summary>
+    /// How many reads a connection may have waiting on the io_uring engine
+    /// before the engine drops it.
+    /// </summary>
+    /// <remarks>
+    /// Each read is up to 32 KB. The engine does not slow a sender down while
+    /// a request is read more slowly than it arrives: it keeps what came in
+    /// and, once this many reads are waiting, closes the connection. Its own
+    /// default of 64 is two megabytes, which a JSON body of a few megabytes
+    /// outruns while it is being parsed - uploads of 24 MB were dropped even
+    /// at 5 MB/s, which the assets of a premium lambda far exceed. 1024 is 32
+    /// MB, and carried 100 MB at 40 MB/s. The reads come out of the ones a
+    /// reactor shares between its connections, 4096 of them; when those run
+    /// out, the engine waits for them to come back rather than dropping
+    /// anybody.
+    /// </remarks>
+    public int ReceiveQueueEntries { get; init; } = 1024;
 
     /// <summary>
     /// Where the build agent listens, or nothing to do without one.
@@ -116,28 +137,70 @@ public sealed record LambdaOptions
     public TimeSpan MaintenanceInterval { get; init; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// The maximum size of a code snippet that will be accepted.
+    /// How many characters of C# a lambda outside the premium tier may have.
     /// </summary>
     /// <remarks>
-    /// Counted across every C# file of a lambda together, and not against
-    /// its assets, which have their own budget. It was half this and that
-    /// was the tightest of the three limits by a distance: a lambda may
-    /// ship twelve files and two megabytes of things to serve, and then be
-    /// refused for the code that serves them. What this actually guards is
-    /// the time the compiler spends, and that is not close to mattering at
-    /// either number.
+    /// Counted across every C# file of a lambda together, in however many
+    /// files, and not against its assets, which have their own budget. What
+    /// this guards is the time and the memory the compiler spends, which the
+    /// whole server shares.
     /// </remarks>
-    public int MaxCodeLength { get; init; } = 128 * 1024;
+    public int MaxCodeLength { get; init; } = 1024 * 1024;
 
     /// <summary>
-    /// How many bytes of assets a lambda may ship beside its code.
+    /// How many characters of C# a lambda in the premium tier may have.
+    /// </summary>
+    /// <remarks>
+    /// Never less than what every other lambda may have, however the two are
+    /// set.
+    /// </remarks>
+    public int PremiumMaxCodeLength { get; init; } = 10 * 1024 * 1024;
+
+    /// <summary>
+    /// How many bytes of assets a lambda outside the premium tier may ship
+    /// beside its code, in however many files.
     /// </summary>
     /// <remarks>
     /// Counted apart from the code because it is not code: a stylesheet is
     /// never compiled, and charging a page of markup against the budget for
     /// the program that serves it is the wrong ceiling for both.
     /// </remarks>
-    public int MaxAssetBytes { get; init; } = 2 * 1024 * 1024;
+    public int MaxAssetBytes { get; init; } = 32 * 1024 * 1024;
+
+    /// <summary>
+    /// How many bytes of assets a lambda in the premium tier may ship.
+    /// </summary>
+    /// <remarks>
+    /// Room for pictures, recordings and data rather than a stylesheet and a
+    /// logo. Mind what it costs: assets are kept inside every version, as
+    /// base64 in JSON, so a version saved at the limit takes nearly half as
+    /// much again on disk, <see cref="MaxVersions"/> of them are kept, and a
+    /// version is read and written whole, in memory. Never less than what
+    /// every other lambda may ship, however the two are set.
+    /// </remarks>
+    public int PremiumMaxAssetBytes { get; init; } = 512 * 1024 * 1024;
+
+    /// <summary>
+    /// What the workspace of a lambda outside the premium tier may hold, all
+    /// of it together.
+    /// </summary>
+    public long WorkspaceBytes { get; init; } = WorkspaceLimits.Standard.Quota;
+
+    /// <summary>
+    /// The largest single file a lambda outside the premium tier may keep in
+    /// its workspace.
+    /// </summary>
+    public int WorkspaceFileBytes { get; init; } = WorkspaceLimits.Standard.MaxFileSize;
+
+    /// <summary>
+    /// What the workspace of a premium lambda may hold, all of it together.
+    /// </summary>
+    public long PremiumWorkspaceBytes { get; init; } = 2048L * 1024 * 1024;
+
+    /// <summary>
+    /// The largest single file a premium lambda may keep in its workspace.
+    /// </summary>
+    public int PremiumWorkspaceFileBytes { get; init; } = 512 * 1024 * 1024;
 
     /// <summary>
     /// How large the picture promoting a lambda in the showcase may be.
@@ -402,6 +465,26 @@ public sealed record LambdaOptions
     /// </summary>
     public bool Administrable => !string.IsNullOrWhiteSpace(AdminToken);
 
+    /// <summary>
+    /// How many characters of C# a lambda in the given tier may have.
+    /// </summary>
+    public int MaxCodeLengthOf(LambdaTier tier)
+        => tier == LambdaTier.Premium ? Math.Max(PremiumMaxCodeLength, MaxCodeLength) : MaxCodeLength;
+
+    /// <summary>
+    /// How many bytes of assets a lambda in the given tier may ship.
+    /// </summary>
+    public int MaxAssetBytesOf(LambdaTier tier)
+        => tier == LambdaTier.Premium ? Math.Max(PremiumMaxAssetBytes, MaxAssetBytes) : MaxAssetBytes;
+
+    /// <summary>
+    /// What a lambda in the given tier may keep in its workspace.
+    /// </summary>
+    public WorkspaceLimits WorkspaceOf(LambdaTier tier)
+        => tier == LambdaTier.Premium
+         ? new WorkspaceLimits(PremiumWorkspaceFileBytes, WorkspaceLimits.Standard.MaxFiles, PremiumWorkspaceBytes)
+         : new WorkspaceLimits(WorkspaceFileBytes, WorkspaceLimits.Standard.MaxFiles, WorkspaceBytes);
+
     #endregion
 
     #region Functionality
@@ -419,6 +502,7 @@ public sealed record LambdaOptions
             Development = ReadBool("LAMBDA_DEVELOPMENT", defaults.Development),
             Engine = ReadEngine("LAMBDA_ENGINE", defaults.Engine),
             Protocols = ReadProtocols("LAMBDA_HTTP_PROTOCOLS", defaults.Protocols),
+            ReceiveQueueEntries = ReadInt("LAMBDA_RECEIVE_QUEUE_ENTRIES", defaults.ReceiveQueueEntries),
             AgentUrl = ReadOptional("LAMBDA_AGENT_URL"),
             AgentToken = ReadOptional("LAMBDA_AGENT_TOKEN"),
             AgentFablePassword = ReadOptional("LAMBDA_AGENT_FABLE_PASSWORD"),
@@ -429,7 +513,13 @@ public sealed record LambdaOptions
             Retention = ReadSpan("LAMBDA_RETENTION_HOURS", defaults.Retention),
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
             MaxCodeLength = ReadInt("LAMBDA_MAX_CODE_LENGTH", defaults.MaxCodeLength),
+            PremiumMaxCodeLength = ReadInt("LAMBDA_PREMIUM_MAX_CODE_LENGTH", defaults.PremiumMaxCodeLength),
             MaxAssetBytes = ReadInt("LAMBDA_MAX_ASSET_BYTES", defaults.MaxAssetBytes),
+            PremiumMaxAssetBytes = ReadInt("LAMBDA_PREMIUM_MAX_ASSET_BYTES", defaults.PremiumMaxAssetBytes),
+            WorkspaceBytes = ReadLong("LAMBDA_WORKSPACE_BYTES", defaults.WorkspaceBytes),
+            WorkspaceFileBytes = ReadInt("LAMBDA_WORKSPACE_FILE_BYTES", defaults.WorkspaceFileBytes),
+            PremiumWorkspaceBytes = ReadLong("LAMBDA_PREMIUM_WORKSPACE_BYTES", defaults.PremiumWorkspaceBytes),
+            PremiumWorkspaceFileBytes = ReadInt("LAMBDA_PREMIUM_WORKSPACE_FILE_BYTES", defaults.PremiumWorkspaceFileBytes),
             MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
@@ -476,6 +566,9 @@ public sealed record LambdaOptions
 
     private static int ReadInt(string key, int fallback)
         => int.TryParse(Environment.GetEnvironmentVariable(key), out var value) ? value : fallback;
+
+    private static long ReadLong(string key, long fallback)
+        => long.TryParse(Environment.GetEnvironmentVariable(key), out var value) ? value : fallback;
 
     private static bool ReadBool(string key, bool fallback)
         => bool.TryParse(Environment.GetEnvironmentVariable(key), out var value) ? value : fallback;

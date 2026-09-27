@@ -99,7 +99,7 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 
 await using var application = Application.Create(options, loggers, book, runs);
 
-var host = application.Configure(CreateHost(options.Engine));
+var host = application.Configure(CreateHost(options));
 
 // the certificate is loaded up front so a bad one stops the server here rather
 // than on the first handshake, and it stays alive to serve renewals afterwards
@@ -144,10 +144,13 @@ runs.Stopped();
 
 return 0;
 
-static IServerHost CreateHost(LambdaEngine engine) => engine switch
+static IServerHost CreateHost(LambdaOptions options) => options.Engine switch
 {
     LambdaEngine.Kestrel => GenHTTP.Engine.Kestrel.Host.Create(),
-    _ => GenHTTP.Engine.Ioxide.Host.Create()
+    _ => GenHTTP.Engine.Ioxide.Host.Create(options: new GenHTTP.Engine.Ioxide.EngineOptions
+    {
+        Tcp = new GenHTTP.Engine.Ioxide.TcpTransportOptions { RecvQueueEntries = options.ReceiveQueueEntries }
+    })
 };
 
 // must be awaited rather than returned: the registrations have to stay alive

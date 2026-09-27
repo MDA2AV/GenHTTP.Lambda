@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Storage;
+using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.Extensions.Logging;
 
@@ -50,12 +51,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     #region Functionality
 
-    public async ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, CancellationToken cancellation = default)
+    public async ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default)
     {
         var id = lambdaId ?? 0;
 
         var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetAssetDirectory(id),
-                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false);
+                                            Storage.GetAssemblyDirectory(id), $"check_{id}", false, limits ?? WorkspaceLimits.Standard);
 
         await _compiling.WaitAsync(cancellation);
 
@@ -77,32 +78,59 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    public async ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, CancellationToken cancellation = default)
+    public async ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
     {
-        if (_deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version)
+        if (IsDeployed(lambdaId, version, limits))
         {
             return CompilationOutcome.Succeeded();
         }
 
-        var code = await Storage.ReadAsync(lambdaId, version, cancellation);
-
-        if (code == null)
-        {
-            return CompilationOutcome.Failed($"Version {version} of this lambda does not exist anymore.");
-        }
-
-        var files = LambdaSource.Parse(code);
-
-        // what this version ships is written out before it is compiled, so the
-        // handler it returns is serving the assets of the version going online
-        // rather than whatever the last one left behind
-        Materialize(lambdaId, files);
-
-        var request = new CompilationRequest(files, Storage.GetWorkspace(lambdaId), Storage.GetAssetDirectory(lambdaId),
-                                            Storage.GetAssemblyDirectory(lambdaId), $"{lambdaId}_{version}", true);
-
+        /*
+         * Everything from reading the version on happens inside the lock, not
+         * only the compilation. The requests that reach a lambda nobody has
+         * compiled since the server started - or since its tier moved - all
+         * arrive here together, and each of them used to read, unpack and
+         * write out the whole version before queueing for the compiler; with
+         * a hundred megabytes of assets that is a hundred megabytes, several
+         * times over, per request. Now the first one does it and the others
+         * find it done.
+         */
         await _compiling.WaitAsync(cancellation);
 
+        try
+        {
+            if (IsDeployed(lambdaId, version, limits))
+            {
+                return CompilationOutcome.Succeeded();
+            }
+
+            var code = await Storage.ReadAsync(lambdaId, version, cancellation);
+
+            if (code == null)
+            {
+                return CompilationOutcome.Failed($"Version {version} of this lambda does not exist anymore.");
+            }
+
+            var files = LambdaSource.Parse(code);
+
+            // what this version ships is written out before it is compiled, so the
+            // handler it returns is serving the assets of the version going online
+            // rather than whatever the last one left behind
+            Materialize(lambdaId, files);
+
+            var request = new CompilationRequest(files, Storage.GetWorkspace(lambdaId), Storage.GetAssetDirectory(lambdaId),
+                                                Storage.GetAssemblyDirectory(lambdaId), $"{lambdaId}_{version}", true, limits);
+
+            return await CompileAsync(lambdaId, version, request);
+        }
+        finally
+        {
+            _compiling.Release();
+        }
+    }
+
+    private async ValueTask<CompilationOutcome> CompileAsync(long lambdaId, int version, CompilationRequest request)
+    {
         try
         {
             var (outcome, handler) = await LambdaCompiler.CompileAsync(request);
@@ -121,7 +149,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                 return CompilationOutcome.Failed(broken);
             }
 
-            _deployed[lambdaId] = new CompiledLambda(version, handler);
+            _deployed[lambdaId] = new CompiledLambda(version, request.Limits, handler);
 
             Logger.LogInformation("Deployed lambda {LambdaId} in version {Version}", lambdaId, version);
 
@@ -133,20 +161,16 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
             return CompilationOutcome.Failed(e.Message);
         }
-        finally
-        {
-            _compiling.Release();
-        }
     }
 
-    public async ValueTask<IHandler> ResolveAsync(long lambdaId, int version, CancellationToken cancellation = default)
+    public async ValueTask<IHandler> ResolveAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
     {
-        if (_deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version)
+        if (_deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version && existing.Limits == limits)
         {
             return existing.Handler;
         }
 
-        var outcome = await ActivateAsync(lambdaId, version, cancellation);
+        var outcome = await ActivateAsync(lambdaId, version, limits, cancellation);
 
         if (!outcome.Success)
         {
@@ -157,6 +181,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         return _deployed[lambdaId].Handler;
     }
+
+    /// <summary>
+    /// Whether the version is online already, compiled with these limits.
+    /// </summary>
+    private bool IsDeployed(long lambdaId, int version, WorkspaceLimits limits)
+        => _deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version && existing.Limits == limits;
 
     /// <summary>
     /// Writes what a version ships into the directory the lambda reads it from.
