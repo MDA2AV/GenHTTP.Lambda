@@ -321,6 +321,27 @@ public sealed class ApiTests
         Assert.IsFalse(platform.Build.Available, "there is no agent in the tests");
     }
 
+    [TestMethod]
+    public async Task TheApiWorksCompiledAsAnInstallationRunsIt()
+    {
+        // every other test calls the API through reflection to start faster;
+        // an installation compiles it, and a method that cannot be compiled
+        // would only show up here
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { CompileApi = true });
+
+        var lambda = await fixture.CreateLambdaAsync("compiled");
+
+        Assert.IsFalse((await DescribeAsync(fixture, "compiled")).Available);
+
+        await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"compiled\"));");
+
+        Assert.IsTrue((await DeploymentOfAsync(fixture, lambda)).Deployed);
+
+        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+
+        Assert.AreEqual("compiled", await served.GetContentAsync());
+    }
+
     private static async Task<KeyResponse> DescribeAsync(LambdaFixture fixture, string key)
     {
         using var response = await fixture.GetAsync($"/api/v1/keys/{key}");

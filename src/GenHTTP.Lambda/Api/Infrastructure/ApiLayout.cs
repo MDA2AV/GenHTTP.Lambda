@@ -3,11 +3,11 @@ using GenHTTP.Api.Content;
 using GenHTTP.Lambda.Configuration;
 
 using GenHTTP.Modules.ApiBrowsing;
-using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.DependencyInjection.Infrastructure;
 using GenHTTP.Modules.ErrorHandling;
 using GenHTTP.Modules.Layouting;
 using GenHTTP.Modules.OpenApi;
+using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices.Provider;
 
 namespace GenHTTP.Lambda.Api.Infrastructure;
@@ -21,27 +21,29 @@ public static class ApiLayout
 
     public static IHandlerBuilder Create(LambdaOptions options)
     {
+        var mode = options.CompileApi ? ExecutionMode.Auto : ExecutionMode.Reflection;
+
         var version = Layout.Create()
-                            .AddDependentService<KeyResource>("keys")
-                            .AddDependentService<DemoResource>("demos")
-                            .AddDependentService<ShowcaseResource>("showcases")
-                            .AddDependentService<BuildResource>("builds")
-                            .AddDependentService<SystemResource>("system")
-                            .AddDependentService<TelemetryResource>("telemetry")
-                            .AddDependentService<LogResource>("logs")
+                            .Add("keys", Resource<KeyResource>(mode))
+                            .Add("demos", Resource<DemoResource>(mode))
+                            .Add("showcases", Resource<ShowcaseResource>(mode))
+                            .Add("builds", Resource<BuildResource>(mode))
+                            .Add("system", Resource<SystemResource>(mode))
+                            .Add("telemetry", Resource<TelemetryResource>(mode))
+                            .Add("logs", Resource<LogResource>(mode))
                             // the token is checked in front of the resource, see AdminGateConcern
                             .Add("admin", Layout.Create()
-                                                .Add(Resource<AdminResource>())
+                                                .Add(Resource<AdminResource>(mode))
                                                 .Add(new AdminGateConcernBuilder(options)))
-                            .Add(Resource<LambdaResource>())
-                            .Add(Resource<VersionResource>())
-                            .Add(Resource<DeploymentResource>())
-                            .Add(Resource<FileResource>())
-                            .Add(Resource<CodeResource>())
-                            .Add(Resource<MonitoringResource>())
-                            .Add(Resource<LambdaShowcaseResource>())
-                            .Add(Resource<LambdaDomainResource>())
-                            .Add(Resource<LambdaAgentResource>())
+                            .Add(Resource<LambdaResource>(mode))
+                            .Add(Resource<VersionResource>(mode))
+                            .Add(Resource<DeploymentResource>(mode))
+                            .Add(Resource<FileResource>(mode))
+                            .Add(Resource<CodeResource>(mode))
+                            .Add(Resource<MonitoringResource>(mode))
+                            .Add(Resource<LambdaShowcaseResource>(mode))
+                            .Add(Resource<LambdaDomainResource>(mode))
+                            .Add(Resource<LambdaAgentResource>(mode))
                             .AddScalar(title: "GenHTTP Lambda API")
                             .AddOpenApi()
                             .Add(ErrorHandler.From(new ApiErrorMapper()));
@@ -50,8 +52,9 @@ public static class ApiLayout
     }
 
     /// <summary>
-    /// A webservice resolved from the service provider, without a path of its
-    /// own.
+    /// A webservice resolved from the service provider, the way
+    /// <c>AddDependentService</c> builds one, but with the execution mode
+    /// chosen by the configuration.
     /// </summary>
     /// <remarks>
     /// Everything below <c>/lambdas</c> is split into one resource per concern,
@@ -66,8 +69,10 @@ public static class ApiLayout
     /// anything in it is asked, which a POST to create a lambda would follow
     /// as a GET.
     /// </remarks>
-    private static ServiceResourceBuilder Resource<T>() where T : class
+    private static ServiceResourceBuilder Resource<T>(ExecutionMode mode) where T : class
         => new ServiceResourceBuilder().Type(typeof(T))
-                                       .InstanceProvider(async r => await InstanceProvider.ProvideAsync<T>(r));
+                                       .InstanceProvider(async r => await InstanceProvider.ProvideAsync<T>(r))
+                                       .Injectors(Injection.Default().Add(new DependencyInjector()))
+                                       .ExecutionMode(mode);
 
 }
