@@ -1,9 +1,10 @@
 <!doctype html>
 <!--
   The pictures a chat or a feed shows when somebody shares a page: one per
-  public page, 1200 by 630. Rendered by render.mjs, which opens this file with
-  ?page=/path and keeps what is on the screen - so opening it in a browser
-  shows exactly what will be written.
+  public page and language, 1200 by 630. Rendered by render.mjs, which opens
+  this file with ?page=/path&lang=xx and keeps what is on the screen - so
+  opening it in a browser shows exactly what will be written. The words are
+  in cards.text.js, one set per language.
 -->
 <html lang="en">
 <head>
@@ -54,6 +55,13 @@
   .brand .l { color: var(--blue); font-size: 1.15em; line-height: 1; }
 
   h1 { margin-top: auto; font-size: 60px; line-height: 1.04; font-weight: 700; letter-spacing: -.025em; }
+
+  /* the faces for Japanese and Korean, which the ones above have no letters
+     for - and room between lines of letters that fill their whole square */
+  :lang(ja) body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Inter, 'Hiragino Sans', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', Meiryo, sans-serif; }
+  :lang(ko) body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Inter, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Noto Sans CJK KR', 'Malgun Gothic', sans-serif; word-break: keep-all; }
+  :lang(ja) h1, :lang(ko) h1 { line-height: 1.22; letter-spacing: 0; }
+  :lang(ja) h1 { word-break: auto-phrase; }
   h1 span { display: block; color: var(--blue); }
 
   .sub { margin-top: 20px; font-size: 24px; line-height: 1.4; color: var(--muted); max-width: 600px; }
@@ -126,6 +134,7 @@
   <div class="scene" id="scene"></div>
 </div>
 
+<script src="cards.text.js"></script>
 <script>
   const check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg>';
   const lock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -134,15 +143,26 @@
 
   const HOST = 'genhttp.dev';
 
-  const bar = (url, kind = 'live', pill = 'Public') =>
+  const params = new URLSearchParams(location.search);
+  const language = params.get('lang') ?? 'en';
+  const page = params.get('page') ?? '/';
+
+  /** The words of the language, those every card shares and those of each card. */
+  const words = window.CARD_TEXT[language] ?? window.CARD_TEXT.en;
+
+  document.documentElement.lang = language;
+
+  const bar = (url, kind = 'live', pill = words.public) =>
     `<div class="bar ${kind}">${kind === 'local' ? globe : lock}<span class="url">${url}</span>${pill ? `<span class="pill ${kind === 'own' ? 'own' : ''}">${pill}</span>` : ''}</div>`;
 
   const people = (count, label) => {
     const colours = ['#5f6368', '#1a73e8', '#aa55ff', '#1e8e3e', '#f9ab00', '#d93025'];
-    const initials = ['You', 'M', 'J', 'S', 'A', 'K'];
+    const initials = [words.you, 'M', 'J', 'S', 'A', 'K'];
     const faces = initials.slice(0, count).map((initial, i) =>
       `<b style="background:${colours[i]};${initial.length > 1 ? 'width:auto;padding:0 12px;border-radius:999px' : ''}">${initial}</b>`).join('');
-    return `<div class="people"><div class="faces">${faces}</div><div class="count"><i></i>${count} ${label}</div></div>`;
+    // "{n}" places the number, for a language that writes it onto its word ("5人")
+    const counted = label.includes('{n}') ? label.replace('{n}', count) : `${count} ${label}`;
+    return `<div class="people"><div class="faces">${faces}</div><div class="count"><i></i>${counted}</div></div>`;
   };
 
   const scores = (widths) => `<div class="bars">${widths.map((w, i) =>
@@ -151,61 +171,59 @@
   const conversation = (ask, reply) =>
     `<div class="chat"><div class="me">${ask}</div><div class="it">${check}${reply}</div></div>`;
 
-  const CARDS = {
-    '/': {
-      title: ['Describe an app.', 'Your agent puts it online.'],
-      sub: 'Polls, games, guestbooks and more, built by an AI agent and shared with a link.',
-      scene: `<div class="card">${conversation('Build a lunch poll for the office.', 'It’s live. Here’s your link.')}
-        <div class="body">${bar(`${HOST}/lambda/q7x2k9`)}${people(5, 'voting')}${scores([74, 52, 30])}</div></div>`,
-    },
-    '/build': {
-      title: ['Say what you want.', 'Share the link.'],
-      sub: 'Type a sentence, and an AI agent builds it, puts it online and hands you the address.',
-      scene: `<div class="card">${conversation('A guestbook for our wedding, please.', 'Done. Share this link.')}
-        <div class="body">${bar(`${HOST}/lambda/w3dd1n`)}${people(4, 'signed')}</div></div>`,
-    },
-    '/ship': {
-      title: ['From your laptop', 'to everyone’s screen.'],
-      sub: 'Tell your coding agent to publish it. A public link in minutes, with live shared data built in.',
-      scene: `<div class="card">${conversation('Put my quiz game online so my friends can join.', 'It’s live. Here’s your link.')}
-        <div class="body">${bar('localhost:5173', 'local', '')}${bar(`${HOST}/lambda/q7x2k9`)}${people(6, 'playing')}</div></div>`,
-    },
-    '/showcase': {
-      title: ['Built with an agent.', 'Running right now.'],
-      sub: 'Games, tools and pages people made here and chose to show. Open any of them in your browser.',
-      scene: `<div class="card"><div class="body">
-        ${bar('Friday quiz night', 'live', 'Live')}${bar('Team lunch poll', 'live', 'Live')}${bar('Pixel canvas', 'live', 'Live')}${bar('Book club guestbook', 'live', 'Live')}
-        ${people(6, 'online')}</div></div>`,
-    },
-    '/enterprise': {
-      title: ['Free to try.', 'Yours to run.'],
-      sub: 'An installation of your own, with your own sign-in, in the cloud or on premises.',
-      facts: ['Your own SSO', 'On premises too', 'Priority support'],
-      scene: `<div class="tiers">
-        <div class="tier"><div><b>Free</b><br><span>No account, no card</span></div><strong>$0</strong></div>
-        <div class="tier ent"><div><b>Enterprise</b><br><span>per user / month</span></div><strong>$5</strong></div>
-        ${bar('apps.yourcompany.com', 'own', 'Yours')}</div>`,
-    },
-    '/docs': {
-      title: ['A snippet of C#.', 'A public address in seconds.'],
-      sub: 'Whatever the snippet returns is served at its own HTTPS address, ready to share.',
-      facts: ['Free', 'No account', 'Open source'],
-      scene: `<div class="card"><div class="code"><span class="k">return</span> <span class="f">Inline</span>.Create()
+  /** What each card shows beside its words, in the words of the language. */
+  const SCENES = {
+    '/': (w) => `<div class="card">${conversation(w.ask, words.shared)}
+        <div class="body">${bar(`${HOST}/lambda/q7x2k9`)}${people(5, w.count)}${scores([74, 52, 30])}</div></div>`,
+    '/build': (w) => `<div class="card">${conversation(w.ask, w.reply)}
+        <div class="body">${bar(`${HOST}/lambda/w3dd1n`)}${people(4, w.count)}</div></div>`,
+    '/ship': (w) => `<div class="card">${conversation(w.ask, words.shared)}
+        <div class="body">${bar('localhost:5173', 'local', '')}${bar(`${HOST}/lambda/q7x2k9`)}${people(6, w.count)}</div></div>`,
+    '/showcase': (w) => `<div class="card"><div class="body">
+        ${w.apps.map((app) => bar(app, 'live', words.live)).join('')}
+        ${people(6, w.count)}</div></div>`,
+    '/enterprise': (w) => `<div class="tiers">
+        <div class="tier"><div><b>${w.free}</b><br><span>${w.freeNote}</span></div><strong>${w.freePrice}</strong></div>
+        <div class="tier ent"><div><b>${w.enterprise}</b><br><span>${w.perUser}</span></div><strong>${w.price}</strong></div>
+        ${bar(w.domain, 'own', w.yours)}</div>`,
+    '/docs': (w) => `<div class="card"><div class="code"><span class="k">return</span> <span class="f">Inline</span>.Create()
     .Get(() =&gt; <span class="s">"Hello, world"</span>);</div>
-        <div class="body">${bar(`${HOST}/lambda/h3ll0w`)}<div class="it" style="font-size:19px">${check}Deployed. It’s live.</div></div></div>`,
-    },
+        <div class="body">${bar(`${HOST}/lambda/h3ll0w`)}<div class="it" style="font-size:19px">${check}${w.deployed}</div></div></div>`,
   };
 
-  const page = new URLSearchParams(location.search).get('page') ?? '/';
-  const card = CARDS[page] ?? CARDS['/'];
+  const card = words[page] ?? words['/'];
 
   document.getElementById('title').innerHTML = `${card.title[0]}<span>${card.title[1]}</span>`;
   document.getElementById('sub').textContent = card.sub;
-  document.getElementById('facts').innerHTML = (card.facts ?? ['Free', 'No account', 'Nothing to install'])
+  document.getElementById('facts').innerHTML = (card.facts ?? words.facts)
     .map((fact) => `<li>${check}${fact}</li>`).join('');
-  document.getElementById('scene').innerHTML = card.scene;
+  document.getElementById('scene').innerHTML = (SCENES[page] ?? SCENES['/'])(card);
 
-  window.CARDS = Object.keys(CARDS);
+  /*
+   * Some languages take more room to say the same. Whatever does not fit the
+   * card is made smaller until it does, the headline first - the English
+   * fits as it is and is left alone.
+   */
+  const copy = document.querySelector('.copy');
+  const shrink = (element, smallest) => {
+    let size = parseFloat(getComputedStyle(element).fontSize);
+
+    while (copy.scrollHeight > copy.clientHeight && size > smallest) {
+      element.style.fontSize = `${--size}px`;
+    }
+  };
+
+  shrink(document.getElementById('title'), 44);
+  shrink(document.getElementById('sub'), 19);
+
+  // the facts sit on one line, which a longer language may not fit
+  const facts = document.getElementById('facts');
+  while (facts.scrollWidth > facts.clientWidth && parseFloat(getComputedStyle(facts).fontSize) > 16) {
+    facts.style.fontSize = `${parseFloat(getComputedStyle(facts).fontSize) - 1}px`;
+  }
+
+  window.CARDS = Object.keys(SCENES);
+  window.LANGUAGES = Object.keys(window.CARD_TEXT);
 </script>
 </body>
 </html>

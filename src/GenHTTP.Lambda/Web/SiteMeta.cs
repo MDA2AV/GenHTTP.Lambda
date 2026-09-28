@@ -94,7 +94,8 @@ public sealed class SiteMeta
         // the languages it is written in, which are all it may name as its translations
         var languages = SiteLanguages.All.Where(entry.Text.ContainsKey).ToList();
 
-        return new SitePage(language, bare, text.Title, text.Description, languages, entry.Image);
+        // the picture drawn in its language, where there is one, and the page's own otherwise
+        return new SitePage(language, bare, text.Title, text.Description, languages, text.Image ?? entry.Image);
     }
 
     /// <summary>
@@ -129,9 +130,12 @@ public sealed class SiteMeta
         // a preview needs the full address of the picture, which only the
         // public address can give - without it, the path is still better than
         // the front page's picture on every page
-        var image = Encode((PublicUrl ?? string.Empty) + (page.Image ?? DefaultImage));
+        var picture = page.Image ?? DefaultImage;
+
+        var image = Encode((PublicUrl ?? string.Empty) + picture);
 
         markup = SetMeta(markup, "property", "og:image", image);
+        markup = SetMeta(markup, "property", "og:image:type", ImageType(picture));
         markup = SetMeta(markup, "property", "og:image:alt", title);
         markup = SetMeta(markup, "name", "twitter:image", image);
 
@@ -256,6 +260,15 @@ public sealed class SiteMeta
         => path.Length > 1 ? path.TrimEnd('/') : path;
 
     /// <summary>
+    /// What a picture is, by its name: the previews in English are PNG, the
+    /// ones in the other languages JPEG, which is a fifth of the size.
+    /// </summary>
+    private static string ImageType(string path)
+        => path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+               ? "image/jpeg"
+               : "image/png";
+
+    /// <summary>
     /// The opening tag of the document, in the given language.
     /// </summary>
     private static string Lang(string tag, string language)
@@ -304,6 +317,7 @@ public sealed record SitePage(string Language, string Path, string Title, string
 public sealed record SiteEntry(string? Image, Dictionary<string, SiteText> Text);
 
 /// <summary>
-/// The name and description of a page in one language.
+/// The name and description of a page in one language, and the picture of
+/// its link preview in that language, if it has one drawn in it.
 /// </summary>
-public sealed record SiteText(string Title, string Description);
+public sealed record SiteText(string Title, string Description, string? Image = null);

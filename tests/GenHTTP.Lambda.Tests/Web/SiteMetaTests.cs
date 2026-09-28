@@ -43,7 +43,7 @@ public sealed class SiteMetaTests
             "image": "/social/docs.png",
             "text": {
               "en": { "title": "How It Works", "description": "Snippets & \"handlers\", hosted." },
-              "de": { "title": "So funktioniert es", "description": "Schnipsel & \"Handler\", gehostet." }
+              "de": { "title": "So funktioniert es", "description": "Schnipsel & \"Handler\", gehostet.", "image": "/social/de/docs.jpg" }
             }
           }
         }
@@ -307,6 +307,45 @@ public sealed class SiteMetaTests
         StringAssert.Contains(body, "<meta property=\"og:image\" content=\"https://genhttp.dev/social/docs.png\" />");
         StringAssert.Contains(body, "<meta name=\"twitter:image\" content=\"https://genhttp.dev/social/docs.png\" />");
         StringAssert.Contains(body, "<meta property=\"og:image:alt\" content=\"How It Works - GenHTTP Lambda\" />");
+        StringAssert.Contains(body, "<meta property=\"og:image:type\" content=\"image/png\" />");
+    }
+
+    [TestMethod]
+    public async Task APageIsPreviewedWithThePictureDrawnInItsLanguage()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/de/docs", accept: "text/html");
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        StringAssert.Contains(body, "<meta property=\"og:image\" content=\"https://genhttp.dev/social/de/docs.jpg\" />");
+        StringAssert.Contains(body, "<meta name=\"twitter:image\" content=\"https://genhttp.dev/social/de/docs.jpg\" />");
+        StringAssert.Contains(body, "<meta property=\"og:image:type\" content=\"image/jpeg\" />");
+    }
+
+    /// <summary>
+    /// The previews in the other languages are JPEG, which GenHTTP would send
+    /// as image/jpg - a type a link preview may not accept.
+    /// </summary>
+    [TestMethod]
+    public async Task APictureInJpegIsSentAsJpeg()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(options =>
+        {
+            options = Site()(options);
+
+            Directory.CreateDirectory(Path.Combine(options.WebRoot, "social", "de"));
+            File.WriteAllBytes(Path.Combine(options.WebRoot, "social", "de", "docs.jpg"), [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]);
+
+            return options;
+        });
+
+        using var response = await fixture.GetAsync("/social/de/docs.jpg");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual("image/jpeg", response.Content.Headers.ContentType?.MediaType);
+        CollectionAssert.AreEqual(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3 }, await response.Content.ReadAsByteArrayAsync());
     }
 
     [TestMethod]
