@@ -122,19 +122,14 @@ function Localized() {
       <Route path="ship" element={<Ship />} />
       <Route path="showcase" element={<Showcase />} />
       <Route path="enterprise" element={<Enterprise />} />
-      {/* the page this replaced, which is linked from elsewhere */}
-      <Route path="agentic-coding" element={<Navigate to={`/${language}/showcase`} replace />} />
       <Route path="terms" element={<Terms />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
 
-/** Paths that are a public page without a language, and where they go. */
-const UNLOCALIZED: Record<string, string> = {
-  ...Object.fromEntries(Object.keys(pages).map((path) => [path, path])),
-  '/agentic-coding': '/showcase',
-};
+/** Paths that are a public page without a language. */
+const UNLOCALIZED = new Set(Object.keys(pages));
 
 /**
  * A public page asked for without a language. The server answers those with
@@ -145,9 +140,9 @@ function Unlocalized() {
   const { pathname, search, hash } = useLocation();
   const language = useLanguage();
 
-  const page = UNLOCALIZED[pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname];
+  const page = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
 
-  if (page === undefined) {
+  if (!UNLOCALIZED.has(page)) {
     return <NotFound />;
   }
 

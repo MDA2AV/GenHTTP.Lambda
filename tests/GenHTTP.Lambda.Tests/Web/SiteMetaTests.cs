@@ -240,35 +240,25 @@ public sealed class SiteMetaTests
         Assert.AreEqual("/de/docs?utm_source=mail&q=a%20b", response.Headers.Location?.OriginalString);
     }
 
-    [TestMethod]
-    public async Task ThePageThatMovedIsFoundInTheLanguageAsWell()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync(Site());
-
-        using var response = await RequestAsync(fixture, "/agentic-coding", "it");
-
-        Assert.AreEqual(HttpStatusCode.Found, response.StatusCode);
-        Assert.AreEqual("/it/showcase", response.Headers.Location?.OriginalString);
-    }
-
     /// <summary>
     /// The editor, the pages the examples used to have, a path that does not
     /// exist - in a language or in none - and a language the site is not
     /// written in are left alone: the client marks them as not to be indexed.
+    /// All but the editor are not found as well.
     /// </summary>
     [TestMethod]
-    [DataRow("/editor/create")]
-    [DataRow("/examples/guestbook")]
-    [DataRow("/nowhere")]
-    [DataRow("/de/nowhere")]
-    [DataRow("/sv/docs")]
-    public async Task AnythingElseIsTheIndexPageUntouched(string path)
+    [DataRow("/editor/create", HttpStatusCode.OK)]
+    [DataRow("/examples/guestbook", HttpStatusCode.NotFound)]
+    [DataRow("/nowhere", HttpStatusCode.NotFound)]
+    [DataRow("/de/nowhere", HttpStatusCode.NotFound)]
+    [DataRow("/sv/docs", HttpStatusCode.NotFound)]
+    public async Task AnythingElseIsTheIndexPageUntouched(string path, HttpStatusCode status)
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
 
         using var response = await fixture.GetAsync(path, accept: "text/html");
 
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual(status, response.StatusCode);
         Assert.AreEqual(Index, await response.Content.ReadAsStringAsync());
     }
 
@@ -423,6 +413,100 @@ public sealed class SiteMetaTests
         StringAssert.Contains(body, "Disallow: /api/");
         StringAssert.Contains(body, "Disallow: /editor/");
         StringAssert.Contains(body, "Sitemap: https://genhttp.dev/sitemap.xml");
+    }
+
+    [TestMethod]
+    public async Task LlmsTextIsMarkdownWithATitleAndLinks()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/llms.txt");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual("text/markdown", response.Content.Headers.ContentType?.MediaType);
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.IsTrue(body.StartsWith("# GenHTTP Lambda\n"));
+        StringAssert.Contains(body, "> The front page.");
+        StringAssert.Contains(body, "- [How It Works](https://genhttp.dev/en/docs): Snippets & \"handlers\", hosted.");
+        StringAssert.Contains(body, "(https://genhttp.dev/mcp)");
+        StringAssert.Contains(body, "(https://genhttp.dev/api/v1/openapi.json)");
+    }
+
+    [TestMethod]
+    public async Task TheAiCatalogNamesTheMcpServerAndTheApi()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/.well-known/ai-catalog.json");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual("application/json", response.Content.Headers.ContentType?.MediaType);
+
+        using var catalog = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+
+        var root = catalog.RootElement;
+
+        Assert.AreEqual("1.0", root.GetProperty("specVersion").GetString());
+        Assert.AreEqual("GenHTTP Lambda", root.GetProperty("host").GetProperty("displayName").GetString());
+
+        var entries = root.GetProperty("entries").EnumerateArray().ToList();
+
+        Assert.AreEqual("urn:air:genhttp.dev:server:lambda", entries[0].GetProperty("identifier").GetString());
+        Assert.AreEqual("https://genhttp.dev/mcp", entries[0].GetProperty("data").GetProperty("remotes")[0].GetProperty("url").GetString());
+        Assert.AreEqual("https://genhttp.dev/api/v1/openapi.json", entries[1].GetProperty("url").GetString());
+    }
+
+    [TestMethod]
+    [DataRow("/nothing.txt")]
+    [DataRow("/.well-known/security.txt")]
+    [DataRow("/de/nothing")]
+    [DataRow("/nothing/at/all")]
+    public async Task AnAddressThatIsNoPageIsNotFound(string path)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync(path);
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.DoesNotContain("<div id=\"app\">", await response.Content.ReadAsStringAsync());
+    }
+
+    [TestMethod]
+    public async Task APersonAskingForNoPageSeesTheApplicationSayItIsNotFound()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/de/nothing", accept: "text/html");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        StringAssert.Contains(await response.Content.ReadAsStringAsync(), "<div id=\"app\">");
+    }
+
+    [TestMethod]
+    [DataRow("/editor/create")]
+    [DataRow("/editor/some-key/logs")]
+    [DataRow("/admin")]
+    [DataRow("/admin/lambdas")]
+    public async Task TheEditorAndTheAdministrationAreTheApplication(string path)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync(path, accept: "text/html");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        StringAssert.Contains(await response.Content.ReadAsStringAsync(), "<div id=\"app\">");
+    }
+
+    [TestMethod]
+    public async Task WithoutAPublicAddressThereIsNoAiCatalog()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site(publicUrl: null));
+
+        using var response = await fixture.GetAsync("/.well-known/ai-catalog.json");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [TestMethod]

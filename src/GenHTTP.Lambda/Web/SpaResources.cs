@@ -69,8 +69,9 @@ public sealed class SpaResources
     #region Functionality
 
     /// <summary>
-    /// The handler serving the application, with unknown paths falling back to
-    /// its index so the client side router can take over.
+    /// The handler serving the application. Which paths the client side router
+    /// draws a page for is decided by the <see cref="SiteMetaConcern" />, so
+    /// any other address is a 404 rather than the index page.
     /// </summary>
     public IHandlerBuilder CreateHandler()
     {
@@ -82,7 +83,6 @@ public sealed class SpaResources
         // ranges because the front page has a video, and Safari will not play
         // one from a server that answers a range with the whole file
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
-                                    .ServerSideRouting()
                                     .Add(RangeSupport.Create())
                                     .Add(new JpegTypeConcernBuilder())
                                     .Add(new SiteMetaConcernBuilder(Meta, Prerender, ReadIndexAsync))

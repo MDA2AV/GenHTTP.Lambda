@@ -104,6 +104,11 @@ public sealed class SiteMeta
     public bool IsPage(string path) => ReadPages().ContainsKey(Normalize(path));
 
     /// <summary>
+    /// Whether the build named any public pages at all.
+    /// </summary>
+    public bool HasPages => ReadPages().Count > 0;
+
+    /// <summary>
     /// The index page, named as the given page and in its language.
     /// </summary>
     public string Render(string markup, SitePage page)
@@ -236,6 +241,103 @@ public sealed class SiteMeta
         );
 
         return sitemap.Declaration + "\n" + sitemap;
+    }
+
+    /// <summary>
+    /// The site as a language model reads it (<c>llms.txt</c>): what it is,
+    /// and a link to each public page and to what an agent works with here.
+    /// </summary>
+    /// <remarks>
+    /// In English, the language models read best. Without a public address
+    /// the links are relative, which is less than a model wants but still
+    /// points somewhere.
+    /// </remarks>
+    public string LlmsText()
+    {
+        var root = PublicUrl ?? string.Empty;
+
+        var pages = ReadPages();
+
+        var summary = pages.TryGetValue("/", out var front) && front.Text.TryGetValue("en", out var home)
+                          ? home.Description
+                          : "Describe an app to an AI agent and get it online with a link to share.";
+
+        var text = new StringBuilder();
+
+        text.Append($"# {Site}\n\n")
+            .Append($"> {summary}\n\n")
+            .Append("An app is a snippet of C# whose GenHTTP handler is served at a public HTTPS address. ")
+            .Append("An agent creates, changes and deploys it through the MCP server or the REST API below.\n\n")
+            .Append("## Pages\n\n");
+
+        foreach (var (path, entry) in pages)
+        {
+            if (entry.Text.TryGetValue("en", out var page))
+            {
+                text.Append($"- [{page.Title}]({root}{SiteLanguages.In("en", path)}): {page.Description}\n");
+            }
+        }
+
+        text.Append("\n## For agents\n\n")
+            .Append($"- [MCP server]({root}/mcp): Streamable HTTP; start with the platform_guide tool\n")
+            .Append($"- [REST API]({root}/api/v1/openapi.json): OpenAPI description of the same functionality\n");
+
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// What an agent can use here, for agents and registries that look for it
+    /// (<c>/.well-known/ai-catalog.json</c>, Agentic Resource Discovery) - or
+    /// nothing, when there is no public address to name it under.
+    /// </summary>
+    public string? AiCatalog()
+    {
+        if (PublicUrl == null)
+        {
+            return null;
+        }
+
+        var host = new Uri(PublicUrl).Host;
+
+        var catalog = new
+        {
+            specVersion = "1.0",
+            host = new { displayName = Site, documentationUrl = $"{PublicUrl}/en/docs" },
+            entries = new object[]
+            {
+                new
+                {
+                    identifier = $"urn:air:{host}:server:lambda",
+                    displayName = Site,
+                    type = "application/mcp-server-card+json",
+                    description = "Write, deploy and host small C# web services and sites at a public address.",
+                    representativeQueries = new[]
+                    {
+                        "build a poll and give me a link to share it",
+                        "host a small web app an AI agent wrote",
+                        "deploy a C# web service to a public HTTPS address"
+                    },
+                    data = new
+                    {
+                        name = "dev.genhttp/lambda",
+                        title = Site,
+                        description = "Write, deploy and host small C# web services and sites at a public address.",
+                        websiteUrl = PublicUrl,
+                        remotes = new[] { new { type = "streamable-http", url = $"{PublicUrl}/mcp" } }
+                    }
+                },
+                new
+                {
+                    identifier = $"urn:air:{host}:api:lambda",
+                    displayName = $"{Site} REST API",
+                    type = "application/vnd.oai.openapi+json",
+                    description = "The same functionality as the MCP server over HTTP; versions can be downloaded and uploaded as a zip.",
+                    url = $"{PublicUrl}/api/v1/openapi.json"
+                }
+            }
+        };
+
+        return JsonSerializer.Serialize(catalog, new JsonSerializerOptions { WriteIndented = true });
     }
 
     private IReadOnlyDictionary<string, SiteEntry> ReadPages()

@@ -11,19 +11,16 @@ namespace GenHTTP.Lambda.Web;
 
 /// <summary>
 /// Sits in front of the single page application and answers what is there for
-/// crawlers: <c>robots.txt</c>, <c>sitemap.xml</c>, and the index page named
+/// crawlers: <c>robots.txt</c>, <c>sitemap.xml</c>, <c>llms.txt</c> and the
+/// AI catalog, and the index page named
 /// as the public page that was asked for, in the language its address names,
 /// with that page's content already in it. A public page asked for without a
-/// language is sent on to the one the visitor prefers. Everything else goes
-/// through.
+/// language is sent on to the one the visitor prefers. The editor and the
+/// administration are handed the index page for the client to draw, the
+/// bundle's files go through, and any other address is not found.
 /// </summary>
 public sealed class SiteMetaConcern : IConcern
 {
-
-    /// <summary>
-    /// The page that used to be here, and the one it became.
-    /// </summary>
-    private static readonly Dictionary<string, string> Moved = new() { ["/agentic-coding"] = "/showcase" };
 
     #region Get-/Setters
 
@@ -53,7 +50,7 @@ public sealed class SiteMetaConcern : IConcern
 
     public async ValueTask<IResponse?> HandleAsync(IRequest request)
     {
-        if (request.Header.Method != RequestMethod.Get)
+        if (request.Header.Method != RequestMethod.Get && request.Header.Method != RequestMethod.Head)
         {
             return await Content.HandleAsync(request);
         }
@@ -71,21 +68,69 @@ public sealed class SiteMetaConcern : IConcern
                 // without a public address there is nothing to list pages
                 // under, and the index page is not a sitemap either
                 return sitemap == null ? null : Answer(request, sitemap, "application/xml; charset=utf-8");
+
+            case "/llms.txt":
+                return Answer(request, Meta.LlmsText(), "text/markdown; charset=utf-8");
+
+            case "/.well-known/ai-catalog.json":
+                var catalog = Meta.AiCatalog();
+
+                return catalog == null ? null : Answer(request, catalog, "application/json; charset=utf-8");
         }
 
         var page = Meta.Find(path);
 
-        if (page == null)
+        if (page != null)
         {
-            return ToLanguage(request, path) ?? await Content.HandleAsync(request);
+            var markup = Meta.Render(await Index(), page);
+
+            markup = await Prerender.RenderAsync(markup, page, request);
+
+            return Answer(request, markup, "text/html; charset=utf-8");
         }
 
-        var markup = Meta.Render(await Index(), page);
+        if (ToLanguage(request, path) is { } redirect)
+        {
+            return redirect;
+        }
 
-        markup = await Prerender.RenderAsync(markup, page, request);
+        // a file of the bundle, or the index page for the root
+        if (await Content.HandleAsync(request) is { } content)
+        {
+            return content;
+        }
 
-        return Answer(request, markup, "text/html; charset=utf-8");
+        if (IsClientRoute(path))
+        {
+            return Answer(request, await Index(), "text/html; charset=utf-8");
+        }
+
+        // a person is shown the application's own page for it, and anything
+        // else - a crawler looking for a file, a checker - learns it is not here
+        return PrefersMarkup(request)
+                   ? request.Respond()
+                            .Status(ResponseStatus.NotFound)
+                            .Content(Resource.FromString(await Index()).Type(new ContentType("text/html; charset=utf-8")).Build())
+                            .Build()
+                   : null;
     }
+
+    /// <summary>
+    /// Whether the client side router draws a page for the path that is not a
+    /// public one: the editor and the administration.
+    /// </summary>
+    /// <remarks>
+    /// Without a build naming the public pages there is no telling which
+    /// address is one, so every address is.
+    /// </remarks>
+    private bool IsClientRoute(string path)
+        => path == "/admin"
+           || path.StartsWith("/admin/", StringComparison.Ordinal)
+           || path.StartsWith("/editor/", StringComparison.Ordinal)
+           || !Meta.HasPages;
+
+    private static bool PrefersMarkup(IRequest request)
+        => request.Header.Headers.GetEntry("Accept")?.Contains("text/html", StringComparison.OrdinalIgnoreCase) == true;
 
     /// <summary>
     /// A public page asked for without a language, sent on to the language
@@ -101,14 +146,9 @@ public sealed class SiteMetaConcern : IConcern
     {
         var normalized = SiteMeta.Normalize(path);
 
-        if (!Moved.TryGetValue(normalized, out var target))
+        if (!Meta.IsPage(normalized))
         {
-            if (!Meta.IsPage(normalized))
-            {
-                return null;
-            }
-
-            target = normalized;
+            return null;
         }
 
         var headers = request.Header.Headers;
@@ -117,7 +157,7 @@ public sealed class SiteMetaConcern : IConcern
 
         return request.Respond()
                       .Status(ResponseStatus.Found)
-                      .Header("Location", SiteLanguages.In(language, target) + Query(request))
+                      .Header("Location", SiteLanguages.In(language, normalized) + Query(request))
                       .Header("Vary", "Accept-Language, Cookie")
                       .Build();
     }
