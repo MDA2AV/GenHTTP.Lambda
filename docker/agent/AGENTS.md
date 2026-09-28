@@ -21,7 +21,7 @@ These, and nothing else:
 | --- | --- |
 | `platform_guide` | how lambdas work here - read it first when building |
 | `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
-| `create_lambda` | claims an address and a private key - building only |
+| `create_lambda` | claims an address and a private key - building only, with `view: "Simple"` |
 | `read_lambda` | the status, the recent history, the open features and the files of a lambda - read it first when changing |
 | `write_code` | replaces every file with a new version, with a `specification` and a `change` note saying why - with `feature`, in that feature instead |
 | `change_code` | changes only the files it names, or a passage within one, and keeps the rest - with `feature`, in that feature instead |

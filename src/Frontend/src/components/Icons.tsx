@@ -225,3 +225,13 @@ export const IconWrench = (p: IconProps) => (
 export const IconDraft = (p: IconProps) => (
   <Svg {...p}><path d="M13 20.5H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2H13l4.5 4.5v3" /><path d="M13 3.5V8h4.5" /><path d="M8 12h4" /><path d="M8 15.5h2" /><path d="M14 21v-2.2l5-5a1.6 1.6 0 0 1 2.2 2.2l-5 5Z" /></Svg>
 );
+
+/** One card with a line or two on it, for the simple view: the app and little else. */
+export const IconViewSimple = (p: IconProps) => (
+  <Svg {...p}><path d="M4 5.5h16v13H4Z" /><path d="M8 10.5h8M8 14h5" /></Svg>
+);
+
+/** A sidebar beside a page of lines, for the full view: every section. */
+export const IconViewFull = (p: IconProps) => (
+  <Svg {...p}><path d="M3.5 4.5h17v15h-17Z" /><path d="M9 4.5v15" /><path d="M12 9h5.5M12 12h5.5M12 15h3.5M5.5 8.5h1.5M5.5 11.5h1.5" /></Svg>
+);

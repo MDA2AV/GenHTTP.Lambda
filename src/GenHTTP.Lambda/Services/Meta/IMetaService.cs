@@ -21,7 +21,9 @@ public interface IMetaService
     /// Creates a new lambda, generating a public key if none was requested and
     /// seeding it with the given template (the default one if none was named).
     /// </summary>
-    ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, CancellationToken cancellation = default);
+    /// <param name="view">How its editor opens for somebody who has not chosen a view of their own</param>
+    ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full,
+                                      CancellationToken cancellation = default);
 
     /// <summary>
     /// Reads a lambda by the private key of its editor.
@@ -94,6 +96,12 @@ public interface IMetaService
     /// Moves the lambda to another public key.
     /// </summary>
     ValueTask<LambdaInfo> ChangeKeyAsync(string privateKey, string? publicKey, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Changes how the editor of the lambda opens for somebody who has not
+    /// chosen a view of their own.
+    /// </summary>
+    ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, CancellationToken cancellation = default);
 
     /// <summary>
     /// Moves the lambda to another tier. Only ever done by an administrator.

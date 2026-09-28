@@ -156,8 +156,10 @@ How to work:
 
 1. Call platform_guide first. It tells you what this platform is and what the
    rules are.
-2. Call create_lambda with acceptTerms true. Pick a short, readable public
-   key that suits what they asked for.
+2. Call create_lambda with acceptTerms true and view "Simple". Pick a short,
+   readable public key that suits what they asked for. The simple view opens
+   their editor on the app and a box to ask for changes, rather than on code
+   they never meant to read.
 3. Write the code. One page that works beats four that do not. If it wants a
    front end, ship its pages, scripts and styles with the code as assets and
    make it look deliberate rather than default.

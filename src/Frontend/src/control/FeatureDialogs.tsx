@@ -170,7 +170,9 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
   /** Opens the dialog that moves its base, for a feature behind the newest version. */
   onRebase: () => void;
 }) {
-  const said = useEditorT().features;
+  const t = useEditorT();
+  const said = t.features;
+  const plain = t.simple;
 
   const [change, setChange] = useState('');
   const [working, setWorking] = useState(false);
@@ -190,6 +192,7 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
   const next = (feature.newest ?? feature.base) + 1;
   const active = control.lambda.activeVersion;
   const agent = control.agent.state?.available ?? false;
+  const { simple } = control;
 
   async function merge() {
     setWorking(true);
@@ -236,10 +239,13 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
           </>
         }
       >
-        <p className="text-slate-600 dark:text-slate-400">{said.behindText(feature.base, feature.newest ?? feature.base)}</p>
+        <p className="text-slate-600 dark:text-slate-400">
+          {simple ? plain.behindText : said.behindText(feature.base, feature.newest ?? feature.base)}
+        </p>
 
-        {/* for changes brought in by hand: said, but not offered as the way */}
-        {agent && (
+        {/* for changes brought in by hand: said, but not offered as the way -
+            and not at all to somebody who does not bring any in by hand */}
+        {agent && !simple && (
           <button type="button" onClick={() => { onClose(); onRebase(); }} className="text-[13px] text-accent-500 hover:underline">
             {said.moveBase}
           </button>
@@ -264,7 +270,9 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
       }
     >
       <p className="text-slate-600 dark:text-slate-400">
-        {said.mergeText(next)} {active != null ? said.deployTooNote(active) : said.deployTooOffline}
+        {simple
+          ? `${plain.mergeText} ${active != null ? plain.mergeUndo : said.deployTooOffline}`
+          : `${said.mergeText(next)} ${active != null ? said.deployTooNote(active) : said.deployTooOffline}`}
       </p>
 
       <label className="block">
@@ -282,11 +290,13 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
         <>
           <p className="flex gap-2 text-red-600 dark:text-red-400">
             <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
-            {said.notCompiling}
+            {simple ? plain.refusedText : said.notCompiling}
           </p>
-          <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-ink-800">
-            <Diagnostics diagnostics={refused} state="idle" onSelect={() => undefined} />
-          </div>
+          {!simple && (
+            <div className="max-h-48 overflow-y-auto border border-slate-200 dark:border-ink-800">
+              <Diagnostics diagnostics={refused} state="idle" onSelect={() => undefined} />
+            </div>
+          )}
         </>
       )}
 

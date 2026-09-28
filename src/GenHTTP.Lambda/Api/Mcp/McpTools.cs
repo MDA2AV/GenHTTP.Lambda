@@ -64,9 +64,23 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                  {
                      ["publicKey"] = Field("string", "Requested address: lower case letters, digits and dashes. Generated if omitted."),
                      ["template"] = Field("string", $"Left out, the lambda starts empty. The id of a demo ({string.Join(", ", DemoCatalog.All.Select(d => d.Id))}) starts it as a copy of that demo, which is yours to change."),
-                     ["acceptTerms"] = Field("boolean", "Must be true: the user accepts the terms in platform_guide (free shared machine, deployments may be removed, nothing malicious).")
+                     ["acceptTerms"] = Field("boolean", "Must be true: the user accepts the terms in platform_guide (free shared machine, deployments may be removed, nothing malicious)."),
+                     ["view"] = Field("string", ViewField)
                  },
                  ["required"] = new JsonArray("acceptTerms")
+             }),
+
+        Tool("update_lambda", "Change a lambda's settings", Effect.Replace,
+             "Change how a lambda's editor opens: view 'Simple' shows the app, how it is doing and a box to ask for a change - for an owner who does not write code - and 'Full' every section, the code, files, data, versions and logs included. Only the default: whoever opens the editor can switch for themselves, and that choice stays theirs. Only do this when the user asks for it.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["view"] = Field("string", ViewField)
+                 },
+                 ["required"] = new JsonArray("privateKey", "view")
              }),
 
         Tool("write_code", "Save all files", Effect.Save,
@@ -374,6 +388,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             return name switch
             {
                 "create_lambda" => await CreateAsync(arguments, origin),
+                "update_lambda" => await UpdateAsync(arguments, origin),
                 "write_code" => await WriteAsync(arguments, origin),
                 "change_code" => await ChangeAsync(arguments, origin),
                 "create_feature" => await CreateFeatureAsync(arguments, origin),
@@ -414,7 +429,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "acceptTerms must be true. Show the user the terms from platform_guide first.");
         }
 
-        var lambda = await meta.CreateAsync(Text(arguments, "publicKey"), Text(arguments, "template"));
+        var view = EditorViews.Parse(Text(arguments, "view")) ?? EditorView.Full;
+
+        var lambda = await meta.CreateAsync(Text(arguments, "publicKey"), Text(arguments, "template"), view);
 
         return McpProtocol.Say(new
         {
@@ -423,8 +440,27 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             privateKey = lambda.PrivateKey,
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             editorUrl = $"{origin}/editor/{lambda.PrivateKey}",
+            view = lambda.View,
             next = "write_code with deploy: true, and fix what needs fixing with change_code and deploy: true - a new lambda needs no feature. Once people use it, make further changes in a feature (create_feature).",
             warning = "The editor key cannot be recovered. Give it to the user."
+        });
+    }
+
+    private async ValueTask<JsonObject> UpdateAsync(JsonObject arguments, string origin)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        var view = EditorViews.Parse(Required(arguments, "view"))!.Value;
+
+        var lambda = await meta.ChangeViewAsync(privateKey, view);
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            publicKey = lambda.PublicKey,
+            editorUrl = $"{origin}/editor/{lambda.PrivateKey}",
+            view = lambda.View,
+            note = "The editor opens in this view for everybody who has not switched it for themselves; whoever has keeps their own."
         });
     }
 
@@ -1134,6 +1170,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             domainUrl = DomainUrl(lambda),
             lambda.Tier,
+            lambda.View,
             limits = Limits(Enum.Parse<LambdaTier>(lambda.Tier)),
             lambda.ActiveVersion,
             lambda.LatestVersion,
@@ -1526,6 +1563,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     #endregion
 
     #region Arguments
+
+    /// <summary>
+    /// What the view of an editor is, wherever a tool takes one.
+    /// </summary>
+    private const string ViewField =
+        "How the editor opens: 'Full' (the default) shows every section, 'Simple' only the app, how it is doing and a box to ask for a change. Simple suits an owner who is not going to read the code - use it when the user asks for a simple editor, or says they are not a developer.";
 
     private static JsonObject Tool(string name, string title, Effect effect, string description, JsonObject schema) => new()
     {

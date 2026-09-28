@@ -2,6 +2,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -34,7 +35,7 @@ public sealed class LambdaResource(IMetaService meta)
             throw LambdaException.Invalid("The terms of service need to be accepted.");
         }
 
-        var lambda = await meta.CreateAsync(request.PublicKey, request.Template);
+        var lambda = await meta.CreateAsync(request.PublicKey, request.Template, EditorViews.Parse(request.View) ?? EditorView.Full);
 
         return new Result<LambdaResponse>(LambdaDescription.Of(lambda)).Status(ResponseStatus.Created);
     }
@@ -50,16 +51,28 @@ public sealed class LambdaResource(IMetaService meta)
     /// Changes a lambda. What the request leaves out stays as it is.
     /// </summary>
     /// <remarks>
-    /// The public key is the only thing there is to change so far. Moving it
-    /// moves the address the lambda answers at, and the old one is free for
-    /// anybody to claim afterwards.
+    /// Moving the public key moves the address the lambda answers at, and the
+    /// old one is free for anybody to claim afterwards. The view is only what
+    /// the editor opens in for somebody who has not picked one: whoever has
+    /// keeps theirs, since that is remembered in their browser.
+    ///
+    /// The view is read before anything changes, so a request that names one
+    /// that does not exist changes nothing at all rather than half of what it
+    /// asked for.
     /// </remarks>
     [ResourceMethod(Method.Patch, "lambdas/:privateKey")]
     public async ValueTask<LambdaResponse> Update(string privateKey, UpdateLambdaRequest request)
     {
+        var view = EditorViews.Parse(request.View);
+
         var lambda = request.PublicKey is { } publicKey
                    ? await meta.ChangeKeyAsync(privateKey, publicKey)
                    : await meta.RequireAsync(privateKey);
+
+        if (view is { } wanted)
+        {
+            lambda = await meta.ChangeViewAsync(privateKey, wanted);
+        }
 
         return LambdaDescription.Of(lambda);
     }
