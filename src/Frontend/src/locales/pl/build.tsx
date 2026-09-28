@@ -1,63 +1,67 @@
 import type { Messages } from '../en';
-import { counted } from './plural';
 
 export const build: Messages['build'] = {
-  offTitle: 'Ta funkcja jest tu wyłączona',
-  off: (write, mcp) => (
-    <>
-      Ta instalacja nie ma agenta do budowania. Nadal możesz {write('napisać kod samodzielnie')} albo podłączyć własnego
-      agenta Claude pod {mcp}.
-    </>
-  ),
-
-  title: 'Powiedz, czego chcesz.',
+  title: 'Od pomysłu do strony internetowej.',
   intro:
-    'Agent to zbuduje, wrzuci do sieci i da ci link, który możesz wysłać, komu chcesz. Bez konta, bez instalacji. Aplikacja zapamiętuje dane – wyniki, wiadomości, wpisy – więc każdy, kto ją otworzy, widzi to samo.',
-  placeholder: 'zbuduj…',
+    'Opisz stronę internetową lub aplikację, o której myślisz. AI ją dla ciebie stworzy, my hostujemy ją na naszych serwerach, a ona od razu jest online – z linkiem, który możesz wysłać każdemu. Bez programowania, bez konfigurowania hostingu, bez konta.',
+  placeholder: 'Chcę stronę internetową, która…',
   working: 'agent pracuje…',
   shortcut: 'Ctrl + Enter',
-  building: 'Budowanie',
-  buildIt: 'Zbuduj',
-  builtBy: 'Model',
+  building: 'Tworzenie',
+  buildIt: 'Stwórz moją stronę',
+  builtBy: 'Tworzy',
   password: 'hasło',
   fable:
     'Fable jest na razie za hasłem, bo go testujemy. Nie ma limitu czasu, więc pracuje, aż skończy – a nie aż skończy się czas.',
   onlyNew:
-    'Tu powstają tylko nowe aplikacje. Żeby zmienić coś, co już masz, otwórz link do edytora i w sekcji „Zmień” napisz, co ma być inaczej.',
+    'Tutaj powstają nowe strony. Aby zmienić istniejącą, otwórz jej link do edytora i opisz w sekcji „Zmień”, co ma być inaczej.',
   ideas: [
-    'zrób tablicę, na której każdy może zostawić krótki wpis',
-    'potrzebuję rankingu wyników do gry w kości',
-    'zbuduj ankietę, w której ludzie głosują i widzą wyniki',
-    'przygotuj księgę gości na moje wesele',
-    'zrób odliczanie do ważnej daty, widoczne dla wszystkich',
+    'stronę dla naszego klubu, na której członkowie zapisują się na wydarzenia',
+    'księgę gości na nasze wesele',
+    'ankietę, w której ludzie głosują i widzą wyniki',
+    'tablicę wyników na nasz cotygodniowy quiz',
+    'odliczanie do naszego otwarcia, które każdy może zobaczyć',
   ],
   ahead: (waiting) =>
-    waiting === 1
-      ? 'Przed tobą jeszcze jedno zadanie – zaraz twoja kolej.'
-      : `Przed tobą w kolejce ${counted(waiting, 'zadanie', 'zadania', 'zadań')}.`,
+    waiting === 1 ? 'Przed twoją jest jeszcze jedna strona – potem twoja kolej.' : `Stron przed twoją: ${waiting}.`,
   starting: 'Zaczynamy…',
 
-  yourApp: 'Twoja aplikacja',
-  further: 'Do dalszej pracy',
-  keep: 'Zachowaj ten link. To jedyna droga powrotu i nikt go nie odzyska – my też nie. Dodaj go do zakładek, zanim zamkniesz tę kartę.',
+  points: [
+    {
+      title: 'Opisana, nie zaprogramowana',
+      text: 'Powiedz własnymi słowami, co ma robić twoja strona. Nie potrzebujesz programowania ani wiedzy technicznej.',
+    },
+    {
+      title: 'Hosting wliczony',
+      text: 'Twoja strona działa na naszych serwerach. Hostingiem, bezpieczeństwem i aktualizacjami zajmujemy się my – niczego nie musisz konfigurować ani pilnować.',
+    },
+    {
+      title: 'Online w kilka minut',
+      text: 'Od razu dostajesz link do udostępnienia. Strona może też zapamiętywać dane – zgłoszenia, głosy, wyniki – więc wszyscy widzą to samo.',
+    },
+  ],
+
+  yourApp: 'Twoja strona',
+  further: 'Aby zmienić ją później',
+  keep:
+    'Zachowaj ten link. To jedyna droga powrotu i nikt go nie odzyska – my też nie. Dodaj go do zakładek, zanim zamkniesz tę kartę.',
   change:
-    'Żeby ją zmienić, otwórz link do edytora i w sekcji „Zmień” napisz, co ma być inaczej – tak samo jak tutaj. Może to zrobić też twój własny agent, jak opisano niżej.',
+    'Aby zmienić swoją stronę, otwórz link do edytora i opisz w sekcji „Zmień”, co ma być inaczej – tak samo jak tutaj. Może to zrobić także twój własny asystent AI, jak opisano poniżej.',
   copyLink: 'Kopiuj link do edytora',
   lifetime: (offline, removed) =>
-    `Aplikacja działa, dopóki ktoś z niej korzysta. Po ${offline} dniach bez odwiedzin i zmian zostaje wyłączona, a po ${removed} dniach usunięta. Żeby ją przywrócić, otwórz edytor i kliknij „Wdróż”.`,
+    `Utrzymujemy ją online, dopóki jest używana: po ${offline} dniach bez odwiedzin i zmian zostaje wyłączona, a po ${removed} dniach usunięta. Otwórz edytor, aby znów ją uruchomić.`,
   openEditor: 'Otwórz edytor',
-  another: 'Zbuduj coś innego',
+  another: 'Stwórz kolejną stronę',
 
-  keepGoing: 'Pracuj dalej z własnym agentem',
-  orOwn: 'Albo użyj własnego agenta',
+  keepGoing: 'Działaj dalej z własnym asystentem AI',
+  orOwn: 'Albo użyj własnego asystenta AI',
   ownText:
-    'Pole powyżej obsługuje Claude działający na naszym serwerze. Jeśli masz własnego agenta, możesz go podłączyć tutaj. Zrobi to samo – utworzy lambdę, napisze kod i wrzuci ją do sieci – bez dziennego limitu i bez tej strony.',
-  thenAsk: 'Potem poproś go o to, czego chcesz – tak samo jak tutaj.',
-  claudeWeb: 'Claude w przeglądarce',
-  claudeWebHow:
-    'Ustawienia, potem „Connectors”, potem „Add custom connector”. Wklej adres podany wyżej jako URL zdalnego serwera MCP. Nie potrzeba klucza ani logowania.',
-  howToChange: 'Tak samo zmienisz coś, co już działa: daj agentowi link do edytora i powiedz, co ma zrobić.',
-  more: 'Więcej o pracy z agentem',
+    'Korzystasz już z Claude albo innego asystenta AI? Podłącz go tutaj, a będzie tworzył i zmieniał strony dla ciebie w ten sam sposób. My je hostujemy, więc nadal nie musisz niczego konfigurować. Nie ma dziennego limitu.',
+  ownTitle: 'Stwórz stronę ze swoim asystentem AI',
+  ownOnly:
+    'Podłącz Claude albo innego asystenta AI pod adres poniżej i opisz stronę, jakiej chcesz. Asystent ją tworzy, my hostujemy ją na naszych serwerach, a ona od razu jest online – z linkiem do udostępnienia.',
+  thenAsk: 'Potem powiedz mu, czego chcesz, na przykład: „Stwórz stronę dla naszego chóru z kalendarzem koncertów”.',
+  howToChange: 'Tak samo zmienisz stronę później: daj asystentowi link do edytora i powiedz, co ma być inaczej.',
 
   failedToStart: 'Nie udało się wysłać prośby.',
   noAnswer: 'Agent skończył, ale nie napisał, co się stało.',

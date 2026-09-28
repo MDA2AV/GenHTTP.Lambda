@@ -44,20 +44,6 @@ export const landing: Messages['landing'] = {
   agentsTitle: 'いつものエージェントで',
   agentsText:
     'Claudeなどのアシスタントをもう使っていますか？　このURLに接続すれば、開いている会話からそのまま、ここでアプリを作成・デプロイ・更新できます。',
-  agents: [
-    {
-      name: 'Claude（Web版・デスクトップ版）',
-      how: '設定を開き、「Connectors」から「Add custom connector」を選びます。上のURLを貼り付ければ完了です。APIキーもサインインも要りません。',
-    },
-    {
-      name: 'Claude Code',
-      how: 'ターミナルで一度だけ実行します：',
-    },
-    {
-      name: 'その他のMCPクライアント',
-      how: 'Cursor、VS Code、CodexなどのMCPクライアントは、リモートサーバーに対応しています。同じURLを設定してください。',
-    },
-  ],
   thenAsk: (em) => <>あとは「{em('チームイベントの参加受付ページを作って公開して')}」と頼むだけです。</>,
 
   contactTitle: 'ご相談はこちら',

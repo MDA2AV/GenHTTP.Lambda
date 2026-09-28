@@ -1,61 +1,69 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Hier nicht aktiviert',
-  off: (write, mcp) => (
-    <>
-      Diese Installation hat keinen Build-Agenten. Sie können den Code aber {write('selbst schreiben')} oder Ihren
-      eigenen Claude mit {mcp} verbinden.
-    </>
-  ),
-
-  title: 'Sagen Sie, was Sie möchten.',
+  title: 'Von der Idee zur Website.',
   intro:
-    'Die App wird gebaut und online gestellt. Sie bekommen einen Link, den Sie an alle schicken können. Außerdem merkt sich die App Punkte, Nachrichten oder Einträge, damit alle dasselbe sehen. Kein Konto, keine Installation.',
-  placeholder: 'Bau mir …',
+    'Beschreiben Sie die Website oder App, die Sie sich vorstellen. Eine KI erstellt sie für Sie, wir betreiben sie auf unseren Servern, und sie ist sofort online – mit einem Link, den Sie an alle schicken können. Ohne Programmieren, ohne Hosting einzurichten, ohne Konto.',
+  placeholder: 'Ich möchte eine Website, die …',
   working: 'Läuft …',
   shortcut: 'Strg + Enter',
-  building: 'Wird gebaut',
-  buildIt: 'Bauen',
-  builtBy: 'Gebaut von',
+  building: 'Wird erstellt',
+  buildIt: 'Website erstellen',
+  builtBy: 'Erstellt von',
   password: 'Passwort',
   fable:
     'Fable ist in der Testphase und durch ein Passwort geschützt. Es hat kein Zeitlimit und arbeitet, bis die App fertig ist – nicht, bis die Zeit abläuft.',
   onlyNew:
-    'Hier entstehen nur neue Apps. Um etwas zu ändern, das Sie schon gebaut haben, öffnen Sie seinen Editor-Link und sagen Sie unter „Ändern“, was anders sein soll.',
+    'Hier entstehen neue Websites. Um eine bestehende zu ändern, öffnen Sie ihren Editor-Link und beschreiben unter „Ändern“, was anders sein soll.',
   ideas: [
-    'eine Pinnwand, auf der jeder eine kurze Nachricht hinterlassen kann',
-    'eine Highscore-Liste für ein Würfelspiel',
-    'eine Umfrage, bei der alle das Ergebnis sehen',
-    'ein Gästebuch für meine Hochzeit',
-    'einen Countdown bis zu einem Datum, den alle sehen',
+    'eine Website für unseren Verein, auf der sich Mitglieder für Termine anmelden',
+    'ein Gästebuch für unsere Hochzeit',
+    'eine Umfrage, bei der alle abstimmen und das Ergebnis sehen',
+    'eine Punktetafel für unseren wöchentlichen Quizabend',
+    'ein Countdown bis zu unserer Eröffnung, den alle sehen können',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Noch ein Build vor Ihrem – Sie sind als Nächstes dran.' : `Noch ${waiting} Builds vor Ihrem.`,
+    waiting === 1 ? 'Eine Website ist vor Ihrer an der Reihe – danach sind Sie dran.' : `${waiting} Websites sind vor Ihrer an der Reihe.`,
   starting: 'Startet …',
 
-  yourApp: 'Ihre App',
-  further: 'So geht es weiter',
-  keep: 'Heben Sie diesen Link gut auf. Er ist der einzige Weg zurück, und niemand kann ihn wiederherstellen – auch wir nicht. Setzen Sie ein Lesezeichen, bevor Sie den Tab schließen.',
+  points: [
+    {
+      title: 'Beschrieben, nicht programmiert',
+      text: 'Sagen Sie in eigenen Worten, was Ihre Website können soll. Programmier- oder Technikkenntnisse sind nicht nötig.',
+    },
+    {
+      title: 'Hosting inklusive',
+      text: 'Ihre Website läuft auf unseren Servern. Um Hosting, Sicherheit und Updates kümmern wir uns – Sie müssen nichts einrichten oder warten.',
+    },
+    {
+      title: 'In Minuten online',
+      text: 'Sie erhalten sofort einen Link zum Teilen. Die Website kann sich auch etwas merken – Einträge, Stimmen, Punkte –, damit alle dasselbe sehen.',
+    },
+  ],
+
+  yourApp: 'Ihre Website',
+  further: 'Um sie später zu ändern',
+  keep:
+    'Heben Sie diesen Link gut auf. Er ist der einzige Weg zurück, und niemand kann ihn wiederherstellen – auch wir nicht. Setzen Sie ein Lesezeichen, bevor Sie den Tab schließen.',
   change:
-    'Um sie zu ändern, öffnen Sie den Editor-Link und sagen Sie unter „Ändern“, was anders sein soll – genau wie hier. Das kann auch Ihr eigener Coding-Agent, wie unten beschrieben.',
+    'Um Ihre Website zu ändern, öffnen Sie den Editor-Link und beschreiben unter „Ändern“, was anders sein soll – genauso wie hier. Das kann auch Ihr eigener KI-Assistent, wie unten beschrieben.',
   copyLink: 'Editor-Link kopieren',
   lifetime: (offline, removed) =>
-    `Die App bleibt online, solange sie genutzt wird. Nach ${offline} Tagen ohne Besuche oder Änderungen geht sie offline, nach ${removed} Tagen wird sie gelöscht. Mit „Deployen“ im Editor ist sie wieder online.`,
+    `Wir halten sie online, solange sie genutzt wird: Nach ${offline} Tagen ohne Besuche oder Änderungen wird sie offline genommen, nach ${removed} Tagen gelöscht. Im Editor können Sie sie wieder online stellen.`,
   openEditor: 'Editor öffnen',
-  another: 'Noch etwas bauen',
+  another: 'Weitere Website erstellen',
 
-  keepGoing: 'Mit Ihrem eigenen Agenten weitermachen',
-  orOwn: 'Oder Ihren eigenen Agenten nutzen',
+  keepGoing: 'Mit Ihrem eigenen KI-Assistenten weitermachen',
+  orOwn: 'Oder nutzen Sie Ihren eigenen KI-Assistenten',
   ownText:
-    'Hinter dem Feld oben arbeitet ein Claude auf unserem Server. Haben Sie schon einen eigenen Agenten? Dann verbinden Sie ihn stattdessen. Er kann dasselbe – ein Lambda anlegen, den Code schreiben, es online stellen –, nur ohne Tageslimit und ohne Umweg über diese Seite.',
-  thenAsk: 'Dann sagen Sie ihm, was Sie möchten – genau wie hier.',
-  claudeWeb: 'Claude im Web',
-  claudeWebHow:
-    'Einstellungen, dann „Connectors“, dann „Add custom connector“. Fügen Sie die Adresse oben als URL des Remote-MCP-Servers ein. Kein Key, kein Login.',
+    'Sie arbeiten bereits mit Claude oder einem anderen KI-Assistenten? Verbinden Sie ihn hier, und er erstellt und ändert Websites für Sie auf dieselbe Weise. Wir betreiben sie, Sie müssen also weiterhin nichts einrichten. Ein Tageslimit gibt es nicht.',
+  ownTitle: 'Erstellen Sie Ihre Website mit Ihrem KI-Assistenten',
+  ownOnly:
+    'Verbinden Sie Claude oder einen anderen KI-Assistenten mit der Adresse unten und beschreiben Sie die gewünschte Website. Er erstellt sie, wir betreiben sie auf unseren Servern, und sie ist sofort online – mit einem Link zum Teilen.',
+  thenAsk:
+    'Sagen Sie ihm dann, was Sie möchten, zum Beispiel: „Erstelle eine Website für unseren Chor mit einem Kalender unserer Konzerte.“',
   howToChange:
-    'So ändern Sie auch eine fertige App: Geben Sie Ihrem Agenten den Editor-Link und sagen Sie ihm, was er tun soll.',
-  more: 'Mehr zum eigenen Agenten',
+    'So ändern Sie eine Website auch später: Geben Sie Ihrem Assistenten den Editor-Link und sagen Sie ihm, was anders sein soll.',
 
   failedToStart: 'Die Anfrage kam nicht durch.',
   noAnswer: 'Fertig, aber ohne Rückmeldung, was passiert ist.',

@@ -2,7 +2,7 @@ import type { Messages } from '../en';
 
 export const shell: Messages['shell'] = {
   main: 'Hoofdmenu',
-  build: 'App maken',
+  build: 'Website maken',
   ship: 'Publiceren',
   showcase: 'Showcase',
   enterprise: 'Enterprise',

@@ -121,20 +121,4 @@ export const ship: Messages['ship'] = {
   compareNote:
     'Eylül 2026 itibarıyla, hiçbir yerde hesabı olmayan biri için. Diğer servislerin planları ve özellikleri değişebilir. Ayrıntılar için kendi sitelerine bakın.',
 
-  yourAgent: 'Ajanınız',
-  terminal: 'Terminal',
-  setups: {
-    claudeCode: 'Bunu terminalde bir kez çalıştırın. Sonra açtığınız her proje buraya yayınlayabilir.',
-    claude: (strong) => (
-      <>
-        Claude’un web ya da masaüstü uygulamasında {strong('Ayarlar')} bölümünü açın, ardından {strong('Connectors')}{' '}
-        bölümüne gidin ve {strong('Add custom connector')} seçeneğine tıklayın. Yukarıdaki adresi yapıştırıp kaydedin.
-        Hepsi bu.
-      </>
-    ),
-    cursor: 'Bunu Cursor’ın MCP ayarlarına ya da aşağıdaki dosyaya ekleyin, sonra yeniden yükleyin.',
-    vscode: 'Bunu projenize kaydedin, sonra sunucuyu Copilot Chat’in MCP görünümünden başlatın.',
-  },
-  elsewhere:
-    'Başka bir şey mi kullanıyorsunuz? Windsurf, Codex, Zed ve diğer ajanların çoğu, ayarlarından uzak bir MCP sunucusu ekleyebilir. Onlara yukarıdaki adresi verin.',
 };

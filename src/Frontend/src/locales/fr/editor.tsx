@@ -350,13 +350,11 @@ export const editor: EditorMessages = {
       failed: 'La modification n’a pas abouti.',
       stopped: 'La modification a été arrêtée.',
     },
-    offTitle: 'Pas d’agent sur cette installation',
-    off: 'Ce serveur n’a pas d’agent à lui pour faire des modifications. Le vôtre peut s’en charger : branchez-le sur l’adresse ci-dessous, donnez-lui le lien d’édition et dites-lui ce qui doit changer.',
-    own: 'Utiliser plutôt votre propre agent',
+    offTitle: 'Modifiez-la avec votre propre agent',
+    off: 'Connectez votre propre agent, Claude par exemple, à l’adresse ci-dessous, donnez-lui le lien d’édition et dites-lui ce qui doit changer. Il modifie votre app ici et la met en ligne pour vous.',
+    own: 'Ou utilisez votre propre agent',
     ownText:
-      'Tout agent qui parle MCP peut modifier cette lambda : branchez-le sur cette adresse, donnez-lui le lien d’édition et dites-lui ce qui doit changer. Ni limite quotidienne, ni chrono.',
-    mcp: 'Adresse MCP',
-    editorLink: 'Lien d’édition (à garder pour vous)',
+      'Tout agent compatible MCP peut aussi modifier cette app : connectez-le à l’adresse ci-dessous, donnez-lui le lien d’édition et dites-lui ce qui doit changer. Sans limite quotidienne ni limite de temps.',
   },
 
   summary: {

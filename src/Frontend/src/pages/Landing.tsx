@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { CopyField } from '../components/CopyField';
+import { ConnectAgent } from '../components/ConnectAgent';
 import { IconChat, IconChevronDown, IconMail } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
 import { CONTACT_MAIL, DISCORD } from '../contact';
@@ -20,13 +20,6 @@ import { useOrigin } from '../site';
 
 /** The pictures of the three steps, in the order the words are in. */
 const STEP_IMAGES = ['/media/prompt.webp', '/media/app.webp', '/media/editor.webp'];
-
-/** What each agent is set up with, beside its words; only Claude Code has a command. */
-const AGENT_COMMANDS: (((origin: string) => string) | undefined)[] = [
-  undefined,
-  (origin) => `claude mcp add --transport http genhttp ${origin}/mcp`,
-  undefined,
-];
 
 export function Landing() {
   usePublicPage('/');
@@ -246,26 +239,10 @@ export function Landing() {
         </Reveal>
 
         <Reveal delay={120}>
-          <div className="mx-auto mt-8 max-w-xl">
-            <CopyField value={`${origin}/mcp`} tone="accent" />
+          <div className="mx-auto mt-8 max-w-4xl">
+            <ConnectAgent origin={origin} />
           </div>
         </Reveal>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {said.agents.map((agent, i) => (
-            <Reveal key={agent.name} delay={160 + i * 80}>
-              <div className="surface h-full rounded-xl p-5">
-                <h3 className="font-semibold">{agent.name}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-grey-700 dark:text-grey-300">{agent.how}</p>
-                {AGENT_COMMANDS[i] && (
-                  <pre className="mt-3 whitespace-pre-wrap break-all rounded-md bg-ink-950 p-3 text-xs text-grey-200">
-                    {AGENT_COMMANDS[i](origin)}
-                  </pre>
-                )}
-              </div>
-            </Reveal>
-          ))}
-        </div>
 
         <Reveal delay={300}>
           <p className="mt-6 text-center text-sm text-grey-700 dark:text-grey-300">

@@ -46,20 +46,6 @@ export const landing: Messages['landing'] = {
   agentsTitle: 'Sevdiğiniz ajanla çalışın',
   agentsText:
     'Zaten Claude ya da başka bir asistanla mı çalışıyorsunuz? Onu bu adrese bağlayın. Artık burada uygulama oluşturabilir, yayına alabilir ve güncelleyebilir. Hem de açık olan sohbetten hiç çıkmadan.',
-  agents: [
-    {
-      name: 'Claude (web veya masaüstü)',
-      how: 'Ayarlar’ı açın, “Connectors” bölümüne gidin ve “Add custom connector” seçeneğine tıklayın. Yukarıdaki adresi yapıştırın. API anahtarı ya da giriş gerekmez.',
-    },
-    {
-      name: 'Claude Code',
-      how: 'Terminalde bunu bir kez çalıştırın:',
-    },
-    {
-      name: 'Diğer MCP istemcileri',
-      how: 'Cursor, VS Code, Codex ve diğer MCP istemcileri uzak sunucuları destekler. Aynı adresi girmeniz yeterli.',
-    },
-  ],
   thenAsk: (em) => (
     <>Sonra şunu istemeniz yeterli: {em('ekip etkinliğimiz için bir kayıt listesi yap ve yayına al')}.</>
   ),

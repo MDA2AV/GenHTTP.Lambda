@@ -78,4 +78,6 @@ public sealed record LambdaOverviewResponse(string PublicKey, int? ActiveVersion
 /// What the operator can switch on or off.
 /// </summary>
 /// <param name="EnterprisePage">Whether the header links to the enterprise page</param>
-public sealed record SettingsModel(bool EnterprisePage);
+/// <param name="BuildBox">Whether /build offers its text box, where there is an agent</param>
+/// <param name="ChangeBox">Whether the Change section of the editor offers its text box, where there is an agent</param>
+public sealed record SettingsModel(bool EnterprisePage, bool BuildBox = true, bool ChangeBox = true);

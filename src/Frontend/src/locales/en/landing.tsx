@@ -47,21 +47,6 @@ export const landing = {
   agentsTitle: 'Bring your favourite agent',
   agentsText:
     'Already working with Claude or another assistant? Connect it to this address and it can build, deploy and update apps here - directly from the conversation you already have open.',
-  /** Where to paste the address, for the agents people actually have. */
-  agents: [
-    {
-      name: 'Claude on the web or desktop',
-      how: 'Open Settings, then Connectors, and choose Add custom connector. Paste the address above - no API key or sign-in required.',
-    },
-    {
-      name: 'Claude Code',
-      how: 'Run this once in a terminal:',
-    },
-    {
-      name: 'Other MCP clients',
-      how: 'Cursor, VS Code, Codex and other MCP clients support remote servers. Configure them with the same address.',
-    },
-  ],
   thenAsk: (em: (text: string) => ReactNode) => (
     <>Then simply ask: {em('build a sign-up sheet for our team event and put it online')}.</>
   ),

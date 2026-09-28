@@ -24,10 +24,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Say what you want.",
+        "From idea to website.",
         "Share the link."
       ],
-      "sub": "Type a sentence, and an AI agent builds it, puts it online and hands you the address.",
+      "sub": "Describe it in a sentence. AI creates your website, we host it, and you get the link.",
       "ask": "A guestbook for our wedding, please.",
       "reply": "Done. Share this link.",
       "count": "signed"
@@ -110,10 +110,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Ceritakan yang Anda mau.",
+        "Dari ide jadi website.",
         "Bagikan link-nya."
       ],
-      "sub": "Cukup satu kalimat. Agen AI membuatnya, menaruhnya online, dan memberi Anda alamatnya.",
+      "sub": "Ceritakan dalam satu kalimat. AI membuat website Anda, kami meng-hosting-nya, Anda dapat link-nya.",
       "ask": "Tolong buatkan buku tamu untuk pernikahan kami.",
       "reply": "Beres. Bagikan link ini.",
       "count": "sudah mengisi"
@@ -196,10 +196,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Sagen Sie, was Sie möchten.",
+        "Von der Idee zur Website.",
         "Teilen Sie den Link."
       ],
-      "sub": "Ein Satz genügt: Ein KI-Agent baut die App, stellt sie online und gibt Ihnen die Adresse.",
+      "sub": "In einem Satz beschrieben: Die KI erstellt Ihre Website, wir hosten sie, Sie erhalten den Link.",
       "ask": "Ein Gästebuch für unsere Hochzeit, bitte.",
       "reply": "Fertig. Hier ist der Link zum Teilen.",
       "count": "eingetragen"
@@ -282,10 +282,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Di lo que quieres.",
+        "De la idea a la web.",
         "Comparte el enlace."
       ],
-      "sub": "Escribe una frase y un agente de IA crea la app, la publica y te da la dirección.",
+      "sub": "Descríbala en una frase: la IA crea su web, nosotros la alojamos y usted recibe el enlace.",
       "ask": "Un libro de visitas para nuestra boda, por favor.",
       "reply": "Listo. Comparte este enlace.",
       "count": "firmaron"
@@ -368,10 +368,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Dites ce que vous voulez.",
+        "De l’idée au site web.",
         "Partagez le lien."
       ],
-      "sub": "Tapez une phrase : un agent IA crée l’app, la met en ligne et vous donne l’adresse.",
+      "sub": "Décrivez-le en une phrase. L’IA crée votre site, nous l’hébergeons, vous recevez le lien.",
       "ask": "Un livre d’or pour notre mariage, s’il te plaît.",
       "reply": "C’est fait. Partagez ce lien.",
       "count": "ont signé"
@@ -454,10 +454,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Chiedi quello che vuoi.",
+        "Dall’idea al sito web.",
         "Condividi il link."
       ],
-      "sub": "Scrivi una frase: un agente AI crea l’app, la mette online e ti dà l’indirizzo.",
+      "sub": "Lo descriva in una frase: l’AI crea il Suo sito, noi lo ospitiamo, Lei riceve il link.",
       "ask": "Un guestbook per il nostro matrimonio, grazie.",
       "reply": "Fatto. Condividi questo link.",
       "count": "hanno firmato"
@@ -540,10 +540,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Zeg wat je wilt.",
+        "Van idee naar website.",
         "Deel de link."
       ],
-      "sub": "Typ één zin. Een AI-agent bouwt je app, zet hem online en geeft je het adres.",
+      "sub": "Beschrijf het in één zin. AI maakt je website, wij hosten hem en jij krijgt de link.",
       "ask": "Een gastenboek voor onze bruiloft, graag.",
       "reply": "Klaar. Deel deze link.",
       "count": "gasten"
@@ -626,10 +626,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Powiedz, czego chcesz.",
+        "Od pomysłu do strony.",
         "Udostępnij link."
       ],
-      "sub": "Wystarczy jedno zdanie. Agent AI zbuduje aplikację, wrzuci ją do sieci i da ci adres.",
+      "sub": "Opisz ją jednym zdaniem. AI tworzy stronę, my ją hostujemy, a ty dostajesz link.",
       "ask": "Zrób księgę gości na nasze wesele.",
       "reply": "Gotowe. Udostępnij ten link.",
       "count": "gości się wpisało"
@@ -712,10 +712,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Diga o que você quer.",
+        "Da ideia ao site.",
         "Compartilhe o link."
       ],
-      "sub": "Escreva uma frase: um agente de IA cria o app, coloca no ar e entrega o endereço para você.",
+      "sub": "Descreva em uma frase. A IA cria o seu site, nós hospedamos e você recebe o link.",
       "ask": "Um livro de visitas para o nosso casamento, por favor.",
       "reply": "Pronto. É só compartilhar este link.",
       "count": "assinaram"
@@ -798,10 +798,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Diz o que queres.",
+        "Da ideia ao site.",
         "Partilha o link."
       ],
-      "sub": "Escreve uma frase: um agente de IA cria a app, põe-na online e dá-te o endereço.",
+      "sub": "Descreve-o numa frase. A IA cria o teu site, nós alojamo-lo e tu recebes o link.",
       "ask": "Um livro de visitas para o nosso casamento, por favor.",
       "reply": "Feito. Partilha este link.",
       "count": "assinaram"
@@ -884,10 +884,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "Ne istediğinizi söyleyin.",
+        "Fikirden web sitesine.",
         "Linki paylaşın."
       ],
-      "sub": "Bir cümle yazın; yapay zekâ ajanı uygulamayı yapsın, yayına alsın ve adresini size versin.",
+      "sub": "Tek cümleyle anlatın. Yapay zekâ sitenizi oluşturur, biz barındırırız, linki siz alırsınız.",
       "ask": "Düğünümüz için bir ziyaretçi defteri yapar mısın?",
       "reply": "Hazır. Bu linki paylaşabilirsiniz.",
       "count": "kişi imzaladı"
@@ -970,10 +970,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "作りたいものを伝えて、",
+        "アイデアをウェブサイトに。",
         "リンクを送るだけ。"
       ],
-      "sub": "ひと言入力すれば、AIエージェントがアプリを作って公開し、URLを届けます。",
+      "sub": "一文で伝えるだけ。AIがサイトを作り、私たちがホスティング。リンクが届きます。",
       "ask": "結婚式のゲストブックをお願い。",
       "reply": "できました。このリンクを共有してください。",
       "count": "{n}人が記帳"
@@ -1056,10 +1056,10 @@ window.CARD_TEXT = {
     },
     "/build": {
       "title": [
-        "원하는 걸 말하세요.",
+        "아이디어를 웹사이트로.",
         "링크로 공유하세요."
       ],
-      "sub": "한 문장만 쓰면 AI 에이전트가 앱을 만들어 온라인에 올리고 주소를 건네줘요.",
+      "sub": "한 문장으로 설명하세요. AI가 만들고, 저희가 호스팅하고, 링크를 드려요.",
       "ask": "우리 결혼식 방명록 만들어 줘.",
       "reply": "다 됐어요. 이 링크를 공유하세요.",
       "count": "{n}명이 남겼어요"

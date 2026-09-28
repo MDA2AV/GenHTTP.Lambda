@@ -1,60 +1,69 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Não está ativo aqui',
-  off: (write, mcp) => (
-    <>
-      Esta instalação não tem agente de criação. Ainda podes {write('escrever o código tu mesmo')}, ou ligar o teu
-      próprio Claude a {mcp}.
-    </>
-  ),
-
-  title: 'Diz o que queres.',
+  title: 'Da ideia ao site.',
   intro:
-    'A tua app é criada e posta online, e recebes um link para enviares a quem quiseres. Sem conta, sem instalar nada. E guarda dados (pontuações, mensagens, inscrições), por isso quem a abre vê sempre o mesmo.',
-  placeholder: 'cria um…',
+    'Descreve o site ou a app que tens em mente. A IA cria-o por ti, nós alojamo-lo nos nossos servidores e fica online de imediato, com um link para enviares a quem quiseres. Sem programar, sem configurar alojamento, sem conta.',
+  placeholder: 'Quero um site que…',
   working: 'a trabalhar…',
   shortcut: 'Ctrl + Enter',
   building: 'A criar',
-  buildIt: 'Criar',
-  builtBy: 'Feito com',
+  buildIt: 'Criar o meu site',
+  builtBy: 'Criado por',
   password: 'palavra-passe',
   fable:
     'O Fable está protegido por palavra-passe enquanto está em testes. Corre sem limite de tempo, por isso continua até a app estar pronta, e não até o tempo acabar.',
   onlyNew:
-    'Aqui só se criam apps novas. Para alterares algo que já fizeste, abre o respetivo link de edição e diz o que deve ficar diferente na secção Alterar.',
+    'Aqui crias sites novos. Para alterar um que já tens, abre o link de edição e descreve em “Alterar” o que deve ser diferente.',
   ideas: [
-    'um mural onde qualquer pessoa pode deixar uma mensagem de uma linha',
-    'uma tabela de recordes para um jogo de dados',
+    'um site para o nosso clube onde os sócios se inscrevem em eventos',
+    'um livro de visitas para o nosso casamento',
     'uma sondagem em que as pessoas votam e veem os resultados',
-    'um livro de visitas para o meu casamento',
-    'uma contagem decrescente para uma data, à vista de todos',
+    'um quadro de pontuações para a nossa noite de quiz semanal',
+    'uma contagem decrescente para a nossa inauguração que todos podem ver',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Há um pedido à frente do teu. A seguir, é a tua vez.' : `${waiting} pedidos à frente do teu.`,
+    waiting === 1 ? 'Há um site à frente do teu. Depois és tu.' : `Há ${waiting} sites à frente do teu.`,
   starting: 'A começar…',
 
-  yourApp: 'A tua app',
-  further: 'Para continuar',
-  keep: 'Guarda este link. É a única forma de voltares a entrar e não pode ser recuperado, nem por nós. Adiciona-o aos marcadores antes de fechares este separador.',
+  points: [
+    {
+      title: 'Descrito, não programado',
+      text: 'Diz por palavras tuas o que o teu site deve fazer. Não precisas de programar nem de conhecimentos técnicos.',
+    },
+    {
+      title: 'Alojamento incluído',
+      text: 'O teu site corre nos nossos servidores. Alojamento, segurança e atualizações ficam a nosso cargo: não tens nada para configurar nem manter.',
+    },
+    {
+      title: 'Online em minutos',
+      text: 'Recebes logo um link para partilhar. O site também pode guardar dados (inscrições, votos, pontuações), para que todos vejam o mesmo.',
+    },
+  ],
+
+  yourApp: 'O teu site',
+  further: 'Para o alterares mais tarde',
+  keep:
+    'Guarda este link. É a única forma de voltares a entrar e não pode ser recuperado, nem por nós. Adiciona-o aos marcadores antes de fechares este separador.',
   change:
-    'Para a alterares, abre o link de edição e diz o que deve ficar diferente na secção Alterar, tal como aqui. O teu agente de programação também o pode fazer, como se explica abaixo.',
+    'Para alterares o teu site, abre o link de edição e descreve em “Alterar” o que deve ser diferente, tal como aqui. O teu próprio assistente de IA também o pode fazer, como explicado abaixo.',
   copyLink: 'Copiar o link de edição',
   lifetime: (offline, removed) =>
-    `Fica online enquanto for usada: ao fim de ${offline} dias sem visitas nem alterações fica offline e, ao fim de ${removed} dias, é removida. Para a pores online outra vez, abre o editor e clica em Fazer deploy.`,
+    `Mantemo-lo online enquanto for usado: após ${offline} dias sem visitas nem alterações fica offline e após ${removed} dias é removido. Abre o editor para o voltares a pôr online.`,
   openEditor: 'Abrir o editor',
-  another: 'Criar outra coisa',
+  another: 'Criar outro site',
 
-  keepGoing: 'Continua com o teu agente',
-  orOwn: 'Ou usa o teu próprio agente',
+  keepGoing: 'Continua com o teu assistente de IA',
+  orOwn: 'Ou usa o teu próprio assistente de IA',
   ownText:
-    'A caixa acima é um Claude a correr nesta máquina. Se já tens o teu, liga-o aqui: faz o mesmo (cria uma lambda, escreve o código, põe-na online), sem limite diário e sem passar por esta página.',
-  thenAsk: 'Depois, pede-lhe o que queres, tal como farias aqui.',
-  claudeWeb: 'Claude na web',
-  claudeWebHow:
-    'Definições, depois «Connectors», depois «Add custom connector». Cola o endereço acima como URL do servidor MCP remoto. Não há chave nem início de sessão.',
-  howToChange: 'Também é assim que alteras algo depois de pronto: dá o link de edição ao teu agente e diz-lhe o que fazer.',
-  more: 'Mais sobre usar um agente aqui',
+    'Já usas o Claude ou outro assistente de IA? Liga-o aqui e ele cria e altera sites por ti da mesma forma. Nós alojamo-los, por isso continuas sem nada para configurar. Não há limite diário.',
+  ownTitle: 'Cria o teu site com o teu assistente de IA',
+  ownOnly:
+    'Liga o Claude ou outro assistente de IA ao endereço abaixo e descreve o site que queres. Ele cria-o, nós alojamo-lo nos nossos servidores e fica online de imediato, com um link para partilhar.',
+  thenAsk:
+    'Depois diz-lhe o que queres, por exemplo: “Cria um site para o nosso coro com um calendário dos nossos concertos.”',
+  howToChange:
+    'É também assim que alteras um site mais tarde: dá ao teu assistente o link de edição e diz-lhe o que deve ser diferente.',
 
   failedToStart: 'Não foi possível enviar o pedido.',
   noAnswer: 'Terminou sem dizer o que aconteceu.',

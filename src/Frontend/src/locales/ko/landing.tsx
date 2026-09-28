@@ -44,20 +44,6 @@ export const landing: Messages['landing'] = {
   agentsTitle: '쓰던 에이전트 그대로',
   agentsText:
     '이미 Claude나 다른 AI 어시스턴트를 쓰고 있나요? 이 주소에 연결하면, 지금 열려 있는 대화에서 바로 여기에 앱을 만들고, 배포하고, 업데이트할 수 있어요.',
-  agents: [
-    {
-      name: '웹·데스크톱용 Claude',
-      how: '설정에서 ‘Connectors’로 들어가 ‘Add custom connector’를 선택하세요. 위 주소를 붙여 넣으면 끝이에요. API 키도, 로그인도 필요 없어요.',
-    },
-    {
-      name: 'Claude Code',
-      how: '터미널에서 한 번만 실행하세요.',
-    },
-    {
-      name: '다른 MCP 클라이언트',
-      how: 'Cursor, VS Code, Codex 같은 MCP 클라이언트는 원격 서버를 지원해요. 같은 주소로 설정하세요.',
-    },
-  ],
   thenAsk: (em) => <>그다음엔 이렇게 말하기만 하면 돼요. “{em('팀 행사 참가 신청 페이지 만들어서 배포해 줘')}”</>,
 
   contactTitle: '문의하기',

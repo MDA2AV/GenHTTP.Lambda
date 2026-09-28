@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { api, ApiError } from '../api';
-import { CopyField } from '../components/CopyField';
+import { ConnectAgent } from '../components/ConnectAgent';
 import { useT } from '../i18n';
-import { Link } from '../i18n/links';
 import { usePublicPage } from '../meta';
 import { useLifetimes, useOrigin } from '../site';
 
@@ -15,6 +14,10 @@ import { useLifetimes, useOrigin } from '../site';
  * code. This is for somebody who wants the thing to exist, so there is one
  * field, one button, and afterwards two links: where it is, and the editor
  * link to take it further with.
+ *
+ * Where the operator switched the box off, or there is no agent to run it,
+ * the page is what it says about itself and how to get the same from an
+ * AI assistant of one's own.
  *
  * It only ever makes new things. Changing one afterwards happens in the
  * Change section of the editor, which already holds the key and can show the
@@ -55,6 +58,10 @@ export function Build() {
   const [copied, setCopied] = useState(false);
 
   const polling = useRef<number | null>(null);
+
+  // offered until the server says otherwise, so the box is in the page as
+  // it is prerendered for crawlers and does not pop in for everybody else
+  const offered = available !== false;
 
   useEffect(() => {
     api
@@ -118,24 +125,6 @@ export function Build() {
     polling.current = window.setInterval(poll, 2500);
   }
 
-  if (available === false) {
-    return (
-      <main className="mx-auto max-w-2xl px-6 py-24 text-center">
-        <h1 className="text-3xl font-light tracking-tight">{said.offTitle}</h1>
-        <p className="mt-4 text-slate-500">
-          {said.off(
-            (text) => (
-              <a className="underline" href="/editor/create">
-                {text}
-              </a>
-            ),
-            <code>/mcp</code>,
-          )}
-        </p>
-      </main>
-    );
-  }
-
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-16 sm:py-24">
       <h1 className="text-center text-4xl font-light tracking-tight sm:text-5xl">
@@ -144,41 +133,43 @@ export function Build() {
 
       <p className="mx-auto mt-4 max-w-lg text-center text-slate-500">{said.intro}</p>
 
-      <div className="surface mt-10 p-2">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) start();
-          }}
-          rows={3}
-          maxLength={2000}
-          disabled={state === 'working'}
-          placeholder={said.placeholder}
-          className="w-full resize-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-slate-400 disabled:opacity-60"
-        />
+      {offered && (
+        <div className="surface mt-10 p-2">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) start();
+            }}
+            rows={3}
+            maxLength={2000}
+            disabled={state === 'working'}
+            placeholder={said.placeholder}
+            className="w-full resize-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-slate-400 disabled:opacity-60"
+          />
 
-        <div className="flex items-center justify-between gap-3 px-2 pb-1">
-          <span className="text-xs text-slate-400">
-            {state === 'working' ? said.working : said.shortcut}
-          </span>
+          <div className="flex items-center justify-between gap-3 px-2 pb-1">
+            <span className="text-xs text-slate-400">
+              {state === 'working' ? said.working : said.shortcut}
+            </span>
 
-          <button
-            type="button"
-            onClick={start}
-            disabled={
-              state === 'working' ||
-              prompt.trim().length < 3 ||
-              (model === 'fable' && password.length < 1)
-            }
-            className="btn btn-primary"
-          >
-            {state === 'working' ? said.building : said.buildIt}
-          </button>
+            <button
+              type="button"
+              onClick={start}
+              disabled={
+                state === 'working' ||
+                prompt.trim().length < 3 ||
+                (model === 'fable' && password.length < 1)
+              }
+              className="btn btn-primary"
+            >
+              {state === 'working' ? said.building : said.buildIt}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {state === 'idle' && secondModel && (
+      {offered && state === 'idle' && secondModel && (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
           <span className="text-slate-400">{said.builtBy}</span>
 
@@ -213,15 +204,15 @@ export function Build() {
         </div>
       )}
 
-      {state === 'idle' && model === 'fable' && (
+      {offered && state === 'idle' && model === 'fable' && (
         <p className="mt-2 text-center text-xs text-slate-400">{said.fable}</p>
       )}
 
-      {state === 'idle' && (
+      {offered && state === 'idle' && (
         <p className="mt-4 text-center text-sm text-slate-500">{said.onlyNew}</p>
       )}
 
-      {state === 'idle' && (
+      {offered && state === 'idle' && (
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           {said.ideas.map((idea) => (
             <button
@@ -234,6 +225,17 @@ export function Build() {
             </button>
           ))}
         </div>
+      )}
+
+      {state === 'idle' && (
+        <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+          {said.points.map((point) => (
+            <li key={point.title} className="surface p-4">
+              <h2 className="text-sm font-medium">{point.title}</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{point.text}</p>
+            </li>
+          ))}
+        </ul>
       )}
 
       {state === 'working' && (
@@ -337,37 +339,16 @@ export function Build() {
       {(state === 'idle' || (state === 'done' && result?.ok)) && (
         <section className="mt-16 border-t border-slate-200 pt-10 dark:border-slate-800">
           <h2 className="text-xl font-light tracking-tight">
-            {state === 'done' ? said.keepGoing : said.orOwn}
+            {!offered ? said.ownTitle : state === 'done' ? said.keepGoing : said.orOwn}
           </h2>
 
-          <p className="mt-3 max-w-xl text-sm text-slate-500">{said.ownText}</p>
+          <p className="mb-5 mt-3 max-w-xl text-sm text-slate-500">{offered ? said.ownText : said.ownOnly}</p>
 
-          <div className="mt-5">
-            <CopyField value={`${origin}/mcp`} tone="accent" />
-          </div>
+          <ConnectAgent origin={origin} />
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div className="surface p-4">
-              <h3 className="text-sm font-medium">Claude Code</h3>
-              <pre className="mt-2 whitespace-pre-wrap break-all rounded-md bg-slate-900 p-3 text-xs text-slate-100 dark:bg-black/40">
-{`claude mcp add --transport http genhttp ${origin}/mcp`}
-              </pre>
-              <p className="mt-2 text-xs text-slate-500">{said.thenAsk}</p>
-            </div>
+          <p className="mt-5 text-sm text-slate-500">{said.thenAsk}</p>
 
-            <div className="surface p-4">
-              <h3 className="text-sm font-medium">{said.claudeWeb}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-slate-500">{said.claudeWebHow}</p>
-            </div>
-          </div>
-
-          <p className="mt-4 text-sm text-slate-500">
-            {said.howToChange}{' '}
-            <Link to="/#agents" className="underline">
-              {said.more}
-            </Link>
-            .
-          </p>
+          <p className="mt-2 text-sm text-slate-500">{said.howToChange}</p>
         </section>
       )}
 

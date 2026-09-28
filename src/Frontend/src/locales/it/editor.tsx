@@ -346,13 +346,11 @@ export const editor: EditorMessages = {
       failed: 'La modifica non è andata a buon fine.',
       stopped: 'La modifica è stata interrotta.',
     },
-    offTitle: 'Questa installazione non ha un agente',
-    off: 'Questo server non ha un agente suo con cui fare modifiche. Il tuo sì: collegalo all’indirizzo qui sotto, dagli il link di modifica e digli cosa deve cambiare.',
-    own: 'Usa invece il tuo agente',
+    offTitle: 'Modificala con il tuo agente',
+    off: 'Collega un tuo agente, per esempio Claude, all’indirizzo qui sotto, dagli il link di modifica e digli cosa deve cambiare. Modifica la tua app qui e la mette online per te.',
+    own: 'Oppure usa il tuo agente',
     ownText:
-      'Qualsiasi agente che parla MCP può modificare questa lambda: collegalo a questo indirizzo, dagli il link di modifica e digli cosa deve cambiare. Non ha limiti giornalieri né di tempo.',
-    mcp: 'Indirizzo MCP',
-    editorLink: 'Link di modifica: tienilo per te',
+      'Anche qualsiasi agente che parla MCP può modificare questa app: collegalo all’indirizzo qui sotto, dagli il link di modifica e digli cosa deve cambiare. Non ha limiti giornalieri né di tempo.',
   },
 
   summary: {

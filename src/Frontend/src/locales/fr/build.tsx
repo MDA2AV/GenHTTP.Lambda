@@ -1,61 +1,69 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Pas activé ici',
-  off: (write, mcp) => (
-    <>
-      Cette installation n’a pas d’agent de création. Vous pouvez quand même {write('écrire le code vous-même')}, ou
-      brancher votre propre Claude sur {mcp}.
-    </>
-  ),
-
-  title: 'Dites ce que vous voulez.',
+  title: 'De l’idée au site web.',
   intro:
-    'Votre app est créée, mise en ligne, et vous recevez un lien à envoyer à qui vous voulez. Sans compte, rien à installer. Et elle garde ses données (scores, messages, inscriptions) : tous ceux qui l’ouvrent voient la même chose.',
-  placeholder: 'crée un…',
+    'Décrivez le site web ou l’application que vous avez en tête. L’IA le crée pour vous, nous l’hébergeons sur nos serveurs, et il est en ligne aussitôt, avec un lien à envoyer à qui vous voulez. Sans programmer, sans hébergement à configurer, sans compte.',
+  placeholder: 'Je voudrais un site web qui…',
   working: 'en cours…',
   shortcut: 'Ctrl + Entrée',
-  building: 'Création…',
-  buildIt: 'Créer',
-  builtBy: 'Avec',
+  building: 'Création',
+  buildIt: 'Créer mon site',
+  builtBy: 'Créé par',
   password: 'mot de passe',
   fable:
     'Fable est protégé par un mot de passe pendant la phase de test. Il n’a pas de limite de temps : il continue jusqu’à ce que l’app soit finie, pas jusqu’à la fin du chrono.',
   onlyNew:
-    'Ici, on ne crée que de nouvelles apps. Pour modifier une app existante, ouvrez son lien d’édition et dites ce qui doit changer dans la section Modifier.',
+    'Ici, vous créez de nouveaux sites. Pour modifier un site existant, ouvrez son lien d’édition et décrivez ce qui doit changer sous « Modifier ».',
   ideas: [
-    'un mur où chacun peut laisser un message d’une ligne',
-    'un tableau des meilleurs scores pour un jeu de dés',
+    'un site pour notre association où les membres s’inscrivent aux événements',
+    'un livre d’or pour notre mariage',
     'un sondage où chacun vote et voit les résultats',
-    'un livre d’or pour mon mariage',
-    'un compte à rebours vers une date, visible par tous',
+    'un tableau des scores pour notre soirée quiz hebdomadaire',
+    'un compte à rebours jusqu’à notre ouverture, visible par tous',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Une création avant la vôtre. Vous passez juste après.' : `${waiting} créations en attente avant la vôtre.`,
+    waiting === 1 ? 'Un site passe avant le vôtre : vous êtes le suivant.' : `${waiting} sites passent avant le vôtre.`,
   starting: 'Démarrage…',
 
-  yourApp: 'Votre app',
-  further: 'Pour aller plus loin',
-  keep: 'Gardez bien ce lien. C’est le seul moyen d’y revenir, et personne ne peut le récupérer, pas même nous. Ajoutez-le à vos favoris avant de fermer cet onglet.',
+  points: [
+    {
+      title: 'Décrit, pas programmé',
+      text: 'Dites avec vos propres mots ce que votre site doit faire. Aucune compétence technique ni en programmation n’est nécessaire.',
+    },
+    {
+      title: 'Hébergement inclus',
+      text: 'Votre site tourne sur nos serveurs. Hébergement, sécurité et mises à jour sont pris en charge : vous n’avez rien à configurer ni à entretenir.',
+    },
+    {
+      title: 'En ligne en quelques minutes',
+      text: 'Vous recevez tout de suite un lien à partager. Le site peut aussi retenir des données (inscriptions, votes, scores) pour que tout le monde voie la même chose.',
+    },
+  ],
+
+  yourApp: 'Votre site',
+  further: 'Pour le modifier plus tard',
+  keep:
+    'Gardez bien ce lien. C’est le seul moyen d’y revenir, et personne ne peut le récupérer, pas même nous. Ajoutez-le à vos favoris avant de fermer cet onglet.',
   change:
-    'Pour la modifier, ouvrez le lien d’édition et dites ce qui doit changer dans la section Modifier, comme ici. Votre propre agent de code peut aussi s’en charger (voir plus bas).',
+    'Pour modifier votre site, ouvrez le lien d’édition et décrivez ce qui doit changer sous « Modifier », comme ici. Votre propre assistant IA peut aussi le faire, comme expliqué ci-dessous.',
   copyLink: 'Copier le lien d’édition',
   lifetime: (offline, removed) =>
-    `Elle reste en ligne tant qu’on l’utilise : après ${offline} jours sans visite ni modification, elle passe hors ligne, et après ${removed} jours, elle est supprimée. Pour la remettre en ligne, ouvrez l’éditeur et cliquez sur Déployer.`,
+    `Nous le gardons en ligne tant qu’il est utilisé : après ${offline} jours sans visite ni modification, il est mis hors ligne, puis supprimé après ${removed} jours. Ouvrez l’éditeur pour le remettre en ligne.`,
   openEditor: 'Ouvrir l’éditeur',
-  another: 'Créer autre chose',
+  another: 'Créer un autre site',
 
-  keepGoing: 'Continuer avec votre agent',
-  orOwn: 'Ou utilisez votre propre agent',
+  keepGoing: 'Continuez avec votre propre assistant IA',
+  orOwn: 'Ou utilisez votre propre assistant IA',
   ownText:
-    'Le champ ci-dessus, c’est un Claude qui tourne sur ce serveur. Si vous avez déjà le vôtre, branchez-le ici : il sait faire la même chose (créer une lambda, écrire le code, la mettre en ligne), sans limite quotidienne et sans passer par cette page.',
-  thenAsk: 'Ensuite, demandez-lui ce que vous voulez, comme vous le feriez ici.',
-  claudeWeb: 'Claude sur le web',
-  claudeWebHow:
-    'Paramètres, puis « Connectors », puis « Add custom connector ». Collez l’adresse ci-dessus comme URL de serveur MCP distant. Pas de clé, pas de connexion.',
+    'Vous utilisez déjà Claude ou un autre assistant IA ? Connectez-le ici : il crée et modifie des sites pour vous de la même façon. Nous les hébergeons, vous n’avez donc toujours rien à configurer. Aucune limite quotidienne.',
+  ownTitle: 'Créez votre site avec votre assistant IA',
+  ownOnly:
+    'Connectez Claude ou un autre assistant IA à l’adresse ci-dessous, puis décrivez le site souhaité. Il le crée, nous l’hébergeons sur nos serveurs, et il est en ligne aussitôt, avec un lien à partager.',
+  thenAsk:
+    'Dites-lui ensuite ce que vous souhaitez, par exemple : « Crée un site pour notre chorale avec le calendrier de nos concerts. »',
   howToChange:
-    'C’est aussi comme ça qu’on modifie une app déjà créée : donnez le lien d’édition à votre agent et dites-lui quoi faire.',
-  more: 'En savoir plus sur les agents',
+    'C’est aussi ainsi que vous modifiez un site plus tard : donnez à votre assistant le lien d’édition et dites-lui ce qui doit changer.',
 
   failedToStart: 'La demande n’est pas passée.',
   noAnswer: 'C’est terminé, mais sans dire ce qui s’est passé.',

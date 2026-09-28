@@ -16,6 +16,10 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
 {
     private const string EnterprisePageKey = "enterprise-page";
 
+    private const string BuildBoxKey = "build-box";
+
+    private const string ChangeBoxKey = "change-box";
+
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     private SiteSettings? _current;
@@ -54,6 +58,8 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
             await using var database = await databases.CreateDbContextAsync(cancellation);
 
             await WriteAsync(database, EnterprisePageKey, settings.EnterprisePage, cancellation);
+            await WriteAsync(database, BuildBoxKey, settings.BuildBox, cancellation);
+            await WriteAsync(database, ChangeBoxKey, settings.ChangeBox, cancellation);
 
             await database.SaveChangesAsync(cancellation);
 
@@ -72,7 +78,9 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
         var stored = await database.Settings.AsNoTracking().ToDictionaryAsync(s => s.Key, s => s.Value, cancellation);
 
         return new SiteSettings(
-            EnterprisePage: Flag(stored, EnterprisePageKey, SiteSettings.Default.EnterprisePage)
+            EnterprisePage: Flag(stored, EnterprisePageKey, SiteSettings.Default.EnterprisePage),
+            BuildBox: Flag(stored, BuildBoxKey, SiteSettings.Default.BuildBox),
+            ChangeBox: Flag(stored, ChangeBoxKey, SiteSettings.Default.ChangeBox)
         );
     }
 
@@ -101,9 +109,17 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
 /// The switches of the installation.
 /// </summary>
 /// <param name="EnterprisePage">Whether the enterprise page is linked from the header. It is reachable either way.</param>
-public sealed record SiteSettings(bool EnterprisePage)
+/// <param name="BuildBox">
+/// Whether /build offers its text box. Off, the page only explains how to
+/// connect an agent of one's own. Either way there is no box without an agent.
+/// </param>
+/// <param name="ChangeBox">
+/// Whether the Change section of the editor offers its text box. Off, it only
+/// explains how to connect an agent of one's own.
+/// </param>
+public sealed record SiteSettings(bool EnterprisePage, bool BuildBox, bool ChangeBox)
 {
 
-    public static readonly SiteSettings Default = new(EnterprisePage: true);
+    public static readonly SiteSettings Default = new(EnterprisePage: true, BuildBox: true, ChangeBox: true);
 
 }

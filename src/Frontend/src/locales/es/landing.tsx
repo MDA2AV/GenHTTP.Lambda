@@ -46,20 +46,6 @@ export const landing: Messages['landing'] = {
   agentsTitle: 'Usa tu agente favorito',
   agentsText:
     '¿Ya trabajas con Claude u otro asistente? Conéctalo a esta dirección y podrá crear, desplegar y actualizar apps aquí, directamente desde la conversación que ya tienes abierta.',
-  agents: [
-    {
-      name: 'Claude en la web o en el escritorio',
-      how: 'Abre Configuración, luego «Connectors», y elige «Add custom connector». Pega la dirección de arriba. No necesitas clave de API ni iniciar sesión.',
-    },
-    {
-      name: 'Claude Code',
-      how: 'Ejecuta esto una vez en una terminal:',
-    },
-    {
-      name: 'Otros clientes MCP',
-      how: 'Cursor, VS Code, Codex y otros clientes MCP admiten servidores remotos. Configúralos con la misma dirección.',
-    },
-  ],
   thenAsk: (em) => (
     <>Después, solo pídele: {em('crea una lista de inscripción para el evento del equipo y publícala')}.</>
   ),

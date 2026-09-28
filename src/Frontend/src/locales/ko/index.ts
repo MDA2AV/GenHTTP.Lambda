@@ -1,6 +1,7 @@
 import type { Messages } from '../en';
 import { build } from './build';
 import { abuse, common, missing, notFound, shell } from './common';
+import { connect } from './connect';
 import { create } from './create';
 import { enterprise } from './enterprise';
 import { guide } from './guide';
@@ -15,6 +16,7 @@ import { terms } from './terms';
 export const messages: Messages = {
   shell,
   common,
+  connect,
   notFound,
   missing,
   abuse,

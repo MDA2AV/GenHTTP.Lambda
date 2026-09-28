@@ -333,13 +333,11 @@ export const editor: EditorMessages = {
       failed: 'Não foi possível fazer a alteração.',
       stopped: 'A alteração foi interrompida.',
     },
-    offTitle: 'Esta instalação não tem agente',
-    off: 'Este servidor não tem um agente próprio para fazer alterações. O teu pode fazê-las: liga-o ao endereço abaixo, dá-lhe o link de edição e diz-lhe o que queres alterar.',
-    own: 'Usar o teu próprio agente',
+    offTitle: 'Altera-a com o teu próprio agente',
+    off: 'Liga um agente teu, como o Claude, ao endereço abaixo, dá-lhe o link de edição e diz-lhe o que deve ser diferente. Ele altera a tua app aqui e põe-na online por ti.',
+    own: 'Ou usa o teu próprio agente',
     ownText:
-      'Qualquer agente compatível com MCP pode alterar esta lambda: liga-o a este endereço, dá-lhe o link de edição e diz-lhe o que queres alterar. Não tem limite diário nem limite de tempo.',
-    mcp: 'Endereço MCP',
-    editorLink: 'Link de edição (não o partilhes)',
+      'Qualquer agente que fale MCP também pode alterar esta app: liga-o ao endereço abaixo, dá-lhe o link de edição e diz-lhe o que deve ser diferente. Não tem limite diário nem de tempo.',
   },
 
   summary: {

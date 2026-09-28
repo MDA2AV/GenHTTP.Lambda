@@ -348,13 +348,11 @@ export const editor: EditorMessages = {
       failed: 'De wijziging is niet gelukt.',
       stopped: 'De wijziging is gestopt.',
     },
-    offTitle: 'Deze installatie heeft geen agent',
-    off: 'Deze server heeft geen eigen agent om wijzigingen mee te maken. Jouw eigen agent kan het wel: koppel hem aan het adres hieronder, geef hem de editorlink en vertel wat er anders moet.',
-    own: 'Je eigen agent gebruiken',
+    offTitle: 'Pas hem aan met je eigen agent',
+    off: 'Koppel een eigen agent, bijvoorbeeld Claude, aan het adres hieronder, geef hem de editorlink en vertel wat er anders moet. Hij past je app hier aan en zet hem voor je online.',
+    own: 'Of gebruik je eigen agent',
     ownText:
-      'Elke agent die MCP spreekt, kan deze lambda aanpassen: koppel hem aan dit adres, geef hem de editorlink en vertel wat er anders moet. Hij heeft geen daglimiet en geen tijdslimiet.',
-    mcp: 'MCP-adres',
-    editorLink: 'Editorlink (houd hem voor jezelf)',
+      'Elke agent die MCP spreekt, kan deze app ook aanpassen: koppel hem aan het adres hieronder, geef hem de editorlink en vertel wat er anders moet. Hij heeft geen daglimiet en geen tijdslimiet.',
   },
 
   summary: {

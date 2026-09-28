@@ -298,15 +298,87 @@ public sealed class AgentTests
         Assert.AreEqual(HttpStatusCode.NotFound, state.StatusCode);
     }
 
+    [TestMethod]
+    public async Task TheChangeBoxCanBeSwitchedOff()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        using var off = await SwitchAsync(fixture, new SettingsModel(true, BuildBox: true, ChangeBox: false));
+
+        Assert.AreEqual(HttpStatusCode.OK, off.StatusCode);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        var state = await StateAsync(fixture, lambda.PrivateKey);
+
+        Assert.IsFalse(state.Available, "the section is left with the own agent only");
+
+        using var started = await StartAsync(fixture, lambda.PrivateKey, "Add a dark mode");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, started.StatusCode);
+
+        Assert.IsEmpty(agent.Received);
+
+        Assert.IsTrue(await BuildOfferedAsync(fixture), "the box on /build has a switch of its own");
+    }
+
+    [TestMethod]
+    public async Task TheBuildBoxCanBeSwitchedOff()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        Assert.IsTrue(await BuildOfferedAsync(fixture), "on by default");
+
+        using var off = await SwitchAsync(fixture, new SettingsModel(true, BuildBox: false, ChangeBox: true));
+
+        Assert.AreEqual(HttpStatusCode.OK, off.StatusCode);
+
+        Assert.IsFalse(await BuildOfferedAsync(fixture));
+
+        using var build = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz"));
+
+        Assert.AreEqual(HttpStatusCode.NotFound, build.StatusCode);
+
+        Assert.IsEmpty(agent.Received);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        Assert.IsTrue((await StateAsync(fixture, lambda.PrivateKey)).Available, "the Change section has a switch of its own");
+    }
+
     #region Helpers
+
+    private const string AdminToken = "the-admin-token";
 
     private static Task<LambdaFixture> WithAgentAsync(FakeAgent agent, int perDay = 10)
         => LambdaFixture.CreateAsync(o => o with
         {
             AgentUrl = agent.Url,
             AgentToken = "a secret",
-            AgentBuildsPerDay = perDay
+            AgentBuildsPerDay = perDay,
+            AdminToken = AdminToken
         });
+
+    private static async Task<HttpResponseMessage> SwitchAsync(LambdaFixture fixture, SettingsModel settings)
+    {
+        using var request = fixture.Host.GetRequest("/api/v1/admin/settings", HttpMethod.Put);
+
+        request.Headers.Add("X-Admin-Token", AdminToken);
+        request.Content = System.Net.Http.Json.JsonContent.Create(settings, options: new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+
+        return await fixture.Host.GetResponseAsync(request);
+    }
+
+    private static async Task<bool> BuildOfferedAsync(LambdaFixture fixture)
+    {
+        using var response = await fixture.GetAsync("/api/v1/system");
+
+        var platform = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+
+        return platform["build"]!["available"]!.GetValue<bool>();
+    }
 
     private static async Task<AgentState> StateAsync(LambdaFixture fixture, string privateKey)
     {

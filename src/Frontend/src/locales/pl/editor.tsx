@@ -345,13 +345,11 @@ export const editor: EditorMessages = {
       failed: 'Zmiana się nie udała.',
       stopped: 'Zmiana została zatrzymana.',
     },
-    offTitle: 'Ta instalacja nie ma agenta',
-    off: 'Ten serwer nie ma własnego agenta do wprowadzania zmian. Może to zrobić twój własny agent: podłącz go pod adres poniżej, daj mu link do edytora i napisz, co ma być inaczej.',
-    own: 'Użyj własnego agenta',
+    offTitle: 'Zmień ją własnym agentem',
+    off: 'Podłącz własnego agenta, na przykład Claude, pod adres poniżej, daj mu link do edytora i powiedz, co ma być inaczej. Zmieni twoją aplikację tutaj i wrzuci ją do sieci.',
+    own: 'Albo użyj własnego agenta',
     ownText:
-      'Każdy agent, który obsługuje MCP, może zmienić tę lambdę: podłącz go pod ten adres, daj mu link do edytora i napisz, co ma być inaczej. Nie ma dziennego limitu ani limitu czasu.',
-    mcp: 'Adres MCP',
-    editorLink: 'Link do edytora – nie udostępniaj go',
+      'Każdy agent obsługujący MCP też może zmienić tę aplikację: podłącz go pod adres poniżej, daj mu link do edytora i powiedz, co ma być inaczej. Nie ma dziennego limitu ani limitu czasu.',
   },
 
   summary: {
