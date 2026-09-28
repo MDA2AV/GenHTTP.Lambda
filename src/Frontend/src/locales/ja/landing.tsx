@@ -68,8 +68,4 @@ export const landing: Messages['landing'] = {
   discordTitle: 'Discordに参加',
   discordText: '作ったものを見せたり、次の一歩を相談したり、開発チームと直接話したりできます。',
   discordLink: 'GenHTTPのDiscord',
-
-  terms: '利用規約',
-  writeCode: 'コードを自分で書く',
-  contact: 'お問い合わせ',
 };

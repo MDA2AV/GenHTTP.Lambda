@@ -11,8 +11,10 @@ import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
 import { Guide } from './pages/Guide';
+import { Imprint } from './pages/Imprint';
 import { Build } from './pages/Build';
 import { Showcase } from './pages/Showcase';
+import { Privacy } from './pages/Privacy';
 import { Ship } from './pages/Ship';
 import { Terms } from './pages/Terms';
 import { useTheme } from './theme';
@@ -123,6 +125,8 @@ function Localized() {
       <Route path="showcase" element={<Showcase />} />
       <Route path="enterprise" element={<Enterprise />} />
       <Route path="terms" element={<Terms />} />
+      <Route path="privacy" element={<Privacy />} />
+      <Route path="imprint" element={<Imprint />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

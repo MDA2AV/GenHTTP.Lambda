@@ -74,8 +74,4 @@ export const landing = {
   discordTitle: 'Join the Discord',
   discordText: 'Share what you have built, get help with the next step, and talk directly with the team.',
   discordLink: 'The GenHTTP Discord',
-
-  terms: 'Terms of service',
-  writeCode: 'Write the code yourself',
-  contact: 'Contact',
 };

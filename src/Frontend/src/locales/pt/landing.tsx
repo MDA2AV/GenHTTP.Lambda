@@ -72,8 +72,4 @@ export const landing: Messages['landing'] = {
   discordTitle: 'Entre no Discord',
   discordText: 'Mostre o que você criou, peça ajuda para o próximo passo e converse direto com a equipe.',
   discordLink: 'O Discord do GenHTTP',
-
-  terms: 'Termos de uso',
-  writeCode: 'Escrever o código você mesmo',
-  contact: 'Contato',
 };

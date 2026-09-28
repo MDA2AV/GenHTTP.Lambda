@@ -14,6 +14,12 @@ export const shell = {
   openMenu: 'Open the menu',
   closeMenu: 'Close the menu',
   language: 'Language',
+  // the footer, under every page that scrolls
+  terms: 'Terms of service',
+  privacy: 'Privacy policy',
+  imprint: 'Legal notice',
+  writeCode: 'Write the code yourself',
+  contact: 'Contact',
 };
 
 /** Words more than one page needs. */
@@ -30,6 +36,8 @@ export const common = {
   copyToClipboard: 'Copy to clipboard',
   openInNewTab: 'Open in a new tab',
   close: 'Close',
+  /** The last line of the operator's address, which is in Germany. */
+  operatorCountry: 'Germany',
 };
 
 export const notFound = {

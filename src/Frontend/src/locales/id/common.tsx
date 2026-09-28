@@ -13,6 +13,11 @@ export const shell: Messages['shell'] = {
   openMenu: 'Buka menu',
   closeMenu: 'Tutup menu',
   language: 'Bahasa',
+  terms: 'Ketentuan layanan',
+  privacy: 'Kebijakan privasi',
+  imprint: 'Informasi hukum',
+  writeCode: 'Tulis kodenya sendiri',
+  contact: 'Kontak',
 };
 
 export const common: Messages['common'] = {
@@ -28,6 +33,7 @@ export const common: Messages['common'] = {
   copyToClipboard: 'Salin ke papan klip',
   openInNewTab: 'Buka di tab baru',
   close: 'Tutup',
+  operatorCountry: 'Jerman',
 };
 
 export const notFound: Messages['notFound'] = {

@@ -72,8 +72,4 @@ export const landing: Messages['landing'] = {
   discordTitle: 'Discord’a katılın',
   discordText: 'Yaptıklarınızı paylaşın, sonraki adım için yardım alın, ekiple doğrudan konuşun.',
   discordLink: 'GenHTTP Discord sunucusu',
-
-  terms: 'Kullanım koşulları',
-  writeCode: 'Kodu kendiniz yazın',
-  contact: 'İletişim',
 };

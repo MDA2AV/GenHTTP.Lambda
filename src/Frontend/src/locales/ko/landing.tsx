@@ -68,8 +68,4 @@ export const landing: Messages['landing'] = {
   discordTitle: 'Discord 참여하기',
   discordText: '만든 걸 자랑하고, 다음 단계에 도움도 받고, 팀과 직접 이야기하세요.',
   discordLink: 'GenHTTP Discord',
-
-  terms: '이용약관',
-  writeCode: '코드 직접 작성하기',
-  contact: '문의',
 };
