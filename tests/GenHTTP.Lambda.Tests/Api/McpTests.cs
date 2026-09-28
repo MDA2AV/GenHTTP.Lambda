@@ -302,6 +302,77 @@ public sealed class McpTests
     }
 
     [TestMethod]
+    public async Task AChangeCanBeCompiledWithoutGoingOnline()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["publicKey"] = "checked-first" }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var online = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"first\"));" })
+        }))["version"]!.GetValue<int>();
+
+        var broken = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["check"] = true,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = "\"first\"", ["replace"] = "\"second\" +" })
+        }));
+
+        Assert.IsTrue(broken["ok"]!.GetValue<bool>(), "the version is saved either way");
+        Assert.AreEqual(online + 1, broken["version"]!.GetValue<int>());
+        Assert.IsFalse(broken["compiles"]!.GetValue<bool>());
+        Assert.IsNotEmpty((JsonArray)broken["diagnostics"]!, "and says what is wrong without the files being sent again");
+
+        var fixedUp = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["check"] = true,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = "\"second\" +", ["replace"] = "\"second\"" })
+        }));
+
+        Assert.IsTrue(fixedUp["compiles"]!.GetValue<bool>(), fixedUp.ToJsonString());
+
+        using var served = await fixture.GetAsync("/lambda/checked-first/");
+
+        Assert.AreEqual("first", await served.Content.ReadAsStringAsync(), "checking puts nothing online");
+    }
+
+    [TestMethod]
+    public async Task ADeploymentThatIsRefusedNamesTheVersionAndWhatIsStillOnline()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["publicKey"] = "still-online" }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var online = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"works\"));" })
+        }))["version"]!.GetValue<int>();
+
+        var refused = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = ");", ["replace"] = ")" })
+        }));
+
+        Assert.IsFalse(refused["ok"]!.GetValue<bool>());
+        Assert.AreEqual(online + 1, refused["version"]!.GetValue<int>(), "the version was saved, and which one it is matters");
+        Assert.AreEqual(online, refused["stillOnline"]!.GetValue<int>(), "and nothing went offline");
+        Assert.IsNotEmpty((JsonArray)refused["diagnostics"]!);
+    }
+
+    [TestMethod]
     public async Task AnEditThatMatchesTwiceIsRefused()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
