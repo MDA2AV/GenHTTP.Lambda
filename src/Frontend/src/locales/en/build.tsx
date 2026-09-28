@@ -22,7 +22,7 @@ export const build = {
   fable:
     'Fable is behind a password while it is being tried out. It runs with no time limit, so it will keep going until the thing is finished rather than until the clock runs out.',
   onlyNew:
-    'This only builds new ones. To take something you have already made further, give its editor link to your own coding agent - see below.',
+    'This only builds new ones. To change something you have already made, open its editor link and say what should be different under Change.',
   ideas: [
     'a wall where anyone can leave a one line message',
     'a highscore board for a dice game',
@@ -38,7 +38,7 @@ export const build = {
   further: 'To take it further',
   keep: 'Keep that one. It is the only way back in and it cannot be recovered - not by us either. Bookmark it before you close this tab.',
   change:
-    'This page only builds new things. To change this one, connect your own coding agent as described below, hand it the editor link and tell it what you want different.',
+    'To change it, open the editor link and say what should be different under Change, the same way as here. Your own coding agent can do it too, as described below.',
   copyLink: 'Copy the editor link',
   lifetime: (offline: number, removed: number) =>
     `It stays online while it is used: after ${offline} days without visits or changes it goes offline, and after ${removed} it is removed. Open the editor and press deploy to put it back up.`,

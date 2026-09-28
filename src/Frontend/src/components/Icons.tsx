@@ -195,3 +195,28 @@ export const IconClose = (p: IconProps) => <Svg {...p}><path d="M6 6l12 12M18 6 
 export const IconSend = (p: IconProps) => (
   <Svg {...p}><path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z" /></Svg>
 );
+
+/** An eye, for reading what is there. */
+export const IconEye = (p: IconProps) => (
+  <Svg {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="2.8" /></Svg>
+);
+
+/** A pencil, for writing code. */
+export const IconPencil = (p: IconProps) => (
+  <Svg {...p}><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z" /><path d="m13.5 6.5 4 4" /></Svg>
+);
+
+/** Lines of text, for a log. */
+export const IconList = (p: IconProps) => (
+  <Svg {...p}><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" /></Svg>
+);
+
+/** An open book, for a guide. */
+export const IconBook = (p: IconProps) => (
+  <Svg {...p}><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z" /><path d="M12 6.5v13" /></Svg>
+);
+
+/** A wrench, for compiling. */
+export const IconWrench = (p: IconProps) => (
+  <Svg {...p}><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9L20 11l-9 9a2.1 2.1 0 0 1-3-3l9-9 .6.6a4 4 0 0 0-4.9-4.9l2.3 2.3-1.4 1.4Z" /></Svg>
+);

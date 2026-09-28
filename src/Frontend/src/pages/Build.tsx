@@ -16,9 +16,11 @@ import { useLifetimes, useOrigin } from '../site';
  * field, one button, and afterwards two links: where it is, and the editor
  * link to take it further with.
  *
- * It only ever makes new things. Changing one afterwards is a job for the
- * person's own agent over MCP, holding the editor link - the box used to try
- * that too, and it never did it well.
+ * It only ever makes new things. Changing one afterwards happens in the
+ * Change section of the editor, which already holds the key and can show the
+ * change as what it is - a new version of something that works - or with the
+ * person's own agent over MCP. The box used to take a pasted editor link and
+ * do both, and it never did the second well.
  */
 
 type Result = {
@@ -99,7 +101,9 @@ export function Build() {
         setEvents(job.events ?? []);
         setWaiting(job.waiting ?? 0);
 
-        if (job.state === 'done' || job.state === 'failed') {
+        // cancelled is never asked for from here, but the agent knows the
+        // state, and a page that polled for ever on it would be worse
+        if (job.state === 'done' || job.state === 'failed' || job.state === 'cancelled') {
           if (polling.current) window.clearInterval(polling.current);
           setResult(job.result ?? { ok: false, error: said.noAnswer });
           setState(job.state === 'done' && job.result?.ok ? 'done' : 'failed');

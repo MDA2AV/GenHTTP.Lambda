@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { absoluteAddress, isDomain, platformPath } from '../address';
-import { ApiError, allowsDomain, api, isDemo, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
+import { ApiError, allowsDomain, api, isActive, isDemo, type ChangeJob, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { useAgent } from '../control/agent';
+import { ChangeTab } from '../control/ChangeTab';
 import type { Busy, Control, Rejection } from '../control/context';
 import { DeploymentsTab } from '../control/DeploymentsTab';
 import { DomainTab } from '../control/DomainTab';
@@ -29,9 +31,9 @@ interface Props {
   theme: Theme;
 }
 
-type SectionId = 'overview' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
+type SectionId = 'overview' | 'change' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
 
-const SECTIONS: SectionId[] = ['overview', 'showcase', 'domain', 'files', 'versions', 'deployments', 'stats', 'logs', 'code'];
+const SECTIONS: SectionId[] = ['overview', 'change', 'showcase', 'domain', 'files', 'versions', 'deployments', 'stats', 'logs', 'code'];
 
 /**
  * The control center of one lambda.
@@ -205,6 +207,37 @@ export function Editor({ theme }: Props) {
     }
   }, [privateKey, refresh, toast, said]);
 
+  /** Said once when a change this page watched comes to an end, wherever the owner is. */
+  const finished = useCallback(
+    (job: ChangeJob) => {
+      const words = t.change.toast;
+      const result = job.result;
+
+      if (job.state === 'cancelled') {
+        toast(words.stopped);
+      } else if (result?.ok && result.online != null) {
+        toast(words.online(result.online));
+      } else if (result?.ok && result.version != null) {
+        toast(words.saved(result.version), result.compiles === false ? 'error' : 'success');
+      } else if (result?.unchanged && job.state === 'done') {
+        toast(words.unchanged);
+      } else {
+        toast(words.failed, 'error');
+      }
+    },
+    [t, toast],
+  );
+
+  const agent = useAgent({
+    privateKey,
+    // a demo is changed by nobody, the agent included
+    enabled: lambda != null && !isDemo(lambda.tier),
+    watching: section === 'change',
+    refresh,
+    onFinished: finished,
+    failed: t.change.readFailed,
+  });
+
   const go = useCallback(
     (to: string) => {
       if (section === 'code' && dirty.current && !to.startsWith(`${base}/code`)
@@ -229,7 +262,7 @@ export function Editor({ theme }: Props) {
   const demo = lambda != null && isDemo(lambda.tier);
 
   // sections that only change the lambda, which a demo does not have
-  const absent = (id: SectionId) => (hidden && id === 'domain') || (demo && id === 'showcase');
+  const absent = (id: SectionId) => (hidden && id === 'domain') || (demo && (id === 'showcase' || id === 'change'));
 
   const away = absent(section);
 
@@ -275,7 +308,11 @@ export function Editor({ theme }: Props) {
     undeploy,
     edit: (version) => go(`${base}/code${version != null ? `?version=${version}` : ''}`),
     browse: (version) => go(`${base}/files${version != null ? `?version=${version}` : ''}`),
+    agent,
   };
+
+  const change = agent.state?.job;
+  const changing = isActive(change);
 
   const live = lambda.activeVersion != null;
   const publicUrl = absoluteAddress(lambda.publicPath);
@@ -354,7 +391,9 @@ export function Editor({ theme }: Props) {
             <Address url={publicUrl} live={live} primary={!domainUrl} />
           </div>
 
-          {ahead && latest != null && !demo && (
+          {/* not while the agent is at work: what it saved last may be a
+              version it is still fixing, and it deploys what it finishes */}
+          {ahead && latest != null && !demo && !changing && (
             <button
               type="button"
               onClick={() => deploy(latest)}
@@ -402,6 +441,17 @@ export function Editor({ theme }: Props) {
                 {id === 'logs' && problems && (
                   <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
                 )}
+                {id === 'change' && changing && (
+                  <span className="ml-auto" title={said.changeRunning}>
+                    <IconSpinner className="h-3.5 w-3.5 text-accent-500 dark:text-accent-400" />
+                  </span>
+                )}
+                {id === 'change' && !changing && agent.unseen && (
+                  <span
+                    className={`ml-auto h-1.5 w-1.5 rounded-full ${change?.result?.ok ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    title={said.changeEnded}
+                  />
+                )}
               </Link>
             );
           })}
@@ -436,8 +486,29 @@ export function Editor({ theme }: Props) {
           </div>
         )}
 
+        {changing && section !== 'change' && change && (
+          <div className="mx-4 mt-6 flex items-center gap-3 border border-accent-500/30 bg-accent-500/5 px-4 py-2.5 text-sm md:mx-0">
+            {change.state === 'running'
+              ? <IconSpinner className="h-4 w-4 shrink-0 text-accent-500 dark:text-accent-400" />
+              : <IconSpark className="h-4 w-4 shrink-0 text-accent-500 dark:text-accent-400" />}
+            <p className="min-w-0 flex-1 truncate">
+              <span className="font-medium">{change.state === 'running' ? said.changing : said.waiting}</span>
+              <span className="text-slate-500"> - {change.prompt}</span>
+            </p>
+            <Link
+              to={`${base}/change`}
+              onClick={(event) => { event.preventDefault(); go(`${base}/change`); }}
+              className="shrink-0 text-[13px] font-medium text-accent-500 hover:underline dark:text-accent-400"
+            >
+              {said.follow}
+            </Link>
+          </div>
+        )}
+
         {section === 'code' ? (
           <Workbench control={control} onDirty={(value) => { dirty.current = value; }} />
+        ) : section === 'change' && !demo ? (
+          <ChangeTab control={control} />
         ) : section === 'files' ? (
           <FilesTab control={control} />
         ) : section === 'versions' ? (

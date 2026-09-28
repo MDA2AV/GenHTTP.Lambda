@@ -86,6 +86,16 @@ export const guide = {
   )) as Text,
   bits: [
     ['Overview', () => <>Whether it is online, how many requests it had today and how many failed, the latest change, and how much room is left.</>],
+    [
+      'Change',
+      (k) => (
+        <>
+          Say what should be different, and the agent on this server does it while you watch: it reads the code, changes
+          it, checks that it compiles and puts it online as a new version. Switch off {k.b('Put it online when it is done')}{' '}
+          to look at it first.
+        </>
+      ),
+    ],
     ['Files', () => <>The files of a version, and its data - what the lambda saves while it runs. A lock or a globe says whether the public can reach them.</>],
     ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],

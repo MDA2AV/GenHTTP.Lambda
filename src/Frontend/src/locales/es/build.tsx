@@ -22,7 +22,7 @@ export const build: Messages['build'] = {
   fable:
     'Fable tiene contraseña mientras está en pruebas. No tiene límite de tiempo, así que sigue hasta terminar, no hasta que se acabe el reloj.',
   onlyNew:
-    'Aquí solo se crean apps nuevas. Para seguir con algo que ya hiciste, dale su enlace de edición a tu propio agente de programación (te explicamos cómo más abajo).',
+    'Aquí solo se crean apps nuevas. Para cambiar algo que ya hiciste, abre su enlace de edición y, en la sección Cambiar, di qué debería ser distinto.',
   ideas: [
     'crea un muro donde cualquiera pueda dejar un mensaje de una línea',
     'haz un ranking para un juego de dados',
@@ -38,7 +38,7 @@ export const build: Messages['build'] = {
   further: 'Para seguir mejorándola',
   keep: 'No lo pierdas. Es la única forma de volver a entrar y nadie puede recuperarlo, ni siquiera nosotros. Guárdalo en tus marcadores antes de cerrar esta pestaña.',
   change:
-    'Esta página solo crea cosas nuevas. Para cambiar esta app, conecta tu propio agente de programación como te explicamos abajo, pásale el enlace de edición y dile qué quieres cambiar.',
+    'Para cambiarla, abre el enlace de edición y, en la sección Cambiar, di qué debería ser distinto, igual que aquí. También puede hacerlo tu propio agente de programación, como te explicamos abajo.',
   copyLink: 'Copiar el enlace de edición',
   lifetime: (offline, removed) =>
     `Sigue en línea mientras se use: después de ${offline} días sin visitas ni cambios se desconecta, y a los ${removed} días se elimina. Para volver a publicarla, abre el editor y haz clic en Desplegar.`,

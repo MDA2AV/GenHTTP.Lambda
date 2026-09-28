@@ -81,6 +81,16 @@ export const guide: Messages['guide'] = {
   ),
   bits: [
     ['Übersicht', () => <>Ob es online ist, wie viele Requests es heute hatte und wie viele davon fehlschlugen, die letzte Änderung und wie viel Platz noch frei ist.</>],
+    [
+      'Ändern',
+      (k) => (
+        <>
+          Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um, während Sie zusehen: Er liest den
+          Code, ändert ihn, prüft, ob er kompiliert, und stellt ihn als neue Version online. Schalten Sie{' '}
+          {k.b('Nach Abschluss online stellen')} aus, um sich die Änderung zuerst anzusehen.
+        </>
+      ),
+    ],
     ['Dateien', () => <>Die Dateien einer Version und ihre Daten – was das Lambda zur Laufzeit speichert. Ein Schloss oder ein Globus zeigt, ob sie öffentlich erreichbar sind.</>],
     ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen.</>],
     ['Deployments', () => <>Was wann online war und warum es offline ging.</>],

@@ -22,7 +22,7 @@ export const build: Messages['build'] = {
   fable:
     'Fable est protégé par un mot de passe pendant la phase de test. Il n’a pas de limite de temps : il continue jusqu’à ce que l’app soit finie, pas jusqu’à la fin du chrono.',
   onlyNew:
-    'Ici, on ne crée que de nouvelles apps. Pour faire évoluer une app existante, donnez son lien d’édition à votre propre agent de code (voir plus bas).',
+    'Ici, on ne crée que de nouvelles apps. Pour modifier une app existante, ouvrez son lien d’édition et dites ce qui doit changer dans la section Modifier.',
   ideas: [
     'un mur où chacun peut laisser un message d’une ligne',
     'un tableau des meilleurs scores pour un jeu de dés',
@@ -38,7 +38,7 @@ export const build: Messages['build'] = {
   further: 'Pour aller plus loin',
   keep: 'Gardez bien ce lien. C’est le seul moyen d’y revenir, et personne ne peut le récupérer, pas même nous. Ajoutez-le à vos favoris avant de fermer cet onglet.',
   change:
-    'Cette page sert uniquement à créer. Pour modifier cette app, branchez votre propre agent de code (voir plus bas), donnez-lui le lien d’édition et dites-lui ce que vous voulez changer.',
+    'Pour la modifier, ouvrez le lien d’édition et dites ce qui doit changer dans la section Modifier, comme ici. Votre propre agent de code peut aussi s’en charger (voir plus bas).',
   copyLink: 'Copier le lien d’édition',
   lifetime: (offline, removed) =>
     `Elle reste en ligne tant qu’on l’utilise : après ${offline} jours sans visite ni modification, elle passe hors ligne, et après ${removed} jours, elle est supprimée. Pour la remettre en ligne, ouvrez l’éditeur et cliquez sur Déployer.`,

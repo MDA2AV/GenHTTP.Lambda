@@ -22,7 +22,7 @@ export const build: Messages['build'] = {
   fable:
     'Fable zit achter een wachtwoord zolang we het uitproberen. Het heeft geen tijdslimiet. Het werkt dus door tot je app af is, niet tot de tijd om is.',
   onlyNew:
-    'Hier maak je alleen nieuwe apps. Wil je verder met iets wat je al hebt gemaakt? Geef de editorlink aan je eigen coding agent. Hieronder lees je hoe.',
+    'Hier maak je alleen nieuwe apps. Wil je iets aanpassen wat je al hebt gemaakt? Open de editorlink en zeg onder ‘Aanpassen’ wat er anders moet.',
   ideas: [
     'maak een prikbord waar iedereen een berichtje van één regel kan achterlaten',
     'maak een highscorelijst voor een dobbelspel',
@@ -40,7 +40,7 @@ export const build: Messages['build'] = {
   further: 'Verder bouwen',
   keep: 'Bewaar deze link goed. Het is de enige weg terug, en hij is niet te herstellen, ook niet door ons. Zet hem in je bladwijzers voordat je dit tabblad sluit.',
   change:
-    'Op deze pagina maak je alleen nieuwe apps. Wil je deze app aanpassen? Koppel je eigen coding agent zoals hieronder staat, geef hem de editorlink en vertel wat er anders moet.',
+    'Wil je deze app aanpassen? Open de editorlink en zeg onder ‘Aanpassen’ wat er anders moet, net zoals hier. Je eigen coding agent kan het ook, zoals hieronder staat.',
   copyLink: 'Editorlink kopiëren',
   lifetime: (offline, removed) =>
     `Je app blijft online zolang hij gebruikt wordt. Na ${offline} dagen zonder bezoek of wijziging gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Open de editor en klik op ‘Deployen’ om hem weer online te zetten.`,
