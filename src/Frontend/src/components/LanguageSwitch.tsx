@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { choose, useLanguage, useT } from '../i18n';
-import { LANGUAGES, LANGUAGE_NAMES, inLanguage, languageOf, type Language } from '../i18n/languages';
+import { LANGUAGES, LANGUAGE_NAMES, inLanguage, languageOf, tagOf, type Language } from '../i18n/languages';
 import { IconCheck, IconGlobe } from './Icons';
 
 /**
@@ -95,14 +95,15 @@ export function LanguageSwitch() {
         title={t.shell.language}
       >
         <IconGlobe />
-        <span className="text-xs font-semibold tracking-wide">{current}</span>
+        {/* the tag rather than the code, so the two Portuguese read PT-BR and PT-PT */}
+        <span className="text-xs font-semibold tracking-wide">{tagOf(current)}</span>
       </button>
 
       {/* always in the page, so a crawler finds every language of it */}
       <div
         id="site-languages"
         hidden={!open}
-        className="absolute right-0 top-full mt-2 w-44 border border-grey-200 bg-white py-1.5 shadow-lg dark:border-ink-800 dark:bg-ink-900"
+        className="absolute right-0 top-full mt-2 w-52 border border-grey-200 bg-white py-1.5 shadow-lg dark:border-ink-800 dark:bg-ink-900"
       >
         <Choices onPick={pick} className="flex items-center justify-between gap-2 px-4 py-2 text-sm" />
       </div>
@@ -153,7 +154,7 @@ function Choices({ onPick, className }: ChoicesProps) {
           <button
             key={language}
             type="button"
-            lang={language}
+            lang={tagOf(language)}
             onClick={(event) => onPick(event, language)}
             className={`${look} w-full text-left`}
             aria-current={active ? 'true' : undefined}
@@ -164,8 +165,8 @@ function Choices({ onPick, className }: ChoicesProps) {
           <a
             key={language}
             href={targets(language)}
-            hrefLang={language}
-            lang={language}
+            hrefLang={tagOf(language)}
+            lang={tagOf(language)}
             onClick={(event) => onPick(event, language)}
             className={look}
             aria-current={active ? 'page' : undefined}

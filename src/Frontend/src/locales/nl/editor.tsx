@@ -1,0 +1,498 @@
+import type { EditorMessages } from '../en/editor';
+
+/** Een aantal met het juiste woord: "1 bestand", "3 bestanden". */
+const many = (count: number, one: string, more: string) => (count === 1 ? `1 ${one}` : `${count} ${more}`);
+
+/** De teksten van de editor in het Nederlands. */
+export const editor: EditorMessages = {
+  shared: {
+    units: { s: 's', min: 'min', h: 'u', d: 'd' },
+    amount: (value, unit) => `${value} ${unit}`,
+    pair: (larger, smaller) => `${larger} ${smaller}`,
+    never: 'nooit',
+    justNow: 'zojuist',
+    ago: (span) => `${span} geleden`,
+    in: (span) => `over ${span}`,
+    origins: {
+      agent: 'agent',
+      template: 'sjabloon',
+      admin: 'beheerder',
+      system: 'platform',
+      api: 'API / editor',
+      unknown: 'onbekend',
+    },
+    endings: {
+      replaced: 'vervangen door een nieuwere deployment',
+      stopped: 'offline gehaald',
+      expired: 'verlopen door inactiviteit',
+      admin: 'offline gehaald door de beheerder',
+      ended: 'beëindigd',
+    },
+    whatThisIs: 'Wat is dit?',
+    byAgent: 'door een agent',
+    writtenByAgent: 'Geschreven door een agent',
+    more: 'Meer',
+    of: (used, total) => `${used} van ${total}`,
+    online: (version) => `Online · v${version}`,
+    onlineTitle: (version) => `Online, versie ${version} draait`,
+    offline: 'Offline',
+    offlineTitle: 'Offline: er wordt niets geserveerd',
+    premium:
+      'Premium: kan op een eigen domein draaien, heeft meer ruimte voor code, assets en data, en blijft online hoe stil het ook is',
+    demo: 'Demo: door deze installatie online gehouden, alleen-lezen',
+    tier: (tier) => `Pakket: ${tier}`,
+    entrances: {
+      title: 'Bereikt via',
+      note: 'Sinds de start van de server, websocketverbindingen meegeteld.',
+    },
+    chart: {
+      showChart: 'Grafiek tonen',
+      showValues: 'Waarden tonen',
+      none: 'Nog geen metingen.',
+      time: 'Tijd',
+    },
+    diagnostics: {
+      compiles: 'De code compileert.',
+      none: 'Nog geen meldingen. Klik op Controleren of Deployen om je code te compileren.',
+      line: (line) => `regel ${line}`,
+    },
+  },
+
+  frame: {
+    title: 'Editor',
+    sections: {
+      overview: 'Overzicht',
+      showcase: 'Showcase',
+      domain: 'Domein',
+      files: 'Bestanden',
+      versions: 'Versies',
+      deployments: 'Deployments',
+      stats: 'Statistieken',
+      logs: 'Logs',
+      code: 'Code',
+    },
+    sectionsLabel: 'Onderdelen',
+    loadFailed: 'Deze lambda kon niet worden geladen.',
+    online: (version) => `Versie ${version} staat online.`,
+    deployFailed: 'De lambda kon niet worden gedeployd.',
+    offline: 'Offline gehaald. De code staat er nog.',
+    offlineFailed: 'De lambda kon niet offline worden gehaald.',
+    leave: 'Je niet-opgeslagen wijzigingen in de code gaan verloren. Toch weggaan?',
+    nothingTitle: 'Deze link opent niets',
+    createNew: 'Nieuwe lambda aanmaken',
+    loading: 'Je lambda laden…',
+    moreActions: 'Meer acties',
+    redeploy: (version) => `Versie ${version} opnieuw deployen`,
+    takeOffline: 'Offline halen',
+    copyLink: 'Link kopiëren',
+    copyPrivate: 'Editorlink kopiëren',
+    privateLink: 'Iedereen met deze link kan de lambda aanpassen. Houd hem voor jezelf.',
+    rename: 'Adres wijzigen',
+    download: 'Downloaden als .NET-project',
+    delete: 'Deze lambda verwijderen',
+    deploy: (version) => `Versie ${version} deployen`,
+    problems: 'Er ging onlangs iets mis',
+    demoTitle: 'Een demo, online gehouden door deze installatie. Alleen-lezen.',
+    demo: (start) => (
+      <>
+        Bekijk de code, de geschiedenis, wat hij opslaat en de logs: daar is hij voor. Wil je iets aanpassen?{' '}
+        {start('Maak er je eigen lambda van')}.
+      </>
+    ),
+    keep: 'Bewaar deze link. Het is de enige weg terug naar deze lambda.',
+    gotIt: 'Begrepen',
+    rejected: (version) => `Versie ${version} is niet online gegaan`,
+    refused: 'De deployment is geweigerd',
+    openCode: 'Code openen',
+    close: 'Sluiten',
+    notCompiling: 'De code compileert niet. Wat eerst online stond, staat er nog.',
+    moved: (path) => `Nu op ${path}.`,
+    deleteTitle: 'Deze lambda verwijderen?',
+    cancel: 'Annuleren',
+    deleteForGood: 'Definitief verwijderen',
+    deleteFailed: 'De lambda kon niet worden verwijderd.',
+    deleteText: (key) => (
+      <>Alle versies, bestanden, de geschiedenis en het adres {key} gaan mee. Dit kun je niet ongedaan maken.</>
+    ),
+    openInTab: 'Openen in nieuw tabblad',
+    open: (address) => `${address} openen in een nieuw tabblad`,
+    copyAddress: 'Adres kopiëren',
+    renameFailed: 'Het adres kon niet worden gewijzigd.',
+    moveIt: 'Verhuizen',
+    renameText: 'Het oude adres werkt meteen niet meer. Pas dus alles aan wat ernaar linkt.',
+  },
+
+  summary: {
+    reading: 'Status laden…',
+    hint: (since, kept, retention, tier) =>
+      `Het verkeer wordt geteld sinds de laatste start van de server (${since}). ` +
+      (kept
+        ? `Een lambda blijft online zolang mensen hem gebruiken. Na ${retention} dagen zonder bezoek en zonder wijzigingen wordt hij verwijderd.`
+        : `Deze lambda heeft het pakket ${tier}. Daardoor blijft hij online en bewaard, hoe stil het ook wordt.`),
+    onlineFor: (duration, version) => (
+      <>
+        Al {duration('een tijdje')} online, met versie {version}.
+      </>
+    ),
+    offline: 'Offline. Er wordt niets geserveerd tot je een versie deployt.',
+    nothing: 'Er is nog niets geschreven.',
+    requestsToday: 'requests vandaag',
+    lastHour: (count) => `${count} in het afgelopen uur`,
+    hourly: 'Requests per uur, afgelopen dag',
+    failed: 'mislukt',
+    failedTitle: (failed, rejected) =>
+      `${many(failed, 'serverfout', 'serverfouten')}, ${rejected} niet gevonden of geweigerd, afgelopen dag`,
+    average: 'gemiddelde responstijd',
+    noneYet: 'nog geen',
+    lastVisit: 'laatste bezoek',
+    problems: 'Er ging onlangs iets mis',
+    openLog: 'Logs openen',
+    latest: 'Laatste wijziging',
+    allVersions: 'Alle versies',
+    noDescription: 'Geen beschrijving',
+    version: (version) => `Versie ${version}`,
+    notOnline: 'nog niet online',
+    wanted: 'Wat er gevraagd werd',
+    noVersions: 'Nog geen versies.',
+    storage: 'Opslag',
+    browse: 'Bekijken',
+    code: 'Code',
+    codeWhy: 'C# wordt gecompileerd, nooit geserveerd.',
+    characters: 'tekens',
+    assets: 'Assets',
+    assetsPublic: 'Openbaar: de code serveert ze.',
+    assetsPrivate: 'Niet geserveerd door de code.',
+    data: 'Data',
+    dataPublic: 'Openbaar: de code serveert de workspace.',
+    dataPrivate: 'Alleen voor de lambda zelf.',
+  },
+
+  files: {
+    hint: (b) => (
+      <>
+        {b('Code')} wordt gecompileerd en nooit geserveerd. {b('Assets')}, zoals pagina's, stylesheets en afbeeldingen,
+        worden bij elke versie opgeslagen en zijn openbaar als de code ze serveert. {b('Data')} is wat de lambda
+        wegschrijft terwijl hij draait. Het hoort bij geen enkele versie en is alleen openbaar als de code het serveert.
+      </>
+    ),
+    edit: 'Deze versie bewerken',
+    version: 'Versie',
+    shown: (version, online, newest) => `Versie ${version}${online ? ', online' : newest ? ', nieuwste' : ''}`,
+    optionOnline: ' (online)',
+    readFailed: 'Die versie kon niet worden gelezen.',
+    dataFailed: 'De data kon niet worden gelezen.',
+    noVersion: 'Er is nog geen versie om te tonen.',
+    label: 'Bestanden',
+    code: 'Code',
+    codeWhy: 'Gecompileerd in de lambda, nooit geserveerd.',
+    count: (files) => many(files, 'bestand', 'bestanden'),
+    codeUsage: (files, used, of) => `${files}, ${used} van ${of} tekens`,
+    usage: (files, used, of) => `${files}, ${used} van ${of}`,
+    noCode: 'Geen code in deze versie.',
+    assets: 'Assets',
+    assetsPublic: 'Openbaar: deze versie serveert ze met Assets.',
+    assetsPrivate: 'Opgeslagen met de code, maar deze versie serveert ze niet.',
+    noAssets: 'Geen assets in deze versie.',
+    data: 'Data',
+    dataPublic: 'Openbaar: deze versie serveert de data met Workspace.',
+    dataPrivate: 'Alleen voor de lambda zelf. Hoort bij geen enkele versie.',
+    uploadFailed: (path) => `${path} kon niet worden geüpload.`,
+    deleteFolder: (path, held) =>
+      held > 0
+        ? `${path} verwijderen, met ${held === 1 ? 'het bestand' : `de ${held} bestanden`} erin?`
+        : `De map ${path} verwijderen?`,
+    deleteFile: (path) => `${path} verwijderen? De lambda kan het dan niet meer vinden.`,
+    deleteFailed: 'Verwijderen is niet gelukt.',
+    full: 'De data-opslag is vol',
+    uploadInto: (folder) => `Uploaden naar ${folder}`,
+    upload: 'Uploaden',
+    reading: 'Lezen…',
+    noData: 'Nog niets. Wat de lambda opslaat terwijl hij draait, verschijnt hier.',
+    delete: (path) => `${path} verwijderen`,
+    deleteShort: 'Verwijderen',
+    fileFailed: 'Het bestand kon niet worden gelezen.',
+    pick: 'Kies een bestand om te zien wat erin staat.',
+    tooLarge: (name, size) => (
+      <>
+        {name} is {size}, te groot om hier te tonen.
+      </>
+    ),
+    download: 'Downloaden',
+    readingFile: (name) => `${name} lezen…`,
+    missing: (name) => `Deze versie heeft geen bestand met de naam ${name}.`,
+    saved: 'opgeslagen',
+    notText: 'Geen tekst. Download het om erin te kijken.',
+  },
+
+  versions: {
+    hint: (limit) =>
+      `Elke versie bewaart wat er gevraagd werd en wat er veranderde, voor zover dat is ingevuld. Bij meer dan ${limit} versies verdwijnen de oudste. De versie die online staat, verdwijnt nooit.`,
+    none: 'Nog geen versies.',
+    noDescription: 'Geen beschrijving',
+    online: 'online',
+    putOnline: 'Deze versie online zetten',
+    rollBackTitle: 'Deze oudere versie weer online zetten',
+    deploy: 'Deployen',
+    rollBack: 'Terugzetten',
+    readFailed: 'Deze versie kon niet worden gelezen.',
+    comparing: 'Vergelijken…',
+    unchanged: 'Niets veranderd ten opzichte van de vorige versie.',
+    first: 'De eerste versie.',
+    status: { added: 'toegevoegd', removed: 'verwijderd', changed: 'gewijzigd', same: 'gelijk' },
+    browse: 'Bestanden bekijken',
+    edit: 'Vanaf hier bewerken',
+    binary: 'Geen tekst, dus er zijn geen regels om te vergelijken.',
+    tooLarge: 'Te groot om regel voor regel te vergelijken.',
+  },
+
+  deployments: {
+    hint: (until) =>
+      `Een deployment blijft online zolang mensen hem gebruiken${until ? `. Gebruikt niemand hem, dan blijft hij online tot ${until}` : ''}. Opnieuw deployen, of elk bezoek, zet die klok weer op nul.`,
+    takeOffline: 'Offline halen',
+    readFailed: 'De geschiedenis kon niet worden gelezen.',
+    reading: 'Geschiedenis laden…',
+    none: 'Er is nog niets gedeployd.',
+    noDescription: 'Geen beschrijving',
+    deployed: (when, by) => `Gedeployd op ${when} (${by})`,
+    duration: 'Hoe lang hij online stond',
+    online: 'online',
+    short: {
+      replaced: 'vervangen',
+      stopped: 'offline gehaald',
+      expired: 'verlopen',
+      admin: 'door beheerder',
+      ended: 'beëindigd',
+    },
+    putBack: (version) => `Versie ${version} weer online zetten`,
+    timeline: 'Wat er de afgelopen zeven dagen online stond',
+    block: (version, from, to) => `Versie ${version}, ${from} tot ${to ?? 'nu'}`,
+    weekAgo: 'een week geleden',
+    now: 'nu',
+  },
+
+  stats: {
+    readFailed: 'De cijfers konden niet worden gelezen.',
+    range: 'Periode',
+    lastHour: 'Afgelopen uur',
+    lastDay: 'Afgelopen dag',
+    hint: (since) =>
+      `In het geheugen geteld sinds de laatste start van de server, ${since}. Na een herstart beginnen deze cijfers opnieuw.`,
+    reading: 'Cijfers laden…',
+    requests: 'requests',
+    websockets: (count) => `en ${many(count, 'websocketverbinding', 'websocketverbindingen')}`,
+    failed: 'mislukt',
+    serverErrors: (count) => many(count, 'serverfout', 'serverfouten'),
+    rejected: 'niet gevonden of geweigerd',
+    average: 'gemiddelde responstijd',
+    sent: (amount) => `${amount} verstuurd`,
+    nobody: (hour) =>
+      hour ? 'Niemand heeft hem het afgelopen uur aangeroepen.' : 'Niemand heeft hem de afgelopen dag aangeroepen.',
+    requestsTitle: 'Requests',
+    per: (hour) => (hour ? 'Per minuut.' : 'Per 15 minuten.'),
+    answered: 'Beantwoord',
+    rejectedSeries: 'Niet gevonden of geweigerd',
+    failedSeries: 'Mislukt',
+    timeTitle: 'Responstijd',
+    averagePer: (hour) => (hour ? 'Het gemiddelde per minuut.' : 'Het gemiddelde per 15 minuten.'),
+    averageSeries: 'Gemiddeld',
+    mostAsked: 'Meest opgevraagd',
+    path: 'Pad',
+    requestsColumn: 'Requests',
+    failedColumn: 'Mislukt',
+    averageColumn: 'Gemiddeld',
+    since: 'Sinds de start van de server.',
+  },
+
+  logs: {
+    readFailed: 'De logs konden niet worden gelezen.',
+    hint: (capturing) =>
+      'Requests, output van de lambda en wat er misging, live.' +
+      (capturing ? '' : " Deze installatie bewaart de output van lambda's niet, dus je ziet alleen requests en fouten.") +
+      " De logs staan in het geheugen, dat alle lambda's hier delen. Ze gaan dus minuten tot uren terug, en zijn leeg na een herstart. Adressen van bezoekers worden niet getoond.",
+    search: 'Zoeken',
+    searchLabel: 'Zoeken in de logs',
+    resume: 'Nieuwe regels tonen zodra ze binnenkomen',
+    pause: 'Geen nieuwe regels toevoegen terwijl je leest',
+    paused: 'Gepauzeerd',
+    live: 'Live',
+    show: 'Tonen',
+    all: 'Alles',
+    requests: 'Requests',
+    output: 'Output',
+    problems: 'Problemen',
+    reading: 'Logs laden…',
+    noProblems: 'Er is niets misgegaan, voor zover de logs nog weten.',
+    nothing: 'Nog niets. Open het adres van de lambda, dan verschijnen de requests hier.',
+    noMatch: 'Geen resultaten.',
+    identical: (count) => `${count} identieke regels`,
+    at: (domain) => `, op ${domain}`,
+    from: (country) => `, uit ${country}`,
+  },
+
+  showcase: {
+    loadFailed: 'De showcase kon niet worden geladen.',
+    loading: 'Laden…',
+    title: 'een titel',
+    description: 'een beschrijving',
+    picture: 'een afbeelding',
+    updated: 'Je vermelding in de showcase is bijgewerkt.',
+    listed: 'Hij staat nu op de showcasepagina.',
+    waiting: 'Opgeslagen. Hij verschijnt op de showcasepagina zodra de lambda online is.',
+    saveFailed: 'Je vermelding in de showcase kon niet worden opgeslagen.',
+    removed: 'Van de showcasepagina gehaald.',
+    removeFailed: 'Je vermelding kon niet uit de showcase worden gehaald.',
+    wrongType: 'Dat is geen PNG-, JPEG-, GIF- of WebP-afbeelding.',
+    tooLarge: (size, limit) => `Dat is ${size}; een afbeelding mag maximaal ${limit} zijn.`,
+    unreadable: 'Dat bestand kon niet worden gelezen.',
+    hint: (tool) => (
+      <>
+        De showcasepagina toont lambda's die hun eigenaars willen laten zien, recent gebruikte eerst. Alleen wie de
+        editorsleutel heeft, kan een lambda erop zetten of eraf halen, en hij staat er alleen zolang hij online is. Een
+        agent kan hetzelfde met de tool {tool}.
+      </>
+    ),
+    open: 'Showcase openen',
+    switch: 'Deze lambda op de showcasepagina tonen',
+    listedNow: 'Staat erop. Iedereen die door de showcase bladert, kan hem openen.',
+    notListed: 'Opgeslagen, maar niet zichtbaar: de lambda is offline. Hij verschijnt weer zodra hij opnieuw is gedeployd.',
+    off: 'Uit. Er wordt nergens iets van deze lambda getoond tot je dit aanzet en opslaat.',
+    offline: "De lambda is offline, dus de vermelding wacht tot hij gedeployd is. Alleen lambda's die reageren, staan erop.",
+    titleLabel: 'Titel',
+    titlePlaceholder: 'Scorebord voor de pubquiz',
+    descriptionLabel: 'Beschrijving',
+    descriptionPlaceholder:
+      'Teams vullen hun antwoorden in op hun telefoon, de quizmaster kijkt ze na en het scorebord werkt voor iedereen in de zaal bij.',
+    save: 'Wijzigingen opslaan',
+    add: 'Toevoegen aan de showcase',
+    takeOff: 'Eraf halen',
+    needs: (missing) =>
+      `Nog nodig: ${missing.length > 1 ? `${missing.slice(0, -1).join(', ')} en ${missing[missing.length - 1]}` : missing[0]}.`,
+    tooLong: 'Sommige velden zijn te lang.',
+    allSaved: 'Alles is opgeslagen.',
+    preview: 'Voorbeeld',
+    card: (address) => <>Dit is de kaart die bezoekers zien. Hij opent {address}.</>,
+    confirm: 'Uit de showcase halen?',
+    keep: 'Laten staan',
+    confirmText: 'De titel, beschrijving en afbeelding worden verwijderd. De lambda zelf blijft precies zoals hij is.',
+    pictureLabel: 'Afbeelding',
+    formats: (limit) => `PNG, JPEG, GIF of WebP, tot ${limit}`,
+    notSaved: 'nog niet opgeslagen',
+    replace: 'Sleep hier een nieuwe heen om hem te vervangen.',
+    drop: 'Sleep hier een afbeelding heen.',
+    advice: 'Een screenshot, of een korte GIF van de app in gebruik, werkt het best in 16:10.',
+    another: 'Andere kiezen',
+    choose: 'Bestand kiezen',
+    keepSaved: 'Opgeslagen afbeelding houden',
+    clear: 'Wissen',
+  },
+
+  domain: {
+    readFailed: 'Het domein kon niet worden gelezen.',
+    reaching: (domain) => `Requests naar ${domain} komen nu bij deze lambda uit.`,
+    saveFailed: 'Het domein kon niet worden opgeslagen.',
+    removed: 'Het domein is verwijderd. De lambda reageert nog gewoon op zijn adres hier.',
+    removeFailed: 'Het domein kon niet worden verwijderd.',
+    hint:
+      'Een premium lambda kan naast zijn adres hier ook op een eigen domein draaien, helemaal vanaf de root. Laat het domein naar deze server wijzen en vul het hier in. Dan komen requests naar dat domein bij de lambda uit.',
+    loading: 'Laden…',
+    example: 'jouw-domein.nl',
+    open: (domain) => `${domain} openen`,
+    label: 'Het domein waarop hij reageert',
+    serving: (domain) => <>Draait nu op {domain}, naast zijn adres hier.</>,
+    none: 'Nog geen. Een subdomein zoals shop.example.com, of een heel domein zoals example.com.',
+    change: 'Wijzigen',
+    use: 'Dit domein gebruiken',
+    remove: 'Verwijderen',
+    confirm: 'Domein verwijderen?',
+    keep: 'Laten staan',
+    confirmText: (domain) => (
+      <>
+        Requests naar {domain} komen meteen niet meer bij deze lambda uit. Het adres hier blijft zoals het is, en de
+        DNS-instellingen van het domein ook.
+      </>
+    ),
+    point: 'Laat het domein naar deze server wijzen',
+    check: 'Opnieuw controleren',
+    records:
+      'Voeg deze twee records toe bij de partij die de DNS van het domein beheert. Laat het AAAA-record weg als je liever niet via IPv6 bereikbaar bent.',
+    type: 'Type',
+    name: 'Naam',
+    value: 'Waarde',
+    pointsHere: (domain) => <>{domain} wijst hierheen.</>,
+    alsoElsewhere: (addresses) =>
+      ` Het verwijst ook naar ${addresses}, en dat is niet deze server. Bezoekers die daar terechtkomen, bereiken de lambda niet.`,
+    elsewhere: (addresses) => `Het verwijst naar ${addresses}, en dat is nog niet deze server.`,
+    wait: 'Het kan even duren voordat een wijziging overal zichtbaar is, maximaal de TTL van het oude record.',
+    cname: 'Een CNAME-record gebruiken',
+    cnameText: (target) => (
+      <>
+        Een subdomein kan ook met een CNAME-record naar {target} wijzen. Dan volgt het deze server als zijn adressen
+        ooit veranderen. Er zitten wel nadelen aan:
+      </>
+    ),
+    cnameRoot: (example) => (
+      <>
+        Het werkt niet voor een heel domein ({example} zelf): de standaard staat geen CNAME toe naast de records die
+        elk domein op zijn root heeft. Sommige providers bieden daar een ALIAS-, ANAME- of ‘flattened’ record voor.
+      </>
+    ),
+    cnameAlone: 'Er kan niets anders op dezelfde naam staan: geen MX-record voor mail, geen TXT-record voor verificaties.',
+    cnameLookup: 'De resolvers van bezoekers doen één lookup extra voordat ze aankomen.',
+    copy: 'Kopiëren',
+    copyValue: (value) => `${value} kopiëren`,
+  },
+
+  code: {
+    title: 'Code',
+    version: (version) => `versie ${version}`,
+    edited: ', bewerkt',
+    online: ', online',
+    loadFailed: 'Die versie kon niet worden geladen.',
+    compiles: 'De code compileert.',
+    notYet: 'De code compileert nog niet.',
+    checkFailed: 'De code kon niet worden gecontroleerd.',
+    saved: (version) => `Opgeslagen als versie ${version}.`,
+    isOnline: (version) => `Versie ${version} staat online.`,
+    notOnline: 'Niet online gegaan. Kijk hieronder wat de compiler zegt.',
+    failed: 'Dat is niet gelukt.',
+    unchanged: 'Er is niets veranderd sinds je laatst opsloeg.',
+    demo: 'Dit is een demo, dus alles hier is alleen-lezen. Maak er je eigen lambda van om hem aan te passen. ',
+    edit: 'Bewerk de code met de hand. Opslaan maakt een nieuwe versie en laat wat online staat met rust. Deployen zet hem online. ',
+    files: (entry, cs) => (
+      <>
+        {entry} geeft terug wat er geserveerd wordt, andere {cs}-bestanden bevatten types, en elk ander bestand wordt
+        geserveerd zoals het is. Ctrl-S slaat op, F12 springt naar een declaratie.
+      </>
+    ),
+    newer: (version) => ` Versie ${version} is nieuwer dan de versie die hier openstaat.`,
+    check: 'Controleren',
+    save: 'Opslaan',
+    deploy: 'Deployen',
+    binary: (size) => `Geen tekst, dus er valt niets te bewerken. Het wordt geserveerd zoals het is en is ${size} kB groot.`,
+    saveAndDeploy: 'Opslaan en deployen',
+    saveVersion: 'Nieuwe versie opslaan',
+    cancel: 'Annuleren',
+    what: 'Wat verandert er? Optioneel, het komt in de geschiedenis.',
+    placeholder: 'Voegt een contactformulier toe',
+    goToDefinition: 'Naar definitie',
+  },
+
+  tabs: {
+    codeName: 'Letters, cijfers, streepjes en underscores, eindigend op .cs',
+    slashes: 'Geen slash aan het begin of eind, en korter dan 120 tekens.',
+    deep: 'Maximaal zes mappen diep.',
+    characters: 'Letters, cijfers, streepjes, underscores en punten, gescheiden door slashes.',
+    extension: 'Het bestand heeft een extensie nodig, zodat het als het juiste type geserveerd wordt.',
+    exists: 'Er is al een bestand met die naam.',
+    remove: (name) => `${name} verwijderen? De inhoud gaat mee.`,
+    there: (name) => `${name} bestaat al.`,
+    entry: 'De snippet: wat hij teruggeeft, wordt geserveerd',
+    errors: 'bevat fouten',
+    removeFile: (name) => `${name} verwijderen`,
+    removeTitle: 'Dit bestand verwijderen',
+    placeholder: 'Types.cs of site/index.html',
+    newFile: 'Nieuw bestand',
+    uploadTitle: 'Een bestand uploaden: een afbeelding, een font, een pagina',
+    upload: 'Bestand uploaden',
+  },
+};

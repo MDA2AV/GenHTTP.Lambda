@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { useLanguage } from './i18n';
-import { LANGUAGES, inLanguage, withoutLanguage, type Language } from './i18n/languages';
+import { LANGUAGES, hreflangsOf, inLanguage, tagOf, withoutLanguage, type Language } from './i18n/languages';
 import pages from './pages.json';
 
 const SITE = 'GenHTTP Lambda';
@@ -20,12 +20,19 @@ export type PagePath = keyof typeof pages;
 
 /** How a search result and a link preview name each locale, as Open Graph spells them. */
 export const OG_LOCALES: Record<Language, string> = {
-  en: 'en_US',
+  id: 'id_ID',
   de: 'de_DE',
+  en: 'en_US',
   es: 'es_ES',
-  pt: 'pt_BR',
   fr: 'fr_FR',
   it: 'it_IT',
+  nl: 'nl_NL',
+  pl: 'pl_PL',
+  pt: 'pt_BR',
+  'pt-pt': 'pt_PT',
+  tr: 'tr_TR',
+  ja: 'ja_JP',
+  ko: 'ko_KR',
 };
 
 /**
@@ -65,7 +72,7 @@ export function usePageMeta({ title, description, index = true }: PageMeta): voi
     const full = `${title} - ${SITE}`;
 
     document.title = full;
-    document.documentElement.lang = language;
+    document.documentElement.lang = tagOf(language);
 
     set('name', 'description', description);
     set('property', 'og:title', full);
@@ -105,7 +112,9 @@ function alternates(origin: string | null, path: string) {
   }
 
   const links: [string, string][] = [
-    ...LANGUAGES.map((language): [string, string] => [language, inLanguage(language, path)]),
+    ...LANGUAGES.flatMap((language) =>
+      hreflangsOf(language).map((hreflang): [string, string] => [hreflang, inLanguage(language, path)]),
+    ),
     ['x-default', path],
   ];
 

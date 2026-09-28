@@ -2,6 +2,10 @@
   "/": {
     "image": "/social/default.png",
     "text": {
+      "id": {
+        "title": "Platform Agentic Coding",
+        "description": "Ceritakan aplikasi Anda ke agen AI. Aplikasinya langsung online, lengkap dengan link. Pakai agen kami, Claude, atau klien MCP lain. Gratis, tanpa akun."
+      },
       "de": {
         "title": "Agentic-Coding-Plattform",
         "description": "Beschreiben Sie einem KI-Agenten eine App – er stellt sie online, Sie teilen den Link. Mit unserem Agenten oder Ihrem eigenen. Kostenlos, ohne Konto."
@@ -22,15 +26,43 @@
         "title": "Piattaforma di coding agentico",
         "description": "Descrivi un’app a un agente AI e ricevi un link da condividere. Usa il nostro agente o il tuo: Claude, Claude Code o un client MCP. Gratis, senza account."
       },
+      "nl": {
+        "title": "Platform voor agentic coding",
+        "description": "Beschrijf een app aan een AI-agent en hij zet hem online, met een link om te delen. Met onze agent of je eigen, zoals Claude. Gratis, geen account."
+      },
+      "pl": {
+        "title": "Platforma do kodowania z agentami AI",
+        "description": "Opisz aplikację agentowi AI, a on wrzuci ją do sieci i da ci link. Nasz agent albo twój: Claude, Claude Code, dowolny klient MCP. Za darmo, bez konta."
+      },
       "pt": {
         "title": "Crie e publique apps com IA",
         "description": "Descreva um app para um agente de IA e coloque no ar com um link para compartilhar. Use o nosso agente ou o seu, como o Claude. Grátis e sem conta."
+      },
+      "pt-pt": {
+        "title": "Criar e publicar apps com IA",
+        "description": "Descreve uma app a um agente de IA: ele põe-na online e dá-te um link para partilhar. Usa o nosso agente ou o teu, como o Claude. Grátis e sem conta."
+      },
+      "tr": {
+        "title": "Yapay zekâ ajanlarıyla kodlama platformu",
+        "description": "Uygulamanızı bir yapay zekâ ajanına anlatın; yayına alsın, linkini versin. Bizim ajanımızı ya da Claude gibi kendi ajanınızı kullanın. Ücretsiz, üyeliksiz."
+      },
+      "ja": {
+        "title": "AIエージェントでアプリを作って公開",
+        "description": "作りたいアプリをAIエージェントに伝えるだけ。公開されて、共有リンクが届きます。このサイトのエージェントでも、Claude、Claude CodeなどのMCPクライアントでも。無料・アカウント不要。"
+      },
+      "ko": {
+        "title": "AI 에이전트로 앱 만들고 배포하기",
+        "description": "만들고 싶은 앱을 AI 에이전트에게 말하면, 공유 링크와 함께 바로 온라인에 올려 줘요. 저희 에이전트도, Claude나 다른 MCP 클라이언트도 좋아요. 무료, 가입 없이."
       }
     }
   },
   "/build": {
     "image": "/social/build.png",
     "text": {
+      "id": {
+        "title": "Buat Aplikasi dengan AI",
+        "description": "Ceritakan yang Anda mau, dan agen AI membuatkan aplikasinya, lengkap dengan link untuk dibagikan. Polling, buku tamu, papan peringkat. Gratis, tanpa akun."
+      },
       "de": {
         "title": "App mit KI erstellen",
         "description": "Sagen Sie, was Sie möchten: Ein KI-Agent baut die App, stellt sie online und gibt Ihnen einen Link. Umfragen, Gästebücher und mehr – kostenlos, ohne Konto."
@@ -51,15 +83,43 @@
         "title": "Creare un’app con l’AI",
         "description": "Scrivi cosa vuoi: un agente AI crea l’app, la mette online e ti dà un link da condividere. Sondaggi, guestbook, classifiche e altro. Gratis, senza account."
       },
+      "nl": {
+        "title": "App maken met AI",
+        "description": "Zeg wat je wilt: een AI-agent bouwt je app, zet hem online en geeft je een deelbare link. Polls, gastenboeken, ranglijsten en meer. Gratis, geen account."
+      },
+      "pl": {
+        "title": "Stwórz aplikację z AI",
+        "description": "Powiedz, czego chcesz, a agent AI zbuduje aplikację, wrzuci ją do sieci i da ci link. Ankiety, księgi gości, rankingi i więcej – za darmo, bez konta."
+      },
       "pt": {
         "title": "Criar app com IA",
         "description": "Diga o que você quer e um agente de IA cria o app, coloca no ar e entrega um link para compartilhar. Enquetes, rankings, murais e mais. Grátis, sem conta."
+      },
+      "pt-pt": {
+        "title": "Criar uma app com IA",
+        "description": "Diz o que queres e um agente de IA cria a app, põe-na online e dá-te um link para partilhar. Sondagens, rankings, livros de visitas. Grátis, sem conta."
+      },
+      "tr": {
+        "title": "Yapay zekâ ile uygulama yapın",
+        "description": "Ne istediğinizi yazın; yapay zekâ ajanı uygulamayı yapsın, yayına alsın, linkini versin. Anket, ziyaretçi defteri, skor tablosu. Ücretsiz, üyeliksiz."
+      },
+      "ja": {
+        "title": "AIでアプリを作成",
+        "description": "作りたいものを伝えるだけで、AIエージェントがアプリを作って公開し、共有リンクを届けます。投票、ゲストブック、ランキングなど。無料・アカウント不要。"
+      },
+      "ko": {
+        "title": "AI로 앱 만들기",
+        "description": "원하는 걸 말하면 AI 에이전트가 앱을 만들어 온라인에 올리고, 공유 링크를 줘요. 투표, 방명록, 순위표까지. 무료이고 가입도 필요 없어요."
       }
     }
   },
   "/ship": {
     "image": "/social/ship.png",
     "text": {
+      "id": {
+        "title": "Publikasikan Aplikasi Buatan AI",
+        "description": "Aplikasi buatan agen AI Anda baru jalan di laptop? Publikasikan di sini dan dapat link publik dalam hitungan menit, plus data live. Gratis, tanpa akun."
+      },
       "de": {
         "title": "App kostenlos hosten",
         "description": "Mit Ihrem KI-Agenten gebaut? Lassen Sie ihn die App hier veröffentlichen: öffentlicher Link in Minuten, mit geteilten Live-Daten. Kostenlos, ohne Konto."
@@ -80,15 +140,43 @@
         "title": "Pubblicare un’app online",
         "description": "Hai creato un’app con il tuo agente AI? Chiedigli di pubblicarla qui: link pubblico in pochi minuti, dati live per giochi e chat. Gratis, senza account."
       },
+      "nl": {
+        "title": "Je app online zetten",
+        "description": "Iets gebouwd met je AI-agent? Laat hem je app hier publiceren. Binnen minuten heb je een openbare link, met live gedeelde data. Gratis, geen account."
+      },
+      "pl": {
+        "title": "Opublikuj aplikację w sieci za darmo",
+        "description": "Masz aplikację zrobioną z agentem AI? Poproś go o publikację, a w kilka minut dostaniesz publiczny link i wspólne dane na żywo. Za darmo, bez konta."
+      },
       "pt": {
         "title": "Publique seu app de graça",
         "description": "Criou algo com seu agente de IA? Peça para ele publicar aqui e ganhe um link público em minutos, com dados ao vivo para jogos e chat. Grátis e sem conta."
+      },
+      "pt-pt": {
+        "title": "Publicar a tua app online, grátis",
+        "description": "Criaste algo com o teu agente de IA? Pede-lhe que o publique aqui: um link público em minutos, dados em tempo real para jogos e chat. Grátis, sem conta."
+      },
+      "tr": {
+        "title": "Uygulamanızı ücretsiz yayınlayın",
+        "description": "Yapay zekâ ajanınızla bir uygulama mı yaptınız? Burada yayınlatın, dakikalar içinde linkinizi alın. Canlı ortak veri dahil. Ücretsiz, üyeliksiz."
+      },
+      "ja": {
+        "title": "AIで作ったアプリを公開",
+        "description": "AIエージェントと作ったアプリを、ここで公開しませんか。頼むだけで、数分後には公開リンクが届きます。ゲームやチャットに使える共有データ付き。無料・アカウント不要。"
+      },
+      "ko": {
+        "title": "AI로 만든 앱 배포하기",
+        "description": "AI 에이전트로 만든 앱, 여기에 배포해 달라고 하세요. 몇 분이면 공개 링크가 생기고, 게임·채팅용 실시간 데이터 공유도 기본이에요. 무료, 가입 없이."
       }
     }
   },
   "/showcase": {
     "image": "/social/showcase.png",
     "text": {
+      "id": {
+        "title": "Showcase Aplikasi Buatan AI",
+        "description": "Aplikasi web yang dibuat di sini dengan agen AI dan dipamerkan pemiliknya: game, tool, halaman, dan layanan yang sedang online. Buka langsung di browser."
+      },
       "de": {
         "title": "Showcase",
         "description": "Web-Apps, die hier mit einem KI-Agenten gebaut wurden: Spiele, Tools, Seiten und Dienste, die gerade laufen. Jede öffnet sich direkt im Browser."
@@ -109,15 +197,43 @@
         "title": "Vetrina: app create con l’AI",
         "description": "App web create qui con un agente AI e messe in mostra da chi le ha fatte: giochi, strumenti, pagine e servizi, online adesso. Provale nel browser."
       },
+      "nl": {
+        "title": "Showcase",
+        "description": "Webapps die mensen hier met een AI-agent bouwden en graag laten zien: games, tools, pagina's en diensten die nu live zijn. Open ze direct in je browser."
+      },
+      "pl": {
+        "title": "Galeria aplikacji zrobionych z AI",
+        "description": "Aplikacje webowe zbudowane tu z agentem AI i pokazane przez ich twórców: gry, narzędzia, strony i usługi. Wszystkie działają – otwórz dowolną."
+      },
       "pt": {
         "title": "Vitrine de apps",
         "description": "Apps que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas e páginas rodando agora. Abra qualquer um no navegador."
+      },
+      "pt-pt": {
+        "title": "Montra de apps feitas com IA",
+        "description": "Apps que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas e páginas, online agora. Abre qualquer uma no browser."
+      },
+      "tr": {
+        "title": "Uygulama vitrini",
+        "description": "İnsanların burada yapay zekâ ajanıyla yaptığı web uygulamaları: oyunlar, araçlar, sayfalar. Hepsi şu an çalışıyor, tarayıcınızda hemen açın."
+      },
+      "ja": {
+        "title": "AIで作ったアプリのショーケース",
+        "description": "AIエージェントと一緒にここで作られたWebアプリを紹介します。ゲーム、ツール、ページ、サービスが、いまも動いています。どれもブラウザーですぐに開けます。"
+      },
+      "ko": {
+        "title": "AI로 만든 앱 쇼케이스",
+        "description": "사람들이 여기서 AI 에이전트로 만들어 직접 공개한 웹앱이에요. 게임, 도구, 페이지, 서비스가 지금 실행 중이에요. 브라우저에서 바로 열어 보세요."
       }
     }
   },
   "/enterprise": {
     "image": "/social/enterprise.png",
     "text": {
+      "id": {
+        "title": "Enterprise",
+        "description": "Coba gratis tanpa akun. Dengan Enterprise, Anda punya instalasi sendiri dengan SSO Anda, di cloud atau on-premise, dan aplikasi yang online selamanya."
+      },
       "de": {
         "title": "Enterprise",
         "description": "Kostenlos testen, ohne Konto. Mit Enterprise bekommen Sie eine eigene Installation mit eigenem Login – in der Cloud oder On-Premises."
@@ -138,15 +254,43 @@
         "title": "Piano Enterprise",
         "description": "Provalo gratis, senza account. Con Enterprise hai un’installazione tutta tua, con il login del tuo team, nel cloud o on-premise."
       },
+      "nl": {
+        "title": "Enterprise",
+        "description": "Gratis uitproberen, zonder account. Met Enterprise krijg je een eigen installatie met je eigen login, in de cloud of op je eigen servers."
+      },
+      "pl": {
+        "title": "Enterprise: własna instalacja dla firm",
+        "description": "Wypróbuj za darmo, bez konta. Enterprise to własna instalacja z logowaniem przez wasze SSO – w chmurze albo na serwerach twojej firmy."
+      },
       "pt": {
         "title": "Para empresas",
         "description": "Teste grátis, sem conta. Com o Enterprise, sua equipe ganha uma instalação própria, com o seu login (SSO), na nuvem ou nos seus servidores."
+      },
+      "pt-pt": {
+        "title": "Para empresas",
+        "description": "Grátis para experimentar, sem conta. Com o Enterprise, a vossa empresa tem uma instalação própria, com o vosso SSO, na cloud ou nos vossos servidores."
+      },
+      "tr": {
+        "title": "Kurumsal plan",
+        "description": "Hesap açmadan ücretsiz deneyin. Kurumsal planla kendi girişinizle çalışan, size özel bir kurulum edinin: bulutta ya da kendi sunucularınızda."
+      },
+      "ja": {
+        "title": "エンタープライズ",
+        "description": "アカウント不要で、無料で試せます。エンタープライズなら、自社のSSOでサインインする専用環境を、クラウドでもオンプレミスでも運用できます。"
+      },
+      "ko": {
+        "title": "엔터프라이즈",
+        "description": "가입 없이 무료로 써 보세요. 엔터프라이즈는 사내 로그인(SSO)을 갖춘 전용 인스턴스를 클라우드나 온프레미스로 제공해요."
       }
     }
   },
   "/docs": {
     "image": "/social/docs.png",
     "text": {
+      "id": {
+        "title": "Cara Kerja dan Dokumentasi",
+        "description": "Tulis snippet C#, dan apa pun yang dikembalikannya online di alamat HTTPS publik dalam hitungan detik. Seluruh platform, sesuai urutan Anda menemuinya."
+      },
       "de": {
         "title": "So funktioniert es",
         "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer öffentlichen HTTPS-Adresse online. Die ganze Plattform, Schritt für Schritt."
@@ -167,14 +311,42 @@
         "title": "Guida: come funziona",
         "description": "Scrivi uno snippet di C# e quello che restituisce va online in pochi secondi, a un indirizzo HTTPS pubblico. Tutta la piattaforma, passo per passo."
       },
+      "nl": {
+        "title": "Zo werkt het",
+        "description": "Schrijf een stukje C#. Wat het teruggeeft, draait binnen seconden op een openbaar HTTPS-adres. Het hele platform, in de volgorde waarin je het tegenkomt."
+      },
+      "pl": {
+        "title": "Dokumentacja: jak to działa",
+        "description": "Napisz snippet w C#, a to, co zwraca, w kilka sekund trafi pod publiczny adres HTTPS. Cała platforma w kolejności, w jakiej ją poznasz."
+      },
       "pt": {
         "title": "Documentação: como funciona",
         "description": "Escreva um trecho de C# e o que ele retorna fica hospedado em um endereço HTTPS público em segundos. A plataforma inteira, na ordem em que você vai usar."
+      },
+      "pt-pt": {
+        "title": "Documentação: como funciona",
+        "description": "Escreve um snippet de C# e o que ele devolve fica alojado num endereço HTTPS público em segundos. A plataforma toda, pela ordem em que a vais usar."
+      },
+      "tr": {
+        "title": "Nasıl çalışır",
+        "description": "Bir parça C# kodu yazın, döndürdüğü şey saniyeler içinde herkese açık bir HTTPS adresinde yayına girsin. Platformun tamamı, karşılaşacağınız sırayla."
+      },
+      "ja": {
+        "title": "仕組みとドキュメント",
+        "description": "C#のスニペットを書くと、返したものが数秒でHTTPSの公開URLにホストされます。プラットフォームの全体を、実際に使う順に説明します。"
+      },
+      "ko": {
+        "title": "작동 방식과 개발 문서",
+        "description": "C# 스니펫 하나를 작성하면, 반환한 것이 몇 초 만에 공개 HTTPS 주소에 올라가요. 플랫폼의 모든 것을 실제로 쓰게 되는 순서대로 정리했어요."
       }
     }
   },
   "/terms": {
     "text": {
+      "id": {
+        "title": "Ketentuan Layanan",
+        "description": "Aturan pemakaian GenHTTP Lambda: apa yang tidak boleh di-host di sini, berapa lama aplikasi tetap online, dan bagaimana penyalahgunaan ditangani."
+      },
       "de": {
         "title": "Nutzungsbedingungen",
         "description": "Die Regeln für GenHTTP Lambda: was hier nicht gehostet werden darf, wie lange Apps online bleiben und wie wir mit Missbrauch umgehen."
@@ -195,9 +367,33 @@
         "title": "Termini di servizio",
         "description": "Le regole per usare GenHTTP Lambda: cosa non si può ospitare qui, per quanto tempo le app restano online e come gestiamo gli abusi."
       },
+      "nl": {
+        "title": "Gebruiksvoorwaarden",
+        "description": "De regels voor GenHTTP Lambda: wat je hier niet mag hosten, hoe lang apps online blijven en hoe we met misbruik omgaan."
+      },
+      "pl": {
+        "title": "Regulamin",
+        "description": "Zasady korzystania z GenHTTP Lambda: czego nie wolno tu hostować, jak długo aplikacje zostają online i co robimy ze zgłoszeniami nadużyć."
+      },
       "pt": {
         "title": "Termos de uso",
         "description": "As regras para usar o GenHTTP Lambda: o que não pode ser hospedado aqui, quanto tempo os apps ficam no ar e como tratamos denúncias de abuso."
+      },
+      "pt-pt": {
+        "title": "Termos de utilização",
+        "description": "As regras de utilização do GenHTTP Lambda: o que não pode ser alojado aqui, quanto tempo as apps ficam online e como tratamos denúncias de abuso."
+      },
+      "tr": {
+        "title": "Kullanım koşulları",
+        "description": "GenHTTP Lambda’nın kullanım kuralları: burada neler barındırılamaz, uygulamalar ne kadar süre yayında kalır ve kötüye kullanım nasıl ele alınır."
+      },
+      "ja": {
+        "title": "利用規約",
+        "description": "GenHTTP Lambdaの利用ルールです。ここに置いてはいけないもの、アプリがオンラインでいられる期間、不正利用への対応をまとめています。"
+      },
+      "ko": {
+        "title": "이용약관",
+        "description": "GenHTTP Lambda 이용 규칙이에요. 여기에 올리면 안 되는 것, 앱이 얼마나 오래 온라인에 유지되는지, 악용 신고를 어떻게 처리하는지 알려 드려요."
       }
     }
   }

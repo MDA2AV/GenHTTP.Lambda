@@ -1,0 +1,490 @@
+import type { EditorMessages } from '../en/editor';
+
+/** 에디터의 한국어 문구. */
+export const editor: EditorMessages = {
+  shared: {
+    units: { s: '초', min: '분', h: '시간', d: '일' },
+    amount: (value, unit) => `${value}${unit}`,
+    pair: (larger, smaller) => `${larger} ${smaller}`,
+    never: '없음',
+    justNow: '방금',
+    ago: (span) => `${span} 전`,
+    in: (span) => `${span} 후`,
+    origins: {
+      agent: '에이전트',
+      template: '템플릿',
+      admin: '운영자',
+      system: '플랫폼',
+      api: 'API / 에디터',
+      unknown: '알 수 없음',
+    },
+    endings: {
+      replaced: '새 배포로 교체됨',
+      stopped: '오프라인으로 전환됨',
+      expired: '사용되지 않아 만료됨',
+      admin: '운영자가 오프라인으로 전환함',
+      ended: '종료됨',
+    },
+    whatThisIs: '설명 보기',
+    byAgent: '에이전트 작성',
+    writtenByAgent: '에이전트가 작성함',
+    more: '더 보기',
+    of: (used, total) => `${used} / ${total}`,
+    online: (version) => `온라인 · v${version}`,
+    onlineTitle: (version) => `온라인, 버전 ${version} 실행 중`,
+    offline: '오프라인',
+    offlineTitle: '오프라인: 제공 중인 것이 없어요',
+    premium:
+      '프리미엄: 전용 도메인을 쓸 수 있고, 코드·에셋·데이터 공간이 더 넉넉하고, 방문이 뜸해도 계속 온라인이에요',
+    demo: '데모: 이 서버가 온라인으로 유지하는 읽기 전용 람다',
+    tier: (tier) => `${tier} 플랜`,
+    entrances: {
+      title: '접속 경로',
+      note: '서버 시작 이후 집계, 웹소켓 연결 포함.',
+    },
+    chart: {
+      showChart: '차트 보기',
+      showValues: '값 보기',
+      none: '아직 측정값이 없어요.',
+      time: '시간',
+    },
+    diagnostics: {
+      compiles: '코드가 컴파일돼요.',
+      none: '아직 메시지가 없어요. 검사하거나 배포하면 코드를 컴파일해요.',
+      line: (line) => `줄 ${line}`,
+    },
+  },
+
+  frame: {
+    title: '에디터',
+    sections: {
+      overview: '개요',
+      showcase: '쇼케이스',
+      domain: '도메인',
+      files: '파일',
+      versions: '버전',
+      deployments: '배포 기록',
+      stats: '통계',
+      logs: '로그',
+      code: '코드',
+    },
+    sectionsLabel: '섹션',
+    loadFailed: '이 람다를 불러오지 못했어요.',
+    online: (version) => `버전 ${version}, 이제 온라인이에요.`,
+    deployFailed: '람다를 배포하지 못했어요.',
+    offline: '오프라인으로 전환했어요. 코드는 그대로 있어요.',
+    offlineFailed: '람다를 오프라인으로 전환하지 못했어요.',
+    leave: '저장하지 않은 코드 변경 사항이 사라져요. 그래도 나갈까요?',
+    nothingTitle: '이 링크로 열 수 있는 게 없어요',
+    createNew: '새 람다 만들기',
+    loading: '람다를 불러오는 중…',
+    moreActions: '더 보기',
+    redeploy: (version) => `버전 ${version} 다시 배포`,
+    takeOffline: '오프라인으로 전환',
+    copyLink: '링크 복사',
+    copyPrivate: '비공개 링크 복사',
+    privateLink: '이 링크가 있으면 누구나 람다를 고칠 수 있어요. 다른 사람에게 알려 주지 마세요.',
+    rename: '주소 변경',
+    download: '.NET 프로젝트로 다운로드',
+    delete: '람다 삭제',
+    deploy: (version) => `버전 ${version} 배포`,
+    problems: '최근에 문제가 있었어요',
+    demoTitle: '이 서버가 온라인으로 유지하는 데모예요. 읽기 전용이에요.',
+    demo: (start) => (
+      <>
+        코드, 기록, 저장된 데이터, 로그를 살펴보세요. 데모는 그러라고 있는 거예요. 고치고 싶다면{' '}
+        {start('이 데모로 내 람다를 시작하세요')}.
+      </>
+    ),
+    keep: '이 링크를 꼭 보관하세요. 이 람다로 돌아올 수 있는 유일한 방법이에요.',
+    gotIt: '확인',
+    rejected: (version) => `버전 ${version}, 온라인에 올리지 못했어요`,
+    refused: '배포가 거부됐어요',
+    openCode: '코드 열기',
+    close: '닫기',
+    notCompiling: '컴파일되지 않아요. 원래 온라인이던 버전이 그대로 유지돼요.',
+    moved: (path) => `새 주소: ${path}`,
+    deleteTitle: '이 람다를 삭제할까요?',
+    cancel: '취소',
+    deleteForGood: '영구 삭제',
+    deleteFailed: '람다를 삭제하지 못했어요.',
+    deleteText: (key) => (
+      <>모든 버전과 파일, 기록, 그리고 {key} 주소까지 함께 사라져요. 되돌릴 수 없어요.</>
+    ),
+    openInTab: '새 탭에서 열기',
+    open: (address) => `새 탭에서 ${address} 열기`,
+    copyAddress: '주소 복사',
+    renameFailed: '주소를 바꾸지 못했어요.',
+    moveIt: '변경하기',
+    renameText: '기존 주소는 바로 끊겨요. 이 주소로 연결된 링크가 있다면 모두 바꿔 주세요.',
+  },
+
+  summary: {
+    reading: '상태를 확인하는 중…',
+    hint: (since, kept, retention, tier) =>
+      `트래픽은 서버가 마지막으로 시작된 뒤부터 집계해요(${since}). ` +
+      (kept
+        ? `람다는 사람들이 쓰는 동안 온라인으로 유지되고, 방문도 수정도 없이 ${retention}일이 지나면 삭제돼요.`
+        : `이 람다는 ${tier} 플랜이라, 방문이 뜸해도 계속 온라인이고 삭제되지 않아요.`),
+    onlineFor: (duration, version) => (
+      <>
+        온라인이 된 지 {duration('한참')} 됐어요. 지금은 버전 {version} 실행 중이에요.
+      </>
+    ),
+    offline: '오프라인이에요. 버전을 배포하기 전까지는 아무것도 제공되지 않아요.',
+    nothing: '아직 작성된 게 없어요.',
+    requestsToday: '오늘 요청',
+    lastHour: (count) => `최근 1시간 ${count}건`,
+    hourly: '최근 하루 동안의 시간당 요청',
+    failed: '실패',
+    failedTitle: (failed, rejected) =>
+      `최근 하루 동안 서버 오류 ${failed}건, 찾을 수 없음 또는 거부 ${rejected}건`,
+    average: '평균 응답 시간',
+    noneYet: '아직 없음',
+    lastVisit: '마지막 방문',
+    problems: '최근에 문제가 있었어요',
+    openLog: '로그 열기',
+    latest: '최근 변경',
+    allVersions: '모든 버전',
+    noDescription: '설명 없음',
+    version: (version) => `버전 ${version}`,
+    notOnline: '아직 온라인 아님',
+    wanted: '요청 내용',
+    noVersions: '아직 버전이 없어요.',
+    storage: '저장 공간',
+    browse: '둘러보기',
+    code: '코드',
+    codeWhy: 'C#은 컴파일만 되고, 그대로 제공되지 않아요.',
+    characters: '자',
+    assets: '에셋',
+    assetsPublic: '공개: 코드가 제공해요.',
+    assetsPrivate: '코드가 제공하지 않아요.',
+    data: '데이터',
+    dataPublic: '공개: 코드가 워크스페이스를 제공해요.',
+    dataPrivate: '람다만 볼 수 있어요.',
+  },
+
+  files: {
+    hint: (b) => (
+      <>
+        {b('코드')}는 컴파일되고, 그대로 제공되지 않아요. {b('에셋')}(페이지, 스타일, 이미지)은 버전마다 함께 저장되고,
+        코드가 제공하면 공개돼요. {b('데이터')}는 람다가 실행 중에 쓰는 거예요. 어떤 버전에도 속하지 않고, 코드가 제공할
+        때만 공개돼요.
+      </>
+    ),
+    edit: '이 버전 편집',
+    version: '버전',
+    shown: (version, online, newest) => `버전 ${version}${online ? ', 온라인' : newest ? ', 최신' : ''}`,
+    optionOnline: ' (온라인)',
+    readFailed: '그 버전을 읽지 못했어요.',
+    dataFailed: '데이터를 읽지 못했어요.',
+    noVersion: '아직 보여 줄 버전이 없어요.',
+    label: '파일',
+    code: '코드',
+    codeWhy: '람다로 컴파일되고, 그대로 제공되지 않아요.',
+    count: (files) => `파일 ${files}개`,
+    codeUsage: (files, used, of) => `${files}, ${of}자 중 ${used}자`,
+    usage: (files, used, of) => `${files}, ${of} 중 ${used}`,
+    noCode: '이 버전에는 코드가 없어요.',
+    assets: '에셋',
+    assetsPublic: '공개: 이 버전이 Assets로 제공해요.',
+    assetsPrivate: '코드와 함께 저장되지만, 이 버전은 제공하지 않아요.',
+    noAssets: '이 버전에는 없어요.',
+    data: '데이터',
+    dataPublic: '공개: 이 버전이 Workspace로 제공해요.',
+    dataPrivate: '람다만 볼 수 있어요. 어떤 버전에도 속하지 않아요.',
+    uploadFailed: (path) => `${path} 파일을 업로드하지 못했어요.`,
+    deleteFolder: (path, held) =>
+      held > 0 ? `${path} 폴더와 그 안의 파일 ${held}개를 삭제할까요?` : `${path} 폴더를 삭제할까요?`,
+    deleteFile: (path) => `${path} 파일을 삭제할까요? 람다가 더는 이 파일을 찾을 수 없어요.`,
+    deleteFailed: '삭제하지 못했어요.',
+    full: '데이터 공간이 가득 찼어요',
+    uploadInto: (folder) => `${folder} 폴더에 업로드`,
+    upload: '업로드',
+    reading: '읽는 중…',
+    noData: '아직 없어요. 람다가 실행 중에 저장하는 것이 여기에 나와요.',
+    delete: (path) => `${path} 삭제`,
+    deleteShort: '삭제',
+    fileFailed: '파일을 읽지 못했어요.',
+    pick: '파일을 고르면 내용을 볼 수 있어요.',
+    tooLarge: (name, size) => (
+      <>
+        {name} 파일({size})은 너무 커서 여기서 보여 줄 수 없어요.
+      </>
+    ),
+    download: '다운로드',
+    readingFile: (name) => `${name} 읽는 중…`,
+    missing: (name) => `이 버전에는 ${name} 파일이 없어요.`,
+    saved: '저장됨',
+    notText: '텍스트가 아니에요. 다운로드해서 확인하세요.',
+  },
+
+  versions: {
+    hint: (limit) =>
+      `버전마다 무엇을 요청했고 무엇이 바뀌었는지 남아 있어요(작성한 쪽이 적었다면요). 버전이 ${limit}개를 넘으면 가장 오래된 것부터 삭제되지만, 온라인 버전은 삭제되지 않아요.`,
+    none: '아직 버전이 없어요.',
+    noDescription: '설명 없음',
+    online: '온라인',
+    putOnline: '이 버전을 온라인에 올리기',
+    rollBackTitle: '이전 버전을 다시 온라인에 올리기',
+    deploy: '배포',
+    rollBack: '롤백',
+    readFailed: '이 버전을 읽지 못했어요.',
+    comparing: '비교하는 중…',
+    unchanged: '이전 버전과 달라진 게 없어요.',
+    first: '첫 번째 버전이에요.',
+    status: { added: '추가됨', removed: '삭제됨', changed: '변경됨', same: '같음' },
+    browse: '파일 둘러보기',
+    edit: '여기서부터 편집',
+    binary: '텍스트가 아니라서 줄 단위로 비교할 수 없어요.',
+    tooLarge: '너무 커서 줄 단위로 비교할 수 없어요.',
+  },
+
+  deployments: {
+    hint: (until) =>
+      `배포는 사람들이 쓰는 동안 계속 온라인이에요${until ? `. 아무도 쓰지 않으면 ${until}까지 유지돼요` : ''}. 다시 배포하거나 누군가 방문하면 이 기간이 새로 시작돼요.`,
+    takeOffline: '오프라인으로 전환',
+    readFailed: '기록을 읽지 못했어요.',
+    reading: '기록을 읽는 중…',
+    none: '아직 배포한 적이 없어요.',
+    noDescription: '설명 없음',
+    deployed: (when, by) => `${when} 배포 (${by})`,
+    duration: '온라인이었던 시간',
+    online: '온라인',
+    short: {
+      replaced: '교체됨',
+      stopped: '오프라인 전환',
+      expired: '만료됨',
+      admin: '운영자가 중단',
+      ended: '종료됨',
+    },
+    putBack: (version) => `버전 ${version} 다시 온라인에 올리기`,
+    timeline: '최근 7일 동안 온라인이었던 버전',
+    block: (version, from, to) => `버전 ${version}, ${from} ~ ${to ?? '지금'}`,
+    weekAgo: '일주일 전',
+    now: '지금',
+  },
+
+  stats: {
+    readFailed: '수치를 읽지 못했어요.',
+    range: '기간',
+    lastHour: '최근 1시간',
+    lastDay: '최근 하루',
+    hint: (since) =>
+      `서버가 마지막으로 시작된 뒤(${since})부터 메모리에서 집계해요. 서버를 재시작하면 수치가 초기화돼요.`,
+    reading: '수치를 읽는 중…',
+    requests: '요청',
+    websockets: (count) => `그 외 웹소켓 연결 ${count}건`,
+    failed: '실패',
+    serverErrors: (count) => `서버 오류 ${count}건`,
+    rejected: '찾을 수 없음 또는 거부',
+    average: '평균 응답 시간',
+    sent: (amount) => `${amount} 전송`,
+    nobody: (hour) => (hour ? '최근 1시간 동안 호출이 없었어요.' : '최근 하루 동안 호출이 없었어요.'),
+    requestsTitle: '요청',
+    per: (hour) => (hour ? '1분 단위.' : '15분 단위.'),
+    answered: '정상 응답',
+    rejectedSeries: '찾을 수 없음 또는 거부',
+    failedSeries: '실패',
+    timeTitle: '응답 시간',
+    averagePer: (hour) => (hour ? '1분 단위 평균.' : '15분 단위 평균.'),
+    averageSeries: '평균',
+    mostAsked: '가장 많이 요청된 경로',
+    path: '경로',
+    requestsColumn: '요청',
+    failedColumn: '실패',
+    averageColumn: '평균',
+    since: '서버 시작 이후.',
+  },
+
+  logs: {
+    readFailed: '로그를 읽지 못했어요.',
+    hint: (capturing) =>
+      '요청, 람다가 출력한 내용, 문제가 생긴 곳을 실시간으로 보여 줘요.' +
+      (capturing ? '' : ' 이 서버는 람다의 출력을 보관하지 않아서, 요청과 오류만 나와요.') +
+      ' 메모리에 보관되고 이 서버의 모든 람다가 함께 쓰기 때문에, 몇 분에서 몇 시간 전까지만 남고 재시작하면 비워져요. 방문자의 IP 주소는 표시하지 않아요.',
+    search: '검색',
+    searchLabel: '로그 검색',
+    resume: '새 줄을 실시간으로 보기',
+    pause: '읽는 동안 새 줄 추가 멈추기',
+    paused: '일시정지',
+    live: '실시간',
+    show: '표시',
+    all: '전체',
+    requests: '요청',
+    output: '출력',
+    problems: '문제',
+    reading: '로그를 읽는 중…',
+    noProblems: '로그에 남아 있는 문제가 없어요.',
+    nothing: '아직 없어요. 람다 주소를 열면 요청이 여기에 나와요.',
+    noMatch: '일치하는 항목이 없어요.',
+    identical: (count) => `같은 줄 ${count}개`,
+    at: (domain) => `, ${domain} 도메인`,
+    from: (country) => `, ${country}에서 접속`,
+  },
+
+  showcase: {
+    loadFailed: '쇼케이스를 불러오지 못했어요.',
+    loading: '불러오는 중…',
+    title: '제목',
+    description: '설명',
+    picture: '이미지',
+    updated: '쇼케이스 항목을 업데이트했어요.',
+    listed: '이제 쇼케이스 페이지에 올라가 있어요.',
+    waiting: '저장했어요. 람다가 온라인이 되면 쇼케이스 페이지에 나타나요.',
+    saveFailed: '쇼케이스 항목을 저장하지 못했어요.',
+    removed: '쇼케이스 페이지에서 내렸어요.',
+    removeFailed: '쇼케이스 항목을 삭제하지 못했어요.',
+    wrongType: 'PNG, JPEG, GIF, WebP 이미지가 아니에요.',
+    tooLarge: (size, limit) => `파일 크기: ${size}. 이미지는 최대 ${limit}까지 올릴 수 있어요.`,
+    unreadable: '파일을 읽지 못했어요.',
+    hint: (tool) => (
+      <>
+        쇼케이스 페이지에는 만든 사람이 공개하기로 한 람다가 최근에 쓰인 순서로 나와요. 에디터 키를 가진 사람만 람다를
+        올리거나 내릴 수 있고, 람다가 온라인일 때만 목록에 나와요. 에이전트도 {tool} 도구로 똑같이 할 수 있어요.
+      </>
+    ),
+    open: '쇼케이스 열기',
+    switch: '이 람다를 쇼케이스 페이지에 보여 주기',
+    listedNow: '지금 목록에 올라가 있어요. 쇼케이스를 둘러보는 누구나 열 수 있어요.',
+    notListed: '저장했지만 람다가 오프라인이라 목록에는 없어요. 다시 배포하면 다시 나타나요.',
+    off: '꺼져 있어요. 이 기능을 켜고 저장하기 전까지 이 람다는 어디에도 보이지 않아요.',
+    offline: '람다가 오프라인이라, 배포될 때까지 항목이 대기해요. 응답하는 람다만 목록에 올라요.',
+    titleLabel: '제목',
+    titlePlaceholder: '펍 퀴즈 점수판',
+    descriptionLabel: '설명',
+    descriptionPlaceholder:
+      '팀마다 휴대폰으로 답을 내면 진행자가 채점하고, 그 자리의 모두가 보는 점수판이 바로 바뀌어요.',
+    save: '변경 사항 저장',
+    add: '쇼케이스에 추가',
+    takeOff: '내리기',
+    needs: (missing) => `아직 필요한 항목: ${missing.join(', ')}`,
+    tooLong: '너무 긴 항목이 있어요.',
+    allSaved: '모두 저장됐어요.',
+    preview: '미리 보기',
+    card: (address) => <>방문자에게 보이는 카드예요. 누르면 {address} 주소가 열려요.</>,
+    confirm: '쇼케이스에서 내릴까요?',
+    keep: '그대로 두기',
+    confirmText: '제목, 설명, 이미지가 삭제돼요. 람다 자체는 그대로예요.',
+    pictureLabel: '이미지',
+    formats: (limit) => `PNG, JPEG, GIF, WebP, 최대 ${limit}`,
+    notSaved: '아직 저장 안 됨',
+    replace: '바꾸려면 새 이미지를 여기에 끌어다 놓으세요.',
+    drop: '이미지를 여기에 끌어다 놓으세요.',
+    advice: '스크린샷이나 사용하는 모습을 담은 짧은 GIF가 좋아요. 16:10 비율이 가장 잘 맞아요.',
+    another: '다른 이미지 선택',
+    choose: '파일 선택',
+    keepSaved: '저장된 이미지 유지',
+    clear: '지우기',
+  },
+
+  domain: {
+    readFailed: '도메인을 읽지 못했어요.',
+    reaching: (domain) => `이제 ${domain} 도메인으로 오는 요청이 이 람다로 연결돼요.`,
+    saveFailed: '도메인을 저장하지 못했어요.',
+    removed: '도메인을 삭제했어요. 람다는 여기 주소에서 계속 응답해요.',
+    removeFailed: '도메인을 삭제하지 못했어요.',
+    hint:
+      '프리미엄 람다는 여기 주소뿐 아니라 전용 도메인에서도 응답할 수 있어요. 루트부터 도메인 전체를 쓸 수 있어요. 도메인이 이 서버를 가리키게 하고 여기에 입력하면, 그 도메인으로 오는 요청이 람다로 연결돼요.',
+    loading: '불러오는 중…',
+    example: 'your-domain.com',
+    open: (domain) => `${domain} 열기`,
+    label: '람다가 응답할 도메인',
+    serving: (domain) => <>지금 여기 주소와 함께 {domain} 도메인에서도 응답하고 있어요.</>,
+    none: '아직 없어요. shop.example.com 같은 하위 도메인이나 example.com 같은 전체 도메인을 쓸 수 있어요.',
+    change: '변경',
+    use: '이 도메인 사용',
+    remove: '삭제',
+    confirm: '도메인을 삭제할까요?',
+    keep: '그대로 두기',
+    confirmText: (domain) => (
+      <>
+        지금부터 {domain} 도메인으로 오는 요청은 이 람다에 닿지 않아요. 여기 주소는 그대로이고, 도메인의 DNS 설정도
+        바뀌지 않아요.
+      </>
+    ),
+    point: '도메인이 이 서버를 가리키게 하기',
+    check: '다시 확인',
+    records:
+      '도메인의 DNS를 관리하는 곳에서 아래 두 레코드를 추가하세요. IPv6로 접속되지 않길 원하면 AAAA 레코드는 빼도 돼요.',
+    type: '유형',
+    name: '이름',
+    value: '값',
+    pointsHere: (domain) => <>{domain} 도메인이 이 서버를 가리키고 있어요.</>,
+    alsoElsewhere: (addresses) =>
+      ` 하지만 이 서버가 아닌 ${addresses} 주소로도 연결돼요. 그쪽으로 간 방문자는 람다에 닿지 못해요.`,
+    elsewhere: (addresses) => `지금은 ${addresses} 주소로 연결돼요. 아직 이 서버가 아니에요.`,
+    wait: '변경 사항이 모든 곳에 반영되기까지 시간이 걸릴 수 있어요. 최대 이전 레코드의 TTL만큼 걸려요.',
+    cname: 'CNAME 레코드를 대신 쓰는 방법',
+    cnameText: (target) => (
+      <>
+        하위 도메인은 CNAME 레코드로 {target} 주소를 가리킬 수도 있어요. 그러면 이 서버의 주소가 바뀌어도 알아서
+        따라가요. 단점도 있어요.
+      </>
+    ),
+    cnameRoot: (example) => (
+      <>
+        루트 도메인({example} 자체)에는 쓸 수 없어요. 모든 도메인이 루트에 갖고 있는 레코드 옆에는 CNAME을 둘 수 없다는
+        게 표준이에요. 일부 업체는 대신 쓸 수 있는 ALIAS, ANAME 또는 ‘flattened’ 레코드를 제공해요.
+      </>
+    ),
+    cnameAlone: '같은 이름에 다른 레코드를 둘 수 없어요. 메일용 MX 레코드도, 인증용 TXT 레코드도요.',
+    cnameLookup: '방문자가 접속하기 전에 리졸버가 조회를 한 번 더 거쳐요.',
+    copy: '복사',
+    copyValue: (value) => `${value} 복사`,
+  },
+
+  code: {
+    title: '코드',
+    version: (version) => `버전 ${version}`,
+    edited: ', 수정됨',
+    online: ', 온라인',
+    loadFailed: '그 버전을 불러오지 못했어요.',
+    compiles: '컴파일돼요.',
+    notYet: '아직 컴파일되지 않아요.',
+    checkFailed: '코드를 검사하지 못했어요.',
+    saved: (version) => `저장했어요 (버전 ${version}).`,
+    isOnline: (version) => `버전 ${version}, 이제 온라인이에요.`,
+    notOnline: '온라인에 올리지 못했어요. 아래에서 컴파일러 메시지를 확인하세요.',
+    failed: '잘 안 됐어요.',
+    unchanged: '마지막 저장 이후 바뀐 게 없어요.',
+    demo: '데모라서 모두 읽기 전용이에요. 고치려면 이 데모로 내 람다를 만드세요. ',
+    edit: '코드를 직접 편집하세요. 저장하면 새 버전이 생기고, 온라인 버전은 그대로예요. 배포하면 온라인에 올라가요. ',
+    files: (entry, cs) => (
+      <>
+        {entry} 파일이 반환하는 것이 제공되고, 다른 {cs} 파일에는 타입을 두고, 그 밖의 파일은 그대로 제공돼요. Ctrl-S로
+        저장하고, F12로 선언으로 이동해요.
+      </>
+    ),
+    newer: (version) => ` 여기 열린 버전보다 새 버전(${version})이 있어요.`,
+    check: '검사',
+    save: '저장',
+    deploy: '배포',
+    binary: (size) => `텍스트가 아니라서 편집할 수 없어요. 그대로 제공되고, 크기는 ${size} kB예요.`,
+    saveAndDeploy: '저장하고 배포',
+    saveVersion: '새 버전 저장',
+    cancel: '취소',
+    what: '무엇이 바뀌나요? 선택 사항이고, 기록에 표시돼요.',
+    placeholder: '문의 양식 추가',
+    goToDefinition: '정의로 이동',
+  },
+
+  tabs: {
+    codeName: '영문자, 숫자, 하이픈, 밑줄만 쓸 수 있고 .cs로 끝나야 해요',
+    slashes: '앞뒤에 슬래시를 쓸 수 없고, 120자 미만이어야 해요.',
+    deep: '폴더는 최대 6단계까지 만들 수 있어요.',
+    characters: '영문자, 숫자, 하이픈, 밑줄, 점을 쓸 수 있고, 슬래시로 구분해요.',
+    extension: '알맞은 형식으로 제공하려면 확장자가 필요해요.',
+    exists: '같은 이름의 파일이 이미 있어요.',
+    remove: (name) => `${name} 파일을 삭제할까요? 내용도 함께 사라져요.`,
+    there: (name) => `${name} 파일이 이미 있어요.`,
+    entry: '스니펫: 반환하는 것이 그대로 제공돼요',
+    errors: '오류 있음',
+    removeFile: (name) => `${name} 삭제`,
+    removeTitle: '이 파일 삭제',
+    placeholder: 'Types.cs 또는 site/index.html',
+    newFile: '새 파일',
+    uploadTitle: '파일 업로드 (이미지, 폰트, 페이지)',
+    upload: '파일 업로드',
+  },
+};

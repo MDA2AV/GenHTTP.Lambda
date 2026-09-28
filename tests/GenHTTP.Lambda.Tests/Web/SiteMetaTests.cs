@@ -5,6 +5,7 @@ using System.Xml.Linq;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Tests.Infrastructure;
+using GenHTTP.Lambda.Web;
 
 namespace GenHTTP.Lambda.Tests.Web;
 
@@ -104,6 +105,59 @@ public sealed class SiteMetaTests
         StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"en\" href=\"https://genhttp.dev/en/docs\" />");
         StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"de\" href=\"https://genhttp.dev/de/docs\" />");
         StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://genhttp.dev/docs\" />");
+
+        // only the languages the page is written in, as the sitemap lists them
+        Assert.DoesNotContain("hreflang=\"fr\"", body);
+        Assert.DoesNotContain("og:locale:alternate\" content=\"fr_FR", body);
+    }
+
+    /// <summary>
+    /// Portuguese is written twice, as Brazil and as Portugal write it. Each
+    /// is tagged with its region, and the Brazilian pages stand for Portuguese
+    /// as a whole, for a reader in a country with no variant of its own.
+    /// </summary>
+    [TestMethod]
+    public async Task AVariantOfALanguageIsTaggedWithItsRegion()
+    {
+        const string pages = """
+            {
+              "/docs": {
+                "text": {
+                  "en": { "title": "How It Works", "description": "Snippets, hosted." },
+                  "pt": { "title": "Como funciona", "description": "Trechos, hospedados." },
+                  "pt-pt": { "title": "Como funciona", "description": "Excertos, alojados." }
+                }
+              }
+            }
+            """;
+
+        await using var fixture = await LambdaFixture.CreateAsync(options =>
+        {
+            options = Site()(options);
+            File.WriteAllText(Path.Combine(options.WebRoot, "pages.json"), pages);
+            return options;
+        });
+
+        using var response = await fixture.GetAsync("/pt-pt/docs", accept: "text/html");
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        StringAssert.Contains(body, "<html lang=\"pt-PT\" class=\"dark\">");
+        StringAssert.Contains(body, "<meta name=\"description\" content=\"Excertos, alojados.\" />");
+        StringAssert.Contains(body, "<meta property=\"og:locale\" content=\"pt_PT\" />");
+        StringAssert.Contains(body, "<meta property=\"og:locale:alternate\" content=\"pt_BR\" />");
+        StringAssert.Contains(body, "<link rel=\"canonical\" href=\"https://genhttp.dev/pt-pt/docs\" />");
+        StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"pt-PT\" href=\"https://genhttp.dev/pt-pt/docs\" />");
+        StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"pt-BR\" href=\"https://genhttp.dev/pt/docs\" />");
+        StringAssert.Contains(body, "<link rel=\"alternate\" hreflang=\"pt\" href=\"https://genhttp.dev/pt/docs\" />");
+
+        using var sitemap = await fixture.GetAsync("/sitemap.xml");
+
+        var xml = await sitemap.Content.ReadAsStringAsync();
+
+        StringAssert.Contains(xml, "<loc>https://genhttp.dev/pt-pt/docs</loc>");
+        StringAssert.Contains(xml, "hreflang=\"pt-PT\" href=\"https://genhttp.dev/pt-pt/docs\"");
+        StringAssert.Contains(xml, "hreflang=\"pt\" href=\"https://genhttp.dev/pt/docs\"");
     }
 
     [TestMethod]
@@ -139,7 +193,13 @@ public sealed class SiteMetaTests
     /// </summary>
     [TestMethod]
     [DataRow("de-CH,de;q=0.9,en;q=0.8", null, "/de/docs")]
-    [DataRow("ja, fr;q=0, en;q=0.5", null, "/en/docs")]
+    [DataRow("zh, fr;q=0, en;q=0.5", null, "/en/docs")]
+    [DataRow("ja-JP,ja;q=0.9,en;q=0.8", null, "/ja/docs")]
+    [DataRow("in-ID", null, "/id/docs")]
+    [DataRow("pt-PT,pt;q=0.9,en;q=0.5", null, "/pt-pt/docs")]
+    [DataRow("pt-AO", null, "/pt-pt/docs")]
+    [DataRow("pt", null, "/pt/docs")]
+    [DataRow("en", "lang=pt-pt", "/pt-pt/docs")]
     [DataRow("it;q=0.4, de;q=0.7", null, "/de/docs")]
     [DataRow("PT-br", null, "/pt/docs")]
     [DataRow("*", null, "/en/docs")]
@@ -201,7 +261,7 @@ public sealed class SiteMetaTests
     [DataRow("/examples/guestbook")]
     [DataRow("/nowhere")]
     [DataRow("/de/nowhere")]
-    [DataRow("/nl/docs")]
+    [DataRow("/sv/docs")]
     public async Task AnythingElseIsTheIndexPageUntouched(string path)
     {
         await using var fixture = await LambdaFixture.CreateAsync(Site());
@@ -290,7 +350,7 @@ public sealed class SiteMetaTests
 
         Assert.AreEqual("GenHTTP Lambda", website.GetProperty("name").GetString());
         Assert.AreEqual("https://genhttp.dev/", website.GetProperty("url").GetString());
-        Assert.AreEqual(6, website.GetProperty("inLanguage").GetArrayLength(), "the site is written in every language it has");
+        Assert.AreEqual(SiteLanguages.All.Count, website.GetProperty("inLanguage").GetArrayLength(), "the site is written in every language it has");
 
         var application = graph.Single(node => node.GetProperty("@type").GetString() == "WebApplication");
 

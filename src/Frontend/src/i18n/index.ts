@@ -21,21 +21,35 @@ export * from './languages';
 type Loader<T> = () => Promise<T>;
 
 const SITE: Record<Language, Loader<Messages>> = {
-  en: () => import('../locales/en').then((module) => module.messages),
+  id: () => import('../locales/id').then((module) => module.messages),
   de: () => import('../locales/de').then((module) => module.messages),
+  en: () => import('../locales/en').then((module) => module.messages),
   es: () => import('../locales/es').then((module) => module.messages),
-  pt: () => import('../locales/pt').then((module) => module.messages),
   fr: () => import('../locales/fr').then((module) => module.messages),
   it: () => import('../locales/it').then((module) => module.messages),
+  nl: () => import('../locales/nl').then((module) => module.messages),
+  pl: () => import('../locales/pl').then((module) => module.messages),
+  pt: () => import('../locales/pt').then((module) => module.messages),
+  'pt-pt': () => import('../locales/pt-pt').then((module) => module.messages),
+  tr: () => import('../locales/tr').then((module) => module.messages),
+  ja: () => import('../locales/ja').then((module) => module.messages),
+  ko: () => import('../locales/ko').then((module) => module.messages),
 };
 
 const EDITOR: Record<Language, Loader<EditorMessages>> = {
-  en: () => import('../locales/en/editor').then((module) => module.editor),
+  id: () => import('../locales/id/editor').then((module) => module.editor),
   de: () => import('../locales/de/editor').then((module) => module.editor),
+  en: () => import('../locales/en/editor').then((module) => module.editor),
   es: () => import('../locales/es/editor').then((module) => module.editor),
-  pt: () => import('../locales/pt/editor').then((module) => module.editor),
   fr: () => import('../locales/fr/editor').then((module) => module.editor),
   it: () => import('../locales/it/editor').then((module) => module.editor),
+  nl: () => import('../locales/nl/editor').then((module) => module.editor),
+  pl: () => import('../locales/pl/editor').then((module) => module.editor),
+  pt: () => import('../locales/pt/editor').then((module) => module.editor),
+  'pt-pt': () => import('../locales/pt-pt/editor').then((module) => module.editor),
+  tr: () => import('../locales/tr/editor').then((module) => module.editor),
+  ja: () => import('../locales/ja/editor').then((module) => module.editor),
+  ko: () => import('../locales/ko/editor').then((module) => module.editor),
 };
 
 /** Catalogs by language, with the fetch that is bringing one while it is on its way. */

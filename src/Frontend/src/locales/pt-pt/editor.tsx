@@ -1,0 +1,497 @@
+import type { EditorMessages } from '../en/editor';
+
+/** Os textos do editor em português europeu. */
+export const editor: EditorMessages = {
+  shared: {
+    units: { s: 's', min: 'min', h: 'h', d: 'd' },
+    amount: (value, unit) => `${value} ${unit}`,
+    pair: (larger, smaller) => `${larger} ${smaller}`,
+    never: 'nunca',
+    justNow: 'agora mesmo',
+    ago: (span) => `há ${span}`,
+    in: (span) => `daqui a ${span}`,
+    origins: {
+      agent: 'agente',
+      template: 'modelo',
+      admin: 'operador',
+      system: 'plataforma',
+      api: 'API / editor',
+      unknown: 'desconhecido',
+    },
+    endings: {
+      replaced: 'substituído por um deploy mais recente',
+      stopped: 'posto offline',
+      expired: 'expirou por falta de uso',
+      admin: 'posto offline pelo operador',
+      ended: 'terminado',
+    },
+    whatThisIs: 'O que é isto',
+    byAgent: 'por um agente',
+    writtenByAgent: 'Escrito por um agente',
+    more: 'Mais',
+    of: (used, total) => `${used} de ${total}`,
+    online: (version) => `Online · v${version}`,
+    onlineTitle: (version) => `Online, a servir a versão ${version}`,
+    offline: 'Offline',
+    offlineTitle: 'Offline: não está a ser servido nada',
+    premium:
+      'Premium: pode responder num domínio próprio, tem mais espaço para código, assets e dados, e fica online mesmo sem movimento',
+    demo: 'Demo: mantida online por esta instalação, só de leitura',
+    tier: (tier) => `Plano ${tier}`,
+    entrances: {
+      title: 'Acedido através de',
+      note: 'Desde que o servidor arrancou, incluindo ligações WebSocket.',
+    },
+    chart: {
+      showChart: 'Mostrar gráfico',
+      showValues: 'Mostrar valores',
+      none: 'Ainda sem medições.',
+      time: 'Hora',
+    },
+    diagnostics: {
+      compiles: 'O código compila.',
+      none: 'Ainda sem mensagens. Verifica ou faz deploy para compilar o teu código.',
+      line: (line) => `linha ${line}`,
+    },
+  },
+
+  frame: {
+    title: 'Editor',
+    sections: {
+      overview: 'Visão geral',
+      showcase: 'Montra',
+      domain: 'Domínio',
+      files: 'Ficheiros',
+      versions: 'Versões',
+      deployments: 'Deploys',
+      stats: 'Estatísticas',
+      logs: 'Logs',
+      code: 'Código',
+    },
+    sectionsLabel: 'Secções',
+    loadFailed: 'Não foi possível carregar esta lambda.',
+    online: (version) => `A versão ${version} está online.`,
+    deployFailed: 'Não foi possível fazer deploy da lambda.',
+    offline: 'Está offline. O código continua aqui.',
+    offlineFailed: 'Não foi possível pôr a lambda offline.',
+    leave: 'As alterações por guardar no código vão perder-se. Sair mesmo assim?',
+    nothingTitle: 'Este link não abre nada',
+    createNew: 'Criar uma nova lambda',
+    loading: 'A carregar a tua lambda…',
+    moreActions: 'Mais ações',
+    redeploy: (version) => `Voltar a fazer deploy da versão ${version}`,
+    takeOffline: 'Pôr offline',
+    copyLink: 'Copiar o link',
+    copyPrivate: 'Copiar o link privado',
+    privateLink: 'Quem tiver este link pode alterar a lambda. Não o partilhes.',
+    rename: 'Mudar o endereço',
+    download: 'Transferir como projeto .NET',
+    delete: 'Eliminar esta lambda',
+    deploy: (version) => `Fazer deploy da versão ${version}`,
+    problems: 'Algo correu mal recentemente',
+    demoTitle: 'Uma demo, mantida online por esta instalação e só de leitura.',
+    demo: (start) => (
+      <>
+        Lê o código, o histórico, o que guarda e os logs: é para isso que aqui está. Para a alterar,{' '}
+        {start('cria uma lambda tua a partir dela')}.
+      </>
+    ),
+    keep: 'Guarda este link. É a única forma de voltares a esta lambda.',
+    gotIt: 'Percebi',
+    rejected: (version) => `A versão ${version} não ficou online`,
+    refused: 'O deploy foi recusado',
+    openCode: 'Abrir o código',
+    close: 'Fechar',
+    notCompiling: 'Não compila. O que estava online continua online.',
+    moved: (path) => `Agora em ${path}.`,
+    deleteTitle: 'Eliminar esta lambda?',
+    cancel: 'Cancelar',
+    deleteForGood: 'Eliminar de vez',
+    deleteFailed: 'Não foi possível eliminar a lambda.',
+    deleteText: (key) => (
+      <>Todas as versões, os ficheiros, o histórico e o endereço {key} vão com ela. Não é possível anular.</>
+    ),
+    openInTab: 'Abrir num novo separador',
+    open: (address) => `Abrir ${address} num novo separador`,
+    copyAddress: 'Copiar o endereço',
+    renameFailed: 'Não foi possível mudar o endereço.',
+    moveIt: 'Mudar',
+    renameText: 'O endereço antigo deixa logo de funcionar, por isso atualiza tudo o que aponta para ele.',
+  },
+
+  summary: {
+    reading: 'A ver como está…',
+    hint: (since, kept, retention, tier) =>
+      `O tráfego é contado desde o último arranque do servidor (${since}). ` +
+      (kept
+        ? `Uma lambda fica online enquanto é usada, e é removida ao fim de ${retention} dias sem visitas nem alterações.`
+        : `Esta lambda está no plano ${tier}, que a mantém online e guardada por mais parada que esteja.`),
+    onlineFor: (duration, version) => (
+      <>
+        Online há {duration('algum tempo')}, a servir a versão {version}.
+      </>
+    ),
+    offline: 'Offline. Não é servido nada até fazeres deploy de uma versão.',
+    nothing: 'Ainda não foi escrito nada.',
+    requestsToday: 'pedidos hoje',
+    lastHour: (count) => `${count} na última hora`,
+    hourly: 'Pedidos por hora nas últimas 24 horas',
+    failed: 'com erro',
+    failedTitle: (failed, rejected) =>
+      `${failed} erros de servidor, ${rejected} não encontrados ou recusados, nas últimas 24 horas`,
+    average: 'tempo médio de resposta',
+    noneYet: 'ainda nenhuma',
+    lastVisit: 'última visita',
+    problems: 'Algo correu mal recentemente',
+    openLog: 'Abrir o log',
+    latest: 'Última alteração',
+    allVersions: 'Todas as versões',
+    noDescription: 'Sem descrição',
+    version: (version) => `Versão ${version}`,
+    notOnline: 'ainda não está online',
+    wanted: 'O que foi pedido',
+    noVersions: 'Ainda não há versões.',
+    storage: 'Armazenamento',
+    browse: 'Explorar',
+    code: 'Código',
+    codeWhy: 'O C# é compilado, nunca servido.',
+    characters: 'caracteres',
+    assets: 'Assets',
+    assetsPublic: 'Públicos: o código serve-os.',
+    assetsPrivate: 'Não são servidos pelo código.',
+    data: 'Dados',
+    dataPublic: 'Públicos: o código serve o workspace.',
+    dataPrivate: 'Privados: só a lambda os usa.',
+  },
+
+  files: {
+    hint: (b) => (
+      <>
+        O {b('Código')} é compilado e nunca é servido. Os {b('Assets')} (páginas, estilos, imagens) são guardados com
+        cada versão e são públicos se o código os servir. Os {b('Dados')} são o que a lambda escreve enquanto corre: não
+        fazem parte de nenhuma versão e só são públicos se o código os servir.
+      </>
+    ),
+    edit: 'Editar esta versão',
+    version: 'Versão',
+    shown: (version, online, newest) =>
+      `Versão ${version}${online ? ', online' : newest ? ', a mais recente' : ''}`,
+    optionOnline: ' (online)',
+    readFailed: 'Não foi possível ler essa versão.',
+    dataFailed: 'Não foi possível ler os dados.',
+    noVersion: 'Ainda não há nenhuma versão para mostrar.',
+    label: 'Ficheiros',
+    code: 'Código',
+    codeWhy: 'Compilado na lambda, nunca servido.',
+    count: (files) => (files === 1 ? '1 ficheiro' : `${files} ficheiros`),
+    codeUsage: (files, used, of) => `${files}, ${used} de ${of} caracteres`,
+    usage: (files, used, of) => `${files}, ${used} de ${of}`,
+    noCode: 'Não há código nesta versão.',
+    assets: 'Assets',
+    assetsPublic: 'Públicos: esta versão serve-os com Assets.',
+    assetsPrivate: 'Guardados com o código, mas esta versão não os serve.',
+    noAssets: 'Nenhum nesta versão.',
+    data: 'Dados',
+    dataPublic: 'Públicos: esta versão serve-os com Workspace.',
+    dataPrivate: 'Privados: só a lambda os usa. Não fazem parte de nenhuma versão.',
+    uploadFailed: (path) => `Não foi possível carregar ${path}.`,
+    deleteFolder: (path, held) =>
+      held > 0
+        ? `Eliminar a pasta ${path} e ${held === 1 ? 'o ficheiro' : `os ${held} ficheiros`} que contém?`
+        : `Eliminar a pasta ${path}?`,
+    deleteFile: (path) => `Eliminar ${path}? A lambda deixa de o encontrar.`,
+    deleteFailed: 'Não foi possível eliminar.',
+    full: 'O espaço para dados está cheio',
+    uploadInto: (folder) => `Carregar para ${folder}`,
+    upload: 'Carregar',
+    reading: 'A ler…',
+    noData: 'Ainda nada. O que a lambda guardar enquanto corre aparece aqui.',
+    delete: (path) => `Eliminar ${path}`,
+    deleteShort: 'Eliminar',
+    fileFailed: 'Não foi possível ler o ficheiro.',
+    pick: 'Escolhe um ficheiro para ver o que tem.',
+    tooLarge: (name, size) => (
+      <>
+        {name} tem {size}, é demasiado grande para mostrar aqui.
+      </>
+    ),
+    download: 'Transferir',
+    readingFile: (name) => `A ler ${name}…`,
+    missing: (name) => `Esta versão não tem nenhum ficheiro chamado ${name}.`,
+    saved: 'guardado',
+    notText: 'Não é texto. Transfere-o para ver o conteúdo.',
+  },
+
+  versions: {
+    hint: (limit) =>
+      `Cada versão guarda o que foi pedido e o que mudou, quando quem a escreveu o indicou. Quando há mais de ${limit}, as mais antigas são removidas; a que está online, nunca.`,
+    none: 'Ainda não há versões.',
+    noDescription: 'Sem descrição',
+    online: 'online',
+    putOnline: 'Pôr esta versão online',
+    rollBackTitle: 'Voltar a pôr online esta versão anterior',
+    deploy: 'Fazer deploy',
+    rollBack: 'Reverter',
+    readFailed: 'Não foi possível ler esta versão.',
+    comparing: 'A comparar…',
+    unchanged: 'Nada mudou em relação à versão anterior.',
+    first: 'A primeira versão.',
+    status: { added: 'adicionado', removed: 'removido', changed: 'alterado', same: 'igual' },
+    browse: 'Ver os ficheiros',
+    edit: 'Editar a partir daqui',
+    binary: 'Não é texto, por isso não há linhas para comparar.',
+    tooLarge: 'Demasiado grande para comparar linha a linha.',
+  },
+
+  deployments: {
+    hint: (until) =>
+      `Um deploy fica online enquanto é usado${until ? ` (se ninguém o usar, até ${until})` : ''}. Um novo deploy, ou qualquer visita, reinicia essa contagem.`,
+    takeOffline: 'Pôr offline',
+    readFailed: 'Não foi possível ler o histórico.',
+    reading: 'A ler o histórico…',
+    none: 'Ainda não houve nenhum deploy.',
+    noDescription: 'Sem descrição',
+    deployed: (when, by) => `Deploy feito a ${when} (${by})`,
+    duration: 'Tempo online',
+    online: 'online',
+    short: {
+      replaced: 'substituído',
+      stopped: 'posto offline',
+      expired: 'expirou',
+      admin: 'pelo operador',
+      ended: 'terminado',
+    },
+    putBack: (version) => `Voltar a pôr a versão ${version} online`,
+    timeline: 'O que esteve online nos últimos sete dias',
+    block: (version, from, to) => `Versão ${version}, de ${from} a ${to ?? 'agora'}`,
+    weekAgo: 'há uma semana',
+    now: 'agora',
+  },
+
+  stats: {
+    readFailed: 'Não foi possível ler os números.',
+    range: 'Período',
+    lastHour: 'Última hora',
+    lastDay: 'Últimas 24 horas',
+    hint: (since) =>
+      `Contados em memória desde o último arranque do servidor, ${since}. Um reinício põe estes números a zero.`,
+    reading: 'A ler os números…',
+    requests: 'pedidos',
+    websockets: (count) => `e ${count} ligações WebSocket`,
+    failed: 'com erro',
+    serverErrors: (count) => `${count} erros de servidor`,
+    rejected: 'não encontrados ou recusados',
+    average: 'tempo médio de resposta',
+    sent: (amount) => `${amount} enviados`,
+    nobody: (hour) => (hour ? 'Não houve pedidos na última hora.' : 'Não houve pedidos nas últimas 24 horas.'),
+    requestsTitle: 'Pedidos',
+    per: (hour) => (hour ? 'Por minuto.' : 'Por cada 15 minutos.'),
+    answered: 'Respondidos',
+    rejectedSeries: 'Não encontrados ou recusados',
+    failedSeries: 'Com erro',
+    timeTitle: 'Tempo de resposta',
+    averagePer: (hour) => (hour ? 'A média por minuto.' : 'A média por cada 15 minutos.'),
+    averageSeries: 'Média',
+    mostAsked: 'Caminhos mais pedidos',
+    path: 'Caminho',
+    requestsColumn: 'Pedidos',
+    failedColumn: 'Com erro',
+    averageColumn: 'Média',
+    since: 'Desde que o servidor arrancou.',
+  },
+
+  logs: {
+    readFailed: 'Não foi possível ler o log.',
+    hint: (capturing) =>
+      'Pedidos, o que a lambda escreveu na consola e o que correu mal, em tempo real.' +
+      (capturing ? '' : ' Esta instalação não guarda o que as lambdas escrevem na consola, por isso só aparecem pedidos e erros.') +
+      ' Fica em memória e é partilhado por todas as lambdas daqui, por isso recua entre alguns minutos e algumas horas, e fica vazio depois de um reinício. Os endereços dos visitantes não são mostrados.',
+    search: 'Pesquisar',
+    searchLabel: 'Pesquisar no log',
+    resume: 'Mostrar as novas linhas à medida que chegam',
+    pause: 'Parar de acrescentar linhas enquanto lês',
+    paused: 'Em pausa',
+    live: 'Em direto',
+    show: 'Mostrar',
+    all: 'Tudo',
+    requests: 'Pedidos',
+    output: 'Consola',
+    problems: 'Problemas',
+    reading: 'A ler o log…',
+    noProblems: 'Nada correu mal, pelo menos que o log ainda se lembre.',
+    nothing: 'Ainda nada. Abre o endereço da lambda e os pedidos aparecem aqui.',
+    noMatch: 'Nenhum resultado.',
+    identical: (count) => `${count} linhas idênticas`,
+    at: (domain) => `, em ${domain}`,
+    from: (country) => `, de ${country}`,
+  },
+
+  showcase: {
+    loadFailed: 'Não foi possível carregar a montra.',
+    loading: 'A carregar…',
+    title: 'um título',
+    description: 'uma descrição',
+    picture: 'uma imagem',
+    updated: 'A entrada na montra foi atualizada.',
+    listed: 'Já está na página da montra.',
+    waiting: 'Guardado. Aparece na montra assim que a lambda estiver online.',
+    saveFailed: 'Não foi possível guardar a entrada na montra.',
+    removed: 'Retirada da montra.',
+    removeFailed: 'Não foi possível retirar a entrada da montra.',
+    wrongType: 'Isso não é uma imagem PNG, JPEG, GIF ou WebP.',
+    tooLarge: (size, limit) => `Essa imagem tem ${size}; o máximo é ${limit}.`,
+    unreadable: 'Não foi possível ler esse ficheiro.',
+    hint: (tool) => (
+      <>
+        A montra lista as lambdas que os donos quiseram mostrar, primeiro as usadas há menos tempo. Só quem tem a chave
+        de edição pode lá pôr uma lambda ou retirá-la, e ela só aparece enquanto estiver online. Um agente pode fazer o
+        mesmo com a ferramenta {tool}.
+      </>
+    ),
+    open: 'Abrir a montra',
+    switch: 'Mostrar esta lambda na montra',
+    listedNow: 'Está na montra. Quem passar por lá pode abri-la.',
+    notListed: 'Guardado, mas não aparece: a lambda está offline. Volta a aparecer quando fizeres deploy outra vez.',
+    off: 'Desligado. Nada sobre esta lambda aparece em lado nenhum até ligares isto e guardares.',
+    offline: 'A lambda está offline, por isso a entrada fica à espera do próximo deploy. Só aparecem lambdas que respondem.',
+    titleLabel: 'Título',
+    titlePlaceholder: 'Pontuações do quiz do bar',
+    descriptionLabel: 'Descrição',
+    descriptionPlaceholder:
+      'As equipas enviam as respostas pelo telemóvel, o apresentador corrige-as e a tabela atualiza-se para toda a sala.',
+    save: 'Guardar alterações',
+    add: 'Adicionar à montra',
+    takeOff: 'Retirar da montra',
+    needs: (missing) =>
+      missing.length > 1
+        ? `Ainda faltam ${missing.slice(0, -1).join(', ')} e ${missing[missing.length - 1]}.`
+        : `Ainda falta ${missing[0]}.`,
+    tooLong: 'Há campos demasiado longos.',
+    allSaved: 'Está tudo guardado.',
+    preview: 'Pré-visualização',
+    card: (address) => <>Este é o cartão que os visitantes veem. Abre {address}.</>,
+    confirm: 'Retirar da montra?',
+    keep: 'Manter',
+    confirmText: 'O título, a descrição e a imagem são eliminados. A lambda fica exatamente como está.',
+    pictureLabel: 'Imagem',
+    formats: (limit) => `PNG, JPEG, GIF ou WebP, até ${limit}`,
+    notSaved: 'ainda não guardada',
+    replace: 'Arrasta uma nova para aqui para a substituir.',
+    drop: 'Arrasta uma imagem para aqui.',
+    advice: 'Uma captura de ecrã, ou um GIF curto da app a ser usada, fica melhor em 16:10.',
+    another: 'Escolher outra',
+    choose: 'Escolher um ficheiro',
+    keepSaved: 'Manter a guardada',
+    clear: 'Limpar',
+  },
+
+  domain: {
+    readFailed: 'Não foi possível ler o domínio.',
+    reaching: (domain) => `Os pedidos para ${domain} já chegam a esta lambda.`,
+    saveFailed: 'Não foi possível guardar o domínio.',
+    removed: 'O domínio foi removido. A lambda continua a responder no endereço daqui.',
+    removeFailed: 'Não foi possível remover o domínio.',
+    hint:
+      'Uma lambda premium pode responder num domínio próprio (o domínio inteiro, a partir da raiz), além do endereço daqui. Aponta o domínio para este servidor, indica-o aqui, e os pedidos para ele chegam à lambda.',
+    loading: 'A carregar…',
+    example: 'o-teu-dominio.pt',
+    open: (domain) => `Abrir ${domain}`,
+    label: 'O domínio em que responde',
+    serving: (domain) => <>A servir {domain}, além do endereço daqui.</>,
+    none: 'Ainda nenhum. Um subdomínio como loja.example.com, ou um domínio inteiro como example.com.',
+    change: 'Mudar',
+    use: 'Usar este domínio',
+    remove: 'Remover',
+    confirm: 'Remover o domínio?',
+    keep: 'Manter',
+    confirmText: (domain) => (
+      <>
+        Os pedidos para {domain} deixam logo de chegar a esta lambda. O endereço daqui fica como está, tal como o DNS do
+        domínio.
+      </>
+    ),
+    point: 'Aponta o domínio para este servidor',
+    check: 'Verificar outra vez',
+    records:
+      'No serviço que gere o DNS do domínio, adiciona estes dois registos. Deixa de fora o registo AAAA se preferires não estar acessível por IPv6.',
+    type: 'Tipo',
+    name: 'Nome',
+    value: 'Valor',
+    pointsHere: (domain) => <>{domain} aponta para aqui.</>,
+    alsoElsewhere: (addresses) =>
+      ` Também resolve para ${addresses}, que não é este servidor: os visitantes enviados para lá não chegam à lambda.`,
+    elsewhere: (addresses) => `Resolve para ${addresses}, que ainda não é este servidor.`,
+    wait: 'Uma alteração pode demorar a ser vista em todo o lado, até ao TTL do registo antigo.',
+    cname: 'Usar antes um registo CNAME',
+    cnameText: (target) => (
+      <>
+        Em vez disso, um subdomínio pode apontar para {target} com um registo CNAME, e assim acompanha este servidor se os
+        endereços dele mudarem. Tem desvantagens:
+      </>
+    ),
+    cnameRoot: (example) => (
+      <>
+        Não serve para um domínio inteiro ({example} em si): a norma não permite um CNAME ao lado dos registos que todos
+        os domínios têm na raiz. Alguns fornecedores oferecem um registo ALIAS, ANAME ou «flattened» que funciona aí.
+      </>
+    ),
+    cnameAlone: 'Mais nada pode ficar no mesmo nome: nenhum registo MX para email, nenhum registo TXT para verificações.',
+    cnameLookup: 'Os resolvers de DNS dos visitantes fazem mais uma consulta antes de chegarem.',
+    copy: 'Copiar',
+    copyValue: (value) => `Copiar ${value}`,
+  },
+
+  code: {
+    title: 'Código',
+    version: (version) => `versão ${version}`,
+    edited: ', editada',
+    online: ', online',
+    loadFailed: 'Não foi possível carregar essa versão.',
+    compiles: 'Compila.',
+    notYet: 'Ainda não compila.',
+    checkFailed: 'Não foi possível verificar o código.',
+    saved: (version) => `Guardado como versão ${version}.`,
+    isOnline: (version) => `A versão ${version} está online.`,
+    notOnline: 'Não ficou online. Vê abaixo o que o compilador disse.',
+    failed: 'Não correu bem.',
+    unchanged: 'Nada mudou desde que guardaste pela última vez.',
+    demo: 'É uma demo, por isso aqui tudo é só de leitura. Para a alterar, cria uma lambda tua a partir dela. ',
+    edit: 'Edita o código à mão. Guardar cria uma nova versão e não toca no que está online; fazer deploy põe-na online. ',
+    files: (entry, cs) => (
+      <>
+        {entry} devolve o que é servido, os outros ficheiros {cs} têm tipos, e qualquer outro ficheiro é servido tal como
+        está. Ctrl-S guarda, F12 vai para a declaração.
+      </>
+    ),
+    newer: (version) => ` A versão ${version} é mais recente do que a que está aberta aqui.`,
+    check: 'Verificar',
+    save: 'Guardar',
+    deploy: 'Fazer deploy',
+    binary: (size) => `Não é texto, por isso não há nada para editar. É servido tal como está e tem ${size} kB.`,
+    saveAndDeploy: 'Guardar e fazer deploy',
+    saveVersion: 'Guardar uma nova versão',
+    cancel: 'Cancelar',
+    what: 'O que é que muda? Opcional: aparece no histórico.',
+    placeholder: 'Adiciona um formulário de contacto',
+    goToDefinition: 'Ir para a definição',
+  },
+
+  tabs: {
+    codeName: 'Letras, algarismos, hífenes e underscores, a terminar em .cs',
+    slashes: 'Sem barra no início nem no fim, e com menos de 120 caracteres.',
+    deep: 'No máximo seis pastas de profundidade.',
+    characters: 'Letras, algarismos, hífenes, underscores e pontos, separados por barras.',
+    extension: 'Precisa de uma extensão, para ser servido como deve ser.',
+    exists: 'Já existe um ficheiro com esse nome.',
+    remove: (name) => `Remover ${name}? O conteúdo vai com ele.`,
+    there: (name) => `${name} já existe.`,
+    entry: 'O snippet: o que devolve é o que é servido',
+    errors: 'tem erros',
+    removeFile: (name) => `Remover ${name}`,
+    removeTitle: 'Remover este ficheiro',
+    placeholder: 'Types.cs ou site/index.html',
+    newFile: 'Novo ficheiro',
+    uploadTitle: 'Carregar um ficheiro: uma imagem, um tipo de letra, uma página',
+    upload: 'Carregar um ficheiro',
+  },
+};

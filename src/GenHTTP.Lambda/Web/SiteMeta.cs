@@ -91,7 +91,10 @@ public sealed class SiteMeta
             return null;
         }
 
-        return new SitePage(language, bare, text.Title, text.Description, entry.Image);
+        // the languages it is written in, which are all it may name as its translations
+        var languages = SiteLanguages.All.Where(entry.Text.ContainsKey).ToList();
+
+        return new SitePage(language, bare, text.Title, text.Description, languages, entry.Image);
     }
 
     /// <summary>
@@ -107,7 +110,7 @@ public sealed class SiteMeta
         var title = Encode($"{page.Title} - {Site}");
         var description = Encode(page.Description);
 
-        markup = HtmlTag.Replace(markup, tag => Lang(tag.Value, page.Language), 1);
+        markup = HtmlTag.Replace(markup, tag => Lang(tag.Value, SiteLanguages.TagOf(page.Language)), 1);
 
         markup = TitleTag.Replace(markup, _ => $"<title>{title}</title>", 1);
 
@@ -120,8 +123,8 @@ public sealed class SiteMeta
         // which language the preview is in, and which others there are
         markup = SetMeta(markup, "property", "og:locale", SiteLanguages.Locales[page.Language]);
 
-        markup = InHead(markup, string.Join("\n", SiteLanguages.All.Where(l => l != page.Language)
-                                                               .Select(l => $"<meta property=\"og:locale:alternate\" content=\"{SiteLanguages.Locales[l]}\" />")));
+        markup = InHead(markup, string.Join("\n", page.Languages.Where(l => l != page.Language)
+                                                        .Select(l => $"<meta property=\"og:locale:alternate\" content=\"{SiteLanguages.Locales[l]}\" />")));
 
         // a preview needs the full address of the picture, which only the
         // public address can give - without it, the path is still better than
@@ -138,7 +141,7 @@ public sealed class SiteMeta
 
             markup = SetMeta(markup, "property", "og:url", address);
             markup = InHead(markup, $"<link rel=\"canonical\" href=\"{address}\" />");
-            markup = InHead(markup, Alternates(page.Path));
+            markup = InHead(markup, Alternates(page));
         }
 
         if (page.Path == "/")
@@ -150,14 +153,15 @@ public sealed class SiteMeta
     }
 
     /// <summary>
-    /// The page in every language, and without one for a visitor matching none
-    /// of them - where they are sent on to the language they prefer.
+    /// The page in every language it is written in, and without one for a
+    /// visitor matching none of them - where they are sent on to the language
+    /// they prefer.
     /// </summary>
-    private string Alternates(string path)
+    private string Alternates(SitePage page)
     {
-        var links = SiteLanguages.All.Select(language => (language, SiteLanguages.In(language, path)))
-                                 .Append(("x-default", path))
-                                 .Select(link => $"<link rel=\"alternate\" hreflang=\"{link.Item1}\" href=\"{Encode(PublicUrl + link.Item2)}\" />");
+        var links = page.Languages.SelectMany(language => SiteLanguages.HreflangsOf(language).Select(hreflang => (hreflang, SiteLanguages.In(language, page.Path))))
+                                  .Append(("x-default", page.Path))
+                                  .Select(link => $"<link rel=\"alternate\" hreflang=\"{link.Item1}\" href=\"{Encode(PublicUrl + link.Item2)}\" />");
 
         return string.Join("\n", links);
     }
@@ -208,17 +212,18 @@ public sealed class SiteMeta
 
         var pages = ReadPages();
 
-        XElement Alternate(string language, string path)
+        XElement Alternate(string hreflang, string path)
             => new(xhtml + "link",
                    new XAttribute("rel", "alternate"),
-                   new XAttribute("hreflang", language),
+                   new XAttribute("hreflang", hreflang),
                    new XAttribute("href", PublicUrl + path));
 
         var urls = pages.SelectMany(page => SiteLanguages.All.Where(page.Value.Text.ContainsKey)
                                                          .Select(language => new XElement(ns + "url",
                                                              new XElement(ns + "loc", PublicUrl + SiteLanguages.In(language, page.Key)),
                                                              SiteLanguages.All.Where(page.Value.Text.ContainsKey)
-                                                                         .Select(other => Alternate(other, SiteLanguages.In(other, page.Key))),
+                                                                         .SelectMany(other => SiteLanguages.HreflangsOf(other)
+                                                                                                           .Select(hreflang => Alternate(hreflang, SiteLanguages.In(other, page.Key)))),
                                                              Alternate("x-default", page.Key))));
 
         var sitemap = new XDocument(
@@ -290,7 +295,8 @@ public sealed class SiteMeta
 /// </summary>
 /// <param name="Language">The language it is shown in</param>
 /// <param name="Path">Its path without a language, as <c>pages.json</c> spells it</param>
-public sealed record SitePage(string Language, string Path, string Title, string Description, string? Image = null);
+/// <param name="Languages">Every language the page is written in, its own included</param>
+public sealed record SitePage(string Language, string Path, string Title, string Description, IReadOnlyList<string> Languages, string? Image = null);
 
 /// <summary>
 /// A page as <c>pages.json</c> has it: its picture, and its words by language.
