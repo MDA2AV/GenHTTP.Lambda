@@ -24,6 +24,18 @@
   }
 
   /*
+   * Headings are set large, and a language with long words - German,
+   * Turkish, Dutch - can have one wider than a phone. Such a word is broken
+   * rather than pushing the whole page sideways; one that fits never is.
+   * Their lines are evened out too, so a longer translation does not end on
+   * a single word alone.
+   */
+  :is(h1, h2, h3) {
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  /*
    * Japanese and Korean. The system faces the stack starts with have no
    * kanji or hangul, and a browser left to fall back on its own may draw
    * Japanese in a Chinese face - the same characters, shaped differently. So

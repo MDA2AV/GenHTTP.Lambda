@@ -95,8 +95,9 @@ export function Landing() {
             style={{ animationDelay: '60ms' }}
           >
             {said.headline}
-            <br />
-            <span className="text-accent-700 dark:text-accent-400">{said.headlineAccent}</span>
+            {/* a line of its own rather than after a break, so each sentence
+                is balanced on its own lines (see index.css) */}
+            <span className="block text-accent-700 dark:text-accent-400">{said.headlineAccent}</span>
           </h1>
 
           <p
