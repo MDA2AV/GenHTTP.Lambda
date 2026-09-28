@@ -10,6 +10,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.Extensions.Logging;
 
@@ -37,18 +38,23 @@ namespace GenHTTP.Lambda.Services.Building;
 ///
 /// Off unless LambdaOptions.AgentUrl is set, so an installation without an
 /// agent simply does not have the feature rather than having a broken one.
+/// With an agent, the operator can still take either text box away in the
+/// panel - builds and changes each have a switch of their own - and the page
+/// is then left with how to connect an agent of one's own.
 /// </remarks>
 public sealed partial class BuildService : IDisposable
 {
     private readonly LambdaOptions _options;
+    private readonly SettingsService _settings;
     private readonly ILogger<BuildService> _logger;
     private readonly HttpClient? _client;
 
     private readonly ConcurrentDictionary<IPAddress, Tally> _asked = [];
 
-    public BuildService(LambdaOptions options, ILogger<BuildService> logger)
+    public BuildService(LambdaOptions options, SettingsService settings, ILogger<BuildService> logger)
     {
         _options = options;
+        _settings = settings;
         _logger = logger;
 
         if (string.IsNullOrWhiteSpace(options.AgentUrl))
@@ -73,6 +79,14 @@ public sealed partial class BuildService : IDisposable
     /// <summary>Whether this installation has an agent to build with.</summary>
     public bool Available => _client != null;
 
+    /// <summary>Whether the box on /build is offered: there is an agent, and the operator has not switched it off.</summary>
+    public async ValueTask<bool> BuildsOfferedAsync()
+        => Available && (await _settings.GetAsync()).BuildBox;
+
+    /// <summary>Whether the box in the Change section is offered: there is an agent, and the operator has not switched it off.</summary>
+    public async ValueTask<bool> ChangesOfferedAsync()
+        => Available && (await _settings.GetAsync()).ChangeBox;
+
     /// <summary>How many builds one address is allowed in a day.</summary>
     public int PerDay => _options.AgentBuildsPerDay;
 
@@ -91,6 +105,11 @@ public sealed partial class BuildService : IDisposable
     public async ValueTask<BuildStarted> StartAsync(string? prompt, string? model, string? password, IPAddress? caller)
     {
         var agent = Required();
+
+        if (!await BuildsOfferedAsync())
+        {
+            throw new ProviderException(ResponseStatus.NotFound, "Nothing is built from here on this installation.");
+        }
 
         var wanted = Prompt(prompt, "Say what you would like built.");
 
@@ -190,7 +209,7 @@ public sealed partial class BuildService : IDisposable
     /// <param name="lambda">The lambda, by the id it is filed under</param>
     public async ValueTask<AgentState> StateAsync(long lambda, IPAddress? caller)
     {
-        if (_client == null)
+        if (!await ChangesOfferedAsync())
         {
             return new AgentState(false, PerDay, 0, HasSecondModel, null);
         }
@@ -212,6 +231,11 @@ public sealed partial class BuildService : IDisposable
                                                    string? model, string? password, string? language, string? feature, IPAddress? caller)
     {
         var agent = Required();
+
+        if (!await ChangesOfferedAsync())
+        {
+            throw new ProviderException(ResponseStatus.NotFound, "Changes are not asked for from here on this installation.");
+        }
 
         var wanted = Prompt(prompt, "Say what should be different.");
 

@@ -72,67 +72,67 @@
     "image": "/social/build.png",
     "text": {
       "id": {
-        "title": "Buat Aplikasi dengan AI",
-        "description": "Ceritakan yang Anda mau, dan agen AI membuatkan aplikasinya, lengkap dengan link untuk dibagikan. Polling, buku tamu, papan peringkat. Gratis, tanpa akun.",
+        "title": "Buat Website dengan AI",
+        "description": "Ceritakan ide Anda, AI membuat websitenya. Kami yang meng-hosting: online dalam hitungan menit, dengan link untuk dibagikan. Tanpa coding, tanpa akun, gratis.",
         "image": "/social/id/build.jpg"
       },
       "de": {
-        "title": "App mit KI erstellen",
-        "description": "Sagen Sie, was Sie möchten: Ein KI-Agent baut die App, stellt sie online und gibt Ihnen einen Link. Umfragen, Gästebücher und mehr – kostenlos, ohne Konto.",
+        "title": "Website mit KI erstellen",
+        "description": "Beschreiben Sie Ihre Idee, eine KI erstellt die Website. Wir hosten sie – in Minuten online, mit Link zum Teilen. Ohne Programmieren, ohne Konto, kostenlos.",
         "image": "/social/de/build.jpg"
       },
       "en": {
-        "title": "Build an App with AI",
-        "description": "Say what you want and an AI agent builds it, puts it online and gives you a link to share. Polls, guestbooks, leaderboards and more - free, no account."
+        "title": "Create a Website with AI",
+        "description": "Describe your idea and AI creates the website for you. We host it, so it is online in minutes with a link to share. No coding, no account, free."
       },
       "es": {
-        "title": "Crea una app con IA",
-        "description": "Di lo que quieres y un agente de IA crea tu app, la publica y te da un enlace. Encuestas, libros de visitas, rankings y más. Gratis y sin cuenta.",
+        "title": "Crear una página web con IA",
+        "description": "Describa su idea: la IA crea la web y nosotros la alojamos. En línea en minutos, con un enlace para compartir. Sin programar, sin cuenta, gratis.",
         "image": "/social/es/build.jpg"
       },
       "fr": {
-        "title": "Créer une app avec l’IA",
-        "description": "Dites ce que vous voulez : un agent IA crée l’app, la met en ligne et vous donne un lien à partager. Sondages, classements… Gratuit, sans compte.",
+        "title": "Créer un site web avec l’IA",
+        "description": "Décrivez votre idée : l’IA crée le site, nous l’hébergeons. En ligne en quelques minutes, avec un lien à partager. Sans code, sans compte, gratuit.",
         "image": "/social/fr/build.jpg"
       },
       "it": {
-        "title": "Creare un’app con l’AI",
-        "description": "Scrivi cosa vuoi: un agente AI crea l’app, la mette online e ti dà un link da condividere. Sondaggi, guestbook, classifiche e altro. Gratis, senza account.",
+        "title": "Creare un sito web con l’AI",
+        "description": "Descriva la Sua idea: l’AI crea il sito, noi lo ospitiamo. Online in pochi minuti, con un link da condividere. Senza codice, senza account, gratis.",
         "image": "/social/it/build.jpg"
       },
       "nl": {
-        "title": "App maken met AI",
-        "description": "Zeg wat je wilt: een AI-agent bouwt je app, zet hem online en geeft je een deelbare link. Polls, gastenboeken, ranglijsten en meer. Gratis, geen account.",
+        "title": "Website maken met AI",
+        "description": "Beschrijf je idee en AI maakt de website. Wij hosten hem: binnen minuten online, met een link om te delen. Zonder programmeren, zonder account, gratis.",
         "image": "/social/nl/build.jpg"
       },
       "pl": {
-        "title": "Stwórz aplikację z AI",
-        "description": "Powiedz, czego chcesz, a agent AI zbuduje aplikację, wrzuci ją do sieci i da ci link. Ankiety, księgi gości, rankingi i więcej – za darmo, bez konta.",
+        "title": "Stwórz stronę internetową z AI",
+        "description": "Opisz pomysł, a AI stworzy stronę. My ją hostujemy – online w kilka minut, z linkiem do udostępnienia. Bez programowania, bez konta, za darmo.",
         "image": "/social/pl/build.jpg"
       },
       "pt": {
-        "title": "Criar app com IA",
-        "description": "Diga o que você quer e um agente de IA cria o app, coloca no ar e entrega um link para compartilhar. Enquetes, rankings, murais e mais. Grátis, sem conta.",
+        "title": "Crie um site com IA",
+        "description": "Descreva sua ideia e a IA cria o site. Nós hospedamos: no ar em minutos, com um link para compartilhar. Sem programar, sem conta, grátis.",
         "image": "/social/pt/build.jpg"
       },
       "pt-pt": {
-        "title": "Criar uma app com IA",
-        "description": "Diz o que queres e um agente de IA cria a app, põe-na online e dá-te um link para partilhar. Sondagens, rankings, livros de visitas. Grátis, sem conta.",
+        "title": "Criar um site com IA",
+        "description": "Descreve a tua ideia e a IA cria o site. Nós alojamo-lo: online em minutos, com um link para partilhar. Sem programar, sem conta, grátis.",
         "image": "/social/pt-pt/build.jpg"
       },
       "tr": {
-        "title": "Yapay zekâ ile uygulama yapın",
-        "description": "Ne istediğinizi yazın; yapay zekâ ajanı uygulamayı yapsın, yayına alsın, linkini versin. Anket, ziyaretçi defteri, skor tablosu. Ücretsiz, üyeliksiz.",
+        "title": "Yapay Zekâ ile Web Sitesi Oluşturun",
+        "description": "Fikrinizi anlatın, yapay zekâ web sitesini oluştursun. Barındırma bizden: dakikalar içinde yayında, paylaşılabilir linkle. Kodlama yok, hesap yok, ücretsiz.",
         "image": "/social/tr/build.jpg"
       },
       "ja": {
-        "title": "AIでアプリを作成",
-        "description": "作りたいものを伝えるだけで、AIエージェントがアプリを作って公開し、共有リンクを届けます。投票、ゲストブック、ランキングなど。無料・アカウント不要。",
+        "title": "AIでウェブサイトを作成",
+        "description": "アイデアを伝えるだけで、AIがウェブサイトを作成。ホスティングは私たちにお任せください。数分で公開、共有リンク付き。プログラミング不要、登録不要、無料。",
         "image": "/social/ja/build.jpg"
       },
       "ko": {
-        "title": "AI로 앱 만들기",
-        "description": "원하는 걸 말하면 AI 에이전트가 앱을 만들어 온라인에 올리고, 공유 링크를 줘요. 투표, 방명록, 순위표까지. 무료이고 가입도 필요 없어요.",
+        "title": "AI로 웹사이트 만들기",
+        "description": "아이디어만 말하면 AI가 웹사이트를 만들어요. 호스팅은 저희가 해요. 몇 분 만에 온라인, 공유 링크까지. 코딩도 가입도 필요 없고 무료예요.",
         "image": "/social/ko/build.jpg"
       }
     }

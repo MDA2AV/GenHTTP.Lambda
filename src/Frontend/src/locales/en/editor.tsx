@@ -309,13 +309,11 @@ export const editor = {
       failed: 'The change did not go through.',
       stopped: 'The change was stopped.',
     },
-    offTitle: 'There is no agent on this installation',
-    off: 'This server has no agent of its own to make changes with. An agent of yours can: connect it to the address below, give it the editor link, and tell it what should be different.',
-    own: 'Use your own agent instead',
+    offTitle: 'Change it with your own agent',
+    off: 'Connect an agent of your own - Claude, for example - to the address below, give it the editor link, and tell it what should be different. It changes your app here and puts it online for you.',
+    own: 'Or use your own agent',
     ownText:
-      'Any agent that speaks MCP can change this lambda: connect it to this address, give it the editor link, and tell it what should be different. It has no daily allowance and no clock.',
-    mcp: 'MCP address',
-    editorLink: 'Editor link - keep it private',
+      'Any agent that speaks MCP can change this app too: connect it to the address below, give it the editor link, and tell it what should be different. It has no daily allowance and no clock.',
   },
 
   summary: {

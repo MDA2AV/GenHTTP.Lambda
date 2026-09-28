@@ -2,7 +2,7 @@ import type { Messages } from '../en';
 
 export const shell: Messages['shell'] = {
   main: 'Ana menü',
-  build: 'Oluştur',
+  build: 'Web sitesi oluştur',
   ship: 'Yayınla',
   showcase: 'Vitrin',
   enterprise: 'Kurumsal',

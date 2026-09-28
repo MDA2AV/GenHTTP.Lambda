@@ -753,6 +753,10 @@ export interface Features {
 /** What the operator can switch on or off in the panel. */
 export interface AdminSettings {
   enterprisePage: boolean;
+  /** Whether /build offers its text box, where there is an agent. */
+  buildBox: boolean;
+  /** Whether the Change section of the editor offers its text box, where there is an agent. */
+  changeBox: boolean;
 }
 
 export class ApiError extends Error {

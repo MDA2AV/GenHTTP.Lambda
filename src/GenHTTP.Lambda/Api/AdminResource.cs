@@ -195,7 +195,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     {
         var current = await settings.GetAsync();
 
-        return new SettingsModel(current.EnterprisePage);
+        return new SettingsModel(current.EnterprisePage, current.BuildBox, current.ChangeBox);
     }
 
     /// <summary>
@@ -204,9 +204,9 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     [ResourceMethod(Method.Put, "settings")]
     public async ValueTask<SettingsModel> ChangeSettings(SettingsModel body)
     {
-        var saved = await settings.SaveAsync(new SiteSettings(body.EnterprisePage));
+        var saved = await settings.SaveAsync(new SiteSettings(body.EnterprisePage, body.BuildBox, body.ChangeBox));
 
-        return new SettingsModel(saved.EnterprisePage);
+        return new SettingsModel(saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
     }
 
     #endregion

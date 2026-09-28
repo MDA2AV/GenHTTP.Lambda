@@ -348,13 +348,11 @@ export const editor: EditorMessages = {
       failed: 'Perubahan tidak berhasil.',
       stopped: 'Perubahan dihentikan.',
     },
-    offTitle: 'Instalasi ini tidak punya agen',
-    off: 'Server ini tidak punya agen sendiri untuk membuat perubahan. Agen Anda sendiri bisa: hubungkan ke alamat di bawah, berikan link editornya, lalu jelaskan apa yang ingin diubah.',
-    own: 'Pakai agen Anda sendiri',
+    offTitle: 'Ubah dengan agen Anda sendiri',
+    off: 'Hubungkan agen Anda sendiri, misalnya Claude, ke alamat di bawah, berikan link editor, dan sampaikan apa yang perlu diganti. Agen akan mengubah aplikasi Anda di sini dan menaruhnya online untuk Anda.',
+    own: 'Atau pakai agen Anda sendiri',
     ownText:
-      'Agen apa pun yang mendukung MCP bisa mengubah lambda ini: hubungkan ke alamat ini, berikan link editornya, lalu jelaskan apa yang ingin diubah. Tanpa batas harian dan tanpa batas waktu.',
-    mcp: 'Alamat MCP',
-    editorLink: 'Link editor (jangan dibagikan)',
+      'Agen apa pun yang mendukung MCP juga bisa mengubah aplikasi ini: hubungkan ke alamat di bawah, berikan link editor, dan sampaikan apa yang perlu diganti. Tanpa batas harian dan tanpa batas waktu.',
   },
 
   summary: {

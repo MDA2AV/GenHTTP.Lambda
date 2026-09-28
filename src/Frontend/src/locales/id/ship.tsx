@@ -125,19 +125,4 @@ export const ship: Messages['ship'] = {
   compareNote:
     'Per September 2026, untuk orang yang belum punya akun di mana pun. Paket dan fitur layanan lain bisa berubah, jadi cek langsung ke mereka untuk detailnya.',
 
-  yourAgent: 'Agen Anda',
-  terminal: 'Terminal',
-  setups: {
-    claudeCode: 'Jalankan ini sekali di terminal. Setelah itu, setiap proyek yang Anda buka bisa dipublikasikan di sini.',
-    claude: (strong) => (
-      <>
-        Di Claude versi web atau desktop, buka {strong('Pengaturan')}, lalu {strong('Connectors')}, dan pilih{' '}
-        {strong('Add custom connector')}. Tempel alamat di atas, lalu simpan. Selesai.
-      </>
-    ),
-    cursor: 'Tambahkan ini ke pengaturan MCP di Cursor, atau ke file di bawah, lalu muat ulang.',
-    vscode: 'Simpan ini di proyek Anda, lalu jalankan server dari tampilan MCP di Copilot Chat.',
-  },
-  elsewhere:
-    'Pakai tool lain? Windsurf, Codex, Zed, dan kebanyakan agen lain bisa menambahkan server MCP remote di pengaturannya. Berikan alamat di atas.',
 };

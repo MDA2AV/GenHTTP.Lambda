@@ -1,60 +1,70 @@
-import type { ReactNode } from 'react';
-
+/*
+ * The words of /build, for somebody who wants a website and does not write
+ * code. They say what happens in the words such a person would search for -
+ * creating a website, hosting, putting it online - and leave out the words
+ * of the people who make such things.
+ */
 export const build = {
-  offTitle: 'Not switched on here',
-  off: (write: (text: string) => ReactNode, mcp: ReactNode) => (
-    <>
-      This installation has no build agent. You can still {write('write it yourself')}, or point your own Claude at{' '}
-      {mcp}.
-    </>
-  ),
-
-  title: 'Say what you want.',
+  title: 'From idea to website.',
   intro:
-    'It gets built, put online, and you get a link you can send to anyone. No account, no install, and it can remember things - scores, messages, entries - so everybody who opens it sees the same thing.',
-  placeholder: 'build a…',
+    'Describe the website or app you have in mind. AI creates it for you, we host it on our servers, and it is online right away - with a link you can send to anyone. No coding, no hosting to set up, no account.',
+  placeholder: 'I would like a website that…',
   working: 'working…',
   shortcut: 'ctrl + enter',
-  building: 'Building',
-  buildIt: 'Build it',
-  builtBy: 'Built by',
+  building: 'Creating',
+  buildIt: 'Create my website',
+  builtBy: 'Created by',
   password: 'password',
   fable:
-    'Fable is behind a password while it is being tried out. It runs with no time limit, so it will keep going until the thing is finished rather than until the clock runs out.',
+    'Fable is behind a password while it is being tried out. It runs with no time limit, so it will keep going until your website is finished rather than until the clock runs out.',
   onlyNew:
-    'This only builds new ones. To change something you have already made, open its editor link and say what should be different under Change.',
+    'This creates new websites. To change one you already have, open its editor link and describe what should be different under Change.',
   ideas: [
-    'a wall where anyone can leave a one line message',
-    'a highscore board for a dice game',
+    'a website for our club where members sign up for events',
+    'a guestbook for our wedding',
     'a poll where people vote and see the totals',
-    'a guestbook for my wedding',
-    'a countdown to a date everyone can see',
+    'a scoreboard for our weekly quiz night',
+    'a countdown to our opening day that everyone can see',
   ],
   ahead: (waiting: number) =>
-    waiting === 1 ? 'One build ahead of yours - you are next.' : `${waiting} builds ahead of yours.`,
+    waiting === 1 ? 'One website ahead of yours - you are next.' : `${waiting} websites ahead of yours.`,
   starting: 'Starting…',
 
-  yourApp: 'Your app',
-  further: 'To take it further',
-  keep: 'Keep that one. It is the only way back in and it cannot be recovered - not by us either. Bookmark it before you close this tab.',
+  points: [
+    {
+      title: 'Described, not programmed',
+      text: 'Say in your own words what your website should do. No coding and no technical knowledge needed.',
+    },
+    {
+      title: 'Hosting included',
+      text: 'Your website runs on our servers. Hosting, security and updates are taken care of - there is nothing for you to set up or look after.',
+    },
+    {
+      title: 'Online in minutes',
+      text: 'You get a link to share straight away. It can remember things too - entries, votes, scores - so everybody sees the same.',
+    },
+  ],
+
+  yourApp: 'Your website',
+  further: 'To change it later',
+  keep: 'Keep that link. It is the only way back in and it cannot be recovered - not by us either. Bookmark it before you close this tab.',
   change:
-    'To change it, open the editor link and say what should be different under Change, the same way as here. Your own coding agent can do it too, as described below.',
+    'To change your website, open the editor link and describe what should be different under Change, the same way as here. Your own AI assistant can do it too, as described below.',
   copyLink: 'Copy the editor link',
   lifetime: (offline: number, removed: number) =>
-    `It stays online while it is used: after ${offline} days without visits or changes it goes offline, and after ${removed} it is removed. Open the editor and press deploy to put it back up.`,
+    `We keep it online for as long as it is used: after ${offline} days without visits or changes it is taken offline, and after ${removed} it is removed. Open the editor to put it back online.`,
   openEditor: 'Open the editor',
-  another: 'Build something else',
+  another: 'Create another website',
 
-  keepGoing: 'Keep going with your own agent',
-  orOwn: 'Or use your own agent',
+  keepGoing: 'Keep going with your own AI assistant',
+  orOwn: 'Or use your own AI assistant',
   ownText:
-    'The box above is a Claude running on this machine. If you already have one of your own, point it here instead and it can do the same things - make a lambda, write the code, put it online - without a daily limit and without going through this page.',
-  thenAsk: 'Then ask it for what you want, the same way you would here.',
-  claudeWeb: 'Claude on the web',
-  claudeWebHow:
-    'Settings, then Connectors, then Add custom connector. Paste the address above as the remote MCP server URL. There is no key and no sign in step.',
-  howToChange: 'That is also how to change something once it is built: give your agent the editor link and tell it what to do.',
-  more: 'More about using an agent here',
+    'Already use Claude or another AI assistant? Connect it here and it creates and changes websites for you in the same way - we host them, so there is still nothing to set up. There is no daily limit.',
+  ownTitle: 'Create your website with your AI assistant',
+  ownOnly:
+    'Connect Claude or another AI assistant to the address below, then describe the website you would like. It creates it, we host it on our servers, and it is online right away with a link to share.',
+  thenAsk: 'Then tell it what you would like, for example: “Create a website for our choir with a calendar of our concerts.”',
+  howToChange: 'That is also how to change a website later: give your assistant the editor link and tell it what should be different.',
 
   failedToStart: 'That did not go through.',
   noAnswer: 'It finished without saying what happened.',

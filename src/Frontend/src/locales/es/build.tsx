@@ -1,62 +1,71 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Aquí no está activado',
-  off: (write, mcp) => (
-    <>
-      Esta instalación no tiene agente para crear apps. Aun así, puedes {write('escribir tú el código')} o conectar tu
-      propio Claude a {mcp}.
-    </>
-  ),
-
-  title: 'Di lo que quieres.',
+  title: 'De la idea a la web.',
   intro:
-    'Tu app se crea y se publica, y recibes un enlace para mandárselo a quien quieras. Sin cuenta y sin instalar nada. Además, recuerda cosas (puntuaciones, mensajes, entradas), así que todos los que la abren ven lo mismo.',
-  placeholder: 'crea un…',
+    'Describa la página web o la aplicación que tiene en mente. La IA la crea por usted, nosotros la alojamos en nuestros servidores y queda en línea al instante, con un enlace que puede enviar a quien quiera. Sin programar, sin configurar un alojamiento, sin cuenta.',
+  placeholder: 'Quiero una página web que…',
   working: 'trabajando…',
   shortcut: 'ctrl + enter',
   building: 'Creando',
-  buildIt: 'Crear',
-  builtBy: 'Crear con',
+  buildIt: 'Crear mi web',
+  builtBy: 'Creado con',
   password: 'contraseña',
   fable:
-    'Fable tiene contraseña mientras está en pruebas. No tiene límite de tiempo, así que sigue hasta terminar, no hasta que se acabe el reloj.',
+    'Fable está protegido con contraseña mientras se prueba. No tiene límite de tiempo, así que sigue trabajando hasta que su web esté terminada, no hasta que se acabe el reloj.',
   onlyNew:
-    'Aquí solo se crean apps nuevas. Para cambiar algo que ya hiciste, abre su enlace de edición y, en la sección Cambiar, di qué debería ser distinto.',
+    'Aquí se crean webs nuevas. Para cambiar una que ya tiene, abra su enlace de edición y describa en «Cambiar» qué debe ser diferente.',
   ideas: [
-    'crea un muro donde cualquiera pueda dejar un mensaje de una línea',
-    'haz un ranking para un juego de dados',
-    'crea una encuesta donde la gente vote y vea los resultados',
-    'haz un libro de visitas para mi boda',
-    'crea una cuenta regresiva hasta una fecha, visible para todos',
+    'una web para nuestro club donde los socios se apuntan a eventos',
+    'un libro de visitas para nuestra boda',
+    'una encuesta donde la gente vota y ve los resultados',
+    'un marcador para nuestra noche de preguntas semanal',
+    'una cuenta atrás para nuestra inauguración que todos puedan ver',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Hay una app en cola antes que la tuya. Después vas tú.' : `Hay ${waiting} apps en cola antes que la tuya.`,
-  starting: 'Empezando…',
+    waiting === 1 ? 'Hay una web por delante de la suya: después le toca a usted.' : `Hay ${waiting} webs por delante de la suya.`,
+  starting: 'Iniciando…',
 
-  yourApp: 'Tu app',
-  further: 'Para seguir mejorándola',
-  keep: 'No lo pierdas. Es la única forma de volver a entrar y nadie puede recuperarlo, ni siquiera nosotros. Guárdalo en tus marcadores antes de cerrar esta pestaña.',
+  points: [
+    {
+      title: 'Descrita, no programada',
+      text: 'Explique con sus propias palabras qué debe hacer su web. No hace falta programar ni tener conocimientos técnicos.',
+    },
+    {
+      title: 'Alojamiento incluido',
+      text: 'Su web funciona en nuestros servidores. Nos ocupamos del alojamiento, la seguridad y las actualizaciones: usted no tiene nada que configurar ni mantener.',
+    },
+    {
+      title: 'En línea en minutos',
+      text: 'Recibe al instante un enlace para compartir. La web también puede guardar datos (inscripciones, votos, puntuaciones) para que todos vean lo mismo.',
+    },
+  ],
+
+  yourApp: 'Su web',
+  further: 'Para cambiarla más adelante',
+  keep:
+    'Guarde ese enlace. Es la única forma de volver a entrar y no se puede recuperar, ni siquiera nosotros podemos. Añádalo a sus marcadores antes de cerrar esta pestaña.',
   change:
-    'Para cambiarla, abre el enlace de edición y, en la sección Cambiar, di qué debería ser distinto, igual que aquí. También puede hacerlo tu propio agente de programación, como te explicamos abajo.',
+    'Para cambiar su web, abra el enlace de edición y describa en «Cambiar» qué debe ser diferente, igual que aquí. También puede hacerlo su propio asistente de IA, como se explica más abajo.',
   copyLink: 'Copiar el enlace de edición',
   lifetime: (offline, removed) =>
-    `Sigue en línea mientras se use: después de ${offline} días sin visitas ni cambios se desconecta, y a los ${removed} días se elimina. Para volver a publicarla, abre el editor y haz clic en Desplegar.`,
+    `La mantenemos en línea mientras se use: tras ${offline} días sin visitas ni cambios se desconecta, y tras ${removed} días se elimina. Abra el editor para volver a ponerla en línea.`,
   openEditor: 'Abrir el editor',
-  another: 'Crear otra app',
+  another: 'Crear otra web',
 
-  keepGoing: 'Sigue con tu propio agente',
-  orOwn: 'O usa tu propio agente',
+  keepGoing: 'Continúe con su propio asistente de IA',
+  orOwn: 'O use su propio asistente de IA',
   ownText:
-    'El cuadro de arriba es un Claude que se ejecuta en este servidor. Si ya tienes uno propio, conéctalo aquí y podrá hacer lo mismo (crear una lambda, escribir el código, publicarla) sin límite diario y sin pasar por esta página.',
-  thenAsk: 'Después, pídele lo que quieras, igual que aquí.',
-  claudeWeb: 'Claude en la web',
-  claudeWebHow:
-    'Configuración, luego «Connectors» y después «Add custom connector». Pega la dirección de arriba como URL del servidor MCP remoto. No hay clave ni inicio de sesión.',
-  howToChange: 'Así también se cambia algo que ya está creado: dale el enlace de edición a tu agente y dile qué hacer.',
-  more: 'Más sobre cómo usar un agente aquí',
+    '¿Ya trabaja con Claude u otro asistente de IA? Conéctelo aquí y creará y cambiará webs para usted de la misma manera. Nosotros las alojamos, así que sigue sin tener nada que configurar. No hay límite diario.',
+  ownTitle: 'Cree su web con su asistente de IA',
+  ownOnly:
+    'Conecte Claude u otro asistente de IA a la dirección de abajo y describa la web que desea. El asistente la crea, nosotros la alojamos en nuestros servidores y queda en línea al instante, con un enlace para compartir.',
+  thenAsk:
+    'Después, dígale lo que desea, por ejemplo: «Crea una web para nuestro coro con un calendario de nuestros conciertos».',
+  howToChange:
+    'Así también se cambia una web más adelante: dé a su asistente el enlace de edición y dígale qué debe ser diferente.',
 
-  failedToStart: 'No se pudo enviar.',
-  noAnswer: 'Terminó sin decir qué pasó.',
-  failed: 'No funcionó.',
+  failedToStart: 'No se ha podido enviar.',
+  noAnswer: 'Terminó sin indicar qué ha pasado.',
+  failed: 'No ha funcionado.',
 };

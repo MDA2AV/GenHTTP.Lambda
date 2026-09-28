@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
 import { isActive, type AgentState, type AgentStep, type ChangeJob, type Feature } from '../api';
-import { CopyField } from '../components/CopyField';
+import { ConnectAgent } from '../components/ConnectAgent';
 import { Dialog } from '../components/Dialog';
 import {
   IconAlert,
@@ -123,9 +123,7 @@ export function ChangeTab({ control }: { control: Control }) {
     return (
       <Section title={heading}>
         <div className="max-w-2xl">
-          <h2 className="text-[15px] font-medium">{said.offTitle}</h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{said.off}</p>
-          <OwnAgent control={control} open />
+          <OwnAgent control={control} alone />
         </div>
       </Section>
     );
@@ -1127,35 +1125,19 @@ function Marks({ step, said }: { step: AgentStep; said: Words }) {
 
 /**
  * The other way to change a lambda: an agent of the owner's own, over MCP.
- * Folded away where this installation has one, and the whole answer where it
- * does not.
+ * Below the box where this installation offers one, and the whole answer
+ * where it does not.
  */
-function OwnAgent({ control, open = false }: { control: Control; open?: boolean }) {
+function OwnAgent({ control, alone = false }: { control: Control; alone?: boolean }) {
   const said = useEditorT().change;
   const { origin } = useOrigin();
   const editor = `${origin}${control.lambda.editorPath}`;
 
-  const body = (
-    <div className="mt-3 space-y-3">
-      <p className="text-sm text-slate-600 dark:text-slate-400">{said.ownText}</p>
-      <CopyField label={said.mcp} value={`${origin}/mcp`} />
-      <CopyField label={said.editorLink} value={editor} />
-      <pre className="overflow-x-auto bg-slate-900 p-3 font-mono text-xs text-slate-100 dark:bg-black/40">
-        {`claude mcp add --transport http genhttp ${origin}/mcp`}
-      </pre>
-    </div>
-  );
-
-  if (open) {
-    return <div className="mt-6">{body}</div>;
-  }
-
   return (
-    <details className="group border-t border-slate-200 pt-4 dark:border-ink-800">
-      <summary className="cursor-pointer select-none text-[13px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
-        {said.own}
-      </summary>
-      {body}
-    </details>
+    <section className={alone ? undefined : 'border-t border-slate-200 pt-6 dark:border-ink-800'}>
+      <h2 className="text-[15px] font-medium">{alone ? said.offTitle : said.own}</h2>
+      <p className="mb-4 mt-2 text-sm text-slate-600 dark:text-slate-400">{alone ? said.off : said.ownText}</p>
+      <ConnectAgent origin={origin} editorLink={editor} />
+    </section>
   );
 }

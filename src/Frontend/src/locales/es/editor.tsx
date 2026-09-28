@@ -334,13 +334,11 @@ export const editor: EditorMessages = {
       failed: 'El cambio no salió adelante.',
       stopped: 'Se detuvo el cambio.',
     },
-    offTitle: 'Esta instalación no tiene agente',
-    off: 'Este servidor no tiene un agente propio para hacer cambios. El tuyo sí puede: conéctalo a la dirección de abajo, dale el enlace de edición y dile qué quieres cambiar.',
-    own: 'Usar tu propio agente',
+    offTitle: 'Cámbiala con tu propio agente',
+    off: 'Conecta un agente propio, por ejemplo Claude, a la dirección de abajo, dale el enlace de edición y dile qué quieres cambiar. Cambia tu app aquí y la pone en línea por ti.',
+    own: 'O usa tu propio agente',
     ownText:
-      'Cualquier agente compatible con MCP puede cambiar esta lambda: conéctalo a esta dirección, dale el enlace de edición y dile qué quieres cambiar. No tiene límite diario ni límite de tiempo.',
-    mcp: 'Dirección MCP',
-    editorLink: 'Enlace de edición (no lo compartas)',
+      'Cualquier agente compatible con MCP también puede cambiar esta app: conéctalo a la dirección de abajo, dale el enlace de edición y dile qué quieres cambiar. No tiene límite diario ni límite de tiempo.',
   },
 
   summary: {

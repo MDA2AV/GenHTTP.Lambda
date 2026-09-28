@@ -46,20 +46,6 @@ export const landing: Messages['landing'] = {
   agentsTitle: 'Bawa agen favorit Anda',
   agentsText:
     'Sudah pakai Claude atau asisten lain? Hubungkan ke alamat ini, lalu agen Anda bisa membuat, men-deploy, dan memperbarui aplikasi di sini. Langsung dari percakapan yang sedang Anda buka.',
-  agents: [
-    {
-      name: 'Claude di web atau desktop',
-      how: 'Buka Pengaturan, lalu “Connectors”, dan pilih “Add custom connector”. Tempel alamat di atas. Tanpa API key, tanpa login.',
-    },
-    {
-      name: 'Claude Code',
-      how: 'Jalankan ini sekali di terminal:',
-    },
-    {
-      name: 'Klien MCP lainnya',
-      how: 'Cursor, VS Code, Codex, dan klien MCP lain mendukung server remote. Atur dengan alamat yang sama.',
-    },
-  ],
   thenAsk: (em) => (
     <>Lalu tinggal minta: {em('buatkan form pendaftaran online untuk acara tim kami')}.</>
   ),

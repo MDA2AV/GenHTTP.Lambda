@@ -1,63 +1,68 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Staat hier niet aan',
-  off: (write, mcp) => (
-    <>
-      Deze installatie heeft geen bouwagent. Je kunt de code nog steeds {write('zelf schrijven')}, of je eigen Claude
-      koppelen aan {mcp}.
-    </>
-  ),
-
-  title: 'Zeg wat je wilt.',
+  title: 'Van idee naar website.',
   intro:
-    'Je app wordt gebouwd en online gezet, en jij krijgt een link die je naar iedereen kunt sturen. Geen account, niets te installeren. En je app kan dingen onthouden, zoals scores, berichten en inzendingen. Zo ziet iedereen die hem opent hetzelfde.',
-  placeholder: 'maak een…',
+    'Beschrijf de website of app die je voor ogen hebt. AI maakt hem voor je, wij hosten hem op onze servers en hij staat meteen online, met een link die je naar iedereen kunt sturen. Zonder programmeren, zonder hosting in te stellen, zonder account.',
+  placeholder: 'Ik wil een website die…',
   working: 'bezig…',
   shortcut: 'ctrl + enter',
-  building: 'Aan het bouwen',
-  buildIt: 'Bouwen',
-  builtBy: 'Gebouwd door',
+  building: 'Bezig met maken',
+  buildIt: 'Maak mijn website',
+  builtBy: 'Gemaakt door',
   password: 'wachtwoord',
   fable:
     'Fable zit achter een wachtwoord zolang we het uitproberen. Het heeft geen tijdslimiet. Het werkt dus door tot je app af is, niet tot de tijd om is.',
   onlyNew:
-    'Hier maak je alleen nieuwe apps. Wil je iets aanpassen wat je al hebt gemaakt? Open de editorlink en zeg onder ‘Aanpassen’ wat er anders moet.',
+    'Hier maak je nieuwe websites. Wil je een bestaande aanpassen? Open de editorlink en beschrijf onder ‘Aanpassen’ wat er anders moet.',
   ideas: [
-    'maak een prikbord waar iedereen een berichtje van één regel kan achterlaten',
-    'maak een highscorelijst voor een dobbelspel',
-    'maak een poll waarin mensen stemmen en de uitslag zien',
-    'maak een gastenboek voor onze bruiloft',
-    'maak een aftelklok naar een datum die iedereen kan zien',
+    'een website voor onze vereniging waar leden zich voor activiteiten aanmelden',
+    'een gastenboek voor onze bruiloft',
+    'een poll waarin mensen stemmen en de uitslag zien',
+    'een scorebord voor onze wekelijkse quizavond',
+    'een aftelklok tot onze opening die iedereen kan zien',
   ],
   ahead: (waiting) =>
-    waiting === 1
-      ? 'Er staat nog één build voor je in de rij. Daarna ben jij aan de beurt.'
-      : `Er staan nog ${waiting} builds voor je in de rij.`,
+    waiting === 1 ? 'Er is nog één website voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} websites voor de jouwe.`,
   starting: 'Starten…',
 
-  yourApp: 'Je app',
-  further: 'Verder bouwen',
-  keep: 'Bewaar deze link goed. Het is de enige weg terug, en hij is niet te herstellen, ook niet door ons. Zet hem in je bladwijzers voordat je dit tabblad sluit.',
+  points: [
+    {
+      title: 'Beschreven, niet geprogrammeerd',
+      text: 'Zeg in je eigen woorden wat je website moet doen. Je hoeft niet te programmeren en geen technische kennis te hebben.',
+    },
+    {
+      title: 'Hosting inbegrepen',
+      text: 'Je website draait op onze servers. Hosting, beveiliging en updates regelen wij – je hoeft niets in te stellen of bij te houden.',
+    },
+    {
+      title: 'Binnen enkele minuten online',
+      text: 'Je krijgt meteen een link om te delen. De website kan ook dingen onthouden, zoals inzendingen, stemmen en scores, zodat iedereen hetzelfde ziet.',
+    },
+  ],
+
+  yourApp: 'Je website',
+  further: 'Om hem later aan te passen',
+  keep:
+    'Bewaar deze link goed. Het is de enige weg terug, en hij is niet te herstellen, ook niet door ons. Zet hem in je bladwijzers voordat je dit tabblad sluit.',
   change:
-    'Wil je deze app aanpassen? Open de editorlink en zeg onder ‘Aanpassen’ wat er anders moet, net zoals hier. Je eigen coding agent kan het ook, zoals hieronder staat.',
+    'Wil je je website aanpassen? Open de editorlink en beschrijf onder ‘Aanpassen’ wat er anders moet, net als hier. Je eigen AI-assistent kan het ook, zoals hieronder beschreven.',
   copyLink: 'Editorlink kopiëren',
   lifetime: (offline, removed) =>
-    `Je app blijft online zolang hij gebruikt wordt. Na ${offline} dagen zonder bezoek of wijziging gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Open de editor en klik op ‘Deployen’ om hem weer online te zetten.`,
+    `We houden hem online zolang hij gebruikt wordt: na ${offline} dagen zonder bezoek of wijzigingen gaat hij offline, en na ${removed} dagen wordt hij verwijderd. Open de editor om hem weer online te zetten.`,
   openEditor: 'Editor openen',
-  another: 'Nog iets maken',
+  another: 'Nog een website maken',
 
-  keepGoing: 'Verder met je eigen agent',
-  orOwn: 'Of gebruik je eigen agent',
+  keepGoing: 'Ga verder met je eigen AI-assistent',
+  orOwn: 'Of gebruik je eigen AI-assistent',
   ownText:
-    'Achter het vak hierboven zit een Claude die op deze server draait. Heb je al een eigen agent? Koppel die dan hier. Hij kan precies hetzelfde: een lambda maken, de code schrijven en alles online zetten. Zonder daglimiet, en zonder via deze pagina te gaan.',
-  thenAsk: 'Vraag hem daarna wat je wilt, net zoals je hier zou doen.',
-  claudeWeb: 'Claude op het web',
-  claudeWebHow:
-    'Instellingen, dan ‘Connectors’, dan ‘Add custom connector’. Plak het adres hierboven als URL van de remote MCP-server. Je hebt geen sleutel nodig en hoeft niet in te loggen.',
-  howToChange:
-    'Zo pas je ook iets aan als het eenmaal gebouwd is: geef je agent de editorlink en vertel wat hij moet doen.',
-  more: 'Meer over werken met je eigen agent',
+    'Gebruik je al Claude of een andere AI-assistent? Koppel hem hier, dan maakt en wijzigt hij websites voor je op dezelfde manier. Wij hosten ze, dus je hoeft nog steeds niets in te stellen. Er is geen daglimiet.',
+  ownTitle: 'Maak je website met je AI-assistent',
+  ownOnly:
+    'Koppel Claude of een andere AI-assistent aan het adres hieronder en beschrijf de website die je wilt. Hij maakt hem, wij hosten hem op onze servers en hij staat meteen online, met een link om te delen.',
+  thenAsk:
+    'Vertel hem daarna wat je wilt, bijvoorbeeld: “Maak een website voor ons koor met een agenda van onze concerten.”',
+  howToChange: 'Zo pas je een website later ook aan: geef je assistent de editorlink en vertel wat er anders moet.',
 
   failedToStart: 'Starten is niet gelukt.',
   noAnswer: 'Klaar, maar zonder te zeggen wat er gebeurd is.',

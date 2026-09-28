@@ -342,13 +342,11 @@ export const editor: EditorMessages = {
       failed: 'Die Änderung hat nicht geklappt.',
       stopped: 'Die Änderung wurde gestoppt.',
     },
-    offTitle: 'Diese Installation hat keinen Agenten',
-    off: 'Dieser Server hat keinen eigenen Agenten für Änderungen. Ihr eigener Agent kann das übernehmen: Verbinden Sie ihn mit der Adresse unten, geben Sie ihm den Editor-Link und sagen Sie ihm, was anders sein soll.',
-    own: 'Stattdessen Ihren eigenen Agenten nutzen',
+    offTitle: 'Mit Ihrem eigenen Agenten ändern',
+    off: 'Verbinden Sie einen eigenen Agenten – zum Beispiel Claude – mit der Adresse unten, geben Sie ihm den Editor-Link und sagen Sie ihm, was anders sein soll. Er ändert Ihre App hier und stellt sie für Sie online.',
+    own: 'Oder nutzen Sie Ihren eigenen Agenten',
     ownText:
-      'Jeder Agent, der MCP spricht, kann dieses Lambda ändern: Verbinden Sie ihn mit dieser Adresse, geben Sie ihm den Editor-Link und sagen Sie ihm, was anders sein soll. Für ihn gibt es kein Tageslimit und kein Zeitlimit.',
-    mcp: 'MCP-Adresse',
-    editorLink: 'Editor-Link – nicht weitergeben',
+      'Jeder Agent, der MCP spricht, kann diese App ebenfalls ändern: Verbinden Sie ihn mit der Adresse unten, geben Sie ihm den Editor-Link und sagen Sie ihm, was anders sein soll. Ohne Tageslimit und ohne Zeitlimit.',
   },
 
   summary: {

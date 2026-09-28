@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 /** What the frame of every page says, whatever page it is. */
 export const shell = {
   main: 'Main',
-  build: 'Build one',
+  build: 'Create a website',
   ship: 'Ship',
   showcase: 'Showcase',
   enterprise: 'Enterprise',

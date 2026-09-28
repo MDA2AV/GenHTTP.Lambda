@@ -342,13 +342,11 @@ export const editor: EditorMessages = {
       failed: 'Değişiklik yapılamadı.',
       stopped: 'Değişiklik durduruldu.',
     },
-    offTitle: 'Bu kurulumda ajan yok',
-    off: 'Bu sunucunun değişiklik yapacak kendi ajanı yok. Ama sizin ajanınız yapabilir: onu aşağıdaki adrese bağlayın, editör linkini verin ve neyin değişmesi gerektiğini söyleyin.',
-    own: 'Bunun yerine kendi ajanınızı kullanın',
+    offTitle: 'Kendi ajanınızla değiştirin',
+    off: 'Kendi ajanınızı, örneğin Claude’u, aşağıdaki adrese bağlayın, ona editör linkini verin ve neyin farklı olması gerektiğini söyleyin. Uygulamanızı burada değiştirir ve sizin için yayına alır.',
+    own: 'Ya da kendi ajanınızı kullanın',
     ownText:
-      'MCP destekleyen her ajan bu lambdayı değiştirebilir: onu bu adrese bağlayın, editör linkini verin ve neyin değişmesi gerektiğini söyleyin. Günlük sınır da süre sınırı da yok.',
-    mcp: 'MCP adresi',
-    editorLink: 'Editör linki: kimseyle paylaşmayın',
+      'MCP destekleyen her ajan bu uygulamayı da değiştirebilir: onu aşağıdaki adrese bağlayın, editör linkini verin ve neyin farklı olması gerektiğini söyleyin. Günlük sınırı ve süre sınırı yoktur.',
   },
 
   summary: {

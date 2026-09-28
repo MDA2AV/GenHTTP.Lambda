@@ -1,61 +1,68 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Bu kurulumda kapalı',
-  off: (write, mcp) => (
-    <>
-      Bu kurulumda oluşturma ajanı yok. Yine de kodu {write('kendiniz yazabilir')} ya da kendi Claude ajanınızı {mcp}{' '}
-      adresine bağlayabilirsiniz.
-    </>
-  ),
-
-  title: 'Ne istediğinizi söyleyin.',
+  title: 'Fikirden web sitesine.',
   intro:
-    'Uygulamanız yapılır, yayına alınır ve herkese gönderebileceğiniz bir link alırsınız. Hesap yok, kurulum yok. Üstelik uygulamanız bir şeyleri hatırlayabilir: skorları, mesajları, kayıtları. Böylece açan herkes aynı şeyi görür.',
-  placeholder: 'bana bir … yap',
+    'Aklınızdaki web sitesini veya uygulamayı anlatın. Yapay zekâ sizin için oluşturur, biz kendi sunucularımızda barındırırız ve siteniz, herkese gönderebileceğiniz bir linkle hemen yayına girer. Kodlama yok, hosting kurulumu yok, hesap yok.',
+  placeholder: 'Şöyle bir web sitesi istiyorum…',
   working: 'çalışıyor…',
   shortcut: 'ctrl + enter',
   building: 'Oluşturuluyor',
-  buildIt: 'Oluştur',
+  buildIt: 'Web sitemi oluştur',
   builtBy: 'Oluşturan',
   password: 'şifre',
   fable:
     'Fable deneme sürecinde şifreyle korunuyor. Süre sınırı olmadan çalışır: süre dolunca değil, iş bitince durur.',
   onlyNew:
-    'Burada yalnızca yeni uygulamalar oluşturulur. Daha önce yaptığınız bir şeyi değiştirmek için editör linkini açın ve Değiştir bölümünde neyin farklı olması gerektiğini yazın.',
+    'Burada yeni web siteleri oluşturulur. Mevcut bir siteyi değiştirmek için editör linkini açın ve “Değiştir” bölümünde neyin farklı olması gerektiğini anlatın.',
   ideas: [
-    'herkesin tek satırlık mesaj bırakabildiği bir duvar yap',
-    'zar oyunu için bir skor tablosu hazırla',
-    'insanların oy verip sonuçları gördüğü bir anket yap',
-    'düğünüm için bir ziyaretçi defteri yap',
-    'herkesin görebileceği bir geri sayım sayacı yap',
+    'üyelerin etkinliklere kaydolabildiği bir kulüp sitesi',
+    'düğünümüz için bir anı defteri',
+    'insanların oy verip sonuçları gördüğü bir anket',
+    'haftalık bilgi yarışması gecemiz için bir skor tablosu',
+    'herkesin görebileceği, açılışımıza geri sayım',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Sizden önce bir istek var, sıradaki sizsiniz.' : `Sizden önce ${waiting} istek var.`,
+    waiting === 1 ? 'Sizinkinden önce bir web sitesi var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} web sitesi var.`,
   starting: 'Başlıyor…',
 
-  yourApp: 'Uygulamanız',
-  further: 'Geliştirmeye devam etmek için',
-  keep: 'Bu linki saklayın. Uygulamanıza geri dönmenin tek yolu bu ve kaybolursa biz de kurtaramayız. Sekmeyi kapatmadan önce yer imlerine ekleyin.',
+  points: [
+    {
+      title: 'Anlatılır, kodlanmaz',
+      text: 'Web sitenizin ne yapması gerektiğini kendi cümlelerinizle söyleyin. Kodlama ya da teknik bilgi gerekmez.',
+    },
+    {
+      title: 'Hosting dahil',
+      text: 'Web siteniz bizim sunucularımızda çalışır. Hosting, güvenlik ve güncellemelerle biz ilgileniriz; kurmanız ya da takip etmeniz gereken bir şey yoktur.',
+    },
+    {
+      title: 'Dakikalar içinde yayında',
+      text: 'Paylaşabileceğiniz linki hemen alırsınız. Site kayıtları, oyları ve skorları da hatırlayabilir; böylece herkes aynı şeyi görür.',
+    },
+  ],
+
+  yourApp: 'Web siteniz',
+  further: 'Daha sonra değiştirmek için',
+  keep:
+    'Bu linki saklayın. Uygulamanıza geri dönmenin tek yolu bu ve kaybolursa biz de kurtaramayız. Sekmeyi kapatmadan önce yer imlerine ekleyin.',
   change:
-    'Değiştirmek için editör linkini açın ve burada yaptığınız gibi Değiştir bölümünde neyin farklı olması gerektiğini yazın. Aşağıda anlatıldığı gibi kendi kodlama ajanınız da bunu yapabilir.',
+    'Web sitenizi değiştirmek için editör linkini açın ve “Değiştir” bölümünde, burada olduğu gibi neyin farklı olması gerektiğini anlatın. Aşağıda anlatıldığı gibi kendi yapay zekâ asistanınız da bunu yapabilir.',
   copyLink: 'Editör linkini kopyala',
   lifetime: (offline, removed) =>
-    `Kullanıldığı sürece yayında kalır. ${offline} gün boyunca ziyaret ya da değişiklik olmazsa yayından kalkar, ${removed} günün sonunda da silinir. Geri getirmek için editörü açıp Yayına al düğmesine basın.`,
+    `Kullanıldığı sürece yayında tutarız: ${offline} gün boyunca ziyaret veya değişiklik olmazsa yayından kaldırılır, ${removed} gün sonra da silinir. Yeniden yayına almak için editörü açın.`,
   openEditor: 'Editörü aç',
-  another: 'Başka bir şey oluştur',
+  another: 'Başka bir web sitesi oluştur',
 
-  keepGoing: 'Kendi ajanınızla devam edin',
-  orOwn: 'Ya da kendi ajanınızı kullanın',
+  keepGoing: 'Kendi yapay zekâ asistanınızla devam edin',
+  orOwn: 'Ya da kendi yapay zekâ asistanınızı kullanın',
   ownText:
-    'Yukarıdaki kutu, bu sunucuda çalışan bir Claude. Kendi ajanınız varsa onu buraya bağlayın. Aynı şeyleri yapabilir: lambda oluşturur, kodu yazar, yayına alır. Hem de günlük sınır olmadan ve bu sayfaya uğramadan.',
-  thenAsk: 'Sonra ne istediğinizi ona, burada yazdığınız gibi anlatın.',
-  claudeWeb: 'Web’de Claude',
-  claudeWebHow:
-    'Ayarlar, sonra “Connectors”, sonra “Add custom connector”. Yukarıdaki adresi uzak MCP sunucusunun URL’si olarak yapıştırın. Anahtar yok, giriş adımı yok.',
+    'Claude veya başka bir yapay zekâ asistanı mı kullanıyorsunuz? Onu buraya bağlayın; sizin için aynı şekilde web siteleri oluşturur ve değiştirir. Barındırmayı biz yaparız, yani yine kurmanız gereken bir şey yoktur. Günlük sınır yoktur.',
+  ownTitle: 'Web sitenizi kendi yapay zekâ asistanınızla oluşturun',
+  ownOnly:
+    'Claude veya başka bir yapay zekâ asistanını aşağıdaki adrese bağlayın, ardından istediğiniz web sitesini anlatın. Asistan siteyi oluşturur, biz sunucularımızda barındırırız ve site paylaşılabilir bir linkle hemen yayına girer.',
+  thenAsk: 'Sonra ona ne istediğinizi söyleyin, örneğin: “Korumuz için konser takvimi olan bir web sitesi oluştur.”',
   howToChange:
-    'Oluşturduğunuz bir şeyi değiştirmenin yolu da bu: editör linkini ajanınıza verin ve ne yapması gerektiğini söyleyin.',
-  more: 'Ajanla çalışmak hakkında daha fazlası',
+    'Bir siteyi daha sonra da böyle değiştirirsiniz: asistanınıza editör linkini verin ve neyin farklı olması gerektiğini söyleyin.',
 
   failedToStart: 'İstek gönderilemedi.',
   noAnswer: 'Ajan işini bitirdi ama ne olduğunu söylemedi.',

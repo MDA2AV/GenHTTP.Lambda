@@ -120,20 +120,4 @@ export const ship: Messages['ship'] = {
   compareNote:
     'Stan na wrzesień 2026, dla kogoś bez konta w żadnym z tych serwisów. Plany i funkcje innych usług się zmieniają – szczegóły sprawdź u nich.',
 
-  yourAgent: 'Twój agent',
-  terminal: 'Terminal',
-  setups: {
-    claudeCode: 'Uruchom to raz w terminalu. Każdy projekt, który potem otworzysz, będzie mógł tu publikować.',
-    claude: (strong) => (
-      <>
-        W Claude (w przeglądarce albo w aplikacji na komputer) otwórz {strong('Ustawienia')}, potem{' '}
-        {strong('Connectors')} i wybierz {strong('Add custom connector')}. Wklej adres podany wyżej i zapisz. To
-        wszystko.
-      </>
-    ),
-    cursor: 'Dodaj to do ustawień MCP w Cursorze albo do pliku poniżej, a potem przeładuj.',
-    vscode: 'Zapisz to w swoim projekcie, a potem uruchom serwer z widoku MCP w Copilot Chat.',
-  },
-  elsewhere:
-    'Używasz czegoś innego? Windsurf, Codex, Zed i większość innych agentów pozwala dodać zdalny serwer MCP w ustawieniach. Podaj im ten sam adres.',
 };

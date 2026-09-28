@@ -46,20 +46,6 @@ export const landing: Messages['landing'] = {
   agentsTitle: 'Podłącz swojego ulubionego agenta',
   agentsText:
     'Pracujesz już z asystentem AI, takim jak Claude? Podłącz go pod ten adres, a będzie tu budować, wdrażać i aktualizować aplikacje – prosto z rozmowy, którą właśnie prowadzisz.',
-  agents: [
-    {
-      name: 'Claude w przeglądarce lub na komputerze',
-      how: 'Otwórz Ustawienia, potem „Connectors” i wybierz „Add custom connector”. Wklej adres podany wyżej – bez klucza API i bez logowania.',
-    },
-    {
-      name: 'Claude Code',
-      how: 'Uruchom to raz w terminalu:',
-    },
-    {
-      name: 'Inne aplikacje z obsługą MCP',
-      how: 'Cursor, VS Code, Codex i inne aplikacje z obsługą MCP łączą się ze zdalnymi serwerami. Podaj im ten sam adres.',
-    },
-  ],
   thenAsk: (em) => (
     <>Potem po prostu poproś: {em('zrób listę zapisów na naszą integrację i wrzuć ją do sieci')}.</>
   ),

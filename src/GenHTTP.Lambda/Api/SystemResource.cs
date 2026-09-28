@@ -31,7 +31,7 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds, S
     /// The terms, limits and editor vocabulary of this installation.
     /// </summary>
     [ResourceMethod]
-    public PlatformResponse Get() => new(
+    public async ValueTask<PlatformResponse> Get() => new(
         Terms,
         Describe(),
         options.MaxCodeLength,
@@ -39,7 +39,7 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds, S
         (int)options.Retention.TotalDays,
         ModuleCatalog.Imports,
         CompletionCatalog.Items,
-        new BuildAvailability(builds.Available, builds.PerDay, builds.HasSecondModel)
+        new BuildAvailability(await builds.BuildsOfferedAsync(), builds.PerDay, builds.HasSecondModel)
     );
 
     /// <summary>
