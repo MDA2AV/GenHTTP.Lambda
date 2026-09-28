@@ -55,6 +55,10 @@ export function FeatureTab({ control, onNotes, onRebase }: {
   const behind = !feature.mergeable && feature.newest != null;
   const agent = control.agent.state?.available ?? false;
 
+  // what a draft is to somebody who does not read code: what it does, what
+  // was asked for, and whether it can go online - not the files it changes
+  const { simple } = control;
+
   // from the preview, a full path to the lambda is the live lambda - and its real data
   const own = `/lambda/${control.lambda.publicKey}/`;
   const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && file.code.includes(own)).map((file) => file.name);
@@ -71,10 +75,12 @@ export function FeatureTab({ control, onNotes, onRebase }: {
               {said.askAgent}
             </button>
           )}
-          <button type="button" onClick={() => control.edit()} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-            <IconPencil className="h-3.5 w-3.5" />
-            {said.editCode}
-          </button>
+          {!simple && (
+            <button type="button" onClick={() => control.edit()} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+              <IconPencil className="h-3.5 w-3.5" />
+              {said.editCode}
+            </button>
+          )}
         </>
       }
     >
@@ -96,7 +102,9 @@ export function FeatureTab({ control, onNotes, onRebase }: {
               <IconAlert className="h-4 w-4 text-amber-500" />
               {said.behindTitle}
             </h2>
-            <p className="mt-1.5 text-[13px] text-slate-600 dark:text-slate-400">{said.behindText(feature.base, feature.newest!)}</p>
+            <p className="mt-1.5 text-[13px] text-slate-600 dark:text-slate-400">
+              {simple ? t.simple.behindText : said.behindText(feature.base, feature.newest!)}
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {agent && (
                 <button type="button" onClick={() => control.askAgent(feature.key, said.catchUp)} className="btn-primary !px-4 !py-1.5 text-[13px]">
@@ -104,15 +112,17 @@ export function FeatureTab({ control, onNotes, onRebase }: {
                   {said.askCatchUp}
                 </button>
               )}
-              <button type="button" onClick={onRebase} className="btn-ghost !px-3 !py-1.5 text-[13px]">
-                {said.moveBase}
-              </button>
+              {(!simple || !agent) && (
+                <button type="button" onClick={onRebase} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+                  {said.moveBase}
+                </button>
+              )}
             </div>
-            <Missed control={control} from={feature.base} to={feature.newest!} />
+            {!simple && <Missed control={control} from={feature.base} to={feature.newest!} />}
           </div>
         )}
 
-        {leaks.length > 0 && (
+        {leaks.length > 0 && !simple && (
           <p className="mt-5 flex gap-2 text-[13px] text-amber-700 dark:text-amber-400">
             <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{said.leaks(own, leaks.join(', '))}</span>
@@ -136,6 +146,7 @@ export function FeatureTab({ control, onNotes, onRebase }: {
           )}
         </div>
 
+        {!simple && (
         <section className="mt-8">
           <h2 className="text-sm font-medium">{said.changes(feature.base)}</h2>
 
@@ -151,6 +162,7 @@ export function FeatureTab({ control, onNotes, onRebase }: {
             )}
           </div>
         </section>
+        )}
       </div>
     </Section>
   );

@@ -247,18 +247,21 @@ function Badge({ tone, title, children }: { tone: string; title?: string; childr
   );
 }
 
-/** Whether a lambda is online, and with which version. */
-export function StatusBadge({ version }: { version?: number | null }) {
+/**
+ * Whether a lambda is online, and with which version - or, given what to say
+ * instead, only whether: the simple view has no versions to name.
+ */
+export function StatusBadge({ version, online }: { version?: number | null; online?: string }) {
   const words = useShared();
   const live = version != null;
 
   return (
     <Badge
       tone={live ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-400/10 text-slate-500'}
-      title={live ? words.onlineTitle(version) : words.offlineTitle}
+      title={live ? (online ?? words.onlineTitle(version)) : words.offlineTitle}
     >
       <LiveDot live={live} />
-      {live ? words.online(version) : words.offline}
+      {live ? (online ?? words.online(version)) : words.offline}
     </Badge>
   );
 }

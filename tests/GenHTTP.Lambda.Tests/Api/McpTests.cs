@@ -76,7 +76,7 @@ public sealed class McpTests
 
         var named = tools.Select(t => t!["name"]!.GetValue<string>()).ToList();
 
-        foreach (var wanted in (string[])["create_lambda", "write_code", "change_code", "create_feature", "update_feature", "merge_feature",
+        foreach (var wanted in (string[])["create_lambda", "update_lambda", "write_code", "change_code", "create_feature", "update_feature", "merge_feature",
                                           "delete_feature", "check_code", "deploy", "read_lambda", "read_logs", "upload_file", "list_files",
                                           "delete_file", "platform_guide"])
         {
@@ -191,6 +191,58 @@ public sealed class McpTests
 
         Assert.IsTrue(answer["result"]!["isError"]!.GetValue<bool>());
         Assert.AreEqual(0, (await fixture.Meta.CountAsync()).Lambdas, "and no lambda was made anyway");
+    }
+
+    [TestMethod]
+    public async Task AnAgentCanBuildForSomebodyWhoWritesNoCode()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["acceptTerms"] = true,
+            ["publicKey"] = "for-the-owner",
+            ["view"] = "Simple"
+        }));
+
+        Assert.AreEqual("Simple", made["view"]!.GetValue<string>());
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.AreEqual("Simple", read["view"]!.GetValue<string>(), "reading it says which view it opens in");
+
+        var full = Structured(await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey, ["view"] = "full" }));
+
+        Assert.AreEqual("Full", full["view"]!.GetValue<string>());
+        Assert.AreEqual("Full", (await fixture.Meta.GetAsync(privateKey))!.View, "and it is kept");
+    }
+
+    [TestMethod]
+    public async Task AnAgentIsToldWhichViewsThereAre()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        Assert.AreEqual("Full", made["view"]!.GetValue<string>(), "a lambda opens in the full view unless asked otherwise");
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var refused = await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey, ["view"] = "minimal" });
+
+        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
+        Assert.Contains("Simple", Structured(refused)["problem"]!.GetValue<string>(), "the refusal names the views there are");
+
+        var missing = await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey });
+
+        Assert.IsTrue(missing["result"]!["isError"]!.GetValue<bool>(), "there is nothing to change without a view");
+
+        var wrong = await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["view"] = "minimal" });
+
+        Assert.IsTrue(wrong["result"]!["isError"]!.GetValue<bool>());
+        Assert.AreEqual(1, (await fixture.Meta.CountAsync()).Lambdas, "and no lambda was made for it");
     }
 
     [TestMethod]

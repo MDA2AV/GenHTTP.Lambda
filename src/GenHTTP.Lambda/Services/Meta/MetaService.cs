@@ -145,6 +145,30 @@ public sealed class MetaService : IMetaService
         return await DescribeAsync(database, lambda, cancellation);
     }
 
+    public async ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var lambda = await RequireAsync(database, privateKey, cancellation);
+
+        EnsureEditable(lambda);
+
+        if (lambda.View != view)
+        {
+            var previous = lambda.View;
+
+            lambda.View = view;
+            lambda.Modified = DateTime.UtcNow;
+
+            await database.SaveChangesAsync(cancellation);
+
+            Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' now opens in the {Current} view rather than the {Previous} one",
+                                  lambda.Id, lambda.PublicKey, view, previous);
+        }
+
+        return await DescribeAsync(database, lambda, cancellation);
+    }
+
     #endregion
 
     #region Hosting
@@ -279,7 +303,8 @@ public sealed class MetaService : IMetaService
 
     #region Lifecycle
 
-    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, CancellationToken cancellation = default)
+    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full,
+                                                   CancellationToken cancellation = default)
     {
         var requested = !string.IsNullOrWhiteSpace(publicKey);
 
@@ -314,6 +339,7 @@ public sealed class MetaService : IMetaService
                 PublicKey = key,
                 PrivateKey = LambdaKeys.CreatePrivateKey(),
                 Tier = LambdaTier.Free,
+                View = view,
                 Created = now,
                 Modified = now
             };
@@ -1184,7 +1210,7 @@ public sealed class MetaService : IMetaService
         // say when rather than leaving it to be discovered
         return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, DeployedUntil(lambda), KeptUntil(lambda),
-                              lambda.Domain);
+                              lambda.Domain, lambda.View.ToString());
     }
 
     /// <summary>

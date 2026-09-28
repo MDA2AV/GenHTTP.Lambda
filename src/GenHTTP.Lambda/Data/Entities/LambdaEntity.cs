@@ -32,6 +32,11 @@ public sealed class LambdaEntity
     public string? Domain { get; set; }
 
     /// <summary>
+    /// How its editor opens for somebody who has not chosen a view of their own.
+    /// </summary>
+    public EditorView View { get; set; }
+
+    /// <summary>
     /// The version that is currently deployed, if any.
     /// </summary>
     public int? ActiveVersion { get; set; }

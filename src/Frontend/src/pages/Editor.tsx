@@ -19,7 +19,7 @@ import {
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner, IconViewFull, IconViewSimple } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
@@ -31,13 +31,16 @@ import { BaseDialog, DeleteFeatureDialog, MergeDialog, NewFeatureDialog, NotesDi
 import { FeaturesTab } from '../control/FeaturesTab';
 import { FeatureTab } from '../control/FeatureTab';
 import { FilesTab } from '../control/FilesTab';
+import { HistoryTab } from '../control/HistoryTab';
 import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
 import { ShowcaseTab } from '../control/ShowcaseTab';
+import { SimpleOverview } from '../control/SimpleOverview';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
 import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui';
+import { useView, type View } from '../control/view';
 import { SharedWordsContext } from '../control/words';
 import { useEditorT } from '../i18n';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
@@ -49,7 +52,8 @@ interface Props {
 }
 
 type SectionId =
-  | 'overview' | 'change' | 'features' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
+  | 'overview' | 'change' | 'features' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain'
+  | 'history';
 
 /*
  * The showcase and the domain right after the overview: both are about how
@@ -68,6 +72,21 @@ const SECTIONS: SectionId[] = ['overview', 'showcase', 'domain', 'change', 'feat
  * alone until it is put online.
  */
 const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
+
+/*
+ * What the simple view keeps: the app, asking for a change, the drafts a
+ * change can leave to be tried, what changed so far, and how people find it.
+ * Change straight after the overview, since asking for one is what the simple
+ * view is for. Nothing that is about the code - its files, its data as files,
+ * its deployments, its log - and not the figures either, which the overview
+ * sums up in the two that matter. The versions are there, as the history:
+ * the changes the app went through and a way back to any of them, without
+ * the files to compare.
+ */
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'history', 'showcase', 'domain'];
+
+/** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
+const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
 
 /**
  * The control center of one lambda.
@@ -106,9 +125,11 @@ export function Editor({ theme }: Props) {
   const featureKey = segment === 'features' && parts[1] ? parts[1] : null;
   const featureView: FeatureView = FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview';
 
-  const section: SectionId = segment === 'edit' ? 'code' : (SECTIONS.find((id) => id === segment) ?? 'overview');
+  const section: SectionId = segment === 'edit' ? 'code' : ([...SECTIONS, ...SIMPLE_SECTIONS].find((id) => id === segment) ?? 'overview');
 
   const [lambda, setLambda] = useState<Lambda | null>(null);
+  const { view, choose } = useView(lambda?.publicKey, lambda?.view);
+  const simple = view === 'simple';
   const [summary, setSummary] = useState<LambdaSummary | null>(null);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [features, setFeatures] = useState<Feature[] | null>(null);
@@ -271,7 +292,7 @@ export function Editor({ theme }: Props) {
           return false;
         }
 
-        toast(said.online(result.lambda?.activeVersion ?? version ?? ''), 'success');
+        toast(simple ? t.simple.deployed : said.online(result.lambda?.activeVersion ?? version ?? ''), 'success');
         return true;
       } catch (error) {
         toast(error instanceof ApiError ? error.message : said.deployFailed, 'error');
@@ -280,7 +301,7 @@ export function Editor({ theme }: Props) {
         setBusy(null);
       }
     },
-    [privateKey, refresh, toast, said],
+    [privateKey, refresh, toast, said, simple, t],
   );
 
   /** Puts what the open feature holds online at its preview address, saying how it went. */
@@ -328,7 +349,10 @@ export function Editor({ theme }: Props) {
   /** Said once when a change this page watched comes to an end, wherever the owner is. */
   const finished = useCallback(
     (job: ChangeJob) => {
-      const words = t.change.toast;
+      // the simple view has no versions to name
+      const words = simple
+        ? { ...t.change.toast, online: t.simple.results.online, saved: t.simple.results.saved }
+        : t.change.toast;
       const result = job.result;
 
       if (job.state === 'cancelled') {
@@ -347,7 +371,7 @@ export function Editor({ theme }: Props) {
         toast(words.failed, 'error');
       }
     },
-    [t, toast],
+    [t, toast, simple],
   );
 
   const agent = useAgent({
@@ -366,12 +390,14 @@ export function Editor({ theme }: Props) {
   const go = useCallback(
     (to: string) => {
       if (coding && dirty.current && !to.startsWith(coding) && !window.confirm(said.leave)) {
-        return;
+        return false;
       }
 
       dirty.current = false;
       setUnsaved(false);
       navigate(to);
+
+      return true;
     },
     [coding, navigate, said],
   );
@@ -393,9 +419,34 @@ export function Editor({ theme }: Props) {
   const absent = (id: SectionId) =>
     (hidden && id === 'domain')
     || (demo && (id === 'showcase' || id === 'change' || id === 'features'))
-    || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0);
+    || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
+    // the full view has the versions for it - known once the lambda is,
+    // which says which view it opens in
+    || (id === 'history' && lambda != null && !simple);
 
   const away = absent(section);
+
+  // whether the simple view has what is open; when it does not - come to by
+  // a link, say - the page says so rather than pretending it is not there
+  const kept = featureKey ? SIMPLE_FEATURE_VIEWS.includes(featureView) : SIMPLE_SECTIONS.includes(section);
+  const outside = simple && !kept;
+
+  /**
+   * Switches the view, leaving what the simple view does not have for the
+   * overview - or the draft's - and the history for the versions, which are
+   * what it is in the full view.
+   */
+  const switchTo = (next: View) => {
+    if (next === 'simple' && !kept && !go(featureKey ? `${base}/features/${featureKey}` : base)) {
+      return;
+    }
+
+    if (next === 'full' && !featureKey && section === 'history') {
+      go(`${base}/versions`);
+    }
+
+    choose(next);
+  };
 
   // the feature the page is opened on, as last read; undefined until the list arrives
   const open = featureKey && features ? (features.find((f) => f.key === featureKey) ?? null) : undefined;
@@ -480,6 +531,7 @@ export function Editor({ theme }: Props) {
       go(`${base}/change${search ? `?${search}` : ''}`);
     },
     feature: featureControl,
+    simple,
   };
 
   /** A new feature is there: open it where work on it starts. */
@@ -546,7 +598,7 @@ export function Editor({ theme }: Props) {
               {/* pulled left by the padding of a badge, so what they say lines
                   up with the name above and the addresses below */}
               <div className="-ml-2 mt-2 flex flex-wrap items-center gap-1.5">
-                <StatusBadge version={lambda.activeVersion} />
+                <StatusBadge version={lambda.activeVersion} online={simple ? t.simple.badge : undefined} />
                 <TierBadge tier={lambda.tier} />
               </div>
             </div>
@@ -554,7 +606,7 @@ export function Editor({ theme }: Props) {
             <Menu label={said.moreActions} align="start">
               {(close) => (
                 <>
-                  {live && !demo && (
+                  {live && !demo && !simple && (
                     <button type="button" role="menuitem" className={menuItem} disabled={busy !== null}
                             onClick={() => { close(); deploy(lambda.activeVersion!); }}>
                       {said.redeploy(lambda.activeVersion!)}
@@ -573,9 +625,17 @@ export function Editor({ theme }: Props) {
                       {said.rename}
                     </button>
                   )}
-                  <a role="menuitem" href={api.exportUrl(privateKey)} className={menuItem} onClick={close}>
-                    {said.download}
-                  </a>
+                  {!simple && (
+                    <a role="menuitem" href={api.exportUrl(privateKey)} className={menuItem} onClick={close}>
+                      {said.download}
+                    </a>
+                  )}
+                  {/* on a phone the switch below the sections is not there, so it is here */}
+                  <button type="button" role="menuitem" className={`${menuItem} md:hidden`}
+                          onClick={() => { close(); switchTo(simple ? 'full' : 'simple'); }}>
+                    {simple ? <IconViewFull className="h-4 w-4 text-slate-400" /> : <IconViewSimple className="h-4 w-4 text-slate-400" />}
+                    {simple ? t.simple.toFull : t.simple.toSimple}
+                  </button>
                   {!demo && menuRule}
                   {!demo && (
                     <button type="button" role="menuitem" className={`${menuItem} text-red-500`}
@@ -606,7 +666,7 @@ export function Editor({ theme }: Props) {
               title={versions[0]?.change ?? undefined}
             >
               {busy === 'deploy' ? <IconSpinner /> : <IconPlay />}
-              {said.deploy(latest)}
+              {simple ? t.simple.publish : said.deploy(latest)}
             </button>
           )}
 
@@ -618,6 +678,7 @@ export function Editor({ theme }: Props) {
               previewing={previewing}
               unsaved={unsaved}
               compact={featureView === 'code'}
+              simple={simple}
               onPreview={previewFeature}
               onPutOnline={() => setMerging(open.key)}
               onDialog={setFeatureDialog}
@@ -636,6 +697,8 @@ export function Editor({ theme }: Props) {
         </div>
 
         {featureKey ? (
+          // one view is no choice, so the simple view has no row for it
+          !simple && (
           <nav aria-label={t.features.viewsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
             {FEATURE_VIEWS.map((view) => {
               const to = featurePath(featureKey, view);
@@ -666,9 +729,10 @@ export function Editor({ theme }: Props) {
               );
             })}
           </nav>
+          )
         ) : (
         <nav aria-label={said.sectionsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-          {SECTIONS.filter((id) => !absent(id)).map((id) => {
+          {(simple ? SIMPLE_SECTIONS : SECTIONS).filter((id) => !absent(id)).map((id) => {
             const to = id === 'overview' ? base : `${base}/${id}`;
             const current = section === id;
 
@@ -720,6 +784,8 @@ export function Editor({ theme }: Props) {
           })}
         </nav>
         )}
+
+        <ViewSwitch view={view} onSwitch={switchTo} />
       </aside>
 
       <main className={`flex min-w-0 flex-1 flex-col ${code ? 'min-h-0' : ''}`}>
@@ -769,6 +835,24 @@ export function Editor({ theme }: Props) {
           </div>
         )}
 
+        {outside && (
+          <div className="mx-4 mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-ink-800 dark:bg-ink-900 md:mx-0">
+            <IconViewFull className="h-4 w-4 shrink-0 text-slate-400" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{t.simple.outsideTitle}</p>
+              <p className="mt-0.5 text-[13px] text-slate-600 dark:text-slate-400">{t.simple.outsideText}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => go(featureKey ? featurePath(featureKey) : base)} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+                {t.simple.back}
+              </button>
+              <button type="button" onClick={() => choose('full')} className="btn-primary !px-4 !py-1.5 text-[13px]">
+                {t.simple.toFull}
+              </button>
+            </div>
+          </div>
+        )}
+
         {featureKey ? (
           open === undefined ? (
             <div className="flex items-center gap-2 px-4 py-10 text-sm text-slate-500 md:px-0"><IconSpinner /> {t.features.loading}</div>
@@ -793,6 +877,8 @@ export function Editor({ theme }: Props) {
           <FilesTab control={control} />
         ) : section === 'data' ? (
           <DataTab control={control} />
+        ) : section === 'history' && simple ? (
+          <HistoryTab control={control} />
         ) : section === 'versions' ? (
           <VersionsTab control={control} />
         ) : section === 'deployments' ? (
@@ -805,6 +891,8 @@ export function Editor({ theme }: Props) {
           <ShowcaseTab control={control} />
         ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />
+        ) : simple ? (
+          <SimpleOverview control={control} />
         ) : (
           <SummaryTab control={control} />
         )}
@@ -812,12 +900,28 @@ export function Editor({ theme }: Props) {
     </div>
 
       <Dialog
-        title={rejection?.feature ? t.features.previewRejected : rejection?.version != null ? said.rejected(rejection.version) : said.refused}
+        title={rejection?.feature ? t.features.previewRejected : simple ? t.simple.refused : rejection?.version != null ? said.rejected(rejection.version) : said.refused}
         open={rejection !== null}
         onClose={() => setRejection(null)}
         footer={
           <>
-            {(rejection?.version != null || rejection?.feature) && (
+            {/* in the simple view, what is wrong with the code is the agent's to fix, not the owner's to read */}
+            {simple && agent.state?.available && !changing && (
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  const feature = rejection?.feature;
+
+                  setRejection(null);
+                  control.askAgent(feature, feature ? undefined : t.simple.fixRefused);
+                }}
+              >
+                <IconSpark className="h-4 w-4" />
+                {t.simple.fix}
+              </button>
+            )}
+            {!simple && (rejection?.version != null || rejection?.feature) && (
               <button
                 type="button"
                 className="btn-ghost"
@@ -841,10 +945,14 @@ export function Editor({ theme }: Props) {
           </>
         }
       >
-        <p className="text-slate-600 dark:text-slate-400">{rejection?.feature ? t.features.previewNotCompiling : said.notCompiling}</p>
-        <div className="max-h-72 overflow-y-auto border border-slate-200 dark:border-ink-800">
-          <Diagnostics diagnostics={rejection?.diagnostics ?? []} state="idle" onSelect={() => undefined} />
-        </div>
+        <p className="text-slate-600 dark:text-slate-400">
+          {simple ? t.simple.refusedText : rejection?.feature ? t.features.previewNotCompiling : said.notCompiling}
+        </p>
+        {!simple && (
+          <div className="max-h-72 overflow-y-auto border border-slate-200 dark:border-ink-800">
+            <Diagnostics diagnostics={rejection?.diagnostics ?? []} state="idle" onSelect={() => undefined} />
+          </div>
+        )}
       </Dialog>
 
       <NewFeatureDialog
@@ -945,6 +1053,54 @@ export function Editor({ theme }: Props) {
 }
 
 /**
+ * Which view is showing, at the foot of the sidebar: the simple one or every
+ * section. Kept for this lambda in the browser of whoever switches, and
+ * nowhere else (see control/view.ts). On a phone the sidebar is a
+ * row along the top with no room below it, so the menu has the switch there.
+ */
+function ViewSwitch({ view, onSwitch }: { view: View; onSwitch: (view: View) => void }) {
+  const said = useEditorT().simple;
+
+  const options: { id: View; label: string; title: string; Icon: typeof IconViewSimple }[] = [
+    { id: 'simple', label: said.simple, title: said.simpleTitle, Icon: IconViewSimple },
+    { id: 'full', label: said.full, title: said.fullTitle, Icon: IconViewFull },
+  ];
+
+  return (
+    <div className="mt-6 hidden border-t border-slate-200 px-3 pt-4 dark:border-ink-800 md:block">
+      <div id="editor-view" className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{said.view}</div>
+
+      <div role="radiogroup" aria-labelledby="editor-view" className="mt-2 grid grid-cols-2 border border-slate-200 p-0.5 dark:border-ink-800">
+        {options.map(({ id, label, title, Icon }) => {
+          const on = view === id;
+
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              title={title}
+              onClick={() => !on && onSwitch(id)}
+              className={`flex items-center justify-center gap-1.5 px-2 py-1.5 text-[13px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500 ${
+                on
+                  ? 'bg-accent-500/10 font-medium text-accent-700 dark:text-accent-400'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-ink-850 dark:hover:text-slate-200'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mt-2 text-xs leading-relaxed text-slate-500">{view === 'simple' ? said.simpleNote : said.fullNote}</p>
+    </div>
+  );
+}
+
+/**
  * The feature the page is opened on, in the sidebar: what it is called,
  * where it can be tried, and the two things done with it - trying it, and
  * putting it online. The rest is in its menu.
@@ -952,7 +1108,7 @@ export function Editor({ theme }: Props) {
  * Its edge and its name line up with the views listed underneath, which are
  * the feature's own, so it reads as their heading.
  */
-function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, onPreview, onPutOnline, onDialog, onStop, onBack }: {
+function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, simple, onPreview, onPutOnline, onDialog, onStop, onBack }: {
   feature: Feature;
   base: string;
   privateKey: string;
@@ -961,6 +1117,8 @@ function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, 
   unsaved: boolean;
   /** Whether the code is open below it, which has room for little else on a phone. */
   compact: boolean;
+  /** Whether the simple view is showing, which leaves the agent to bring a draft up to date and has no use for its files. */
+  simple: boolean;
   onPreview: () => void;
   onPutOnline: () => void;
   onDialog: (dialog: 'notes' | 'base' | 'delete') => void;
@@ -990,14 +1148,16 @@ function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, 
                 {said.editNotes}
               </button>
               {/* up to date already, there is nothing to mark */}
-              {!feature.mergeable && (
+              {!feature.mergeable && !simple && (
                 <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); onDialog('base'); }}>
                   {said.moveBase}
                 </button>
               )}
-              <a role="menuitem" href={api.feature.zipUrl(privateKey, feature.key)} className={menuItem} onClick={close}>
-                {said.download}
-              </a>
+              {!simple && (
+                <a role="menuitem" href={api.feature.zipUrl(privateKey, feature.key)} className={menuItem} onClick={close}>
+                  {said.download}
+                </a>
+              )}
               {feature.online && (
                 <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); onStop(); }}>
                   {said.stopPreview}

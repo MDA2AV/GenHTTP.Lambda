@@ -73,8 +73,8 @@ path.
 
 | Endpoint                                              | Does                                      |
 |-------------------------------------------------------|-------------------------------------------|
-| `POST /lambdas`                                       | creates a lambda                          |
-| `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key), removes it      |
+| `POST /lambdas`                                       | creates a lambda (optionally with `view`: `Full` or `Simple`) |
+| `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key, its `view`), removes it |
 | `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
@@ -223,6 +223,32 @@ It shares the queue and the daily allowance of `/build`, one change of a
 lambda runs at a time, and it can be stopped - whatever it saved stays, in its
 feature or as a version. A change runs without `create_lambda`, and its editor key travels in
 the brief inside the build container, never in a log line.
+
+### The simple view
+
+Somebody who had an app built on `/build` wants it to do something else, not
+to look after code, files, versions and deployments. So the editor has two
+views. The **simple** one keeps the overview, Change, the drafts (once there
+are any), a history, the showcase and the domain. Its overview is the app:
+whether it is online and where, errors visitors ran into with a button that
+asks the agent to fix them, the latest change, today's hits, and a button to
+ask for the next change. The history is every version as the change it made,
+with a way back to any of them - which is deploying an older version, said as
+what it does. Nothing in it names a version, a file or a log: the Change
+section tells how a change ended without version numbers and shows what the
+agent said rather than the tools it called, a draft is what it does rather
+than the files it changes, and a change that does not compile is the agent's
+to fix rather than a list of compiler errors. The **full** view is every
+section, as before.
+
+Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
+when it is created (`POST /lambdas`, `create_lambda`) and changed later
+(`PATCH /lambdas/:privateKey`, `update_lambda`). The build agent creates its
+lambdas `Simple`; everything else defaults to `Full`. That is only the
+default: whoever switches at the foot of the sidebar (in the menu on a phone)
+has chosen for themselves, for that lambda, which is kept in their browser and
+never sent anywhere - so an operator looking at somebody's lambda in the full
+view leaves it simple for its owner.
 
 ## How it is put together
 
@@ -575,7 +601,7 @@ this server answers rather than streams.
 https://genhttp.dev/mcp
 ```
 
-The tools are the shape of the job: `create_lambda`, `write_code`, `change_code`,
+The tools are the shape of the job: `create_lambda`, `update_lambda`, `write_code`, `change_code`,
 `check_code`, `deploy`, `read_lambda`, `read_logs`, the feature tools
 `create_feature`, `update_feature`, `merge_feature` and `delete_feature`, the
 data tools `upload_file`, `list_files` and `delete_file`, and `list_demos` for

@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -7,13 +8,19 @@ namespace GenHTTP.Lambda.Api.Model;
 /// Asks for a new lambda. The key is optional, a short random one is generated
 /// if none is given.
 /// </summary>
-public sealed record CreateLambdaRequest(string? PublicKey, bool AcceptedTerms, string? Template = null);
+/// <param name="View">
+/// How its editor opens: Full, the default, or Simple - the app, how it is
+/// doing and where to ask for a change, for somebody who is not going to
+/// read the code
+/// </param>
+public sealed record CreateLambdaRequest(string? PublicKey, bool AcceptedTerms, string? Template = null, string? View = null);
 
 /// <summary>
 /// The changes to make to a lambda. What is left out stays as it is.
 /// </summary>
 /// <param name="PublicKey">The key the lambda should move to</param>
-public sealed record UpdateLambdaRequest(string? PublicKey);
+/// <param name="View">How its editor opens for somebody who has not chosen a view of their own: Full or Simple</param>
+public sealed record UpdateLambdaRequest(string? PublicKey, string? View = null);
 
 /// <summary>
 /// A lambda as the editor sees it.
@@ -23,6 +30,7 @@ public sealed record UpdateLambdaRequest(string? PublicKey);
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
 /// <param name="DomainServed">Whether it actually answers at that domain - it has one, and its tier includes it</param>
 /// <param name="Address">Where to link to it: its domain while that is served, its path otherwise</param>
+/// <param name="View">How its editor opens for somebody who has not chosen a view of their own: Full or Simple</param>
 public sealed record LambdaResponse(
     string PublicKey,
     string PrivateKey,
@@ -38,7 +46,8 @@ public sealed record LambdaResponse(
     DateTime? KeptUntil,
     string? Domain,
     bool DomainServed,
-    string Address
+    string Address,
+    string View
 );
 
 /// <summary>
@@ -66,7 +75,8 @@ public static class LambdaDescription
         lambda.KeptUntil,
         lambda.Domain,
         Serves(lambda.Tier, lambda.Domain),
-        Address(lambda.PublicKey, lambda.Tier, lambda.Domain)
+        Address(lambda.PublicKey, lambda.Tier, lambda.Domain),
+        lambda.View
     );
 
     /// <summary>
@@ -86,6 +96,33 @@ public static class LambdaDescription
     /// </summary>
     public static string Address(string publicKey, string tier, string? domain)
         => Serves(tier, domain) ? $"https://{domain}/" : $"/lambda/{publicKey}/";
+}
+
+/// <summary>
+/// Reads the view a lambda's editor is asked to open in.
+/// </summary>
+/// <remarks>
+/// Shared by the REST API and the MCP, so both accept the same words and
+/// refuse the rest with the same sentence.
+/// </remarks>
+public static class EditorViews
+{
+
+    /// <summary>
+    /// The view that was asked for, in any case, or nothing when none was.
+    /// </summary>
+    public static EditorView? Parse(string? view)
+    {
+        if (string.IsNullOrWhiteSpace(view))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<EditorView>(view.Trim(), true, out var parsed) && Enum.IsDefined(parsed)
+            ? parsed
+            : throw LambdaException.Invalid($"There is no view called '{view.Trim()}'. It is either 'Full' or 'Simple'.");
+    }
+
 }
 
 /// <summary>

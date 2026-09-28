@@ -292,6 +292,99 @@ public sealed class ApiTests
     }
 
     [TestMethod]
+    public async Task ALambdaOpensInTheFullViewUnlessAskedOtherwise()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var plain = await fixture.CreateLambdaAsync("for-a-developer");
+
+        Assert.AreEqual("Full", plain.View);
+
+        using var response = await fixture.SendAsync(HttpMethod.Post, "/api/v1/lambdas", new CreateLambdaRequest("for-an-owner", true, View: "simple"));
+
+        Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+        Assert.AreEqual("Simple", (await response.GetContentAsync<LambdaResponse>()).View, "the view is read in any case");
+    }
+
+    [TestMethod]
+    public async Task ALambdaIsNotCreatedWithAViewThereIsNot()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        using var response = await fixture.SendAsync(HttpMethod.Post, "/api/v1/lambdas", new CreateLambdaRequest("fancy", true, View: "fancy"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Simple", (await response.GetContentAsync<ErrorResponse>()).Message, "the refusal names the views there are");
+
+        using var status = await fixture.GetAsync("/api/v1/keys/fancy");
+
+        Assert.IsFalse((await status.GetContentAsync<KeyResponse>()).Exists, "and nothing was made anyway");
+    }
+
+    [TestMethod]
+    public async Task TheViewOfALambdaCanBeChanged()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("changes-view");
+
+        using var simple = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest(null, "Simple"));
+
+        Assert.AreEqual("Simple", (await simple.GetContentAsync<LambdaResponse>()).View);
+
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}");
+
+        var kept = await read.GetContentAsync<LambdaResponse>();
+
+        Assert.AreEqual("Simple", kept.View, "it is kept");
+        Assert.AreEqual("changes-view", kept.PublicKey, "and nothing else changed");
+
+        using var renamed = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest("changed-view"));
+
+        Assert.AreEqual("Simple", (await renamed.GetContentAsync<LambdaResponse>()).View, "a request that leaves it out leaves it alone");
+
+        using var both = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest("view-changed", "full"));
+
+        var changed = await both.GetContentAsync<LambdaResponse>();
+
+        Assert.AreEqual("view-changed", changed.PublicKey);
+        Assert.AreEqual("Full", changed.View);
+    }
+
+    [TestMethod]
+    public async Task AnUpdateWithAViewThereIsNotChangesNothing()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("stays-full");
+
+        using var response = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest("moved-anyway", "compact"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+
+        using var read = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}");
+
+        var kept = await read.GetContentAsync<LambdaResponse>();
+
+        Assert.AreEqual("stays-full", kept.PublicKey, "the key it named did not move either");
+        Assert.AreEqual("Full", kept.View);
+    }
+
+    [TestMethod]
+    public async Task TheViewOfADemoStaysAsItIs()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("some-demo");
+
+        await fixture.MakeDemoAsync("some-demo");
+
+        using var response = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest(null, "Simple"));
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [TestMethod]
     public async Task PathsBelowALambdaNobodyServesAreNotFound()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

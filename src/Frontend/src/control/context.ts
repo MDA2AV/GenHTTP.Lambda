@@ -49,6 +49,12 @@ export interface Control {
   askAgent: (feature?: string, prompt?: string) => void;
   /** The feature being worked on, when the control center is opened on one. */
   feature: FeatureControl | null;
+  /**
+   * Whether the simple view is showing, which says nothing of code, files,
+   * versions or deployments: a section that shows in both leaves out what
+   * only the full view explains.
+   */
+  simple: boolean;
 }
 
 /** The views of a feature: what it is and changes, its code, its copy of the data, what its preview said. */

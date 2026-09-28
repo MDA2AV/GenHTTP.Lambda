@@ -275,7 +275,9 @@ function Composer({
   /** The feature to go on with, as the page suggests it; a new one when null. */
   target: string | null;
 }) {
-  const said = useEditorT().change;
+  const t = useEditorT();
+  const said = t.change;
+  const plain = t.simple;
   const language = useLanguage();
 
   const [online, setOnline] = useState(remembered);
@@ -401,7 +403,7 @@ function Composer({
         />
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 px-3 py-2 dark:border-ink-800">
-          <div className="flex items-center gap-2" title={online ? said.goOnlineOn : said.goOnlineOff}>
+          <div className="flex items-center gap-2" title={control.simple ? (online ? plain.askOnline : plain.askDraft) : online ? said.goOnlineOn : said.goOnlineOff}>
             <Switch on={online} onToggle={toggle} labelledBy="change-online" />
             <span id="change-online" className="text-[13px] text-slate-600 dark:text-slate-400">
               {said.goOnline}
@@ -456,7 +458,7 @@ function Composer({
       </div>
 
       <p className="mt-2 text-xs text-slate-500">
-        {online ? said.goOnlineOn : said.goOnlineOff}
+        {control.simple ? (online ? plain.askOnline : plain.askDraft) : online ? said.goOnlineOn : said.goOnlineOff}
         {model === 'fable' && ` ${said.fable}`}
       </p>
 
@@ -540,7 +542,7 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
 
       {running ? <Progress control={control} job={job} /> : <Outcome control={control} job={job} onAgain={onAgain} />}
 
-      {job.steps.length > 0 && <Timeline job={job} running={running} />}
+      {job.steps.some((step) => !control.simple || step.kind === 'say') && <Timeline job={job} running={running} simple={control.simple} />}
 
       <Dialog
         title={said.stopTitle}
@@ -620,7 +622,7 @@ function Progress({ control, job }: { control: Control; job: ChangeJob }) {
   // the step it is on, when it is on one; what it said last is already on
   // the screen, underneath
   const pending = [...job.steps].reverse().find((step) => step.kind !== 'say');
-  const doing = pending && !pending.done ? <StepText step={pending} said={said} /> : said.working;
+  const doing = pending && !pending.done && !control.simple ? <StepText step={pending} said={said} /> : said.working;
 
   return (
     <div className="px-4 py-3">
@@ -742,7 +744,10 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
 
 function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
   const t = useEditorT();
-  const said = t.change;
+  const { simple } = control;
+
+  // the simple view says what happened to the change, not which version it became
+  const said: Words = simple ? { ...t.change, results: { ...t.change.results, ...t.simple.results } } : t.change;
   const { lambda, busy } = control;
   const result = job.result;
 
@@ -824,7 +829,7 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
           {deployable && (
             <button type="button" onClick={() => control.deploy(version)} disabled={busy !== null} className="btn-primary !px-4 !py-1.5 text-[13px]">
               {busy === 'deploy' ? <IconSpinner className="h-3.5 w-3.5" /> : <IconPlay className="h-3.5 w-3.5" />}
-              {said.deploy(version!)}
+              {simple ? t.simple.deploy : said.deploy(version!)}
             </button>
           )}
 
@@ -835,7 +840,7 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
             </a>
           )}
 
-          {version != null && (
+          {version != null && !simple && (
             <Link to={`/editor/${control.privateKey}/versions?version=${version}`} className="btn-ghost !px-3 !py-1.5 text-[13px]">
               {said.seeChanges}
             </Link>
@@ -846,10 +851,10 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
               type="button"
               onClick={() => control.deploy(before)}
               disabled={busy !== null}
-              title={said.undoTitle}
+              title={simple ? t.simple.undoTitle : said.undoTitle}
               className="btn-ghost !px-3 !py-1.5 text-[13px]"
             >
-              {said.undo(before!)}
+              {simple ? t.simple.undo : said.undo(before!)}
             </button>
           )}
 
@@ -870,9 +875,14 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
  * Everything the agent did, oldest first, in the order it did it. Open and
  * following along while it runs; folded away once it has ended, where the
  * outcome is what is read and this is there for anybody who wants the how.
+ *
+ * The simple view keeps what the agent said and leaves out the tools it
+ * called: "Looking at how the scores are stored" means something to the
+ * owner, "Changing lambda.cs" does not.
  */
-function Timeline({ job, running }: { job: ChangeJob; running: boolean }) {
+function Timeline({ job, running, simple }: { job: ChangeJob; running: boolean; simple: boolean }) {
   const said = useEditorT().change;
+  const steps = simple ? job.steps.filter((step) => step.kind === 'say') : job.steps;
   const list = useRef<HTMLOListElement>(null);
   const [open, setOpen] = useState(running);
 
@@ -889,10 +899,10 @@ function Timeline({ job, running }: { job: ChangeJob; running: boolean }) {
     if (box && following.current) {
       box.scrollTop = box.scrollHeight;
     }
-  }, [job.steps.length, open]);
+  }, [steps.length, open]);
 
   // the last step that has not answered is the one being worked on
-  const current = running ? lastIndex(job.steps, (step) => step.kind !== 'say' && !step.done) : -1;
+  const current = running ? lastIndex(steps, (step) => step.kind !== 'say' && !step.done) : -1;
 
   return (
     <div className="border-t border-slate-200 dark:border-ink-800">
@@ -904,7 +914,7 @@ function Timeline({ job, running }: { job: ChangeJob; running: boolean }) {
       >
         <IconChevronDown className={`h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
         <span className="font-medium">{said.log}</span>
-        {!open && <span className="tabular-nums text-slate-400">{job.steps.filter((step) => step.kind !== 'say').length}</span>}
+        {!open && <span className="tabular-nums text-slate-400">{simple ? steps.length : steps.filter((step) => step.kind !== 'say').length}</span>}
       </button>
 
       {open && (
@@ -916,7 +926,7 @@ function Timeline({ job, running }: { job: ChangeJob; running: boolean }) {
           }}
           className="max-h-[26rem] overflow-y-auto px-4 pb-3"
         >
-          {job.steps.map((step, index) => (
+          {steps.map((step, index) => (
             <Step key={index} step={step} said={said} working={index === current} />
           ))}
         </ol>

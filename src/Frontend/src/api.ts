@@ -25,6 +25,8 @@ export interface Lambda {
   domainServed: boolean;
   /** Where to link to it: its domain while that is served, its path otherwise. See address.ts. */
   address: string;
+  /** How its editor opens for somebody who has not chosen a view of their own: Full or Simple. See control/view.ts. */
+  view: string;
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */

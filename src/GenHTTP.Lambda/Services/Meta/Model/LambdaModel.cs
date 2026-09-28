@@ -9,6 +9,7 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="DeployedUntil">When it goes offline unless used, or nothing while it is offline or its tier keeps it online</param>
 /// <param name="KeptUntil">When it is removed unless used, or nothing when its tier keeps it</param>
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
+/// <param name="View">How its editor opens for somebody who has not chosen a view of their own</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
@@ -20,7 +21,8 @@ public sealed record LambdaInfo(
     DateTime? DeployedAt,
     DateTime? DeployedUntil,
     DateTime? KeptUntil,
-    string? Domain
+    string? Domain,
+    string View
 );
 
 /// <summary>
