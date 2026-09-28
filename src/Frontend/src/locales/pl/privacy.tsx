@@ -28,10 +28,12 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Co mówisz agentowi do budowania',
     agent: (policy) => (
       <>
-        To, co wpisujesz w pole na stronie „Zbuduj”, trafia do Anthropic PBC w Stanach Zjednoczonych. Ta firma prowadzi
-        model Claude, który pisze aplikację. Co Anthropic robi z tymi danymi, opisuje{' '}
-        {policy('polityka prywatności tej firmy')}. Stany Zjednoczone nie chronią danych osobowych tak jak UE. Twoja
-        prośba jest tam wysyłana, bo bez tego nie da się zbudować tego, o co prosisz
+        To, co wpisujesz w pole na stronie „Zbuduj” albo w sekcji „Zmień” w edytorze lambdy, trafia do Anthropic PBC w
+        Stanach Zjednoczonych. Ta firma prowadzi model Claude, który pisze aplikację. Żeby wprowadzić zmianę, agent
+        czyta też lambdę – jej kod, notatki do jej wersji i jej log, w którym są żądania i to, co lambda wypisała, ale
+        nie adresy IP odwiedzających. To, co agent przeczyta, również jest tam wysyłane. Co Anthropic robi z tymi danymi,
+        opisuje {policy('polityka prywatności tej firmy')}. Stany Zjednoczone nie chronią danych osobowych tak jak UE.
+        Twoja prośba jest tam wysyłana, bo bez tego nie da się zbudować ani zmienić tego, o co prosisz
         (art. 6 ust. 1 lit. b i art. 49 ust. 1 lit. b RODO). Nie wpisuj więc niczego, czym nie chcesz się dzielić.
       </>
     ),

@@ -28,10 +28,13 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Wat je aan de bouwagent vraagt',
     agent: (policy) => (
       <>
-        Wat je op de pagina ‘App maken’ in het invoervak typt, wordt naar Anthropic PBC in de Verenigde Staten
-        gestuurd. Anthropic draait Claude, het model dat de app schrijft. Wat Anthropic ermee doet, staat in{' '}
+        Wat je op de pagina ‘App maken’ of in het onderdeel ‘Aanpassen’ in de editor van een lambda in het invoervak
+        typt, wordt naar Anthropic PBC in de Verenigde Staten gestuurd. Anthropic draait Claude, het model dat de app
+        schrijft. Om een wijziging door te voeren, leest de agent ook de lambda: de code, de notities bij de versies en
+        het log, met de requests en de output van de lambda, maar niet de IP-adressen van bezoekers. Ook wat hij leest,
+        wordt daarheen gestuurd. Wat Anthropic ermee doet, staat in{' '}
         {policy('het eigen privacybeleid van Anthropic')}. De Verenigde Staten beschermen persoonsgegevens niet zoals de
-        EU dat doet. Je verzoek gaat daarheen omdat dat nodig is om te bouwen wat je vroeg
+        EU dat doet. Je verzoek gaat daarheen omdat dat nodig is om te bouwen of aan te passen wat je vroeg
         (art. 6 lid 1 sub b en art. 49 lid 1 sub b AVG). Zet er dus niets in wat je niet met anderen wilt delen.
       </>
     ),

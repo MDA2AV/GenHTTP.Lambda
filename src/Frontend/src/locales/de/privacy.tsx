@@ -28,10 +28,13 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Was Sie dem Build-Agenten sagen',
     agent: (policy) => (
       <>
-        Was Sie auf der Seite „App bauen“ in das Eingabefeld tippen, geht an Anthropic PBC in den USA. Anthropic
-        betreibt Claude, das Modell, das die App schreibt. Was Anthropic damit macht, steht in{' '}
+        Was Sie auf der Seite „App bauen“ oder im Bereich „Ändern“ im Editor eines Lambdas in das Eingabefeld tippen,
+        geht an Anthropic PBC in den USA. Anthropic betreibt Claude, das Modell, das die App schreibt. Um eine Änderung
+        vorzunehmen, liest der Agent außerdem das Lambda – seinen Code, die Notizen zu seinen Versionen und sein Log,
+        das seine Requests und seine Ausgaben enthält, aber nicht die IP-Adressen seiner Besucher. Auch was er dabei liest,
+        wird dorthin geschickt. Was Anthropic damit macht, steht in{' '}
         {policy('der Datenschutzerklärung von Anthropic')}. Die USA schützen personenbezogene Daten nicht so wie die EU.
-        Ihre Anfrage wird dorthin geschickt, weil das nötig ist, um zu bauen, was Sie möchten
+        Ihre Anfrage wird dorthin geschickt, weil das nötig ist, um zu bauen oder zu ändern, was Sie möchten
         (Art. 6 Abs. 1 lit. b und Art. 49 Abs. 1 lit. b DSGVO). Schreiben Sie also nichts hinein, was Sie nicht
         weitergeben möchten.
       </>
