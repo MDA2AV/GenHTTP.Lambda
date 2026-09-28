@@ -52,8 +52,10 @@ verify() {
   status=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null || echo missing)
   [ "$status" = healthy ] && ok "container healthy" || { bad "container is '$status'"; failed=1; }
 
+  # -L because the root answers with a redirect to the visitor's language
+  # (/ -> /en); without it this is a 302 on a perfectly healthy site.
   local code
-  code=$(curl -s --max-time 20 -o /dev/null -w '%{http_code}' "$SITE/" || echo 000)
+  code=$(curl -sL --max-time 20 -o /dev/null -w '%{http_code}' "$SITE/" || echo 000)
   [ "$code" = 200 ] && ok "site answering (HTTP $code)" || { bad "site returned $code"; failed=1; }
 
   # The check that catches a missing agent overlay, which is otherwise
@@ -116,7 +118,7 @@ say "Waiting for it to come back"
 # that is in fact perfectly fine - a false alarm every time, which is the kind
 # that teaches you to ignore the real one.
 for _ in $(seq 1 60); do
-  code=$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "$SITE/" || echo 000)
+  code=$(curl -sL --max-time 5 -o /dev/null -w '%{http_code}' "$SITE/" || echo 000)
   health=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null || echo missing)
   [ "$code" = 200 ] && [ "$health" = healthy ] && break
   sleep 3
