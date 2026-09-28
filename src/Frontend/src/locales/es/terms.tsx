@@ -3,37 +3,37 @@ import type { Messages } from '../en';
 export const terms: Messages['terms'] = {
   title: 'Condiciones del servicio',
   binding: (english) => (
-    <>Esta traducción se ofrece únicamente a título informativo. La versión vinculante es la {english('versión en inglés')}.</>
+    <>Esta traducción es solo informativa. La única versión vinculante es la {english('original en inglés')}.</>
   ),
   intro:
-    'Este es un servicio gratuito para realizar pruebas. Ejecuta código escrito por terceros en una infraestructura compartida, lo cual solo es viable si todos respetan unas pocas normas.',
+    'Este es un servicio gratuito para probar cosas. Ejecuta código escrito por desconocidos en una infraestructura compartida, y eso solo funciona si todos cumplen unas pocas reglas.',
   sections: {
-    forbiddenTitle: 'Contenidos no permitidos',
+    forbiddenTitle: 'Lo que no puedes publicar aquí',
     forbidden: [
-      'Ni malware, ni phishing, ni mineros de criptomonedas. Nada que ataque, analice, sature o interfiera de otro modo con otros sistemas, aquí o en cualquier otro lugar. Nada que acose a otras personas. Nada que no tenga derecho a publicar, incluidos código, textos, imágenes y marcas de terceros.',
-      'No utilice un lambda para almacenar ni reenviar datos personales de otras personas. Una dirección pública no tiene nada de privado, y esta plataforma no ofrece ningún medio para proteger dichos datos.',
+      'Nada de malware, phishing ni mineros de criptomonedas. Nada que ataque, escanee, sature o interfiera de cualquier otra forma con otros sistemas, aquí o en cualquier otro lugar. Nada que acose a nadie. Nada que no tengas derecho a publicar, y eso incluye código, textos, imágenes y marcas de otras personas.',
+      'No uses una lambda para guardar ni reenviar datos personales de otras personas. Una dirección pública no tiene nada de privado, y esta plataforma no te ofrece ninguna forma de proteger esos datos.',
     ],
-    actionTitle: 'Medidas que podemos adoptar',
+    actionTitle: 'Lo que podemos hacer al respecto',
     action:
-      'Cualquier contenido desplegado aquí puede desconectarse o eliminarse en cualquier momento, sin previo aviso y sin obligación de justificarlo. En la práctica, esto ocurre cuando se infringen las normas anteriores, cuando se pone en riesgo el servidor compartido o cuando alguien lo denuncia con fundamento.',
-    lastingTitle: 'Duración',
+      'Cualquier cosa desplegada aquí puede desconectarse o eliminarse en cualquier momento, sin aviso y sin obligación de dar explicaciones. En la práctica, eso pasa cuando algo incumple las reglas de arriba, cuando pone en riesgo la máquina que todos comparten o cuando alguien lo denuncia y resulta que tiene razón.',
+    lastingTitle: 'Cuánto dura cada cosa',
     lasting: (hours, days) =>
-      `Un despliegue permanece accesible aproximadamente ${hours} horas. Un lambda que no haya abierto se elimina, junto con todas las versiones de su código, unos ${days} días después de su última modificación. Guardar o desplegar cuenta como modificación, por lo que todo aquello en lo que esté trabajando se conserva. Nada de esto constituye una copia de seguridad: conserve su propia copia del código que le importe.`,
-    keyTitle: 'Su enlace de edición es su contraseña',
-    key: 'Cualquier persona que disponga del enlace de edición puede leer y modificar ese lambda; no hay ninguna cuenta ni contraseña asociada. Publicar el enlace equivale a permitir que otros lo modifiquen. Un enlace perdido no puede recuperarse.',
+      `Un despliegue sigue accesible unas ${hours} horas. Una lambda que no hayas abierto se elimina, con todas las versiones de su código, unos ${days} días después de la última vez que la tocaste. Guardar o desplegar cuenta como tocarla, así que lo que tengas entre manos se conserva. Nada de esto es una copia de seguridad: guarda tu propia copia del código que te importe.`,
+    keyTitle: 'Tu enlace de edición es tu contraseña',
+    key: 'Cualquiera que tenga el enlace de edición puede leer y cambiar esa lambda, y no hay ninguna cuenta ni contraseña detrás. Si publicas el enlace, publicas también la posibilidad de cambiarla. Si lo pierdes, no hay forma de recuperarlo.',
     warrantyTitle: 'Sin garantía',
     warranty:
-      'El servicio se ofrece tal cual, sin garantía de que funcione, siga funcionando o conserve lo que usted almacene en él. Puede reiniciarse, modificarse o interrumpirse en cualquier momento. No base en él nada que sea importante para usted o para terceros.',
-    reportTitle: 'Denuncias',
+      'El servicio se ofrece tal cual, sin garantía de que funcione, de que siga funcionando ni de que conserve lo que pongas en él. Puede reiniciarse, cambiarse o apagarse en cualquier momento. No construyas aquí nada que sea importante para ti ni para nadie.',
+    reportTitle: 'Cómo denunciar algo',
     report: (mailbox, front) => (
       <>
-        Si un lambda alojado aquí hace algo indebido, escriba a {mailbox} indicando su dirección. En la{' '}
-        {front('página de inicio')} encontrará qué información incluir.
+        Si una lambda alojada aquí hace algo que no debería, escribe a {mailbox} con su dirección. En la{' '}
+        {front('página de inicio')} verás qué incluir.
       </>
     ),
   },
-  change: 'Estas condiciones pueden cambiar. La versión aplicable es la publicada en esta página.',
+  change: 'Estas condiciones pueden cambiar. La versión que se aplica es la de esta página.',
 
   short:
-    'Los lambdas se ejecutan en una infraestructura compartida. Al crear uno, usted se compromete a no desplegar malware, páginas de phishing, mineros de criptomonedas ni nada que ataque, analice o sature otros sistemas, y a no publicar contenidos sobre los que no tenga derechos. Cualquiera que conozca el enlace de edición puede modificar su lambda, por lo que debe tratarlo como una contraseña. Los lambdas del plan gratuito permanecen en línea mientras se utilizan: uno que nadie visite ni modifique durante un mes se desconecta y se elimina si no hay actividad durante los dos meses siguientes. Cualquier contenido desplegado puede eliminarse en cualquier momento.',
+    'Las lambdas se ejecutan en una infraestructura compartida. Al crear una, aceptas no desplegar malware, páginas de phishing, mineros de criptomonedas ni nada que ataque, escanee o sature otros sistemas, y no publicar contenido que no tengas derecho a publicar. Cualquiera que conozca el enlace de edición puede cambiar tu lambda, así que trátalo como una contraseña. Las lambdas del plan gratuito siguen en línea mientras se usen: si nadie visita ni edita una durante un mes, se desconecta, y se elimina si no pasa nada en los dos meses siguientes. Todo lo que despliegues puede eliminarse en cualquier momento.',
 };

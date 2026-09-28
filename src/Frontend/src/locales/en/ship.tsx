@@ -102,7 +102,8 @@ export const ship = {
     public: 'Public',
     onlyYou: 'Only you',
     app: 'Friday quiz night',
-    playing: 'playing',
+    /** Who is in the app, around the number: "3 playing", where Japanese writes "3人がプレイ中". */
+    playing: (count: ReactNode) => <>{count} playing</>,
     you: 'You',
   },
 

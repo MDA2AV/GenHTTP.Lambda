@@ -1,142 +1,137 @@
 import type { Messages } from '../en';
 
 export const ship: Messages['ship'] = {
-  title: 'Do seu computador para todas as telas.',
+  title: 'Do seu notebook para a tela de todo mundo.',
   intro:
-    'Você criou algo com seu agente de programação, mas ele só funciona na sua máquina. Peça ao agente que o publique aqui. Poucos minutos depois, a aplicação terá um link público que qualquer pessoa pode abrir e poderá guardar dados, permitindo que várias pessoas joguem, conversem e publiquem nela em conjunto.',
-  facts: ['Gratuito', 'Sem conta', 'Sem instalação'],
+    'Você criou algo com seu agente de código, mas ele só roda na sua máquina. Peça para o agente publicar aqui. Em poucos minutos, o app ganha um link público que qualquer pessoa pode abrir. E ele guarda dados: as pessoas podem jogar, conversar e postar juntas.',
+  facts: ['Grátis', 'Sem conta', 'Nada para instalar'],
   connect: 'Conectar seu agente',
-  seeOthers: 'Ver aplicações publicadas',
+  seeOthers: 'Ver o que outros publicaram',
 
   stepsTitle: 'Três passos, e um deles é uma frase',
   step: (n) => `Passo ${n}`,
   steps: [
     {
-      title: 'Conexão única',
-      body: 'Adicione um endereço ao Claude, ao Cursor ou ao agente com que você trabalha. Leva menos de um minuto e é necessário apenas uma vez.',
+      title: 'Conecte uma vez',
+      body: 'Adicione um endereço ao Claude, ao Cursor ou ao agente que você usa. Leva menos de um minuto, e é só uma vez.',
     },
     {
-      title: 'Solicitação de publicação',
-      body: 'Peça ao agente que coloque a aplicação no ar aqui. Ele a empacota, publica e verifica se está respondendo.',
+      title: 'Peça para publicar',
+      body: 'Diga para ele colocar o app no ar aqui. Ele empacota o app, publica e confere se está respondendo.',
     },
     {
-      title: 'Compartilhamento do link',
-      body: 'Você recebe um endereço público e um link de edição privado. O primeiro pode ser compartilhado com qualquer pessoa; guarde o segundo, pois é com ele que você alterará a aplicação depois.',
+      title: 'Compartilhe o link',
+      body: 'Você recebe um endereço público e um link de edição privado. Mande o primeiro para quem quiser. Guarde o segundo: é com ele que você muda o app depois.',
     },
   ],
 
-  togetherTitle: 'Mais do que uma página: um espaço compartilhado.',
+  togetherTitle: 'Não é só uma página. É um ponto de encontro.',
   together:
-    'A maioria das hospedagens entrega a cada visitante uma cópia própria da aplicação, e cada um a utiliza isoladamente. Aqui, cada aplicação tem sua própria memória e uma conexão em tempo real com todas as pessoas que a têm aberta. Uma ação de uma pessoa aparece imediatamente para as demais, e o que é publicado permanece salvo.',
+    'A maioria das hospedagens entrega uma cópia do app para cada visitante, e cada um joga sozinho. Aqui, todo app tem memória própria e uma conexão ao vivo com todo mundo que está com ele aberto. O que uma pessoa faz aparece na hora para as outras, e o que elas postam continua lá amanhã.',
   together2:
-    'Sem banco de dados para contratar e sem serviços adicionais para integrar. Basta descrever a funcionalidade desejada.',
+    'Sem banco de dados para contratar, sem outro serviço para integrar. Peça do jeito que você explicaria para um amigo.',
   kinds: [
-    { name: 'Jogos multijogador', ask: 'Permita que até oito pessoas participem da mesma partida e vejam as jogadas umas das outras em tempo real.' },
-    { name: 'Salas de bate-papo', ask: 'Adicione uma sala em que todos com o link possam conversar e guarde as últimas cem mensagens.' },
-    { name: 'Listas compartilhadas', ask: 'Transforme a lista de bagagem em uma lista que toda a equipe possa editar ao mesmo tempo.' },
-    { name: 'Pontuações e recordes', ask: 'Mantenha um ranking com o melhor tempo de cada pessoa e mostre os dez primeiros na tela inicial.' },
-    { name: 'Pequenas comunidades', ask: 'Permita que os convidados do casamento publiquem fotos em um mural comum e curtam as dos demais.' },
+    { name: 'Jogos multiplayer', ask: 'Deixa até oito amigos entrarem na mesma rodada e verem as jogadas uns dos outros ao vivo.' },
+    { name: 'Salas de chat', ask: 'Adiciona uma sala onde todo mundo com o link pode conversar, e guarda as últimas cem mensagens.' },
+    { name: 'Listas compartilhadas', ask: 'Transforma a lista do que levar em uma lista que a equipe toda edita ao mesmo tempo.' },
+    { name: 'Placares e recordes', ask: 'Cria um ranking com o melhor tempo de cada um e mostra o top 10 na tela inicial.' },
+    { name: 'Mini redes sociais', ask: 'Deixa os convidados do casamento postarem fotos num mural e curtirem as dos outros.' },
   ],
   quote: (text) => `“${text}”`,
 
-  connectTitle: 'Conecte seu agente uma única vez',
-  connectText:
-    'Informe este endereço ao seu agente. A partir daí, ele saberá publicar aqui, sem chave e sem login.',
-  sayLike: 'Depois, no seu projeto, basta pedir algo como',
+  connectTitle: 'Conecte seu agente uma vez',
+  connectText: 'Passe este endereço para o seu agente. A partir daí, ele sabe publicar aqui, sem chave e sem login.',
+  sayLike: 'Depois, no seu projeto, diga algo como',
   asks: [
-    'Publique esta aplicação no GenHTTP Lambda e me envie o link.',
-    'Torne as pontuações compartilhadas, para que todos vejam o mesmo ranking.',
+    'Publica este app no GenHTTP Lambda e me manda o link.',
+    'Deixa os recordes compartilhados, para todo mundo ver o mesmo ranking.',
   ],
 
-  domainChip: 'Quando a aplicação ganha escala',
-  domainTitle: 'Um domínio próprio',
+  domainChip: 'Quando fizer sucesso',
+  domainTitle: 'Um domínio só dele',
   domainText:
-    'A mesma aplicação e o mesmo link de edição, mas em um endereço que pertence a você: mais fácil de divulgar, de memorizar e com uma apresentação mais profissional quando compartilhado.',
-  domainSubject: 'Um domínio para minha aplicação',
-  domainAsk: 'Solicitar um domínio próprio',
+    'O mesmo app, o mesmo link de edição, mas em um endereço que é seu. Mais fácil de falar, mais fácil de lembrar, e com cara de profissional quando as pessoas começarem a compartilhar.',
+  domainSubject: 'Um domínio para o meu app',
+  domainAsk: 'Pergunte sobre seu domínio',
 
-  questionsTitle: 'Perguntas frequentes',
+  questionsTitle: 'Antes que você pergunte',
   questions: (offline, removed, showcase, terms) => [
     [
-      'É realmente gratuito?',
+      'É grátis mesmo?',
       <>
-        Sim. Sem cartão, sem período de teste e sem conta. Sua aplicação permanece no ar enquanto for utilizada. Após{' '}
-        {offline} dias sem nenhum acesso ou alteração, ela sai do ar e, após {removed} dias, é removida.
+        Sim. Sem cartão, sem período de teste e sem conta. Seu app fica no ar enquanto as pessoas usarem. Depois de{' '}
+        {offline} dias sem nenhuma visita ou mudança, ele sai do ar, e depois de {removed} dias é removido.
       </>,
     ],
     [
-      'Minha aplicação precisa seguir uma estrutura específica?',
-      'Não, seu agente cuida disso. Páginas, imagens e estilos são publicados como estão, e o agente adapta a esta plataforma tudo o que precisa ser executado no servidor. Você descreve o que a aplicação deve fazer, e o agente se encarrega da implementação.',
+      'Meu app precisa ser feito de um jeito específico?',
+      'Não, seu agente cuida disso. Páginas, imagens e estilos sobem do jeito que estão, e o que precisa rodar no servidor o agente adapta para esta plataforma. Você descreve o que o app deve fazer, e ele faz a tradução.',
     ],
     [
-      'Como faço alterações depois?',
-      'Com o link de edição recebido na publicação. Entregue-o ao seu agente com a próxima alteração ou abra-o no navegador. Cada alteração se torna uma nova versão no mesmo endereço, e você pode voltar a uma versão anterior a qualquer momento.',
+      'Como eu mudo o app depois?',
+      'Com o link de edição que você recebeu ao publicar. Passe para o seu agente junto com a próxima mudança, ou abra no navegador. Cada mudança vira uma nova versão no mesmo endereço, e você pode voltar para uma versão anterior quando quiser.',
     ],
     [
-      'Quem pode ver minha aplicação?',
+      'Quem pode ver meu app?',
       <>
-        Qualquer pessoa a quem você enviar o link. Ela não é listada em lugar nenhum, a menos que você decida adicioná-la à{' '}
-        {showcase('vitrine')}.
+        Qualquer pessoa que tiver o link. O app não fica listado em lugar nenhum, a não ser que você decida mostrar
+        na {showcase('vitrine')}.
       </>,
     ],
     [
-      'Há algo que não posso publicar?',
-      <>
-        Sim, por exemplo qualquer conteúdo que prejudique ou engane pessoas. Os {terms('termos de serviço')} são curtos e
-        escritos de forma clara.
-      </>,
+      'Tem algo que eu não posso publicar?',
+      <>Poucas coisas, como algo que prejudique ou engane pessoas. Os {terms('termos')} são curtos e em linguagem simples.</>,
     ],
   ],
 
   closeTitle: 'Funciona na sua máquina.',
-  closeAccent: 'Faça funcionar para todos.',
+  closeAccent: 'Agora, na de todo mundo.',
   noAgent: 'Sem agente? Crie aqui',
-  closeFacts: 'Gratuito. Sem conta. Sem instalação.',
+  closeFacts: 'Grátis. Sem conta. Nada para instalar.',
 
   scene: {
-    label:
-      'Um agente recebe o pedido de publicar uma aplicação. O endereço muda de localhost para um link público, e outras pessoas entram.',
-    ask: 'Coloque meu jogo de perguntas no ar para que meus amigos possam participar.',
-    live: 'Está no ar. Este é o seu link.',
+    label: 'Um agente recebe o pedido de publicar um app. O endereço muda de localhost para um link público, e as pessoas entram.',
+    ask: 'Coloca meu quiz no ar para os meus amigos entrarem.',
+    live: 'Pronto, está no ar. Aqui está o link.',
     publishing: 'Publicando…',
     public: 'Público',
-    onlyYou: 'Local',
-    app: 'Noite de perguntas de sexta',
-    playing: 'online',
+    onlyYou: 'Só você',
+    app: 'Quiz de sexta',
+    playing: (count) => <>{count} jogando</>,
     you: 'Você',
   },
 
-  compareTitle: 'O caminho mais curto de “funciona” para “experimente”',
+  compareTitle: 'O caminho mais curto entre “funciona” e “testa aí”',
   compareText:
-    'Vercel, Cloudflare e Lovable são ótimas plataformas para executar aplicações. No entanto, exigem cadastro e, assim que sua aplicação precisa compartilhar dados entre visitantes, a configuração de um serviço adicional. Veja a comparação para quem começa do zero.',
+    'Vercel, Cloudflare e Lovable são ótimos lugares para rodar coisas. Mas todos começam com um cadastro. E, quando seu app precisa compartilhar algo entre visitantes, você ainda tem que configurar outro serviço. Veja como fica quando você começa do zero.',
   rows: [
     'Começar sem conta',
-    'Publicar a partir do agente que você já usa',
-    'Dados compartilhados em tempo real: chat, multijogador, recordes',
+    'Publicar pelo agente que você já usa',
+    'Dados compartilhados ao vivo: chat, multiplayer, recordes',
     'Custo até o primeiro link',
   ],
-  us: ['Sim', 'Uma conexão, depois basta pedir', 'Incluído em cada aplicação', 'Gratuito'],
+  us: ['Sim', 'Conecte uma vez e é só pedir', 'Já vem em todo app', 'Grátis'],
   rivals: [
-    ['Cadastro necessário', 'Com ferramentas próprias, após login', 'Adicionar um serviço de banco de dados', 'Plano gratuito'],
-    ['Cadastro necessário', 'Com ferramentas próprias, após login', 'Possível, com configuração', 'Plano gratuito'],
-    ['Cadastro necessário', 'Em editor próprio', 'Por meio de um backend conectado', 'Plano gratuito, créditos limitados'],
+    ['Precisa de cadastro', 'Com login nas ferramentas deles', 'Com um banco de dados à parte', 'Plano grátis'],
+    ['Precisa de cadastro', 'Com login nas ferramentas deles', 'Possível, com configuração', 'Plano grátis'],
+    ['Precisa de cadastro', 'Criado no editor deles', 'Por um backend conectado', 'Plano grátis, créditos limitados'],
   ],
   compareNote:
-    'Situação em setembro de 2026, para quem não possui conta em nenhum serviço. Planos e recursos de outros serviços mudam; consulte os detalhes diretamente com cada um.',
+    'Em setembro de 2026, para quem não tem conta em lugar nenhum. Planos e recursos de outros serviços mudam; confira os detalhes com eles.',
 
   yourAgent: 'Seu agente',
   terminal: 'Terminal',
   setups: {
-    claudeCode: 'Execute isto uma vez em um terminal. Todo projeto aberto depois poderá publicar aqui.',
+    claudeCode: 'Rode isto uma vez no terminal. Todo projeto que você abrir depois já pode publicar aqui.',
     claude: (strong) => (
       <>
-        No Claude na web ou no desktop, abra as {strong('Configurações')}, depois {strong('Connectors')}, e escolha{' '}
-        {strong('Add custom connector')}. Cole o endereço acima e salve. Nenhuma outra etapa é necessária.
+        No Claude na web ou no desktop, abra {strong('Configurações')}, depois {strong('Connectors')}, e escolha{' '}
+        {strong('Add custom connector')}. Cole o endereço acima e salve. Só isso.
       </>
     ),
-    cursor: 'Adicione isto às configurações MCP do Cursor, ou ao arquivo indicado abaixo, e recarregue.',
-    vscode: 'Salve este arquivo no seu projeto e, em seguida, inicie o servidor na visualização MCP do Copilot Chat.',
+    cursor: 'Adicione isto nas configurações de MCP do Cursor, ou no arquivo abaixo, e recarregue.',
+    vscode: 'Salve isto no seu projeto e inicie o servidor pelo painel MCP do Copilot Chat.',
   },
   elsewhere:
-    'Usa outra ferramenta? Windsurf, Codex, Zed e a maioria dos agentes permitem adicionar um servidor MCP remoto nas configurações. Informe a eles o endereço acima.',
+    'Usa outra ferramenta? Windsurf, Codex, Zed e a maioria dos outros agentes aceitam um servidor MCP remoto nas configurações. Passe o endereço acima para eles.',
 };

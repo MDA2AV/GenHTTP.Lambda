@@ -22,6 +22,58 @@
   ::selection {
     @apply bg-accent-500/20;
   }
+
+  /*
+   * Headings are set large, and a language with long words - German,
+   * Turkish, Dutch - can have one wider than a phone. Such a word is broken
+   * rather than pushing the whole page sideways; one that fits never is.
+   * Their lines are evened out too, so a longer translation does not end on
+   * a single word alone.
+   */
+  :is(h1, h2, h3) {
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+  }
+
+  /*
+   * Japanese and Korean. The system faces the stack starts with have no
+   * kanji or hangul, and a browser left to fall back on its own may draw
+   * Japanese in a Chinese face - the same characters, shaped differently. So
+   * each names its own faces, on the root only: set on every element, it
+   * would win over the monospace face code is shown in.
+   */
+  html:lang(ja) {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP',
+      'Yu Gothic UI', 'Yu Gothic', Meiryo, system-ui, sans-serif;
+    /* no small kana or closing bracket at the start of a line */
+    line-break: strict;
+  }
+
+  html:lang(ko) {
+    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic',
+      system-ui, sans-serif;
+    /* Korean puts spaces between its words, and a word broken in the middle
+       reads as two - so lines break where the spaces are, as they would in
+       English */
+    word-break: keep-all;
+  }
+
+  /* a heading broken inside a phrase is hard to read, and headings are short */
+  html:lang(ja) :is(h1, h2, h3) {
+    word-break: auto-phrase;
+  }
+
+  /* neither script has italics; a slanted kanji is a distorted one */
+  html:is(:lang(ja), :lang(ko)) em {
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  /* the headlines are set tight for Latin letters, which leave room above
+     and below themselves - these fill their whole square */
+  html:is(:lang(ja), :lang(ko)) h1 {
+    line-height: 1.25;
+  }
 }
 
 @layer utilities {

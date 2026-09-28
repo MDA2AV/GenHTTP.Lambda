@@ -1,28 +1,28 @@
 import type { Messages } from '../en';
 
 export const shell: Messages['shell'] = {
-  main: 'Hauptnavigation',
-  build: 'Erstellen',
-  ship: 'Veröffentlichen',
+  main: 'Hauptmenü',
+  build: 'App bauen',
+  ship: 'Hosten',
   showcase: 'Showcase',
   enterprise: 'Enterprise',
-  docs: 'Dokumentation',
+  docs: 'Docs',
   admin: 'Admin',
-  lightMode: 'Helles Design aktivieren',
-  darkMode: 'Dunkles Design aktivieren',
+  lightMode: 'Zum hellen Design wechseln',
+  darkMode: 'Zum dunklen Design wechseln',
   openMenu: 'Menü öffnen',
   closeMenu: 'Menü schließen',
   language: 'Sprache',
 };
 
 export const common: Messages['common'] = {
-  loading: 'Wird geladen …',
-  loadingEditor: 'Der Editor wird geladen …',
+  loading: 'Lädt …',
+  loadingEditor: 'Editor lädt …',
   editorFailed: 'Der Editor konnte nicht geladen werden',
-  editorFailedWhy: 'In der Regel wurde die Website aktualisiert, während dieser Tab geöffnet war.',
+  editorFailedWhy: 'Meist wurde die Seite aktualisiert, während dieser Tab offen war.',
   reload: 'Seite neu laden',
   backToStart: 'Zur Startseite',
-  tryAgain: 'Erneut versuchen',
+  tryAgain: 'Nochmal versuchen',
   copy: 'Kopieren',
   copied: 'Kopiert',
   copyToClipboard: 'In die Zwischenablage kopieren',
@@ -32,27 +32,26 @@ export const common: Messages['common'] = {
 
 export const notFound: Messages['notFound'] = {
   title: 'Seite nicht gefunden',
-  heading: 'Diese Seite existiert nicht',
-  text: 'Der Link ist möglicherweise veraltet, oder das Lambda, auf das er verwies, wurde gelöscht.',
+  heading: 'Diese Seite gibt es nicht',
+  text: 'Vielleicht ist der Link veraltet, oder das Lambda dahinter wurde gelöscht.',
 };
 
 export const missing: Messages['missing'] = {
-  title: 'Unter dieser Adresse läuft nichts',
-  heading: 'Unter dieser Adresse läuft nichts',
+  title: 'Hier läuft nichts',
+  heading: 'Hier läuft nichts',
   notDeployed: (key) => (
     <>
-      Unter {key} existiert ein Lambda, es ist derzeit jedoch nicht bereitgestellt. Im kostenlosen Tarif bleiben
-      Bereitstellungen online, solange sie genutzt werden, und werden nach einem Monat ohne Aufrufe oder Änderungen
-      offline genommen. Wer über den Editor-Link verfügt, kann das Lambda wieder online stellen.
+      Unter {key} gibt es ein Lambda, aber es ist gerade nicht deployt. Im Free-Tarif bleiben Deployments online,
+      solange sie genutzt werden. Nach einem Monat ohne Besuche oder Änderungen gehen sie offline. Wer den Editor-Link
+      hat, kann das Lambda wieder online stellen.
     </>
   ),
   unknown: (key) => (
     <>
-      Unter {key} ist kein Lambda gehostet. Der Schlüssel hat möglicherweise nie existiert, oder das zugehörige Lambda
-      wurde gelöscht.
+      Unter {key} gibt es kein Lambda. Entweder gab es diesen Schlüssel nie, oder das Lambda dahinter wurde gelöscht.
     </>
   ),
-  create: 'Lambda erstellen',
+  create: 'Hier ein Lambda erstellen',
 };
 
 export const abuse: Messages['abuse'] = {
@@ -61,22 +60,21 @@ export const abuse: Messages['abuse'] = {
   write: 'E-Mail schreiben',
   subject: 'Missbrauchsmeldung',
   intro:
-    'Auf dieser Plattform kann jede Person Code veröffentlichen. Gelegentlich wird dabei auch Unzulässiges veröffentlicht. Wenn eine hier gehostete Seite Personen täuscht, andere Systeme angreift oder Inhalte ohne entsprechende Rechte verwendet, informieren Sie uns bitte – wir nehmen sie offline.',
+    'Hier kann jeder Code online stellen. Manchmal ist leider auch etwas dabei, das hier nichts zu suchen hat. Täuscht eine Seite Menschen, greift sie etwas an oder nutzt sie Inhalte ohne Erlaubnis? Dann sagen Sie uns Bescheid, und wir nehmen sie offline.',
   how: (mailbox, strong, path) => (
     <>
-      Schreiben Sie an {mailbox} und nennen Sie {strong('die Adresse der Seite')} – sie hat die Form {path} – sowie
-      kurz das Problem. Ein Screenshot ist hilfreich. Ein Konto oder eine Nutzung dieser Plattform ist dafür nicht
-      erforderlich.
+      Schreiben Sie an {mailbox} und nennen Sie {strong('die Adresse der Seite')} – sie sieht aus wie {path} – und in
+      einem Satz, was nicht stimmt. Ein Screenshot hilft. Sie brauchen kein Konto und müssen die Plattform nicht selbst
+      nutzen.
     </>
   ),
   next: (strong, terms) => (
     <>
-      {strong('Weiteres Vorgehen.')} Jede Meldung wird von einem Menschen geprüft. Verstößt das Lambda gegen die{' '}
-      {terms('Nutzungsbedingungen')}, wird es in der Regel innerhalb eines Tages offline genommen. Angaben zur
-      verantwortlichen Person geben wir nicht heraus, und wir können nicht jede Meldung beantworten – gelesen wird jedoch
-      jede.
+      {strong('Wie es weitergeht.')} Ein Mensch liest Ihre Meldung. Verstößt das Lambda gegen die{' '}
+      {terms('Nutzungsbedingungen')}, nehmen wir es offline, meist innerhalb eines Tages. Wer es erstellt hat, verraten
+      wir nicht. Wir können nicht auf jede Meldung antworten – aber wir lesen jede.
     </>
   ),
   danger:
-    'Wenn eine Person in unmittelbarer Gefahr ist oder eine Straftat begangen wird, wenden Sie sich bitte zusätzlich an die zuständigen Behörden. Wir können eine Seite entfernen, jedoch keine weiteren Maßnahmen ergreifen.',
+    'Ist jemand in akuter Gefahr oder geschieht gerade eine Straftat, wenden Sie sich bitte auch an die Behörden vor Ort. Wir können eine Seite entfernen – mehr nicht.',
 };

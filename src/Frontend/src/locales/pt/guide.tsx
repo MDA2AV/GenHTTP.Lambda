@@ -3,268 +3,267 @@ import type { Messages } from '../en';
 export const guide: Messages['guide'] = {
   title: 'Como funciona',
   intro:
-    'Você escreve um trecho de C#. O que ele retornar fica hospedado em um endereço público, via HTTPS, em poucos segundos. Esta página apresenta toda a plataforma, na ordem em que você vai conhecê-la.',
+    'Você escreve um trecho de C#. O que ele retorna fica hospedado em um endereço público, com HTTPS, em poucos segundos. Aqui está tudo, na ordem em que você vai precisar.',
   contents: 'Conteúdo',
 
   parts: {
-    what: 'O que é um lambda',
-    first: 'Seu primeiro lambda',
-    editor: 'O centro de controle',
-    why: 'Documentar as alterações',
-    files: 'Vários arquivos',
-    page: 'Servir uma página',
+    what: 'O que é uma lambda',
+    first: 'Sua primeira lambda',
+    editor: 'O painel de controle',
+    why: 'Explicando o porquê',
+    files: 'Mais de um arquivo',
+    page: 'Servindo uma página',
     spa: 'Um front-end, passo a passo',
-    storage: 'Os dois locais onde ficam os arquivos',
-    keeping: 'Guardar dados',
+    storage: 'Os dois lugares onde ficam os arquivos',
+    keeping: 'Guardando dados',
     sockets: 'WebSockets',
-    limits: 'Restrições',
-    away: 'Exportar o código',
-    agents: 'Trabalhar com um agente',
+    limits: 'O que não é permitido',
+    away: 'Levando seu código embora',
+    agents: 'Deixando um agente fazer',
   },
 
   what: [
     (k) => (
       <>
-        Um lambda é um trecho de código que retorna um handler do GenHTTP. A plataforma o compila, o carrega e publica o
-        resultado no seu próprio endereço. Não há projeto, arquivo de build nem instrução {k.code('using')}: todos os
-        módulos do GenHTTP já estão importados.
+        Uma lambda é um trecho de código que retorna um handler do GenHTTP. A plataforma compila, carrega e monta o que
+        ele retornou no seu próprio endereço. Não tem projeto, nem arquivo de build, nem {k.code('using')}. Todos os
+        módulos do GenHTTP já vêm importados.
       </>
     ),
     (k) => (
       <>
-        Isso já é um lambda completo. Implantado em {k.code('/lambda/your-key/')}, ele responde a cada requisição com a
-        palavra “hello”.
+        Essa é uma lambda completa. No ar em {k.code('/lambda/your-key/')}, ela responde a toda requisição com a
+        palavra hello.
       </>
     ),
   ],
   whatAside: (k) => (
     <>
-      O trecho é composto de {k.em('instruções')}, não de uma classe. A última coisa que ele faz é retornar algo capaz de
-      atender requisições: um handler ou um builder de handler.
+      O trecho é feito de {k.em('instruções')}, não de uma classe. A última coisa que ele faz é retornar algo que atenda
+      requisições: um handler ou um builder de handler.
     </>
   ),
 
   first: [
     (k) => (
       <>
-        Clique em {k.b('Criar lambda')}. Você recebe um endereço público e uma chave de edição. A chave é o único acesso e
-        ninguém pode recuperá-la por você, portanto guarde-a.
+        Clique em {k.b('Criar minha lambda')}. Você recebe um endereço público e uma chave de edição. A chave é o único
+        jeito de voltar, então guarde bem. Ninguém consegue recuperar para você.
       </>
     ),
     () => (
       <>
-        Você é direcionado ao centro de controle, com um pequeno serviço REST já escrito como primeira versão. Ele serve
-        apenas como ponto de partida.
+        Você cai no painel de controle, com um pequeno serviço REST já escrito como primeira versão. É só um ponto de
+        partida.
       </>
     ),
     (k) => (
       <>
-        Entregue a chave de edição a um agente e descreva o que ele deve criar – ele escreve novas versões via{' '}
-        {k.link('/#agents', 'MCP')}. Ou abra {k.b('Código')} e escreva você mesmo: {k.b('Verificar')} compila sem salvar
-        nada e mostra as mensagens do compilador, com arquivo e linha.
+        Passe a chave de edição para um agente e diga o que criar: ele escreve novas versões via{' '}
+        {k.link('/#agents', 'MCP')}. Ou abra {k.b('Código')} e escreva você mesmo: {k.b('Verificar')} compila sem
+        salvar nada e mostra o que o compilador achou, com arquivo e linha.
       </>
     ),
     (k) => (
       <>
-        Clique em {k.b('Implantar')}. Agora ele está no ar; antes disso, nada fica acessível. Cada nova implantação
-        prolonga o tempo em que ele permanece no ar.
+        Clique em {k.b('Fazer deploy')}. Pronto, está no ar. Antes disso, nada fica acessível, e cada novo deploy
+        estende o tempo que ela fica no ar.
       </>
     ),
   ],
 
   editor: (k) => (
     <>
-      O link de edição abre um centro de controle em vez de um simples editor de texto: a maior parte do código aqui é
-      escrita por agentes, então a primeira informação exibida é o estado do seu lambda. A barra lateral mostra se ele está
-      no ar, seu endereço, um botão quando há uma versão mais recente aguardando implantação e suas seções. Ações pouco
-      frequentes, como alterar o endereço ou excluí-lo, ficam no menu {k.b('⋯')}.
+      O link de edição abre um painel de controle, não uma caixa de texto: a maior parte do código aqui é escrita por
+      agentes, então a primeira coisa na tela é como anda a sua lambda. A barra lateral mostra a lambda (se está no
+      ar, o endereço e um botão quando uma versão mais nova está esperando para ir ao ar) e as seções dela. O que se
+      faz raramente, como mudar o endereço ou excluir a lambda, fica no menu {k.b('⋯')} ali.
     </>
   ),
   bits: [
-    ['Visão geral', () => <>Se está no ar, quantas requisições recebeu hoje e quantas falharam, a última alteração e o espaço disponível.</>],
-    ['Arquivos', () => <>Os arquivos de uma versão e seus dados – o que o lambda salva durante a execução. Um cadeado ou um globo indica se estão acessíveis publicamente.</>],
-    ['Versões', () => <>O que cada versão alterou, o que foi solicitado e a diferença em relação à anterior. Implante ou reverta a partir daqui.</>],
-    ['Implantações', () => <>O que esteve no ar, quando, e o que o tirou do ar.</>],
-    ['Estatísticas', () => <>Requisições, falhas, tempos de resposta e os caminhos mais acessados, na última hora ou nas últimas 24 horas.</>],
-    ['Logs', () => <>Suas requisições, o que ele imprimiu e o stack trace de qualquer erro, em tempo real.</>],
+    ['Visão geral', () => <>Se está no ar, quantas requisições teve hoje e quantas falharam, a última mudança e quanto espaço ainda sobra.</>],
+    ['Arquivos', () => <>Os arquivos de uma versão e os dados dela: o que a lambda salva enquanto roda. Um cadeado ou um globo mostra se o público consegue acessar.</>],
+    ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faça deploy ou volte uma versão por aqui.</>],
+    ['Deploys', () => <>O que esteve no ar e quando, e o que tirou do ar.</>],
+    ['Métricas', () => <>Requisições, falhas, tempos de resposta e os caminhos mais acessados, na última hora ou nas últimas 24 horas.</>],
+    ['Logs', () => <>As requisições, o que ela imprimiu e o stack trace de qualquer erro, em tempo real.</>],
     [
       'Código',
       (k) => (
         <>
-          Edição manual. {k.b('Verificar')} compila, {k.b('Salvar')} cria uma versão e {k.b('Implantar')} a coloca no ar.{' '}
-          {k.code('Ctrl+S')} salva; {k.code('F12')} vai para uma declaração.
+          Para escrever à mão. {k.b('Verificar')} compila, {k.b('Salvar')} cria uma versão, {k.b('Fazer deploy')} coloca
+          no ar. {k.code('Ctrl-S')} salva; {k.code('F12')} vai para uma declaração.
         </>
       ),
     ],
   ],
   sections: (k) => (
     <>
-      Todas as seções funcionam da mesma forma: um título, um {k.b('ⓘ')} com a explicação, as ações à direita e – quando há
-      mais de uma visualização – uma fileira de seletores abaixo. No código, esses seletores são os arquivos.
+      Toda seção funciona do mesmo jeito: o título, um {k.b('ⓘ')} que explica, as ações à direita e, quando há mais de
+      uma visualização, uma fileira de abas embaixo. No código, as abas são os arquivos.
     </>
   ),
   editorAside:
-    'O tráfego e o log são mantidos em memória, para acompanhamento e não para arquivamento: uma reinicialização do servidor os zera. As versões e o histórico de implantações são armazenados de forma permanente.',
+    'O tráfego e o log ficam em memória, para acompanhar, não para guardar: reiniciar o servidor zera tudo. As versões e o histórico de deploys ficam salvos.',
 
   why: (k) => (
     <>
-      Uma versão é o código e, opcionalmente, duas anotações: {k.b('a especificação')}, ou seja, o que o usuário deseja e
-      por quê, de preferência com as palavras dele, e {k.b('a alteração')}, uma linha sobre o que a versão faz. Elas são
-      exibidas ao lado do diff no histórico de versões, para que o {k.em('porquê')} permaneça junto ao {k.em('quê')} –
-      para você e para o próximo agente que ler o histórico antes de fazer alterações.
+      Uma versão é o código e, se você quiser, duas notas sobre ele: {k.b('a especificação')}, o que o usuário quer e
+      por quê, com as palavras dele quando possível, e {k.b('a mudança')}, uma linha sobre o que a versão faz. As duas
+      aparecem ao lado do diff no histórico de versões. Assim, o {k.em('porquê')} fica junto do {k.em('quê')}: para
+      você e para o próximo agente que ler o histórico antes de mudar alguma coisa.
     </>
   ),
   whySample: {
-    specification: 'Um livro de visitas que as pessoas possam assinar; as entradas devem sobreviver a uma reinicialização',
-    change: 'Guarda as entradas no workspace para que sobrevivam a uma reinicialização',
+    specification: 'Um livro de visitas para as pessoas assinarem; as mensagens não podem sumir num reinício',
+    change: 'Guarda as mensagens no workspace para não sumirem num reinício',
   },
   why2: (k) => (
     <>
-      Os agentes enviam os mesmos dois campos para {k.code('write_code')}. Em {k.b('Código')}, ao salvar, a alteração é
-      solicitada. Ambos são opcionais; uma especificação longa é cortada em 4000 caracteres e uma alteração em 500, em vez
-      de ser recusada.
+      Os agentes passam os mesmos dois campos para {k.code('write_code')}. Em {k.b('Código')}, ao salvar, você informa
+      a mudança. Os dois são opcionais. Uma especificação longa é cortada em 4.000 caracteres, e uma mudança em 500, em
+      vez de ser recusada.
     </>
   ),
 
   files: (k) => (
     <>
-      Os tipos não precisam ficar abaixo do código que os utiliza. Em {k.b('Código')}, clique em {k.b('+')} ao lado dos
-      arquivos: o novo arquivo é compilado junto com o trecho, no mesmo namespace, sem necessidade de importação. Um nome
-      sem extensão é tratado como C#.
+      Os tipos não precisam ficar embaixo do código que os usa. Em {k.b('Código')}, clique em {k.b('+')} ao lado dos
+      arquivos: o novo arquivo é compilado junto com o trecho, no mesmo namespace, então não precisa importar nada. Um
+      nome sem extensão é tratado como C#.
     </>
   ),
 
-  page: 'Há três maneiras; a adequada depende de onde a página está.',
-  inlineTitle: 'Uma página escrita no próprio código',
-  inline: 'Adequada para algo pequeno. A página faz parte do trecho.',
-  folderTitle: 'Uma pasta de arquivos',
+  page: 'Existem três jeitos, e o certo depende de onde a página fica.',
+  inlineTitle: 'Uma página, escrita no código',
+  inline: 'Bom para algo pequeno. A página faz parte do trecho.',
+  folderTitle: 'Uma pasta de arquivos de verdade',
   folder:
-    'A opção indicada para qualquer coisa com folha de estilo e script. Os arquivos são adicionados da mesma forma que um arquivo C# e servidos exatamente como foram escritos, sem compilação.',
-  workspaceTitle: 'A partir do workspace',
-  workspace: 'Quando a página é enviada em vez de escrita e deve poder mudar sem uma nova implantação.',
+    'O ideal para qualquer coisa com CSS e script. Os arquivos são adicionados do mesmo jeito que um arquivo C# e servidos exatamente como foram escritos. Nada compila esses arquivos.',
+  workspaceTitle: 'Do workspace',
+  workspace: 'Quando a página é enviada, não escrita, e precisa poder mudar sem um novo deploy.',
 
   spa: (k) => (
     <>
-      A segunda opção, em detalhes. Todas as demos servem sua página dessa forma a partir de uma pasta chamada{' '}
-      {k.code('web')} – abra {k.link('/editor/demo-crud', 'demo-crud')} para ver um exemplo. As demos são somente leitura;
-      a chave de edição delas é o próprio nome.
+      O segundo jeito, completo. Toda demo serve a página assim, de uma pasta chamada {k.code('web')}. Abra{' '}
+      {k.link('/editor/demo-crud', 'demo-crud')} para ver uma. As demos são somente leitura; a chave de edição delas é o
+      próprio nome.
     </>
   ),
   spaSteps: [
     (k) => (
       <>
         Em {k.b('Código')}, clique em {k.b('+')} ao lado dos arquivos e digite {k.code('site/index.html')}. Um nome com
-        barra coloca o arquivo em uma pasta; um nome com extensão é tratado como o tipo de arquivo indicado.
+        barra coloca o arquivo em uma pasta; um nome com extensão é tratado como o tipo de arquivo que ele indica.
       </>
     ),
     (k) => (
       <>
-        Adicione {k.code('site/app.css')} e {k.code('site/app.js')} da mesma forma. Sua página se refere a eles pelo nome,
-        como em {k.code('href="app.css"')}, pois a pasta é a raiz do que é servido e não faz parte do endereço.
+        Adicione {k.code('site/app.css')} e {k.code('site/app.js')} do mesmo jeito. Sua página se refere a eles pelo
+        nome, como em {k.code('href="app.css"')}, porque a pasta é a raiz do que é servido, e não parte do endereço.
       </>
     ),
     (k) => (
       <>
-        Para arquivos que não são texto, como uma imagem ou uma fonte, abra um arquivo em {k.code('site')} e use o botão de
-        envio ao lado dos arquivos: ele será colocado na mesma pasta.
+        Para o que não é texto, como uma imagem ou uma fonte, abra um arquivo em {k.code('site')} e use o botão de
+        enviar ao lado dos arquivos: ele vai para a mesma pasta. Não dá para digitar um PNG num editor de texto, então o
+        caminho é esse.
       </>
     ),
     (k) => <>Em {k.code('lambda.cs')}, sirva a pasta:</>,
     (k) => (
       <>
-        Clique em {k.b('Implantar')}. {k.code('site/index.html')} responde em {k.code('/')}, {k.code('site/app.css')} em{' '}
-        {k.code('/app.css')}, e qualquer endereço sem arquivo correspondente é respondido com a página – assim, um
-        front-end com roteamento próprio continua funcionando quando alguém recarrega um link interno.
+        Clique em {k.b('Fazer deploy')}. {k.code('site/index.html')} responde em {k.code('/')}, {k.code('site/app.css')}{' '}
+        em {k.code('/app.css')}, e qualquer endereço que não bate com nenhum arquivo recebe a página. Assim, um front-end
+        com roteamento próprio continua funcionando quando alguém recarrega a página num deep link.
       </>
     ),
-    () => <>Adicione uma API ao lado para que a página tenha com o que se comunicar:</>,
+    () => <>Adicione uma API ao lado, e a página ganha com quem conversar:</>,
   ],
 
   storage: (k) => (
     <>
-      A seção {k.b('Arquivos')} mostra ambos – os arquivos de uma versão e o workspace como {k.b('Dados')} – e informa
-      quais são acessíveis publicamente. Os arquivos do código são alterados em {k.b('Código')}; os dados podem ser
-      enviados e excluídos em {k.b('Arquivos')}. Porém, eles não são a mesma coisa, e a diferença está em{' '}
-      {k.em('quando cada um muda')}.
+      A seção {k.b('Arquivos')} mostra os dois (os arquivos de uma versão e o workspace, como {k.b('Dados')}) e diz
+      quais o público consegue acessar. Os arquivos do código mudam em {k.b('Código')}; os dados podem ser enviados e
+      excluídos em {k.b('Arquivos')}. Mas não são a mesma coisa, e a diferença é {k.em('quando cada um muda')}.
     </>
   ),
   savedWithCode: 'Salvo com o seu código',
   workspaceColumn: 'Workspace',
   table: [
-    ['o que contém', 'todos os arquivos do seu lambda, incluindo o C#', 'tudo o que foi escrito ou enviado'],
-    ['quando muda', 'ao clicar em Salvar ou Implantar', 'no momento em que algo é gravado'],
-    ['uma implantação', 'substitui tudo', 'não o altera'],
-    ['reverter uma versão', 'restaura os arquivos anteriores', 'nenhum efeito'],
-    ['clonar o lambda', 'é copiado', 'não é copiado'],
+    ['o que guarda', 'todos os arquivos da sua lambda, inclusive o C#', 'tudo o que foi gravado ou enviado'],
+    ['quando muda', 'quando você clica em Salvar ou Fazer deploy', 'no momento em que algo é gravado nele'],
+    ['um deploy', 'substitui tudo', 'nunca mexe nele'],
+    ['voltar uma versão', 'traz os arquivos antigos de volta', 'nenhum efeito'],
+    ['clonar a lambda', 'vai junto', 'não vai'],
   ],
   reachedAs: 'acessado no código como',
   storageAside:
-    'Eles não podem ser um único diretório. Se fossem, uma implantação apagaria tudo o que o lambda gravou desde então, ou nada jamais poderia ser removido do que ele publica. Um jogo com ranking precisa da segunda opção; a página que ele serve, da primeira.',
+    'Os dois não podem ser o mesmo diretório. Se fossem, um deploy ou apagaria tudo o que a lambda gravou desde então, ou nada nunca poderia sair dos arquivos que vão com ela. Um jogo com ranking quer a segunda opção; a página que ele serve quer a primeira.',
 
   keeping: (k) => (
     <>
-      {k.code('Workspace')} é um diretório privado que seu lambda pode ler e gravar. É o lugar para tudo o que precisa
-      durar além de uma requisição ou de uma implantação.
+      {k.code('Workspace')} é um diretório privado que sua lambda pode ler e gravar. É o lugar para tudo o que precisa
+      durar mais que uma requisição, ou que um deploy.
     </>
   ),
   keeping2: (k) => (
     <>
-      Também estão disponíveis {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
-      {k.code('CreateFolder')} e {k.code('Tree')}/{k.code('Files')}/{k.code('App')} para servi-lo. O restante do sistema
-      de arquivos não é acessível.
+      Também tem {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
+      {k.code('CreateFolder')} e {k.code('Tree')}/{k.code('Files')}/{k.code('App')} para servir o conteúdo. Nada mais
+      no sistema de arquivos é acessível.
     </>
   ),
 
   sockets: (k) => (
     <>
-      Totalmente suportados. A demo {k.link('/editor/demo-game', 'demo-game')} forma pares de jogadores e executa cada
-      partida no servidor. A forma mais simples consiste em três callbacks:
+      Suporte completo, pensado desde o início. A demo {k.link('/editor/demo-game', 'demo-game')} forma pares de
+      jogadores e roda cada partida no servidor. A forma mais simples são três callbacks:
     </>
   ),
   socketsAside: (k) => (
     <>
-      Um ponto que merece atenção: o navegador não consegue definir cabeçalhos no handshake de um WebSocket. Passe o que o
-      handler precisa na query, onde ele lê a partir de {k.code('connection.Request.Header.Query')}, ou envie informações
-      sigilosas na primeira mensagem.
+      Uma coisa pega todo mundo: o navegador não consegue definir headers no handshake de um WebSocket. Passe o que o
+      handler precisa na query, que ele lê de {k.code('connection.Request.Header.Query')}, ou mande segredos na primeira
+      mensagem.
     </>
   ),
 
   limits:
-    'Seu código é executado em um servidor compartilhado, portanto parte do C# é recusada antes da compilação: iniciar processos, abrir sockets próprios, carregar assemblies, acessar o sistema de arquivos fora do seu workspace e usar reflexão para contornar essas restrições.',
+    'Seu código roda em um servidor compartilhado, então parte do C# é recusada antes de compilar: iniciar processos, abrir seus próprios sockets, carregar assemblies, acessar o sistema de arquivos fora do seu workspace e usar reflection para contornar qualquer uma dessas regras.',
   limits2:
-    'Todo o restante está disponível, incluindo toda a API de módulos do GenHTTP. Se algo for recusado, você é informado da linha e do motivo.',
+    'Todo o resto está disponível, incluindo a API de módulos do GenHTTP inteira. Se algo for recusado, você fica sabendo a linha e o motivo, e não só que falhou.',
 
   away: (k) => (
     <>
-      {k.b('Baixar como projeto .NET')}, no editor, entrega tudo como um projeto .NET: uma solução que você pode abrir,
-      executar com {k.code('dotnet run')} e manter. Ela tem uma única referência de pacote e nenhuma dependência desta
-      plataforma.
+      {k.b('Baixar como projeto .NET')}, no editor, entrega tudo pronto: uma solução que você pode abrir, rodar com{' '}
+      {k.code('dotnet run')} e guardar. Ela tem uma única referência de pacote e nenhum rastro desta plataforma.
     </>
   ),
   away2: (k) => (
     <>
-      Seu trecho se torna o corpo de {k.code('Program.cs')}, dentro de um host que serve o que ele retorna. Seus demais
-      arquivos são mantidos exatamente como foram escritos. {k.code('Workspace')} e {k.code('Assets')} se tornam duas
-      pastas ao lado do código, com os mesmos métodos, portanto nada no seu código precisa mudar.
+      Seu trecho vira o corpo do {k.code('Program.cs')}, dentro de um host que serve o que ele retorna. Seus outros
+      arquivos vão exatamente como você escreveu. {k.code('Workspace')} e {k.code('Assets')} viram duas pastas ao lado
+      do código, com os mesmos métodos, então nada no seu código precisa mudar.
     </>
   ),
   awayAside:
-    'Vale saber antes de começar: o código que você escreve pertence a você e pode ser exportado integralmente. Executá-lo nesta plataforma não o vincula a ela.',
+    'Bom saber antes de criar qualquer coisa aqui: o que você escreve é seu e sai inteiro. Rodar nesta máquina não prende seu código a ela.',
 
   agents: (k) => (
     <>
-      Há um endpoint MCP em {k.code('/mcp')}. Um agente conectado a ele pode fazer tudo o que o editor faz: ler o guia,
-      consultar uma demo completa, gravar arquivos, compilá-los e implantá-los. Ambos usam a mesma API.
+      Existe um endpoint MCP em {k.code('/mcp')}. Conecte um agente a ele, e o agente pode fazer tudo o que o editor
+      faz: ler o guia, ler uma demo inteira, escrever arquivos, compilar e fazer deploy. Por baixo, é a mesma API.
     </>
   ),
   agents2: (k) => (
     <>
-      O agente registra seus motivos ao longo do processo – {k.code('write_code')} recebe a especificação e a alteração – e
-      pode verificar o que implantou: {k.code('read_logs')} retorna as requisições recentes do lambda, o que ele imprimiu e
-      o stack trace de qualquer exceção. É assim que um agente confirma que seu código funciona, em vez de presumir. Você
-      acompanha as mesmas informações no centro de controle.
+      O agente explica o porquê enquanto trabalha ({k.code('write_code')} recebe a especificação e a mudança) e pode
+      ver o que colocou no ar: {k.code('read_logs')} responde com as requisições recentes da lambda, o que ela imprimiu
+      e o stack trace de qualquer exceção. É assim que ele descobre que o código funciona, em vez de supor. Você
+      acompanha tudo isso no painel de controle.
     </>
   ),
   more: 'Saiba mais →',
-  make: 'Criar um lambda',
+  make: 'Criar uma lambda',
 };

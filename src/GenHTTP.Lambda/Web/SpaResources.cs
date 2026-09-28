@@ -84,6 +84,7 @@ public sealed class SpaResources
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .ServerSideRouting()
                                     .Add(RangeSupport.Create())
+                                    .Add(new JpegTypeConcernBuilder())
                                     .Add(new SiteMetaConcernBuilder(Meta, Prerender, ReadIndexAsync))
                                     .Add(CacheControl.NoCache());
     }

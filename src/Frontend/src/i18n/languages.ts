@@ -10,22 +10,98 @@
  * Only the addresses without a prefix pick a language, and the server does it
  * (Web/SiteLanguages.cs, which lists the same codes): a choice made here,
  * remembered in a cookie, and otherwise the browser's Accept-Language.
+ *
+ * A code is a language, or a language and a region where the site is written
+ * in more than one variant of it: "pt" is Portuguese as Brazil writes it,
+ * which most readers of Portuguese do, and "pt-pt" as Portugal does.
  */
-export const LANGUAGES = ['en', 'de', 'es', 'pt', 'fr', 'it'] as const;
+export const LANGUAGES = ['id', 'de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'pt-pt', 'tr', 'ja', 'ko'] as const;
 
 export type Language = (typeof LANGUAGES)[number];
 
 export const DEFAULT_LANGUAGE: Language = 'en';
 
-/** Each language in its own words, the way a switcher should offer it. */
+/**
+ * Each language in its own words, the way a switcher should offer it - in the
+ * order above, which is alphabetical by these names, with the languages in
+ * other scripts after the ones in Latin letters.
+ */
 export const LANGUAGE_NAMES: Record<Language, string> = {
-  en: 'English',
+  id: 'Bahasa Indonesia',
   de: 'Deutsch',
+  en: 'English',
   es: 'Español',
-  pt: 'Português',
   fr: 'Français',
   it: 'Italiano',
+  nl: 'Nederlands',
+  pl: 'Polski',
+  pt: 'Português (Brasil)',
+  'pt-pt': 'Português (Portugal)',
+  tr: 'Türkçe',
+  ja: '日本語',
+  ko: '한국어',
 };
+
+/**
+ * How a language is tagged in the markup, for a search engine and a screen
+ * reader - its code, except where the code leaves out the region.
+ */
+const TAGS: Partial<Record<Language, string>> = { pt: 'pt-BR', 'pt-pt': 'pt-PT' };
+
+/**
+ * The variant that also stands for its whole language, for a reader in a
+ * country with no variant of its own here: Portuguese outside of Brazil and
+ * Portugal finds the Brazilian pages, which most of its readers write.
+ */
+const WHOLE: Partial<Record<Language, string>> = { pt: 'pt' };
+
+/**
+ * Where a language is written after the variant of another country than the
+ * one its primary code stands for: Angola, Mozambique and the other countries
+ * of Portuguese in Africa and Asia write it as Portugal does.
+ */
+const REGIONS: Record<string, Language> = Object.fromEntries(
+  ['pt', 'ao', 'mz', 'cv', 'gw', 'st', 'tl', 'mo'].map((region): [string, Language] => [`pt-${region}`, 'pt-pt']),
+);
+
+/**
+ * Codes some browsers still send for a language that has another one now:
+ * older Android and Java call Indonesian "in". The server knows them too.
+ */
+const ALIASES: Record<string, Language> = { in: 'id' };
+
+/** The language as the markup tags it: "de", or "pt-BR" for Portuguese. */
+export function tagOf(language: Language): string {
+  return TAGS[language] ?? language;
+}
+
+/**
+ * What a page in the language answers for among its translations - its tag,
+ * and for the variant standing for a whole language, that language.
+ */
+export function hreflangsOf(language: Language): string[] {
+  const whole = WHOLE[language];
+
+  return whole === undefined ? [tagOf(language)] : [tagOf(language), whole];
+}
+
+/**
+ * The language the site has for a tag a browser sent: "pt-PT" is Portuguese
+ * as Portugal writes it, "pt-AO" as well, "pt-BR" and "pt" are Brazilian,
+ * "de-CH" is German - or nothing, for a language it has not.
+ */
+export function matchLanguage(tag: string): Language | null {
+  const lower = tag.trim().toLowerCase();
+
+  if (REGIONS[lower] !== undefined) {
+    return REGIONS[lower];
+  }
+
+  const primary = lower.split('-')[0] ?? '';
+  const language = ALIASES[primary] ?? primary;
+
+  return isLanguage(language) ? language : null;
+}
 
 /** Where a choice is remembered, and read by the server as well. */
 export const COOKIE = 'lang';
@@ -50,7 +126,7 @@ export function withoutLanguage(pathname: string): string {
     return pathname;
   }
 
-  const rest = pathname.slice(3);
+  const rest = pathname.slice(pathname.split('/')[1].length + 1);
 
   return rest === '' ? '/' : rest;
 }
@@ -79,10 +155,10 @@ export function preferredLanguage(): Language {
   }
 
   for (const tag of navigator.languages ?? [navigator.language]) {
-    const primary = tag?.split('-')[0]?.toLowerCase();
+    const language = tag ? matchLanguage(tag) : null;
 
-    if (isLanguage(primary)) {
-      return primary;
+    if (language !== null) {
+      return language;
     }
   }
 
@@ -90,7 +166,7 @@ export function preferredLanguage(): Language {
 }
 
 function readCookie(): Language | null {
-  const match = document.cookie.match(/(?:^|;\s*)lang=([a-z]+)/);
+  const match = document.cookie.match(/(?:^|;\s*)lang=([a-z-]+)/);
 
   return match && isLanguage(match[1]) ? match[1] : null;
 }

@@ -1,12 +1,12 @@
 import type { Messages } from '../en';
 
 export const shell: Messages['shell'] = {
-  main: 'Navegação principal',
+  main: 'Principal',
   build: 'Criar',
   ship: 'Publicar',
   showcase: 'Vitrine',
   enterprise: 'Empresas',
-  docs: 'Documentação',
+  docs: 'Docs',
   admin: 'Admin',
   lightMode: 'Mudar para o tema claro',
   darkMode: 'Mudar para o tema escuro',
@@ -18,62 +18,60 @@ export const shell: Messages['shell'] = {
 export const common: Messages['common'] = {
   loading: 'Carregando…',
   loadingEditor: 'Carregando o editor…',
-  editorFailed: 'Não foi possível carregar o editor',
-  editorFailedWhy: 'Normalmente isso significa que o site foi atualizado enquanto esta aba estava aberta.',
+  editorFailed: 'O editor não carregou',
+  editorFailedWhy: 'Normalmente é porque o site foi atualizado com esta aba aberta.',
   reload: 'Recarregar a página',
   backToStart: 'Voltar ao início',
-  tryAgain: 'Tentar novamente',
+  tryAgain: 'Tentar de novo',
   copy: 'Copiar',
   copied: 'Copiado',
   copyToClipboard: 'Copiar para a área de transferência',
-  openInNewTab: 'Abrir em uma nova aba',
+  openInNewTab: 'Abrir em nova aba',
   close: 'Fechar',
 };
 
 export const notFound: Messages['notFound'] = {
   title: 'Página não encontrada',
   heading: 'Esta página não existe',
-  text: 'O link pode estar desatualizado, ou o lambda para o qual ele apontava foi excluído.',
+  text: 'O link pode estar desatualizado, ou a lambda para onde ele apontava foi excluída.',
 };
 
 export const missing: Messages['missing'] = {
-  title: 'Nada em execução neste endereço',
-  heading: 'Nada em execução neste endereço',
+  title: 'Nada rodando aqui',
+  heading: 'Nada rodando aqui',
   notDeployed: (key) => (
     <>
-      Existe um lambda em {key}, mas ele não está implantado no momento. No plano gratuito, as implantações permanecem no
-      ar enquanto são utilizadas e são retiradas após um mês sem acessos ou alterações. Quem possui o link de edição pode
-      colocá-lo no ar novamente.
+      Existe uma lambda em {key}, mas ela não está no ar agora. No plano grátis, os deploys ficam no ar enquanto são
+      usados e saem do ar depois de um mês sem visitas nem edições. Quem tem o link de edição pode colocar de volta
+      no ar.
     </>
   ),
   unknown: (key) => (
-    <>
-      Nenhum lambda está hospedado em {key}. A chave pode nunca ter existido, ou o lambda correspondente foi excluído.
-    </>
+    <>Não tem nenhuma lambda em {key}. A chave pode nunca ter existido, ou a lambda foi excluída.</>
   ),
-  create: 'Criar um lambda',
+  create: 'Criar uma lambda aqui',
 };
 
 export const abuse: Messages['abuse'] = {
   report: 'Denunciar abuso',
-  title: 'Denunciar um lambda',
-  write: 'Enviar e-mail',
+  title: 'Denunciar uma lambda',
+  write: 'Escreva para a gente',
   subject: 'Denúncia de abuso',
   intro:
-    'Qualquer pessoa pode publicar código nesta plataforma, e por isso eventualmente surgem conteúdos indevidos. Se uma página hospedada aqui tenta enganar pessoas, ataca outros sistemas ou utiliza material sem os devidos direitos, informe-nos e nós a retiraremos do ar.',
+    'Qualquer pessoa pode colocar código no ar aqui, e às vezes alguém publica o que não devia. Se uma página hospedada aqui está tentando enganar pessoas, atacando alguma coisa ou usando material sem autorização, avise a gente e nós tiramos do ar.',
   how: (mailbox, strong, path) => (
     <>
-      Escreva para {mailbox} informando {strong('o endereço da página')} – no formato {path} – e uma breve descrição do
-      problema. Uma captura de tela é útil. Não é necessário ter uma conta nem ser usuário deste site.
+      Escreva para {mailbox} com {strong('o endereço da página')} (algo como {path}) e uma frase sobre o problema. Uma
+      captura de tela ajuda. Você não precisa ter conta nem usar este site.
     </>
   ),
   next: (strong, terms) => (
     <>
-      {strong('Próximos passos.')} Cada denúncia é analisada por uma pessoa. Se o lambda violar os{' '}
-      {terms('termos de serviço')}, ele é retirado do ar, normalmente em até um dia. Não divulgamos quem o publicou e não
-      podemos responder a todas as denúncias, mas todas são lidas.
+      {strong('O que acontece depois.')} Uma pessoa lê a denúncia. Se a lambda violar os {terms('termos de uso')}, ela
+      sai do ar, normalmente em até um dia. Não contamos quem publicou, e não podemos prometer responder a cada
+      denúncia, mas todas são lidas.
     </>
   ),
   danger:
-    'Se alguém estiver em perigo imediato ou um crime estiver sendo cometido, entre em contato também com as autoridades competentes. Podemos remover uma página, mas não podemos tomar outras providências.',
+    'Se alguém estiver em perigo imediato, ou se um crime estiver acontecendo, procure também as autoridades locais. Podemos remover a página, mas não podemos fazer mais nada.',
 };

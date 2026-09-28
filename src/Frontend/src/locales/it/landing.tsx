@@ -1,79 +1,79 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Una piattaforma di coding agentico',
-  headline: 'Descriva un’applicazione.',
-  headlineAccent: 'Il Suo agente la mette online.',
+  eyebrow: 'Piattaforma di coding agentico',
+  headline: 'Descrivi la tua app.',
+  headlineAccent: 'Il tuo agente la mette online.',
   intro:
-    'Sondaggi, guestbook, classifiche, piccoli negozi: descriva ciò che Le serve al nostro agente o a quello che utilizza già, e riceverà un’applicazione funzionante con un link da condividere. L’applicazione resta modificabile e può essere perfezionata anche molto tempo dopo la prima versione.',
-  build: 'Crea un’applicazione',
-  ownAgent: 'Utilizza il Suo agente',
-  free: 'Gratuito. Senza account, senza installazioni.',
-  seeIt: 'Guarda una dimostrazione',
+    'Sondaggi, guestbook, classifiche, piccoli negozi online. Spiega cosa ti serve al nostro agente o a quello che usi già. Ricevi un’app funzionante, con un link da condividere. E puoi continuare a migliorarla anche molto dopo la prima versione.',
+  build: 'Crea qualcosa',
+  ownAgent: 'Usa il tuo agente',
+  free: 'Gratis. Niente account, niente da installare.',
+  seeIt: 'Guarda come funziona',
 
-  videoTitle: 'Da una frase a un’applicazione online',
+  videoTitle: 'Da una frase a un’app online',
   videoText:
-    'Una finestra di navigazione privata, nessun account e un’unica richiesta nella pagina Crea – quindi l’applicazione completata, aperta dal suo link come la vedrà qualsiasi visitatore.',
-  videoNote: 'La creazione è mostrata a velocità accelerata. Tutto il resto in tempo reale.',
-  tryIt: 'Provi ora',
+    'Una finestra in incognito, nessun account e una sola richiesta al nostro agente. Poi l’app finita, aperta dal suo link come la vedrebbe chiunque.',
+  videoNote: 'Nel video la creazione è accelerata. Tutto il resto è in tempo reale.',
+  tryIt: 'Prova anche tu',
 
-  oneShotTitle: 'Non un risultato isolato',
+  oneShotTitle: 'Non è usa e getta',
   oneShotText:
-    'La maggior parte dei generatori consegna un risultato e si ferma lì. Qui l’applicazione continua a funzionare dove è stata creata, ed è possibile continuare a svilupparla insieme al proprio agente.',
+    'Quasi tutti i generatori ti danno un risultato e finisce lì. Qui l’app resta online dove è nata, così tu e il tuo agente potete continuare a lavorarci.',
   steps: [
     {
-      title: 'Descriva ciò che Le serve',
-      body: 'Lo descriva con parole Sue, all’agente di questo sito o a quello che utilizza già. Senza codice, senza configurazione e senza account.',
-      alt: 'La pagina Crea con una richiesta per un sondaggio sul pranzo',
+      title: 'Chiedi quello che vuoi',
+      body: 'Descrivilo con parole tue, all’agente di questo sito o a quello che usi già. Niente codice, niente configurazione, niente account.',
+      alt: 'La pagina di creazione con la richiesta di un sondaggio per il pranzo',
     },
     {
-      title: 'Un’applicazione funzionante e un link',
-      body: 'L’applicazione viene creata, distribuita e restituita come indirizzo pubblico da condividere. Conserva i propri dati – voti, punteggi, messaggi – così che tutti vedano lo stesso stato.',
-      alt: 'Il sondaggio completato, aperto in un browser',
+      title: 'Ricevi un’app e un link',
+      body: 'L’app viene creata e messa online, con un indirizzo pubblico da condividere. Ricorda i suoi dati (voti, punteggi, messaggi), così chiunque la apra vede la stessa cosa.',
+      alt: 'Il sondaggio per il pranzo, finito e aperto nel browser',
     },
     {
-      title: 'Miglioramento continuo',
-      body: 'Ogni applicazione dispone di un link di modifica privato. Lo consegni al Suo agente insieme alla modifica successiva, oppure lo apra direttamente. Ogni modifica diventa una nuova versione e l’indirizzo resta invariato.',
-      alt: 'Il centro di controllo del sondaggio: le sue versioni, ciascuna con la richiesta, la modifica e la differenza rispetto alla precedente',
+      title: 'Continua a migliorarla',
+      body: 'Ogni app ha un link di modifica privato. Passalo al tuo agente con la prossima richiesta, oppure aprilo tu. Ogni modifica diventa una nuova versione e l’indirizzo non cambia.',
+      alt: 'Il pannello di controllo del sondaggio: le versioni, ognuna con la richiesta, cosa ha cambiato e le differenze rispetto alla precedente',
     },
   ],
   weekLater: 'Una settimana dopo',
   weekAsk:
-    'Ecco il link di modifica del mio sondaggio. Chiudi la votazione alle 11 il venerdì e mostra il risultato in alto.',
+    'Ecco il link di modifica del mio sondaggio per il pranzo. Il venerdì chiudi le votazioni alle 11 e metti il vincitore in alto.',
   weekAnswer:
-    'Fatto. La versione 4 è online allo stesso indirizzo e la versione 3 resta disponibile in caso di ripristino.',
+    'Fatto. La versione 4 è online allo stesso indirizzo, e la 3 è ancora lì se vuoi tornare indietro.',
 
-  agentsTitle: 'Utilizzi l’agente che preferisce',
+  agentsTitle: 'Collega il tuo agente preferito',
   agentsText:
-    'Lavora già con Claude o con un altro assistente? Lo colleghi a questo indirizzo: potrà creare, distribuire e aggiornare applicazioni qui, direttamente dalla conversazione già aperta.',
+    'Lavori già con Claude o con un altro assistente? Collegalo a questo indirizzo: potrà creare, pubblicare e aggiornare app qui, direttamente dalla chat che hai già aperta.',
   agents: [
     {
       name: 'Claude sul web o su desktop',
-      how: 'Apra le Impostazioni, quindi «Connectors», e selezioni «Add custom connector». Incolli l’indirizzo qui sopra: non sono richiesti chiavi API né accesso.',
+      how: 'Apri Impostazioni, poi «Connectors» e scegli «Add custom connector». Incolla l’indirizzo qui sopra: niente chiave API, niente login.',
     },
     {
       name: 'Claude Code',
-      how: 'Esegua una volta in un terminale:',
+      how: 'Esegui una volta questo comando nel terminale:',
     },
     {
       name: 'Altri client MCP',
-      how: 'Cursor, VS Code, Codex e altri client MCP supportano i server remoti. Li configuri con lo stesso indirizzo.',
+      how: 'Cursor, VS Code, Codex e gli altri client MCP supportano i server remoti. Configurali con lo stesso indirizzo.',
     },
   ],
   thenAsk: (em) => (
-    <>A quel punto basta una richiesta come: {em('crea un foglio di iscrizione per il nostro evento aziendale e pubblicalo')}.</>
+    <>Poi basta chiedere: {em('crea un modulo di iscrizione per l’evento del nostro team e mettilo online')}.</>
   ),
 
-  contactTitle: 'Contatti',
+  contactTitle: 'Parliamone',
   contactText:
-    'Ha bisogno di assistenza, sta pianificando un progetto più ampio o cerca una soluzione su misura? Saremo lieti di ricevere la Sua richiesta.',
-  mailTitle: 'Via e-mail',
-  mailText: 'Per progetti, richieste e qualsiasi argomento che preferisca trattare in modo riservato.',
-  discordTitle: 'Il nostro Discord',
-  discordText: 'Presenti i Suoi progetti, riceva supporto e si confronti direttamente con il team.',
+    'Ti serve aiuto, hai in mente un progetto più grande o cerchi una soluzione su misura? Ci farebbe piacere sentirti.',
+  mailTitle: 'Scrivici un’email',
+  mailText: 'Per progetti, richieste e tutto ciò di cui preferisci parlare in privato.',
+  discordTitle: 'Entra nel nostro Discord',
+  discordText: 'Mostra cosa hai creato, fatti aiutare con il prossimo passo e parla direttamente con il team.',
   discordLink: 'Il Discord di GenHTTP',
 
   terms: 'Termini di servizio',
-  writeCode: 'Scrivere il codice autonomamente',
+  writeCode: 'Scrivi tu il codice',
   contact: 'Contatti',
 };

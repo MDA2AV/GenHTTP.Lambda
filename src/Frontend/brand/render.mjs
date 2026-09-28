@@ -1,6 +1,7 @@
 /*
  * Writes the icons and the link previews into public/, from logo.svg and
- * cards.html next to this file. Run it after changing either:
+ * cards.html next to this file - a preview for every page in every language
+ * of cards.text.js. Run it after changing any of them:
  *
  *   node brand/render.mjs
  *
@@ -78,11 +79,26 @@ try {
   await page.shoot(`${cards}?page=/`, 1200, 630);
 
   const paths = await page.evaluate('window.CARDS');
+  const languages = await page.evaluate('window.LANGUAGES');
 
-  for (const path of paths) {
-    const name = path === '/' ? 'default' : path.slice(1);
-    writeFileSync(join(out, 'social', `${name}.png`), await page.shoot(`${cards}?page=${path}`, 1200, 630));
-    console.log(`social/${name}.png`);
+  // English where it always was, as PNG; every other language in a folder of
+  // its own, as JPEG - a fifth of the size, which is most of a megabyte per
+  // language, and a preview is looked at once and small
+  for (const language of languages) {
+    const english = language === 'en';
+
+    if (!english) {
+      mkdirSync(join(out, 'social', language), { recursive: true });
+    }
+
+    for (const path of paths) {
+      const name = path === '/' ? 'default' : path.slice(1);
+      const file = english ? `social/${name}.png` : `social/${language}/${name}.jpg`;
+      const url = `${cards}?page=${path}&lang=${language}`;
+
+      writeFileSync(join(out, file), await page.shoot(url, 1200, 630, english ? 'png' : 'jpeg'));
+      console.log(file);
+    }
   }
 
   console.log('icons written');
@@ -130,13 +146,17 @@ async function connect() {
 
   return {
     evaluate,
-    async shoot(url, width, height) {
+    async shoot(url, width, height, format = 'png') {
       await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       await send('Page.navigate', { url });
       await sleep(400);
       await evaluate('document.fonts.ready.then(() => true)');
 
-      const shot = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width, height, scale: 1 } });
+      const shot = await send('Page.captureScreenshot', {
+        format,
+        ...(format === 'jpeg' ? { quality: 85 } : {}),
+        clip: { x: 0, y: 0, width, height, scale: 1 },
+      });
       return Buffer.from(shot.result.data, 'base64');
     },
   };

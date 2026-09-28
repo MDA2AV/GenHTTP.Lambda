@@ -1,63 +1,63 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Auf dieser Installation nicht verfügbar',
+  offTitle: 'Hier nicht aktiviert',
   off: (write, mcp) => (
     <>
-      Diese Installation verfügt über keinen Build-Agenten. Sie können den Code jedoch {write('selbst schreiben')} oder
-      Ihren eigenen Claude mit {mcp} verbinden.
+      Diese Installation hat keinen Build-Agenten. Sie können den Code aber {write('selbst schreiben')} oder Ihren
+      eigenen Claude mit {mcp} verbinden.
     </>
   ),
 
-  title: 'Beschreiben Sie, was Sie benötigen.',
+  title: 'Sagen Sie, was Sie möchten.',
   intro:
-    'Die Anwendung wird erstellt und online gestellt, und Sie erhalten einen Link, den Sie mit anderen teilen können. Ohne Konto, ohne Installation – und sie kann Daten speichern, etwa Punktestände, Nachrichten oder Einträge, sodass alle Nutzer denselben Stand sehen.',
-  placeholder: 'Erstelle eine …',
-  working: 'in Arbeit …',
+    'Die App wird gebaut und online gestellt. Sie bekommen einen Link, den Sie an alle schicken können. Außerdem merkt sich die App Punkte, Nachrichten oder Einträge, damit alle dasselbe sehen. Kein Konto, keine Installation.',
+  placeholder: 'Bau mir …',
+  working: 'Läuft …',
   shortcut: 'Strg + Enter',
-  building: 'Wird erstellt',
-  buildIt: 'Erstellen',
-  builtBy: 'Erstellt mit',
+  building: 'Wird gebaut',
+  buildIt: 'Bauen',
+  builtBy: 'Gebaut von',
   password: 'Passwort',
   fable:
-    'Fable ist während der Erprobung durch ein Passwort geschützt. Es arbeitet ohne Zeitlimit, bis die Anwendung fertiggestellt ist.',
+    'Fable ist in der Testphase und durch ein Passwort geschützt. Es hat kein Zeitlimit und arbeitet, bis die App fertig ist – nicht, bis die Zeit abläuft.',
   onlyNew:
-    'Hier werden ausschließlich neue Anwendungen erstellt. Um eine bestehende Anwendung weiterzuentwickeln, übergeben Sie deren Editor-Link Ihrem eigenen Coding-Agenten – siehe unten.',
+    'Hier entstehen nur neue Apps. Um eine bestehende weiterzuentwickeln, geben Sie ihren Editor-Link Ihrem eigenen Coding-Agenten – siehe unten.',
   ideas: [
-    'eine Pinnwand, auf der jede Person eine kurze Nachricht hinterlassen kann',
-    'eine Bestenliste für ein Würfelspiel',
-    'eine Umfrage mit sichtbarem Zwischenergebnis',
-    'ein Gästebuch für unsere Hochzeit',
-    'einen Countdown bis zu einem gemeinsamen Termin',
+    'eine Pinnwand, auf der jeder eine kurze Nachricht hinterlassen kann',
+    'eine Highscore-Liste für ein Würfelspiel',
+    'eine Umfrage, bei der alle das Ergebnis sehen',
+    'ein Gästebuch für meine Hochzeit',
+    'einen Countdown bis zu einem Datum, den alle sehen',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Ein Auftrag vor Ihrem – Sie sind als Nächstes an der Reihe.' : `${waiting} Aufträge vor Ihrem.`,
-  starting: 'Wird gestartet …',
+    waiting === 1 ? 'Noch ein Build vor Ihrem – Sie sind als Nächstes dran.' : `Noch ${waiting} Builds vor Ihrem.`,
+  starting: 'Startet …',
 
-  yourApp: 'Ihre Anwendung',
-  further: 'Zur Weiterentwicklung',
-  keep: 'Bitte bewahren Sie diesen Link sicher auf. Er ist der einzige Zugang und kann nicht wiederhergestellt werden – auch nicht durch uns. Legen Sie ein Lesezeichen an, bevor Sie diesen Tab schließen.',
+  yourApp: 'Ihre App',
+  further: 'So geht es weiter',
+  keep: 'Heben Sie diesen Link gut auf. Er ist der einzige Weg zurück, und niemand kann ihn wiederherstellen – auch wir nicht. Setzen Sie ein Lesezeichen, bevor Sie den Tab schließen.',
   change:
-    'Diese Seite erstellt ausschließlich neue Anwendungen. Um diese Anwendung zu ändern, verbinden Sie Ihren eigenen Coding-Agenten wie unten beschrieben, übergeben ihm den Editor-Link und beschreiben die gewünschte Änderung.',
+    'Diese Seite baut nur neue Apps. Um diese hier zu ändern, verbinden Sie Ihren eigenen Coding-Agenten wie unten beschrieben. Geben Sie ihm den Editor-Link und sagen Sie ihm, was anders werden soll.',
   copyLink: 'Editor-Link kopieren',
   lifetime: (offline, removed) =>
-    `Die Anwendung bleibt online, solange sie genutzt wird: Nach ${offline} Tagen ohne Aufrufe oder Änderungen wird sie offline genommen, nach ${removed} Tagen entfernt. Über den Editor und „Bereitstellen“ lässt sie sich wieder online stellen.`,
+    `Die App bleibt online, solange sie genutzt wird. Nach ${offline} Tagen ohne Besuche oder Änderungen geht sie offline, nach ${removed} Tagen wird sie gelöscht. Mit „Deployen“ im Editor ist sie wieder online.`,
   openEditor: 'Editor öffnen',
-  another: 'Weitere Anwendung erstellen',
+  another: 'Noch etwas bauen',
 
-  keepGoing: 'Mit Ihrem eigenen Agenten weiterarbeiten',
-  orOwn: 'Oder Ihren eigenen Agenten verwenden',
+  keepGoing: 'Mit Ihrem eigenen Agenten weitermachen',
+  orOwn: 'Oder Ihren eigenen Agenten nutzen',
   ownText:
-    'Das Eingabefeld oben nutzt einen Claude, der auf diesem Server läuft. Wenn Sie bereits einen eigenen Agenten verwenden, können Sie ihn stattdessen verbinden. Er verfügt über dieselben Möglichkeiten – ein Lambda anlegen, den Code schreiben, es online stellen –, ohne Tageslimit und ohne diese Seite.',
-  thenAsk: 'Anschließend beschreiben Sie Ihre Anforderung wie hier.',
+    'Hinter dem Feld oben arbeitet ein Claude auf unserem Server. Haben Sie schon einen eigenen Agenten? Dann verbinden Sie ihn stattdessen. Er kann dasselbe – ein Lambda anlegen, den Code schreiben, es online stellen –, nur ohne Tageslimit und ohne Umweg über diese Seite.',
+  thenAsk: 'Dann sagen Sie ihm, was Sie möchten – genau wie hier.',
   claudeWeb: 'Claude im Web',
   claudeWebHow:
-    'Einstellungen, dann „Connectors“, dann „Add custom connector“. Fügen Sie die obige Adresse als URL des entfernten MCP-Servers ein. Ein Schlüssel oder eine Anmeldung ist nicht erforderlich.',
+    'Einstellungen, dann „Connectors“, dann „Add custom connector“. Fügen Sie die Adresse oben als URL des Remote-MCP-Servers ein. Kein Key, kein Login.',
   howToChange:
-    'Auf diesem Weg ändern Sie auch eine bestehende Anwendung: Übergeben Sie Ihrem Agenten den Editor-Link und beschreiben Sie die Änderung.',
-  more: 'Mehr zur Nutzung eines Agenten',
+    'So ändern Sie auch eine fertige App: Geben Sie Ihrem Agenten den Editor-Link und sagen Sie ihm, was er tun soll.',
+  more: 'Mehr zum eigenen Agenten',
 
-  failedToStart: 'Die Anfrage konnte nicht gestartet werden.',
-  noAnswer: 'Der Vorgang wurde ohne Rückmeldung beendet.',
-  failed: 'Der Vorgang ist fehlgeschlagen.',
+  failedToStart: 'Die Anfrage kam nicht durch.',
+  noAnswer: 'Fertig, aber ohne Rückmeldung, was passiert ist.',
+  failed: 'Das hat nicht geklappt.',
 };

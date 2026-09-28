@@ -2,36 +2,34 @@ import type { Messages } from '../en';
 
 export const showcase: Messages['showcase'] = {
   eyebrow: 'Showcase',
-  title: 'Hier erstellt, jetzt in Betrieb',
+  title: 'Hier gebaut, jetzt online',
   intro:
-    'Lambdas, die ihre Eigentümer zur Ansicht freigegeben haben. Alle sind online – jede Karte öffnet die laufende Anwendung. Zuletzt häufig genutzte Anwendungen erscheinen zuerst.',
+    'Lambdas, die ihre Besitzer zeigen möchten. Alle sind online – jede Karte öffnet die echte App. Was zuletzt genutzt wurde, steht oben.',
   counted: (total) => (total === 1 ? '1 Lambda' : `${total} Lambdas`),
   failed: 'Der Showcase konnte nicht geladen werden.',
-  loadingMore: 'Weitere werden geladen …',
-  showMore: 'Weitere anzeigen',
-  nothingTitle: 'Noch keine Einträge',
+  loadingMore: 'Lädt weitere …',
+  showMore: 'Mehr anzeigen',
+  nothingTitle: 'Noch nichts zu sehen',
   nothing: (tab) => (
     <>
-      Sie haben eine funktionsfähige Anwendung erstellt? Öffnen Sie ihr Kontrollzentrum, wählen Sie {tab('Showcase')}{' '}
-      und ergänzen Sie einen Titel, eine kurze Beschreibung und ein Bild. Der Eintrag erscheint hier, solange die
-      Anwendung online ist.
+      Sie haben etwas gebaut, das funktioniert? Öffnen Sie das Kontrollzentrum, wählen Sie {tab('Showcase')} und fügen
+      Sie einen Titel, ein paar Worte und ein Bild hinzu. Solange die App online ist, erscheint sie hier.
     </>
   ),
-  buildOne: 'Anwendung erstellen',
-  yoursTitle: 'Ihre Anwendung im Showcase',
+  buildOne: 'App bauen',
+  yoursTitle: 'Ihre App im Showcase?',
   yours: (tab) => (
     <>
-      Öffnen Sie das Kontrollzentrum Ihres Lambdas und wählen Sie {tab('Showcase')}, oder beauftragen Sie den Agenten,
-      der es erstellt hat. Dies ist nur mit dem Editor-Schlüssel möglich, und der Eintrag kann jederzeit wieder entfernt
-      werden.
+      Öffnen Sie das Kontrollzentrum Ihres Lambdas und wählen Sie {tab('Showcase')} – oder bitten Sie den Agenten, der es
+      gebaut hat. Das kann nur, wer den Editor-Link hat. Und Sie können den Eintrag jederzeit wieder entfernen.
     </>
   ),
-  buildSomething: 'Anwendung erstellen',
+  buildSomething: 'App bauen',
 };
 
 export const card: Messages['card'] = {
   noPicture: 'Noch kein Bild',
   title: 'Titel',
-  description: 'Was Besucher damit tun können.',
+  description: 'Was Besucher damit machen können.',
   opens: (title, address) => `${title}, öffnet ${address} in einem neuen Tab`,
 };

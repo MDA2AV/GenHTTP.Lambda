@@ -62,30 +62,30 @@ export function percent(part: number, whole: number): string {
 
 /** A span of time as somebody would say it: 3 d 4 h, 12 min, 40 s. */
 export function span(seconds: number, words: SharedWords = SHARED): string {
-  const { s: sec, min, h, d } = words.units;
+  const { units, amount, pair } = words;
   const s = Math.max(0, Math.round(seconds));
 
   if (s < 60) {
-    return `${s} ${sec}`;
+    return amount(s, units.s);
   }
 
   const minutes = Math.floor(s / 60);
 
   if (minutes < 60) {
-    return `${minutes} ${min}`;
+    return amount(minutes, units.min);
   }
 
   const hours = Math.floor(minutes / 60);
 
   if (hours < 48) {
     const rest = minutes % 60;
-    return rest > 0 && hours < 10 ? `${hours} ${h} ${rest} ${min}` : `${hours} ${h}`;
+    return rest > 0 && hours < 10 ? pair(amount(hours, units.h), amount(rest, units.min)) : amount(hours, units.h);
   }
 
   const days = Math.floor(hours / 24);
   const rest = hours % 24;
 
-  return rest > 0 && days < 10 ? `${days} ${d} ${rest} ${h}` : `${days} ${d}`;
+  return rest > 0 && days < 10 ? pair(amount(days, units.d), amount(rest, units.h)) : amount(days, units.d);
 }
 
 /** How long ago, or how long from now, in the same words. */

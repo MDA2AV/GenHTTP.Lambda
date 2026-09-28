@@ -1,51 +1,53 @@
 import type { Messages } from '../en';
 
 export const create: Messages['create'] = {
-  title: 'Crear un lambda',
-  whatTitle: '¿Qué desea crear?',
+  title: 'Crear una lambda',
+  whatTitle: '¿Qué quieres crear?',
   whatText:
-    'Elija la opción más parecida y empezará con una copia de algo que ya funciona, totalmente modificable. También puede empezar desde cero.',
-  seeIt: 'Ver en funcionamiento',
-  startFrom: 'Usar esta plantilla',
+    'Elige lo más parecido y empiezas con una copia de algo que ya funciona, lista para cambiarla a tu gusto. O empieza desde cero.',
+  seeIt: 'Verla en marcha',
+  startFrom: 'Empezar con esta',
   starters: {
     'demo-crud': {
-      title: 'Gestionar elementos',
-      description: 'Una lista que se puede ampliar, modificar y marcar: tareas, notas, marcadores o un pequeño inventario.',
+      title: 'Lleva el control de tus cosas',
+      description: 'Una lista donde la gente añade, cambia y marca cosas: tareas, notas, marcadores o un pequeño inventario.',
     },
     'demo-registration': {
-      title: 'Registro e inicio de sesión',
-      description: 'Cuentas con registro e inicio de sesión, y páginas visibles solo para los usuarios registrados.',
+      title: 'Deja que la gente se registre',
+      description: 'Cuentas con las que la gente se registra e inicia sesión, y páginas que solo ellos pueden ver.',
     },
     'demo-game': {
-      title: 'Un juego multijugador',
-      description: 'Algo que varias personas utilizan al mismo tiempo, en tiempo real en sus navegadores.',
+      title: 'Un juego en grupo',
+      description: 'Varias personas juegan a la vez, en vivo, cada una en su navegador.',
     },
     'demo-files': {
-      title: 'Compartir archivos e imágenes',
-      description: 'Las personas suben imágenes o documentos y los demás pueden verlos.',
+      title: 'Comparte archivos y fotos',
+      description: 'La gente sube fotos o documentos, y todos los demás pueden verlos.',
     },
     'demo-live': {
-      title: 'Actualizaciones en tiempo real',
+      title: 'Muestra lo que pasa al instante',
       description: 'Una página que se actualiza sola en cuanto algo cambia: votos, puntuaciones, un panel.',
     },
     empty: {
-      title: 'Lambda vacío',
-      description: 'Empiece con un lambda vacío y desarrolle su propia idea.',
+      title: 'Otra cosa',
+      description: 'Empieza con una lambda vacía y crea lo que tengas en mente.',
     },
   },
 
-  addressTitle: 'Asignar una dirección',
-  fromDemo: (title) => <>{title}: su lambda comienza como una copia de la demo, totalmente modificable.</>,
-  fromNothing: 'Su lambda comienza vacío, listo para lo que tenga en mente.',
-  pickAgain: 'Elegir otra opción',
+  addressTitle: 'Dale una dirección',
+  fromDemo: (title) => (
+    <>{title}: tu lambda empieza como una copia de la demo, y puedes cambiar todo lo que quieras.</>
+  ),
+  fromNothing: 'Tu lambda empieza vacía, lista para lo que tengas en mente.',
+  pickAgain: 'Elegir otra cosa',
   publicKey: 'Clave pública',
   free: (key) => `«${key}» está disponible.`,
-  keyHint: 'Letras minúsculas, dígitos y guiones; tres caracteres como mínimo. Déjelo vacío para obtener una clave aleatoria.',
+  keyHint: 'Minúsculas, números y guiones. Tres caracteres como mínimo. Déjalo vacío y te damos una al azar.',
   accept: 'Acepto las condiciones del servicio',
-  fullTerms: 'Leer las condiciones del servicio completas',
+  fullTerms: 'Leer las condiciones completas',
   back: 'Atrás',
   creating: 'Creando…',
-  submit: 'Crear lambda',
-  keepLink: 'En la siguiente pantalla verá su enlace de edición. Es el único acceso, así que consérvelo.',
-  failed: 'No se pudo crear el lambda.',
+  submit: 'Crear mi lambda',
+  keepLink: 'En la siguiente pantalla verás tu enlace de edición. Es la única forma de volver a entrar, así que guárdalo.',
+  failed: 'No se pudo crear la lambda.',
 };

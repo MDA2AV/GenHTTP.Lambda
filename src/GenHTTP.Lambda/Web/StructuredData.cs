@@ -55,7 +55,7 @@ public static class StructuredData
                     ["@id"] = Home + "#website",
                     ["name"] = site,
                     ["url"] = Home,
-                    ["inLanguage"] = new JsonArray([.. SiteLanguages.All.Select(l => JsonValue.Create(l))]),
+                    ["inLanguage"] = new JsonArray([.. SiteLanguages.All.Select(l => JsonValue.Create(SiteLanguages.TagOf(l)))]),
                     ["publisher"] = new JsonObject { ["@id"] = Organization }
                 },
                 new JsonObject
@@ -64,7 +64,7 @@ public static class StructuredData
                     ["@id"] = Home + "#application",
                     ["name"] = site,
                     ["url"] = Home + language,
-                    ["inLanguage"] = language,
+                    ["inLanguage"] = SiteLanguages.TagOf(language),
                     ["description"] = description,
                     ["applicationCategory"] = "DeveloperApplication",
                     ["operatingSystem"] = "Any",

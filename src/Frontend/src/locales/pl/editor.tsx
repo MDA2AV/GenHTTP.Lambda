@@ -1,0 +1,497 @@
+import type { EditorMessages } from '../en/editor';
+import { counted } from './plural';
+
+/** Teksty edytora po polsku. */
+export const editor: EditorMessages = {
+  shared: {
+    units: { s: 's', min: 'min', h: 'godz.', d: 'd' },
+    amount: (value, unit) => `${value} ${unit}`,
+    pair: (larger, smaller) => `${larger} ${smaller}`,
+    never: 'nigdy',
+    justNow: 'przed chwilą',
+    ago: (span) => `${span} temu`,
+    in: (span) => `za ${span}`,
+    origins: {
+      agent: 'agent',
+      template: 'szablon',
+      admin: 'administrator',
+      system: 'platforma',
+      api: 'API / edytor',
+      unknown: 'nieznane',
+    },
+    endings: {
+      replaced: 'zastąpione nowszym wdrożeniem',
+      stopped: 'wyłączone',
+      expired: 'wygasłe z braku ruchu',
+      admin: 'wyłączone przez administratora',
+      ended: 'zakończone',
+    },
+    whatThisIs: 'Co to jest',
+    byAgent: 'przez agenta',
+    writtenByAgent: 'Napisane przez agenta',
+    more: 'Więcej',
+    of: (used, total) => `${used} z ${total}`,
+    online: (version) => `Online · v${version}`,
+    onlineTitle: (version) => `Online, serwuje wersję ${version}`,
+    offline: 'Offline',
+    offlineTitle: 'Offline: nic nie jest serwowane',
+    premium:
+      'Premium: może działać pod własną domeną, ma więcej miejsca na kod, zasoby i dane, i zostaje online bez względu na ruch',
+    demo: 'Demo: utrzymywane online przez tę instalację, tylko do odczytu',
+    tier: (tier) => `Plan ${tier}`,
+    entrances: {
+      title: 'Ruch według adresu',
+      note: 'Od startu serwera, łącznie z połączeniami websocket.',
+    },
+    chart: {
+      showChart: 'Pokaż wykres',
+      showValues: 'Pokaż wartości',
+      none: 'Brak pomiarów.',
+      time: 'Czas',
+    },
+    diagnostics: {
+      compiles: 'Kod się kompiluje.',
+      none: 'Brak komunikatów. Sprawdź albo wdróż kod, żeby go skompilować.',
+      line: (line) => `linia ${line}`,
+    },
+  },
+
+  frame: {
+    title: 'Edytor',
+    sections: {
+      overview: 'Przegląd',
+      showcase: 'Galeria',
+      domain: 'Domena',
+      files: 'Pliki',
+      versions: 'Wersje',
+      deployments: 'Wdrożenia',
+      stats: 'Statystyki',
+      logs: 'Logi',
+      code: 'Kod',
+    },
+    sectionsLabel: 'Sekcje',
+    loadFailed: 'Nie udało się załadować tej lambdy.',
+    online: (version) => `Wersja ${version} jest online.`,
+    deployFailed: 'Nie udało się wdrożyć lambdy.',
+    offline: 'Wyłączona. Kod nadal tu jest.',
+    offlineFailed: 'Nie udało się wyłączyć lambdy.',
+    leave: 'Niezapisane zmiany w kodzie przepadną. Wyjść mimo to?',
+    nothingTitle: 'Ten link niczego nie otwiera',
+    createNew: 'Utwórz nową lambdę',
+    loading: 'Ładowanie lambdy…',
+    moreActions: 'Więcej opcji',
+    redeploy: (version) => `Wdróż ponownie wersję ${version}`,
+    takeOffline: 'Wyłącz',
+    copyLink: 'Kopiuj link',
+    copyPrivate: 'Kopiuj prywatny link',
+    privateLink: 'Każdy, kto ma ten link, może zmienić lambdę. Nie udostępniaj go.',
+    rename: 'Zmień adres',
+    download: 'Pobierz jako projekt .NET',
+    delete: 'Usuń tę lambdę',
+    deploy: (version) => `Wdróż wersję ${version}`,
+    problems: 'Ostatnio coś poszło nie tak',
+    demoTitle: 'Demo utrzymywane online przez tę instalację, tylko do odczytu.',
+    demo: (start) => (
+      <>
+        Przeglądaj kod, historię, zapisane dane i logi – po to tu jest. Żeby coś zmienić,{' '}
+        {start('utwórz na jego podstawie własną lambdę')}.
+      </>
+    ),
+    keep: 'Zachowaj ten link. To jedyna droga powrotu do tej lambdy.',
+    gotIt: 'Rozumiem',
+    rejected: (version) => `Wersja ${version} nie trafiła online`,
+    refused: 'Wdrożenie zostało odrzucone',
+    openCode: 'Otwórz kod',
+    close: 'Zamknij',
+    notCompiling: 'Kod się nie kompiluje. To, co było online wcześniej, nadal działa.',
+    moved: (path) => `Nowy adres: ${path}.`,
+    deleteTitle: 'Usunąć tę lambdę?',
+    cancel: 'Anuluj',
+    deleteForGood: 'Usuń na zawsze',
+    deleteFailed: 'Nie udało się usunąć lambdy.',
+    deleteText: (key) => (
+      <>Znikną wszystkie wersje, pliki, historia i adres {key}. Tego nie da się cofnąć.</>
+    ),
+    openInTab: 'Otwórz w nowej karcie',
+    open: (address) => `Otwórz ${address} w nowej karcie`,
+    copyAddress: 'Kopiuj adres',
+    renameFailed: 'Nie udało się zmienić adresu.',
+    moveIt: 'Przenieś',
+    renameText: 'Stary adres od razu przestanie działać, więc zaktualizuj wszystko, co do niego prowadzi.',
+  },
+
+  summary: {
+    reading: 'Sprawdzanie stanu…',
+    hint: (since, kept, retention, tier) =>
+      `Ruch jest liczony od ostatniego startu serwera (${since}). ` +
+      (kept
+        ? `Lambda działa, dopóki ktoś z niej korzysta, i jest usuwana po ${retention === 1 ? '1 dniu' : `${retention} dniach`} bez odwiedzin i zmian.`
+        : `Ta lambda jest w planie ${tier}, więc zostaje online i zapisana bez względu na ruch.`),
+    onlineFor: (duration, version) => (
+      <>
+        Online od {duration('jakiegoś czasu')}, serwuje wersję {version}.
+      </>
+    ),
+    offline: 'Offline. Nic nie jest serwowane, dopóki nie wdrożysz jakiejś wersji.',
+    nothing: 'Nic jeszcze nie napisano.',
+    requestsToday: 'żądania dziś',
+    lastHour: (count) => `${count} w ostatniej godzinie`,
+    hourly: 'Żądania na godzinę, ostatnie 24 godziny',
+    failed: 'nieudane',
+    failedTitle: (failed, rejected) =>
+      `Ostatnie 24 godziny: ${counted(failed, 'błąd serwera', 'błędy serwera', 'błędów serwera')}, nieznalezione lub odrzucone: ${rejected}`,
+    average: 'średni czas odpowiedzi',
+    noneYet: 'brak',
+    lastVisit: 'ostatnia wizyta',
+    problems: 'Ostatnio coś poszło nie tak',
+    openLog: 'Otwórz log',
+    latest: 'Ostatnia zmiana',
+    allVersions: 'Wszystkie wersje',
+    noDescription: 'Bez opisu',
+    version: (version) => `Wersja ${version}`,
+    notOnline: 'jeszcze nie online',
+    wanted: 'O co proszono',
+    noVersions: 'Jeszcze nie ma wersji.',
+    storage: 'Miejsce',
+    browse: 'Przeglądaj',
+    code: 'Kod',
+    codeWhy: 'C# jest kompilowany, nigdy serwowany.',
+    characters: 'znaków',
+    assets: 'Zasoby',
+    assetsPublic: 'Publiczne: kod je serwuje.',
+    assetsPrivate: 'Kod ich nie serwuje.',
+    data: 'Dane',
+    dataPublic: 'Publiczne: kod serwuje obszar roboczy.',
+    dataPrivate: 'Dostępne tylko dla lambdy.',
+  },
+
+  files: {
+    hint: (b) => (
+      <>
+        {b('Kod')} jest kompilowany i nigdy nie jest serwowany. {b('Zasoby')} – strony, style, obrazki – są zapisywane z
+        każdą wersją i są publiczne, jeśli kod je serwuje. {b('Dane')} to to, co lambda zapisuje w trakcie działania; nie
+        należą do żadnej wersji i są publiczne tylko wtedy, gdy kod je serwuje.
+      </>
+    ),
+    edit: 'Edytuj tę wersję',
+    version: 'Wersja',
+    shown: (version, online, newest) => `Wersja ${version}${online ? ', online' : newest ? ', najnowsza' : ''}`,
+    optionOnline: ' (online)',
+    readFailed: 'Nie udało się odczytać tej wersji.',
+    dataFailed: 'Nie udało się odczytać danych.',
+    noVersion: 'Nie ma jeszcze żadnej wersji.',
+    label: 'Pliki',
+    code: 'Kod',
+    codeWhy: 'Kompilowany do lambdy, nigdy serwowany.',
+    count: (files) => counted(files, 'plik', 'pliki', 'plików'),
+    codeUsage: (files, used, of) => `${files}, ${used} z ${of} znaków`,
+    usage: (files, used, of) => `${files}, ${used} z ${of}`,
+    noCode: 'W tej wersji nie ma kodu.',
+    assets: 'Zasoby',
+    assetsPublic: 'Publiczne: ta wersja serwuje je przez Assets.',
+    assetsPrivate: 'Zapisane z kodem, ale ta wersja ich nie serwuje.',
+    noAssets: 'Brak w tej wersji.',
+    data: 'Dane',
+    dataPublic: 'Publiczne: ta wersja serwuje je przez Workspace.',
+    dataPrivate: 'Dostępne tylko dla lambdy. Nie należą do żadnej wersji.',
+    uploadFailed: (path) => `Nie udało się przesłać pliku ${path}.`,
+    deleteFolder: (path, held) =>
+      held > 0
+        ? `Usunąć folder ${path} i ${counted(held, 'plik', 'pliki', 'plików')} w środku?`
+        : `Usunąć folder ${path}?`,
+    deleteFile: (path) => `Usunąć plik ${path}? Lambda już go nie znajdzie.`,
+    deleteFailed: 'Nie udało się tego usunąć.',
+    full: 'Brak miejsca na dane',
+    uploadInto: (folder) => `Prześlij do folderu ${folder}`,
+    upload: 'Prześlij',
+    reading: 'Odczytywanie…',
+    noData: 'Na razie pusto. Tu pojawi się to, co lambda zapisze w trakcie działania.',
+    delete: (path) => `Usuń ${path}`,
+    deleteShort: 'Usuń',
+    fileFailed: 'Nie udało się odczytać pliku.',
+    pick: 'Wybierz plik, żeby zobaczyć, co w nim jest.',
+    tooLarge: (name, size) => (
+      <>
+        Plik {name} ma {size} – to za dużo, żeby go tu pokazać.
+      </>
+    ),
+    download: 'Pobierz',
+    readingFile: (name) => `Odczytywanie pliku ${name}…`,
+    missing: (name) => `Ta wersja nie ma pliku ${name}.`,
+    saved: 'zapisano',
+    notText: 'To nie jest tekst. Pobierz plik, żeby zajrzeć do środka.',
+  },
+
+  versions: {
+    hint: (limit) =>
+      `Każda wersja pamięta, o co proszono i co zmieniła – jeśli autor to podał. Gdy wersji jest więcej niż ${limit}, najstarsze są usuwane; ta, która jest online, nigdy.`,
+    none: 'Jeszcze nie ma wersji.',
+    noDescription: 'Bez opisu',
+    online: 'online',
+    putOnline: 'Wdróż tę wersję',
+    rollBackTitle: 'Przywróć tę starszą wersję online',
+    deploy: 'Wdróż',
+    rollBack: 'Przywróć',
+    readFailed: 'Nie udało się odczytać tej wersji.',
+    comparing: 'Porównywanie…',
+    unchanged: 'Nic się nie zmieniło względem poprzedniej wersji.',
+    first: 'Pierwsza wersja.',
+    status: { added: 'dodany', removed: 'usunięty', changed: 'zmieniony', same: 'bez zmian' },
+    browse: 'Przeglądaj pliki',
+    edit: 'Edytuj od tej wersji',
+    binary: 'To nie jest tekst, więc nie ma linii do porównania.',
+    tooLarge: 'Za duży, żeby porównać go linia po linii.',
+  },
+
+  deployments: {
+    hint: (until) =>
+      `Wdrożenie działa, dopóki ktoś z niego korzysta${until ? ` – a jeśli nikt, to do ${until}` : ''}. Każde kolejne wdrożenie i każda wizyta zaczynają to odliczanie od nowa.`,
+    takeOffline: 'Wyłącz',
+    readFailed: 'Nie udało się odczytać historii.',
+    reading: 'Odczytywanie historii…',
+    none: 'Nic jeszcze nie wdrożono.',
+    noDescription: 'Bez opisu',
+    deployed: (when, by) => `Wdrożono ${when} (${by})`,
+    duration: 'Jak długo było online',
+    online: 'online',
+    short: {
+      replaced: 'zastąpione',
+      stopped: 'wyłączone',
+      expired: 'wygasłe',
+      admin: 'przez administratora',
+      ended: 'zakończone',
+    },
+    putBack: (version) => `Przywróć online wersję ${version}`,
+    timeline: 'Co było online w ciągu ostatnich siedmiu dni',
+    block: (version, from, to) => `Wersja ${version}, od ${from} do ${to ?? 'teraz'}`,
+    weekAgo: 'tydzień temu',
+    now: 'teraz',
+  },
+
+  stats: {
+    readFailed: 'Nie udało się odczytać statystyk.',
+    range: 'Zakres czasu',
+    lastHour: 'Ostatnia godzina',
+    lastDay: 'Ostatnie 24 godziny',
+    hint: (since) =>
+      `Liczone w pamięci od ostatniego startu serwera (${since}). Po restarcie liczenie zaczyna się od nowa.`,
+    reading: 'Odczytywanie statystyk…',
+    requests: 'żądania',
+    websockets: (count) => `oraz ${counted(count, 'połączenie', 'połączenia', 'połączeń')} websocket`,
+    failed: 'nieudane',
+    serverErrors: (count) => counted(count, 'błąd serwera', 'błędy serwera', 'błędów serwera'),
+    rejected: 'nieznalezione lub odrzucone',
+    average: 'średni czas odpowiedzi',
+    sent: (amount) => `wysłano ${amount}`,
+    nobody: (hour) => (hour ? 'Brak wywołań w ostatniej godzinie.' : 'Brak wywołań w ostatnich 24 godzinach.'),
+    requestsTitle: 'Żądania',
+    per: (hour) => (hour ? 'Na minutę.' : 'Na 15 minut.'),
+    answered: 'Obsłużone',
+    rejectedSeries: 'Nieznalezione lub odrzucone',
+    failedSeries: 'Nieudane',
+    timeTitle: 'Czas odpowiedzi',
+    averagePer: (hour) => (hour ? 'Średnia na minutę.' : 'Średnia na 15 minut.'),
+    averageSeries: 'Średnia',
+    mostAsked: 'Najpopularniejsze ścieżki',
+    path: 'Ścieżka',
+    requestsColumn: 'Żądania',
+    failedColumn: 'Nieudane',
+    averageColumn: 'Średnia',
+    since: 'Od startu serwera.',
+  },
+
+  logs: {
+    readFailed: 'Nie udało się odczytać logu.',
+    hint: (capturing) =>
+      'Żądania, to, co lambda wypisała, i to, co poszło nie tak – na bieżąco.' +
+      (capturing ? '' : ' Ta instalacja nie zapisuje tego, co wypisują lambdy, więc widać tylko żądania i błędy.') +
+      ' Log jest trzymany w pamięci i wspólny dla wszystkich lambd na tym serwerze, więc sięga od kilku minut do kilku godzin wstecz, a po restarcie jest pusty. Adresy odwiedzających nie są pokazywane.',
+    search: 'Szukaj',
+    searchLabel: 'Szukaj w logu',
+    resume: 'Pokazuj nowe wpisy na bieżąco',
+    pause: 'Wstrzymaj nowe wpisy na czas czytania',
+    paused: 'Wstrzymane',
+    live: 'Na żywo',
+    show: 'Pokaż',
+    all: 'Wszystko',
+    requests: 'Żądania',
+    output: 'Konsola',
+    problems: 'Problemy',
+    reading: 'Odczytywanie logu…',
+    noProblems: 'Nic nie poszło nie tak – przynajmniej nic, co log jeszcze pamięta.',
+    nothing: 'Na razie pusto. Otwórz adres lambdy, a jej żądania pojawią się tutaj.',
+    noMatch: 'Brak wyników.',
+    identical: (count) => counted(count, 'identyczny wpis', 'identyczne wpisy', 'identycznych wpisów'),
+    at: (domain) => `, pod adresem ${domain}`,
+    from: (country) => `, kraj: ${country}`,
+  },
+
+  showcase: {
+    loadFailed: 'Nie udało się załadować wpisu w galerii.',
+    loading: 'Ładowanie…',
+    // what is still missing, after "Brakuje jeszcze": so in the genitive
+    title: 'tytułu',
+    description: 'opisu',
+    picture: 'obrazka',
+    updated: 'Wpis w galerii został zaktualizowany.',
+    listed: 'Lambda jest już w galerii.',
+    waiting: 'Zapisano. Wpis pojawi się w galerii, gdy tylko lambda będzie online.',
+    saveFailed: 'Nie udało się zapisać wpisu w galerii.',
+    removed: 'Usunięto z galerii.',
+    removeFailed: 'Nie udało się usunąć wpisu z galerii.',
+    wrongType: 'To nie jest obrazek PNG, JPEG, GIF ani WebP.',
+    tooLarge: (size, limit) => `Ten plik ma ${size}, a obrazek może mieć najwyżej ${limit}.`,
+    unreadable: 'Nie udało się odczytać pliku.',
+    hint: (tool) => (
+      <>
+        Galeria pokazuje lambdy, które ich właściciele postanowili pokazać – najpierw te ostatnio używane. Tylko osoba z
+        kluczem edytora może dodać lambdę do galerii albo ją z niej usunąć, a lambda jest tam widoczna tylko wtedy, gdy
+        jest online. Agent może zrobić to samo narzędziem {tool}.
+      </>
+    ),
+    open: 'Otwórz galerię',
+    switch: 'Pokaż tę lambdę w galerii',
+    listedNow: 'Widoczna w galerii. Każdy, kto przegląda galerię, może ją otworzyć.',
+    notListed: 'Zapisano, ale lambda jest offline, więc nie ma jej w galerii. Wróci tam, gdy znów ją wdrożysz.',
+    off: 'Wyłączone. Nic o tej lambdzie nie jest nigdzie pokazywane, dopóki tego nie włączysz i nie zapiszesz.',
+    offline: 'Lambda jest offline, więc wpis poczeka, aż zostanie wdrożona. W galerii są tylko lambdy, które odpowiadają.',
+    titleLabel: 'Tytuł',
+    titlePlaceholder: 'Wyniki quizu w pubie',
+    descriptionLabel: 'Opis',
+    descriptionPlaceholder:
+      'Drużyny wpisują odpowiedzi na telefonach, prowadzący je ocenia, a tablica wyników aktualizuje się u wszystkich na sali.',
+    save: 'Zapisz zmiany',
+    add: 'Dodaj do galerii',
+    takeOff: 'Usuń z galerii',
+    needs: (missing) =>
+      `Brakuje jeszcze ${missing.length > 1 ? `${missing.slice(0, -1).join(', ')} i ${missing[missing.length - 1]}` : missing[0]}.`,
+    tooLong: 'Część tekstu jest za długa.',
+    allSaved: 'Wszystko zapisane.',
+    preview: 'Podgląd',
+    card: (address) => <>Tak odwiedzający zobaczą tę kartę. Prowadzi do {address}.</>,
+    confirm: 'Usunąć z galerii?',
+    keep: 'Zostaw',
+    confirmText: 'Tytuł, opis i obrazek zostaną usunięte. Sama lambda zostaje bez zmian.',
+    pictureLabel: 'Obrazek',
+    formats: (limit) => `PNG, JPEG, GIF lub WebP, maks. ${limit}`,
+    notSaved: 'jeszcze niezapisany',
+    replace: 'Przeciągnij tu nowy, żeby go zastąpić.',
+    drop: 'Przeciągnij tu obrazek.',
+    advice: 'Najlepiej sprawdzi się zrzut ekranu albo krótki GIF z działania aplikacji, w proporcjach 16:10.',
+    another: 'Wybierz inny',
+    choose: 'Wybierz plik',
+    keepSaved: 'Zostaw zapisany',
+    clear: 'Wyczyść',
+  },
+
+  domain: {
+    readFailed: 'Nie udało się odczytać domeny.',
+    reaching: (domain) => `Żądania do ${domain} trafiają teraz do tej lambdy.`,
+    saveFailed: 'Nie udało się zapisać domeny.',
+    removed: 'Domena została usunięta. Lambda nadal odpowiada pod swoim adresem tutaj.',
+    removeFailed: 'Nie udało się usunąć domeny.',
+    hint:
+      'Lambda premium może odpowiadać nie tylko pod swoim adresem tutaj, ale też pod całą własną domeną. Skieruj domenę na ten serwer, wpisz ją tutaj, a żądania do niej trafią do lambdy.',
+    loading: 'Ładowanie…',
+    example: 'twoja-domena.pl',
+    open: (domain) => `Otwórz ${domain}`,
+    label: 'Domena, pod którą odpowiada',
+    serving: (domain) => <>Działa teraz pod {domain} i nadal pod swoim adresem tutaj.</>,
+    none: 'Jeszcze brak. Może to być subdomena, np. shop.example.com, albo cała domena, np. example.com.',
+    change: 'Zmień',
+    use: 'Użyj tej domeny',
+    remove: 'Usuń',
+    confirm: 'Usunąć domenę?',
+    keep: 'Zostaw',
+    confirmText: (domain) => (
+      <>
+        Żądania do {domain} od razu przestaną trafiać do tej lambdy. Jej adres tutaj zostaje bez zmian, podobnie jak
+        ustawienia DNS domeny.
+      </>
+    ),
+    point: 'Skieruj domenę na ten serwer',
+    check: 'Sprawdź ponownie',
+    records:
+      'U dostawcy DNS domeny dodaj te dwa rekordy. Pomiń rekord AAAA, jeśli nie chcesz, żeby domena była dostępna przez IPv6.',
+    type: 'Typ',
+    name: 'Nazwa',
+    value: 'Wartość',
+    pointsHere: (domain) => <>{domain} wskazuje na ten serwer.</>,
+    alsoElsewhere: (addresses) =>
+      ` Domena wskazuje też na ${addresses}, a to nie jest ten serwer – odwiedzający, którzy tam trafią, nie dotrą do lambdy.`,
+    elsewhere: (addresses) => `Domena wskazuje na ${addresses}, a to jeszcze nie jest ten serwer.`,
+    wait: 'Zmiana może chwilę potrwać, zanim będzie widoczna wszędzie – najdłużej tyle, ile wynosi TTL starego rekordu.',
+    cname: 'Rekord CNAME jako alternatywa',
+    cnameText: (target) => (
+      <>
+        Subdomena może zamiast tego wskazywać na {target} rekordem CNAME – wtedy, jeśli adresy tego serwera kiedyś się
+        zmienią, domena sama za nimi nadąży. Ma to jednak wady:
+      </>
+    ),
+    cnameRoot: (example) => (
+      <>
+        Nie da się tego zrobić dla całej domeny (czyli {example} bez subdomeny): standard nie pozwala na CNAME obok
+        rekordów, które każda domena ma w korzeniu. Niektórzy dostawcy oferują w zamian rekord ALIAS, ANAME lub
+        „spłaszczony”, który tam działa.
+      </>
+    ),
+    cnameAlone: 'Pod tą samą nazwą nie może być nic innego – ani rekordu MX dla poczty, ani rekordu TXT do weryfikacji.',
+    cnameLookup: 'Serwery DNS odwiedzających muszą wykonać jedno zapytanie więcej.',
+    copy: 'Kopiuj',
+    copyValue: (value) => `Kopiuj ${value}`,
+  },
+
+  code: {
+    title: 'Kod',
+    version: (version) => `wersja ${version}`,
+    edited: ', edytowana',
+    online: ', online',
+    loadFailed: 'Nie udało się załadować tej wersji.',
+    compiles: 'Kompiluje się.',
+    notYet: 'Jeszcze się nie kompiluje.',
+    checkFailed: 'Nie udało się sprawdzić kodu.',
+    saved: (version) => `Zapisano jako wersję ${version}.`,
+    isOnline: (version) => `Wersja ${version} jest online.`,
+    notOnline: 'Nie trafiła online. Zobacz niżej, co mówi kompilator.',
+    failed: 'Nie udało się.',
+    unchanged: 'Nic się nie zmieniło od ostatniego zapisu.',
+    demo: 'To demo, więc wszystko tu jest tylko do odczytu. Żeby coś zmienić, utwórz na jego podstawie własną lambdę. ',
+    edit: 'Edytuj kod ręcznie. Zapisanie tworzy nową wersję i nie rusza tego, co jest online; wdrożenie wrzuca ją online. ',
+    files: (entry, cs) => (
+      <>
+        {entry} zwraca to, co jest serwowane, pozostałe pliki {cs} zawierają typy, a każdy inny plik jest serwowany bez
+        zmian. Ctrl+S zapisuje, F12 przechodzi do deklaracji.
+      </>
+    ),
+    newer: (version) => ` Wersja ${version} jest nowsza niż ta, którą masz otwartą.`,
+    check: 'Sprawdź',
+    save: 'Zapisz',
+    deploy: 'Wdróż',
+    binary: (size) => `Ten plik nie jest tekstem, więc nie da się go edytować. Jest serwowany bez zmian i waży ${size} kB.`,
+    saveAndDeploy: 'Zapisz i wdróż',
+    saveVersion: 'Zapisz nową wersję',
+    cancel: 'Anuluj',
+    what: 'Co zmienia ta wersja? Opcjonalnie – pojawi się w historii.',
+    placeholder: 'Dodaje formularz kontaktowy',
+    goToDefinition: 'Przejdź do definicji',
+  },
+
+  tabs: {
+    codeName: 'Litery, cyfry, myślniki i podkreślenia, na końcu .cs',
+    slashes: 'Bez ukośnika na początku i na końcu, poniżej 120 znaków.',
+    deep: 'Najwyżej sześć poziomów folderów.',
+    characters: 'Litery, cyfry, myślniki, podkreślenia i kropki, rozdzielone ukośnikami.',
+    extension: 'Nazwa musi mieć rozszerzenie, żeby plik był serwowany jako właściwy typ.',
+    exists: 'Plik o tej nazwie już istnieje.',
+    remove: (name) => `Usunąć plik ${name}? Jego zawartość też zniknie.`,
+    there: (name) => `Plik ${name} już istnieje.`,
+    entry: 'Snippet: to, co zwraca, jest serwowane',
+    errors: 'zawiera błędy',
+    removeFile: (name) => `Usuń plik ${name}`,
+    removeTitle: 'Usuń ten plik',
+    placeholder: 'Types.cs lub site/index.html',
+    newFile: 'Nowy plik',
+    uploadTitle: 'Prześlij plik – obrazek, font albo stronę',
+    upload: 'Prześlij plik',
+  },
+};

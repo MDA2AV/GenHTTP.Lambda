@@ -1,143 +1,141 @@
 import type { Messages } from '../en';
 
 export const ship: Messages['ship'] = {
-  title: 'De votre ordinateur à tous les écrans.',
+  title: 'De votre machine à tous les écrans.',
   intro:
-    'Vous avez créé une application avec votre agent de programmation, mais elle ne fonctionne que sur votre machine. Demandez à l’agent de la publier ici. Quelques minutes plus tard, elle dispose d’un lien public accessible à tous et peut conserver des données : plusieurs personnes peuvent ainsi y jouer, discuter et publier ensemble.',
-  facts: ['Gratuit', 'Sans compte', 'Sans installation'],
+    'Vous avez créé quelque chose avec votre agent de code, mais ça ne tourne que sur votre machine. Demandez-lui de le publier ici. Quelques minutes plus tard, vous avez un lien public que tout le monde peut ouvrir. Et l’app garde ses données : on peut y jouer, discuter et poster à plusieurs.',
+  facts: ['Gratuit', 'Sans compte', 'Rien à installer'],
   connect: 'Connecter votre agent',
-  seeOthers: 'Voir les applications publiées',
+  seeOthers: 'Voir ce que d’autres ont publié',
 
-  stepsTitle: 'Trois étapes, dont une simple phrase',
+  stepsTitle: 'Trois étapes, dont une qui tient en une phrase',
   step: (n) => `Étape ${n}`,
   steps: [
     {
-      title: 'Connexion unique',
-      body: 'Ajoutez une adresse à Claude, Cursor ou à l’agent de votre choix. Cela prend moins d’une minute et ne se fait qu’une seule fois.',
+      title: 'Branchez votre agent',
+      body: 'Ajoutez une adresse à Claude, Cursor ou l’agent de votre choix. Ça prend moins d’une minute, et vous ne le faites qu’une fois.',
     },
     {
-      title: 'Demande de publication',
-      body: 'Demandez à l’agent de mettre l’application en ligne ici. Il la prépare, la publie et vérifie qu’elle répond.',
+      title: 'Demandez-lui de publier',
+      body: 'Dites-lui de mettre l’app en ligne ici. Il la prépare, la publie et vérifie qu’elle répond.',
     },
     {
-      title: 'Partage du lien',
-      body: 'Vous recevez une adresse publique et un lien d’édition privé. La première se partage librement ; conservez le second, il vous permettra de modifier l’application.',
+      title: 'Partagez le lien',
+      body: 'Vous recevez une adresse publique et un lien d’édition privé. Envoyez la première à qui vous voulez. Gardez le second : c’est lui qui vous permet de modifier l’app plus tard.',
     },
   ],
 
-  togetherTitle: 'Plus qu’une page : un espace partagé.',
+  togetherTitle: 'Pas juste une page. Un endroit où l’on se retrouve.',
   together:
-    'La plupart des hébergeurs servent une copie distincte de l’application à chaque visiteur, et chacun l’utilise seul. Ici, chaque application dispose de sa propre mémoire et d’une connexion en direct avec toutes les personnes qui l’ont ouverte. Une action d’un utilisateur apparaît immédiatement chez les autres, et les contributions sont conservées.',
+    'La plupart des hébergeurs donnent à chaque visiteur sa propre copie de l’app, et chacun joue dans son coin. Ici, chaque app a sa propre mémoire et une connexion en direct avec tous ceux qui l’ont ouverte. Ce que fait une personne apparaît aussitôt chez les autres, et ce qu’on y poste est encore là le lendemain.',
   together2:
-    'Aucune base de données à souscrire, aucun service supplémentaire à intégrer. Décrivez simplement la fonctionnalité souhaitée.',
+    'Pas d’abonnement à une base de données, pas de second service à brancher. Demandez-le comme vous l’expliqueriez à un ami.',
   kinds: [
-    { name: 'Jeux multijoueurs', ask: 'Permets à huit personnes au plus de rejoindre la même partie et de voir les coups des autres en direct.' },
-    { name: 'Salons de discussion', ask: 'Ajoute un salon où toutes les personnes disposant du lien peuvent échanger, et conserve les cent derniers messages.' },
-    { name: 'Listes partagées', ask: 'Transforme la liste de préparatifs en une liste que toute l’équipe peut modifier simultanément.' },
-    { name: 'Scores et records', ask: 'Tiens un classement des meilleurs temps et affiche les dix premiers sur l’écran d’accueil.' },
-    { name: 'Petits réseaux communautaires', ask: 'Permets aux invités du mariage de publier des photos sur un mur commun et de les apprécier.' },
+    { name: 'Jeux multijoueurs', ask: 'Permets à huit amis max de rejoindre la même partie et de voir les coups des autres en direct.' },
+    { name: 'Salons de chat', ask: 'Ajoute un salon où tous ceux qui ont le lien peuvent discuter, et garde les cent derniers messages.' },
+    { name: 'Listes partagées', ask: 'Rends la liste d’affaires à emporter modifiable par toute l’équipe en même temps.' },
+    { name: 'Scores et records', ask: 'Tiens un classement avec le meilleur temps de chacun et affiche le top 10 sur l’écran d’accueil.' },
+    { name: 'Mini réseaux sociaux', ask: 'Permets aux invités du mariage de poster leurs photos sur un mur commun et de liker celles des autres.' },
   ],
   quote: (text) => `« ${text} »`,
 
-  connectTitle: 'Connectez votre agent une seule fois',
-  connectText:
-    'Communiquez cette adresse à votre agent. Il saura ensuite publier ici, sans clé ni connexion.',
-  sayLike: 'Ensuite, dans votre projet, formulez par exemple',
+  connectTitle: 'Connectez votre agent, une fois pour toutes',
+  connectText: 'Donnez cette adresse à votre agent. Il saura ensuite publier ici, sans clé ni connexion.',
+  sayLike: 'Ensuite, dans votre projet, dites par exemple',
   asks: [
-    'Publie cette application sur GenHTTP Lambda et envoie-moi le lien.',
-    'Rends les meilleurs scores communs, pour que tout le monde voie le même classement.',
+    'Publie cette app sur GenHTTP Lambda et envoie-moi le lien.',
+    'Mets les meilleurs scores en commun, pour que tout le monde voie le même classement.',
   ],
 
-  domainChip: 'Pour les applications qui se développent',
-  domainTitle: 'Un nom de domaine dédié',
+  domainChip: 'Quand ça décolle',
+  domainTitle: 'Donnez-lui son propre nom',
   domainText:
-    'La même application et le même lien d’édition, mais à une adresse qui vous appartient : plus simple à communiquer, plus facile à retenir et plus professionnelle lorsqu’elle est partagée.',
-  domainSubject: 'Un nom de domaine pour mon application',
-  domainAsk: 'Demander un nom de domaine',
+    'La même app, le même lien d’édition, mais à une adresse qui vous appartient. Plus facile à dire, plus facile à retenir, et ça fait sérieux quand on commence à la partager.',
+  domainSubject: 'Un nom de domaine pour mon app',
+  domainAsk: 'Parlons de votre domaine',
 
   questionsTitle: 'Questions fréquentes',
   questions: (offline, removed, showcase, terms) => [
     [
-      'Le service est-il réellement gratuit ?',
+      'C’est vraiment gratuit ?',
       <>
-        Oui. Ni carte bancaire, ni période d’essai, ni compte. Votre application reste en ligne tant qu’elle est utilisée.
-        Après {offline} jours sans visite ni modification, elle est mise hors ligne, puis supprimée après {removed} jours.
+        Oui. Pas de carte bancaire, pas d’essai, pas de compte. Votre app reste en ligne tant qu’on l’utilise. Après{' '}
+        {offline} jours sans la moindre visite ni modification, elle est mise hors ligne, et après {removed} jours, elle
+        est supprimée.
       </>,
     ],
     [
-      'Mon application doit-elle respecter une structure particulière ?',
-      'Non, votre agent s’en charge. Les pages, images et feuilles de style sont publiées telles quelles, et l’agent adapte à cette plateforme tout ce qui doit s’exécuter côté serveur. Vous décrivez le comportement attendu ; l’agent se charge de la mise en œuvre.',
+      'Faut-il coder mon app d’une façon particulière ?',
+      'Non, votre agent s’en occupe. Les pages, les images et les styles sont publiés tels quels. Tout ce qui doit tourner côté serveur, l’agent l’adapte à la plateforme. Vous décrivez ce que l’app doit faire, il se charge de la traduction.',
     ],
     [
-      'Comment la modifier par la suite ?',
-      'Avec le lien d’édition reçu lors de la publication. Transmettez-le à votre agent avec la modification souhaitée, ou ouvrez-le dans votre navigateur. Chaque modification devient une nouvelle version à la même adresse, et vous pouvez revenir à une version antérieure à tout moment.',
+      'Comment la modifier ensuite ?',
+      'Avec le lien d’édition reçu à la publication. Donnez-le à votre agent avec la prochaine modification, ou ouvrez-le dans votre navigateur. Chaque modification crée une nouvelle version à la même adresse, et vous pouvez revenir à une ancienne à tout moment.',
     ],
     [
-      'Qui peut voir mon application ?',
+      'Qui peut voir mon app ?',
       <>
-        Toute personne à qui vous transmettez le lien. Elle n’est répertoriée nulle part, sauf si vous choisissez de
-        l’ajouter à la {showcase('vitrine')}.
+        Tous ceux à qui vous donnez le lien. Elle n’est listée nulle part, sauf si vous choisissez de l’ajouter à la{' '}
+        {showcase('vitrine')}.
       </>,
     ],
     [
-      'Certains contenus sont-ils interdits ?',
+      'Y a-t-il des choses que je ne peux pas publier ?',
       <>
-        Oui, notamment tout ce qui nuit aux personnes ou les trompe. Les {terms('conditions d’utilisation')} sont brèves
-        et rédigées simplement.
+        Quelques-unes, comme tout ce qui nuit aux gens ou les trompe. Les {terms('conditions')} sont courtes et écrites
+        simplement.
       </>,
     ],
   ],
 
-  closeTitle: 'Elle fonctionne sur votre machine.',
-  closeAccent: 'Rendez-la accessible à tous.',
-  noAgent: 'Pas d’agent ? Créer ici',
-  closeFacts: 'Gratuit. Sans compte. Sans installation.',
+  closeTitle: 'Ça marche chez vous.',
+  closeAccent: 'Faites que ça marche chez eux.',
+  noAgent: 'Pas d’agent ? Créez votre app ici',
+  closeFacts: 'Gratuit. Sans compte. Rien à installer.',
 
   scene: {
-    label:
-      'Un agent reçoit une demande de publication. L’adresse passe de localhost à un lien public, et des personnes rejoignent l’application.',
-    ask: 'Mets mon jeu de quiz en ligne pour que mes amis puissent participer.',
-    live: 'L’application est en ligne. Voici votre lien.',
+    label: 'On demande à un agent de publier une app. L’adresse passe de localhost à un lien public, et des gens arrivent.',
+    ask: 'Mets mon jeu de quiz en ligne pour que mes potes puissent jouer.',
+    live: 'C’est en ligne. Voici votre lien.',
     publishing: 'Publication…',
     public: 'Public',
-    onlyYou: 'Local',
-    app: 'Soirée quiz du vendredi',
-    playing: 'en ligne',
+    onlyYou: 'Privé',
+    app: 'Quiz du vendredi soir',
+    playing: (count) => <>{count} en jeu</>,
     you: 'Vous',
   },
 
-  compareTitle: 'Le chemin le plus court de « ça fonctionne » à « essayez-le »',
+  compareTitle: 'Le chemin le plus court entre « ça marche » et « essaie ça »',
   compareText:
-    'Vercel, Cloudflare et Lovable sont d’excellentes plateformes d’hébergement. Elles exigent toutefois une inscription et, dès que votre application doit partager des données entre visiteurs, la configuration d’un service supplémentaire. Voici la comparaison pour un démarrage sans compte existant.',
+    'Vercel, Cloudflare et Lovable sont d’excellents endroits pour faire tourner vos projets. Mais tout commence par un formulaire d’inscription. Et dès que votre app doit partager quoi que ce soit entre visiteurs, il faut configurer un second service. Voici ce que ça donne quand on part de zéro.',
   rows: [
     'Démarrer sans compte',
-    'Publier depuis l’agent que vous utilisez déjà',
+    'Publier depuis votre agent habituel',
     'Données partagées en direct : chat, multijoueur, records',
-    'Coût jusqu’au premier lien',
+    'Coût du premier lien',
   ],
-  us: ['Oui', 'Une connexion, puis une simple demande', 'Intégré à chaque application', 'Gratuit'],
+  us: ['Oui', 'Une connexion, puis on demande', 'Intégré à chaque app', 'Gratuit'],
   rivals: [
-    ['Inscription requise', 'Via ses propres outils, après connexion', 'Service de base de données à ajouter', 'Offre gratuite'],
-    ['Inscription requise', 'Via ses propres outils, après connexion', 'Possible, avec configuration', 'Offre gratuite'],
+    ['Inscription requise', 'Après connexion à ses outils', 'Base de données à ajouter', 'Offre gratuite'],
+    ['Inscription requise', 'Après connexion à ses outils', 'Possible, avec configuration', 'Offre gratuite'],
     ['Inscription requise', 'Dans son propre éditeur', 'Via un backend connecté', 'Offre gratuite, crédits limités'],
   ],
   compareNote:
-    'Situation en septembre 2026, pour une personne sans compte existant. Les offres et fonctionnalités des autres services évoluent ; veuillez vous référer à leurs informations.',
+    'Situation en septembre 2026, pour quelqu’un qui n’a de compte nulle part. Les offres et fonctionnalités des autres services évoluent : vérifiez les détails auprès d’eux.',
 
   yourAgent: 'Votre agent',
   terminal: 'Terminal',
   setups: {
-    claudeCode: 'Exécutez cette commande une fois dans un terminal. Chaque projet ouvert ensuite pourra publier ici.',
+    claudeCode: 'Lancez ceci une fois dans un terminal. Tous les projets que vous ouvrirez ensuite pourront publier ici.',
     claude: (strong) => (
       <>
         Dans Claude sur le web ou sur ordinateur, ouvrez les {strong('Paramètres')}, puis {strong('Connectors')}, et
-        choisissez {strong('Add custom connector')}. Collez l’adresse ci-dessus et enregistrez. Aucune autre étape n’est
-        nécessaire.
+        choisissez {strong('Add custom connector')}. Collez l’adresse ci-dessus et enregistrez. C’est tout.
       </>
     ),
     cursor: 'Ajoutez ceci aux paramètres MCP de Cursor, ou au fichier ci-dessous, puis rechargez.',
     vscode: 'Enregistrez ce fichier dans votre projet, puis démarrez le serveur depuis la vue MCP de Copilot Chat.',
   },
   elsewhere:
-    'Vous utilisez un autre outil ? Windsurf, Codex, Zed et la plupart des autres agents permettent d’ajouter un serveur MCP distant dans leurs paramètres. Indiquez-leur l’adresse ci-dessus.',
+    'Vous utilisez autre chose ? Windsurf, Codex, Zed et la plupart des autres agents peuvent ajouter un serveur MCP distant dans leurs paramètres. Donnez-leur l’adresse ci-dessus.',
 };

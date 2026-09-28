@@ -81,14 +81,20 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
             {t.shell.showcase}
           </NavLink>
 
-          {/* switched off in the panel, the page is still there - just not linked */}
+          {/*
+            Switched off in the panel, the page is still there - just not
+            linked. It and the docs join the bar a step later than their
+            width in English would allow: the same words in Polish or
+            Japanese take half as much room again, and the bar would push its
+            own menu off the screen.
+          */}
           {features.enterprise && (
-            <NavLink to="/enterprise" className={(state) => `${tab(state)} hidden md:inline-flex`}>
+            <NavLink to="/enterprise" className={(state) => `${tab(state)} hidden lg:inline-flex`}>
               {t.shell.enterprise}
             </NavLink>
           )}
 
-          <NavLink to="/docs" className={(state) => `${tab(state)} hidden sm:inline-flex`}>
+          <NavLink to="/docs" className={(state) => `${tab(state)} hidden md:inline-flex`}>
             {t.shell.docs}
           </NavLink>
 
@@ -198,11 +204,11 @@ function Menu({ theme, themeLabel, onToggleTheme, enterprise }: MenuProps) {
             {t.shell.showcase}
           </NavLink>
           {enterprise && (
-            <NavLink to="/enterprise" className={(state) => `${item(state)} md:hidden`}>
+            <NavLink to="/enterprise" className={(state) => `${item(state)} lg:hidden`}>
               {t.shell.enterprise}
             </NavLink>
           )}
-          <NavLink to="/docs" className={(state) => `${item(state)} sm:hidden`}>
+          <NavLink to="/docs" className={(state) => `${item(state)} md:hidden`}>
             {t.shell.docs}
           </NavLink>
           <NavLink to="/admin" className={item}>
