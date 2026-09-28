@@ -13,6 +13,11 @@ export const shell: Messages['shell'] = {
   openMenu: '메뉴 열기',
   closeMenu: '메뉴 닫기',
   language: '언어',
+  terms: '이용약관',
+  privacy: '개인정보 처리방침',
+  imprint: '법적 고지',
+  writeCode: '코드 직접 작성하기',
+  contact: '문의',
 };
 
 export const common: Messages['common'] = {
@@ -28,6 +33,7 @@ export const common: Messages['common'] = {
   copyToClipboard: '클립보드에 복사',
   openInNewTab: '새 탭에서 열기',
   close: '닫기',
+  operatorCountry: '독일',
 };
 
 export const notFound: Messages['notFound'] = {

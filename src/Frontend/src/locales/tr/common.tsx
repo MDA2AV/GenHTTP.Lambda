@@ -13,6 +13,11 @@ export const shell: Messages['shell'] = {
   openMenu: 'Menüyü aç',
   closeMenu: 'Menüyü kapat',
   language: 'Dil',
+  terms: 'Kullanım koşulları',
+  privacy: 'Gizlilik politikası',
+  imprint: 'Künye',
+  writeCode: 'Kodu kendiniz yazın',
+  contact: 'İletişim',
 };
 
 export const common: Messages['common'] = {
@@ -28,6 +33,7 @@ export const common: Messages['common'] = {
   copyToClipboard: 'Panoya kopyala',
   openInNewTab: 'Yeni sekmede aç',
   close: 'Kapat',
+  operatorCountry: 'Almanya',
 };
 
 export const notFound: Messages['notFound'] = {

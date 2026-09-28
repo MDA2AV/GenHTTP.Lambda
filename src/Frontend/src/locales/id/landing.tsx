@@ -72,8 +72,4 @@ export const landing: Messages['landing'] = {
   discordTitle: 'Gabung ke Discord',
   discordText: 'Pamerkan yang sudah Anda buat, minta bantuan untuk langkah berikutnya, dan ngobrol langsung dengan tim.',
   discordLink: 'Discord GenHTTP',
-
-  terms: 'Ketentuan layanan',
-  writeCode: 'Tulis kodenya sendiri',
-  contact: 'Kontak',
 };

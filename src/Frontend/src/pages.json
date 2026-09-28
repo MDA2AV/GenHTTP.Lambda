@@ -480,5 +480,141 @@
         "image": "/social/ko/default.jpg"
       }
     }
+  },
+  "/privacy": {
+    "text": {
+      "id": {
+        "title": "Kebijakan Privasi",
+        "description": "Apa yang dicatat GenHTTP Lambda tentang Anda dan alasannya: log permintaan, apa yang dikirim agen build ke Anthropic, cookie, lama penyimpanan, dan hak Anda.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "Datenschutzerklärung",
+        "description": "Was GenHTTP Lambda über Sie speichert und warum: das Anfrage-Log, was der Build-Agent an Anthropic schickt, Cookies, Speicherdauer und Ihre Rechte.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "Privacy Policy",
+        "description": "What GenHTTP Lambda records about you and why: the request log, what the build agent sends to Anthropic, cookies, how long it is kept, and your rights."
+      },
+      "es": {
+        "title": "Política de privacidad",
+        "description": "Qué guarda GenHTTP Lambda sobre ti y por qué: el registro de peticiones, lo que el agente envía a Anthropic, las cookies, cuánto se conserva y tus derechos.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Politique de confidentialité",
+        "description": "Ce que GenHTTP Lambda enregistre sur vous et pourquoi : journal des requêtes, ce que l’agent envoie à Anthropic, cookies, durée de conservation et vos droits.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "Informativa sulla privacy",
+        "description": "Cosa registra GenHTTP Lambda su di te e perché: il log delle richieste, cosa invia l’agente ad Anthropic, i cookie, i tempi di conservazione e i tuoi diritti.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "Privacybeleid",
+        "description": "Wat GenHTTP Lambda over je vastlegt en waarom: het verzoeklog, wat de bouwagent naar Anthropic stuurt, cookies, hoe lang we het bewaren en je rechten.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Polityka prywatności",
+        "description": "Co GenHTTP Lambda zapisuje o tobie i dlaczego: log żądań, co agent do budowania wysyła do Anthropic, pliki cookie, jak długo to trzymamy i twoje prawa.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Política de privacidade",
+        "description": "O que o GenHTTP Lambda registra sobre você e por quê: o log de requisições, o que o agente envia à Anthropic, cookies, por quanto tempo guarda e seus direitos.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Política de privacidade",
+        "description": "O que o GenHTTP Lambda regista sobre ti e porquê: o log de pedidos, o que o agente envia à Anthropic, os cookies, quanto tempo fica guardado e os teus direitos.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "Gizlilik politikası",
+        "description": "GenHTTP Lambda’nın sizinle ilgili neleri, neden kaydettiği: istek logu, ajanın Anthropic’e gönderdikleri, çerezler, saklama süresi ve haklarınız.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "プライバシーポリシー",
+        "description": "GenHTTP Lambdaが記録する情報とその理由です。リクエストのログ、エージェントがAnthropicに送る内容、Cookie、保存期間、あなたの権利をまとめています。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "개인정보 처리방침",
+        "description": "GenHTTP Lambda가 무엇을 왜 기록하는지 알려 드려요. 요청 로그, 빌드 에이전트가 Anthropic에 보내는 내용, 쿠키, 보관 기간, 이용자의 권리를 다뤄요.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
+  },
+  "/imprint": {
+    "text": {
+      "id": {
+        "title": "Informasi Hukum",
+        "description": "Siapa yang mengelola GenHTTP Lambda: penyedia dan alamat yang diwajibkan hukum Jerman, cara menghubungi kami, dan titik kontak menurut DSA.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "Impressum",
+        "description": "Wer GenHTTP Lambda betreibt: Anbieter und Anschrift nach § 5 DDG, wie Sie uns erreichen und unsere Kontaktstelle nach dem Gesetz über digitale Dienste.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "Legal Notice",
+        "description": "Who runs GenHTTP Lambda: the provider and address German law asks for, how to reach us, and our contact point under the Digital Services Act."
+      },
+      "es": {
+        "title": "Aviso legal",
+        "description": "Quién gestiona GenHTTP Lambda: prestador y dirección según la ley alemana, cómo contactarnos y el punto de contacto del Reglamento de Servicios Digitales.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Mentions légales",
+        "description": "Qui édite GenHTTP Lambda : l’éditeur et l’adresse exigés par la loi allemande, comment nous joindre et notre point de contact au titre du DSA.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "Note legali",
+        "description": "Chi gestisce GenHTTP Lambda: fornitore e indirizzo richiesti dalla legge tedesca, come contattarci e il punto di contatto ai sensi del DSA.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "Colofon",
+        "description": "Wie GenHTTP Lambda beheert: de aanbieder en het adres die de Duitse wet vraagt, hoe je ons bereikt en ons contactpunt volgens de DSA.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Nota prawna",
+        "description": "Kto prowadzi GenHTTP Lambda: usługodawca i adres wymagane przez niemieckie prawo, jak się z nami skontaktować i nasz punkt kontaktowy według DSA.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Aviso legal",
+        "description": "Quem administra o GenHTTP Lambda: provedor e endereço exigidos pela lei alemã, como nos contatar e o ponto de contato segundo o DSA.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Aviso legal",
+        "description": "Quem gere o GenHTTP Lambda: prestador e morada exigidos pela lei alemã, como nos contactar e o ponto de contacto ao abrigo do DSA.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "Künye",
+        "description": "GenHTTP Lambda’yı kim işletiyor: Alman hukukunun istediği sağlayıcı ve adres bilgileri, bize nasıl ulaşabileceğiniz ve DSA kapsamındaki iletişim noktamız.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "運営者情報",
+        "description": "GenHTTP Lambdaの運営者情報です。ドイツの法律で求められる運営者名と住所、連絡先、デジタルサービス法（DSA）に基づく連絡窓口を記載しています。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "법적 고지",
+        "description": "GenHTTP Lambda를 누가 운영하는지 알려 드려요. 독일 법이 요구하는 운영자와 주소, 연락처, 디지털 서비스법(DSA)에 따른 연락 창구를 안내해요.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
   }
 }

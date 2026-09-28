@@ -114,6 +114,15 @@ services:
     mem_limit: 2g
     pids_limit: 512
     restart: unless-stopped
+    # One line per build, with the start of what was asked for. A deploy
+    # rebuilds the server and leaves this container alone, so without a cap
+    # its log would keep every prompt ever typed. Capped like the server's,
+    # and promised the same way on the privacy page.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   egress-proxy:
     image: genhttp-agent:latest

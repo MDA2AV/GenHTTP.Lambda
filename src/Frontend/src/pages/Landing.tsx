@@ -2,16 +2,13 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { CopyField } from '../components/CopyField';
-import { ReportAbuse } from '../components/ReportAbuse';
 import { IconChat, IconChevronDown, IconMail } from '../components/Icons';
 import { Reveal } from '../components/Reveal';
+import { CONTACT_MAIL, DISCORD } from '../contact';
 import { useT } from '../i18n';
 import { Link } from '../i18n/links';
 import { usePublicPage } from '../meta';
 import { useOrigin } from '../site';
-
-const CONTACT_MAIL = 'solutions@genhttp.dev';
-const DISCORD = 'https://discord.gg/PRkwKrnrB4';
 
 /**
  * The front page, written for somebody who has an agent and an idea rather
@@ -322,44 +319,6 @@ export function Landing() {
             </a>
           </Reveal>
         </div>
-
-        {/*
-          Small, at the bottom, and on the front page rather than behind a
-          lambda: whoever needs it is here because something hosted here did
-          something to them, and they have no reason to know the rest of this.
-        */}
-        <footer className="mt-16 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-grey-300 pt-6 text-xs text-grey-700 dark:border-ink-800 dark:text-grey-300">
-          <ReportAbuse />
-
-          <Link to="/terms" className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400">
-            {said.terms}
-          </Link>
-
-          <Link to="/editor/create" className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400">
-            {said.writeCode}
-          </Link>
-
-          <a
-            href={`mailto:${CONTACT_MAIL}`}
-            className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
-          >
-            {said.contact}
-          </a>
-
-          <a
-            href={DISCORD}
-            target="_blank"
-            rel="noreferrer"
-            className="text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
-          >
-            Discord
-          </a>
-
-          {/* the header carries this on anything wider than a phone */}
-          <Link to="/admin" className="text-slate-500 hover:text-accent-600 hover:underline sm:hidden dark:hover:text-accent-400">
-            {t.shell.admin}
-          </Link>
-        </footer>
       </div>
     </div>
   );

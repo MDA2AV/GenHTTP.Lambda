@@ -71,8 +71,4 @@ export const landing: Messages['landing'] = {
   discordTitle: 'Kom erbij op Discord',
   discordText: 'Laat zien wat je hebt gebouwd, vraag hulp bij de volgende stap en praat direct met het team.',
   discordLink: 'De GenHTTP-Discord',
-
-  terms: 'Gebruiksvoorwaarden',
-  writeCode: 'Schrijf de code zelf',
-  contact: 'Contact',
 };

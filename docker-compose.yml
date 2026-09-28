@@ -101,6 +101,15 @@ services:
       - /opt/genhttp-lambda/certs:/certs:ro
       - /opt/genhttp-lambda/acme:/acme:ro
     restart: unless-stopped
+    # What docker keeps of stdout, which has the address of every caller on
+    # it: a fixed amount, the oldest going first, rather than a file that
+    # grows for as long as the container lives. The privacy policy promises
+    # exactly this, so a change here is a change to that page as well.
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
 networks:
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { Footer } from './Footer';
 import { IconClose, IconLock, IconLogo, IconMenu, IconMoon, IconSun } from './Icons';
 import { LanguageMenu, LanguageSwitch } from './LanguageSwitch';
 import { useFeatures } from '../features';
@@ -125,6 +126,8 @@ export function Shell({ theme, onToggleTheme, actions, children, fixed }: Props)
       </header>
 
       <main className={fixed ? 'flex min-h-0 flex-1 flex-col' : 'flex-1'}>{children}</main>
+
+      {!fixed && <Footer />}
     </div>
   );
 }
