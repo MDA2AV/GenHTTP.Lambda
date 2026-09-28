@@ -218,7 +218,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `v${version}から`,
       online: 'オンライン',
       previewOnline: 'プレビューがオンライン',
       compiles: 'コンパイルOK',
@@ -318,12 +317,6 @@ export const editor: EditorMessages = {
     previewOnline: 'プレビューはオンラインです',
     previewOffline: 'プレビューはオフラインです',
     behind: 'もとが古い',
-    featureTip: (start) => (
-      <>
-        使われているものを変えるときは、{start('下書きを作りましょう')}
-        。専用のURLで、データのコピーを使って試し、うまくいったら次のバージョンになります。
-      </>
-    ),
     storage: 'ストレージ',
     inVersion: (version) => `バージョン${version}に含まれるもの`,
     noVersion: 'バージョンに含まれるもの',
@@ -415,11 +408,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'この下書きが使うデータです。下書きを作ったときに、lambdaのデータからコピーしたものです。プレビューはこのコピーを読み書きするので、ここで何を試しても、lambdaが保存しているものには影響しません。下書きを確定するとコピーは破棄され、lambdaのデータはそのまま残ります。',
-    featureFacts: [
-      ['コピー', '下書きを作ったとき、または最後にコピーし直したときに、lambdaから取ったものです。'],
-      ['使うのはプレビューだけ', 'プレビューが書き込んだものは、ここにとどまります。lambdaとその訪問者には見えません。'],
-      ['下書きと一緒に消える', '下書きを確定または削除すると、コピーも削除されます。lambdaのデータはそのまま残ります。'],
-    ],
     recopy: 'lambdaのデータをコピーし直す',
     recopyTitle: 'このコピーを、lambdaの今のデータで置き換える',
     recopyConfirm: 'lambdaのデータをコピーし直しますか？',
@@ -465,16 +453,9 @@ export const editor: EditorMessages = {
     emptyTitle: '作業中の下書きはありません',
     emptyText:
       '下書きを作れば、オンラインのものに触れずにlambdaを変更できます。自分でもエージェントでも、納得がいくまで何度でも変更し、専用のURLで試せます。',
-    steps: [
-      ['作る', '最新のバージョンと、lambdaのデータのコピーです。'],
-      ['変更して試す', '専用のURLで、下書き用のデータのコピーを使って試します。'],
-      ['確定する', '次のバージョンになり、自分で決めたときにオンラインになります。'],
-    ],
     start: '下書きを作る',
     askAgentNew: 'エージェントに変更を依頼',
     noChange: 'まだ変更内容の説明がありません',
-    from: (version) => `バージョン${version}から`,
-    mergeable: '確定できます',
     behindTitle: '作ったあとに、新しいバージョンが保存されました',
     behind: (newest) => `バージョン${newest}のほうが新しい`,
     previewOnline: 'プレビューがオンライン',
@@ -496,9 +477,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'ランキング',
     wanted: '何をするものですか？',
     wantedPlaceholder: '任意。上位10件のスコアを保存し、ゲームのたびに表示する。',
-    startFrom: 'もとにするバージョン',
-    version: (version, newest, online) =>
-      `バージョン${version}${newest && online ? '（最新、オンライン）' : newest ? '（最新）' : online ? '（オンライン）' : ''}`,
     olderBase: (newest) => `最新ではありません。確定する前に、バージョン${newest}までの変更を取り込む必要があります。`,
     create: '作成',
     createFailed: '下書きを作成できませんでした。',
@@ -511,14 +489,9 @@ export const editor: EditorMessages = {
     featureHint:
       'lambdaとは別に進めている変更です。プレビューは下書きのコードを専用のデータのコピーで動かすので、lambdaの訪問者には何も見えません。確定すると、次のバージョンになります。',
     askAgent: 'エージェントに依頼',
+    askCatchUp: 'エージェントに最新の状態にしてもらう',
+    catchUp: 'この下書きをアプリの最新バージョンに合わせて更新し、下書きでの変更はそのまま残してください。',
     editCode: 'コードを編集',
-    preview: 'プレビュー',
-    state: {
-      online: 'オンライン',
-      outdated: 'オンライン（前の保存内容）',
-      offline: 'オフライン',
-    },
-    deployed: '最終デプロイ',
     deployPreview: 'プレビューをデプロイ',
     updatePreview: 'プレビューを更新',
     previewDeployed: 'プレビューがオンラインになりました。',
@@ -526,20 +499,12 @@ export const editor: EditorMessages = {
     previewStopped: 'プレビューをオフラインにしました。',
     previewRejected: 'プレビューは変わりませんでした',
     previewNotCompiling: 'コンパイルできません。プレビューには、前と同じものが表示されています。',
-    previewAddress: 'プレビューのURL',
-    previewNote: 'このURLを知っている人は誰でも、プレビューを開けます。検索エンジンには、登録しないよう伝えています。',
-    basedOn: 'もとにしたバージョン',
-    mergeableLong: '最新なので、確定できます',
     started: '作成',
     changes: (version) => `バージョン${version}からの変更点`,
     noChanges: (version) => `まだありません。中身はバージョン${version}とまったく同じです。`,
-    notes: 'メモ',
     editNotes: '名前とメモ',
     what: '何を変更しますか？',
     whatPlaceholder: '上位10件のスコアを保存するランキングを追加',
-    noWanted: 'まだ何も書かれていません',
-    mergeNote: (version) =>
-      `確定すると、このメモ付きでバージョン${version}になります。下書き（プレビューとデータのコピー）はなくなります。`,
     missed: (from, to) => (to - from === 1 ? `バージョン${to}の変更点` : `バージョン${from + 1}〜${to}の変更点`),
     missedNothing: 'ファイルの変更はありません。',
 
@@ -553,11 +518,9 @@ export const editor: EditorMessages = {
       `${files}では、${path}へのリンクが完全なパスで書かれています。プレビューからだと、この下書きのデータのコピーではなく、オンラインのlambdaとその実際のデータにつながります。相対パス（「api/items」）なら、プレビューの中にとどまります。`,
     mergeButton: '確定',
     saveFirst: '先にコードを保存してください。プレビューと確定には、保存されている内容が使われます。',
-    merge: '確定する',
     mergeAndDeploy: (version) => `確定してバージョン${version}をオンラインにする`,
     mergeText: (version) =>
       `バージョン${version}になります。下書き（プレビューとデータのコピー）はなくなります。lambda自体のデータはそのまま残ります。`,
-    deployToo: (version) => `バージョン${version}をすぐにオンラインにする`,
     deployTooNote: (active) => `バージョン${active}には、「バージョン」からワンクリックで戻せます。`,
     deployTooOffline: '今lambdaはオフラインです。これでオンラインになります。',
     notCompiling: 'コンパイルできないため、確定しませんでした。先に下書きで直してください。',
@@ -843,7 +806,6 @@ export const editor: EditorMessages = {
     editFeature:
       'この下書きのコードです。保存しても下書きの中に残るだけで、lambdaの訪問者に配信されるものは何も変わりません。デプロイすると下書き専用のURLでオンラインになり、試せます。下書きを確定すると、次のバージョンになります。',
     inFeature: (name) => `下書き「${name}」`,
-    previewed: '（プレビューに反映済み）',
     changedElsewhere:
       'この下書きは、開いたあとにほかの場所で保存されています（エージェントかもしれません）。ここで保存する前に、保存されている内容を読み込んでください。ここでの変更で上書きすることはできません。',
     readAgain: '保存されている内容を読み込む',
@@ -857,7 +819,6 @@ export const editor: EditorMessages = {
     check: 'チェック',
     save: '保存',
     deploy: 'デプロイ',
-    deployPreview: 'プレビューをデプロイ',
     deployPreviewTitle: '保存して、試せるように下書き専用のURLでオンラインにする',
     binary: (size) => `テキストではないため、編集できません。このまま配信されます（${size} kB）。`,
     saveAndDeploy: '保存してデプロイ',

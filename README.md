@@ -182,13 +182,19 @@ and a lambda has at most one deployment at a time. A deployment that does not
 compile leaves the one before it standing - its assets included, which are
 written back after the failed attempt replaced them.
 
-The editor lists the features in a section of its own, and opened on one it
-becomes the feature's: the sidebar holds it, with its preview address and the
-buttons that deploy the preview and merge it, and its views are its code, its
-copy of the data and its preview's log. Showcase, domain, figures and
-deployments stay with the lambda. A version offers to start a feature from it,
-and the save dialog of the code offers to put what was typed into a new
-feature instead of a version.
+The editor is written for people who had an app built rather than for
+developers, so it calls a feature a **draft**, its copy of the data **test
+data**, and merging it **putting it online** - which merges it and deploys the
+version it becomes in one step. Nothing in it says merge, base or branch; a
+feature behind the newest version is **out of date**, and the agent is offered
+to bring it up to date. The drafts have a section of their own, shown once
+there is one, and opened on one the editor becomes the draft's: the sidebar
+holds it, with the buttons that try it and put it online, and its views are
+its code, its test data and its preview's log. Showcase, domain, figures and
+deployments stay with the lambda. A version offers to start a draft from it,
+the save dialog of the code offers to save what was typed as a new draft
+instead of a version, and a change the agent leaves as a draft can be tried
+and put online from the Change section.
 
 ### Changing a lambda by asking
 

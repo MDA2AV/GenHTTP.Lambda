@@ -23,10 +23,12 @@ type Busy = 'save' | 'check' | 'deploy' | null;
  * Saving asks what changed - the same note an agent leaves - so a version
  * written by hand reads as well in the history as one that was not.
  *
- * Opened on a feature, it edits the feature instead: saving replaces what
- * the feature holds, without a note - the feature says what it changes as a
- * whole, on its overview - and deploying puts it online at its preview
- * address. Nothing a visitor of the lambda gets changes either way.
+ * Opened on a feature - a draft, to the owner - it edits the feature
+ * instead: saving replaces what the feature holds, without a note - the
+ * feature says what it changes as a whole, on its overview - and puts it
+ * online at its preview address in the same step, so there is one button
+ * rather than two that only make sense to somebody who knows the difference.
+ * Nothing a visitor of the lambda gets changes either way.
  */
 export function Workbench({ control, onDirty }: { control: Control; onDirty: (dirty: boolean) => void }) {
   const { privateKey, lambda } = control;
@@ -234,32 +236,25 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
   }
 
-  /** Stores what is in the editor as the feature's, and puts its preview online if asked to. */
-  async function commitFeature(thenPreview: boolean) {
-    if (!feature) {
+  /** Stores what is in the editor as the feature's, and puts its preview online with it. */
+  async function commitFeature() {
+    if (!feature || !dirty) {
       return;
     }
 
-    setBusy(thenPreview ? 'deploy' : 'save');
+    setBusy('deploy');
 
     try {
-      if (dirty) {
-        // made from the save read here, and refused if another came in between
-        const result = await api.feature.save(privateKey, feature.key, files, thenPreview, held ?? undefined);
+      // made from the save read here, and refused if another came in between
+      const result = await api.feature.save(privateKey, feature.key, files, true, held ?? undefined);
 
-        setSaved(JSON.stringify(files));
-        setHeld(result.feature.revision);
+      setSaved(JSON.stringify(files));
+      setHeld(result.feature.revision);
 
-        if (!thenPreview) {
-          toast(said.featureSaved);
-        } else if (result.preview) {
-          report(result.preview.success, result.preview.diagnostics);
-        }
-      } else if (thenPreview) {
-        const result = await api.feature.preview(privateKey, feature.key);
-
-        setHeld(result.feature.revision);
-        report(result.success, result.diagnostics);
+      if (result.preview) {
+        report(result.preview.success, result.preview.diagnostics);
+      } else {
+        toast(said.featureSaved);
       }
 
       await control.feature?.refresh();
@@ -290,16 +285,15 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
 
     if (feature) {
-      commitFeature(false);
+      // saved into a draft is saved to be tried, so its preview shows it
+      commitFeature();
     } else {
       setSaving('save');
     }
   }
 
   function deploy() {
-    if (feature) {
-      commitFeature(true);
-    } else if (dirty) {
+    if (dirty) {
       setSaving('deploy');
     } else {
       commit(true);
@@ -312,9 +306,6 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   const newer = lambda.latestVersion != null && loaded != null && lambda.latestVersion > loaded && !dirty;
   const showDiagnostics = diagnostics.length > 0 || built === 'clean';
 
-  // the preview serves what was last saved
-  const previewCurrent = feature?.current ?? false;
-
   return (
     <Section
       flush
@@ -323,7 +314,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           {said.title}
           <span className="ml-2 text-sm font-normal text-slate-500">
             {feature ? said.inFeature(feature.name) : loaded != null ? said.version(loaded) : ''}
-            {dirty ? said.edited : feature ? (previewCurrent ? said.previewed : '') : online ? said.online : ''}
+            {dirty ? said.edited : !feature && online ? said.online : ''}
           </span>
         </>
       }
@@ -340,7 +331,13 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
             {busy === 'check' && <IconSpinner />}
             {said.check}
           </button>
-          {!demo && (
+          {!demo && feature && (
+            <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-primary !px-4 !py-1.5 text-[13px]" title={said.deployPreviewTitle}>
+              {busy === 'deploy' && <IconSpinner />}
+              {said.save}
+            </button>
+          )}
+          {!demo && !feature && (
             <>
               <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Ctrl+S">
                 {busy === 'save' && <IconSpinner />}
@@ -349,12 +346,11 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
               <button
                 type="button"
                 onClick={deploy}
-                disabled={busy !== null || (feature ? !dirty && previewCurrent : !dirty && online)}
+                disabled={busy !== null || (!dirty && online)}
                 className="btn-primary !px-4 !py-1.5 text-[13px]"
-                title={feature ? said.deployPreviewTitle : undefined}
               >
                 {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
-                {feature ? said.deployPreview : said.deploy}
+                {said.deploy}
               </button>
             </>
           )}

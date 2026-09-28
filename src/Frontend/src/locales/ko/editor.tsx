@@ -217,7 +217,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `v${version} 기준`,
       online: '온라인',
       previewOnline: '미리 보기 온라인',
       compiles: '컴파일됨',
@@ -317,12 +316,6 @@ export const editor: EditorMessages = {
     previewOnline: '미리 보기가 온라인이에요',
     previewOffline: '미리 보기가 오프라인이에요',
     behind: '기준이 오래됨',
-    featureTip: (start) => (
-      <>
-        사람들이 쓰는 걸 바꾸려고 하나요? {start('초안을 만들어 보세요')}. 전용 주소에서 데이터 복사본으로 써 보고,
-        제대로 되면 다음 버전이 돼요.
-      </>
-    ),
     storage: '저장 공간',
     inVersion: (version) => `버전 ${version}에 담긴 것`,
     noVersion: '버전에 담긴 것',
@@ -412,11 +405,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       '이 초안이 쓰는 데이터예요. 초안을 만들 때 람다의 데이터를 복사한 거예요. 미리 보기는 이 복사본을 읽고 쓰기 때문에, 여기서 무엇을 해 봐도 람다가 보관하는 데이터는 건드리지 않아요. 초안을 확정하면 복사본은 버려지고, 람다의 데이터는 그대로 남아요.',
-    featureFacts: [
-      ['복사본', '초안을 만들 때, 또는 마지막으로 다시 복사했을 때 람다에서 가져온 거예요.'],
-      ['미리 보기만 봐요', '미리 보기가 쓴 건 여기에만 남아요. 람다와 방문자는 절대 보지 못해요.'],
-      ['초안과 함께 사라져요', '초안을 확정하거나 삭제하면 복사본도 삭제돼요. 람다의 데이터는 그대로예요.'],
-    ],
     recopy: '람다의 데이터 다시 복사',
     recopyTitle: '이 복사본을 지금 람다에 있는 데이터로 바꾸기',
     recopyConfirm: '람다의 데이터를 다시 복사할까요?',
@@ -462,16 +450,9 @@ export const editor: EditorMessages = {
     emptyTitle: '작업 중인 초안이 없어요',
     emptyText:
       '초안을 만들면 온라인 버전은 건드리지 않고 람다를 바꿀 수 있어요. 직접 하든 에이전트에게 맡기든, 필요한 만큼 몇 번이고 고치고 전용 주소에서 써 볼 수 있어요.',
-    steps: [
-      ['만들기', '최신 버전과 람다 데이터의 복사본이에요.'],
-      ['고치고 써 보기', '전용 주소에서, 초안만의 데이터 복사본으로요.'],
-      ['확정하기', '다음 버전이 되고, 원할 때 온라인에 올라가요.'],
-    ],
     start: '초안 만들기',
     askAgentNew: '에이전트에게 수정 요청하기',
     noChange: '아직 무엇을 바꾸는지 적혀 있지 않아요',
-    from: (version) => `버전 ${version} 기준`,
-    mergeable: '확정할 수 있음',
     behindTitle: '초안을 만든 뒤에 더 새로운 버전이 저장됐어요',
     behind: (newest) => `버전 ${newest}보다 오래됨`,
     previewOnline: '미리 보기 온라인',
@@ -493,9 +474,6 @@ export const editor: EditorMessages = {
     namePlaceholder: '순위표',
     wanted: '무엇을 하나요?',
     wantedPlaceholder: '선택 사항. 최고 점수 10개를 저장하고 게임이 끝날 때마다 보여 주기',
-    startFrom: '기준 버전',
-    version: (version, newest, online) =>
-      `버전 ${version}${newest && online ? ' (최신, 온라인)' : newest ? ' (최신)' : online ? ' (온라인)' : ''}`,
     olderBase: (newest) => `최신 버전이 아니에요. 확정하려면 먼저 버전 ${newest}까지 바뀐 내용을 가져와야 해요.`,
     create: '만들기',
     createFailed: '초안을 만들지 못했어요.',
@@ -508,14 +486,9 @@ export const editor: EditorMessages = {
     featureHint:
       '람다와 따로 작업 중인 수정이에요. 미리 보기는 초안의 코드를 초안만의 데이터 복사본으로 실행하기 때문에, 람다의 방문자에게는 아무것도 보이지 않아요. 확정하면 다음 버전이 돼요.',
     askAgent: '에이전트에게 요청',
+    askCatchUp: '에이전트에게 최신 상태로 맞춰 달라고 요청하기',
+    catchUp: '이 초안을 앱의 최신 버전에 맞춰 업데이트하고, 초안에서 바꾼 내용은 그대로 유지해 주세요.',
     editCode: '코드 편집',
-    preview: '미리 보기',
-    state: {
-      online: '온라인',
-      outdated: '온라인, 이전 저장본',
-      offline: '오프라인',
-    },
-    deployed: '마지막 배포',
     deployPreview: '미리 보기 배포',
     updatePreview: '미리 보기 업데이트',
     previewDeployed: '미리 보기가 온라인에 올라갔어요.',
@@ -523,20 +496,12 @@ export const editor: EditorMessages = {
     previewStopped: '미리 보기를 오프라인으로 전환했어요.',
     previewRejected: '미리 보기가 바뀌지 않았어요',
     previewNotCompiling: '컴파일되지 않아요. 미리 보기에는 전에 보이던 내용이 그대로 보여요.',
-    previewAddress: '미리 보기 주소',
-    previewNote: '이 주소를 아는 사람은 누구나 미리 보기를 열 수 있어요. 검색 엔진에는 수집하지 말라고 알려 둬요.',
-    basedOn: '기준 버전',
-    mergeableLong: '최신 버전이라 확정할 수 있어요',
     started: '만든 때',
     changes: (version) => `버전 ${version} 대비 바뀐 내용`,
     noChanges: (version) => `아직 없어요. 버전 ${version} 내용 그대로예요.`,
-    notes: '메모',
     editNotes: '이름과 메모',
     what: '무엇이 바뀌나요?',
     whatPlaceholder: '최고 점수 10개를 보관하는 순위표 추가',
-    noWanted: '아직 적힌 게 없어요',
-    mergeNote: (version) =>
-      `확정하면 이 메모를 달고 다음 버전(버전 ${version})이 돼요. 초안(미리 보기와 데이터 복사본)은 함께 사라져요.`,
     missed: (from, to) => (to - from === 1 ? `버전 ${to}에서 바뀐 내용` : `버전 ${from + 1}~${to}에서 바뀐 내용`),
     missedNothing: '파일에는 바뀐 게 없어요.',
 
@@ -550,11 +515,9 @@ export const editor: EditorMessages = {
       `${files}의 링크가 전체 경로(${path})를 쓰고 있어요. 미리 보기에서 이 링크는 이 초안의 데이터 복사본이 아니라, 온라인에 있는 람다와 실제 데이터로 이어져요. 상대 경로(‘api/items’)는 미리 보기 안에 머물러요.`,
     mergeButton: '확정',
     saveFirst: '먼저 코드를 저장하세요. 미리 보기와 확정에는 저장된 내용이 쓰여요.',
-    merge: '확정하기',
     mergeAndDeploy: (version) => `확정하고 버전 ${version} 온라인에 올리기`,
     mergeText: (version) =>
       `다음 버전(버전 ${version})이 돼요. 초안(미리 보기와 데이터 복사본)은 함께 사라져요. 람다의 데이터 자체는 그대로 남아요.`,
-    deployToo: (version) => `버전 ${version} 바로 온라인에 올리기`,
     deployTooNote: (active) => `버전 ${active}도 버전 목록에서 클릭 한 번에 다시 올릴 수 있어요.`,
     deployTooOffline: '지금은 람다가 오프라인이라, 이렇게 하면 온라인이 돼요.',
     notCompiling: '컴파일되지 않아서 확정하지 않았어요. 먼저 초안에서 고치세요.',
@@ -840,7 +803,6 @@ export const editor: EditorMessages = {
     editFeature:
       '이 초안의 코드예요. 저장해도 초안에만 남고, 람다의 방문자가 받는 건 하나도 바뀌지 않아요. 배포하면 초안 전용 주소에서 온라인에 올라가 써 볼 수 있어요. 초안을 확정하면 다음 버전이 돼요. ',
     inFeature: (name) => `‘${name}’ 초안`,
-    previewed: ', 미리 보기에 반영됨',
     changedElsewhere: '이 초안은 연 뒤에 다른 곳에서 저장됐어요. 아마 에이전트일 거예요. 여기서 저장하기 전에 저장된 내용을 불러오세요. 여기서 바꾼 내용은 그 위에 저장되지 않아요.',
     readAgain: '저장된 내용 불러오기',
     files: (entry, cs) => (
@@ -853,7 +815,6 @@ export const editor: EditorMessages = {
     check: '검사',
     save: '저장',
     deploy: '배포',
-    deployPreview: '미리 보기 배포',
     deployPreviewTitle: '저장하고, 써 볼 수 있게 초안 전용 주소에서 온라인에 올리기',
     binary: (size) => `텍스트가 아니라서 편집할 수 없어요. 그대로 제공되고, 크기는 ${size} kB예요.`,
     saveAndDeploy: '저장하고 배포',

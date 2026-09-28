@@ -204,7 +204,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `a partir da v${version}`,
       online: 'online',
       previewOnline: 'pré-visualização online',
       compiles: 'compila',
@@ -305,12 +304,6 @@ export const editor: EditorMessages = {
     previewOnline: 'A pré-visualização está online',
     previewOffline: 'A pré-visualização está offline',
     behind: 'desatualizado',
-    featureTip: (start) => (
-      <>
-        Vais mudar algo que as pessoas usam? {start('Começa um rascunho')}: é experimentado num endereço próprio, com uma
-        cópia dos dados, e passa a ser a próxima versão quando estiver bem.
-      </>
-    ),
     storage: 'Armazenamento',
     inVersion: (version) => `Na versão ${version}`,
     noVersion: 'Na versão',
@@ -403,11 +396,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'Os dados com que este rascunho trabalha: uma cópia dos da lambda, tirada quando o rascunho começou. A pré-visualização lê e escreve na cópia, por isso experimentar coisas aqui nunca toca no que a lambda guarda. Integrar o rascunho deita a cópia fora e deixa os dados da lambda como estão.',
-    featureFacts: [
-      ['Uma cópia', 'Tirada da lambda quando o rascunho começou, ou da última vez que a voltaste a copiar.'],
-      ['Só a pré-visualização a vê', 'O que a pré-visualização escreve fica aqui. A lambda e os visitantes dela nunca o veem.'],
-      ['Vai com o rascunho', 'Integrar ou eliminar o rascunho elimina a cópia. Os dados da lambda ficam como estão.'],
-    ],
     recopy: 'Voltar a copiar os dados da lambda',
     recopyTitle: 'Substituir esta cópia pelo que a lambda guarda agora',
     recopyConfirm: 'Voltar a copiar os dados da lambda?',
@@ -453,16 +441,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Não há nada em curso',
     emptyText:
       'Começa um rascunho para alterar a lambda sem tocar no que está online. Tu, ou o agente, podem alterá-lo quantas vezes for preciso e experimentá-lo no endereço próprio dele.',
-    steps: [
-      ['Começar', 'Uma cópia da versão mais recente e dos dados da lambda.'],
-      ['Alterar e experimentar', 'Num endereço próprio, com a sua própria cópia dos dados.'],
-      ['Integrar', 'Passa a ser a próxima versão, e fica online quando disseres.'],
-    ],
     start: 'Começar um rascunho',
     askAgentNew: 'Pedir uma alteração ao agente',
     noChange: 'Ainda não diz o que altera',
-    from: (version) => `a partir da versão ${version}`,
-    mergeable: 'pronto a integrar',
     behindTitle: 'Foi guardada uma versão mais recente depois de ter começado',
     behind: (newest) => `a versão ${newest} é mais recente`,
     previewOnline: 'pré-visualização online',
@@ -484,9 +465,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Ranking',
     wanted: 'O que deve fazer?',
     wantedPlaceholder: 'Opcional. Guardar as dez melhores pontuações e mostrá-las depois de cada jogo.',
-    startFrom: 'Começar a partir de',
-    version: (version, newest, online) =>
-      `Versão ${version}${newest && online ? ' (a mais recente, online)' : newest ? ' (a mais recente)' : online ? ' (online)' : ''}`,
     olderBase: (newest) =>
       `Não é a mais recente: antes de poder ser integrado, tem de receber o que as versões até à ${newest} mudaram.`,
     create: 'Começar',
@@ -500,14 +478,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Uma alteração em que se trabalha ao lado da lambda. A pré-visualização corre o código do rascunho com uma cópia própria dos dados, por isso os visitantes da lambda não veem nada disto. Ao integrá-lo, passa a ser a próxima versão.',
     askAgent: 'Pedir ao agente',
+    askCatchUp: 'Pedir ao agente para o atualizar',
+    catchUp: 'Atualiza este rascunho com a versão mais recente da app, mantendo o que ele altera.',
     editCode: 'Editar o código',
-    preview: 'Pré-visualização',
-    state: {
-      online: 'Online',
-      outdated: 'Online, com um estado anterior',
-      offline: 'Offline',
-    },
-    deployed: 'deploy feito',
     deployPreview: 'Fazer deploy da pré-visualização',
     updatePreview: 'Atualizar a pré-visualização',
     previewDeployed: 'A pré-visualização está online.',
@@ -515,20 +488,12 @@ export const editor: EditorMessages = {
     previewStopped: 'A pré-visualização está offline.',
     previewRejected: 'A pré-visualização não mudou',
     previewNotCompiling: 'Não compila. A pré-visualização continua a mostrar o que mostrava antes.',
-    previewAddress: 'Endereço da pré-visualização',
-    previewNote: 'Qualquer pessoa com este endereço pode abrir a pré-visualização. Os motores de busca são avisados para a ignorar.',
-    basedOn: 'Baseado em',
-    mergeableLong: 'a mais recente, por isso pode ser integrado',
     started: 'Começou',
     changes: (version) => `O que altera em relação à versão ${version}`,
     noChanges: (version) => `Nada ainda: tem exatamente o mesmo que a versão ${version}.`,
-    notes: 'Notas',
     editNotes: 'Nome e notas',
     what: 'O que é que altera?',
     whatPlaceholder: 'Adiciona um ranking com as dez melhores pontuações',
-    noWanted: 'Ainda não diz nada',
-    mergeNote: (version) =>
-      `Ao integrá-lo, passa a ser a versão ${version}, com estas notas. O rascunho desaparece com isso: a pré-visualização e a cópia dos dados.`,
     missed: (from, to) =>
       to - from === 1 ? `O que a versão ${to} mudou` : `O que as versões ${from + 1} a ${to} mudaram`,
     missedNothing: 'Nada nos ficheiros.',
@@ -543,11 +508,9 @@ export const editor: EditorMessages = {
       `Em ${files}, as ligações para ${path} usam o caminho completo. A partir da pré-visualização, levam à lambda online e aos dados reais dela, não à cópia deste rascunho. Os caminhos relativos («api/items») ficam na pré-visualização.`,
     mergeButton: 'Integrar',
     saveFirst: 'Guarda primeiro o código: a pré-visualização e a integração usam o que está guardado.',
-    merge: 'Integrar o rascunho',
     mergeAndDeploy: (version) => `Integrar e pôr a versão ${version} online`,
     mergeText: (version) =>
       `Passa a ser a versão ${version}. O rascunho desaparece com isso: a pré-visualização e a cópia dos dados. Os dados da própria lambda ficam como estão.`,
-    deployToo: (version) => `Pôr a versão ${version} online já`,
     deployTooNote: (active) => `A versão ${active} continua à distância de um clique nas versões.`,
     deployTooOffline: 'A lambda está offline; isto põe-na online.',
     notCompiling: 'Não compila, por isso não foi integrado. Corrige-o primeiro no rascunho.',
@@ -838,7 +801,6 @@ export const editor: EditorMessages = {
     editFeature:
       'O código deste rascunho. Guardar mantém-no no rascunho: nada do que os visitantes da lambda recebem muda. Fazer deploy põe-no online no endereço próprio do rascunho, para o experimentares; integrar o rascunho faz dele a próxima versão. ',
     inFeature: (name) => `em «${name}»`,
-    previewed: ', na pré-visualização',
     changedElsewhere: 'O rascunho foi guardado noutro sítio desde que o abriste (talvez pelo agente). Carrega o que está guardado antes de guardares aqui; as tuas alterações não seriam guardadas por cima.',
     readAgain: 'Carregar o que está guardado',
     files: (entry, cs) => (
@@ -851,7 +813,6 @@ export const editor: EditorMessages = {
     check: 'Verificar',
     save: 'Guardar',
     deploy: 'Fazer deploy',
-    deployPreview: 'Fazer deploy da pré-visualização',
     deployPreviewTitle: 'Guardar e pôr o rascunho online no endereço próprio dele, para o experimentares',
     binary: (size) => `Não é texto, por isso não há nada para editar. É servido tal como está e tem ${size} kB.`,
     saveAndDeploy: 'Guardar e fazer deploy',

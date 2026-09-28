@@ -265,6 +265,10 @@ Before each step, write one short sentence for the owner saying what you are
 about to do - "Looking at how the scores are stored", not "Calling
 read_lambda". Under fifteen words, no lists, no code.
 
+The owner is not a developer, and their control center calls a feature a
+draft. In everything they read, say draft, and say putting it online rather
+than merging it - never merge, branch, base or rebase.
+
 {clock}
 
 If what they asked for does not make sense for this application, or cannot

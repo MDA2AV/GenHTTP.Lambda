@@ -217,7 +217,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `da v${version}`,
       online: 'online',
       previewOnline: 'anteprima online',
       compiles: 'compila',
@@ -318,12 +317,6 @@ export const editor: EditorMessages = {
     previewOnline: 'La sua anteprima è online',
     previewOffline: 'La sua anteprima è offline',
     behind: 'rimasta indietro',
-    featureTip: (start) => (
-      <>
-        Devi cambiare qualcosa che la gente usa? {start('Avvia una bozza')}: la provi a un indirizzo tutto suo, su
-        una copia dei dati, e diventa la prossima versione quando è a posto.
-      </>
-    ),
     storage: 'Spazio',
     inVersion: (version) => `Nella versione ${version}`,
     noVersion: 'Nella versione',
@@ -415,11 +408,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'I dati su cui lavora questa bozza: una copia di quelli della lambda, fatta quando la bozza è stata avviata. La sua anteprima legge e scrive nella copia, quindi le prove fatte qui non toccano mai quello che la lambda conserva. Integrando la bozza, la copia viene buttata via e i dati della lambda restano come sono.',
-    featureFacts: [
-      ['Una copia', 'Presa dalla lambda quando la bozza è stata avviata, o l’ultima volta che l’hai ricopiata.'],
-      ['La vede solo l’anteprima', 'Quello che scrive l’anteprima resta qui. La lambda e i suoi visitatori non lo vedono mai.'],
-      ['Sparisce con la bozza', 'Integrare o eliminare la bozza elimina la copia. I dati della lambda restano come sono.'],
-    ],
     recopy: 'Ricopia i dati della lambda',
     recopyTitle: 'Sostituisci questa copia con quello che la lambda contiene adesso',
     recopyConfirm: 'Ricopiare i dati della lambda?',
@@ -465,16 +453,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Non c’è niente in lavorazione',
     emptyText:
       'Avvia una bozza per cambiare la lambda senza toccare quello che è online. Tu, o l’agente, potete modificarla tutte le volte che serve e provarla al suo indirizzo.',
-    steps: [
-      ['Avviala', 'Una copia della versione più recente e dei dati della lambda.'],
-      ['Modificala e provala', 'A un indirizzo tutto suo, sulla sua copia dei dati.'],
-      ['Integrala', 'Diventa la prossima versione e va online quando lo decidi tu.'],
-    ],
     start: 'Avvia una bozza',
     askAgentNew: 'Chiedi una modifica all’agente',
     noChange: 'Non è ancora detto cosa cambia',
-    from: (version) => `dalla versione ${version}`,
-    mergeable: 'pronta da integrare',
     behindTitle: 'Dopo il suo avvio è stata salvata una versione più recente',
     behind: (newest) => `la versione ${newest} è più recente`,
     previewOnline: 'anteprima online',
@@ -496,9 +477,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Classifica',
     wanted: 'Cosa deve fare?',
     wantedPlaceholder: 'Facoltativo. Tieni i dieci punteggi migliori e mostrali dopo ogni partita.',
-    startFrom: 'Parti da',
-    version: (version, newest, online) =>
-      `Versione ${version}${newest && online ? ' (la più recente, online)' : newest ? ' (la più recente)' : online ? ' (online)' : ''}`,
     olderBase: (newest) =>
       `Non è la più recente: prima di poterla integrare, dovrà incorporare quello che hanno cambiato le versioni fino alla ${newest}.`,
     create: 'Avvia',
@@ -512,14 +490,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Una modifica in lavorazione accanto alla lambda. La sua anteprima fa girare il suo codice sulla sua copia dei dati, quindi i visitatori della lambda non ne vedono niente. Integrandola diventa la prossima versione.',
     askAgent: 'Chiedi all’agente',
+    askCatchUp: 'Chiedi all’agente di aggiornarla',
+    catchUp: 'Aggiorna questa bozza alla versione più recente dell’app, mantenendo ciò che cambia.',
     editCode: 'Modifica il codice',
-    preview: 'Anteprima',
-    state: {
-      online: 'Online',
-      outdated: 'Online, con un salvataggio precedente',
-      offline: 'Offline',
-    },
-    deployed: 'messa online',
     deployPreview: 'Deploy dell’anteprima',
     updatePreview: 'Aggiorna l’anteprima',
     previewDeployed: 'L’anteprima è online.',
@@ -527,20 +500,12 @@ export const editor: EditorMessages = {
     previewStopped: 'L’anteprima è offline.',
     previewRejected: 'L’anteprima non è cambiata',
     previewNotCompiling: 'Non compila. L’anteprima mostra ancora quello che mostrava prima.',
-    previewAddress: 'Indirizzo dell’anteprima',
-    previewNote: 'Chiunque abbia questo indirizzo può aprire l’anteprima. Ai motori di ricerca viene chiesto di ignorarla.',
-    basedOn: 'Basata su',
-    mergeableLong: 'la più recente, quindi si può integrare',
     started: 'Avviata',
     changes: (version) => `Cosa cambia rispetto alla versione ${version}`,
     noChanges: (version) => `Ancora niente: contiene esattamente quello che contiene la versione ${version}.`,
-    notes: 'Note',
     editNotes: 'Nome e note',
     what: 'Cosa cambia?',
     whatPlaceholder: 'Aggiunge una classifica con i dieci punteggi migliori',
-    noWanted: 'Non è ancora stato detto niente',
-    mergeNote: (version) =>
-      `Integrandola diventa la versione ${version}, con queste note. La bozza sparisce insieme alla sua anteprima e alla sua copia dei dati.`,
     missed: (from, to) =>
       to - from === 1 ? `Cosa ha cambiato la versione ${to}` : `Cosa hanno cambiato le versioni da ${from + 1} a ${to}`,
     missedNothing: 'Niente nei file.',
@@ -555,11 +520,9 @@ export const editor: EditorMessages = {
       `In ${files} i link a ${path} usano il percorso completo. Dall’anteprima portano alla lambda online e ai suoi dati veri, non alla copia di questa bozza. I percorsi relativi («api/items») restano nell’anteprima.`,
     mergeButton: 'Integra',
     saveFirst: 'Prima salva il codice: l’anteprima e l’integrazione usano quello che è salvato.',
-    merge: 'Integrala',
     mergeAndDeploy: (version) => `Integra e metti online la versione ${version}`,
     mergeText: (version) =>
       `Diventa la versione ${version}. La bozza sparisce, insieme alla sua anteprima e alla sua copia dei dati. I dati della lambda restano come sono.`,
-    deployToo: (version) => `Metti subito online la versione ${version}`,
     deployTooNote: (active) => `La versione ${active} resta a un clic, nelle versioni.`,
     deployTooOffline: 'Ora la lambda è offline; così va online.',
     notCompiling: 'Non compila, quindi non è stata integrata. Prima sistemala nella bozza.',
@@ -848,7 +811,6 @@ export const editor: EditorMessages = {
     editFeature:
       'Il codice di questa bozza. Salvando resta nella bozza: per i visitatori della lambda non cambia niente. Con il deploy va online all’indirizzo della bozza, per provarla; integrando la bozza diventa la prossima versione. ',
     inFeature: (name) => `in «${name}»`,
-    previewed: ', nell’anteprima',
     changedElsewhere:
       'La bozza è stata salvata altrove da quando l’hai aperta, forse dall’agente. Carica quello che è salvato prima di salvare qui; le tue modifiche non verrebbero salvate sopra.',
     readAgain: 'Carica quello che è salvato',
@@ -862,7 +824,6 @@ export const editor: EditorMessages = {
     check: 'Verifica',
     save: 'Salva',
     deploy: 'Deploy',
-    deployPreview: 'Deploy dell’anteprima',
     deployPreviewTitle: 'Salva e metti online la bozza al suo indirizzo per provarla',
     binary: (size) => `Non è testo, quindi non c’è niente da modificare. Viene servito così com’è e pesa ${size} kB.`,
     saveAndDeploy: 'Salva e fai il deploy',

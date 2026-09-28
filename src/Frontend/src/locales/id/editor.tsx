@@ -219,7 +219,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `dari v${version}`,
       online: 'online',
       previewOnline: 'pratinjau online',
       compiles: 'terkompilasi',
@@ -320,12 +319,6 @@ export const editor: EditorMessages = {
     previewOnline: 'Pratinjaunya online',
     previewOffline: 'Pratinjaunya offline',
     behind: 'tertinggal',
-    featureTip: (start) => (
-      <>
-        Mau mengubah sesuatu yang sedang dipakai orang? {start('Mulai draf')}: draf dicoba di alamatnya sendiri, dengan
-        salinan data, dan menjadi versi berikutnya setelah hasilnya pas.
-      </>
-    ),
     storage: 'Penyimpanan',
     inVersion: (version) => `Di versi ${version}`,
     noVersion: 'Di versi',
@@ -416,11 +409,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'Data yang dipakai draf ini: salinan data lambda, diambil saat draf dimulai. Pratinjaunya membaca dan menulis salinan itu, jadi mencoba apa pun di sini tidak pernah menyentuh apa yang disimpan lambda. Menggabungkan draf membuang salinan ini dan membiarkan data lambda apa adanya.',
-    featureFacts: [
-      ['Sebuah salinan', 'Diambil dari lambda saat draf dimulai, atau saat terakhir kali Anda menyalinnya lagi.'],
-      ['Hanya pratinjau yang melihatnya', 'Apa yang ditulis pratinjau tetap di sini. Lambda dan pengunjungnya tidak pernah melihatnya.'],
-      ['Hilang bersama drafnya', 'Menggabungkan atau menghapus draf juga menghapus salinan ini. Data lambda tetap apa adanya.'],
-    ],
     recopy: 'Salin lagi data lambda',
     recopyTitle: 'Ganti salinan ini dengan isi lambda saat ini',
     recopyConfirm: 'Salin lagi data lambda?',
@@ -467,16 +455,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Tidak ada yang sedang dikerjakan',
     emptyText:
       'Mulai draf untuk mengubah lambda tanpa menyentuh yang sedang online. Anda, atau agen, bisa mengubahnya sesering yang diperlukan dan mencobanya di alamatnya sendiri.',
-    steps: [
-      ['Mulai', 'Salinan versi terbaru, dan salinan data lambda.'],
-      ['Ubah dan coba', 'Di alamatnya sendiri, dengan salinan datanya sendiri.'],
-      ['Gabungkan', 'Draf menjadi versi berikutnya, dan online saat Anda mau.'],
-    ],
     start: 'Mulai draf',
     askAgentNew: 'Minta perubahan ke agen',
     noChange: 'Belum ada keterangan tentang apa yang diubah',
-    from: (version) => `dari versi ${version}`,
-    mergeable: 'siap digabungkan',
     behindTitle: 'Ada versi yang lebih baru disimpan setelah draf ini dimulai',
     behind: (newest) => `versi ${newest} lebih baru`,
     previewOnline: 'pratinjau online',
@@ -498,9 +479,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Papan peringkat',
     wanted: 'Apa yang harus dilakukannya?',
     wantedPlaceholder: 'Opsional. Simpan 10 skor terbaik dan tampilkan setelah setiap permainan.',
-    startFrom: 'Mulai dari',
-    version: (version, newest, online) =>
-      `Versi ${version}${newest && online ? ' (terbaru, online)' : newest ? ' (terbaru)' : online ? ' (online)' : ''}`,
     olderBase: (newest) =>
       `Bukan yang terbaru: sebelum bisa digabungkan, draf ini harus memasukkan dulu perubahan dari versi-versi sampai versi ${newest}.`,
     create: 'Mulai',
@@ -514,14 +492,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Perubahan yang sedang dikerjakan di samping lambda. Pratinjaunya menjalankan kodenya dengan salinan datanya sendiri, jadi pengunjung lambda tidak melihat apa pun. Menggabungkannya menjadikannya versi berikutnya.',
     askAgent: 'Minta ke agen',
+    askCatchUp: 'Minta agen memperbaruinya',
+    catchUp: 'Perbarui draf ini dengan versi aplikasi yang terbaru, dan pertahankan apa yang diubahnya.',
     editCode: 'Edit kode',
-    preview: 'Pratinjau',
-    state: {
-      online: 'Online',
-      outdated: 'Online, dengan simpanan lama',
-      offline: 'Offline',
-    },
-    deployed: 'di-deploy',
     deployPreview: 'Deploy pratinjau',
     updatePreview: 'Perbarui pratinjau',
     previewDeployed: 'Pratinjau sudah online.',
@@ -529,20 +502,12 @@ export const editor: EditorMessages = {
     previewStopped: 'Pratinjau sudah offline.',
     previewRejected: 'Pratinjau tidak berubah',
     previewNotCompiling: 'Kode tidak bisa dikompilasi. Pratinjau masih menampilkan yang sebelumnya.',
-    previewAddress: 'Alamat pratinjau',
-    previewNote: 'Siapa pun yang punya alamat ini bisa membuka pratinjaunya. Mesin pencari diminta untuk tidak menyentuhnya.',
-    basedOn: 'Versi dasar',
-    mergeableLong: 'yang terbaru, jadi bisa digabungkan',
     started: 'Dimulai',
     changes: (version) => `Apa yang diubahnya dibandingkan versi ${version}`,
     noChanges: (version) => `Belum ada: isinya masih persis sama dengan versi ${version}.`,
-    notes: 'Catatan',
     editNotes: 'Nama dan catatan',
     what: 'Apa yang diubahnya?',
     whatPlaceholder: 'Menambahkan papan peringkat yang menyimpan 10 skor terbaik',
-    noWanted: 'Belum ada keterangan',
-    mergeNote: (version) =>
-      `Menggabungkannya menjadikannya versi ${version}, dengan catatan ini. Drafnya ikut hilang, termasuk pratinjau dan salinan datanya.`,
     missed: (from, to) =>
       to - from === 1 ? `Yang diubah versi ${to}` : `Yang diubah versi ${from + 1} sampai ${to}`,
     missedNothing: 'Tidak ada perubahan di file.',
@@ -557,11 +522,9 @@ export const editor: EditorMessages = {
       `Di ${files}, tautan ke ${path} memakai path lengkap. Dari pratinjau, tautan itu mengarah ke lambda yang online beserta data aslinya, bukan ke salinan milik draf ini. Path relatif (“api/items”) tetap berada di pratinjau.`,
     mergeButton: 'Gabungkan',
     saveFirst: 'Simpan kodenya dulu: pratinjau dan penggabungan memakai yang tersimpan.',
-    merge: 'Gabungkan',
     mergeAndDeploy: (version) => `Gabungkan dan jadikan versi ${version} online`,
     mergeText: (version) =>
       `Draf ini menjadi versi ${version}. Drafnya ikut hilang, termasuk pratinjau dan salinan datanya. Data lambda sendiri tetap apa adanya.`,
-    deployToo: (version) => `Langsung jadikan versi ${version} online`,
     deployTooNote: (active) => `Versi ${active} tetap bisa dikembalikan dengan satu klik di bagian versi.`,
     deployTooOffline: 'Lambda sedang offline; ini akan membuatnya online.',
     notCompiling: 'Kode tidak bisa dikompilasi, jadi tidak digabungkan. Perbaiki dulu di drafnya.',
@@ -849,7 +812,6 @@ export const editor: EditorMessages = {
     editFeature:
       'Kode draf ini. Menyimpan membuatnya tetap di draf, jadi tidak ada yang berubah bagi pengunjung lambda. Deploy membuatnya online di alamat draf itu sendiri, untuk dicoba; menggabungkan draf menjadikannya versi berikutnya. ',
     inFeature: (name) => `di draf “${name}”`,
-    previewed: ', di pratinjau',
     changedElsewhere: 'Draf ini disimpan dari tempat lain sejak Anda membukanya, mungkin oleh agen. Muat yang tersimpan sebelum menyimpan di sini; perubahan Anda tidak akan disimpan di atasnya.',
     readAgain: 'Muat yang tersimpan',
     files: (entry, cs) => (
@@ -862,7 +824,6 @@ export const editor: EditorMessages = {
     check: 'Periksa',
     save: 'Simpan',
     deploy: 'Deploy',
-    deployPreview: 'Deploy pratinjau',
     deployPreviewTitle: 'Simpan, lalu buat draf online di alamatnya sendiri untuk dicoba',
     binary: (size) => `Bukan teks, jadi tidak ada yang bisa diedit. File ini disajikan apa adanya, ukurannya ${size} kB.`,
     saveAndDeploy: 'Simpan dan deploy',

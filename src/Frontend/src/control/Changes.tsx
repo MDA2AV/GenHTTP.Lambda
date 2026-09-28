@@ -12,23 +12,26 @@ import { compare, type DiffLine, type FileDiff } from './diff';
  * usually the one to read. The versions show the difference to the version
  * before; a feature shows the difference to the version it is based on.
  */
-export function ChangeList({ before, after, theme, empty }: {
+export function ChangeList({ before, after, theme, empty, folded = false }: {
   before: LambdaFile[];
   after: LambdaFile[];
   theme: Theme;
   /** What to say when nothing differs. */
   empty: string;
+  /** Whether every file starts closed, where the lines are there for whoever wants them rather than the point of the page. */
+  folded?: boolean;
 }) {
   const said = useEditorT().versions;
 
   const changed = useMemo(() => compare(before, after).filter((d) => d.status !== 'same'), [before, after]);
 
-  const [shown, setShown] = useState<string | null>(changed[0]?.name ?? null);
+  const first = folded ? null : changed[0]?.name ?? null;
+  const [shown, setShown] = useState<string | null>(first);
 
   // a file that is no longer among the changes is not held open
   useEffect(() => {
-    setShown((was) => (was != null && changed.some((d) => d.name === was) ? was : changed[0]?.name ?? null));
-  }, [changed]);
+    setShown((was) => (was != null && changed.some((d) => d.name === was) ? was : first));
+  }, [changed, first]);
 
   if (changed.length === 0) {
     return <p className="text-sm text-slate-500">{empty}</p>;

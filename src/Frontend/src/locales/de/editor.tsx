@@ -212,7 +212,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `aus v${version}`,
       online: 'online',
       previewOnline: 'Vorschau online',
       compiles: 'kompiliert',
@@ -314,12 +313,6 @@ export const editor: EditorMessages = {
     previewOnline: 'Die Vorschau ist online',
     previewOffline: 'Die Vorschau ist offline',
     behind: 'nicht aktuell',
-    featureTip: (start) => (
-      <>
-        Sie ändern etwas, das Leute nutzen? {start('Beginnen Sie einen Entwurf')}: Er wird unter einer eigenen Adresse
-        mit einer Kopie der Daten ausprobiert und wird zur nächsten Version, sobald alles passt.
-      </>
-    ),
     storage: 'Speicher',
     inVersion: (version) => `In Version ${version}`,
     noVersion: 'In der Version',
@@ -412,11 +405,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'Die Daten, mit denen dieser Entwurf arbeitet: eine Kopie der Daten des Lambdas, angelegt, als der Entwurf begonnen wurde. Seine Vorschau liest und schreibt die Kopie – was Sie hier ausprobieren, rührt also nie an, was das Lambda aufbewahrt. Wird der Entwurf übernommen, wird die Kopie verworfen, und die Daten des Lambdas bleiben, wie sie sind.',
-    featureFacts: [
-      ['Eine Kopie', 'Aus dem Lambda kopiert, als der Entwurf begonnen wurde – oder als Sie sie zuletzt neu kopiert haben.'],
-      ['Nur die Vorschau sieht sie', 'Was die Vorschau schreibt, bleibt hier. Das Lambda und seine Besucher sehen es nie.'],
-      ['Verschwindet mit dem Entwurf', 'Wird der Entwurf übernommen oder gelöscht, wird die Kopie gelöscht. Die Daten des Lambdas bleiben, wie sie sind.'],
-    ],
     recopy: 'Daten des Lambdas neu kopieren',
     recopyTitle: 'Diese Kopie durch das ersetzen, was das Lambda jetzt enthält',
     recopyConfirm: 'Die Daten des Lambdas neu kopieren?',
@@ -463,16 +451,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Gerade wird an nichts gearbeitet',
     emptyText:
       'Beginnen Sie einen Entwurf, um das Lambda zu ändern, ohne anzurühren, was online ist. Sie oder der Agent können ihn so oft ändern wie nötig und unter seiner eigenen Adresse ausprobieren.',
-    steps: [
-      ['Beginnen', 'Eine Kopie der neuesten Version und der Daten des Lambdas.'],
-      ['Ändern und ausprobieren', 'Unter einer eigenen Adresse, mit einer eigenen Kopie der Daten.'],
-      ['Übernehmen', 'Er wird zur nächsten Version und geht online, wenn Sie es sagen.'],
-    ],
     start: 'Entwurf beginnen',
     askAgentNew: 'Den Agenten um eine Änderung bitten',
     noChange: 'Noch keine Angabe, was er ändert',
-    from: (version) => `aus Version ${version}`,
-    mergeable: 'bereit zum Übernehmen',
     behindTitle: 'Nach seinem Beginn wurde eine neuere Version gespeichert',
     behind: (newest) => `Version ${newest} ist neuer`,
     previewOnline: 'Vorschau online',
@@ -494,9 +475,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Bestenliste',
     wanted: 'Was soll er tun?',
     wantedPlaceholder: 'Optional. Die zehn besten Punktestände behalten und nach jedem Spiel anzeigen.',
-    startFrom: 'Ausgehend von',
-    version: (version, newest, online) =>
-      `Version ${version}${newest && online ? ' (neueste, online)' : newest ? ' (neueste)' : online ? ' (online)' : ''}`,
     olderBase: (newest) =>
       `Nicht die neueste: Bevor er übernommen werden kann, muss er aufnehmen, was die Versionen bis ${newest} geändert haben.`,
     create: 'Beginnen',
@@ -510,14 +488,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Eine Änderung, an der neben dem Lambda gearbeitet wird. Die Vorschau führt ihren Code mit einer eigenen Kopie der Daten aus, Besucher des Lambdas sehen also nichts davon. Beim Übernehmen wird sie zur nächsten Version.',
     askAgent: 'Den Agenten fragen',
+    askCatchUp: 'Den Agenten bitten, ihn auf den neuesten Stand zu bringen',
+    catchUp: 'Bring diesen Entwurf auf den Stand der neuesten Version der App, und behalte, was er ändert.',
     editCode: 'Code bearbeiten',
-    preview: 'Vorschau',
-    state: {
-      online: 'Online',
-      outdated: 'Online, mit einem älteren Stand',
-      offline: 'Offline',
-    },
-    deployed: 'deployt',
     deployPreview: 'Vorschau deployen',
     updatePreview: 'Vorschau aktualisieren',
     previewDeployed: 'Die Vorschau ist online.',
@@ -525,20 +498,12 @@ export const editor: EditorMessages = {
     previewStopped: 'Die Vorschau ist offline.',
     previewRejected: 'Die Vorschau hat sich nicht geändert',
     previewNotCompiling: 'Der Code kompiliert nicht. Die Vorschau zeigt weiter, was sie vorher gezeigt hat.',
-    previewAddress: 'Adresse der Vorschau',
-    previewNote: 'Jeder mit dieser Adresse kann die Vorschau öffnen. Suchmaschinen werden gebeten, sie nicht aufzunehmen.',
-    basedOn: 'Basiert auf',
-    mergeableLong: 'der neuesten – er kann also übernommen werden',
     started: 'Begonnen',
     changes: (version) => `Was er gegenüber Version ${version} ändert`,
     noChanges: (version) => `Noch nichts: Er enthält genau, was Version ${version} enthält.`,
-    notes: 'Notizen',
     editNotes: 'Name und Notizen',
     what: 'Was ändert er?',
     whatPlaceholder: 'Fügt eine Bestenliste mit den zehn besten Punkteständen hinzu',
-    noWanted: 'Noch nichts angegeben',
-    mergeNote: (version) =>
-      `Beim Übernehmen wird er Version ${version}, mit diesen Notizen. Der Entwurf verschwindet damit – samt seiner Vorschau und seiner Kopie der Daten.`,
     missed: (from, to) =>
       to - from === 1 ? `Was Version ${to} geändert hat` : `Was die Versionen ${from + 1} bis ${to} geändert haben`,
     missedNothing: 'Nichts an den Dateien.',
@@ -553,11 +518,9 @@ export const editor: EditorMessages = {
       `In ${files} wird ${path} mit dem vollen Pfad verlinkt. Aus der Vorschau heraus führt das zum Lambda, das online ist, und zu seinen echten Daten – nicht zur Kopie dieses Entwurfs. Relative Pfade („api/items“) bleiben in der Vorschau.`,
     mergeButton: 'Übernehmen',
     saveFirst: 'Speichern Sie zuerst den Code: Vorschau und Übernehmen verwenden, was gespeichert ist.',
-    merge: 'Übernehmen',
     mergeAndDeploy: (version) => `Übernehmen und Version ${version} online stellen`,
     mergeText: (version) =>
       `Er wird Version ${version}. Der Entwurf verschwindet damit – samt seiner Vorschau und seiner Kopie der Daten. Die Daten des Lambdas selbst bleiben, wie sie sind.`,
-    deployToo: (version) => `Version ${version} sofort online stellen`,
     deployTooNote: (active) => `Zu Version ${active} kommen Sie unter den Versionen mit einem Klick zurück.`,
     deployTooOffline: 'Das Lambda ist gerade offline; so geht es online.',
     notCompiling: 'Der Code kompiliert nicht, deshalb wurde der Entwurf nicht übernommen. Beheben Sie das zuerst im Entwurf.',
@@ -847,7 +810,6 @@ export const editor: EditorMessages = {
     editFeature:
       'Der Code dieses Entwurfs. Speichern behält ihn im Entwurf – für die Besucher des Lambdas ändert sich nichts. Deployen stellt ihn unter der eigenen Adresse des Entwurfs online, zum Ausprobieren; wird der Entwurf übernommen, wird er zur nächsten Version. ',
     inFeature: (name) => `in „${name}“`,
-    previewed: ', in der Vorschau',
     changedElsewhere: 'Der Entwurf wurde woanders gespeichert, seit Sie ihn geöffnet haben – vielleicht vom Agenten. Laden Sie den gespeicherten Stand, bevor Sie hier speichern; Ihre Änderungen würden nicht darüber gespeichert.',
     readAgain: 'Gespeicherten Stand laden',
     files: (entry, cs) => (
@@ -860,7 +822,6 @@ export const editor: EditorMessages = {
     check: 'Prüfen',
     save: 'Speichern',
     deploy: 'Deployen',
-    deployPreview: 'Vorschau deployen',
     deployPreviewTitle: 'Speichern und den Entwurf unter seiner eigenen Adresse online stellen, um ihn auszuprobieren',
     binary: (size) => `Kein Text, also nichts zu bearbeiten. Die Datei wird ausgeliefert, wie sie ist, und ist ${size} kB groß.`,
     saveAndDeploy: 'Speichern und deployen',

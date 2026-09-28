@@ -218,7 +218,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `uit v${version}`,
       online: 'online',
       previewOnline: 'voorvertoning online',
       compiles: 'compileert',
@@ -320,12 +319,6 @@ export const editor: EditorMessages = {
     previewOnline: 'De voorvertoning staat online',
     previewOffline: 'De voorvertoning staat offline',
     behind: 'loopt achter',
-    featureTip: (start) => (
-      <>
-        Wil je iets aanpassen dat mensen gebruiken? {start('Start een concept')}: dat probeer je uit op een eigen adres,
-        met een kopie van de data, en het wordt de volgende versie zodra het goed is.
-      </>
-    ),
     storage: 'Opslag',
     inVersion: (version) => `In versie ${version}`,
     noVersion: 'In de versie',
@@ -418,11 +411,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'De data waarmee dit concept werkt: een kopie van die van de lambda, gemaakt toen het concept begon. De voorvertoning leest en schrijft de kopie, dus wat je hier uitprobeert, raakt nooit aan wat de lambda bewaart. Voeg je het concept samen, dan wordt de kopie weggegooid en blijft de data van de lambda zoals die is.',
-    featureFacts: [
-      ['Een kopie', 'Gemaakt van de data van de lambda toen het concept begon, of toen je die voor het laatst opnieuw kopieerde.'],
-      ['Alleen voor de voorvertoning', 'Wat de voorvertoning schrijft, blijft hier. De lambda en zijn bezoekers zien het nooit.'],
-      ['Verdwijnt met het concept', 'Voeg je het concept samen of verwijder je het, dan wordt de kopie verwijderd. De data van de lambda blijft zoals die is.'],
-    ],
     recopy: 'De data van de lambda opnieuw kopiëren',
     recopyTitle: 'Deze kopie vervangen door wat de lambda nu bevat',
     recopyConfirm: 'De data van de lambda opnieuw kopiëren?',
@@ -469,16 +457,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Er wordt nergens aan gewerkt',
     emptyText:
       'Start een concept om de lambda aan te passen zonder wat er online staat aan te raken. Jij of de agent kan het zo vaak aanpassen als nodig en het uitproberen op zijn eigen adres.',
-    steps: [
-      ['Start het', 'Een kopie van de nieuwste versie, en van de data van de lambda.'],
-      ['Pas het aan en probeer het uit', 'Op een eigen adres, met een eigen kopie van de data.'],
-      ['Voeg het samen', 'Het wordt de volgende versie, en gaat online wanneer jij dat zegt.'],
-    ],
     start: 'Concept starten',
     askAgentNew: 'De agent om een wijziging vragen',
     noChange: 'Nog niet beschreven wat het verandert',
-    from: (version) => `uit versie ${version}`,
-    mergeable: 'klaar om samen te voegen',
     behindTitle: 'Er is een nieuwere versie opgeslagen nadat het concept begon',
     behind: (newest) => `versie ${newest} is nieuwer`,
     previewOnline: 'voorvertoning online',
@@ -500,9 +481,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Ranglijst',
     wanted: 'Wat moet het doen?',
     wantedPlaceholder: 'Optioneel. Bewaar de tien beste scores en toon ze na elk spel.',
-    startFrom: 'Starten vanaf',
-    version: (version, newest, online) =>
-      `Versie ${version}${newest && online ? ' (nieuwste, online)' : newest ? ' (nieuwste)' : online ? ' (online)' : ''}`,
     olderBase: (newest) =>
       `Niet de nieuwste: voordat het kan worden samengevoegd, moet het eerst overnemen wat de versies tot en met ${newest} veranderden.`,
     create: 'Starten',
@@ -516,14 +494,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Een wijziging waaraan naast de lambda wordt gewerkt. De voorvertoning draait de code ervan met een eigen kopie van de data, dus bezoekers van de lambda zien er niets van. Samenvoegen maakt er de volgende versie van.',
     askAgent: 'De agent vragen',
+    askCatchUp: 'De agent vragen het bij te werken',
+    catchUp: 'Werk dit concept bij naar de nieuwste versie van de app, en behoud wat het verandert.',
     editCode: 'Code bewerken',
-    preview: 'Voorvertoning',
-    state: {
-      online: 'Online',
-      outdated: 'Online, maar niet bijgewerkt',
-      offline: 'Offline',
-    },
-    deployed: 'gedeployd',
     deployPreview: 'Voorvertoning deployen',
     updatePreview: 'Voorvertoning bijwerken',
     previewDeployed: 'De voorvertoning staat online.',
@@ -531,20 +504,12 @@ export const editor: EditorMessages = {
     previewStopped: 'De voorvertoning staat offline.',
     previewRejected: 'De voorvertoning is niet veranderd',
     previewNotCompiling: 'De code compileert niet. De voorvertoning toont nog wat hij eerder toonde.',
-    previewAddress: 'Adres van de voorvertoning',
-    previewNote: 'Iedereen met dit adres kan de voorvertoning openen. Zoekmachines wordt gevraagd hem te negeren.',
-    basedOn: 'Gebaseerd op',
-    mergeableLong: 'de nieuwste, dus het kan worden samengevoegd',
     started: 'Gestart',
     changes: (version) => `Wat het verandert ten opzichte van versie ${version}`,
     noChanges: (version) => `Nog niets: het bevat precies wat versie ${version} bevat.`,
-    notes: 'Notities',
     editNotes: 'Naam en notities',
     what: 'Wat verandert het?',
     whatPlaceholder: 'Voegt een ranglijst toe met de tien beste scores',
-    noWanted: 'Nog niets opgegeven',
-    mergeNote: (version) =>
-      `Samenvoegen maakt er versie ${version} van, met deze notities. Het concept verdwijnt dan, met zijn voorvertoning en zijn kopie van de data.`,
     missed: (from, to) =>
       to - from === 1 ? `Wat versie ${to} veranderde` : `Wat versies ${from + 1} tot en met ${to} veranderden`,
     missedNothing: 'Niets in de bestanden.',
@@ -559,11 +524,9 @@ export const editor: EditorMessages = {
       `In ${files} wordt naar ${path} gelinkt met het volledige pad. Vanuit de voorvertoning is dat de lambda die online staat, met de echte data, niet de kopie van dit concept. Relatieve paden (‘api/items’) blijven in de voorvertoning.`,
     mergeButton: 'Samenvoegen',
     saveFirst: 'Sla eerst de code op: de voorvertoning en het samenvoegen gebruiken wat is opgeslagen.',
-    merge: 'Samenvoegen',
     mergeAndDeploy: (version) => `Samenvoegen en versie ${version} online zetten`,
     mergeText: (version) =>
       `Het wordt versie ${version}. Het concept verdwijnt dan, met zijn voorvertoning en zijn kopie van de data. De data van de lambda zelf blijft zoals die is.`,
-    deployToo: (version) => `Versie ${version} meteen online zetten`,
     deployTooNote: (active) => `Met één klik ga je in de versies terug naar versie ${active}.`,
     deployTooOffline: 'De lambda staat nu offline; hiermee gaat hij online.',
     notCompiling: 'De code compileert niet, dus het concept is niet samengevoegd. Los het eerst op in het concept.',
@@ -854,7 +817,6 @@ export const editor: EditorMessages = {
     editFeature:
       'De code van dit concept. Opslaan bewaart hem in het concept: voor de bezoekers van de lambda verandert er niets. Deployen zet hem online op het eigen adres van het concept, om hem uit te proberen; samenvoegen maakt van het concept de volgende versie. ',
     inFeature: (name) => `in ‘${name}’`,
-    previewed: ', in de voorvertoning',
     changedElsewhere: 'Het concept is ergens anders opgeslagen sinds je het opende, misschien door de agent. Laad wat er is opgeslagen voordat je hier opslaat; je wijzigingen zouden er niet overheen worden opgeslagen.',
     readAgain: 'Laden wat er is opgeslagen',
     files: (entry, cs) => (
@@ -867,7 +829,6 @@ export const editor: EditorMessages = {
     check: 'Controleren',
     save: 'Opslaan',
     deploy: 'Deployen',
-    deployPreview: 'Voorvertoning deployen',
     deployPreviewTitle: 'Opslaan, en het concept online zetten op zijn eigen adres om het uit te proberen',
     binary: (size) => `Geen tekst, dus er valt niets te bewerken. Het wordt geserveerd zoals het is en is ${size} kB groot.`,
     saveAndDeploy: 'Opslaan en deployen',

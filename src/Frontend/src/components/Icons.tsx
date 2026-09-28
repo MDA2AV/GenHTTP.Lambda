@@ -221,12 +221,7 @@ export const IconWrench = (p: IconProps) => (
   <Svg {...p}><path d="M14.5 5.5a4 4 0 0 0 4.9 4.9L20 11l-9 9a2.1 2.1 0 0 1-3-3l9-9 .6.6a4 4 0 0 0-4.9-4.9l2.3 2.3-1.4 1.4Z" /></Svg>
 );
 
-/** A line that branches off another, for a feature. */
-export const IconBranch = (p: IconProps) => (
-  <Svg {...p}><circle cx="6" cy="5.5" r="2" /><circle cx="6" cy="18.5" r="2" /><circle cx="18" cy="8" r="2" /><path d="M6 7.5v9" /><path d="M18 10c0 4-6 3.5-11 7" /></Svg>
-);
-
-/** Two arrows meeting, for merging a feature. */
-export const IconMerge = (p: IconProps) => (
-  <Svg {...p}><circle cx="6" cy="5.5" r="2" /><circle cx="6" cy="18.5" r="2" /><circle cx="18" cy="15" r="2" /><path d="M6 7.5v9" /><path d="M6 7.5c0 4.5 5 7.5 10 7.5" /></Svg>
+/** A page being written on, for a draft - a copy of the app a change is tried on. */
+export const IconDraft = (p: IconProps) => (
+  <Svg {...p}><path d="M13 20.5H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2H13l4.5 4.5v3" /><path d="M13 3.5V8h4.5" /><path d="M8 12h4" /><path d="M8 15.5h2" /><path d="M14 21v-2.2l5-5a1.6 1.6 0 0 1 2.2 2.2l-5 5Z" /></Svg>
 );

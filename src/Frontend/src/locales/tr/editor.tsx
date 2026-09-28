@@ -213,7 +213,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `v${version} temelli`,
       online: 'yayında',
       previewOnline: 'önizleme yayında',
       compiles: 'derleme başarılı',
@@ -314,12 +313,6 @@ export const editor: EditorMessages = {
     previewOnline: 'Önizlemesi yayında',
     previewOffline: 'Önizlemesi yayında değil',
     behind: 'geride',
-    featureTip: (start) => (
-      <>
-        İnsanların kullandığı bir şeyi mi değiştiriyorsunuz? {start('Bir taslak başlatın')}: kendi adresinde, verilerin
-        bir kopyasıyla denenir ve hazır olunca bir sonraki sürüm olur.
-      </>
-    ),
     storage: 'Depolama',
     inVersion: (version) => `Sürüm ${version} içinde`,
     noVersion: 'Sürümde',
@@ -410,11 +403,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'Bu taslağın üzerinde çalıştığı veriler: lambdanın verilerinin, taslak başladığında alınmış bir kopyası. Önizleme bu kopyayı okur ve yazar, yani burada bir şeyler denemek lambdanın sakladıklarına hiç dokunmaz. Taslağı birleştirmek kopyayı atar ve lambdanın verilerini olduğu gibi bırakır.',
-    featureFacts: [
-      ['Bir kopya', 'Taslak başladığında ya da en son yeniden kopyaladığınızda lambdadan alındı.'],
-      ['Yalnızca önizleme görür', 'Önizlemenin yazdıkları burada kalır. Lambda ve ziyaretçileri bunları asla görmez.'],
-      ['Taslakla birlikte gider', 'Taslağı birleştirmek ya da silmek kopyayı siler. Lambdanın verileri olduğu gibi kalır.'],
-    ],
     recopy: 'Lambdanın verilerini yeniden kopyala',
     recopyTitle: 'Bu kopyayı lambdanın şu anki verileriyle değiştir',
     recopyConfirm: 'Lambdanın verileri yeniden kopyalansın mı?',
@@ -460,16 +448,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Üzerinde çalışılan bir şey yok',
     emptyText:
       'Yayındakine dokunmadan lambdayı değiştirmek için bir taslak başlatın. Siz ya da ajan onu gerektiği kadar değiştirebilir ve kendi adresinde deneyebilir.',
-    steps: [
-      ['Başlatın', 'En yeni sürümün ve lambdanın verilerinin bir kopyası.'],
-      ['Değiştirin ve deneyin', 'Kendi adresinde, verilerin kendine ait bir kopyasıyla.'],
-      ['Birleştirin', 'Bir sonraki sürüm olur ve siz ne zaman derseniz yayına girer.'],
-    ],
     start: 'Taslak başlat',
     askAgentNew: 'Ajandan bir değişiklik iste',
     noChange: 'Neyi değiştirdiği henüz yazılmadı',
-    from: (version) => `${version}. sürümden`,
-    mergeable: 'birleştirmeye hazır',
     behindTitle: 'Taslak başladıktan sonra daha yeni bir sürüm kaydedildi',
     behind: (newest) => `sürüm ${newest} daha yeni`,
     previewOnline: 'önizleme yayında',
@@ -491,9 +472,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Skor tablosu',
     wanted: 'Ne yapmalı?',
     wantedPlaceholder: 'İsteğe bağlı. En iyi on skoru tutsun ve her oyundan sonra göstersin.',
-    startFrom: 'Başlangıç sürümü',
-    version: (version, newest, online) =>
-      `Sürüm ${version}${newest && online ? ' (en yeni, yayında)' : newest ? ' (en yeni)' : online ? ' (yayında)' : ''}`,
     olderBase: (newest) =>
       `En yeni sürüm değil: birleştirilebilmesi için önce ${newest}. sürüme kadar yapılan değişiklikleri alması gerekir.`,
     create: 'Başlat',
@@ -507,14 +485,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Lambdanın yanında üzerinde çalışılan bir değişiklik. Önizlemesi, kodunu verilerin kendine ait kopyasıyla çalıştırır, bu yüzden lambdanın ziyaretçileri bunların hiçbirini görmez. Birleştirmek onu bir sonraki sürüm yapar.',
     askAgent: 'Ajandan iste',
+    askCatchUp: 'Ajandan güncellemesini iste',
+    catchUp: 'Bu taslağı uygulamanın en yeni sürümüne göre güncelle ve taslaktaki değişiklikleri koru.',
     editCode: 'Kodu düzenle',
-    preview: 'Önizleme',
-    state: {
-      online: 'Yayında',
-      outdated: 'Yayında, daha eski bir kayıtla',
-      offline: 'Yayında değil',
-    },
-    deployed: 'son yayına alma',
     deployPreview: 'Önizlemeyi yayına al',
     updatePreview: 'Önizlemeyi güncelle',
     previewDeployed: 'Önizleme yayında.',
@@ -522,20 +495,12 @@ export const editor: EditorMessages = {
     previewStopped: 'Önizleme yayından kaldırıldı.',
     previewRejected: 'Önizleme değişmedi',
     previewNotCompiling: 'Kod derlenmiyor. Önizleme hâlâ önceki hâlini gösteriyor.',
-    previewAddress: 'Önizleme adresi',
-    previewNote: 'Bu adrese sahip olan herkes önizlemeyi açabilir. Arama motorlarından ona dokunmamaları istenir.',
-    basedOn: 'Temel sürüm',
-    mergeableLong: 'en yeni sürüm, yani birleştirilebilir',
     started: 'Başlangıç',
     changes: (version) => `${version}. sürüme göre neyi değiştiriyor`,
     noChanges: (version) => `Henüz hiçbir şey: içeriği sürüm ${version} ile tamamen aynı.`,
-    notes: 'Notlar',
     editNotes: 'Ad ve notlar',
     what: 'Neyi değiştiriyor?',
     whatPlaceholder: 'En iyi on skoru tutan bir skor tablosu ekler',
-    noWanted: 'Henüz bir şey yazılmadı',
-    mergeNote: (version) =>
-      `Birleştirmek onu bu notlarla sürüm ${version} yapar. Taslak ise önizlemesi ve verilerin kopyasıyla birlikte kaldırılır.`,
     missed: (from, to) =>
       to - from === 1 ? `Sürüm ${to} neyi değiştirdi` : `Sürüm ${from + 1} – ${to} arasında neler değişti`,
     missedNothing: 'Dosyalarda bir şey değişmedi.',
@@ -550,11 +515,9 @@ export const editor: EditorMessages = {
       `${files} içinde ${path} adresine tam yoluyla bağlantı veriliyor. Önizlemeden bu bağlantılar taslağın veri kopyasına değil, yayındaki lambdaya ve onun gerçek verilerine gider. Göreli yollar (“api/items”) önizlemenin içinde kalır.`,
     mergeButton: 'Birleştir',
     saveFirst: 'Önce kodu kaydedin: önizleme ve birleştirme kaydedilmiş olanı kullanır.',
-    merge: 'Birleştir',
     mergeAndDeploy: (version) => `Birleştir ve ${version}. sürümü yayına al`,
     mergeText: (version) =>
       `Sürüm ${version} olur. Taslak ise önizlemesi ve verilerin kopyasıyla birlikte kaldırılır. Lambdanın kendi verileri olduğu gibi kalır.`,
-    deployToo: (version) => `${version}. sürümü hemen yayına al`,
     deployTooNote: (active) => `Sürüm ${active}, sürümlerde bir tık uzakta kalır.`,
     deployTooOffline: 'Lambda şu an yayında değil, bu onu yayına alır.',
     notCompiling: 'Kod derlenmiyor, bu yüzden birleştirilmedi. Önce taslakta düzeltin.',
@@ -843,7 +806,6 @@ export const editor: EditorMessages = {
     editFeature:
       'Bu taslağın kodu. Kaydetmek onu taslakta tutar, lambdanın ziyaretçilerinin gördüğü hiçbir şey değişmez. Yayına aldığınızda, denemeniz için taslağın kendi adresinde yayına girer; taslağı birleştirmek onu bir sonraki sürüm yapar. ',
     inFeature: (name) => `“${name}” taslağında`,
-    previewed: ', önizlemede',
     changedElsewhere: 'Siz açtıktan sonra taslak başka bir yerden kaydedildi, belki ajan tarafından. Burada kaydetmeden önce kaydedileni yükleyin; değişiklikleriniz onun üzerine kaydedilmez.',
     readAgain: 'Kaydedileni yükle',
     files: (entry, cs) => (
@@ -856,7 +818,6 @@ export const editor: EditorMessages = {
     check: 'Kontrol et',
     save: 'Kaydet',
     deploy: 'Yayına al',
-    deployPreview: 'Önizlemeyi yayına al',
     deployPreviewTitle: 'Kaydet ve denemek için taslağı kendi adresinde yayına al',
     binary: (size) => `Metin değil, düzenlenecek bir şey yok. Olduğu gibi sunulur. Boyutu ${size} kB.`,
     saveAndDeploy: 'Kaydet ve yayına al',

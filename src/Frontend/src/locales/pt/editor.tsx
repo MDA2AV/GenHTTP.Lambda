@@ -204,7 +204,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `a partir da v${version}`,
       online: 'no ar',
       previewOnline: 'prévia no ar',
       compiles: 'compila',
@@ -305,12 +304,6 @@ export const editor: EditorMessages = {
     previewOnline: 'A prévia está no ar',
     previewOffline: 'A prévia está fora do ar',
     behind: 'desatualizado',
-    featureTip: (start) => (
-      <>
-        Vai mudar algo que as pessoas usam? {start('Comece um rascunho')}: ele é testado num endereço próprio, com uma
-        cópia dos dados, e vira a próxima versão quando estiver tudo certo.
-      </>
-    ),
     storage: 'Armazenamento',
     inVersion: (version) => `Na versão ${version}`,
     noVersion: 'Na versão',
@@ -402,11 +395,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'Os dados com que este rascunho trabalha: uma cópia dos dados da lambda, feita quando o rascunho começou. A prévia lê e grava na cópia, então testar coisas aqui nunca mexe no que a lambda guarda. Mesclar o rascunho descarta a cópia e deixa os dados da lambda como estão.',
-    featureFacts: [
-      ['Uma cópia', 'Feita a partir da lambda quando o rascunho começou, ou na última vez que você copiou de novo.'],
-      ['Só a prévia vê', 'O que a prévia grava fica aqui. A lambda e os visitantes dela nunca veem.'],
-      ['Some com o rascunho', 'Mesclar ou excluir o rascunho apaga a cópia. Os dados da lambda ficam como estão.'],
-    ],
     recopy: 'Copiar os dados da lambda de novo',
     recopyTitle: 'Substituir esta cópia pelo que a lambda guarda agora',
     recopyConfirm: 'Copiar os dados da lambda de novo?',
@@ -452,16 +440,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Nada em andamento',
     emptyText:
       'Comece um rascunho para mudar a lambda sem mexer no que está no ar. Você, ou o agente, pode mudar o rascunho quantas vezes precisar e testar no endereço próprio dele.',
-    steps: [
-      ['Comece', 'Uma cópia da versão mais recente e dos dados da lambda.'],
-      ['Mude e teste', 'Num endereço próprio, com a própria cópia dos dados.'],
-      ['Mescle', 'Ele vira a próxima versão, e vai para o ar quando você quiser.'],
-    ],
     start: 'Começar um rascunho',
     askAgentNew: 'Pedir uma mudança ao agente',
     noChange: 'Ainda não diz o que muda',
-    from: (version) => `a partir da versão ${version}`,
-    mergeable: 'pronto para mesclar',
     behindTitle: 'Uma versão mais nova foi salva depois que ele começou',
     behind: (newest) => `a versão ${newest} é mais nova`,
     previewOnline: 'prévia no ar',
@@ -483,9 +464,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Ranking',
     wanted: 'O que ele deve fazer?',
     wantedPlaceholder: 'Opcional. Guarde as dez melhores pontuações e mostre depois de cada partida.',
-    startFrom: 'Começar a partir de',
-    version: (version, newest, online) =>
-      `Versão ${version}${newest && online ? ' (mais recente, no ar)' : newest ? ' (mais recente)' : online ? ' (no ar)' : ''}`,
     olderBase: (newest) =>
       `Não é a mais recente: antes de ser mesclado, ele precisa incorporar o que as versões até a ${newest} mudaram.`,
     create: 'Começar',
@@ -499,14 +477,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Uma mudança feita ao lado da lambda. A prévia roda o código dele com a própria cópia dos dados, então os visitantes da lambda não veem nada disso. Mesclar faz dele a próxima versão.',
     askAgent: 'Pedir ao agente',
+    askCatchUp: 'Pedir ao agente para atualizá-lo',
+    catchUp: 'Atualize este rascunho com a versão mais nova do app, mantendo o que ele muda.',
     editCode: 'Editar o código',
-    preview: 'Prévia',
-    state: {
-      online: 'No ar',
-      outdated: 'No ar, com um salvamento anterior',
-      offline: 'Fora do ar',
-    },
-    deployed: 'deploy feito',
     deployPreview: 'Fazer deploy da prévia',
     updatePreview: 'Atualizar a prévia',
     previewDeployed: 'A prévia está no ar.',
@@ -514,20 +487,12 @@ export const editor: EditorMessages = {
     previewStopped: 'A prévia está fora do ar.',
     previewRejected: 'A prévia não mudou',
     previewNotCompiling: 'Não compila. A prévia continua mostrando o que mostrava antes.',
-    previewAddress: 'Endereço da prévia',
-    previewNote: 'Qualquer pessoa com este endereço pode abrir a prévia. Os buscadores são orientados a ignorá-la.',
-    basedOn: 'Baseado em',
-    mergeableLong: 'a mais recente, então pode ser mesclado',
     started: 'Começou',
     changes: (version) => `O que ele muda em relação à versão ${version}`,
     noChanges: (version) => `Nada ainda: tem exatamente o mesmo que a versão ${version}.`,
-    notes: 'Notas',
     editNotes: 'Nome e notas',
     what: 'O que ele muda?',
     whatPlaceholder: 'Adiciona um ranking que guarda as dez melhores pontuações',
-    noWanted: 'Nada informado ainda',
-    mergeNote: (version) =>
-      `Mesclar faz dele a versão ${version}, com estas notas. O rascunho some junto, com a prévia e a cópia dos dados.`,
     missed: (from, to) =>
       to - from === 1 ? `O que a versão ${to} mudou` : `O que as versões da ${from + 1} à ${to} mudaram`,
     missedNothing: 'Nada nos arquivos.',
@@ -542,11 +507,9 @@ export const editor: EditorMessages = {
       `Em ${files}, os links para ${path} usam o caminho completo. A partir da prévia, eles levam à lambda no ar e aos dados reais dela, não à cópia deste rascunho. Caminhos relativos (“api/items”) ficam na prévia.`,
     mergeButton: 'Mesclar',
     saveFirst: 'Salve o código primeiro: a prévia e a mesclagem usam o que está salvo.',
-    merge: 'Mesclar agora',
     mergeAndDeploy: (version) => `Mesclar e colocar a versão ${version} no ar`,
     mergeText: (version) =>
       `Ele vira a versão ${version}. O rascunho some junto: a prévia e a cópia dos dados. Os dados da própria lambda ficam como estão.`,
-    deployToo: (version) => `Colocar a versão ${version} no ar agora mesmo`,
     deployTooNote: (active) => `A versão ${active} continua a um clique, nas versões.`,
     deployTooOffline: 'A lambda está fora do ar agora; isto a coloca no ar.',
     notCompiling: 'Não compila, então não foi mesclado. Corrija no rascunho primeiro.',
@@ -838,7 +801,6 @@ export const editor: EditorMessages = {
     editFeature:
       'O código deste rascunho. Salvar mantém a mudança no rascunho: nada do que os visitantes da lambda recebem muda. Fazer deploy coloca no ar no endereço próprio do rascunho, para testar; mesclar o rascunho faz dele a próxima versão. ',
     inFeature: (name) => `em “${name}”`,
-    previewed: ', na prévia',
     changedElsewhere: 'O rascunho foi salvo em outro lugar depois que você abriu (talvez pelo agente). Carregue o que está salvo antes de salvar aqui; suas alterações não seriam salvas por cima.',
     readAgain: 'Carregar o que está salvo',
     files: (entry, cs) => (
@@ -851,7 +813,6 @@ export const editor: EditorMessages = {
     check: 'Verificar',
     save: 'Salvar',
     deploy: 'Fazer deploy',
-    deployPreview: 'Fazer deploy da prévia',
     deployPreviewTitle: 'Salvar e colocar o rascunho no ar no endereço próprio dele, para testar',
     binary: (size) => `Não é texto, então não há o que editar. É servido como está e tem ${size} kB.`,
     saveAndDeploy: 'Salvar e fazer deploy',

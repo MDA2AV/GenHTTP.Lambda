@@ -24,11 +24,13 @@ const NO_FILES: LambdaFile[] = [];
  * owner - only the workspace so far, listed the way every kind will be - and
  * then what the workspace holds.
  *
- * Opened on a feature, it shows the feature's copy instead: what the preview
- * reads and writes, taken from the lambda when the feature began and thrown
- * away when it is merged. Which kinds there are is still the lambda's to
- * switch, so there are no switches here - only copying the lambda's data
- * again, for a preview that has made a mess of its copy.
+ * Opened on a feature, it shows the feature's copy instead - the test data
+ * of a draft, to the owner: what the preview reads and writes, taken from
+ * the lambda when the feature began and thrown away when it goes online.
+ * That is said in a line rather than three, since it is all there is to know
+ * about it. Which kinds there are is still the lambda's to switch, so there
+ * are no switches here - only resetting the copy, for a preview that has
+ * made a mess of it.
  */
 export function DataTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -120,8 +122,8 @@ export function DataTab({ control }: { control: Control }) {
 
   return (
     <Section
-      title={t.frame.sections.data}
-      hint={feature ? said.featureHint : said.hint}
+      title={feature ? t.features.views.data : t.frame.sections.data}
+      hint={feature ? undefined : said.hint}
       actions={feature && (
         <button
           type="button"
@@ -137,14 +139,18 @@ export function DataTab({ control }: { control: Control }) {
     >
       {demo && <p className="-mt-1 mb-4 text-[13px] text-slate-500">{said.demo}</p>}
 
-      <dl className="grid gap-4 sm:grid-cols-3">
-        {(feature ? said.featureFacts : said.facts).map(([title, text]) => (
-          <div key={title} className="border-l-2 border-accent-500/40 pl-3 dark:border-accent-400/40">
-            <dt className="text-[13px] font-medium">{title}</dt>
-            <dd className="mt-0.5 text-[13px] text-slate-500">{text}</dd>
-          </div>
-        ))}
-      </dl>
+      {feature ? (
+        <p className="max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{said.featureHint}</p>
+      ) : (
+        <dl className="grid gap-4 sm:grid-cols-3">
+          {said.facts.map(([title, text]) => (
+            <div key={title} className="border-l-2 border-accent-500/40 pl-3 dark:border-accent-400/40">
+              <dt className="text-[13px] font-medium">{title}</dt>
+              <dd className="mt-0.5 text-[13px] text-slate-500">{text}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       {failure && <p className="mt-6 text-sm text-red-500">{failure}</p>}
 
@@ -152,7 +158,8 @@ export function DataTab({ control }: { control: Control }) {
         <div className="mt-6 flex items-center gap-2 text-sm text-slate-500">
           <IconSpinner /> {t.files.reading}
         </div>
-      ) : (
+      ) : !feature && (
+        // which kinds of data there are is the lambda's to switch, so a draft does not list them
         <ul className="mt-6 space-y-3">
           {(stores ?? []).map((store) => (
             <li key={store.kind}>
@@ -160,9 +167,9 @@ export function DataTab({ control }: { control: Control }) {
                 store={store}
                 name={name(store.kind)}
                 what={said.kinds[store.kind]?.what}
-                publicly={feature ? null : store.kind === 'workspace' && !!storage?.servesWorkspace}
+                publicly={store.kind === 'workspace' && !!storage?.servesWorkspace}
                 busy={switching === store.kind}
-                readOnly={demo || feature !== null}
+                readOnly={demo}
                 onToggle={() => (store.enabled ? setConfirming(store) : toggle(store, true))}
               />
             </li>

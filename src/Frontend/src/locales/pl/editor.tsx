@@ -216,7 +216,6 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
-      from: (version) => `z v${version}`,
       online: 'online',
       previewOnline: 'podgląd online',
       compiles: 'kompiluje się',
@@ -317,12 +316,6 @@ export const editor: EditorMessages = {
     previewOnline: 'Podgląd jest online',
     previewOffline: 'Podgląd jest offline',
     behind: 'nieaktualny',
-    featureTip: (start) => (
-      <>
-        Zmieniasz coś, z czego ludzie korzystają? {start('Utwórz szkic')}: wypróbujesz go pod osobnym adresem, na kopii
-        danych, a gdy wszystko będzie gotowe, stanie się kolejną wersją.
-      </>
-    ),
     storage: 'Miejsce',
     inVersion: (version) => `W wersji ${version}`,
     noVersion: 'W wersji',
@@ -414,11 +407,6 @@ export const editor: EditorMessages = {
     ],
     featureHint:
       'Dane, na których działa ten szkic: kopia danych lambdy, zrobiona, gdy szkic powstał. Podgląd czyta i zapisuje tę kopię, więc próby tutaj nigdy nie ruszają tego, co przechowuje lambda. Scalenie szkicu wyrzuca kopię, a dane lambdy zostawia bez zmian.',
-    featureFacts: [
-      ['Kopia', 'Zrobiona z danych lambdy, gdy szkic powstał, albo przy ostatnim ponownym kopiowaniu.'],
-      ['Widzi ją tylko podgląd', 'To, co zapisze podgląd, zostaje tutaj. Lambda i jej odwiedzający nigdy tego nie widzą.'],
-      ['Znika razem ze szkicem', 'Scalenie albo usunięcie szkicu usuwa kopię. Dane lambdy zostają bez zmian.'],
-    ],
     recopy: 'Skopiuj ponownie dane lambdy',
     recopyTitle: 'Zastąp tę kopię tym, co lambda przechowuje teraz',
     recopyConfirm: 'Skopiować ponownie dane lambdy?',
@@ -466,16 +454,9 @@ export const editor: EditorMessages = {
     emptyTitle: 'Nic nie jest w toku',
     emptyText:
       'Utwórz szkic, żeby zmienić lambdę, nie ruszając tego, co jest online. Ty albo agent możecie go zmieniać tyle razy, ile trzeba, i wypróbowywać pod jego własnym adresem.',
-    steps: [
-      ['Utwórz', 'Kopia najnowszej wersji i danych lambdy.'],
-      ['Zmień i wypróbuj', 'Pod własnym adresem, na własnej kopii danych.'],
-      ['Scal', 'Szkic staje się kolejną wersją i trafia online, kiedy zdecydujesz.'],
-    ],
     start: 'Utwórz szkic',
     askAgentNew: 'Poproś agenta o zmianę',
     noChange: 'Jeszcze nie opisano, co zmienia',
-    from: (version) => `z wersji ${version}`,
-    mergeable: 'gotowy do scalenia',
     behindTitle: 'Po jego utworzeniu zapisano nowszą wersję',
     behind: (newest) => `wersja ${newest} jest nowsza`,
     previewOnline: 'podgląd online',
@@ -497,9 +478,6 @@ export const editor: EditorMessages = {
     namePlaceholder: 'Ranking',
     wanted: 'Co ma robić?',
     wantedPlaceholder: 'Opcjonalnie. Zapamiętuj dziesięć najlepszych wyników i pokazuj je po każdej grze.',
-    startFrom: 'Zacznij od',
-    version: (version, newest, online) =>
-      `Wersja ${version}${newest && online ? ' (najnowsza, online)' : newest ? ' (najnowsza)' : online ? ' (online)' : ''}`,
     olderBase: (newest) =>
       `To nie jest najnowsza wersja: zanim szkic będzie można scalić, musi przejąć to, co zmieniły wersje do ${newest} włącznie.`,
     create: 'Utwórz',
@@ -513,14 +491,9 @@ export const editor: EditorMessages = {
     featureHint:
       'Zmiana, nad którą trwa praca obok lambdy. Podgląd uruchamia kod szkicu na jego własnej kopii danych, więc odwiedzający lambdę nic z tego nie widzą. Scalenie zamienia szkic w kolejną wersję.',
     askAgent: 'Poproś agenta',
+    askCatchUp: 'Poproś agenta o zaktualizowanie go',
+    catchUp: 'Zaktualizuj ten szkic do najnowszej wersji aplikacji i zachowaj to, co w nim zmieniono.',
     editCode: 'Edytuj kod',
-    preview: 'Podgląd',
-    state: {
-      online: 'Online',
-      outdated: 'Online, z wcześniejszym zapisem',
-      offline: 'Offline',
-    },
-    deployed: 'wdrożono',
     deployPreview: 'Wdróż podgląd',
     updatePreview: 'Zaktualizuj podgląd',
     previewDeployed: 'Podgląd jest online.',
@@ -528,20 +501,12 @@ export const editor: EditorMessages = {
     previewStopped: 'Podgląd jest offline.',
     previewRejected: 'Podgląd się nie zmienił',
     previewNotCompiling: 'Kod się nie kompiluje. Podgląd nadal pokazuje to, co wcześniej.',
-    previewAddress: 'Adres podglądu',
-    previewNote: 'Każdy, kto ma ten adres, może otworzyć podgląd. Wyszukiwarki dostają prośbę, żeby go pomijały.',
-    basedOn: 'Na bazie',
-    mergeableLong: 'to najnowsza wersja, więc szkic można scalić',
     started: 'Utworzono',
     changes: (version) => `Co zmienia względem wersji ${version}`,
     noChanges: (version) => `Na razie nic: zawiera dokładnie to samo co wersja ${version}.`,
-    notes: 'Notatki',
     editNotes: 'Nazwa i notatki',
     what: 'Co zmienia?',
     whatPlaceholder: 'Dodaje ranking z dziesięcioma najlepszymi wynikami',
-    noWanted: 'Jeszcze nic nie opisano',
-    mergeNote: (version) =>
-      `Scalenie zamieni go w wersję ${version} z tymi notatkami. Szkic zniknie – razem z podglądem i kopią danych.`,
     missed: (from, to) =>
       to - from === 1 ? `Co zmieniła wersja ${to}` : `Co zmieniły wersje od ${from + 1} do ${to}`,
     missedNothing: 'Nic w plikach.',
@@ -556,11 +521,9 @@ export const editor: EditorMessages = {
       `W ${files} linki do ${path} używają pełnej ścieżki. Z podglądu prowadzą one do lambdy online i jej prawdziwych danych, a nie do kopii tego szkicu. Ścieżki względne („api/items”) zostają w podglądzie.`,
     mergeButton: 'Scal',
     saveFirst: 'Najpierw zapisz kod: podgląd i scalanie używają tego, co jest zapisane.',
-    merge: 'Scal szkic',
     mergeAndDeploy: (version) => `Scal i wdróż wersję ${version}`,
     mergeText: (version) =>
       `Szkic stanie się wersją ${version} i zniknie – razem z podglądem i kopią danych. Same dane lambdy zostaną bez zmian.`,
-    deployToo: (version) => `Od razu wdróż wersję ${version}`,
     deployTooNote: (active) => `Do wersji ${active} wrócisz jednym kliknięciem w sekcji wersji.`,
     deployTooOffline: 'Lambda jest teraz offline – to wrzuci ją online.',
     notCompiling: 'Kod się nie kompiluje, więc szkic nie został scalony. Najpierw popraw go w szkicu.',
@@ -850,7 +813,6 @@ export const editor: EditorMessages = {
     editFeature:
       'Kod tego szkicu. Zapisanie zostawia go w szkicu – dla odwiedzających lambdę nic się nie zmienia. Wdrożenie wrzuca go online pod własnym adresem szkicu, żeby go wypróbować; scalenie szkicu zamienia go w kolejną wersję. ',
     inFeature: (name) => `szkic „${name}”`,
-    previewed: ', w podglądzie',
     changedElsewhere: 'Od chwili otwarcia szkic został zapisany gdzie indziej – może przez agenta. Zanim zapiszesz tutaj, wczytaj zapisany stan; twoje zmiany nie zostałyby zapisane na nim.',
     readAgain: 'Wczytaj zapisany stan',
     files: (entry, cs) => (
@@ -863,7 +825,6 @@ export const editor: EditorMessages = {
     check: 'Sprawdź',
     save: 'Zapisz',
     deploy: 'Wdróż',
-    deployPreview: 'Wdróż podgląd',
     deployPreviewTitle: 'Zapisz i wrzuć szkic online pod jego własnym adresem, żeby go wypróbować',
     binary: (size) => `Ten plik nie jest tekstem, więc nie da się go edytować. Jest serwowany bez zmian i waży ${size} kB.`,
     saveAndDeploy: 'Zapisz i wdróż',

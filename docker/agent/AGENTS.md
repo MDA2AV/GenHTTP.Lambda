@@ -102,7 +102,9 @@ them alone, whatever a tool answer suggests.
 
 The owner is watching while you work. What you write between tool calls is
 shown to them as it happens, so keep it to one short line each, about what
-you are doing and not about the tools.
+you are doing and not about the tools. They are usually not developers, and
+their control center calls a feature a draft and merging it putting it
+online: use their words, not merge, branch or base.
 
 ## What is actually being asked of you
 

@@ -11,8 +11,10 @@ import type { Control } from './context';
 const MAX_NAME = 80;
 
 /**
- * Starting a feature: what it is called, what it should do, and which version
- * it starts from. The newest, unless the owner came from an older one.
+ * Starting a feature - a draft, to the owner: what it is called and what it
+ * should do. It starts from the newest version, unless the owner came from
+ * an older one in the versions; which one is not asked, since starting from
+ * anything else only makes a draft that cannot go online as it is.
  */
 export function NewFeatureDialog({ control, open, base, files, onClose, onCreated }: {
   control: Control;
@@ -29,7 +31,6 @@ export function NewFeatureDialog({ control, open, base, files, onClose, onCreate
 
   const [name, setName] = useState('');
   const [specification, setSpecification] = useState('');
-  const [from, setFrom] = useState<number | undefined>(base);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,12 +43,14 @@ export function NewFeatureDialog({ control, open, base, files, onClose, onCreate
     if (open) {
       setName('');
       setSpecification('');
-      setFrom(base ?? versions[0]?.version);
       setError(null);
       setMade(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const newest = versions[0]?.version;
+  const from = base ?? newest;
 
   const limit = control.summary?.limits.features ?? Infinity;
   const full = features.length >= limit && made == null;
@@ -138,21 +141,11 @@ export function NewFeatureDialog({ control, open, base, files, onClose, onCreate
         />
       </label>
 
-      {versions.length > 1 && (
-        <label className="block">
-          <span className="text-slate-600 dark:text-slate-400">{said.startFrom}</span>
-          <select value={from ?? ''} onChange={(event) => setFrom(Number(event.target.value))} className="field mt-1.5">
-            {versions.map((version, index) => (
-              <option key={version.version} value={version.version}>
-                {said.version(version.version, index === 0, version.version === control.lambda.activeVersion)}
-                {version.change ? ` - ${version.change}` : ''}
-              </option>
-            ))}
-          </select>
-          {from != null && from !== versions[0]?.version && (
-            <span className="mt-1.5 block text-xs text-amber-700 dark:text-amber-400">{said.olderBase(versions[0].version)}</span>
-          )}
-        </label>
+      {from != null && newest != null && from !== newest && (
+        <p className="flex gap-2 text-[13px] text-amber-700 dark:text-amber-400">
+          <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          {said.olderBase(newest)}
+        </p>
       )}
 
       {error && <p className="text-xs text-red-500">{error}</p>}
@@ -161,10 +154,12 @@ export function NewFeatureDialog({ control, open, base, files, onClose, onCreate
 }
 
 /**
- * Merging a feature: it becomes the next version, with a line on what it
- * changes, and goes online at once if the owner wants. Only offered for a
- * feature based on the newest version - one that is not is told how to get
- * there instead, since merging it would undo what was saved after it began.
+ * Putting a feature online: it is merged into the next version, with a line
+ * on what it changes, and that version is deployed - one step to the owner,
+ * who wants the draft online rather than a version to deploy afterwards.
+ * Only offered for a feature based on the newest version; one that is not is
+ * told how to get there instead, since merging it would undo what was saved
+ * after it began.
  */
 export function MergeDialog({ control, feature, open, onClose, onMerged, onRebase }: {
   control: Control;
@@ -178,7 +173,6 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
   const said = useEditorT().features;
 
   const [change, setChange] = useState('');
-  const [deploy, setDeploy] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refused, setRefused] = useState<Diagnostic[] | null>(null);
@@ -186,7 +180,6 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
   useEffect(() => {
     if (open) {
       setChange(feature.change ?? '');
-      setDeploy(true);
       setError(null);
       setRefused(null);
     }
@@ -195,6 +188,8 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
   }, [open]);
 
   const next = (feature.newest ?? feature.base) + 1;
+  const active = control.lambda.activeVersion;
+  const agent = control.agent.state?.available ?? false;
 
   async function merge() {
     setWorking(true);
@@ -202,7 +197,7 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
     setRefused(null);
 
     try {
-      const result = await api.feature.merge(control.privateKey, feature.key, { deploy, change: change.trim() || undefined });
+      const result = await api.feature.merge(control.privateKey, feature.key, { deploy: true, change: change.trim() || undefined });
 
       if (!result.merged) {
         setRefused(result.diagnostics);
@@ -229,16 +224,26 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
         footer={
           <>
             <button type="button" onClick={onClose} className="btn-ghost">{said.close}</button>
-            <button type="button" onClick={() => { onClose(); control.askAgent(feature.key); }} className="btn-ghost">
-              {said.askAgent}
-            </button>
-            <button type="button" onClick={() => { onClose(); onRebase(); }} className="btn-primary">
-              {said.moveBase}
-            </button>
+            {agent ? (
+              <button type="button" onClick={() => { onClose(); control.askAgent(feature.key, said.catchUp); }} className="btn-primary">
+                {said.askAgent}
+              </button>
+            ) : (
+              <button type="button" onClick={() => { onClose(); onRebase(); }} className="btn-primary">
+                {said.moveBase}
+              </button>
+            )}
           </>
         }
       >
         <p className="text-slate-600 dark:text-slate-400">{said.behindText(feature.base, feature.newest ?? feature.base)}</p>
+
+        {/* for changes brought in by hand: said, but not offered as the way */}
+        {agent && (
+          <button type="button" onClick={() => { onClose(); onRebase(); }} className="text-[13px] text-accent-500 hover:underline">
+            {said.moveBase}
+          </button>
+        )}
       </Dialog>
     );
   }
@@ -253,12 +258,14 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
           <button type="button" onClick={onClose} className="btn-ghost">{said.cancel}</button>
           <button type="button" onClick={merge} disabled={working} className="btn-primary">
             {working && <IconSpinner />}
-            {deploy ? said.mergeAndDeploy(next) : said.merge}
+            {said.mergeAndDeploy(next)}
           </button>
         </>
       }
     >
-      <p className="text-slate-600 dark:text-slate-400">{said.mergeText(next)}</p>
+      <p className="text-slate-600 dark:text-slate-400">
+        {said.mergeText(next)} {active != null ? said.deployTooNote(active) : said.deployTooOffline}
+      </p>
 
       <label className="block">
         <span className="text-slate-600 dark:text-slate-400">{said.what}</span>
@@ -269,16 +276,6 @@ export function MergeDialog({ control, feature, open, onClose, onMerged, onRebas
           placeholder={said.whatPlaceholder}
           className="field mt-1.5"
         />
-      </label>
-
-      <label className="flex items-start gap-2">
-        <input type="checkbox" checked={deploy} onChange={(event) => setDeploy(event.target.checked)} className="mt-0.5" />
-        <span>
-          {said.deployToo(next)}
-          <span className="block text-xs text-slate-500">
-            {control.lambda.activeVersion != null ? said.deployTooNote(control.lambda.activeVersion) : said.deployTooOffline}
-          </span>
-        </span>
       </label>
 
       {refused && (
@@ -374,9 +371,11 @@ export function NotesDialog({ control, feature, open, onClose }: {
 }
 
 /**
- * Moving the version a feature is based on. Nothing is merged or rebased: the
- * owner - or the agent - brings a newer version's changes into the feature,
- * and this is where that is said, so the feature can be merged.
+ * Moving the version a feature is based on to the newest - marking the draft
+ * as up to date, to the owner. Nothing is merged or rebased: the owner - or
+ * the agent - brings a newer version's changes into the feature, and this is
+ * where that is said, so the feature can be put online. Only ever to the
+ * newest, since anything older would leave it just as far from going online.
  */
 export function BaseDialog({ control, feature, open, onClose }: {
   control: Control;
@@ -385,18 +384,15 @@ export function BaseDialog({ control, feature, open, onClose }: {
   onClose: () => void;
 }) {
   const said = useEditorT().features;
-  const { versions } = control;
 
-  const [to, setTo] = useState<number>(feature.newest ?? feature.base);
+  const to = feature.newest ?? feature.base;
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      setTo(feature.newest ?? feature.base);
       setError(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function move() {
@@ -431,18 +427,6 @@ export function BaseDialog({ control, feature, open, onClose }: {
     >
       <p className="text-slate-600 dark:text-slate-400">{said.baseText(feature.base)}</p>
 
-      <label className="block">
-        <span className="text-slate-600 dark:text-slate-400">{said.basedOn}</span>
-        <select value={to} onChange={(event) => setTo(Number(event.target.value))} className="field mt-1.5">
-          {versions.map((version, index) => (
-            <option key={version.version} value={version.version}>
-              {said.version(version.version, index === 0, version.version === control.lambda.activeVersion)}
-              {version.change ? ` - ${version.change}` : ''}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <p className="flex gap-2 text-[13px] text-amber-700 dark:text-amber-400">
         <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
         {said.baseWarning}
@@ -453,7 +437,7 @@ export function BaseDialog({ control, feature, open, onClose }: {
   );
 }
 
-/** Deleting a feature nobody wants any more. */
+/** Deleting a feature nobody wants any more - discarding the draft. */
 export function DeleteFeatureDialog({ control, feature, open, onClose, onDeleted }: {
   control: Control;
   feature: Feature;

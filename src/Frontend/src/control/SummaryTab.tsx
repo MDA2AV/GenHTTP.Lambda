@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import { isDemo } from '../api';
-import { IconAlert, IconBranch, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
+import { IconAlert, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { ago, bytes, count, local, millis, percent, span } from './format';
@@ -117,9 +117,8 @@ export function SummaryTab({ control }: { control: Control }) {
             <p className="mt-3 text-sm text-slate-500">{said.noVersions}</p>
           )}
 
-          {/* what is being worked on beside it - or, while nothing is, where
-              a change of something people use is best made */}
-          {!demo && (features.length > 0 ? (
+          {/* the drafts being worked on beside it, while there are any */}
+          {!demo && features.length > 0 && (
             <div className="mt-8">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-medium">{said.inProgress}</h2>
@@ -128,7 +127,7 @@ export function SummaryTab({ control }: { control: Control }) {
               <ul className="mt-3 space-y-2">
                 {features.slice(0, 3).map((feature) => (
                   <li key={feature.key} className="flex items-center gap-3 text-[13px]">
-                    <IconBranch className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <IconDraft className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                     <button
                       type="button"
                       onClick={() => control.openFeature(feature.key)}
@@ -148,16 +147,7 @@ export function SummaryTab({ control }: { control: Control }) {
                 ))}
               </ul>
             </div>
-          ) : live && (
-            <p className="mt-8 flex items-start gap-2 text-[13px] text-slate-500">
-              <IconBranch className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>
-                {said.featureTip((text) => (
-                  <button type="button" onClick={() => control.startFeature()} className="text-accent-500 hover:underline">{text}</button>
-                ))}
-              </span>
-            </p>
-          ))}
+          )}
         </section>
 
         {/* the two halves of what a lambda keeps, apart: what belongs to a

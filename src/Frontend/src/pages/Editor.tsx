@@ -19,7 +19,7 @@ import {
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconBranch, IconCheck, IconCopy, IconExternal, IconMerge, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
@@ -52,18 +52,20 @@ type SectionId =
   | 'overview' | 'change' | 'features' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
 
 /*
- * Files and Data side by side, because they are the two halves of what a
- * lambda keeps - the program, which belongs to a version, and what it keeps,
- * which belongs to the lambda - and somebody looking for one is best shown
- * the other right beside it. Features right after Change: both are where a
- * change of the lambda is made.
+ * The showcase and the domain right after the overview: both are about how
+ * people find the lambda, which is what an owner looks after first. Features
+ * - drafts, to the owner - right after Change: both are where a change of
+ * the lambda is made. Files and Data side by side, because they are the two
+ * halves of what a lambda keeps - the program, which belongs to a version,
+ * and what it keeps, which belongs to the lambda - and somebody looking for
+ * one is best shown the other right beside it.
  */
-const SECTIONS: SectionId[] = ['overview', 'change', 'features', 'showcase', 'domain', 'files', 'data', 'versions', 'deployments', 'stats', 'logs', 'code'];
+const SECTIONS: SectionId[] = ['overview', 'showcase', 'domain', 'change', 'features', 'files', 'data', 'versions', 'deployments', 'stats', 'logs', 'code'];
 
 /*
  * What a feature is worked on with. The rest - the showcase, the domain, the
  * figures, the deployments - belongs to the lambda, which the feature leaves
- * alone until it is merged.
+ * alone until it is put online.
  */
 const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
 
@@ -78,9 +80,13 @@ const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
  *
  * Opened on a feature - /features/{key}/{view} - the frame is the feature's:
  * the sidebar holds it, with where it can be tried and the buttons that try
- * and merge it, and the views are its own code, its copy of the data and what
- * its preview said. The lambda stays at the top, so it is always clear whose
- * feature it is.
+ * it and put it online, and the views are its own code, its copy of the data
+ * and what its preview said. The lambda stays at the top, so it is always
+ * clear whose feature it is.
+ *
+ * The owner reads of drafts rather than features: somebody who had an app
+ * built knows what a draft is, and does not need to know what merging is.
+ * Putting one online merges it and deploys the version it becomes, in one.
  */
 export function Editor({ theme }: Props) {
   const t = useEditorT();
@@ -114,7 +120,10 @@ export function Editor({ theme }: Props) {
 
   /** What a new feature is to start from, while the dialog for one is open. */
   const [creating, setCreating] = useState<{ base?: number; files?: LambdaFile[] } | null>(null);
-  const [featureDialog, setFeatureDialog] = useState<'merge' | 'notes' | 'base' | 'delete' | null>(null);
+  const [featureDialog, setFeatureDialog] = useState<'notes' | 'base' | 'delete' | null>(null);
+
+  /** The feature being put online, while the dialog for that is open - from its own page, or from the change that left it. */
+  const [merging, setMerging] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
 
   /** Whether the code view holds something unsaved, so leaving it can ask first. */
@@ -377,8 +386,14 @@ export function Editor({ theme }: Props) {
   // a demo is read by anybody holding its announced key, and changed by nobody
   const demo = lambda != null && isDemo(lambda.tier);
 
-  // sections that only change the lambda, which a demo does not have
-  const absent = (id: SectionId) => (hidden && id === 'domain') || (demo && (id === 'showcase' || id === 'change' || id === 'features'));
+  // sections that only change the lambda, which a demo does not have - and
+  // the drafts, while there are none: they are met through a change the agent
+  // leaves to be tried, or started from a version or the code, and the list
+  // of them is nothing to look at until then
+  const absent = (id: SectionId) =>
+    (hidden && id === 'domain')
+    || (demo && (id === 'showcase' || id === 'change' || id === 'features'))
+    || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0);
 
   const away = absent(section);
 
@@ -426,7 +441,7 @@ export function Editor({ theme }: Props) {
   }
 
   const featureControl: FeatureControl | null = open
-    ? { info: open, refresh, preview: previewFeature, merge: () => setFeatureDialog('merge'), previewing }
+    ? { info: open, refresh, preview: previewFeature, previewing }
     : null;
 
   const featurePath = (key: string, view: FeatureView = 'overview') => `${base}/features/${key}${view === 'overview' ? '' : `/${view}`}`;
@@ -448,7 +463,22 @@ export function Editor({ theme }: Props) {
     openData: () => go(`${base}/data`),
     startFeature: (from, files) => setCreating({ base: from, files }),
     openFeature: (key, view) => go(featurePath(key, view)),
-    askAgent: (key) => go(`${base}/change${key ? `?feature=${key}` : ''}`),
+    putOnline: (key) => setMerging(key),
+    askAgent: (key, prompt) => {
+      const query = new URLSearchParams();
+
+      if (key) {
+        query.set('feature', key);
+      }
+
+      if (prompt) {
+        query.set('ask', prompt);
+      }
+
+      const search = query.toString();
+
+      go(`${base}/change${search ? `?${search}` : ''}`);
+    },
     feature: featureControl,
   };
 
@@ -468,7 +498,7 @@ export function Editor({ theme }: Props) {
 
   /** A feature became a version: show the version. */
   const merged = (result: FeatureMerge) => {
-    setFeatureDialog(null);
+    setMerging(null);
     refresh().catch(() => undefined);
 
     const version = result.version?.version;
@@ -484,6 +514,9 @@ export function Editor({ theme }: Props) {
 
   const change = agent.state?.job;
   const changing = isActive(change);
+
+  // the feature being put online, as last read - gone when it was merged or deleted meanwhile
+  const putting = merging ? (features?.find((f) => f.key === merging) ?? null) : null;
 
   const live = lambda.activeVersion != null;
   const publicUrl = absoluteAddress(lambda.publicPath);
@@ -586,6 +619,7 @@ export function Editor({ theme }: Props) {
               unsaved={unsaved}
               compact={featureView === 'code'}
               onPreview={previewFeature}
+              onPutOnline={() => setMerging(open.key)}
               onDialog={setFeatureDialog}
               onStop={async () => {
                 try {
@@ -822,16 +856,28 @@ export function Editor({ theme }: Props) {
         onCreated={(feature) => created(feature, creating?.files != null)}
       />
 
+      {putting && (
+        <MergeDialog
+          control={control}
+          feature={putting}
+          open={merging !== null}
+          onClose={() => setMerging(null)}
+          onMerged={merged}
+          onRebase={() => {
+            setMerging(null);
+
+            // marked from the feature's own page, where the dialog for it is
+            if (putting.key === open?.key) {
+              setFeatureDialog('base');
+            } else {
+              control.openFeature(putting.key);
+            }
+          }}
+        />
+      )}
+
       {open && (
         <>
-          <MergeDialog
-            control={control}
-            feature={open}
-            open={featureDialog === 'merge'}
-            onClose={() => setFeatureDialog(null)}
-            onMerged={merged}
-            onRebase={() => setFeatureDialog('base')}
-          />
           <NotesDialog control={control} feature={open} open={featureDialog === 'notes'} onClose={() => setFeatureDialog(null)} />
           <BaseDialog control={control} feature={open} open={featureDialog === 'base'} onClose={() => setFeatureDialog(null)} />
           <DeleteFeatureDialog
@@ -899,28 +945,33 @@ export function Editor({ theme }: Props) {
 }
 
 /**
- * The feature the page is opened on, in the sidebar: what it is, what it is
- * based on, where it can be tried, and the two things done with it - trying
- * it, and merging it. The rest is in its menu.
+ * The feature the page is opened on, in the sidebar: what it is called,
+ * where it can be tried, and the two things done with it - trying it, and
+ * putting it online. The rest is in its menu.
+ *
+ * Its edge and its name line up with the views listed underneath, which are
+ * the feature's own, so it reads as their heading.
  */
-function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, onPreview, onDialog, onStop, onBack }: {
+function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, onPreview, onPutOnline, onDialog, onStop, onBack }: {
   feature: Feature;
   base: string;
   privateKey: string;
   previewing: boolean;
-  /** Whether the code view holds something unsaved, which neither the preview nor a merge would include. */
+  /** Whether the code view holds something unsaved, which neither the preview nor putting it online would include. */
   unsaved: boolean;
   /** Whether the code is open below it, which has room for little else on a phone. */
   compact: boolean;
   onPreview: () => void;
-  onDialog: (dialog: 'merge' | 'notes' | 'base' | 'delete') => void;
+  onPutOnline: () => void;
+  onDialog: (dialog: 'notes' | 'base' | 'delete') => void;
   onStop: () => void;
   onBack: () => void;
 }) {
   const said = useEditorT().features;
+  const preview = absoluteAddress(feature.previewPath);
 
   return (
-    <div className="mt-4 border-l-2 border-accent-500 pl-3 dark:border-accent-400">
+    <div className="mt-4 border-l-2 border-accent-500 pl-3 dark:border-accent-400 md:-ml-3">
       <Link
         to={`${base}/features`}
         onClick={(event) => { event.preventDefault(); onBack(); }}
@@ -930,7 +981,6 @@ function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, 
       </Link>
 
       <div className="mt-1 flex items-start gap-1.5">
-        <IconBranch className="mt-1 h-3.5 w-3.5 shrink-0 text-accent-500 dark:text-accent-400" />
         <span className="min-w-0 flex-1 break-words text-[15px] font-semibold leading-snug">{feature.name}</span>
 
         <Menu label={said.actions} align="start">
@@ -939,7 +989,7 @@ function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, 
               <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); onDialog('notes'); }}>
                 {said.editNotes}
               </button>
-              {/* based on the newest already, there is nowhere to move it */}
+              {/* up to date already, there is nothing to mark */}
               {!feature.mergeable && (
                 <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); onDialog('base'); }}>
                   {said.moveBase}
@@ -962,18 +1012,25 @@ function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, 
         </Menu>
       </div>
 
-      <p className="mt-0.5 text-xs text-slate-500">
-        {said.from(feature.base)}
-        {!feature.mergeable && <span className="text-amber-600 dark:text-amber-400"> · {said.behind(feature.newest ?? feature.base)}</span>}
-      </p>
+      {/* which version it began from is nothing to the owner, until a newer one means it cannot go online as it is */}
+      {!feature.mergeable && (
+        <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400" title={said.behindTitle}>
+          {said.behind(feature.newest ?? feature.base)}
+        </p>
+      )}
 
       <div className={compact ? 'hidden md:block' : ''}>
         <div className="mt-2">
-          <Address url={absoluteAddress(feature.previewPath)} live={feature.online} primary />
+          <Address url={preview} live={feature.online} primary={false} />
         </div>
 
         <div className="mt-3 grid gap-1.5">
-          {!feature.current && (
+          {feature.current ? (
+            <a href={preview} target="_blank" rel="noreferrer" className="btn-ghost w-full" title={said.openPreviewTitle}>
+              <IconExternal />
+              {said.openPreview}
+            </a>
+          ) : (
             <button type="button" onClick={onPreview} disabled={previewing || unsaved} className="btn-primary w-full">
               {previewing ? <IconSpinner /> : <IconPlay />}
               {feature.online ? said.updatePreview : said.deployPreview}
@@ -981,12 +1038,12 @@ function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, 
           )}
           <button
             type="button"
-            onClick={() => onDialog('merge')}
+            onClick={onPutOnline}
             disabled={unsaved}
             className={`${feature.current && feature.mergeable ? 'btn-primary' : 'btn-ghost'} w-full`}
             title={feature.mergeable ? said.mergeTitleShort : said.behindTitle}
           >
-            <IconMerge />
+            <IconPlay />
             {said.mergeButton}
           </button>
           {unsaved && <p className="text-xs text-amber-700 dark:text-amber-400">{said.saveFirst}</p>}

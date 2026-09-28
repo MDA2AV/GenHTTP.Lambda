@@ -1,17 +1,18 @@
 import { absoluteAddress } from '../address';
-import { IconBranch, IconExternal, IconPlus, IconSpark } from '../components/Icons';
+import { IconDraft, IconExternal, IconPlus, IconSpark } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { AgentMark, Ago, LiveDot, Section } from './ui';
 
 /**
- * The changes being worked on beside the lambda.
+ * The features being worked on beside the lambda - drafts, to the owner.
  *
  * A version never changes once it is saved; a feature is where a change is
  * made instead. It starts as a copy of a version and of the lambda's data,
  * can be tried at an address of its own while visitors keep getting what is
- * online, and becomes the next version when it is merged. This lists them,
- * says which can be merged, and starts new ones.
+ * online, and becomes the next version when it is put online. This lists
+ * them and starts new ones; which version each began from is left out, and
+ * only one that has fallen behind the newest says so.
  */
 export function FeaturesTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -40,38 +41,29 @@ export function FeaturesTab({ control }: { control: Control }) {
       }
     >
       {features.length === 0 ? (
-        <div className="surface mx-auto max-w-2xl p-8 text-center">
+        <div className="surface mx-auto max-w-xl p-8 text-center">
           <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-accent-500/10 text-accent-600 dark:text-accent-400">
-            <IconBranch className="h-5 w-5" />
+            <IconDraft className="h-5 w-5" />
           </span>
           <h2 className="mt-4 text-[15px] font-medium">{said.emptyTitle}</h2>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-slate-600 dark:text-slate-400">{said.emptyText}</p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">{said.emptyText}</p>
 
-          <ol className="mx-auto mt-6 grid max-w-xl gap-4 text-left sm:grid-cols-3">
-            {said.steps.map(([title, text], index) => (
-              <li key={title} className="flex gap-2.5">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-400/15 text-[11px] font-medium tabular-nums text-slate-600 dark:text-slate-300">
-                  {index + 1}
-                </span>
-                <span>
-                  <span className="block text-[13px] font-medium">{title}</span>
-                  <span className="mt-0.5 block text-[13px] leading-relaxed text-slate-500">{text}</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-
-          <div className="mt-7 flex flex-wrap justify-center gap-2">
-            <button type="button" onClick={() => control.startFeature()} disabled={lambda.latestVersion == null} className="btn-primary !px-4 !py-1.5 text-[13px]">
-              <IconPlus className="h-3.5 w-3.5" />
-              {said.start}
-            </button>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
             {agent && (
-              <button type="button" onClick={() => control.askAgent()} className="btn-ghost !px-3 !py-1.5 text-[13px]">
+              <button type="button" onClick={() => control.askAgent()} className="btn-primary !px-4 !py-1.5 text-[13px]">
                 <IconSpark className="h-3.5 w-3.5" />
                 {said.askAgentNew}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => control.startFeature()}
+              disabled={lambda.latestVersion == null}
+              className={`${agent ? 'btn-ghost !px-3' : 'btn-primary !px-4'} !py-1.5 text-[13px]`}
+            >
+              <IconPlus className="h-3.5 w-3.5" />
+              {said.start}
+            </button>
           </div>
         </div>
       ) : (
@@ -79,7 +71,7 @@ export function FeaturesTab({ control }: { control: Control }) {
           <ul className="divide-y divide-slate-200 border-y border-slate-200 dark:divide-ink-800 dark:border-ink-800">
             {features.map((feature) => (
               <li key={feature.key} className="group flex items-start gap-3 py-3">
-                <IconBranch className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
+                <IconDraft className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
 
                 <button type="button" onClick={() => control.openFeature(feature.key)} className="min-w-0 flex-1 text-left">
                   <span className="flex items-center gap-2">
@@ -90,18 +82,15 @@ export function FeaturesTab({ control }: { control: Control }) {
                     {feature.change ?? feature.specification ?? said.noChange}
                   </span>
                   <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                    <span>{said.from(feature.base)}</span>
-                    {feature.mergeable ? (
-                      <span className="text-emerald-600 dark:text-emerald-400">{said.mergeable}</span>
-                    ) : (
-                      <span className="text-amber-600 dark:text-amber-400" title={said.behindTitle}>
-                        {said.behind(feature.newest ?? feature.base)}
-                      </span>
-                    )}
                     <span className="flex items-center gap-1.5">
                       <LiveDot live={feature.online} />
                       {feature.online ? (feature.current ? said.previewOnline : said.previewOutdated) : said.previewOffline}
                     </span>
+                    {!feature.mergeable && (
+                      <span className="text-amber-600 dark:text-amber-400" title={said.behindTitle}>
+                        {said.behind(feature.newest ?? feature.base)}
+                      </span>
+                    )}
                     <span>
                       {said.changed} <Ago at={feature.modified} />
                     </span>

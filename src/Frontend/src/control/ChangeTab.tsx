@@ -8,10 +8,10 @@ import { Dialog } from '../components/Dialog';
 import {
   IconAlert,
   IconBook,
-  IconBranch,
   IconCheck,
   IconChevronDown,
   IconDots,
+  IconDraft,
   IconExternal,
   IconEye,
   IconFolder,
@@ -19,7 +19,6 @@ import {
   IconInfo,
   IconLayers,
   IconList,
-  IconMerge,
   IconPencil,
   IconPlay,
   IconPlus,
@@ -51,10 +50,11 @@ type Words = ReturnType<typeof useEditorT>['change'];
  * draws it: leaving the section does not stop anything, and coming back finds
  * it where it got to.
  *
- * The agent works in a feature - a new one, or one the owner picks to go on
- * with - so what it does is tried at the feature's own address before any
- * visitor sees it. Told to put it online, it merges the feature into the next
- * version once it works; told not to, it leaves the feature for the owner.
+ * The agent works in a feature - a draft, to the owner: a new one, or one
+ * the owner picks to go on with - so what it does is tried at the feature's
+ * own address before any visitor sees it. Told to put it online, it merges
+ * the feature into the next version once it works and deploys that; told
+ * not to, it leaves the draft for the owner to try and put online from here.
  */
 export function ChangeTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -71,9 +71,30 @@ export function ChangeTab({ control }: { control: Control }) {
 
   // a feature asked for by the link - "ask the agent" on a feature - or the
   // one the last change left open, which is what a next request builds on
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const open = (key?: string | null) => (key && control.features.some((f) => f.key === key) ? key : null);
   const target = open(params.get('feature')) ?? open(job?.result?.feature) ?? null;
+
+  // a request the link suggests - bringing a draft up to date - goes into the
+  // box once, to be sent or changed; a reload does not put it back
+  const suggested = params.get('ask');
+
+  useEffect(() => {
+    if (!suggested) {
+      return;
+    }
+
+    setPrompt(suggested);
+    setParams((was) => {
+      const next = new URLSearchParams(was);
+      next.delete('ask');
+      return next;
+    }, { replace: true });
+
+    window.requestAnimationFrame(() => composer.current?.focus());
+    // the box takes what is typed into it; only a new suggestion replaces that
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggested]);
 
   // looking at the section is looking at how the last change ended
   const { seen } = agent;
@@ -154,7 +175,7 @@ export function ChangeTab({ control }: { control: Control }) {
 /** What happens after the button, for somebody who has not pressed it yet. */
 function HowItWorks() {
   const said = useEditorT().change;
-  const icons = [IconEye, IconBranch, IconPlay];
+  const icons = [IconEye, IconDraft, IconPlay];
 
   return (
     <ol className="grid gap-5 pt-2 sm:grid-cols-3">
@@ -340,21 +361,24 @@ function Composer({
           {next ? said.placeholderNext : said.label}
         </label>
 
-        {/* where it works: a feature of its own, or one to go on with */}
-        <label className="flex items-center gap-2 text-[13px] text-slate-600 dark:text-slate-400" title={said.whereTitle}>
-          <IconBranch className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          {said.where}
-          <select
-            value={where}
-            onChange={(event) => setWhere(event.target.value)}
-            className="max-w-[14rem] truncate rounded border border-slate-200 bg-transparent px-1.5 py-0.5 text-[13px] dark:border-ink-800"
-          >
-            <option value="" disabled={full}>{said.newFeature}</option>
-            {features.map((feature) => (
-              <option key={feature.key} value={feature.key}>{feature.name}</option>
-            ))}
-          </select>
-        </label>
+        {/* where it works: a draft of its own, or one to go on with - which
+            is only a question once there is one to go on with */}
+        {features.length > 0 && (
+          <label className="flex items-center gap-2 text-[13px] text-slate-600 dark:text-slate-400" title={said.whereTitle}>
+            <IconDraft className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            {said.where}
+            <select
+              value={where}
+              onChange={(event) => setWhere(event.target.value)}
+              className="max-w-[14rem] truncate rounded border border-slate-200 bg-transparent px-1.5 py-0.5 text-[13px] dark:border-ink-800"
+            >
+              <option value="" disabled={full}>{said.newFeature}</option>
+              {features.map((feature) => (
+                <option key={feature.key} value={feature.key}>{feature.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <div className="surface focus-within:border-accent-500 focus-within:ring-1 focus-within:ring-accent-500 dark:focus-within:border-accent-400 dark:focus-within:ring-accent-400">
@@ -662,7 +686,7 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
   // cut short after it had saved something: what is there is as far as it got
   const cut = result.reason === 'timeout' ? [said.results.timedOut] : result.reason === 'turns' ? [said.results.usedUp] : [];
 
-  // left in a feature rather than merged: asked to, or not done by the end
+  // left in a draft rather than put online: asked to, or not done by the end
   if (result.ok && version == null && feature != null) {
     const merged = job.deploy ? [said.results.notMerged] : [];
 
@@ -717,7 +741,8 @@ function verdict(job: ChangeJob, active: number | undefined, feature: string | n
 }
 
 function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
-  const said = useEditorT().change;
+  const t = useEditorT();
+  const said = t.change;
   const { lambda, busy } = control;
   const result = job.result;
 
@@ -727,7 +752,12 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const name = left?.name ?? result?.featureName ?? null;
 
   // the name it was given, or - never said - the start of its key
-  const { tone, headline, notes } = verdict(job, lambda.activeVersion, result?.feature ? name ?? result.feature.slice(0, 8) : null, said);
+  const judged = verdict(job, lambda.activeVersion, result?.feature ? name ?? result.feature.slice(0, 8) : null, said);
+
+  // the draft it left is gone since - put online, or discarded - so there is
+  // nothing left to try, and what the verdict says about it is history
+  const gone = result?.feature != null && !left && result.version == null && (result.ok || job.state === 'cancelled');
+  const { tone, headline, notes } = gone ? { ...judged, tone: 'quiet' as Tone, notes: [t.features.missingText] } : judged;
   const look = TONES[tone];
 
   const version = result?.version ?? undefined;
@@ -740,7 +770,7 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const live = online != null && lambda.activeVersion === online;
   const deployable = version != null && online == null && result?.compiles !== false && lambda.activeVersion !== version;
   const undoable = live && before != null && before !== online;
-  const retry = !result?.ok || (version == null && !left);
+  const retry = !result?.ok || (version == null && !left && !gone);
 
   const Icon = tone === 'good' ? IconCheck : tone === 'ready' ? IconCheck : tone === 'quiet' ? IconInfo : IconAlert;
 
@@ -769,6 +799,7 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
         )}
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          {/* left as a draft: try it, and put it online from here once it is right */}
           {left?.online && (
             <a href={absoluteAddress(left.previewPath)} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
               <IconExternal className="h-3.5 w-3.5" />
@@ -776,9 +807,16 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
             </a>
           )}
 
+          {left && result?.compiles !== false && (
+            <button type="button" onClick={() => control.putOnline(left.key)} className="btn-ghost !px-3 !py-1.5 text-[13px]" title={t.features.mergeTitleShort}>
+              <IconPlay className="h-3.5 w-3.5" />
+              {t.features.mergeButton}
+            </button>
+          )}
+
           {left && (
             <button type="button" onClick={() => control.openFeature(left.key)} className={`${left.online ? 'btn-ghost !px-3' : 'btn-primary !px-4'} !py-1.5 text-[13px]`}>
-              <IconBranch className="h-3.5 w-3.5" />
+              <IconDraft className="h-3.5 w-3.5" />
               {said.openFeature}
             </button>
           )}
@@ -910,9 +948,9 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   upload: IconUpload,
   delete: IconTrash,
   list: IconFolder,
-  feature: IconBranch,
+  feature: IconDraft,
   update: IconHistory,
-  merge: IconMerge,
+  merge: IconPlay,
   discard: IconTrash,
   other: IconDots,
 };
@@ -1043,11 +1081,7 @@ function Marks({ step, said }: { step: AgentStep; said: Words }) {
     shown.push(<Mark key="version" tone="plain">{marks.version(step.version)}</Mark>);
   }
 
-  // a feature starts from a version, and a merge makes one
-  if (step.version != null && step.kind === 'feature') {
-    shown.push(<Mark key="from" tone="plain">{marks.from(step.version)}</Mark>);
-  }
-
+  // a merge makes a version; which one a draft began from is nothing to the owner
   if (step.version != null && step.kind === 'merge' && !step.online) {
     shown.push(<Mark key="merged" tone="good">{marks.version(step.version)}</Mark>);
   }

@@ -40,8 +40,13 @@ export interface Control {
   startFeature: (base?: number, files?: LambdaFile[]) => void;
   /** Opens a feature, at one of its views. */
   openFeature: (key: string, view?: FeatureView) => void;
-  /** Asks the agent to go on with a feature. */
-  askAgent: (feature?: string) => void;
+  /**
+   * Asks to put a feature online - to merge it, and deploy the version it
+   * becomes - wherever the owner is: the frame holds the dialog.
+   */
+  putOnline: (key: string) => void;
+  /** Asks the agent to go on with a feature, with a request to start from if there is an obvious one. */
+  askAgent: (feature?: string, prompt?: string) => void;
   /** The feature being worked on, when the control center is opened on one. */
   feature: FeatureControl | null;
 }
@@ -60,8 +65,6 @@ export interface FeatureControl {
   refresh: () => Promise<void>;
   /** Puts what the feature holds online at its preview address, with the frame's feedback. */
   preview: () => Promise<boolean>;
-  /** Opens the merge dialog of the frame. */
-  merge: () => void;
   /** Whether its preview is being put online right now. */
   previewing: boolean;
 }
