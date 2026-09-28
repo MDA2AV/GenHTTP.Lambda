@@ -31,9 +31,16 @@ export interface AgentControl {
   seen: () => void;
 }
 
-/** How many versions a change has saved or put online so far. */
+/**
+ * How many things a change has done so far that the page shows: versions
+ * saved or put online, and features started, saved, tried, merged or deleted.
+ */
 const milestones = (job?: ChangeJob | null) =>
-  (job?.steps ?? []).filter((step) => step.done && step.version != null && (step.kind === 'write' || step.kind === 'copy' || step.kind === 'deploy')).length;
+  (job?.steps ?? []).filter((step) =>
+    step.done && (
+      ((step.kind === 'write' || step.kind === 'deploy') && (step.version != null || step.preview))
+      || step.kind === 'feature' || step.kind === 'update' || step.kind === 'merge' || step.kind === 'discard'
+    )).length;
 
 export function useAgent({
   privateKey,

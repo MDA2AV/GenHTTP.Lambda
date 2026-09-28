@@ -35,6 +35,4 @@ public sealed record DeploymentOutcomeResponse(bool Success, LambdaResponse? Lam
 /// expired because nobody used it, or taken down by the operator
 /// </param>
 /// <param name="Seconds">How long it was online, or has been so far</param>
-/// <param name="Revision">Which save of the version was online; absent for a stretch from before versions could be saved over</param>
-public sealed record ActivationResponse(int Version, DateTime Started, string? Origin, DateTime? Ended, string? EndedBy, long Seconds,
-                                        int? Revision = null);
+public sealed record ActivationResponse(int Version, DateTime Started, string? Origin, DateTime? Ended, string? EndedBy, long Seconds);

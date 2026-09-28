@@ -8,41 +8,14 @@ public interface IStorageService
 {
 
     /// <summary>
-    /// Stores the code of a version, replacing what it held before.
+    /// Stores the code of a newly created version.
     /// </summary>
-    /// <remarks>
-    /// Written whole or not at all: the newest version is saved over while it
-    /// is worked on, and a save cut short must not leave half of one behind.
-    /// </remarks>
     ValueTask WriteAsync(long lambdaId, int version, string code, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Reads the code of the given version, as it was last saved, if it exists.
+    /// Reads the code of the given version, if it exists.
     /// </summary>
     ValueTask<string?> ReadAsync(long lambdaId, int version, CancellationToken cancellation = default);
-
-    /// <summary>
-    /// Keeps the code of a version as it is now, as the code that is online.
-    /// </summary>
-    /// <remarks>
-    /// Called before the version that is online is saved over. What visitors
-    /// get only changes when it is deployed again, and a server that restarts
-    /// in between has to build what was deployed rather than what was saved
-    /// since - so it is set aside first, and only then, since for every other
-    /// lambda the version itself is what is online.
-    /// </remarks>
-    ValueTask PreserveOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default);
-
-    /// <summary>
-    /// Reads the code that is online, given the version that is: what was set
-    /// aside for it if it has been saved over since, the version otherwise.
-    /// </summary>
-    ValueTask<string?> ReadOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default);
-
-    /// <summary>
-    /// Forgets what was set aside as online, once something else is - or nothing.
-    /// </summary>
-    ValueTask DropOnlineAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a single version of a lambda.
@@ -50,14 +23,17 @@ public interface IStorageService
     ValueTask DeleteVersionAsync(long lambdaId, int version, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Removes everything stored for the given lambda, including its workspace.
+    /// Removes everything stored for the given lambda, including its workspace
+    /// and its features.
     /// </summary>
     ValueTask DeleteAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
-    /// The directory a deployed lambda may read and write files in. Created on demand.
+    /// The directory a deployed lambda - or the preview of one of its features -
+    /// may read and write files in. Created on demand.
     /// </summary>
-    string GetWorkspace(long lambdaId);
+    /// <param name="featureId">The feature whose copy of the workspace is meant, or nothing for the lambda's own</param>
+    string GetWorkspace(long lambdaId, long? featureId = null);
 
     /// <summary>
     /// The directory the assemblies generated for a lambda are written to.
@@ -65,14 +41,63 @@ public interface IStorageService
     string GetAssemblyDirectory(long lambdaId);
 
     /// <summary>
-    /// The directory the assets shipped with a lambda are written to.
+    /// The directory the assets shipped with a lambda - or with the preview of
+    /// one of its features - are written to.
     /// </summary>
     /// <remarks>
-    /// Rewritten from the deployed version every time one goes online, so it
-    /// holds what that version shipped and nothing a previous one did. The
-    /// lambda may read it and not write it - what it writes goes in the
-    /// workspace, which outlives a deployment.
+    /// Rewritten from what is being deployed every time something goes online,
+    /// so it holds what that shipped and nothing that went before. The lambda
+    /// may read it and not write it - what it writes goes in the workspace,
+    /// which outlives a deployment.
     /// </remarks>
-    string GetAssetDirectory(long lambdaId);
+    /// <param name="featureId">The feature whose preview is meant, or nothing for the lambda itself</param>
+    string GetAssetDirectory(long lambdaId, long? featureId = null);
+
+    #region Features
+
+    /// <summary>
+    /// Stores the files of a feature as they are now, replacing what they were.
+    /// </summary>
+    /// <remarks>
+    /// Written whole or not at all: a feature is saved over again and again
+    /// while it is worked on, and a save cut short must not leave half of one.
+    /// </remarks>
+    ValueTask WriteFeatureAsync(long lambdaId, long featureId, string code, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Reads the files of a feature, if it has any.
+    /// </summary>
+    ValueTask<string?> ReadFeatureAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Keeps what the preview of a feature was deployed with, so it serves that
+    /// until it is deployed again - a restart included - however much the
+    /// feature is changed in the meantime.
+    /// </summary>
+    ValueTask WritePreviewAsync(long lambdaId, long featureId, string code, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Reads what the preview of a feature was deployed with, if it was.
+    /// </summary>
+    ValueTask<string?> ReadPreviewAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Replaces the feature's copy of the workspace with a fresh copy of the
+    /// lambda's own.
+    /// </summary>
+    ValueTask CopyWorkspaceAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Removes everything stored for a feature: its files, what its preview
+    /// serves and its copy of the data.
+    /// </summary>
+    ValueTask DeleteFeatureAsync(long lambdaId, long featureId, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// The features there are files of, by lambda and feature.
+    /// </summary>
+    IEnumerable<(long LambdaId, long FeatureId)> ListFeatures();
+
+    #endregion
 
 }

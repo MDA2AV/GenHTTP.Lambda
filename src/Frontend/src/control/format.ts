@@ -139,6 +139,11 @@ export function local(text: string, publicKey: string): string {
   return text.split(`/lambda/${publicKey}/`).join('/').split(`/lambda/${publicKey} `).join('/ ');
 }
 
+/** The same for the preview of a feature, which answers below its own key. */
+export function preview(text: string, feature: string): string {
+  return text.split(`/features/${feature}/`).join('/').split(`/features/${feature} `).join('/ ');
+}
+
 /**
  * Whether the code asks for a directory to be served. The same test the
  * server makes for the summary, so the two never disagree.

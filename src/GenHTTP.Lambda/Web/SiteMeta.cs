@@ -192,6 +192,7 @@ public sealed class SiteMeta
               .Append("Disallow: /mcp\n")
               .Append("Disallow: /start\n")
               .Append("Disallow: /editor/\n")
+              .Append("Disallow: /features/\n")
               .Append("Disallow: /admin\n")
               .Append("Disallow: /logs\n")
               .Append("Disallow: /stats\n");
@@ -331,7 +332,7 @@ public sealed class SiteMeta
                     identifier = $"urn:air:{host}:api:lambda",
                     displayName = $"{Site} REST API",
                     type = "application/vnd.oai.openapi+json",
-                    description = "The same functionality as the MCP server over HTTP; versions can be downloaded and uploaded as a zip.",
+                    description = "The same functionality as the MCP server over HTTP; versions can be downloaded and uploaded as a zip, and a feature being worked on downloaded and put back as one.",
                     url = $"{PublicUrl}/api/v1/openapi.json"
                 }
             }

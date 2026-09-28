@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Continua a migliorarla',
-      body: 'Ogni app ha un link di modifica privato. Passalo al tuo agente con la prossima richiesta, oppure aprilo tu. Ogni modifica che chiedi diventa una versione a sé, e l’indirizzo non cambia.',
+      body: 'Ogni app ha un link di modifica privato. Passalo al tuo agente con la prossima richiesta, oppure aprilo tu. Ogni modifica diventa una nuova versione e l’indirizzo non cambia.',
       alt: 'Il pannello di controllo del sondaggio: le versioni, ognuna con la richiesta, cosa ha cambiato e le differenze rispetto alla precedente',
     },
   ],

@@ -114,7 +114,27 @@ public sealed class ArchiveTests
     }
 
     [TestMethod]
-    public async Task AZipCanBePutBackOverTheNewestVersion()
+    public async Task NotesSentInTheQueryAreKeptAsTheyWereWritten()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // how curl and every URL builder send a space
+        using var request = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip?change=Says%20hello+again", HttpMethod.Post);
+
+        request.Content = new ByteArrayContent(Zip(("lambda.cs", Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(\"hello\"));"))));
+        request.Content.Headers.ContentType = new("application/zip");
+
+        using var uploaded = await fixture.Host.GetResponseAsync(request);
+
+        var version = await uploaded.GetContentAsync<SavedVersionResponse>();
+
+        Assert.AreEqual("Says hello again", version.Change);
+    }
+
+    [TestMethod]
+    public async Task AFeatureCanBeDownloadedChangedAndPutBack()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -125,26 +145,46 @@ public sealed class ArchiveTests
             Assert.AreEqual(HttpStatusCode.Created, first.StatusCode);
         }
 
-        // edited locally and pushed back, as often as it takes, into the same version
-        using var request = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}/versions/2/zip?deploy=true&change=Says%20second", HttpMethod.Put);
+        using var created = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features", new CreateFeatureRequest("Second"));
 
-        request.Content = new ByteArrayContent(Zip(("lambda.cs", Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(\"second\"));"))));
-        request.Content.Headers.ContentType = new("application/zip");
+        var feature = await created.GetContentAsync<FeatureResponse>();
 
-        using var put = await fixture.Host.GetResponseAsync(request);
+        using (var downloaded = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/zip"))
+        {
+            using var zip = new ZipArchive(new MemoryStream(await downloaded.Content.ReadAsByteArrayAsync()));
 
-        Assert.AreEqual(HttpStatusCode.OK, put.StatusCode, await put.Content.ReadAsStringAsync());
+            Assert.IsNotNull(zip.GetEntry("lambda.cs"), "a feature downloads like a version");
+        }
 
-        var saved = await put.GetContentAsync<SavedVersionResponse>();
+        // edited locally and pushed back, as often as it takes, into the same feature
+        for (var i = 0; i < 2; i++)
+        {
+            using var request = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/zip?deploy=true&change=Says%20second", HttpMethod.Put);
 
-        Assert.AreEqual(2, saved.Version);
-        Assert.AreEqual(2, saved.Revision);
-        Assert.AreEqual("Says second", saved.Change);
-        Assert.IsTrue(saved.Deployment?.Success);
+            request.Content = new ByteArrayContent(Zip(("lambda.cs", Encoding.UTF8.GetBytes($"return Content.From(Resource.FromString(\"second {i}\"));"))));
+            request.Content.Headers.ContentType = new("application/zip");
 
-        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+            using var put = await fixture.Host.GetResponseAsync(request);
 
-        Assert.AreEqual("second", await served.GetContentAsync());
+            Assert.AreEqual(HttpStatusCode.OK, put.StatusCode, await put.Content.ReadAsStringAsync());
+
+            var saved = await put.GetContentAsync<FeatureSavedResponse>();
+
+            Assert.AreEqual("Says second", saved.Feature.Change);
+            Assert.IsTrue(saved.Preview?.Success);
+        }
+
+        using var preview = await fixture.GetAsync($"/features/{feature.Key}/");
+
+        Assert.AreEqual("second 1", await preview.GetContentAsync());
+
+        using var live = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+
+        Assert.AreNotEqual("second 1", await live.GetContentAsync(), "and the lambda itself is not touched");
+
+        using var versions = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions");
+
+        Assert.HasCount(2, await versions.GetContentAsync<List<VersionResponse>>(), "however often a feature is saved, no version is made");
     }
 
     private static async Task<HttpResponseMessage> UploadAsync(LambdaFixture fixture, string privateKey, byte[] archive)

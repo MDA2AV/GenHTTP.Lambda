@@ -71,16 +71,10 @@ export function DeploymentsTab({ control }: { control: Control }) {
                 <li key={`${entry.started}-${index}`} className="flex items-center gap-3 py-3 text-[13px]">
                   <span className="w-8 shrink-0 tabular-nums text-slate-500">{entry.version}</span>
 
-                  <span className="flex min-w-0 flex-1 items-baseline gap-2">
-                    <span className="truncate text-[15px]" title={change(entry.version) ?? undefined}>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px]" title={change(entry.version) ?? undefined}>
                       {change(entry.version) ?? <span className="text-slate-400">{said.noDescription}</span>}
                     </span>
-                    {/* the same version can go online in several saves, while it is worked on */}
-                    {entry.revision != null && entry.revision > 1 && (
-                      <span className="shrink-0 text-xs text-slate-400" title={said.revisionTitle(entry.revision)}>
-                        {said.revision(entry.revision)}
-                      </span>
-                    )}
                   </span>
 
                   <AgentMark origin={entry.origin} />

@@ -15,6 +15,7 @@ export const guide = {
     first: 'Your first one',
     editor: 'The control center',
     why: 'Saying why',
+    features: 'Changing it safely',
     files: 'More than one file',
     page: 'Serving a page',
     spa: 'A front end, step by step',
@@ -63,9 +64,9 @@ export const guide = {
     ),
     (k) => (
       <>
-        Hand the editor key to an agent and tell it what to build - it works through {k.link('/#agents', 'MCP')},
-        in one version for each thing you ask for. Or open {k.b('Code')} and write it yourself: {k.b('Check')}{' '}
-        compiles without storing anything and tells you what the compiler thinks, file and line.
+        Hand the editor key to an agent and tell it what to build - it writes new versions through{' '}
+        {k.link('/#agents', 'MCP')}. Or open {k.b('Code')} and write it yourself: {k.b('Check')} compiles without
+        storing anything and tells you what the compiler thinks, file and line.
       </>
     ),
     (k) => (
@@ -80,8 +81,8 @@ export const guide = {
     <>
       The editor link opens a control center rather than a text box: most of the code here is written by agents, so
       the first thing on the screen is how your lambda is doing. The sidebar holds the lambda - whether it is online,
-      its address, and a button when there is something to put online - and its sections. Anything done rarely, like
-      changing the address or deleting it, is behind the {k.b('⋯')} menu there.
+      its address, and a button when a newer version is waiting to go online - and its sections. Anything done
+      rarely, like changing the address or deleting it, is behind the {k.b('⋯')} menu there.
     </>
   )) as Text,
   bits: [
@@ -90,15 +91,16 @@ export const guide = {
       'Change',
       (k) => (
         <>
-          Say what should be different, and the agent on this server does it while you watch: it reads the code, changes
-          it, checks that it compiles and puts it online as a new version. Switch off {k.b('Put it online when it is done')}{' '}
-          to look at it first.
+          Say what should be different, and the agent on this server does it while you watch. It works in a feature,
+          tries it there, and merges it into the next version once it works. Switch off{' '}
+          {k.b('Put it online when it is done')} to try the feature yourself first.
         </>
       ),
     ],
+    ['Features', () => <>Changes worked on beside the lambda: each is tried at an address of its own and merged into the next version once it is right. Opened, a feature has its own code, data and logs.</>],
     ['Files', () => <>The files of a version: its code and assets, the program itself. A lock or a globe says whether the public can reach them.</>],
     ['Data', () => <>What the lambda keeps while it runs, shared by every version: the workspace. Look into it, upload and delete files, or switch it off.</>],
-    ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. The newest is the one being worked on. Deploy, roll back or start a new version from here.</>],
+    ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a feature from any of them.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
     ['Stats', () => <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
     ['Logs', () => <>Its requests, what it printed, and the stack trace of anything that went wrong, as it happens.</>],
@@ -106,9 +108,9 @@ export const guide = {
       'Code',
       (k) => (
         <>
-          Writing it by hand. {k.b('Check')} compiles, {k.b('Save')} saves over the newest version,{' '}
-          {k.b('New version')} keeps it as it is and starts another, {k.b('Deploy')} puts it online.{' '}
-          {k.code('Ctrl-S')} saves; {k.code('F12')} goes to a declaration.
+          Writing it by hand. {k.b('Check')} compiles, {k.b('Save')} makes a version, {k.b('Deploy')} puts it online.
+          In a feature, {k.b('Save')} keeps it in the feature and {k.b('Deploy preview')} puts it online at the
+          feature's address. {k.code('Ctrl-S')} saves; {k.code('F12')} goes to a declaration.
         </>
       ),
     ],
@@ -136,9 +138,47 @@ export const guide = {
   },
   why2: ((k) => (
     <>
-      Agents pass the same two fields to {k.code('write_code')}. In {k.b('Code')}, {k.b('New version')} asks for the
-      change. Both are optional; a long specification is cut at 4000 characters and a change at 500 rather than
-      refused. Saving over a version keeps its notes unless new ones are given.
+      Agents pass the same two fields to {k.code('write_code')}. In {k.b('Code')}, saving asks for the change. Both
+      are optional; a long specification is cut at 4000 characters and a change at 500 rather than refused. A
+      feature keeps its own two, and the version it is merged into takes them over.
+    </>
+  )) as Text,
+
+  features: ((k) => (
+    <>
+      A version never changes once it is saved - which is what makes every one worth keeping: any of them can be
+      compared with, and put back online exactly as it was. To change a lambda that people use, start a{' '}
+      {k.b('feature')} instead.
+    </>
+  )) as Text,
+  featureSteps: [
+    (k) => (
+      <>
+        Start it under {k.b('Features')}, or from any version. It is a copy of that version's code and assets, and of
+        the lambda's data.
+      </>
+    ),
+    (k) => (
+      <>
+        Change it as often as it takes - in {k.b('Code')}, or by asking the agent. {k.b('Deploy preview')} puts it
+        online at an address of its own, {k.code('/features/…/')}, against its own copy of the data. Visitors of the
+        lambda see none of it, and nothing it writes reaches the lambda's data.
+      </>
+    ),
+    (k) => (
+      <>
+        {k.b('Merge')} it once it is right: it becomes the next version, with its notes, and goes online at once if you
+        want. The feature goes with it - its preview and its copy of the data.
+      </>
+    ),
+  ] as Text[],
+  featureSample: 'Leaderboard',
+  featuresAside: (() => (
+    <>
+      Several features can be worked on at once. Only one based on the newest version can be merged, so that a merge
+      never undoes a version saved after the feature began. When another was merged first, bring its changes in - or
+      ask the agent to - and then base the feature on the newest version. Nothing merges on its own; that is
+      deliberate.
     </>
   )) as Text,
 
@@ -210,10 +250,10 @@ export const guide = {
   workspaceColumn: 'In the data',
   table: [
     ['what it holds', 'the code and assets: the program, front end included', 'whatever the lambda writes, or somebody uploads'],
-    ['when it changes', 'when the version is saved', 'the moment something is written to it'],
+    ['when it changes', 'never - a change is a new version', 'the moment something is written to it'],
     ['a deploy', 'puts exactly these files online', 'never touches it'],
     ['rolling back', 'brings the old files back', 'no effect: every version shares it'],
-    ['a new version', 'starts as a copy of them', 'no effect'],
+    ['a feature', 'starts as a copy of them', 'works on a copy of it'],
     ['when it goes', 'with old versions, past the limit', 'with the lambda, or when you switch it off'],
   ] as [string, string, string][],
   reachedAs: 'reached from code as',

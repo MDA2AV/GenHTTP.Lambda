@@ -224,6 +224,16 @@ public sealed record LambdaOptions
     public int MaxVersions { get; init; } = 50;
 
     /// <summary>
+    /// How many features a lambda may have open at once.
+    /// </summary>
+    /// <remarks>
+    /// Each one holds a copy of the lambda's files and of its workspace, so a
+    /// lambda at the limit of its workspace takes that room again for every
+    /// feature it has open.
+    /// </remarks>
+    public int MaxFeatures { get; init; } = 10;
+
+    /// <summary>
     /// Requests per second a single client may send to the lambda routes.
     /// </summary>
     public int RateLimit { get; init; } = 5000;
@@ -463,6 +473,12 @@ public sealed record LambdaOptions
     public string AssetDirectory => Path.Combine(DataDirectory, "assets");
 
     /// <summary>
+    /// Where features keep their files, their copy of the data and what their
+    /// preview serves, one folder per lambda and feature.
+    /// </summary>
+    public string FeatureDirectory => Path.Combine(DataDirectory, "features");
+
+    /// <summary>
     /// Whether the server should offer a TLS endpoint next to the plain one.
     /// </summary>
     public bool Secure => SecurePort > 0 && !string.IsNullOrWhiteSpace(CertificatePath);
@@ -526,6 +542,7 @@ public sealed record LambdaOptions
             PremiumWorkspaceBytes = ReadLong("LAMBDA_PREMIUM_WORKSPACE_BYTES", defaults.PremiumWorkspaceBytes),
             MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
+            MaxFeatures = ReadInt("LAMBDA_MAX_FEATURES", defaults.MaxFeatures),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),

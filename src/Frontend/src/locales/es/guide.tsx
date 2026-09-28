@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Tu primera lambda',
     editor: 'El centro de control',
     why: 'Explicar el porqué',
+    features: 'Cambiarla sin riesgo',
     files: 'Más de un archivo',
     page: 'Servir una página',
     spa: 'Un frontend, paso a paso',
@@ -59,9 +60,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Pásale la clave de edición a un agente y dile qué construir: trabaja a través de {k.link('/#agents', 'MCP')}, con
-        una versión para cada cosa que le pidas. O abre {k.b('Código')} y escríbelo tú: {k.b('Comprobar')} compila sin
-        guardar nada y te dice qué opina el compilador, con archivo y línea.
+        Pásale la clave de edición a un agente y dile qué construir: escribe versiones nuevas a través de{' '}
+        {k.link('/#agents', 'MCP')}. O abre {k.b('Código')} y escríbelo tú: {k.b('Comprobar')} compila sin guardar nada
+        y te dice qué opina el compilador, con archivo y línea.
       </>
     ),
     (k) => (
@@ -76,8 +77,8 @@ export const guide: Messages['guide'] = {
     <>
       El enlace de edición abre un centro de control, no un cuadro de texto: aquí casi todo el código lo escriben
       agentes, así que lo primero que ves es cómo está tu lambda. La barra lateral muestra la lambda (si está en línea,
-      su dirección y un botón cuando hay algo que poner en línea) y sus secciones. Lo que se hace pocas veces, como
-      cambiar la dirección o eliminarla, está en el menú {k.b('⋯')} de esa barra.
+      su dirección y un botón cuando hay una versión más nueva esperando para ponerse en línea) y sus secciones. Lo
+      que se hace pocas veces, como cambiar la dirección o eliminarla, está en el menú {k.b('⋯')} de esa barra.
     </>
   ),
   bits: [
@@ -86,15 +87,16 @@ export const guide: Messages['guide'] = {
       'Cambiar',
       (k) => (
         <>
-          Di qué debería ser distinto y el agente de este servidor lo hace mientras miras: lee el código, lo cambia,
-          comprueba que compila y lo pone en línea como una versión nueva. Desactiva {k.b('Ponerlo en línea al terminar')}{' '}
-          para revisarlo antes.
+          Di qué debería ser distinto y el agente de este servidor lo hace mientras miras. Trabaja en un borrador, lo
+          prueba ahí y lo fusiona en la siguiente versión cuando funciona. Desactiva{' '}
+          {k.b('Ponerlo en línea al terminar')} para probar tú el borrador antes.
         </>
       ),
     ],
+    ['Borradores', () => <>Cambios en los que se trabaja al lado de la lambda: cada uno se prueba en su propia dirección y se fusiona en la siguiente versión cuando está bien. Al abrirlo, un borrador tiene su propio código, sus datos y sus logs.</>],
     ['Archivos', () => <>Los archivos de una versión: su código y sus recursos, el programa en sí. Un candado o un globo indica si el público puede acceder a ellos.</>],
     ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: el workspace. Puedes ver lo que contiene, subir y eliminar archivos, o desactivarlo.</>],
-    ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. La más nueva es en la que se trabaja. Desde aquí despliegas, vuelves atrás o empiezas una versión nueva.</>],
+    ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. Desde aquí despliegas o vuelves atrás, o empiezas un borrador a partir de cualquiera de ellas.</>],
     ['Despliegues', () => <>Qué estuvo en línea y cuándo, y qué lo desconectó.</>],
     ['Estadísticas', () => <>Peticiones, fallos, tiempos de respuesta y las rutas más pedidas, en la última hora o el último día.</>],
     ['Logs', () => <>Sus peticiones, lo que imprimió y el stack trace de cualquier error, en tiempo real.</>],
@@ -102,9 +104,9 @@ export const guide: Messages['guide'] = {
       'Código',
       (k) => (
         <>
-          Para escribirlo a mano. {k.b('Comprobar')} compila, {k.b('Guardar')} guarda en la versión más nueva,{' '}
-          {k.b('Versión nueva')} la deja como está y empieza otra, y {k.b('Desplegar')} la pone en línea.{' '}
-          {k.code('Ctrl-S')} guarda; {k.code('F12')} va a una declaración.
+          Para escribirlo a mano. {k.b('Comprobar')} compila, {k.b('Guardar')} crea una versión y {k.b('Desplegar')} la
+          pone en línea. En un borrador, {k.b('Guardar')} lo guarda en el borrador y {k.b('Desplegar la vista previa')}{' '}
+          lo pone en línea en la dirección del borrador. {k.code('Ctrl-S')} guarda; {k.code('F12')} va a una declaración.
         </>
       ),
     ],
@@ -132,9 +134,48 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Los agentes pasan esos mismos dos campos a {k.code('write_code')}. En {k.b('Código')}, {k.b('Versión nueva')} te
-      pide el cambio. Los dos son opcionales; una especificación larga se recorta a 4000 caracteres y un cambio a 500, en
-      vez de rechazarse. Al guardar en una versión se conservan sus notas, salvo que des otras nuevas.
+      Los agentes pasan esos mismos dos campos a {k.code('write_code')}. En {k.b('Código')}, al guardar se te pide el
+      cambio. Los dos son opcionales; una especificación larga se recorta a 4000 caracteres y un cambio a 500, en vez de
+      rechazarse. Un borrador tiene sus propios dos campos, y la versión en la que se fusiona se queda con ellos.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Una versión nunca cambia una vez guardada, y eso es lo que hace que valga la pena conservarlas todas: cualquiera de
+      ellas se puede comparar y volver a poner en línea exactamente como estaba. Para cambiar una lambda que la gente
+      usa, empieza un {k.b('borrador')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Empiézalo en {k.b('Borradores')} o desde cualquier versión. Es una copia del código y los recursos de esa
+        versión, y de los datos de la lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Cámbialo tantas veces como haga falta, en {k.b('Código')} o pidiéndoselo al agente.{' '}
+        {k.b('Desplegar la vista previa')} lo pone en línea en su propia dirección, {k.code('/features/…/')}, con su
+        propia copia de los datos. Los visitantes de la lambda no ven nada de esto, y nada de lo que escribe llega a los
+        datos de la lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Cuando esté bien, {k.b('Fusionar')} lo convierte en la siguiente versión, con sus notas, y lo pone en línea
+        enseguida si quieres. El borrador desaparece con ello, junto con su vista previa y su copia de los datos.
+      </>
+    ),
+  ],
+  featureSample: 'Ranking',
+  featuresAside: () => (
+    <>
+      Se puede trabajar en varios borradores a la vez. Solo se puede fusionar uno basado en la versión más nueva, para
+      que una fusión nunca deshaga una versión guardada después de que empezara el borrador. Si antes se fusionó otro,
+      lleva sus cambios a este (o pídeselo al agente) y después basa el borrador en la versión más nueva. Nada se
+      fusiona solo; es a propósito.
     </>
   ),
 
@@ -206,10 +247,10 @@ export const guide: Messages['guide'] = {
   workspaceColumn: 'En los datos',
   table: [
     ['qué contiene', 'el código y los recursos: el programa, frontend incluido', 'lo que escribe la lambda o sube alguien'],
-    ['cuándo cambia', 'cuando se guarda la versión', 'en cuanto se escribe algo en ellos'],
+    ['cuándo cambia', 'nunca: un cambio es una versión nueva', 'en cuanto se escribe algo en ellos'],
     ['un despliegue', 'pone en línea exactamente estos archivos', 'nunca los toca'],
     ['volver atrás', 'trae de vuelta los archivos anteriores', 'no les afecta: todas las versiones los comparten'],
-    ['una versión nueva', 'empieza como una copia de ellos', 'no les afecta'],
+    ['un borrador', 'empieza como una copia de ellos', 'trabaja con una copia de ellos'],
     ['cuándo desaparece', 'con las versiones antiguas, al pasar el límite', 'con la lambda, o cuando desactivas el workspace'],
   ],
   reachedAs: 'cómo se accede desde el código',

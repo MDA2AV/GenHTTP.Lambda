@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Terus kembangkan',
-      body: 'Setiap aplikasi punya link editor privat. Berikan ke agen Anda bersama perubahan berikutnya, atau buka sendiri. Tiap perubahan yang Anda minta jadi versinya sendiri, dan alamatnya tetap sama.',
+      body: 'Setiap aplikasi punya link editor privat. Berikan ke agen Anda bersama perubahan berikutnya, atau buka sendiri. Tiap perubahan jadi versi baru, dan alamatnya tetap sama.',
       alt: 'Pusat kontrol polling: daftar versinya, masing-masing dengan apa yang diminta, apa yang diubah, dan bedanya dengan versi sebelumnya',
     },
   ],

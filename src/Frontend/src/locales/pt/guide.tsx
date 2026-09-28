@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Sua primeira lambda',
     editor: 'O painel de controle',
     why: 'Explicando o porquê',
+    features: 'Mudando com segurança',
     files: 'Mais de um arquivo',
     page: 'Servindo uma página',
     spa: 'Um front-end, passo a passo',
@@ -59,9 +60,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Passe a chave de edição para um agente e diga o que criar: ele trabalha via {k.link('/#agents', 'MCP')}, com
-        uma versão para cada coisa que você pedir. Ou abra {k.b('Código')} e escreva você mesmo: {k.b('Verificar')}{' '}
-        compila sem salvar nada e mostra o que o compilador achou, com arquivo e linha.
+        Passe a chave de edição para um agente e diga o que criar: ele escreve novas versões via{' '}
+        {k.link('/#agents', 'MCP')}. Ou abra {k.b('Código')} e escreva você mesmo: {k.b('Verificar')} compila sem salvar
+        nada e mostra o que o compilador achou, com arquivo e linha.
       </>
     ),
     (k) => (
@@ -76,8 +77,8 @@ export const guide: Messages['guide'] = {
     <>
       O link de edição abre um painel de controle, não uma caixa de texto: a maior parte do código aqui é escrita por
       agentes, então a primeira coisa na tela é como anda a sua lambda. A barra lateral mostra a lambda (se está no
-      ar, o endereço e um botão quando há algo para colocar no ar) e as seções dela. O que se faz raramente, como
-      mudar o endereço ou excluir a lambda, fica no menu {k.b('⋯')} ali.
+      ar, o endereço e um botão quando uma versão mais nova está esperando para ir ao ar) e as seções dela. O que se
+      faz raramente, como mudar o endereço ou excluir a lambda, fica no menu {k.b('⋯')} ali.
     </>
   ),
   bits: [
@@ -86,15 +87,16 @@ export const guide: Messages['guide'] = {
       'Mudar',
       (k) => (
         <>
-          Diga o que deve ficar diferente e o agente deste servidor faz isso enquanto você acompanha: lê o código, faz a
-          mudança, confere se compila e coloca no ar como uma nova versão. Desligue {k.b('Colocar no ar quando terminar')}{' '}
-          para revisar antes.
+          Diga o que deve ficar diferente e o agente deste servidor faz isso enquanto você acompanha. Ele trabalha num
+          rascunho, testa lá e mescla na próxima versão quando funciona. Desligue{' '}
+          {k.b('Colocar no ar quando terminar')} para testar o rascunho você mesmo antes.
         </>
       ),
     ],
+    ['Rascunhos', () => <>Mudanças feitas ao lado da lambda: cada uma é testada num endereço próprio e mesclada na próxima versão quando estiver tudo certo. Aberto, um rascunho tem código, dados e log próprios.</>],
     ['Arquivos', () => <>Os arquivos de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo mostra se o público consegue acessar.</>],
     ['Dados', () => <>O que a lambda guarda enquanto roda, compartilhado por todas as versões: o workspace. Veja o que tem nele, envie e exclua arquivos, ou desligue.</>],
-    ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. A mais recente é a que está em andamento. Faça deploy, volte uma versão ou comece uma nova versão por aqui.</>],
+    ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faça deploy ou volte uma versão por aqui, ou comece um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve no ar e quando, e o que tirou do ar.</>],
     ['Métricas', () => <>Requisições, falhas, tempos de resposta e os caminhos mais acessados, na última hora ou nas últimas 24 horas.</>],
     ['Logs', () => <>As requisições, o que ela imprimiu e o stack trace de qualquer erro, em tempo real.</>],
@@ -102,9 +104,9 @@ export const guide: Messages['guide'] = {
       'Código',
       (k) => (
         <>
-          Para escrever à mão. {k.b('Verificar')} compila, {k.b('Salvar')} grava as mudanças na versão mais recente,{' '}
-          {k.b('Nova versão')} mantém essa como está e começa outra, {k.b('Fazer deploy')} coloca no ar.{' '}
-          {k.code('Ctrl-S')} salva; {k.code('F12')} vai para uma declaração.
+          Para escrever à mão. {k.b('Verificar')} compila, {k.b('Salvar')} cria uma versão, {k.b('Fazer deploy')} coloca
+          no ar. Num rascunho, {k.b('Salvar')} mantém a mudança no rascunho e {k.b('Fazer deploy da prévia')} coloca no
+          ar no endereço do rascunho. {k.code('Ctrl-S')} salva; {k.code('F12')} vai para uma declaração.
         </>
       ),
     ],
@@ -132,9 +134,47 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Os agentes passam os mesmos dois campos para {k.code('write_code')}. Em {k.b('Código')}, {k.b('Nova versão')}{' '}
-      pede a mudança. Os dois são opcionais. Uma especificação longa é cortada em 4.000 caracteres, e uma mudança em
-      500, em vez de ser recusada. Salvar de novo numa versão mantém as notas dela, a não ser que você informe novas.
+      Os agentes passam os mesmos dois campos para {k.code('write_code')}. Em {k.b('Código')}, salvar pede a mudança.
+      Os dois são opcionais. Uma especificação longa é cortada em 4.000 caracteres, e uma mudança em 500, em vez de ser
+      recusada. Um rascunho tem os próprios dois campos, e a versão em que ele é mesclado fica com eles.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Uma versão nunca muda depois de salva, e é isso que faz cada uma valer a pena: qualquer uma delas pode ser
+      comparada e colocada de volta no ar exatamente como era. Para mudar uma lambda que as pessoas usam, comece um{' '}
+      {k.b('rascunho')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Comece em {k.b('Rascunhos')}, ou a partir de qualquer versão. Ele é uma cópia do código e dos assets dessa
+        versão, e dos dados da lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Mude quantas vezes precisar, em {k.b('Código')} ou pedindo ao agente. {k.b('Fazer deploy da prévia')} coloca no
+        ar num endereço próprio, {k.code('/features/…/')}, com a própria cópia dos dados. Os visitantes da lambda não
+        veem nada disso, e nada do que ele grava chega aos dados da lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Quando estiver tudo certo, {k.b('Mesclar')} faz dele a próxima versão, com as notas dele, e coloca no ar na
+        hora, se você quiser. O rascunho some junto, com a prévia e a cópia dos dados.
+      </>
+    ),
+  ],
+  featureSample: 'Ranking',
+  featuresAside: () => (
+    <>
+      Dá para trabalhar em vários rascunhos ao mesmo tempo. Só um baseado na versão mais recente pode ser mesclado, para
+      que uma mesclagem nunca desfaça uma versão salva depois que o rascunho começou. Se outro foi mesclado antes,
+      traga as mudanças dele (ou peça ao agente) e depois baseie o rascunho na versão mais recente. Nada é mesclado
+      sozinho; isso é de propósito.
     </>
   ),
 
@@ -206,10 +246,10 @@ export const guide: Messages['guide'] = {
   workspaceColumn: 'Nos dados',
   table: [
     ['o que guarda', 'o código e os assets: o programa, inclusive o front-end', 'tudo o que a lambda grava ou alguém envia'],
-    ['quando muda', 'quando a versão é salva', 'no momento em que algo é gravado'],
+    ['quando muda', 'nunca: uma mudança é uma nova versão', 'no momento em que algo é gravado'],
     ['um deploy', 'coloca exatamente esses arquivos no ar', 'nunca mexe neles'],
     ['voltar uma versão', 'traz os arquivos antigos de volta', 'nenhum efeito: são os mesmos para todas as versões'],
-    ['uma nova versão', 'começa como uma cópia deles', 'nenhum efeito'],
+    ['um rascunho', 'começa como uma cópia deles', 'trabalha numa cópia deles'],
     ['quando somem', 'com as versões antigas, depois do limite', 'com a lambda, ou quando você desliga'],
   ],
   reachedAs: 'acessado no código como',

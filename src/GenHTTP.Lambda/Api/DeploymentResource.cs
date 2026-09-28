@@ -73,7 +73,7 @@ public sealed class DeploymentResource(IMetaService meta)
         var activations = await meta.GetActivationsAsync(privateKey);
 
         return activations.Select(a => new ActivationResponse(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy,
-                                                              (long)((a.Ended ?? now) - a.Started).TotalSeconds, a.Revision))
+                                                              (long)((a.Ended ?? now) - a.Started).TotalSeconds))
                           .ToList();
     }
 

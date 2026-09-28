@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { ApiError, api, type LambdaFile, type WorkspaceListing } from '../api';
+import { ApiError, api, type LambdaFile, type WorkspaceEntry, type WorkspaceListing } from '../api';
 import { decode, download, encodeBytes, readable } from '../bytes';
 import { CodeEditor } from '../components/CodeEditor';
 import { IconChevronDown, IconDownload, IconSpinner } from '../components/Icons';
@@ -17,6 +17,44 @@ import { Ago, pill } from './ui';
  * - one belongs to a version, the other to the lambda - the only thing to
  * notice.
  */
+
+/**
+ * Where the files of a workspace are read and written: the lambda's own, or
+ * the copy a feature works on. The same calls either way, so the pages that
+ * browse one browse the other.
+ */
+export interface WorkspaceAccess {
+  list: () => Promise<WorkspaceListing>;
+  read: (path: string) => Promise<{ path: string; content: string; size: number }>;
+  /** Where a file is streamed from, for a download link. */
+  url: (path: string) => string;
+  upload: (path: string, content: Blob) => Promise<WorkspaceEntry>;
+  remove: (path: string) => Promise<void>;
+}
+
+/** The workspace a control center shows: the feature's copy while it is opened on one, the lambda's otherwise. */
+export function workspaceOf(control: Control): WorkspaceAccess {
+  const { privateKey } = control;
+  const feature = control.feature?.info.key;
+
+  if (feature) {
+    return {
+      list: () => api.feature.workspace.list(privateKey, feature),
+      read: (path) => api.feature.workspace.read(privateKey, feature, path),
+      url: (path) => api.feature.workspace.url(privateKey, feature, path),
+      upload: (path, content) => api.feature.workspace.upload(privateKey, feature, path, content),
+      remove: (path) => api.feature.workspace.remove(privateKey, feature, path),
+    };
+  }
+
+  return {
+    list: () => api.files(privateKey),
+    read: (path) => api.readFile(privateKey, path),
+    url: (path) => api.fileUrl(privateKey, path),
+    upload: (path, content) => api.uploadFile(privateKey, path, content),
+    remove: (path) => api.deleteFile(privateKey, path),
+  };
+}
 
 /** Where a selected file lives: in the version, as code or an asset, or in the data. */
 export type Group = 'code' | 'assets' | 'data';
@@ -183,6 +221,8 @@ export function Viewer({ control, selection, files, listing }: {
 
   const entry = selection?.group === 'data' ? listing?.files.find((f) => f.path === selection.path) : undefined;
 
+  const workspace = workspaceOf(control);
+
   // a data file is read when it is opened, never before: it can be a
   // megabyte, and the tree only needs its name
   useEffect(() => {
@@ -195,15 +235,17 @@ export function Viewer({ control, selection, files, listing }: {
 
     let alive = true;
 
-    api
-      .readFile(control.privateKey, entry.path)
+    workspace
+      .read(entry.path)
       .then((file) => alive && setLoaded({ path: file.path, bytes: new Uint8Array(decode(file.content)) }))
       .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : said.fileFailed));
 
     return () => {
       alive = false;
     };
-  }, [control.privateKey, entry?.path, entry?.modified, said]);
+    // the accessor is made again with every render; the feature it reads from is what matters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [control.privateKey, control.feature?.info.key, entry?.path, entry?.modified, said]);
 
   const frame = 'surface flex min-h-[20rem] flex-col';
 
@@ -225,7 +267,7 @@ export function Viewer({ control, selection, files, listing }: {
       return (
         <div className={`${frame} items-center justify-center gap-3 p-6 text-center text-sm text-slate-500`}>
           <p>{said.tooLarge(<span className="font-mono">{name}</span>, bytes(entry.size))}</p>
-          <a href={api.fileUrl(control.privateKey, entry.path)} download={name.split('/').pop()} className={pill(false)}>
+          <a href={workspace.url(entry.path)} download={name.split('/').pop()} className={pill(false)}>
             <IconDownload className="h-3.5 w-3.5" /> {said.download}
           </a>
         </div>
@@ -274,7 +316,7 @@ export function Viewer({ control, selection, files, listing }: {
         </span>
         {entry ? (
           <a
-            href={api.fileUrl(control.privateKey, entry.path)}
+            href={workspace.url(entry.path)}
             download={name.split('/').pop()}
             className="ml-auto rounded-full p-1 text-slate-400 hover:bg-accent-500/10 hover:text-accent-500"
             title={said.download}

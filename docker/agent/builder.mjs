@@ -10,14 +10,17 @@
  *              take it further with.
  *   a change   the owner of a lambda asked for something different from the
  *              Change section of its control center. It arrives with the
- *              editor key, and reports the version it made and whether that
- *              version is online.
+ *              editor key, is made in a feature - so nobody using the lambda
+ *              sees it half done - and reports either the version the
+ *              feature was merged into, or the feature left for the owner
+ *              to try at its preview address.
  *
  * Both share the queue, the clock and the container a job runs in. The
  * change used to be a second brief tacked onto the build box, which had to be
  * handed a pasted editor link and never did it well; it lives in the control
  * center now, where the key is already known and the result can be shown as
- * what it is - a new version of something that already works.
+ * what it is - a new version of something that already works, or a feature
+ * of it waiting to be tried.
  *
  * It is deliberately boring. No streaming to the browser, no websockets: a
  * job goes on a queue, one runs at a time, and the caller polls. A job is a
@@ -102,17 +105,23 @@ const TOKEN = process.env.AGENT_TOKEN ?? '';
 const ALLOW = [
   'mcp__genhttp__platform_guide', 'mcp__genhttp__list_demos',
   'mcp__genhttp__create_lambda', 'mcp__genhttp__write_code', 'mcp__genhttp__change_code',
-  'mcp__genhttp__copy_version', 'mcp__genhttp__check_code',
-  'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda', 'mcp__genhttp__read_logs',
-  'mcp__genhttp__upload_file', 'mcp__genhttp__list_files', 'mcp__genhttp__delete_file'
+  'mcp__genhttp__check_code', 'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda',
+  'mcp__genhttp__read_logs', 'mcp__genhttp__upload_file', 'mcp__genhttp__list_files',
+  'mcp__genhttp__delete_file'
 ];
 
 /*
  * A change works on the lambda it was given and on no other, so it cannot
  * make one: a lambda created there would have an editor key that only the
- * model ever saw, which is a lambda nobody can find again.
+ * model ever saw, which is a lambda nobody can find again. It works in a
+ * feature, so it has the feature tools - which a build, making something
+ * nobody uses yet, has no use for, and so does not get.
  */
-const CHANGE_ALLOW = ALLOW.filter(tool => tool !== 'mcp__genhttp__create_lambda');
+const CHANGE_ALLOW = [
+  ...ALLOW.filter(tool => tool !== 'mcp__genhttp__create_lambda'),
+  'mcp__genhttp__create_feature', 'mcp__genhttp__update_feature',
+  'mcp__genhttp__merge_feature', 'mcp__genhttp__delete_feature'
+];
 
 const DENY = [
   'Bash', 'Read', 'Write', 'Edit', 'NotebookEdit', 'Glob', 'Grep',
@@ -149,19 +158,16 @@ How to work:
    rules are.
 2. Call create_lambda with acceptTerms true. Pick a short, readable public
    key that suits what they asked for.
-3. Write the code with write_code. One page that works beats four that do
-   not. If it wants a front end, ship its pages, scripts and styles with the
-   code as assets and make it look deliberate rather than default. Pass what
-   they asked for, word for word, as specification, and one line on what the
-   version does as change - they read both in the version history.
-4. Call check_code and fix whatever it complains about. Do not deploy code
-   that does not compile.
-5. Call deploy. Nothing is online until you do. If there is time, call
-   read_logs to see that it answers without errors.
-6. Everything after the first write_code goes into that same version: pass
-   its number as version to change_code (or write_code) for every fix and
-   improvement, with deploy: true. They asked for one thing, so the history
-   should show one version for it, not one per fix.
+3. Write the code. One page that works beats four that do not. If it wants a
+   front end, ship its pages, scripts and styles with the code as assets and
+   make it look deliberate rather than default.
+4. Call check_code and fix whatever it complains about, before saving
+   anything: every write_code saves a version, and the owner reads every one
+   of them in the version history.
+5. Save it with write_code and deploy: true. Nothing is online until you do.
+   Pass what they asked for, word for word, as specification, and one line on
+   what the version does as change. If there is time, call read_logs to see
+   that it answers without errors.
 
 Whatever the application keeps - entries, scores, accounts - is data: write
 it to the workspace from the code, never into the files of a version.
@@ -197,6 +203,14 @@ deployed and working first; make it better with whatever time is left.`;
  * to send only what changes, to keep the data, and to say what it is doing
  * as it goes - every line of prose it writes between tools is shown to the
  * owner as it happens.
+ *
+ * And it works in a feature. Saving versions of a lambda that people are
+ * using, one per attempt, put every half-finished attempt online and filled
+ * the history with them; a feature is tried at an address of its own against
+ * a copy of the data, and becomes one version when it is merged. It is told
+ * to leave every other feature alone, because the one refusal it is likely
+ * to meet - no room for another feature - says to merge or delete one, and
+ * those are somebody else's work.
  */
 const CHANGE = `You are changing a web application that already exists, for its owner. They
 typed what they want different into the control center of the application
@@ -208,33 +222,44 @@ The editor key of the application is {key}. Every tool takes it as
 privateKey. It is the only application you may touch, and you cannot create
 another one.
 
+You work in a feature: a copy of the application - its files and its data -
+with an address of its own. Nobody using the application sees what you do
+there until the feature is merged, so save, deploy and try as often as it
+takes.
+
 How to work:
 
 1. Call read_lambda with the key. It answers with the files of the newest
-   version, what the recent versions changed, and what the newest one was
-   asked for. When there are too many files to send at once it lists them
-   instead - read the ones this change is about, one at a time, with file.
-   Read before you change anything: this is somebody's working application,
-   not a blank page.
+   version, what the recent versions changed, what the newest one was asked
+   for, and the features that are open. When there are too many files to
+   send at once it lists them instead - read the ones this change is about,
+   one at a time, with file. Read before you change anything: this is
+   somebody's working application, not a blank page.
 2. If they say something is broken or does not work, call read_logs before
    you touch anything. The errors it threw are there, with stack traces.
-3. Make the change they asked for, and only that. Keep everything they did
+3. {where}
+4. Make the change they asked for, and only that. Keep everything they did
    not mention working the way it did. Keep what the application has stored:
-   its data lives in the workspace and outlasts every version, so code that
-   reads it differently loses what people already put in. If a format has to
-   change, keep reading the old one.
-4. Save with change_code. Name only the files that change - whole, in files -
-   or replace a passage within one with edits; everything you leave out stays
-   as it is. {deploy} Pass what they asked for, in their words, as
-   specification, and one line on what this version does as change. They read
-   both in the version history. This first save makes a new version: the
-   answer says its number.
-5. Everything after that goes into that same version: pass its number as
-   version to change_code, which saves over it, for every fix and
-   improvement. They asked for one change, so the history should show one
-   version for it, not one per fix. If an answer comes with diagnostics, the
-   code does not compile and nothing new went online: fix what they say that
-   way. What is online stays online until something compiles.
+   its data outlasts every version, so code that reads it differently loses
+   what people already put in. If a format has to change, keep reading the
+   old one.
+5. Save with change_code and feature. Name only the files that change -
+   whole, in files - or replace a passage within one with edits; everything
+   you leave out stays as it is. Pass deploy: true every time: it puts the
+   feature online at its preview address, never at the application's own.
+   Pass one line on what the whole feature does as change: the owner reads
+   it, and the version the feature becomes keeps it. If an answer comes with
+   diagnostics, the code does not compile and the preview did not change:
+   fix what they say the same way. A feature has no versions of its own, so
+   save into it as often as it takes.
+6. Call read_logs with feature to see that the preview answers without
+   errors. It runs against its own copy of the data, so trying things there
+   harms nothing.
+7. {finish}
+
+Leave every other feature alone: each is somebody's work in progress. Never
+merge, change or delete a feature you were not given or did not start, even
+when an answer suggests it.
 
 Before each step, write one short sentence for the owner saying what you are
 about to do - "Looking at how the scores are stored", not "Calling
@@ -251,6 +276,35 @@ list links or describe your process.
 
 {language}`;
 
+/* Where the work happens: a feature of its own, or the one the owner picked. */
+const WHERE = {
+  fresh: 'Call create_feature with a name for the change - two to four words, in\n'
+    + '   the language of the request - and what they asked for, in their words, as\n'
+    + '   specification. Its answer holds the feature\'s key, which every tool below\n'
+    + '   takes as feature. If there is no room for another feature, change nothing\n'
+    + '   and say so in your closing note.',
+  given: 'Work in the feature {feature}, which the owner picked: it holds earlier\n'
+    + '   work towards this, maybe yours. Read it with read_lambda and feature\n'
+    + '   before changing it, and pass it as feature to every tool below. Do not\n'
+    + '   start another feature. If read_lambda says versions were saved after it\n'
+    + '   began, bring their changes in first and move its base to the newest\n'
+    + '   version with update_feature - it cannot be merged until then.'
+};
+
+/* How it ends: merged and online, or left for the owner to try. */
+const FINISH = {
+  yes: 'When it works, call merge_feature with deploy: true. That makes the\n'
+    + '   feature the next version of the application and puts it online; the\n'
+    + '   feature and its copy of the data are gone afterwards. If it is refused\n'
+    + '   because a newer version was saved after the feature began, bring that\n'
+    + '   version\'s changes into the feature (read_lambda with version shows\n'
+    + '   them), move its base to that version with update_feature, and merge\n'
+    + '   again.',
+  no: 'Do not merge it: the owner wants to try it at the feature\'s preview\n'
+    + '   address first, and merge it themselves. Leave its preview online with\n'
+    + '   the last thing you saved.'
+};
+
 const CHANGE_CLOCK = `You have about {minutes} minutes and then you are stopped, wherever you have got
 to. A small change that works beats a large one that is half written: get the
 change saved and compiling first, then improve it with whatever time is left.`;
@@ -258,13 +312,6 @@ change saved and compiling first, then improve it with whatever time is left.`;
 const UNBOUNDED_CLOCK = `Take the time you need. There is no clock on this one and no limit on how many
 steps you take, so do the thing properly rather than the smallest version of
 it: get it working first, then keep going until it is actually good.`;
-
-const DEPLOY = {
-  yes: 'Pass deploy: true, so it goes online as soon as it compiles.',
-  no: 'Do not deploy: the owner wants to look at it before it goes online.\n'
-    + '   Pass check: true instead, which compiles it and answers with what is\n'
-    + '   wrong without putting anything online.'
-};
 
 function briefOf(job) {
   // the brief says how long there is, so it must not promise ten minutes to a
@@ -284,9 +331,12 @@ function briefOf(job) {
     + 'change - in the language their request is written in.'
     + (name ? ` Their control center is set to ${name}; use that where you cannot tell.` : '');
 
+  const where = job.feature ? WHERE.given.replace('{feature}', job.feature) : WHERE.fresh;
+
   return `${CHANGE
     .replace('{key}', job.key)
-    .replace('{deploy}', job.deploy ? DEPLOY.yes : DEPLOY.no)
+    .replace('{where}', where)
+    .replace('{finish}', job.deploy ? FINISH.yes : FINISH.no)
     .replace('{clock}', clock)
     .replace('{language}', language)}\n\nWhat they asked for:\n\n${job.prompt}`;
 }
@@ -342,6 +392,7 @@ function enqueue(order) {
     deploy: order.deploy,
     language: order.language,
     before: order.before,
+    feature: order.feature,
     events: [],
     steps: [],
     created: Date.now(),
@@ -393,8 +444,9 @@ async function pump(lane) {
 
 /**
  * Stops a job: takes it off the queue if it has not started, kills its
- * container if it has. What it saved before that stays saved - versions are
- * only ever added - so stopping is always safe.
+ * container if it has. What it saved before that stays saved - in its
+ * feature, or as a version, which are only ever added - so stopping is
+ * always safe.
  */
 function cancel(job) {
   if (job.state === 'queued') {
@@ -547,6 +599,11 @@ async function run(job) {
   let online = null;
   let compiles;
 
+  // the feature it works in, as the tools last described it - its key, its
+  // name and whether its preview is online - until merging or deleting it
+  // ends it
+  let feature = job.feature ? { key: job.feature } : null;
+
   // which call each result belongs to. Without it a result is just an object,
   // and two tools that answer with the same field are indistinguishable
   const calls = new Map();
@@ -619,17 +676,40 @@ async function run(job) {
           // and an empty address. Nothing else in the run proves it: creating
           // a lambda seeds a starter template, and deploying that answers
           // exactly like deploying something real.
-          if ((from === 'write_code' || from === 'change_code') && body?.ok === true) wrote = true;
+          // a save that did not go online is still a save: it names the version
+          // it made, or the feature it went into
+          if ((from === 'write_code' || from === 'change_code')
+              && (body?.ok === true || Number.isInteger(body?.version) || (body?.feature && typeof body.feature === 'object'))) wrote = true;
 
-          if ((from === 'write_code' || from === 'change_code' || from === 'copy_version') && Number.isInteger(body?.version)) {
+          if ((from === 'write_code' || from === 'change_code') && Number.isInteger(body?.version)) {
             // a failed deploy after a save still names the version it saved
             saved = Math.max(saved ?? 0, body.version);
           }
 
-          if (from === 'write_code' || from === 'change_code' || from === 'deploy' || from === 'check_code') {
-            if (Array.isArray(body?.diagnostics)) compiles = errorsIn(body.diagnostics) === 0;
-            else if (body?.ok === true && body.onlineUntil !== undefined) compiles = true;
+          // a merge saves a version too, and says so only when it happened
+          if (from === 'merge_feature' && body?.merged === true && Number.isInteger(body.version)) {
+            wrote = true;
+            saved = Math.max(saved ?? 0, body.version);
           }
+
+          if (['write_code', 'change_code', 'deploy', 'check_code', 'merge_feature'].includes(from)) {
+            if (Array.isArray(body?.diagnostics)) compiles = errorsIn(body.diagnostics) === 0;
+            // previewUrl at the top is the answer of a preview that went online
+            else if (body?.ok === true && (body.onlineUntil !== undefined || body.previewUrl !== undefined)) compiles = true;
+          }
+
+          const described = body?.feature && typeof body.feature === 'object' ? body.feature : null;
+
+          if (described?.feature) {
+            feature = {
+              key: described.feature,
+              name: described.name ?? (feature?.key === described.feature ? feature.name : undefined),
+              preview: described.previewOnline === true
+            };
+          }
+
+          if (from === 'merge_feature' && body?.merged === true) feature = null;
+          if (from === 'delete_feature' && body?.ok === true && body.deleted === feature?.key) feature = null;
 
           if (body?.ok === true && body.onlineUntil !== undefined && Number.isInteger(body.version)) {
             online = body.version;
@@ -692,7 +772,7 @@ async function run(job) {
     // cut short by the clock, or by the number of steps it may take
     const cut = expired ? 'timeout' : ending === 'error_max_turns' ? 'turns' : undefined;
 
-    settle(job, { wrote, saved, online, compiles, summary: closing, stderr, unauthorised, cut });
+    settle(job, { wrote, saved, online, compiles, feature, summary: closing, stderr, unauthorised, cut });
     return;
   }
 
@@ -754,17 +834,21 @@ async function run(job) {
  *
  * The owner already has the lambda, so there are no links to hand over: what
  * matters is which version it made, whether that is the one online now, and -
- * when it is not - why. The words are left to the control center, which says
- * them in the owner's language; the error strings here are for the log and
- * for a client that has no words of its own.
+ * when it is not - why; or which feature it left open to be tried. The words
+ * are left to the control center, which says them in the owner's language;
+ * the error strings here are for the log and for a client that has no words
+ * of its own.
  */
-function settle(job, { wrote, saved, online, compiles, summary, stderr, unauthorised, cut }) {
+function settle(job, { wrote, saved, online, compiles, feature, summary, stderr, unauthorised, cut }) {
   const facts = {
     version: saved ?? undefined,
     online: online ?? undefined,
     deployed: online != null,
     compiles,
-    before: job.before ?? undefined
+    before: job.before ?? undefined,
+    feature: feature?.key,
+    featureName: feature?.name,
+    preview: feature ? feature.preview === true : undefined
   };
 
   if (job.cancelled) {
@@ -814,7 +898,11 @@ function settle(job, { wrote, saved, online, compiles, summary, stderr, unauthor
     summary: summary ? clip(summary, 1200) : undefined
   };
 
-  say(job, online != null ? `Version ${online} is online` : `Saved as version ${saved}`);
+  say(job, online != null
+    ? `Version ${online} is online`
+    : feature
+      ? `Ready to try in the feature ${feature.name ?? feature.key}`
+      : `Saved as version ${saved}`);
 }
 
 /**
@@ -843,6 +931,7 @@ function record(job) {
     wrote: r.ok === true || undefined,
     deployed: r.deployed,
     version: r.version,
+    feature: r.feature ? true : undefined,
     key: job.kind === 'build' ? r.publicKey : undefined,
     error: r.error,
     prompt: clip(job.prompt, 300)
@@ -892,14 +981,17 @@ const names = list => (Array.isArray(list) ? list.map(f => String(f?.name ?? f ?
 
 /** What a tool call is about to do, as a step. */
 function begin(tool, input) {
+  // the tools that work on the lambda or on one of its features say which
+  const preview = typeof input?.feature === 'string' && input.feature !== '' ? { preview: true } : {};
+
   switch (tool) {
     case 'platform_guide': return { kind: 'guide' };
     case 'list_demos': return { kind: 'demos' };
     case 'read_lambda':
-      return input?.file ? { kind: 'read', files: [String(input.file)] } : { kind: 'read' };
-    case 'read_logs': return { kind: 'logs' };
+      return input?.file ? { kind: 'read', files: [String(input.file)], ...preview } : { kind: 'read', ...preview };
+    case 'read_logs': return { kind: 'logs', ...preview };
     case 'create_lambda': return { kind: 'create' };
-    case 'write_code': return { kind: 'write', files: names(input?.files), whole: true };
+    case 'write_code': return { kind: 'write', files: names(input?.files), whole: true, ...preview };
     case 'change_code': {
       const files = new Set([
         ...names(input?.files),
@@ -907,15 +999,22 @@ function begin(tool, input) {
       ]);
       const removed = Array.isArray(input?.remove) ? input.remove.map(String) : [];
 
-      return { kind: 'write', files: [...files], ...(removed.length ? { removed } : {}) };
+      return { kind: 'write', files: [...files], ...(removed.length ? { removed } : {}), ...preview };
     }
-    case 'copy_version': return { kind: 'copy' };
     case 'check_code': return { kind: 'check' };
     case 'deploy':
-      return Number.isInteger(input?.version) ? { kind: 'deploy', version: input.version } : { kind: 'deploy' };
-    case 'upload_file': return { kind: 'upload', path: String(input?.path ?? '') };
-    case 'delete_file': return { kind: 'delete', path: String(input?.path ?? '') };
-    case 'list_files': return { kind: 'list' };
+      return Number.isInteger(input?.version) && !preview.preview
+        ? { kind: 'deploy', version: input.version }
+        : { kind: 'deploy', ...preview };
+    case 'create_feature':
+      return { kind: 'feature', ...(input?.name ? { feature: clip(String(input.name), 80) } : {}), preview: true };
+    case 'update_feature':
+      return Number.isInteger(input?.base) ? { kind: 'update', version: input.base, preview: true } : { kind: 'update', preview: true };
+    case 'merge_feature': return { kind: 'merge', preview: true };
+    case 'delete_feature': return { kind: 'discard', preview: true };
+    case 'upload_file': return { kind: 'upload', path: String(input?.path ?? ''), ...preview };
+    case 'delete_file': return { kind: 'delete', path: String(input?.path ?? ''), ...preview };
+    case 'list_files': return { kind: 'list', ...preview };
     default: return { kind: 'other', tool };
   }
 }
@@ -931,19 +1030,29 @@ function finish(entry, tool, body) {
     return;
   }
 
+  // which feature it was, by the name the owner knows it by
+  if (body.feature && typeof body.feature === 'object' && body.feature.name) {
+    entry.feature = clip(String(body.feature.name), 80);
+  }
+
   switch (tool) {
     case 'write_code':
     case 'change_code':
-    case 'copy_version':
     case 'deploy':
+    case 'merge_feature':
       if (Number.isInteger(body.version)) entry.version = body.version;
 
-      if (body.ok === true && body.onlineUntil !== undefined) entry.online = true;
+      // a version went online, or a feature's preview did
+      if (body.ok === true && (body.onlineUntil !== undefined || body.previewUrl !== undefined)) entry.online = true;
 
       if (Array.isArray(body.diagnostics)) {
         entry.errors = errorsIn(body.diagnostics);
         if (body.ok === false) entry.online = false;
       }
+      break;
+
+    case 'create_feature':
+      if (Number.isInteger(body.feature?.base)) entry.version = body.feature.base;
       break;
 
     case 'check_code':
@@ -968,7 +1077,10 @@ const WORDS = {
   create_lambda: 'Claiming an address',
   write_code: 'Writing the code',
   change_code: 'Changing the code',
-  copy_version: 'Starting a new version',
+  create_feature: 'Starting a feature',
+  update_feature: 'Updating the feature',
+  merge_feature: 'Merging the feature',
+  delete_feature: 'Deleting a feature',
   check_code: 'Compiling it',
   deploy: 'Putting it online',
   read_lambda: 'Checking what is there',
@@ -1015,7 +1127,7 @@ function progress(job) {
     // what a change was asked for is only ever read back by whoever holds
     // the key it was started with; a build's page still has it in its box
     ...(job.kind === 'change'
-      ? { prompt: job.prompt, deploy: job.deploy, model: job.model || 'opus', before: job.before ?? null }
+      ? { prompt: job.prompt, deploy: job.deploy, model: job.model || 'opus', before: job.before ?? null, feature: job.feature ?? null }
       : {})
   };
 }
@@ -1091,6 +1203,13 @@ createServer(async (req, res) => {
       return send(res, 400, { error: 'A change needs the lambda it belongs to.' });
     }
 
+    // the feature a change goes on with; only a change has one
+    const feature = String(body.feature ?? '').trim();
+
+    if (feature && (!key || !/^[0-9a-f]{32}$/.test(feature))) {
+      return send(res, 400, { error: 'That does not look like a feature.' });
+    }
+
     if (key) {
       const running = jobs.get(latest.get(lambda));
 
@@ -1107,7 +1226,8 @@ createServer(async (req, res) => {
       lambda: key ? lambda : undefined,
       deploy: body.deploy !== false,
       language: Object.hasOwn(LANGUAGES, body.language) ? body.language : undefined,
-      before: Number.isInteger(body.before) ? body.before : undefined
+      before: Number.isInteger(body.before) ? body.before : undefined,
+      feature: feature || undefined
     });
 
     return send(res, 202, { id: job.id, queued: laneOf(job).queue.length, ...(key ? progress(job) : {}) });

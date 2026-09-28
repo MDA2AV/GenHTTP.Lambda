@@ -2,12 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiError, api, isDemo, type LambdaFile, type VersionContent, type VersionInfo } from '../api';
-import { IconChevronDown, IconPlus, IconSpinner } from '../components/Icons';
+import { IconChevronDown, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
-import { languageFor, monaco } from '../monaco';
-import type { Theme } from '../theme';
+import { ChangeList } from './Changes';
 import type { Control } from './context';
-import { compare, type DiffLine, type FileDiff } from './diff';
 import { AgentMark, Ago, Empty, Quote, Section } from './ui';
 
 /**
@@ -17,9 +15,9 @@ import { AgentMark, Ago, Empty, Quote, Section } from './ui';
  * A link can name the version to open, with ?version= - which is how the
  * Change section shows what the agent just did.
  *
- * The newest is marked as the one being worked on, since it is the only one
- * that changes; starting a new version is an action of its own here rather
- * than something every save does.
+ * Versions never change once saved, so each opened one offers to start a
+ * feature from it: that is where a change is worked on, and a feature
+ * becomes the next version once it is merged.
  */
 export function VersionsTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -27,7 +25,6 @@ export function VersionsTab({ control }: { control: Control }) {
   const [params] = useSearchParams();
   const asked = Number(params.get('version')) || null;
   const [open, setOpen] = useState<number | null>(asked);
-  const [starting, setStarting] = useState(false);
 
   // a link followed while the section is already open still opens its version
   useEffect(() => {
@@ -36,39 +33,8 @@ export function VersionsTab({ control }: { control: Control }) {
     }
   }, [asked]);
 
-  const demo = isDemo(lambda.tier);
-
-  async function start() {
-    setStarting(true);
-
-    const made = await control.startVersion();
-
-    if (made != null) {
-      setOpen(null);
-    }
-
-    setStarting(false);
-  }
-
   return (
-    <Section
-      title={t.frame.sections.versions}
-      hint={t.versions.hint(control.summary?.limits.versions ?? 50)}
-      actions={
-        !demo && lambda.latestVersion != null && (
-          <button
-            type="button"
-            onClick={start}
-            disabled={starting || control.busy !== null}
-            className="btn-ghost !px-3 !py-1.5 text-[13px]"
-            title={t.versions.startTitle(lambda.latestVersion)}
-          >
-            {starting ? <IconSpinner /> : <IconPlus className="h-3.5 w-3.5" />}
-            {t.versions.start}
-          </button>
-        )
-      }
-    >
+    <Section title={t.frame.sections.versions} hint={t.versions.hint(control.summary?.limits.versions ?? 50)}>
       {versions.length === 0 ? (
         <Empty>{t.versions.none}</Empty>
       ) : (
@@ -121,11 +87,6 @@ function Row({
     }
   }, [reveal]);
 
-  // saved over since it went online: what visitors get is an earlier save
-  const changed = live && control.lambda.activeChanged;
-  const edited = version.revision > 1 && version.modified;
-  const demo = isDemo(control.lambda.tier);
-
   return (
     <li ref={row} className="scroll-mt-4">
       <div className="group flex items-center gap-3 py-3">
@@ -135,50 +96,33 @@ function Row({
           <span className="min-w-0 flex-1 truncate text-[15px]" title={version.change ?? undefined}>
             {version.change ?? <span className="text-slate-400">{said.noDescription}</span>}
           </span>
-          {latest && (
-            <span className="hidden shrink-0 rounded-full bg-accent-500/10 px-2 py-0.5 text-[11px] font-medium text-accent-700 dark:text-accent-400 sm:inline"
-                  title={said.newestTitle}>
-              {said.newest}
-            </span>
-          )}
         </button>
 
         <span className="flex shrink-0 items-center gap-3 text-[13px] text-slate-500">
           {live && (
-            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400" title={changed ? said.changedSince : undefined}>
-              <span className={`h-1.5 w-1.5 rounded-full ${changed ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               {said.online}
             </span>
           )}
           <AgentMark origin={version.origin} />
-          <span className="hidden w-28 text-right sm:inline" title={said.saves(version.revision)}>
-            {edited ? (
-              <>
-                {said.edited} <Ago at={version.modified} />
-              </>
-            ) : (
-              <Ago at={version.created} />
-            )}
-          </span>
+          <Ago at={version.created} className="hidden w-24 text-right sm:inline" />
         </span>
 
-        <span className="w-24 shrink-0 text-right">
-          {!demo && (!live || changed) && (
+        <span className="w-20 shrink-0 text-right">
+          {!live && !isDemo(control.lambda.tier) && (
             <button
               type="button"
               onClick={() => control.deploy(version.version)}
               disabled={control.busy !== null}
               className="text-[13px] font-medium text-accent-500 opacity-70 hover:underline group-hover:opacity-100 disabled:opacity-40"
-              title={changed ? said.deployAgainTitle : latest ? said.putOnline : said.rollBackTitle}
+              title={latest ? said.putOnline : said.rollBackTitle}
             >
-              {changed ? said.deployAgain : latest ? said.deploy : said.rollBack}
+              {latest ? said.deploy : said.rollBack}
             </button>
           )}
         </span>
       </div>
-      {changed && (
-        <p className="-mt-2 pb-2 pl-7 text-xs text-amber-600 dark:text-amber-400 sm:pl-[3.75rem]">{said.changedSince}</p>
-      )}
 
       {open && <Detail control={control} version={version} previous={previous} />}
     </li>
@@ -187,10 +131,8 @@ function Row({
 
 function Detail({ control, version, previous }: { control: Control; version: VersionInfo; previous?: VersionInfo }) {
   const said = useEditorT().versions;
-  const [diffs, setDiffs] = useState<FileDiff[] | null>(null);
-  const [sides, setSides] = useState<{ before: LambdaFile[]; after: LambdaFile[] }>({ before: [], after: [] });
+  const [sides, setSides] = useState<{ before: LambdaFile[]; after: LambdaFile[] } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [shown, setShown] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -199,19 +141,7 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
       api.version(control.privateKey, version.version),
       previous ? api.version(control.privateKey, previous.version).catch(() => null) : Promise.resolve(null as VersionContent | null),
     ])
-      .then(([after, before]) => {
-        if (!alive) {
-          return;
-        }
-
-        const result = compare(before?.files ?? [], after.files);
-
-        setDiffs(result);
-        setSides({ before: before?.files ?? [], after: after.files });
-
-        // the first file that changed is usually the one to read
-        setShown(result.find((d) => d.status !== 'same')?.name ?? null);
-      })
+      .then(([after, before]) => alive && setSides({ before: before?.files ?? [], after: after.files }))
       .catch((error) => alive && setFailure(error instanceof ApiError ? error.message : said.readFailed));
 
     return () => {
@@ -219,55 +149,18 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
     };
   }, [control.privateKey, version.version, previous, said]);
 
-  const changed = diffs?.filter((d) => d.status !== 'same') ?? [];
-
   return (
     <div className="space-y-4 pb-5 pl-7 sm:pl-[3.75rem]">
       {version.specification && <Quote>{version.specification}</Quote>}
 
       {failure ? (
         <p className="text-sm text-red-500">{failure}</p>
-      ) : diffs === null ? (
+      ) : sides === null ? (
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <IconSpinner /> {said.comparing}
         </div>
-      ) : changed.length === 0 ? (
-        <p className="text-sm text-slate-500">{previous ? said.unchanged : said.first}</p>
       ) : (
-        <div className="surface overflow-hidden">
-          <ul className="divide-y divide-slate-200 dark:divide-ink-800">
-            {changed.map((diff) => (
-              <li key={diff.name}>
-                <button
-                  type="button"
-                  onClick={() => setShown((was) => (was === diff.name ? null : diff.name))}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-ink-850"
-                  aria-expanded={shown === diff.name}
-                >
-                  <span className="min-w-0 flex-1 truncate font-mono text-[13px]">
-                    {diff.name}
-                    {diff.status !== 'changed' && <span className="ml-2 font-sans text-xs text-slate-500">{said.status[diff.status]}</span>}
-                  </span>
-                  {!diff.binary && (
-                    <span className="shrink-0 font-mono text-xs">
-                      <span className="text-emerald-600 dark:text-emerald-400">+{diff.added}</span>{' '}
-                      <span className="text-red-500 dark:text-red-400">−{diff.removed}</span>
-                    </span>
-                  )}
-                </button>
-
-                {shown === diff.name && (
-                  <Patch
-                    diff={diff}
-                    before={sides.before.find((f) => f.name === diff.name)?.code ?? ''}
-                    after={sides.after.find((f) => f.name === diff.name)?.code ?? ''}
-                    theme={control.theme}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ChangeList before={sides.before} after={sides.after} theme={control.theme} empty={previous ? said.unchanged : said.first} />
       )}
 
       <div className="flex flex-wrap gap-4 text-[13px]">
@@ -278,101 +171,12 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
           {said.edit}
         </button>
         {!isDemo(control.lambda.tier) && (
-          <button type="button" onClick={() => control.startVersion(version.version)} className="text-accent-500 hover:underline">
-            {said.startFrom}
+          <button type="button" onClick={() => control.startFeature(version.version)} className="text-accent-500 hover:underline"
+                  title={said.featureTitle}>
+            {said.feature}
           </button>
         )}
       </div>
     </div>
   );
-}
-
-/**
- * Each side coloured as a whole by the editor's own grammar and theme, then
- * cut into lines - a line coloured on its own would not know it sits inside a
- * comment or a string that began above it. Monaco is already loaded for the
- * code view, so this costs nothing more than the tokenising.
- */
-function useColoured(code: string, language: string, theme: Theme): string[] | null {
-  const [lines, setLines] = useState<string[] | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-
-    setLines(null);
-
-    // the theme is global to monaco; the code view sets it the same way
-    monaco.editor.setTheme(theme === 'dark' ? 'lambda-dark' : 'lambda-light');
-
-    monaco.editor
-      .colorize(code.replace(/\r\n/g, '\n'), language, { tabSize: 4 })
-      .then((html) => alive && setLines(html.split('<br/>')))
-      .catch(() => {
-        // uncoloured is still readable
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [code, language, theme]);
-
-  return lines;
-}
-
-function Patch({ diff, before, after, theme }: { diff: FileDiff; before: string; after: string; theme: Theme }) {
-  const said = useEditorT().versions;
-  const language = languageFor(diff.name);
-  const old = useColoured(before, language, theme);
-  const now = useColoured(after, language, theme);
-
-  if (diff.binary || !diff.hunks) {
-    return (
-      <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500 dark:border-ink-800">
-        {diff.binary ? said.binary : said.tooLarge}
-      </p>
-    );
-  }
-
-  return (
-    <div className="max-h-[28rem] overflow-auto border-t border-slate-200 dark:border-ink-800">
-      <table className="w-full border-collapse font-mono text-[12.5px] leading-5">
-        <tbody>
-          {diff.hunks.map((hunk, h) => (
-            <Hunk key={h} lines={hunk.lines} separator={h > 0} old={old} now={now} />
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function Hunk({ lines, separator, old, now }: { lines: DiffLine[]; separator: boolean; old: string[] | null; now: string[] | null }) {
-  return (
-    <>
-      {separator && (
-        <tr>
-          <td colSpan={3} className="bg-slate-100 px-3 text-center text-slate-400 dark:bg-ink-850">⋯</td>
-        </tr>
-      )}
-      {lines.map((line, i) => (
-        <tr key={i} className={line.kind === 'added' ? 'bg-emerald-500/10' : line.kind === 'removed' ? 'bg-red-500/10' : ''}>
-          <td className="w-12 select-none px-2 text-right align-top text-slate-400">{line.number}</td>
-          <td className="w-4 select-none align-top text-slate-500">
-            {line.kind === 'added' ? '+' : line.kind === 'removed' ? '−' : ''}
-          </td>
-          <Code text={line.text} html={(line.kind === 'removed' ? old : now)?.[line.number - 1]} />
-        </tr>
-      ))}
-    </>
-  );
-}
-
-function Code({ text, html }: { text: string; html?: string }) {
-  // an empty line has no text to hold the row open, coloured or not
-  if (text === '' || html === undefined) {
-    return <td className="whitespace-pre pr-4">{text || ' '}</td>;
-  }
-
-  // monaco escapes the source as it renders it
-  return <td className="whitespace-pre pr-4" dangerouslySetInnerHTML={{ __html: html }} />;
 }

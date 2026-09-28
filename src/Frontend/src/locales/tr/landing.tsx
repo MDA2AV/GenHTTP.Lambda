@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Geliştirmeye devam edin',
-      body: 'Her uygulamanın özel bir editör linki var. Linki, istediğiniz değişiklikle birlikte ajanınıza verin ya da kendiniz açın. İstediğiniz her değişiklik ayrı bir sürüm olur, adres aynı kalır.',
+      body: 'Her uygulamanın özel bir editör linki var. Linki, istediğiniz değişiklikle birlikte ajanınıza verin ya da kendiniz açın. Her değişiklik yeni bir sürüm olur, adres aynı kalır.',
       alt: 'Anketin kontrol paneli: sürümleri ve her birinde ne istendiği, neyin değiştiği, bir öncekinden farkı',
     },
   ],

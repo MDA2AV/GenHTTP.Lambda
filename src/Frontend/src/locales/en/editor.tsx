@@ -18,6 +18,7 @@ export const editor = {
     sections: {
       overview: 'Overview',
       change: 'Change',
+      features: 'Features',
       showcase: 'Showcase',
       domain: 'Domain',
       files: 'Files',
@@ -48,8 +49,6 @@ export const editor = {
     download: 'Download as a .NET project',
     delete: 'Delete this lambda',
     deploy: (version: number) => `Deploy version ${version}`,
-    changedSince: 'Saved over since it went online. Visitors still get what was deployed.',
-    changedShort: 'Changed since it went online',
     problems: 'Something went wrong recently',
     demoTitle: 'A demo, kept online by this installation and read only.',
     demo: (start: (text: string) => Node) => (
@@ -88,7 +87,7 @@ export const editor = {
 
   /** The agent of the installation, changing the lambda for its owner. */
   change: {
-    hint: 'Say what should be different, and the agent running on this server does it: it reads the code, makes the change, checks that it compiles and puts it online. Every change is a new version, so the one before is always a click away.',
+    hint: 'Say what should be different, and the agent running on this server does it. It works in a feature - a copy of the lambda with an address of its own - so your visitors see nothing until it is done. Then it becomes the next version and goes online, or waits in its feature for you to try it first.',
     reading: 'Asking the agent…',
     readFailed: 'The agent could not be asked.',
     label: 'What should be different?',
@@ -97,8 +96,13 @@ export const editor = {
     send: 'Make the change',
     sending: 'Asking…',
     goOnline: 'Put it online when it is done',
-    goOnlineOn: 'It goes online once it compiles. Until then, what is online now stays.',
-    goOnlineOff: 'It is saved as a new version, and you deploy it once you have looked at it.',
+    goOnlineOn: 'Once it works in its feature, the agent merges it into the next version and puts that online. Until then, what is online now stays.',
+    goOnlineOff: 'The agent leaves it in its feature. Try it at the feature\'s own address, and merge it when you are happy with it.',
+    where: 'Work in',
+    whereTitle: 'A new feature, or one that is open to go on with',
+    newFeature: 'A new feature',
+    full: (limit: number) =>
+      `This lambda has ${limit} features open, which is all it may have. Pick one to go on with, or merge or delete one first.`,
     password: 'Password',
     fable: 'Fable takes its time: no clock and no step limit, in a lane of its own.',
     left: (left: number, perDay: number) => `${left} of ${perDay} left today`,
@@ -108,12 +112,13 @@ export const editor = {
     fixLog: 'Fix the errors in the log',
     how: [
       { title: 'It reads what is there', text: 'The code, and what earlier versions were asked for - so what works keeps working.' },
-      { title: 'It makes the change', text: 'And fixes whatever does not compile, while you watch every step.' },
-      { title: 'It puts it online', text: 'As a new version. The one before stays a click away.' },
+      { title: 'It works in a feature', text: 'A copy with its own address and its own data: it makes the change there and tries it, while you watch every step.' },
+      { title: 'It puts it online', text: 'As the next version - or leaves it for you to try first. The version before stays a click away.' },
     ],
     asked: 'You asked',
     goesOnline: 'goes online when done',
-    review: 'saved for you to look at first',
+    review: 'left in its feature for you to try',
+    inFeature: (name: string) => `in the feature “${name}”`,
     queued: (ahead: number) =>
       ahead === 1 ? 'Waiting - one job is ahead of this one.' : `Waiting - ${ahead} jobs are ahead of this one.`,
     starting: 'Starting…',
@@ -123,7 +128,7 @@ export const editor = {
     stopping: 'Stopping…',
     stopTitle: 'Stop this change?',
     stopText:
-      'What it has saved so far stays as a version. What is online stays online, unless it has already put a new version there.',
+      'What it has saved so far stays - in its feature, or as a version. What is online stays online, unless it has already merged the change and put it there.',
     keepGoing: 'Keep going',
     stopIt: 'Stop it',
     log: 'What it did',
@@ -134,14 +139,22 @@ export const editor = {
       read: 'Reading the code',
       readFile: (file: Node) => <>Reading {file}</>,
       logs: 'Reading the log',
+      logsPreview: 'Reading what the preview logged',
+      readFeature: 'Reading the feature',
       create: 'Creating a lambda',
-      copy: 'Starting a new version',
+      feature: 'Starting a feature',
+      featureStarted: (name: Node) => <>Started the feature {name}</>,
+      update: 'Updating the feature\'s notes',
+      rebase: (version: number) => `Basing the feature on version ${version}`,
+      merge: 'Merging the feature',
+      discard: 'Deleting a feature',
       write: (files: Node) => <>Changing {files}</>,
       writeAll: (files: Node) => <>Writing {files}</>,
       removing: (files: Node) => <>, removing {files}</>,
       more: (count: number) => `+${count} more`,
       check: 'Compiling',
       deploy: 'Putting it online',
+      deployPreview: 'Putting the preview online',
       deployVersion: (version: number) => `Putting version ${version} online`,
       upload: (path: Node) => <>Storing {path}</>,
       delete: (path: Node) => <>Removing {path}</>,
@@ -150,7 +163,9 @@ export const editor = {
     },
     marks: {
       version: (version: number) => `v${version}`,
+      from: (version: number) => `from v${version}`,
       online: 'online',
+      previewOnline: 'preview online',
       compiles: 'compiles',
       errors: (count: number) => (count === 1 ? '1 error' : `${count} errors`),
       problems: (count: number) => (count === 1 ? '1 error' : `${count} errors`),
@@ -169,6 +184,13 @@ export const editor = {
       unchanged: 'Nothing was changed',
       stopped: 'Stopped',
       stoppedSaved: (version: number) => `Version ${version} was saved before that.`,
+      stoppedFeature: (name: string) => `What it did until then is in the feature “${name}”.`,
+      feature: (name: string) => `Ready to try in the feature “${name}”`,
+      featureBroken: (name: string) => `The feature “${name}” does not compile yet`,
+      tryIt: 'Try it at the feature\'s own address. When you are happy with it, merge it: it becomes the next version.',
+      previewOffline: 'Its preview is not online. Deploy it from the feature to try it.',
+      previewStill: 'Its preview still shows what last compiled.',
+      notMerged: 'It was not merged, so nothing new went online.',
       failed: 'The change did not go through',
       timeout:
         'It ran out of time before it changed anything. Ask for something smaller, or ask again - it gets further some runs than others.',
@@ -182,6 +204,8 @@ export const editor = {
     },
     seeChanges: 'See what changed',
     open: 'Open it',
+    openPreview: 'Open the preview',
+    openFeature: 'Open the feature',
     deploy: (version: number) => `Deploy version ${version}`,
     undo: (version: number) => `Put version ${version} back`,
     undoTitle: 'Undo the change: the version that was online before goes back online. The new one stays in the history.',
@@ -189,6 +213,7 @@ export const editor = {
     toast: {
       online: (version: number) => `The change is online as version ${version}.`,
       saved: (version: number) => `The change is saved as version ${version}.`,
+      feature: (name: string) => `The change is ready to try in the feature “${name}”.`,
       unchanged: 'The agent did not change anything.',
       failed: 'The change did not go through.',
       stopped: 'The change was stopped.',
@@ -232,10 +257,19 @@ export const editor = {
     noDescription: 'No description',
     version: (version: number) => `Version ${version}`,
     notOnline: 'not online yet',
-    changedSinceOnline: 'changed since it went online',
-    edited: 'edited',
     wanted: 'What was wanted',
     noVersions: 'No versions yet.',
+    inProgress: 'Being worked on',
+    allFeatures: 'All features',
+    previewOnline: 'Its preview is online',
+    previewOffline: 'Its preview is offline',
+    behind: 'behind',
+    featureTip: (start: (text: string) => Node) => (
+      <>
+        Changing something people use? {start('Start a feature')}: it is tried at an address of its own, on a copy of the
+        data, and becomes the next version once it is right.
+      </>
+    ),
     storage: 'Storage',
     inVersion: (version: number) => `In version ${version}`,
     noVersion: 'In the version',
@@ -275,7 +309,6 @@ export const editor = {
       `Version ${version}${online ? ', online' : newest ? ', newest' : ''}`,
     optionOnline: ' (online)',
     readFailed: 'That version could not be read.',
-    dataFailed: 'The data could not be read.',
     noVersion: 'There is no version to show yet.',
     label: 'Files',
     code: 'Code',
@@ -322,12 +355,28 @@ export const editor = {
   /** The data of a lambda: what it keeps rather than what it is. */
   data: {
     hint:
-      'Data is what the lambda keeps while it runs. It belongs to the lambda, not to a version: every version reads and writes the same data, and nothing you do with versions changes it. It goes when the lambda is deleted, or when you switch that kind of data off.',
+      'Data is what the lambda keeps while it runs. It belongs to the lambda, not to a version: every version reads and writes the same data, and nothing you do with versions changes it. A feature tries itself out on a copy of it. It goes when the lambda is deleted, or when you switch that kind of data off.',
     facts: [
       ['Shared by every version', 'Whichever version is online reads and writes the same data.'],
-      ['Kept when you deploy', 'Deploying, rolling back or copying a version never touches it.'],
+      ['Kept when you deploy', 'Deploying, rolling back or merging a feature never touches it.'],
       ['Yours to switch', 'Each kind is on only while you want it. Switching one off deletes what it holds.'],
     ] as [string, string][],
+    featureHint:
+      'The data this feature works on: a copy of the lambda\'s, taken when the feature began. Its preview reads and writes the copy, so trying things here never touches what the lambda keeps. Merging the feature throws the copy away and leaves the lambda\'s data as it is.',
+    featureFacts: [
+      ['A copy', 'Taken from the lambda when the feature began, or when you last copied it again.'],
+      ['Only the preview sees it', 'What the preview writes stays here. The lambda and its visitors never see it.'],
+      ['Gone with the feature', 'Merging or deleting the feature deletes the copy. The lambda\'s data stays as it is.'],
+    ] as [string, string][],
+    recopy: 'Copy the lambda\'s data again',
+    recopyTitle: 'Replace this copy with what the lambda holds now',
+    recopyConfirm: 'Copy the lambda\'s data again?',
+    recopyText:
+      'Everything in this copy - whatever the preview wrote into it - is replaced by what the lambda holds now. The lambda\'s own data is not touched.',
+    keepCopy: 'Keep this copy',
+    recopied: 'The copy is fresh. The preview reads it from its next request.',
+    recopyFailed: 'The data could not be copied again.',
+    copyContents: 'What the copy of the workspace holds',
     kinds: {
       workspace: {
         name: 'Workspace',
@@ -339,8 +388,6 @@ export const editor = {
     byDefault: 'On by default',
     usage: (items: string, used: string, of: string) => `${items} · ${used} of ${of}`,
     offText: 'Switched off. It holds nothing, and code that uses it fails until it is switched on again.',
-    switchOn: 'Switch on',
-    switchOff: 'Switch off',
     switchLabel: (name: string) => `${name} on or off`,
     confirmOff: (name: string) => `Switch the ${name.toLowerCase()} off?`,
     confirmText: (items: string, size: string) =>
@@ -359,24 +406,157 @@ export const editor = {
     offBrowse: 'The workspace is off, so there are no files to show.',
   },
 
+  /** Features: changes worked on beside the lambda, merged into the next version once they are right. */
+  features: {
+    hint:
+      'A version never changes once it is saved. A feature is where a change is made instead: it starts as a copy of a version and of the lambda\'s data, can be tried at an address of its own while visitors keep getting what is online, and becomes the next version when you merge it.',
+    newFeature: 'New feature',
+    full: (limit: number) => `This lambda has ${limit} features open, which is all it may have. Merge or delete one first.`,
+    emptyTitle: 'Nothing is being worked on',
+    emptyText:
+      'Start a feature to change the lambda without touching what is online. You, or the agent, can change it as often as it takes and try it at its own address.',
+    steps: [
+      ['Start it', 'A copy of the newest version, and of the lambda\'s data.'],
+      ['Change and try it', 'At an address of its own, on its own copy of the data.'],
+      ['Merge it', 'It becomes the next version, and goes online when you say so.'],
+    ] as [string, string][],
+    start: 'Start a feature',
+    askAgentNew: 'Ask the agent for a change',
+    noChange: 'Nothing said about what it changes yet',
+    from: (version: number) => `from version ${version}`,
+    mergeable: 'ready to merge',
+    behindTitle: 'A newer version was saved after it began',
+    behind: (newest: number) => `version ${newest} is newer`,
+    previewOnline: 'preview online',
+    previewOutdated: 'preview shows an earlier save',
+    previewOffline: 'preview offline',
+    changed: 'changed',
+    openPreview: 'Preview',
+    openPreviewTitle: 'Open the preview in a new tab',
+    count: (open: number, limit: number) => `${open} of ${limit} features open`,
+    loading: 'Loading the feature…',
+    readFailed: 'The feature could not be read.',
+
+    newTitle: 'Start a feature',
+    newText:
+      'A feature starts as a copy of a version - its code and its assets - and of the lambda\'s data. Change it and try it at an address of its own while visitors keep getting what is online; merge it once it is right.',
+    newTextFiles:
+      'What you typed in the code goes into it, instead of becoming a version. Try it at the feature\'s own address, and merge it once it is right.',
+    name: 'Name',
+    namePlaceholder: 'Leaderboard',
+    wanted: 'What should it do?',
+    wantedPlaceholder: 'Optional. Keep the ten best scores and show them after every game.',
+    startFrom: 'Start from',
+    version: (version: number, newest: boolean, online: boolean) =>
+      `Version ${version}${newest && online ? ' (newest, online)' : newest ? ' (newest)' : online ? ' (online)' : ''}`,
+    olderBase: (newest: number) =>
+      `Not the newest: before it can be merged, it has to take in what versions up to ${newest} changed.`,
+    create: 'Start it',
+    createFailed: 'The feature could not be started.',
+    retry: 'Try again',
+    madeNotSaved: (name: string) =>
+      `The feature “${name}” is started, but what you typed could not be put into it yet. Try again, or close this and find the feature under Features.`,
+    created: (name: string) => `The feature “${name}” is started.`,
+    cancel: 'Cancel',
+
+    featureHint:
+      'A change being worked on beside the lambda. Its preview runs its code against its own copy of the data, so visitors of the lambda see none of it. Merging makes it the next version.',
+    askAgent: 'Ask the agent',
+    editCode: 'Edit the code',
+    preview: 'Preview',
+    state: {
+      online: 'Online',
+      outdated: 'Online, with an earlier save',
+      offline: 'Offline',
+    },
+    deployed: 'deployed',
+    deployPreview: 'Deploy preview',
+    updatePreview: 'Update the preview',
+    previewDeployed: 'The preview is online.',
+    previewFailed: 'The preview could not be put online.',
+    previewStopped: 'The preview is offline.',
+    previewRejected: 'The preview did not change',
+    previewNotCompiling: 'It does not compile. The preview still shows what it showed before.',
+    previewAddress: 'Preview address',
+    previewNote: 'Anyone with this address can open the preview. Search engines are told to leave it alone.',
+    basedOn: 'Based on',
+    mergeableLong: 'the newest, so it can be merged',
+    started: 'Started',
+    changes: (version: number) => `What it changes against version ${version}`,
+    noChanges: (version: number) => `Nothing yet: it holds exactly what version ${version} holds.`,
+    notes: 'Notes',
+    editNotes: 'Name and notes',
+    what: 'What does it change?',
+    whatPlaceholder: 'Adds a leaderboard that keeps the ten best scores',
+    noWanted: 'Nothing said yet',
+    mergeNote: (version: number) =>
+      `Merging makes it version ${version}, with these notes. The feature goes with it - its preview and its copy of the data.`,
+    missed: (from: number, to: number) =>
+      to - from === 1 ? `What version ${to} changed` : `What versions ${from + 1} to ${to} changed`,
+    missedNothing: 'Nothing in the files.',
+
+    behindText: (base: number, newest: number) =>
+      `It started from version ${base}, and version ${newest} was saved since. Merging it now would undo what that changed. Bring those changes into the feature - or ask the agent to - and then say it is based on version ${newest}.`,
+    moveBase: 'Base it on another version',
+    close: 'Close',
+    mergeTitle: (name: string) => `Merge “${name}”`,
+    mergeTitleShort: 'Make it the next version',
+    leaks: (path: string, files: string) =>
+      `${files} link to ${path} by its full path. From the preview, that is the live lambda with its real data, not this feature's copy. Relative paths ("api/items") stay in the preview.`,
+    mergeButton: 'Merge',
+    saveFirst: 'Save the code first: the preview and merging use what is saved.',
+    merge: 'Merge it',
+    mergeAndDeploy: (version: number) => `Merge and put version ${version} online`,
+    mergeText: (version: number) =>
+      `It becomes version ${version}. The feature goes with it: its preview, and its copy of the data. The lambda's own data stays as it is.`,
+    deployToo: (version: number) => `Put version ${version} online right away`,
+    deployTooNote: (active: number) => `Version ${active} stays a click away in the versions.`,
+    deployTooOffline: 'The lambda is offline now; this puts it online.',
+    notCompiling: 'It does not compile, so it was not merged. Fix it in the feature first.',
+    mergeFailed: 'The feature could not be merged.',
+    merged: (version: number | string) => `Merged as version ${version}.`,
+    mergedOnline: (version: number | string) => `Merged as version ${version}, and online.`,
+
+    notesTitle: 'Name and notes',
+    save: 'Save',
+    saveFailed: 'That could not be saved.',
+
+    baseTitle: 'Base it on another version',
+    baseText: (base: number) =>
+      `It is based on version ${base}. Only a feature based on the newest version can be merged, so that merging never undoes what was saved after it began. Once it holds everything a newer version changed, say so here.`,
+    moveTo: (version: number) => `Base it on version ${version}`,
+    baseWarning: 'Nothing checks that those changes really are in the feature. Merging without them undoes them.',
+
+    deleteTitle: (name: string) => `Delete “${name}”?`,
+    deleteText:
+      'Its code, its preview and its copy of the data are deleted for good. The lambda and its versions are not touched.',
+    keep: 'Keep it',
+    deleteForGood: 'Delete for good',
+    deleteFailed: 'The feature could not be deleted.',
+    deleted: (name: string) => `The feature “${name}” is deleted.`,
+
+    all: 'All features',
+    actions: 'More for this feature',
+    download: 'Download as a zip',
+    stopPreview: 'Take the preview offline',
+    delete: 'Delete this feature',
+    viewsLabel: 'The feature',
+    views: {
+      overview: 'Feature',
+      code: 'Code',
+      data: 'Data',
+      logs: 'Logs',
+    },
+    missingTitle: 'This feature is not there any more',
+    missingText: 'It was merged into a version, or deleted. The versions show what became of it.',
+  },
+
   versions: {
     hint: (limit: number) =>
-      `A version is the program: its code and its assets. The newest one is being worked on - it can be saved over and deployed again as often as needed. The ones before it stay exactly as they were, to compare with and roll back to. Each keeps what was asked for and what it changed. The oldest are removed once there are more than ${limit}; the one online never is.`,
+      `A version is the program - its code and its assets - and never changes once it is saved, so any of them can be compared with and put back online exactly as it was. Each keeps what was asked for and what it changed. To change the lambda, start a feature: it becomes the next version once it is right. The oldest are removed once there are more than ${limit}; the one online never is.`,
     none: 'No versions yet.',
     noDescription: 'No description',
     online: 'online',
-    newest: 'newest',
-    newestTitle: 'The version being worked on: saving changes it in place',
-    edited: 'edited',
-    saves: (count: number) => (count === 1 ? 'Saved once' : `Saved ${count} times`),
-    changedSince: 'changed since it went online',
-    deployAgain: 'Deploy again',
-    deployAgainTitle: 'Put what was saved since online',
-    start: 'New version',
-    startTitle: (version: number) => `Keep version ${version} as it is, and carry on in a copy of it`,
-    startFrom: 'Start a new version from here',
-    started: (version: number) => `Version ${version} started. It is the newest now, so that is where work carries on.`,
-    startFailed: 'The new version could not be started.',
     putOnline: 'Put this version online',
     rollBackTitle: 'Put this older version back online',
     deploy: 'Deploy',
@@ -388,6 +568,8 @@ export const editor = {
     status: { added: 'added', removed: 'removed', changed: 'changed', same: 'same' } as Record<string, string>,
     browse: 'Browse its files',
     edit: 'Edit from here',
+    feature: 'Start a feature from here',
+    featureTitle: 'Work on a change of this version beside the lambda, and merge it into the next version once it is right',
     binary: 'Not text, so there are no lines to compare.',
     tooLarge: 'Too large to compare line by line.',
   },
@@ -411,8 +593,6 @@ export const editor = {
       ended: 'ended',
     } as Record<string, string>,
     putBack: (version: number) => `Put version ${version} back online`,
-    revision: (revision: number) => `save ${revision}`,
-    revisionTitle: (revision: number) => `The version as it was after its save number ${revision}`,
     timeline: 'What was online over the last seven days',
     block: (version: number, from: string, to: string | null) => `Version ${version}, ${from} to ${to ?? 'now'}`,
     weekAgo: 'a week ago',
@@ -457,6 +637,11 @@ export const editor = {
       'Requests, what the lambda printed and what went wrong, as it happens.' +
       (capturing ? '' : ' This installation does not keep what lambdas print, so only requests and errors appear.') +
       " Held in memory and shared with every lambda here, so it reaches back minutes to hours, and is empty after a restart. Visitors' addresses are not shown.",
+    featureHint: (capturing: boolean) =>
+      'What the preview of this feature answered, printed and threw, as it happens.' +
+      (capturing ? '' : ' This installation does not keep what lambdas print, so only requests and errors appear.') +
+      " Kept apart from the lambda's own log, which never shows the preview. Held in memory, so it reaches back minutes to hours.",
+    nothingPreview: "Nothing yet. Open the feature's preview and its requests appear here.",
     search: 'Search',
     searchLabel: 'Search the log',
     resume: 'Show new lines as they come',
@@ -601,36 +786,45 @@ export const editor = {
     notYet: 'It does not compile yet.',
     checkFailed: 'The code could not be checked.',
     saved: (version: number | undefined) => `Saved as version ${version}.`,
-    savedOver: (version: number) => `Saved over version ${version}. Deploy to put it online.`,
-    savedOverOnline: (version: number) =>
-      `Saved over version ${version}. Visitors get what was deployed until you deploy it again.`,
+    featureSaved: 'Saved into the feature. Deploy its preview to try it.',
+    featureLoadFailed: 'The feature could not be loaded.',
+    previewOnline: 'The preview is online.',
+    previewRefused: 'The preview did not change. See what the compiler said below.',
     isOnline: (version: number | undefined) => `Version ${version} is online.`,
     notOnline: 'It did not go online. See what the compiler said below.',
     failed: 'That did not work.',
     unchanged: 'Nothing has changed since the last save.',
     demo: 'A demo, so everything here is read only. Create a lambda of your own from it to change it. ',
-    edit: 'Edit the code by hand. Saving changes the newest version in place, as often as you like; what is online only changes when you deploy. New version keeps the one you started from as it is. ',
-    history: (version: number, newest: number) =>
-      `Version ${version} is history and stays as it is, so saving makes a new version from it. Version ${newest} is the newest. `,
+    edit: 'Edit the code by hand. Saving makes a new version and leaves what is online alone; deploying puts it online. To try a change first, start a feature. ',
+    editFeature:
+      'The code of this feature. Saving keeps it in the feature - nothing the lambda\'s visitors get changes. Deploying puts it online at the feature\'s own address, to try it; merging the feature makes it the next version. ',
+    inFeature: (name: string) => `in “${name}”`,
+    previewed: ', in the preview',
+    changedElsewhere: 'The feature was saved elsewhere since you opened it - by the agent, perhaps. Load what is saved before saving here; your changes would not be saved over it.',
+    readAgain: 'Load what is saved',
     files: (entry: Node, cs: Node) => (
       <>
         {entry} returns what gets served, other {cs} files hold types, and any other file is served as it is. Ctrl-S
         saves, F12 goes to a declaration.
       </>
     ),
+    newer: (version: number) => ` Version ${version} is newer than the one open here.`,
     check: 'Check',
     save: 'Save',
-    saveTitle: (version: number) => `Save over version ${version} (Ctrl+S)`,
-    saveNew: 'New version',
-    saveNewTitle: 'Save as a new version, and keep the one you started from as it is',
     deploy: 'Deploy',
-    older: ', history',
-    newestTag: ', newest',
-    unpublished: ', saved since it went online',
+    deployPreview: 'Deploy preview',
+    deployPreviewTitle: 'Save, and put the feature online at its own address to try it',
     binary: (size: number) => `Not text, so there is nothing to edit. It is served as it is and weighs ${size} kB.`,
     saveAndDeploy: 'Save and deploy',
     saveVersion: 'Save a new version',
-    saveNewAndDeploy: 'Save a new version and deploy it',
+    fromOlder: (version: number, newest: number) =>
+      `This starts from version ${version}, and version ${newest} is newer. Saving makes it the newest version, without what came after version ${version}.`,
+    featureInstead: (start: (text: string) => Node) => (
+      <>
+        Trying something out? {start('Put it into a new feature instead')}: it gets an address of its own, and no version is
+        saved until it is right.
+      </>
+    ),
     cancel: 'Cancel',
     what: 'What does it change? Optional - it is shown in the history.',
     placeholder: 'Adds a contact form',

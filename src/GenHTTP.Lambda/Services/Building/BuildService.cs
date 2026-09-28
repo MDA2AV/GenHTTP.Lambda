@@ -205,10 +205,11 @@ public sealed partial class BuildService : IDisposable
     /// <param name="lambda">The lambda, by the id the agent files the change under</param>
     /// <param name="privateKey">The editor key, which the agent needs to change anything</param>
     /// <param name="before">The version online now, to offer putting it back afterwards</param>
-    /// <param name="deploy">Whether to put the change online once it compiles</param>
+    /// <param name="deploy">Whether to merge the change and put it online once it works</param>
     /// <param name="language">The language of the control center, for the agent to fall back on</param>
+    /// <param name="feature">The feature to go on with, by its key; a new one when left out</param>
     public async ValueTask<AgentState> ChangeAsync(long lambda, string privateKey, int? before, string? prompt, bool deploy,
-                                                   string? model, string? password, string? language, IPAddress? caller)
+                                                   string? model, string? password, string? language, string? feature, IPAddress? caller)
     {
         var agent = Required();
 
@@ -240,7 +241,8 @@ public sealed partial class BuildService : IDisposable
                 lambda = lambda.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 deploy,
                 language = Language(language),
-                before
+                before,
+                feature
             });
 
             if (!response.IsSuccessStatusCode)
@@ -273,7 +275,8 @@ public sealed partial class BuildService : IDisposable
 
     /// <summary>
     /// Stops the change of a lambda that is under way. Whatever it saved so
-    /// far stays saved: versions are only ever added.
+    /// far stays saved: in its feature, or as a version - which are only ever
+    /// added.
     /// </summary>
     public async ValueTask<AgentState> StopAsync(long lambda, IPAddress? caller)
     {

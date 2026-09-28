@@ -9,8 +9,6 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="DeployedUntil">When it goes offline unless used, or nothing while it is offline or its tier keeps it online</param>
 /// <param name="KeptUntil">When it is removed unless used, or nothing when its tier keeps it</param>
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
-/// <param name="ActiveRevision">Which save of the active version is online</param>
-/// <param name="ActiveChanged">Whether the active version was saved over after it went online, so deploying it again changes what is served</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
@@ -22,9 +20,7 @@ public sealed record LambdaInfo(
     DateTime? DeployedAt,
     DateTime? DeployedUntil,
     DateTime? KeptUntil,
-    string? Domain,
-    int? ActiveRevision = null,
-    bool ActiveChanged = false
+    string? Domain
 );
 
 /// <summary>
@@ -47,16 +43,12 @@ public sealed record LambdaPage(
 /// <param name="Specification">What the user wanted and why, where whoever saved it said</param>
 /// <param name="Change">What it changed, in a line</param>
 /// <param name="Origin">Where it came from: template, api or agent</param>
-/// <param name="Revision">How many times it has been saved, the first save included</param>
-/// <param name="Modified">When it was last saved over, or nothing while it is as it was created</param>
-public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Specification = null, string? Change = null, string? Origin = null,
-                                       int Revision = 1, DateTime? Modified = null);
+public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Specification = null, string? Change = null, string? Origin = null);
 
 /// <summary>
 /// A stored version, including the code itself.
 /// </summary>
-public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Specification = null, string? Change = null, string? Origin = null,
-                                          int Revision = 1, DateTime? Modified = null);
+public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Specification = null, string? Change = null, string? Origin = null);
 
 /// <summary>
 /// Why a version was written, as whoever wrote it tells it.
@@ -90,17 +82,27 @@ public sealed record VersionNote(string? Specification = null, string? Change = 
 /// <param name="Origin">Who put it online: api, agent or admin</param>
 /// <param name="Ended">When it went offline, or nothing while it is online</param>
 /// <param name="EndedBy">replaced, stopped, expired or admin</param>
-/// <param name="Revision">Which save of the version was online, or nothing for a stretch from before versions could be saved over</param>
-public sealed record LambdaActivation(int Version, DateTime Started, string? Origin, DateTime? Ended, string? EndedBy, int? Revision = null);
+public sealed record LambdaActivation(int Version, DateTime Started, string? Origin, DateTime? Ended, string? EndedBy);
 
 /// <summary>
 /// A lambda that has been looked up by its public key and is ready to run.
 /// </summary>
 /// <param name="Tier">Read on every request, so a lambda moved to another tier runs under its limits from the next one on</param>
-/// <param name="ActiveRevision">Which save of the version is online</param>
 /// <param name="WorkspaceEnabled">Whether its owner left the workspace on, read on every request for the same reason as the tier</param>
-public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt, int ActiveRevision = 1,
-                                    bool WorkspaceEnabled = true);
+/// <param name="Feature">
+/// The feature whose preview is being served, or nothing for the lambda itself. A preview runs the feature's files
+/// against the feature's copy of the data, and is kept out of the lambda's figures.
+/// </param>
+public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt,
+                                    bool WorkspaceEnabled = true, ResolvedFeature? Feature = null);
+
+/// <summary>
+/// The preview of a feature a request was addressed to.
+/// </summary>
+/// <param name="Id">The identity its files and data are kept under</param>
+/// <param name="Key">What it is addressed by</param>
+/// <param name="Preview">Which deployment of the preview is online, so a preview deployed again is built again</param>
+public sealed record ResolvedFeature(long Id, string Key, int Preview);
 
 /// <summary>
 /// Everything anybody may know about a public key: whether it could be

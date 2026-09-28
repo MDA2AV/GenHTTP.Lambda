@@ -12,6 +12,10 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// The workspace limits are compiled into a lambda, so each of these takes the
 /// ones of its tier - and a lambda compiled with other limits than the ones
 /// asked for is compiled again, which is how a change of tier takes effect.
+///
+/// Besides what a lambda has online, each of its features can have a preview
+/// online: built the same way from the feature's files, with the feature's
+/// copy of the workspace and assets of its own, and kept apart from the lambda.
 /// </remarks>
 public interface IDeploymentService
 {
@@ -25,29 +29,53 @@ public interface IDeploymentService
     ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Compiles and prepares the given version, as it was last saved, so it is
-    /// ready to serve requests.
+    /// Compiles and prepares the given version so it is ready to serve requests.
     /// </summary>
     /// <remarks>
     /// What was being served before goes on being served when this fails -
     /// the handler, and the assets it serves.
     /// </remarks>
-    /// <param name="revision">Which save of the version that is, so a version saved over is built again</param>
-    ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, int revision, WorkspaceLimits limits, CancellationToken cancellation = default);
+    ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Returns the handler of what is online, compiling it if needed.
+    /// Returns the handler of the given version, compiling it if needed.
+    /// </summary>
+    ValueTask<IHandler> ResolveAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Compiles and prepares the given code as the preview of a feature.
     /// </summary>
     /// <remarks>
-    /// Built from the code that was deployed rather than the version as it is
-    /// now, which differ once the version online has been saved over: nothing
-    /// visitors get changes until it is deployed again, a restart included.
+    /// Like <see cref="ActivateAsync" />, what the preview served before goes
+    /// on being served when this fails.
     /// </remarks>
-    ValueTask<IHandler> ResolveAsync(long lambdaId, int version, int revision, WorkspaceLimits limits, CancellationToken cancellation = default);
+    /// <param name="preview">Which deployment of the preview this is, so the next one is built again</param>
+    ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, string code, WorkspaceLimits limits,
+                                               CancellationToken cancellation = default);
 
     /// <summary>
-    /// Drops the compiled handler of a lambda, if there is one.
+    /// Returns the handler of a feature's preview, compiling what it was
+    /// deployed with if needed.
+    /// </summary>
+    ValueTask<IHandler> ResolvePreviewAsync(long lambdaId, long featureId, int preview, WorkspaceLimits limits,
+                                            CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Drops the compiled handler of what a lambda has online, if there is
+    /// one. The previews of its features are left as they are: taking the
+    /// lambda offline says nothing about them.
     /// </summary>
     void Evict(long lambdaId);
+
+    /// <summary>
+    /// Drops every compiled handler of a lambda - what it has online and the
+    /// previews of its features - for a lambda that is going away.
+    /// </summary>
+    void EvictAll(long lambdaId);
+
+    /// <summary>
+    /// Drops the compiled handler of a feature's preview, if there is one.
+    /// </summary>
+    void EvictPreview(long lambdaId, long featureId);
 
 }

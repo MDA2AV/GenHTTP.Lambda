@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, api, isDemo, type DataStore, type LambdaFile, type WorkspaceListing } from '../api';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconFolder, IconLayers, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
+import { IconAlert, IconFolder, IconHistory, IconLayers, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
-import { GroupList, Tree, Viewer, type Selection } from './FileBrowser';
+import { GroupList, Tree, Viewer, workspaceOf, type Selection } from './FileBrowser';
 import { bytes } from './format';
 import { Exposure } from './SummaryTab';
 import { Meter, Section, Switch } from './ui';
@@ -23,6 +23,12 @@ const NO_FILES: LambdaFile[] = [];
  * goes. Then the kinds of data there are, each switched on or off by the
  * owner - only the workspace so far, listed the way every kind will be - and
  * then what the workspace holds.
+ *
+ * Opened on a feature, it shows the feature's copy instead: what the preview
+ * reads and writes, taken from the lambda when the feature began and thrown
+ * away when it is merged. Which kinds there are is still the lambda's to
+ * switch, so there are no switches here - only copying the lambda's data
+ * again, for a preview that has made a mess of its copy.
  */
 export function DataTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -35,13 +41,20 @@ export function DataTab({ control }: { control: Control }) {
   const [selected, setSelected] = useState<Selection | null>(null);
   const [switching, setSwitching] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<DataStore | null>(null);
+  const [recopying, setRecopying] = useState<'asking' | 'busy' | null>(null);
 
   // what a demo keeps is there to be read, not replaced
   const demo = isDemo(control.lambda.tier);
 
+  const feature = control.feature?.info ?? null;
+  const workspace = workspaceOf(control);
+
   const reload = useCallback(async () => {
     try {
-      const [found, files] = await Promise.all([api.data(control.privateKey), api.files(control.privateKey)]);
+      const [found, files] = await Promise.all([
+        feature ? api.feature.data(control.privateKey, feature.key) : api.data(control.privateKey),
+        workspace.list(),
+      ]);
 
       setStores(found);
       setListing(files);
@@ -49,7 +62,9 @@ export function DataTab({ control }: { control: Control }) {
     } catch (error) {
       setFailure(error instanceof ApiError ? error.message : said.readFailed);
     }
-  }, [control.privateKey, said]);
+    // the accessor is made again with every render; the feature it reads from is what matters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [control.privateKey, feature?.key, said]);
 
   useEffect(() => {
     reload();
@@ -79,15 +94,51 @@ export function DataTab({ control }: { control: Control }) {
     }
   }
 
+  /** Throws the feature's copy away and copies the lambda's data again. */
+  async function recopy() {
+    if (!feature) {
+      return;
+    }
+
+    setRecopying('busy');
+
+    try {
+      await api.feature.refresh(control.privateKey, feature.key);
+      setSelected(null);
+      toast(said.recopied, 'success');
+
+      await Promise.all([reload(), control.feature?.refresh()]);
+    } catch (error) {
+      toast(error instanceof ApiError ? error.message : said.recopyFailed, 'error');
+    } finally {
+      setRecopying(null);
+    }
+  }
+
   const storage = control.summary?.storage;
-  const workspace = stores?.find((s) => s.kind === 'workspace');
+  const kept = stores?.find((s) => s.kind === 'workspace');
 
   return (
-    <Section title={t.frame.sections.data} hint={said.hint}>
+    <Section
+      title={t.frame.sections.data}
+      hint={feature ? said.featureHint : said.hint}
+      actions={feature && (
+        <button
+          type="button"
+          onClick={() => setRecopying('asking')}
+          disabled={recopying !== null}
+          className="btn-ghost !px-3 !py-1.5 text-[13px]"
+          title={said.recopyTitle}
+        >
+          {recopying === 'busy' ? <IconSpinner /> : <IconHistory className="h-3.5 w-3.5" />}
+          {said.recopy}
+        </button>
+      )}
+    >
       {demo && <p className="-mt-1 mb-4 text-[13px] text-slate-500">{said.demo}</p>}
 
       <dl className="grid gap-4 sm:grid-cols-3">
-        {said.facts.map(([title, text]) => (
+        {(feature ? said.featureFacts : said.facts).map(([title, text]) => (
           <div key={title} className="border-l-2 border-accent-500/40 pl-3 dark:border-accent-400/40">
             <dt className="text-[13px] font-medium">{title}</dt>
             <dd className="mt-0.5 text-[13px] text-slate-500">{text}</dd>
@@ -109,9 +160,9 @@ export function DataTab({ control }: { control: Control }) {
                 store={store}
                 name={name(store.kind)}
                 what={said.kinds[store.kind]?.what}
-                publicly={store.kind === 'workspace' && !!storage?.servesWorkspace}
+                publicly={feature ? null : store.kind === 'workspace' && !!storage?.servesWorkspace}
                 busy={switching === store.kind}
-                readOnly={demo}
+                readOnly={demo || feature !== null}
                 onToggle={() => (store.enabled ? setConfirming(store) : toggle(store, true))}
               />
             </li>
@@ -119,20 +170,20 @@ export function DataTab({ control }: { control: Control }) {
         </ul>
       )}
 
-      {workspace && (
+      {kept && (
         <div className="mt-8">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-medium">
             <IconFolder className="h-4 w-4 text-slate-400" />
-            {said.contents}
+            {feature ? said.copyContents : said.contents}
           </h2>
 
-          {workspace.enabled ? (
+          {kept.enabled ? (
             <div className="grid gap-5 lg:grid-cols-[17rem,1fr]">
               <nav aria-label={said.browse} className="lg:max-h-[40rem] lg:overflow-y-auto">
                 <WorkspaceFiles
                   control={control}
                   listing={listing}
-                  publicly={!!storage?.servesWorkspace}
+                  publicly={feature ? null : !!storage?.servesWorkspace}
                   readOnly={demo}
                   selected={selected?.group === 'data' ? selected.path : null}
                   onSelect={(path) => setSelected(path ? { group: 'data', path } : null)}
@@ -147,6 +198,24 @@ export function DataTab({ control }: { control: Control }) {
           )}
         </div>
       )}
+
+      <Dialog
+        title={said.recopyConfirm}
+        open={recopying === 'asking'}
+        onClose={() => setRecopying(null)}
+        footer={
+          <>
+            <button type="button" onClick={() => setRecopying(null)} className="btn-ghost">
+              {said.keepCopy}
+            </button>
+            <button type="button" className="btn-primary" onClick={recopy}>
+              {said.recopy}
+            </button>
+          </>
+        }
+      >
+        <p className="text-slate-600 dark:text-slate-400">{said.recopyText}</p>
+      </Dialog>
 
       <Dialog
         title={confirming ? said.confirmOff(name(confirming.kind)) : ''}
@@ -188,7 +257,8 @@ function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
   store: DataStore;
   name: string;
   what?: string;
-  publicly: boolean;
+  /** Whether the code online serves it; null where that says nothing, as for the copy of a feature. */
+  publicly: boolean | null;
   busy: boolean;
   readOnly: boolean;
   onToggle: () => void;
@@ -210,7 +280,7 @@ function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h2 id={id} className="text-[15px] font-medium">{name}</h2>
-          {store.enabled && (
+          {store.enabled && publicly !== null && (
             <Exposure open={publicly} why={publicly ? t.files.dataPublic : t.files.dataPrivate} />
           )}
           <span
@@ -251,7 +321,7 @@ function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
 function WorkspaceFiles({ control, listing, publicly, readOnly, selected, onSelect, onChanged }: {
   control: Control;
   listing: WorkspaceListing | null;
-  publicly: boolean;
+  publicly: boolean | null;
   readOnly: boolean;
   selected: string | null;
   onSelect: (path: string | null) => void;
@@ -262,6 +332,8 @@ function WorkspaceFiles({ control, listing, publicly, readOnly, selected, onSele
   const toast = useToast();
   const picker = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+
+  const workspace = workspaceOf(control);
 
   // uploads land in the folder of whatever is selected, or at the top
   const into = selected
@@ -281,7 +353,7 @@ function WorkspaceFiles({ control, listing, publicly, readOnly, selected, onSele
       const path = into ? `${into}/${file.name}` : file.name;
 
       try {
-        await api.uploadFile(control.privateKey, path, file);
+        await workspace.upload(path, file);
       } catch (error) {
         toast(error instanceof ApiError ? error.message : said.uploadFailed(path), 'error');
       }
@@ -305,7 +377,7 @@ function WorkspaceFiles({ control, listing, publicly, readOnly, selected, onSele
     }
 
     try {
-      await api.deleteFile(control.privateKey, path);
+      await workspace.remove(path);
 
       if (selected === path || selected?.startsWith(`${path}/`)) {
         onSelect(null);
@@ -322,7 +394,7 @@ function WorkspaceFiles({ control, listing, publicly, readOnly, selected, onSele
   return (
     <GroupList
       title={t.data.browse}
-      exposure={<Exposure open={publicly} why={publicly ? said.dataPublic : said.dataPrivate} />}
+      exposure={publicly !== null && <Exposure open={publicly} why={publicly ? said.dataPublic : said.dataPrivate} />}
       usage={listing ? said.usage(said.count(listing.files.length), bytes(listing.usedBytes), bytes(listing.quotaBytes)) : undefined}
       action={readOnly ? undefined : (
         <>

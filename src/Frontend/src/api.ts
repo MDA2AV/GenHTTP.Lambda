@@ -25,13 +25,6 @@ export interface Lambda {
   domainServed: boolean;
   /** Where to link to it: its domain while that is served, its path otherwise. See address.ts. */
   address: string;
-  /** Which save of the version online is being served; absent while offline. */
-  activeRevision?: number | null;
-  /**
-   * Whether the version online was saved over after it went online. Visitors
-   * get what was deployed, so deploying it again is what changes what they see.
-   */
-  activeChanged: boolean;
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */
@@ -66,18 +59,6 @@ export interface VersionInfo {
   /** What the version changed, in a line. */
   change?: string | null;
   origin?: Origin | null;
-  /**
-   * How many times it was saved, the first save included. Only the newest
-   * version is ever saved over; the ones before it are history.
-   */
-  revision: number;
-  /** When it was last saved over; absent while it is as it was created. */
-  modified?: string | null;
-}
-
-/** A version that was just stored, and whether it went online with it. */
-export interface SavedVersion extends VersionInfo {
-  deployment?: { success: boolean; lambda?: Lambda | null; diagnostics: Diagnostic[] } | null;
 }
 
 /** One stretch of time a version was online. */
@@ -90,8 +71,6 @@ export interface Activation {
   endedBy?: 'replaced' | 'stopped' | 'expired' | 'admin' | null;
   /** How long it was online, or has been so far. */
   seconds: number;
-  /** Which save of the version was online; absent for a stretch from before versions could be saved over. */
-  revision?: number | null;
 }
 
 /** One interval of a lambda's traffic. */
@@ -190,6 +169,8 @@ export interface LambdaSummary {
     versions: number;
     deploymentLifetimeHours: number;
     retentionDays: number;
+    /** How many features it may have open at once. */
+    features: number;
   };
 }
 
@@ -258,7 +239,13 @@ export interface BuildResult {
 export interface AgentStep {
   /** Seconds into the run. */
   at: number;
-  kind: 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'copy' | 'check' | 'deploy' | 'upload' | 'delete' | 'list' | 'other';
+  /**
+   * What it did. feature is starting one, update changing its notes or its
+   * base, merge making it a version, discard deleting it.
+   */
+  kind:
+    | 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list'
+    | 'feature' | 'update' | 'merge' | 'discard' | 'other';
   /** What the agent said, for "say". */
   text?: string | null;
   /** The tool, for "other". */
@@ -273,10 +260,14 @@ export interface AgentStep {
   path?: string | null;
   /** Whether the tool has answered. */
   done?: boolean | null;
-  /** The version read, saved, started or put online. */
+  /** The version read, saved, merged into, put online, or made a feature's base. */
   version?: number | null;
-  /** Whether a write or a deployment went online. */
+  /** Whether a write or a deployment went online - at the preview address, for a feature. */
   online?: boolean | null;
+  /** The name of the feature it was about, once a tool said it. */
+  feature?: string | null;
+  /** Whether it was about a feature rather than the lambda itself. */
+  preview?: boolean | null;
   /** How many errors the compiler found. */
   errors?: number | null;
   /** How many errors the log held. */
@@ -287,9 +278,9 @@ export interface AgentStep {
 
 /** How a change ended, from what the tools answered. */
 export interface ChangeResult {
-  /** Whether it saved a version. */
+  /** Whether it saved anything - into a feature, or as a version. */
   ok: boolean;
-  /** The newest version it saved. */
+  /** The newest version it saved, merging included. */
   version?: number | null;
   /** The version it put online, if it put one there. */
   online?: number | null;
@@ -307,6 +298,11 @@ export interface ChangeResult {
   /** In English, for when there are no words of our own for it. */
   error?: string | null;
   detail?: string | null;
+  /** The feature it left the change in, by its key, when it did not merge it. */
+  feature?: string | null;
+  featureName?: string | null;
+  /** Whether that feature's preview is online, to be tried. */
+  preview?: boolean | null;
 }
 
 export type ChangeState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
@@ -316,9 +312,11 @@ export interface ChangeJob {
   id: string;
   state: ChangeState;
   prompt: string;
-  /** Whether it was asked to put the change online. */
+  /** Whether it was asked to merge the change and put it online. */
   deploy: boolean;
   model: string;
+  /** The feature it was asked to go on with; absent when it starts one of its own. */
+  feature?: string | null;
   /** The version online when it was asked for. */
   before?: number | null;
   steps: AgentStep[];
@@ -346,12 +344,14 @@ export interface AgentState {
 
 export interface ChangeRequest {
   prompt: string;
-  /** Put it online once it compiles, rather than leave it to be looked at. */
+  /** Merge it and put it online once it works, rather than leave it in its feature to be tried. */
   deploy: boolean;
   model?: string;
   password?: string;
   /** The language of the control center, for the agent to fall back on. */
   language?: string;
+  /** The feature to go on with; left out, the agent starts a new one. */
+  feature?: string;
 }
 
 /** Whether a change is still waiting or working. */
@@ -496,6 +496,68 @@ export interface DataStore {
   items: number;
   usedBytes: number;
   quotaBytes: number;
+}
+
+/**
+ * A change being worked on beside the lambda: it starts as a copy of a
+ * version and of the lambda's data, can be tried at an address of its own,
+ * and becomes the next version when it is merged.
+ */
+export interface Feature {
+  /** What it is addressed by, and where its preview answers. */
+  key: string;
+  name: string;
+  /** What the user wants from it and why. */
+  specification?: string | null;
+  /** What it changes, in a line - what the version it becomes will say. */
+  change?: string | null;
+  /** The version it is based on. */
+  base: number;
+  /** The newest version of the lambda. */
+  newest?: number | null;
+  /** Whether it can be merged: it is based on the newest version. */
+  mergeable: boolean;
+  origin?: Origin | null;
+  created: string;
+  modified: string;
+  /** Whether its preview is online. */
+  online: boolean;
+  /** Whether its preview is online and serves what the feature holds now, rather than an earlier save. */
+  current: boolean;
+  /** When its preview last went online, while it is. */
+  previewed?: string | null;
+  /** Where its preview answers, online or not. */
+  previewPath: string;
+  /** How many times its files were saved, counting the ones it began with. */
+  revision: number;
+}
+
+export interface FeatureContent {
+  feature: Feature;
+  /** Every file, lambda.cs first. */
+  files: LambdaFile[];
+}
+
+export interface FeaturePreview {
+  success: boolean;
+  feature: Feature;
+  diagnostics: Diagnostic[];
+}
+
+export interface FeatureSaved {
+  feature: Feature;
+  /** How putting the preview online went, when that was asked for. */
+  preview?: FeaturePreview | null;
+}
+
+export interface FeatureMerge {
+  merged: boolean;
+  /** The version it became. */
+  version?: VersionInfo | null;
+  /** Why it was not merged, where its code does not compile. */
+  diagnostics: Diagnostic[];
+  /** How putting that version online went, when that was asked for. */
+  deployment?: DeploymentResult | null;
 }
 
 export interface LambdaActivity {
@@ -869,23 +931,9 @@ export const api = {
   version: (privateKey: string, version: number) =>
     request<VersionContent>(`/lambdas/${privateKey}/versions/${version}`),
 
-  /** Stores a new version; the change and the specification are the why, kept beside the what. */
+  /** Stores a version; the change and the specification are the why, kept beside the what. */
   save: (privateKey: string, files: LambdaFile[], change?: string, specification?: string) =>
-    request<SavedVersion>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, specification: specification || null })),
-
-  /**
-   * Saves over the newest version, which is the one being worked on. What is
-   * online only changes once it is deployed again; notes left out are kept.
-   */
-  update: (privateKey: string, version: number, files: LambdaFile[], change?: string) =>
-    request<SavedVersion>(`/lambdas/${privateKey}/versions/${version}`, {
-      method: 'PUT',
-      body: JSON.stringify({ files, change: change || null }),
-    }),
-
-  /** Starts a new version as a copy of this one, which becomes the newest. */
-  copy: (privateKey: string, version: number, change?: string) =>
-    request<SavedVersion>(`/lambdas/${privateKey}/versions/${version}/copy`, send({ change: change || null })),
+    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, specification: specification || null })),
 
   deployment: (privateKey: string) => request<Deployment>(`/lambdas/${privateKey}/deployment`),
 
@@ -951,6 +999,101 @@ export const api = {
   /** Switches a kind of data off, deleting everything it held. */
   disableData: (privateKey: string, kind: string) =>
     request<DataStore>(`/lambdas/${privateKey}/data/${encodeURIComponent(kind)}`, { method: 'DELETE' }),
+
+  /**
+   * The features of a lambda: changes worked on beside it, each with a copy
+   * of the data and a preview of its own, until they are merged or deleted.
+   */
+  feature: {
+    list: (privateKey: string) => request<Feature[]>(`/lambdas/${privateKey}/features`),
+
+    /** Starts one from a version - the newest when none is named. */
+    create: (privateKey: string, name: string, specification?: string, base?: number) =>
+      request<Feature>(`/lambdas/${privateKey}/features`, send({ name, specification: specification || null, base: base ?? null })),
+
+    get: (privateKey: string, feature: string) => request<FeatureContent>(`/lambdas/${privateKey}/features/${feature}`),
+
+    /** What is left out stays as it is. */
+    update: (privateKey: string, feature: string, update: { name?: string; specification?: string; change?: string; base?: number }) =>
+      request<Feature>(`/lambdas/${privateKey}/features/${feature}`, { method: 'PATCH', body: JSON.stringify(update) }),
+
+    remove: (privateKey: string, feature: string) => request<void>(`/lambdas/${privateKey}/features/${feature}`, { method: 'DELETE' }),
+
+    /**
+     * Replaces every file it holds, and puts its preview online as well if
+     * asked. Given the save the files were made from, it is refused with 409
+     * when the feature was saved again since.
+     */
+    save: (privateKey: string, feature: string, files: LambdaFile[], deploy = false, revision?: number) =>
+      request<FeatureSaved>(`/lambdas/${privateKey}/features/${feature}/files${deploy ? '?deploy=true' : ''}`, {
+        method: 'PUT',
+        body: JSON.stringify({ files, revision: revision ?? null }),
+      }),
+
+    /** Puts what it holds online at its preview address. A failure answers 422, and the preview stays as it was. */
+    preview: (privateKey: string, feature: string) =>
+      request<FeaturePreview>(`/lambdas/${privateKey}/features/${feature}/preview/start`, { method: 'POST' }, [422]),
+
+    stop: (privateKey: string, feature: string) =>
+      request<Feature>(`/lambdas/${privateKey}/features/${feature}/preview/stop`, { method: 'POST' }),
+
+    /** What its preview has been doing, kept apart from the lambda's own log. */
+    logs: (privateKey: string, feature: string, options: { since?: number; level?: string; limit?: number } = {}) => {
+      const query = new URLSearchParams();
+
+      if (options.since !== undefined) query.set('since', String(options.since));
+      if (options.level) query.set('level', options.level);
+      if (options.limit) query.set('limit', String(options.limit));
+
+      return request<OwnerLogPage>(`/lambdas/${privateKey}/features/${feature}/logs?${query}`);
+    },
+
+    /** Its copy of the lambda's data, kind by kind. */
+    data: (privateKey: string, feature: string) => request<DataStore[]>(`/lambdas/${privateKey}/features/${feature}/data`),
+
+    /** Throws its copy of the data away and copies the lambda's again. */
+    refresh: (privateKey: string, feature: string) =>
+      request<Feature>(`/lambdas/${privateKey}/features/${feature}/data/refresh`, { method: 'POST' }),
+
+    /**
+     * Makes it the next version and deletes it. Answers 422 while its code
+     * does not compile, and refuses with 409 while it is not based on the
+     * newest version.
+     */
+    merge: (privateKey: string, feature: string, merge: { deploy: boolean; change?: string; specification?: string }) =>
+      request<FeatureMerge>(`/lambdas/${privateKey}/features/${feature}/merge`, send({
+        deploy: merge.deploy,
+        change: merge.change || null,
+        specification: merge.specification || null,
+      }), [422]),
+
+    zipUrl: (privateKey: string, feature: string) => `${base}/lambdas/${privateKey}/features/${feature}/zip`,
+
+    /** Its copy of the workspace, addressed the way the lambda's own is. */
+    workspace: {
+      list: (privateKey: string, feature: string) =>
+        request<WorkspaceListing>(`/lambdas/${privateKey}/features/${feature}/workspace`),
+
+      read: (privateKey: string, feature: string, path: string) =>
+        request<{ path: string; content: string; size: number }>(
+          `/lambdas/${privateKey}/features/${feature}/workspace/${encodeURIComponent(path)}`,
+        ),
+
+      url: (privateKey: string, feature: string, path: string) =>
+        `${base}/lambdas/${privateKey}/features/${feature}/workspace/${encodeURIComponent(path)}/content`,
+
+      upload: (privateKey: string, feature: string, path: string, content: Blob) =>
+        request<WorkspaceEntry>(`/lambdas/${privateKey}/features/${feature}/workspace/${encodeURIComponent(path)}/content`, {
+          method: 'PUT',
+          body: content,
+          headers: { 'Content-Type': 'application/octet-stream' },
+        }),
+
+      remove: (privateKey: string, feature: string, path: string) =>
+        request<void>(`/lambdas/${privateKey}/features/${feature}/workspace/${encodeURIComponent(path)}`, { method: 'DELETE' }),
+
+    },
+  },
 
   /*
    * Questions for the compiler. They share one request shape; the ones about

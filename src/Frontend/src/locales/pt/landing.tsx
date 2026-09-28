@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Continue melhorando',
-      body: 'Todo app vem com um link de edição privado. Passe o link para o seu agente junto com a próxima mudança, ou abra você mesmo. Cada mudança que você pede vira uma versão própria, e o endereço continua o mesmo.',
+      body: 'Todo app vem com um link de edição privado. Passe o link para o seu agente junto com a próxima mudança, ou abra você mesmo. Cada mudança vira uma nova versão, e o endereço continua o mesmo.',
       alt: 'O painel de controle da enquete: as versões, cada uma com o pedido, o que mudou e a diferença para a anterior',
     },
   ],

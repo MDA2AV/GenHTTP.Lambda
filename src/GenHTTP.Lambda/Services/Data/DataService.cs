@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -12,14 +13,16 @@ namespace GenHTTP.Lambda.Services.Data;
 /// Keeps which kinds of data each lambda has, and measures what they hold.
 /// </summary>
 public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IWorkspaceService workspace,
-                                ILogger<DataService> logger) : IDataService
+                                IFeatureService features, ILogger<DataService> logger) : IDataService
 {
 
     #region Functionality
 
-    public async ValueTask<IReadOnlyList<DataStoreInfo>> ListAsync(string privateKey, CancellationToken cancellation = default)
+    public async ValueTask<IReadOnlyList<DataStoreInfo>> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default)
     {
         var id = await RequireIdAsync(privateKey, cancellation);
+
+        long? featureId = feature != null ? (await features.RequireAsync(privateKey, feature, false, cancellation)).FeatureId : null;
 
         var switches = await ReadAsync(id, cancellation);
 
@@ -27,7 +30,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
         foreach (var kind in DataKinds.All)
         {
-            stores.Add(await DescribeAsync(id, kind, switches[kind.Id], cancellation));
+            stores.Add(await DescribeAsync(id, kind, switches[kind.Id], featureId, cancellation));
         }
 
         return stores;
@@ -39,7 +42,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
         var id = await RequireIdAsync(privateKey, cancellation);
 
-        return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], cancellation);
+        return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], null, cancellation);
     }
 
     public async ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, CancellationToken cancellation = default)
@@ -55,7 +58,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             logger.LogInformation("Lambda {LambdaId} switched its {Kind} on", id, wanted.Id);
         }
 
-        return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], cancellation);
+        return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], null, cancellation);
     }
 
     public async ValueTask<DataStoreInfo> DisableAsync(string privateKey, string kind, CancellationToken cancellation = default)
@@ -74,7 +77,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
             logger.LogInformation("Lambda {LambdaId} switched its {Kind} off, and what it held was deleted", id, wanted.Id);
         }
 
-        return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], cancellation);
+        return await DescribeAsync(id, wanted, (await ReadAsync(id, cancellation))[wanted.Id], null, cancellation);
     }
 
     #endregion
@@ -84,13 +87,14 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     /// <summary>
     /// What a kind of data holds, in the figures every kind can give.
     /// </summary>
-    private async ValueTask<DataStoreInfo> DescribeAsync(long lambdaId, DataKind kind, DataSwitch state, CancellationToken cancellation)
+    /// <param name="featureId">The feature whose copy is meant, or nothing for the lambda's own</param>
+    private async ValueTask<DataStoreInfo> DescribeAsync(long lambdaId, DataKind kind, DataSwitch state, long? featureId, CancellationToken cancellation)
     {
         switch (kind.Id)
         {
             case DataKinds.WorkspaceId:
                 {
-                    var listing = await workspace.ListAsync(lambdaId, cancellation);
+                    var listing = await workspace.ListAsync(lambdaId, featureId, cancellation);
 
                     return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, listing.Files.Count, listing.UsedBytes, listing.QuotaBytes);
                 }
@@ -104,9 +108,24 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     /// </summary>
     private async ValueTask ClearAsync(long lambdaId, DataKind kind, CancellationToken cancellation)
     {
-        if (kind.Id == DataKinds.WorkspaceId)
+        if (kind.Id != DataKinds.WorkspaceId)
         {
-            await workspace.ClearAsync(lambdaId, cancellation);
+            return;
+        }
+
+        await workspace.ClearAsync(lambdaId, null, cancellation);
+
+        // a copy is still the data, and switching it off leaves none of it
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        var copies = await database.Features.AsNoTracking()
+                                   .Where(f => f.LambdaId == lambdaId)
+                                   .Select(f => f.Id)
+                                   .ToListAsync(cancellation);
+
+        foreach (var copy in copies)
+        {
+            await workspace.ClearAsync(lambdaId, copy, cancellation);
         }
     }
 

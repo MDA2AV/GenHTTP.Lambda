@@ -13,6 +13,12 @@ namespace GenHTTP.Lambda.Services.Execution;
 /// by the protection layer, so all that is left is to fetch the compiled
 /// handler and let it answer the request.
 /// </summary>
+/// <remarks>
+/// The lambda itself, or the preview of one of its features - which is the
+/// same thing built from other files, and the only one of the two a search
+/// engine is asked to leave alone: its address is handed around to try a
+/// change, not to be found.
+/// </remarks>
 public sealed class LambdaExecutionHandler(IDeploymentService deployments, LambdaOptions options) : IHandler
 {
 
@@ -22,10 +28,34 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, Lambd
     {
         var lambda = request.RequireLambda();
 
-        var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, lambda.ActiveRevision,
-                                                     options.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled));
+        var limits = options.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled);
 
-        return await handler.HandleAsync(request);
+        if (lambda.Feature is not { } feature)
+        {
+            var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, limits);
+
+            return await handler.HandleAsync(request);
+        }
+
+        var preview = await deployments.ResolvePreviewAsync(lambda.Id, feature.Id, feature.Preview, limits);
+
+        var response = await preview.HandleAsync(request);
+
+        if (response == null || (int)response.Status == 101)
+        {
+            return response;
+        }
+
+        var rebuilt = response.Rebuild().Header("X-Robots-Tag", "noindex, nofollow");
+
+        // the key in its address is what opens it: not handed to whatever the
+        // page links to, unless the code decided otherwise
+        if (!response.Headers.ContainsKey("Referrer-Policy"))
+        {
+            rebuilt.Header("Referrer-Policy", "no-referrer");
+        }
+
+        return rebuilt.Build();
     }
 
 }

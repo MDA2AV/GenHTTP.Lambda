@@ -13,9 +13,10 @@ public interface IDataService
 {
 
     /// <summary>
-    /// Every kind of data there is, as the lambda has it.
+    /// Every kind of data there is, as the lambda has it - or, where a feature
+    /// is named, as that feature's copy of it is.
     /// </summary>
-    ValueTask<IReadOnlyList<DataStoreInfo>> ListAsync(string privateKey, CancellationToken cancellation = default);
+    ValueTask<IReadOnlyList<DataStoreInfo>> ListAsync(string privateKey, string? feature = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// One kind of data, as the lambda has it.
@@ -28,7 +29,8 @@ public interface IDataService
     ValueTask<DataStoreInfo> EnableAsync(string privateKey, string kind, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Switches a kind of data off, deleting everything it held.
+    /// Switches a kind of data off, deleting everything it held - the copies
+    /// the features of the lambda have of it included.
     /// </summary>
     /// <remarks>
     /// Deleting is the point rather than a side effect: a kind of data that is

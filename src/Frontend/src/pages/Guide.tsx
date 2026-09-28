@@ -19,6 +19,7 @@ const PARTS = [
   'first',
   'editor',
   'why',
+  'features',
   'files',
   'page',
   'spa',
@@ -145,6 +146,18 @@ export function Guide() {
   "change": ${JSON.stringify(said.whySample.change)}
 }`} />
             <p>{said.why2(k)}</p>
+          </Section>
+
+          <Section id="features" title={said.parts.features}>
+            <p>{said.features(k)}</p>
+            <Steps steps={said.featureSteps.map((step) => step(k))} />
+            <Sample code={`POST /api/v1/lambdas/{editorKey}/features
+{ "name": ${JSON.stringify(said.featureSample)} }
+
+PUT  /api/v1/lambdas/{editorKey}/features/{feature}/files?deploy=true
+POST /api/v1/lambdas/{editorKey}/features/{feature}/merge
+{ "deploy": true }`} />
+            <Aside>{said.featuresAside(k)}</Aside>
           </Section>
 
           <Section id="files" title={said.parts.files}>

@@ -412,6 +412,7 @@ public sealed class SiteMetaTests
 
         StringAssert.Contains(body, "Disallow: /api/");
         StringAssert.Contains(body, "Disallow: /editor/");
+        StringAssert.Contains(body, "Disallow: /features/");
         StringAssert.Contains(body, "Sitemap: https://genhttp.dev/sitemap.xml");
     }
 

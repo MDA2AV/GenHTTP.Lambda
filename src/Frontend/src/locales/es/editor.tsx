@@ -60,6 +60,7 @@ export const editor: EditorMessages = {
     sections: {
       overview: 'Resumen',
       change: 'Cambiar',
+      features: 'Borradores',
       showcase: 'Galería',
       domain: 'Dominio',
       files: 'Archivos',
@@ -90,8 +91,6 @@ export const editor: EditorMessages = {
     download: 'Descargar como proyecto .NET',
     delete: 'Eliminar esta lambda',
     deploy: (version) => `Desplegar la versión ${version}`,
-    changedSince: 'Hay cambios guardados desde que se puso en línea. Los visitantes siguen recibiendo lo que se desplegó.',
-    changedShort: 'Cambiada desde que se puso en línea',
     problems: 'Algo falló hace poco',
     demoTitle: 'Una demo: esta instalación la mantiene en línea y es de solo lectura.',
     demo: (start) => (
@@ -129,7 +128,7 @@ export const editor: EditorMessages = {
   },
 
   change: {
-    hint: 'Di qué debería ser distinto y el agente que se ejecuta en este servidor se encarga: lee el código, hace el cambio, comprueba que compila y lo pone en línea. Cada cambio es una versión nueva, así que la anterior siempre está a un clic.',
+    hint: 'Di qué debería ser distinto y el agente que se ejecuta en este servidor se encarga. Trabaja en un borrador (una copia de la lambda con su propia dirección), así que tus visitantes no ven nada hasta que termina. Después pasa a ser la siguiente versión y se pone en línea, o espera en su borrador para que lo pruebes tú antes.',
     reading: 'Consultando al agente…',
     readFailed: 'No se pudo consultar al agente.',
     label: '¿Qué quieres cambiar?',
@@ -138,8 +137,13 @@ export const editor: EditorMessages = {
     send: 'Hacer el cambio',
     sending: 'Enviando…',
     goOnline: 'Ponerlo en línea al terminar',
-    goOnlineOn: 'Se pone en línea en cuanto compile. Hasta entonces, sigue en línea lo que hay ahora.',
-    goOnlineOff: 'Se guarda como versión nueva y la despliegas tú cuando la hayas revisado.',
+    goOnlineOn: 'Cuando funcione en su borrador, el agente lo fusiona en la siguiente versión y la pone en línea. Hasta entonces, sigue en línea lo que hay ahora.',
+    goOnlineOff: 'El agente lo deja en su borrador. Pruébalo en la dirección propia del borrador y fusiónalo cuando te convenza.',
+    where: 'Trabajar en',
+    whereTitle: 'Un borrador nuevo, o uno abierto para seguir con él',
+    newFeature: 'Un borrador nuevo',
+    full: (limit) =>
+      `Esta lambda tiene ${limit} borradores abiertos, el máximo que puede tener. Elige uno para seguir con él, o fusiona o elimina uno antes.`,
     password: 'Contraseña',
     fable: 'Fable se toma su tiempo: sin límite de tiempo ni de pasos, y con su propia cola.',
     left: (left, perDay) => (left === 1 ? `Hoy te queda 1 de ${perDay}` : `Hoy te quedan ${left} de ${perDay}`),
@@ -150,12 +154,13 @@ export const editor: EditorMessages = {
     fixLog: 'Corrige los errores de los logs',
     how: [
       { title: 'Lee lo que hay', text: 'El código y lo que se pidió en versiones anteriores, para que lo que funciona siga funcionando.' },
-      { title: 'Hace el cambio', text: 'Y corrige lo que no compile, mientras tú ves cada paso.' },
-      { title: 'Lo pone en línea', text: 'Como una versión nueva. La anterior sigue a un clic.' },
+      { title: 'Trabaja en un borrador', text: 'Una copia con su propia dirección y sus propios datos: hace el cambio ahí y lo prueba, mientras tú ves cada paso.' },
+      { title: 'Lo pone en línea', text: 'Como la siguiente versión, o te lo deja para que lo pruebes antes. La versión anterior sigue a un clic.' },
     ],
     asked: 'Lo que pediste',
     goesOnline: 'se pone en línea al terminar',
-    review: 'se guarda para que lo revises antes',
+    review: 'se queda en su borrador para que lo pruebes',
+    inFeature: (name) => `en el borrador «${name}»`,
     queued: (ahead) => (ahead === 1 ? 'En cola: hay una tarea antes que esta.' : `En cola: hay ${ahead} tareas antes que esta.`),
     starting: 'Empezando…',
     working: 'Trabajando en ello',
@@ -164,7 +169,7 @@ export const editor: EditorMessages = {
     stopping: 'Deteniendo…',
     stopTitle: '¿Detener este cambio?',
     stopText:
-      'Lo que haya guardado hasta ahora se queda como versión. Lo que está en línea sigue en línea, salvo que ya haya puesto ahí una versión nueva.',
+      'Lo que haya guardado hasta ahora se queda, en su borrador o como versión. Lo que está en línea sigue en línea, salvo que ya haya fusionado el cambio y lo haya puesto ahí.',
     keepGoing: 'Dejar que siga',
     stopIt: 'Detenerlo',
     log: 'Lo que hizo',
@@ -175,14 +180,22 @@ export const editor: EditorMessages = {
       read: 'Leyendo el código',
       readFile: (file) => <>Leyendo {file}</>,
       logs: 'Leyendo los logs',
+      logsPreview: 'Leyendo los logs de la vista previa',
+      readFeature: 'Leyendo el borrador',
       create: 'Creando una lambda',
-      copy: 'Empezando una versión nueva',
+      feature: 'Empezando un borrador',
+      featureStarted: (name) => <>Empezó el borrador {name}</>,
+      update: 'Actualizando las notas del borrador',
+      rebase: (version) => `Basando el borrador en la versión ${version}`,
+      merge: 'Fusionando el borrador',
+      discard: 'Eliminando un borrador',
       write: (files) => <>Cambiando {files}</>,
       writeAll: (files) => <>Escribiendo {files}</>,
       removing: (files) => <>, eliminando {files}</>,
       more: (count) => `y ${count} más`,
       check: 'Compilando',
       deploy: 'Poniéndolo en línea',
+      deployPreview: 'Poniendo en línea la vista previa',
       deployVersion: (version) => `Poniendo en línea la versión ${version}`,
       upload: (path) => <>Guardando {path}</>,
       delete: (path) => <>Eliminando {path}</>,
@@ -191,7 +204,9 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
+      from: (version) => `desde v${version}`,
       online: 'en línea',
+      previewOnline: 'vista previa en línea',
       compiles: 'compila',
       errors: (count) => (count === 1 ? '1 error' : `${count} errores`),
       problems: (count) => (count === 1 ? '1 error' : `${count} errores`),
@@ -210,6 +225,13 @@ export const editor: EditorMessages = {
       unchanged: 'No se cambió nada',
       stopped: 'Detenido',
       stoppedSaved: (version) => `Antes de eso se guardó la versión ${version}.`,
+      stoppedFeature: (name) => `Lo que hizo hasta entonces está en el borrador «${name}».`,
+      feature: (name) => `Listo para probar en el borrador «${name}»`,
+      featureBroken: (name) => `El borrador «${name}» todavía no compila`,
+      tryIt: 'Pruébalo en la dirección propia del borrador. Cuando te convenza, fusiónalo: pasa a ser la siguiente versión.',
+      previewOffline: 'Su vista previa no está en línea. Despliégala desde el borrador para probarlo.',
+      previewStill: 'Su vista previa sigue mostrando lo último que compiló.',
+      notMerged: 'No se fusionó, así que no se puso en línea nada nuevo.',
       failed: 'El cambio no salió adelante',
       timeout:
         'Se quedó sin tiempo antes de cambiar nada. Pide algo más pequeño o vuelve a intentarlo: unas veces llega más lejos que otras.',
@@ -223,6 +245,8 @@ export const editor: EditorMessages = {
     },
     seeChanges: 'Ver qué cambió',
     open: 'Abrirla',
+    openPreview: 'Abrir la vista previa',
+    openFeature: 'Abrir el borrador',
     deploy: (version) => `Desplegar la versión ${version}`,
     undo: (version) => `Volver a la versión ${version}`,
     undoTitle:
@@ -231,6 +255,7 @@ export const editor: EditorMessages = {
     toast: {
       online: (version) => `El cambio está en línea como versión ${version}.`,
       saved: (version) => `El cambio se guardó como versión ${version}.`,
+      feature: (name) => `El cambio está listo para probar en el borrador «${name}».`,
       unchanged: 'El agente no cambió nada.',
       failed: 'El cambio no salió adelante.',
       stopped: 'Se detuvo el cambio.',
@@ -274,10 +299,19 @@ export const editor: EditorMessages = {
     noDescription: 'Sin descripción',
     version: (version) => `Versión ${version}`,
     notOnline: 'todavía no está en línea',
-    changedSinceOnline: 'cambiada desde que se puso en línea',
-    edited: 'editada',
     wanted: 'Lo que se pidió',
     noVersions: 'Todavía no hay versiones.',
+    inProgress: 'En curso',
+    allFeatures: 'Todos los borradores',
+    previewOnline: 'Su vista previa está en línea',
+    previewOffline: 'Su vista previa está fuera de línea',
+    behind: 'atrasado',
+    featureTip: (start) => (
+      <>
+        ¿Vas a cambiar algo que la gente usa? {start('Empieza un borrador')}: se prueba en su propia dirección, con una
+        copia de los datos, y pasa a ser la siguiente versión cuando esté bien.
+      </>
+    ),
     storage: 'Almacenamiento',
     inVersion: (version) => `En la versión ${version}`,
     noVersion: 'En la versión',
@@ -316,7 +350,6 @@ export const editor: EditorMessages = {
     shown: (version, online, newest) => `Versión ${version}${online ? ', en línea' : newest ? ', la más nueva' : ''}`,
     optionOnline: ' (en línea)',
     readFailed: 'No se pudo leer esa versión.',
-    dataFailed: 'No se pudieron leer los datos.',
     noVersion: 'Todavía no hay ninguna versión que mostrar.',
     label: 'Archivos',
     code: 'Código',
@@ -362,12 +395,28 @@ export const editor: EditorMessages = {
 
   data: {
     hint:
-      'Los datos son lo que la lambda guarda mientras se ejecuta. Pertenecen a la lambda, no a una versión: todas las versiones leen y escriben los mismos datos, y nada de lo que hagas con las versiones los cambia. Desaparecen cuando se elimina la lambda o cuando desactivas ese tipo de datos.',
+      'Los datos son lo que la lambda guarda mientras se ejecuta. Pertenecen a la lambda, no a una versión: todas las versiones leen y escriben los mismos datos, y nada de lo que hagas con las versiones los cambia. Un borrador se prueba con una copia de ellos. Desaparecen cuando se elimina la lambda o cuando desactivas ese tipo de datos.',
     facts: [
       ['Compartidos por todas las versiones', 'La versión que esté en línea lee y escribe los mismos datos.'],
-      ['Se conservan al desplegar', 'Desplegar, restaurar o copiar una versión nunca los toca.'],
+      ['Se conservan al desplegar', 'Desplegar, restaurar o fusionar un borrador nunca los toca.'],
       ['Tú decides', 'Cada tipo está activado solo mientras tú quieras. Al desactivar uno se elimina lo que contiene.'],
     ],
+    featureHint:
+      'Los datos con los que trabaja este borrador: una copia de los de la lambda, hecha cuando empezó el borrador. Su vista previa lee y escribe en la copia, así que probar cosas aquí nunca toca lo que guarda la lambda. Al fusionar el borrador, la copia se descarta y los datos de la lambda se quedan como están.',
+    featureFacts: [
+      ['Una copia', 'Hecha a partir de la lambda cuando empezó el borrador, o la última vez que la volviste a copiar.'],
+      ['Solo la ve la vista previa', 'Lo que escribe la vista previa se queda aquí. La lambda y sus visitantes nunca lo ven.'],
+      ['Se va con el borrador', 'Al fusionar o eliminar el borrador se elimina la copia. Los datos de la lambda se quedan como están.'],
+    ],
+    recopy: 'Volver a copiar los datos de la lambda',
+    recopyTitle: 'Reemplazar esta copia por lo que contiene la lambda ahora',
+    recopyConfirm: '¿Volver a copiar los datos de la lambda?',
+    recopyText:
+      'Todo lo que hay en esta copia (lo que haya escrito la vista previa) se reemplaza por lo que contiene la lambda ahora. Los datos de la propia lambda no se tocan.',
+    keepCopy: 'Mantener esta copia',
+    recopied: 'La copia está al día. La vista previa la lee desde su próxima petición.',
+    recopyFailed: 'No se pudieron volver a copiar los datos.',
+    copyContents: 'Lo que contiene la copia del workspace',
     kinds: {
       workspace: {
         name: 'Workspace',
@@ -379,8 +428,6 @@ export const editor: EditorMessages = {
     byDefault: 'Activado por defecto',
     usage: (items, used, of) => `${items} · ${used} de ${of}`,
     offText: 'Desactivado. No contiene nada, y el código que lo usa falla hasta que se vuelva a activar.',
-    switchOn: 'Activar',
-    switchOff: 'Desactivar',
     switchLabel: (name) => `${name}: activado o desactivado`,
     confirmOff: (name) => `¿Desactivar el ${name.toLowerCase()}?`,
     confirmText: (items, size) => `Todo lo que contiene (${items}, ${size}) se elimina para siempre. No se puede deshacer.`,
@@ -398,24 +445,156 @@ export const editor: EditorMessages = {
     offBrowse: 'El workspace está desactivado, así que no hay archivos que mostrar.',
   },
 
+  features: {
+    hint:
+      'Una versión nunca cambia una vez guardada. Los cambios se hacen en un borrador: empieza como una copia de una versión y de los datos de la lambda, se puede probar en su propia dirección mientras los visitantes siguen recibiendo lo que está en línea, y pasa a ser la siguiente versión cuando lo fusionas.',
+    newFeature: 'Borrador nuevo',
+    full: (limit) => `Esta lambda tiene ${limit} borradores abiertos, el máximo que puede tener. Fusiona o elimina uno antes.`,
+    emptyTitle: 'No hay nada en curso',
+    emptyText:
+      'Empieza un borrador para cambiar la lambda sin tocar lo que está en línea. Puedes cambiarlo tú, o el agente, tantas veces como haga falta, y probarlo en su propia dirección.',
+    steps: [
+      ['Empiézalo', 'Una copia de la versión más nueva y de los datos de la lambda.'],
+      ['Cámbialo y pruébalo', 'En su propia dirección, con su propia copia de los datos.'],
+      ['Fusiónalo', 'Pasa a ser la siguiente versión, y se pone en línea cuando tú digas.'],
+    ],
+    start: 'Empezar un borrador',
+    askAgentNew: 'Pedirle un cambio al agente',
+    noChange: 'Todavía no dice qué cambia',
+    from: (version) => `a partir de la versión ${version}`,
+    mergeable: 'listo para fusionar',
+    behindTitle: 'Se guardó una versión más nueva después de que empezara',
+    behind: (newest) => `la versión ${newest} es más nueva`,
+    previewOnline: 'vista previa en línea',
+    previewOutdated: 'la vista previa muestra un guardado anterior',
+    previewOffline: 'vista previa fuera de línea',
+    changed: 'modificado',
+    openPreview: 'Vista previa',
+    openPreviewTitle: 'Abrir la vista previa en una pestaña nueva',
+    count: (open, limit) => `${open} de ${limit} borradores abiertos`,
+    loading: 'Cargando el borrador…',
+    readFailed: 'No se pudo leer el borrador.',
+
+    newTitle: 'Empezar un borrador',
+    newText:
+      'Un borrador empieza como una copia de una versión (su código y sus recursos) y de los datos de la lambda. Cámbialo y pruébalo en su propia dirección mientras los visitantes siguen recibiendo lo que está en línea; fusiónalo cuando esté bien.',
+    newTextFiles:
+      'Lo que escribiste en el código va a parar a él, en vez de convertirse en una versión. Pruébalo en la dirección propia del borrador y fusiónalo cuando esté bien.',
+    name: 'Nombre',
+    namePlaceholder: 'Ranking',
+    wanted: '¿Qué debería hacer?',
+    wantedPlaceholder: 'Opcional. Guarda las diez mejores puntuaciones y muéstralas después de cada partida.',
+    startFrom: 'Empezar a partir de',
+    version: (version, newest, online) =>
+      `Versión ${version}${newest && online ? ' (la más nueva, en línea)' : newest ? ' (la más nueva)' : online ? ' (en línea)' : ''}`,
+    olderBase: (newest) =>
+      `No es la más nueva: antes de poder fusionarlo, tiene que incorporar lo que cambiaron las versiones hasta la ${newest}.`,
+    create: 'Empezarlo',
+    createFailed: 'No se pudo empezar el borrador.',
+    retry: 'Volver a intentarlo',
+    madeNotSaved: (name) =>
+      `El borrador «${name}» ya está en marcha, pero lo que escribiste todavía no se pudo guardar en él. Vuelve a intentarlo, o cierra esto y busca el borrador en Borradores.`,
+    created: (name) => `El borrador «${name}» ya está en marcha.`,
+    cancel: 'Cancelar',
+
+    featureHint:
+      'Un cambio en el que se trabaja al lado de la lambda. Su vista previa ejecuta su código con su propia copia de los datos, así que los visitantes de la lambda no ven nada de esto. Al fusionarlo pasa a ser la siguiente versión.',
+    askAgent: 'Pedírselo al agente',
+    editCode: 'Editar el código',
+    preview: 'Vista previa',
+    state: {
+      online: 'En línea',
+      outdated: 'En línea, con un guardado anterior',
+      offline: 'Fuera de línea',
+    },
+    deployed: 'desplegada',
+    deployPreview: 'Desplegar la vista previa',
+    updatePreview: 'Actualizar la vista previa',
+    previewDeployed: 'La vista previa está en línea.',
+    previewFailed: 'No se pudo poner en línea la vista previa.',
+    previewStopped: 'La vista previa está fuera de línea.',
+    previewRejected: 'La vista previa no cambió',
+    previewNotCompiling: 'No compila. La vista previa sigue mostrando lo mismo que antes.',
+    previewAddress: 'Dirección de la vista previa',
+    previewNote: 'Cualquiera con esta dirección puede abrir la vista previa. A los buscadores se les pide que la ignoren.',
+    basedOn: 'Basado en',
+    mergeableLong: 'la más nueva, así que se puede fusionar',
+    started: 'Empezó',
+    changes: (version) => `Lo que cambia respecto a la versión ${version}`,
+    noChanges: (version) => `Nada todavía: contiene exactamente lo mismo que la versión ${version}.`,
+    notes: 'Notas',
+    editNotes: 'Nombre y notas',
+    what: '¿Qué cambia?',
+    whatPlaceholder: 'Añade un ranking que guarda las diez mejores puntuaciones',
+    noWanted: 'Todavía no se ha dicho nada',
+    mergeNote: (version) =>
+      `Al fusionarlo pasa a ser la versión ${version}, con estas notas. El borrador desaparece entonces, con su vista previa y su copia de los datos.`,
+    missed: (from, to) =>
+      to - from === 1 ? `Lo que cambió la versión ${to}` : `Lo que cambiaron las versiones de la ${from + 1} a la ${to}`,
+    missedNothing: 'Nada en los archivos.',
+
+    behindText: (base, newest) =>
+      `Empezó a partir de la versión ${base}, y desde entonces se guardó la versión ${newest}. Fusionarlo ahora desharía lo que cambió esa versión. Lleva esos cambios al borrador (o pídeselo al agente) y después indica que está basado en la versión ${newest}.`,
+    moveBase: 'Basarlo en otra versión',
+    close: 'Cerrar',
+    mergeTitle: (name) => `Fusionar «${name}»`,
+    mergeTitleShort: 'Convertirlo en la siguiente versión',
+    leaks: (path, files) =>
+      `En ${files} se enlaza a ${path} con la ruta completa. Desde la vista previa, eso lleva a la lambda en línea y a sus datos reales, no a la copia de este borrador. Las rutas relativas («api/items») se quedan en la vista previa.`,
+    mergeButton: 'Fusionar',
+    saveFirst: 'Guarda el código primero: la vista previa y la fusión usan lo que está guardado.',
+    merge: 'Fusionarlo',
+    mergeAndDeploy: (version) => `Fusionar y poner en línea la versión ${version}`,
+    mergeText: (version) =>
+      `Pasa a ser la versión ${version}. El borrador desaparece con ello: su vista previa y su copia de los datos. Los datos de la propia lambda se quedan como están.`,
+    deployToo: (version) => `Poner en línea la versión ${version} enseguida`,
+    deployTooNote: (active) => `La versión ${active} sigue a un clic en las versiones.`,
+    deployTooOffline: 'La lambda está fuera de línea ahora; esto la pone en línea.',
+    notCompiling: 'No compila, así que no se fusionó. Corrígelo antes en el borrador.',
+    mergeFailed: 'No se pudo fusionar el borrador.',
+    merged: (version) => `Fusionado como versión ${version}.`,
+    mergedOnline: (version) => `Fusionado como versión ${version}, y en línea.`,
+
+    notesTitle: 'Nombre y notas',
+    save: 'Guardar',
+    saveFailed: 'No se pudo guardar.',
+
+    baseTitle: 'Basarlo en otra versión',
+    baseText: (base) =>
+      `Está basado en la versión ${base}. Solo se puede fusionar un borrador basado en la versión más nueva, para que fusionar nunca deshaga lo que se guardó después de que empezara. Cuando contenga todo lo que cambió una versión más nueva, indícalo aquí.`,
+    moveTo: (version) => `Basarlo en la versión ${version}`,
+    baseWarning: 'Nada comprueba que esos cambios estén de verdad en el borrador. Si lo fusionas sin ellos, se deshacen.',
+
+    deleteTitle: (name) => `¿Eliminar «${name}»?`,
+    deleteText:
+      'Su código, su vista previa y su copia de los datos se eliminan para siempre. La lambda y sus versiones no se tocan.',
+    keep: 'Mantenerlo',
+    deleteForGood: 'Eliminar para siempre',
+    deleteFailed: 'No se pudo eliminar el borrador.',
+    deleted: (name) => `Se eliminó el borrador «${name}».`,
+
+    all: 'Todos los borradores',
+    actions: 'Más opciones de este borrador',
+    download: 'Descargar como zip',
+    stopPreview: 'Desconectar la vista previa',
+    delete: 'Eliminar este borrador',
+    viewsLabel: 'El borrador',
+    views: {
+      overview: 'Borrador',
+      code: 'Código',
+      data: 'Datos',
+      logs: 'Logs',
+    },
+    missingTitle: 'Este borrador ya no existe',
+    missingText: 'Se fusionó en una versión o se eliminó. Las versiones muestran qué fue de él.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Una versión es el programa: su código y sus recursos. La más nueva es en la que se trabaja: se pueden guardar cambios en ella y volver a desplegarla tantas veces como haga falta. Las anteriores se quedan exactamente como estaban, para compararlas y volver a ellas. Cada una guarda lo que se pidió y lo que cambió. Cuando hay más de ${limit}, se eliminan las más antiguas; la que está en línea, nunca.`,
+      `Una versión es el programa (su código y sus recursos) y nunca cambia una vez guardada, así que cualquiera de ellas se puede comparar y volver a poner en línea exactamente como estaba. Cada una guarda lo que se pidió y lo que cambió. Para cambiar la lambda, empieza un borrador: pasa a ser la siguiente versión cuando esté bien. Cuando hay más de ${limit}, se eliminan las más antiguas; la que está en línea, nunca.`,
     none: 'Todavía no hay versiones.',
     noDescription: 'Sin descripción',
     online: 'en línea',
-    newest: 'la más nueva',
-    newestTitle: 'La versión en la que se trabaja: al guardar se cambia esta misma versión',
-    edited: 'editada',
-    saves: (count) => (count === 1 ? 'Guardada una vez' : `Guardada ${count} veces`),
-    changedSince: 'cambiada desde que se puso en línea',
-    deployAgain: 'Volver a desplegar',
-    deployAgainTitle: 'Poner en línea lo que se guardó desde el último despliegue',
-    start: 'Versión nueva',
-    startTitle: (version) => `Dejar la versión ${version} como está y seguir en una copia`,
-    startFrom: 'Empezar una versión nueva desde aquí',
-    started: (version) => `Versión ${version} creada. Ahora es la más nueva, así que el trabajo sigue ahí.`,
-    startFailed: 'No se pudo crear la versión nueva.',
     putOnline: 'Poner esta versión en línea',
     rollBackTitle: 'Volver a poner en línea esta versión anterior',
     deploy: 'Desplegar',
@@ -427,6 +606,9 @@ export const editor: EditorMessages = {
     status: { added: 'añadido', removed: 'eliminado', changed: 'modificado', same: 'igual' },
     browse: 'Ver sus archivos',
     edit: 'Editar desde aquí',
+    feature: 'Empezar un borrador desde aquí',
+    featureTitle:
+      'Trabajar en un cambio de esta versión al lado de la lambda, y fusionarlo en la siguiente versión cuando esté bien',
     binary: 'No es texto, así que no hay líneas que comparar.',
     tooLarge: 'Es demasiado grande para compararlo línea a línea.',
   },
@@ -450,8 +632,6 @@ export const editor: EditorMessages = {
       ended: 'finalizado',
     },
     putBack: (version) => `Volver a poner en línea la versión ${version}`,
-    revision: (revision) => `guardado n.º ${revision}`,
-    revisionTitle: (revision) => `La versión tal como quedó después de su guardado n.º ${revision}`,
     timeline: 'Lo que estuvo en línea en los últimos siete días',
     block: (version, from, to) => `Versión ${version}: ${from} – ${to ?? 'ahora'}`,
     weekAgo: 'hace una semana',
@@ -496,6 +676,11 @@ export const editor: EditorMessages = {
       'Peticiones, lo que imprime la lambda y lo que sale mal, en tiempo real.' +
       (capturing ? '' : ' Esta instalación no guarda lo que imprimen las lambdas, así que solo aparecen peticiones y errores.') +
       ' Se guardan en memoria y se comparten con todas las lambdas de aquí, así que abarcan de minutos a horas y se vacían tras un reinicio. No se muestran las direcciones de los visitantes.',
+    featureHint: (capturing) =>
+      'Lo que respondió la vista previa de este borrador, lo que imprimió y lo que falló, en tiempo real.' +
+      (capturing ? '' : ' Esta instalación no guarda lo que imprimen las lambdas, así que solo aparecen peticiones y errores.') +
+      ' Se guardan aparte de los logs de la propia lambda, que nunca muestran la vista previa. Se guardan en memoria, así que abarcan de minutos a horas.',
+    nothingPreview: 'Nada todavía. Abre la vista previa del borrador y sus peticiones aparecerán aquí.',
     search: 'Buscar',
     searchLabel: 'Buscar en los logs',
     resume: 'Mostrar las líneas nuevas según llegan',
@@ -641,36 +826,45 @@ export const editor: EditorMessages = {
     notYet: 'Todavía no compila.',
     checkFailed: 'No se pudo comprobar el código.',
     saved: (version) => `Guardado como versión ${version}.`,
-    savedOver: (version) => `Versión ${version} actualizada. Despliégala para ponerla en línea.`,
-    savedOverOnline: (version) =>
-      `Versión ${version} actualizada. Los visitantes reciben lo que se desplegó hasta que la vuelvas a desplegar.`,
+    featureSaved: 'Guardado en el borrador. Despliega su vista previa para probarlo.',
+    featureLoadFailed: 'No se pudo cargar el borrador.',
+    previewOnline: 'La vista previa está en línea.',
+    previewRefused: 'La vista previa no cambió. Mira abajo lo que dijo el compilador.',
     isOnline: (version) => `La versión ${version} está en línea.`,
     notOnline: 'No se puso en línea. Mira abajo lo que dijo el compilador.',
     failed: 'No funcionó.',
     unchanged: 'No hay cambios desde la última vez que guardaste.',
     demo: 'Es una demo, así que todo es de solo lectura. Para cambiarla, crea tu propia lambda a partir de ella. ',
-    edit: 'Edita el código a mano. Al guardar cambias la versión más nueva, tantas veces como quieras; lo que está en línea solo cambia cuando despliegas. «Versión nueva» deja tal cual la versión de la que partiste. ',
-    history: (version, newest) =>
-      `La versión ${version} es parte del historial y se queda como está, así que al guardar se crea una versión nueva a partir de ella. La más nueva es la ${newest}. `,
+    edit: 'Edita el código a mano. Al guardar se crea una versión nueva y lo que está en línea no cambia; al desplegar, se pone en línea. Para probar un cambio antes, empieza un borrador. ',
+    editFeature:
+      'El código de este borrador. Al guardar se queda en el borrador: no cambia nada de lo que reciben los visitantes de la lambda. Al desplegar se pone en línea en la dirección propia del borrador, para probarlo; al fusionar el borrador, pasa a ser la siguiente versión. ',
+    inFeature: (name) => `en «${name}»`,
+    previewed: ', en la vista previa',
+    changedElsewhere: 'El borrador se guardó en otro sitio desde que lo abriste (quizá lo hizo el agente). Carga lo guardado antes de guardar aquí; tus cambios no se guardarían encima.',
+    readAgain: 'Cargar lo guardado',
     files: (entry, cs) => (
       <>
         {entry} devuelve lo que se sirve, los demás archivos {cs} contienen tipos y cualquier otro archivo se sirve tal
         cual. Ctrl-S guarda; F12 va a una declaración.
       </>
     ),
+    newer: (version) => ` La versión ${version} es más nueva que la que tienes abierta aquí.`,
     check: 'Comprobar',
     save: 'Guardar',
-    saveTitle: (version) => `Guardar en la versión ${version} (Ctrl+S)`,
-    saveNew: 'Versión nueva',
-    saveNewTitle: 'Guardar como versión nueva y dejar tal cual la versión de la que partiste',
     deploy: 'Desplegar',
-    older: ', historial',
-    newestTag: ', la más nueva',
-    unpublished: ', con cambios desde que se puso en línea',
+    deployPreview: 'Desplegar la vista previa',
+    deployPreviewTitle: 'Guardar y poner en línea el borrador en su propia dirección para probarlo',
     binary: (size) => `No es texto, así que no hay nada que editar. Se sirve tal cual y pesa ${size} kB.`,
     saveAndDeploy: 'Guardar y desplegar',
     saveVersion: 'Guardar una versión nueva',
-    saveNewAndDeploy: 'Guardar una versión nueva y desplegarla',
+    fromOlder: (version, newest) =>
+      `Esto parte de la versión ${version}, y la versión ${newest} es más nueva. Al guardar pasa a ser la versión más nueva, sin lo que vino después de la versión ${version}.`,
+    featureInstead: (start) => (
+      <>
+        ¿Vas a probar algo? {start('Mejor, ponlo en un borrador nuevo')}: tiene su propia dirección, y no se guarda ninguna
+        versión hasta que esté bien.
+      </>
+    ),
     cancel: 'Cancelar',
     what: '¿Qué cambia? Es opcional y se muestra en el historial.',
     placeholder: 'Añade un formulario de contacto',

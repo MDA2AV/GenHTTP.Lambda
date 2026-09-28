@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'A tua primeira lambda',
     editor: 'O painel de controlo',
     why: 'Explicar o porquê',
+    features: 'Alterar com segurança',
     files: 'Mais do que um ficheiro',
     page: 'Servir uma página',
     spa: 'Um front-end, passo a passo',
@@ -59,9 +60,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Dá a chave de edição a um agente e diz-lhe o que deve criar: ele trabalha via {k.link('/#agents', 'MCP')}, numa
-        versão para cada coisa que pedes. Ou abre {k.b('Código')} e escreve-o tu: {k.b('Verificar')} compila sem guardar
-        nada e diz-te o que o compilador acha, com ficheiro e linha.
+        Dá a chave de edição a um agente e diz-lhe o que deve criar: ele escreve novas versões via{' '}
+        {k.link('/#agents', 'MCP')}. Ou abre {k.b('Código')} e escreve-o tu: {k.b('Verificar')} compila sem guardar nada
+        e diz-te o que o compilador acha, com ficheiro e linha.
       </>
     ),
     (k) => (
@@ -76,8 +77,8 @@ export const guide: Messages['guide'] = {
     <>
       O link de edição abre um painel de controlo em vez de uma caixa de texto: aqui, a maior parte do código é escrita
       por agentes, por isso a primeira coisa no ecrã é como está a tua lambda. A barra lateral tem a lambda (se está
-      online, o endereço e um botão quando há alguma coisa para pôr online) e as secções. O que se faz raramente, como
-      mudar o endereço ou eliminá-la, está no menu {k.b('⋯')} que lá encontras.
+      online, o endereço e um botão quando há uma versão mais recente à espera de ficar online) e as secções. O que se
+      faz raramente, como mudar o endereço ou eliminá-la, está no menu {k.b('⋯')} que lá encontras.
     </>
   ),
   bits: [
@@ -86,15 +87,16 @@ export const guide: Messages['guide'] = {
       'Alterar',
       (k) => (
         <>
-          Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas: lê o código, altera-o,
-          confirma que compila e põe-no online como uma nova versão. Desliga {k.b('Pôr online quando terminar')}{' '}
-          para o veres primeiro.
+          Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas. Trabalha num
+          rascunho, experimenta-o lá e integra-o na próxima versão quando funcionar. Desliga{' '}
+          {k.b('Pôr online quando terminar')} para experimentares tu o rascunho primeiro.
         </>
       ),
     ],
+    ['Rascunhos', () => <>Alterações feitas ao lado da lambda: cada uma é experimentada num endereço próprio e integrada na próxima versão quando estiver bem. Aberto, um rascunho tem o seu próprio código, dados e logs.</>],
     ['Ficheiros', () => <>Os ficheiros de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo indica se o público lhes consegue aceder.</>],
     ['Dados', () => <>O que a lambda guarda enquanto corre, partilhado por todas as versões: o workspace. Vê o que lá está, carrega e elimina ficheiros, ou desliga-o.</>],
-    ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. A mais recente é aquela em que se está a trabalhar. Faz deploy, reverte ou começa uma nova versão a partir daqui.</>],
+    ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faz deploy ou reverte a partir daqui, ou começa um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve online e quando, e o que o pôs offline.</>],
     ['Estatísticas', () => <>Pedidos, falhas, tempos de resposta e os caminhos mais pedidos, na última hora ou nas últimas 24 horas.</>],
     ['Logs', () => <>Os pedidos, o que a lambda escreveu na consola e o stack trace de tudo o que correu mal, em tempo real.</>],
@@ -102,9 +104,9 @@ export const guide: Messages['guide'] = {
       'Código',
       (k) => (
         <>
-          Para o escrever à mão. {k.b('Verificar')} compila, {k.b('Guardar')} altera a própria versão mais recente,{' '}
-          {k.b('Nova versão')} mantém-na como está e começa outra, {k.b('Fazer deploy')} põe-na online.{' '}
-          {k.code('Ctrl-S')} guarda; {k.code('F12')} vai para a declaração.
+          Para o escrever à mão. {k.b('Verificar')} compila, {k.b('Guardar')} cria uma versão, {k.b('Fazer deploy')}{' '}
+          põe-na online. Num rascunho, {k.b('Guardar')} mantém-no no rascunho e {k.b('Fazer deploy da pré-visualização')}{' '}
+          põe-no online no endereço do rascunho. {k.code('Ctrl-S')} guarda; {k.code('F12')} vai para a declaração.
         </>
       ),
     ],
@@ -132,10 +134,48 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Os agentes passam os mesmos dois campos a {k.code('write_code')}. Em {k.b('Código')}, {k.b('Nova versão')}{' '}
-      pede-te a alteração. Ambos são opcionais: em vez de ser recusada, uma especificação longa é cortada aos 4000
-      caracteres, e uma alteração aos 500. Guardar outra vez numa versão mantém as notas dela, a não ser que indiques
-      novas.
+      Os agentes passam os mesmos dois campos a {k.code('write_code')}. Em {k.b('Código')}, guardar pede-te a
+      alteração. Ambos são opcionais: em vez de ser recusada, uma especificação longa é cortada aos 4000 caracteres, e
+      uma alteração aos 500. Um rascunho tem as suas próprias duas notas, e a versão em que é integrado fica com elas.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Uma versão nunca muda depois de guardada, e é isso que faz com que valha a pena guardar cada uma: qualquer uma
+      pode ser comparada e voltar a ficar online exatamente como era. Para alterar uma lambda que as pessoas usam,
+      começa antes um {k.b('rascunho')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Começa-o em {k.b('Rascunhos')}, ou a partir de qualquer versão. É uma cópia do código e dos assets dessa versão,
+        e dos dados da lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Altera-o quantas vezes for preciso: em {k.b('Código')}, ou pedindo ao agente.{' '}
+        {k.b('Fazer deploy da pré-visualização')} põe-no online num endereço próprio, {k.code('/features/…/')}, com a
+        sua própria cópia dos dados. Os visitantes da lambda não veem nada disto, e nada do que ele escreve chega aos
+        dados da lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Quando estiver bem, {k.b('Integrar')} faz dele a próxima versão, com as suas notas, e põe-no logo online se
+        quiseres. O rascunho desaparece com isso: a pré-visualização e a cópia dos dados.
+      </>
+    ),
+  ],
+  featureSample: 'Ranking',
+  featuresAside: () => (
+    <>
+      Podes trabalhar em vários rascunhos ao mesmo tempo. Só um que se baseie na versão mais recente pode ser
+      integrado, para que uma integração nunca desfaça uma versão guardada depois de o rascunho ter começado. Se outro
+      foi integrado primeiro, traz as alterações dele (ou pede ao agente que o faça) e depois baseia o rascunho na
+      versão mais recente. Nada se integra sozinho; é de propósito.
     </>
   ),
 
@@ -207,10 +247,10 @@ export const guide: Messages['guide'] = {
   workspaceColumn: 'Nos dados',
   table: [
     ['o que guarda', 'o código e os assets: o programa, incluindo o front-end', 'tudo o que a lambda escreve, ou que alguém carrega'],
-    ['quando muda', 'quando a versão é guardada', 'no momento em que algo é escrito'],
+    ['quando muda', 'nunca: uma alteração é uma nova versão', 'no momento em que algo é escrito'],
     ['um deploy', 'põe online exatamente estes ficheiros', 'nunca lhes toca'],
     ['reverter', 'traz de volta os ficheiros antigos', 'não tem efeito: são os mesmos para todas as versões'],
-    ['uma nova versão', 'começa como uma cópia deles', 'não tem efeito'],
+    ['um rascunho', 'começa como uma cópia deles', 'trabalha numa cópia deles'],
     ['quando desaparecem', 'com as versões antigas, passado o limite', 'com a lambda, ou quando os desligas'],
   ],
   reachedAs: 'acedido no código como',

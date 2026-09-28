@@ -89,13 +89,15 @@ public sealed record StorageSummary(
 /// Nothing counts files - C#, assets or the workspace - only what they come
 /// to, and for the workspace the room they take.
 /// </remarks>
+/// <param name="Features">How many features it may have open at once</param>
 public sealed record SummaryLimits(
     int CodeCharacters,
     long AssetBytes,
     long WorkspaceBytes,
     int Versions,
     int DeploymentLifetimeHours,
-    int RetentionDays
+    int RetentionDays,
+    int Features
 );
 
 /// <summary>

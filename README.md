@@ -28,7 +28,7 @@ Two processes: the .NET server, and Vite serving the frontend with hot reload.
 # the server, on http://localhost:8080/
 dotnet run --project src/GenHTTP.Lambda
 
-# the frontend, on http://localhost:5173/ (proxies /api and /lambda to the server)
+# the frontend, on http://localhost:5173/ (proxies /api, /lambda and /features to the server)
 cd src/Frontend && npm install && npm run dev
 ```
 
@@ -58,6 +58,7 @@ port, each against its own temporary data directory.
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
+| `/features/:feature` | the preview of a feature, while it is online              |
 | any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
 | `/api/v1/`           | everything the editor calls, see below                    |
 | `/mcp`               | the same, for agents                                      |
@@ -77,9 +78,7 @@ path.
 | `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
-| `PUT / PATCH /lambdas/:privateKey/versions/:version`  | saves all files, or some, over the newest version |
-| `GET / PUT /lambdas/:privateKey/versions/:version/zip`| one version's files as a zip; a zip saved over the newest |
-| `POST /lambdas/:privateKey/versions/:version/copy`    | starts a new version as a copy of this one |
+| `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
 | `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
 | `POST /lambdas/:privateKey/versions/changes`          | changes some files of the newest version, as a new one |
 | `GET /lambdas/:privateKey/deployment`                 | what is online, and until when            |
@@ -96,6 +95,16 @@ path.
 | `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`), as base64 up to 32 MB |
 | `GET / PUT /lambdas/:privateKey/files/:path/content`  | one file as it is, streamed, however large |
 | `PUT /lambdas/:privateKey/folders/:path`              | makes a folder                            |
+| `GET / POST /lambdas/:privateKey/features`            | lists the features, starts one (`name`, `specification`, `base`) |
+| `GET / PATCH / DELETE /lambdas/:privateKey/features/:feature` | one feature with its files; changes its name, notes or `base`; deletes it |
+| `PUT /lambdas/:privateKey/features/:feature/files`    | replaces its files (`?deploy=true` puts its preview online) |
+| `POST /lambdas/:privateKey/features/:feature/changes` | changes some of its files                 |
+| `GET / PUT /lambdas/:privateKey/features/:feature/zip`| its files as a zip; a zip put back into it |
+| `POST /lambdas/:privateKey/features/:feature/preview/start` / `stop` | puts its preview online, takes it off |
+| `POST /lambdas/:privateKey/features/:feature/merge`   | makes it the next version and deletes it (`deploy` to put that online) |
+| `GET /lambdas/:privateKey/features/:feature/logs`     | what its preview has been doing           |
+| `GET /lambdas/:privateKey/features/:feature/data`, `POST …/data/refresh` | its copy of the data; a fresh copy of the lambda's |
+| `…/features/:feature/workspace[/:path[/content]]`, `…/folders/:path` | its copy of the workspace, as `files` and `folders` are the lambda's |
 | `POST /lambdas/:privateKey/code/check`                | compiles without saving                   |
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
@@ -125,62 +134,88 @@ The editor says when both free tier timers run out: a hint under the public URL
 for the deployment, and a chip beside the buttons for the lambda itself, which
 opens an explanation of how each one is extended.
 
-### Versions and data
+### Versions, features and data
 
-A lambda keeps two kinds of things, and they live differently.
+A lambda keeps three kinds of things, and they live differently.
 
 A **version** is the program: every C# file and every asset, the front end
-included. The newest version is the one being worked on - it is saved over in
-place (`PUT` or `PATCH` on it, `version` on `write_code` and `change_code`) as
-often as it takes, and deployed again each time. Every version before it is
-history and never changes: something to compare with and roll back to. A new
-version is started deliberately, once per thing somebody asked for - by saving
-without a version number, or by copying an existing one, which is also how an
-old version is carried on from. The editor shows the newest as such, and its
-**Save** saves over it while **New version** keeps it and starts another.
+included. A version never changes once it is saved, which is what makes every
+one worth keeping - any of them can be compared with, and put back online
+exactly as it was. Saving files (`POST …/versions`, `write_code`) makes a new
+one.
+
+A **feature** is a change worked on beside the lambda. It branches off a
+version - the newest, unless another is named - with a copy of its files and a
+copy of the lambda's data, and is changed in place as often as it takes; it has
+no versions of its own. Its preview is built from its files against its copy of
+the data and answers at `/features/{feature}/`, a random key nobody guesses,
+told to search engines with `X-Robots-Tag: noindex` and a `Disallow` in
+`robots.txt`. It serves what was deployed until it is deployed again, a restart
+included, is counted neither in the lambda's traffic nor in its log, and on the
+free tier goes offline like a deployment does when nobody works on it. Once it
+does what was asked it is **merged**: its files become the next version, with
+its notes, and the feature goes - preview, copy of the data and all; the
+lambda's own data is not touched. Only a feature based on the newest version
+can be merged, so that a merge never undoes a version saved after the feature
+began - by the owner, an agent, or the merge of another feature. There is no
+merging or rebasing machinery: whoever works on the feature brings a newer
+version's changes in and then says so by moving its `base` (`PATCH`, or
+`update_feature`), and the merge takes the lambda's lock and checks the base
+once more, so two merges cannot both win. A lambda may have ten features open
+(`LAMBDA_MAX_FEATURES`); a demo has none. Each holds a full copy of the
+workspace, taken on a thread of its own and swapped in whole, so ten features
+of a premium lambda with a full workspace take ten times its room on disk.
 
 **Data** is what the program keeps: for now the workspace, a private directory
 of files, with a database and secrets meant to follow. It belongs to the lambda
 rather than to a version - every version reads and writes the same data, and
-deploying, rolling back or copying a version never touches it. It goes with the
-lambda, or when its owner switches that kind of data off, which deletes what it
-held. Each kind is switched on by the owner (`PUT …/data/:kind`); the workspace
-is on unless it was switched off, and a lambda whose workspace is off is
-compiled with one that refuses every call and says why. The editor has a
-**Data** section of its own, beside **Files**, which now holds only the files
-of a version.
+deploying, rolling back or merging never touches it. It goes with the lambda,
+or when its owner switches that kind of data off, which deletes what it held -
+the copies features work on included. Each kind is switched on by the owner
+(`PUT …/data/:kind`); the workspace is on unless it was switched off, and a
+lambda whose workspace is off is compiled with one that refuses every call and
+says why. The editor has a **Data** section of its own, beside **Files**, which
+holds the files of a version.
 
-Editing and deploying are separate: deploying picks a version (the latest by
-default), builds it and makes it live, and a lambda has at most one deployment
-at a time. What is online stays exactly what was deployed until the next
-deploy. Saving over the version that is online sets aside what was deployed
-first, so a restart builds that rather than the save that followed, and a
-deployment of the new save that does not compile leaves the old one standing -
-its assets included, which are written back after the failed attempt replaced
-them. The lambda says `activeChanged` while the version online has been saved
-over since, and the editor offers to deploy it again.
+Deploying picks a version (the latest by default), builds it and makes it live,
+and a lambda has at most one deployment at a time. A deployment that does not
+compile leaves the one before it standing - its assets included, which are
+written back after the failed attempt replaced them.
+
+The editor lists the features in a section of its own, and opened on one it
+becomes the feature's: the sidebar holds it, with its preview address and the
+buttons that deploy the preview and merge it, and its views are its code, its
+copy of the data and its preview's log. Showcase, domain, figures and
+deployments stay with the lambda. A version offers to start a feature from it,
+and the save dialog of the code offers to put what was typed into a new
+feature instead of a version.
 
 ### Changing a lambda by asking
 
 Where the installation runs the build agent, the editor has a **Change**
 section: the owner says what should be different, and the same agent that
-builds things on `/build` changes the lambda - it reads the code and the
-history, changes only what was asked with `change_code`, fixes what does not
-compile, and puts the result online as a new version. Switched off, it saves
-the version for the owner to look at and deploy themselves.
+builds things on `/build` changes the lambda. It works in a feature - a new
+one, or one the owner picks to go on with - reads the code and the history,
+changes only what was asked with `change_code`, and tries it at the feature's
+preview until it works. Then it merges the feature into the next version and
+puts that online; switched off, it leaves the feature with its preview online
+for the owner to try and merge. The next request defaults to the feature the
+last one left open, so asking for a tweak after trying the preview goes on
+with the same feature. It is told to leave every other feature alone.
 
 The section shows it happen: what the agent says it is doing, each tool it
-calls with what came of it (the version saved, errors from the compiler, the
-version online), and a clock against its time limit. Afterwards it offers the
-difference to the version before, the address, and putting the previous
-version back. The change is followed by the frame of the editor rather than
+calls with what came of it (the feature started, its preview online, errors
+from the compiler, the version merged and online), and a clock against its time
+limit. Afterwards it offers the preview and the feature - or, once merged, the
+difference to the version before, the address, and putting the previous version
+back. The change is followed by the frame of the editor rather than
 the section, so the sidebar marks it and the lambda is read again when it
 ends wherever the owner is; and it is kept by the agent under the lambda, so a
 reload, a second tab or a redeploy of the server finds it where it got to.
 
 It shares the queue and the daily allowance of `/build`, one change of a
-lambda runs at a time, and it can be stopped - whatever it saved stays a
-version. A change runs without `create_lambda`, and its editor key travels in
+lambda runs at a time, and it can be stopped - whatever it saved stays, in its
+feature or as a version. A change runs without `create_lambda`, and its editor key travels in
 the brief inside the build container, never in a log line.
 
 ## How it is put together
@@ -205,9 +240,16 @@ services that the API resources talk to through interfaces:
   of files of any size - counted in blocks of 4 KB as the disk counts it, so
   an empty file or a folder is not free. The quota is compiled into the
   lambda, so moving it to another tier builds it again on its next request.
+- **Features** (`Services/Features`) - changes worked on beside a lambda. A
+  row per feature says what it is based on and whether its preview is online;
+  its files (`files.json`), what its preview serves (`preview.json`), its copy
+  of the workspace and its preview's assets live below
+  `/data/features/{lambda}/{feature}`, so deleting a feature is deleting a
+  folder. Merging goes through Meta, under the same lock every save takes.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
-  the resulting handler. Compiled once, then cached.
+  the resulting handler. Compiled once, then cached - one handler for what a
+  lambda has online, and one for the preview of each of its features.
 - **Execution** (`Services/Execution`) - an `IHandler`, not a web service: it
   looks up the handler for a request and runs it.
 - **Protection** (`Services/Protection`) - concerns in front of execution that
@@ -258,6 +300,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_WORKSPACE_BYTES`            | `268435456`      | the room a workspace may take in all        |
 | `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | the same for a premium lambda               |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
+| `LAMBDA_MAX_FEATURES`               | `10`             | features open per lambda - each holds a copy of the workspace, so this bounds the disk they take |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
@@ -527,23 +570,29 @@ https://genhttp.dev/mcp
 ```
 
 The tools are the shape of the job: `create_lambda`, `write_code`, `change_code`,
-`copy_version`, `check_code`, `deploy`, `read_lambda`, `read_logs`, the data
-tools `upload_file`, `list_files` and `delete_file`, and `list_demos` for reading
-something that already works. `platform_guide` is the one to call first - it
-opens with how versions and data live, then says what a snippet has to return,
-what is imported, what is refused, and the handful of things that catch people
-out.
+`check_code`, `deploy`, `read_lambda`, `read_logs`, the feature tools
+`create_feature`, `update_feature`, `merge_feature` and `delete_feature`, the
+data tools `upload_file`, `list_files` and `delete_file`, and `list_demos` for
+reading something that already works. `platform_guide` is the one to call first
+- it opens with how versions, features and data live, then says what a snippet
+has to return, what is imported, what is refused, and the handful of things
+that catch people out.
 
-Agents used to leave a version behind for every fix. Now `write_code` and
-`change_code` take a `version` - the number of the newest - and save over it
-instead, and the answer to every save says which version to keep working in;
-`copy_version` starts the next one without sending a file. The same two rules
-are said wherever an agent decides something - in the instructions it reads on
-connecting, in the tool descriptions and in the guide: work in the newest
-version, starting a new one only per request, and keep the front end in the
-version and user data in the workspace, never the other way round. `read_lambda`
-says whether what is online is behind what was saved, and which data the lambda
-has switched on.
+Agents used to leave a version behind for every attempt, and put every attempt
+online. A lambda that exists is now changed in a feature: `write_code`,
+`change_code`, `deploy`, `read_lambda`, `read_logs` and the data tools take an
+optional `feature` and then act on the feature - its files, its preview, its
+copy of the data - instead of the lambda, so the same few tools do both. The
+answers name the feature, its `previewUrl` and whether it is `mergeable`, and
+never carry `onlineUntil`, which only a deployment of the lambda does.
+`merge_feature` refuses a feature that is behind with how to get it there;
+`read_lambda` with `feature` lists the `newerVersions` it would have to take
+in. The same rules are said wherever an agent decides something - in the
+instructions it reads on connecting, in the tool descriptions and answers, and
+in the guide: a new lambda is written as versions, one that exists is changed
+in a feature, and the front end goes in the version and user data in the
+workspace, never the other way round. `read_lambda` also lists the open
+features and says which data the lambda has switched on.
 
 `write_code` takes an optional `specification` (what the user wants and why) and `change` (one
 line on what the version does). `change_code` changes only the files it names,

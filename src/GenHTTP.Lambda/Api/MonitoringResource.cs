@@ -69,7 +69,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
          * anything the server said about the lambda itself - a handler that
          * threw is a warning with the trace attached.
          */
-        var (said, _, _) = book.Read(0, null, LogLevel.Warning, 500, lambdaId: id);
+        var (said, _, _) = book.Read(0, null, LogLevel.Warning, 500, lambdaId: id, feature: FeatureLines.None);
 
         var problems = said.Where(l => l.Level is "error" or "critical" || l.Source != "Requests")
                            .TakeLast(5)
@@ -84,7 +84,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             current == null
                 ? null
                 : new ActivationResponse(current.Version, current.Started, current.Origin, null, null,
-                                         (long)(now - current.Started).TotalSeconds, current.Revision),
+                                         (long)(now - current.Started).TotalSeconds),
             Summarize(traffic),
             [.. problems.Select(Describe)],
             await MeasureAsync(privateKey, id, live?.Version ?? latest?.Version),
@@ -94,7 +94,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                 allowance.Quota,
                 options.MaxVersions,
                 (int)options.DeploymentLifetime.TotalHours,
-                (int)options.Retention.TotalDays
+                (int)options.Retention.TotalDays,
+                options.MaxFeatures
             )
         );
     }
@@ -132,7 +133,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var wanted = Math.Clamp(limit ?? (since.HasValue ? 1000 : 500), 1, 2000);
 
-        var (lines, cursor, missed) = book.Read(since ?? 0, null, Minimum(level), wanted, lambdaId: id);
+        var (lines, cursor, missed) = book.Read(since ?? 0, null, Minimum(level), wanted, lambdaId: id, feature: FeatureLines.None);
 
         return new OwnerLogResponse([.. lines.Select(Describe)], cursor, missed, options.CaptureLambdaOutput);
     }
@@ -231,7 +232,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     [GeneratedRegex(@"\bWorkspace\s*\.\s*[A-Z]\w*")]
     private static partial Regex UsingWorkspace();
 
-    private static LogLevel Minimum(string? level) => level?.Trim().ToLowerInvariant() switch
+    internal static LogLevel Minimum(string? level) => level?.Trim().ToLowerInvariant() switch
     {
         "trace" => LogLevel.Trace,
         "debug" => LogLevel.Debug,

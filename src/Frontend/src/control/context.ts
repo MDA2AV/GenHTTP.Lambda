@@ -1,4 +1,4 @@
-import type { Diagnostic, Lambda, LambdaSummary, VersionInfo } from '../api';
+import type { Diagnostic, Feature, Lambda, LambdaFile, LambdaSummary, VersionInfo } from '../api';
 import type { Theme } from '../theme';
 import type { AgentControl } from './agent';
 
@@ -15,15 +15,17 @@ export interface Control {
   summary: LambdaSummary | null;
   /** Every stored version, newest first. */
   versions: VersionInfo[];
+  /** The features being worked on, most recently changed first. */
+  features: Feature[];
   /** What is running right now, so buttons can say so and wait. */
   busy: Busy;
   theme: Theme;
-  /** Reads the lambda, its versions and the summary again. */
+  /** Reads the lambda, its versions, its features and the summary again. */
   refresh: () => Promise<void>;
   /** Puts a version online - the newest when none is named. */
   deploy: (version?: number) => Promise<boolean>;
   undeploy: () => Promise<void>;
-  /** Opens a version in the code view. */
+  /** Opens a version in the code view - or, in a feature, the feature's code. */
   edit: (version?: number) => void;
   /** Opens a version in the files view. */
   browse: (version?: number) => void;
@@ -32,11 +34,36 @@ export interface Control {
   /** Opens the data of the lambda, which no version holds. */
   openData: () => void;
   /**
-   * Starts a new version as a copy of one - the newest when none is named -
-   * and says so. The copy becomes the newest, so it is where work carries on.
-   * Resolves to its number, or to nothing when it could not be made.
+   * Asks for a new feature, starting from a version - the newest when none is
+   * named - and holding the files given instead of that version's, if any.
    */
-  startVersion: (from?: number) => Promise<number | null>;
+  startFeature: (base?: number, files?: LambdaFile[]) => void;
+  /** Opens a feature, at one of its views. */
+  openFeature: (key: string, view?: FeatureView) => void;
+  /** Asks the agent to go on with a feature. */
+  askAgent: (feature?: string) => void;
+  /** The feature being worked on, when the control center is opened on one. */
+  feature: FeatureControl | null;
+}
+
+/** The views of a feature: what it is and changes, its code, its copy of the data, what its preview said. */
+export type FeatureView = 'overview' | 'code' | 'data' | 'logs';
+
+/**
+ * A feature the control center is opened on. The frame holds it, so the
+ * sidebar, the header and the views all show the same state of it, and a
+ * preview deployed from the code view is the one the sidebar links to.
+ */
+export interface FeatureControl {
+  info: Feature;
+  /** Reads the feature again, and the lambda with it. */
+  refresh: () => Promise<void>;
+  /** Puts what the feature holds online at its preview address, with the frame's feedback. */
+  preview: () => Promise<boolean>;
+  /** Opens the merge dialog of the frame. */
+  merge: () => void;
+  /** Whether its preview is being put online right now. */
+  previewing: boolean;
 }
 
 export type Busy = 'deploy' | 'undeploy' | null;
@@ -44,6 +71,8 @@ export type Busy = 'deploy' | 'undeploy' | null;
 /** The compiler's refusal of a deployment, shown by the frame. */
 export interface Rejection {
   version?: number;
+  /** Set when it was the preview of a feature that was refused. */
+  feature?: string;
   diagnostics: Diagnostic[];
 }
 

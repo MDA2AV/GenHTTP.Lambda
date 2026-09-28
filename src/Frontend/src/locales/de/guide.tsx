@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Ihr erstes Lambda',
     editor: 'Das Kontrollzentrum',
     why: 'Das Warum festhalten',
+    features: 'Gefahrlos ändern',
     files: 'Mehrere Dateien',
     page: 'Eine Seite ausliefern',
     spa: 'Ein Frontend, Schritt für Schritt',
@@ -58,10 +59,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Geben Sie den Editor-Schlüssel einem Agenten und sagen Sie ihm, was er bauen soll – er arbeitet über{' '}
-        {k.link('/#agents', 'MCP')}, mit einer eigenen Version für jeden Wunsch. Oder öffnen Sie {k.b('Code')} und
-        schreiben Sie selbst: {k.b('Prüfen')} kompiliert, ohne etwas zu speichern, und zeigt die Meldungen des
-        Compilers mit Datei und Zeile.
+        Geben Sie den Editor-Schlüssel einem Agenten und sagen Sie ihm, was er bauen soll – er schreibt über{' '}
+        {k.link('/#agents', 'MCP')} neue Versionen. Oder öffnen Sie {k.b('Code')} und schreiben Sie selbst:{' '}
+        {k.b('Prüfen')} kompiliert, ohne etwas zu speichern, und zeigt die Meldungen des Compilers mit Datei und Zeile.
       </>
     ),
     (k) => (
@@ -76,8 +76,8 @@ export const guide: Messages['guide'] = {
     <>
       Der Editor-Link öffnet ein Kontrollzentrum, kein Textfeld. Den meisten Code schreiben hier Agenten, also sehen Sie
       zuerst, wie es Ihrem Lambda geht. Die Seitenleiste zeigt, ob das Lambda online ist, seine Adresse und seine
-      Bereiche. Gibt es etwas, das online gehen kann, erscheint dort ein Button. Was Sie selten brauchen, etwa
-      die Adresse ändern oder das Lambda löschen, steckt im Menü {k.b('⋯')}.
+      Bereiche. Wartet eine neuere Version darauf, online zu gehen, erscheint dort ein Button. Was Sie selten
+      brauchen, etwa die Adresse ändern oder das Lambda löschen, steckt im Menü {k.b('⋯')}.
     </>
   ),
   bits: [
@@ -86,15 +86,16 @@ export const guide: Messages['guide'] = {
       'Ändern',
       (k) => (
         <>
-          Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um, während Sie zusehen: Er liest den
-          Code, ändert ihn, prüft, ob er kompiliert, und stellt ihn als neue Version online. Schalten Sie{' '}
-          {k.b('Nach Abschluss online stellen')} aus, um sich die Änderung zuerst anzusehen.
+          Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um, während Sie zusehen. Er arbeitet
+          in einem Entwurf, probiert die Änderung dort aus und übernimmt sie als nächste Version, sobald sie funktioniert.
+          Schalten Sie {k.b('Nach Abschluss online stellen')} aus, um den Entwurf zuerst selbst auszuprobieren.
         </>
       ),
     ],
+    ['Entwürfe', () => <>Änderungen, an denen neben dem Lambda gearbeitet wird: Jede wird unter einer eigenen Adresse ausprobiert und als nächste Version übernommen, sobald alles passt. Geöffnet hat ein Entwurf eigenen Code, eigene Daten und eigene Logs.</>],
     ['Dateien', () => <>Die Dateien einer Version: Code und Assets, das Programm selbst. Ein Schloss oder ein Globus zeigt, ob sie öffentlich erreichbar sind.</>],
     ['Daten', () => <>Was das Lambda zur Laufzeit aufbewahrt, für alle Versionen gemeinsam: der Workspace. Hineinsehen, Dateien hochladen und löschen oder ihn ausschalten.</>],
-    ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. An der neuesten wird gearbeitet. Von hier aus deployen, zurückrollen oder eine neue Version beginnen.</>],
+    ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen – oder aus jeder von ihnen einen Entwurf beginnen.</>],
     ['Deployments', () => <>Was wann online war und warum es offline ging.</>],
     ['Statistik', () => <>Requests, Fehler, Antwortzeiten und die meistgefragten Pfade der letzten Stunde oder des letzten Tages.</>],
     ['Logs', () => <>Requests, Ausgaben und Stacktraces von allem, was schiefging – live.</>],
@@ -102,9 +103,10 @@ export const guide: Messages['guide'] = {
       'Code',
       (k) => (
         <>
-          Selbst schreiben. {k.b('Prüfen')} kompiliert, {k.b('Speichern')} überschreibt die neueste Version,{' '}
-          {k.b('Neue Version')} lässt sie, wie sie ist, und beginnt eine weitere, {k.b('Deployen')} stellt sie online.{' '}
-          {k.code('Strg+S')} speichert, {k.code('F12')} springt zur Deklaration.
+          Selbst schreiben. {k.b('Prüfen')} kompiliert, {k.b('Speichern')} legt eine Version an, {k.b('Deployen')} stellt
+          sie online. In einem Entwurf behält {k.b('Speichern')} den Code im Entwurf, und {k.b('Vorschau deployen')}{' '}
+          stellt ihn unter der Adresse des Entwurfs online. {k.code('Strg+S')} speichert, {k.code('F12')} springt zur
+          Deklaration.
         </>
       ),
     ],
@@ -132,10 +134,51 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Agenten übergeben dieselben beiden Felder an {k.code('write_code')}. Unter {k.b('Code')} fragt{' '}
-      {k.b('Neue Version')} nach der Änderung. Beides ist optional. Zu lange Texte werden gekürzt statt abgelehnt: die
-      Spezifikation nach 4000 Zeichen, die Änderung nach 500. Wird eine Version überschrieben, behält sie ihre Notizen,
-      solange keine neuen angegeben werden.
+      Agenten übergeben dieselben beiden Felder an {k.code('write_code')}. Unter {k.b('Code')} wird beim Speichern
+      nach der Änderung gefragt. Beides ist optional. Zu lange Texte werden gekürzt statt abgelehnt: die Spezifikation
+      nach 4000 Zeichen, die Änderung nach 500. Ein Entwurf hat seine eigenen beiden; wird er übernommen, gehen sie an
+      die neue Version über.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Eine Version ändert sich nie mehr, sobald sie gespeichert ist – und genau deshalb lohnt es sich, jede
+      aufzuheben: Jede lässt sich vergleichen und genau so wieder online stellen, wie sie war. Um ein Lambda zu ändern,
+      das Leute nutzen, beginnen Sie stattdessen einen {k.b('Entwurf')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Beginnen Sie ihn unter {k.b('Entwürfe')} oder aus einer beliebigen Version. Er ist eine Kopie von Code und
+        Assets dieser Version und der Daten des Lambdas.
+      </>
+    ),
+    (k) => (
+      <>
+        Ändern Sie ihn so oft wie nötig – unter {k.b('Code')} oder indem Sie den Agenten darum bitten.{' '}
+        {k.b('Vorschau deployen')} stellt ihn unter einer eigenen Adresse online, {k.code('/features/…/')}, mit einer
+        eigenen Kopie der Daten. Besucher des Lambdas sehen nichts davon, und nichts, was er schreibt, erreicht die Daten
+        des Lambdas.
+      </>
+    ),
+    (k) => (
+      <>
+        Klicken Sie auf {k.b('Übernehmen')}, sobald alles passt: Der Entwurf wird zur nächsten Version, mit seinen
+        Notizen, und geht auf Wunsch sofort online. Dabei verschwindet er – samt seiner Vorschau und seiner Kopie der
+        Daten.
+      </>
+    ),
+  ],
+  featureSample: 'Bestenliste',
+  featuresAside: () => (
+    <>
+      An mehreren Entwürfen kann gleichzeitig gearbeitet werden. Übernehmen lässt sich nur einer, der auf der neuesten
+      Version basiert – damit das Übernehmen nie eine Version rückgängig macht, die nach dem Beginn des Entwurfs
+      gespeichert wurde. Wurde zuerst ein anderer übernommen, holen Sie dessen Änderungen herein – oder bitten Sie
+      den Agenten darum – und geben Sie dann an, dass der Entwurf auf der neuesten Version basiert. Nichts wird von selbst
+      übernommen; das ist Absicht.
     </>
   ),
 
@@ -208,10 +251,10 @@ export const guide: Messages['guide'] = {
   workspaceColumn: 'In den Daten',
   table: [
     ['Inhalt', 'Code und Assets: das Programm, samt Frontend', 'alles, was das Lambda schreibt oder jemand hochlädt'],
-    ['Ändert sich', 'wenn die Version gespeichert wird', 'sobald etwas hineingeschrieben wird'],
+    ['Ändert sich', 'nie – eine Änderung ist eine neue Version', 'sobald etwas hineingeschrieben wird'],
     ['Ein Deployment', 'stellt genau diese Dateien online', 'lässt sie unberührt'],
     ['Zurückrollen', 'bringt die alten Dateien zurück', 'keine Wirkung: Alle Versionen teilen sie'],
-    ['Eine neue Version', 'beginnt als Kopie davon', 'keine Wirkung'],
+    ['Ein Entwurf', 'beginnt als Kopie davon', 'arbeitet mit einer Kopie davon'],
     ['Wird gelöscht', 'mit alten Versionen, sobald das Limit überschritten ist', 'mit dem Lambda oder wenn Sie sie ausschalten'],
   ],
   reachedAs: 'im Code erreichbar als',

@@ -122,7 +122,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         {
             var change = current == null ? "Set up as a demo" : "Brought up to date with its template";
 
-            await meta.SaveAsync(demo.Key, wanted, new VersionNote(Specification: demo.Description, Change: change, Origin: VersionOrigins.System), cancellation);
+            await meta.SaveAsync(demo.Key, wanted, new VersionNote(Specification: demo.Description, Change: change, Origin: VersionOrigins.System), cancellation: cancellation);
 
             if (current != null)
             {

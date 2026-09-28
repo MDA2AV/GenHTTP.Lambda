@@ -70,7 +70,7 @@ export const ship: Messages['ship'] = {
     ],
     [
       '¿Cómo la cambio más adelante?',
-      'Con el enlace de edición que recibiste al publicarla. Pásaselo a tu agente con el siguiente cambio o ábrelo en el navegador. Cada cambio que pidas tiene su propia versión, en la misma dirección, y puedes volver a una anterior cuando quieras.',
+      'Con el enlace de edición que recibiste al publicarla. Pásaselo a tu agente con el siguiente cambio o ábrelo en el navegador. Cada cambio es una versión nueva en la misma dirección, y puedes volver a una anterior cuando quieras.',
     ],
     [
       '¿Quién puede ver mi app?',

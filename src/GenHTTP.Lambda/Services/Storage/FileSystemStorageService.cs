@@ -9,8 +9,11 @@ namespace GenHTTP.Lambda.Services.Storage;
 /// every lambda a private directory below <c>{data}/workspaces/{id}</c>.
 /// </summary>
 /// <remarks>
-/// <c>{data}/code/{id}/online.cs</c> is there only while the version that is
-/// online has been saved over since it was deployed, and holds what it was.
+/// A feature keeps everything of its own below <c>{data}/features/{id}/{feature}</c>:
+/// <c>files.json</c> as it is being worked on, <c>preview.json</c> as its
+/// preview was deployed, its copy of the workspace in <c>workspace</c> and
+/// what its preview serves in <c>assets</c> - so deleting a feature is
+/// deleting a folder, and deleting a lambda takes its features along.
 /// </remarks>
 public sealed class FileSystemStorageService : IStorageService
 {
@@ -42,30 +45,32 @@ public sealed class FileSystemStorageService : IStorageService
 
     #endregion
 
-    #region Functionality
+    #region Versions
 
     public async ValueTask WriteAsync(long lambdaId, int version, string code, CancellationToken cancellation = default)
-        => await WriteWholeAsync(GetFile(lambdaId, version), code, cancellation);
-
-    public ValueTask<string?> ReadAsync(long lambdaId, int version, CancellationToken cancellation = default)
-        => ReadIfThereAsync(GetFile(lambdaId, version), cancellation);
-
-    public async ValueTask PreserveOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default)
     {
-        var code = await ReadAsync(lambdaId, version, cancellation);
+        var directory = GetCodeDirectory(lambdaId);
 
-        if (code != null)
-        {
-            await WriteWholeAsync(GetOnlineFile(lambdaId), code, cancellation);
-        }
+        Directory.CreateDirectory(directory);
+
+        await File.WriteAllTextAsync(GetFile(lambdaId, version), code, cancellation);
     }
 
-    public async ValueTask<string?> ReadOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default)
-        => await ReadIfThereAsync(GetOnlineFile(lambdaId), cancellation) ?? await ReadAsync(lambdaId, version, cancellation);
-
-    public ValueTask DropOnlineAsync(long lambdaId, CancellationToken cancellation = default)
+    public async ValueTask<string?> ReadAsync(long lambdaId, int version, CancellationToken cancellation = default)
     {
-        var file = GetOnlineFile(lambdaId);
+        var file = GetFile(lambdaId, version);
+
+        if (!File.Exists(file))
+        {
+            return null;
+        }
+
+        return await File.ReadAllTextAsync(file, cancellation);
+    }
+
+    public ValueTask DeleteVersionAsync(long lambdaId, int version, CancellationToken cancellation = default)
+    {
+        var file = GetFile(lambdaId, version);
 
         if (File.Exists(file))
         {
@@ -73,6 +78,155 @@ public sealed class FileSystemStorageService : IStorageService
         }
 
         return ValueTask.CompletedTask;
+    }
+
+    public ValueTask DeleteAsync(long lambdaId, CancellationToken cancellation = default)
+    {
+        Remove(GetCodeDirectory(lambdaId));
+        Remove(GetWorkspaceDirectory(lambdaId));
+        Remove(GetAssetDirectory(lambdaId));
+        Remove(Path.Combine(Options.FeatureDirectory, lambdaId.ToString()));
+
+        // the generated assembly stays: it cannot be unloaded and GenHTTP builds
+        // its invocation code from the files behind the loaded assemblies, so
+        // removing one here would break the compilation of every handler that
+        // follows. The next start of the server wipes the directory instead.
+
+        Logger.LogInformation("Removed stored content of lambda {LambdaId}", lambdaId);
+
+        return ValueTask.CompletedTask;
+    }
+
+    public string GetWorkspace(long lambdaId, long? featureId = null)
+    {
+        var directory = featureId is { } feature
+            ? Path.Combine(GetFeatureDirectory(lambdaId, feature), "workspace")
+            : GetWorkspaceDirectory(lambdaId);
+
+        Directory.CreateDirectory(directory);
+
+        return directory;
+    }
+
+    public string GetAssemblyDirectory(long lambdaId) => Path.Combine(Options.AssemblyDirectory, lambdaId.ToString());
+
+    public string GetAssetDirectory(long lambdaId, long? featureId = null)
+        => featureId is { } feature
+         ? Path.Combine(GetFeatureDirectory(lambdaId, feature), "assets")
+         : Path.Combine(Options.AssetDirectory, lambdaId.ToString());
+
+    #endregion
+
+    #region Features
+
+    public ValueTask WriteFeatureAsync(long lambdaId, long featureId, string code, CancellationToken cancellation = default)
+        => WriteWholeAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "files.json"), code, cancellation);
+
+    public ValueTask<string?> ReadFeatureAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
+        => ReadIfThereAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "files.json"), cancellation);
+
+    public ValueTask WritePreviewAsync(long lambdaId, long featureId, string code, CancellationToken cancellation = default)
+        => WriteWholeAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"), code, cancellation);
+
+    public ValueTask<string?> ReadPreviewAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
+        => ReadIfThereAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"), cancellation);
+
+    /// <remarks>
+    /// Copied beside the copy it replaces and swapped in once complete, so a
+    /// copy that fails halfway leaves the one there was. On a thread of its
+    /// own, since a workspace can be large and this is asked for by a request.
+    /// </remarks>
+    public async ValueTask CopyWorkspaceAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
+    {
+        var target = Path.Combine(GetFeatureDirectory(lambdaId, featureId), "workspace");
+
+        var staging = $"{target}.copying";
+
+        var source = GetWorkspaceDirectory(lambdaId);
+
+        await Task.Run(() =>
+        {
+            Remove(staging);
+
+            Directory.CreateDirectory(staging);
+
+            try
+            {
+                if (Directory.Exists(source))
+                {
+                    Copy(new DirectoryInfo(source), staging, cancellation);
+                }
+            }
+            catch
+            {
+                Remove(staging);
+                throw;
+            }
+
+            Remove(target);
+
+            Directory.Move(staging, target);
+        }, cancellation);
+    }
+
+    public ValueTask DeleteFeatureAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
+    {
+        Remove(GetFeatureDirectory(lambdaId, featureId));
+
+        return ValueTask.CompletedTask;
+    }
+
+    public IEnumerable<(long LambdaId, long FeatureId)> ListFeatures()
+    {
+        if (!Directory.Exists(Options.FeatureDirectory))
+        {
+            yield break;
+        }
+
+        foreach (var lambda in Directory.EnumerateDirectories(Options.FeatureDirectory))
+        {
+            if (!long.TryParse(Path.GetFileName(lambda), out var lambdaId))
+            {
+                continue;
+            }
+
+            foreach (var feature in Directory.EnumerateDirectories(lambda))
+            {
+                if (long.TryParse(Path.GetFileName(feature), out var featureId))
+                {
+                    yield return (lambdaId, featureId);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Copies a folder with everything in it, empty folders included - an
+    /// empty folder is a real thing in a workspace, which code may rely on.
+    /// </summary>
+    private static void Copy(DirectoryInfo source, string target, CancellationToken cancellation)
+    {
+        foreach (var file in source.EnumerateFiles())
+        {
+            cancellation.ThrowIfCancellationRequested();
+
+            // an upload still arriving is not part of what is there yet
+            if (file.Name.EndsWith(".uploading", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            file.CopyTo(Path.Combine(target, file.Name), true);
+        }
+
+        foreach (var folder in source.EnumerateDirectories())
+        {
+            var inner = Path.Combine(target, folder.Name);
+
+            Directory.CreateDirectory(inner);
+
+            Copy(folder, inner, cancellation);
+        }
     }
 
     /// <summary>
@@ -93,70 +247,29 @@ public sealed class FileSystemStorageService : IStorageService
 
     private static async ValueTask<string?> ReadIfThereAsync(string file, CancellationToken cancellation)
     {
-        if (!File.Exists(file))
-        {
-            return null;
-        }
-
         try
         {
-            return await File.ReadAllTextAsync(file, cancellation);
+            return File.Exists(file) ? await File.ReadAllTextAsync(file, cancellation) : null;
         }
         catch (FileNotFoundException)
         {
-            // dropped between looking and reading
+            // removed between looking and reading
             return null;
         }
     }
 
-    public ValueTask DeleteVersionAsync(long lambdaId, int version, CancellationToken cancellation = default)
-    {
-        var file = GetFile(lambdaId, version);
+    #endregion
 
-        if (File.Exists(file))
-        {
-            File.Delete(file);
-        }
-
-        return ValueTask.CompletedTask;
-    }
-
-    public ValueTask DeleteAsync(long lambdaId, CancellationToken cancellation = default)
-    {
-        Remove(GetCodeDirectory(lambdaId));
-        Remove(GetWorkspaceDirectory(lambdaId));
-        Remove(GetAssetDirectory(lambdaId));
-
-        // the generated assembly stays: it cannot be unloaded and GenHTTP builds
-        // its invocation code from the files behind the loaded assemblies, so
-        // removing one here would break the compilation of every handler that
-        // follows. The next start of the server wipes the directory instead.
-
-        Logger.LogInformation("Removed stored content of lambda {LambdaId}", lambdaId);
-
-        return ValueTask.CompletedTask;
-    }
-
-    public string GetWorkspace(long lambdaId)
-    {
-        var directory = GetWorkspaceDirectory(lambdaId);
-
-        Directory.CreateDirectory(directory);
-
-        return directory;
-    }
-
-    public string GetAssemblyDirectory(long lambdaId) => Path.Combine(Options.AssemblyDirectory, lambdaId.ToString());
-
-    public string GetAssetDirectory(long lambdaId) => Path.Combine(Options.AssetDirectory, lambdaId.ToString());
+    #region Helpers
 
     private string GetCodeDirectory(long lambdaId) => Path.Combine(Options.CodeDirectory, lambdaId.ToString());
 
     private string GetWorkspaceDirectory(long lambdaId) => Path.Combine(Options.WorkspaceDirectory, lambdaId.ToString());
 
-    private string GetFile(long lambdaId, int version) => Path.Combine(GetCodeDirectory(lambdaId), $"v{version}.cs");
+    private string GetFeatureDirectory(long lambdaId, long featureId)
+        => Path.Combine(Options.FeatureDirectory, lambdaId.ToString(), featureId.ToString());
 
-    private string GetOnlineFile(long lambdaId) => Path.Combine(GetCodeDirectory(lambdaId), "online.cs");
+    private string GetFile(long lambdaId, int version) => Path.Combine(GetCodeDirectory(lambdaId), $"v{version}.cs");
 
     private static void Remove(string directory)
     {

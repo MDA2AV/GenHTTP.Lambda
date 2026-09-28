@@ -6,7 +6,7 @@ import { CodeEditor } from '../components/CodeEditor';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
 import { ENTRY, FileTabs } from '../components/FileTabs';
-import { IconPlay, IconSpinner } from '../components/Icons';
+import { IconAlert, IconPlay, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useEditorT } from '../i18n';
 import { languageFor } from '../monaco';
@@ -20,25 +20,25 @@ type Busy = 'save' | 'check' | 'deploy' | null;
  *
  * Built like every other section: the files are its views, so they are the
  * pills under the title, and checking, saving and deploying are its actions.
+ * Saving asks what changed - the same note an agent leaves - so a version
+ * written by hand reads as well in the history as one that was not.
  *
- * The newest version is the one being worked on, so saving changes it where
- * it is - as often as it takes, without a question every time - and what is
- * online only follows when it is deployed. Keeping it as it is and carrying
- * on in a new one is a decision rather than a side effect of saving, and asks
- * what the new version is for: the same note an agent leaves, so a version
- * written by hand reads as well in the history as one that was not. A version
- * that is not the newest is history, and saving it can only make a new one.
+ * Opened on a feature, it edits the feature instead: saving replaces what
+ * the feature holds, without a note - the feature says what it changes as a
+ * whole, on its overview - and deploying puts it online at its preview
+ * address. Nothing a visitor of the lambda gets changes either way.
  */
 export function Workbench({ control, onDirty }: { control: Control; onDirty: (dirty: boolean) => void }) {
   const { privateKey, lambda } = control;
+  const feature = control.feature?.info ?? null;
 
   const said = useEditorT().code;
   const toast = useToast();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
 
   // what an agent works on is the newest, so that is where editing starts,
   // unless a particular version was asked for
-  const requested = Number(params.get('version')) || lambda.latestVersion || lambda.activeVersion;
+  const requested = feature ? null : Number(params.get('version')) || lambda.latestVersion || lambda.activeVersion;
 
   const [loaded, setLoaded] = useState<number | null>(null);
   const [files, setFiles] = useState<LambdaFile[]>([{ name: ENTRY, code: '' }]);
@@ -49,17 +49,16 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   const [busy, setBusy] = useState<Busy>(null);
   const [reveal, setReveal] = useState<{ line: number; column: number; nonce: number }>();
 
-  /** Whether the dialog for a new version is open, and whether it deploys afterwards. */
+  /** Whether the save dialog is open, and whether it deploys afterwards. */
   const [saving, setSaving] = useState<'save' | 'deploy' | null>(null);
   const [change, setChange] = useState('');
+
+  /** Which save of the feature is open here, as this page knows it - to notice a save made elsewhere. */
+  const [held, setHeld] = useState<number | null>(null);
 
   const current = files.find((file) => file.name === active) ?? files[0];
   const code = current?.code ?? '';
   const dirty = saved !== '' && JSON.stringify(files) !== saved;
-
-  // only the newest version is saved over; anything older is history, and
-  // with nothing saved yet there is nothing to save over either
-  const newest = loaded != null && loaded === lambda.latestVersion;
 
   useEffect(() => {
     onDirty(dirty);
@@ -78,13 +77,10 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   }, []);
 
   useEffect(() => {
-    if (requested == null) {
-      setSaved(JSON.stringify(files));
-      return;
-    }
-
-    // a version this view just made is already what it shows
-    if (requested === loaded) {
+    if (feature || requested == null) {
+      if (!feature) {
+        setSaved(JSON.stringify(files));
+      }
       return;
     }
 
@@ -108,6 +104,40 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     // only a different version is a reason to reload what is being edited
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privateKey, requested, adopt]);
+
+  const readFeature = useCallback(async (key: string) => {
+    try {
+      const content = await api.feature.get(privateKey, key);
+
+      adopt(content.files);
+      setHeld(content.feature.revision);
+      setDiagnostics([]);
+      setBuilt('idle');
+    } catch (error) {
+      toast(error instanceof ApiError ? error.message : said.featureLoadFailed, 'error');
+    }
+  }, [privateKey, adopt, toast, said]);
+
+  // a feature is read when it is opened
+  useEffect(() => {
+    if (feature) {
+      readFeature(feature.key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feature?.key, readFeature]);
+
+  /*
+   * Saved elsewhere since it was read here - by the agent, most likely, or in
+   * another tab. Read again while nothing here is unsaved; otherwise said,
+   * since saving would replace what was saved there.
+   */
+  const elsewhere = feature != null && held != null && feature.revision !== held;
+
+  useEffect(() => {
+    if (elsewhere && !dirty && busy === null) {
+      readFeature(feature.key);
+    }
+  }, [elsewhere, dirty, busy, feature, readFeature]);
 
   useEffect(() => {
     if (!dirty) {
@@ -164,48 +194,28 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
   }
 
-  /** Makes the version just saved the one the address shows, so a reload opens it. */
-  function follow(version: number) {
-    setLoaded(version);
-
-    if (Number(params.get('version')) !== version) {
-      setParams({ version: String(version) }, { replace: true });
-    }
-  }
-
-  /**
-   * Stores what is in the editor - over the newest version, or as a new one
-   * with the note - and puts it online if asked to.
-   */
-  async function commit(asNew: boolean, thenDeploy: boolean) {
+  /** Stores what is in the editor, with the note, and puts it online if asked to. */
+  async function commit(thenDeploy: boolean) {
     setSaving(null);
     setBusy(thenDeploy ? 'deploy' : 'save');
 
     try {
       let target = loaded ?? undefined;
 
-      if (dirty || asNew) {
-        const version = asNew || !newest
-          ? await api.save(privateKey, files, change.trim() || undefined)
-          : await api.update(privateKey, loaded!, files);
+      if (dirty) {
+        const version = await api.save(privateKey, files, change.trim() || undefined);
 
         setSaved(JSON.stringify(files));
+        setLoaded(version.version);
         setChange('');
-        follow(version.version);
 
         target = version.version;
+      }
 
-        if (!thenDeploy) {
-          await control.refresh();
-
-          toast(asNew || !newest
-            ? said.saved(version.version)
-            : version.version === lambda.activeVersion
-              ? said.savedOverOnline(version.version)
-              : said.savedOver(version.version));
-
-          return;
-        }
+      if (!thenDeploy) {
+        await control.refresh();
+        toast(said.saved(target));
+        return;
       }
 
       const result = await api.deploy(privateKey, target);
@@ -224,8 +234,52 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
   }
 
-  /** Saving: over the newest version at once, or - for one that is history - as a new version. */
-  const save = useCallback(() => {
+  /** Stores what is in the editor as the feature's, and puts its preview online if asked to. */
+  async function commitFeature(thenPreview: boolean) {
+    if (!feature) {
+      return;
+    }
+
+    setBusy(thenPreview ? 'deploy' : 'save');
+
+    try {
+      if (dirty) {
+        // made from the save read here, and refused if another came in between
+        const result = await api.feature.save(privateKey, feature.key, files, thenPreview, held ?? undefined);
+
+        setSaved(JSON.stringify(files));
+        setHeld(result.feature.revision);
+
+        if (!thenPreview) {
+          toast(said.featureSaved);
+        } else if (result.preview) {
+          report(result.preview.success, result.preview.diagnostics);
+        }
+      } else if (thenPreview) {
+        const result = await api.feature.preview(privateKey, feature.key);
+
+        setHeld(result.feature.revision);
+        report(result.success, result.diagnostics);
+      }
+
+      await control.feature?.refresh();
+    } catch (error) {
+      toast(error instanceof ApiError ? error.message : said.failed, 'error');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function report(success: boolean, found: Diagnostic[]) {
+    setDiagnostics(found);
+    setBuilt(success ? 'clean' : 'idle');
+
+    toast(success ? said.previewOnline : said.previewRefused, success ? 'success' : 'error');
+  }
+
+  // made again with every render, so it always saves what is in the editor
+  // now - the editor holds on to the newest one
+  function save() {
     if (busy) {
       return;
     }
@@ -235,30 +289,31 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       return;
     }
 
-    if (newest) {
-      commit(false, false);
+    if (feature) {
+      commitFeature(false);
     } else {
       setSaving('save');
     }
-    // commit reads the state of this render, which is what it should save
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, dirty, newest, toast, said, files]);
+  }
 
   function deploy() {
-    if (dirty && !newest) {
+    if (feature) {
+      commitFeature(true);
+    } else if (dirty) {
       setSaving('deploy');
     } else {
-      commit(false, true);
+      commit(true);
     }
   }
 
   const online = loaded != null && loaded === lambda.activeVersion;
   // a demo is there to be read: its files open, nothing in them changes
   const demo = isDemo(lambda.tier);
+  const newer = lambda.latestVersion != null && loaded != null && lambda.latestVersion > loaded && !dirty;
   const showDiagnostics = diagnostics.length > 0 || built === 'clean';
 
-  // nothing to put online: what is open is exactly what is online already
-  const settled = !dirty && online && !lambda.activeChanged;
+  // the preview serves what was last saved
+  const previewCurrent = feature?.current ?? false;
 
   return (
     <Section
@@ -267,17 +322,16 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
         <>
           {said.title}
           <span className="ml-2 text-sm font-normal text-slate-500">
-            {loaded != null ? said.version(loaded) : ''}
-            {loaded != null ? (newest ? said.newestTag : said.older) : ''}
-            {dirty ? said.edited : online ? (lambda.activeChanged ? said.unpublished : said.online) : ''}
+            {feature ? said.inFeature(feature.name) : loaded != null ? said.version(loaded) : ''}
+            {dirty ? said.edited : feature ? (previewCurrent ? said.previewed : '') : online ? said.online : ''}
           </span>
         </>
       }
       hint={
         <>
-          {demo ? said.demo : said.edit}
-          {!demo && loaded != null && !newest && lambda.latestVersion != null && said.history(loaded, lambda.latestVersion)}
+          {feature ? said.editFeature : demo ? said.demo : said.edit}
           {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>)}
+          {newer && said.newer(lambda.latestVersion!)}
         </>
       }
       actions={
@@ -288,32 +342,19 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           </button>
           {!demo && (
             <>
-              {loaded != null && (
-                <button
-                  type="button"
-                  onClick={() => setSaving('save')}
-                  disabled={busy !== null}
-                  className="btn-ghost !px-3 !py-1.5 text-[13px]"
-                  title={said.saveNewTitle}
-                >
-                  {said.saveNew}
-                </button>
-              )}
-              {(newest || loaded == null) && (
-                <button
-                  type="button"
-                  onClick={save}
-                  disabled={busy !== null || !dirty}
-                  className="btn-ghost !px-3 !py-1.5 text-[13px]"
-                  title={loaded != null ? said.saveTitle(loaded) : 'Ctrl+S'}
-                >
-                  {busy === 'save' && <IconSpinner />}
-                  {said.save}
-                </button>
-              )}
-              <button type="button" onClick={deploy} disabled={busy !== null || settled} className="btn-primary !px-4 !py-1.5 text-[13px]">
+              <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Ctrl+S">
+                {busy === 'save' && <IconSpinner />}
+                {said.save}
+              </button>
+              <button
+                type="button"
+                onClick={deploy}
+                disabled={busy !== null || (feature ? !dirty && previewCurrent : !dirty && online)}
+                className="btn-primary !px-4 !py-1.5 text-[13px]"
+                title={feature ? said.deployPreviewTitle : undefined}
+              >
                 {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
-                {said.deploy}
+                {feature ? said.deployPreview : said.deploy}
               </button>
             </>
           )}
@@ -329,6 +370,18 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
         />
       }
     >
+      {elsewhere && dirty && (
+        <p className="mx-4 mb-3 flex items-start gap-2 text-[13px] text-amber-700 dark:text-amber-400 md:mx-0">
+          <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {said.changedElsewhere}{' '}
+            <button type="button" onClick={() => feature && readFeature(feature.key)} className="font-medium underline">
+              {said.readAgain}
+            </button>
+          </span>
+        </p>
+      )}
+
       <div className="relative mx-4 min-h-[18rem] flex-1 border border-slate-200 dark:border-ink-800 md:mx-0">
         {/* one editor for every file, so switching swaps what it shows
             rather than building it again - which is what made it jump */}
@@ -370,7 +423,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       )}
 
       <Dialog
-        title={saving === 'deploy' ? said.saveNewAndDeploy : said.saveVersion}
+        title={saving === 'deploy' ? said.saveAndDeploy : said.saveVersion}
         open={saving !== null}
         onClose={() => setSaving(null)}
         footer={
@@ -378,24 +431,51 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
             <button type="button" onClick={() => setSaving(null)} className="btn-ghost">
               {said.cancel}
             </button>
-            <button type="button" onClick={() => commit(true, saving === 'deploy')} className="btn-primary">
-              {saving === 'deploy' ? said.saveNewAndDeploy : said.saveNew}
+            <button type="button" onClick={() => commit(saving === 'deploy')} className="btn-primary">
+              {saving === 'deploy' ? said.saveAndDeploy : said.save}
             </button>
           </>
         }
       >
+        {/* saving from an older version makes it the newest, without what came after it */}
+        {loaded != null && lambda.latestVersion != null && loaded < lambda.latestVersion && (
+          <p className="flex gap-2 text-[13px] text-amber-700 dark:text-amber-400">
+            <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            {said.fromOlder(loaded, lambda.latestVersion)}
+          </p>
+        )}
+
         <label className="block text-sm">
           <span className="text-slate-600 dark:text-slate-400">{said.what}</span>
           <input
             autoFocus
             value={change}
             onChange={(event) => setChange(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && commit(true, saving === 'deploy')}
+            onKeyDown={(event) => event.key === 'Enter' && commit(saving === 'deploy')}
             maxLength={500}
             placeholder={said.placeholder}
             className="field mt-2"
           />
         </label>
+
+        {/* a version is saved for good; a feature is where a change is tried */}
+        {lambda.activeVersion != null && (
+          <p className="text-[13px] text-slate-500">
+            {said.featureInstead((text) => (
+              <button
+                type="button"
+                className="text-accent-500 hover:underline"
+                onClick={() => {
+                  setSaving(null);
+                  // what was typed here goes into the feature rather than being lost
+                  control.startFeature(loaded ?? undefined, dirty ? files : undefined);
+                }}
+              >
+                {text}
+              </button>
+            ))}
+          </p>
+        )}
       </Dialog>
     </Section>
   );

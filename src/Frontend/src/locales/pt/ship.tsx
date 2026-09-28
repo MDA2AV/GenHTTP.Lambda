@@ -69,7 +69,7 @@ export const ship: Messages['ship'] = {
     ],
     [
       'Como eu mudo o app depois?',
-      'Com o link de edição que você recebeu ao publicar. Passe para o seu agente junto com a próxima mudança, ou abra no navegador. Cada mudança que você pede vira uma versão própria no mesmo endereço, e você pode voltar para uma versão anterior quando quiser.',
+      'Com o link de edição que você recebeu ao publicar. Passe para o seu agente junto com a próxima mudança, ou abra no navegador. Cada mudança vira uma nova versão no mesmo endereço, e você pode voltar para uma versão anterior quando quiser.',
     ],
     [
       'Quem pode ver meu app?',

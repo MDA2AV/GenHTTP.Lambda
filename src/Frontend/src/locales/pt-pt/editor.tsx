@@ -60,6 +60,7 @@ export const editor: EditorMessages = {
     sections: {
       overview: 'Visão geral',
       change: 'Alterar',
+      features: 'Rascunhos',
       showcase: 'Montra',
       domain: 'Domínio',
       files: 'Ficheiros',
@@ -90,8 +91,6 @@ export const editor: EditorMessages = {
     download: 'Transferir como projeto .NET',
     delete: 'Eliminar esta lambda',
     deploy: (version) => `Fazer deploy da versão ${version}`,
-    changedSince: 'Foi guardada outra vez depois de ficar online. Os visitantes continuam a receber o que ficou online com o deploy.',
-    changedShort: 'Mudou desde que ficou online',
     problems: 'Algo correu mal recentemente',
     demoTitle: 'Uma demo, mantida online por esta instalação e só de leitura.',
     demo: (start) => (
@@ -129,7 +128,7 @@ export const editor: EditorMessages = {
   },
 
   change: {
-    hint: 'Diz o que deve ficar diferente e o agente que corre neste servidor trata do resto: lê o código, faz a alteração, confirma que compila e põe-na online. Cada alteração é uma nova versão, por isso a anterior está sempre à distância de um clique.',
+    hint: 'Diz o que deve ficar diferente e o agente que corre neste servidor trata do resto. Trabalha num rascunho (uma cópia da lambda com um endereço próprio), por isso os teus visitantes não veem nada até estar pronto. Depois passa a ser a próxima versão e fica online, ou fica à espera no rascunho para o experimentares primeiro.',
     reading: 'A consultar o agente…',
     readFailed: 'Não foi possível consultar o agente.',
     label: 'O que queres alterar?',
@@ -138,8 +137,13 @@ export const editor: EditorMessages = {
     send: 'Fazer a alteração',
     sending: 'A enviar…',
     goOnline: 'Pôr online quando terminar',
-    goOnlineOn: 'Fica online assim que compilar. Até lá, o que está online agora mantém-se.',
-    goOnlineOff: 'Fica guardada como nova versão, e fazes o deploy depois de a veres.',
+    goOnlineOn: 'Assim que funcionar no rascunho, o agente integra-a na próxima versão e põe essa versão online. Até lá, o que está online agora mantém-se.',
+    goOnlineOff: 'O agente deixa-a no rascunho. Experimenta-a no endereço próprio do rascunho e integra-a quando te parecer bem.',
+    where: 'Trabalhar em',
+    whereTitle: 'Um rascunho novo, ou um que esteja aberto para continuar',
+    newFeature: 'Um rascunho novo',
+    full: (limit) =>
+      `Esta lambda tem ${limit} rascunhos abertos, o máximo que pode ter. Escolhe um para continuar, ou integra ou elimina um primeiro.`,
     password: 'Palavra-passe',
     fable: 'O Fable não tem pressa: sem relógio nem limite de passos, numa fila só para ele.',
     left: (left, perDay) => (left === 1 ? `Resta 1 de ${perDay} hoje` : `Restam ${left} de ${perDay} hoje`),
@@ -150,12 +154,13 @@ export const editor: EditorMessages = {
     fixLog: 'Corrige os erros do log',
     how: [
       { title: 'Lê o que já existe', text: 'O código e o que foi pedido nas versões anteriores, para que o que funciona continue a funcionar.' },
-      { title: 'Faz a alteração', text: 'E corrige o que não compilar, enquanto acompanhas cada passo.' },
-      { title: 'Põe-na online', text: 'Como uma nova versão. A anterior continua à distância de um clique.' },
+      { title: 'Trabalha num rascunho', text: 'Uma cópia com endereço próprio e dados próprios: faz lá a alteração e experimenta-a, enquanto acompanhas cada passo.' },
+      { title: 'Põe-na online', text: 'Como a próxima versão, ou deixa-a para a experimentares primeiro. A versão anterior continua à distância de um clique.' },
     ],
     asked: 'O teu pedido',
     goesOnline: 'fica online quando terminar',
-    review: 'fica guardada para a veres primeiro',
+    review: 'fica no rascunho para a experimentares',
+    inFeature: (name) => `no rascunho «${name}»`,
     queued: (ahead) => (ahead === 1 ? 'À espera: há um pedido à frente deste.' : `À espera: há ${ahead} pedidos à frente deste.`),
     starting: 'A começar…',
     working: 'A trabalhar nisso',
@@ -164,7 +169,7 @@ export const editor: EditorMessages = {
     stopping: 'A parar…',
     stopTitle: 'Parar esta alteração?',
     stopText:
-      'O que já guardou fica como versão. O que está online continua online, a não ser que já lá tenha posto uma nova versão.',
+      'O que já guardou fica: no rascunho, ou como versão. O que está online continua online, a não ser que já tenha integrado a alteração e a tenha posto lá.',
     keepGoing: 'Deixar continuar',
     stopIt: 'Parar agora',
     log: 'O que fez',
@@ -175,14 +180,22 @@ export const editor: EditorMessages = {
       read: 'A ler o código',
       readFile: (file) => <>A ler {file}</>,
       logs: 'A ler o log',
+      logsPreview: 'A ler o log da pré-visualização',
+      readFeature: 'A ler o rascunho',
       create: 'A criar uma lambda',
-      copy: 'A começar uma versão nova',
+      feature: 'A começar um rascunho',
+      featureStarted: (name) => <>Começou o rascunho {name}</>,
+      update: 'A atualizar as notas do rascunho',
+      rebase: (version) => `A basear o rascunho na versão ${version}`,
+      merge: 'A integrar o rascunho',
+      discard: 'A eliminar um rascunho',
       write: (files) => <>A alterar {files}</>,
       writeAll: (files) => <>A escrever {files}</>,
       removing: (files) => <>, a remover {files}</>,
       more: (count) => `e mais ${count}`,
       check: 'A compilar',
       deploy: 'A pôr online',
+      deployPreview: 'A pôr a pré-visualização online',
       deployVersion: (version) => `A pôr a versão ${version} online`,
       upload: (path) => <>A guardar {path}</>,
       delete: (path) => <>A remover {path}</>,
@@ -191,7 +204,9 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
+      from: (version) => `a partir da v${version}`,
       online: 'online',
+      previewOnline: 'pré-visualização online',
       compiles: 'compila',
       errors: (count) => (count === 1 ? '1 erro' : `${count} erros`),
       problems: (count) => (count === 1 ? '1 erro' : `${count} erros`),
@@ -210,6 +225,13 @@ export const editor: EditorMessages = {
       unchanged: 'Não foi alterado nada',
       stopped: 'Interrompido',
       stoppedSaved: (version) => `Antes disso, foi guardada a versão ${version}.`,
+      stoppedFeature: (name) => `O que fez até lá está no rascunho «${name}».`,
+      feature: (name) => `Já podes experimentar no rascunho «${name}»`,
+      featureBroken: (name) => `O rascunho «${name}» ainda não compila`,
+      tryIt: 'Experimenta-a no endereço próprio do rascunho. Quando te parecer bem, integra o rascunho: passa a ser a próxima versão.',
+      previewOffline: 'A pré-visualização não está online. Faz deploy dela a partir do rascunho para a experimentares.',
+      previewStill: 'A pré-visualização continua a mostrar o que compilou da última vez.',
+      notMerged: 'Não foi integrada, por isso nada de novo ficou online.',
       failed: 'Não foi possível fazer a alteração',
       timeout:
         'O tempo acabou antes de alterar alguma coisa. Pede algo mais pequeno ou tenta outra vez: há vezes em que vai mais longe do que noutras.',
@@ -223,6 +245,8 @@ export const editor: EditorMessages = {
     },
     seeChanges: 'Ver o que mudou',
     open: 'Abrir a lambda',
+    openPreview: 'Abrir a pré-visualização',
+    openFeature: 'Abrir o rascunho',
     deploy: (version) => `Fazer deploy da versão ${version}`,
     undo: (version) => `Voltar à versão ${version}`,
     undoTitle: 'Anular a alteração: a versão que estava online antes volta a ficar online. A nova fica no histórico.',
@@ -230,6 +254,7 @@ export const editor: EditorMessages = {
     toast: {
       online: (version) => `A alteração está online como versão ${version}.`,
       saved: (version) => `A alteração foi guardada como versão ${version}.`,
+      feature: (name) => `A alteração está pronta a experimentar no rascunho «${name}».`,
       unchanged: 'O agente não alterou nada.',
       failed: 'Não foi possível fazer a alteração.',
       stopped: 'A alteração foi interrompida.',
@@ -273,10 +298,19 @@ export const editor: EditorMessages = {
     noDescription: 'Sem descrição',
     version: (version) => `Versão ${version}`,
     notOnline: 'ainda não está online',
-    changedSinceOnline: 'mudou desde que ficou online',
-    edited: 'editada',
     wanted: 'O que foi pedido',
     noVersions: 'Ainda não há versões.',
+    inProgress: 'Em curso',
+    allFeatures: 'Todos os rascunhos',
+    previewOnline: 'A pré-visualização está online',
+    previewOffline: 'A pré-visualização está offline',
+    behind: 'desatualizado',
+    featureTip: (start) => (
+      <>
+        Vais mudar algo que as pessoas usam? {start('Começa um rascunho')}: é experimentado num endereço próprio, com uma
+        cópia dos dados, e passa a ser a próxima versão quando estiver bem.
+      </>
+    ),
     storage: 'Armazenamento',
     inVersion: (version) => `Na versão ${version}`,
     noVersion: 'Na versão',
@@ -316,7 +350,6 @@ export const editor: EditorMessages = {
       `Versão ${version}${online ? ', online' : newest ? ', a mais recente' : ''}`,
     optionOnline: ' (online)',
     readFailed: 'Não foi possível ler essa versão.',
-    dataFailed: 'Não foi possível ler os dados.',
     noVersion: 'Ainda não há nenhuma versão para mostrar.',
     label: 'Ficheiros',
     code: 'Código',
@@ -362,12 +395,28 @@ export const editor: EditorMessages = {
 
   data: {
     hint:
-      'Os dados são o que a lambda guarda enquanto corre. Pertencem à lambda, não a uma versão: todas as versões leem e escrevem os mesmos dados, e nada do que fazes com as versões lhes toca. Só desaparecem quando a lambda é eliminada, ou quando desligas esse tipo de dados.',
+      'Os dados são o que a lambda guarda enquanto corre. Pertencem à lambda, não a uma versão: todas as versões leem e escrevem os mesmos dados, e nada do que fazes com as versões lhes toca. Um rascunho é experimentado numa cópia deles. Só desaparecem quando a lambda é eliminada, ou quando desligas esse tipo de dados.',
     facts: [
       ['Partilhados por todas as versões', 'Seja qual for a versão online, lê e escreve os mesmos dados.'],
-      ['Ficam quando fazes deploy', 'Fazer deploy, reverter ou copiar uma versão nunca lhes toca.'],
+      ['Ficam quando fazes deploy', 'Fazer deploy, reverter ou integrar um rascunho nunca lhes toca.'],
       ['Decides tu', 'Cada tipo só está ligado enquanto quiseres. Desligar um deles elimina o que guarda.'],
     ],
+    featureHint:
+      'Os dados com que este rascunho trabalha: uma cópia dos da lambda, tirada quando o rascunho começou. A pré-visualização lê e escreve na cópia, por isso experimentar coisas aqui nunca toca no que a lambda guarda. Integrar o rascunho deita a cópia fora e deixa os dados da lambda como estão.',
+    featureFacts: [
+      ['Uma cópia', 'Tirada da lambda quando o rascunho começou, ou da última vez que a voltaste a copiar.'],
+      ['Só a pré-visualização a vê', 'O que a pré-visualização escreve fica aqui. A lambda e os visitantes dela nunca o veem.'],
+      ['Vai com o rascunho', 'Integrar ou eliminar o rascunho elimina a cópia. Os dados da lambda ficam como estão.'],
+    ],
+    recopy: 'Voltar a copiar os dados da lambda',
+    recopyTitle: 'Substituir esta cópia pelo que a lambda guarda agora',
+    recopyConfirm: 'Voltar a copiar os dados da lambda?',
+    recopyText:
+      'Tudo o que está nesta cópia (o que a pré-visualização lá escreveu) é substituído pelo que a lambda guarda agora. Os dados da própria lambda ficam como estão.',
+    keepCopy: 'Manter esta cópia',
+    recopied: 'A cópia está atualizada. A pré-visualização lê-a a partir do próximo pedido.',
+    recopyFailed: 'Não foi possível voltar a copiar os dados.',
+    copyContents: 'O que a cópia do workspace guarda',
     kinds: {
       workspace: {
         name: 'Workspace',
@@ -379,8 +428,6 @@ export const editor: EditorMessages = {
     byDefault: 'Ligado por predefinição',
     usage: (items, used, of) => `${items} · ${used} de ${of}`,
     offText: 'Desligado. Não guarda nada, e o código que o usa falha até voltar a ser ligado.',
-    switchOn: 'Ligar',
-    switchOff: 'Desligar',
     switchLabel: (name) => `${name} ligado ou desligado`,
     confirmOff: (name) => `Desligar o ${name.toLowerCase()}?`,
     confirmText: (items, size) => `Tudo o que lá está (${items}, ${size}) é eliminado de vez. Não é possível anular.`,
@@ -398,24 +445,156 @@ export const editor: EditorMessages = {
     offBrowse: 'O workspace está desligado, por isso não há ficheiros para mostrar.',
   },
 
+  features: {
+    hint:
+      'Uma versão nunca muda depois de guardada. As alterações fazem-se num rascunho: começa como uma cópia de uma versão e dos dados da lambda, pode ser experimentado num endereço próprio enquanto os visitantes continuam a receber o que está online, e passa a ser a próxima versão quando o integras.',
+    newFeature: 'Novo rascunho',
+    full: (limit) => `Esta lambda tem ${limit} rascunhos abertos, o máximo que pode ter. Integra ou elimina um primeiro.`,
+    emptyTitle: 'Não há nada em curso',
+    emptyText:
+      'Começa um rascunho para alterar a lambda sem tocar no que está online. Tu, ou o agente, podem alterá-lo quantas vezes for preciso e experimentá-lo no endereço próprio dele.',
+    steps: [
+      ['Começar', 'Uma cópia da versão mais recente e dos dados da lambda.'],
+      ['Alterar e experimentar', 'Num endereço próprio, com a sua própria cópia dos dados.'],
+      ['Integrar', 'Passa a ser a próxima versão, e fica online quando disseres.'],
+    ],
+    start: 'Começar um rascunho',
+    askAgentNew: 'Pedir uma alteração ao agente',
+    noChange: 'Ainda não diz o que altera',
+    from: (version) => `a partir da versão ${version}`,
+    mergeable: 'pronto a integrar',
+    behindTitle: 'Foi guardada uma versão mais recente depois de ter começado',
+    behind: (newest) => `a versão ${newest} é mais recente`,
+    previewOnline: 'pré-visualização online',
+    previewOutdated: 'a pré-visualização mostra um estado anterior',
+    previewOffline: 'pré-visualização offline',
+    changed: 'alterado',
+    openPreview: 'Pré-visualização',
+    openPreviewTitle: 'Abrir a pré-visualização num novo separador',
+    count: (open, limit) => `${open} de ${limit} rascunhos abertos`,
+    loading: 'A carregar o rascunho…',
+    readFailed: 'Não foi possível ler o rascunho.',
+
+    newTitle: 'Começar um rascunho',
+    newText:
+      'Um rascunho começa como uma cópia de uma versão (o código e os assets) e dos dados da lambda. Altera-o e experimenta-o num endereço próprio enquanto os visitantes continuam a receber o que está online; integra-o quando estiver bem.',
+    newTextFiles:
+      'O que escreveste no código vai para ele, em vez de passar a ser uma versão. Experimenta-o no endereço próprio do rascunho e integra-o quando estiver bem.',
+    name: 'Nome',
+    namePlaceholder: 'Ranking',
+    wanted: 'O que deve fazer?',
+    wantedPlaceholder: 'Opcional. Guardar as dez melhores pontuações e mostrá-las depois de cada jogo.',
+    startFrom: 'Começar a partir de',
+    version: (version, newest, online) =>
+      `Versão ${version}${newest && online ? ' (a mais recente, online)' : newest ? ' (a mais recente)' : online ? ' (online)' : ''}`,
+    olderBase: (newest) =>
+      `Não é a mais recente: antes de poder ser integrado, tem de receber o que as versões até à ${newest} mudaram.`,
+    create: 'Começar',
+    createFailed: 'Não foi possível começar o rascunho.',
+    retry: 'Tentar novamente',
+    madeNotSaved: (name) =>
+      `O rascunho «${name}» foi criado, mas o que escreveste ainda não pôde ser guardado nele. Tenta novamente, ou fecha isto e procura o rascunho em Rascunhos.`,
+    created: (name) => `O rascunho «${name}» foi criado.`,
+    cancel: 'Cancelar',
+
+    featureHint:
+      'Uma alteração em que se trabalha ao lado da lambda. A pré-visualização corre o código do rascunho com uma cópia própria dos dados, por isso os visitantes da lambda não veem nada disto. Ao integrá-lo, passa a ser a próxima versão.',
+    askAgent: 'Pedir ao agente',
+    editCode: 'Editar o código',
+    preview: 'Pré-visualização',
+    state: {
+      online: 'Online',
+      outdated: 'Online, com um estado anterior',
+      offline: 'Offline',
+    },
+    deployed: 'deploy feito',
+    deployPreview: 'Fazer deploy da pré-visualização',
+    updatePreview: 'Atualizar a pré-visualização',
+    previewDeployed: 'A pré-visualização está online.',
+    previewFailed: 'Não foi possível pôr a pré-visualização online.',
+    previewStopped: 'A pré-visualização está offline.',
+    previewRejected: 'A pré-visualização não mudou',
+    previewNotCompiling: 'Não compila. A pré-visualização continua a mostrar o que mostrava antes.',
+    previewAddress: 'Endereço da pré-visualização',
+    previewNote: 'Qualquer pessoa com este endereço pode abrir a pré-visualização. Os motores de busca são avisados para a ignorar.',
+    basedOn: 'Baseado em',
+    mergeableLong: 'a mais recente, por isso pode ser integrado',
+    started: 'Começou',
+    changes: (version) => `O que altera em relação à versão ${version}`,
+    noChanges: (version) => `Nada ainda: tem exatamente o mesmo que a versão ${version}.`,
+    notes: 'Notas',
+    editNotes: 'Nome e notas',
+    what: 'O que é que altera?',
+    whatPlaceholder: 'Adiciona um ranking com as dez melhores pontuações',
+    noWanted: 'Ainda não diz nada',
+    mergeNote: (version) =>
+      `Ao integrá-lo, passa a ser a versão ${version}, com estas notas. O rascunho desaparece com isso: a pré-visualização e a cópia dos dados.`,
+    missed: (from, to) =>
+      to - from === 1 ? `O que a versão ${to} mudou` : `O que as versões ${from + 1} a ${to} mudaram`,
+    missedNothing: 'Nada nos ficheiros.',
+
+    behindText: (base, newest) =>
+      `Começou a partir da versão ${base}, e desde então foi guardada a versão ${newest}. Integrá-lo agora desfaria o que ela mudou. Traz essas alterações para o rascunho (ou pede ao agente que o faça) e depois indica que se baseia na versão ${newest}.`,
+    moveBase: 'Basear noutra versão',
+    close: 'Fechar',
+    mergeTitle: (name) => `Integrar «${name}»`,
+    mergeTitleShort: 'Torná-lo a próxima versão',
+    leaks: (path, files) =>
+      `Em ${files}, as ligações para ${path} usam o caminho completo. A partir da pré-visualização, levam à lambda online e aos dados reais dela, não à cópia deste rascunho. Os caminhos relativos («api/items») ficam na pré-visualização.`,
+    mergeButton: 'Integrar',
+    saveFirst: 'Guarda primeiro o código: a pré-visualização e a integração usam o que está guardado.',
+    merge: 'Integrar o rascunho',
+    mergeAndDeploy: (version) => `Integrar e pôr a versão ${version} online`,
+    mergeText: (version) =>
+      `Passa a ser a versão ${version}. O rascunho desaparece com isso: a pré-visualização e a cópia dos dados. Os dados da própria lambda ficam como estão.`,
+    deployToo: (version) => `Pôr a versão ${version} online já`,
+    deployTooNote: (active) => `A versão ${active} continua à distância de um clique nas versões.`,
+    deployTooOffline: 'A lambda está offline; isto põe-na online.',
+    notCompiling: 'Não compila, por isso não foi integrado. Corrige-o primeiro no rascunho.',
+    mergeFailed: 'Não foi possível integrar o rascunho.',
+    merged: (version) => `Integrado como versão ${version}.`,
+    mergedOnline: (version) => `Integrado como versão ${version}, e online.`,
+
+    notesTitle: 'Nome e notas',
+    save: 'Guardar',
+    saveFailed: 'Não foi possível guardar.',
+
+    baseTitle: 'Basear noutra versão',
+    baseText: (base) =>
+      `Baseia-se na versão ${base}. Só um rascunho baseado na versão mais recente pode ser integrado, para que integrar nunca desfaça o que foi guardado depois de ele começar. Quando tiver tudo o que uma versão mais recente mudou, indica-o aqui.`,
+    moveTo: (version) => `Basear na versão ${version}`,
+    baseWarning: 'Nada verifica se essas alterações estão mesmo no rascunho. Integrá-lo sem elas desfá-las.',
+
+    deleteTitle: (name) => `Eliminar «${name}»?`,
+    deleteText:
+      'O código, a pré-visualização e a cópia dos dados são eliminados de vez. A lambda e as versões ficam como estão.',
+    keep: 'Manter',
+    deleteForGood: 'Eliminar de vez',
+    deleteFailed: 'Não foi possível eliminar o rascunho.',
+    deleted: (name) => `O rascunho «${name}» foi eliminado.`,
+
+    all: 'Todos os rascunhos',
+    actions: 'Mais ações para este rascunho',
+    download: 'Transferir como zip',
+    stopPreview: 'Pôr a pré-visualização offline',
+    delete: 'Eliminar este rascunho',
+    viewsLabel: 'O rascunho',
+    views: {
+      overview: 'Rascunho',
+      code: 'Código',
+      data: 'Dados',
+      logs: 'Logs',
+    },
+    missingTitle: 'Este rascunho já não existe',
+    missingText: 'Foi integrado numa versão, ou eliminado. As versões mostram o que aconteceu com ele.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Uma versão é o programa: o código e os assets. A mais recente é aquela em que se está a trabalhar: podes guardar alterações nela e voltar a fazer deploy sempre que for preciso. As anteriores ficam exatamente como estavam, para comparar e para voltar a elas. Cada uma guarda o que foi pedido e o que mudou. Quando há mais de ${limit}, as mais antigas são removidas; a que está online, nunca.`,
+      `Uma versão é o programa (o código e os assets) e nunca muda depois de guardada, por isso qualquer uma pode ser comparada e voltar a ficar online exatamente como era. Cada uma guarda o que foi pedido e o que mudou. Para alterar a lambda, começa um rascunho: passa a ser a próxima versão quando estiver bem. Quando há mais de ${limit}, as mais antigas são removidas; a que está online, nunca.`,
     none: 'Ainda não há versões.',
     noDescription: 'Sem descrição',
     online: 'online',
-    newest: 'mais recente',
-    newestTitle: 'A versão em que se está a trabalhar: guardar altera-a diretamente',
-    edited: 'editada',
-    saves: (count) => (count === 1 ? 'Guardada uma vez' : `Guardada ${count} vezes`),
-    changedSince: 'mudou desde que ficou online',
-    deployAgain: 'Voltar a fazer deploy',
-    deployAgainTitle: 'Pôr online o que foi guardado desde que ficou online',
-    start: 'Nova versão',
-    startTitle: (version) => `Manter a versão ${version} como está e continuar numa cópia dela`,
-    startFrom: 'Começar uma nova versão a partir daqui',
-    started: (version) => `A versão ${version} foi criada. Agora é a mais recente, por isso é nela que o trabalho continua.`,
-    startFailed: 'Não foi possível criar a nova versão.',
     putOnline: 'Pôr esta versão online',
     rollBackTitle: 'Voltar a pôr online esta versão anterior',
     deploy: 'Fazer deploy',
@@ -427,6 +606,8 @@ export const editor: EditorMessages = {
     status: { added: 'adicionado', removed: 'removido', changed: 'alterado', same: 'igual' },
     browse: 'Ver os ficheiros',
     edit: 'Editar a partir daqui',
+    feature: 'Começar um rascunho a partir daqui',
+    featureTitle: 'Trabalhar numa alteração desta versão ao lado da lambda, e integrá-la na próxima versão quando estiver bem',
     binary: 'Não é texto, por isso não há linhas para comparar.',
     tooLarge: 'Demasiado grande para comparar linha a linha.',
   },
@@ -450,8 +631,6 @@ export const editor: EditorMessages = {
       ended: 'terminado',
     },
     putBack: (version) => `Voltar a pôr a versão ${version} online`,
-    revision: (revision) => `revisão ${revision}`,
-    revisionTitle: (revision) => `A versão tal como estava depois de ser guardada pela ${revision}.ª vez`,
     timeline: 'O que esteve online nos últimos sete dias',
     block: (version, from, to) => `Versão ${version}, de ${from} a ${to ?? 'agora'}`,
     weekAgo: 'há uma semana',
@@ -496,6 +675,11 @@ export const editor: EditorMessages = {
       'Pedidos, o que a lambda escreveu na consola e o que correu mal, em tempo real.' +
       (capturing ? '' : ' Esta instalação não guarda o que as lambdas escrevem na consola, por isso só aparecem pedidos e erros.') +
       ' Fica em memória e é partilhado por todas as lambdas daqui, por isso recua entre alguns minutos e algumas horas, e fica vazio depois de um reinício. Os endereços dos visitantes não são mostrados.',
+    featureHint: (capturing) =>
+      'O que a pré-visualização deste rascunho respondeu, escreveu na consola e lançou, em tempo real.' +
+      (capturing ? '' : ' Esta instalação não guarda o que as lambdas escrevem na consola, por isso só aparecem pedidos e erros.') +
+      ' Fica separado do log da própria lambda, que nunca mostra a pré-visualização. Fica em memória, por isso recua entre alguns minutos e algumas horas.',
+    nothingPreview: 'Ainda nada. Abre a pré-visualização do rascunho e os pedidos aparecem aqui.',
     search: 'Pesquisar',
     searchLabel: 'Pesquisar no log',
     resume: 'Mostrar as novas linhas à medida que chegam',
@@ -641,36 +825,45 @@ export const editor: EditorMessages = {
     notYet: 'Ainda não compila.',
     checkFailed: 'Não foi possível verificar o código.',
     saved: (version) => `Guardado como versão ${version}.`,
-    savedOver: (version) => `Guardado na versão ${version}. Faz deploy para a pôr online.`,
-    savedOverOnline: (version) =>
-      `Guardado na versão ${version}. Os visitantes continuam a receber o que foi posto online até voltares a fazer deploy.`,
+    featureSaved: 'Guardado no rascunho. Faz deploy da pré-visualização para o experimentares.',
+    featureLoadFailed: 'Não foi possível carregar o rascunho.',
+    previewOnline: 'A pré-visualização está online.',
+    previewRefused: 'A pré-visualização não mudou. Vê abaixo o que o compilador disse.',
     isOnline: (version) => `A versão ${version} está online.`,
     notOnline: 'Não ficou online. Vê abaixo o que o compilador disse.',
     failed: 'Não correu bem.',
     unchanged: 'Nada mudou desde que guardaste pela última vez.',
     demo: 'É uma demo, por isso aqui tudo é só de leitura. Para a alterar, cria uma lambda tua a partir dela. ',
-    edit: 'Edita o código à mão. Guardar altera a versão mais recente, sempre que quiseres; o que está online só muda quando fazes deploy. Nova versão mantém tal como está a versão de onde partiste. ',
-    history: (version, newest) =>
-      `A versão ${version} já faz parte do histórico e fica como está, por isso guardar cria uma nova versão a partir dela. A versão ${newest} é a mais recente. `,
+    edit: 'Edita o código à mão. Guardar cria uma nova versão e não mexe no que está online; fazer deploy põe-na online. Para experimentares uma alteração primeiro, começa um rascunho. ',
+    editFeature:
+      'O código deste rascunho. Guardar mantém-no no rascunho: nada do que os visitantes da lambda recebem muda. Fazer deploy põe-no online no endereço próprio do rascunho, para o experimentares; integrar o rascunho faz dele a próxima versão. ',
+    inFeature: (name) => `em «${name}»`,
+    previewed: ', na pré-visualização',
+    changedElsewhere: 'O rascunho foi guardado noutro sítio desde que o abriste (talvez pelo agente). Carrega o que está guardado antes de guardares aqui; as tuas alterações não seriam guardadas por cima.',
+    readAgain: 'Carregar o que está guardado',
     files: (entry, cs) => (
       <>
         {entry} devolve o que é servido, os outros ficheiros {cs} têm tipos, e qualquer outro ficheiro é servido tal como
         está. Ctrl-S guarda, F12 vai para a declaração.
       </>
     ),
+    newer: (version) => ` A versão ${version} é mais recente do que a que está aberta aqui.`,
     check: 'Verificar',
     save: 'Guardar',
-    saveTitle: (version) => `Guardar na versão ${version} (Ctrl+S)`,
-    saveNew: 'Nova versão',
-    saveNewTitle: 'Guardar como nova versão e manter tal como está a versão de onde partiste',
     deploy: 'Fazer deploy',
-    older: ', histórico',
-    newestTag: ', mais recente',
-    unpublished: ', guardada depois de ficar online',
+    deployPreview: 'Fazer deploy da pré-visualização',
+    deployPreviewTitle: 'Guardar e pôr o rascunho online no endereço próprio dele, para o experimentares',
     binary: (size) => `Não é texto, por isso não há nada para editar. É servido tal como está e tem ${size} kB.`,
     saveAndDeploy: 'Guardar e fazer deploy',
     saveVersion: 'Guardar uma nova versão',
-    saveNewAndDeploy: 'Guardar uma nova versão e fazer deploy',
+    fromOlder: (version, newest) =>
+      `Isto parte da versão ${version}, e a versão ${newest} é mais recente. Guardar torna-o a versão mais recente, sem o que veio depois da versão ${version}.`,
+    featureInstead: (start) => (
+      <>
+        Estás a experimentar algo? {start('Põe-no antes num novo rascunho')}: tem um endereço próprio, e nenhuma versão é
+        guardada até estar bem.
+      </>
+    ),
     cancel: 'Cancelar',
     what: 'O que é que muda? Opcional: aparece no histórico.',
     placeholder: 'Adiciona um formulário de contacto',

@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Votre première lambda',
     editor: 'Le tableau de bord',
     why: 'Dire pourquoi',
+    features: 'Modifier sans risque',
     files: 'Plusieurs fichiers',
     page: 'Servir une page',
     spa: 'Un front-end, étape par étape',
@@ -58,9 +59,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Donnez la clé d’édition à un agent et dites-lui quoi construire : il passe par {k.link('/#agents', 'MCP')},
-        avec une version pour chaque chose que vous demandez. Ou ouvrez {k.b('Code')} et écrivez le code vous-même : {k.b('Vérifier')} compile sans
-        rien enregistrer et vous montre ce qu’en dit le compilateur, avec le fichier et la ligne.
+        Donnez la clé d’édition à un agent et dites-lui quoi construire : il écrit de nouvelles versions via{' '}
+        {k.link('/#agents', 'MCP')}. Ou ouvrez {k.b('Code')} et écrivez le code vous-même : {k.b('Vérifier')} compile
+        sans rien enregistrer et vous montre ce qu’en dit le compilateur, avec le fichier et la ligne.
       </>
     ),
     (k) => (
@@ -75,7 +76,7 @@ export const guide: Messages['guide'] = {
     <>
       Le lien d’édition ouvre un tableau de bord plutôt qu’une zone de texte : ici, l’essentiel du code est écrit par des
       agents, donc l’écran montre d’abord comment va votre lambda. La barre latérale contient la lambda (en ligne ou non,
-      son adresse, et un bouton quand il y a quelque chose à mettre en ligne) et ses sections. Tout ce qui
+      son adresse, et un bouton quand une version plus récente attend d’être mise en ligne) et ses sections. Tout ce qui
       sert rarement, comme changer l’adresse ou supprimer la lambda, se trouve dans le menu {k.b('⋯')}.
     </>
   ),
@@ -85,15 +86,16 @@ export const guide: Messages['guide'] = {
       'Modifier',
       (k) => (
         <>
-          Dites ce qui doit changer, et l’agent de ce serveur s’en charge sous vos yeux : il lit le code, le modifie,
-          vérifie que ça compile et le met en ligne dans une nouvelle version. Désactivez{' '}
-          {k.b('Mettre en ligne une fois terminé')} pour y jeter un œil d’abord.
+          Dites ce qui doit changer, et l’agent de ce serveur s’en charge sous vos yeux. Il travaille dans un
+          brouillon, y essaie la modification, et l’intègre à la prochaine version une fois que ça marche.
+          Désactivez {k.b('Mettre en ligne une fois terminé')} pour essayer vous-même le brouillon d’abord.
         </>
       ),
     ],
+    ['Brouillons', () => <>Des modifications préparées à côté de la lambda : chacune s’essaie à sa propre adresse et s’intègre à la prochaine version une fois au point. Une fois ouvert, un brouillon a son propre code, ses propres données et ses propres logs.</>],
     ['Fichiers', () => <>Les fichiers d’une version : son code et ses assets, le programme lui-même. Un cadenas ou un globe indique si le public peut y accéder.</>],
     ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : le workspace. Regardez ce qu’il contient, importez et supprimez des fichiers, ou désactivez-le.</>],
-    ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. La plus récente est celle sur laquelle on travaille. C’est ici qu’on déploie, qu’on revient en arrière ou qu’on commence une nouvelle version.</>],
+    ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],
     ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
     ['Logs', () => <>Ses requêtes, ce qu’elle affiche, et la stack trace de tout ce qui plante, en direct.</>],
@@ -101,9 +103,10 @@ export const guide: Messages['guide'] = {
       'Code',
       (k) => (
         <>
-          Pour écrire le code à la main. {k.b('Vérifier')} compile, {k.b('Enregistrer')} met à jour la version la plus
-          récente, {k.b('Nouvelle version')} la garde telle quelle et en commence une autre, {k.b('Déployer')} met en
-          ligne. {k.code('Ctrl-S')} enregistre ; {k.code('F12')} va à une déclaration.
+          Pour écrire le code à la main. {k.b('Vérifier')} compile, {k.b('Enregistrer')} crée une version,{' '}
+          {k.b('Déployer')} met en ligne. Dans un brouillon, {k.b('Enregistrer')} garde le code dans le brouillon
+          et {k.b('Déployer l’aperçu')} le met en ligne à l’adresse du brouillon.{' '}
+          {k.code('Ctrl-S')} enregistre ; {k.code('F12')} va à une déclaration.
         </>
       ),
     ],
@@ -131,10 +134,50 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Les agents passent les deux mêmes champs à {k.code('write_code')}. Dans {k.b('Code')},{' '}
-      {k.b('Nouvelle version')} vous demande le changement. Les deux sont facultatifs. Trop longs, ils ne sont pas
-      refusés mais coupés : à 4 000 caractères pour la spécification, à 500 pour le changement. Mettre à jour une
-      version garde ses notes, sauf si vous en donnez de nouvelles.
+      Les agents passent les deux mêmes champs à {k.code('write_code')}. Dans {k.b('Code')}, l’enregistrement vous
+      demande le changement. Les deux sont facultatifs. Trop longs, ils ne sont pas refusés mais coupés : à
+      4 000 caractères pour la spécification, à 500 pour le changement. Un brouillon a ses deux notes à lui, et la
+      version dans laquelle il est intégré les reprend.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Une version ne change plus une fois enregistrée, et c’est ce qui fait que chacune vaut la peine d’être gardée : on
+      peut comparer n’importe laquelle, et la remettre en ligne exactement telle qu’elle était. Pour modifier une lambda
+      que des gens utilisent, démarrez plutôt un {k.b('brouillon')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Démarrez-le dans {k.b('Brouillons')}, ou à partir de n’importe quelle version. C’est une copie du code et
+        des assets de cette version, et des données de la lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Modifiez-le autant de fois qu’il le faut, dans {k.b('Code')} ou en le demandant à l’agent.{' '}
+        {k.b('Déployer l’aperçu')} le met en ligne à sa propre adresse, {k.code('/features/…/')}, avec sa propre copie
+        des données. Les visiteurs de la lambda n’en voient rien, et rien de ce qu’il écrit n’atteint les données de
+        la lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Une fois au point, cliquez sur {k.b('Intégrer')} : il devient la prochaine version, avec ses notes, et passe
+        en ligne tout de suite si vous le voulez. Le brouillon disparaît alors, avec son aperçu et sa copie des
+        données.
+      </>
+    ),
+  ],
+  featureSample: 'Classement',
+  featuresAside: () => (
+    <>
+      On peut travailler sur plusieurs brouillons à la fois. Seul un brouillon basé sur la version la plus récente
+      peut être intégré : ainsi, une intégration n’annule jamais une version enregistrée après le démarrage du
+      brouillon. Si un autre a été intégré avant, reportez ses changements (ou demandez-le à l’agent), puis basez le
+      brouillon sur la version la plus récente. Rien ne s’intègre tout seul, et c’est voulu.
     </>
   ),
 
@@ -207,10 +250,10 @@ export const guide: Messages['guide'] = {
   workspaceColumn: 'Dans les données',
   table: [
     ['ce qu’il contient', 'le code et les assets : le programme, front-end compris', 'tout ce que la lambda écrit, ou que quelqu’un importe'],
-    ['quand il change', 'quand la version est enregistrée', 'dès que quelque chose y est écrit'],
+    ['quand il change', 'jamais : une modification donne une nouvelle version', 'dès que quelque chose y est écrit'],
     ['un déploiement', 'met exactement ces fichiers en ligne', 'n’y touche jamais'],
     ['revenir en arrière', 'restaure les anciens fichiers', 'aucun effet : toutes les versions les partagent'],
-    ['une nouvelle version', 'commence par une copie de ces fichiers', 'aucun effet'],
+    ['un brouillon', 'commence par une copie de ces fichiers', 'travaille sur une copie de ces données'],
     ['quand il disparaît', 'avec les anciennes versions, au-delà de la limite', 'avec la lambda, ou quand vous le désactivez'],
   ],
   reachedAs: 'accessible dans le code via',

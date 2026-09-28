@@ -70,7 +70,7 @@ export const ship: Messages['ship'] = {
     ],
     [
       'Wie ändere ich die App später?',
-      'Mit dem Editor-Link, den Sie beim Veröffentlichen bekommen haben. Geben Sie ihn mit dem nächsten Wunsch an Ihren Agenten oder öffnen Sie ihn im Browser. Jede Änderung, um die Sie bitten, wird eine eigene Version unter derselben Adresse. Ältere Versionen können Sie jederzeit zurückholen.',
+      'Mit dem Editor-Link, den Sie beim Veröffentlichen bekommen haben. Geben Sie ihn mit dem nächsten Wunsch an Ihren Agenten oder öffnen Sie ihn im Browser. Jede Änderung wird eine neue Version unter derselben Adresse. Ältere Versionen können Sie jederzeit zurückholen.',
     ],
     [
       'Wer kann meine App sehen?',

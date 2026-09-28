@@ -10,6 +10,7 @@ using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Execution;
+using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Hosting;
@@ -118,6 +119,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         services.AddSingleton<IDataService, DataService>();
+        services.AddSingleton<IFeatureService, FeatureService>();
         services.AddSingleton<IShowcaseService, ShowcaseService>();
         services.AddSingleton<SettingsService>();
         services.AddSingleton<DemoSeeder>();
@@ -170,11 +172,15 @@ public sealed class Application : IAsyncDisposable
 
         var lambdas = LambdaRoute.Create(services, new KeyLocator(services.GetRequiredService<IMetaService>(), spa));
 
+        // the previews of features, served like the lambdas they belong to
+        var previews = LambdaRoute.Create(services, new FeatureLocator(services.GetRequiredService<IFeatureService>()));
+
         var layout = Layout.Create()
                            .Add("api", ApiLayout.Create(options))
                            // one path, for agents rather than for browsers
                            .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
-                           .Add("lambda", lambdas);
+                           .Add("lambda", lambdas)
+                           .Add("features", previews);
 
         // Ahead of the application, so a miss here is a 404 rather than the
         // index page: a named route answers for itself and never falls through

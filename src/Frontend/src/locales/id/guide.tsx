@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Lambda pertama Anda',
     editor: 'Pusat kontrol',
     why: 'Mencatat alasan',
+    features: 'Mengubah dengan aman',
     files: 'Lebih dari satu file',
     page: 'Menyajikan halaman',
     spa: 'Front end, langkah demi langkah',
@@ -59,8 +60,8 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Berikan kunci editor ke agen dan jelaskan apa yang harus dibuat. Agen bekerja lewat {k.link('/#agents', 'MCP')},
-        dengan satu versi untuk setiap hal yang Anda minta. Atau buka {k.b('Kode')} dan tulis sendiri:{' '}
+        Berikan kunci editor ke agen dan jelaskan apa yang harus dibuat. Agen menulis versi-versi baru lewat{' '}
+        {k.link('/#agents', 'MCP')}. Atau buka {k.b('Kode')} dan tulis sendiri:{' '}
         {k.b('Periksa')} mengompilasi tanpa menyimpan apa pun, lalu menunjukkan pesan compiler, lengkap dengan file dan
         barisnya.
       </>
@@ -77,7 +78,7 @@ export const guide: Messages['guide'] = {
     <>
       Link editor membuka pusat kontrol, bukan kotak teks. Sebagian besar kode di sini ditulis oleh agen, jadi yang
       pertama tampil di layar adalah kondisi lambda Anda. Sidebar berisi lambda-nya (apakah online, alamatnya, dan tombol
-      kalau ada sesuatu yang bisa di-deploy) beserta bagian-bagiannya. Hal yang jarang dilakukan, seperti
+      kalau ada versi lebih baru yang menunggu untuk online) beserta bagian-bagiannya. Hal yang jarang dilakukan, seperti
       mengganti alamat atau menghapus lambda, ada di menu {k.b('⋯')} di sana.
     </>
   ),
@@ -87,15 +88,16 @@ export const guide: Messages['guide'] = {
       'Ubah',
       (k) => (
         <>
-          Tulis apa yang perlu diubah, dan agen di server ini akan mengerjakannya sementara Anda melihat: membaca kode,
-          mengubahnya, memastikan kodenya bisa dikompilasi, lalu membuatnya online sebagai versi baru. Matikan{' '}
-          {k.b('Langsung online setelah selesai')} kalau Anda ingin memeriksanya dulu.
+          Tulis apa yang perlu diubah, dan agen di server ini akan mengerjakannya sementara Anda melihat. Agen bekerja di
+          sebuah draf, mencobanya di sana, lalu menggabungkannya menjadi versi berikutnya begitu berhasil. Matikan{' '}
+          {k.b('Langsung online setelah selesai')} kalau Anda ingin mencoba drafnya sendiri dulu.
         </>
       ),
     ],
+    ['Draf', () => <>Perubahan yang dikerjakan di samping lambda: masing-masing dicoba di alamatnya sendiri dan digabungkan menjadi versi berikutnya setelah hasilnya pas. Saat dibuka, draf punya kode, data, dan log-nya sendiri.</>],
     ['File', () => <>File dari sebuah versi: kode dan asetnya, yaitu programnya sendiri. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
     ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: workspace. Lihat isinya, unggah dan hapus file, atau nonaktifkan.</>],
-    ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Versi terbaru adalah yang sedang dikerjakan. Deploy, rollback, atau mulai versi baru dari sini.</>],
+    ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
     ['Log', () => <>Request yang masuk, apa yang dicetak lambda, dan stack trace dari setiap error, secara langsung.</>],
@@ -103,9 +105,9 @@ export const guide: Messages['guide'] = {
       'Kode',
       (k) => (
         <>
-          Menulis kode secara manual. {k.b('Periksa')} mengompilasi, {k.b('Simpan')} menyimpan ke versi terbaru,{' '}
-          {k.b('Versi baru')} membiarkannya apa adanya dan memulai versi lain, {k.b('Deploy')} membuatnya online.{' '}
-          {k.code('Ctrl-S')} menyimpan; {k.code('F12')} membuka deklarasi.
+          Menulis kode secara manual. {k.b('Periksa')} mengompilasi, {k.b('Simpan')} membuat versi, {k.b('Deploy')}{' '}
+          membuatnya online. Di draf, {k.b('Simpan')} menyimpannya di draf dan {k.b('Deploy pratinjau')} membuatnya
+          online di alamat draf itu. {k.code('Ctrl-S')} menyimpan; {k.code('F12')} membuka deklarasi.
         </>
       ),
     ],
@@ -134,10 +136,48 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Agen mengirim dua field yang sama ke {k.code('write_code')}. Di {k.b('Kode')}, {k.b('Versi baru')} meminta Anda
+      Agen mengirim dua field yang sama ke {k.code('write_code')}. Di {k.b('Kode')}, saat menyimpan Anda diminta
       mengisi perubahannya. Keduanya opsional. Spesifikasi yang terlalu panjang dipotong di 4.000 karakter, dan
-      perubahan di 500 karakter, bukan ditolak. Menyimpan ke versi yang sama tetap mempertahankan catatannya, kecuali
-      diberi catatan baru.
+      perubahan di 500 karakter, bukan ditolak. Draf menyimpan dua catatannya sendiri, dan versi hasil penggabungannya
+      mengambil alih catatan itu.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Versi tidak pernah berubah setelah disimpan, dan justru itulah yang membuat setiap versi layak disimpan: versi
+      mana pun bisa dibandingkan, dan dijadikan online lagi persis seperti semula. Untuk mengubah lambda yang sedang
+      dipakai orang, mulai {k.b('draf')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Mulai di {k.b('Draf')}, atau dari versi mana pun. Draf adalah salinan kode dan aset versi itu, dan salinan data
+        lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Ubah sesering yang diperlukan, di {k.b('Kode')} atau dengan meminta agen. {k.b('Deploy pratinjau')} membuatnya
+        online di alamatnya sendiri, {k.code('/features/…/')}, dengan salinan datanya sendiri. Pengunjung lambda tidak
+        melihat apa pun, dan tidak ada yang ditulisnya yang sampai ke data lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        {k.b('Gabungkan')} setelah hasilnya pas: draf menjadi versi berikutnya, lengkap dengan catatannya, dan bisa
+        langsung online kalau Anda mau. Drafnya ikut hilang, termasuk pratinjau dan salinan datanya.
+      </>
+    ),
+  ],
+  featureSample: 'Papan peringkat',
+  featuresAside: () => (
+    <>
+      Beberapa draf bisa dikerjakan sekaligus. Hanya draf yang berbasis versi terbaru yang bisa digabungkan, supaya
+      penggabungan tidak pernah membatalkan versi yang disimpan setelah draf itu dimulai. Kalau ada draf lain yang
+      digabungkan lebih dulu, masukkan perubahannya (atau minta agen melakukannya), lalu jadikan versi terbaru sebagai
+      dasar draf. Tidak ada yang tergabung dengan sendirinya; itu disengaja.
     </>
   ),
 
@@ -210,10 +250,10 @@ export const guide: Messages['guide'] = {
   workspaceColumn: 'Di data',
   table: [
     ['isinya', 'kode dan aset: programnya, termasuk front end', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
-    ['kapan berubah', 'saat versinya disimpan', 'begitu ada yang ditulis ke dalamnya'],
+    ['kapan berubah', 'tidak pernah: perubahan menjadi versi baru', 'begitu ada yang ditulis ke dalamnya'],
     ['saat deploy', 'file inilah yang persis dibuat online', 'tidak pernah disentuh'],
     ['rollback', 'file lama kembali', 'tidak berpengaruh: semua versi memakainya bersama'],
-    ['versi baru', 'dimulai sebagai salinannya', 'tidak berpengaruh'],
+    ['draf', 'dimulai sebagai salinannya', 'memakai salinannya'],
     ['kapan hilang', 'bersama versi lama, setelah melewati batas', 'bersama lambda, atau saat Anda menonaktifkannya'],
   ],
   reachedAs: 'diakses dari kode sebagai',

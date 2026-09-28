@@ -132,6 +132,7 @@ public sealed class FakeAgent : IAsyncDisposable
                 ["deploy"] = body["deploy"]?.GetValue<bool>() ?? true,
                 ["model"] = "opus",
                 ["before"] = body["before"]?.DeepClone(),
+                ["feature"] = body["feature"]?.DeepClone(),
                 ["events"] = new JsonArray(),
                 ["steps"] = new JsonArray(),
                 ["waiting"] = 1,

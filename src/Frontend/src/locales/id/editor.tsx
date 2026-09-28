@@ -64,6 +64,7 @@ export const editor: EditorMessages = {
     sections: {
       overview: 'Ringkasan',
       change: 'Ubah',
+      features: 'Draf',
       showcase: 'Showcase',
       domain: 'Domain',
       files: 'File',
@@ -94,8 +95,6 @@ export const editor: EditorMessages = {
     download: 'Unduh sebagai proyek .NET',
     delete: 'Hapus lambda ini',
     deploy: (version) => `Deploy versi ${version}`,
-    changedSince: 'Ada perubahan yang disimpan sejak online. Pengunjung masih mendapat apa yang di-deploy.',
-    changedShort: 'Berubah sejak online',
     problems: 'Ada masalah baru-baru ini',
     demoTitle: 'Demo, dijaga tetap online oleh instalasi ini dan hanya bisa dibaca.',
     demo: (start) => (
@@ -133,7 +132,7 @@ export const editor: EditorMessages = {
   },
 
   change: {
-    hint: 'Tulis apa yang perlu diubah, dan agen yang berjalan di server ini akan mengerjakannya: membaca kode, membuat perubahan, memastikan kodenya bisa dikompilasi, lalu membuatnya online. Setiap perubahan jadi versi baru, jadi versi sebelumnya selalu bisa dikembalikan dengan satu klik.',
+    hint: 'Tulis apa yang perlu diubah, dan agen yang berjalan di server ini akan mengerjakannya. Agen bekerja di sebuah draf, yaitu salinan lambda dengan alamatnya sendiri, jadi pengunjung Anda tidak melihat apa pun sampai selesai. Setelah itu, draf menjadi versi berikutnya dan langsung online, atau menunggu di drafnya supaya Anda bisa mencobanya dulu.',
     reading: 'Menghubungi agen…',
     readFailed: 'Agen gagal dihubungi.',
     label: 'Apa yang perlu diubah?',
@@ -142,8 +141,13 @@ export const editor: EditorMessages = {
     send: 'Ubah sekarang',
     sending: 'Mengirim…',
     goOnline: 'Langsung online setelah selesai',
-    goOnlineOn: 'Perubahan langsung online begitu berhasil dikompilasi. Sampai saat itu, yang sekarang online tetap online.',
-    goOnlineOff: 'Perubahan disimpan sebagai versi baru, lalu Anda deploy sendiri setelah memeriksanya.',
+    goOnlineOn: 'Begitu berhasil di drafnya, agen menggabungkannya menjadi versi berikutnya lalu membuatnya online. Sampai saat itu, yang sekarang online tetap online.',
+    goOnlineOff: 'Agen membiarkannya di drafnya. Coba di alamat draf itu sendiri, lalu gabungkan kalau Anda sudah puas.',
+    where: 'Kerjakan di',
+    whereTitle: 'Draf baru, atau draf yang masih terbuka untuk dilanjutkan',
+    newFeature: 'Draf baru',
+    full: (limit) =>
+      `Lambda ini punya ${limit} draf yang terbuka, dan itu batas maksimalnya. Pilih satu untuk dilanjutkan, atau gabungkan atau hapus satu dulu.`,
     password: 'Kata sandi',
     fable: 'Fable bekerja lebih santai: tanpa batas waktu, tanpa batas langkah, dan dengan antreannya sendiri.',
     left: (left, perDay) => `Sisa ${left} dari ${perDay} hari ini`,
@@ -157,14 +161,18 @@ export const editor: EditorMessages = {
         text: 'Kodenya, dan apa yang diminta di versi-versi sebelumnya, supaya yang sudah jalan tetap jalan.',
       },
       {
-        title: 'Membuat perubahan',
-        text: 'Sekaligus memperbaiki apa pun yang tidak bisa dikompilasi, dan Anda bisa melihat setiap langkahnya.',
+        title: 'Bekerja di sebuah draf',
+        text: 'Salinan dengan alamat dan datanya sendiri: agen membuat perubahan di sana dan mencobanya, sementara Anda bisa melihat setiap langkahnya.',
       },
-      { title: 'Membuatnya online', text: 'Sebagai versi baru. Versi sebelumnya tetap bisa dikembalikan dengan satu klik.' },
+      {
+        title: 'Membuatnya online',
+        text: 'Sebagai versi berikutnya, atau membiarkannya supaya Anda coba dulu. Versi sebelumnya tetap bisa dikembalikan dengan satu klik.',
+      },
     ],
     asked: 'Permintaan Anda',
     goesOnline: 'langsung online setelah selesai',
-    review: 'disimpan dulu untuk Anda periksa',
+    review: 'dibiarkan di drafnya untuk Anda coba',
+    inFeature: (name) => `di draf “${name}”`,
     queued: (ahead) =>
       ahead === 1
         ? 'Menunggu giliran. Ada satu pekerjaan lain di depan.'
@@ -176,7 +184,7 @@ export const editor: EditorMessages = {
     stopping: 'Menghentikan…',
     stopTitle: 'Hentikan perubahan ini?',
     stopText:
-      'Yang sudah disimpan tetap ada sebagai versi. Yang sedang online tetap online, kecuali agen sudah telanjur membuat versi baru online.',
+      'Yang sudah disimpan tetap ada, di drafnya atau sebagai versi. Yang sedang online tetap online, kecuali agen sudah telanjur menggabungkan perubahannya dan membuatnya online.',
     keepGoing: 'Lanjutkan',
     stopIt: 'Hentikan',
     log: 'Yang dikerjakan',
@@ -187,14 +195,22 @@ export const editor: EditorMessages = {
       read: 'Membaca kode',
       readFile: (file) => <>Membaca {file}</>,
       logs: 'Membaca log',
+      logsPreview: 'Membaca log pratinjau',
+      readFeature: 'Membaca draf',
       create: 'Membuat lambda',
-      copy: 'Memulai versi baru',
+      feature: 'Memulai draf',
+      featureStarted: (name) => <>Draf {name} dimulai</>,
+      update: 'Memperbarui catatan draf',
+      rebase: (version) => `Menjadikan versi ${version} sebagai dasar draf`,
+      merge: 'Menggabungkan draf',
+      discard: 'Menghapus draf',
       write: (files) => <>Mengubah {files || 'file'}</>,
       writeAll: (files) => <>Menulis {files}</>,
       removing: (files) => <>, menghapus {files}</>,
       more: (count) => `+${count} lainnya`,
       check: 'Mengompilasi',
       deploy: 'Membuatnya online',
+      deployPreview: 'Membuat pratinjau online',
       deployVersion: (version) => `Membuat versi ${version} online`,
       upload: (path) => <>Menyimpan {path}</>,
       delete: (path) => <>Menghapus {path}</>,
@@ -203,7 +219,9 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
+      from: (version) => `dari v${version}`,
       online: 'online',
+      previewOnline: 'pratinjau online',
       compiles: 'terkompilasi',
       errors: (count) => `${count} error`,
       problems: (count) => `${count} error`,
@@ -222,6 +240,13 @@ export const editor: EditorMessages = {
       unchanged: 'Tidak ada yang diubah',
       stopped: 'Dihentikan',
       stoppedSaved: (version) => `Versi ${version} sudah tersimpan sebelum dihentikan.`,
+      stoppedFeature: (name) => `Yang sudah dikerjakan sampai saat itu ada di draf “${name}”.`,
+      feature: (name) => `Siap dicoba di draf “${name}”`,
+      featureBroken: (name) => `Draf “${name}” belum bisa dikompilasi`,
+      tryIt: 'Coba di alamat draf itu sendiri. Kalau Anda sudah puas, gabungkan: draf itu menjadi versi berikutnya.',
+      previewOffline: 'Pratinjaunya tidak online. Deploy dari draf untuk mencobanya.',
+      previewStill: 'Pratinjaunya masih menampilkan apa yang terakhir berhasil dikompilasi.',
+      notMerged: 'Draf tidak digabungkan, jadi tidak ada yang baru online.',
       failed: 'Perubahan tidak berhasil',
       timeout:
         'Waktunya habis sebelum ada yang diubah. Minta sesuatu yang lebih kecil, atau minta lagi: kadang agen bisa melangkah lebih jauh di percobaan berikutnya.',
@@ -235,6 +260,8 @@ export const editor: EditorMessages = {
     },
     seeChanges: 'Lihat perubahannya',
     open: 'Buka',
+    openPreview: 'Buka pratinjau',
+    openFeature: 'Buka draf',
     deploy: (version) => `Deploy versi ${version}`,
     undo: (version) => `Kembalikan versi ${version}`,
     undoTitle: 'Batalkan perubahan: versi yang sebelumnya online jadi online lagi. Versi baru tetap ada di riwayat.',
@@ -242,6 +269,7 @@ export const editor: EditorMessages = {
     toast: {
       online: (version) => `Perubahan sudah online sebagai versi ${version}.`,
       saved: (version) => `Perubahan disimpan sebagai versi ${version}.`,
+      feature: (name) => `Perubahan siap dicoba di draf “${name}”.`,
       unchanged: 'Agen tidak mengubah apa pun.',
       failed: 'Perubahan tidak berhasil.',
       stopped: 'Perubahan dihentikan.',
@@ -285,10 +313,19 @@ export const editor: EditorMessages = {
     noDescription: 'Tanpa deskripsi',
     version: (version) => `Versi ${version}`,
     notOnline: 'belum online',
-    changedSinceOnline: 'berubah sejak online',
-    edited: 'diedit',
     wanted: 'Yang diminta',
     noVersions: 'Belum ada versi.',
+    inProgress: 'Sedang dikerjakan',
+    allFeatures: 'Semua draf',
+    previewOnline: 'Pratinjaunya online',
+    previewOffline: 'Pratinjaunya offline',
+    behind: 'tertinggal',
+    featureTip: (start) => (
+      <>
+        Mau mengubah sesuatu yang sedang dipakai orang? {start('Mulai draf')}: draf dicoba di alamatnya sendiri, dengan
+        salinan data, dan menjadi versi berikutnya setelah hasilnya pas.
+      </>
+    ),
     storage: 'Penyimpanan',
     inVersion: (version) => `Di versi ${version}`,
     noVersion: 'Di versi',
@@ -328,7 +365,6 @@ export const editor: EditorMessages = {
     shown: (version, online, newest) => `Versi ${version}${online ? ', online' : newest ? ', terbaru' : ''}`,
     optionOnline: ' (online)',
     readFailed: 'Versi itu gagal dibaca.',
-    dataFailed: 'Data gagal dibaca.',
     noVersion: 'Belum ada versi untuk ditampilkan.',
     label: 'File',
     code: 'Kode',
@@ -372,12 +408,28 @@ export const editor: EditorMessages = {
 
   data: {
     hint:
-      'Data adalah apa yang disimpan lambda selama berjalan. Data milik lambda, bukan milik satu versi: semua versi membaca dan menulis data yang sama, dan apa pun yang Anda lakukan dengan versi tidak mengubahnya. Data baru hilang kalau lambdanya dihapus, atau kalau Anda menonaktifkan jenis data itu.',
+      'Data adalah apa yang disimpan lambda selama berjalan. Data milik lambda, bukan milik satu versi: semua versi membaca dan menulis data yang sama, dan apa pun yang Anda lakukan dengan versi tidak mengubahnya. Draf dicoba dengan salinan data itu. Data baru hilang kalau lambdanya dihapus, atau kalau Anda menonaktifkan jenis data itu.',
     facts: [
       ['Dipakai bersama semua versi', 'Versi mana pun yang online membaca dan menulis data yang sama.'],
-      ['Tetap ada saat deploy', 'Deploy, rollback, atau menyalin versi tidak pernah menyentuhnya.'],
+      ['Tetap ada saat deploy', 'Deploy, rollback, atau menggabungkan draf tidak pernah menyentuhnya.'],
       ['Anda yang atur', 'Setiap jenis hanya aktif selama Anda mau. Menonaktifkannya menghapus isinya.'],
     ],
+    featureHint:
+      'Data yang dipakai draf ini: salinan data lambda, diambil saat draf dimulai. Pratinjaunya membaca dan menulis salinan itu, jadi mencoba apa pun di sini tidak pernah menyentuh apa yang disimpan lambda. Menggabungkan draf membuang salinan ini dan membiarkan data lambda apa adanya.',
+    featureFacts: [
+      ['Sebuah salinan', 'Diambil dari lambda saat draf dimulai, atau saat terakhir kali Anda menyalinnya lagi.'],
+      ['Hanya pratinjau yang melihatnya', 'Apa yang ditulis pratinjau tetap di sini. Lambda dan pengunjungnya tidak pernah melihatnya.'],
+      ['Hilang bersama drafnya', 'Menggabungkan atau menghapus draf juga menghapus salinan ini. Data lambda tetap apa adanya.'],
+    ],
+    recopy: 'Salin lagi data lambda',
+    recopyTitle: 'Ganti salinan ini dengan isi lambda saat ini',
+    recopyConfirm: 'Salin lagi data lambda?',
+    recopyText:
+      'Semua isi salinan ini, termasuk apa pun yang ditulis pratinjau ke dalamnya, diganti dengan isi lambda saat ini. Data lambda sendiri tidak disentuh.',
+    keepCopy: 'Biarkan salinan ini',
+    recopied: 'Salinannya sudah diperbarui. Pratinjau membacanya mulai request berikutnya.',
+    recopyFailed: 'Data gagal disalin lagi.',
+    copyContents: 'Isi salinan workspace',
     kinds: {
       workspace: {
         name: 'Workspace',
@@ -389,8 +441,6 @@ export const editor: EditorMessages = {
     byDefault: 'Aktif secara default',
     usage: (items, used, of) => `${items} · ${used} dari ${of}`,
     offText: 'Nonaktif. Isinya kosong, dan kode yang memakainya akan gagal sampai diaktifkan lagi.',
-    switchOn: 'Aktifkan',
-    switchOff: 'Nonaktifkan',
     switchLabel: (name) => `Aktifkan atau nonaktifkan ${name.toLowerCase()}`,
     confirmOff: (name) => `Nonaktifkan ${name.toLowerCase()}?`,
     confirmText: (items, size) =>
@@ -409,24 +459,155 @@ export const editor: EditorMessages = {
     offBrowse: 'Workspace nonaktif, jadi tidak ada file untuk ditampilkan.',
   },
 
+  features: {
+    hint:
+      'Versi tidak pernah berubah setelah disimpan. Perubahan dibuat di draf: draf dimulai sebagai salinan sebuah versi dan data lambda, bisa dicoba di alamatnya sendiri sementara pengunjung tetap mendapat yang sedang online, dan menjadi versi berikutnya saat Anda menggabungkannya.',
+    newFeature: 'Draf baru',
+    full: (limit) => `Lambda ini punya ${limit} draf yang terbuka, dan itu batas maksimalnya. Gabungkan atau hapus satu dulu.`,
+    emptyTitle: 'Tidak ada yang sedang dikerjakan',
+    emptyText:
+      'Mulai draf untuk mengubah lambda tanpa menyentuh yang sedang online. Anda, atau agen, bisa mengubahnya sesering yang diperlukan dan mencobanya di alamatnya sendiri.',
+    steps: [
+      ['Mulai', 'Salinan versi terbaru, dan salinan data lambda.'],
+      ['Ubah dan coba', 'Di alamatnya sendiri, dengan salinan datanya sendiri.'],
+      ['Gabungkan', 'Draf menjadi versi berikutnya, dan online saat Anda mau.'],
+    ],
+    start: 'Mulai draf',
+    askAgentNew: 'Minta perubahan ke agen',
+    noChange: 'Belum ada keterangan tentang apa yang diubah',
+    from: (version) => `dari versi ${version}`,
+    mergeable: 'siap digabungkan',
+    behindTitle: 'Ada versi yang lebih baru disimpan setelah draf ini dimulai',
+    behind: (newest) => `versi ${newest} lebih baru`,
+    previewOnline: 'pratinjau online',
+    previewOutdated: 'pratinjau menampilkan simpanan lama',
+    previewOffline: 'pratinjau offline',
+    changed: 'diubah',
+    openPreview: 'Pratinjau',
+    openPreviewTitle: 'Buka pratinjau di tab baru',
+    count: (open, limit) => `${open} dari ${limit} draf terbuka`,
+    loading: 'Memuat draf…',
+    readFailed: 'Draf gagal dibaca.',
+
+    newTitle: 'Mulai draf',
+    newText:
+      'Draf dimulai sebagai salinan sebuah versi (kode dan asetnya) dan salinan data lambda. Ubah dan coba di alamatnya sendiri sementara pengunjung tetap mendapat yang sedang online; gabungkan setelah hasilnya pas.',
+    newTextFiles:
+      'Apa yang Anda ketik di kode masuk ke draf ini, bukan menjadi versi. Coba di alamat draf itu sendiri, lalu gabungkan setelah hasilnya pas.',
+    name: 'Nama',
+    namePlaceholder: 'Papan peringkat',
+    wanted: 'Apa yang harus dilakukannya?',
+    wantedPlaceholder: 'Opsional. Simpan 10 skor terbaik dan tampilkan setelah setiap permainan.',
+    startFrom: 'Mulai dari',
+    version: (version, newest, online) =>
+      `Versi ${version}${newest && online ? ' (terbaru, online)' : newest ? ' (terbaru)' : online ? ' (online)' : ''}`,
+    olderBase: (newest) =>
+      `Bukan yang terbaru: sebelum bisa digabungkan, draf ini harus memasukkan dulu perubahan dari versi-versi sampai versi ${newest}.`,
+    create: 'Mulai',
+    createFailed: 'Draf gagal dimulai.',
+    retry: 'Coba lagi',
+    madeNotSaved: (name) =>
+      `Draf “${name}” sudah dimulai, tetapi apa yang Anda ketik belum bisa disimpan ke dalamnya. Coba lagi, atau tutup ini dan temukan drafnya di Draf.`,
+    created: (name) => `Draf “${name}” sudah dimulai.`,
+    cancel: 'Batal',
+
+    featureHint:
+      'Perubahan yang sedang dikerjakan di samping lambda. Pratinjaunya menjalankan kodenya dengan salinan datanya sendiri, jadi pengunjung lambda tidak melihat apa pun. Menggabungkannya menjadikannya versi berikutnya.',
+    askAgent: 'Minta ke agen',
+    editCode: 'Edit kode',
+    preview: 'Pratinjau',
+    state: {
+      online: 'Online',
+      outdated: 'Online, dengan simpanan lama',
+      offline: 'Offline',
+    },
+    deployed: 'di-deploy',
+    deployPreview: 'Deploy pratinjau',
+    updatePreview: 'Perbarui pratinjau',
+    previewDeployed: 'Pratinjau sudah online.',
+    previewFailed: 'Pratinjau gagal dibuat online.',
+    previewStopped: 'Pratinjau sudah offline.',
+    previewRejected: 'Pratinjau tidak berubah',
+    previewNotCompiling: 'Kode tidak bisa dikompilasi. Pratinjau masih menampilkan yang sebelumnya.',
+    previewAddress: 'Alamat pratinjau',
+    previewNote: 'Siapa pun yang punya alamat ini bisa membuka pratinjaunya. Mesin pencari diminta untuk tidak menyentuhnya.',
+    basedOn: 'Versi dasar',
+    mergeableLong: 'yang terbaru, jadi bisa digabungkan',
+    started: 'Dimulai',
+    changes: (version) => `Apa yang diubahnya dibandingkan versi ${version}`,
+    noChanges: (version) => `Belum ada: isinya masih persis sama dengan versi ${version}.`,
+    notes: 'Catatan',
+    editNotes: 'Nama dan catatan',
+    what: 'Apa yang diubahnya?',
+    whatPlaceholder: 'Menambahkan papan peringkat yang menyimpan 10 skor terbaik',
+    noWanted: 'Belum ada keterangan',
+    mergeNote: (version) =>
+      `Menggabungkannya menjadikannya versi ${version}, dengan catatan ini. Drafnya ikut hilang, termasuk pratinjau dan salinan datanya.`,
+    missed: (from, to) =>
+      to - from === 1 ? `Yang diubah versi ${to}` : `Yang diubah versi ${from + 1} sampai ${to}`,
+    missedNothing: 'Tidak ada perubahan di file.',
+
+    behindText: (base, newest) =>
+      `Draf ini dimulai dari versi ${base}, dan sejak itu versi ${newest} sudah disimpan. Menggabungkannya sekarang akan membatalkan perubahan di versi itu. Masukkan perubahan itu ke draf (atau minta agen melakukannya), lalu jadikan versi ${newest} sebagai dasarnya.`,
+    moveBase: 'Ganti versi dasarnya',
+    close: 'Tutup',
+    mergeTitle: (name) => `Gabungkan “${name}”`,
+    mergeTitleShort: 'Jadikan versi berikutnya',
+    leaks: (path, files) =>
+      `Di ${files}, tautan ke ${path} memakai path lengkap. Dari pratinjau, tautan itu mengarah ke lambda yang online beserta data aslinya, bukan ke salinan milik draf ini. Path relatif (“api/items”) tetap berada di pratinjau.`,
+    mergeButton: 'Gabungkan',
+    saveFirst: 'Simpan kodenya dulu: pratinjau dan penggabungan memakai yang tersimpan.',
+    merge: 'Gabungkan',
+    mergeAndDeploy: (version) => `Gabungkan dan jadikan versi ${version} online`,
+    mergeText: (version) =>
+      `Draf ini menjadi versi ${version}. Drafnya ikut hilang, termasuk pratinjau dan salinan datanya. Data lambda sendiri tetap apa adanya.`,
+    deployToo: (version) => `Langsung jadikan versi ${version} online`,
+    deployTooNote: (active) => `Versi ${active} tetap bisa dikembalikan dengan satu klik di bagian versi.`,
+    deployTooOffline: 'Lambda sedang offline; ini akan membuatnya online.',
+    notCompiling: 'Kode tidak bisa dikompilasi, jadi tidak digabungkan. Perbaiki dulu di drafnya.',
+    mergeFailed: 'Draf gagal digabungkan.',
+    merged: (version) => `Digabungkan sebagai versi ${version}.`,
+    mergedOnline: (version) => `Digabungkan sebagai versi ${version}, dan sudah online.`,
+
+    notesTitle: 'Nama dan catatan',
+    save: 'Simpan',
+    saveFailed: 'Gagal disimpan.',
+
+    baseTitle: 'Ganti versi dasarnya',
+    baseText: (base) =>
+      `Draf ini berbasis versi ${base}. Hanya draf yang berbasis versi terbaru yang bisa digabungkan, supaya penggabungan tidak pernah membatalkan apa yang disimpan setelah draf dimulai. Kalau draf ini sudah memuat semua yang diubah versi yang lebih baru, nyatakan di sini.`,
+    moveTo: (version) => `Jadikan versi ${version} sebagai dasarnya`,
+    baseWarning: 'Tidak ada yang memeriksa apakah perubahan itu benar-benar sudah ada di draf. Menggabungkan tanpa perubahan itu akan membatalkannya.',
+
+    deleteTitle: (name) => `Hapus “${name}”?`,
+    deleteText: 'Kode, pratinjau, dan salinan datanya dihapus permanen. Lambda dan versinya tidak disentuh.',
+    keep: 'Jangan hapus',
+    deleteForGood: 'Hapus permanen',
+    deleteFailed: 'Draf gagal dihapus.',
+    deleted: (name) => `Draf “${name}” sudah dihapus.`,
+
+    all: 'Semua draf',
+    actions: 'Aksi lain untuk draf ini',
+    download: 'Unduh sebagai zip',
+    stopPreview: 'Matikan pratinjau',
+    delete: 'Hapus draf ini',
+    viewsLabel: 'Draf',
+    views: {
+      overview: 'Draf',
+      code: 'Kode',
+      data: 'Data',
+      logs: 'Log',
+    },
+    missingTitle: 'Draf ini sudah tidak ada',
+    missingText: 'Draf ini sudah digabungkan ke sebuah versi, atau dihapus. Bagian versi menunjukkan apa yang terjadi dengannya.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Versi adalah programnya: kode dan asetnya. Versi terbaru adalah yang sedang dikerjakan: bisa diubah dan di-deploy ulang sesering yang diperlukan. Versi-versi sebelumnya tetap persis seperti semula, untuk dibandingkan dan untuk rollback. Setiap versi menyimpan apa yang diminta dan apa yang diubah. Versi terlama dihapus begitu jumlahnya lebih dari ${limit}; versi yang sedang online tidak pernah dihapus.`,
+      `Versi adalah programnya, yaitu kode dan asetnya, dan tidak pernah berubah setelah disimpan. Jadi versi mana pun bisa dibandingkan dan dijadikan online lagi persis seperti semula. Setiap versi menyimpan apa yang diminta dan apa yang diubah. Untuk mengubah lambda, mulai draf: draf menjadi versi berikutnya setelah hasilnya pas. Versi terlama dihapus begitu jumlahnya lebih dari ${limit}; versi yang sedang online tidak pernah dihapus.`,
     none: 'Belum ada versi.',
     noDescription: 'Tanpa deskripsi',
     online: 'online',
-    newest: 'terbaru',
-    newestTitle: 'Versi yang sedang dikerjakan: menyimpan langsung mengubahnya',
-    edited: 'diedit',
-    saves: (count) => (count === 1 ? 'Disimpan sekali' : `Disimpan ${count} kali`),
-    changedSince: 'berubah sejak online',
-    deployAgain: 'Deploy ulang',
-    deployAgainTitle: 'Deploy apa yang disimpan sejak online',
-    start: 'Versi baru',
-    startTitle: (version) => `Biarkan versi ${version} apa adanya, dan lanjutkan di salinannya`,
-    startFrom: 'Mulai versi baru dari sini',
-    started: (version) => `Versi ${version} dimulai. Sekarang ini versi terbaru, jadi pekerjaan berlanjut di sana.`,
-    startFailed: 'Versi baru gagal dimulai.',
     putOnline: 'Deploy versi ini',
     rollBackTitle: 'Jadikan versi lama ini online lagi',
     deploy: 'Deploy',
@@ -438,6 +619,8 @@ export const editor: EditorMessages = {
     status: { added: 'ditambahkan', removed: 'dihapus', changed: 'diubah', same: 'sama' },
     browse: 'Lihat file-nya',
     edit: 'Edit dari sini',
+    feature: 'Mulai draf dari sini',
+    featureTitle: 'Kerjakan perubahan dari versi ini di samping lambda, lalu gabungkan menjadi versi berikutnya setelah hasilnya pas',
     binary: 'Bukan teks, jadi tidak ada baris untuk dibandingkan.',
     tooLarge: 'Terlalu besar untuk dibandingkan baris per baris.',
   },
@@ -461,8 +644,6 @@ export const editor: EditorMessages = {
       ended: 'berakhir',
     },
     putBack: (version) => `Jadikan versi ${version} online lagi`,
-    revision: (revision) => `simpanan ke-${revision}`,
-    revisionTitle: (revision) => `Isi versi ini setelah simpanan ke-${revision}`,
     timeline: 'Yang online selama tujuh hari terakhir',
     block: (version, from, to) => `Versi ${version}, ${from} sampai ${to ?? 'sekarang'}`,
     weekAgo: 'seminggu lalu',
@@ -508,6 +689,11 @@ export const editor: EditorMessages = {
       'Request, apa yang dicetak lambda, dan apa yang error, secara langsung.' +
       (capturing ? '' : ' Instalasi ini tidak menyimpan apa yang dicetak lambda, jadi hanya request dan error yang muncul.') +
       ' Disimpan di memori dan dipakai bersama semua lambda di sini, jadi hanya mencakup beberapa menit sampai beberapa jam terakhir, dan kosong setelah restart. Alamat pengunjung tidak ditampilkan.',
+    featureHint: (capturing) =>
+      'Jawaban, apa yang dicetak, dan error dari pratinjau draf ini, secara langsung.' +
+      (capturing ? '' : ' Instalasi ini tidak menyimpan apa yang dicetak lambda, jadi hanya request dan error yang muncul.') +
+      ' Dipisahkan dari log lambda sendiri, yang tidak pernah menampilkan pratinjau. Disimpan di memori, jadi hanya mencakup beberapa menit sampai beberapa jam terakhir.',
+    nothingPreview: 'Belum ada apa-apa. Buka pratinjau draf, dan request-nya akan muncul di sini.',
     search: 'Cari',
     searchLabel: 'Cari di log',
     resume: 'Tampilkan baris baru saat masuk',
@@ -650,36 +836,45 @@ export const editor: EditorMessages = {
     notYet: 'Belum bisa dikompilasi.',
     checkFailed: 'Kode gagal diperiksa.',
     saved: (version) => `Disimpan sebagai versi ${version}.`,
-    savedOver: (version) => `Disimpan ke versi ${version}. Deploy untuk membuatnya online.`,
-    savedOverOnline: (version) =>
-      `Disimpan ke versi ${version}. Pengunjung tetap mendapat apa yang di-deploy sampai Anda deploy lagi.`,
+    featureSaved: 'Disimpan ke draf. Deploy pratinjaunya untuk mencobanya.',
+    featureLoadFailed: 'Draf gagal dimuat.',
+    previewOnline: 'Pratinjau sudah online.',
+    previewRefused: 'Pratinjau tidak berubah. Lihat pesan compiler di bawah.',
     isOnline: (version) => `Versi ${version} sudah online.`,
     notOnline: 'Gagal online. Lihat pesan compiler di bawah.',
     failed: 'Tidak berhasil.',
     unchanged: 'Tidak ada perubahan sejak terakhir disimpan.',
     demo: 'Ini demo, jadi semuanya hanya bisa dibaca. Untuk mengubahnya, buat lambda Anda sendiri dari demo ini. ',
-    edit: 'Edit kode secara manual. Menyimpan langsung mengubah versi terbaru, sesering yang Anda mau; yang online baru berubah saat Anda deploy. “Versi baru” membiarkan versi awal Anda tetap apa adanya. ',
-    history: (version, newest) =>
-      `Versi ${version} sudah jadi riwayat dan tidak berubah lagi, jadi menyimpan akan membuat versi baru darinya. Versi terbaru adalah versi ${newest}. `,
+    edit: 'Edit kode secara manual. Menyimpan membuat versi baru dan tidak mengubah yang sedang online; deploy membuatnya online. Untuk mencoba perubahan dulu, mulai draf. ',
+    editFeature:
+      'Kode draf ini. Menyimpan membuatnya tetap di draf, jadi tidak ada yang berubah bagi pengunjung lambda. Deploy membuatnya online di alamat draf itu sendiri, untuk dicoba; menggabungkan draf menjadikannya versi berikutnya. ',
+    inFeature: (name) => `di draf “${name}”`,
+    previewed: ', di pratinjau',
+    changedElsewhere: 'Draf ini disimpan dari tempat lain sejak Anda membukanya, mungkin oleh agen. Muat yang tersimpan sebelum menyimpan di sini; perubahan Anda tidak akan disimpan di atasnya.',
+    readAgain: 'Muat yang tersimpan',
     files: (entry, cs) => (
       <>
         {entry} mengembalikan apa yang disajikan, file {cs} lainnya berisi tipe, dan file lain disajikan apa adanya.
         Ctrl-S untuk menyimpan, F12 untuk membuka deklarasi.
       </>
     ),
+    newer: (version) => ` Versi ${version} lebih baru dari yang terbuka di sini.`,
     check: 'Periksa',
     save: 'Simpan',
-    saveTitle: (version) => `Simpan ke versi ${version} (Ctrl+S)`,
-    saveNew: 'Versi baru',
-    saveNewTitle: 'Simpan sebagai versi baru, dan biarkan versi awal tetap apa adanya',
     deploy: 'Deploy',
-    older: ', riwayat',
-    newestTag: ', terbaru',
-    unpublished: ', disimpan sejak online',
+    deployPreview: 'Deploy pratinjau',
+    deployPreviewTitle: 'Simpan, lalu buat draf online di alamatnya sendiri untuk dicoba',
     binary: (size) => `Bukan teks, jadi tidak ada yang bisa diedit. File ini disajikan apa adanya, ukurannya ${size} kB.`,
     saveAndDeploy: 'Simpan dan deploy',
     saveVersion: 'Simpan versi baru',
-    saveNewAndDeploy: 'Simpan versi baru dan deploy',
+    fromOlder: (version, newest) =>
+      `Ini berawal dari versi ${version}, dan versi ${newest} lebih baru. Menyimpan menjadikannya versi terbaru, tanpa apa yang datang setelah versi ${version}.`,
+    featureInstead: (start) => (
+      <>
+        Mau mencoba sesuatu? {start('Masukkan ke draf baru sebagai gantinya')}: draf punya alamat sendiri, dan tidak ada versi yang
+        disimpan sampai hasilnya pas.
+      </>
+    ),
     cancel: 'Batal',
     what: 'Apa yang diubah? Opsional, akan ditampilkan di riwayat.',
     placeholder: 'Menambahkan formulir kontak',

@@ -63,6 +63,7 @@ export const editor: EditorMessages = {
     sections: {
       overview: 'Vue d’ensemble',
       change: 'Modifier',
+      features: 'Brouillons',
       showcase: 'Vitrine',
       domain: 'Domaine',
       files: 'Fichiers',
@@ -93,8 +94,6 @@ export const editor: EditorMessages = {
     download: 'Télécharger en projet .NET',
     delete: 'Supprimer cette lambda',
     deploy: (version) => `Déployer la version ${version}`,
-    changedSince: 'Modifiée depuis sa mise en ligne. Les visiteurs voient toujours ce qui a été déployé.',
-    changedShort: 'Modifiée depuis sa mise en ligne',
     problems: 'Il y a eu des erreurs récemment',
     demoTitle: 'Une démo, gardée en ligne par cette installation, en lecture seule.',
     demo: (start) => (
@@ -132,7 +131,7 @@ export const editor: EditorMessages = {
   },
 
   change: {
-    hint: 'Dites ce qui doit changer : l’agent qui tourne sur ce serveur s’en charge. Il lit le code, fait la modification, vérifie que ça compile et la met en ligne. Chaque modification crée une nouvelle version : la précédente reste toujours à un clic.',
+    hint: 'Dites ce qui doit changer : l’agent qui tourne sur ce serveur s’en charge. Il travaille dans un brouillon, une copie de la lambda avec sa propre adresse : vos visiteurs ne voient rien tant que ce n’est pas terminé. Ensuite, la modification devient la prochaine version et passe en ligne, ou attend dans son brouillon que vous l’essayiez d’abord.',
     reading: 'Connexion à l’agent…',
     readFailed: 'Impossible de joindre l’agent.',
     label: 'Qu’est-ce qui doit changer ?',
@@ -141,8 +140,15 @@ export const editor: EditorMessages = {
     send: 'Lancer la modification',
     sending: 'Envoi…',
     goOnline: 'Mettre en ligne une fois terminé',
-    goOnlineOn: 'Mise en ligne dès que ça compile. D’ici là, ce qui est en ligne y reste.',
-    goOnlineOff: 'La modification est enregistrée comme nouvelle version, que vous déployez après y avoir jeté un œil.',
+    goOnlineOn:
+      'Dès que ça marche dans son brouillon, l’agent l’intègre à la prochaine version et met celle-ci en ligne. D’ici là, ce qui est en ligne y reste.',
+    goOnlineOff:
+      'L’agent laisse la modification dans son brouillon. Essayez-la à l’adresse du brouillon, et intégrez-la quand elle vous convient.',
+    where: 'Travailler dans',
+    whereTitle: 'Un nouveau brouillon, ou un brouillon en cours à poursuivre',
+    newFeature: 'Un nouveau brouillon',
+    full: (limit) =>
+      `Cette lambda a déjà ${count(limit, 'brouillon en cours', 'brouillons en cours')}, le maximum possible. Choisissez-en un à poursuivre, ou commencez par en intégrer ou en supprimer un.`,
     password: 'Mot de passe',
     fable: 'Fable prend son temps : ni chrono ni limite d’étapes, et une file rien que pour lui.',
     left: (left, perDay) => `Il en reste ${left} sur ${perDay} aujourd’hui`,
@@ -155,12 +161,19 @@ export const editor: EditorMessages = {
         title: 'Il lit l’existant',
         text: 'Le code, et ce qui a été demandé pour les versions précédentes. Ce qui marche continue donc de marcher.',
       },
-      { title: 'Il fait la modification', text: 'Et corrige ce qui ne compile pas, sous vos yeux, étape par étape.' },
-      { title: 'Il met en ligne', text: 'Sous forme de nouvelle version. La précédente reste à un clic.' },
+      {
+        title: 'Il travaille dans un brouillon',
+        text: 'Une copie avec sa propre adresse et ses propres données : il y fait la modification et l’essaie, sous vos yeux, étape par étape.',
+      },
+      {
+        title: 'Il met en ligne',
+        text: 'Sous forme de prochaine version, ou il vous la laisse essayer d’abord. La version précédente reste à un clic.',
+      },
     ],
     asked: 'Votre demande',
     goesOnline: 'mise en ligne à la fin',
-    review: 'enregistrée, à vérifier avant mise en ligne',
+    review: 'laissée dans son brouillon pour que vous l’essayiez',
+    inFeature: (name) => `dans le brouillon « ${name} »`,
     queued: (ahead) =>
       ahead === 1
         ? 'En attente : une demande passe avant la vôtre.'
@@ -172,7 +185,7 @@ export const editor: EditorMessages = {
     stopping: 'Arrêt…',
     stopTitle: 'Arrêter cette modification ?',
     stopText:
-      'Ce qu’il a déjà enregistré reste disponible sous forme de version. Ce qui est en ligne y reste, sauf s’il y a déjà mis une nouvelle version.',
+      'Ce qu’il a déjà enregistré reste disponible, dans son brouillon ou sous forme de version. Ce qui est en ligne y reste, sauf s’il a déjà intégré la modification et l’a mise en ligne.',
     keepGoing: 'Continuer',
     stopIt: 'Arrêter',
     log: 'Ce qu’il a fait',
@@ -183,14 +196,22 @@ export const editor: EditorMessages = {
       read: 'Lecture du code',
       readFile: (file) => <>Lecture de {file}</>,
       logs: 'Lecture des logs',
+      logsPreview: 'Lecture des logs de l’aperçu',
+      readFeature: 'Lecture du brouillon',
       create: 'Création d’une lambda',
-      copy: 'Début d’une nouvelle version',
+      feature: 'Démarrage d’un brouillon',
+      featureStarted: (name) => <>Brouillon {name} démarré</>,
+      update: 'Mise à jour des notes du brouillon',
+      rebase: (version) => `Nouvelle base du brouillon : la version ${version}`,
+      merge: 'Intégration du brouillon',
+      discard: 'Suppression d’un brouillon',
       write: (files) => (files ? <>Modification de {files}</> : <>Modification des fichiers</>),
       writeAll: (files) => <>Écriture de {files}</>,
       removing: (files) => <>, suppression de {files}</>,
       more: (value) => `+${count(value, 'autre', 'autres')}`,
       check: 'Compilation',
       deploy: 'Mise en ligne',
+      deployPreview: 'Mise en ligne de l’aperçu',
       deployVersion: (version) => `Mise en ligne de la version ${version}`,
       upload: (path) => <>Enregistrement de {path}</>,
       delete: (path) => <>Suppression de {path}</>,
@@ -199,7 +220,9 @@ export const editor: EditorMessages = {
     },
     marks: {
       version: (version) => `v${version}`,
+      from: (version) => `à partir de v${version}`,
       online: 'en ligne',
+      previewOnline: 'aperçu en ligne',
       compiles: 'compile',
       errors: (value) => count(value, 'erreur', 'erreurs'),
       problems: (value) => count(value, 'erreur', 'erreurs'),
@@ -218,6 +241,13 @@ export const editor: EditorMessages = {
       unchanged: 'Rien n’a été modifié',
       stopped: 'Modification arrêtée',
       stoppedSaved: (version) => `La version ${version} avait été enregistrée avant l’arrêt.`,
+      stoppedFeature: (name) => `Ce qu’il a fait jusque-là se trouve dans le brouillon « ${name} ».`,
+      feature: (name) => `Prête à essayer dans le brouillon « ${name} »`,
+      featureBroken: (name) => `Le brouillon « ${name} » ne compile pas encore`,
+      tryIt: 'Essayez-la à l’adresse du brouillon. Quand elle vous convient, intégrez le brouillon : il devient la prochaine version.',
+      previewOffline: 'Son aperçu n’est pas en ligne. Déployez-le depuis le brouillon pour l’essayer.',
+      previewStill: 'Son aperçu montre toujours ce qui a compilé en dernier.',
+      notMerged: 'Le brouillon n’a pas été intégré : rien de nouveau n’a été mis en ligne.',
       failed: 'La modification n’a pas abouti',
       timeout:
         'Le temps s’est écoulé avant la moindre modification. Demandez moins d’un coup, ou relancez : certaines tentatives vont plus loin que d’autres.',
@@ -231,6 +261,8 @@ export const editor: EditorMessages = {
     },
     seeChanges: 'Voir ce qui a changé',
     open: 'Ouvrir',
+    openPreview: 'Ouvrir l’aperçu',
+    openFeature: 'Ouvrir le brouillon',
     deploy: (version) => `Déployer la version ${version}`,
     undo: (version) => `Remettre la version ${version} en ligne`,
     undoTitle:
@@ -239,6 +271,7 @@ export const editor: EditorMessages = {
     toast: {
       online: (version) => `La modification est en ligne (version ${version}).`,
       saved: (version) => `La modification est enregistrée en version ${version}.`,
+      feature: (name) => `La modification est prête à essayer dans le brouillon « ${name} ».`,
       unchanged: 'L’agent n’a rien modifié.',
       failed: 'La modification n’a pas abouti.',
       stopped: 'La modification a été arrêtée.',
@@ -282,10 +315,19 @@ export const editor: EditorMessages = {
     noDescription: 'Sans description',
     version: (version) => `Version ${version}`,
     notOnline: 'pas encore en ligne',
-    changedSinceOnline: 'modifiée depuis sa mise en ligne',
-    edited: 'modifiée',
     wanted: 'Ce qui était demandé',
     noVersions: 'Aucune version pour l’instant.',
+    inProgress: 'En cours',
+    allFeatures: 'Tous les brouillons',
+    previewOnline: 'Son aperçu est en ligne',
+    previewOffline: 'Son aperçu est hors ligne',
+    behind: 'en retard',
+    featureTip: (start) => (
+      <>
+        Vous modifiez quelque chose que des gens utilisent ? {start('Démarrez un brouillon')} : il s’essaie à sa
+        propre adresse, sur une copie des données, et devient la prochaine version une fois au point.
+      </>
+    ),
     storage: 'Stockage',
     inVersion: (version) => `Dans la version ${version}`,
     noVersion: 'Dans la version',
@@ -324,7 +366,6 @@ export const editor: EditorMessages = {
     shown: (version, online, newest) => `Version ${version}${online ? ', en ligne' : newest ? ', la plus récente' : ''}`,
     optionOnline: ' (en ligne)',
     readFailed: 'Impossible de lire cette version.',
-    dataFailed: 'Impossible de lire les données.',
     noVersion: 'Aucune version à afficher pour l’instant.',
     label: 'Fichiers',
     code: 'Code',
@@ -370,12 +411,31 @@ export const editor: EditorMessages = {
 
   data: {
     hint:
-      'Les données sont ce que la lambda garde pendant qu’elle tourne. Elles appartiennent à la lambda, pas à une version : toutes les versions lisent et écrivent les mêmes données, et rien de ce que vous faites avec les versions ne les change. Elles disparaissent quand la lambda est supprimée, ou quand vous désactivez ce type de données.',
+      'Les données sont ce que la lambda garde pendant qu’elle tourne. Elles appartiennent à la lambda, pas à une version : toutes les versions lisent et écrivent les mêmes données, et rien de ce que vous faites avec les versions ne les change. Un brouillon s’essaie sur une copie de ces données. Elles disparaissent quand la lambda est supprimée, ou quand vous désactivez ce type de données.',
     facts: [
       ['Partagées par toutes les versions', 'Quelle que soit la version en ligne, elle lit et écrit les mêmes données.'],
-      ['Gardées quand vous déployez', 'Déployer, restaurer ou copier une version n’y touche jamais.'],
+      ['Gardées quand vous déployez', 'Déployer, restaurer ou intégrer un brouillon n’y touche jamais.'],
       ['Vous décidez', 'Chaque type n’est activé que tant que vous le voulez. En désactiver un supprime ce qu’il contient.'],
     ],
+    featureHint:
+      'Les données sur lesquelles travaille ce brouillon : une copie de celles de la lambda, faite au démarrage du brouillon. Son aperçu lit et écrit dans cette copie : vos essais ici ne touchent jamais à ce que garde la lambda. Intégrer le brouillon supprime la copie et laisse les données de la lambda telles quelles.',
+    featureFacts: [
+      ['Une copie', 'Faite à partir de la lambda au démarrage du brouillon, ou la dernière fois que vous l’avez recopiée.'],
+      ['Seul l’aperçu la voit', 'Ce que l’aperçu écrit reste ici. La lambda et ses visiteurs ne le voient jamais.'],
+      [
+        'Part avec le brouillon',
+        'Intégrer ou supprimer le brouillon supprime la copie. Les données de la lambda restent telles quelles.',
+      ],
+    ],
+    recopy: 'Recopier les données de la lambda',
+    recopyTitle: 'Remplacer cette copie par ce que contient la lambda maintenant',
+    recopyConfirm: 'Recopier les données de la lambda ?',
+    recopyText:
+      'Tout ce que contient cette copie (tout ce que l’aperçu y a écrit) est remplacé par ce que contient la lambda maintenant. Les données de la lambda elle-même ne sont pas touchées.',
+    keepCopy: 'Garder cette copie',
+    recopied: 'La copie est à jour. L’aperçu la lit dès sa prochaine requête.',
+    recopyFailed: 'Impossible de recopier les données.',
+    copyContents: 'Ce que contient la copie du workspace',
     kinds: {
       workspace: {
         name: 'Workspace',
@@ -387,8 +447,6 @@ export const editor: EditorMessages = {
     byDefault: 'Activé par défaut',
     usage: (items, used, of) => `${items} · ${used} sur ${of}`,
     offText: 'Désactivé. Il ne contient rien, et le code qui s’en sert échoue tant qu’il n’est pas réactivé.',
-    switchOn: 'Activer',
-    switchOff: 'Désactiver',
     switchLabel: (name) => `${name} : activer ou désactiver`,
     confirmOff: (name) => `Désactiver le ${name.toLowerCase()} ?`,
     confirmText: (items, size) =>
@@ -407,24 +465,158 @@ export const editor: EditorMessages = {
     offBrowse: 'Le workspace est désactivé : il n’y a aucun fichier à afficher.',
   },
 
+  features: {
+    hint:
+      'Une version ne change plus une fois enregistrée. C’est dans un brouillon qu’on fait une modification : il part d’une copie d’une version et des données de la lambda, s’essaie à sa propre adresse pendant que les visiteurs continuent de recevoir ce qui est en ligne, et devient la prochaine version quand vous l’intégrez.',
+    newFeature: 'Nouveau brouillon',
+    full: (limit) =>
+      `Cette lambda a déjà ${count(limit, 'brouillon en cours', 'brouillons en cours')}, le maximum possible. Commencez par en intégrer ou en supprimer un.`,
+    emptyTitle: 'Rien en cours',
+    emptyText:
+      'Démarrez un brouillon pour modifier la lambda sans toucher à ce qui est en ligne. Vous, ou l’agent, pouvez le modifier autant de fois qu’il le faut et l’essayer à sa propre adresse.',
+    steps: [
+      ['Le démarrer', 'Une copie de la version la plus récente, et des données de la lambda.'],
+      ['Le modifier et l’essayer', 'À sa propre adresse, sur sa propre copie des données.'],
+      ['L’intégrer', 'Il devient la prochaine version, et passe en ligne quand vous le décidez.'],
+    ],
+    start: 'Démarrer un brouillon',
+    askAgentNew: 'Demander une modification à l’agent',
+    noChange: 'Rien n’indique encore ce qu’il change',
+    from: (version) => `à partir de la version ${version}`,
+    mergeable: 'prêt à intégrer',
+    behindTitle: 'Une version plus récente a été enregistrée après son démarrage',
+    behind: (newest) => `la version ${newest} est plus récente`,
+    previewOnline: 'aperçu en ligne',
+    previewOutdated: 'l’aperçu montre un enregistrement antérieur',
+    previewOffline: 'aperçu hors ligne',
+    changed: 'modifié',
+    openPreview: 'Aperçu',
+    openPreviewTitle: 'Ouvrir l’aperçu dans un nouvel onglet',
+    count: (open, limit) => `${open} sur ${limit} brouillons en cours`,
+    loading: 'Chargement du brouillon…',
+    readFailed: 'Impossible de lire le brouillon.',
+
+    newTitle: 'Démarrer un brouillon',
+    newText:
+      'Un brouillon part d’une copie d’une version (son code et ses assets) et des données de la lambda. Modifiez-le et essayez-le à sa propre adresse pendant que les visiteurs continuent de recevoir ce qui est en ligne ; intégrez-le une fois au point.',
+    newTextFiles:
+      'Ce que vous avez tapé dans le code y va, au lieu de devenir une version. Essayez-le à l’adresse du brouillon, et intégrez-le une fois au point.',
+    name: 'Nom',
+    namePlaceholder: 'Classement',
+    wanted: 'Que doit-il faire ?',
+    wantedPlaceholder: 'Facultatif. Garder les dix meilleurs scores et les afficher après chaque partie.',
+    startFrom: 'Partir de',
+    version: (version, newest, online) =>
+      `Version ${version}${newest && online ? ' (la plus récente, en ligne)' : newest ? ' (la plus récente)' : online ? ' (en ligne)' : ''}`,
+    olderBase: (newest) =>
+      `Pas la plus récente : avant de pouvoir l’intégrer, il faudra y reporter ce que les versions jusqu’à la ${newest} ont changé.`,
+    create: 'Démarrer',
+    createFailed: 'Impossible de démarrer le brouillon.',
+    retry: 'Réessayer',
+    madeNotSaved: (name) =>
+      `Le brouillon « ${name} » est démarré, mais ce que vous avez tapé n’a pas encore pu y être mis. Réessayez, ou fermez cette fenêtre et retrouvez le brouillon dans Brouillons.`,
+    created: (name) => `Le brouillon « ${name} » est démarré.`,
+    cancel: 'Annuler',
+
+    featureHint:
+      'Une modification en cours, à côté de la lambda. Son aperçu fait tourner son code sur sa propre copie des données : les visiteurs de la lambda n’en voient rien. L’intégrer en fait la prochaine version.',
+    askAgent: 'Demander à l’agent',
+    editCode: 'Modifier le code',
+    preview: 'Aperçu',
+    state: {
+      online: 'En ligne',
+      outdated: 'En ligne, avec un enregistrement antérieur',
+      offline: 'Hors ligne',
+    },
+    deployed: 'déployé',
+    deployPreview: 'Déployer l’aperçu',
+    updatePreview: 'Mettre à jour l’aperçu',
+    previewDeployed: 'L’aperçu est en ligne.',
+    previewFailed: 'Impossible de mettre l’aperçu en ligne.',
+    previewStopped: 'L’aperçu est hors ligne.',
+    previewRejected: 'L’aperçu n’a pas changé',
+    previewNotCompiling: 'Le code ne compile pas. L’aperçu montre toujours la même chose qu’avant.',
+    previewAddress: 'Adresse de l’aperçu',
+    previewNote: 'Toute personne qui a cette adresse peut ouvrir l’aperçu. Les moteurs de recherche sont priés de l’ignorer.',
+    basedOn: 'Basé sur',
+    mergeableLong: 'la plus récente : il peut donc être intégré',
+    started: 'Démarré',
+    changes: (version) => `Ce qu’il change par rapport à la version ${version}`,
+    noChanges: (version) => `Rien pour l’instant : il contient exactement la même chose que la version ${version}.`,
+    notes: 'Notes',
+    editNotes: 'Nom et notes',
+    what: 'Qu’est-ce qu’il change ?',
+    whatPlaceholder: 'Ajoute un classement qui garde les dix meilleurs scores',
+    noWanted: 'Rien d’indiqué pour l’instant',
+    mergeNote: (version) =>
+      `L’intégrer en fait la version ${version}, avec ces notes. Le brouillon disparaît alors, avec son aperçu et sa copie des données.`,
+    missed: (from, to) =>
+      to - from === 1 ? `Ce que la version ${to} a changé` : `Ce que les versions ${from + 1} à ${to} ont changé`,
+    missedNothing: 'Rien dans les fichiers.',
+
+    behindText: (base, newest) =>
+      `Il est parti de la version ${base}, et la version ${newest} a été enregistrée depuis. L’intégrer maintenant annulerait ce que celle-ci a changé. Reportez ces changements dans le brouillon (ou demandez-le à l’agent), puis indiquez qu’il est basé sur la version ${newest}.`,
+    moveBase: 'Le baser sur une autre version',
+    close: 'Fermer',
+    mergeTitle: (name) => `Intégrer « ${name} »`,
+    mergeTitleShort: 'En faire la prochaine version',
+    leaks: (path, files) =>
+      `Dans ${files}, les liens vers ${path} utilisent le chemin complet. Depuis l’aperçu, ils mènent à la lambda en ligne et à ses vraies données, pas à la copie de ce brouillon. Les chemins relatifs (« api/items ») restent dans l’aperçu.`,
+    mergeButton: 'Intégrer',
+    saveFirst: 'Enregistrez d’abord le code : l’aperçu et l’intégration utilisent ce qui est enregistré.',
+    merge: 'L’intégrer',
+    mergeAndDeploy: (version) => `Intégrer et mettre la version ${version} en ligne`,
+    mergeText: (version) =>
+      `Il devient la version ${version}. Le brouillon disparaît avec son aperçu et sa copie des données. Les données de la lambda elle-même restent telles quelles.`,
+    deployToo: (version) => `Mettre la version ${version} en ligne tout de suite`,
+    deployTooNote: (active) => `La version ${active} reste à un clic, dans les versions.`,
+    deployTooOffline: 'La lambda est hors ligne pour l’instant ; ceci la met en ligne.',
+    notCompiling: 'Le code ne compile pas : rien n’a été intégré. Corrigez-le d’abord dans le brouillon.',
+    mergeFailed: 'Impossible d’intégrer le brouillon.',
+    merged: (version) => `Intégré en version ${version}.`,
+    mergedOnline: (version) => `Intégré en version ${version}, et en ligne.`,
+
+    notesTitle: 'Nom et notes',
+    save: 'Enregistrer',
+    saveFailed: 'Impossible d’enregistrer.',
+
+    baseTitle: 'Le baser sur une autre version',
+    baseText: (base) =>
+      `Il est basé sur la version ${base}. Seul un brouillon basé sur la version la plus récente peut être intégré : ainsi, l’intégrer n’annule jamais ce qui a été enregistré après son démarrage. Une fois qu’il contient tout ce qu’une version plus récente a changé, indiquez-le ici.`,
+    moveTo: (version) => `Le baser sur la version ${version}`,
+    baseWarning:
+      'Rien ne vérifie que ces changements sont vraiment dans le brouillon. L’intégrer sans eux les annule.',
+
+    deleteTitle: (name) => `Supprimer « ${name} » ?`,
+    deleteText:
+      'Son code, son aperçu et sa copie des données sont supprimés définitivement. La lambda et ses versions ne sont pas touchées.',
+    keep: 'Le garder',
+    deleteForGood: 'Supprimer définitivement',
+    deleteFailed: 'Impossible de supprimer le brouillon.',
+    deleted: (name) => `Le brouillon « ${name} » est supprimé.`,
+
+    all: 'Tous les brouillons',
+    actions: 'Plus d’actions pour ce brouillon',
+    download: 'Télécharger en zip',
+    stopPreview: 'Mettre l’aperçu hors ligne',
+    delete: 'Supprimer ce brouillon',
+    viewsLabel: 'Le brouillon',
+    views: {
+      overview: 'Brouillon',
+      code: 'Code',
+      data: 'Données',
+      logs: 'Logs',
+    },
+    missingTitle: 'Ce brouillon n’existe plus',
+    missingText: 'Il a été intégré à une version, ou supprimé. Les versions montrent ce qu’il est devenu.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Une version, c’est le programme : son code et ses assets. La plus récente est celle sur laquelle on travaille : on peut l’enregistrer et la redéployer autant de fois qu’il le faut. Les précédentes restent exactement telles qu’elles étaient, pour comparer et revenir en arrière. Chacune garde ce qui a été demandé et ce qu’elle a changé. Au-delà de ${limit} versions, les plus anciennes sont supprimées ; celle qui est en ligne, jamais.`,
+      `Une version, c’est le programme (son code et ses assets), et elle ne change plus une fois enregistrée : on peut donc comparer n’importe laquelle et la remettre en ligne exactement telle qu’elle était. Chacune garde ce qui a été demandé et ce qu’elle a changé. Pour modifier la lambda, démarrez un brouillon : il devient la prochaine version une fois au point. Au-delà de ${limit} versions, les plus anciennes sont supprimées ; celle qui est en ligne, jamais.`,
     none: 'Aucune version pour l’instant.',
     noDescription: 'Sans description',
     online: 'en ligne',
-    newest: 'la plus récente',
-    newestTitle: 'La version sur laquelle on travaille : l’enregistrer la modifie directement',
-    edited: 'modifiée',
-    saves: (count) => (count === 1 ? 'Enregistrée une fois' : `Enregistrée ${count} fois`),
-    changedSince: 'modifiée depuis sa mise en ligne',
-    deployAgain: 'Redéployer',
-    deployAgainTitle: 'Mettre en ligne ce qui a été enregistré depuis',
-    start: 'Nouvelle version',
-    startTitle: (version) => `Garder la version ${version} telle quelle, et continuer dans une copie`,
-    startFrom: 'Commencer une nouvelle version à partir d’ici',
-    started: (version) => `Version ${version} créée. C’est maintenant la plus récente : c’est là que le travail continue.`,
-    startFailed: 'Impossible de créer la nouvelle version.',
     putOnline: 'Mettre cette version en ligne',
     rollBackTitle: 'Remettre en ligne cette ancienne version',
     deploy: 'Déployer',
@@ -436,6 +628,9 @@ export const editor: EditorMessages = {
     status: { added: 'ajouté', removed: 'supprimé', changed: 'modifié', same: 'inchangé' },
     browse: 'Parcourir ses fichiers',
     edit: 'Modifier à partir d’ici',
+    feature: 'Démarrer un brouillon à partir d’ici',
+    featureTitle:
+      'Préparer une modification de cette version à côté de la lambda, et l’intégrer à la prochaine version une fois au point',
     binary: 'Ce n’est pas du texte : pas de lignes à comparer.',
     tooLarge: 'Trop gros pour une comparaison ligne à ligne.',
   },
@@ -459,8 +654,6 @@ export const editor: EditorMessages = {
       ended: 'terminé',
     },
     putBack: (version) => `Remettre la version ${version} en ligne`,
-    revision: (revision) => `${revision}e enregistrement`,
-    revisionTitle: (revision) => `La version telle qu’elle était après son ${revision}e enregistrement`,
     timeline: 'Ce qui était en ligne ces sept derniers jours',
     block: (version, from, to) => `Version ${version} : ${from} – ${to ?? 'maintenant'}`,
     weekAgo: 'il y a une semaine',
@@ -505,6 +698,11 @@ export const editor: EditorMessages = {
       'Les requêtes, ce que la lambda affiche et ce qui plante, en direct.' +
       (capturing ? '' : ' Cette installation ne garde pas ce que les lambdas affichent : seules les requêtes et les erreurs apparaissent.') +
       ' Les logs sont gardés en mémoire et partagés par toutes les lambdas de l’installation : ils remontent de quelques minutes à quelques heures, et repartent de zéro à chaque redémarrage. Les adresses des visiteurs ne sont pas affichées.',
+    featureHint: (capturing) =>
+      'Les réponses de l’aperçu de ce brouillon, ce qu’il affiche et ce qui plante, en direct.' +
+      (capturing ? '' : ' Cette installation ne garde pas ce que les lambdas affichent : seules les requêtes et les erreurs apparaissent.') +
+      ' Ces logs sont séparés de ceux de la lambda, qui ne montrent jamais l’aperçu. Ils sont gardés en mémoire : ils remontent de quelques minutes à quelques heures.',
+    nothingPreview: 'Rien pour l’instant. Ouvrez l’aperçu du brouillon : ses requêtes apparaîtront ici.',
     search: 'Rechercher',
     searchLabel: 'Rechercher dans les logs',
     resume: 'Afficher les nouvelles lignes au fur et à mesure',
@@ -649,36 +847,46 @@ export const editor: EditorMessages = {
     notYet: 'Ça ne compile pas encore.',
     checkFailed: 'Impossible de vérifier le code.',
     saved: (version) => `Enregistré en version ${version}.`,
-    savedOver: (version) => `Version ${version} mise à jour. Déployez pour la mettre en ligne.`,
-    savedOverOnline: (version) =>
-      `Version ${version} mise à jour. Les visiteurs voient ce qui a été déployé jusqu’à ce que vous la redéployiez.`,
+    featureSaved: 'Enregistré dans le brouillon. Déployez son aperçu pour l’essayer.',
+    featureLoadFailed: 'Impossible de charger le brouillon.',
+    previewOnline: 'L’aperçu est en ligne.',
+    previewRefused: 'L’aperçu n’a pas changé. Le compilateur explique pourquoi ci-dessous.',
     isOnline: (version) => `La version ${version} est en ligne.`,
     notOnline: 'La mise en ligne a échoué. Le compilateur explique pourquoi ci-dessous.',
     failed: 'Ça n’a pas marché.',
     unchanged: 'Rien n’a changé depuis le dernier enregistrement.',
     demo: 'C’est une démo : tout est en lecture seule. Pour la modifier, créez votre propre lambda à partir de celle-ci. ',
-    edit: 'Modifiez le code à la main. Enregistrer met à jour la version la plus récente, aussi souvent que vous voulez ; ce qui est en ligne ne change que quand vous déployez. « Nouvelle version » garde intacte celle dont vous êtes parti. ',
-    history: (version, newest) =>
-      `La version ${version} fait partie de l’historique et ne change plus : enregistrer crée donc une nouvelle version à partir d’elle. La plus récente est la version ${newest}. `,
+    edit: 'Modifiez le code à la main. Enregistrer crée une nouvelle version sans toucher à ce qui est en ligne ; déployer la met en ligne. Pour essayer une modification d’abord, démarrez un brouillon. ',
+    editFeature:
+      'Le code de ce brouillon. Enregistrer le garde dans le brouillon : rien ne change pour les visiteurs de la lambda. Déployer le met en ligne à l’adresse du brouillon, pour l’essayer ; intégrer le brouillon en fait la prochaine version. ',
+    inFeature: (name) => `dans « ${name} »`,
+    previewed: ', dans l’aperçu',
+    changedElsewhere:
+      'Le brouillon a été enregistré ailleurs depuis que vous l’avez ouvert, peut-être par l’agent. Chargez ce qui est enregistré avant d’enregistrer ici ; vos modifications ne seraient pas enregistrées par-dessus.',
+    readAgain: 'Charger ce qui est enregistré',
     files: (entry, cs) => (
       <>
         {entry} renvoie ce qui est servi, les autres fichiers {cs} contiennent des types, et tout autre fichier est servi
         tel quel. Ctrl-S enregistre, F12 va à une déclaration.
       </>
     ),
+    newer: (version) => ` La version ${version} est plus récente que celle ouverte ici.`,
     check: 'Vérifier',
     save: 'Enregistrer',
-    saveTitle: (version) => `Mettre à jour la version ${version} (Ctrl+S)`,
-    saveNew: 'Nouvelle version',
-    saveNewTitle: 'Enregistrer comme nouvelle version, et garder intacte celle dont vous êtes parti',
     deploy: 'Déployer',
-    older: ', historique',
-    newestTag: ', la plus récente',
-    unpublished: ', enregistrée depuis sa mise en ligne',
+    deployPreview: 'Déployer l’aperçu',
+    deployPreviewTitle: 'Enregistrer, et mettre le brouillon en ligne à sa propre adresse pour l’essayer',
     binary: (size) => `Ce n’est pas du texte : rien à modifier. Le fichier est servi tel quel et pèse ${size} ko.`,
     saveAndDeploy: 'Enregistrer et déployer',
     saveVersion: 'Enregistrer une nouvelle version',
-    saveNewAndDeploy: 'Enregistrer une nouvelle version et la déployer',
+    fromOlder: (version, newest) =>
+      `Ce code part de la version ${version}, alors que la version ${newest} est plus récente. L’enregistrer en fait la version la plus récente, sans ce qui a été fait après la version ${version}.`,
+    featureInstead: (start) => (
+      <>
+        Vous faites un essai ? {start('Mettez-le plutôt dans un nouveau brouillon')} : il a sa propre adresse,
+        et aucune version n’est enregistrée avant que ce soit au point.
+      </>
+    ),
     cancel: 'Annuler',
     what: 'Qu’est-ce que ça change ? Facultatif, affiché dans l’historique.',
     placeholder: 'Ajoute un formulaire de contact',

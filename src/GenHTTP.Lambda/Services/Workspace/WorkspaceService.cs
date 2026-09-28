@@ -9,14 +9,15 @@ using Microsoft.Extensions.Logging;
 namespace GenHTTP.Lambda.Services.Workspace;
 
 /// <summary>
-/// Reads and writes the private directory of a lambda on behalf of its owner.
+/// Reads and writes the private directory of a lambda on behalf of its owner -
+/// or a feature's copy of it, which is held to the same quota.
 /// </summary>
 public sealed class WorkspaceService(IStorageService storage, IMetaService meta, LambdaOptions options, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
 
     #region Functionality
 
-    public async ValueTask<WorkspaceListing> ListAsync(long lambdaId, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceListing> ListAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)
     {
         var limits = await LimitsAsync(lambdaId, cancellation);
 
@@ -27,7 +28,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
             return new WorkspaceListing([], [], 0, limits.Quota, false);
         }
 
-        var root = Root(lambdaId);
+        var root = Root(lambdaId, featureId);
 
         var files = new List<WorkspaceEntry>();
 
@@ -58,16 +59,16 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         return new WorkspaceListing(files, folders, used, limits.Quota);
     }
 
-    public ValueTask<FileInfo?> FindAsync(long lambdaId, string path, CancellationToken cancellation = default)
+    public ValueTask<FileInfo?> FindAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
-        var resolved = Resolve(Root(lambdaId), path);
+        var resolved = Resolve(Root(lambdaId, featureId), path);
 
         return ValueTask.FromResult(File.Exists(resolved) ? new FileInfo(resolved) : null);
     }
 
-    public async ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
-        var root = Root(lambdaId);
+        var root = Root(lambdaId, featureId);
 
         var resolved = Resolve(root, path);
 
@@ -79,11 +80,12 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         return new WorkspaceContent(Relative(root, resolved), await File.ReadAllBytesAsync(resolved, cancellation));
     }
 
-    public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
+                                                      CancellationToken cancellation = default)
     {
         var limits = await RequireEnabledAsync(lambdaId, cancellation);
 
-        var root = Root(lambdaId);
+        var root = Root(lambdaId, featureId);
 
         var resolved = Resolve(root, path);
 
@@ -143,18 +145,18 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
             throw;
         }
 
-        logger.LogInformation("Workspace of lambda {LambdaId} received '{Path}'", lambdaId, path);
+        logger.LogInformation("Workspace of lambda {LambdaId} (feature {FeatureId}) received '{Path}'", lambdaId, featureId, path);
 
         var info = new FileInfo(resolved);
 
         return new WorkspaceEntry(Relative(root, resolved), info.Length, info.LastWriteTimeUtc);
     }
 
-    public async ValueTask CreateFolderAsync(long lambdaId, string path, CancellationToken cancellation = default)
+    public async ValueTask CreateFolderAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
         var limits = await RequireEnabledAsync(lambdaId, cancellation);
 
-        var root = Root(lambdaId);
+        var root = Root(lambdaId, featureId);
 
         var resolved = Resolve(root, path);
 
@@ -180,25 +182,25 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         logger.LogInformation("Workspace of lambda {LambdaId} gained folder '{Path}'", lambdaId, path);
     }
 
-    public ValueTask DeleteAsync(long lambdaId, string path, CancellationToken cancellation = default)
+    public ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
     {
-        var resolved = Resolve(Root(lambdaId), path);
+        var resolved = Resolve(Root(lambdaId, featureId), path);
 
         Delete(resolved);
 
         return ValueTask.CompletedTask;
     }
 
-    public ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default)
+    public ValueTask ClearAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)
     {
-        var root = Root(lambdaId);
+        var root = Root(lambdaId, featureId);
 
         foreach (var entry in Directory.GetFileSystemEntries(root))
         {
             Delete(entry);
         }
 
-        logger.LogInformation("Workspace of lambda {LambdaId} was emptied", lambdaId);
+        logger.LogInformation("Workspace of lambda {LambdaId} (feature {FeatureId}) was emptied", lambdaId, featureId);
 
         return ValueTask.CompletedTask;
     }
@@ -328,8 +330,8 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         }
     }
 
-    private string Root(long lambdaId)
-        => Path.TrimEndingDirectorySeparator(Path.GetFullPath(storage.GetWorkspace(lambdaId))) + Path.DirectorySeparatorChar;
+    private string Root(long lambdaId, long? featureId)
+        => Path.TrimEndingDirectorySeparator(Path.GetFullPath(storage.GetWorkspace(lambdaId, featureId))) + Path.DirectorySeparatorChar;
 
     /// <summary>
     /// Turns a requested name into a path inside the workspace, or refuses it.

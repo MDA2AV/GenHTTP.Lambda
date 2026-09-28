@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Twoja pierwsza lambda',
     editor: 'Centrum sterowania',
     why: 'Opisz, dlaczego',
+    features: 'Bezpieczne zmiany',
     files: 'Więcej niż jeden plik',
     page: 'Serwowanie strony',
     spa: 'Frontend krok po kroku',
@@ -57,8 +58,8 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Daj klucz edytora agentowi i powiedz, co ma zbudować – pracuje przez {k.link('/#agents', 'MCP')}, w osobnej
-        wersji dla każdej rzeczy, o którą poprosisz. Albo otwórz {k.b('Kod')} i napisz wszystko samodzielnie: {k.b('Sprawdź')} kompiluje bez zapisywania i pokazuje,
+        Daj klucz edytora agentowi i powiedz, co ma zbudować – zapisuje nowe wersje przez {k.link('/#agents', 'MCP')}.
+        Albo otwórz {k.b('Kod')} i napisz wszystko samodzielnie: {k.b('Sprawdź')} kompiluje bez zapisywania i pokazuje,
         co mówi kompilator – z nazwą pliku i numerem linii.
       </>
     ),
@@ -74,7 +75,7 @@ export const guide: Messages['guide'] = {
     <>
       Link do edytora otwiera centrum sterowania, a nie pole tekstowe: większość kodu piszą tu agenci, więc najpierw
       widzisz, jak radzi sobie twoja lambda. Na pasku bocznym jest sama lambda – czy jest online, jej adres i przycisk,
-      gdy jest coś do wdrożenia – oraz jej sekcje. Rzadsze akcje, jak zmiana adresu czy usunięcie, są tam w
+      gdy nowsza wersja czeka na wdrożenie – oraz jej sekcje. Rzadsze akcje, jak zmiana adresu czy usunięcie, są tam w
       menu {k.b('⋯')}.
     </>
   ),
@@ -84,15 +85,16 @@ export const guide: Messages['guide'] = {
       'Zmień',
       (k) => (
         <>
-          Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach: przeczyta kod, zmieni go,
-          sprawdzi, czy się kompiluje, i wrzuci online jako nową wersję. Wyłącz {k.b('Wdróż po zakończeniu')}, jeśli
-          chcesz najpierw przejrzeć zmianę.
+          Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach. Pracuje w szkicu, tam sprawdza
+          zmianę, a gdy działa, scala szkic w kolejną wersję. Wyłącz {k.b('Wdróż po zakończeniu')}, jeśli chcesz
+          najpierw samodzielnie wypróbować szkic.
         </>
       ),
     ],
+    ['Szkice', () => <>Zmiany przygotowywane obok lambdy: każdą wypróbowuje się pod osobnym adresem i scala w kolejną wersję, gdy jest gotowa. Otwarty szkic ma własny kod, dane i logi.</>],
     ['Pliki', () => <>Pliki danej wersji: jej kod i zasoby, czyli sam program. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
     ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: obszar roboczy. Zajrzyj do środka, przesyłaj i usuwaj pliki albo go wyłącz.</>],
-    ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Nad najnowszą trwa praca. Stąd wdrażasz wersję, wracasz do starszej albo zaczynasz nową.</>],
+    ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
     ['Statystyki', () => <>Żądania, błędy, czasy odpowiedzi i najczęściej odwiedzane ścieżki z ostatniej godziny albo ostatnich 24 godzin.</>],
     ['Logi', () => <>Żądania, to, co lambda wypisała, i stack trace każdego błędu – na bieżąco.</>],
@@ -100,9 +102,9 @@ export const guide: Messages['guide'] = {
       'Kod',
       (k) => (
         <>
-          Tu piszesz kod ręcznie. {k.b('Sprawdź')} kompiluje, {k.b('Zapisz')} nadpisuje najnowszą wersję,{' '}
-          {k.b('Nowa wersja')} zostawia ją bez zmian i zaczyna kolejną, {k.b('Wdróż')} wrzuca kod online.{' '}
-          {k.code('Ctrl-S')} zapisuje; {k.code('F12')} przechodzi do deklaracji.
+          Tu piszesz kod ręcznie. {k.b('Sprawdź')} kompiluje, {k.b('Zapisz')} tworzy wersję, {k.b('Wdróż')} wrzuca kod
+          online. W szkicu {k.b('Zapisz')} zostawia kod w szkicu, a {k.b('Wdróż podgląd')} wrzuca go online pod adresem
+          szkicu. {k.code('Ctrl-S')} zapisuje; {k.code('F12')} przechodzi do deklaracji.
         </>
       ),
     ],
@@ -130,9 +132,46 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Agenci przekazują te same dwa pola do {k.code('write_code')}. W sekcji {k.b('Kod')} o zmianę pyta przycisk{' '}
-      {k.b('Nowa wersja')}. Oba pola są opcjonalne. Za długi tekst nie jest odrzucany, tylko przycinany: specyfikacja do
-      4000 znaków, zmiana do 500. Nadpisanie wersji zachowuje jej notatki, chyba że podasz nowe.
+      Agenci przekazują te same dwa pola do {k.code('write_code')}. W sekcji {k.b('Kod')} o zmianę pyta okno
+      zapisywania. Oba pola są opcjonalne. Za długi tekst nie jest odrzucany, tylko przycinany: specyfikacja do 4000
+      znaków, zmiana do 500. Szkic ma własne dwa pola, a wersja, w którą zostanie scalony, je przejmuje.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Zapisana wersja nigdy się nie zmienia – i właśnie dlatego każdą warto zachować: każdą można porównać i przywrócić
+      online dokładnie taką, jaka była. Żeby zmienić lambdę, z której ludzie korzystają, utwórz zamiast tego{' '}
+      {k.b('szkic')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Utwórz go w sekcji {k.b('Szkice')} albo na bazie dowolnej wersji. To kopia kodu i zasobów tej wersji oraz
+        danych lambdy.
+      </>
+    ),
+    (k) => (
+      <>
+        Zmieniaj go tyle razy, ile trzeba – w sekcji {k.b('Kod')} albo prosząc agenta. {k.b('Wdróż podgląd')} wrzuca
+        go online pod osobnym adresem, {k.code('/features/…/')}, na jego własnej kopii danych. Odwiedzający lambdę nic
+        z tego nie widzą, a nic, co zapisze szkic, nie trafia do danych lambdy.
+      </>
+    ),
+    (k) => (
+      <>
+        {k.b('Scal')} go, gdy wszystko będzie gotowe: stanie się kolejną wersją razem ze swoimi notatkami i od razu
+        trafi online, jeśli zechcesz. Szkic znika – razem z podglądem i kopią danych.
+      </>
+    ),
+  ],
+  featureSample: 'Ranking',
+  featuresAside: () => (
+    <>
+      Nad kilkoma szkicami można pracować jednocześnie. Scalić można tylko szkic oparty na najnowszej wersji, żeby
+      scalenie nigdy nie cofnęło wersji zapisanej po utworzeniu szkicu. Jeśli wcześniej scalono inny, przenieś jego
+      zmiany – albo poproś o to agenta – a potem oprzyj szkic na najnowszej wersji. Nic nie scala się samo; tak ma być.
     </>
   ),
 
@@ -204,10 +243,10 @@ export const guide: Messages['guide'] = {
   workspaceColumn: 'W danych',
   table: [
     ['co zawiera', 'kod i zasoby: program, łącznie z frontendem', 'wszystko, co zapisze lambda albo ktoś prześle'],
-    ['kiedy się zmienia', 'gdy wersja zostanie zapisana', 'w chwili, gdy coś zostanie zapisane'],
+    ['kiedy się zmienia', 'nigdy – zmiana to nowa wersja', 'w chwili, gdy coś zostanie zapisane'],
     ['wdrożenie', 'wrzuca online dokładnie te pliki', 'nigdy ich nie rusza'],
     ['powrót do starszej wersji', 'przywraca stare pliki', 'bez wpływu: wszystkie wersje je współdzielą'],
-    ['nowa wersja', 'zaczyna jako ich kopia', 'bez wpływu'],
+    ['szkic', 'zaczyna jako ich kopia', 'działa na ich kopii'],
     ['kiedy znika', 'razem ze starymi wersjami, po przekroczeniu limitu', 'razem z lambdą albo gdy je wyłączysz'],
   ],
   reachedAs: 'dostęp z kodu przez',

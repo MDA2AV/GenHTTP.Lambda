@@ -81,7 +81,7 @@ public static class LambdaOutput
 /// one. The collecting is per request rather than per process because two
 /// lambdas printing at once would otherwise splice into each other.
 /// </remarks>
-public sealed class OutputScope(string? publicKey, LogBook book, int most, long? lambdaId = null)
+public sealed class OutputScope(string? publicKey, LogBook book, int most, long? lambdaId = null, long? featureId = null)
 {
 
     #region Get-/Setters
@@ -96,6 +96,11 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most, long?
     /// The identity of that lambda, which is what its owner's view reads by.
     /// </summary>
     public long? LambdaId { get; } = lambdaId;
+
+    /// <summary>
+    /// The feature whose preview is being served, if it is one.
+    /// </summary>
+    public long? FeatureId { get; } = featureId;
 
     /// <summary>
     /// How many lines one request may contribute before the rest is counted
@@ -198,7 +203,8 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most, long?
         {
             book.Append("warn", "stdout", PublicKey,
                         $"… this request printed more than {Most} lines; the rest was dropped.",
-                        null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place, lambdaId: LambdaId, domain: caller?.Domain);
+                        null, caller?.Client, caller?.Agent, caller?.Country, caller?.Place, lambdaId: LambdaId, domain: caller?.Domain,
+                        featureId: FeatureId);
 
             return;
         }
@@ -208,7 +214,7 @@ public sealed class OutputScope(string? publicKey, LogBook book, int most, long?
                     // a print is what it says, so the same print twice is the
                     // same line - which is what folds a reactor faulting over
                     // and over into one line and a count
-                    text, LambdaId, caller?.Domain);
+                    text, LambdaId, caller?.Domain, FeatureId);
     }
 
     #endregion
