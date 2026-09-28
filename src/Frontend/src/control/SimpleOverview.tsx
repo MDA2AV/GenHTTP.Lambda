@@ -1,12 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
-import { isActive, isDemo, type VersionInfo } from '../api';
-import { CopyField } from '../components/CopyField';
-import { Dialog } from '../components/Dialog';
-import { IconAlert, IconCheck, IconCopy, IconDraft, IconExternal, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
-import { tagOf, useEditorT, useLanguage } from '../i18n';
-import { Allowance, OwnAgent, remembered, useDraft } from './ChangeTab';
+import { isActive, isDemo } from '../api';
+import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
+import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { count, span } from './format';
 import { AgentMark, Ago, Figure, Section, Sparkline } from './ui';
@@ -15,42 +13,41 @@ import { AgentMark, Ago, Figure, Section, Sparkline } from './ui';
  * The overview of the simple view, for somebody who had the app built and
  * wants it to do something else - not to look after a server.
  *
- * In the order they would ask: is it there and where, is anything wrong,
- * what should be different, is anybody using it, and what changed so far -
- * with a way back to any earlier state. Nothing here says version,
- * deployment, file or log: those are the full view's words for the same
- * things.
+ * Only what tells them how things stand: is it there and where, is anything
+ * wrong, what changed last and is anybody using it. Asking for a change, the
+ * drafts and the history have sections of their own, as they do in the full
+ * view; the button at the top is the way to the one they come for. Nothing
+ * here says version, deployment, file or log: those are the full view's words
+ * for the same things.
  */
 export function SimpleOverview({ control }: { control: Control }) {
   const said = useEditorT().simple;
-  const { lambda } = control;
+  const { lambda, agent } = control;
   const demo = isDemo(lambda.tier);
   const problems = (control.summary?.recentProblems.length ?? 0) > 0;
 
+  // the frame says so above every section while a change is under way
+  const ask = !demo && (agent.state?.available ?? false) && !isActive(agent.state?.job);
+
   return (
-    <Section title={said.title}>
-      <div className="max-w-3xl space-y-10">
+    <Section
+      title={said.title}
+      actions={ask && (
+        <button type="button" onClick={() => control.askAgent()} className="btn-primary !px-4 !py-1.5 text-[13px]">
+          <IconSpark className="h-3.5 w-3.5" />
+          {said.askCta}
+        </button>
+      )}
+    >
+      <div className="max-w-4xl space-y-8">
         <Status control={control} />
 
         {problems && !demo && <Problems control={control} />}
 
-        {!demo && <Ask control={control} />}
-
-        {!demo && control.features.length > 0 && <Drafts control={control} />}
-
-        <Today control={control} />
-
-        <History control={control} />
-
-        {!demo && (
-          <section>
-            <h2 className="text-sm font-medium">{said.keepTitle}</h2>
-            <p className="mt-1 max-w-xl text-[13px] text-slate-500">{said.keepText}</p>
-            <div className="mt-3 max-w-xl">
-              <CopyField value={`${window.location.origin}${lambda.editorPath}`} />
-            </div>
-          </section>
-        )}
+        <div className="grid gap-8 lg:grid-cols-2">
+          <Latest control={control} />
+          <Today control={control} />
+        </div>
       </div>
     </Section>
   );
@@ -208,181 +205,48 @@ function Problems({ control }: { control: Control }) {
   );
 }
 
-/* ------------------------------------------------------------ what next */
+/* ------------------------------------------------------------ what changed */
 
-/**
- * The box of the Change section, brought to where the owner lands: what they
- * type is sent from here, and the Change section opens to show it happen.
- * It shares its draft with the box there, so nothing typed is lost going
- * back and forth.
- */
-function Ask({ control }: { control: Control }) {
+/** The last change, in its own words, with the way to all the others. */
+function Latest({ control }: { control: Control }) {
   const t = useEditorT();
   const said = t.simple;
-  const language = useLanguage();
-  const { agent } = control;
-  const state = agent.state;
+  const latest = control.versions[0];
 
-  const [prompt, setPrompt] = useDraft(control.lambda.publicKey);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const field = useRef<HTMLTextAreaElement>(null);
-
-  // grows with what is in it, like the box in the Change section
-  useLayoutEffect(() => {
-    const box = field.current;
-
-    if (box) {
-      box.style.height = 'auto';
-      box.style.height = `${Math.min(box.scrollHeight, 240)}px`;
-    }
-  }, [prompt]);
-
-  // not known yet, or under way - the frame says so above every section
-  if (!state || isActive(state.job)) {
+  if (!latest) {
     return null;
   }
 
-  if (!state.available) {
-    return (
-      <section>
-        <h2 className="text-[15px] font-medium">{said.ownTitle}</h2>
-        <OwnAgent control={control} open />
-      </section>
-    );
-  }
-
-  const online = remembered();
-  const spent = state.left <= 0;
-  const wanted = prompt.trim();
-  const ready = wanted.length >= 3 && !sending && !spent;
-
-  const reset = new Date();
-  reset.setUTCHours(24, 0, 0, 0);
-
-  async function send() {
-    if (!ready) {
-      return;
-    }
-
-    setSending(true);
-    setError(null);
-
-    const refused = await agent.start({ prompt: wanted, deploy: online, language });
-
-    setSending(false);
-
-    if (refused) {
-      setError(refused);
-    } else {
-      setPrompt('');
-      control.askAgent();
-    }
-  }
-
   return (
-    <section>
-      <label htmlFor="simple-ask" className="block text-[15px] font-medium">{said.askTitle}</label>
-
-      <div className="surface mt-3 focus-within:border-accent-500 focus-within:ring-1 focus-within:ring-accent-500 dark:focus-within:border-accent-400 dark:focus-within:ring-accent-400">
-        <textarea
-          id="simple-ask"
-          ref={field}
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-              event.preventDefault();
-              void send();
-            }
-          }}
-          rows={2}
-          maxLength={2000}
-          disabled={sending || spent}
-          placeholder={said.askPlaceholder}
-          className="block min-h-[4.5rem] w-full resize-none bg-transparent px-4 py-3 text-[15px] leading-relaxed outline-none placeholder:text-slate-400 disabled:opacity-60 dark:placeholder:text-slate-600"
-        />
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 px-3 py-2 dark:border-ink-800">
-          <span className="text-xs text-slate-500">{online ? said.askOnline : said.askDraft}</span>
-          <span className="ml-auto"><Allowance state={state} /></span>
-          <button type="button" onClick={send} disabled={!ready} className="btn-primary !px-4 !py-1.5 text-[13px]">
-            {sending ? <IconSpinner className="h-3.5 w-3.5" /> : <IconSpark className="h-3.5 w-3.5" />}
-            {sending ? said.asking : said.ask}
-          </button>
-        </div>
+    <section className="flex flex-col">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-medium">{said.latest}</h2>
+        <Link to={`/editor/${control.privateKey}/history`} className="text-[13px] text-accent-500 hover:underline">{said.allChanges}</Link>
       </div>
 
-      {spent && (
-        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
-          {t.change.noneLeft(reset.toLocaleTimeString(tagOf(language), { hour: '2-digit', minute: '2-digit' }))}
+      <div className="surface mt-3 flex-1 p-5">
+        <p className={`break-words text-[15px] leading-snug ${latest.change ? '' : 'text-slate-500'}`}>
+          {latest.change ?? (latest.origin === 'template' ? said.created : said.noNote)}
         </p>
-      )}
-
-      {error && (
-        <p className="mt-3 flex items-start gap-2 text-sm text-red-500">
-          <IconAlert className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+        <p className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
+          <Ago at={latest.created} />
+          <AgentMark origin={latest.origin} />
+          {latest.version === control.lambda.activeVersion && <OnlineMark />}
         </p>
-      )}
-
-      {wanted === '' && !spent && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {t.change.ideas.map((idea) => (
-            <button
-              key={idea}
-              type="button"
-              onClick={() => {
-                setPrompt(idea);
-                field.current?.focus();
-              }}
-              className="rounded-full border border-slate-200 px-3 py-1 text-[13px] text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-ink-800 dark:text-slate-400 dark:hover:border-ink-700 dark:hover:text-slate-200"
-            >
-              {idea}
-            </button>
-          ))}
-        </div>
-      )}
+      </div>
     </section>
   );
 }
 
-/**
- * The drafts waiting to be tried - left by a change that was not to go online
- * by itself - with the two things done with one: trying it, and opening it.
- */
-function Drafts({ control }: { control: Control }) {
-  const t = useEditorT();
-  const said = t.simple;
+/** That this is what visitors get. */
+export function OnlineMark() {
+  const said = useEditorT().simple;
 
   return (
-    <section>
-      <h2 className="text-sm font-medium">{said.drafts}</h2>
-      <p className="mt-1 max-w-xl text-[13px] text-slate-500">{said.draftsHint}</p>
-
-      <ul className="surface mt-3 divide-y divide-slate-200 dark:divide-ink-800">
-        {control.features.map((feature) => (
-          <li key={feature.key} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-            <IconDraft className="h-4 w-4 shrink-0 text-slate-400" />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-medium">{feature.name}</p>
-              {feature.change && <p className="mt-0.5 truncate text-[13px] text-slate-500" title={feature.change}>{feature.change}</p>}
-            </div>
-            <span className="flex shrink-0 items-center gap-3">
-              {feature.online && (
-                <a href={absoluteAddress(feature.previewPath)} target="_blank" rel="noreferrer"
-                   className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-600 hover:underline dark:text-accent-400">
-                  <IconExternal className="h-3.5 w-3.5" />
-                  {t.features.openPreview}
-                </a>
-              )}
-              <button type="button" onClick={() => control.openFeature(feature.key)} className="btn-ghost !px-3 !py-1 text-[13px]">
-                {said.openDraft}
-              </button>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-px text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+      {said.isOnline}
+    </span>
   );
 }
 
@@ -398,139 +262,15 @@ function Today({ control }: { control: Control }) {
   }
 
   return (
-    <section>
+    <section className="flex flex-col">
       <h2 className="text-sm font-medium">{said.activity}</h2>
-      <div className="surface mt-3 grid grid-cols-2 gap-6 p-5">
+      <div className="surface mt-3 grid flex-1 grid-cols-2 gap-6 p-5">
         <div>
           <Figure value={count(traffic.dayRequests)} label={said.hits} title={said.hitsTitle} />
           <div className="mt-2"><Sparkline values={traffic.hourly} label={t.summary.hourly} /></div>
         </div>
         <Figure value={traffic.lastSeen ? <Ago at={traffic.lastSeen} /> : said.noVisit} label={said.lastVisit} />
       </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------ what changed */
-
-const SHOWN = 4;
-
-/**
- * Every version, as the change it was: what it did and when, which one
- * visitors get, and a way back to any other. Going back is deploying an
- * older version, which is all it ever was - but said as what it does.
- */
-function History({ control }: { control: Control }) {
-  const said = useEditorT().simple;
-  const { versions, lambda, busy } = control;
-  const [all, setAll] = useState(false);
-  const [asking, setAsking] = useState<VersionInfo | null>(null);
-
-  if (versions.length === 0) {
-    return null;
-  }
-
-  const demo = isDemo(lambda.tier);
-  const active = lambda.activeVersion;
-  const shown = all ? versions : versions.slice(0, SHOWN);
-
-  // newer than what is online - or nothing is online - is putting it online;
-  // older is going back
-  const forward = (version: number) => active == null || version > active;
-
-  return (
-    <section>
-      <h2 className="text-sm font-medium">{said.history}</h2>
-      <p className="mt-1 max-w-xl text-[13px] text-slate-500">{said.historyHint}</p>
-
-      <ol className="mt-4">
-        {shown.map((version, index) => {
-          const online = version.version === active;
-          const last = index === shown.length - 1;
-
-          return (
-            <li key={version.version} className="relative flex gap-4 pb-5 last:pb-0">
-              {/* the line that ties one change to the one before it */}
-              {!last && <span className="absolute left-[5px] top-4 h-full w-px bg-slate-200 dark:bg-ink-800" aria-hidden="true" />}
-
-              <span
-                className={`relative mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full border-2 ${
-                  online ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 bg-white dark:border-ink-700 dark:bg-ink-950'
-                }`}
-                aria-hidden="true"
-              />
-
-              <div className="min-w-0 flex-1">
-                <p className={`break-words text-[15px] leading-snug ${version.change ? '' : 'text-slate-500'}`}>
-                  {version.change ?? (version.origin === 'template' ? said.created : said.noNote)}
-                </p>
-                <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
-                  <Ago at={version.created} />
-                  <AgentMark origin={version.origin} />
-                  {online && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-px text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                      {said.isOnline}
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              {!online && !demo && (
-                <button
-                  type="button"
-                  onClick={() => setAsking(version)}
-                  disabled={busy !== null}
-                  className="mt-0.5 shrink-0 self-start text-[13px] font-medium text-accent-600 hover:underline disabled:opacity-50 dark:text-accent-400"
-                >
-                  {forward(version.version) ? said.putThisOnline : said.goBack}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-
-      {versions.length > SHOWN && (
-        <button
-          type="button"
-          onClick={() => setAll((was) => !was)}
-          className="mt-4 pl-[27px] text-[13px] text-slate-500 hover:text-slate-800 hover:underline dark:hover:text-slate-200"
-        >
-          {all ? said.fewer : said.more(versions.length - SHOWN)}
-        </button>
-      )}
-
-      <Dialog
-        title={asking && forward(asking.version) ? said.putOnlineTitle : said.goBackTitle}
-        open={asking !== null}
-        onClose={() => setAsking(null)}
-        footer={
-          <>
-            <button type="button" onClick={() => setAsking(null)} className="btn-ghost">
-              {said.cancel}
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => {
-                const version = asking?.version;
-
-                setAsking(null);
-
-                if (version != null) {
-                  void control.deploy(version);
-                }
-              }}
-            >
-              {asking && forward(asking.version) ? said.putOnlineConfirm : said.goBackConfirm}
-            </button>
-          </>
-        }
-      >
-        {asking?.change && <p className="border-l-2 border-slate-300 pl-3 text-slate-700 dark:border-ink-700 dark:text-slate-300">{asking.change}</p>}
-        <p className="text-slate-600 dark:text-slate-400">{asking && forward(asking.version) ? said.putOnlineText : said.goBackText}</p>
-      </Dialog>
     </section>
   );
 }

@@ -229,25 +229,26 @@ the brief inside the build container, never in a log line.
 Somebody who had an app built on `/build` wants it to do something else, not
 to look after code, files, versions and deployments. So the editor has two
 views. The **simple** one keeps the overview, Change, the drafts (once there
-are any), the showcase and the domain, and its overview is the app itself:
-whether it is online and where, a box that sends a change straight to the
-agent, errors visitors ran into with a button that asks the agent to fix them,
-the drafts waiting to be tried, today's hits, and every change so far with a
-way back to any of them - which is deploying an older version, said as what it
-does. Nothing in it names a version, a file or a log: the Change section tells
-how a change ended without version numbers and shows what the agent said
-rather than the tools it called, a draft is what it does rather than the files
-it changes, and a change that does not compile is the agent's to fix rather
-than a list of compiler errors. The **full** view is every section, as before.
+are any), a history, the showcase and the domain. Its overview is the app:
+whether it is online and where, errors visitors ran into with a button that
+asks the agent to fix them, the latest change, today's hits, and a button to
+ask for the next change. The history is every version as the change it made,
+with a way back to any of them - which is deploying an older version, said as
+what it does. Nothing in it names a version, a file or a log: the Change
+section tells how a change ended without version numbers and shows what the
+agent said rather than the tools it called, a draft is what it does rather
+than the files it changes, and a change that does not compile is the agent's
+to fix rather than a list of compiler errors. The **full** view is every
+section, as before.
 
 Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
 when it is created (`POST /lambdas`, `create_lambda`) and changed later
 (`PATCH /lambdas/:privateKey`, `update_lambda`). The build agent creates its
 lambdas `Simple`; everything else defaults to `Full`. That is only the
 default: whoever switches at the foot of the sidebar (in the menu on a phone)
-has chosen for themselves, which is kept in their browser for every lambda
-they open and never sent anywhere - so an operator looking at somebody's
-lambda in the full view leaves it simple for its owner.
+has chosen for themselves, for that lambda, which is kept in their browser and
+never sent anywhere - so an operator looking at somebody's lambda in the full
+view leaves it simple for its owner.
 
 ## How it is put together
 

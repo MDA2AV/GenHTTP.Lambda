@@ -199,7 +199,7 @@ function HowItWorks() {
 }
 
 /** How many more the owner may ask for today, beside the button that spends one. */
-export function Allowance({ state }: { state: AgentState }) {
+function Allowance({ state }: { state: AgentState }) {
   const said = useEditorT().change;
 
   return (
@@ -218,7 +218,7 @@ export function Allowance({ state }: { state: AgentState }) {
  * What is typed in the box, kept for the tab while the owner looks at another
  * section: a request half written is not something to lose to a click.
  */
-export function useDraft(lambda: string): [string, (text: string) => void] {
+function useDraft(lambda: string): [string, (text: string) => void] {
   const key = `lambda-change-draft:${lambda}`;
 
   const [draft, setDraft] = useState(() => {
@@ -248,8 +248,7 @@ export function useDraft(lambda: string): [string, (text: string) => void] {
 
 const REMEMBERED = 'lambda-change-online';
 
-/** Whether a change goes online by itself once it works, as the owner last chose here. */
-export function remembered(): boolean {
+function remembered(): boolean {
   try {
     return localStorage.getItem(REMEMBERED) !== 'no';
   } catch {
@@ -1131,7 +1130,7 @@ function Marks({ step, said }: { step: AgentStep; said: Words }) {
  * Folded away where this installation has one, and the whole answer where it
  * does not.
  */
-export function OwnAgent({ control, open = false }: { control: Control; open?: boolean }) {
+function OwnAgent({ control, open = false }: { control: Control; open?: boolean }) {
   const said = useEditorT().change;
   const { origin } = useOrigin();
   const editor = `${origin}${control.lambda.editorPath}`;

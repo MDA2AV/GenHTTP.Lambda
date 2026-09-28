@@ -31,6 +31,7 @@ import { BaseDialog, DeleteFeatureDialog, MergeDialog, NewFeatureDialog, NotesDi
 import { FeaturesTab } from '../control/FeaturesTab';
 import { FeatureTab } from '../control/FeatureTab';
 import { FilesTab } from '../control/FilesTab';
+import { HistoryTab } from '../control/HistoryTab';
 import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
 import { ShowcaseTab } from '../control/ShowcaseTab';
@@ -51,7 +52,8 @@ interface Props {
 }
 
 type SectionId =
-  | 'overview' | 'change' | 'features' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
+  | 'overview' | 'change' | 'features' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain'
+  | 'history';
 
 /*
  * The showcase and the domain right after the overview: both are about how
@@ -73,13 +75,15 @@ const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
 
 /*
  * What the simple view keeps: the app, asking for a change, the drafts a
- * change can leave to be tried, and how people find it. Change straight after
- * the overview, since asking for one is what the simple view is for. Nothing
- * that is about the code - its files, its data as files, its versions, its
- * deployments, its log - and not the figures either, which the overview sums
- * up in the two that matter.
+ * change can leave to be tried, what changed so far, and how people find it.
+ * Change straight after the overview, since asking for one is what the simple
+ * view is for. Nothing that is about the code - its files, its data as files,
+ * its deployments, its log - and not the figures either, which the overview
+ * sums up in the two that matter. The versions are there, as the history:
+ * the changes the app went through and a way back to any of them, without
+ * the files to compare.
  */
-const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'showcase', 'domain'];
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'history', 'showcase', 'domain'];
 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
@@ -121,10 +125,10 @@ export function Editor({ theme }: Props) {
   const featureKey = segment === 'features' && parts[1] ? parts[1] : null;
   const featureView: FeatureView = FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview';
 
-  const section: SectionId = segment === 'edit' ? 'code' : (SECTIONS.find((id) => id === segment) ?? 'overview');
+  const section: SectionId = segment === 'edit' ? 'code' : ([...SECTIONS, ...SIMPLE_SECTIONS].find((id) => id === segment) ?? 'overview');
 
   const [lambda, setLambda] = useState<Lambda | null>(null);
-  const { view, choose } = useView(lambda?.view);
+  const { view, choose } = useView(lambda?.publicKey, lambda?.view);
   const simple = view === 'simple';
   const [summary, setSummary] = useState<LambdaSummary | null>(null);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
@@ -415,7 +419,10 @@ export function Editor({ theme }: Props) {
   const absent = (id: SectionId) =>
     (hidden && id === 'domain')
     || (demo && (id === 'showcase' || id === 'change' || id === 'features'))
-    || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0);
+    || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
+    // the full view has the versions for it - known once the lambda is,
+    // which says which view it opens in
+    || (id === 'history' && lambda != null && !simple);
 
   const away = absent(section);
 
@@ -424,10 +431,18 @@ export function Editor({ theme }: Props) {
   const kept = featureKey ? SIMPLE_FEATURE_VIEWS.includes(featureView) : SIMPLE_SECTIONS.includes(section);
   const outside = simple && !kept;
 
-  /** Switches the view, leaving what the simple view does not have for the overview - or the draft's. */
+  /**
+   * Switches the view, leaving what the simple view does not have for the
+   * overview - or the draft's - and the history for the versions, which are
+   * what it is in the full view.
+   */
   const switchTo = (next: View) => {
     if (next === 'simple' && !kept && !go(featureKey ? `${base}/features/${featureKey}` : base)) {
       return;
+    }
+
+    if (next === 'full' && !featureKey && section === 'history') {
+      go(`${base}/versions`);
     }
 
     choose(next);
@@ -862,6 +877,8 @@ export function Editor({ theme }: Props) {
           <FilesTab control={control} />
         ) : section === 'data' ? (
           <DataTab control={control} />
+        ) : section === 'history' && simple ? (
+          <HistoryTab control={control} />
         ) : section === 'versions' ? (
           <VersionsTab control={control} />
         ) : section === 'deployments' ? (
@@ -1037,8 +1054,8 @@ export function Editor({ theme }: Props) {
 
 /**
  * Which view is showing, at the foot of the sidebar: the simple one or every
- * section. Kept in the browser of whoever switches, for every lambda they
- * open, and nowhere else (see control/view.ts). On a phone the sidebar is a
+ * section. Kept for this lambda in the browser of whoever switches, and
+ * nowhere else (see control/view.ts). On a phone the sidebar is a
  * row along the top with no room below it, so the menu has the switch there.
  */
 function ViewSwitch({ view, onSwitch }: { view: View; onSwitch: (view: View) => void }) {
