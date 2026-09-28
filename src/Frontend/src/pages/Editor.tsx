@@ -2,7 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { absoluteAddress, isDomain, platformPath } from '../address';
-import { ApiError, allowsDomain, api, isActive, isDemo, type ChangeJob, type Lambda, type LambdaSummary, type VersionInfo } from '../api';
+import {
+  ApiError,
+  allowsDomain,
+  api,
+  isActive,
+  isDemo,
+  type ChangeJob,
+  type Feature,
+  type FeatureMerge,
+  type Lambda,
+  type LambdaFile,
+  type LambdaSummary,
+  type VersionInfo,
+} from '../api';
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
@@ -10,9 +23,13 @@ import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, Icon
 import { useToast } from '../components/Toast';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
-import type { Busy, Control, Rejection } from '../control/context';
+import type { Busy, Control, FeatureControl, FeatureView, Rejection } from '../control/context';
+import { DataTab } from '../control/DataTab';
 import { DeploymentsTab } from '../control/DeploymentsTab';
 import { DomainTab } from '../control/DomainTab';
+import { BaseDialog, DeleteFeatureDialog, MergeDialog, NewFeatureDialog, NotesDialog } from '../control/FeatureDialogs';
+import { FeaturesTab } from '../control/FeaturesTab';
+import { FeatureTab } from '../control/FeatureTab';
 import { FilesTab } from '../control/FilesTab';
 import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
@@ -31,9 +48,26 @@ interface Props {
   theme: Theme;
 }
 
-type SectionId = 'overview' | 'change' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
+type SectionId =
+  | 'overview' | 'change' | 'features' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
 
-const SECTIONS: SectionId[] = ['overview', 'change', 'showcase', 'domain', 'files', 'versions', 'deployments', 'stats', 'logs', 'code'];
+/*
+ * The showcase and the domain right after the overview: both are about how
+ * people find the lambda, which is what an owner looks after first. Features
+ * - drafts, to the owner - right after Change: both are where a change of
+ * the lambda is made. Files and Data side by side, because they are the two
+ * halves of what a lambda keeps - the program, which belongs to a version,
+ * and what it keeps, which belongs to the lambda - and somebody looking for
+ * one is best shown the other right beside it.
+ */
+const SECTIONS: SectionId[] = ['overview', 'showcase', 'domain', 'change', 'features', 'files', 'data', 'versions', 'deployments', 'stats', 'logs', 'code'];
+
+/*
+ * What a feature is worked on with. The rest - the showcase, the domain, the
+ * figures, the deployments - belongs to the lambda, which the feature leaves
+ * alone until it is put online.
+ */
+const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
 
 /**
  * The control center of one lambda.
@@ -43,6 +77,16 @@ const SECTIONS: SectionId[] = ['overview', 'change', 'showcase', 'domain', 'file
  * it is online, where, and its sections; the page beside it is one section at
  * a time. Everything done rarely sits behind one menu, so what is left on the
  * screen is what is worth looking at.
+ *
+ * Opened on a feature - /features/{key}/{view} - the frame is the feature's:
+ * the sidebar holds it, with where it can be tried and the buttons that try
+ * it and put it online, and the views are its own code, its copy of the data
+ * and what its preview said. The lambda stays at the top, so it is always
+ * clear whose feature it is.
+ *
+ * The owner reads of drafts rather than features: somebody who had an app
+ * built knows what a draft is, and does not need to know what merging is.
+ * Putting one online merges it and deploys the version it becomes, in one.
  */
 export function Editor({ theme }: Props) {
   const t = useEditorT();
@@ -55,20 +99,43 @@ export function Editor({ theme }: Props) {
   const location = useLocation();
   const toast = useToast();
 
-  const segment = rest.split('/')[0];
+  const parts = rest.split('/');
+  const segment = parts[0];
+
+  // a feature, opened at one of its views
+  const featureKey = segment === 'features' && parts[1] ? parts[1] : null;
+  const featureView: FeatureView = FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview';
+
   const section: SectionId = segment === 'edit' ? 'code' : (SECTIONS.find((id) => id === segment) ?? 'overview');
 
   const [lambda, setLambda] = useState<Lambda | null>(null);
   const [summary, setSummary] = useState<LambdaSummary | null>(null);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
+  const [features, setFeatures] = useState<Feature[] | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [rejection, setRejection] = useState<Rejection | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [removing, setRemoving] = useState(false);
 
+  /** What a new feature is to start from, while the dialog for one is open. */
+  const [creating, setCreating] = useState<{ base?: number; files?: LambdaFile[] } | null>(null);
+  const [featureDialog, setFeatureDialog] = useState<'notes' | 'base' | 'delete' | null>(null);
+
+  /** The feature being put online, while the dialog for that is open - from its own page, or from the change that left it. */
+  const [merging, setMerging] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+
   /** Whether the code view holds something unsaved, so leaving it can ask first. */
   const dirty = useRef(false);
+
+  /** The same, for what is drawn: the sidebar's preview and merge use what is saved, not what is typed. */
+  const [unsaved, setUnsaved] = useState(false);
+
+  const onDirty = useCallback((value: boolean) => {
+    dirty.current = value;
+    setUnsaved(value);
+  }, []);
 
   // the creation page says so in the router state
   const fresh = (location.state as { created?: boolean } | null)?.created === true;
@@ -94,15 +161,37 @@ export function Editor({ theme }: Props) {
       (await api.completions(privateKey, code, line, column)).completions);
   }, [privateKey]);
 
+  /*
+   * Read on an interval and after every action, so two reads can be under
+   * way at once; only one newer than the last applied is applied, or a slow
+   * poll would bring back what an action had just changed.
+   */
+  const issued = useRef(0);
+  const applied = useRef(0);
+
   const refresh = useCallback(async () => {
-    const [current, history, figures] = await Promise.all([
+    const mine = ++issued.current;
+
+    const [current, history, figures, open] = await Promise.all([
       api.get(privateKey),
       api.versions(privateKey),
       api.summary(privateKey).catch(() => null),
+      // one that could not be read is not one that is gone: the last list stays
+      api.feature.list(privateKey).catch(() => null),
     ]);
+
+    if (mine < applied.current) {
+      return;
+    }
+
+    applied.current = mine;
 
     setLambda(current);
     setVersions(history);
+
+    if (open) {
+      setFeatures(open);
+    }
 
     if (figures) {
       setSummary(figures);
@@ -129,7 +218,8 @@ export function Editor({ theme }: Props) {
    * hidden.
    */
   useEffect(() => {
-    const every = section === 'overview' ? 10_000 : 30_000;
+    // the overviews are where a change by somebody else shows first
+    const every = section === 'overview' || (featureKey != null && featureView === 'overview') ? 10_000 : 30_000;
 
     const timer = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
@@ -138,7 +228,7 @@ export function Editor({ theme }: Props) {
     }, every);
 
     return () => window.clearInterval(timer);
-  }, [refresh, section]);
+  }, [refresh, section, featureKey, featureView]);
 
   /*
    * Opening a section is asking how things are now. The sections that load
@@ -157,7 +247,7 @@ export function Editor({ theme }: Props) {
     }
 
     refresh().catch(() => undefined);
-  }, [refresh, section]);
+  }, [refresh, section, featureKey, featureView]);
 
   useEffect(() => {
     const back = () => document.visibilityState === 'visible' && refresh().catch(() => undefined);
@@ -193,6 +283,34 @@ export function Editor({ theme }: Props) {
     [privateKey, refresh, toast, said],
   );
 
+  /** Puts what the open feature holds online at its preview address, saying how it went. */
+  const previewFeature = useCallback(async () => {
+    if (!featureKey) {
+      return false;
+    }
+
+    setPreviewing(true);
+
+    try {
+      const result = await api.feature.preview(privateKey, featureKey);
+
+      await refresh();
+
+      if (!result.success) {
+        setRejection({ feature: featureKey, diagnostics: result.diagnostics });
+        return false;
+      }
+
+      toast(t.features.previewDeployed, 'success');
+      return true;
+    } catch (error) {
+      toast(error instanceof ApiError ? error.message : t.features.previewFailed, 'error');
+      return false;
+    } finally {
+      setPreviewing(false);
+    }
+  }, [privateKey, featureKey, refresh, toast, t]);
+
   const undeploy = useCallback(async () => {
     setBusy('undeploy');
 
@@ -217,6 +335,10 @@ export function Editor({ theme }: Props) {
         toast(words.stopped);
       } else if (result?.ok && result.online != null) {
         toast(words.online(result.online));
+      } else if (result?.ok && result.version == null && result.feature) {
+        const name = result.featureName ?? result.feature.slice(0, 8);
+
+        toast(result.compiles === false ? t.change.results.featureBroken(name) : words.feature(name), result.compiles === false ? 'error' : 'success');
       } else if (result?.ok && result.version != null) {
         toast(words.saved(result.version), result.compiles === false ? 'error' : 'success');
       } else if (result?.unchanged && job.state === 'done') {
@@ -238,17 +360,20 @@ export function Editor({ theme }: Props) {
     failed: t.change.readFailed,
   });
 
+  // where the code being edited is: the lambda's, or the open feature's
+  const coding = featureKey ? (featureView === 'code' ? `${base}/features/${featureKey}/code` : null) : section === 'code' ? `${base}/code` : null;
+
   const go = useCallback(
     (to: string) => {
-      if (section === 'code' && dirty.current && !to.startsWith(`${base}/code`)
-          && !window.confirm(said.leave)) {
+      if (coding && dirty.current && !to.startsWith(coding) && !window.confirm(said.leave)) {
         return;
       }
 
       dirty.current = false;
+      setUnsaved(false);
       navigate(to);
     },
-    [base, navigate, section, said],
+    [coding, navigate, said],
   );
 
   /*
@@ -261,10 +386,29 @@ export function Editor({ theme }: Props) {
   // a demo is read by anybody holding its announced key, and changed by nobody
   const demo = lambda != null && isDemo(lambda.tier);
 
-  // sections that only change the lambda, which a demo does not have
-  const absent = (id: SectionId) => (hidden && id === 'domain') || (demo && (id === 'showcase' || id === 'change'));
+  // sections that only change the lambda, which a demo does not have - and
+  // the drafts, while there are none: they are met through a change the agent
+  // leaves to be tried, or started from a version or the code, and the list
+  // of them is nothing to look at until then
+  const absent = (id: SectionId) =>
+    (hidden && id === 'domain')
+    || (demo && (id === 'showcase' || id === 'change' || id === 'features'))
+    || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0);
 
   const away = absent(section);
+
+  // the feature the page is opened on, as last read; undefined until the list arrives
+  const open = featureKey && features ? (features.find((f) => f.key === featureKey) ?? null) : undefined;
+
+  // merged or deleted elsewhere while its code was open: nothing is left to save
+  const gone = featureKey != null && open === null;
+
+  useEffect(() => {
+    if (gone) {
+      dirty.current = false;
+      setUnsaved(false);
+    }
+  }, [gone]);
 
   useEffect(() => {
     if (away) {
@@ -296,23 +440,83 @@ export function Editor({ theme }: Props) {
     );
   }
 
+  const featureControl: FeatureControl | null = open
+    ? { info: open, refresh, preview: previewFeature, previewing }
+    : null;
+
+  const featurePath = (key: string, view: FeatureView = 'overview') => `${base}/features/${key}${view === 'overview' ? '' : `/${view}`}`;
+
   const control: Control = {
     privateKey,
     lambda,
     summary,
     versions,
+    features: features ?? [],
     busy,
     theme,
     refresh,
     deploy,
     undeploy,
-    edit: (version) => go(`${base}/code${version != null ? `?version=${version}` : ''}`),
+    edit: (version) => go(open && version == null ? featurePath(open.key, 'code') : `${base}/code${version != null ? `?version=${version}` : ''}`),
     browse: (version) => go(`${base}/files${version != null ? `?version=${version}` : ''}`),
     agent,
+    openData: () => go(`${base}/data`),
+    startFeature: (from, files) => setCreating({ base: from, files }),
+    openFeature: (key, view) => go(featurePath(key, view)),
+    putOnline: (key) => setMerging(key),
+    askAgent: (key, prompt) => {
+      const query = new URLSearchParams();
+
+      if (key) {
+        query.set('feature', key);
+      }
+
+      if (prompt) {
+        query.set('ask', prompt);
+      }
+
+      const search = query.toString();
+
+      go(`${base}/change${search ? `?${search}` : ''}`);
+    },
+    feature: featureControl,
+  };
+
+  /** A new feature is there: open it where work on it starts. */
+  const created = (feature: Feature, carried: boolean) => {
+    setCreating(null);
+
+    // known at once, so the page it opens does not first say it is missing
+    setFeatures((was) => [feature, ...(was ?? []).filter((f) => f.key !== feature.key)]);
+    refresh().catch(() => undefined);
+    toast(t.features.created(feature.name), 'success');
+
+    // what was typed in the code view is in the feature now, not lost
+    onDirty(false);
+    navigate(featurePath(feature.key, carried ? 'code' : 'overview'));
+  };
+
+  /** A feature became a version: show the version. */
+  const merged = (result: FeatureMerge) => {
+    setMerging(null);
+    refresh().catch(() => undefined);
+
+    const version = result.version?.version;
+
+    if (result.deployment && !result.deployment.success) {
+      setRejection({ version, diagnostics: result.deployment.diagnostics });
+    } else {
+      toast(result.deployment ? t.features.mergedOnline(version ?? '') : t.features.merged(version ?? ''), 'success');
+    }
+
+    navigate(`${base}/versions${version != null ? `?version=${version}` : ''}`);
   };
 
   const change = agent.state?.job;
   const changing = isActive(change);
+
+  // the feature being put online, as last read - gone when it was merged or deleted meanwhile
+  const putting = merging ? (features?.find((f) => f.key === merging) ?? null) : null;
 
   const live = lambda.activeVersion != null;
   const publicUrl = absoluteAddress(lambda.publicPath);
@@ -322,7 +526,7 @@ export function Editor({ theme }: Props) {
   const ahead = latest != null && latest !== lambda.activeVersion;
   const problems = (summary?.recentProblems.length ?? 0) > 0;
 
-  const code = section === 'code';
+  const code = coding != null;
 
   /*
    * One centred column holding the sidebar and the section beside it, the
@@ -347,7 +551,7 @@ export function Editor({ theme }: Props) {
               </div>
             </div>
 
-            <Menu label={said.moreActions} align="left">
+            <Menu label={said.moreActions} align="start">
               {(close) => (
                 <>
                   {live && !demo && (
@@ -393,7 +597,7 @@ export function Editor({ theme }: Props) {
 
           {/* not while the agent is at work: what it saved last may be a
               version it is still fixing, and it deploys what it finishes */}
-          {ahead && latest != null && !demo && !changing && (
+          {!featureKey && ahead && latest != null && !demo && !changing && (
             <button
               type="button"
               onClick={() => deploy(latest)}
@@ -405,8 +609,64 @@ export function Editor({ theme }: Props) {
               {said.deploy(latest)}
             </button>
           )}
+
+          {open && (
+            <FeatureCard
+              feature={open}
+              base={base}
+              privateKey={privateKey}
+              previewing={previewing}
+              unsaved={unsaved}
+              compact={featureView === 'code'}
+              onPreview={previewFeature}
+              onPutOnline={() => setMerging(open.key)}
+              onDialog={setFeatureDialog}
+              onStop={async () => {
+                try {
+                  await api.feature.stop(privateKey, open.key);
+                  await refresh();
+                  toast(t.features.previewStopped);
+                } catch (error) {
+                  toast(error instanceof ApiError ? error.message : t.features.previewFailed, 'error');
+                }
+              }}
+              onBack={() => go(`${base}/features`)}
+            />
+          )}
         </div>
 
+        {featureKey ? (
+          <nav aria-label={t.features.viewsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
+            {FEATURE_VIEWS.map((view) => {
+              const to = featurePath(featureKey, view);
+              const current = featureView === view;
+
+              return (
+                <Link
+                  key={view}
+                  to={to}
+                  onClick={(event) => {
+                    event.preventDefault();
+
+                    if (current) {
+                      refresh().catch(() => undefined);
+                    } else {
+                      go(to);
+                    }
+                  }}
+                  aria-current={current ? 'page' : undefined}
+                  className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm md:border-b-0 md:border-l-2 ${
+                    current
+                      ? 'border-accent-500 font-medium text-ink-900 dark:border-accent-400 dark:text-slate-100 md:bg-slate-100 md:dark:bg-ink-850'
+                      : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {t.features.views[view]}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : (
         <nav aria-label={said.sectionsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
           {SECTIONS.filter((id) => !absent(id)).map((id) => {
             const to = id === 'overview' ? base : `${base}/${id}`;
@@ -438,6 +698,9 @@ export function Editor({ theme }: Props) {
                 {id === 'versions' && versions.length > 0 && (
                   <span className="ml-auto text-xs tabular-nums text-slate-400">{versions.length}</span>
                 )}
+                {id === 'features' && (features?.length ?? 0) > 0 && (
+                  <span className="ml-auto text-xs tabular-nums text-slate-400">{features!.length}</span>
+                )}
                 {id === 'logs' && problems && (
                   <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
                 )}
@@ -456,6 +719,7 @@ export function Editor({ theme }: Props) {
             );
           })}
         </nav>
+        )}
       </aside>
 
       <main className={`flex min-w-0 flex-1 flex-col ${code ? 'min-h-0' : ''}`}>
@@ -505,12 +769,30 @@ export function Editor({ theme }: Props) {
           </div>
         )}
 
-        {section === 'code' ? (
-          <Workbench control={control} onDirty={(value) => { dirty.current = value; }} />
+        {featureKey ? (
+          open === undefined ? (
+            <div className="flex items-center gap-2 px-4 py-10 text-sm text-slate-500 md:px-0"><IconSpinner /> {t.features.loading}</div>
+          ) : open === null ? (
+            <FeatureMissing onBack={() => go(`${base}/features`)} onVersions={() => go(`${base}/versions`)} />
+          ) : featureView === 'code' ? (
+            <Workbench key={open.key} control={control} onDirty={onDirty} />
+          ) : featureView === 'data' ? (
+            <DataTab key={open.key} control={control} />
+          ) : featureView === 'logs' ? (
+            <LogsTab key={open.key} control={control} />
+          ) : (
+            <FeatureTab control={control} onNotes={() => setFeatureDialog('notes')} onRebase={() => setFeatureDialog('base')} />
+          )
+        ) : section === 'code' ? (
+          <Workbench control={control} onDirty={onDirty} />
+        ) : section === 'features' && !demo ? (
+          <FeaturesTab control={control} />
         ) : section === 'change' && !demo ? (
           <ChangeTab control={control} />
         ) : section === 'files' ? (
           <FilesTab control={control} />
+        ) : section === 'data' ? (
+          <DataTab control={control} />
         ) : section === 'versions' ? (
           <VersionsTab control={control} />
         ) : section === 'deployments' ? (
@@ -530,19 +812,24 @@ export function Editor({ theme }: Props) {
     </div>
 
       <Dialog
-        title={rejection?.version != null ? said.rejected(rejection.version) : said.refused}
+        title={rejection?.feature ? t.features.previewRejected : rejection?.version != null ? said.rejected(rejection.version) : said.refused}
         open={rejection !== null}
         onClose={() => setRejection(null)}
         footer={
           <>
-            {rejection?.version != null && (
+            {(rejection?.version != null || rejection?.feature) && (
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={() => {
-                  const version = rejection.version;
+                  const { version, feature } = rejection;
                   setRejection(null);
-                  control.edit(version);
+
+                  if (feature) {
+                    control.openFeature(feature, 'code');
+                  } else {
+                    control.edit(version);
+                  }
                 }}
               >
                 {said.openCode}
@@ -554,11 +841,60 @@ export function Editor({ theme }: Props) {
           </>
         }
       >
-        <p className="text-slate-600 dark:text-slate-400">{said.notCompiling}</p>
+        <p className="text-slate-600 dark:text-slate-400">{rejection?.feature ? t.features.previewNotCompiling : said.notCompiling}</p>
         <div className="max-h-72 overflow-y-auto border border-slate-200 dark:border-ink-800">
           <Diagnostics diagnostics={rejection?.diagnostics ?? []} state="idle" onSelect={() => undefined} />
         </div>
       </Dialog>
+
+      <NewFeatureDialog
+        control={control}
+        open={creating !== null}
+        base={creating?.base}
+        files={creating?.files}
+        onClose={() => setCreating(null)}
+        onCreated={(feature) => created(feature, creating?.files != null)}
+      />
+
+      {putting && (
+        <MergeDialog
+          control={control}
+          feature={putting}
+          open={merging !== null}
+          onClose={() => setMerging(null)}
+          onMerged={merged}
+          onRebase={() => {
+            setMerging(null);
+
+            // marked from the feature's own page, where the dialog for it is
+            if (putting.key === open?.key) {
+              setFeatureDialog('base');
+            } else {
+              control.openFeature(putting.key);
+            }
+          }}
+        />
+      )}
+
+      {open && (
+        <>
+          <NotesDialog control={control} feature={open} open={featureDialog === 'notes'} onClose={() => setFeatureDialog(null)} />
+          <BaseDialog control={control} feature={open} open={featureDialog === 'base'} onClose={() => setFeatureDialog(null)} />
+          <DeleteFeatureDialog
+            control={control}
+            feature={open}
+            open={featureDialog === 'delete'}
+            onClose={() => setFeatureDialog(null)}
+            onDeleted={() => {
+              setFeatureDialog(null);
+              toast(t.features.deleted(open.name));
+              onDirty(false);
+              navigate(`${base}/features`);
+              refresh().catch(() => undefined);
+            }}
+          />
+        </>
+      )}
 
       <RenameDialog
         open={renaming}
@@ -605,6 +941,132 @@ export function Editor({ theme }: Props) {
       </Dialog>
     </div>
     </SharedWordsContext.Provider>
+  );
+}
+
+/**
+ * The feature the page is opened on, in the sidebar: what it is called,
+ * where it can be tried, and the two things done with it - trying it, and
+ * putting it online. The rest is in its menu.
+ *
+ * Its edge and its name line up with the views listed underneath, which are
+ * the feature's own, so it reads as their heading.
+ */
+function FeatureCard({ feature, base, privateKey, previewing, unsaved, compact, onPreview, onPutOnline, onDialog, onStop, onBack }: {
+  feature: Feature;
+  base: string;
+  privateKey: string;
+  previewing: boolean;
+  /** Whether the code view holds something unsaved, which neither the preview nor putting it online would include. */
+  unsaved: boolean;
+  /** Whether the code is open below it, which has room for little else on a phone. */
+  compact: boolean;
+  onPreview: () => void;
+  onPutOnline: () => void;
+  onDialog: (dialog: 'notes' | 'base' | 'delete') => void;
+  onStop: () => void;
+  onBack: () => void;
+}) {
+  const said = useEditorT().features;
+  const preview = absoluteAddress(feature.previewPath);
+
+  return (
+    <div className="mt-4 border-l-2 border-accent-500 pl-3 dark:border-accent-400 md:-ml-3">
+      <Link
+        to={`${base}/features`}
+        onClick={(event) => { event.preventDefault(); onBack(); }}
+        className="text-xs text-slate-500 hover:text-slate-800 hover:underline dark:hover:text-slate-200"
+      >
+        ← {said.all}
+      </Link>
+
+      <div className="mt-1 flex items-start gap-1.5">
+        <span className="min-w-0 flex-1 break-words text-[15px] font-semibold leading-snug">{feature.name}</span>
+
+        <Menu label={said.actions} align="start">
+          {(close) => (
+            <>
+              <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); onDialog('notes'); }}>
+                {said.editNotes}
+              </button>
+              {/* up to date already, there is nothing to mark */}
+              {!feature.mergeable && (
+                <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); onDialog('base'); }}>
+                  {said.moveBase}
+                </button>
+              )}
+              <a role="menuitem" href={api.feature.zipUrl(privateKey, feature.key)} className={menuItem} onClick={close}>
+                {said.download}
+              </a>
+              {feature.online && (
+                <button type="button" role="menuitem" className={menuItem} onClick={() => { close(); onStop(); }}>
+                  {said.stopPreview}
+                </button>
+              )}
+              {menuRule}
+              <button type="button" role="menuitem" className={`${menuItem} text-red-500`} onClick={() => { close(); onDialog('delete'); }}>
+                {said.delete}
+              </button>
+            </>
+          )}
+        </Menu>
+      </div>
+
+      {/* which version it began from is nothing to the owner, until a newer one means it cannot go online as it is */}
+      {!feature.mergeable && (
+        <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400" title={said.behindTitle}>
+          {said.behind(feature.newest ?? feature.base)}
+        </p>
+      )}
+
+      <div className={compact ? 'hidden md:block' : ''}>
+        <div className="mt-2">
+          <Address url={preview} live={feature.online} primary={false} />
+        </div>
+
+        <div className="mt-3 grid gap-1.5">
+          {feature.current ? (
+            <a href={preview} target="_blank" rel="noreferrer" className="btn-ghost w-full" title={said.openPreviewTitle}>
+              <IconExternal />
+              {said.openPreview}
+            </a>
+          ) : (
+            <button type="button" onClick={onPreview} disabled={previewing || unsaved} className="btn-primary w-full">
+              {previewing ? <IconSpinner /> : <IconPlay />}
+              {feature.online ? said.updatePreview : said.deployPreview}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onPutOnline}
+            disabled={unsaved}
+            className={`${feature.current && feature.mergeable ? 'btn-primary' : 'btn-ghost'} w-full`}
+            title={feature.mergeable ? said.mergeTitleShort : said.behindTitle}
+          >
+            <IconPlay />
+            {said.mergeButton}
+          </button>
+          {unsaved && <p className="text-xs text-amber-700 dark:text-amber-400">{said.saveFirst}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A feature link that no longer leads anywhere: merged, deleted, or never there. */
+function FeatureMissing({ onBack, onVersions }: { onBack: () => void; onVersions: () => void }) {
+  const t = useEditorT();
+  const said = t.features;
+
+  return (
+    <div className="max-w-xl px-4 py-16 md:px-0">
+      <h1 className="text-lg font-semibold">{said.missingTitle}</h1>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{said.missingText}</p>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <button type="button" onClick={onVersions} className="btn-primary !px-4 !py-1.5 text-[13px]">{t.frame.sections.versions}</button>
+        <button type="button" onClick={onBack} className="btn-ghost !px-3 !py-1.5 text-[13px]">{said.all}</button>
+      </div>
+    </div>
   );
 }
 

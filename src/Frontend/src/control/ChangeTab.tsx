@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
-import { isActive, type AgentState, type AgentStep, type ChangeJob } from '../api';
+import { isActive, type AgentState, type AgentStep, type ChangeJob, type Feature } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Dialog } from '../components/Dialog';
 import {
@@ -11,9 +11,11 @@ import {
   IconCheck,
   IconChevronDown,
   IconDots,
+  IconDraft,
   IconExternal,
   IconEye,
   IconFolder,
+  IconHistory,
   IconInfo,
   IconLayers,
   IconList,
@@ -47,6 +49,12 @@ type Words = ReturnType<typeof useEditorT>['change'];
  * The change itself is followed by the frame (control/agent.ts), so this only
  * draws it: leaving the section does not stop anything, and coming back finds
  * it where it got to.
+ *
+ * The agent works in a feature - a draft, to the owner: a new one, or one
+ * the owner picks to go on with - so what it does is tried at the feature's
+ * own address before any visitor sees it. Told to put it online, it merges
+ * the feature into the next version once it works and deploys that; told
+ * not to, it leaves the draft for the owner to try and put online from here.
  */
 export function ChangeTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -60,6 +68,33 @@ export function ChangeTab({ control }: { control: Control }) {
 
   const [prompt, setPrompt] = useDraft(control.lambda.publicKey);
   const composer = useRef<HTMLTextAreaElement>(null);
+
+  // a feature asked for by the link - "ask the agent" on a feature - or the
+  // one the last change left open, which is what a next request builds on
+  const [params, setParams] = useSearchParams();
+  const open = (key?: string | null) => (key && control.features.some((f) => f.key === key) ? key : null);
+  const target = open(params.get('feature')) ?? open(job?.result?.feature) ?? null;
+
+  // a request the link suggests - bringing a draft up to date - goes into the
+  // box once, to be sent or changed; a reload does not put it back
+  const suggested = params.get('ask');
+
+  useEffect(() => {
+    if (!suggested) {
+      return;
+    }
+
+    setPrompt(suggested);
+    setParams((was) => {
+      const next = new URLSearchParams(was);
+      next.delete('ask');
+      return next;
+    }, { replace: true });
+
+    window.requestAnimationFrame(() => composer.current?.focus());
+    // the box takes what is typed into it; only a new suggestion replaces that
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggested]);
 
   // looking at the section is looking at how the last change ended
   const { seen } = agent;
@@ -118,12 +153,14 @@ export function ChangeTab({ control }: { control: Control }) {
 
         {!running && (
           <Composer
+            key={target ?? 'new'}
             control={control}
             state={state}
             prompt={prompt}
             onPrompt={setPrompt}
             field={composer}
             next={job != null}
+            target={target}
           />
         )}
 
@@ -138,7 +175,7 @@ export function ChangeTab({ control }: { control: Control }) {
 /** What happens after the button, for somebody who has not pressed it yet. */
 function HowItWorks() {
   const said = useEditorT().change;
-  const icons = [IconEye, IconPencil, IconPlay];
+  const icons = [IconEye, IconDraft, IconPlay];
 
   return (
     <ol className="grid gap-5 pt-2 sm:grid-cols-3">
@@ -226,6 +263,7 @@ function Composer({
   onPrompt,
   field,
   next,
+  target,
 }: {
   control: Control;
   state: AgentState;
@@ -234,11 +272,21 @@ function Composer({
   field: React.RefObject<HTMLTextAreaElement>;
   /** Whether this follows a change, which changes what the box asks. */
   next: boolean;
+  /** The feature to go on with, as the page suggests it; a new one when null. */
+  target: string | null;
 }) {
   const said = useEditorT().change;
   const language = useLanguage();
 
   const [online, setOnline] = useState(remembered);
+  const [picked, setWhere] = useState<string>(target ?? '');
+
+  const { features } = control;
+
+  // merged or deleted since it was picked: a new one, then
+  const where = features.some((f) => f.key === picked) ? picked : '';
+  const limit = control.summary?.limits.features ?? Infinity;
+  const full = features.length >= limit;
   const [model, setModel] = useState<'opus' | 'fable'>('opus');
   const [password, setPassword] = useState('');
   const [sending, setSending] = useState(false);
@@ -246,7 +294,8 @@ function Composer({
 
   const spent = state.left <= 0;
   const wanted = prompt.trim();
-  const ready = wanted.length >= 3 && !sending && !spent && (model === 'opus' || password.length > 0);
+  const room = where !== '' || !full;
+  const ready = wanted.length >= 3 && !sending && !spent && room && (model === 'opus' || password.length > 0);
 
   // the box grows with what is in it, up to a point, and the page scrolls after that
   useLayoutEffect(() => {
@@ -284,6 +333,7 @@ function Composer({
       model: model === 'opus' ? undefined : model,
       password: model === 'opus' ? undefined : password,
       language,
+      feature: where || undefined,
     });
 
     setSending(false);
@@ -306,9 +356,30 @@ function Composer({
 
   return (
     <div>
-      <label htmlFor="change-prompt" className="mb-2 block text-[15px] font-medium">
-        {next ? said.placeholderNext : said.label}
-      </label>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+        <label htmlFor="change-prompt" className="block text-[15px] font-medium">
+          {next ? said.placeholderNext : said.label}
+        </label>
+
+        {/* where it works: a draft of its own, or one to go on with - which
+            is only a question once there is one to go on with */}
+        {features.length > 0 && (
+          <label className="flex items-center gap-2 text-[13px] text-slate-600 dark:text-slate-400" title={said.whereTitle}>
+            <IconDraft className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            {said.where}
+            <select
+              value={where}
+              onChange={(event) => setWhere(event.target.value)}
+              className="max-w-[14rem] truncate rounded border border-slate-200 bg-transparent px-1.5 py-0.5 text-[13px] dark:border-ink-800"
+            >
+              <option value="" disabled={full}>{said.newFeature}</option>
+              {features.map((feature) => (
+                <option key={feature.key} value={feature.key}>{feature.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
 
       <div className="surface focus-within:border-accent-500 focus-within:ring-1 focus-within:ring-accent-500 dark:focus-within:border-accent-400 dark:focus-within:ring-accent-400">
         <textarea
@@ -389,6 +460,10 @@ function Composer({
         {model === 'fable' && ` ${said.fable}`}
       </p>
 
+      {!room && (
+        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">{said.full(limit)}</p>
+      )}
+
       {spent && (
         <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
           {said.noneLeft(reset.toLocaleTimeString(tagOf(language), { hour: '2-digit', minute: '2-digit' }))}
@@ -428,6 +503,7 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const said = useEditorT().change;
   const shared = useShared();
   const running = isActive(job);
+  const given = job.feature ? control.features.find((f) => f.key === job.feature) : undefined;
   const [stopping, setStopping] = useState(false);
   const [halting, setHalting] = useState(false);
   const [stopError, setStopError] = useState<string | null>(null);
@@ -447,6 +523,7 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
           <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{said.asked}</div>
           <p className="mt-1 whitespace-pre-line break-words text-[15px] leading-relaxed">{job.prompt}</p>
           <p className="mt-1.5 text-xs text-slate-500">
+            {given && `${said.inFeature(given.name)} · `}
             {job.deploy ? said.goesOnline : said.review}
             {job.model === 'fable' && ' · Fable 5.1'}
             {!running && job.seconds > 0 && ` · ${said.took(span(job.seconds, shared))}`}
@@ -588,12 +665,14 @@ const TONES: Record<Tone, { box: string; icon: string }> = {
  * saved, which went online, whether it compiles - rather than off what the
  * model said, because a model says it deployed things it never deployed.
  */
-function verdict(job: ChangeJob, active: number | undefined, said: Words): { tone: Tone; headline: string; notes: string[] } {
+function verdict(job: ChangeJob, active: number | undefined, feature: string | null, said: Words): { tone: Tone; headline: string; notes: string[] } {
   const result = job.result;
   const version = result?.version ?? undefined;
 
   if (job.state === 'cancelled') {
-    return { tone: 'quiet', headline: said.results.stopped, notes: version != null ? [said.results.stoppedSaved(version)] : [] };
+    const kept = version != null ? [said.results.stoppedSaved(version)] : feature != null ? [said.results.stoppedFeature(feature)] : [];
+
+    return { tone: 'quiet', headline: said.results.stopped, notes: kept };
   }
 
   if (!result) {
@@ -602,6 +681,24 @@ function verdict(job: ChangeJob, active: number | undefined, said: Words): { ton
 
   if (result.reason === 'unauthorised') {
     return { tone: 'bad', headline: said.results.failed, notes: [said.results.unauthorised] };
+  }
+
+  // cut short after it had saved something: what is there is as far as it got
+  const cut = result.reason === 'timeout' ? [said.results.timedOut] : result.reason === 'turns' ? [said.results.usedUp] : [];
+
+  // left in a draft rather than put online: asked to, or not done by the end
+  if (result.ok && version == null && feature != null) {
+    const merged = job.deploy ? [said.results.notMerged] : [];
+
+    if (result.compiles === false) {
+      return { tone: 'warn', headline: said.results.featureBroken(feature), notes: [said.results.previewStill, ...merged, ...cut] };
+    }
+
+    return {
+      tone: 'ready',
+      headline: said.results.feature(feature),
+      notes: [result.preview ? said.results.tryIt : said.results.previewOffline, ...merged, ...cut],
+    };
   }
 
   if (!result.ok || version == null) {
@@ -620,8 +717,7 @@ function verdict(job: ChangeJob, active: number | undefined, said: Words): { ton
     return { tone: 'bad', headline: said.results.failed, notes: result.error ? [result.error] : [] };
   }
 
-  // cut short after it had saved something: what is there is as far as it got
-  const timedOut = result.reason === 'timeout' ? [said.results.timedOut] : result.reason === 'turns' ? [said.results.usedUp] : [];
+  const timedOut = cut;
 
   if (result.online != null) {
     return { tone: 'good', headline: said.results.online(result.online), notes: timedOut };
@@ -645,11 +741,23 @@ function verdict(job: ChangeJob, active: number | undefined, said: Words): { ton
 }
 
 function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; onAgain: () => void }) {
-  const said = useEditorT().change;
+  const t = useEditorT();
+  const said = t.change;
   const { lambda, busy } = control;
   const result = job.result;
 
-  const { tone, headline, notes } = verdict(job, lambda.activeVersion, said);
+  // the feature it left the change in, as it is now: merged or deleted since,
+  // there is nothing left to open
+  const left: Feature | undefined = result?.feature ? control.features.find((f) => f.key === result.feature) : undefined;
+  const name = left?.name ?? result?.featureName ?? null;
+
+  // the name it was given, or - never said - the start of its key
+  const judged = verdict(job, lambda.activeVersion, result?.feature ? name ?? result.feature.slice(0, 8) : null, said);
+
+  // the draft it left is gone since - put online, or discarded - so there is
+  // nothing left to try, and what the verdict says about it is history
+  const gone = result?.feature != null && !left && result.version == null && (result.ok || job.state === 'cancelled');
+  const { tone, headline, notes } = gone ? { ...judged, tone: 'quiet' as Tone, notes: [t.features.missingText] } : judged;
   const look = TONES[tone];
 
   const version = result?.version ?? undefined;
@@ -662,7 +770,7 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const live = online != null && lambda.activeVersion === online;
   const deployable = version != null && online == null && result?.compiles !== false && lambda.activeVersion !== version;
   const undoable = live && before != null && before !== online;
-  const retry = !result?.ok || version == null;
+  const retry = !result?.ok || (version == null && !left && !gone);
 
   const Icon = tone === 'good' ? IconCheck : tone === 'ready' ? IconCheck : tone === 'quiet' ? IconInfo : IconAlert;
 
@@ -691,6 +799,28 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
         )}
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          {/* left as a draft: try it, and put it online from here once it is right */}
+          {left?.online && (
+            <a href={absoluteAddress(left.previewPath)} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
+              <IconExternal className="h-3.5 w-3.5" />
+              {said.openPreview}
+            </a>
+          )}
+
+          {left && result?.compiles !== false && (
+            <button type="button" onClick={() => control.putOnline(left.key)} className="btn-ghost !px-3 !py-1.5 text-[13px]" title={t.features.mergeTitleShort}>
+              <IconPlay className="h-3.5 w-3.5" />
+              {t.features.mergeButton}
+            </button>
+          )}
+
+          {left && (
+            <button type="button" onClick={() => control.openFeature(left.key)} className={`${left.online ? 'btn-ghost !px-3' : 'btn-primary !px-4'} !py-1.5 text-[13px]`}>
+              <IconDraft className="h-3.5 w-3.5" />
+              {said.openFeature}
+            </button>
+          )}
+
           {deployable && (
             <button type="button" onClick={() => control.deploy(version)} disabled={busy !== null} className="btn-primary !px-4 !py-1.5 text-[13px]">
               {busy === 'deploy' ? <IconSpinner className="h-3.5 w-3.5" /> : <IconPlay className="h-3.5 w-3.5" />}
@@ -818,6 +948,10 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   upload: IconUpload,
   delete: IconTrash,
   list: IconFolder,
+  feature: IconDraft,
+  update: IconHistory,
+  merge: IconPlay,
+  discard: IconTrash,
   other: IconDots,
 };
 
@@ -877,11 +1011,19 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
     case 'demos':
       return <>{words.demos}</>;
     case 'read':
-      return <>{step.files?.length ? words.readFile(<File name={step.files[0]} />) : words.read}</>;
+      return <>{step.files?.length ? words.readFile(<File name={step.files[0]} />) : step.preview ? words.readFeature : words.read}</>;
     case 'logs':
-      return <>{words.logs}</>;
+      return <>{step.preview ? words.logsPreview : words.logs}</>;
     case 'create':
       return <>{words.create}</>;
+    case 'feature':
+      return <>{step.done && step.feature ? words.featureStarted(<strong className="font-medium">{step.feature}</strong>) : words.feature}</>;
+    case 'update':
+      return <>{step.version != null ? words.rebase(step.version) : words.update}</>;
+    case 'merge':
+      return <>{words.merge}</>;
+    case 'discard':
+      return <>{words.discard}</>;
     case 'write': {
       const files = step.files ?? [];
       const removed = step.removed ?? [];
@@ -897,7 +1039,7 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
     case 'check':
       return <>{words.check}</>;
     case 'deploy':
-      return <>{step.version != null && !step.done ? words.deployVersion(step.version) : words.deploy}</>;
+      return <>{step.preview ? words.deployPreview : step.version != null && !step.done ? words.deployVersion(step.version) : words.deploy}</>;
     case 'upload':
       return <>{words.upload(<File name={step.path ?? ''} />)}</>;
     case 'delete':
@@ -939,12 +1081,21 @@ function Marks({ step, said }: { step: AgentStep; said: Words }) {
     shown.push(<Mark key="version" tone="plain">{marks.version(step.version)}</Mark>);
   }
 
+  // a merge makes a version; which one a draft began from is nothing to the owner
+  if (step.version != null && step.kind === 'merge' && !step.online) {
+    shown.push(<Mark key="merged" tone="good">{marks.version(step.version)}</Mark>);
+  }
+
   if (step.errors != null && step.errors > 0) {
     shown.push(<Mark key="errors" tone="bad">{marks.errors(step.errors)}</Mark>);
   } else if (step.online) {
     shown.push(
       <Mark key="online" tone="good">
-        {step.kind === 'deploy' && step.version != null ? `${marks.version(step.version)} ${marks.online}` : marks.online}
+        {step.preview && step.kind !== 'merge'
+          ? marks.previewOnline
+          : (step.kind === 'deploy' || step.kind === 'merge') && step.version != null
+            ? `${marks.version(step.version)} ${marks.online}`
+            : marks.online}
       </Mark>,
     );
   } else if (step.errors === 0) {

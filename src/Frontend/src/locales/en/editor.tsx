@@ -18,9 +18,11 @@ export const editor = {
     sections: {
       overview: 'Overview',
       change: 'Change',
+      features: 'Drafts',
       showcase: 'Showcase',
       domain: 'Domain',
       files: 'Files',
+      data: 'Data',
       versions: 'Versions',
       deployments: 'Deployments',
       stats: 'Stats',
@@ -68,7 +70,7 @@ export const editor = {
     deleteForGood: 'Delete for good',
     deleteFailed: 'The lambda could not be deleted.',
     deleteText: (key: Node) => (
-      <>Every version, its files, its history and the address {key} go with it. This cannot be undone.</>
+      <>Every version, all of its data, its history and the address {key} go with it. This cannot be undone.</>
     ),
     openInTab: 'Open in a new tab',
     open: (address: string) => `Open ${address} in a new tab`,
@@ -85,7 +87,7 @@ export const editor = {
 
   /** The agent of the installation, changing the lambda for its owner. */
   change: {
-    hint: 'Say what should be different, and the agent running on this server does it: it reads the code, makes the change, checks that it compiles and puts it online. Every change is a new version, so the one before is always a click away.',
+    hint: 'Say what should be different, and the agent running on this server does it while you watch. It works on a draft - a copy of your app with an address of its own - so your visitors see nothing until it works. Then it goes online, or stays a draft for you to try first.',
     reading: 'Asking the agent…',
     readFailed: 'The agent could not be asked.',
     label: 'What should be different?',
@@ -94,8 +96,13 @@ export const editor = {
     send: 'Make the change',
     sending: 'Asking…',
     goOnline: 'Put it online when it is done',
-    goOnlineOn: 'It goes online once it compiles. Until then, what is online now stays.',
-    goOnlineOff: 'It is saved as a new version, and you deploy it once you have looked at it.',
+    goOnlineOn: 'Once it works, it goes online as a new version. Until then, your visitors keep seeing what is online now.',
+    goOnlineOff: 'It stays a draft: try it at its own address, and put it online when you are happy with it.',
+    where: 'Work on',
+    whereTitle: 'A new draft, or one to go on with',
+    newFeature: 'A new draft',
+    full: (limit: number) =>
+      `There are ${limit} drafts already, which is all there may be. Pick one to go on with, or put one online or discard it first.`,
     password: 'Password',
     fable: 'Fable takes its time: no clock and no step limit, in a lane of its own.',
     left: (left: number, perDay: number) => `${left} of ${perDay} left today`,
@@ -105,12 +112,13 @@ export const editor = {
     fixLog: 'Fix the errors in the log',
     how: [
       { title: 'It reads what is there', text: 'The code, and what earlier versions were asked for - so what works keeps working.' },
-      { title: 'It makes the change', text: 'And fixes whatever does not compile, while you watch every step.' },
-      { title: 'It puts it online', text: 'As a new version. The one before stays a click away.' },
+      { title: 'It tries it on a draft', text: 'A copy of your app with an address of its own, so nothing changes for your visitors while it works.' },
+      { title: 'It puts it online', text: 'As a new version - or leaves the draft for you to try first. The version before stays a click away.' },
     ],
     asked: 'You asked',
     goesOnline: 'goes online when done',
-    review: 'saved for you to look at first',
+    review: 'stays a draft for you to try',
+    inFeature: (name: string) => `in the draft “${name}”`,
     queued: (ahead: number) =>
       ahead === 1 ? 'Waiting - one job is ahead of this one.' : `Waiting - ${ahead} jobs are ahead of this one.`,
     starting: 'Starting…',
@@ -120,7 +128,7 @@ export const editor = {
     stopping: 'Stopping…',
     stopTitle: 'Stop this change?',
     stopText:
-      'What it has saved so far stays as a version. What is online stays online, unless it has already put a new version there.',
+      'What it has done so far stays in its draft. What is online stays online, unless it has already put the change there.',
     keepGoing: 'Keep going',
     stopIt: 'Stop it',
     log: 'What it did',
@@ -131,13 +139,22 @@ export const editor = {
       read: 'Reading the code',
       readFile: (file: Node) => <>Reading {file}</>,
       logs: 'Reading the log',
+      logsPreview: 'Reading what the draft logged',
+      readFeature: 'Reading the draft',
       create: 'Creating a lambda',
+      feature: 'Starting a draft',
+      featureStarted: (name: Node) => <>Started the draft {name}</>,
+      update: 'Updating the draft\'s notes',
+      rebase: (_version: number) => 'Marking the draft as up to date',
+      merge: 'Putting the draft online',
+      discard: 'Discarding a draft',
       write: (files: Node) => <>Changing {files}</>,
       writeAll: (files: Node) => <>Writing {files}</>,
       removing: (files: Node) => <>, removing {files}</>,
       more: (count: number) => `+${count} more`,
       check: 'Compiling',
       deploy: 'Putting it online',
+      deployPreview: 'Putting the preview online',
       deployVersion: (version: number) => `Putting version ${version} online`,
       upload: (path: Node) => <>Storing {path}</>,
       delete: (path: Node) => <>Removing {path}</>,
@@ -147,6 +164,7 @@ export const editor = {
     marks: {
       version: (version: number) => `v${version}`,
       online: 'online',
+      previewOnline: 'preview online',
       compiles: 'compiles',
       errors: (count: number) => (count === 1 ? '1 error' : `${count} errors`),
       problems: (count: number) => (count === 1 ? '1 error' : `${count} errors`),
@@ -165,6 +183,13 @@ export const editor = {
       unchanged: 'Nothing was changed',
       stopped: 'Stopped',
       stoppedSaved: (version: number) => `Version ${version} was saved before that.`,
+      stoppedFeature: (name: string) => `What it did until then is in the draft “${name}”.`,
+      feature: (name: string) => `Ready to try in the draft “${name}”`,
+      featureBroken: (name: string) => `The draft “${name}” does not work yet`,
+      tryIt: 'Try it at its own address. When you are happy with it, put it online.',
+      previewOffline: 'Its preview is not running. Start it from the draft to try it.',
+      previewStill: 'It does not compile, so its preview still shows the last version that did.',
+      notMerged: 'Nothing new went online.',
       failed: 'The change did not go through',
       timeout:
         'It ran out of time before it changed anything. Ask for something smaller, or ask again - it gets further some runs than others.',
@@ -178,6 +203,8 @@ export const editor = {
     },
     seeChanges: 'See what changed',
     open: 'Open it',
+    openPreview: 'Try it',
+    openFeature: 'Open the draft',
     deploy: (version: number) => `Deploy version ${version}`,
     undo: (version: number) => `Put version ${version} back`,
     undoTitle: 'Undo the change: the version that was online before goes back online. The new one stays in the history.',
@@ -185,6 +212,7 @@ export const editor = {
     toast: {
       online: (version: number) => `The change is online as version ${version}.`,
       saved: (version: number) => `The change is saved as version ${version}.`,
+      feature: (name: string) => `The change is ready to try in the draft “${name}”.`,
       unchanged: 'The agent did not change anything.',
       failed: 'The change did not go through.',
       stopped: 'The change was stopped.',
@@ -230,7 +258,16 @@ export const editor = {
     notOnline: 'not online yet',
     wanted: 'What was wanted',
     noVersions: 'No versions yet.',
+    inProgress: 'Drafts',
+    allFeatures: 'All drafts',
+    previewOnline: 'Its preview is running',
+    previewOffline: 'Its preview is not running',
+    behind: 'out of date',
     storage: 'Storage',
+    inVersion: (version: number) => `In version ${version}`,
+    noVersion: 'In the version',
+    inData: 'In the data',
+    sharedByAll: 'Shared by every version',
     browse: 'Browse',
     code: 'Code',
     codeWhy: 'C# is compiled, never served.',
@@ -239,6 +276,8 @@ export const editor = {
     assetsPublic: 'Public: the code serves them.',
     assetsPrivate: 'Not served by the code.',
     data: 'Data',
+    workspace: 'Workspace',
+    workspaceOff: 'switched off',
     dataPublic: 'Public: the code serves the workspace.',
     dataPrivate: 'Private to the lambda.',
   },
@@ -246,9 +285,15 @@ export const editor = {
   files: {
     hint: (b: (text: string) => Node) => (
       <>
-        {b('Code')} is compiled and never served. {b('Assets')} - pages, styles, images - are saved with each version and
-        are public if the code serves them. {b('Data')} is what the lambda writes while it runs; it is not part of any
-        version, and is public only if the code serves it.
+        The files of one version - the program. {b('Code')} is compiled and never served. {b('Assets')} - pages,
+        scripts, styles, images - are saved with the code, deployed and rolled back with it, and are public if the code
+        serves them. What the lambda keeps while it runs is not here: that is its {b('Data')}.
+      </>
+    ),
+    scope: (version: number, data: (text: string) => Node) => (
+      <>
+        These belong to version {version} and change with it. What the lambda keeps while it runs is the same for every
+        version, and is under {data('Data')}.
       </>
     ),
     edit: 'Edit this version',
@@ -257,7 +302,6 @@ export const editor = {
       `Version ${version}${online ? ', online' : newest ? ', newest' : ''}`,
     optionOnline: ' (online)',
     readFailed: 'That version could not be read.',
-    dataFailed: 'The data could not be read.',
     noVersion: 'There is no version to show yet.',
     label: 'Files',
     code: 'Code',
@@ -271,7 +315,7 @@ export const editor = {
     assetsPrivate: 'Saved with the code, but this version does not serve them.',
     noAssets: 'None in this version.',
     data: 'Data',
-    dataPublic: 'Public: this version serves it with Workspace.',
+    dataPublic: 'Public: the code online serves it with Workspace.',
     dataPrivate: 'Private to the lambda. Not part of any version.',
     uploadFailed: (path: string) => `${path} could not be uploaded.`,
     deleteFolder: (path: string, held: number) =>
@@ -301,9 +345,181 @@ export const editor = {
     notText: 'Not text. Download it to look inside.',
   },
 
+  /** The data of a lambda: what it keeps rather than what it is. */
+  data: {
+    hint:
+      'Data is what the lambda keeps while it runs. It belongs to the lambda, not to a version: every version reads and writes the same data, and nothing you do with versions changes it. It goes when the lambda is deleted, or when you switch that kind of data off.',
+    facts: [
+      ['Shared by every version', 'Whichever version is online reads and writes the same data.'],
+      ['Kept when you deploy', 'Deploying or rolling back never touches it.'],
+      ['Yours to switch', 'Each kind is on only while you want it. Switching one off deletes what it holds.'],
+    ] as [string, string][],
+    featureHint:
+      'A copy of your app\'s data, just for this draft: its preview reads and writes only this copy, so trying things here never touches the real data. It goes when the draft does.',
+    recopy: 'Reset the test data',
+    recopyTitle: 'Replace it with a fresh copy of your app\'s data',
+    recopyConfirm: 'Reset the test data?',
+    recopyText:
+      'Everything the preview wrote into it is replaced by a fresh copy of your app\'s data. Your app\'s own data is not touched.',
+    keepCopy: 'Keep it',
+    recopied: 'The test data is fresh again.',
+    recopyFailed: 'The test data could not be reset.',
+    copyContents: 'What the test data holds',
+    kinds: {
+      workspace: {
+        name: 'Workspace',
+        what: 'Files the lambda reads and writes while it runs: uploads, records, anything it keeps.',
+      },
+    } as Record<string, { name: string; what: string }>,
+    on: 'On',
+    off: 'Off',
+    byDefault: 'On by default',
+    usage: (items: string, used: string, of: string) => `${items} · ${used} of ${of}`,
+    offText: 'Switched off. It holds nothing, and code that uses it fails until it is switched on again.',
+    switchLabel: (name: string) => `${name} on or off`,
+    confirmOff: (name: string) => `Switch the ${name.toLowerCase()} off?`,
+    confirmText: (items: string, size: string) =>
+      `Everything in it - ${items}, ${size} - is deleted for good. This cannot be undone.`,
+    confirmEmpty: 'It is empty, so nothing is lost.',
+    inUse: 'The version online uses it, so it will fail where it does until you switch it on again.',
+    deleteAndOff: 'Switch off and delete',
+    keep: 'Keep it',
+    switchedOn: (name: string) => `The ${name.toLowerCase()} is on. The lambda can use it from its next request.`,
+    switchedOff: (name: string) => `The ${name.toLowerCase()} is off, and what it held is deleted.`,
+    switchFailed: 'That could not be switched.',
+    readFailed: 'The data could not be read.',
+    demo: 'A demo: its data is there to be read, not changed.',
+    contents: 'What the workspace holds',
+    browse: 'Files',
+    offBrowse: 'The workspace is off, so there are no files to show.',
+  },
+
+  /**
+   * Drafts - features, to the code: a copy of the lambda a change is tried on,
+   * put online once it is right. Said without merging, bases or branches,
+   * since the people reading it built an app, not a repository.
+   */
+  features: {
+    hint:
+      'A draft is a copy of your app to try a change on before anybody sees it, with an address and test data of its own. Put it online once it is right; until then, your visitors keep getting what is online now.',
+    newFeature: 'New draft',
+    full: (limit: number) => `There are ${limit} drafts already, which is all there may be. Put one online or discard it first.`,
+    emptyTitle: 'No drafts',
+    emptyText:
+      'A draft is a copy of your app to try a change on before it goes online. When the agent leaves a change for you to try, you find it here.',
+    start: 'New draft',
+    askAgentNew: 'Ask the agent for a change',
+    noChange: 'Nothing said about what it changes yet',
+    behindTitle: 'Your app changed since this draft began',
+    behind: (_newest: number) => 'out of date',
+    previewOnline: 'preview running',
+    previewOutdated: 'preview shows an earlier save',
+    previewOffline: 'preview not running',
+    changed: 'changed',
+    openPreview: 'Try it',
+    openPreviewTitle: 'Open its preview in a new tab',
+    count: (open: number, limit: number) => `${open} of ${limit} drafts`,
+    loading: 'Loading the draft…',
+    readFailed: 'The draft could not be read.',
+
+    newTitle: 'New draft',
+    newText:
+      'A copy of your app and its data, with an address of its own. Change it and try it there - your visitors see nothing of it until you put it online.',
+    newTextFiles:
+      'What you typed goes into the draft instead of becoming a version, so you can try it at its own address before it goes online.',
+    name: 'Name',
+    namePlaceholder: 'Leaderboard',
+    wanted: 'What should it do?',
+    wantedPlaceholder: 'Optional. Keep the ten best scores and show them after every game.',
+    olderBase: (newest: number) =>
+      `This starts from an older version, so it is out of date from the start: before it can go online, what changed up to version ${newest} has to be brought in.`,
+    create: 'Start the draft',
+    createFailed: 'The draft could not be started.',
+    retry: 'Try again',
+    madeNotSaved: (name: string) =>
+      `The draft “${name}” is started, but what you typed could not be put into it yet. Try again, or close this and find it under Drafts.`,
+    created: (name: string) => `The draft “${name}” is started.`,
+    cancel: 'Cancel',
+
+    featureHint:
+      'A copy of your app to try this change on. Its preview has an address and test data of its own, so your visitors see none of it until you put it online.',
+    askAgent: 'Ask the agent',
+    askCatchUp: 'Ask the agent to bring it up to date',
+    catchUp: 'Bring this draft up to date with the newest version of the app, and keep what it changes.',
+    editCode: 'Edit the code',
+    deployPreview: 'Start the preview',
+    updatePreview: 'Update the preview',
+    previewDeployed: 'The preview is running.',
+    previewFailed: 'The preview could not be started.',
+    previewStopped: 'The preview is stopped.',
+    previewRejected: 'The preview did not change',
+    previewNotCompiling: 'It does not compile, so the preview still shows the last version that did.',
+    started: 'Started',
+    changes: (_version: number) => 'Changed files',
+    noChanges: (_version: number) => 'Nothing is changed yet.',
+    editNotes: 'Name and notes',
+    what: 'What does it change?',
+    whatPlaceholder: 'Adds a leaderboard that keeps the ten best scores',
+    missed: (_from: number, _to: number) => 'What changed in your app since it began',
+    missedNothing: 'Nothing in the files.',
+
+    behindText: (_base: number, newest: number) =>
+      `Version ${newest} of your app was saved after this draft began. Putting the draft online now would undo what that changed, so it has to be brought up to date first - the agent can do that for you.`,
+    moveBase: 'Mark as up to date',
+    close: 'Close',
+    mergeTitle: (name: string) => `Put “${name}” online`,
+    mergeTitleShort: 'Make it the new version of your app, and put it online',
+    leaks: (path: string, files: string) =>
+      `${files} link to ${path}, which is your live app. From the preview, those links read and change its real data instead of the test data. Ask the agent to link without that part ("api/items").`,
+    mergeButton: 'Put online',
+    saveFirst: 'Save the code first: the preview and putting it online use what is saved.',
+    mergeAndDeploy: (_version: number) => 'Put online',
+    mergeText: (version: number) =>
+      `It becomes version ${version} of your app and goes online. Your app's data stays as it is.`,
+    deployTooNote: (active: number) => `Version ${active} stays a click away in the versions.`,
+    deployTooOffline: 'Your app is offline now; this puts it online.',
+    notCompiling: 'It does not compile, so it did not go online. Fix it in the draft first.',
+    mergeFailed: 'The draft could not be put online.',
+    merged: (version: number | string) => `Saved as version ${version}.`,
+    mergedOnline: (version: number | string) => `Version ${version} is online.`,
+
+    notesTitle: 'Name and notes',
+    save: 'Save',
+    saveFailed: 'That could not be saved.',
+
+    baseTitle: 'Mark it as up to date?',
+    baseText: (_base: number) =>
+      'Only a draft that holds what the newest version changed can go online without undoing it. If those changes are in this draft now - brought in by you or by the agent - mark it as up to date.',
+    moveTo: (_version: number) => 'Mark as up to date',
+    baseWarning: 'Nothing checks this. If the changes are not in the draft, putting it online undoes them.',
+
+    deleteTitle: (name: string) => `Discard “${name}”?`,
+    deleteText:
+      'Its code, its preview and its test data are deleted for good. Your app and its versions are not touched.',
+    keep: 'Keep it',
+    deleteForGood: 'Discard',
+    deleteFailed: 'The draft could not be discarded.',
+    deleted: (name: string) => `The draft “${name}” is discarded.`,
+
+    all: 'All drafts',
+    actions: 'More for this draft',
+    download: 'Download as a zip',
+    stopPreview: 'Stop the preview',
+    delete: 'Discard this draft',
+    viewsLabel: 'The draft',
+    views: {
+      overview: 'Draft',
+      code: 'Code',
+      data: 'Test data',
+      logs: 'Logs',
+    },
+    missingTitle: 'This draft is not there any more',
+    missingText: 'It was put online or discarded. The versions show what became of it.',
+  },
+
   versions: {
     hint: (limit: number) =>
-      `Each version keeps what was asked for and what it changed, where whoever wrote it said so. The oldest are removed once there are more than ${limit}; the one online never is.`,
+      `A version is your app as it was saved - its code and its assets - and never changes afterwards, so any of them can be compared with and put back online exactly as it was. Each keeps what was asked for and what it changed. The oldest are removed once there are more than ${limit}; the one online never is.`,
     none: 'No versions yet.',
     noDescription: 'No description',
     online: 'online',
@@ -318,6 +534,8 @@ export const editor = {
     status: { added: 'added', removed: 'removed', changed: 'changed', same: 'same' } as Record<string, string>,
     browse: 'Browse its files',
     edit: 'Edit from here',
+    feature: 'Start a draft from here',
+    featureTitle: 'Try a change on a copy of this version, without touching what is online',
     binary: 'Not text, so there are no lines to compare.',
     tooLarge: 'Too large to compare line by line.',
   },
@@ -385,6 +603,11 @@ export const editor = {
       'Requests, what the lambda printed and what went wrong, as it happens.' +
       (capturing ? '' : ' This installation does not keep what lambdas print, so only requests and errors appear.') +
       " Held in memory and shared with every lambda here, so it reaches back minutes to hours, and is empty after a restart. Visitors' addresses are not shown.",
+    featureHint: (capturing: boolean) =>
+      'What the preview of this draft answered, printed and threw, as it happens.' +
+      (capturing ? '' : ' This installation does not keep what lambdas print, so only requests and errors appear.') +
+      " Kept apart from your app's own log. Held in memory, so it reaches back minutes to hours.",
+    nothingPreview: "Nothing yet. Open the draft's preview and its requests appear here.",
     search: 'Search',
     searchLabel: 'Search the log',
     resume: 'Show new lines as they come',
@@ -529,12 +752,21 @@ export const editor = {
     notYet: 'It does not compile yet.',
     checkFailed: 'The code could not be checked.',
     saved: (version: number | undefined) => `Saved as version ${version}.`,
+    featureSaved: 'Saved in the draft.',
+    featureLoadFailed: 'The draft could not be loaded.',
+    previewOnline: 'Saved. Its preview shows it now.',
+    previewRefused: 'Saved, but it does not compile yet, so the preview still shows the last version that did. See what the compiler said below.',
     isOnline: (version: number | undefined) => `Version ${version} is online.`,
     notOnline: 'It did not go online. See what the compiler said below.',
     failed: 'That did not work.',
     unchanged: 'Nothing has changed since the last save.',
     demo: 'A demo, so everything here is read only. Create a lambda of your own from it to change it. ',
-    edit: 'Edit the code by hand. Saving makes a new version and leaves what is online alone; deploying puts it online. ',
+    edit: 'Edit the code by hand. Saving makes a new version and leaves what is online alone; deploying puts it online. To try a change first, start a draft. ',
+    editFeature:
+      'The code of this draft. Saving keeps it in the draft and shows it at the draft\'s own address; your visitors see nothing of it until you put the draft online. ',
+    inFeature: (name: string) => `in “${name}”`,
+    changedElsewhere: 'This draft was saved elsewhere since you opened it - by the agent, perhaps. Load what is saved before saving here; your changes would not be saved over it.',
+    readAgain: 'Load what is saved',
     files: (entry: Node, cs: Node) => (
       <>
         {entry} returns what gets served, other {cs} files hold types, and any other file is served as it is. Ctrl-S
@@ -545,9 +777,18 @@ export const editor = {
     check: 'Check',
     save: 'Save',
     deploy: 'Deploy',
+    deployPreviewTitle: 'Save, and show it at the draft\'s own address',
     binary: (size: number) => `Not text, so there is nothing to edit. It is served as it is and weighs ${size} kB.`,
     saveAndDeploy: 'Save and deploy',
     saveVersion: 'Save a new version',
+    fromOlder: (version: number, newest: number) =>
+      `This starts from version ${version}, and version ${newest} is newer. Saving makes it the newest version, without what came after version ${version}.`,
+    featureInstead: (start: (text: string) => Node) => (
+      <>
+        Want to try it first? {start('Save it as a draft instead')}: it gets an address of its own, and nothing goes online
+        until you say so.
+      </>
+    ),
     cancel: 'Cancel',
     what: 'What does it change? Optional - it is shown in the history.',
     placeholder: 'Adds a contact form',

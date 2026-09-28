@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'İlk lambdanız',
     editor: 'Kontrol paneli',
     why: 'Nedenini yazmak',
+    features: 'Güvenle değiştirmek',
     files: 'Birden fazla dosya',
     page: 'Sayfa sunmak',
     spa: 'Adım adım bir frontend',
@@ -59,9 +60,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Editör anahtarını bir ajana verin ve ne yapacağını söyleyin. Ajan yeni sürümleri {k.link('/#agents', 'MCP')}{' '}
-        üzerinden yazar. Ya da {k.b('Kod')} bölümünü açıp kendiniz yazın: {k.b('Kontrol et')} hiçbir şey kaydetmeden
-        derler ve derleyicinin ne dediğini dosya ve satırıyla gösterir.
+        Editör anahtarını bir ajana verin ve ne yapacağını söyleyin. Ajan {k.link('/#agents', 'MCP')} üzerinden
+        yeni sürümler yazar. Ya da {k.b('Kod')} bölümünü açıp kendiniz yazın:{' '}
+        {k.b('Kontrol et')} hiçbir şey kaydetmeden derler ve derleyicinin ne dediğini dosya ve satırıyla gösterir.
       </>
     ),
     (k) => (
@@ -76,7 +77,7 @@ export const guide: Messages['guide'] = {
     <>
       Editör linki bir metin kutusu değil, bir kontrol paneli açar. Buradaki kodun çoğunu ajanlar yazar, bu yüzden
       ekranda ilk gördüğünüz şey lambdanızın durumudur. Kenar çubuğunda lambdanın kendisi (yayında olup olmadığı,
-      adresi ve yayına girmeyi bekleyen daha yeni bir sürüm varsa bir düğme) ve bölümleri yer alır. Adresi değiştirmek
+      adresi ve daha yeni bir sürüm yayına alınmayı bekliyorsa bir düğme) ve bölümleri yer alır. Adresi değiştirmek
       ya da lambdayı silmek gibi nadiren yapılan işler, oradaki {k.b('⋯')} menüsündedir.
     </>
   ),
@@ -86,14 +87,16 @@ export const guide: Messages['guide'] = {
       'Değiştir',
       (k) => (
         <>
-          Neyin farklı olması gerektiğini yazın, gerisini bu sunucudaki ajan siz izlerken halleder. Kodu okur, değiştirir,
-          derlendiğini kontrol eder ve yeni bir sürüm olarak yayına alır. Önce kendiniz bakmak isterseniz{' '}
-          {k.b('Bitince yayına al')} seçeneğini kapatın.
+          Neyin farklı olması gerektiğini yazın, gerisini bu sunucudaki ajan siz izlerken halleder. Bir taslakta çalışır,
+          değişikliği orada dener ve çalışınca birleştirip bir sonraki sürüm yapar. Taslağı önce kendiniz denemek
+          isterseniz {k.b('Bitince yayına al')} seçeneğini kapatın.
         </>
       ),
     ],
-    ['Dosyalar', () => <>Bir sürümün dosyaları ve lambdanın çalışırken kaydettiği veriler. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
-    ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir ya da eski bir sürüme dönebilirsiniz.</>],
+    ['Taslaklar', () => <>Lambdanın yanında üzerinde çalışılan değişiklikler: her biri kendi adresinde denenir ve hazır olunca birleştirilip bir sonraki sürüm olur. Açıldığında bir taslağın kendi kodu, verileri ve logları vardır.</>],
+    ['Dosyalar', () => <>Bir sürümün dosyaları: kodu ve statik dosyaları, yani programın kendisi. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
+    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: çalışma alanı. İçine bakın, dosya yükleyip silin ya da onu kapatın.</>],
+    ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
     ['İstatistikler', () => <>Son bir saatin ya da günün istekleri, hataları, yanıt süreleri ve en çok istenen yolları.</>],
     ['Loglar', () => <>İstekler, lambdanın yazdırdıkları ve ters giden her şeyin stack trace’i, anında.</>],
@@ -102,7 +105,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Elle yazmak için. {k.b('Kontrol et')} derler, {k.b('Kaydet')} bir sürüm oluşturur, {k.b('Yayına al')} yayına
-          alır. {k.code('Ctrl-S')} kaydeder, {k.code('F12')} bir tanıma gider.
+          alır. Bir taslakta ise {k.b('Kaydet')} onu taslakta tutar, {k.b('Önizlemeyi yayına al')} da taslağın adresinde
+          yayına alır. {k.code('Ctrl-S')} kaydeder, {k.code('F12')} bir tanıma gider.
         </>
       ),
     ],
@@ -132,7 +136,45 @@ export const guide: Messages['guide'] = {
     <>
       Ajanlar da aynı iki alanı {k.code('write_code')} aracına verir. {k.b('Kod')} bölümünde kaydederken değişiklik
       sorulur. İkisi de isteğe bağlıdır. Uzun bir spesifikasyon reddedilmez, 4.000 karakterde kesilir; değişiklik ise
-      500 karakterde.
+      500 karakterde. Bir taslağın da kendi iki notu vardır; birleştirildiği sürüm bunları devralır.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Bir sürüm, kaydedildikten sonra bir daha değişmez. Her birini saklamaya değer kılan da bu: herhangi biriyle
+      karşılaştırma yapılabilir, herhangi biri tam olduğu gibi yeniden yayına alınabilir. İnsanların kullandığı bir
+      lambdayı değiştirmek için bunun yerine bir {k.b('taslak')} başlatın.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        {k.b('Taslaklar')} bölümünden ya da herhangi bir sürümden başlatın. Taslak, o sürümün kodunun ve statik
+        dosyalarının, bir de lambdanın verilerinin kopyasıdır.
+      </>
+    ),
+    (k) => (
+      <>
+        Gerektiği kadar değiştirin: {k.b('Kod')} bölümünde ya da ajandan isteyerek. {k.b('Önizlemeyi yayına al')} onu
+        kendi adresinde, {k.code('/features/…/')} altında, verilerin kendine ait kopyasıyla yayına alır. Lambdanın
+        ziyaretçileri bunların hiçbirini görmez; taslağın yazdığı hiçbir şey lambdanın verilerine ulaşmaz.
+      </>
+    ),
+    (k) => (
+      <>
+        Hazır olunca {k.b('Birleştir')} düğmesine basın: notlarıyla birlikte bir sonraki sürüm olur ve isterseniz hemen
+        yayına girer. Taslak ise önizlemesi ve verilerin kopyasıyla birlikte kaldırılır.
+      </>
+    ),
+  ],
+  featureSample: 'Skor tablosu',
+  featuresAside: () => (
+    <>
+      Aynı anda birden fazla taslak üzerinde çalışılabilir. Yalnızca en yeni sürümü temel alan bir taslak
+      birleştirilebilir; böylece bir birleştirme, taslak başladıktan sonra kaydedilen bir sürümü asla geri almaz. Önce
+      başka bir taslak birleştirildiyse onun değişikliklerini taslağa taşıyın (ya da ajandan isteyin), sonra taslağın
+      temelini en yeni sürüm yapın. Hiçbir şey kendiliğinden birleşmez; bu bilinçli bir tercih.
     </>
   ),
 
@@ -144,14 +186,15 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
-  page: 'Üç yolu var. Hangisini seçeceğiniz, sayfanın nerede durduğuna bağlı.',
+  page: 'Sayfa sunmanın iki yolu var. İnsanların yanına yüklediği dosyalar için de bir üçüncüsü.',
   inlineTitle: 'Tek sayfa, kodun içinde',
   inline: 'Küçük şeyler için yeterli. Sayfa doğrudan kodun içinde yer alır.',
   folderTitle: 'Gerçek dosyalarla bir klasör',
   folder:
     'Stil dosyası ve script içeren her şey için doğru seçim. Dosyalar tıpkı bir C# dosyası gibi eklenir ve tam yazıldığı gibi sunulur. Derlenmezler.',
-  workspaceTitle: 'Çalışma alanından',
-  workspace: 'Sayfa yazılmak yerine yüklendiğinde ve yeniden yayına almadan değiştirilebilmesi gerektiğinde.',
+  workspaceTitle: 'Yüklenen dosyalar, verilerden',
+  workspace:
+    'İnsanların yüklediği ya da lambdanın oluşturduğu şeyler (görseller, belgeler) için; uygulamanın yanında sunulurlar. Uygulamanın kendi sayfaları için değil: onların yeri bir dosya klasörüdür, orada onlara ihtiyaç duyan kodla birlikte sürümlenirler.',
 
   spa: (k) => (
     <>
@@ -195,24 +238,25 @@ export const guide: Messages['guide'] = {
 
   storage: (k) => (
     <>
-      {k.b('Dosyalar')} bölümü ikisini de gösterir: bir sürümün dosyalarını ve {k.b('Veriler')} adıyla çalışma
-      alanını. Hangilerine herkesin erişebileceğini de söyler. Kod dosyaları {k.b('Kod')} bölümünde değiştirilir;
-      veriler {k.b('Dosyalar')} bölümünde yüklenip silinebilir. Ama ikisi aynı şey değildir ve fark,{' '}
-      {k.em('ne zaman değiştiklerinde')} yatar.
+      Bir lambda dosyaları iki yerde tutar ve editör onları ayrı gösterir: {k.b('Dosyalar')} bir sürümün dosyalarını
+      (programı), {k.b('Veriler')} ise çalışma alanını (programın sakladıklarını) tutar. Fark,{' '}
+      {k.em('kime ait olduklarında')} yatar. Bir sürümün dosyaları o sürüme aittir; veriler ise lambdaya aittir ve her
+      sürüm onları paylaşır.
     </>
   ),
-  savedWithCode: 'Kodla birlikte kaydedilen',
-  workspaceColumn: 'Çalışma alanı',
+  savedWithCode: 'Bir sürümde',
+  workspaceColumn: 'Verilerde',
   table: [
-    ['ne tutar', 'lambdanızın tüm dosyaları, C# dahil', 'yazılan ya da yüklenen her şey'],
-    ['ne zaman değişir', 'Kaydet ya da Yayına al düğmesine bastığınızda', 'içine bir şey yazıldığı anda'],
-    ['yayına alma', 'hepsini değiştirir', 'ona hiç dokunmaz'],
-    ['eski bir sürüme dönmek', 'eski dosyaları geri getirir', 'etkisi yok'],
-    ['lambdayı klonlamak', 'birlikte gelir', 'gelmez'],
+    ['ne tutar', 'kod ve statik dosyalar: frontend dahil programın kendisi', 'lambdanın yazdığı ya da birinin yüklediği her şey'],
+    ['ne zaman değişir', 'hiçbir zaman: her değişiklik yeni bir sürümdür', 'içine bir şey yazıldığı anda'],
+    ['yayına alma', 'tam olarak bu dosyaları yayına alır', 'ona hiç dokunmaz'],
+    ['eski bir sürüme dönmek', 'eski dosyaları geri getirir', 'etkisi yok: her sürüm onu paylaşır'],
+    ['bir taslak', 'onların bir kopyasıyla başlar', 'onun bir kopyası üzerinde çalışır'],
+    ['ne zaman silinir', 'sınır aşılınca, eski sürümlerle birlikte', 'lambdayla birlikte ya da siz kapattığınızda'],
   ],
   reachedAs: 'koddan erişim',
   storageAside:
-    'İkisi tek bir klasör olamaz. Olsaydı, her yayına alma ya lambdanızın o zamandan beri yazdığı her şeyi silerdi ya da yayına aldığınız dosyalardan hiçbir şey kaldırılamazdı. Skor tablosu tutan bir oyun ikincisini ister, sunduğu sayfa ise birincisini.',
+    'İkisi tek bir yer olamaz. Olsaydı, her yayına alma ya lambdanızın o zamandan beri yazdığı her şeyi silerdi ya da yayına aldığınız dosyalardan hiçbir şey kaldırılamazdı. Skor tablosu tutan bir oyun ikincisini ister, sunduğu sayfa ise birincisini. Bu yüzden sayfa sürüme, skor tablosu da verilere girer.',
 
   keeping: (k) => (
     <>

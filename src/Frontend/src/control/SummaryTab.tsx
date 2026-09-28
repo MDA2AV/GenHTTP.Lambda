@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 
-import { IconAlert, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
+import { isDemo } from '../api';
+import { IconAlert, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { ago, bytes, count, local, millis, percent, span } from './format';
-import { AgentMark, Ago, Figure, Meter, Quote, Section, Sparkline } from './ui';
+import { AgentMark, Ago, Figure, LiveDot, Meter, Quote, Section, Sparkline } from './ui';
 
 /**
  * Whether it is working, in the order somebody asks: is it up, is anybody
@@ -15,8 +16,9 @@ export function SummaryTab({ control }: { control: Control }) {
   const said = t.summary;
   const title = t.frame.sections.overview;
 
-  const { lambda, summary } = control;
+  const { lambda, summary, features } = control;
   const base = `/editor/${control.privateKey}`;
+  const demo = isDemo(lambda.tier);
 
   if (!summary) {
     return (
@@ -96,7 +98,7 @@ export function SummaryTab({ control }: { control: Control }) {
               <p className="text-[15px]">
                 {latest.change ?? <span className="text-slate-500">{said.noDescription}</span>}
               </p>
-              <p className="flex items-center gap-2 text-[13px] text-slate-500">
+              <p className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
                 <span>{said.version(latest.version)}</span>
                 <AgentMark origin={latest.origin} />
                 <Ago at={latest.created} />
@@ -114,37 +116,98 @@ export function SummaryTab({ control }: { control: Control }) {
           ) : (
             <p className="mt-3 text-sm text-slate-500">{said.noVersions}</p>
           )}
+
+          {/* the drafts being worked on beside it, while there are any */}
+          {!demo && features.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-medium">{said.inProgress}</h2>
+                <Link to={`${base}/features`} className="text-[13px] text-accent-500 hover:underline">{said.allFeatures}</Link>
+              </div>
+              <ul className="mt-3 space-y-2">
+                {features.slice(0, 3).map((feature) => (
+                  <li key={feature.key} className="flex items-center gap-3 text-[13px]">
+                    <IconDraft className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <button
+                      type="button"
+                      onClick={() => control.openFeature(feature.key)}
+                      className="min-w-0 flex-1 truncate text-left text-[15px] hover:text-accent-600 dark:hover:text-accent-400"
+                      title={feature.change ?? undefined}
+                    >
+                      {feature.name}
+                    </button>
+                    <AgentMark origin={feature.origin} />
+                    <span className="flex shrink-0 items-center gap-1.5 text-slate-500" title={feature.online ? said.previewOnline : said.previewOffline}>
+                      <LiveDot live={feature.online} />
+                      <span className="sr-only">{feature.online ? said.previewOnline : said.previewOffline}</span>
+                      {!feature.mergeable && <span className="text-amber-600 dark:text-amber-400">{said.behind}</span>}
+                    </span>
+                    <Ago at={feature.modified} className="hidden shrink-0 text-slate-500 sm:inline" />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
 
+        {/* the two halves of what a lambda keeps, apart: what belongs to a
+            version, and what belongs to the lambda whichever version runs */}
         <section className="lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium">{said.storage}</h2>
-            <Link to={`${base}/files`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
-          </div>
+          <h2 className="text-sm font-medium">{said.storage}</h2>
 
-          <div className="mt-3 space-y-4">
-            <Meter
-              label={said.code}
-              extra={<Exposure open={false} why={said.codeWhy} />}
-              used={storage.codeCharacters}
-              of={limits.codeCharacters}
-              format={count}
-              unit={said.characters}
-            />
-            <Meter
-              label={said.assets}
-              extra={<Exposure open={storage.servesAssets} why={storage.servesAssets ? said.assetsPublic : said.assetsPrivate} />}
-              used={storage.assetBytes}
-              of={limits.assetBytes}
-              format={bytes}
-            />
-            <Meter
-              label={said.data}
-              extra={<Exposure open={storage.servesWorkspace} why={storage.servesWorkspace ? said.dataPublic : said.dataPrivate} />}
-              used={storage.workspaceBytes}
-              of={limits.workspaceBytes}
-              format={bytes}
-            />
+          <div className="mt-3 space-y-5">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {storage.version != null ? said.inVersion(storage.version) : said.noVersion}
+                </h3>
+                <Link to={`${base}/files`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
+              </div>
+
+              <div className="mt-2 space-y-4">
+                <Meter
+                  label={said.code}
+                  extra={<Exposure open={false} why={said.codeWhy} />}
+                  used={storage.codeCharacters}
+                  of={limits.codeCharacters}
+                  format={count}
+                  unit={said.characters}
+                />
+                <Meter
+                  label={said.assets}
+                  extra={<Exposure open={storage.servesAssets} why={storage.servesAssets ? said.assetsPublic : said.assetsPrivate} />}
+                  used={storage.assetBytes}
+                  of={limits.assetBytes}
+                  format={bytes}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500" title={said.sharedByAll}>
+                  {said.inData}
+                </h3>
+                <Link to={`${base}/data`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
+              </div>
+
+              <div className="mt-2">
+                {storage.workspaceEnabled ? (
+                  <Meter
+                    label={said.workspace}
+                    extra={<Exposure open={storage.servesWorkspace} why={storage.servesWorkspace ? said.dataPublic : said.dataPrivate} />}
+                    used={storage.workspaceBytes}
+                    of={limits.workspaceBytes}
+                    format={bytes}
+                  />
+                ) : (
+                  <p className="flex items-center justify-between text-[13px]">
+                    <span className="text-slate-700 dark:text-slate-300">{said.workspace}</span>
+                    <span className="text-slate-500">{said.workspaceOff}</span>
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       </div>

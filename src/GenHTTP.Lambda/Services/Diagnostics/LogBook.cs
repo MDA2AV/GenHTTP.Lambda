@@ -189,9 +189,10 @@ public sealed class LogBook
     /// </param>
     /// <param name="lambdaId">The identity of the lambda named by <paramref name="lambda"/></param>
     /// <param name="domain">The lambda's own domain the request being served was addressed to</param>
+    /// <param name="featureId">The feature whose preview was being served, if it was one</param>
     public long Append(string level, string source, string? lambda, string text, string? detail = null,
                        string? client = null, string? agent = null, string? country = null, string? place = null,
-                       string? folding = null, long? lambdaId = null, string? domain = null)
+                       string? folding = null, long? lambdaId = null, string? domain = null, long? featureId = null)
     {
         var repeats = 1;
 
@@ -220,7 +221,7 @@ public sealed class LogBook
              */
             var key = folding == null
                 ? null
-                : $"{level}\u0000{where}\u0000{lambda}\u0000{lambdaId}\u0000{domain}\u0000{client}\u0000{folding}";
+                : $"{level}\u0000{where}\u0000{lambda}\u0000{lambdaId}\u0000{featureId}\u0000{domain}\u0000{client}\u0000{folding}";
 
             Run? open = null;
 
@@ -234,7 +235,7 @@ public sealed class LogBook
                         // newest is kept so closing it says something current
                         run.Held++;
                         run.Last = at;
-                        run.Latest = new LogLine(0, at, level, where, lambda, said, trace, client, agent, country, place, 1, lambdaId, domain);
+                        run.Latest = new LogLine(0, at, level, where, lambda, said, trace, client, agent, country, place, 1, lambdaId, domain, featureId);
 
                         return 0;
                     }
@@ -263,7 +264,7 @@ public sealed class LogBook
                 Drop();
             }
 
-            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats, lambdaId, domain);
+            var line = new LogLine(seq, at, level, where, lambda, said, trace, client, agent, country, place, repeats, lambdaId, domain, featureId);
 
             if (open != null)
             {
@@ -309,8 +310,13 @@ public sealed class LogBook
     /// Only the lines of the lambda with this identity, if given. What an
     /// owner's view reads by, since a public key can change hands.
     /// </param>
+    /// <param name="feature">
+    /// Which lines of a lambda: those of the lambda itself (<see cref="FeatureLines.None" />, what its owner and
+    /// its agent read), those of one feature's preview, or - left out - all of them together
+    /// </param>
     public (IReadOnlyList<LogLine> Lines, long Cursor, int Missed) Read(long since, string? lambda, LogLevel minimum, int limit,
-                                                                        string? client = null, long? lambdaId = null)
+                                                                        string? client = null, long? lambdaId = null,
+                                                                        FeatureLines? feature = null)
     {
         var wanted = Math.Clamp(limit, 1, 50_000);
 
@@ -347,6 +353,11 @@ public sealed class LogBook
                 }
 
                 if (lambdaId != null && line.LambdaId != lambdaId)
+                {
+                    continue;
+                }
+
+                if (feature != null && line.FeatureId != feature.Value.Id)
                 {
                     continue;
                 }

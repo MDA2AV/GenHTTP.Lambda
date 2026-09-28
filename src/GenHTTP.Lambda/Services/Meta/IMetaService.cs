@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Workspace;
 
 namespace GenHTTP.Lambda.Services.Meta;
 
@@ -54,8 +55,18 @@ public interface IMetaService
     /// <summary>
     /// Stores the given code as a new version.
     /// </summary>
+    /// <remarks>
+    /// Versions are never changed once they are stored: every change to the
+    /// code is a new one, and the one online stays exactly what it was.
+    /// </remarks>
     /// <param name="note">Why it was written, and which door it came through</param>
-    ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, CancellationToken cancellation = default);
+    /// <param name="after">
+    /// The version this one has to follow directly, if it must: a feature is
+    /// merged only on top of the version it is based on, and refused if
+    /// another was saved first
+    /// </param>
+    ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, int? after = null,
+                                           CancellationToken cancellation = default);
 
     /// <summary>
     /// Compiles the given code without deploying it.
@@ -120,10 +131,11 @@ public interface IMetaService
     ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
-    /// The tier of the lambda filed under the given identity, for the services
-    /// whose allowance depends on it. Null when there is no such lambda.
+    /// What the lambda filed under the given identity may keep in its
+    /// workspace, which its tier decides and its owner can switch off. Null
+    /// when there is no such lambda.
     /// </summary>
-    ValueTask<LambdaTier?> GetTierAsync(long lambdaId, CancellationToken cancellation = default);
+    ValueTask<WorkspaceLimits?> GetWorkspaceLimitsAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// The identity of a lambda its owner may change, for the services that

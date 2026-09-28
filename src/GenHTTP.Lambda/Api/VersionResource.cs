@@ -89,8 +89,20 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
 
         var files = await LambdaArchive.UnpackAsync(body, options.MaxCodeLengthOf(tier) * 4L + options.MaxAssetBytesOf(tier));
 
-        return await SaveAsync(privateKey, files, deploy, specification, change);
+        return await SaveAsync(privateKey, files, deploy, Decode(specification), Decode(change));
     }
+
+    /// <summary>
+    /// A note sent in the query, as it was written.
+    /// </summary>
+    /// <remarks>
+    /// Query values arrive exactly as they were sent, so a change of "Says
+    /// hello" sent as <c>Says%20hello</c> - which is how curl and every URL
+    /// builder send it - was kept with the percent sign in it. A plus is a
+    /// space there too, the way a form encodes one.
+    /// </remarks>
+    internal static string? Decode(string? value)
+        => value == null ? null : Uri.UnescapeDataString(value.Replace('+', ' '));
 
     /// <summary>
     /// Applies changes to the newest version and stores the result as a new one.

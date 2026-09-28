@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Twoja pierwsza lambda',
     editor: 'Centrum sterowania',
     why: 'Opisz, dlaczego',
+    features: 'Bezpieczne zmiany',
     files: 'Więcej niż jeden plik',
     page: 'Serwowanie strony',
     spa: 'Frontend krok po kroku',
@@ -57,7 +58,7 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Daj klucz edytora agentowi i powiedz, co ma zbudować – nowe wersje zapisuje przez {k.link('/#agents', 'MCP')}.
+        Daj klucz edytora agentowi i powiedz, co ma zbudować – zapisuje nowe wersje przez {k.link('/#agents', 'MCP')}.
         Albo otwórz {k.b('Kod')} i napisz wszystko samodzielnie: {k.b('Sprawdź')} kompiluje bez zapisywania i pokazuje,
         co mówi kompilator – z nazwą pliku i numerem linii.
       </>
@@ -84,14 +85,16 @@ export const guide: Messages['guide'] = {
       'Zmień',
       (k) => (
         <>
-          Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach: przeczyta kod, zmieni go,
-          sprawdzi, czy się kompiluje, i wrzuci online jako nową wersję. Wyłącz {k.b('Wdróż po zakończeniu')}, jeśli
-          chcesz najpierw przejrzeć zmianę.
+          Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach. Pracuje w szkicu, tam sprawdza
+          zmianę, a gdy działa, scala szkic w kolejną wersję. Wyłącz {k.b('Wdróż po zakończeniu')}, jeśli chcesz
+          najpierw samodzielnie wypróbować szkic.
         </>
       ),
     ],
-    ['Pliki', () => <>Pliki danej wersji i dane lambdy – to, co zapisuje w trakcie działania. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
-    ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej.</>],
+    ['Szkice', () => <>Zmiany przygotowywane obok lambdy: każdą wypróbowuje się pod osobnym adresem i scala w kolejną wersję, gdy jest gotowa. Otwarty szkic ma własny kod, dane i logi.</>],
+    ['Pliki', () => <>Pliki danej wersji: jej kod i zasoby, czyli sam program. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
+    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: obszar roboczy. Zajrzyj do środka, przesyłaj i usuwaj pliki albo go wyłącz.</>],
+    ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
     ['Statystyki', () => <>Żądania, błędy, czasy odpowiedzi i najczęściej odwiedzane ścieżki z ostatniej godziny albo ostatnich 24 godzin.</>],
     ['Logi', () => <>Żądania, to, co lambda wypisała, i stack trace każdego błędu – na bieżąco.</>],
@@ -99,8 +102,9 @@ export const guide: Messages['guide'] = {
       'Kod',
       (k) => (
         <>
-          Tu piszesz kod ręcznie. {k.b('Sprawdź')} kompiluje, {k.b('Zapisz')} tworzy wersję, {k.b('Wdróż')} wrzuca ją online.{' '}
-          {k.code('Ctrl-S')} zapisuje; {k.code('F12')} przechodzi do deklaracji.
+          Tu piszesz kod ręcznie. {k.b('Sprawdź')} kompiluje, {k.b('Zapisz')} tworzy wersję, {k.b('Wdróż')} wrzuca kod
+          online. W szkicu {k.b('Zapisz')} zostawia kod w szkicu, a {k.b('Wdróż podgląd')} wrzuca go online pod adresem
+          szkicu. {k.code('Ctrl-S')} zapisuje; {k.code('F12')} przechodzi do deklaracji.
         </>
       ),
     ],
@@ -128,9 +132,46 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Agenci przekazują te same dwa pola do {k.code('write_code')}. W sekcji {k.b('Kod')} przy zapisie pojawia się
-      pytanie o zmianę. Oba pola są opcjonalne. Za długi tekst nie jest odrzucany, tylko przycinany: specyfikacja do 4000
-      znaków, zmiana do 500.
+      Agenci przekazują te same dwa pola do {k.code('write_code')}. W sekcji {k.b('Kod')} o zmianę pyta okno
+      zapisywania. Oba pola są opcjonalne. Za długi tekst nie jest odrzucany, tylko przycinany: specyfikacja do 4000
+      znaków, zmiana do 500. Szkic ma własne dwa pola, a wersja, w którą zostanie scalony, je przejmuje.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Zapisana wersja nigdy się nie zmienia – i właśnie dlatego każdą warto zachować: każdą można porównać i przywrócić
+      online dokładnie taką, jaka była. Żeby zmienić lambdę, z której ludzie korzystają, utwórz zamiast tego{' '}
+      {k.b('szkic')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Utwórz go w sekcji {k.b('Szkice')} albo na bazie dowolnej wersji. To kopia kodu i zasobów tej wersji oraz
+        danych lambdy.
+      </>
+    ),
+    (k) => (
+      <>
+        Zmieniaj go tyle razy, ile trzeba – w sekcji {k.b('Kod')} albo prosząc agenta. {k.b('Wdróż podgląd')} wrzuca
+        go online pod osobnym adresem, {k.code('/features/…/')}, na jego własnej kopii danych. Odwiedzający lambdę nic
+        z tego nie widzą, a nic, co zapisze szkic, nie trafia do danych lambdy.
+      </>
+    ),
+    (k) => (
+      <>
+        {k.b('Scal')} go, gdy wszystko będzie gotowe: stanie się kolejną wersją razem ze swoimi notatkami i od razu
+        trafi online, jeśli zechcesz. Szkic znika – razem z podglądem i kopią danych.
+      </>
+    ),
+  ],
+  featureSample: 'Ranking',
+  featuresAside: () => (
+    <>
+      Nad kilkoma szkicami można pracować jednocześnie. Scalić można tylko szkic oparty na najnowszej wersji, żeby
+      scalenie nigdy nie cofnęło wersji zapisanej po utworzeniu szkicu. Jeśli wcześniej scalono inny, przenieś jego
+      zmiany – albo poproś o to agenta – a potem oprzyj szkic na najnowszej wersji. Nic nie scala się samo; tak ma być.
     </>
   ),
 
@@ -142,14 +183,15 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
-  page: 'Są trzy sposoby, a wybór zależy od tego, gdzie leży strona.',
+  page: 'Stronę można serwować na dwa sposoby, a do tego jest jeszcze trzeci – na to, co ludzie przesyłają obok niej.',
   inlineTitle: 'Jedna strona, wpisana w kod',
   inline: 'Wystarczy do czegoś małego. Strona jest częścią snippetu.',
   folderTitle: 'Folder z prawdziwymi plikami',
   folder:
     'Najlepszy wybór, gdy masz arkusz stylów i skrypt. Pliki dodajesz tak samo jak plik C#, a serwowane są dokładnie tak, jak je napiszesz. Nic ich nie kompiluje.',
-  workspaceTitle: 'Z obszaru roboczego',
-  workspace: 'Gdy stronę przesyłasz, zamiast ją pisać, i chcesz ją zmieniać bez ponownego wdrażania.',
+  workspaceTitle: 'Przesłane pliki, z danych',
+  workspace:
+    'Na to, co przesyłają ludzie albo tworzy lambda – zdjęcia, dokumenty – serwowane obok aplikacji. Nie na strony samej aplikacji: ich miejsce jest w folderze z plikami, gdzie trafiają do wersji razem z kodem, który ich potrzebuje.',
 
   spa: (k) => (
     <>
@@ -191,23 +233,25 @@ export const guide: Messages['guide'] = {
 
   storage: (k) => (
     <>
-      Sekcja {k.b('Pliki')} pokazuje oba miejsca – pliki wersji i obszar roboczy jako {k.b('Dane')} – i mówi, które z
-      nich są publicznie dostępne. Pliki kodu zmieniasz w sekcji {k.b('Kod')}; dane możesz przesyłać i usuwać w sekcji{' '}
-      {k.b('Pliki')}. To jednak nie to samo, a cała różnica polega na tym, {k.em('kiedy każde z nich się zmienia')}.
+      Lambda trzyma pliki w dwóch miejscach, a edytor pokazuje je osobno: {k.b('Pliki')} to pliki wersji – program –
+      a {k.b('Dane')} to obszar roboczy – to, co program przechowuje. Cała różnica polega na tym,{' '}
+      {k.em('do kogo należą')}. Pliki wersji należą do tej wersji; dane należą do lambdy i wszystkie wersje je
+      współdzielą.
     </>
   ),
-  savedWithCode: 'Zapisywane z kodem',
-  workspaceColumn: 'Obszar roboczy',
+  savedWithCode: 'W wersji',
+  workspaceColumn: 'W danych',
   table: [
-    ['co zawiera', 'każdy plik lambdy, łącznie z C#', 'wszystko, co zostało zapisane lub przesłane'],
-    ['kiedy się zmienia', 'gdy klikniesz Zapisz albo Wdróż', 'w chwili, gdy coś zostanie w nim zapisane'],
-    ['wdrożenie', 'zastępuje całość', 'nigdy go nie rusza'],
-    ['powrót do starszej wersji', 'przywraca stare pliki', 'bez wpływu'],
-    ['klonowanie lambdy', 'są kopiowane', 'nie jest kopiowany'],
+    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem', 'wszystko, co zapisze lambda albo ktoś prześle'],
+    ['kiedy się zmienia', 'nigdy – zmiana to nowa wersja', 'w chwili, gdy coś zostanie zapisane'],
+    ['wdrożenie', 'wrzuca online dokładnie te pliki', 'nigdy ich nie rusza'],
+    ['powrót do starszej wersji', 'przywraca stare pliki', 'bez wpływu: wszystkie wersje je współdzielą'],
+    ['szkic', 'zaczyna jako ich kopia', 'działa na ich kopii'],
+    ['kiedy znika', 'razem ze starymi wersjami, po przekroczeniu limitu', 'razem z lambdą albo gdy je wyłączysz'],
   ],
   reachedAs: 'dostęp z kodu przez',
   storageAside:
-    'Nie mogą być jednym katalogiem. Gdyby były, każde wdrożenie albo kasowałoby wszystko, co lambda zapisała od poprzedniego, albo z tego, co wdrażasz, nie dałoby się nigdy niczego usunąć. Gra z rankingiem potrzebuje tego drugiego, a strona, którą serwuje – pierwszego.',
+    'Nie mogą być jednym miejscem. Gdyby były, każde wdrożenie albo kasowałoby wszystko, co lambda zapisała od poprzedniego, albo z tego, co wdrażasz, nie dałoby się nigdy niczego usunąć. Gra z rankingiem potrzebuje tego drugiego, a strona, którą serwuje – pierwszego. Dlatego strona trafia do wersji, a ranking do danych.',
 
   keeping: (k) => (
     <>

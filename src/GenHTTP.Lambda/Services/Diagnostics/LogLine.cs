@@ -53,6 +53,11 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// platform. Without it a request line of a lambda reached at its domain
 /// reads like one of the platform's paths.
 /// </param>
+/// <param name="FeatureId">
+/// The feature whose preview said this, when it was not the lambda itself. A
+/// preview is somebody trying a change, and what it says is read beside the
+/// feature rather than mixed into what the lambda's visitors caused.
+/// </param>
 public sealed record LogLine(
     long Seq,
     DateTime At,
@@ -67,7 +72,8 @@ public sealed record LogLine(
     string? Place = null,
     int Repeats = 1,
     long? LambdaId = null,
-    string? Domain = null
+    string? Domain = null,
+    long? FeatureId = null
 );
 
 /// <summary>
@@ -87,3 +93,18 @@ public sealed record CallerSummary(
     DateTime First,
     DateTime Last
 );
+
+/// <summary>
+/// Which of a lambda's lines to read: its own, or one feature's preview's.
+/// </summary>
+/// <param name="Id">The feature, or nothing for the lambda itself</param>
+public readonly record struct FeatureLines(long? Id)
+{
+
+    /// <summary>What the lambda itself said, without its previews.</summary>
+    public static FeatureLines None => new(null);
+
+    /// <summary>What the preview of one feature said.</summary>
+    public static FeatureLines Of(long featureId) => new(featureId);
+
+}

@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'La tua prima lambda',
     editor: 'Il pannello di controllo',
     why: 'Spiegare il perché',
+    features: 'Cambiarla senza rischi',
     files: 'Più di un file',
     page: 'Servire una pagina',
     spa: 'Un front-end, passo per passo',
@@ -60,8 +61,8 @@ export const guide: Messages['guide'] = {
     (k) => (
       <>
         Passa la chiave di modifica a un agente e digli cosa creare: scrive nuove versioni tramite{' '}
-        {k.link('/#agents', 'MCP')}. Oppure apri {k.b('Codice')} e scrivi tu il codice: {k.b('Verifica')} compila senza
-        salvare niente e ti mostra cosa dice il compilatore, con file e riga.
+        {k.link('/#agents', 'MCP')}. Oppure apri {k.b('Codice')} e scrivi tu il codice: {k.b('Verifica')} compila
+        senza salvare niente e ti mostra cosa dice il compilatore, con file e riga.
       </>
     ),
     (k) => (
@@ -86,14 +87,16 @@ export const guide: Messages['guide'] = {
       'Modifica',
       (k) => (
         <>
-          Scrivi cosa deve cambiare e l’agente di questo server lo fa sotto i tuoi occhi: legge il codice, lo modifica,
-          controlla che compili e lo mette online come nuova versione. Disattiva {k.b('Metti online a lavoro finito')}{' '}
-          per guardarlo prima tu.
+          Scrivi cosa deve cambiare e l’agente di questo server lo fa sotto i tuoi occhi. Lavora su una bozza,
+          prova lì la modifica e la integra nella prossima versione quando funziona. Disattiva{' '}
+          {k.b('Metti online a lavoro finito')} per provare prima tu la bozza.
         </>
       ),
     ],
-    ['File', () => <>I file di una versione e i suoi dati, cioè quello che la lambda salva mentre gira. Un lucchetto o un globo indica se sono pubblici.</>],
-    ['Versioni', () => <>Cosa ha cambiato ogni versione, cosa era stato chiesto e le differenze rispetto alla precedente. Da qui fai il deploy o torni indietro.</>],
+    ['Bozze', () => <>Modifiche preparate accanto alla lambda: ognuna si prova a un indirizzo tutto suo e si integra nella prossima versione quando è a posto. Una volta aperta, una bozza ha il suo codice, i suoi dati e i suoi log.</>],
+    ['File', () => <>I file di una versione: il codice e gli asset, cioè il programma vero e proprio. Un lucchetto o un globo indica se sono pubblici.</>],
+    ['Dati', () => <>Quello che la lambda conserva mentre gira, condiviso da tutte le versioni: il workspace. Puoi guardarci dentro, caricare ed eliminare file, o disattivarlo.</>],
+    ['Versioni', () => <>Cosa ha cambiato ogni versione, cosa era stato chiesto e le differenze rispetto alla precedente. Da qui fai il deploy o torni indietro, oppure avvii una bozza da una qualsiasi di esse.</>],
     ['Deployment', () => <>Cosa è stato online e quando, e cosa l’ha fermato.</>],
     ['Statistiche', () => <>Richieste, errori, tempi di risposta e i percorsi più richiesti, nell’ultima ora o nelle ultime 24 ore.</>],
     ['Log', () => <>Le richieste, cosa ha stampato e lo stack trace di ogni errore, in tempo reale.</>],
@@ -102,7 +105,9 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Per scriverlo a mano. {k.b('Verifica')} compila, {k.b('Salva')} crea una versione, {k.b('Deploy')} la mette
-          online. {k.code('Ctrl-S')} salva; {k.code('F12')} va alla dichiarazione.
+          online. In una bozza, {k.b('Salva')} lo tiene nella bozza e {k.b('Deploy dell’anteprima')} lo
+          mette online all’indirizzo della bozza. {k.code('Ctrl-S')} salva; {k.code('F12')} va alla
+          dichiarazione.
         </>
       ),
     ],
@@ -130,9 +135,48 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Gli agenti passano gli stessi due campi a {k.code('write_code')}. In {k.b('Codice')}, quando salvi ti viene chiesta
-      la modifica. Sono entrambi facoltativi: una specifica lunga viene tagliata a 4000 caratteri e una modifica a 500,
-      invece di essere rifiutata.
+      Gli agenti passano gli stessi due campi a {k.code('write_code')}. In {k.b('Codice')}, quando salvi ti viene
+      chiesta la modifica. Sono entrambi facoltativi: una specifica lunga viene tagliata a 4000 caratteri e una modifica
+      a 500, invece di essere rifiutata. Una bozza ha le sue due note, e la versione in cui viene integrata le
+      riprende.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Una versione, una volta salvata, non cambia più, ed è per questo che vale la pena conservarle tutte: ognuna si può
+      confrontare e rimettere online esattamente com’era. Per cambiare una lambda che la gente usa, avvia invece una{' '}
+      {k.b('bozza')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Avviala in {k.b('Bozze')}, o da una versione qualsiasi. È una copia del codice e degli asset di quella
+        versione, e dei dati della lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Modificala tutte le volte che serve, in {k.b('Codice')} o chiedendolo all’agente. {k.b('Deploy dell’anteprima')}{' '}
+        la mette online a un indirizzo tutto suo, {k.code('/features/…/')}, con la sua copia dei dati. I visitatori della
+        lambda non ne vedono niente, e niente di quello che scrive arriva ai dati della lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Quando è a posto, premi {k.b('Integra')}: diventa la prossima versione, con le sue note, e se vuoi va subito
+        online. La bozza sparisce, insieme alla sua anteprima e alla sua copia dei dati.
+      </>
+    ),
+  ],
+  featureSample: 'Classifica',
+  featuresAside: () => (
+    <>
+      Si può lavorare a più bozze insieme. Si può integrare solo una bozza basata sulla versione più
+      recente, così un’integrazione non annulla mai una versione salvata dopo l’avvio della bozza. Se prima ne è
+      stata integrata un’altra, porta dentro le sue modifiche (o chiedilo all’agente), poi basa la bozza sulla
+      versione più recente. Niente viene integrato da solo, ed è voluto.
     </>
   ),
 
@@ -144,14 +188,15 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
-  page: 'Ci sono tre modi, e quello giusto dipende da dove si trova la pagina.',
+  page: 'Ci sono due modi per servire una pagina, più uno per quello che la gente carica accanto.',
   inlineTitle: 'Una pagina, scritta nel codice',
   inline: 'Va bene per le cose piccole. La pagina fa parte dello snippet.',
   folderTitle: 'Una cartella di file veri',
   folder:
     'Quello che ti serve per qualsiasi cosa con un foglio di stile e uno script. I file si aggiungono come un file C# e vengono serviti esattamente come li hai scritti. Niente li compila.',
-  workspaceTitle: 'Dal workspace',
-  workspace: 'Quando la pagina viene caricata invece che scritta, e deve poter cambiare senza un nuovo deploy.',
+  workspaceTitle: 'File caricati, dai dati',
+  workspace:
+    'Per quello che la gente carica o che la lambda crea (foto, documenti), servito accanto all’app. Non per le pagine dell’app stessa: quelle vanno in una cartella di file, dove seguono le versioni insieme al codice che le usa.',
 
   spa: (k) => (
     <>
@@ -194,23 +239,25 @@ export const guide: Messages['guide'] = {
 
   storage: (k) => (
     <>
-      La sezione {k.b('File')} li mostra entrambi (i file di una versione e il workspace come {k.b('Dati')}) e indica
-      quali sono pubblici. I file del codice si modificano in {k.b('Codice')}; i dati si possono caricare ed eliminare in{' '}
-      {k.b('File')}. Ma non sono la stessa cosa, e la differenza è {k.em('quando cambiano')}.
+      Una lambda tiene i file in due posti, e l’editor li mostra separati: {k.b('File')} contiene i file di una versione
+      (il programma) e {k.b('Dati')} contiene il workspace (quello che il programma conserva). La differenza è{' '}
+      {k.em('di chi sono')}. I file di una versione appartengono a quella versione; i dati appartengono alla lambda, e
+      tutte le versioni li condividono.
     </>
   ),
-  savedWithCode: 'Salvati con il codice',
-  workspaceColumn: 'Workspace',
+  savedWithCode: 'In una versione',
+  workspaceColumn: 'Nei dati',
   table: [
-    ['cosa contiene', 'tutti i file della lambda, C# compreso', 'tutto ciò che è stato scritto o caricato'],
-    ['quando cambia', 'quando premi Salva o Deploy', 'appena ci viene scritto qualcosa'],
-    ['un deploy', 'lo sostituisce tutto', 'non lo tocca mai'],
-    ['tornare a una versione precedente', 'riporta i vecchi file', 'nessun effetto'],
-    ['clonare la lambda', 'viene copiato', 'non viene copiato'],
+    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso', 'quello che scrive la lambda o che carica qualcuno'],
+    ['quando cambia', 'mai: una modifica è una nuova versione', 'appena ci viene scritto qualcosa'],
+    ['un deploy', 'mette online esattamente questi file', 'non li tocca mai'],
+    ['tornare indietro', 'riporta i vecchi file', 'nessun effetto: tutte le versioni li condividono'],
+    ['una bozza', 'parte da una copia di questi file', 'lavora su una copia dei dati'],
+    ['quando sparisce', 'con le versioni vecchie, oltre il limite', 'con la lambda, o quando disattivi il workspace'],
   ],
   reachedAs: 'dal codice si raggiunge con',
   storageAside:
-    'Non possono essere un’unica cartella. Se lo fossero, un deploy cancellerebbe tutto ciò che la lambda ha scritto nel frattempo, oppure non si potrebbe mai togliere niente da ciò che pubblica. Un gioco con una classifica vuole la seconda cosa; la pagina che serve vuole la prima.',
+    'Non possono stare in un unico posto. Se ci stessero, un deploy cancellerebbe tutto ciò che la lambda ha scritto nel frattempo, oppure non si potrebbe mai togliere niente da ciò che pubblica. Un gioco con una classifica vuole la seconda cosa; la pagina che serve vuole la prima. Quindi la pagina va nella versione, e la classifica nei dati.',
 
   keeping: (k) => (
     <>

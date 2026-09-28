@@ -29,7 +29,9 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
     {
         var lambda = request.GetLambda();
 
-        if (lambda == null)
+        // a preview is somebody trying a change: counting it would make the
+        // lambda look used, and keep a free one online, while nobody visits it
+        if (lambda == null || lambda.Feature != null)
         {
             return await content.HandleAsync(request);
         }

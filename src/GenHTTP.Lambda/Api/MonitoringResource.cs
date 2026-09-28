@@ -69,7 +69,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
          * anything the server said about the lambda itself - a handler that
          * threw is a warning with the trace attached.
          */
-        var (said, _, _) = book.Read(0, null, LogLevel.Warning, 500, lambdaId: id);
+        var (said, _, _) = book.Read(0, null, LogLevel.Warning, 500, lambdaId: id, feature: FeatureLines.None);
 
         var problems = said.Where(l => l.Level is "error" or "critical" || l.Source != "Requests")
                            .TakeLast(5)
@@ -94,7 +94,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                 allowance.Quota,
                 options.MaxVersions,
                 (int)options.DeploymentLifetime.TotalHours,
-                (int)options.Retention.TotalDays
+                (int)options.Retention.TotalDays,
+                options.MaxFeatures
             )
         );
     }
@@ -132,7 +133,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var wanted = Math.Clamp(limit ?? (since.HasValue ? 1000 : 500), 1, 2000);
 
-        var (lines, cursor, missed) = book.Read(since ?? 0, null, Minimum(level), wanted, lambdaId: id);
+        var (lines, cursor, missed) = book.Read(since ?? 0, null, Minimum(level), wanted, lambdaId: id, feature: FeatureLines.None);
 
         return new OwnerLogResponse([.. lines.Select(Describe)], cursor, missed, options.CaptureLambdaOutput);
     }
@@ -175,7 +176,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     }
 
     /// <summary>
-    /// What the lambda keeps: the files of a version and the workspace beside it.
+    /// What the lambda keeps: the files of a version, and its data beside it.
     /// </summary>
     private async ValueTask<StorageSummary> MeasureAsync(string privateKey, long id, int? version)
     {
@@ -207,7 +208,9 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             listing.Files.Count,
             listing.UsedBytes,
             code.Any(f => ServingAssets().IsMatch(f.Code)),
-            code.Any(f => ServingWorkspace().IsMatch(f.Code))
+            code.Any(f => ServingWorkspace().IsMatch(f.Code)),
+            listing.Enabled,
+            code.Any(f => UsingWorkspace().IsMatch(f.Code))
         );
     }
 
@@ -222,7 +225,14 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     [GeneratedRegex(@"\bWorkspace\s*\.\s*(App|Files|Tree)\s*\(")]
     private static partial Regex ServingWorkspace();
 
-    private static LogLevel Minimum(string? level) => level?.Trim().ToLowerInvariant() switch
+    /// <summary>
+    /// Any use of the workspace at all, to warn whoever is about to switch it
+    /// off that the code online would then fail where it reaches for it.
+    /// </summary>
+    [GeneratedRegex(@"\bWorkspace\s*\.\s*[A-Z]\w*")]
+    private static partial Regex UsingWorkspace();
+
+    internal static LogLevel Minimum(string? level) => level?.Trim().ToLowerInvariant() switch
     {
         "trace" => LogLevel.Trace,
         "debug" => LogLevel.Debug,

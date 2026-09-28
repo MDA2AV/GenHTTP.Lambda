@@ -6,7 +6,7 @@ import { CodeEditor } from '../components/CodeEditor';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
 import { ENTRY, FileTabs } from '../components/FileTabs';
-import { IconPlay, IconSpinner } from '../components/Icons';
+import { IconAlert, IconPlay, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useEditorT } from '../i18n';
 import { languageFor } from '../monaco';
@@ -22,9 +22,17 @@ type Busy = 'save' | 'check' | 'deploy' | null;
  * pills under the title, and checking, saving and deploying are its actions.
  * Saving asks what changed - the same note an agent leaves - so a version
  * written by hand reads as well in the history as one that was not.
+ *
+ * Opened on a feature - a draft, to the owner - it edits the feature
+ * instead: saving replaces what the feature holds, without a note - the
+ * feature says what it changes as a whole, on its overview - and puts it
+ * online at its preview address in the same step, so there is one button
+ * rather than two that only make sense to somebody who knows the difference.
+ * Nothing a visitor of the lambda gets changes either way.
  */
 export function Workbench({ control, onDirty }: { control: Control; onDirty: (dirty: boolean) => void }) {
   const { privateKey, lambda } = control;
+  const feature = control.feature?.info ?? null;
 
   const said = useEditorT().code;
   const toast = useToast();
@@ -32,7 +40,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
 
   // what an agent works on is the newest, so that is where editing starts,
   // unless a particular version was asked for
-  const requested = Number(params.get('version')) || lambda.latestVersion || lambda.activeVersion;
+  const requested = feature ? null : Number(params.get('version')) || lambda.latestVersion || lambda.activeVersion;
 
   const [loaded, setLoaded] = useState<number | null>(null);
   const [files, setFiles] = useState<LambdaFile[]>([{ name: ENTRY, code: '' }]);
@@ -46,6 +54,9 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   /** Whether the save dialog is open, and whether it deploys afterwards. */
   const [saving, setSaving] = useState<'save' | 'deploy' | null>(null);
   const [change, setChange] = useState('');
+
+  /** Which save of the feature is open here, as this page knows it - to notice a save made elsewhere. */
+  const [held, setHeld] = useState<number | null>(null);
 
   const current = files.find((file) => file.name === active) ?? files[0];
   const code = current?.code ?? '';
@@ -68,8 +79,10 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   }, []);
 
   useEffect(() => {
-    if (requested == null) {
-      setSaved(JSON.stringify(files));
+    if (feature || requested == null) {
+      if (!feature) {
+        setSaved(JSON.stringify(files));
+      }
       return;
     }
 
@@ -93,6 +106,40 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     // only a different version is a reason to reload what is being edited
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [privateKey, requested, adopt]);
+
+  const readFeature = useCallback(async (key: string) => {
+    try {
+      const content = await api.feature.get(privateKey, key);
+
+      adopt(content.files);
+      setHeld(content.feature.revision);
+      setDiagnostics([]);
+      setBuilt('idle');
+    } catch (error) {
+      toast(error instanceof ApiError ? error.message : said.featureLoadFailed, 'error');
+    }
+  }, [privateKey, adopt, toast, said]);
+
+  // a feature is read when it is opened
+  useEffect(() => {
+    if (feature) {
+      readFeature(feature.key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feature?.key, readFeature]);
+
+  /*
+   * Saved elsewhere since it was read here - by the agent, most likely, or in
+   * another tab. Read again while nothing here is unsaved; otherwise said,
+   * since saving would replace what was saved there.
+   */
+  const elsewhere = feature != null && held != null && feature.revision !== held;
+
+  useEffect(() => {
+    if (elsewhere && !dirty && busy === null) {
+      readFeature(feature.key);
+    }
+  }, [elsewhere, dirty, busy, feature, readFeature]);
 
   useEffect(() => {
     if (!dirty) {
@@ -189,7 +236,45 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
   }
 
-  const save = useCallback(() => {
+  /** Stores what is in the editor as the feature's, and puts its preview online with it. */
+  async function commitFeature() {
+    if (!feature || !dirty) {
+      return;
+    }
+
+    setBusy('deploy');
+
+    try {
+      // made from the save read here, and refused if another came in between
+      const result = await api.feature.save(privateKey, feature.key, files, true, held ?? undefined);
+
+      setSaved(JSON.stringify(files));
+      setHeld(result.feature.revision);
+
+      if (result.preview) {
+        report(result.preview.success, result.preview.diagnostics);
+      } else {
+        toast(said.featureSaved);
+      }
+
+      await control.feature?.refresh();
+    } catch (error) {
+      toast(error instanceof ApiError ? error.message : said.failed, 'error');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function report(success: boolean, found: Diagnostic[]) {
+    setDiagnostics(found);
+    setBuilt(success ? 'clean' : 'idle');
+
+    toast(success ? said.previewOnline : said.previewRefused, success ? 'success' : 'error');
+  }
+
+  // made again with every render, so it always saves what is in the editor
+  // now - the editor holds on to the newest one
+  function save() {
     if (busy) {
       return;
     }
@@ -199,8 +284,13 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       return;
     }
 
-    setSaving('save');
-  }, [busy, dirty, toast, said]);
+    if (feature) {
+      // saved into a draft is saved to be tried, so its preview shows it
+      commitFeature();
+    } else {
+      setSaving('save');
+    }
+  }
 
   function deploy() {
     if (dirty) {
@@ -223,14 +313,14 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
         <>
           {said.title}
           <span className="ml-2 text-sm font-normal text-slate-500">
-            {loaded != null ? said.version(loaded) : ''}
-            {dirty ? said.edited : online ? said.online : ''}
+            {feature ? said.inFeature(feature.name) : loaded != null ? said.version(loaded) : ''}
+            {dirty ? said.edited : !feature && online ? said.online : ''}
           </span>
         </>
       }
       hint={
         <>
-          {demo ? said.demo : said.edit}
+          {feature ? said.editFeature : demo ? said.demo : said.edit}
           {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>)}
           {newer && said.newer(lambda.latestVersion!)}
         </>
@@ -241,13 +331,24 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
             {busy === 'check' && <IconSpinner />}
             {said.check}
           </button>
-          {!demo && (
+          {!demo && feature && (
+            <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-primary !px-4 !py-1.5 text-[13px]" title={said.deployPreviewTitle}>
+              {busy === 'deploy' && <IconSpinner />}
+              {said.save}
+            </button>
+          )}
+          {!demo && !feature && (
             <>
               <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Ctrl+S">
                 {busy === 'save' && <IconSpinner />}
                 {said.save}
               </button>
-              <button type="button" onClick={deploy} disabled={busy !== null || (!dirty && online)} className="btn-primary !px-4 !py-1.5 text-[13px]">
+              <button
+                type="button"
+                onClick={deploy}
+                disabled={busy !== null || (!dirty && online)}
+                className="btn-primary !px-4 !py-1.5 text-[13px]"
+              >
                 {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
                 {said.deploy}
               </button>
@@ -265,6 +366,18 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
         />
       }
     >
+      {elsewhere && dirty && (
+        <p className="mx-4 mb-3 flex items-start gap-2 text-[13px] text-amber-700 dark:text-amber-400 md:mx-0">
+          <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {said.changedElsewhere}{' '}
+            <button type="button" onClick={() => feature && readFeature(feature.key)} className="font-medium underline">
+              {said.readAgain}
+            </button>
+          </span>
+        </p>
+      )}
+
       <div className="relative mx-4 min-h-[18rem] flex-1 border border-slate-200 dark:border-ink-800 md:mx-0">
         {/* one editor for every file, so switching swaps what it shows
             rather than building it again - which is what made it jump */}
@@ -320,6 +433,14 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           </>
         }
       >
+        {/* saving from an older version makes it the newest, without what came after it */}
+        {loaded != null && lambda.latestVersion != null && loaded < lambda.latestVersion && (
+          <p className="flex gap-2 text-[13px] text-amber-700 dark:text-amber-400">
+            <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            {said.fromOlder(loaded, lambda.latestVersion)}
+          </p>
+        )}
+
         <label className="block text-sm">
           <span className="text-slate-600 dark:text-slate-400">{said.what}</span>
           <input
@@ -332,6 +453,25 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
             className="field mt-2"
           />
         </label>
+
+        {/* a version is saved for good; a feature is where a change is tried */}
+        {lambda.activeVersion != null && (
+          <p className="text-[13px] text-slate-500">
+            {said.featureInstead((text) => (
+              <button
+                type="button"
+                className="text-accent-500 hover:underline"
+                onClick={() => {
+                  setSaving(null);
+                  // what was typed here goes into the feature rather than being lost
+                  control.startFeature(loaded ?? undefined, dirty ? files : undefined);
+                }}
+              >
+                {text}
+              </button>
+            ))}
+          </p>
+        )}
       </Dialog>
     </Section>
   );

@@ -15,6 +15,7 @@ export const guide = {
     first: 'Your first one',
     editor: 'The control center',
     why: 'Saying why',
+    features: 'Changing it safely',
     files: 'More than one file',
     page: 'Serving a page',
     spa: 'A front end, step by step',
@@ -90,14 +91,16 @@ export const guide = {
       'Change',
       (k) => (
         <>
-          Say what should be different, and the agent on this server does it while you watch: it reads the code, changes
-          it, checks that it compiles and puts it online as a new version. Switch off {k.b('Put it online when it is done')}{' '}
-          to look at it first.
+          Say what should be different, and the agent on this server does it while you watch. It tries the change on a
+          draft - a copy with an address of its own - and puts it online once it works. Switch off{' '}
+          {k.b('Put it online when it is done')} to try the draft yourself first.
         </>
       ),
     ],
-    ['Files', () => <>The files of a version, and its data - what the lambda saves while it runs. A lock or a globe says whether the public can reach them.</>],
-    ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here.</>],
+    ['Drafts', () => <>Changes being tried before they go online, each at an address of its own and on test data of its own. Opened, a draft has its own code, test data and logs. The section is there once there is a draft.</>],
+    ['Files', () => <>The files of a version: its code and assets, the program itself. A lock or a globe says whether the public can reach them.</>],
+    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the workspace. Look into it, upload and delete files, or switch it off.</>],
+    ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a draft from any of them.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
     ['Stats', () => <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
     ['Logs', () => <>Its requests, what it printed, and the stack trace of anything that went wrong, as it happens.</>],
@@ -105,8 +108,9 @@ export const guide = {
       'Code',
       (k) => (
         <>
-          Writing it by hand. {k.b('Check')} compiles, {k.b('Save')} makes a version, {k.b('Deploy')} puts it online.{' '}
-          {k.code('Ctrl-S')} saves; {k.code('F12')} goes to a declaration.
+          Writing it by hand. {k.b('Check')} compiles, {k.b('Save')} makes a version, {k.b('Deploy')} puts it online.
+          In a draft, {k.b('Save')} keeps it in the draft and shows it at the draft's address. {k.code('Ctrl-S')}{' '}
+          saves; {k.code('F12')} goes to a declaration.
         </>
       ),
     ],
@@ -135,7 +139,46 @@ export const guide = {
   why2: ((k) => (
     <>
       Agents pass the same two fields to {k.code('write_code')}. In {k.b('Code')}, saving asks for the change. Both
-      are optional; a long specification is cut at 4000 characters and a change at 500 rather than refused.
+      are optional; a long specification is cut at 4000 characters and a change at 500 rather than refused. A
+      draft keeps its own two, and the version it becomes takes them over.
+    </>
+  )) as Text,
+
+  features: ((k) => (
+    <>
+      A version never changes once it is saved - which is what makes every one worth keeping: any of them can be
+      compared with, and put back online exactly as it was. To change a lambda that people use, try the change in
+      a {k.b('draft')} first.
+    </>
+  )) as Text,
+  featureSteps: [
+    (k) => (
+      <>
+        Start it from any version under {k.b('Versions')}, or let the agent start one. It is a copy of that version's
+        code and assets, and of the lambda's data.
+      </>
+    ),
+    (k) => (
+      <>
+        Change it as often as it takes - in {k.b('Code')}, or by asking the agent. Its preview answers at an address
+        of its own, {k.code('/features/…/')}, against test data of its own. Visitors of the lambda see none of it,
+        and nothing it writes reaches the lambda's data.
+      </>
+    ),
+    (k) => (
+      <>
+        {k.b('Put online')} once it is right: it becomes the next version, with its notes, and goes online. The draft
+        goes with it - its preview and its test data.
+      </>
+    ),
+  ] as Text[],
+  featureSample: 'Leaderboard',
+  featuresAside: (() => (
+    <>
+      Several drafts can be worked on at once. Only one that is up to date with the newest version can go online,
+      so that it never undoes a version saved after the draft began. When another went online first, bring its
+      changes in - or ask the agent to - and mark the draft as up to date. Nothing goes online on its own; that is
+      deliberate. The API calls a draft a feature, and putting it online a merge.
     </>
   )) as Text,
 
@@ -147,14 +190,15 @@ export const guide = {
     </>
   )) as Text,
 
-  page: 'There are three ways, and which one you want depends on where the page lives.',
+  page: 'There are two ways to serve a page, and one more for what people upload beside it.',
   inlineTitle: 'One page, written inline',
   inline: 'Fine for something small. The page is part of the snippet.',
   folderTitle: 'A folder of real files',
   folder:
     'What you want for anything with a stylesheet and a script. The files are added the same way a C# file is, and served exactly as written. Nothing compiles them.',
-  workspaceTitle: 'From the workspace',
-  workspace: 'When the page is uploaded rather than written, and should be changeable without redeploying.',
+  workspaceTitle: 'Uploaded files, from the data',
+  workspace:
+    'For what people upload or the lambda creates - pictures, documents - served beside the app. Not for the pages of the app itself: those belong in a folder of files, where they are versioned with the code that needs them.',
 
   spa: ((k) => (
     <>
@@ -196,23 +240,25 @@ export const guide = {
 
   storage: ((k) => (
     <>
-      The {k.b('Files')} section shows both - the files of a version, and the workspace as {k.b('Data')} - and says
-      which of them the public can reach. Files of the code are changed in {k.b('Code')}; data can be uploaded and
-      deleted in {k.b('Files')}. They are not the same thing though, and the difference is {k.em('when each changes')}.
+      A lambda keeps files in two places, and the editor shows them apart: {k.b('Files')} holds the files of a
+      version - the program - and {k.b('Data')} holds the workspace - what the program keeps. The difference is{' '}
+      {k.em('whose they are')}. The files of a version belong to that version; the data belongs to the lambda, and
+      every version shares it.
     </>
   )) as Text,
-  savedWithCode: 'Saved with your code',
-  workspaceColumn: 'Workspace',
+  savedWithCode: 'In a version',
+  workspaceColumn: 'In the data',
   table: [
-    ['what it holds', 'every file of your lambda, the C# included', 'whatever has been written or uploaded'],
-    ['when it changes', 'when you press Save or Deploy', 'the moment something is written to it'],
-    ['a deploy', 'replaces all of it', 'never touches it'],
-    ['rolling back a version', 'brings the old files back', 'no effect'],
-    ['cloning the lambda', 'comes along', 'does not'],
+    ['what it holds', 'the code and assets: the program, front end included', 'whatever the lambda writes, or somebody uploads'],
+    ['when it changes', 'never - a change is a new version', 'the moment something is written to it'],
+    ['a deploy', 'puts exactly these files online', 'never touches it'],
+    ['rolling back', 'brings the old files back', 'no effect: every version shares it'],
+    ['a draft', 'starts as a copy of them', 'works on a copy of it'],
+    ['when it goes', 'with old versions, past the limit', 'with the lambda, or when you switch it off'],
   ] as [string, string, string][],
   reachedAs: 'reached from code as',
   storageAside:
-    'They cannot be one directory. If they were, a deploy would either wipe everything your lambda had written since, or nothing could ever be removed from what it ships. A game that keeps a leaderboard wants the second; the page it serves wants the first.',
+    'They cannot be one place. If they were, a deploy would either wipe everything your lambda had written since, or nothing could ever be removed from what it ships. A game that keeps a leaderboard wants the second; the page it serves wants the first. So the page goes in the version, and the leaderboard in the data.',
 
   keeping: ((k) => (
     <>

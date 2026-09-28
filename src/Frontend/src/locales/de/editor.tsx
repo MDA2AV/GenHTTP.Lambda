@@ -60,9 +60,11 @@ export const editor: EditorMessages = {
     sections: {
       overview: 'Übersicht',
       change: 'Ändern',
+      features: 'Entwürfe',
       showcase: 'Showcase',
       domain: 'Domain',
       files: 'Dateien',
+      data: 'Daten',
       versions: 'Versionen',
       deployments: 'Deployments',
       stats: 'Statistik',
@@ -110,7 +112,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Endgültig löschen',
     deleteFailed: 'Das Lambda konnte nicht gelöscht werden.',
     deleteText: (key) => (
-      <>Alle Versionen, Dateien, der Verlauf und die Adresse {key} werden gelöscht. Das lässt sich nicht rückgängig machen.</>
+      <>Alle Versionen, alle Daten, der Verlauf und die Adresse {key} werden gelöscht. Das lässt sich nicht rückgängig machen.</>
     ),
     openInTab: 'In neuem Tab öffnen',
     open: (address) => `${address} in neuem Tab öffnen`,
@@ -126,7 +128,7 @@ export const editor: EditorMessages = {
   },
 
   change: {
-    hint: 'Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um: Er liest den Code, ändert ihn, prüft, ob er kompiliert, und stellt ihn online. Jede Änderung wird eine neue Version – zur vorherigen kommen Sie also immer mit einem Klick zurück.',
+    hint: 'Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um. Er arbeitet in einem Entwurf – einer Kopie des Lambdas mit eigener Adresse –, Ihre Besucher sehen also nichts davon, bis die Änderung fertig ist. Dann wird sie zur nächsten Version und geht online – oder sie wartet im Entwurf darauf, dass Sie sie zuerst selbst ausprobieren.',
     reading: 'Agent wird abgefragt …',
     readFailed: 'Der Agent konnte nicht abgefragt werden.',
     label: 'Was soll anders sein?',
@@ -135,8 +137,13 @@ export const editor: EditorMessages = {
     send: 'Änderung starten',
     sending: 'Wird gesendet …',
     goOnline: 'Nach Abschluss online stellen',
-    goOnlineOn: 'Die Änderung geht online, sobald sie kompiliert. Bis dahin bleibt online, was jetzt online ist.',
-    goOnlineOff: 'Die Änderung wird als neue Version gespeichert. Deployen Sie sie, wenn Sie sie sich angesehen haben.',
+    goOnlineOn: 'Sobald die Änderung im Entwurf funktioniert, übernimmt der Agent sie als nächste Version und stellt diese online. Bis dahin bleibt online, was jetzt online ist.',
+    goOnlineOff: 'Der Agent lässt die Änderung im Entwurf. Probieren Sie sie unter der eigenen Adresse des Entwurfs aus und übernehmen Sie den Entwurf, wenn alles passt.',
+    where: 'Arbeiten in',
+    whereTitle: 'Ein neuer Entwurf oder ein offener, um daran weiterzuarbeiten',
+    newFeature: 'Neuer Entwurf',
+    full: (limit) =>
+      `Dieses Lambda hat ${limit} offene Entwürfe – mehr sind nicht erlaubt. Wählen Sie einen, um daran weiterzuarbeiten, oder übernehmen oder löschen Sie zuerst einen.`,
     password: 'Passwort',
     fable: 'Fable lässt sich Zeit: ohne Zeitlimit, ohne Schrittlimit und in einer eigenen Warteschlange.',
     left: (left, perDay) => `Heute noch ${left} von ${perDay}`,
@@ -149,12 +156,19 @@ export const editor: EditorMessages = {
         title: 'Er liest, was schon da ist',
         text: 'Den Code und worum bei früheren Versionen gebeten wurde – damit weiter funktioniert, was funktioniert.',
       },
-      { title: 'Er nimmt die Änderung vor', text: 'Und behebt, was nicht kompiliert. Sie sehen jeden Schritt mit.' },
-      { title: 'Er stellt sie online', text: 'Als neue Version. Zur vorherigen kommen Sie mit einem Klick zurück.' },
+      {
+        title: 'Er arbeitet in einem Entwurf',
+        text: 'Einer Kopie mit eigener Adresse und eigenen Daten: Dort nimmt er die Änderung vor und probiert sie aus. Sie sehen jeden Schritt mit.',
+      },
+      {
+        title: 'Er stellt sie online',
+        text: 'Als nächste Version – oder er überlässt sie Ihnen zuerst zum Ausprobieren. Zur vorherigen Version kommen Sie mit einem Klick zurück.',
+      },
     ],
     asked: 'Ihre Anfrage',
     goesOnline: 'geht nach Abschluss online',
-    review: 'wird zur Prüfung gespeichert',
+    review: 'bleibt zum Ausprobieren im Entwurf',
+    inFeature: (name) => `im Entwurf „${name}“`,
     queued: (ahead) => (ahead === 1 ? 'Wartet – noch ein Auftrag davor.' : `Wartet – noch ${ahead} Aufträge davor.`),
     starting: 'Startet …',
     working: 'In Arbeit',
@@ -163,7 +177,7 @@ export const editor: EditorMessages = {
     stopping: 'Wird gestoppt …',
     stopTitle: 'Diese Änderung stoppen?',
     stopText:
-      'Was der Agent bis jetzt gespeichert hat, bleibt als Version erhalten. Was online ist, bleibt online – es sei denn, er hat schon eine neue Version online gestellt.',
+      'Was der Agent bis jetzt gespeichert hat, bleibt erhalten – im Entwurf oder als Version. Was online ist, bleibt online – es sei denn, er hat die Änderung schon übernommen und online gestellt.',
     keepGoing: 'Weiterlaufen lassen',
     stopIt: 'Stoppen',
     log: 'Was der Agent getan hat',
@@ -174,13 +188,22 @@ export const editor: EditorMessages = {
       read: 'Liest den Code',
       readFile: (file) => <>Liest {file}</>,
       logs: 'Liest das Log',
+      logsPreview: 'Liest das Log der Vorschau',
+      readFeature: 'Liest den Entwurf',
       create: 'Legt ein Lambda an',
+      feature: 'Beginnt einen Entwurf',
+      featureStarted: (name) => <>Hat den Entwurf {name} begonnen</>,
+      update: 'Aktualisiert die Notizen des Entwurfs',
+      rebase: (version) => `Nimmt Version ${version} als Grundlage des Entwurfs`,
+      merge: 'Übernimmt den Entwurf',
+      discard: 'Löscht einen Entwurf',
       write: (files) => <>Ändert {files}</>,
       writeAll: (files) => <>Schreibt {files}</>,
       removing: (files) => <>, löscht {files}</>,
       more: (count) => `+${count} weitere`,
       check: 'Kompiliert den Code',
       deploy: 'Stellt es online',
+      deployPreview: 'Stellt die Vorschau online',
       deployVersion: (version) => `Stellt Version ${version} online`,
       upload: (path) => <>Speichert {path}</>,
       delete: (path) => <>Löscht {path}</>,
@@ -190,6 +213,7 @@ export const editor: EditorMessages = {
     marks: {
       version: (version) => `v${version}`,
       online: 'online',
+      previewOnline: 'Vorschau online',
       compiles: 'kompiliert',
       errors: (count) => `${count} Fehler`,
       problems: (count) => `${count} Fehler`,
@@ -208,6 +232,13 @@ export const editor: EditorMessages = {
       unchanged: 'Es wurde nichts geändert',
       stopped: 'Gestoppt',
       stoppedSaved: (version) => `Vorher wurde noch Version ${version} gespeichert.`,
+      stoppedFeature: (name) => `Was der Agent bis dahin getan hat, steckt im Entwurf „${name}“.`,
+      feature: (name) => `Bereit zum Ausprobieren im Entwurf „${name}“`,
+      featureBroken: (name) => `Der Entwurf „${name}“ kompiliert noch nicht`,
+      tryIt: 'Probieren Sie den Entwurf unter seiner eigenen Adresse aus. Wenn alles passt, übernehmen Sie ihn – dann wird er zur nächsten Version.',
+      previewOffline: 'Die Vorschau ist nicht online. Deployen Sie sie im Entwurf, um die Änderung auszuprobieren.',
+      previewStill: 'Die Vorschau zeigt noch, was zuletzt kompiliert hat.',
+      notMerged: 'Die Änderung wurde nicht übernommen, also ist nichts Neues online gegangen.',
       failed: 'Die Änderung hat nicht geklappt',
       timeout:
         'Die Zeit war um, bevor der Agent etwas geändert hat. Bitten Sie um etwas Kleineres oder versuchen Sie es noch einmal – mal kommt er weiter, mal nicht.',
@@ -221,6 +252,8 @@ export const editor: EditorMessages = {
     },
     seeChanges: 'Änderungen ansehen',
     open: 'Öffnen',
+    openPreview: 'Vorschau öffnen',
+    openFeature: 'Entwurf öffnen',
     deploy: (version) => `Version ${version} deployen`,
     undo: (version) => `Zurück zu Version ${version}`,
     undoTitle:
@@ -229,6 +262,7 @@ export const editor: EditorMessages = {
     toast: {
       online: (version) => `Die Änderung ist als Version ${version} online.`,
       saved: (version) => `Die Änderung ist als Version ${version} gespeichert.`,
+      feature: (name) => `Die Änderung ist im Entwurf „${name}“ bereit zum Ausprobieren.`,
       unchanged: 'Der Agent hat nichts geändert.',
       failed: 'Die Änderung hat nicht geklappt.',
       stopped: 'Die Änderung wurde gestoppt.',
@@ -274,7 +308,16 @@ export const editor: EditorMessages = {
     notOnline: 'noch nicht online',
     wanted: 'Worum gebeten wurde',
     noVersions: 'Noch keine Versionen.',
+    inProgress: 'In Arbeit',
+    allFeatures: 'Alle Entwürfe',
+    previewOnline: 'Die Vorschau ist online',
+    previewOffline: 'Die Vorschau ist offline',
+    behind: 'nicht aktuell',
     storage: 'Speicher',
+    inVersion: (version) => `In Version ${version}`,
+    noVersion: 'In der Version',
+    inData: 'In den Daten',
+    sharedByAll: 'Für alle Versionen dieselben',
     browse: 'Ansehen',
     code: 'Code',
     codeWhy: 'C# wird kompiliert, nie ausgeliefert.',
@@ -283,6 +326,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Öffentlich: Der Code liefert sie aus.',
     assetsPrivate: 'Vom Code nicht ausgeliefert.',
     data: 'Daten',
+    workspace: 'Workspace',
+    workspaceOff: 'ausgeschaltet',
     dataPublic: 'Öffentlich: Der Code liefert den Workspace aus.',
     dataPrivate: 'Privat, nur für das Lambda.',
   },
@@ -290,9 +335,16 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('Code')} wird kompiliert und nie ausgeliefert. {b('Assets')} – Seiten, Styles, Bilder – werden mit jeder
-        Version gespeichert und sind öffentlich, wenn der Code sie ausliefert. {b('Daten')} schreibt das Lambda zur
-        Laufzeit. Sie gehören zu keiner Version und sind nur öffentlich, wenn der Code sie ausliefert.
+        Die Dateien einer Version – das Programm. {b('Code')} wird kompiliert und nie ausgeliefert. {b('Assets')} –
+        Seiten, Scripts, Styles, Bilder – werden mit dem Code gespeichert, mit ihm deployt und zurückgerollt und sind
+        öffentlich, wenn der Code sie ausliefert. Was das Lambda zur Laufzeit aufbewahrt, steht nicht hier: Das sind
+        seine {b('Daten')}.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        Diese Dateien gehören zu Version {version} und ändern sich mit ihr. Was das Lambda zur Laufzeit aufbewahrt, ist
+        für alle Versionen gleich und steht unter {data('Daten')}.
       </>
     ),
     edit: 'Diese Version bearbeiten',
@@ -300,7 +352,6 @@ export const editor: EditorMessages = {
     shown: (version, online, newest) => `Version ${version}${online ? ', online' : newest ? ', neueste' : ''}`,
     optionOnline: ' (online)',
     readFailed: 'Diese Version konnte nicht gelesen werden.',
-    dataFailed: 'Die Daten konnten nicht gelesen werden.',
     noVersion: 'Es gibt noch keine Version.',
     label: 'Dateien',
     code: 'Code',
@@ -314,7 +365,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Mit dem Code gespeichert, aber diese Version liefert sie nicht aus.',
     noAssets: 'Keine in dieser Version.',
     data: 'Daten',
-    dataPublic: 'Öffentlich: Diese Version liefert sie mit Workspace aus.',
+    dataPublic: 'Öffentlich: Der Code, der online ist, liefert sie mit Workspace aus.',
     dataPrivate: 'Privat, nur für das Lambda. Gehört zu keiner Version.',
     uploadFailed: (path) => `${path} konnte nicht hochgeladen werden.`,
     deleteFolder: (path, held) =>
@@ -344,9 +395,176 @@ export const editor: EditorMessages = {
     notText: 'Kein Text. Laden Sie die Datei herunter, um hineinzusehen.',
   },
 
+  data: {
+    hint:
+      'Daten sind, was das Lambda zur Laufzeit aufbewahrt. Sie gehören dem Lambda, nicht einer Version: Jede Version liest und schreibt dieselben Daten, und nichts, was Sie mit Versionen tun, ändert daran etwas. Ein Entwurf wird mit einer Kopie davon ausprobiert. Gelöscht werden sie erst mit dem Lambda – oder wenn Sie diese Art von Daten ausschalten.',
+    facts: [
+      ['Für alle Versionen dieselben', 'Welche Version auch online ist: Sie liest und schreibt dieselben Daten.'],
+      ['Bleiben beim Deployen', 'Deployen, Zurückrollen oder einen Entwurf übernehmen – nichts davon rührt sie an.'],
+      ['Ihre Entscheidung', 'Jede Art ist nur eingeschaltet, solange Sie das wollen. Schalten Sie eine aus, wird gelöscht, was darin liegt.'],
+    ],
+    featureHint:
+      'Die Daten, mit denen dieser Entwurf arbeitet: eine Kopie der Daten des Lambdas, angelegt, als der Entwurf begonnen wurde. Seine Vorschau liest und schreibt die Kopie – was Sie hier ausprobieren, rührt also nie an, was das Lambda aufbewahrt. Wird der Entwurf übernommen, wird die Kopie verworfen, und die Daten des Lambdas bleiben, wie sie sind.',
+    recopy: 'Daten des Lambdas neu kopieren',
+    recopyTitle: 'Diese Kopie durch das ersetzen, was das Lambda jetzt enthält',
+    recopyConfirm: 'Die Daten des Lambdas neu kopieren?',
+    recopyText:
+      'Alles in dieser Kopie – was auch immer die Vorschau hineingeschrieben hat – wird durch das ersetzt, was das Lambda jetzt enthält. Die Daten des Lambdas selbst bleiben unberührt.',
+    keepCopy: 'Diese Kopie behalten',
+    recopied: 'Die Kopie ist frisch. Die Vorschau liest sie ab ihrem nächsten Request.',
+    recopyFailed: 'Die Daten konnten nicht neu kopiert werden.',
+    copyContents: 'Was in der Kopie des Workspace liegt',
+    kinds: {
+      workspace: {
+        name: 'Workspace',
+        what: 'Dateien, die das Lambda zur Laufzeit liest und schreibt: Uploads, Datensätze, alles, was es aufbewahrt.',
+      },
+    },
+    on: 'An',
+    off: 'Aus',
+    byDefault: 'Standardmäßig an',
+    usage: (items, used, of) => `${items} · ${used} von ${of}`,
+    offText: 'Ausgeschaltet. Hier liegt nichts, und Code, der darauf zugreift, schlägt fehl, bis Sie es wieder einschalten.',
+    switchLabel: (name) => `${name} ein- oder ausschalten`,
+    confirmOff: (name) => `${name} ausschalten?`,
+    confirmText: (items, size) =>
+      `Alles darin – ${items}, ${size} – wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.`,
+    confirmEmpty: 'Hier liegt nichts, es geht also nichts verloren.',
+    inUse: 'Die Version, die online ist, greift darauf zu. An diesen Stellen schlägt sie fehl, bis Sie es wieder einschalten.',
+    deleteAndOff: 'Ausschalten und löschen',
+    keep: 'Behalten',
+    switchedOn: (name) => `${name} ist eingeschaltet. Das Lambda kann ab seinem nächsten Request darauf zugreifen.`,
+    switchedOff: (name) => `${name} ist ausgeschaltet, und was darin lag, ist gelöscht.`,
+    switchFailed: 'Das ließ sich nicht umschalten.',
+    readFailed: 'Die Daten konnten nicht gelesen werden.',
+    demo: 'Eine Demo: Die Daten sind zum Lesen da, nicht zum Ändern.',
+    contents: 'Was im Workspace liegt',
+    browse: 'Dateien',
+    offBrowse: 'Der Workspace ist ausgeschaltet, also gibt es keine Dateien zu zeigen.',
+  },
+
+  features: {
+    hint:
+      'Eine Version ändert sich nie mehr, sobald sie gespeichert ist. Geändert wird stattdessen in einem Entwurf: Er beginnt als Kopie einer Version und der Daten des Lambdas, lässt sich unter einer eigenen Adresse ausprobieren, während Besucher weiter bekommen, was online ist, und wird zur nächsten Version, wenn Sie ihn übernehmen.',
+    newFeature: 'Neuer Entwurf',
+    full: (limit) => `Dieses Lambda hat ${limit} offene Entwürfe – mehr sind nicht erlaubt. Übernehmen oder löschen Sie zuerst einen.`,
+    emptyTitle: 'Gerade wird an nichts gearbeitet',
+    emptyText:
+      'Beginnen Sie einen Entwurf, um das Lambda zu ändern, ohne anzurühren, was online ist. Sie oder der Agent können ihn so oft ändern wie nötig und unter seiner eigenen Adresse ausprobieren.',
+    start: 'Entwurf beginnen',
+    askAgentNew: 'Den Agenten um eine Änderung bitten',
+    noChange: 'Noch keine Angabe, was er ändert',
+    behindTitle: 'Nach seinem Beginn wurde eine neuere Version gespeichert',
+    behind: (newest) => `Version ${newest} ist neuer`,
+    previewOnline: 'Vorschau online',
+    previewOutdated: 'Vorschau zeigt einen älteren Stand',
+    previewOffline: 'Vorschau offline',
+    changed: 'geändert',
+    openPreview: 'Vorschau',
+    openPreviewTitle: 'Die Vorschau in einem neuen Tab öffnen',
+    count: (open, limit) => `${open} von ${limit} Entwürfen offen`,
+    loading: 'Der Entwurf lädt …',
+    readFailed: 'Der Entwurf konnte nicht gelesen werden.',
+
+    newTitle: 'Entwurf beginnen',
+    newText:
+      'Ein Entwurf beginnt als Kopie einer Version – ihres Codes und ihrer Assets – und der Daten des Lambdas. Ändern Sie ihn und probieren Sie ihn unter einer eigenen Adresse aus, während Besucher weiter bekommen, was online ist. Übernehmen Sie ihn, sobald alles passt.',
+    newTextFiles:
+      'Was Sie im Code geschrieben haben, kommt in den Entwurf, statt eine Version zu werden. Probieren Sie ihn unter seiner eigenen Adresse aus und übernehmen Sie ihn, sobald alles passt.',
+    name: 'Name',
+    namePlaceholder: 'Bestenliste',
+    wanted: 'Was soll er tun?',
+    wantedPlaceholder: 'Optional. Die zehn besten Punktestände behalten und nach jedem Spiel anzeigen.',
+    olderBase: (newest) =>
+      `Nicht die neueste: Bevor er übernommen werden kann, muss er aufnehmen, was die Versionen bis ${newest} geändert haben.`,
+    create: 'Beginnen',
+    createFailed: 'Der Entwurf konnte nicht angelegt werden.',
+    retry: 'Noch einmal versuchen',
+    madeNotSaved: (name) =>
+      `Der Entwurf „${name}“ ist angelegt, aber was Sie geschrieben haben, konnte noch nicht darin gespeichert werden. Versuchen Sie es noch einmal, oder schließen Sie dieses Fenster und finden Sie den Entwurf unter Entwürfe.`,
+    created: (name) => `Der Entwurf „${name}“ ist angelegt.`,
+    cancel: 'Abbrechen',
+
+    featureHint:
+      'Eine Änderung, an der neben dem Lambda gearbeitet wird. Die Vorschau führt ihren Code mit einer eigenen Kopie der Daten aus, Besucher des Lambdas sehen also nichts davon. Beim Übernehmen wird sie zur nächsten Version.',
+    askAgent: 'Den Agenten fragen',
+    askCatchUp: 'Den Agenten bitten, ihn auf den neuesten Stand zu bringen',
+    catchUp: 'Bring diesen Entwurf auf den Stand der neuesten Version der App, und behalte, was er ändert.',
+    editCode: 'Code bearbeiten',
+    deployPreview: 'Vorschau deployen',
+    updatePreview: 'Vorschau aktualisieren',
+    previewDeployed: 'Die Vorschau ist online.',
+    previewFailed: 'Die Vorschau konnte nicht online gestellt werden.',
+    previewStopped: 'Die Vorschau ist offline.',
+    previewRejected: 'Die Vorschau hat sich nicht geändert',
+    previewNotCompiling: 'Der Code kompiliert nicht. Die Vorschau zeigt weiter, was sie vorher gezeigt hat.',
+    started: 'Begonnen',
+    changes: (version) => `Was er gegenüber Version ${version} ändert`,
+    noChanges: (version) => `Noch nichts: Er enthält genau, was Version ${version} enthält.`,
+    editNotes: 'Name und Notizen',
+    what: 'Was ändert er?',
+    whatPlaceholder: 'Fügt eine Bestenliste mit den zehn besten Punkteständen hinzu',
+    missed: (from, to) =>
+      to - from === 1 ? `Was Version ${to} geändert hat` : `Was die Versionen ${from + 1} bis ${to} geändert haben`,
+    missedNothing: 'Nichts an den Dateien.',
+
+    behindText: (base, newest) =>
+      `Er hat mit Version ${base} begonnen, und seitdem wurde Version ${newest} gespeichert. Ihn jetzt zu übernehmen, würde rückgängig machen, was sie geändert hat. Holen Sie diese Änderungen in den Entwurf – oder bitten Sie den Agenten darum – und geben Sie dann an, dass er auf Version ${newest} basiert.`,
+    moveBase: 'Andere Version als Grundlage nehmen',
+    close: 'Schließen',
+    mergeTitle: (name) => `„${name}“ übernehmen`,
+    mergeTitleShort: 'Zur nächsten Version machen',
+    leaks: (path, files) =>
+      `In ${files} wird ${path} mit dem vollen Pfad verlinkt. Aus der Vorschau heraus führt das zum Lambda, das online ist, und zu seinen echten Daten – nicht zur Kopie dieses Entwurfs. Relative Pfade („api/items“) bleiben in der Vorschau.`,
+    mergeButton: 'Übernehmen',
+    saveFirst: 'Speichern Sie zuerst den Code: Vorschau und Übernehmen verwenden, was gespeichert ist.',
+    mergeAndDeploy: (version) => `Übernehmen und Version ${version} online stellen`,
+    mergeText: (version) =>
+      `Er wird Version ${version}. Der Entwurf verschwindet damit – samt seiner Vorschau und seiner Kopie der Daten. Die Daten des Lambdas selbst bleiben, wie sie sind.`,
+    deployTooNote: (active) => `Zu Version ${active} kommen Sie unter den Versionen mit einem Klick zurück.`,
+    deployTooOffline: 'Das Lambda ist gerade offline; so geht es online.',
+    notCompiling: 'Der Code kompiliert nicht, deshalb wurde der Entwurf nicht übernommen. Beheben Sie das zuerst im Entwurf.',
+    mergeFailed: 'Der Entwurf konnte nicht übernommen werden.',
+    merged: (version) => `Als Version ${version} übernommen.`,
+    mergedOnline: (version) => `Als Version ${version} übernommen und online.`,
+
+    notesTitle: 'Name und Notizen',
+    save: 'Speichern',
+    saveFailed: 'Das konnte nicht gespeichert werden.',
+
+    baseTitle: 'Andere Version als Grundlage nehmen',
+    baseText: (base) =>
+      `Er basiert auf Version ${base}. Übernehmen lässt sich nur ein Entwurf, der auf der neuesten Version basiert – damit das Übernehmen nie rückgängig macht, was nach seinem Beginn gespeichert wurde. Sobald er alles enthält, was eine neuere Version geändert hat, geben Sie das hier an.`,
+    moveTo: (version) => `Version ${version} als Grundlage nehmen`,
+    baseWarning: 'Es wird nicht geprüft, ob diese Änderungen wirklich im Entwurf sind. Übernehmen ohne sie macht sie rückgängig.',
+
+    deleteTitle: (name) => `„${name}“ löschen?`,
+    deleteText:
+      'Sein Code, seine Vorschau und seine Kopie der Daten werden endgültig gelöscht. Das Lambda und seine Versionen bleiben unberührt.',
+    keep: 'Behalten',
+    deleteForGood: 'Endgültig löschen',
+    deleteFailed: 'Der Entwurf konnte nicht gelöscht werden.',
+    deleted: (name) => `Der Entwurf „${name}“ ist gelöscht.`,
+
+    all: 'Alle Entwürfe',
+    actions: 'Weitere Aktionen für diesen Entwurf',
+    download: 'Als ZIP herunterladen',
+    stopPreview: 'Vorschau offline nehmen',
+    delete: 'Entwurf löschen',
+    viewsLabel: 'Der Entwurf',
+    views: {
+      overview: 'Entwurf',
+      code: 'Code',
+      data: 'Daten',
+      logs: 'Logs',
+    },
+    missingTitle: 'Diesen Entwurf gibt es nicht mehr',
+    missingText: 'Er wurde in eine Version übernommen oder gelöscht. Unter den Versionen sehen Sie, was aus ihm geworden ist.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Jede Version hält fest, worum gebeten wurde und was sie geändert hat – sofern der Autor es angegeben hat. Bei mehr als ${limit} Versionen fallen die ältesten weg; die Version, die online ist, nie.`,
+      `Eine Version ist das Programm – Code und Assets – und ändert sich nie mehr, sobald sie gespeichert ist. So lässt sich jede vergleichen und genau so wieder online stellen, wie sie war. Jede hält fest, worum gebeten wurde und was sie geändert hat. Um das Lambda zu ändern, beginnen Sie einen Entwurf: Er wird zur nächsten Version, sobald alles passt. Bei mehr als ${limit} Versionen fallen die ältesten weg; die Version, die online ist, nie.`,
     none: 'Noch keine Versionen.',
     noDescription: 'Keine Beschreibung',
     online: 'online',
@@ -361,6 +579,9 @@ export const editor: EditorMessages = {
     status: { added: 'neu', removed: 'entfernt', changed: 'geändert', same: 'gleich' },
     browse: 'Dateien ansehen',
     edit: 'Von hier aus bearbeiten',
+    feature: 'Von hier aus einen Entwurf beginnen',
+    featureTitle:
+      'Neben dem Lambda an einer Änderung dieser Version arbeiten und sie als nächste Version übernehmen, sobald alles passt',
     binary: 'Kein Text, also keine Zeilen zum Vergleichen.',
     tooLarge: 'Zu groß für einen zeilenweisen Vergleich.',
   },
@@ -428,6 +649,11 @@ export const editor: EditorMessages = {
       'Requests, Ausgaben des Lambdas und Fehler – live.' +
       (capturing ? '' : ' Diese Installation speichert keine Ausgaben von Lambdas, daher erscheinen nur Requests und Fehler.') +
       ' Das Log liegt im Arbeitsspeicher und wird mit allen Lambdas hier geteilt. Es reicht Minuten bis Stunden zurück und ist nach einem Neustart leer. Adressen von Besuchern werden nicht angezeigt.',
+    featureHint: (capturing) =>
+      'Requests, Ausgaben und Fehler der Vorschau dieses Entwurfs – live.' +
+      (capturing ? '' : ' Diese Installation speichert keine Ausgaben von Lambdas, daher erscheinen nur Requests und Fehler.') +
+      ' Getrennt vom Log des Lambdas, das die Vorschau nie zeigt. Es liegt im Arbeitsspeicher und reicht Minuten bis Stunden zurück.',
+    nothingPreview: 'Noch nichts. Öffnen Sie die Vorschau des Entwurfs, dann erscheinen hier ihre Requests.',
     search: 'Suchen',
     searchLabel: 'Log durchsuchen',
     resume: 'Neue Zeilen live anzeigen',
@@ -571,12 +797,21 @@ export const editor: EditorMessages = {
     notYet: 'Kompiliert noch nicht.',
     checkFailed: 'Der Code konnte nicht geprüft werden.',
     saved: (version) => `Als Version ${version} gespeichert.`,
+    featureSaved: 'Im Entwurf gespeichert. Deployen Sie die Vorschau, um ihn auszuprobieren.',
+    featureLoadFailed: 'Der Entwurf konnte nicht geladen werden.',
+    previewOnline: 'Die Vorschau ist online.',
+    previewRefused: 'Die Vorschau hat sich nicht geändert. Was der Compiler sagt, steht unten.',
     isOnline: (version) => `Version ${version} ist online.`,
     notOnline: 'Ist nicht online gegangen. Was der Compiler sagt, steht unten.',
     failed: 'Das hat nicht geklappt.',
     unchanged: 'Seit dem letzten Speichern hat sich nichts geändert.',
     demo: 'Eine Demo, daher ist hier alles schreibgeschützt. Um etwas zu ändern, erstellen Sie damit ein eigenes Lambda. ',
-    edit: 'Code von Hand bearbeiten. Speichern legt eine neue Version an und lässt, was online ist, unberührt. Deployen stellt sie online. ',
+    edit: 'Code von Hand bearbeiten. Speichern legt eine neue Version an und lässt unberührt, was online ist; Deployen stellt sie online. Um eine Änderung zuerst auszuprobieren, beginnen Sie einen Entwurf. ',
+    editFeature:
+      'Der Code dieses Entwurfs. Speichern behält ihn im Entwurf – für die Besucher des Lambdas ändert sich nichts. Deployen stellt ihn unter der eigenen Adresse des Entwurfs online, zum Ausprobieren; wird der Entwurf übernommen, wird er zur nächsten Version. ',
+    inFeature: (name) => `in „${name}“`,
+    changedElsewhere: 'Der Entwurf wurde woanders gespeichert, seit Sie ihn geöffnet haben – vielleicht vom Agenten. Laden Sie den gespeicherten Stand, bevor Sie hier speichern; Ihre Änderungen würden nicht darüber gespeichert.',
+    readAgain: 'Gespeicherten Stand laden',
     files: (entry, cs) => (
       <>
         {entry} gibt zurück, was ausgeliefert wird. Weitere {cs}-Dateien enthalten Typen, alle anderen Dateien werden
@@ -587,9 +822,18 @@ export const editor: EditorMessages = {
     check: 'Prüfen',
     save: 'Speichern',
     deploy: 'Deployen',
+    deployPreviewTitle: 'Speichern und den Entwurf unter seiner eigenen Adresse online stellen, um ihn auszuprobieren',
     binary: (size) => `Kein Text, also nichts zu bearbeiten. Die Datei wird ausgeliefert, wie sie ist, und ist ${size} kB groß.`,
     saveAndDeploy: 'Speichern und deployen',
     saveVersion: 'Neue Version speichern',
+    fromOlder: (version, newest) =>
+      `Das geht von Version ${version} aus, und Version ${newest} ist neuer. Speichern macht es zur neuesten Version – ohne das, was nach Version ${version} kam.`,
+    featureInstead: (start) => (
+      <>
+        Sie wollen etwas ausprobieren? {start('Speichern Sie es stattdessen in einem neuen Entwurf')}: Er bekommt eine
+        eigene Adresse, und eine Version wird erst gespeichert, wenn alles passt.
+      </>
+    ),
     cancel: 'Abbrechen',
     what: 'Was ändert sich? Optional – erscheint im Verlauf.',
     placeholder: 'Fügt ein Kontaktformular hinzu',

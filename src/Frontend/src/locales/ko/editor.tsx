@@ -1,5 +1,12 @@
 import type { EditorMessages } from '../en/editor';
 
+/** 받침이 있으면 앞의 조사, 없으면 뒤의 조사를 붙여요: 워크스페이스를, 시크릿을. */
+const josa = (word: string, withFinal: string, without: string) => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+
+  return `${word}${code >= 0 && code < 11172 && code % 28 !== 0 ? withFinal : without}`;
+};
+
 /** 에디터의 한국어 문구. */
 export const editor: EditorMessages = {
   shared: {
@@ -60,9 +67,11 @@ export const editor: EditorMessages = {
     sections: {
       overview: '개요',
       change: '수정 요청',
+      features: '초안',
       showcase: '쇼케이스',
       domain: '도메인',
       files: '파일',
+      data: '데이터',
       versions: '버전',
       deployments: '배포 기록',
       stats: '통계',
@@ -110,7 +119,7 @@ export const editor: EditorMessages = {
     deleteForGood: '영구 삭제',
     deleteFailed: '람다를 삭제하지 못했어요.',
     deleteText: (key) => (
-      <>모든 버전과 파일, 기록, 그리고 {key} 주소까지 함께 사라져요. 되돌릴 수 없어요.</>
+      <>모든 버전과 모든 데이터, 기록, 그리고 {key} 주소까지 함께 사라져요. 되돌릴 수 없어요.</>
     ),
     openInTab: '새 탭에서 열기',
     open: (address) => `새 탭에서 ${address} 열기`,
@@ -126,7 +135,7 @@ export const editor: EditorMessages = {
   },
 
   change: {
-    hint: '무엇을 바꿀지 말하면 이 서버에서 돌아가는 에이전트가 대신 해 줘요. 코드를 읽고, 고치고, 컴파일되는지 확인한 다음 온라인에 올려요. 고칠 때마다 새 버전이 생기니까, 이전 버전으로 언제든 클릭 한 번에 돌아갈 수 있어요.',
+    hint: '무엇을 바꿀지 말하면 이 서버에서 돌아가는 에이전트가 대신 해 줘요. 작업은 초안에서 해요. 초안은 전용 주소가 있는 람다의 복사본이라, 다 끝날 때까지 방문자에게는 아무것도 보이지 않아요. 끝나면 다음 버전이 되어 온라인에 올라가거나, 먼저 직접 써 볼 수 있도록 초안에 그대로 남아요.',
     reading: '에이전트 상태를 불러오는 중…',
     readFailed: '에이전트 상태를 불러오지 못했어요.',
     label: '무엇을 바꿀까요?',
@@ -135,8 +144,13 @@ export const editor: EditorMessages = {
     send: '수정하기',
     sending: '요청하는 중…',
     goOnline: '끝나면 온라인에 올리기',
-    goOnlineOn: '컴파일되면 바로 온라인에 올라가요. 그전까지는 지금 온라인인 버전이 그대로 유지돼요.',
-    goOnlineOff: '새 버전으로 저장만 해요. 직접 확인한 뒤에 배포하세요.',
+    goOnlineOn: '초안에서 잘 작동하면, 에이전트가 초안을 확정해 다음 버전으로 만들고 온라인에 올려요. 그전까지는 지금 온라인인 버전이 그대로 유지돼요.',
+    goOnlineOff: '에이전트가 초안에 그대로 남겨 둬요. 초안 전용 주소에서 써 보고, 마음에 들면 확정하세요.',
+    where: '작업할 곳',
+    whereTitle: '새 초안, 또는 이어서 작업할 열린 초안',
+    newFeature: '새 초안',
+    full: (limit) =>
+      `이 람다에는 이미 초안이 ${limit}개 열려 있어서 더 만들 수 없어요. 이어서 작업할 초안을 고르거나, 먼저 하나를 확정하거나 삭제하세요.`,
     password: '비밀번호',
     fable: 'Fable은 시간을 들여 작업해요. 시간 제한도 단계 제한도 없고, 대기열도 따로 써요.',
     left: (left, perDay) => `오늘 ${perDay}번 중 ${left}번 남음`,
@@ -146,12 +160,19 @@ export const editor: EditorMessages = {
     fixLog: '로그에 나온 오류 고쳐 줘',
     how: [
       { title: '지금 있는 걸 읽어요', text: '코드와 이전 버전에서 요청했던 내용을 읽어요. 그래서 잘 되던 건 계속 잘 돼요.' },
-      { title: '고쳐요', text: '컴파일되지 않는 부분도 고쳐요. 모든 단계를 옆에서 지켜볼 수 있어요.' },
-      { title: '온라인에 올려요', text: '새 버전으로 올려요. 이전 버전으로는 클릭 한 번에 돌아갈 수 있어요.' },
+      {
+        title: '초안에서 작업해요',
+        text: '전용 주소와 전용 데이터가 있는 복사본에서 고치고 써 봐요. 모든 단계를 옆에서 지켜볼 수 있어요.',
+      },
+      {
+        title: '온라인에 올려요',
+        text: '다음 버전으로 올리거나, 먼저 써 볼 수 있게 남겨 둬요. 이전 버전으로는 클릭 한 번에 돌아갈 수 있어요.',
+      },
     ],
     asked: '요청 내용',
     goesOnline: '끝나면 온라인에 올림',
-    review: '저장만 하고 먼저 확인',
+    review: '초안에 남겨 두고 직접 써 보기',
+    inFeature: (name) => `‘${name}’ 초안에서`,
     queued: (ahead) =>
       ahead === 1 ? '기다리는 중이에요. 앞에 작업이 하나 있어요.' : `기다리는 중이에요. 앞에 작업 ${ahead}개가 있어요.`,
     starting: '시작하는 중…',
@@ -161,7 +182,7 @@ export const editor: EditorMessages = {
     stopping: '중지하는 중…',
     stopTitle: '이 수정 작업을 중지할까요?',
     stopText:
-      '지금까지 저장한 건 버전으로 남아요. 이미 새 버전을 온라인에 올린 게 아니라면, 온라인 버전도 그대로예요.',
+      '지금까지 저장한 건 초안이나 버전으로 남아요. 이미 수정한 내용을 확정해서 온라인에 올린 게 아니라면, 온라인 버전도 그대로예요.',
     keepGoing: '계속하기',
     stopIt: '중지하기',
     log: '작업 기록',
@@ -172,13 +193,22 @@ export const editor: EditorMessages = {
       read: '코드 읽기',
       readFile: (file) => <>{file} 읽기</>,
       logs: '로그 읽기',
+      logsPreview: '미리 보기 로그 읽기',
+      readFeature: '초안 읽기',
       create: '람다 만들기',
+      feature: '초안 만들기',
+      featureStarted: (name) => <>{name} 초안 만듦</>,
+      update: '초안 메모 수정',
+      rebase: (version) => `버전 ${version} 기준으로 초안 맞추기`,
+      merge: '초안 확정',
+      discard: '초안 삭제',
       write: (files) => <>{files || '파일'} 수정</>,
       writeAll: (files) => <>{files} 작성</>,
       removing: (files) => <>, {files} 삭제</>,
       more: (count) => `외 ${count}개`,
       check: '컴파일',
       deploy: '온라인에 올리기',
+      deployPreview: '미리 보기 온라인에 올리기',
       deployVersion: (version) => `버전 ${version} 온라인에 올리기`,
       upload: (path) => <>{path} 저장</>,
       delete: (path) => <>{path} 삭제</>,
@@ -188,6 +218,7 @@ export const editor: EditorMessages = {
     marks: {
       version: (version) => `v${version}`,
       online: '온라인',
+      previewOnline: '미리 보기 온라인',
       compiles: '컴파일됨',
       errors: (count) => `오류 ${count}개`,
       problems: (count) => `오류 ${count}건`,
@@ -206,6 +237,13 @@ export const editor: EditorMessages = {
       unchanged: '바뀐 게 없어요',
       stopped: '중지됐어요',
       stoppedSaved: (version) => `중지하기 전에 저장한 버전은 남아 있어요 (버전 ${version}).`,
+      stoppedFeature: (name) => `그때까지 한 작업은 ‘${name}’ 초안에 남아 있어요.`,
+      feature: (name) => `‘${name}’ 초안에서 써 볼 수 있어요`,
+      featureBroken: (name) => `‘${name}’ 초안이 아직 컴파일되지 않아요`,
+      tryIt: '초안 전용 주소에서 써 보세요. 마음에 들면 확정하세요. 그러면 다음 버전이 돼요.',
+      previewOffline: '미리 보기가 온라인이 아니에요. 써 보려면 초안에서 배포하세요.',
+      previewStill: '미리 보기에는 마지막으로 컴파일된 내용이 그대로 보여요.',
+      notMerged: '확정되지 않아서, 새로 온라인에 올라간 건 없어요.',
       failed: '수정하지 못했어요',
       timeout:
         '아무것도 바꾸기 전에 시간이 다 됐어요. 더 작은 걸 요청하거나 다시 요청해 보세요. 실행할 때마다 어디까지 가는지가 달라요.',
@@ -218,6 +256,8 @@ export const editor: EditorMessages = {
     },
     seeChanges: '바뀐 내용 보기',
     open: '열기',
+    openPreview: '미리 보기 열기',
+    openFeature: '초안 열기',
     deploy: (version) => `버전 ${version} 배포`,
     undo: (version) => `되돌리기 (버전 ${version})`,
     undoTitle: '수정을 취소해요. 전에 온라인이던 버전이 다시 온라인에 올라가요. 새 버전은 기록에 남아요.',
@@ -225,6 +265,7 @@ export const editor: EditorMessages = {
     toast: {
       online: (version) => `수정한 내용이 온라인에 올라갔어요 (버전 ${version}).`,
       saved: (version) => `수정한 내용을 저장했어요 (버전 ${version}).`,
+      feature: (name) => `수정한 내용을 ‘${name}’ 초안에서 써 볼 수 있어요.`,
       unchanged: '에이전트가 아무것도 바꾸지 않았어요.',
       failed: '수정하지 못했어요.',
       stopped: '수정 작업을 중지했어요.',
@@ -270,7 +311,16 @@ export const editor: EditorMessages = {
     notOnline: '아직 온라인 아님',
     wanted: '요청 내용',
     noVersions: '아직 버전이 없어요.',
+    inProgress: '작업 중',
+    allFeatures: '모든 초안',
+    previewOnline: '미리 보기가 온라인이에요',
+    previewOffline: '미리 보기가 오프라인이에요',
+    behind: '기준이 오래됨',
     storage: '저장 공간',
+    inVersion: (version) => `버전 ${version}에 담긴 것`,
+    noVersion: '버전에 담긴 것',
+    inData: '데이터에 담긴 것',
+    sharedByAll: '모든 버전이 함께 써요',
     browse: '둘러보기',
     code: '코드',
     codeWhy: 'C#은 컴파일만 되고, 그대로 제공되지 않아요.',
@@ -279,6 +329,8 @@ export const editor: EditorMessages = {
     assetsPublic: '공개: 코드가 제공해요.',
     assetsPrivate: '코드가 제공하지 않아요.',
     data: '데이터',
+    workspace: '워크스페이스',
+    workspaceOff: '꺼짐',
     dataPublic: '공개: 코드가 워크스페이스를 제공해요.',
     dataPrivate: '람다만 볼 수 있어요.',
   },
@@ -286,9 +338,15 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('코드')}는 컴파일되고, 그대로 제공되지 않아요. {b('에셋')}(페이지, 스타일, 이미지)은 버전마다 함께 저장되고,
-        코드가 제공하면 공개돼요. {b('데이터')}는 람다가 실행 중에 쓰는 거예요. 어떤 버전에도 속하지 않고, 코드가 제공할
-        때만 공개돼요.
+        한 버전의 파일, 즉 프로그램이에요. {b('코드')}는 컴파일되고, 그대로 제공되지 않아요. {b('에셋')}(페이지,
+        스크립트, 스타일, 이미지)은 코드와 함께 저장되고 함께 배포되고 롤백되며, 코드가 제공하면 공개돼요. 람다가 실행
+        중에 보관하는 건 여기 없어요. 그건 {b('데이터')}에 있어요.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        이 파일들은 버전 {version}에 속하고, 버전과 함께 바뀌어요. 람다가 실행 중에 보관하는 건 모든 버전에서 똑같고,{' '}
+        {data('데이터')}에 있어요.
       </>
     ),
     edit: '이 버전 편집',
@@ -296,7 +354,6 @@ export const editor: EditorMessages = {
     shown: (version, online, newest) => `버전 ${version}${online ? ', 온라인' : newest ? ', 최신' : ''}`,
     optionOnline: ' (온라인)',
     readFailed: '그 버전을 읽지 못했어요.',
-    dataFailed: '데이터를 읽지 못했어요.',
     noVersion: '아직 보여 줄 버전이 없어요.',
     label: '파일',
     code: '코드',
@@ -310,7 +367,7 @@ export const editor: EditorMessages = {
     assetsPrivate: '코드와 함께 저장되지만, 이 버전은 제공하지 않아요.',
     noAssets: '이 버전에는 없어요.',
     data: '데이터',
-    dataPublic: '공개: 이 버전이 Workspace로 제공해요.',
+    dataPublic: '공개: 온라인 코드가 Workspace로 제공해요.',
     dataPrivate: '람다만 볼 수 있어요. 어떤 버전에도 속하지 않아요.',
     uploadFailed: (path) => `${path} 파일을 업로드하지 못했어요.`,
     deleteFolder: (path, held) =>
@@ -338,9 +395,172 @@ export const editor: EditorMessages = {
     notText: '텍스트가 아니에요. 다운로드해서 확인하세요.',
   },
 
+  data: {
+    hint:
+      '데이터는 람다가 실행 중에 보관하는 거예요. 버전이 아니라 람다에 속해요. 모든 버전이 같은 데이터를 읽고 쓰고, 버전으로 무엇을 하든 데이터는 바뀌지 않아요. 초안은 데이터의 복사본으로 써 봐요. 람다를 삭제하거나 그 종류의 데이터를 끌 때만 사라져요.',
+    facts: [
+      ['모든 버전이 공유', '어느 버전이 온라인이든 같은 데이터를 읽고 써요.'],
+      ['배포해도 그대로', '배포, 롤백, 초안 확정은 데이터를 전혀 건드리지 않아요.'],
+      ['켜고 끄는 건 내 선택', '종류마다 원하는 동안만 켜 둘 수 있어요. 끄면 안에 있던 건 삭제돼요.'],
+    ],
+    featureHint:
+      '이 초안이 쓰는 데이터예요. 초안을 만들 때 람다의 데이터를 복사한 거예요. 미리 보기는 이 복사본을 읽고 쓰기 때문에, 여기서 무엇을 해 봐도 람다가 보관하는 데이터는 건드리지 않아요. 초안을 확정하면 복사본은 버려지고, 람다의 데이터는 그대로 남아요.',
+    recopy: '람다의 데이터 다시 복사',
+    recopyTitle: '이 복사본을 지금 람다에 있는 데이터로 바꾸기',
+    recopyConfirm: '람다의 데이터를 다시 복사할까요?',
+    recopyText:
+      '이 복사본에 있는 모든 것(미리 보기가 쓴 것까지)이 지금 람다에 있는 데이터로 바뀌어요. 람다의 데이터 자체는 건드리지 않아요.',
+    keepCopy: '이 복사본 유지',
+    recopied: '새로 복사했어요. 다음 요청부터 미리 보기가 이 복사본을 읽어요.',
+    recopyFailed: '데이터를 다시 복사하지 못했어요.',
+    copyContents: '워크스페이스 복사본에 담긴 것',
+    kinds: {
+      workspace: {
+        name: '워크스페이스',
+        what: '람다가 실행 중에 읽고 쓰는 파일이에요. 업로드된 파일, 기록 등 보관할 건 뭐든지요.',
+      },
+    },
+    on: '켜짐',
+    off: '꺼짐',
+    byDefault: '기본으로 켜짐',
+    usage: (items, used, of) => `${items} · ${of} 중 ${used}`,
+    offText: '꺼져 있어요. 아무것도 담겨 있지 않고, 이걸 쓰는 코드는 다시 켤 때까지 실패해요.',
+    switchLabel: (name) => `${name} 켜기/끄기`,
+    confirmOff: (name) => `${josa(name, '을', '를')} 끌까요?`,
+    confirmText: (items, size) => `안에 있는 모든 것(${items}, ${size})이 영구 삭제돼요. 되돌릴 수 없어요.`,
+    confirmEmpty: '비어 있어서 잃는 건 없어요.',
+    inUse: '온라인 버전이 이걸 쓰고 있어서, 다시 켤 때까지 그 부분에서 실패해요.',
+    deleteAndOff: '끄고 삭제',
+    keep: '그대로 두기',
+    switchedOn: (name) => `${josa(name, '이', '가')} 켜졌어요. 다음 요청부터 람다가 쓸 수 있어요.`,
+    switchedOff: (name) => `${josa(name, '이', '가')} 꺼졌고, 안에 있던 건 삭제됐어요.`,
+    switchFailed: '전환하지 못했어요.',
+    readFailed: '데이터를 읽지 못했어요.',
+    demo: '데모라서 데이터는 읽기만 할 수 있고, 바꿀 수는 없어요.',
+    contents: '워크스페이스에 담긴 것',
+    browse: '파일',
+    offBrowse: '워크스페이스가 꺼져 있어서 보여 줄 파일이 없어요.',
+  },
+
+  features: {
+    hint:
+      '버전은 한 번 저장하면 바뀌지 않아요. 대신 수정은 초안에서 해요. 초안은 버전과 람다 데이터의 복사본으로 시작하고, 방문자가 계속 온라인 버전을 받는 동안 전용 주소에서 써 볼 수 있어요. 확정하면 다음 버전이 돼요.',
+    newFeature: '새 초안',
+    full: (limit) => `이 람다에는 이미 초안이 ${limit}개 열려 있어서 더 만들 수 없어요. 먼저 하나를 확정하거나 삭제하세요.`,
+    emptyTitle: '작업 중인 초안이 없어요',
+    emptyText:
+      '초안을 만들면 온라인 버전은 건드리지 않고 람다를 바꿀 수 있어요. 직접 하든 에이전트에게 맡기든, 필요한 만큼 몇 번이고 고치고 전용 주소에서 써 볼 수 있어요.',
+    start: '초안 만들기',
+    askAgentNew: '에이전트에게 수정 요청하기',
+    noChange: '아직 무엇을 바꾸는지 적혀 있지 않아요',
+    behindTitle: '초안을 만든 뒤에 더 새로운 버전이 저장됐어요',
+    behind: (newest) => `버전 ${newest}보다 오래됨`,
+    previewOnline: '미리 보기 온라인',
+    previewOutdated: '미리 보기가 이전 저장본',
+    previewOffline: '미리 보기 오프라인',
+    changed: '마지막 수정',
+    openPreview: '미리 보기',
+    openPreviewTitle: '새 탭에서 미리 보기 열기',
+    count: (open, limit) => `초안 ${limit}개 중 ${open}개 열림`,
+    loading: '초안을 불러오는 중…',
+    readFailed: '초안을 읽지 못했어요.',
+
+    newTitle: '초안 만들기',
+    newText:
+      '초안은 버전(코드와 에셋)과 람다 데이터의 복사본으로 시작해요. 방문자가 계속 온라인 버전을 받는 동안, 전용 주소에서 고치고 써 볼 수 있어요. 제대로 되면 확정하세요.',
+    newTextFiles:
+      '코드에 입력한 내용은 버전이 되지 않고 이 초안에 들어가요. 초안 전용 주소에서 써 보고, 제대로 되면 확정하세요.',
+    name: '이름',
+    namePlaceholder: '순위표',
+    wanted: '무엇을 하나요?',
+    wantedPlaceholder: '선택 사항. 최고 점수 10개를 저장하고 게임이 끝날 때마다 보여 주기',
+    olderBase: (newest) => `최신 버전이 아니에요. 확정하려면 먼저 버전 ${newest}까지 바뀐 내용을 가져와야 해요.`,
+    create: '만들기',
+    createFailed: '초안을 만들지 못했어요.',
+    retry: '다시 시도',
+    madeNotSaved: (name) =>
+      `‘${name}’ 초안을 만들었지만, 입력한 내용은 아직 넣지 못했어요. 다시 시도하거나, 이 창을 닫고 ‘초안’에서 찾으세요.`,
+    created: (name) => `‘${name}’ 초안을 만들었어요.`,
+    cancel: '취소',
+
+    featureHint:
+      '람다와 따로 작업 중인 수정이에요. 미리 보기는 초안의 코드를 초안만의 데이터 복사본으로 실행하기 때문에, 람다의 방문자에게는 아무것도 보이지 않아요. 확정하면 다음 버전이 돼요.',
+    askAgent: '에이전트에게 요청',
+    askCatchUp: '에이전트에게 최신 상태로 맞춰 달라고 요청하기',
+    catchUp: '이 초안을 앱의 최신 버전에 맞춰 업데이트하고, 초안에서 바꾼 내용은 그대로 유지해 주세요.',
+    editCode: '코드 편집',
+    deployPreview: '미리 보기 배포',
+    updatePreview: '미리 보기 업데이트',
+    previewDeployed: '미리 보기가 온라인에 올라갔어요.',
+    previewFailed: '미리 보기를 온라인에 올리지 못했어요.',
+    previewStopped: '미리 보기를 오프라인으로 전환했어요.',
+    previewRejected: '미리 보기가 바뀌지 않았어요',
+    previewNotCompiling: '컴파일되지 않아요. 미리 보기에는 전에 보이던 내용이 그대로 보여요.',
+    started: '만든 때',
+    changes: (version) => `버전 ${version} 대비 바뀐 내용`,
+    noChanges: (version) => `아직 없어요. 버전 ${version} 내용 그대로예요.`,
+    editNotes: '이름과 메모',
+    what: '무엇이 바뀌나요?',
+    whatPlaceholder: '최고 점수 10개를 보관하는 순위표 추가',
+    missed: (from, to) => (to - from === 1 ? `버전 ${to}에서 바뀐 내용` : `버전 ${from + 1}~${to}에서 바뀐 내용`),
+    missedNothing: '파일에는 바뀐 게 없어요.',
+
+    behindText: (base, newest) =>
+      `이 초안은 버전 ${base} 기준으로 시작했는데, 그 뒤에 새 버전(버전 ${newest})이 저장됐어요. 지금 확정하면 그 버전에서 바뀐 내용이 되돌려져요. 그 변경 사항을 초안에 가져온 다음(에이전트에게 맡겨도 돼요), 버전 ${newest} 기준으로 바꿔 주세요.`,
+    moveBase: '기준 버전 바꾸기',
+    close: '닫기',
+    mergeTitle: (name) => `‘${name}’ 초안 확정`,
+    mergeTitleShort: '다음 버전으로 만들기',
+    leaks: (path, files) =>
+      `${files}의 링크가 전체 경로(${path})를 쓰고 있어요. 미리 보기에서 이 링크는 이 초안의 데이터 복사본이 아니라, 온라인에 있는 람다와 실제 데이터로 이어져요. 상대 경로(‘api/items’)는 미리 보기 안에 머물러요.`,
+    mergeButton: '확정',
+    saveFirst: '먼저 코드를 저장하세요. 미리 보기와 확정에는 저장된 내용이 쓰여요.',
+    mergeAndDeploy: (version) => `확정하고 버전 ${version} 온라인에 올리기`,
+    mergeText: (version) =>
+      `다음 버전(버전 ${version})이 돼요. 초안(미리 보기와 데이터 복사본)은 함께 사라져요. 람다의 데이터 자체는 그대로 남아요.`,
+    deployTooNote: (active) => `버전 ${active}도 버전 목록에서 클릭 한 번에 다시 올릴 수 있어요.`,
+    deployTooOffline: '지금은 람다가 오프라인이라, 이렇게 하면 온라인이 돼요.',
+    notCompiling: '컴파일되지 않아서 확정하지 않았어요. 먼저 초안에서 고치세요.',
+    mergeFailed: '초안을 확정하지 못했어요.',
+    merged: (version) => `확정했어요 (버전 ${version}).`,
+    mergedOnline: (version) => `확정하고 온라인에 올렸어요 (버전 ${version}).`,
+
+    notesTitle: '이름과 메모',
+    save: '저장',
+    saveFailed: '저장하지 못했어요.',
+
+    baseTitle: '기준 버전 바꾸기',
+    baseText: (base) =>
+      `지금은 버전 ${base} 기준이에요. 최신 버전을 기준으로 한 초안만 확정할 수 있어요. 그래야 확정할 때 초안을 만든 뒤에 저장된 내용이 되돌려지지 않아요. 더 새로운 버전에서 바뀐 내용을 모두 가져왔다면, 여기서 바꿔 주세요.`,
+    moveTo: (version) => `버전 ${version} 기준으로 바꾸기`,
+    baseWarning: '그 변경 사항이 정말 초안에 들어 있는지는 아무도 확인하지 않아요. 빠진 채로 확정하면 그 변경 사항은 되돌려져요.',
+
+    deleteTitle: (name) => `‘${name}’ 초안을 삭제할까요?`,
+    deleteText: '코드, 미리 보기, 데이터 복사본이 영구 삭제돼요. 람다와 람다의 버전은 건드리지 않아요.',
+    keep: '그대로 두기',
+    deleteForGood: '영구 삭제',
+    deleteFailed: '초안을 삭제하지 못했어요.',
+    deleted: (name) => `‘${name}’ 초안을 삭제했어요.`,
+
+    all: '모든 초안',
+    actions: '이 초안의 다른 작업',
+    download: 'ZIP으로 다운로드',
+    stopPreview: '미리 보기 오프라인으로 전환',
+    delete: '이 초안 삭제',
+    viewsLabel: '초안',
+    views: {
+      overview: '초안',
+      code: '코드',
+      data: '데이터',
+      logs: '로그',
+    },
+    missingTitle: '이 초안은 이제 없어요',
+    missingText: '확정되어 버전이 됐거나, 삭제됐어요. 어떻게 됐는지는 버전에서 확인할 수 있어요.',
+  },
+
   versions: {
     hint: (limit) =>
-      `버전마다 무엇을 요청했고 무엇이 바뀌었는지 남아 있어요(작성한 쪽이 적었다면요). 버전이 ${limit}개를 넘으면 가장 오래된 것부터 삭제되지만, 온라인 버전은 삭제되지 않아요.`,
+      `버전은 프로그램, 즉 코드와 에셋이에요. 한 번 저장하면 바뀌지 않아서, 어느 버전이든 비교할 수 있고 저장했던 그대로 다시 온라인에 올릴 수 있어요. 버전마다 무엇을 요청했고 무엇이 바뀌었는지 남아 있어요. 람다를 바꾸려면 초안을 만드세요. 제대로 되면 다음 버전이 돼요. 버전이 ${limit}개를 넘으면 가장 오래된 것부터 삭제되지만, 온라인 버전은 삭제되지 않아요.`,
     none: '아직 버전이 없어요.',
     noDescription: '설명 없음',
     online: '온라인',
@@ -355,6 +575,8 @@ export const editor: EditorMessages = {
     status: { added: '추가됨', removed: '삭제됨', changed: '변경됨', same: '같음' },
     browse: '파일 둘러보기',
     edit: '여기서부터 편집',
+    feature: '여기서 초안 만들기',
+    featureTitle: '이 버전을 람다와 따로 고쳐 보고, 제대로 되면 확정해서 다음 버전으로 만들기',
     binary: '텍스트가 아니라서 줄 단위로 비교할 수 없어요.',
     tooLarge: '너무 커서 줄 단위로 비교할 수 없어요.',
   },
@@ -422,6 +644,11 @@ export const editor: EditorMessages = {
       '요청, 람다가 출력한 내용, 문제가 생긴 곳을 실시간으로 보여 줘요.' +
       (capturing ? '' : ' 이 서버는 람다의 출력을 보관하지 않아서, 요청과 오류만 나와요.') +
       ' 메모리에 보관되고 이 서버의 모든 람다가 함께 쓰기 때문에, 몇 분에서 몇 시간 전까지만 남고 재시작하면 비워져요. 방문자의 IP 주소는 표시하지 않아요.',
+    featureHint: (capturing) =>
+      '이 초안의 미리 보기가 응답하고, 출력하고, 던진 것을 실시간으로 보여 줘요.' +
+      (capturing ? '' : ' 이 서버는 람다의 출력을 보관하지 않아서, 요청과 오류만 나와요.') +
+      ' 람다 자체의 로그와는 따로 보관되고, 람다 로그에는 미리 보기가 나오지 않아요. 메모리에 보관되기 때문에 몇 분에서 몇 시간 전까지만 남아요.',
+    nothingPreview: '아직 없어요. 초안의 미리 보기를 열면 요청이 여기에 나와요.',
     search: '검색',
     searchLabel: '로그 검색',
     resume: '새 줄을 실시간으로 보기',
@@ -563,25 +790,43 @@ export const editor: EditorMessages = {
     notYet: '아직 컴파일되지 않아요.',
     checkFailed: '코드를 검사하지 못했어요.',
     saved: (version) => `저장했어요 (버전 ${version}).`,
+    featureSaved: '초안에 저장했어요. 써 보려면 미리 보기를 배포하세요.',
+    featureLoadFailed: '초안을 불러오지 못했어요.',
+    previewOnline: '미리 보기가 온라인에 올라갔어요.',
+    previewRefused: '미리 보기가 바뀌지 않았어요. 아래에서 컴파일러 메시지를 확인하세요.',
     isOnline: (version) => `버전 ${version}, 이제 온라인이에요.`,
     notOnline: '온라인에 올리지 못했어요. 아래에서 컴파일러 메시지를 확인하세요.',
     failed: '잘 안 됐어요.',
     unchanged: '마지막 저장 이후 바뀐 게 없어요.',
     demo: '데모라서 모두 읽기 전용이에요. 고치려면 이 데모로 내 람다를 만드세요. ',
-    edit: '코드를 직접 편집하세요. 저장하면 새 버전이 생기고, 온라인 버전은 그대로예요. 배포하면 온라인에 올라가요. ',
+    edit: '코드를 직접 편집하세요. 저장하면 새 버전이 생기고, 온라인 버전은 그대로예요. 배포하면 온라인에 올라가요. 먼저 써 보고 싶다면 초안을 만드세요. ',
+    editFeature:
+      '이 초안의 코드예요. 저장해도 초안에만 남고, 람다의 방문자가 받는 건 하나도 바뀌지 않아요. 배포하면 초안 전용 주소에서 온라인에 올라가 써 볼 수 있어요. 초안을 확정하면 다음 버전이 돼요. ',
+    inFeature: (name) => `‘${name}’ 초안`,
+    changedElsewhere: '이 초안은 연 뒤에 다른 곳에서 저장됐어요. 아마 에이전트일 거예요. 여기서 저장하기 전에 저장된 내용을 불러오세요. 여기서 바꾼 내용은 그 위에 저장되지 않아요.',
+    readAgain: '저장된 내용 불러오기',
     files: (entry, cs) => (
       <>
         {entry} 파일이 반환하는 것이 제공되고, 다른 {cs} 파일에는 타입을 두고, 그 밖의 파일은 그대로 제공돼요. Ctrl-S로
         저장하고, F12로 선언으로 이동해요.
       </>
     ),
-    newer: (version) => ` 여기 열린 버전보다 새 버전(${version})이 있어요.`,
+    newer: (version) => ` 여기 열린 것보다 새로운 버전이 있어요 (버전 ${version}).`,
     check: '검사',
     save: '저장',
     deploy: '배포',
+    deployPreviewTitle: '저장하고, 써 볼 수 있게 초안 전용 주소에서 온라인에 올리기',
     binary: (size) => `텍스트가 아니라서 편집할 수 없어요. 그대로 제공되고, 크기는 ${size} kB예요.`,
     saveAndDeploy: '저장하고 배포',
     saveVersion: '새 버전 저장',
+    fromOlder: (version, newest) =>
+      `버전 ${version}에서 시작한 코드인데, 더 새로운 버전 ${newest}도 있어요. 저장하면 버전 ${version} 이후에 바뀐 내용 없이 이 코드가 최신 버전이 돼요.`,
+    featureInstead: (start) => (
+      <>
+        뭔가 시험해 보는 중인가요? {start('대신 새 초안에 넣으세요')}. 전용 주소가 생기고, 제대로 될 때까지 버전은
+        저장되지 않아요.
+      </>
+    ),
     cancel: '취소',
     what: '무엇이 바뀌나요? 선택 사항이고, 기록에 표시돼요.',
     placeholder: '문의 양식 추가',

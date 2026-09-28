@@ -62,10 +62,12 @@ public sealed record TrafficSummary(
 /// <param name="CodeCharacters">Characters of C#, which is what the code budget counts</param>
 /// <param name="Assets">Files saved with the code that are not C#, served as they are when the code asks</param>
 /// <param name="AssetBytes">What those weigh, decoded</param>
-/// <param name="WorkspaceFiles">Files in the workspace, which the lambda writes at runtime</param>
-/// <param name="WorkspaceBytes">What those weigh</param>
+/// <param name="WorkspaceFiles">Files in the workspace - the lambda's data, which it writes at runtime and every version shares</param>
+/// <param name="WorkspaceBytes">The room those take</param>
 /// <param name="ServesAssets">Whether the code of that version reaches for Assets to serve them</param>
 /// <param name="ServesWorkspace">Whether it serves the workspace, which makes those files public</param>
+/// <param name="WorkspaceEnabled">Whether the owner left the workspace switched on</param>
+/// <param name="UsesWorkspace">Whether the code of that version uses the workspace at all, and so fails where it does once it is off</param>
 public sealed record StorageSummary(
     int? Version,
     int CodeFiles,
@@ -75,7 +77,9 @@ public sealed record StorageSummary(
     int WorkspaceFiles,
     long WorkspaceBytes,
     bool ServesAssets,
-    bool ServesWorkspace
+    bool ServesWorkspace,
+    bool WorkspaceEnabled,
+    bool UsesWorkspace
 );
 
 /// <summary>
@@ -85,13 +89,15 @@ public sealed record StorageSummary(
 /// Nothing counts files - C#, assets or the workspace - only what they come
 /// to, and for the workspace the room they take.
 /// </remarks>
+/// <param name="Features">How many features it may have open at once</param>
 public sealed record SummaryLimits(
     int CodeCharacters,
     long AssetBytes,
     long WorkspaceBytes,
     int Versions,
     int DeploymentLifetimeHours,
-    int RetentionDays
+    int RetentionDays,
+    int Features
 );
 
 /// <summary>

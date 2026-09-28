@@ -25,6 +25,13 @@ public sealed record BuildAvailability(bool Available, int PerDay, bool SecondMo
 /// What the Change section sends: what should be different about the lambda
 /// whose editor key the request is made with.
 /// </summary>
-/// <param name="Deploy">Whether to put the change online once it compiles, rather than leave it to be looked at</param>
+/// <param name="Deploy">
+/// Whether to merge the change and put it online once it works, rather than
+/// leave it in its feature for the owner to try first
+/// </param>
 /// <param name="Language">The language of the control center, for the agent to fall back on</param>
-public sealed record ChangeRequest(string? Prompt, bool Deploy = true, string? Model = null, string? Password = null, string? Language = null);
+/// <param name="Feature">
+/// The feature to go on with, by its key; left out, the agent starts a new one
+/// </param>
+public sealed record ChangeRequest(string? Prompt, bool Deploy = true, string? Model = null, string? Password = null, string? Language = null,
+                                   string? Feature = null);

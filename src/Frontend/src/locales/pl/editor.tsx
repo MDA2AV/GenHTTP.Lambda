@@ -61,9 +61,11 @@ export const editor: EditorMessages = {
     sections: {
       overview: 'Przegląd',
       change: 'Zmień',
+      features: 'Szkice',
       showcase: 'Galeria',
       domain: 'Domena',
       files: 'Pliki',
+      data: 'Dane',
       versions: 'Wersje',
       deployments: 'Wdrożenia',
       stats: 'Statystyki',
@@ -111,7 +113,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Usuń na zawsze',
     deleteFailed: 'Nie udało się usunąć lambdy.',
     deleteText: (key) => (
-      <>Znikną wszystkie wersje, pliki, historia i adres {key}. Tego nie da się cofnąć.</>
+      <>Znikną wszystkie wersje, wszystkie dane, historia i adres {key}. Tego nie da się cofnąć.</>
     ),
     openInTab: 'Otwórz w nowej karcie',
     open: (address) => `Otwórz ${address} w nowej karcie`,
@@ -127,7 +129,7 @@ export const editor: EditorMessages = {
   },
 
   change: {
-    hint: 'Napisz, co ma być inaczej, a agent działający na tym serwerze to zrobi: przeczyta kod, wprowadzi zmianę, sprawdzi, czy się kompiluje, i wrzuci ją online. Każda zmiana to nowa wersja, więc do poprzedniej zawsze wrócisz jednym kliknięciem.',
+    hint: 'Napisz, co ma być inaczej, a agent działający na tym serwerze to zrobi. Pracuje w szkicu – kopii lambdy z własnym adresem – więc odwiedzający nic nie zobaczą, dopóki nie skończy. Potem zmiana staje się kolejną wersją i trafia online albo czeka w szkicu, aż najpierw ją wypróbujesz.',
     reading: 'Łączenie z agentem…',
     readFailed: 'Nie udało się połączyć z agentem.',
     label: 'Co ma być inaczej?',
@@ -136,8 +138,13 @@ export const editor: EditorMessages = {
     send: 'Wprowadź zmianę',
     sending: 'Wysyłanie…',
     goOnline: 'Wdróż po zakończeniu',
-    goOnlineOn: 'Zmiana trafi online, gdy tylko się skompiluje. Do tego czasu działa to, co jest online teraz.',
-    goOnlineOff: 'Zmiana zostanie zapisana jako nowa wersja, a ty wdrożysz ją, kiedy ją przejrzysz.',
+    goOnlineOn: 'Gdy zmiana zadziała w szkicu, agent scali szkic w kolejną wersję i ją wdroży. Do tego czasu działa to, co jest online teraz.',
+    goOnlineOff: 'Agent zostawi zmianę w szkicu. Wypróbuj ją pod własnym adresem szkicu i scal szkic, gdy wszystko będzie w porządku.',
+    where: 'Pracuj w',
+    whereTitle: 'Nowy szkic albo otwarty, nad którym można pracować dalej',
+    newFeature: 'Nowy szkic',
+    full: (limit) =>
+      `Ta lambda ma już ${counted(limit, 'otwarty szkic', 'otwarte szkice', 'otwartych szkiców')} – więcej mieć nie może. Wybierz jeden, żeby nad nim pracować dalej, albo najpierw scal lub usuń któryś.`,
     password: 'Hasło',
     fable: 'Fable się nie spieszy: bez limitu czasu i kroków, we własnej kolejce.',
     left: (left, perDay) => `Pozostało dziś: ${left} z ${perDay}`,
@@ -150,12 +157,19 @@ export const editor: EditorMessages = {
         title: 'Czyta to, co już jest',
         text: 'Kod i to, o co proszono przy wcześniejszych wersjach – żeby to, co działa, działało dalej.',
       },
-      { title: 'Wprowadza zmianę', text: 'I poprawia wszystko, co się nie kompiluje, a ty widzisz każdy krok.' },
-      { title: 'Wrzuca ją online', text: 'Jako nową wersję. Do poprzedniej wrócisz jednym kliknięciem.' },
+      {
+        title: 'Pracuje w szkicu',
+        text: 'W kopii z własnym adresem i własnymi danymi: tam wprowadza zmianę i ją sprawdza, a ty widzisz każdy krok.',
+      },
+      {
+        title: 'Wrzuca ją online',
+        text: 'Jako kolejną wersję – albo zostawia ją do wypróbowania. Do poprzedniej wersji wrócisz jednym kliknięciem.',
+      },
     ],
     asked: 'Twoja prośba',
     goesOnline: 'trafi online po zakończeniu',
-    review: 'zostanie zapisana do przejrzenia',
+    review: 'zostanie w szkicu do wypróbowania',
+    inFeature: (name) => `w szkicu „${name}”`,
     queued: (ahead) =>
       ahead === 1
         ? 'W kolejce – przed tą zmianą jest jeszcze jedno zadanie.'
@@ -167,7 +181,7 @@ export const editor: EditorMessages = {
     stopping: 'Zatrzymywanie…',
     stopTitle: 'Zatrzymać tę zmianę?',
     stopText:
-      'To, co agent zdążył zapisać, zostanie jako wersja. To, co jest online, zostaje online – chyba że agent zdążył już wdrożyć nową wersję.',
+      'To, co agent zdążył zapisać, zostaje – w szkicu albo jako wersja. To, co jest online, zostaje online – chyba że agent zdążył już scalić zmianę i ją wdrożyć.',
     keepGoing: 'Kontynuuj',
     stopIt: 'Zatrzymaj',
     log: 'Co zrobił agent',
@@ -178,13 +192,22 @@ export const editor: EditorMessages = {
       read: 'Czytanie kodu',
       readFile: (file) => <>Czytanie pliku {file}</>,
       logs: 'Czytanie logu',
+      logsPreview: 'Czytanie logu podglądu',
+      readFeature: 'Czytanie szkicu',
       create: 'Tworzenie lambdy',
+      feature: 'Tworzenie szkicu',
+      featureStarted: (name) => <>Utworzono szkic {name}</>,
+      update: 'Aktualizowanie notatek szkicu',
+      rebase: (version) => `Opieranie szkicu na wersji ${version}`,
+      merge: 'Scalanie szkicu',
+      discard: 'Usuwanie szkicu',
       write: (files) => <>Edycja {files}</>,
       writeAll: (files) => <>Zapisywanie {files}</>,
       removing: (files) => <>, usuwanie {files}</>,
       more: (count) => `+${count} więcej`,
       check: 'Kompilowanie',
       deploy: 'Wdrażanie',
+      deployPreview: 'Wdrażanie podglądu',
       deployVersion: (version) => `Wdrażanie wersji ${version}`,
       upload: (path) => <>Zapisywanie {path}</>,
       delete: (path) => <>Usuwanie {path}</>,
@@ -194,6 +217,7 @@ export const editor: EditorMessages = {
     marks: {
       version: (version) => `v${version}`,
       online: 'online',
+      previewOnline: 'podgląd online',
       compiles: 'kompiluje się',
       errors: (count) => counted(count, 'błąd', 'błędy', 'błędów'),
       problems: (count) => counted(count, 'błąd', 'błędy', 'błędów'),
@@ -212,6 +236,13 @@ export const editor: EditorMessages = {
       unchanged: 'Nic się nie zmieniło',
       stopped: 'Zatrzymano',
       stoppedSaved: (version) => `Wcześniej zapisano jeszcze wersję ${version}.`,
+      stoppedFeature: (name) => `To, co agent zdążył zrobić, jest w szkicu „${name}”.`,
+      feature: (name) => `Gotowe do wypróbowania w szkicu „${name}”`,
+      featureBroken: (name) => `Szkic „${name}” jeszcze się nie kompiluje`,
+      tryIt: 'Wypróbuj zmianę pod własnym adresem szkicu. Gdy wszystko będzie w porządku, scal szkic: stanie się kolejną wersją.',
+      previewOffline: 'Podgląd nie jest online. Wdróż go w szkicu, żeby wypróbować zmianę.',
+      previewStill: 'Podgląd nadal pokazuje to, co ostatnio się skompilowało.',
+      notMerged: 'Szkic nie został scalony, więc nic nowego nie trafiło online.',
       failed: 'Zmiana się nie udała',
       timeout:
         'Czas się skończył, zanim agent cokolwiek zmienił. Poproś o coś mniejszego albo spróbuj jeszcze raz – czasem udaje mu się dojść dalej.',
@@ -225,6 +256,8 @@ export const editor: EditorMessages = {
     },
     seeChanges: 'Zobacz, co się zmieniło',
     open: 'Otwórz',
+    openPreview: 'Otwórz podgląd',
+    openFeature: 'Otwórz szkic',
     deploy: (version) => `Wdróż wersję ${version}`,
     undo: (version) => `Przywróć wersję ${version}`,
     undoTitle: 'Cofnij zmianę: wersja, która była online wcześniej, wróci online. Nowa zostanie w historii.',
@@ -232,6 +265,7 @@ export const editor: EditorMessages = {
     toast: {
       online: (version) => `Zmiana jest online jako wersja ${version}.`,
       saved: (version) => `Zmiana została zapisana jako wersja ${version}.`,
+      feature: (name) => `Zmiana jest gotowa do wypróbowania w szkicu „${name}”.`,
       unchanged: 'Agent niczego nie zmienił.',
       failed: 'Zmiana się nie udała.',
       stopped: 'Zmiana została zatrzymana.',
@@ -277,7 +311,16 @@ export const editor: EditorMessages = {
     notOnline: 'jeszcze nie online',
     wanted: 'O co proszono',
     noVersions: 'Jeszcze nie ma wersji.',
+    inProgress: 'W toku',
+    allFeatures: 'Wszystkie szkice',
+    previewOnline: 'Podgląd jest online',
+    previewOffline: 'Podgląd jest offline',
+    behind: 'nieaktualny',
     storage: 'Miejsce',
+    inVersion: (version) => `W wersji ${version}`,
+    noVersion: 'W wersji',
+    inData: 'W danych',
+    sharedByAll: 'Wspólne dla wszystkich wersji',
     browse: 'Przeglądaj',
     code: 'Kod',
     codeWhy: 'C# jest kompilowany, nigdy serwowany.',
@@ -286,6 +329,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Publiczne: kod je serwuje.',
     assetsPrivate: 'Kod ich nie serwuje.',
     data: 'Dane',
+    workspace: 'Obszar roboczy',
+    workspaceOff: 'wyłączony',
     dataPublic: 'Publiczne: kod serwuje obszar roboczy.',
     dataPrivate: 'Dostępne tylko dla lambdy.',
   },
@@ -293,9 +338,15 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('Kod')} jest kompilowany i nigdy nie jest serwowany. {b('Zasoby')} – strony, style, obrazki – są zapisywane z
-        każdą wersją i są publiczne, jeśli kod je serwuje. {b('Dane')} to to, co lambda zapisuje w trakcie działania; nie
-        należą do żadnej wersji i są publiczne tylko wtedy, gdy kod je serwuje.
+        Pliki jednej wersji – czyli program. {b('Kod')} jest kompilowany i nigdy nie jest serwowany. {b('Zasoby')} –
+        strony, skrypty, style, obrazki – są zapisywane razem z kodem, razem z nim wdrażane i przywracane, i są publiczne,
+        jeśli kod je serwuje. Tego, co lambda przechowuje w trakcie działania, tu nie ma: to jej {b('Dane')}.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        Te pliki należą do wersji {version} i zmieniają się razem z nią. To, co lambda przechowuje w trakcie działania,
+        jest wspólne dla wszystkich wersji i znajdziesz to w sekcji {data('Dane')}.
       </>
     ),
     edit: 'Edytuj tę wersję',
@@ -303,7 +354,6 @@ export const editor: EditorMessages = {
     shown: (version, online, newest) => `Wersja ${version}${online ? ', online' : newest ? ', najnowsza' : ''}`,
     optionOnline: ' (online)',
     readFailed: 'Nie udało się odczytać tej wersji.',
-    dataFailed: 'Nie udało się odczytać danych.',
     noVersion: 'Nie ma jeszcze żadnej wersji.',
     label: 'Pliki',
     code: 'Kod',
@@ -317,7 +367,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Zapisane z kodem, ale ta wersja ich nie serwuje.',
     noAssets: 'Brak w tej wersji.',
     data: 'Dane',
-    dataPublic: 'Publiczne: ta wersja serwuje je przez Workspace.',
+    dataPublic: 'Publiczne: kod, który jest online, serwuje je przez Workspace.',
     dataPrivate: 'Dostępne tylko dla lambdy. Nie należą do żadnej wersji.',
     uploadFailed: (path) => `Nie udało się przesłać pliku ${path}.`,
     deleteFolder: (path, held) =>
@@ -347,9 +397,176 @@ export const editor: EditorMessages = {
     notText: 'To nie jest tekst. Pobierz plik, żeby zajrzeć do środka.',
   },
 
+  data: {
+    hint:
+      'Dane to to, co lambda przechowuje w trakcie działania. Należą do lambdy, a nie do wersji: każda wersja czyta i zapisuje te same dane, a nic, co robisz z wersjami, ich nie zmienia. Szkic wypróbowuje się na ich kopii. Znikają dopiero wtedy, gdy usuniesz lambdę albo wyłączysz dany rodzaj danych.',
+    facts: [
+      ['Wspólne dla wszystkich wersji', 'Niezależnie od tego, która wersja jest online, czyta i zapisuje te same dane.'],
+      ['Zostają przy wdrożeniu', 'Ani wdrożenie, ani przywrócenie, ani scalenie szkicu nigdy ich nie rusza.'],
+      ['Ty decydujesz', 'Każdy rodzaj jest włączony tylko wtedy, gdy tego chcesz. Wyłączenie go usuwa to, co w nim jest.'],
+    ],
+    featureHint:
+      'Dane, na których działa ten szkic: kopia danych lambdy, zrobiona, gdy szkic powstał. Podgląd czyta i zapisuje tę kopię, więc próby tutaj nigdy nie ruszają tego, co przechowuje lambda. Scalenie szkicu wyrzuca kopię, a dane lambdy zostawia bez zmian.',
+    recopy: 'Skopiuj ponownie dane lambdy',
+    recopyTitle: 'Zastąp tę kopię tym, co lambda przechowuje teraz',
+    recopyConfirm: 'Skopiować ponownie dane lambdy?',
+    recopyText:
+      'Wszystko, co jest w tej kopii – cokolwiek zapisał do niej podgląd – zostanie zastąpione tym, co lambda przechowuje teraz. Same dane lambdy pozostaną nietknięte.',
+    keepCopy: 'Zostaw tę kopię',
+    recopied: 'Kopia jest świeża. Podgląd czyta ją od następnego żądania.',
+    recopyFailed: 'Nie udało się ponownie skopiować danych.',
+    copyContents: 'Co jest w kopii obszaru roboczego',
+    kinds: {
+      workspace: {
+        name: 'Obszar roboczy',
+        what: 'Pliki, które lambda czyta i zapisuje w trakcie działania: przesłane pliki, wpisy, wszystko, co przechowuje.',
+      },
+    },
+    on: 'Włączone',
+    off: 'Wyłączone',
+    byDefault: 'Domyślnie włączone',
+    usage: (items, used, of) => `${items} · ${used} z ${of}`,
+    offText: 'Wyłączony. Nic w nim nie ma, a kod, który z niego korzysta, nie zadziała, dopóki znów go nie włączysz.',
+    switchLabel: (name) => `${name}: włącz lub wyłącz`,
+    confirmOff: (name) => `Wyłączyć ${name.toLowerCase()}?`,
+    confirmText: (items, size) =>
+      `Wszystko, co w nim jest – ${items}, ${size} – zostanie usunięte na zawsze. Tego nie da się cofnąć.`,
+    confirmEmpty: 'Jest pusty, więc nic nie przepadnie.',
+    inUse: 'Wersja, która jest online, z niego korzysta, więc tam, gdzie go używa, przestanie działać, dopóki znów go nie włączysz.',
+    deleteAndOff: 'Wyłącz i usuń',
+    keep: 'Zostaw',
+    switchedOn: (name) => `${name} jest włączony. Lambda może z niego korzystać od następnego żądania.`,
+    switchedOff: (name) => `${name} jest wyłączony, a to, co w nim było, zostało usunięte.`,
+    switchFailed: 'Nie udało się tego przełączyć.',
+    readFailed: 'Nie udało się odczytać danych.',
+    demo: 'To demo: jego dane można przeglądać, ale nie zmieniać.',
+    contents: 'Co jest w obszarze roboczym',
+    browse: 'Pliki',
+    offBrowse: 'Obszar roboczy jest wyłączony, więc nie ma plików do pokazania.',
+  },
+
+  features: {
+    hint:
+      'Zapisana wersja nigdy się nie zmienia. Zmiany powstają w szkicu: zaczyna się on jako kopia wersji i danych lambdy, można go wypróbować pod własnym adresem, podczas gdy odwiedzający dostają to, co jest online, a po scaleniu staje się kolejną wersją.',
+    newFeature: 'Nowy szkic',
+    full: (limit) =>
+      `Ta lambda ma już ${counted(limit, 'otwarty szkic', 'otwarte szkice', 'otwartych szkiców')} – więcej mieć nie może. Najpierw scal albo usuń któryś.`,
+    emptyTitle: 'Nic nie jest w toku',
+    emptyText:
+      'Utwórz szkic, żeby zmienić lambdę, nie ruszając tego, co jest online. Ty albo agent możecie go zmieniać tyle razy, ile trzeba, i wypróbowywać pod jego własnym adresem.',
+    start: 'Utwórz szkic',
+    askAgentNew: 'Poproś agenta o zmianę',
+    noChange: 'Jeszcze nie opisano, co zmienia',
+    behindTitle: 'Po jego utworzeniu zapisano nowszą wersję',
+    behind: (newest) => `wersja ${newest} jest nowsza`,
+    previewOnline: 'podgląd online',
+    previewOutdated: 'podgląd pokazuje wcześniejszy zapis',
+    previewOffline: 'podgląd offline',
+    changed: 'zmieniono',
+    openPreview: 'Podgląd',
+    openPreviewTitle: 'Otwórz podgląd w nowej karcie',
+    count: (open, limit) => `Otwarte szkice: ${open} z ${limit}`,
+    loading: 'Ładowanie szkicu…',
+    readFailed: 'Nie udało się odczytać szkicu.',
+
+    newTitle: 'Utwórz szkic',
+    newText:
+      'Szkic zaczyna się jako kopia wersji – jej kodu i zasobów – oraz danych lambdy. Zmieniaj go i wypróbowuj pod własnym adresem, podczas gdy odwiedzający dostają to, co jest online; scal go, gdy wszystko będzie gotowe.',
+    newTextFiles:
+      'To, co jest wpisane w kodzie, trafi do szkicu, zamiast stać się wersją. Wypróbuj go pod jego własnym adresem i scal, gdy wszystko będzie gotowe.',
+    name: 'Nazwa',
+    namePlaceholder: 'Ranking',
+    wanted: 'Co ma robić?',
+    wantedPlaceholder: 'Opcjonalnie. Zapamiętuj dziesięć najlepszych wyników i pokazuj je po każdej grze.',
+    olderBase: (newest) =>
+      `To nie jest najnowsza wersja: zanim szkic będzie można scalić, musi przejąć to, co zmieniły wersje do ${newest} włącznie.`,
+    create: 'Utwórz',
+    createFailed: 'Nie udało się utworzyć szkicu.',
+    retry: 'Spróbuj ponownie',
+    madeNotSaved: (name) =>
+      `Utworzono szkic „${name}”, ale tego, co jest wpisane, nie udało się jeszcze do niego zapisać. Spróbuj ponownie albo zamknij to okno i znajdź szkic w sekcji Szkice.`,
+    created: (name) => `Utworzono szkic „${name}”.`,
+    cancel: 'Anuluj',
+
+    featureHint:
+      'Zmiana, nad którą trwa praca obok lambdy. Podgląd uruchamia kod szkicu na jego własnej kopii danych, więc odwiedzający lambdę nic z tego nie widzą. Scalenie zamienia szkic w kolejną wersję.',
+    askAgent: 'Poproś agenta',
+    askCatchUp: 'Poproś agenta o zaktualizowanie go',
+    catchUp: 'Zaktualizuj ten szkic do najnowszej wersji aplikacji i zachowaj to, co w nim zmieniono.',
+    editCode: 'Edytuj kod',
+    deployPreview: 'Wdróż podgląd',
+    updatePreview: 'Zaktualizuj podgląd',
+    previewDeployed: 'Podgląd jest online.',
+    previewFailed: 'Nie udało się wdrożyć podglądu.',
+    previewStopped: 'Podgląd jest offline.',
+    previewRejected: 'Podgląd się nie zmienił',
+    previewNotCompiling: 'Kod się nie kompiluje. Podgląd nadal pokazuje to, co wcześniej.',
+    started: 'Utworzono',
+    changes: (version) => `Co zmienia względem wersji ${version}`,
+    noChanges: (version) => `Na razie nic: zawiera dokładnie to samo co wersja ${version}.`,
+    editNotes: 'Nazwa i notatki',
+    what: 'Co zmienia?',
+    whatPlaceholder: 'Dodaje ranking z dziesięcioma najlepszymi wynikami',
+    missed: (from, to) =>
+      to - from === 1 ? `Co zmieniła wersja ${to}` : `Co zmieniły wersje od ${from + 1} do ${to}`,
+    missedNothing: 'Nic w plikach.',
+
+    behindText: (base, newest) =>
+      `Szkic powstał na bazie wersji ${base}, a od tego czasu zapisano wersję ${newest}. Scalenie go teraz cofnęłoby to, co ona zmieniła. Przenieś te zmiany do szkicu – albo poproś o to agenta – a potem zaznacz, że bazuje na wersji ${newest}.`,
+    moveBase: 'Oprzyj na innej wersji',
+    close: 'Zamknij',
+    mergeTitle: (name) => `Scal „${name}”`,
+    mergeTitleShort: 'Zrób z niego kolejną wersję',
+    leaks: (path, files) =>
+      `W ${files} linki do ${path} używają pełnej ścieżki. Z podglądu prowadzą one do lambdy online i jej prawdziwych danych, a nie do kopii tego szkicu. Ścieżki względne („api/items”) zostają w podglądzie.`,
+    mergeButton: 'Scal',
+    saveFirst: 'Najpierw zapisz kod: podgląd i scalanie używają tego, co jest zapisane.',
+    mergeAndDeploy: (version) => `Scal i wdróż wersję ${version}`,
+    mergeText: (version) =>
+      `Szkic stanie się wersją ${version} i zniknie – razem z podglądem i kopią danych. Same dane lambdy zostaną bez zmian.`,
+    deployTooNote: (active) => `Do wersji ${active} wrócisz jednym kliknięciem w sekcji wersji.`,
+    deployTooOffline: 'Lambda jest teraz offline – to wrzuci ją online.',
+    notCompiling: 'Kod się nie kompiluje, więc szkic nie został scalony. Najpierw popraw go w szkicu.',
+    mergeFailed: 'Nie udało się scalić szkicu.',
+    merged: (version) => `Scalono jako wersję ${version}.`,
+    mergedOnline: (version) => `Scalono jako wersję ${version} i wdrożono.`,
+
+    notesTitle: 'Nazwa i notatki',
+    save: 'Zapisz',
+    saveFailed: 'Nie udało się tego zapisać.',
+
+    baseTitle: 'Oprzyj na innej wersji',
+    baseText: (base) =>
+      `Szkic bazuje na wersji ${base}. Scalić można tylko szkic oparty na najnowszej wersji – dzięki temu scalenie nigdy nie cofa tego, co zapisano po jego utworzeniu. Gdy szkic zawiera już wszystko, co zmieniła nowsza wersja, zaznacz to tutaj.`,
+    moveTo: (version) => `Oprzyj na wersji ${version}`,
+    baseWarning: 'Nic nie sprawdza, czy te zmiany naprawdę są w szkicu. Scalenie bez nich je cofnie.',
+
+    deleteTitle: (name) => `Usunąć „${name}”?`,
+    deleteText: 'Kod, podgląd i kopia danych zostaną usunięte na zawsze. Lambda i jej wersje zostają bez zmian.',
+    keep: 'Zostaw',
+    deleteForGood: 'Usuń na zawsze',
+    deleteFailed: 'Nie udało się usunąć szkicu.',
+    deleted: (name) => `Usunięto szkic „${name}”.`,
+
+    all: 'Wszystkie szkice',
+    actions: 'Więcej opcji szkicu',
+    download: 'Pobierz jako zip',
+    stopPreview: 'Wyłącz podgląd',
+    delete: 'Usuń ten szkic',
+    viewsLabel: 'Szkic',
+    views: {
+      overview: 'Szkic',
+      code: 'Kod',
+      data: 'Dane',
+      logs: 'Logi',
+    },
+    missingTitle: 'Tego szkicu już nie ma',
+    missingText: 'Został scalony w wersję albo usunięty. W wersjach widać, co się z nim stało.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Każda wersja pamięta, o co proszono i co zmieniła – jeśli autor to podał. Gdy wersji jest więcej niż ${limit}, najstarsze są usuwane; ta, która jest online, nigdy.`,
+      `Wersja to program – jej kod i zasoby – i po zapisaniu nigdy się nie zmienia, więc każdą można porównać i przywrócić online dokładnie taką, jaka była. Każda pamięta, o co proszono i co zmieniła. Żeby zmienić lambdę, utwórz szkic: stanie się kolejną wersją, gdy wszystko będzie gotowe. Gdy wersji jest więcej niż ${limit}, najstarsze są usuwane; ta, która jest online, nigdy.`,
     none: 'Jeszcze nie ma wersji.',
     noDescription: 'Bez opisu',
     online: 'online',
@@ -364,6 +581,8 @@ export const editor: EditorMessages = {
     status: { added: 'dodany', removed: 'usunięty', changed: 'zmieniony', same: 'bez zmian' },
     browse: 'Przeglądaj pliki',
     edit: 'Edytuj od tej wersji',
+    feature: 'Utwórz szkic od tej wersji',
+    featureTitle: 'Pracuj nad zmianą tej wersji obok lambdy i scal ją w kolejną wersję, gdy wszystko będzie gotowe',
     binary: 'To nie jest tekst, więc nie ma linii do porównania.',
     tooLarge: 'Za duży, żeby porównać go linia po linii.',
   },
@@ -431,6 +650,11 @@ export const editor: EditorMessages = {
       'Żądania, to, co lambda wypisała, i to, co poszło nie tak – na bieżąco.' +
       (capturing ? '' : ' Ta instalacja nie zapisuje tego, co wypisują lambdy, więc widać tylko żądania i błędy.') +
       ' Log jest trzymany w pamięci i wspólny dla wszystkich lambd na tym serwerze, więc sięga od kilku minut do kilku godzin wstecz, a po restarcie jest pusty. Adresy odwiedzających nie są pokazywane.',
+    featureHint: (capturing) =>
+      'Żądania do podglądu tego szkicu, to, co wypisał, i to, co poszło nie tak – na bieżąco.' +
+      (capturing ? '' : ' Ta instalacja nie zapisuje tego, co wypisują lambdy, więc widać tylko żądania i błędy.') +
+      ' Ten log jest oddzielony od logu samej lambdy, który nigdy nie pokazuje podglądu. Jest trzymany w pamięci, więc sięga od kilku minut do kilku godzin wstecz.',
+    nothingPreview: 'Na razie pusto. Otwórz podgląd szkicu, a jego żądania pojawią się tutaj.',
     search: 'Szukaj',
     searchLabel: 'Szukaj w logu',
     resume: 'Pokazuj nowe wpisy na bieżąco',
@@ -576,25 +800,43 @@ export const editor: EditorMessages = {
     notYet: 'Jeszcze się nie kompiluje.',
     checkFailed: 'Nie udało się sprawdzić kodu.',
     saved: (version) => `Zapisano jako wersję ${version}.`,
+    featureSaved: 'Zapisano w szkicu. Wdróż podgląd, żeby go wypróbować.',
+    featureLoadFailed: 'Nie udało się załadować szkicu.',
+    previewOnline: 'Podgląd jest online.',
+    previewRefused: 'Podgląd się nie zmienił. Zobacz niżej, co mówi kompilator.',
     isOnline: (version) => `Wersja ${version} jest online.`,
     notOnline: 'Nie trafiła online. Zobacz niżej, co mówi kompilator.',
     failed: 'Nie udało się.',
     unchanged: 'Nic się nie zmieniło od ostatniego zapisu.',
     demo: 'To demo, więc wszystko tu jest tylko do odczytu. Żeby coś zmienić, utwórz na jego podstawie własną lambdę. ',
-    edit: 'Edytuj kod ręcznie. Zapisanie tworzy nową wersję i nie rusza tego, co jest online; wdrożenie wrzuca ją online. ',
+    edit: 'Edytuj kod ręcznie. Zapisanie tworzy nową wersję i nie rusza tego, co jest online; wdrożenie wrzuca ją online. Jeśli chcesz najpierw wypróbować zmianę, utwórz szkic. ',
+    editFeature:
+      'Kod tego szkicu. Zapisanie zostawia go w szkicu – dla odwiedzających lambdę nic się nie zmienia. Wdrożenie wrzuca go online pod własnym adresem szkicu, żeby go wypróbować; scalenie szkicu zamienia go w kolejną wersję. ',
+    inFeature: (name) => `szkic „${name}”`,
+    changedElsewhere: 'Od chwili otwarcia szkic został zapisany gdzie indziej – może przez agenta. Zanim zapiszesz tutaj, wczytaj zapisany stan; twoje zmiany nie zostałyby zapisane na nim.',
+    readAgain: 'Wczytaj zapisany stan',
     files: (entry, cs) => (
       <>
         {entry} zwraca to, co jest serwowane, pozostałe pliki {cs} zawierają typy, a każdy inny plik jest serwowany bez
         zmian. Ctrl+S zapisuje, F12 przechodzi do deklaracji.
       </>
     ),
-    newer: (version) => ` Wersja ${version} jest nowsza niż ta, którą masz otwartą.`,
+    newer: (version) => ` Wersja ${version} jest nowsza niż ta otwarta tutaj.`,
     check: 'Sprawdź',
     save: 'Zapisz',
     deploy: 'Wdróż',
+    deployPreviewTitle: 'Zapisz i wrzuć szkic online pod jego własnym adresem, żeby go wypróbować',
     binary: (size) => `Ten plik nie jest tekstem, więc nie da się go edytować. Jest serwowany bez zmian i waży ${size} kB.`,
     saveAndDeploy: 'Zapisz i wdróż',
     saveVersion: 'Zapisz nową wersję',
+    fromOlder: (version, newest) =>
+      `To zaczyna się od wersji ${version}, a wersja ${newest} jest nowsza. Zapisanie zrobi z tego najnowszą wersję – bez tego, co przyszło po wersji ${version}.`,
+    featureInstead: (start) => (
+      <>
+        Chcesz coś wypróbować? {start('Przenieś to do nowego szkicu')}: dostanie własny adres, a żadna wersja nie
+        zostanie zapisana, dopóki wszystko nie będzie gotowe.
+      </>
+    ),
     cancel: 'Anuluj',
     what: 'Co zmienia ta wersja? Opcjonalnie – pojawi się w historii.',
     placeholder: 'Dodaje formularz kontaktowy',

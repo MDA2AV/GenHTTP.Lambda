@@ -66,6 +66,52 @@ public sealed class AgentTests
         Assert.AreEqual(id!.Value.ToString(), sent["lambda"]!.GetValue<string>(), "filed under the lambda, to be found by it");
 
         Assert.IsTrue(agent.Tokens.All(t => t == "a secret"), "every call carries the shared secret");
+
+        Assert.IsNull(sent["feature"], "left out, the agent starts a feature of its own");
+    }
+
+    [TestMethod]
+    public async Task AChangeCanGoOnWithAFeature()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var created = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features", new CreateFeatureRequest("Dark mode"));
+
+        var feature = await created.GetContentAsync<FeatureResponse>();
+
+        using var response = await StartAsync(fixture, lambda.PrivateKey, "Make it darker still", feature: feature.Key);
+
+        Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
+
+        Assert.AreEqual(feature.Key, agent.Received.Single()["feature"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task AFeatureThatIsNotThereIsNotWorkedOn()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+        var other = await fixture.CreateLambdaAsync();
+
+        using var created = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{other.PrivateKey}/features", new CreateFeatureRequest("Theirs"));
+
+        var theirs = await created.GetContentAsync<FeatureResponse>();
+
+        foreach (var key in (string[])[new string('a', 32), theirs.Key])
+        {
+            using var response = await StartAsync(fixture, lambda.PrivateKey, "Make it darker", feature: key);
+
+            Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "a feature of another lambda is not one of this");
+        }
+
+        Assert.IsEmpty(agent.Received);
+
+        Assert.AreEqual(fixture.Options.AgentBuildsPerDay, (await StateAsync(fixture, lambda.PrivateKey)).Left, "and costs nothing");
     }
 
     [TestMethod]
@@ -272,9 +318,9 @@ public sealed class AgentTests
     }
 
     private static Task<HttpResponseMessage> StartAsync(LambdaFixture fixture, string privateKey, string prompt, bool deploy = true,
-                                                        string? language = null)
+                                                        string? language = null, string? feature = null)
         => fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{privateKey}/agent/start",
-                             new ChangeRequest(prompt, deploy, Language: language));
+                             new ChangeRequest(prompt, deploy, Language: language, Feature: feature));
 
     #endregion
 

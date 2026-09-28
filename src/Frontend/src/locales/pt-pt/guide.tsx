@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'A tua primeira lambda',
     editor: 'O painel de controlo',
     why: 'Explicar o porquê',
+    features: 'Alterar com segurança',
     files: 'Mais do que um ficheiro',
     page: 'Servir uma página',
     spa: 'Um front-end, passo a passo',
@@ -86,14 +87,16 @@ export const guide: Messages['guide'] = {
       'Alterar',
       (k) => (
         <>
-          Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas: lê o código, altera-o,
-          confirma que compila e põe-no online como uma nova versão. Desliga {k.b('Pôr online quando terminar')}{' '}
-          para o veres primeiro.
+          Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas. Trabalha num
+          rascunho, experimenta-o lá e integra-o na próxima versão quando funcionar. Desliga{' '}
+          {k.b('Pôr online quando terminar')} para experimentares tu o rascunho primeiro.
         </>
       ),
     ],
-    ['Ficheiros', () => <>Os ficheiros de uma versão e os dados: o que a lambda guarda enquanto corre. Um cadeado ou um globo indica se o público lhes consegue aceder.</>],
-    ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faz deploy ou reverte a partir daqui.</>],
+    ['Rascunhos', () => <>Alterações feitas ao lado da lambda: cada uma é experimentada num endereço próprio e integrada na próxima versão quando estiver bem. Aberto, um rascunho tem o seu próprio código, dados e logs.</>],
+    ['Ficheiros', () => <>Os ficheiros de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo indica se o público lhes consegue aceder.</>],
+    ['Dados', () => <>O que a lambda guarda enquanto corre, partilhado por todas as versões: o workspace. Vê o que lá está, carrega e elimina ficheiros, ou desliga-o.</>],
+    ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faz deploy ou reverte a partir daqui, ou começa um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve online e quando, e o que o pôs offline.</>],
     ['Estatísticas', () => <>Pedidos, falhas, tempos de resposta e os caminhos mais pedidos, na última hora ou nas últimas 24 horas.</>],
     ['Logs', () => <>Os pedidos, o que a lambda escreveu na consola e o stack trace de tudo o que correu mal, em tempo real.</>],
@@ -101,8 +104,9 @@ export const guide: Messages['guide'] = {
       'Código',
       (k) => (
         <>
-          Para o escrever à mão. {k.b('Verificar')} compila, {k.b('Guardar')} cria uma versão, {k.b('Fazer deploy')} põe-na
-          online. {k.code('Ctrl-S')} guarda; {k.code('F12')} vai para a declaração.
+          Para o escrever à mão. {k.b('Verificar')} compila, {k.b('Guardar')} cria uma versão, {k.b('Fazer deploy')}{' '}
+          põe-na online. Num rascunho, {k.b('Guardar')} mantém-no no rascunho e {k.b('Fazer deploy da pré-visualização')}{' '}
+          põe-no online no endereço do rascunho. {k.code('Ctrl-S')} guarda; {k.code('F12')} vai para a declaração.
         </>
       ),
     ],
@@ -130,9 +134,48 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Os agentes passam os mesmos dois campos a {k.code('write_code')}. Em {k.b('Código')}, ao guardares, é-te pedida a
+      Os agentes passam os mesmos dois campos a {k.code('write_code')}. Em {k.b('Código')}, guardar pede-te a
       alteração. Ambos são opcionais: em vez de ser recusada, uma especificação longa é cortada aos 4000 caracteres, e
-      uma alteração aos 500.
+      uma alteração aos 500. Um rascunho tem as suas próprias duas notas, e a versão em que é integrado fica com elas.
+    </>
+  ),
+
+  features: (k) => (
+    <>
+      Uma versão nunca muda depois de guardada, e é isso que faz com que valha a pena guardar cada uma: qualquer uma
+      pode ser comparada e voltar a ficar online exatamente como era. Para alterar uma lambda que as pessoas usam,
+      começa antes um {k.b('rascunho')}.
+    </>
+  ),
+  featureSteps: [
+    (k) => (
+      <>
+        Começa-o em {k.b('Rascunhos')}, ou a partir de qualquer versão. É uma cópia do código e dos assets dessa versão,
+        e dos dados da lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Altera-o quantas vezes for preciso: em {k.b('Código')}, ou pedindo ao agente.{' '}
+        {k.b('Fazer deploy da pré-visualização')} põe-no online num endereço próprio, {k.code('/features/…/')}, com a
+        sua própria cópia dos dados. Os visitantes da lambda não veem nada disto, e nada do que ele escreve chega aos
+        dados da lambda.
+      </>
+    ),
+    (k) => (
+      <>
+        Quando estiver bem, {k.b('Integrar')} faz dele a próxima versão, com as suas notas, e põe-no logo online se
+        quiseres. O rascunho desaparece com isso: a pré-visualização e a cópia dos dados.
+      </>
+    ),
+  ],
+  featureSample: 'Ranking',
+  featuresAside: () => (
+    <>
+      Podes trabalhar em vários rascunhos ao mesmo tempo. Só um que se baseie na versão mais recente pode ser
+      integrado, para que uma integração nunca desfaça uma versão guardada depois de o rascunho ter começado. Se outro
+      foi integrado primeiro, traz as alterações dele (ou pede ao agente que o faça) e depois baseia o rascunho na
+      versão mais recente. Nada se integra sozinho; é de propósito.
     </>
   ),
 
@@ -144,14 +187,15 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
-  page: 'Há três formas, e a que queres depende de onde a página está.',
+  page: 'Há duas formas de servir uma página, e mais uma para o que as pessoas carregam junto dela.',
   inlineTitle: 'Uma página, escrita no código',
   inline: 'Serve para algo pequeno. A página faz parte do snippet.',
   folderTitle: 'Uma pasta de ficheiros a sério',
   folder:
     'O que queres para qualquer coisa com uma folha de estilos e um script. Os ficheiros são adicionados da mesma forma que um ficheiro C#, e servidos exatamente como foram escritos. Nada os compila.',
-  workspaceTitle: 'A partir do workspace',
-  workspace: 'Quando a página é carregada em vez de escrita, e deve poder mudar sem um novo deploy.',
+  workspaceTitle: 'Ficheiros carregados, a partir dos dados',
+  workspace:
+    'Para o que as pessoas carregam ou a lambda cria (fotografias, documentos), servido ao lado da app. Não para as páginas da própria app: essas pertencem a uma pasta de ficheiros, onde entram nas versões juntamente com o código que precisa delas.',
 
   spa: (k) => (
     <>
@@ -193,24 +237,25 @@ export const guide: Messages['guide'] = {
 
   storage: (k) => (
     <>
-      A secção {k.b('Ficheiros')} mostra os dois (os ficheiros de uma versão e o workspace, como {k.b('Dados')}) e diz a
-      quais o público consegue aceder. Os ficheiros do código alteram-se em {k.b('Código')}; os dados podem ser
-      carregados e eliminados em {k.b('Ficheiros')}. Mas não são a mesma coisa, e a diferença está em{' '}
-      {k.em('quando cada um muda')}.
+      Uma lambda guarda ficheiros em dois sítios, e o editor mostra-os em separado: {k.b('Ficheiros')} tem os ficheiros
+      de uma versão (o programa) e {k.b('Dados')} tem o workspace (o que o programa guarda). A diferença está em{' '}
+      {k.em('a quem pertencem')}. Os ficheiros de uma versão pertencem a essa versão; os dados pertencem à lambda, e
+      todas as versões os partilham.
     </>
   ),
-  savedWithCode: 'Guardado com o código',
-  workspaceColumn: 'Workspace',
+  savedWithCode: 'Numa versão',
+  workspaceColumn: 'Nos dados',
   table: [
-    ['o que guarda', 'todos os ficheiros da lambda, incluindo o C#', 'tudo o que foi escrito ou carregado'],
-    ['quando muda', 'quando clicas em Guardar ou Fazer deploy', 'no momento em que algo é escrito nele'],
-    ['um deploy', 'substitui tudo', 'nunca lhe toca'],
-    ['reverter uma versão', 'traz de volta os ficheiros antigos', 'não tem efeito'],
-    ['clonar a lambda', 'vai junto', 'não vai'],
+    ['o que guarda', 'o código e os assets: o programa, incluindo o front-end', 'tudo o que a lambda escreve, ou que alguém carrega'],
+    ['quando muda', 'nunca: uma alteração é uma nova versão', 'no momento em que algo é escrito'],
+    ['um deploy', 'põe online exatamente estes ficheiros', 'nunca lhes toca'],
+    ['reverter', 'traz de volta os ficheiros antigos', 'não tem efeito: são os mesmos para todas as versões'],
+    ['um rascunho', 'começa como uma cópia deles', 'trabalha numa cópia deles'],
+    ['quando desaparecem', 'com as versões antigas, passado o limite', 'com a lambda, ou quando os desligas'],
   ],
   reachedAs: 'acedido no código como',
   storageAside:
-    'Não podem ser um só diretório. Se fossem, um deploy ou apagava tudo o que a lambda escreveu entretanto, ou nunca se poderia remover nada do que ela traz. Um jogo com um ranking quer a segunda opção; a página que ele serve quer a primeira.',
+    'Não podem ser um só sítio. Se fossem, um deploy ou apagava tudo o que a lambda escreveu entretanto, ou nunca se poderia remover nada do que ela traz. Um jogo com um ranking quer a segunda opção; a página que ele serve quer a primeira. Por isso, a página vai na versão, e o ranking nos dados.',
 
   keeping: (k) => (
     <>

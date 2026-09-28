@@ -88,7 +88,21 @@ public sealed record LambdaActivation(int Version, DateTime Started, string? Ori
 /// A lambda that has been looked up by its public key and is ready to run.
 /// </summary>
 /// <param name="Tier">Read on every request, so a lambda moved to another tier runs under its limits from the next one on</param>
-public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt);
+/// <param name="WorkspaceEnabled">Whether its owner left the workspace on, read on every request for the same reason as the tier</param>
+/// <param name="Feature">
+/// The feature whose preview is being served, or nothing for the lambda itself. A preview runs the feature's files
+/// against the feature's copy of the data, and is kept out of the lambda's figures.
+/// </param>
+public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt,
+                                    bool WorkspaceEnabled = true, ResolvedFeature? Feature = null);
+
+/// <summary>
+/// The preview of a feature a request was addressed to.
+/// </summary>
+/// <param name="Id">The identity its files and data are kept under</param>
+/// <param name="Key">What it is addressed by</param>
+/// <param name="Preview">Which deployment of the preview is online, so a preview deployed again is built again</param>
+public sealed record ResolvedFeature(long Id, string Key, int Preview);
 
 /// <summary>
 /// Everything anybody may know about a public key: whether it could be

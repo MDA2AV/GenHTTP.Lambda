@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -8,6 +9,7 @@ using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,6 +23,20 @@ namespace GenHTTP.Lambda.Services.Meta;
 public sealed class MetaService : IMetaService
 {
     private const int KeyAttempts = 8;
+
+    /// <summary>
+    /// Takes turns over what adds a version to a lambda or changes what it has
+    /// online, one lambda at a time.
+    /// </summary>
+    /// <remarks>
+    /// Two saves at once used to be able to pick the same number for their
+    /// version, and a feature being merged has to find the newest version to
+    /// be the one it is based on at the moment its own is added - not a moment
+    /// before, with somebody else's save landing in between. Striped rather
+    /// than one per lambda so it does not grow with them; two lambdas sharing
+    /// a stripe merely wait for each other.
+    /// </remarks>
+    private readonly SemaphoreSlim[] _stripes = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
     #region Get-/Setters
 
@@ -396,7 +412,9 @@ public sealed class MetaService : IMetaService
             return null;
         }
 
-        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created);
+        var workspace = await DataSwitches.IsEnabledAsync(database, lambda.Id, DataKinds.Workspace, cancellation);
+
+        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created, workspace);
     }
 
     public async ValueTask<IReadOnlyList<LambdaVersionInfo>> GetVersionsAsync(string privateKey, CancellationToken cancellation = default)
@@ -442,19 +460,33 @@ public sealed class MetaService : IMetaService
 
     #region Editing
 
-    public async ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, CancellationToken cancellation = default)
+    public async ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, int? after = null,
+                                                        CancellationToken cancellation = default)
     {
         var files = Validate(code);
 
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
 
         note ??= new VersionNote(Origin: VersionOrigins.Api);
 
         EnsureEditable(lambda, note.Origin);
 
-        ValidateAllowance(files, lambda.Tier);
+        if (after is { } expected)
+        {
+            var newest = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
+                                       .MaxAsync(d => (int?)d.Version, cancellation);
+
+            if (newest != expected)
+            {
+                throw LambdaException.Conflict($"Version {newest} was saved in the meantime; this was meant to follow version {expected}.");
+            }
+        }
+
+        ValidateAllowance(files, lambda.Tier, Options);
 
         var version = await AppendAsync(database, lambda, code, DateTime.UtcNow, note, cancellation);
 
@@ -471,16 +503,18 @@ public sealed class MetaService : IMetaService
 
         var lambda = await RequireAsync(database, privateKey, cancellation);
 
-        ValidateAllowance(files, lambda.Tier);
+        ValidateAllowance(files, lambda.Tier, Options);
 
-        return await Deployments.ValidateAsync(code, lambda.Id, Options.WorkspaceOf(lambda.Tier), cancellation);
+        return await Deployments.ValidateAsync(code, lambda.Id, await WorkspaceOfAsync(database, lambda, cancellation), cancellation);
     }
 
     public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, string? origin = null, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
 
         EnsureEditable(lambda, origin);
 
@@ -506,7 +540,7 @@ public sealed class MetaService : IMetaService
                ? LambdaOutput.Enter(new OutputScope(lambda.PublicKey, Book, Options.MaxOutputLines, lambda.Id))
                : null)
         {
-            outcome = await Deployments.ActivateAsync(lambda.Id, target, Options.WorkspaceOf(lambda.Tier), cancellation);
+            outcome = await Deployments.ActivateAsync(lambda.Id, target, await WorkspaceOfAsync(database, lambda, cancellation), cancellation);
         }
 
         if (!outcome.Success)
@@ -545,7 +579,9 @@ public sealed class MetaService : IMetaService
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
 
         EnsureEditable(lambda, endedBy == ActivationEndings.Admin ? VersionOrigins.Admin : null);
 
@@ -718,7 +754,7 @@ public sealed class MetaService : IMetaService
     /// Checks what can be checked without knowing whose code it is.
     /// </summary>
     /// <returns>The files, for the checks that do need to know</returns>
-    private IReadOnlyList<LambdaFile> Validate(string? code)
+    internal static IReadOnlyList<LambdaFile> Validate(string? code)
     {
         if (string.IsNullOrWhiteSpace(code))
         {
@@ -743,24 +779,25 @@ public sealed class MetaService : IMetaService
     /// tier keeps the versions it has, and can put any of them online again;
     /// what it cannot do is save a new one until it fits. A refusal names
     /// what the premium tier allows, so whoever reads it knows there is more.
+    /// A feature is held to the same, since what it holds becomes a version.
     /// </remarks>
-    private void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier)
+    internal static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, LambdaOptions options)
     {
         // the limit counts what was written rather than what it is stored as,
         // so splitting a lambda into files does not spend any of it on the
         // envelope those files are kept in
-        var code = Options.MaxCodeLengthOf(tier);
+        var code = options.MaxCodeLengthOf(tier);
 
         if (LambdaSource.Length(files) > code)
         {
-            throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, Options.MaxCodeLengthOf(LambdaTier.Premium), $"{Options.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
+            throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, options.MaxCodeLengthOf(LambdaTier.Premium), $"{options.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
         }
 
-        var assets = Options.MaxAssetBytesOf(tier);
+        var assets = options.MaxAssetBytesOf(tier);
 
         if (LambdaSource.AssetBytes(files) > assets)
         {
-            throw LambdaException.Invalid($"The assets must not exceed {Readable(assets)} in total.{Beyond(tier, assets, Options.MaxAssetBytesOf(LambdaTier.Premium), Readable(Options.MaxAssetBytesOf(LambdaTier.Premium)))} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
+            throw LambdaException.Invalid($"The assets must not exceed {Readable(assets)} in total.{Beyond(tier, assets, options.MaxAssetBytesOf(LambdaTier.Premium), Readable(options.MaxAssetBytesOf(LambdaTier.Premium)))} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
         }
     }
 
@@ -803,15 +840,28 @@ public sealed class MetaService : IMetaService
                              .FirstOrDefaultAsync(cancellation);
     }
 
-    public async ValueTask<LambdaTier?> GetTierAsync(long lambdaId, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceLimits?> GetWorkspaceLimitsAsync(long lambdaId, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        return await database.Lambdas.AsNoTracking()
-                             .Where(l => l.Id == lambdaId)
-                             .Select(l => (LambdaTier?)l.Tier)
-                             .FirstOrDefaultAsync(cancellation);
+        var tier = await database.Lambdas.AsNoTracking()
+                                 .Where(l => l.Id == lambdaId)
+                                 .Select(l => (LambdaTier?)l.Tier)
+                                 .FirstOrDefaultAsync(cancellation);
+
+        if (tier == null)
+        {
+            return null;
+        }
+
+        return Options.WorkspaceOf(tier.Value, await DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Workspace, cancellation));
     }
+
+    /// <summary>
+    /// What the lambda may keep in its workspace, which is compiled into it.
+    /// </summary>
+    private async ValueTask<WorkspaceLimits> WorkspaceOfAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
+        => Options.WorkspaceOf(lambda.Tier, await DataSwitches.IsEnabledAsync(database, lambda.Id, DataKinds.Workspace, cancellation));
 
     public async ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null,
                                                  CancellationToken cancellation = default)
@@ -890,6 +940,48 @@ public sealed class MetaService : IMetaService
         => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
+    /// <summary>
+    /// The lambda of the key, read once it is its turn to change (see <see cref="_stripes" />).
+    /// </summary>
+    /// <returns>The lambda, and the turn - to be disposed of once the change is written</returns>
+    private async ValueTask<(LambdaEntity Lambda, IDisposable Turn)> LockedAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
+    {
+        var id = await database.Lambdas.AsNoTracking()
+                               .Where(l => l.PrivateKey == privateKey)
+                               .Select(l => (long?)l.Id)
+                               .FirstOrDefaultAsync(cancellation)
+              ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+
+        var stripe = _stripes[(int)((ulong)id % (ulong)_stripes.Length)];
+
+        await stripe.WaitAsync(cancellation);
+
+        try
+        {
+            // read after waiting, so what it decides on is what the change
+            // before it left behind
+            return (await RequireAsync(database, privateKey, cancellation), new Turn(stripe));
+        }
+        catch
+        {
+            stripe.Release();
+            throw;
+        }
+    }
+
+    private sealed class Turn(SemaphoreSlim stripe) : IDisposable
+    {
+        private int _released;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0)
+            {
+                stripe.Release();
+            }
+        }
+    }
+
     private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, string? template, DateTime now, CancellationToken cancellation)
     {
         var demo = DemoCatalog.Find(template);
@@ -941,7 +1033,7 @@ public sealed class MetaService : IMetaService
     /// of a save. An agent that wrote working code and a paragraph too many
     /// about it should lose the end of the paragraph, not the code.
     /// </remarks>
-    private static string? Tidy(string? text, int most)
+    internal static string? Tidy(string? text, int most)
     {
         var trimmed = text?.Trim();
 
@@ -999,7 +1091,11 @@ public sealed class MetaService : IMetaService
     /// </summary>
     private async ValueTask PruneAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
     {
-        var obsolete = await database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion)
+        // the base of a feature is kept like the version online: it is what
+        // the feature is compared with, and what it is shown to change
+        var bases = await database.Features.Where(f => f.LambdaId == lambda.Id).Select(f => f.BaseVersion).ToListAsync(cancellation);
+
+        var obsolete = await database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion && !bases.Contains(d.Version))
                                      .OrderByDescending(d => d.Version)
                                      .Skip(Options.MaxVersions)
                                      .ToListAsync(cancellation);
@@ -1048,7 +1144,8 @@ public sealed class MetaService : IMetaService
 
     private async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
     {
-        Deployments.Evict(lambda.Id);
+        // with every preview of its features, which go with it
+        Deployments.EvictAll(lambda.Id);
 
         // a deleted lambda takes its numbers with it rather than leaving a row
         // in the activity list that nothing can be looked up from any more
@@ -1061,6 +1158,10 @@ public sealed class MetaService : IMetaService
         await database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
 
         await database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+
+        await database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+
+        await database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
 
         database.Lambdas.Remove(lambda);
 

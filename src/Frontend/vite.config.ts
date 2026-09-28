@@ -40,6 +40,8 @@ export default defineConfig(({ isSsrBuild }) => ({
       // ws: lambdas open websockets too, and without it the upgrade is never
       // passed on - the browser waits in CONNECTING for ever
       '/lambda': { target: apiTarget, changeOrigin: true, ws: true },
+      // the previews of features, which open websockets like the lambdas they preview
+      '/features': { target: apiTarget, changeOrigin: true, ws: true },
     },
   },
 }));

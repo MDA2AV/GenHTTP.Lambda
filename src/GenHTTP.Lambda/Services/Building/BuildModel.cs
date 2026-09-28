@@ -46,7 +46,9 @@ public sealed record BuildResult(
 /// </remarks>
 /// <param name="At">Seconds into the run</param>
 /// <param name="Kind">
-/// say, guide, demos, read, logs, write, check, deploy, upload, delete, list or other
+/// say, guide, demos, read, logs, write, check, deploy, upload, delete, list,
+/// feature (started one), update (changed one's notes or base), merge, discard
+/// (deleted one) or other
 /// </param>
 /// <param name="Text">What the agent said, for a step of kind say</param>
 /// <param name="Tool">The tool, for a step of a kind this list does not name</param>
@@ -55,8 +57,10 @@ public sealed record BuildResult(
 /// <param name="Whole">Whether a write replaced every file rather than some</param>
 /// <param name="Path">The workspace path of an upload or a removal</param>
 /// <param name="Done">Whether the tool has answered</param>
-/// <param name="Version">The version read, saved, or put online</param>
-/// <param name="Online">Whether a write or a deployment went online</param>
+/// <param name="Version">The version read, saved, merged into, put online, or made a feature's base</param>
+/// <param name="Online">Whether a write or a deployment went online - at the preview address, for a feature</param>
+/// <param name="Feature">The name of the feature the step was about</param>
+/// <param name="Preview">Whether the step was about a feature rather than the lambda itself</param>
 /// <param name="Errors">How many errors the compiler found</param>
 /// <param name="Problems">How many errors the log holds</param>
 /// <param name="Problem">Why the platform refused the step, in its words</param>
@@ -74,15 +78,17 @@ public sealed record AgentStep(
     bool? Online = null,
     int? Errors = null,
     int? Problems = null,
-    string? Problem = null
+    string? Problem = null,
+    string? Feature = null,
+    bool? Preview = null
 );
 
 /// <summary>
 /// How a change ended, from what the tools answered rather than from what the
 /// model said about them.
 /// </summary>
-/// <param name="Ok">Whether it saved a version</param>
-/// <param name="Version">The newest version it saved</param>
+/// <param name="Ok">Whether it saved anything - into a feature, or as a version</param>
+/// <param name="Version">The newest version it saved, merging included</param>
 /// <param name="Online">The version it put online, if it put one there</param>
 /// <param name="Deployed">Whether it put a version online</param>
 /// <param name="Compiles">Whether the last version it compiled compiles, where it is known</param>
@@ -96,6 +102,9 @@ public sealed record AgentStep(
 /// <param name="Summary">What the agent said at the end, for the owner</param>
 /// <param name="Error">What went wrong, in English, for a client without words of its own</param>
 /// <param name="Detail">What went wrong, in the words of whatever it went wrong in</param>
+/// <param name="Feature">The feature the change was left in, by its key, when it was not merged</param>
+/// <param name="FeatureName">What that feature is called</param>
+/// <param name="Preview">Whether that feature's preview is online, to be tried</param>
 public sealed record ChangeResult(
     bool Ok,
     int? Version = null,
@@ -108,7 +117,10 @@ public sealed record ChangeResult(
     string? Reason = null,
     string? Summary = null,
     string? Error = null,
-    string? Detail = null
+    string? Detail = null,
+    string? Feature = null,
+    string? FeatureName = null,
+    bool? Preview = null
 );
 
 /// <summary>
@@ -116,12 +128,13 @@ public sealed record ChangeResult(
 /// </summary>
 /// <param name="State">queued, running, done, failed or cancelled</param>
 /// <param name="Prompt">What was asked for</param>
-/// <param name="Deploy">Whether it was asked to put the change online</param>
+/// <param name="Deploy">Whether it was asked to merge the change and put it online</param>
 /// <param name="Model">Which of the offered models is doing it</param>
 /// <param name="Before">The version that was online when it was asked for</param>
 /// <param name="Waiting">Its place in the queue, zero once it runs</param>
 /// <param name="Seconds">How long it has been running</param>
 /// <param name="Limit">How long it may run, in seconds; null when there is no clock on it</param>
+/// <param name="Feature">The feature it was asked to go on with, by its key; null when it starts one of its own</param>
 public sealed record ChangeProgress(
     string Id,
     string State,
@@ -133,7 +146,8 @@ public sealed record ChangeProgress(
     ChangeResult? Result,
     int Waiting,
     int Seconds,
-    int? Limit
+    int? Limit,
+    string? Feature = null
 );
 
 /// <summary>

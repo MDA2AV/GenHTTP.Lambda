@@ -326,7 +326,12 @@ export function Quote({ children }: { children: ReactNode }) {
 export function Menu({ label, children, align = 'right' }: {
   label?: string;
   children: (close: () => void) => ReactNode;
-  align?: 'left' | 'right';
+  /**
+   * Which edge of the button the list lines up with. start is the left edge
+   * where the sidebar is a column, and the right one on a phone, where the
+   * sidebar spans the page and its buttons sit at the right of it.
+   */
+  align?: 'left' | 'right' | 'start';
 }) {
   const words = useShared();
   const named = label ?? words.more;
@@ -370,7 +375,9 @@ export function Menu({ label, children, align = 'right' }: {
       </button>
 
       {open && (
-        <div role="menu" className={`surface absolute top-full z-40 mt-1 w-64 py-1 shadow-lg ${align === 'right' ? 'right-0' : 'left-0'}`}>
+        <div role="menu" className={`surface absolute top-full z-40 mt-1 w-64 py-1 shadow-lg ${
+          align === 'right' ? 'right-0' : align === 'left' ? 'left-0' : 'right-0 md:left-0 md:right-auto'
+        }`}>
           {children(() => setOpen(false))}
         </div>
       )}

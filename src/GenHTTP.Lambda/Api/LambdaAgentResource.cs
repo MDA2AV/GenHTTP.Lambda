@@ -3,6 +3,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
@@ -24,7 +25,7 @@ namespace GenHTTP.Lambda.Api;
 /// A process rather than a thing, so it is read at <c>agent</c> and driven
 /// with verbs, the way a deployment is.
 /// </remarks>
-public sealed class LambdaAgentResource(BuildService builds, IMetaService meta)
+public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, IFeatureService features)
 {
 
     /// <summary>
@@ -52,6 +53,10 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta)
     /// the first is queued or running, since two agents writing the same files
     /// would each undo the other. Counted against the same daily allowance as
     /// the build page.
+    ///
+    /// The agent works in a feature: a new one, or the one named - which is
+    /// looked up here, so a feature that does not exist is refused before
+    /// anything is spent on it.
     /// </remarks>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/start")]
     public async ValueTask<Result<AgentState>> Start(string privateKey, ChangeRequest body, IRequest request)
@@ -60,15 +65,17 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta)
 
         var current = await meta.RequireAsync(privateKey);
 
+        var feature = body?.Feature is { Length: > 0 } key ? (await features.GetAsync(privateKey, key)).Feature.Key : null;
+
         var state = await builds.ChangeAsync(lambda, privateKey, current.ActiveVersion, body?.Prompt, body?.Deploy ?? true,
-                                             body?.Model, body?.Password, body?.Language, request.Client.Address);
+                                             body?.Model, body?.Password, body?.Language, feature, request.Client.Address);
 
         return new Result<AgentState>(state).Status(ResponseStatus.Accepted);
     }
 
     /// <summary>
-    /// Stops the change under way. What it saved so far stays as a version,
-    /// and whatever is online stays online.
+    /// Stops the change under way. What it saved so far stays saved - in its
+    /// feature, or as a version - and whatever is online stays online.
     /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/stop")]
     public async ValueTask<AgentState> Stop(string privateKey, IRequest request)

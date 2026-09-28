@@ -115,7 +115,7 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
                     // what it asked for and what it got back identifies the
                     // line; how many microseconds it took measures it
                     $"{caller.Method} {target} {status}",
-                    lambda?.Id, caller.Domain);
+                    lambda?.Id, caller.Domain, lambda?.Feature?.Id);
     }
 
 }

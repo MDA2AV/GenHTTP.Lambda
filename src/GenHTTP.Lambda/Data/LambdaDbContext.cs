@@ -24,6 +24,10 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<SettingEntity> Settings => Set<SettingEntity>();
 
+    public DbSet<DataStoreEntity> DataStores => Set<DataStoreEntity>();
+
+    public DbSet<FeatureEntity> Features => Set<FeatureEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -149,6 +153,51 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
         settings.Property(s => s.Key).HasColumnName("key");
         settings.Property(s => s.Value).HasColumnName("value");
+
+        var stores = builder.Entity<DataStoreEntity>();
+
+        stores.ToTable("data_stores");
+
+        stores.HasKey(s => new { s.LambdaId, s.Kind });
+
+        stores.Property(s => s.LambdaId).HasColumnName("lambda_id");
+        stores.Property(s => s.Kind).HasColumnName("kind");
+        stores.Property(s => s.Enabled).HasColumnName("enabled");
+        stores.Property(s => s.Changed).HasColumnName("changed");
+
+        stores.HasOne(s => s.Lambda)
+              .WithMany()
+              .HasForeignKey(s => s.LambdaId)
+              .OnDelete(DeleteBehavior.Cascade);
+
+        var features = builder.Entity<FeatureEntity>();
+
+        features.ToTable("features");
+
+        features.HasKey(f => f.Id);
+
+        features.Property(f => f.Id).HasColumnName("id");
+        features.Property(f => f.LambdaId).HasColumnName("lambda_id");
+        features.Property(f => f.Key).HasColumnName("key");
+        features.Property(f => f.Name).HasColumnName("name");
+        features.Property(f => f.Specification).HasColumnName("specification");
+        features.Property(f => f.Change).HasColumnName("change");
+        features.Property(f => f.BaseVersion).HasColumnName("base_version");
+        features.Property(f => f.Origin).HasColumnName("origin");
+        features.Property(f => f.Created).HasColumnName("created");
+        features.Property(f => f.Modified).HasColumnName("modified");
+        features.Property(f => f.Preview).HasColumnName("preview");
+        features.Property(f => f.Previewed).HasColumnName("previewed");
+        features.Property(f => f.Revision).HasColumnName("revision");
+        features.Property(f => f.PreviewOf).HasColumnName("preview_of");
+
+        features.HasIndex(f => f.Key).IsUnique();
+        features.HasIndex(f => f.LambdaId);
+
+        features.HasOne(f => f.Lambda)
+                .WithMany()
+                .HasForeignKey(f => f.LambdaId)
+                .OnDelete(DeleteBehavior.Cascade);
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

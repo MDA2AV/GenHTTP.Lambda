@@ -19,6 +19,7 @@ const PARTS = [
   'first',
   'editor',
   'why',
+  'features',
   'files',
   'page',
   'spa',
@@ -147,6 +148,18 @@ export function Guide() {
             <p>{said.why2(k)}</p>
           </Section>
 
+          <Section id="features" title={said.parts.features}>
+            <p>{said.features(k)}</p>
+            <Steps steps={said.featureSteps.map((step) => step(k))} />
+            <Sample code={`POST /api/v1/lambdas/{editorKey}/features
+{ "name": ${JSON.stringify(said.featureSample)} }
+
+PUT  /api/v1/lambdas/{editorKey}/features/{feature}/files?deploy=true
+POST /api/v1/lambdas/{editorKey}/features/{feature}/merge
+{ "deploy": true }`} />
+            <Aside>{said.featuresAside(k)}</Aside>
+          </Section>
+
           <Section id="files" title={said.parts.files}>
             <p>{said.files(k)}</p>
 
@@ -195,7 +208,10 @@ return Content.From(page);`} />
 
             <h3 className="pt-2 text-sm font-semibold">{said.workspaceTitle}</h3>
             <p>{said.workspace}</p>
-            <Sample code={`return Layout.Create().Add(Workspace.App());`} />
+            <Sample code={`return Layout.Create()
+             .Add("api", api)
+             .Add("uploads", Workspace.Files("uploads"))
+             .Add(Assets.App("site"));`} />
           </Section>
 
           <Section id="spa" title={said.parts.spa}>

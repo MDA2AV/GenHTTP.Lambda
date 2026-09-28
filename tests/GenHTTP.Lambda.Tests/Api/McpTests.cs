@@ -76,8 +76,9 @@ public sealed class McpTests
 
         var named = tools.Select(t => t!["name"]!.GetValue<string>()).ToList();
 
-        foreach (var wanted in (string[])["create_lambda", "write_code", "check_code", "deploy", "read_lambda",
-                                          "read_logs", "upload_file", "list_files", "delete_file", "platform_guide"])
+        foreach (var wanted in (string[])["create_lambda", "write_code", "change_code", "create_feature", "update_feature", "merge_feature",
+                                          "delete_feature", "check_code", "deploy", "read_lambda", "read_logs", "upload_file", "list_files",
+                                          "delete_file", "platform_guide"])
         {
             Assert.Contains(wanted, named);
         }
@@ -555,19 +556,404 @@ public sealed class McpTests
         Assert.Contains("Assets.App(\\u0022site\\u0022)", guide,
                         "the guide has to say a folder can be served by naming it");
 
-        // an agent has no Storage panel, so the guide has to name the tool
-        // that puts a file there and say which way round to prefer
-        Assert.Contains("Workspace.App()", guide, "and that a front end can live in the workspace instead");
+        // an agent has no Data panel, so the guide has to name the tool that
+        // puts a file there - and say that the front end is not what goes there
         Assert.Contains("upload_file", guide, "the guide has to name the tool that puts a file in the workspace");
-        // both ways are ordinary, so the guide has to describe both and say
-        // what decides between them rather than naming a winner
-        Assert.Contains("withTheCode", guide);
-        Assert.Contains("inTheWorkspace", guide);
-        Assert.Contains("whenToPreferIt", guide, "each way has to say what it is for");
+
+        var parsed = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        Assert.Contains("Assets.App", parsed["servingAFrontEnd"]!["rule"]!.GetValue<string>(),
+                        "the front end is part of the program, and shipped with it");
+        Assert.Contains("workspace", parsed["servingAFrontEnd"]!["notFromTheWorkspace"]!.GetValue<string>());
     }
 
     [TestMethod]
-    public async Task AnAgentCanUploadAFrontEndAndHaveItServed()
+    public async Task TheGuideSaysHowVersionsFeaturesAndDataLive()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        // said before anything else about files, because it decides where
+        // every one of them goes and how a change is made
+        var names = guide.Select(p => p.Key).ToList();
+
+        Assert.IsLessThan(names.IndexOf("assets"), names.IndexOf("lifecycle"), "the lifecycle comes before the details");
+
+        var lifecycle = guide["lifecycle"]!;
+
+        Assert.Contains("never changes", lifecycle["versions"]!["immutable"]!.GetValue<string>());
+        Assert.Contains("online", lifecycle["features"]!["when"]!.GetValue<string>(), "a lambda in use is changed in a feature");
+        Assert.Contains("merge_feature", lifecycle["features"]!["how"]!.GetValue<string>());
+        Assert.Contains("copy", lifecycle["features"]!["data"]!.GetValue<string>());
+        Assert.Contains("update_feature", lifecycle["features"]!["rebasing"]!.GetValue<string>(), "and how to get a feature that fell behind merged");
+        Assert.Contains("Nothing merges or rebases for you", lifecycle["features"]!["rebasing"]!.GetValue<string>());
+
+        Assert.Contains("every version", lifecycle["data"]!["what"]!.GetValue<string>());
+        Assert.Contains("merge", lifecycle["data"]!["lifetime"]!.GetValue<string>());
+        Assert.Contains("ask the user", lifecycle["data"]!["optIn"]!.GetValue<string>(), "data is switched on by the owner, not by an agent");
+
+        Assert.Contains("front end", lifecycle["whereThingsGo"]!["theProgram"]!.GetValue<string>());
+        Assert.Contains("users", lifecycle["whereThingsGo"]!["theData"]!.GetValue<string>());
+
+        Assert.Contains("No feature needed", lifecycle["flows"]!["newLambda"]!.GetValue<string>(), "the flow without features stays");
+        Assert.Contains("create_feature", lifecycle["flows"]!["changeALambda"]!.GetValue<string>());
+
+        var initialized = await CallAsync(fixture, "initialize", new JsonObject());
+
+        var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
+
+        Assert.Contains("create_feature", instructions, "the instructions every agent reads say it before the guide does");
+        Assert.Contains("merge_feature", instructions);
+        Assert.Contains("never in assets", instructions);
+    }
+
+    [TestMethod]
+    public async Task APreviewThatLinksToTheLambdaByItsFullPathIsWarnedAbout()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["publicKey"] = "linked" }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var feature = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject { ["privateKey"] = privateKey, ["name"] = "Page" }))
+                      ["feature"]!["feature"]!.GetValue<string>();
+
+        var linked = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(
+                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Layout.Create().Add(Assets.App(\"web\"));" },
+                new JsonObject { ["name"] = "web/index.html", ["code"] = "<script>fetch('/lambda/linked/api/items', { method: 'POST' })</script>" })
+        }));
+
+        Assert.IsTrue(linked["ok"]!.GetValue<bool>(), linked.ToJsonString());
+        Assert.Contains("live lambda", linked["warning"]!.GetValue<string>(), "from the preview, that is the real data");
+
+        var relative = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["deploy"] = true,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "web/index.html", ["find"] = "/lambda/linked/api/items", ["replace"] = "api/items" })
+        }));
+
+        Assert.IsNull(relative["warning"], "a relative path stays in the preview");
+
+        var deleted = Structured(await CallToolAsync(fixture, "delete_feature", new JsonObject { ["privateKey"] = privateKey, ["feature"] = $" {feature.ToUpperInvariant()} " }));
+
+        Assert.AreEqual(feature, deleted["deleted"]!.GetValue<string>(), "said by the key it has, however it was written");
+    }
+
+    [TestMethod]
+    public async Task AnAgentChangesALambdaInAFeatureWithoutTouchingIt()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["acceptTerms"] = true,
+            ["publicKey"] = "in-a-feature"
+        }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var deployed = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["change"] = "Greets",
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"live\"));" })
+        }));
+
+        Assert.Contains("create_feature", deployed["next"]!.GetValue<string>(), "an agent that just put something online is told how the next change is made");
+
+        var created = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["name"] = "Louder greeting",
+            ["specification"] = "Make the greeting louder"
+        }));
+
+        Assert.IsTrue(created["ok"]!.GetValue<bool>(), created.ToJsonString());
+
+        var feature = created["feature"]!["feature"]!.GetValue<string>();
+
+        Assert.AreEqual(2, created["feature"]!["base"]!.GetValue<int>());
+        Assert.IsTrue(created["feature"]!["mergeable"]!.GetValue<bool>());
+
+        var previewUrl = new Uri(created["feature"]!["previewUrl"]!.GetValue<string>());
+
+        Assert.AreEqual($"/features/{feature}/", previewUrl.AbsolutePath);
+
+        // two attempts, both in the feature, both tried at its own address
+        foreach (var attempt in (string[])["LIVE?", "LIVE!"])
+        {
+            var changed = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+            {
+                ["privateKey"] = privateKey,
+                ["feature"] = feature,
+                ["deploy"] = true,
+                ["change"] = "Greets louder",
+                ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = $"return Content.From(Resource.FromString(\"{attempt}\"));" })
+            }));
+
+            Assert.IsTrue(changed["ok"]!.GetValue<bool>(), changed.ToJsonString());
+            Assert.IsNull(changed["onlineUntil"], "a preview is not the lambda going online");
+
+            using var preview = await fixture.GetAsync(previewUrl.AbsolutePath);
+
+            Assert.AreEqual(attempt, await preview.GetContentAsync());
+
+            using var live = await fixture.GetAsync("/lambda/in-a-feature/");
+
+            Assert.AreEqual("live", await live.GetContentAsync(), "the lambda goes on serving its visitors");
+        }
+
+        var logs = Structured(await CallToolAsync(fixture, "read_logs", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature }));
+
+        var texts = ((JsonArray)logs["lines"]!).Select(l => l!["text"]!.GetValue<string>()).ToList();
+
+        Assert.IsTrue(texts.Any(t => t.Contains($"/features/{feature}/")), string.Join(" | ", texts));
+        Assert.IsFalse(texts.Any(t => t.Contains("/lambda/in-a-feature/")), "what the lambda's visitors caused is not the feature's");
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.AreEqual(2, read["latestVersion"]!.GetValue<int>(), "however often a feature is changed, no version is made");
+        Assert.AreEqual(feature, ((JsonArray)read["features"]!).Single()!["feature"]!.GetValue<string>());
+
+        var merged = Structured(await CallToolAsync(fixture, "merge_feature", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["deploy"] = true
+        }));
+
+        Assert.IsTrue(merged["ok"]!.GetValue<bool>(), merged.ToJsonString());
+        Assert.AreEqual(3, merged["version"]!.GetValue<int>());
+
+        using (var live = await fixture.GetAsync("/lambda/in-a-feature/"))
+        {
+            Assert.AreEqual("LIVE!", await live.GetContentAsync());
+        }
+
+        using (var gone = await fixture.GetAsync(previewUrl.AbsolutePath))
+        {
+            Assert.AreEqual(HttpStatusCode.NotFound, gone.StatusCode, "a merged feature is gone, its preview with it");
+        }
+
+        var after = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.IsEmpty((JsonArray)after["features"]!);
+        Assert.AreEqual("Greets louder", after["change"]!.GetValue<string>(), "the version keeps what the feature said about itself");
+        Assert.AreEqual("Make the greeting louder", after["specification"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task AFeatureBehindTheNewestVersionIsMergedOnlyOnceItsBaseMoves()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"two\"));" })
+        }));
+
+        var feature = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["name"] = "Something"
+        }))["feature"]!["feature"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = "two", ["replace"] = "two, with something" })
+        }));
+
+        // somebody else saves a version meanwhile
+        Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "Other.cs", ["code"] = "static class Other { }" })
+        }));
+
+        var refused = await CallToolAsync(fixture, "merge_feature", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature });
+
+        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
+
+        var problem = Structured(refused)["problem"]!.GetValue<string>();
+
+        Assert.Contains("version 3", problem);
+        Assert.Contains("update_feature", problem, "the refusal says how to get there");
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature }));
+
+        Assert.IsFalse(read["feature"]!["mergeable"]!.GetValue<bool>());
+        Assert.AreEqual(3, ((JsonArray)read["feature"]!["newerVersions"]!).Single()!["version"]!.GetValue<int>(), "and which versions it has to take in");
+        Assert.Contains("two, with something", ((JsonArray)read["files"]!)[0]!["code"]!.GetValue<string>(), "the files are the feature's");
+
+        // brought in by hand, and said so
+        Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "Other.cs", ["code"] = "static class Other { }" })
+        }));
+
+        var moved = Structured(await CallToolAsync(fixture, "update_feature", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["base"] = 3
+        }));
+
+        Assert.IsTrue(moved["feature"]!["mergeable"]!.GetValue<bool>());
+
+        var merged = Structured(await CallToolAsync(fixture, "merge_feature", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature }));
+
+        Assert.IsTrue(merged["ok"]!.GetValue<bool>(), merged.ToJsonString());
+        Assert.AreEqual(4, merged["version"]!.GetValue<int>());
+        Assert.IsNull(merged["onlineUntil"], "merged without deploy, nothing went online");
+    }
+
+    [TestMethod]
+    public async Task AFeatureTriesItselfOutOnACopyOfTheData()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["publicKey"] = "copied-data" }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(new JsonObject
+            {
+                ["name"] = "lambda.cs",
+                ["code"] = "return Inline.Create().Get(() => Workspace.ReadText(\"note.txt\")).Post(\"wipe\", () => { Workspace.WriteText(\"note.txt\", \"wiped\"); return \"ok\"; });"
+            })
+        }));
+
+        Structured(await CallToolAsync(fixture, "upload_file", new JsonObject { ["privateKey"] = privateKey, ["path"] = "note.txt", ["content"] = "real" }));
+
+        var created = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject { ["privateKey"] = privateKey, ["name"] = "Wiping" }));
+
+        var feature = created["feature"]!["feature"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "deploy", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature }));
+
+        using (var copy = await fixture.GetAsync($"/features/{feature}/"))
+        {
+            Assert.AreEqual("real", await copy.GetContentAsync(), "the feature starts with a copy of what the lambda keeps");
+        }
+
+        using (var _ = await fixture.SendAsync(HttpMethod.Post, $"/features/{feature}/wipe")) { }
+
+        using (var live = await fixture.GetAsync("/lambda/copied-data/"))
+        {
+            Assert.AreEqual("real", await live.GetContentAsync(), "and whatever it does to the copy, the lambda's own is as it was");
+        }
+
+        var listed = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature }));
+
+        Assert.AreEqual("note.txt", ((JsonArray)listed["files"]!).Single()!["path"]!.GetValue<string>());
+
+        var uploaded = Structured(await CallToolAsync(fixture, "upload_file", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["path"] = "extra.txt",
+            ["content"] = "only in the feature"
+        }));
+
+        Assert.Contains("copy", uploaded["note"]!.GetValue<string>());
+
+        var real = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.HasCount(1, (JsonArray)real["files"]!, "nothing put into the copy reaches the lambda's data");
+
+        Structured(await CallToolAsync(fixture, "delete_feature", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature }));
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.IsEmpty((JsonArray)read["features"]!);
+    }
+
+    [TestMethod]
+    public async Task AFeatureThatDoesNotCompileIsNotMerged()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var feature = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["name"] = "Broken"
+        }))["feature"]!["feature"]!.GetValue<string>();
+
+        var checkedOnly = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["check"] = true,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return this is not csharp;" })
+        }));
+
+        Assert.IsFalse(checkedOnly["compiles"]!.GetValue<bool>());
+
+        var refused = await CallToolAsync(fixture, "merge_feature", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature });
+
+        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
+        Assert.IsNotEmpty((JsonArray)Structured(refused)["diagnostics"]!);
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.HasCount(1, (JsonArray)read["features"]!, "the feature stays, to be fixed");
+        Assert.AreEqual(1, read["latestVersion"]!.GetValue<int>(), "and no version was made of it");
+    }
+
+    [TestMethod]
+    public async Task AnAgentIsToldWhenTheWorkspaceIsOff()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using (var _ = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/data/workspace")) { }
+
+        var listed = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
+
+        Assert.IsFalse(listed["enabled"]!.GetValue<bool>());
+        Assert.Contains("ask the user", listed["note"]!.GetValue<string>());
+
+        var refused = await CallToolAsync(fixture, "upload_file", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey,
+            ["path"] = "a.txt",
+            ["content"] = "a"
+        });
+
+        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
+        Assert.Contains("switched off", Structured(refused)["problem"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task AFileUploadedByAnAgentIsServedAtOnce()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -708,6 +1094,14 @@ public sealed class McpTests
 
         Assert.IsTrue(upload["result"]!["isError"]!.GetValue<bool>(), "nor can what it stores be replaced");
 
+        var feature = await CallToolAsync(fixture, "create_feature", new JsonObject
+        {
+            ["privateKey"] = "demo-crud",
+            ["name"] = "Mine now"
+        });
+
+        Assert.IsTrue(feature["result"]!["isError"]!.GetValue<bool>(), "nor can a feature be started on it");
+
         var copy = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
         {
             ["template"] = "demo-crud",
@@ -847,11 +1241,12 @@ public sealed class McpTests
         // while it picks a tool, so both have to say it
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
 
-        var rule = guide["whereFilesGo"]!["rule"]!.GetValue<string>();
+        var rule = guide["lifecycle"]!["whereThingsGo"]!["theData"]!.GetValue<string>();
 
         Assert.Contains("model", rule);
         Assert.Contains("workspace", rule);
-        Assert.Contains("upload_file", guide["whereFilesGo"]!["how"]!.GetValue<string>());
+        Assert.Contains("upload_file", guide["workspace"]!["fromOutside"]!.GetValue<string>());
+        Assert.Contains("workspace", guide["assets"]!["size"]!.GetValue<string>(), "and the assets say where their large files belong");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
 
@@ -859,6 +1254,11 @@ public sealed class McpTests
 
         Assert.Contains("upload_file", Describe("write_code"));
         Assert.Contains("model", Describe("upload_file"));
+
+        // and while it picks one, which way round the program and its data go
+        Assert.Contains("front end", Describe("write_code"));
+        Assert.Contains("Not for the front end", Describe("upload_file"));
+        Assert.Contains("every version", Describe("list_files") + Describe("upload_file"));
     }
 
     #region Plumbing

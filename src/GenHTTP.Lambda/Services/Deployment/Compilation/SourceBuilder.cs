@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Workspace;
 
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -426,6 +427,12 @@ internal static class SourceBuilder
     /// read it and cannot change it. Only the room is limited, counted in
     /// blocks as <see cref="WorkspaceLimits"/> explains; reading never creates
     /// anything, and a folder is only made once there is room for it.
+    ///
+    /// A workspace its owner switched off is still the same class, so code
+    /// that names it compiles, but every member refuses with the reason and
+    /// the way to switch it on - which is what the stack trace in the log then
+    /// says. Written as two bodies of one method rather than a flag to test,
+    /// so the compiler has no unreachable branch to warn the author about.
     /// </remarks>
     private static string WorkspaceSource(WorkspaceLimits limits) => $$"""
         internal sealed class {{WorkspaceType}}
@@ -441,11 +448,22 @@ internal static class SourceBuilder
                 _root = global::System.IO.Path.TrimEndingDirectorySeparator(global::System.IO.Path.GetFullPath(root))
                       + global::System.IO.Path.DirectorySeparatorChar;
 
-                global::System.IO.Directory.CreateDirectory(_root);
+                {{(limits.Enabled ? "global::System.IO.Directory.CreateDirectory(_root);" : "// switched off, so there is nothing to make")}}
             }
 
+            {{(limits.Enabled
+                ? "private static void Guard() { }"
+                : $"private static void Guard() => throw new global::System.InvalidOperationException({Literal(DataKinds.WorkspaceOff)});")}}
+
             /// <summary>The absolute path of this workspace.</summary>
-            public string Root => _root;
+            public string Root
+            {
+                get
+                {
+                    Guard();
+                    return _root;
+                }
+            }
 
             /// <summary>Checks whether the given file exists.</summary>
             public bool Exists(string name) => global::System.IO.File.Exists(Resolve(name));
@@ -486,6 +504,8 @@ internal static class SourceBuilder
             /// <summary>Lists the files in this workspace, relative to its root.</summary>
             public string[] List()
             {
+                Guard();
+
                 var files = global::System.IO.Directory.GetFiles(_root, "*", global::System.IO.SearchOption.AllDirectories);
 
                 var result = new string[files.Length];
@@ -500,7 +520,11 @@ internal static class SourceBuilder
 
             /// <summary>Provides this workspace as a resource tree.</summary>
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree()
-                => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
+            {
+                Guard();
+
+                return global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
+            }
 
             /// <summary>One folder of this workspace as a resource tree.</summary>
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree(string folder)
@@ -551,6 +575,8 @@ internal static class SourceBuilder
             /// <summary>The folders of this workspace, relative to its root.</summary>
             public string[] Folders()
             {
+                Guard();
+
                 if (!global::System.IO.Directory.Exists(_root))
                 {
                     return new string[0];
@@ -593,6 +619,8 @@ internal static class SourceBuilder
 
             private string Resolve(string name)
             {
+                Guard();
+
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     throw new global::System.ArgumentException("The name of a workspace file must not be empty.", "name");

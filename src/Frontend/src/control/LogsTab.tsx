@@ -4,7 +4,7 @@ import { ApiError, api, type OwnerLogEntry } from '../api';
 import { IconChevronDown, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
-import { clock, local } from './format';
+import { clock, local, preview } from './format';
 import { Empty, LevelMark, Pills, Section } from './ui';
 
 /** How many lines are held on the page before the oldest are let go. */
@@ -16,10 +16,15 @@ type View = 'all' | 'requests' | 'output' | 'problems';
  * What this lambda has been saying, as it happens: the requests it answered,
  * what it printed, and what went wrong - a handler that threw comes with its
  * stack trace. Newest first, so what just happened is where the eye is.
+ *
+ * Opened on a feature, what its preview has been saying instead - kept apart
+ * from the lambda's own log, so trying a feature leaves no trace among the
+ * lambda's visitors, and the lambda's visitors none in the feature's.
  */
 export function LogsTab({ control }: { control: Control }) {
   const t = useEditorT();
   const said = t.logs;
+  const feature = control.feature?.info.key ?? null;
 
   const [lines, setLines] = useState<OwnerLogEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -41,7 +46,7 @@ export function LogsTab({ control }: { control: Control }) {
     cursor.current = undefined;
     setLines([]);
     setLoaded(false);
-  }, [level, control.privateKey]);
+  }, [level, control.privateKey, feature]);
 
   useEffect(() => {
     if (paused) {
@@ -52,7 +57,9 @@ export function LogsTab({ control }: { control: Control }) {
 
     async function poll() {
       try {
-        const page = await api.lambdaLogs(control.privateKey, { since: cursor.current, level });
+        const page = feature
+          ? await api.feature.logs(control.privateKey, feature, { since: cursor.current, level })
+          : await api.lambdaLogs(control.privateKey, { since: cursor.current, level });
 
         if (!alive) {
           return;
@@ -83,7 +90,7 @@ export function LogsTab({ control }: { control: Control }) {
       alive = false;
       window.clearInterval(timer);
     };
-  }, [control.privateKey, level, paused, said]);
+  }, [control.privateKey, feature, level, paused, said]);
 
   const needle = search.trim().toLowerCase();
 
@@ -98,7 +105,7 @@ export function LogsTab({ control }: { control: Control }) {
   return (
     <Section
       title={t.frame.sections.logs}
-      hint={said.hint(capturing)}
+      hint={feature ? said.featureHint(capturing) : said.hint(capturing)}
       actions={
         <>
           <input
@@ -138,7 +145,7 @@ export function LogsTab({ control }: { control: Control }) {
       ) : !loaded ? (
         <div className="flex items-center gap-2 text-sm text-slate-500"><IconSpinner /> {said.reading}</div>
       ) : shown.length === 0 ? (
-        <Empty>{lines.length === 0 ? (view === 'problems' ? said.noProblems : said.nothing) : said.noMatch}</Empty>
+        <Empty>{lines.length === 0 ? (view === 'problems' ? said.noProblems : feature ? said.nothingPreview : said.nothing) : said.noMatch}</Empty>
       ) : (
         <ul className="divide-y divide-slate-100 border-y border-slate-200 font-mono text-[12.5px] dark:divide-ink-850 dark:border-ink-800">
           {shown.map((line) => {
@@ -159,7 +166,7 @@ export function LogsTab({ control }: { control: Control }) {
                   </span>
                   <LevelMark level={line.level} />
                   <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                    {local(line.text, control.lambda.publicKey)}
+                    {feature ? preview(line.text, feature) : local(line.text, control.lambda.publicKey)}
                     {line.repeats > 1 && <span className="ml-2 text-slate-400" title={said.identical(line.repeats)}>×{line.repeats}</span>}
                   </span>
                   {expandable && (
