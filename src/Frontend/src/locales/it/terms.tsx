@@ -3,37 +3,37 @@ import type { Messages } from '../en';
 export const terms: Messages['terms'] = {
   title: 'Termini di servizio',
   binding: (english) => (
-    <>Questa traduzione è fornita a solo scopo informativo. Fa fede esclusivamente la {english('versione inglese')}.</>
+    <>Questa traduzione è solo informativa. Fa fede la {english('versione inglese')}.</>
   ),
   intro:
-    'Questo è un servizio gratuito a scopo di sperimentazione. Esegue codice scritto da terzi su un’infrastruttura condivisa, il che è possibile solo se tutti rispettano alcune regole.',
+    'Questo è un servizio gratuito per sperimentare. Esegue codice scritto da sconosciuti su un’infrastruttura condivisa, e funziona solo se tutti rispettano poche regole.',
   sections: {
-    forbiddenTitle: 'Contenuti non consentiti',
+    forbiddenTitle: 'Cosa non puoi pubblicare qui',
     forbidden: [
-      'Nessun malware, nessun phishing, nessun miner di criptovalute. Nulla che attacchi, scansioni, sovraccarichi o interferisca in altro modo con altri sistemi, qui o altrove. Nulla che molesti altre persone. Nulla che non si abbia il diritto di pubblicare, inclusi codice, testi, immagini e marchi di terzi.',
-      'Non utilizzi un lambda per memorizzare o inoltrare dati personali di altre persone. Un indirizzo pubblico non ha nulla di privato, e questa piattaforma non offre alcuno strumento per proteggere tali dati.',
+      'Niente malware, niente phishing, niente miner di criptovalute. Niente che attacchi, scansioni, sommerga di richieste o disturbi in altro modo altri sistemi, qui o altrove. Niente che molesti qualcuno. Niente che tu non abbia il diritto di pubblicare, compresi codice, testi, immagini e marchi di altri.',
+      'Non usare una lambda per salvare o inoltrare dati personali di altre persone. Un indirizzo pubblico non ha niente di privato, e questa piattaforma non ti offre alcun modo per proteggere questi dati.',
     ],
-    actionTitle: 'Provvedimenti',
+    actionTitle: 'Cosa possiamo fare',
     action:
-      'Qualsiasi contenuto distribuito qui può essere disattivato o rimosso in qualsiasi momento, senza preavviso e senza obbligo di motivazione. In pratica ciò avviene in caso di violazione delle regole di cui sopra, di rischio per il server condiviso o di segnalazione fondata.',
-    lastingTitle: 'Durata di conservazione',
+      'Tutto ciò che viene messo online qui può essere messo offline o eliminato in qualsiasi momento, senza preavviso e senza obbligo di spiegazioni. In pratica succede quando qualcosa viola le regole qui sopra, quando mette a rischio il server che tutti condividono, o quando qualcuno lo segnala e ha ragione.',
+    lastingTitle: 'Quanto dura',
     lasting: (hours, days) =>
-      `Una distribuzione resta raggiungibile per circa ${hours} ore. Un lambda non aperto viene rimosso, insieme a tutte le versioni del codice, circa ${days} giorni dopo l’ultima modifica. Il salvataggio e la distribuzione valgono come modifica: ciò su cui si sta lavorando viene quindi conservato. Questo servizio non costituisce un backup: conservi una copia personale del codice importante.`,
-    keyTitle: 'Il link di modifica equivale a una password',
-    key: 'Chiunque disponga del link di modifica può leggere e modificare il relativo lambda; non sono associati account né password. Pubblicare il link significa consentire ad altri di modificarlo. Un link smarrito non può essere recuperato.',
+      `Un deployment resta raggiungibile per circa ${hours} ore. Una lambda che non apri viene eliminata, con tutte le versioni del suo codice, circa ${days} giorni dopo l’ultima volta che ci hai messo mano. Salvare o fare il deploy conta come metterci mano, quindi quello su cui stai lavorando resta. Niente qui è un backup: tieni una tua copia del codice che ti sta a cuore.`,
+    keyTitle: 'Il link di modifica è la tua password',
+    key: 'Chiunque abbia il link di modifica può leggere e modificare quella lambda, e dietro non c’è né un account né una password. Se pubblichi il link, dai a chiunque la possibilità di modificarla. Un link perso non si può recuperare.',
     warrantyTitle: 'Nessuna garanzia',
     warranty:
-      'Il servizio è fornito così com’è, senza alcuna garanzia di funzionamento, continuità o conservazione dei contenuti. Può essere riavviato, modificato o interrotto in qualsiasi momento. Non vi si basi nulla di importante per Lei o per terzi.',
+      'Il servizio è fornito così com’è, senza garanzia che funzioni, che continui a funzionare o che conservi quello che ci metti. Può essere riavviato, cambiato o spento in qualsiasi momento. Non costruirci sopra niente che sia importante per te o per altri.',
     reportTitle: 'Segnalazioni',
     report: (mailbox, front) => (
       <>
-        Se un lambda ospitato qui ha un comportamento scorretto, scriva a {mailbox} indicandone l’indirizzo. Le informazioni
-        utili da includere sono indicate nella {front('pagina iniziale')}.
+        Se una lambda ospitata qui fa qualcosa che non dovrebbe, scrivi a {mailbox} indicando il suo indirizzo. Cosa
+        includere lo trovi nella {front('home page')}.
       </>
     ),
   },
-  change: 'Questi termini possono cambiare. Si applica la versione pubblicata in questa pagina.',
+  change: 'Questi termini possono cambiare. Vale la versione pubblicata in questa pagina.',
 
   short:
-    'I lambda vengono eseguiti su un’infrastruttura condivisa. Creandone uno, Lei si impegna a non distribuire malware, pagine di phishing, miner di criptovalute o qualsiasi cosa che attacchi, scansioni o sovraccarichi altri sistemi, e a non pubblicare contenuti su cui non detiene i diritti. Chiunque conosca il link di modifica può modificare il Suo lambda: lo tratti come una password. I lambda del piano gratuito restano online finché vengono utilizzati: un lambda senza visite né modifiche per un mese viene disattivato e rimosso se non vi è alcuna attività nei due mesi successivi. Qualsiasi contenuto distribuito può essere rimosso in qualsiasi momento.',
+    'Le lambda girano su un’infrastruttura condivisa. Creandone una, accetti di non mettere online malware, pagine di phishing, miner di criptovalute o qualsiasi cosa che attacchi, scansioni o sommerga di richieste altri sistemi, e di non pubblicare contenuti che non hai il diritto di pubblicare. Chiunque conosca il link di modifica può modificare la tua lambda: trattalo come una password. Nel piano gratuito le lambda restano online finché vengono usate: una lambda che nessuno visita e nessuno modifica per un mese va offline, e viene eliminata se nei due mesi successivi non succede niente. Tutto ciò che pubblichi può essere eliminato in qualsiasi momento.',
 };

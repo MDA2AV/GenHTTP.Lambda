@@ -51,7 +51,7 @@ export const guide = {
   first: [
     (k) => (
       <>
-        Press {k.b('Create a lambda')}. You get a public address and an editor key. The key is the only way back
+        Press {k.b('Create my lambda')}. You get a public address and an editor key. The key is the only way back
         in, so keep it. Nobody can recover it for you.
       </>
     ),

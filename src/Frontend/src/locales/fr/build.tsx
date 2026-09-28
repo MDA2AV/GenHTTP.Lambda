@@ -1,63 +1,63 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  offTitle: 'Non disponible sur cette installation',
+  offTitle: 'Pas activé ici',
   off: (write, mcp) => (
     <>
-      Cette installation ne dispose pas d’agent de création. Vous pouvez néanmoins {write('écrire le code vous-même')} ou
-      connecter votre propre Claude à {mcp}.
+      Cette installation n’a pas d’agent de création. Vous pouvez quand même {write('écrire le code vous-même')}, ou
+      brancher votre propre Claude sur {mcp}.
     </>
   ),
 
-  title: 'Décrivez votre besoin.',
+  title: 'Dites ce que vous voulez.',
   intro:
-    'L’application est créée et mise en ligne, et vous recevez un lien à partager. Sans compte, sans installation – et elle peut conserver des données, comme des scores, des messages ou des inscriptions, afin que chacun voie le même état.',
+    'Votre app est créée, mise en ligne, et vous recevez un lien à envoyer à qui vous voulez. Sans compte, rien à installer. Et elle garde ses données (scores, messages, inscriptions) : tous ceux qui l’ouvrent voient la même chose.',
   placeholder: 'crée un…',
   working: 'en cours…',
   shortcut: 'Ctrl + Entrée',
-  building: 'Création en cours',
+  building: 'Création…',
   buildIt: 'Créer',
-  builtBy: 'Créé avec',
+  builtBy: 'Avec',
   password: 'mot de passe',
   fable:
-    'Fable est protégé par un mot de passe pendant sa phase d’essai. Il fonctionne sans limite de temps et poursuit jusqu’à ce que l’application soit terminée.',
+    'Fable est protégé par un mot de passe pendant la phase de test. Il n’a pas de limite de temps : il continue jusqu’à ce que l’app soit finie, pas jusqu’à la fin du chrono.',
   onlyNew:
-    'Cette page crée uniquement de nouvelles applications. Pour faire évoluer une application existante, confiez son lien d’édition à votre propre agent – voir ci-dessous.',
+    'Ici, on ne crée que de nouvelles apps. Pour faire évoluer une app existante, donnez son lien d’édition à votre propre agent de code (voir plus bas).',
   ideas: [
-    'un mur où chacun peut laisser un court message',
-    'un tableau des scores pour un jeu de dés',
-    'un sondage avec les résultats en direct',
-    'un livre d’or pour notre mariage',
-    'un compte à rebours partagé jusqu’à une date',
+    'un mur où chacun peut laisser un message d’une ligne',
+    'un tableau des meilleurs scores pour un jeu de dés',
+    'un sondage où chacun vote et voit les résultats',
+    'un livre d’or pour mon mariage',
+    'un compte à rebours vers une date, visible par tous',
   ],
   ahead: (waiting) =>
-    waiting === 1 ? 'Une création avant la vôtre – vous êtes le suivant.' : `${waiting} créations avant la vôtre.`,
+    waiting === 1 ? 'Une création avant la vôtre. Vous passez juste après.' : `${waiting} créations en attente avant la vôtre.`,
   starting: 'Démarrage…',
 
-  yourApp: 'Votre application',
-  further: 'Pour la faire évoluer',
-  keep: 'Conservez ce lien précieusement. C’est le seul moyen d’y accéder, et il ne peut pas être récupéré – y compris par nous. Ajoutez-le à vos favoris avant de fermer cet onglet.',
+  yourApp: 'Votre app',
+  further: 'Pour aller plus loin',
+  keep: 'Gardez bien ce lien. C’est le seul moyen d’y revenir, et personne ne peut le récupérer, pas même nous. Ajoutez-le à vos favoris avant de fermer cet onglet.',
   change:
-    'Cette page crée uniquement de nouvelles applications. Pour modifier celle-ci, connectez votre propre agent comme indiqué ci-dessous, transmettez-lui le lien d’édition et décrivez la modification souhaitée.',
+    'Cette page sert uniquement à créer. Pour modifier cette app, branchez votre propre agent de code (voir plus bas), donnez-lui le lien d’édition et dites-lui ce que vous voulez changer.',
   copyLink: 'Copier le lien d’édition',
   lifetime: (offline, removed) =>
-    `L’application reste en ligne tant qu’elle est utilisée : après ${offline} jours sans visite ni modification, elle est mise hors ligne, et supprimée après ${removed} jours. Pour la remettre en ligne, ouvrez l’éditeur et cliquez sur Déployer.`,
+    `Elle reste en ligne tant qu’on l’utilise : après ${offline} jours sans visite ni modification, elle passe hors ligne, et après ${removed} jours, elle est supprimée. Pour la remettre en ligne, ouvrez l’éditeur et cliquez sur Déployer.`,
   openEditor: 'Ouvrir l’éditeur',
-  another: 'Créer une autre application',
+  another: 'Créer autre chose',
 
-  keepGoing: 'Poursuivre avec votre propre agent',
+  keepGoing: 'Continuer avec votre agent',
   orOwn: 'Ou utilisez votre propre agent',
   ownText:
-    'Le champ ci-dessus utilise un Claude hébergé sur ce serveur. Si vous disposez déjà de votre propre agent, vous pouvez le connecter ici : il dispose des mêmes possibilités – créer un lambda, écrire le code, le mettre en ligne – sans limite quotidienne et sans passer par cette page.',
-  thenAsk: 'Décrivez ensuite votre besoin, comme vous le feriez ici.',
+    'Le champ ci-dessus, c’est un Claude qui tourne sur ce serveur. Si vous avez déjà le vôtre, branchez-le ici : il sait faire la même chose (créer une lambda, écrire le code, la mettre en ligne), sans limite quotidienne et sans passer par cette page.',
+  thenAsk: 'Ensuite, demandez-lui ce que vous voulez, comme vous le feriez ici.',
   claudeWeb: 'Claude sur le web',
   claudeWebHow:
-    'Paramètres, puis « Connectors », puis « Add custom connector ». Collez l’adresse ci-dessus comme URL du serveur MCP distant. Aucune clé ni connexion n’est requise.',
+    'Paramètres, puis « Connectors », puis « Add custom connector ». Collez l’adresse ci-dessus comme URL de serveur MCP distant. Pas de clé, pas de connexion.',
   howToChange:
-    'C’est également ainsi que l’on modifie une application existante : transmettez le lien d’édition à votre agent et décrivez la modification.',
-  more: 'En savoir plus sur l’utilisation d’un agent',
+    'C’est aussi comme ça qu’on modifie une app déjà créée : donnez le lien d’édition à votre agent et dites-lui quoi faire.',
+  more: 'En savoir plus sur les agents',
 
-  failedToStart: 'La demande n’a pas pu être lancée.',
-  noAnswer: 'Le traitement s’est terminé sans retour d’information.',
-  failed: 'L’opération a échoué.',
+  failedToStart: 'La demande n’est pas passée.',
+  noAnswer: 'C’est terminé, mais sans dire ce qui s’est passé.',
+  failed: 'Ça n’a pas marché.',
 };

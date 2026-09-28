@@ -2,75 +2,73 @@ import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
   eyebrow: 'Eine Plattform für Agentic Coding',
-  headline: 'Beschreiben Sie eine Anwendung.',
+  headline: 'Beschreiben Sie eine App.',
   headlineAccent: 'Ihr Agent stellt sie online.',
   intro:
-    'Umfragen, Gästebücher, Bestenlisten, kleine Shops: Beschreiben Sie unserem Agenten oder Ihrem eigenen, was Sie benötigen, und Sie erhalten eine funktionsfähige Anwendung mit einem Link zum Teilen. Die Anwendung bleibt bearbeitbar und lässt sich auch nach der ersten Version jederzeit weiterentwickeln.',
-  build: 'Anwendung erstellen',
-  ownAgent: 'Eigenen Agenten verwenden',
-  free: 'Kostenlos. Ohne Konto und ohne Installation.',
-  seeIt: 'So funktioniert es',
+    'Umfragen, Gästebücher, Bestenlisten, kleine Shops. Sagen Sie unserem Agenten oder Ihrem eigenen, was Sie brauchen – und Sie bekommen eine fertige App mit Link zum Teilen. Sie können sie jederzeit weiter verbessern, auch lange nach der ersten Version.',
+  build: 'App bauen',
+  ownAgent: 'Eigenen Agenten nutzen',
+  free: 'Kostenlos. Kein Konto, keine Installation.',
+  seeIt: 'In Aktion ansehen',
 
-  videoTitle: 'Von der Beschreibung zur laufenden Anwendung',
+  videoTitle: 'Vom Satz zur laufenden App',
   videoText:
-    'Ein privates Browserfenster, kein Konto und eine einzige Anfrage auf der Seite „Erstellen“ – anschließend die fertige Anwendung, aufgerufen über ihren Link, so wie jede andere Person sie sieht.',
-  videoNote: 'Der Erstellungsvorgang ist beschleunigt dargestellt, alles Weitere in Echtzeit.',
+    'Ein privates Browserfenster, kein Konto, ein einziger Prompt. Danach die fertige App, geöffnet über ihren Link – genau so, wie jeder Besucher sie sieht.',
+  videoNote: 'Das Bauen läuft im Zeitraffer, alles andere in Echtzeit.',
   tryIt: 'Selbst ausprobieren',
 
-  oneShotTitle: 'Nicht nur ein einmaliges Ergebnis',
+  oneShotTitle: 'Mehr als ein erster Wurf',
   oneShotText:
-    'Die meisten Generatoren liefern ein Ergebnis und enden dort. Hier läuft die Anwendung dort weiter, wo sie erstellt wurde – Sie und Ihr Agent können sie also fortlaufend weiterentwickeln.',
+    'Die meisten Generatoren liefern ein Ergebnis und lassen Sie damit allein. Bei uns läuft die App gleich dort, wo sie entstanden ist. Sie und Ihr Agent können jederzeit daran weiterarbeiten.',
   steps: [
     {
-      title: 'Anforderung beschreiben',
-      body: 'Beschreiben Sie in eigenen Worten, was Sie benötigen – dem Agenten auf dieser Website oder dem, den Sie bereits verwenden. Ohne Code, ohne Einrichtung, ohne Konto.',
-      alt: 'Die Seite „Erstellen“ mit einer eingegebenen Anfrage für eine Mittagsumfrage',
+      title: 'Idee beschreiben',
+      body: 'Sagen Sie in eigenen Worten, was Sie möchten – dem Agenten auf dieser Seite oder Ihrem eigenen. Kein Code, kein Setup, kein Konto.',
+      alt: 'Die Seite „App bauen“ mit einem Prompt für eine Mittagsumfrage',
     },
     {
-      title: 'Funktionsfähige Anwendung mit Link',
-      body: 'Die Anwendung wird erstellt, bereitgestellt und als öffentliche Adresse zurückgegeben, die Sie teilen können. Sie speichert ihre Daten – Stimmen, Punktestände, Nachrichten –, sodass alle Nutzer denselben Stand sehen.',
-      alt: 'Die fertige Mittagsumfrage, geöffnet im Browser',
+      title: 'App und Link bekommen',
+      body: 'Die App wird gebaut und online gestellt. Sie bekommen eine öffentliche Adresse zum Teilen. Die App speichert ihre Daten – Stimmen, Punkte, Nachrichten –, damit alle denselben Stand sehen.',
+      alt: 'Die fertige Mittagsumfrage im Browser',
     },
     {
-      title: 'Kontinuierlich verbessern',
-      body: 'Zu jeder Anwendung gehört ein privater Editor-Link. Übergeben Sie ihn Ihrem Agenten mit der nächsten Änderung oder öffnen Sie ihn selbst. Jede Änderung wird zu einer neuen Version, die Adresse bleibt unverändert.',
-      alt: 'Das Kontrollzentrum der Umfrage: ihre Versionen, jeweils mit der Anforderung, der Änderung und dem Unterschied zur vorherigen Version',
+      title: 'Weiter verbessern',
+      body: 'Zu jeder App gehört ein privater Editor-Link. Geben Sie ihn mit dem nächsten Wunsch an Ihren Agenten oder öffnen Sie ihn selbst. Jede Änderung wird eine neue Version, die Adresse bleibt gleich.',
+      alt: 'Das Kontrollzentrum der Umfrage: ihre Versionen, jeweils mit Wunsch, Änderung und Diff zur vorherigen',
     },
   ],
   weekLater: 'Eine Woche später',
   weekAsk:
-    'Hier ist der Editor-Link meiner Mittagsumfrage. Bitte beende die Abstimmung freitags um 11 Uhr und zeige das Ergebnis oben an.',
+    'Hier ist der Editor-Link für meine Mittagsumfrage. Bitte beende die Abstimmung freitags um 11 Uhr und zeig den Gewinner ganz oben an.',
   weekAnswer:
-    'Erledigt. Version 4 ist unter derselben Adresse online, Version 3 steht für eine Wiederherstellung weiterhin zur Verfügung.',
+    'Erledigt. Version 4 ist unter derselben Adresse live. Version 3 lässt sich jederzeit zurückholen.',
 
-  agentsTitle: 'Ihren bevorzugten Agenten verwenden',
+  agentsTitle: 'Bringen Sie Ihren Lieblingsagenten mit',
   agentsText:
-    'Sie arbeiten bereits mit Claude oder einem anderen Assistenten? Verbinden Sie ihn mit dieser Adresse, und er kann hier Anwendungen erstellen, bereitstellen und aktualisieren – direkt aus der laufenden Unterhaltung.',
+    'Sie arbeiten schon mit Claude oder einem anderen Assistenten? Verbinden Sie ihn mit dieser Adresse. Dann baut er hier Apps, stellt sie online und ändert sie – direkt aus dem Chat, den Sie ohnehin offen haben.',
   agents: [
     {
-      name: 'Claude im Web oder auf dem Desktop',
-      how: 'Öffnen Sie die Einstellungen, dann „Connectors“, und wählen Sie „Add custom connector“. Fügen Sie die obige Adresse ein – ohne API-Schlüssel und ohne Anmeldung.',
+      name: 'Claude im Web oder als Desktop-App',
+      how: 'Öffnen Sie die Einstellungen, dann „Connectors“, und wählen Sie „Add custom connector“. Fügen Sie die Adresse oben ein – ohne API-Key, ohne Login.',
     },
     {
       name: 'Claude Code',
-      how: 'Führen Sie einmalig in einem Terminal aus:',
+      how: 'Einmal im Terminal ausführen:',
     },
     {
       name: 'Andere MCP-Clients',
-      how: 'Cursor, VS Code, Codex und weitere MCP-Clients unterstützen entfernte Server. Konfigurieren Sie sie mit derselben Adresse.',
+      how: 'Cursor, VS Code, Codex und andere MCP-Clients unterstützen Remote-Server. Tragen Sie dort dieselbe Adresse ein.',
     },
   ],
-  thenAsk: (em) => (
-    <>Anschließend genügt eine Anfrage wie: {em('Erstelle eine Anmeldeliste für unser Team-Event und stelle sie online')}.</>
-  ),
+  thenAsk: (em) => <>Danach genügt ein Satz: {em('Bau eine Anmeldeliste für unser Team-Event und stell sie online')}.</>,
 
-  contactTitle: 'Kontakt',
+  contactTitle: 'Sprechen Sie mit uns',
   contactText:
-    'Sie benötigen Unterstützung, planen ein größeres Vorhaben oder suchen eine individuell entwickelte Lösung? Wir freuen uns auf Ihre Nachricht.',
-  mailTitle: 'Per E-Mail',
-  mailText: 'Für Projekte, Anfragen und alle Anliegen, die Sie vertraulich besprechen möchten.',
-  discordTitle: 'Discord-Community',
-  discordText: 'Stellen Sie Ihre Projekte vor, erhalten Sie Unterstützung und tauschen Sie sich direkt mit dem Team aus.',
+    'Sie brauchen Hilfe, planen etwas Größeres oder suchen eine Lösung nach Maß? Wir freuen uns auf Ihre Nachricht.',
+  mailTitle: 'Schreiben Sie uns',
+  mailText: 'Für Projekte, Anfragen und alles, was Sie lieber unter vier Augen besprechen.',
+  discordTitle: 'Discord beitreten',
+  discordText: 'Zeigen Sie, was Sie gebaut haben, holen Sie sich Hilfe und sprechen Sie direkt mit dem Team.',
   discordLink: 'Der GenHTTP-Discord',
 
   terms: 'Nutzungsbedingungen',

@@ -2,35 +2,34 @@ import type { Messages } from '../en';
 
 export const showcase: Messages['showcase'] = {
   eyebrow: 'Vetrina',
-  title: 'Realizzate qui, attive ora',
+  title: 'Nate qui, online adesso',
   intro:
-    'Lambda che i proprietari hanno scelto di mostrare. Sono tutti online, quindi ogni scheda apre l’applicazione reale. I più utilizzati di recente compaiono per primi.',
+    'Lambda che i proprietari hanno deciso di mostrare. Sono tutte online, quindi ogni scheda apre l’app vera. Prima quelle usate di recente.',
   counted: (total) => (total === 1 ? '1 lambda' : `${total} lambda`),
   failed: 'Impossibile caricare la vetrina.',
   loadingMore: 'Caricamento…',
-  showMore: 'Mostra altri',
-  nothingTitle: 'Ancora nessuna applicazione in vetrina',
+  showMore: 'Mostra altre',
+  nothingTitle: 'Ancora niente in vetrina',
   nothing: (tab) => (
     <>
-      Ha realizzato un’applicazione funzionante? Apra il relativo centro di controllo, selezioni {tab('Vetrina')} e
-      aggiunga un titolo, una breve descrizione e un’immagine. Comparirà qui finché resta online.
+      Hai creato qualcosa che funziona? Apri il suo pannello di controllo, scegli {tab('Vetrina')} e aggiungi un titolo,
+      due righe di descrizione e un’immagine. Comparirà qui finché è online.
     </>
   ),
-  buildOne: 'Crea un’applicazione',
-  yoursTitle: 'Desidera mostrare la Sua?',
+  buildOne: 'Crea un’app',
+  yoursTitle: 'Vuoi qui anche la tua?',
   yours: (tab) => (
     <>
-      Apra il centro di controllo del Suo lambda e selezioni {tab('Vetrina')}, oppure chieda all’agente che lo ha creato
-      di aggiungerlo. Solo chi possiede la chiave di modifica può farlo, e l’inserimento può essere rimosso in qualsiasi
-      momento.
+      Apri il pannello di controllo della tua lambda e scegli {tab('Vetrina')}, oppure chiedi all’agente che l’ha creata
+      di metterla in vetrina. Può farlo solo chi ha la chiave di modifica, e puoi toglierla dalla vetrina quando vuoi.
     </>
   ),
-  buildSomething: 'Crea un’applicazione',
+  buildSomething: 'Crea qualcosa',
 };
 
 export const card: Messages['card'] = {
-  noPicture: 'Nessuna immagine',
+  noPicture: 'Ancora nessuna immagine',
   title: 'Titolo',
-  description: 'Cosa può farne un visitatore.',
+  description: 'Cosa ci può fare chi la visita.',
   opens: (title, address) => `${title}, apre ${address} in una nuova scheda`,
 };

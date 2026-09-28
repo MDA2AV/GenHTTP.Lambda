@@ -3,116 +3,114 @@ import type { Messages } from '../en';
 export const guide: Messages['guide'] = {
   title: 'So funktioniert es',
   intro:
-    'Sie schreiben ein C#-Snippet. Was es zurückgibt, ist innerhalb weniger Sekunden unter einer öffentlichen Adresse über HTTPS erreichbar. Diese Seite beschreibt die gesamte Plattform in der Reihenfolge, in der Sie ihr begegnen.',
+    'Sie schreiben ein C#-Snippet. Was es zurückgibt, ist in wenigen Sekunden unter einer öffentlichen HTTPS-Adresse erreichbar. Hier steht alles Wichtige – in der Reihenfolge, in der Sie es brauchen.',
   contents: 'Inhalt',
 
   parts: {
-    what: 'Was ist ein Lambda?',
+    what: 'Was ein Lambda ist',
     first: 'Ihr erstes Lambda',
     editor: 'Das Kontrollzentrum',
-    why: 'Änderungen begründen',
+    why: 'Das Warum festhalten',
     files: 'Mehrere Dateien',
-    page: 'Webseiten ausliefern',
-    spa: 'Ein Frontend Schritt für Schritt',
-    storage: 'Die zwei Speicherorte für Dateien',
-    keeping: 'Daten dauerhaft speichern',
+    page: 'Eine Seite ausliefern',
+    spa: 'Ein Frontend, Schritt für Schritt',
+    storage: 'Zwei Orte für Dateien',
+    keeping: 'Daten speichern',
     sockets: 'Websockets',
-    limits: 'Einschränkungen',
-    away: 'Code exportieren',
-    agents: 'Arbeiten mit Agenten',
+    limits: 'Was nicht erlaubt ist',
+    away: 'Alles mitnehmen',
+    agents: 'Mit einem Agenten arbeiten',
   },
 
   what: [
     (k) => (
       <>
-        Ein Lambda ist ein Code-Snippet, das einen GenHTTP-Handler zurückgibt. Die Plattform kompiliert und lädt es und
-        stellt das Ergebnis unter Ihrer eigenen Adresse bereit. Es sind weder ein Projekt noch eine Build-Datei oder eine{' '}
-        {k.code('using')}-Anweisung erforderlich; alle GenHTTP-Module sind bereits importiert.
+        Ein Lambda ist ein Snippet, das einen GenHTTP-Handler zurückgibt. Die Plattform kompiliert es, lädt es und hängt
+        das Ergebnis unter Ihrer eigenen Adresse ein. Kein Projekt, keine Build-Datei, keine {k.code('using')}
+        -Anweisungen: Alle GenHTTP-Module sind schon importiert.
       </>
     ),
     (k) => (
       <>
-        Dies ist bereits ein vollständiges Lambda. Unter {k.code('/lambda/your-key/')} bereitgestellt, beantwortet es jede
-        Anfrage mit dem Wort „hello“.
+        Das ist bereits ein vollständiges Lambda. Unter {k.code('/lambda/your-key/')} deployt, beantwortet es jeden
+        Request mit „hello“.
       </>
     ),
   ],
   whatAside: (k) => (
     <>
-      Das Snippet besteht aus {k.em('Anweisungen')}, nicht aus einer Klasse. Zuletzt gibt es ein Objekt zurück, das
-      Anfragen beantworten kann: einen Handler oder einen Builder für einen Handler.
+      Das Snippet besteht aus {k.em('Anweisungen')}, nicht aus einer Klasse. Zum Schluss gibt es etwas zurück, das
+      Requests beantworten kann: einen Handler oder einen Builder dafür.
     </>
   ),
 
   first: [
     (k) => (
       <>
-        Klicken Sie auf {k.b('Lambda erstellen')}. Sie erhalten eine öffentliche Adresse und einen Editor-Schlüssel. Der
-        Schlüssel ist der einzige Zugang und kann nicht wiederhergestellt werden – bitte bewahren Sie ihn sicher auf.
+        Klicken Sie auf {k.b('Lambda erstellen')}. Sie bekommen eine öffentliche Adresse und einen Editor-Schlüssel. Der
+        Schlüssel ist der einzige Weg zurück – heben Sie ihn auf. Niemand kann ihn für Sie wiederherstellen.
       </>
     ),
     () => (
       <>
-        Sie gelangen in das Kontrollzentrum, in dem bereits ein kleiner REST-Dienst als erste Version angelegt ist. Er
-        dient lediglich als Ausgangspunkt.
+        Sie landen im Kontrollzentrum. Als erste Version ist schon ein kleiner REST-Dienst angelegt – nur als Startpunkt.
       </>
     ),
     (k) => (
       <>
-        Übergeben Sie den Editor-Schlüssel einem Agenten und beschreiben Sie, was entstehen soll – er schreibt neue
-        Versionen über {k.link('/#agents', 'MCP')}. Alternativ öffnen Sie {k.b('Code')} und schreiben selbst:{' '}
-        {k.b('Prüfen')} kompiliert, ohne zu speichern, und zeigt die Meldungen des Compilers mit Datei und Zeile.
+        Geben Sie den Editor-Schlüssel einem Agenten und sagen Sie ihm, was er bauen soll – er schreibt neue Versionen
+        über {k.link('/#agents', 'MCP')}. Oder öffnen Sie {k.b('Code')} und schreiben Sie selbst: {k.b('Prüfen')}{' '}
+        kompiliert, ohne etwas zu speichern, und zeigt die Meldungen des Compilers mit Datei und Zeile.
       </>
     ),
     (k) => (
       <>
-        Klicken Sie auf {k.b('Bereitstellen')}. Das Lambda ist nun online; vorher ist nichts erreichbar. Eine erneute
-        Bereitstellung verlängert die Laufzeit.
+        Klicken Sie auf {k.b('Deployen')}. Jetzt ist es online – vorher ist nichts erreichbar. Jedes weitere Deployment
+        verlängert, wie lange es online bleibt.
       </>
     ),
   ],
 
   editor: (k) => (
     <>
-      Der Editor-Link öffnet ein Kontrollzentrum statt eines Texteditors: Der Großteil des Codes wird von Agenten
-      geschrieben, daher sehen Sie zuerst den Zustand Ihres Lambdas. Die Seitenleiste zeigt, ob es online ist, seine
-      Adresse, eine Schaltfläche für eine neuere, noch nicht bereitgestellte Version sowie die einzelnen Bereiche. Seltene
-      Aktionen wie das Ändern der Adresse oder das Löschen finden Sie im Menü {k.b('⋯')}.
+      Der Editor-Link öffnet ein Kontrollzentrum, kein Textfeld. Den meisten Code schreiben hier Agenten, also sehen Sie
+      zuerst, wie es Ihrem Lambda geht. Die Seitenleiste zeigt, ob das Lambda online ist, seine Adresse und seine
+      Bereiche. Wartet eine neuere Version auf ihr Deployment, erscheint dort ein Button. Was Sie selten brauchen, etwa
+      die Adresse ändern oder das Lambda löschen, steckt im Menü {k.b('⋯')}.
     </>
   ),
   bits: [
-    ['Übersicht', () => <>Online-Status, Anzahl der heutigen und der fehlgeschlagenen Anfragen, die letzte Änderung und der verbleibende Speicherplatz.</>],
-    ['Dateien', () => <>Die Dateien einer Version sowie die Daten, die das Lambda zur Laufzeit speichert. Ein Schloss oder eine Weltkugel zeigt an, ob sie öffentlich erreichbar sind.</>],
-    ['Versionen', () => <>Die Änderungen und Anforderungen jeder Version sowie der Unterschied zur vorherigen. Von hier aus lassen sich Versionen bereitstellen oder wiederherstellen.</>],
-    ['Bereitstellungen', () => <>Welche Version wann online war und wodurch sie beendet wurde.</>],
-    ['Statistik', () => <>Anfragen, Fehler, Antwortzeiten und die am häufigsten aufgerufenen Pfade der letzten Stunde oder des letzten Tages.</>],
-    ['Logs', () => <>Anfragen, Ausgaben und Stacktraces aufgetretener Fehler in Echtzeit.</>],
+    ['Übersicht', () => <>Ob es online ist, wie viele Requests es heute hatte und wie viele davon fehlschlugen, die letzte Änderung und wie viel Platz noch frei ist.</>],
+    ['Dateien', () => <>Die Dateien einer Version und ihre Daten – was das Lambda zur Laufzeit speichert. Ein Schloss oder ein Globus zeigt, ob sie öffentlich erreichbar sind.</>],
+    ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen.</>],
+    ['Deployments', () => <>Was wann online war und warum es offline ging.</>],
+    ['Statistik', () => <>Requests, Fehler, Antwortzeiten und die meistgefragten Pfade der letzten Stunde oder des letzten Tages.</>],
+    ['Logs', () => <>Requests, Ausgaben und Stacktraces von allem, was schiefging – live.</>],
     [
       'Code',
       (k) => (
         <>
-          Manuelle Bearbeitung. {k.b('Prüfen')} kompiliert, {k.b('Speichern')} legt eine Version an,{' '}
-          {k.b('Bereitstellen')} stellt sie online. {k.code('Strg+S')} speichert, {k.code('F12')} springt zur
-          Deklaration.
+          Selbst schreiben. {k.b('Prüfen')} kompiliert, {k.b('Speichern')} legt eine Version an, {k.b('Deployen')} stellt
+          sie online. {k.code('Strg+S')} speichert, {k.code('F12')} springt zur Deklaration.
         </>
       ),
     ],
   ],
   sections: (k) => (
     <>
-      Alle Bereiche sind gleich aufgebaut: ein Titel, ein {k.b('ⓘ')} mit Erläuterungen, die Aktionen auf der rechten Seite
-      und – bei mehreren Ansichten – eine Reihe von Auswahlfeldern darunter. Im Bereich Code sind dies die Dateien.
+      Alle Bereiche funktionieren gleich: oben der Titel, ein {k.b('ⓘ')} mit Erklärung, rechts die Aktionen und – wo es
+      mehrere Ansichten gibt – darunter eine Reihe von Tabs. Beim Code sind die Tabs seine Dateien.
     </>
   ),
   editorAside:
-    'Datenverkehr und Log werden im Arbeitsspeicher gehalten und dienen der Beobachtung, nicht der Archivierung: Nach einem Neustart des Servers beginnen sie von vorn. Versionen und der Bereitstellungsverlauf werden dauerhaft gespeichert.',
+    'Traffic und Log liegen im Arbeitsspeicher. Sie sind zum Beobachten da, nicht zum Aufbewahren: Nach einem Neustart des Servers beginnen sie von vorn. Versionen und der Deployment-Verlauf werden gespeichert.',
 
   why: (k) => (
     <>
-      Eine Version besteht aus dem Code und optional zwei Anmerkungen: {k.b('der Spezifikation')} – was der Nutzer
-      wünscht und warum, möglichst in seinen eigenen Worten – und {k.b('der Änderung')}, einer Zeile zum Inhalt der
-      Version. Beide erscheinen im Versionsverlauf neben dem Diff. So bleibt das {k.em('Warum')} neben dem {k.em('Was')}{' '}
-      erhalten – für Sie und für jeden Agenten, der den Verlauf vor einer Änderung liest.
+      Eine Version ist der Code plus zwei optionale Notizen: {k.b('die Spezifikation')} – was der Nutzer möchte und
+      warum, möglichst in seinen Worten – und {k.b('die Änderung')}, eine Zeile dazu, was die Version tut. Beide stehen im
+      Versionsverlauf neben dem Diff. So bleibt das {k.em('Warum')} neben dem {k.em('Was')} erhalten – für Sie und für
+      den nächsten Agenten, der den Verlauf liest, bevor er etwas ändert.
     </>
   ),
   whySample: {
@@ -121,153 +119,153 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Agenten übergeben dieselben beiden Felder an {k.code('write_code')}. Im Bereich {k.b('Code')} wird beim Speichern
-      nach der Änderung gefragt. Beide Angaben sind optional; eine lange Spezifikation wird nach 4000 Zeichen, eine
-      Änderung nach 500 Zeichen gekürzt statt abgelehnt.
+      Agenten übergeben dieselben beiden Felder an {k.code('write_code')}. Unter {k.b('Code')} fragt das Speichern nach
+      der Änderung. Beides ist optional. Zu lange Texte werden gekürzt statt abgelehnt: die Spezifikation nach 4000
+      Zeichen, die Änderung nach 500.
     </>
   ),
 
   files: (k) => (
     <>
-      Typen müssen nicht unterhalb des Codes stehen, der sie verwendet. Klicken Sie im Bereich {k.b('Code')} auf{' '}
-      {k.b('+')} neben den Dateien: Die neue Datei wird zusammen mit dem Snippet im selben Namespace kompiliert, sodass
-      keine Importe nötig sind. Ein Name ohne Dateiendung wird als C#-Datei behandelt.
+      Typen müssen nicht unter dem Code stehen, der sie nutzt. Klicken Sie unter {k.b('Code')} neben den Dateien auf{' '}
+      {k.b('+')}: Die neue Datei wird zusammen mit dem Snippet im selben Namespace kompiliert, also müssen Sie nichts
+      importieren. Ein Name ohne Endung gilt als C#.
     </>
   ),
 
-  page: 'Es gibt drei Möglichkeiten. Welche geeignet ist, hängt davon ab, wo die Seite liegt.',
-  inlineTitle: 'Eine Seite direkt im Code',
-  inline: 'Geeignet für kleine Anwendungen. Die Seite ist Teil des Snippets.',
-  folderTitle: 'Ein Ordner mit Dateien',
+  page: 'Es gibt drei Wege. Welcher passt, hängt davon ab, wo die Seite liegt.',
+  inlineTitle: 'Eine Seite, direkt im Code',
+  inline: 'Gut für Kleines. Die Seite ist Teil des Snippets.',
+  folderTitle: 'Ein Ordner mit echten Dateien',
   folder:
-    'Die richtige Wahl für alles mit Stylesheets und Skripten. Die Dateien werden wie C#-Dateien angelegt und unverändert ausgeliefert; sie werden nicht kompiliert.',
+    'Das Richtige für alles mit Stylesheet und Script. Die Dateien legen Sie genauso an wie eine C#-Datei. Sie werden ausgeliefert, wie sie sind – nichts wird kompiliert.',
   workspaceTitle: 'Aus dem Workspace',
-  workspace: 'Wenn die Seite hochgeladen statt geschrieben wird und sich ohne neue Bereitstellung ändern lassen soll.',
+  workspace: 'Wenn die Seite hochgeladen statt geschrieben wird und sich ohne neues Deployment ändern soll.',
 
   spa: (k) => (
     <>
-      Die zweite Möglichkeit im Detail. Jede Demo liefert ihre Seite auf diese Weise aus einem Ordner namens{' '}
-      {k.code('web')} aus – öffnen Sie {k.link('/editor/demo-crud', 'demo-crud')} als Beispiel. Demos sind
-      schreibgeschützt; ihr Editor-Schlüssel entspricht ihrem Namen.
+      Der zweite Weg im Detail. Jede Demo liefert ihre Seite so aus, aus einem Ordner namens {k.code('web')} – öffnen Sie
+      zum Beispiel {k.link('/editor/demo-crud', 'demo-crud')}. Demos sind schreibgeschützt; ihr Editor-Schlüssel ist ihr
+      Name.
     </>
   ),
   spaSteps: [
     (k) => (
       <>
-        Klicken Sie im Bereich {k.b('Code')} auf {k.b('+')} neben den Dateien und geben Sie {k.code('site/index.html')}{' '}
-        ein. Ein Name mit Schrägstrich legt die Datei in einem Ordner ab; ein Name mit Dateiendung wird als entsprechende
-        Datei behandelt.
+        Klicken Sie unter {k.b('Code')} neben den Dateien auf {k.b('+')} und geben Sie {k.code('site/index.html')} ein.
+        Ein Schrägstrich im Namen legt die Datei in einen Ordner. Eine Endung sagt, was für eine Datei es ist.
       </>
     ),
     (k) => (
       <>
-        Legen Sie {k.code('site/app.css')} und {k.code('site/app.js')} auf dieselbe Weise an. Ihre Seite verweist über den
-        Dateinamen darauf, etwa mit {k.code('href="app.css"')}, da der Ordner das Wurzelverzeichnis der Auslieferung bildet
-        und nicht Teil der Adresse ist.
+        Legen Sie {k.code('site/app.css')} und {k.code('site/app.js')} genauso an. Ihre Seite verweist über den Namen auf
+        sie, etwa mit {k.code('href="app.css"')}. Denn der Ordner ist die Wurzel dessen, was ausgeliefert wird – kein Teil
+        der Adresse.
       </>
     ),
     (k) => (
       <>
-        Für Binärdateien wie Bilder oder Schriftarten öffnen Sie eine Datei in {k.code('site')} und nutzen die
-        Upload-Schaltfläche neben den Dateien: Die Datei wird im selben Ordner abgelegt.
+        Für alles, was kein Text ist, etwa Bilder oder Schriften, öffnen Sie eine Datei in {k.code('site')} und klicken
+        neben den Dateien auf den Upload-Button: Die Datei landet im selben Ordner. Ein PNG kann man nicht in einen
+        Texteditor tippen – das hier ist der Weg.
       </>
     ),
     (k) => <>Liefern Sie den Ordner in {k.code('lambda.cs')} aus:</>,
     (k) => (
       <>
-        Klicken Sie auf {k.b('Bereitstellen')}. {k.code('site/index.html')} antwortet unter {k.code('/')},{' '}
-        {k.code('site/app.css')} unter {k.code('/app.css')}, und jede Adresse ohne passende Datei wird mit der Seite
-        beantwortet – ein Frontend mit eigenem Routing funktioniert also auch beim Neuladen eines tiefen Links.
+        Klicken Sie auf {k.b('Deployen')}. {k.code('site/index.html')} antwortet unter {k.code('/')},{' '}
+        {k.code('site/app.css')} unter {k.code('/app.css')}. Jede Adresse ohne passende Datei bekommt die Seite. So
+        funktioniert ein Frontend mit eigenem Routing auch, wenn jemand einen Deep Link neu lädt.
       </>
     ),
-    () => <>Ergänzen Sie eine API, mit der die Seite kommunizieren kann:</>,
+    () => <>Mit einer API daneben hat die Seite auch einen Gesprächspartner:</>,
   ],
 
   storage: (k) => (
     <>
       Der Bereich {k.b('Dateien')} zeigt beides – die Dateien einer Version und den Workspace als {k.b('Daten')} – und
-      gibt an, was davon öffentlich erreichbar ist. Code-Dateien bearbeiten Sie im Bereich {k.b('Code')}; Daten lassen sich
-      unter {k.b('Dateien')} hochladen und löschen. Beides unterscheidet sich jedoch darin, {k.em('wann es sich ändert')}.
+      sagt, was davon öffentlich erreichbar ist. Code-Dateien ändern Sie unter {k.b('Code')}, Daten können Sie unter{' '}
+      {k.b('Dateien')} hochladen und löschen. Trotzdem ist es nicht dasselbe. Der Unterschied: {k.em('wann sich was ändert')}.
     </>
   ),
   savedWithCode: 'Mit dem Code gespeichert',
   workspaceColumn: 'Workspace',
   table: [
-    ['Inhalt', 'alle Dateien Ihres Lambdas, einschließlich des C#-Codes', 'alles, was geschrieben oder hochgeladen wurde'],
-    ['Änderung', 'beim Speichern oder Bereitstellen', 'sobald etwas geschrieben wird'],
-    ['Bereitstellung', 'ersetzt den gesamten Inhalt', 'bleibt unberührt'],
-    ['Wiederherstellen einer Version', 'stellt die früheren Dateien wieder her', 'keine Auswirkung'],
-    ['Klonen des Lambdas', 'wird übernommen', 'wird nicht übernommen'],
+    ['Inhalt', 'alle Dateien Ihres Lambdas, samt C#', 'alles, was geschrieben oder hochgeladen wurde'],
+    ['Ändert sich', 'beim Speichern oder Deployen', 'sobald etwas hineingeschrieben wird'],
+    ['Ein Deployment', 'ersetzt alles', 'lässt ihn unberührt'],
+    ['Rollback einer Version', 'bringt die alten Dateien zurück', 'keine Wirkung'],
+    ['Lambda klonen', 'wird mitkopiert', 'wird nicht mitkopiert'],
   ],
-  reachedAs: 'Zugriff im Code über',
+  reachedAs: 'im Code erreichbar als',
   storageAside:
-    'Ein gemeinsames Verzeichnis ist nicht möglich: Andernfalls würde eine Bereitstellung entweder alle seither geschriebenen Daten löschen, oder aus dem ausgelieferten Inhalt ließe sich nie etwas entfernen. Eine Bestenliste benötigt das Zweite, die zugehörige Seite das Erste.',
+    'Ein gemeinsames Verzeichnis geht nicht. Sonst würde ein Deployment entweder alles löschen, was Ihr Lambda seitdem geschrieben hat – oder aus dem, was es ausliefert, ließe sich nie etwas entfernen. Ein Spiel mit Bestenliste braucht das Zweite, die Seite dazu das Erste.',
 
   keeping: (k) => (
     <>
-      {k.code('Workspace')} ist ein privates Verzeichnis, das Ihr Lambda lesen und beschreiben kann. Hier gehören alle
-      Daten hin, die über eine Anfrage oder eine Bereitstellung hinaus erhalten bleiben sollen.
+      {k.code('Workspace')} ist ein privates Verzeichnis, in dem Ihr Lambda lesen und schreiben darf. Hier gehört alles
+      hin, was einen Request oder ein Deployment überdauern soll.
     </>
   ),
   keeping2: (k) => (
     <>
-      Außerdem stehen {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
-      {k.code('CreateFolder')} sowie {k.code('Tree')}/{k.code('Files')}/{k.code('App')} zur Auslieferung zur Verfügung.
-      Auf das übrige Dateisystem besteht kein Zugriff.
+      Dazu gibt es {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
+      {k.code('CreateFolder')} und zum Ausliefern {k.code('Tree')}/{k.code('Files')}/{k.code('App')}. Sonst ist nichts
+      im Dateisystem erreichbar.
     </>
   ),
 
   sockets: (k) => (
     <>
-      Websockets werden vollständig unterstützt. Die Demo {k.link('/editor/demo-game', 'demo-game')} bringt Spieler
-      zusammen und führt jede Partie auf dem Server aus. Die einfachste Form besteht aus drei Callbacks:
+      Unterstützt – und von Anfang an mitgedacht. Die Demo {k.link('/editor/demo-game', 'demo-game')} bringt Spieler zusammen und
+      führt jede Partie auf dem Server aus. Die einfachste Form sind drei Callbacks:
     </>
   ),
   socketsAside: (k) => (
     <>
-      Ein häufiger Stolperstein: Browser können beim Websocket-Handshake keine Header setzen. Übergeben Sie benötigte
-      Werte in der Query, aus der der Handler sie über {k.code('connection.Request.Header.Query')} liest, oder senden Sie
-      vertrauliche Werte als erste Nachricht.
+      In diese Falle tappt jeder: Browser können beim Websocket-Handshake keine Header setzen. Übergeben Sie, was der
+      Handler braucht, in der Query – er liest sie aus {k.code('connection.Request.Header.Query')}. Secrets schicken Sie
+      als erste Nachricht.
     </>
   ),
 
   limits:
-    'Ihr Code läuft auf einem gemeinsam genutzten Server. Daher werden einige C#-Funktionen bereits vor dem Kompilieren abgelehnt: das Starten von Prozessen, das Öffnen eigener Sockets, das Laden von Assemblies, der Zugriff auf das Dateisystem außerhalb Ihres Workspaces sowie Reflection, die diese Einschränkungen umgehen soll.',
+    'Ihr Code läuft auf einem gemeinsam genutzten Server. Deshalb wird manches in C# schon vor dem Kompilieren abgelehnt: Prozesse starten, eigene Sockets öffnen, Assemblies laden, auf das Dateisystem außerhalb Ihres Workspace zugreifen – und Reflection, die all das umgehen soll.',
   limits2:
-    'Alle übrigen Funktionen stehen zur Verfügung, einschließlich der vollständigen GenHTTP-Modul-API. Wird etwas abgelehnt, erfahren Sie, in welcher Zeile und aus welchem Grund.',
+    'Alles andere ist da, auch die komplette API der GenHTTP-Module. Wird etwas abgelehnt, sehen Sie, in welcher Zeile und warum – nicht nur, dass es fehlschlug.',
 
   away: (k) => (
     <>
-      {k.b('Als .NET-Projekt herunterladen')} im Editor liefert das vollständige Lambda als .NET-Projekt: eine Solution,
-      die Sie öffnen, mit {k.code('dotnet run')} ausführen und behalten können. Sie enthält eine einzige Paketreferenz und
-      keinerlei Abhängigkeit von dieser Plattform.
+      Mit {k.b('Als .NET-Projekt herunterladen')} im Editor bekommen Sie alles als Solution, die Sie öffnen, mit{' '}
+      {k.code('dotnet run')} starten und behalten können. Sie hat genau eine Paketreferenz und keine Spur dieser
+      Plattform.
     </>
   ),
   away2: (k) => (
     <>
-      Ihr Snippet wird zum Inhalt von {k.code('Program.cs')}, eingebettet in einen Host, der das Rückgabeobjekt ausliefert.
-      Weitere Dateien werden unverändert übernommen. {k.code('Workspace')} und {k.code('Assets')} werden zu zwei Ordnern
-      neben dem Code mit denselben Methoden – Ihr Code muss also nicht angepasst werden.
+      Ihr Snippet wird zum Inhalt von {k.code('Program.cs')}, in einem Host, der ausliefert, was es zurückgibt. Ihre
+      anderen Dateien kommen genau so mit, wie Sie sie geschrieben haben. {k.code('Workspace')} und {k.code('Assets')}{' '}
+      werden zu zwei Ordnern neben dem Code, mit denselben Methoden – an Ihrem Code ändert sich nichts.
     </>
   ),
   awayAside:
-    'Wichtig vorab: Der Code, den Sie hier schreiben, gehört Ihnen und lässt sich vollständig exportieren. Der Betrieb auf dieser Plattform bindet ihn nicht an diese Plattform.',
+    'Gut zu wissen, bevor Sie hier etwas bauen: Was Sie schreiben, gehört Ihnen, und Sie können es komplett mitnehmen. Dass es auf unserem Server läuft, bindet es nicht an unseren Server.',
 
   agents: (k) => (
     <>
-      Unter {k.code('/mcp')} steht ein MCP-Endpunkt zur Verfügung. Ein damit verbundener Agent kann alles, was auch der
-      Editor kann: die Anleitung lesen, Demos vollständig einsehen, Dateien schreiben, kompilieren und bereitstellen. Beide
-      nutzen dieselbe API.
+      Unter {k.code('/mcp')} gibt es einen MCP-Endpunkt. Verbinden Sie einen Agenten damit, und er kann alles, was der
+      Editor kann: die Anleitung lesen, eine Demo komplett lesen, Dateien schreiben, kompilieren und deployen. Darunter
+      liegt dieselbe API.
     </>
   ),
   agents2: (k) => (
     <>
-      Der Agent dokumentiert dabei seine Gründe – {k.code('write_code')} nimmt Spezifikation und Änderung entgegen – und
-      kann das Ergebnis prüfen: {k.code('read_logs')} liefert die letzten Anfragen des Lambdas, seine Ausgaben und die
-      Stacktraces aufgetretener Fehler. So stellt ein Agent fest, dass sein Code funktioniert, statt es nur anzunehmen.
-      Dieselben Informationen sehen Sie im Kontrollzentrum.
+      Dabei sagt er, warum er etwas tut – {k.code('write_code')} nimmt Spezifikation und Änderung entgegen. Und er kann
+      prüfen, was er deployt hat: {k.code('read_logs')} liefert die letzten Requests des Lambdas, seine Ausgaben und die
+      Stacktraces aller Exceptions. So weiß ein Agent, dass sein Code funktioniert, statt es nur anzunehmen.
+      Dasselbe sehen Sie im Kontrollzentrum.
     </>
   ),
-  more: 'Weitere Informationen →',
+  more: 'Mehr dazu →',
   make: 'Lambda erstellen',
 };

@@ -2,202 +2,202 @@
   "/": {
     "image": "/social/default.png",
     "text": {
-      "en": {
-        "title": "Agentic Coding Platform",
-        "description": "Describe an app to an AI agent and get it online with a link you can share. Use the agent built in or bring your own - Claude, Claude Code or anything that speaks MCP. Free, no account, nothing to install."
-      },
       "de": {
         "title": "Agentic-Coding-Plattform",
-        "description": "Beschreiben Sie einem KI-Agenten eine Anwendung und stellen Sie sie mit einem teilbaren Link online. Nutzen Sie den integrierten Agenten oder Ihren eigenen – Claude, Claude Code oder jeden MCP-fähigen Client. Kostenlos, ohne Konto, ohne Installation."
+        "description": "Beschreiben Sie einem KI-Agenten eine App – er stellt sie online, Sie teilen den Link. Mit unserem Agenten oder Ihrem eigenen. Kostenlos, ohne Konto."
+      },
+      "en": {
+        "title": "Agentic Coding Platform",
+        "description": "Describe an app to an AI agent and get it online with a link to share. Use our agent or your own - Claude, Claude Code or any MCP client. Free, no account."
       },
       "es": {
-        "title": "Plataforma de programación agéntica",
-        "description": "Describa una aplicación a un agente de IA y publíquela con un enlace que puede compartir. Utilice el agente integrado o el suyo propio: Claude, Claude Code o cualquier cliente compatible con MCP. Gratis, sin cuenta y sin instalaciones."
-      },
-      "pt": {
-        "title": "Plataforma de programação agêntica",
-        "description": "Descreva uma aplicação para um agente de IA e publique-a com um link para compartilhar. Use o agente integrado ou o seu próprio – Claude, Claude Code ou qualquer cliente compatível com MCP. Gratuito, sem conta, sem instalação."
+        "title": "Plataforma de programación con IA",
+        "description": "Describe una app a un agente de IA y recibe un enlace para compartirla. Usa nuestro agente o el tuyo: Claude o cualquier cliente MCP. Gratis y sin cuenta."
       },
       "fr": {
         "title": "Plateforme de codage agentique",
-        "description": "Décrivez une app à un agent IA et mettez-la en ligne avec un lien à partager. Utilisez l'agent intégré ou le vôtre – Claude, Claude Code ou tout client qui parle MCP. Gratuit, sans compte, rien à installer."
+        "description": "Décrivez une app à un agent IA : il la met en ligne et vous donne un lien à partager. Notre agent ou le vôtre (Claude, Cursor…). Gratuit, sans compte."
       },
       "it": {
         "title": "Piattaforma di coding agentico",
-        "description": "Descriva un'applicazione a un agente IA e la pubblichi con un link condivisibile. Può utilizzare l'agente integrato o il proprio: Claude, Claude Code o qualsiasi client compatibile con MCP. Gratuito, senza account, senza installazioni."
+        "description": "Descrivi un’app a un agente AI e ricevi un link da condividere. Usa il nostro agente o il tuo: Claude, Claude Code o un client MCP. Gratis, senza account."
+      },
+      "pt": {
+        "title": "Crie e publique apps com IA",
+        "description": "Descreva um app para um agente de IA e coloque no ar com um link para compartilhar. Use o nosso agente ou o seu, como o Claude. Grátis e sem conta."
       }
     }
   },
   "/build": {
     "image": "/social/build.png",
     "text": {
+      "de": {
+        "title": "App mit KI erstellen",
+        "description": "Sagen Sie, was Sie möchten: Ein KI-Agent baut die App, stellt sie online und gibt Ihnen einen Link. Umfragen, Gästebücher und mehr – kostenlos, ohne Konto."
+      },
       "en": {
         "title": "Build an App with AI",
         "description": "Say what you want and an AI agent builds it, puts it online and gives you a link to share. Polls, guestbooks, leaderboards and more - free, no account."
       },
-      "de": {
-        "title": "App mit KI erstellen",
-        "description": "Beschreiben Sie, was Sie benötigen: Ein KI-Agent erstellt die Anwendung, stellt sie online und liefert Ihnen einen Link zum Teilen. Umfragen, Gästebücher, Bestenlisten und mehr – kostenlos und ohne Konto."
-      },
       "es": {
-        "title": "Cree una aplicación con IA",
-        "description": "Indique lo que necesita y un agente de IA crea la aplicación, la publica y le entrega un enlace para compartir. Encuestas, libros de visitas, clasificaciones y más: gratis y sin cuenta."
-      },
-      "pt": {
-        "title": "Crie um app com IA",
-        "description": "Descreva o que você precisa e um agente de IA cria a aplicação, publica e fornece um link para compartilhar. Enquetes, livros de visitas, rankings e muito mais – gratuito e sem conta."
+        "title": "Crea una app con IA",
+        "description": "Di lo que quieres y un agente de IA crea tu app, la publica y te da un enlace. Encuestas, libros de visitas, rankings y más. Gratis y sin cuenta."
       },
       "fr": {
-        "title": "Créer une app avec l'IA",
-        "description": "Dites ce que vous voulez : un agent IA le construit, le met en ligne et vous donne un lien à partager. Sondages, livres d'or, classements et plus encore – gratuit, sans compte."
+        "title": "Créer une app avec l’IA",
+        "description": "Dites ce que vous voulez : un agent IA crée l’app, la met en ligne et vous donne un lien à partager. Sondages, classements… Gratuit, sans compte."
       },
       "it": {
-        "title": "Creare un'app con l'IA",
-        "description": "Indichi ciò di cui ha bisogno: un agente IA crea l'applicazione, la pubblica e Le fornisce un link da condividere. Sondaggi, guestbook, classifiche e altro ancora, gratuitamente e senza account."
+        "title": "Creare un’app con l’AI",
+        "description": "Scrivi cosa vuoi: un agente AI crea l’app, la mette online e ti dà un link da condividere. Sondaggi, guestbook, classifiche e altro. Gratis, senza account."
+      },
+      "pt": {
+        "title": "Criar app com IA",
+        "description": "Diga o que você quer e um agente de IA cria o app, coloca no ar e entrega um link para compartilhar. Enquetes, rankings, murais e mais. Grátis, sem conta."
       }
     }
   },
   "/ship": {
     "image": "/social/ship.png",
     "text": {
+      "de": {
+        "title": "App kostenlos hosten",
+        "description": "Mit Ihrem KI-Agenten gebaut? Lassen Sie ihn die App hier veröffentlichen: öffentlicher Link in Minuten, mit geteilten Live-Daten. Kostenlos, ohne Konto."
+      },
       "en": {
         "title": "Ship Your App",
-        "description": "Built something with your AI agent? Ask it to publish here and get a public link in minutes - with live shared data for games, chat and more. Free, no account, nothing to install."
-      },
-      "de": {
-        "title": "App veröffentlichen",
-        "description": "Sie haben mit Ihrem KI-Agenten eine Anwendung erstellt? Lassen Sie sie hier veröffentlichen und erhalten Sie in wenigen Minuten einen öffentlichen Link – mit gemeinsam genutzten Live-Daten für Spiele, Chats und mehr. Kostenlos, ohne Konto, ohne Installation."
+        "description": "Built something with your AI agent? Ask it to publish here and get a public link in minutes, with live shared data for games and chat. Free, no account."
       },
       "es": {
-        "title": "Publique su aplicación",
-        "description": "¿Ha creado algo con su agente de IA? Pídale que lo publique aquí y obtenga un enlace público en pocos minutos, con datos compartidos en tiempo real para juegos, chats y más. Gratis, sin cuenta y sin instalaciones."
-      },
-      "pt": {
-        "title": "Publique seu app",
-        "description": "Criou algo com seu agente de IA? Peça que ele publique aqui e receba um link público em poucos minutos – com dados compartilhados em tempo real para jogos, chats e mais. Gratuito, sem conta, sem instalação."
+        "title": "Publica tu app gratis",
+        "description": "¿Creaste algo con tu agente de IA? Publícalo aquí y consigue un enlace público en minutos, con datos en vivo para juegos y chats. Gratis y sin cuenta."
       },
       "fr": {
-        "title": "Publiez votre app",
-        "description": "Vous avez créé quelque chose avec votre agent IA ? Demandez-lui de le publier ici et obtenez un lien public en quelques minutes, avec des données partagées en direct pour les jeux, le chat et plus encore. Gratuit, sans compte, rien à installer."
+        "title": "Mettre votre app en ligne gratuitement",
+        "description": "Votre agent IA vous a créé une app ? Demandez-lui de la publier ici : lien public en quelques minutes, données partagées en direct. Gratuit, sans compte."
       },
       "it": {
-        "title": "Pubblicare un'app",
-        "description": "Ha creato qualcosa con il Suo agente IA? Gli chieda di pubblicarlo qui: in pochi minuti otterrà un link pubblico, con dati condivisi in tempo reale per giochi, chat e altro. Gratuito, senza account, senza installazioni."
+        "title": "Pubblicare un’app online",
+        "description": "Hai creato un’app con il tuo agente AI? Chiedigli di pubblicarla qui: link pubblico in pochi minuti, dati live per giochi e chat. Gratis, senza account."
+      },
+      "pt": {
+        "title": "Publique seu app de graça",
+        "description": "Criou algo com seu agente de IA? Peça para ele publicar aqui e ganhe um link público em minutos, com dados ao vivo para jogos e chat. Grátis e sem conta."
       }
     }
   },
   "/showcase": {
     "image": "/social/showcase.png",
     "text": {
+      "de": {
+        "title": "Showcase",
+        "description": "Web-Apps, die hier mit einem KI-Agenten gebaut wurden: Spiele, Tools, Seiten und Dienste, die gerade laufen. Jede öffnet sich direkt im Browser."
+      },
       "en": {
         "title": "Showcase",
         "description": "Web apps people built here with an AI agent and chose to show: games, tools, pages and services, running right now. Open any of them in your browser."
       },
-      "de": {
-        "title": "Showcase",
-        "description": "Webanwendungen, die hier mit einem KI-Agenten erstellt und von ihren Eigentümern freigegeben wurden: Spiele, Werkzeuge, Seiten und Dienste, die gerade in Betrieb sind. Jede lässt sich direkt im Browser öffnen."
-      },
       "es": {
-        "title": "Galería",
-        "description": "Aplicaciones web creadas aquí con un agente de IA y que sus propietarios han decidido mostrar: juegos, herramientas, páginas y servicios en funcionamiento. Puede abrir cualquiera de ellas en su navegador."
-      },
-      "pt": {
-        "title": "Vitrine",
-        "description": "Apps web que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas, páginas e serviços rodando agora mesmo. Abra qualquer um no seu navegador."
+        "title": "Galería de apps creadas con IA",
+        "description": "Apps web que la gente creó aquí con un agente de IA y quiso mostrar: juegos, herramientas, páginas y servicios, funcionando ahora. Ábrelas en tu navegador."
       },
       "fr": {
-        "title": "Vitrine",
-        "description": "Des applications web créées ici avec un agent IA et partagées par leurs auteurs : jeux, outils, pages et services, en ligne en ce moment. Ouvrez-les dans votre navigateur."
+        "title": "Vitrine : apps créées avec l’IA",
+        "description": "Des apps web créées ici avec un agent IA et montrées par leurs auteurs : jeux, outils, pages, services. Toutes en ligne, à ouvrir dans votre navigateur."
       },
       "it": {
-        "title": "Vetrina",
-        "description": "Applicazioni web realizzate qui con un agente IA e rese visibili dai loro proprietari: giochi, strumenti, pagine e servizi attualmente attivi. Ciascuna si apre direttamente nel browser."
+        "title": "Vetrina: app create con l’AI",
+        "description": "App web create qui con un agente AI e messe in mostra da chi le ha fatte: giochi, strumenti, pagine e servizi, online adesso. Provale nel browser."
+      },
+      "pt": {
+        "title": "Vitrine de apps",
+        "description": "Apps que as pessoas criaram aqui com um agente de IA e escolheram mostrar: jogos, ferramentas e páginas rodando agora. Abra qualquer um no navegador."
       }
     }
   },
   "/enterprise": {
     "image": "/social/enterprise.png",
     "text": {
+      "de": {
+        "title": "Enterprise",
+        "description": "Kostenlos testen, ohne Konto. Mit Enterprise bekommen Sie eine eigene Installation mit eigenem Login – in der Cloud oder On-Premises."
+      },
       "en": {
         "title": "Enterprise",
         "description": "Free to try with no account. Enterprise for an installation of your own with your own sign-in - in the cloud or on premises."
       },
-      "de": {
-        "title": "Enterprise",
-        "description": "Kostenlos testen, ohne Konto. Enterprise bietet eine eigene Installation mit eigener Anmeldung – in der Cloud oder im eigenen Rechenzentrum."
-      },
       "es": {
-        "title": "Empresas",
-        "description": "Pruébelo gratis y sin cuenta. Enterprise ofrece una instalación propia con su propio sistema de inicio de sesión, en la nube o en sus instalaciones."
-      },
-      "pt": {
-        "title": "Empresas",
-        "description": "Experimente grátis, sem conta. Enterprise para ter sua própria instalação com seu próprio login – na nuvem ou nos seus servidores."
+        "title": "Para empresas",
+        "description": "Pruébalo gratis y sin cuenta. Con Enterprise tienes tu propia instalación, con tu propio inicio de sesión, en la nube o en tus servidores. Hablemos."
       },
       "fr": {
-        "title": "Entreprise",
-        "description": "Essai gratuit, sans compte. Enterprise pour disposer de votre propre installation avec votre propre authentification – dans le cloud ou sur site."
+        "title": "Offre Entreprise",
+        "description": "Essayez gratuitement, sans compte. L’offre Entreprise vous donne votre propre installation, avec votre SSO, dans le cloud ou sur site."
       },
       "it": {
-        "title": "Aziende",
-        "description": "Prova gratuita, senza account. Enterprise offre un'installazione dedicata con un proprio sistema di accesso, nel cloud o on-premise."
+        "title": "Piano Enterprise",
+        "description": "Provalo gratis, senza account. Con Enterprise hai un’installazione tutta tua, con il login del tuo team, nel cloud o on-premise."
+      },
+      "pt": {
+        "title": "Para empresas",
+        "description": "Teste grátis, sem conta. Com o Enterprise, sua equipe ganha uma instalação própria, com o seu login (SSO), na nuvem ou nos seus servidores."
       }
     }
   },
   "/docs": {
     "image": "/social/docs.png",
     "text": {
+      "de": {
+        "title": "So funktioniert es",
+        "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer öffentlichen HTTPS-Adresse online. Die ganze Plattform, Schritt für Schritt."
+      },
       "en": {
         "title": "How It Works",
         "description": "Write a snippet of C# and whatever it returns is hosted at a public HTTPS address in seconds. The whole platform, in the order you will meet it."
       },
-      "de": {
-        "title": "So funktioniert es",
-        "description": "Schreiben Sie ein C#-Snippet – was es zurückgibt, ist in Sekunden unter einer öffentlichen HTTPS-Adresse erreichbar. Die gesamte Plattform in der Reihenfolge, in der Sie ihr begegnen."
-      },
       "es": {
         "title": "Cómo funciona",
-        "description": "Escriba un fragmento de C# y lo que devuelva quedará alojado en una dirección HTTPS pública en segundos. Toda la plataforma, en el orden en que la irá conociendo."
-      },
-      "pt": {
-        "title": "Como funciona",
-        "description": "Escreva um trecho de C# e o que ele retornar fica hospedado em um endereço HTTPS público em segundos. A plataforma inteira, na ordem em que você vai conhecê-la."
+        "description": "Escribe un fragmento de C# y lo que devuelva queda en una dirección HTTPS pública en segundos. Toda la plataforma, en el orden en que la vas a usar."
       },
       "fr": {
-        "title": "Comment ça marche",
-        "description": "Écrivez un extrait de C# : ce qu'il renvoie est hébergé à une adresse HTTPS publique en quelques secondes. Toute la plateforme, dans l'ordre où vous la découvrirez."
+        "title": "Documentation : comment ça marche",
+        "description": "Écrivez un snippet C# : ce qu’il renvoie est hébergé en HTTPS, à une adresse publique, en quelques secondes. Toute la plateforme, étape par étape."
       },
       "it": {
-        "title": "Come funziona",
-        "description": "Si scrive un frammento di C# e ciò che restituisce viene pubblicato in pochi secondi a un indirizzo HTTPS pubblico. L'intera piattaforma, nell'ordine in cui la si incontra."
+        "title": "Guida: come funziona",
+        "description": "Scrivi uno snippet di C# e quello che restituisce va online in pochi secondi, a un indirizzo HTTPS pubblico. Tutta la piattaforma, passo per passo."
+      },
+      "pt": {
+        "title": "Documentação: como funciona",
+        "description": "Escreva um trecho de C# e o que ele retorna fica hospedado em um endereço HTTPS público em segundos. A plataforma inteira, na ordem em que você vai usar."
       }
     }
   },
   "/terms": {
     "text": {
+      "de": {
+        "title": "Nutzungsbedingungen",
+        "description": "Die Regeln für GenHTTP Lambda: was hier nicht gehostet werden darf, wie lange Apps online bleiben und wie wir mit Missbrauch umgehen."
+      },
       "en": {
         "title": "Terms of Service",
         "description": "The rules for using GenHTTP Lambda: what may not be hosted here, how long apps stay online and how abuse is handled."
       },
-      "de": {
-        "title": "Nutzungsbedingungen",
-        "description": "Die Regeln für die Nutzung von GenHTTP Lambda: was hier nicht gehostet werden darf, wie lange Anwendungen online bleiben und wie mit Missbrauch umgegangen wird."
-      },
       "es": {
         "title": "Condiciones del servicio",
-        "description": "Las reglas para usar GenHTTP Lambda: qué no se puede alojar aquí, cuánto tiempo permanecen las apps en línea y cómo se gestionan los abusos."
-      },
-      "pt": {
-        "title": "Termos de serviço",
-        "description": "As regras para usar o GenHTTP Lambda: o que não pode ser hospedado aqui, quanto tempo os apps ficam no ar e como os abusos são tratados."
+        "description": "Las reglas para usar GenHTTP Lambda: qué no se puede alojar aquí, cuánto tiempo siguen en línea las apps y cómo gestionamos los abusos."
       },
       "fr": {
-        "title": "Conditions d'utilisation",
-        "description": "Les règles d'utilisation de GenHTTP Lambda : ce qui ne peut pas être hébergé ici, combien de temps les apps restent en ligne et comment les abus sont traités."
+        "title": "Conditions d’utilisation",
+        "description": "Les règles de GenHTTP Lambda : ce qui est interdit ici, combien de temps les apps restent en ligne et comment nous traitons les abus."
       },
       "it": {
         "title": "Termini di servizio",
-        "description": "Le regole per usare GenHTTP Lambda: cosa non si può ospitare qui, per quanto tempo le app restano online e come vengono gestiti gli abusi."
+        "description": "Le regole per usare GenHTTP Lambda: cosa non si può ospitare qui, per quanto tempo le app restano online e come gestiamo gli abusi."
+      },
+      "pt": {
+        "title": "Termos de uso",
+        "description": "As regras para usar o GenHTTP Lambda: o que não pode ser hospedado aqui, quanto tempo os apps ficam no ar e como tratamos denúncias de abuso."
       }
     }
   }

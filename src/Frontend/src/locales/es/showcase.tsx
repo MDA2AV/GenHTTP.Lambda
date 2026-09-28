@@ -2,34 +2,34 @@ import type { Messages } from '../en';
 
 export const showcase: Messages['showcase'] = {
   eyebrow: 'Galería',
-  title: 'Creadas aquí, en funcionamiento ahora',
+  title: 'Creadas aquí, funcionando ahora',
   intro:
-    'Lambdas que sus propietarios han decidido mostrar. Todos están en línea, por lo que cada tarjeta abre la aplicación real. Los más utilizados recientemente aparecen primero.',
+    'Lambdas que sus dueños quisieron mostrar. Todas están en línea, así que cada tarjeta abre la app de verdad. Primero van las que más se han usado últimamente.',
   counted: (total) => (total === 1 ? '1 lambda' : `${total} lambdas`),
   failed: 'No se pudo cargar la galería.',
   loadingMore: 'Cargando más…',
-  showMore: 'Mostrar más',
-  nothingTitle: 'Todavía no hay nada que mostrar',
+  showMore: 'Ver más',
+  nothingTitle: 'Todavía no hay nada que ver',
   nothing: (tab) => (
     <>
-      ¿Ha creado algo que funciona? Abra su centro de control, elija {tab('Galería')} y añada un título, una breve
-      descripción y una imagen. Aparecerá aquí mientras esté en línea.
+      ¿Hiciste algo que funciona? Abre su centro de control, elige {tab('Galería')} y añade un título, unas palabras y
+      una imagen. Aparecerá aquí mientras esté en línea.
     </>
   ),
-  buildOne: 'Crear una aplicación',
-  yoursTitle: '¿Desea mostrar la suya?',
+  buildOne: 'Crea tu app',
+  yoursTitle: '¿Quieres que aparezca la tuya?',
   yours: (tab) => (
     <>
-      Abra el centro de control de su lambda y elija {tab('Galería')}, o pida al agente que lo creó que lo añada. Solo
-      quien tiene la clave de edición puede hacerlo, y puede retirarse en cualquier momento.
+      Abre el centro de control de tu lambda y elige {tab('Galería')}, o pídele al agente que la creó que la muestre
+      aquí. Solo puede hacerlo quien tenga la clave de edición, y puedes retirarla cuando quieras.
     </>
   ),
-  buildSomething: 'Crear una aplicación',
+  buildSomething: 'Crea tu app',
 };
 
 export const card: Messages['card'] = {
-  noPicture: 'Sin imagen todavía',
+  noPicture: 'Todavía sin imagen',
   title: 'Título',
   description: 'Lo que un visitante puede hacer con ella.',
-  opens: (title, address) => `${title}, abre ${address} en una pestaña nueva`,
+  opens: (title, address) => `${title}: abre ${address} en una pestaña nueva`,
 };

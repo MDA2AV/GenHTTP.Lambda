@@ -436,7 +436,7 @@ function GoingPublic({ host }: { host: string }) {
                   className={`h-2 w-2 rounded-full ${live ? 'animate-pulse bg-emerald-500' : 'bg-grey-400'}`}
                   aria-hidden="true"
                 />
-                <span className="tabular-nums">{live ? arrived + 1 : 1}</span> {said.playing}
+                {said.playing(<span className="tabular-nums">{live ? arrived + 1 : 1}</span>)}
               </span>
             </div>
 

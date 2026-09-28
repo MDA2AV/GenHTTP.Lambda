@@ -10,6 +10,10 @@ import { createContext, useContext } from 'react';
  */
 export const SHARED = {
   units: { s: 's', min: 'min', h: 'h', d: 'd' },
+  /** A number with its unit: "3 min" here, "3分" where no space goes between them. */
+  amount: (value: number, unit: string) => `${value} ${unit}`,
+  /** Two amounts making one span: "3 h 12 min". */
+  pair: (larger: string, smaller: string) => `${larger} ${smaller}`,
   never: 'never',
   justNow: 'just now',
   ago: (span: string) => `${span} ago`,

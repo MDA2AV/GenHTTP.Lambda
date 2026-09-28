@@ -1,143 +1,142 @@
 import type { Messages } from '../en';
 
 export const ship: Messages['ship'] = {
-  title: 'Vom eigenen Rechner ins Netz.',
+  title: 'Vom Laptop auf jeden Bildschirm.',
   intro:
-    'Sie haben mit Ihrem Coding-Agenten eine Anwendung erstellt, die bislang nur lokal läuft. Bitten Sie den Agenten, sie hier zu veröffentlichen. Wenige Minuten später ist sie über einen öffentlichen Link erreichbar und kann Daten speichern – mehrere Personen können sie also gemeinsam nutzen, darin spielen, chatten und Beiträge verfassen.',
-  facts: ['Kostenlos', 'Ohne Konto', 'Ohne Installation'],
+    'Sie haben mit Ihrem Coding-Agenten etwas gebaut, aber es läuft nur auf Ihrem Rechner. Bitten Sie den Agenten, es hier zu veröffentlichen. Wenige Minuten später hat es einen öffentlichen Link. Und es merkt sich Dinge – so können Leute darin gemeinsam spielen, chatten und posten.',
+  facts: ['Kostenlos', 'Kein Konto', 'Keine Installation'],
   connect: 'Agenten verbinden',
-  seeOthers: 'Veröffentlichte Anwendungen ansehen',
+  seeOthers: 'Sehen, was andere gebaut haben',
 
-  stepsTitle: 'Drei Schritte, einer davon ist ein einziger Satz',
+  stepsTitle: 'Drei Schritte – einer davon ist ein Satz',
   step: (n) => `Schritt ${n}`,
   steps: [
     {
-      title: 'Einmalig verbinden',
-      body: 'Fügen Sie Claude, Cursor oder Ihrem bevorzugten Agenten eine Adresse hinzu. Das dauert weniger als eine Minute und ist nur einmal erforderlich.',
+      title: 'Einmal verbinden',
+      body: 'Fügen Sie Claude, Cursor oder Ihrem Agenten eine Adresse hinzu. Das dauert keine Minute und ist nur einmal nötig.',
     },
     {
-      title: 'Veröffentlichung anfordern',
-      body: 'Bitten Sie den Agenten, die Anwendung hier online zu stellen. Er verpackt sie, veröffentlicht sie und prüft, ob sie erreichbar ist.',
+      title: 'Veröffentlichen lassen',
+      body: 'Sagen Sie Ihrem Agenten, er soll die App hier online stellen. Er packt sie ein, veröffentlicht sie und prüft, ob sie erreichbar ist.',
     },
     {
       title: 'Link teilen',
-      body: 'Sie erhalten eine öffentliche Adresse und einen privaten Editor-Link. Die Adresse geben Sie weiter. Den Editor-Link bewahren Sie auf – mit ihm ändern Sie die Anwendung später.',
+      body: 'Sie bekommen eine öffentliche Adresse und einen privaten Editor-Link. Die Adresse schicken Sie an alle. Den Editor-Link behalten Sie – damit ändern Sie die App später.',
     },
   ],
 
-  togetherTitle: 'Mehr als eine Webseite: ein gemeinsamer Ort.',
+  togetherTitle: 'Mehr als eine Seite. Ein Treffpunkt.',
   together:
-    'Die meisten Hosting-Angebote liefern jedem Besucher eine eigene Kopie der Anwendung aus – jede Person nutzt sie für sich allein. Hier verfügt jede Anwendung über einen eigenen Speicher und eine Live-Verbindung zu allen, die sie gerade geöffnet haben. Eine Aktion erscheint sofort bei allen anderen, und Beiträge bleiben dauerhaft erhalten.',
+    'Bei den meisten Hostern bekommt jeder Besucher seine eigene Kopie der App – und alle spielen allein. Hier hat jede App ein eigenes Gedächtnis und eine Live-Verbindung zu allen, die sie gerade offen haben. Macht jemand einen Zug, sehen ihn alle anderen sofort. Und was gepostet wird, ist morgen noch da.',
   together2:
-    'Sie benötigen weder eine separate Datenbank noch einen zusätzlichen Dienst. Beschreiben Sie die gewünschte Funktion einfach in eigenen Worten.',
+    'Keine Datenbank, für die Sie sich anmelden müssen, kein zweiter Dienst zum Anbinden. Beschreiben Sie es einfach so, wie Sie es einem Freund erzählen würden.',
   kinds: [
-    { name: 'Mehrspieler-Spiele', ask: 'Bis zu acht Personen sollen derselben Runde beitreten und die Züge der anderen live sehen können.' },
-    { name: 'Chaträume', ask: 'Füge einen Raum hinzu, in dem alle mit dem Link schreiben können, und speichere die letzten hundert Nachrichten.' },
-    { name: 'Gemeinsame Listen', ask: 'Mach aus der Packliste eine Liste, die das gesamte Team gleichzeitig bearbeiten kann.' },
-    { name: 'Punktestände und Rekorde', ask: 'Führe eine Bestenliste mit der besten Zeit jeder Person und zeige die zehn besten auf dem Startbildschirm.' },
-    { name: 'Kleine Communitys', ask: 'Hochzeitsgäste sollen Fotos auf einer gemeinsamen Pinnwand teilen und bewerten können.' },
+    { name: 'Multiplayer-Spiele', ask: 'Lass bis zu acht Freunde derselben Runde beitreten und die Züge der anderen live sehen.' },
+    { name: 'Chaträume', ask: 'Füg einen Raum hinzu, in dem alle mit dem Link chatten können, und speichere die letzten hundert Nachrichten.' },
+    { name: 'Gemeinsame Listen', ask: 'Mach aus der Packliste eine, die das ganze Team gleichzeitig bearbeiten kann.' },
+    { name: 'Punkte und Rekorde', ask: 'Merk dir die Bestzeit jedes Spielers und zeig die Top 10 auf dem Startbildschirm.' },
+    { name: 'Kleine soziale Netzwerke', ask: 'Lass Hochzeitsgäste Fotos auf eine gemeinsame Pinnwand stellen und die der anderen liken.' },
   ],
   quote: (text) => `„${text}“`,
 
-  connectTitle: 'Agenten einmalig verbinden',
+  connectTitle: 'Agenten einmal verbinden',
   connectText:
-    'Übergeben Sie Ihrem Agenten diese Adresse. Danach kann er hier veröffentlichen – ohne Schlüssel und ohne Anmeldung.',
-  sayLike: 'Anschließend genügt in Ihrem Projekt eine Anfrage wie',
+    'Geben Sie Ihrem Agenten diese Adresse. Ab dann weiß er, wie er hier veröffentlicht – ohne Key und ohne Login.',
+  sayLike: 'Dann sagen Sie in Ihrem Projekt zum Beispiel:',
   asks: [
-    'Veröffentliche diese Anwendung auf GenHTTP Lambda und sende mir den Link.',
-    'Speichere die Highscores zentral, sodass alle dieselbe Bestenliste sehen.',
+    'Veröffentliche diese App auf GenHTTP Lambda und schick mir den Link.',
+    'Speichere die Highscores zentral, damit alle dieselbe Bestenliste sehen.',
   ],
 
-  domainChip: 'Für wachsende Anwendungen',
+  domainChip: 'Wenn es gut ankommt',
   domainTitle: 'Eine eigene Domain',
   domainText:
-    'Dieselbe Anwendung und derselbe Editor-Link, jedoch unter einer Adresse, die Ihnen gehört – einprägsamer und professioneller, sobald die Anwendung weiterempfohlen wird.',
-  domainSubject: 'Eigene Domain für meine Anwendung',
-  domainAsk: 'Eigene Domain anfragen',
+    'Dieselbe App, derselbe Editor-Link – aber unter einer Adresse, die Ihnen gehört. Leichter zu sagen, leichter zu merken. Und sie macht etwas her, wenn sich die App herumspricht.',
+  domainSubject: 'Eine Domain für meine App',
+  domainAsk: 'Domain anfragen',
 
-  questionsTitle: 'Häufige Fragen',
+  questionsTitle: 'Bevor Sie fragen',
   questions: (offline, removed, showcase, terms) => [
     [
-      'Ist die Nutzung tatsächlich kostenlos?',
+      'Ist das wirklich kostenlos?',
       <>
-        Ja. Keine Kreditkarte, keine Testphase, kein Konto. Ihre Anwendung bleibt online, solange sie genutzt wird. Nach{' '}
-        {offline} Tagen ohne Aufruf oder Änderung wird sie offline genommen, nach {removed} Tagen entfernt.
+        Ja. Keine Kreditkarte, keine Testphase, kein Konto. Ihre App bleibt online, solange sie genutzt wird. Nach{' '}
+        {offline} Tagen ohne Besuch oder Änderung geht sie offline, nach {removed} Tagen wird sie gelöscht.
       </>,
     ],
     [
-      'Muss meine Anwendung auf eine bestimmte Weise aufgebaut sein?',
-      'Nein, darum kümmert sich Ihr Agent. Seiten, Bilder und Stylesheets werden unverändert übernommen, und serverseitige Logik passt der Agent an diese Plattform an. Sie beschreiben die gewünschte Funktion, die Umsetzung übernimmt der Agent.',
+      'Muss meine App auf eine bestimmte Art gebaut sein?',
+      'Nein, darum kümmert sich Ihr Agent. Seiten, Bilder und Styles werden übernommen, wie sie sind. Was auf dem Server laufen muss, passt der Agent an diese Plattform an. Sie beschreiben, was die App tun soll – den Rest übersetzt er.',
     ],
     [
-      'Wie ändere ich die Anwendung später?',
-      'Mit dem Editor-Link, den Sie bei der Veröffentlichung erhalten haben. Übergeben Sie ihn Ihrem Agenten zusammen mit der gewünschten Änderung oder öffnen Sie ihn im Browser. Jede Änderung wird als neue Version unter derselben Adresse gespeichert, und frühere Versionen lassen sich jederzeit wiederherstellen.',
+      'Wie ändere ich die App später?',
+      'Mit dem Editor-Link, den Sie beim Veröffentlichen bekommen haben. Geben Sie ihn mit dem nächsten Wunsch an Ihren Agenten oder öffnen Sie ihn im Browser. Jede Änderung wird eine neue Version unter derselben Adresse. Ältere Versionen können Sie jederzeit zurückholen.',
     ],
     [
-      'Wer kann meine Anwendung sehen?',
+      'Wer kann meine App sehen?',
       <>
-        Alle Personen, denen Sie den Link geben. Die Anwendung wird nirgends aufgeführt, es sei denn, Sie nehmen sie selbst
-        in den {showcase('Showcase')} auf.
+        Alle, denen Sie den Link geben. Die App wird nirgends gelistet – außer Sie nehmen sie selbst in den{' '}
+        {showcase('Showcase')} auf.
       </>,
     ],
     [
-      'Gibt es Inhalte, die nicht veröffentlicht werden dürfen?',
+      'Gibt es etwas, das ich nicht veröffentlichen darf?',
       <>
-        Ja, etwa alles, was Menschen schadet oder sie täuscht. Die {terms('Nutzungsbedingungen')} sind kurz und
-        verständlich formuliert.
+        Ja, ein paar Dinge – etwa alles, was Menschen schadet oder sie täuscht. Die {terms('Nutzungsbedingungen')} sind
+        kurz und klar formuliert.
       </>,
     ],
   ],
 
-  closeTitle: 'Lokal funktioniert es bereits.',
-  closeAccent: 'Jetzt auch für alle anderen.',
-  noAgent: 'Ohne Agent? Hier erstellen',
-  closeFacts: 'Kostenlos. Ohne Konto. Ohne Installation.',
+  closeTitle: 'Auf Ihrem Rechner läuft es schon.',
+  closeAccent: 'Jetzt auch bei allen anderen.',
+  noAgent: 'Kein Agent? Hier bauen',
+  closeFacts: 'Kostenlos. Kein Konto. Keine Installation.',
 
   scene: {
     label:
-      'Ein Agent wird gebeten, eine Anwendung zu veröffentlichen. Die Adresse wechselt von localhost zu einem öffentlichen Link, und weitere Personen treten bei.',
-    ask: 'Stelle mein Quizspiel online, damit meine Freunde mitspielen können.',
-    live: 'Die Anwendung ist online. Hier ist Ihr Link.',
+      'Ein Agent soll eine App veröffentlichen. Die Adresse wechselt von localhost zu einem öffentlichen Link, und Leute kommen dazu.',
+    ask: 'Stell mein Quizspiel online, damit meine Freunde mitspielen können.',
+    live: 'Ist online. Hier ist der Link.',
     publishing: 'Wird veröffentlicht …',
     public: 'Öffentlich',
-    onlyYou: 'Nur lokal',
+    onlyYou: 'Nur Sie',
     app: 'Quizabend am Freitag',
-    playing: 'aktiv',
+    playing: (count) => <>{count} dabei</>,
     you: 'Sie',
   },
 
-  compareTitle: 'Der kürzeste Weg von „funktioniert“ zu „verfügbar“',
+  compareTitle: 'Der kürzeste Weg von „läuft“ zu „probier’s aus“',
   compareText:
-    'Vercel, Cloudflare und Lovable sind hervorragende Plattformen für den Betrieb von Anwendungen. Sie setzen jedoch eine Registrierung voraus und, sobald Daten zwischen Besuchern geteilt werden sollen, einen zusätzlichen Dienst, der eingerichtet werden muss. Die Übersicht zeigt den Aufwand bei einem Start ohne bestehendes Konto.',
+    'Vercel, Cloudflare und Lovable sind großartige Plattformen. Aber dort beginnt alles mit einer Registrierung. Und sobald Ihre App Daten zwischen Besuchern teilen soll, müssen Sie einen zweiten Dienst einrichten. So sieht es aus, wenn Sie bei null anfangen.',
   rows: [
     'Start ohne Konto',
-    'Veröffentlichung aus dem bereits genutzten Agenten',
-    'Geteilte Live-Daten: Chat, Mehrspieler, Rekorde',
+    'Veröffentlichen aus Ihrem Agenten',
+    'Geteilte Live-Daten: Chat, Multiplayer, Rekorde',
     'Kosten bis zum ersten Link',
   ],
-  us: ['Ja', 'Einmal verbinden, dann anfragen', 'In jeder Anwendung enthalten', 'Kostenlos'],
+  us: ['Ja', 'Einmal verbinden, dann fragen', 'In jede App eingebaut', 'Kostenlos'],
   rivals: [
-    ['Registrierung erforderlich', 'Nach Anmeldung in eigenen Tools', 'Zusätzlicher Datenbankdienst', 'Kostenloser Tarif'],
-    ['Registrierung erforderlich', 'Nach Anmeldung in eigenen Tools', 'Möglich, mit Einrichtung', 'Kostenloser Tarif'],
-    ['Registrierung erforderlich', 'Im eigenen Editor erstellt', 'Über ein angebundenes Backend', 'Kostenloser Tarif, begrenzte Credits'],
+    ['Registrierung nötig', 'Nach Login in eigenen Tools', 'Datenbankdienst dazubuchen', 'Free-Tarif'],
+    ['Registrierung nötig', 'Nach Login in eigenen Tools', 'Möglich, mit Einrichtung', 'Free-Tarif'],
+    ['Registrierung nötig', 'Im eigenen Editor gebaut', 'Über ein angebundenes Backend', 'Free-Tarif, begrenzte Credits'],
   ],
   compareNote:
-    'Stand: September 2026, für eine Person ohne bestehendes Konto. Tarife und Funktionen anderer Anbieter können sich ändern; maßgeblich sind deren eigene Angaben.',
+    'Stand: September 2026, für jemanden ohne Konto bei einem der Anbieter. Tarife und Funktionen anderer Dienste ändern sich – Details bitte dort prüfen.',
 
   yourAgent: 'Ihr Agent',
   terminal: 'Terminal',
   setups: {
-    claudeCode: 'Führen Sie diesen Befehl einmalig in einem Terminal aus. Jedes danach geöffnete Projekt kann hier veröffentlichen.',
+    claudeCode: 'Einmal im Terminal ausführen. Danach kann jedes Projekt, das Sie öffnen, hier veröffentlichen.',
     claude: (strong) => (
       <>
-        Öffnen Sie in Claude im Web oder auf dem Desktop die {strong('Einstellungen')}, dann {strong('Connectors')}, und
-        wählen Sie {strong('Add custom connector')}. Fügen Sie die obige Adresse ein und speichern Sie. Weitere Schritte
-        sind nicht erforderlich.
+        Öffnen Sie in Claude (Web oder Desktop) die {strong('Einstellungen')}, dann {strong('Connectors')}, und wählen Sie{' '}
+        {strong('Add custom connector')}. Adresse oben einfügen, speichern, fertig.
       </>
     ),
-    cursor: 'Fügen Sie diesen Eintrag den MCP-Einstellungen von Cursor oder der unten genannten Datei hinzu und laden Sie neu.',
-    vscode: 'Speichern Sie diese Datei in Ihrem Projekt und starten Sie den Server anschließend in der MCP-Ansicht von Copilot Chat.',
+    cursor: 'Fügen Sie das in die MCP-Einstellungen von Cursor oder in die Datei unten ein und laden Sie neu.',
+    vscode: 'Speichern Sie das in Ihrem Projekt und starten Sie den Server in der MCP-Ansicht von Copilot Chat.',
   },
   elsewhere:
-    'Sie verwenden ein anderes Werkzeug? Windsurf, Codex, Zed und die meisten weiteren Agenten können in ihren Einstellungen einen entfernten MCP-Server einbinden. Verwenden Sie dafür die obige Adresse.',
+    'Sie nutzen etwas anderes? Windsurf, Codex, Zed und die meisten anderen Agenten können in ihren Einstellungen einen Remote-MCP-Server hinzufügen. Nutzen Sie dafür die Adresse oben.',
 };

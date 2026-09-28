@@ -2,34 +2,34 @@ import type { Messages } from '../en';
 
 export const showcase: Messages['showcase'] = {
   eyebrow: 'Vitrine',
-  title: 'Créées ici, en ligne maintenant',
+  title: 'Créées ici, en ligne en ce moment',
   intro:
-    'Des lambdas que leurs propriétaires ont choisi de présenter. Tous sont en ligne : chaque carte ouvre l’application réelle. Les plus utilisés récemment apparaissent en premier.',
-  counted: (total) => (total === 1 ? '1 lambda' : `${total} lambdas`),
-  failed: 'La vitrine n’a pas pu être chargée.',
+    'Des lambdas que leurs auteurs ont choisi de montrer. Toutes sont en ligne : chaque carte ouvre la vraie app. Les plus utilisées récemment viennent en premier.',
+  counted: (total) => (total === 1 ? '1 lambda' : `${total} lambdas`),
+  failed: 'Impossible de charger la vitrine.',
   loadingMore: 'Chargement…',
-  showMore: 'Afficher davantage',
-  nothingTitle: 'Aucune application pour le moment',
+  showMore: 'Afficher plus',
+  nothingTitle: 'Rien en vitrine pour l’instant',
   nothing: (tab) => (
     <>
-      Vous avez créé une application fonctionnelle ? Ouvrez son centre de contrôle, choisissez {tab('Vitrine')}, puis
-      ajoutez un titre, une courte description et une image. Elle apparaîtra ici tant qu’elle est en ligne.
+      Vous avez créé quelque chose qui marche ? Ouvrez son tableau de bord, choisissez {tab('Vitrine')}, puis ajoutez
+      un titre, quelques mots et une image. Votre app apparaîtra ici tant qu’elle est en ligne.
     </>
   ),
-  buildOne: 'Créer une application',
-  yoursTitle: 'Présenter votre application',
+  buildOne: 'Créer une app',
+  yoursTitle: 'Et la vôtre ?',
   yours: (tab) => (
     <>
-      Ouvrez le centre de contrôle de votre lambda et choisissez {tab('Vitrine')}, ou demandez à l’agent qui l’a créé de
-      l’y ajouter. Seul le détenteur de la clé d’édition peut le faire, et l’application peut être retirée à tout moment.
+      Ouvrez le tableau de bord de votre lambda et choisissez {tab('Vitrine')}, ou demandez à l’agent qui l’a créée de
+      l’y ajouter. Il faut pour cela la clé d’édition, et vous pouvez retirer votre lambda de la vitrine à tout moment.
     </>
   ),
-  buildSomething: 'Créer une application',
+  buildSomething: 'Créer une app',
 };
 
 export const card: Messages['card'] = {
   noPicture: 'Pas encore d’image',
   title: 'Titre',
-  description: 'Ce que les visiteurs peuvent en faire.',
+  description: 'Ce qu’un visiteur peut en faire.',
   opens: (title, address) => `${title}, ouvre ${address} dans un nouvel onglet`,
 };
