@@ -80,6 +80,16 @@ export const guide: Messages['guide'] = {
   ),
   bits: [
     ['Przegląd', () => <>Czy jest online, ile dziś było żądań i ile z nich się nie udało, ostatnia zmiana i ile zostało miejsca.</>],
+    [
+      'Zmień',
+      (k) => (
+        <>
+          Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach: przeczyta kod, zmieni go,
+          sprawdzi, czy się kompiluje, i wrzuci online jako nową wersję. Wyłącz {k.b('Wdróż po zakończeniu')}, jeśli
+          chcesz najpierw przejrzeć zmianę.
+        </>
+      ),
+    ],
     ['Pliki', () => <>Pliki danej wersji i dane lambdy – to, co zapisuje w trakcie działania. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],

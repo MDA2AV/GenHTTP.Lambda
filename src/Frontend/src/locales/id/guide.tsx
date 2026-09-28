@@ -82,6 +82,16 @@ export const guide: Messages['guide'] = {
   ),
   bits: [
     ['Ringkasan', () => <>Apakah lambda online, berapa request hari ini dan berapa yang gagal, perubahan terakhir, dan sisa ruang penyimpanan.</>],
+    [
+      'Ubah',
+      (k) => (
+        <>
+          Tulis apa yang perlu diubah, dan agen di server ini akan mengerjakannya sementara Anda melihat: membaca kode,
+          mengubahnya, memastikan kodenya bisa dikompilasi, lalu membuatnya online sebagai versi baru. Matikan{' '}
+          {k.b('Langsung online setelah selesai')} kalau Anda ingin memeriksanya dulu.
+        </>
+      ),
+    ],
     ['File', () => <>File dari sebuah versi, beserta datanya: apa yang disimpan lambda selama berjalan. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],

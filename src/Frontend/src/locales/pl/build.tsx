@@ -23,7 +23,7 @@ export const build: Messages['build'] = {
   fable:
     'Fable jest na razie za hasłem, bo go testujemy. Nie ma limitu czasu, więc pracuje, aż skończy – a nie aż skończy się czas.',
   onlyNew:
-    'Tu powstają tylko nowe aplikacje. Chcesz rozwinąć coś, co już masz? Daj link do edytora własnemu agentowi – szczegóły niżej.',
+    'Tu powstają tylko nowe aplikacje. Żeby zmienić coś, co już masz, otwórz link do edytora i w sekcji „Zmień” napisz, co ma być inaczej.',
   ideas: [
     'zrób tablicę, na której każdy może zostawić krótki wpis',
     'potrzebuję rankingu wyników do gry w kości',
@@ -41,7 +41,7 @@ export const build: Messages['build'] = {
   further: 'Do dalszej pracy',
   keep: 'Zachowaj ten link. To jedyna droga powrotu i nikt go nie odzyska – my też nie. Dodaj go do zakładek, zanim zamkniesz tę kartę.',
   change:
-    'Ta strona tylko tworzy nowe aplikacje. Żeby zmienić tę, podłącz własnego agenta (instrukcja niżej), daj mu link do edytora i powiedz, co ma być inaczej.',
+    'Żeby ją zmienić, otwórz link do edytora i w sekcji „Zmień” napisz, co ma być inaczej – tak samo jak tutaj. Może to zrobić też twój własny agent, jak opisano niżej.',
   copyLink: 'Kopiuj link do edytora',
   lifetime: (offline, removed) =>
     `Aplikacja działa, dopóki ktoś z niej korzysta. Po ${offline} dniach bez odwiedzin i zmian zostaje wyłączona, a po ${removed} dniach usunięta. Żeby ją przywrócić, otwórz edytor i kliknij „Wdróż”.`,

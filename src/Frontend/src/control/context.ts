@@ -1,5 +1,6 @@
 import type { Diagnostic, Lambda, LambdaSummary, VersionInfo } from '../api';
 import type { Theme } from '../theme';
+import type { AgentControl } from './agent';
 
 /**
  * What every tab of the control center is handed: the lambda as last read,
@@ -26,6 +27,8 @@ export interface Control {
   edit: (version?: number) => void;
   /** Opens a version in the files view. */
   browse: (version?: number) => void;
+  /** The agent changing this lambda, followed wherever the owner is. */
+  agent: AgentControl;
 }
 
 export type Busy = 'deploy' | 'undeploy' | null;

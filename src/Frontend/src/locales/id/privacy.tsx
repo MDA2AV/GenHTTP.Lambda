@@ -28,11 +28,14 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Yang Anda minta dari agen build',
     agent: (policy) => (
       <>
-        Apa yang Anda ketik di kotak build dikirim ke Anthropic PBC di Amerika Serikat, yang menjalankan Claude, model
-        yang menulis aplikasinya. Apa yang dilakukan Anthropic dengan data itu diatur oleh{' '}
-        {policy('kebijakan privasinya sendiri')}. Perlindungan data pribadi di Amerika Serikat tidak setara dengan di
-        Uni Eropa. Permintaan Anda dikirim ke sana karena itu diperlukan untuk membuat apa yang Anda minta (Pasal 6 ayat
-        (1) huruf b dan Pasal 49 ayat (1) huruf b GDPR). Jadi, jangan masukkan apa pun yang tidak ingin Anda bagikan.
+        Apa yang Anda ketik di kotak build, atau di bagian “Ubah” pada editor sebuah lambda, dikirim ke Anthropic PBC di
+        Amerika Serikat, yang menjalankan Claude, model yang menulis aplikasinya. Untuk membuat perubahan, agen juga
+        membaca lambda itu: kodenya, catatan pada versi-versinya, dan log-nya, yang berisi request ke lambda itu dan apa
+        yang dicetaknya, tetapi tidak berisi alamat IP pengunjungnya. Apa yang dibaca agen juga dikirim ke sana. Apa yang
+        dilakukan Anthropic dengan data itu diatur oleh {policy('kebijakan privasinya sendiri')}. Perlindungan data
+        pribadi di Amerika Serikat tidak setara dengan di Uni Eropa. Permintaan Anda dikirim ke sana karena itu diperlukan
+        untuk membuat atau mengubah apa yang Anda minta (Pasal 6 ayat (1) huruf b dan Pasal 49 ayat (1) huruf b GDPR).
+        Jadi, jangan masukkan apa pun yang tidak ingin Anda bagikan.
       </>
     ),
     agentKept:

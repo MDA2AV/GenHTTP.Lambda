@@ -30,11 +30,13 @@ export const privacy = {
     agentTitle: 'What you ask the build agent',
     agent: (policy: (text: string) => ReactNode) => (
       <>
-        What you type into the build box is sent to Anthropic PBC in the United States, which runs Claude, the model
-        that writes the app. What Anthropic does with it is covered by {policy('its own privacy policy')}. The United
-        States does not protect personal data the way the EU does. Your request is sent there because building what
-        you asked for needs it (Art. 6(1)(b) and Art. 49(1)(b) GDPR), so do not put anything into it that you would
-        not want to share.
+        What you type into the build box, or into the Change section of a lambda's editor, is sent to Anthropic PBC in
+        the United States, which runs Claude, the model that writes the app. To make a change, the agent also reads the
+        lambda - its code, the notes on its versions and its log, which holds its requests and what it printed but not
+        its visitors' IP addresses - and what it reads is sent there too. What Anthropic does with it is covered by{' '}
+        {policy('its own privacy policy')}. The United States does not protect personal data the way the EU does. Your
+        request is sent there because building or changing what you asked for needs it (Art. 6(1)(b) and Art. 49(1)(b)
+        GDPR), so do not put anything into it that you would not want to share.
       </>
     ),
     agentKept:

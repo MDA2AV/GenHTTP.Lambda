@@ -82,6 +82,16 @@ export const guide: Messages['guide'] = {
   ),
   bits: [
     ['Genel bakış', () => <>Yayında olup olmadığı, bugün kaç istek aldığı ve kaçının başarısız olduğu, son değişiklik ve ne kadar yer kaldığı.</>],
+    [
+      'Değiştir',
+      (k) => (
+        <>
+          Neyin farklı olması gerektiğini yazın, gerisini bu sunucudaki ajan siz izlerken halleder. Kodu okur, değiştirir,
+          derlendiğini kontrol eder ve yeni bir sürüm olarak yayına alır. Önce kendiniz bakmak isterseniz{' '}
+          {k.b('Bitince yayına al')} seçeneğini kapatın.
+        </>
+      ),
+    ],
     ['Dosyalar', () => <>Bir sürümün dosyaları ve lambdanın çalışırken kaydettiği veriler. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir ya da eski bir sürüme dönebilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],

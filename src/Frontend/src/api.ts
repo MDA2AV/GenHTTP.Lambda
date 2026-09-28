@@ -225,6 +225,113 @@ export interface BuildResult {
   deployed?: boolean;
 }
 
+/**
+ * One thing the agent did while changing a lambda. Facts rather than words,
+ * so the control center says them in its own language; only what the agent
+ * said itself (kind "say") is prose.
+ */
+export interface AgentStep {
+  /** Seconds into the run. */
+  at: number;
+  kind: 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list' | 'other';
+  /** What the agent said, for "say". */
+  text?: string | null;
+  /** The tool, for "other". */
+  tool?: string | null;
+  /** The files written, or the one read. */
+  files?: string[] | null;
+  /** The files a write removed. */
+  removed?: string[] | null;
+  /** Whether a write replaced every file rather than some. */
+  whole?: boolean | null;
+  /** The workspace path of an upload or a removal. */
+  path?: string | null;
+  /** Whether the tool has answered. */
+  done?: boolean | null;
+  /** The version read, saved or put online. */
+  version?: number | null;
+  /** Whether a write or a deployment went online. */
+  online?: boolean | null;
+  /** How many errors the compiler found. */
+  errors?: number | null;
+  /** How many errors the log held. */
+  problems?: number | null;
+  /** Why the platform refused the step, in its words. */
+  problem?: string | null;
+}
+
+/** How a change ended, from what the tools answered. */
+export interface ChangeResult {
+  /** Whether it saved a version. */
+  ok: boolean;
+  /** The newest version it saved. */
+  version?: number | null;
+  /** The version it put online, if it put one there. */
+  online?: number | null;
+  deployed?: boolean | null;
+  /** Whether the last version it compiled compiles, where that is known. */
+  compiles?: boolean | null;
+  /** The version online when it started. */
+  before?: number | null;
+  unchanged?: boolean | null;
+  cancelled?: boolean | null;
+  /** What cut it short, whether or not it had saved something by then. */
+  reason?: 'unauthorised' | 'timeout' | 'turns' | 'nothing' | null;
+  /** What the agent said at the end, for the owner. */
+  summary?: string | null;
+  /** In English, for when there are no words of our own for it. */
+  error?: string | null;
+  detail?: string | null;
+}
+
+export type ChangeState = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+
+/** A change asked of the agent, and how it is getting on. */
+export interface ChangeJob {
+  id: string;
+  state: ChangeState;
+  prompt: string;
+  /** Whether it was asked to put the change online. */
+  deploy: boolean;
+  model: string;
+  /** The version online when it was asked for. */
+  before?: number | null;
+  steps: AgentStep[];
+  result?: ChangeResult | null;
+  /** Its place in the queue; zero once it runs. */
+  waiting: number;
+  /** How long it has been running, counted by the agent. */
+  seconds: number;
+  /** How long it may run, in seconds; absent when there is no clock on it. */
+  limit?: number | null;
+}
+
+/** What the Change section needs to draw itself. */
+export interface AgentState {
+  /** Whether this installation has an agent at all. */
+  available: boolean;
+  /** Builds and changes one address may ask for in a day. */
+  perDay: number;
+  left: number;
+  /** Whether a second model is offered, behind a password. */
+  secondModel: boolean;
+  /** The change under way, or the last one while the agent remembers it (an hour). */
+  job?: ChangeJob | null;
+}
+
+export interface ChangeRequest {
+  prompt: string;
+  /** Put it online once it compiles, rather than leave it to be looked at. */
+  deploy: boolean;
+  model?: string;
+  password?: string;
+  /** The language of the control center, for the agent to fall back on. */
+  language?: string;
+}
+
+/** Whether a change is still waiting or working. */
+export const isActive = (job?: ChangeJob | null) => job?.state === 'queued' || job?.state === 'running';
+
 /** Everything anybody may know about a public key. */
 export interface KeyStatus {
   /** The key the way it would be stored. */
@@ -671,6 +778,14 @@ export const api = {
     request<Telemetry>(`/telemetry?minutes=${minutes}&days=30`, withToken(token)),
 
   showcases: (skip = 0, take = 12) => request<ShowcaseListing>(`/showcases/?skip=${skip}&take=${take}`),
+
+  /** The agent of the installation, changing one lambda for whoever holds its key. */
+  agent: {
+    state: (privateKey: string) => request<AgentState>(`/lambdas/${privateKey}/agent`),
+    start: (privateKey: string, change: ChangeRequest) =>
+      request<AgentState>(`/lambdas/${privateKey}/agent/start`, send(change)),
+    stop: (privateKey: string) => request<AgentState>(`/lambdas/${privateKey}/agent/stop`, { method: 'POST' }),
+  },
 
   showcase: (privateKey: string) => request<OwnShowcase>(`/lambdas/${privateKey}/showcase`),
 

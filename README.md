@@ -86,6 +86,8 @@ path.
 | `GET /lambdas/:privateKey/summary`                    | the dashboard: state, traffic, problems, storage |
 | `GET /lambdas/:privateKey/traffic`                    | requests by minute and quarter hour, statuses, paths |
 | `GET /lambdas/:privateKey/logs`                       | its own log, followed with `?since=`; no visitor addresses |
+| `GET /lambdas/:privateKey/agent`                      | the agent's change of it - under way, or the last one - and how many are left today |
+| `POST /lambdas/:privateKey/agent/start` / `stop`      | asks the agent for a change, stops it     |
 | `GET /lambdas/:privateKey/files`                      | lists the workspace                       |
 | `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`), as base64 up to 32 MB |
 | `GET / PUT /lambdas/:privateKey/files/:path/content`  | one file as it is, streamed, however large |
@@ -122,6 +124,29 @@ opens an explanation of how each one is extended.
 Editing and deploying are separate: saving creates a version, deploying picks
 one (the latest by default) and makes it live. A lambda has at most one
 deployment at a time, and older versions stay available to deploy again.
+
+### Changing a lambda by asking
+
+Where the installation runs the build agent, the editor has a **Change**
+section: the owner says what should be different, and the same agent that
+builds things on `/build` changes the lambda - it reads the code and the
+history, changes only what was asked with `change_code`, fixes what does not
+compile, and puts the result online as a new version. Switched off, it saves
+the version for the owner to look at and deploy themselves.
+
+The section shows it happen: what the agent says it is doing, each tool it
+calls with what came of it (the version saved, errors from the compiler, the
+version online), and a clock against its time limit. Afterwards it offers the
+difference to the version before, the address, and putting the previous
+version back. The change is followed by the frame of the editor rather than
+the section, so the sidebar marks it and the lambda is read again when it
+ends wherever the owner is; and it is kept by the agent under the lambda, so a
+reload, a second tab or a redeploy of the server finds it where it got to.
+
+It shares the queue and the daily allowance of `/build`, one change of a
+lambda runs at a time, and it can be stopped - whatever it saved stays a
+version. A change runs without `create_lambda`, and its editor key travels in
+the brief inside the build container, never in a log line.
 
 ## How it is put together
 
@@ -469,7 +494,11 @@ it says what a snippet has to return, what is imported, what is refused, and the
 handful of things that catch people out.
 
 `write_code` takes an optional `specification` (what the user wants and why) and `change` (one
-line on what the version does). They are kept with the version and shown next
+line on what the version does). `change_code` changes only the files it names,
+or a passage within one, and either takes `deploy: true` or `check: true` -
+the latter compiles what it saved and answers with the diagnostics, without
+sending every file again the way `check_code` needs. A deployment that is
+refused names the version it refused and the one that is `stillOnline`. They are kept with the version and shown next
 to its diff in the control center, and `read_lambda` hands the recent history
 back so the next agent can read why before it changes anything. `read_logs`
 lets an agent see how what it deployed is answering, stack traces included.

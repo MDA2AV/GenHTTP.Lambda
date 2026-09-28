@@ -22,7 +22,7 @@ export const build: Messages['build'] = {
   fable:
     'Fable masih dalam uji coba, jadi dilindungi kata sandi. Fable berjalan tanpa batas waktu. Ia terus bekerja sampai aplikasinya selesai, bukan sampai waktunya habis.',
   onlyNew:
-    'Halaman ini hanya untuk membuat aplikasi baru. Untuk melanjutkan yang sudah Anda buat, berikan link editornya ke agen coding Anda sendiri. Caranya ada di bawah.',
+    'Halaman ini hanya untuk membuat aplikasi baru. Untuk mengubah yang sudah Anda buat, buka link editornya, lalu tulis apa yang perlu diubah di bagian “Ubah”.',
   ideas: [
     'dinding tempat siapa pun bisa menulis pesan satu baris',
     'papan skor tertinggi untuk game dadu',
@@ -38,7 +38,7 @@ export const build: Messages['build'] = {
   further: 'Untuk mengembangkannya lagi',
   keep: 'Simpan baik-baik. Ini satu-satunya cara untuk masuk lagi, dan tidak bisa dipulihkan. Kami pun tidak bisa. Bookmark dulu sebelum menutup tab ini.',
   change:
-    'Halaman ini hanya membuat yang baru. Untuk mengubah aplikasi ini, hubungkan agen coding Anda sendiri seperti dijelaskan di bawah, berikan link editornya, lalu jelaskan apa yang ingin diubah.',
+    'Untuk mengubahnya, buka link editornya, lalu tulis apa yang perlu diubah di bagian “Ubah”, sama seperti di sini. Agen coding Anda sendiri juga bisa melakukannya, seperti dijelaskan di bawah.',
   copyLink: 'Salin link editor',
   lifetime: (offline, removed) =>
     `Aplikasi ini tetap online selama dipakai. Setelah ${offline} hari tanpa kunjungan atau perubahan, aplikasinya jadi offline, dan setelah ${removed} hari dihapus. Buka editor dan tekan Deploy untuk membuatnya online lagi.`,

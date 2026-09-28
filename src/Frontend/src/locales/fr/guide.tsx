@@ -81,6 +81,16 @@ export const guide: Messages['guide'] = {
   ),
   bits: [
     ['Vue d’ensemble', () => <>En ligne ou non, le nombre de requêtes du jour et d’échecs, la dernière modification, et la place qui reste.</>],
+    [
+      'Modifier',
+      (k) => (
+        <>
+          Dites ce qui doit changer, et l’agent de ce serveur s’en charge sous vos yeux : il lit le code, le modifie,
+          vérifie que ça compile et le met en ligne dans une nouvelle version. Désactivez{' '}
+          {k.b('Mettre en ligne une fois terminé')} pour y jeter un œil d’abord.
+        </>
+      ),
+    ],
     ['Fichiers', () => <>Les fichiers d’une version, et ses données : ce que la lambda enregistre pendant qu’elle tourne. Un cadenas ou un globe indique si le public peut y accéder.</>],
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],

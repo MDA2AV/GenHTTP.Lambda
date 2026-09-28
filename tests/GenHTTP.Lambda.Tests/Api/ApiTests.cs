@@ -219,7 +219,7 @@ public sealed class ApiTests
 
         // one path of each resource, so a resource that is routed but not
         // discovered shows up here rather than as a gap in the browser
-        foreach (var path in new[] { "/lambdas", "/versions", "/versions/zip", "/deployment/start", "/files", "/folders", "/code/check", "/keys", "/builds", "/system" })
+        foreach (var path in new[] { "/lambdas", "/versions", "/versions/zip", "/deployment/start", "/files", "/folders", "/code/check", "/keys", "/builds", "/agent/start", "/system" })
         {
             Assert.Contains(path, specification, $"'{path}' is missing from the specification");
         }

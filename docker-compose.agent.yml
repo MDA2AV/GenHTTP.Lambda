@@ -1,4 +1,5 @@
-# The build agent, for the prompt box on the landing page.
+# The build agent, for the prompt box on /build and the Change section of the
+# editor.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.ioxide.yml \
 #                  -f docker-compose.agent.yml up -d
@@ -30,7 +31,9 @@ services:
   lambda:
     environment:
       # where the server sends a prompt, and the shared secret it sends with
-      # it. Empty LAMBDA_AGENT_URL leaves the whole feature off.
+      # it. Empty LAMBDA_AGENT_URL leaves the whole feature off: no /build and
+      # no Change section in the editor. The allowance per day is shared
+      # between building and changing.
       LAMBDA_AGENT_URL: http://agent:8401
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
       LAMBDA_AGENT_BUILDS_PER_DAY: ${LAMBDA_AGENT_BUILDS_PER_DAY:-10}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { ApiError, api, type LambdaFile, type VersionContent, type VersionInfo } from '../api';
 import { IconChevronDown, IconSpinner } from '../components/Icons';
@@ -12,11 +13,23 @@ import { AgentMark, Ago, Empty, Quote, Section } from './ui';
 /**
  * Every version, newest first: what it changed in a line, and - opened - what
  * was asked for and the difference to the one before.
+ *
+ * A link can name the version to open, with ?version= - which is how the
+ * Change section shows what the agent just did.
  */
 export function VersionsTab({ control }: { control: Control }) {
   const t = useEditorT();
   const { versions, lambda } = control;
-  const [open, setOpen] = useState<number | null>(null);
+  const [params] = useSearchParams();
+  const asked = Number(params.get('version')) || null;
+  const [open, setOpen] = useState<number | null>(asked);
+
+  // a link followed while the section is already open still opens its version
+  useEffect(() => {
+    if (asked != null) {
+      setOpen(asked);
+    }
+  }, [asked]);
 
   return (
     <Section title={t.frame.sections.versions} hint={t.versions.hint(control.summary?.limits.versions ?? 50)}>
@@ -34,6 +47,7 @@ export function VersionsTab({ control }: { control: Control }) {
               latest={index === 0}
               open={open === version.version}
               onToggle={() => setOpen((was) => (was === version.version ? null : version.version))}
+              reveal={asked === version.version}
             />
           ))}
         </ol>
@@ -50,6 +64,7 @@ function Row({
   latest,
   open,
   onToggle,
+  reveal,
 }: {
   control: Control;
   version: VersionInfo;
@@ -58,11 +73,20 @@ function Row({
   latest: boolean;
   open: boolean;
   onToggle: () => void;
+  /** Whether the address asked for this version, so it is scrolled to. */
+  reveal: boolean;
 }) {
   const said = useEditorT().versions;
+  const row = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    if (reveal) {
+      row.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  }, [reveal]);
 
   return (
-    <li>
+    <li ref={row} className="scroll-mt-4">
       <div className="group flex items-center gap-3 py-3">
         <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-expanded={open}>
           <IconChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? '' : '-rotate-90'}`} />

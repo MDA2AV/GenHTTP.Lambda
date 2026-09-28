@@ -78,13 +78,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                              ["required"] = new JsonArray("name", "code")
                          }
                      },
-                     ["deploy"] = Field("boolean", "Also deploy the new version, so it goes live at once.")
+                     ["deploy"] = Field("boolean", "Also deploy the new version, so it goes live at once."),
+                     ["check"] = Field("boolean", "Without deploy: compile the new version and answer with its diagnostics, leaving what is online alone.")
                  },
                  ["required"] = new JsonArray("privateKey", "files")
              }),
 
         Tool("change_code", "Change some files", Effect.Save,
-             "Change some files of the newest version and save the result as a new version: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. Pass deploy: true to publish it in the same call.",
+             "Change some files of the newest version and save the result as a new version: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. Pass deploy: true to publish it in the same call, or check: true to compile it without publishing. A version that does not compile is saved but never goes online.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -131,7 +132,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                              ["required"] = new JsonArray("file", "find", "replace")
                          }
                      },
-                     ["deploy"] = Field("boolean", "Also deploy the new version, so it goes live at once.")
+                     ["deploy"] = Field("boolean", "Also deploy the new version, so it goes live at once."),
+                     ["check"] = Field("boolean", "Without deploy: compile the new version and answer with its diagnostics, leaving what is online alone.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -394,11 +396,32 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         if (Flag(arguments, "deploy") != true)
         {
+            if (Flag(arguments, "check") != true)
+            {
+                return McpProtocol.Say(new
+                {
+                    ok = true,
+                    version = version.Version,
+                    next = "deploy",
+                    note = reminder
+                });
+            }
+
+            /*
+             * Compiled here rather than left to check_code, which wants every
+             * file sent again: an agent that changed one line with change_code
+             * would have to read the whole lambda back to find out whether the
+             * line compiles. The version is saved either way.
+             */
+            var outcome = await meta.CheckAsync(privateKey, LambdaSource.Serialize(files));
+
             return McpProtocol.Say(new
             {
                 ok = true,
                 version = version.Version,
-                next = "deploy",
+                compiles = outcome.Success,
+                diagnostics = outcome.Diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message }),
+                next = outcome.Success ? "deploy, when it should go online" : "fix the diagnostics with change_code",
                 note = reminder
             });
         }
@@ -514,10 +537,22 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         if (!result.Success)
         {
+            /*
+             * Which version was refused, and what is online instead. A save
+             * with deploy: true that does not compile has still made a
+             * version, and an answer without its number left an agent - and
+             * whatever reports on it - unable to say which one it was, or
+             * whether anything had gone offline. Nothing has: a refused
+             * deployment leaves the one before it running.
+             */
+            var current = await meta.GetAsync(privateKey);
+
             return McpProtocol.Say(new
             {
                 ok = false,
-                problem = "Not deployed. The diagnostics say whether compiling or building the handler failed.",
+                problem = "Not deployed. The diagnostics say whether compiling or building the handler failed. Whatever was online before still is.",
+                version = version ?? current?.LatestVersion,
+                stillOnline = current?.ActiveVersion,
                 diagnostics = result.Diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message })
             }, failed: true);
         }

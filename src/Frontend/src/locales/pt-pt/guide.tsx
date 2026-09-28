@@ -82,6 +82,16 @@ export const guide: Messages['guide'] = {
   ),
   bits: [
     ['Visão geral', () => <>Se está online, quantos pedidos teve hoje e quantos falharam, a última alteração e quanto espaço ainda sobra.</>],
+    [
+      'Alterar',
+      (k) => (
+        <>
+          Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas: lê o código, altera-o,
+          confirma que compila e põe-no online como uma nova versão. Desliga {k.b('Pôr online quando terminar')}{' '}
+          para o veres primeiro.
+        </>
+      ),
+    ],
     ['Ficheiros', () => <>Os ficheiros de uma versão e os dados: o que a lambda guarda enquanto corre. Um cadeado ou um globo indica se o público lhes consegue aceder.</>],
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faz deploy ou reverte a partir daqui.</>],
     ['Deploys', () => <>O que esteve online e quando, e o que o pôs offline.</>],

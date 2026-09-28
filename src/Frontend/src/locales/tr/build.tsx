@@ -22,7 +22,7 @@ export const build: Messages['build'] = {
   fable:
     'Fable deneme sürecinde şifreyle korunuyor. Süre sınırı olmadan çalışır: süre dolunca değil, iş bitince durur.',
   onlyNew:
-    'Burada yalnızca yeni uygulamalar oluşturulur. Daha önce yaptığınız bir şeyi geliştirmek için editör linkini kendi kodlama ajanınıza verin. Nasıl yapılacağı aşağıda.',
+    'Burada yalnızca yeni uygulamalar oluşturulur. Daha önce yaptığınız bir şeyi değiştirmek için editör linkini açın ve Değiştir bölümünde neyin farklı olması gerektiğini yazın.',
   ideas: [
     'herkesin tek satırlık mesaj bırakabildiği bir duvar yap',
     'zar oyunu için bir skor tablosu hazırla',
@@ -38,7 +38,7 @@ export const build: Messages['build'] = {
   further: 'Geliştirmeye devam etmek için',
   keep: 'Bu linki saklayın. Uygulamanıza geri dönmenin tek yolu bu ve kaybolursa biz de kurtaramayız. Sekmeyi kapatmadan önce yer imlerine ekleyin.',
   change:
-    'Bu sayfa yalnızca yeni uygulamalar oluşturur. Bunu değiştirmek için kendi kodlama ajanınızı aşağıda anlatıldığı gibi bağlayın, editör linkini ona verin ve neyin değişmesini istediğinizi söyleyin.',
+    'Değiştirmek için editör linkini açın ve burada yaptığınız gibi Değiştir bölümünde neyin farklı olması gerektiğini yazın. Aşağıda anlatıldığı gibi kendi kodlama ajanınız da bunu yapabilir.',
   copyLink: 'Editör linkini kopyala',
   lifetime: (offline, removed) =>
     `Kullanıldığı sürece yayında kalır. ${offline} gün boyunca ziyaret ya da değişiklik olmazsa yayından kalkar, ${removed} günün sonunda da silinir. Geri getirmek için editörü açıp Yayına al düğmesine basın.`,

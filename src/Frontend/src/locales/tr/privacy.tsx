@@ -30,10 +30,13 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Oluşturma ajanından istedikleriniz',
     agent: (policy) => (
       <>
-        Oluşturma kutusuna yazdıklarınız, uygulamayı yazan model Claude’u işleten ve ABD’de bulunan Anthropic PBC’ye
-        gönderilir. Anthropic’in bunlarla ne yaptığı, şirketin {policy('kendi gizlilik politikasında')} anlatılır. ABD,
-        kişisel verileri AB’nin koruduğu gibi korumaz. İsteğiniz oraya gönderilir, çünkü istediğiniz şeyi oluşturmak için
-        bu gereklidir (GDPR md. 6/1-b ve md. 49/1-b). Bu yüzden paylaşmak istemeyeceğiniz hiçbir şeyi oraya yazmayın.
+        Oluşturma kutusuna ya da bir lambdanın editöründeki Değiştir bölümüne yazdıklarınız, uygulamayı yazan model
+        Claude’u işleten ve ABD’de bulunan Anthropic PBC’ye gönderilir. Bir değişiklik yapmak için ajan lambdayı da okur:
+        kodunu, sürümlerinin notlarını ve logunu. Log, lambdanın aldığı istekleri ve yazdırdıklarını içerir, ama
+        ziyaretçilerinin IP adreslerini içermez. Ajanın okudukları da oraya gönderilir. Anthropic’in bunlarla ne yaptığı,
+        şirketin {policy('kendi gizlilik politikasında')} anlatılır. ABD, kişisel verileri AB’nin koruduğu gibi korumaz.
+        İsteğiniz oraya gönderilir, çünkü istediğiniz şeyi oluşturmak ya da değiştirmek için bu gereklidir
+        (GDPR md. 6/1-b ve md. 49/1-b). Bu yüzden paylaşmak istemeyeceğiniz hiçbir şeyi oraya yazmayın.
       </>
     ),
     agentKept:

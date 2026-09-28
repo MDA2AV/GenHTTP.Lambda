@@ -28,9 +28,12 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Cosa chiedi al nostro agente',
     agent: (policy) => (
       <>
-        Quello che scrivi nel campo in cui chiedi l’app viene inviato ad Anthropic PBC, negli Stati Uniti, che gestisce
-        Claude, il modello che la scrive. Cosa ne fa Anthropic lo stabilisce {policy('la sua informativa sulla privacy')}.
-        Gli Stati Uniti non proteggono i dati personali come l’UE. La tua richiesta viene inviata lì perché serve a creare
+        Quello che scrivi nel campo in cui chiedi l’app, o nella sezione Modifica dell’editor di una lambda, viene
+        inviato ad Anthropic PBC, negli Stati Uniti, che gestisce Claude, il modello che scrive l’app. Per fare una
+        modifica, l’agente legge anche la lambda (il codice, le note delle sue versioni e il suo log, che contiene le
+        richieste e quello che ha stampato, ma non gli indirizzi IP dei visitatori), e anche quello che legge viene inviato
+        lì. Cosa ne fa Anthropic lo stabilisce {policy('la sua informativa sulla privacy')}. Gli Stati Uniti non
+        proteggono i dati personali come l’UE. La tua richiesta viene inviata lì perché serve a creare o modificare
         quello che hai chiesto (artt. 6, par. 1, lett. b) e 49, par. 1, lett. b) GDPR), quindi non scriverci niente che
         non vorresti condividere.
       </>

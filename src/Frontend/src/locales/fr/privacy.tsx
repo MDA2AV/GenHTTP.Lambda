@@ -31,10 +31,13 @@ export const privacy: Messages['privacy'] = {
     agentTitle: 'Ce que vous demandez à l’agent de création',
     agent: (policy) => (
       <>
-        Ce que vous tapez dans le champ de création est envoyé à Anthropic PBC, aux États-Unis, qui exploite Claude, le
-        modèle qui écrit l’app. Ce qu’Anthropic en fait relève de {policy('sa propre politique de confidentialité')}. Les
-        États-Unis ne protègent pas les données personnelles comme l’UE. Votre demande y est envoyée parce qu’elle est
-        nécessaire pour créer ce que vous voulez (art. 6.1.b et art. 49.1.b du RGPD) : n’y mettez donc rien que vous ne
+        Ce que vous tapez dans le champ de création, ou dans la section Modifier de l’éditeur d’une lambda, est envoyé à
+        Anthropic PBC, aux États-Unis, qui exploite Claude, le modèle qui écrit l’app. Pour faire une modification,
+        l’agent lit aussi la lambda (son code, les notes de ses versions et son journal, qui contient ses requêtes et ce
+        qu’elle a affiché, mais pas les adresses IP de ses visiteurs), et ce qu’il lit y est lui aussi envoyé. Ce
+        qu’Anthropic en fait relève de {policy('sa propre politique de confidentialité')}. Les États-Unis ne protègent
+        pas les données personnelles comme l’UE. Votre demande y est envoyée parce qu’elle est nécessaire pour créer ou
+        modifier ce que vous voulez (art. 6.1.b et art. 49.1.b du RGPD) : n’y mettez donc rien que vous ne
         voudriez pas partager.
       </>
     ),
