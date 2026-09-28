@@ -20,3 +20,11 @@ public sealed record BuildRequest(string? Prompt, string? Model = null, string? 
 /// needs to know whether to offer the choice, not what the answer is.
 /// </param>
 public sealed record BuildAvailability(bool Available, int PerDay, bool SecondModel);
+
+/// <summary>
+/// What the Change section sends: what should be different about the lambda
+/// whose editor key the request is made with.
+/// </summary>
+/// <param name="Deploy">Whether to put the change online once it compiles, rather than leave it to be looked at</param>
+/// <param name="Language">The language of the control center, for the agent to fall back on</param>
+public sealed record ChangeRequest(string? Prompt, bool Deploy = true, string? Model = null, string? Password = null, string? Language = null);
