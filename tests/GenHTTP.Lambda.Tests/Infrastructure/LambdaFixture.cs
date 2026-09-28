@@ -114,10 +114,13 @@ internal sealed class LambdaFixture : IAsyncDisposable
 
         await File.WriteAllTextAsync(Path.Combine(webRoot, "index.html"), SpaMarkup);
 
+        // not compiling the API is what makes a fixture take milliseconds
+        // rather than a second, see LambdaOptions.CompileApi
         var options = new LambdaOptions
         {
             DataDirectory = root,
-            WebRoot = webRoot
+            WebRoot = webRoot,
+            CompileApi = false
         };
 
         if (configure != null)

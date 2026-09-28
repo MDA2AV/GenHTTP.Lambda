@@ -63,6 +63,22 @@ public sealed record LambdaOptions
     public int ReceiveQueueEntries { get; init; } = 4096;
 
     /// <summary>
+    /// Whether the methods of the API are compiled when the server starts,
+    /// rather than called through reflection.
+    /// </summary>
+    /// <remarks>
+    /// Compiling is what GenHTTP does by default, and it makes every call to
+    /// the API a little cheaper for the price of about a second of Roslyn on
+    /// each start. An installation starts once and pays that gladly. The tests
+    /// start one for nearly every test they run, so they switch it off, and
+    /// that second was most of what a test took.
+    ///
+    /// Not read from the environment: nothing about running an installation
+    /// is helped by turning it off.
+    /// </remarks>
+    public bool CompileApi { get; init; } = true;
+
+    /// <summary>
     /// Where the build agent listens, or nothing to do without one.
     /// </summary>
     /// <remarks>
