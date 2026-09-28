@@ -23,6 +23,11 @@ public sealed record UpdateLambdaRequest(string? PublicKey);
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
 /// <param name="DomainServed">Whether it actually answers at that domain - it has one, and its tier includes it</param>
 /// <param name="Address">Where to link to it: its domain while that is served, its path otherwise</param>
+/// <param name="ActiveRevision">Which save of the version online is being served; absent while offline</param>
+/// <param name="ActiveChanged">
+/// Whether the version online was saved over after it went online. Visitors get what was deployed, so deploying it
+/// again is what puts the changes online.
+/// </param>
 public sealed record LambdaResponse(
     string PublicKey,
     string PrivateKey,
@@ -38,7 +43,9 @@ public sealed record LambdaResponse(
     DateTime? KeptUntil,
     string? Domain,
     bool DomainServed,
-    string Address
+    string Address,
+    int? ActiveRevision,
+    bool ActiveChanged
 );
 
 /// <summary>
@@ -66,7 +73,9 @@ public static class LambdaDescription
         lambda.KeptUntil,
         lambda.Domain,
         Serves(lambda.Tier, lambda.Domain),
-        Address(lambda.PublicKey, lambda.Tier, lambda.Domain)
+        Address(lambda.PublicKey, lambda.Tier, lambda.Domain),
+        lambda.ActiveRevision,
+        lambda.ActiveChanged
     );
 
     /// <summary>

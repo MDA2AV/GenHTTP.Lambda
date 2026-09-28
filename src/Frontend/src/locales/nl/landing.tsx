@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Blijf hem verbeteren',
-      body: 'Elke app krijgt een editorlink die alleen voor jou is. Geef die aan je agent met je volgende wijziging, of open hem zelf. Elke wijziging wordt een nieuwe versie. Het adres blijft hetzelfde.',
+      body: 'Elke app krijgt een editorlink die alleen voor jou is. Geef die aan je agent met je volgende wijziging, of open hem zelf. Elke wijziging die je vraagt, wordt een eigen versie. Het adres blijft hetzelfde.',
       alt: 'Het dashboard van de poll: alle versies, elk met wat er gevraagd werd, wat er veranderde en het verschil met de vorige',
     },
   ],

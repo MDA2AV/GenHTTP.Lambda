@@ -22,6 +22,12 @@ public sealed class ActivationEntity
     /// </summary>
     public int Version { get; set; }
 
+    /// <summary>
+    /// Which save of the version was online, or null for a stretch that began
+    /// before versions could be saved over.
+    /// </summary>
+    public int? Revision { get; set; }
+
     public DateTime Started { get; set; }
 
     /// <summary>

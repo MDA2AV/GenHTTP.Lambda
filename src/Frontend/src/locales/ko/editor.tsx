@@ -1,5 +1,12 @@
 import type { EditorMessages } from '../en/editor';
 
+/** 받침이 있으면 앞의 조사, 없으면 뒤의 조사를 붙여요: 워크스페이스를, 시크릿을. */
+const josa = (word: string, withFinal: string, without: string) => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+
+  return `${word}${code >= 0 && code < 11172 && code % 28 !== 0 ? withFinal : without}`;
+};
+
 /** 에디터의 한국어 문구. */
 export const editor: EditorMessages = {
   shared: {
@@ -63,6 +70,7 @@ export const editor: EditorMessages = {
       showcase: '쇼케이스',
       domain: '도메인',
       files: '파일',
+      data: '데이터',
       versions: '버전',
       deployments: '배포 기록',
       stats: '통계',
@@ -89,6 +97,8 @@ export const editor: EditorMessages = {
     download: '.NET 프로젝트로 다운로드',
     delete: '람다 삭제',
     deploy: (version) => `버전 ${version} 배포`,
+    changedSince: '온라인에 올린 뒤에 덮어써서 저장했어요. 방문자는 여전히 배포할 때의 내용을 받아요.',
+    changedShort: '온라인에 올린 뒤 바뀜',
     problems: '최근에 문제가 있었어요',
     demoTitle: '이 서버가 온라인으로 유지하는 데모예요. 읽기 전용이에요.',
     demo: (start) => (
@@ -110,7 +120,7 @@ export const editor: EditorMessages = {
     deleteForGood: '영구 삭제',
     deleteFailed: '람다를 삭제하지 못했어요.',
     deleteText: (key) => (
-      <>모든 버전과 파일, 기록, 그리고 {key} 주소까지 함께 사라져요. 되돌릴 수 없어요.</>
+      <>모든 버전과 모든 데이터, 기록, 그리고 {key} 주소까지 함께 사라져요. 되돌릴 수 없어요.</>
     ),
     openInTab: '새 탭에서 열기',
     open: (address) => `새 탭에서 ${address} 열기`,
@@ -173,6 +183,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>{file} 읽기</>,
       logs: '로그 읽기',
       create: '람다 만들기',
+      copy: '새 버전 시작',
       write: (files) => <>{files || '파일'} 수정</>,
       writeAll: (files) => <>{files} 작성</>,
       removing: (files) => <>, {files} 삭제</>,
@@ -268,9 +279,15 @@ export const editor: EditorMessages = {
     noDescription: '설명 없음',
     version: (version) => `버전 ${version}`,
     notOnline: '아직 온라인 아님',
+    changedSinceOnline: '온라인에 올린 뒤 바뀜',
+    edited: '수정됨',
     wanted: '요청 내용',
     noVersions: '아직 버전이 없어요.',
     storage: '저장 공간',
+    inVersion: (version) => `버전 ${version}에 담긴 것`,
+    noVersion: '버전에 담긴 것',
+    inData: '데이터에 담긴 것',
+    sharedByAll: '모든 버전이 함께 써요',
     browse: '둘러보기',
     code: '코드',
     codeWhy: 'C#은 컴파일만 되고, 그대로 제공되지 않아요.',
@@ -279,6 +296,8 @@ export const editor: EditorMessages = {
     assetsPublic: '공개: 코드가 제공해요.',
     assetsPrivate: '코드가 제공하지 않아요.',
     data: '데이터',
+    workspace: '워크스페이스',
+    workspaceOff: '꺼짐',
     dataPublic: '공개: 코드가 워크스페이스를 제공해요.',
     dataPrivate: '람다만 볼 수 있어요.',
   },
@@ -286,9 +305,15 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('코드')}는 컴파일되고, 그대로 제공되지 않아요. {b('에셋')}(페이지, 스타일, 이미지)은 버전마다 함께 저장되고,
-        코드가 제공하면 공개돼요. {b('데이터')}는 람다가 실행 중에 쓰는 거예요. 어떤 버전에도 속하지 않고, 코드가 제공할
-        때만 공개돼요.
+        한 버전의 파일, 즉 프로그램이에요. {b('코드')}는 컴파일되고, 그대로 제공되지 않아요. {b('에셋')}(페이지,
+        스크립트, 스타일, 이미지)은 코드와 함께 저장되고 함께 배포되고 롤백되며, 코드가 제공하면 공개돼요. 람다가 실행
+        중에 보관하는 건 여기 없어요. 그건 {b('데이터')}에 있어요.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        이 파일들은 버전 {version}에 속하고, 버전과 함께 바뀌어요. 람다가 실행 중에 보관하는 건 모든 버전에서 똑같고,{' '}
+        {data('데이터')}에 있어요.
       </>
     ),
     edit: '이 버전 편집',
@@ -310,7 +335,7 @@ export const editor: EditorMessages = {
     assetsPrivate: '코드와 함께 저장되지만, 이 버전은 제공하지 않아요.',
     noAssets: '이 버전에는 없어요.',
     data: '데이터',
-    dataPublic: '공개: 이 버전이 Workspace로 제공해요.',
+    dataPublic: '공개: 온라인 코드가 Workspace로 제공해요.',
     dataPrivate: '람다만 볼 수 있어요. 어떤 버전에도 속하지 않아요.',
     uploadFailed: (path) => `${path} 파일을 업로드하지 못했어요.`,
     deleteFolder: (path, held) =>
@@ -338,12 +363,62 @@ export const editor: EditorMessages = {
     notText: '텍스트가 아니에요. 다운로드해서 확인하세요.',
   },
 
+  data: {
+    hint:
+      '데이터는 람다가 실행 중에 보관하는 거예요. 버전이 아니라 람다에 속해요. 모든 버전이 같은 데이터를 읽고 쓰고, 버전으로 무엇을 하든 데이터는 바뀌지 않아요. 람다를 삭제하거나 그 종류의 데이터를 끌 때만 사라져요.',
+    facts: [
+      ['모든 버전이 공유', '어느 버전이 온라인이든 같은 데이터를 읽고 써요.'],
+      ['배포해도 그대로', '배포, 롤백, 버전 복사는 데이터를 전혀 건드리지 않아요.'],
+      ['켜고 끄는 건 내 선택', '종류마다 원하는 동안만 켜 둘 수 있어요. 끄면 안에 있던 건 삭제돼요.'],
+    ],
+    kinds: {
+      workspace: {
+        name: '워크스페이스',
+        what: '람다가 실행 중에 읽고 쓰는 파일이에요. 업로드된 파일, 기록 등 보관할 건 뭐든지요.',
+      },
+    },
+    on: '켜짐',
+    off: '꺼짐',
+    byDefault: '기본으로 켜짐',
+    usage: (items, used, of) => `${items} · ${of} 중 ${used}`,
+    offText: '꺼져 있어요. 아무것도 담겨 있지 않고, 이걸 쓰는 코드는 다시 켤 때까지 실패해요.',
+    switchOn: '켜기',
+    switchOff: '끄기',
+    switchLabel: (name) => `${name} 켜기/끄기`,
+    confirmOff: (name) => `${josa(name, '을', '를')} 끌까요?`,
+    confirmText: (items, size) => `안에 있는 모든 것(${items}, ${size})이 영구 삭제돼요. 되돌릴 수 없어요.`,
+    confirmEmpty: '비어 있어서 잃는 건 없어요.',
+    inUse: '온라인 버전이 이걸 쓰고 있어서, 다시 켤 때까지 그 부분에서 실패해요.',
+    deleteAndOff: '끄고 삭제',
+    keep: '그대로 두기',
+    switchedOn: (name) => `${josa(name, '이', '가')} 켜졌어요. 다음 요청부터 람다가 쓸 수 있어요.`,
+    switchedOff: (name) => `${josa(name, '이', '가')} 꺼졌고, 안에 있던 건 삭제됐어요.`,
+    switchFailed: '전환하지 못했어요.',
+    readFailed: '데이터를 읽지 못했어요.',
+    demo: '데모라서 데이터는 읽기만 할 수 있고, 바꿀 수는 없어요.',
+    contents: '워크스페이스에 담긴 것',
+    browse: '파일',
+    offBrowse: '워크스페이스가 꺼져 있어서 보여 줄 파일이 없어요.',
+  },
+
   versions: {
     hint: (limit) =>
-      `버전마다 무엇을 요청했고 무엇이 바뀌었는지 남아 있어요(작성한 쪽이 적었다면요). 버전이 ${limit}개를 넘으면 가장 오래된 것부터 삭제되지만, 온라인 버전은 삭제되지 않아요.`,
+      `버전은 프로그램, 즉 코드와 에셋이에요. 최신 버전은 작업 중인 버전이라, 필요한 만큼 덮어써서 저장하고 다시 배포할 수 있어요. 그 이전 버전들은 비교하거나 롤백할 수 있도록 그대로 남아요. 버전마다 무엇을 요청했고 무엇이 바뀌었는지 남아 있어요. 버전이 ${limit}개를 넘으면 가장 오래된 것부터 삭제되지만, 온라인 버전은 삭제되지 않아요.`,
     none: '아직 버전이 없어요.',
     noDescription: '설명 없음',
     online: '온라인',
+    newest: '최신',
+    newestTitle: '작업 중인 버전: 저장하면 이 버전이 그대로 바뀌어요',
+    edited: '수정됨',
+    saves: (count) => (count === 1 ? '한 번 저장됨' : `${count}번 저장됨`),
+    changedSince: '온라인에 올린 뒤 바뀜',
+    deployAgain: '다시 배포',
+    deployAgainTitle: '온라인에 올린 뒤 저장한 내용 반영하기',
+    start: '새 버전',
+    startTitle: (version) => `이 버전(${version})은 그대로 두고, 복사본에서 이어서 작업하기`,
+    startFrom: '여기서 새 버전 시작하기',
+    started: (version) => `새 버전(${version})을 시작했어요. 이제 이 버전이 최신이라, 여기서 작업을 이어 가요.`,
+    startFailed: '새 버전을 시작하지 못했어요.',
     putOnline: '이 버전을 온라인에 올리기',
     rollBackTitle: '이전 버전을 다시 온라인에 올리기',
     deploy: '배포',
@@ -378,6 +453,8 @@ export const editor: EditorMessages = {
       ended: '종료됨',
     },
     putBack: (version) => `버전 ${version} 다시 온라인에 올리기`,
+    revision: (revision) => `${revision}번째 저장`,
+    revisionTitle: (revision) => `${revision}번째로 저장한 직후의 버전`,
     timeline: '최근 7일 동안 온라인이었던 버전',
     block: (version, from, to) => `버전 ${version}, ${from} ~ ${to ?? '지금'}`,
     weekAgo: '일주일 전',
@@ -563,25 +640,36 @@ export const editor: EditorMessages = {
     notYet: '아직 컴파일되지 않아요.',
     checkFailed: '코드를 검사하지 못했어요.',
     saved: (version) => `저장했어요 (버전 ${version}).`,
+    savedOver: (version) => `버전 ${version}에 덮어써서 저장했어요. 온라인에 올리려면 배포하세요.`,
+    savedOverOnline: (version) =>
+      `버전 ${version}에 덮어써서 저장했어요. 다시 배포하기 전까지 방문자는 배포할 때의 내용을 받아요.`,
     isOnline: (version) => `버전 ${version}, 이제 온라인이에요.`,
     notOnline: '온라인에 올리지 못했어요. 아래에서 컴파일러 메시지를 확인하세요.',
     failed: '잘 안 됐어요.',
     unchanged: '마지막 저장 이후 바뀐 게 없어요.',
     demo: '데모라서 모두 읽기 전용이에요. 고치려면 이 데모로 내 람다를 만드세요. ',
-    edit: '코드를 직접 편집하세요. 저장하면 새 버전이 생기고, 온라인 버전은 그대로예요. 배포하면 온라인에 올라가요. ',
+    edit: '코드를 직접 편집하세요. 저장하면 최신 버전이 그 자리에서 바뀌고, 몇 번이든 저장할 수 있어요. 온라인 버전은 배포할 때만 바뀌어요. ‘새 버전’을 누르면 시작한 버전은 그대로 남아요. ',
+    history: (version, newest) =>
+      `이 버전(${version})은 지난 기록이라 그대로 유지돼요. 그래서 저장하면 여기서 새 버전을 만들어요. 최신 버전은 따로 있어요(버전 ${newest}). `,
     files: (entry, cs) => (
       <>
         {entry} 파일이 반환하는 것이 제공되고, 다른 {cs} 파일에는 타입을 두고, 그 밖의 파일은 그대로 제공돼요. Ctrl-S로
         저장하고, F12로 선언으로 이동해요.
       </>
     ),
-    newer: (version) => ` 여기 열린 버전보다 새 버전(${version})이 있어요.`,
     check: '검사',
     save: '저장',
+    saveTitle: (version) => `버전 ${version}에 덮어쓰기 (Ctrl+S)`,
+    saveNew: '새 버전',
+    saveNewTitle: '새 버전으로 저장하고, 시작한 버전은 그대로 두기',
     deploy: '배포',
+    older: ', 지난 버전',
+    newestTag: ', 최신',
+    unpublished: ', 온라인에 올린 뒤 저장됨',
     binary: (size) => `텍스트가 아니라서 편집할 수 없어요. 그대로 제공되고, 크기는 ${size} kB예요.`,
     saveAndDeploy: '저장하고 배포',
     saveVersion: '새 버전 저장',
+    saveNewAndDeploy: '새 버전으로 저장하고 배포',
     cancel: '취소',
     what: '무엇이 바뀌나요? 선택 사항이고, 기록에 표시돼요.',
     placeholder: '문의 양식 추가',

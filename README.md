@@ -77,9 +77,11 @@ path.
 | `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
-| `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
+| `PUT / PATCH /lambdas/:privateKey/versions/:version`  | saves all files, or some, over the newest version |
+| `GET / PUT /lambdas/:privateKey/versions/:version/zip`| one version's files as a zip; a zip saved over the newest |
+| `POST /lambdas/:privateKey/versions/:version/copy`    | starts a new version as a copy of this one |
 | `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
-| `POST /lambdas/:privateKey/versions/changes`          | changes some files of the newest version  |
+| `POST /lambdas/:privateKey/versions/changes`          | changes some files of the newest version, as a new one |
 | `GET /lambdas/:privateKey/deployment`                 | what is online, and until when            |
 | `POST /lambdas/:privateKey/deployment/start` / `stop` | puts a version online, takes it off       |
 | `GET /lambdas/:privateKey/deployment/history`         | every stretch it was online, and what ended it |
@@ -88,6 +90,8 @@ path.
 | `GET /lambdas/:privateKey/logs`                       | its own log, followed with `?since=`; no visitor addresses |
 | `GET /lambdas/:privateKey/agent`                      | the agent's change of it - under way, or the last one - and how many are left today |
 | `POST /lambdas/:privateKey/agent/start` / `stop`      | asks the agent for a change, stops it     |
+| `GET /lambdas/:privateKey/data`                       | the kinds of data it keeps, and how full each is |
+| `GET / PUT / DELETE /lambdas/:privateKey/data/:kind`  | one kind; switches it on; switches it off and deletes what it held |
 | `GET /lambdas/:privateKey/files`                      | lists the workspace                       |
 | `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`), as base64 up to 32 MB |
 | `GET / PUT /lambdas/:privateKey/files/:path/content`  | one file as it is, streamed, however large |
@@ -121,9 +125,40 @@ The editor says when both free tier timers run out: a hint under the public URL
 for the deployment, and a chip beside the buttons for the lambda itself, which
 opens an explanation of how each one is extended.
 
-Editing and deploying are separate: saving creates a version, deploying picks
-one (the latest by default) and makes it live. A lambda has at most one
-deployment at a time, and older versions stay available to deploy again.
+### Versions and data
+
+A lambda keeps two kinds of things, and they live differently.
+
+A **version** is the program: every C# file and every asset, the front end
+included. The newest version is the one being worked on - it is saved over in
+place (`PUT` or `PATCH` on it, `version` on `write_code` and `change_code`) as
+often as it takes, and deployed again each time. Every version before it is
+history and never changes: something to compare with and roll back to. A new
+version is started deliberately, once per thing somebody asked for - by saving
+without a version number, or by copying an existing one, which is also how an
+old version is carried on from. The editor shows the newest as such, and its
+**Save** saves over it while **New version** keeps it and starts another.
+
+**Data** is what the program keeps: for now the workspace, a private directory
+of files, with a database and secrets meant to follow. It belongs to the lambda
+rather than to a version - every version reads and writes the same data, and
+deploying, rolling back or copying a version never touches it. It goes with the
+lambda, or when its owner switches that kind of data off, which deletes what it
+held. Each kind is switched on by the owner (`PUT …/data/:kind`); the workspace
+is on unless it was switched off, and a lambda whose workspace is off is
+compiled with one that refuses every call and says why. The editor has a
+**Data** section of its own, beside **Files**, which now holds only the files
+of a version.
+
+Editing and deploying are separate: deploying picks a version (the latest by
+default), builds it and makes it live, and a lambda has at most one deployment
+at a time. What is online stays exactly what was deployed until the next
+deploy. Saving over the version that is online sets aside what was deployed
+first, so a restart builds that rather than the save that followed, and a
+deployment of the new save that does not compile leaves the old one standing -
+its assets included, which are written back after the failed attempt replaced
+them. The lambda says `activeChanged` while the version online has been saved
+over since, and the editor offers to deploy it again.
 
 ### Changing a lambda by asking
 
@@ -158,6 +193,10 @@ services that the API resources talk to through interfaces:
   that speaks to the database. Its public surface is DTOs, mapped by hand.
 - **Storage** (`Services/Storage`) - the code itself, on the file system, one
   file per version. Never in the database.
+- **Data** (`Services/Data`) - which kinds of data a lambda keeps, switched on
+  and off by its owner. Only the choice is stored: a lambda without a row for a
+  kind has its default, so a kind added to `DataKinds` needs no migration to
+  exist. Switching a kind off deletes what it held.
 - **Workspace** (`Services/Workspace`) - the private directory of a lambda,
   reached from the editor. The same directory the generated `Workspace` class
   writes to from inside a lambda, under the same limits, so a file put there by
@@ -487,11 +526,24 @@ this server answers rather than streams.
 https://genhttp.dev/mcp
 ```
 
-The tools are the shape of the job: `create_lambda`, `write_code`, `check_code`,
-`deploy`, `read_lambda`, `read_logs`, and `list_demos` for reading something that
-already works. `platform_guide` is the one to call first -
-it says what a snippet has to return, what is imported, what is refused, and the
-handful of things that catch people out.
+The tools are the shape of the job: `create_lambda`, `write_code`, `change_code`,
+`copy_version`, `check_code`, `deploy`, `read_lambda`, `read_logs`, the data
+tools `upload_file`, `list_files` and `delete_file`, and `list_demos` for reading
+something that already works. `platform_guide` is the one to call first - it
+opens with how versions and data live, then says what a snippet has to return,
+what is imported, what is refused, and the handful of things that catch people
+out.
+
+Agents used to leave a version behind for every fix. Now `write_code` and
+`change_code` take a `version` - the number of the newest - and save over it
+instead, and the answer to every save says which version to keep working in;
+`copy_version` starts the next one without sending a file. The same two rules
+are said wherever an agent decides something - in the instructions it reads on
+connecting, in the tool descriptions and in the guide: work in the newest
+version, starting a new one only per request, and keep the front end in the
+version and user data in the workspace, never the other way round. `read_lambda`
+says whether what is online is behind what was saved, and which data the lambda
+has switched on.
 
 `write_code` takes an optional `specification` (what the user wants and why) and `change` (one
 line on what the version does). `change_code` changes only the files it names,

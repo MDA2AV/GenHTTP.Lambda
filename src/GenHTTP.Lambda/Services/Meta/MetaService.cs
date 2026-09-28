@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -8,6 +9,7 @@ using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,6 +23,20 @@ namespace GenHTTP.Lambda.Services.Meta;
 public sealed class MetaService : IMetaService
 {
     private const int KeyAttempts = 8;
+
+    /// <summary>
+    /// Takes turns over what changes the versions of a lambda or what it has
+    /// online, one lambda at a time.
+    /// </summary>
+    /// <remarks>
+    /// The newest version is saved over while it is worked on, often by an
+    /// agent that saves and deploys in quick succession, and a save landing
+    /// between a deployment reading a version and recording which save of it
+    /// went online would leave the record saying something that is not being
+    /// served. Striped rather than one per lambda so it does not grow with
+    /// them; two lambdas sharing a stripe merely wait for each other.
+    /// </remarks>
+    private readonly SemaphoreSlim[] _stripes = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
 
     #region Get-/Setters
 
@@ -396,7 +412,10 @@ public sealed class MetaService : IMetaService
             return null;
         }
 
-        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created);
+        var workspace = await DataSwitches.IsEnabledAsync(database, lambda.Id, DataKinds.Workspace, cancellation);
+
+        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created,
+                                  lambda.ActiveRevision ?? deployment.Revision, workspace);
     }
 
     public async ValueTask<IReadOnlyList<LambdaVersionInfo>> GetVersionsAsync(string privateKey, CancellationToken cancellation = default)
@@ -421,7 +440,8 @@ public sealed class MetaService : IMetaService
         var code = await Storage.ReadAsync(lambda.Id, version, cancellation)
                 ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
-        return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Specification, deployment.Change, deployment.Origin);
+        return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Specification, deployment.Change, deployment.Origin,
+                                        deployment.Revision, deployment.Modified);
     }
 
     public async ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default)
@@ -434,7 +454,7 @@ public sealed class MetaService : IMetaService
                              .Where(a => a.LambdaId == lambda.Id)
                              .OrderByDescending(a => a.Started)
                              .ThenByDescending(a => a.Id)
-                             .Select(a => new LambdaActivation(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy))
+                             .Select(a => new LambdaActivation(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy, a.Revision))
                              .ToListAsync(cancellation);
     }
 
@@ -448,7 +468,9 @@ public sealed class MetaService : IMetaService
 
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
 
         note ??= new VersionNote(Origin: VersionOrigins.Api);
 
@@ -463,6 +485,120 @@ public sealed class MetaService : IMetaService
         return version;
     }
 
+    public async ValueTask<LambdaVersionInfo> UpdateAsync(string privateKey, int version, string code, VersionNote? note = null, CancellationToken cancellation = default)
+    {
+        var files = Validate(code);
+
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
+
+        note ??= new VersionNote(Origin: VersionOrigins.Api);
+
+        EnsureEditable(lambda, note.Origin);
+
+        var newest = await NewestAsync(database, lambda.Id, cancellation)
+                  ?? throw LambdaException.NotFound("There is no version yet to save over. Save a new one first.");
+
+        if (newest.Version != version)
+        {
+            if (!await database.Deployments.AnyAsync(d => d.LambdaId == lambda.Id && d.Version == version, cancellation))
+            {
+                throw LambdaException.NotFound($"Version {version} does not exist. The newest is version {newest.Version}.");
+            }
+
+            throw LambdaException.Conflict(History(version, newest.Version));
+        }
+
+        ValidateAllowance(files, lambda.Tier);
+
+        var now = DateTime.UtcNow;
+
+        // saved again as it is, it is the same save: only what is said about
+        // it can change, and nothing needs deploying again
+        if (await Storage.ReadAsync(lambda.Id, version, cancellation) != code)
+        {
+            /*
+             * Visitors get what was deployed until it is deployed again. Where
+             * this is the version online and the save online is the one on
+             * disk, that save is set aside before it is written over - so a
+             * restart builds what was deployed, and a deployment of the new
+             * save that fails leaves the old one standing, assets and all.
+             */
+            if (lambda.ActiveVersion == version && (lambda.ActiveRevision ?? newest.Revision) == newest.Revision)
+            {
+                await Storage.PreserveOnlineAsync(lambda.Id, version, cancellation);
+            }
+
+            await Storage.WriteAsync(lambda.Id, version, code, cancellation);
+
+            newest.Revision++;
+            newest.Modified = now;
+
+            Record(database, lambda, LambdaEvents.Saved);
+        }
+
+        newest.Specification = Tidy(note.Specification, VersionNote.MaxSpecification) ?? newest.Specification;
+        newest.Change = Tidy(note.Change, VersionNote.MaxChange) ?? newest.Change;
+
+        lambda.Modified = now;
+
+        await database.SaveChangesAsync(cancellation);
+
+        Logger.LogInformation("Saved over version {Version} of lambda {LambdaId}, now in revision {Revision}", version, lambda.Id, newest.Revision);
+
+        return Describe(newest);
+    }
+
+    public async ValueTask<LambdaVersionInfo> CopyAsync(string privateKey, int? version, VersionNote? note = null, CancellationToken cancellation = default)
+    {
+        await using var database = await Databases.CreateDbContextAsync(cancellation);
+
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
+
+        note ??= new VersionNote(Origin: VersionOrigins.Api);
+
+        EnsureEditable(lambda, note.Origin);
+
+        var source = version is { } wanted
+            ? await database.Deployments.AsNoTracking().FirstOrDefaultAsync(d => d.LambdaId == lambda.Id && d.Version == wanted, cancellation)
+              ?? throw LambdaException.NotFound($"Version {wanted} does not exist.")
+            : await NewestAsync(database, lambda.Id, cancellation)
+              ?? throw LambdaException.NotFound("There is no version yet to copy. Save one first.");
+
+        var code = await Storage.ReadAsync(lambda.Id, source.Version, cancellation)
+                ?? throw LambdaException.NotFound($"The code of version {source.Version} is no longer available.");
+
+        // a copy is a new version like any other, held to what the tier allows
+        // today rather than to what it allowed when the original was saved
+        ValidateAllowance(LambdaSource.Parse(code), lambda.Tier);
+
+        // what the user wants did not change by copying it; what the copy
+        // changes is nothing yet, which is what it says until it is saved over
+        var copied = new VersionNote(string.IsNullOrWhiteSpace(note.Specification) ? source.Specification : note.Specification,
+                                     string.IsNullOrWhiteSpace(note.Change) ? $"A copy of version {source.Version}" : note.Change,
+                                     note.Origin);
+
+        var created = await AppendAsync(database, lambda, code, DateTime.UtcNow, copied, cancellation);
+
+        Logger.LogInformation("Copied version {Source} of lambda {LambdaId} as version {Version}", source.Version, lambda.Id, created.Version);
+
+        return created;
+    }
+
+    /// <summary>
+    /// What somebody is told who tries to save over a version that is not the
+    /// newest, which is also what to do instead.
+    /// </summary>
+    internal static string History(int version, int newest)
+        => $"Version {version} is history and stays as it is: only the newest version, {newest}, can be saved over. " +
+           $"Save a new version instead (leave the version out), or start one from version {version} with copy_version " +
+           $"(POST /api/v1/lambdas/{{privateKey}}/versions/{version}/copy).";
+
     public async ValueTask<CompilationOutcome> CheckAsync(string privateKey, string code, CancellationToken cancellation = default)
     {
         var files = Validate(code);
@@ -473,25 +609,30 @@ public sealed class MetaService : IMetaService
 
         ValidateAllowance(files, lambda.Tier);
 
-        return await Deployments.ValidateAsync(code, lambda.Id, Options.WorkspaceOf(lambda.Tier), cancellation);
+        return await Deployments.ValidateAsync(code, lambda.Id, await WorkspaceOfAsync(database, lambda, cancellation), cancellation);
     }
 
     public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, string? origin = null, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
 
         EnsureEditable(lambda, origin);
 
-        var target = version ?? await database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                                              .MaxAsync(d => (int?)d.Version, cancellation)
-                  ?? throw LambdaException.Invalid("There is nothing to deploy yet, save the code first.");
+        var row = version is { } wanted
+            ? await database.Deployments.AsNoTracking().FirstOrDefaultAsync(d => d.LambdaId == lambda.Id && d.Version == wanted, cancellation)
+              ?? throw LambdaException.NotFound($"Version {wanted} does not exist.")
+            : await NewestAsync(database, lambda.Id, cancellation)
+              ?? throw LambdaException.Invalid("There is nothing to deploy yet, save the code first.");
 
-        if (!await database.Deployments.AnyAsync(d => d.LambdaId == lambda.Id && d.Version == target, cancellation))
-        {
-            throw LambdaException.NotFound($"Version {target} does not exist.");
-        }
+        var target = row.Version;
+
+        // the save it is in now, which is what goes online - deploying a
+        // version that was saved over since it last went online builds it again
+        var revision = row.Revision;
 
         /*
          * Under the lambda's own name, because activating it runs its code:
@@ -506,7 +647,7 @@ public sealed class MetaService : IMetaService
                ? LambdaOutput.Enter(new OutputScope(lambda.PublicKey, Book, Options.MaxOutputLines, lambda.Id))
                : null)
         {
-            outcome = await Deployments.ActivateAsync(lambda.Id, target, Options.WorkspaceOf(lambda.Tier), cancellation);
+            outcome = await Deployments.ActivateAsync(lambda.Id, target, revision, await WorkspaceOfAsync(database, lambda, cancellation), cancellation);
         }
 
         if (!outcome.Success)
@@ -519,6 +660,7 @@ public sealed class MetaService : IMetaService
         var now = DateTime.UtcNow;
 
         lambda.ActiveVersion = target;
+        lambda.ActiveRevision = revision;
         lambda.Deployed = now;
         lambda.Modified = now;
 
@@ -528,9 +670,15 @@ public sealed class MetaService : IMetaService
         {
             LambdaId = lambda.Id,
             Version = target,
+            Revision = revision,
             Started = now,
             Origin = origin ?? VersionOrigins.Api
         });
+
+        // what was set aside as online is not any more; forgotten before the
+        // record says so, since of the two ways to be caught halfway, serving
+        // what just compiled is the one that deploying again straightens out
+        await Storage.DropOnlineAsync(lambda.Id, cancellation);
 
         Record(database, lambda, LambdaEvents.Deployed);
 
@@ -545,13 +693,16 @@ public sealed class MetaService : IMetaService
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+
+        using var turn = held;
 
         EnsureEditable(lambda, endedBy == ActivationEndings.Admin ? VersionOrigins.Admin : null);
 
         if (lambda.ActiveVersion != null)
         {
             lambda.ActiveVersion = null;
+            lambda.ActiveRevision = null;
             lambda.Deployed = null;
 
             await CloseActivationAsync(database, lambda.Id, DateTime.UtcNow, endedBy ?? ActivationEndings.Stopped, cancellation);
@@ -559,6 +710,8 @@ public sealed class MetaService : IMetaService
             Record(database, lambda, LambdaEvents.Undeployed);
 
             await database.SaveChangesAsync(cancellation);
+
+            await Storage.DropOnlineAsync(lambda.Id, cancellation);
 
             Deployments.Evict(lambda.Id);
 
@@ -660,6 +813,8 @@ public sealed class MetaService : IMetaService
 
         var undeployed = 0;
 
+        var swept = new List<long>();
+
         foreach (var lambda in running)
         {
             // a lambda deployed before the column existed has no date; it is
@@ -688,11 +843,14 @@ public sealed class MetaService : IMetaService
             }
 
             lambda.ActiveVersion = null;
+            lambda.ActiveRevision = null;
             lambda.Deployed = null;
 
             await CloseActivationAsync(database, lambda.Id, now, ActivationEndings.Expired, cancellation);
 
             Deployments.Evict(lambda.Id);
+
+            swept.Add(lambda.Id);
 
             undeployed++;
         }
@@ -700,6 +858,11 @@ public sealed class MetaService : IMetaService
         if (undeployed > 0)
         {
             await database.SaveChangesAsync(cancellation);
+
+            foreach (var id in swept)
+            {
+                await Storage.DropOnlineAsync(id, cancellation);
+            }
         }
 
         if (undeployed > 0 || expired.Count > 0)
@@ -803,15 +966,28 @@ public sealed class MetaService : IMetaService
                              .FirstOrDefaultAsync(cancellation);
     }
 
-    public async ValueTask<LambdaTier?> GetTierAsync(long lambdaId, CancellationToken cancellation = default)
+    public async ValueTask<WorkspaceLimits?> GetWorkspaceLimitsAsync(long lambdaId, CancellationToken cancellation = default)
     {
         await using var database = await Databases.CreateDbContextAsync(cancellation);
 
-        return await database.Lambdas.AsNoTracking()
-                             .Where(l => l.Id == lambdaId)
-                             .Select(l => (LambdaTier?)l.Tier)
-                             .FirstOrDefaultAsync(cancellation);
+        var tier = await database.Lambdas.AsNoTracking()
+                                 .Where(l => l.Id == lambdaId)
+                                 .Select(l => (LambdaTier?)l.Tier)
+                                 .FirstOrDefaultAsync(cancellation);
+
+        if (tier == null)
+        {
+            return null;
+        }
+
+        return Options.WorkspaceOf(tier.Value, await DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Workspace, cancellation));
     }
+
+    /// <summary>
+    /// What the lambda may keep in its workspace, which is compiled into it.
+    /// </summary>
+    private async ValueTask<WorkspaceLimits> WorkspaceOfAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
+        => Options.WorkspaceOf(lambda.Tier, await DataSwitches.IsEnabledAsync(database, lambda.Id, DataKinds.Workspace, cancellation));
 
     public async ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null,
                                                  CancellationToken cancellation = default)
@@ -889,6 +1065,59 @@ public sealed class MetaService : IMetaService
     private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
         => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+
+    /// <summary>
+    /// The lambda of the key, read once it is its turn to change (see <see cref="_stripes" />).
+    /// </summary>
+    /// <returns>The lambda, and the turn - to be disposed of once the change is written</returns>
+    private async ValueTask<(LambdaEntity Lambda, IDisposable Turn)> LockedAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
+    {
+        var id = await database.Lambdas.AsNoTracking()
+                               .Where(l => l.PrivateKey == privateKey)
+                               .Select(l => (long?)l.Id)
+                               .FirstOrDefaultAsync(cancellation)
+              ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
+
+        var stripe = _stripes[(int)((ulong)id % (ulong)_stripes.Length)];
+
+        await stripe.WaitAsync(cancellation);
+
+        try
+        {
+            // read after waiting, so what it decides on is what the change
+            // before it left behind
+            return (await RequireAsync(database, privateKey, cancellation), new Turn(stripe));
+        }
+        catch
+        {
+            stripe.Release();
+            throw;
+        }
+    }
+
+    private sealed class Turn(SemaphoreSlim stripe) : IDisposable
+    {
+        private int _released;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0)
+            {
+                stripe.Release();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The newest version of a lambda, the one being worked on.
+    /// </summary>
+    private static async ValueTask<DeploymentEntity?> NewestAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation)
+        => await database.Deployments.Where(d => d.LambdaId == lambdaId)
+                         .OrderByDescending(d => d.Version)
+                         .FirstOrDefaultAsync(cancellation);
+
+    private static LambdaVersionInfo Describe(DeploymentEntity version)
+        => new(version.Version, version.Created, version.Specification, version.Change, version.Origin, version.Revision, version.Modified);
 
     private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, string? template, DateTime now, CancellationToken cancellation)
     {
@@ -1079,11 +1308,22 @@ public sealed class MetaService : IMetaService
         var latest = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
                                    .MaxAsync(d => (int?)d.Version, cancellation);
 
+        // the save the version online is in now, against the one that went
+        // online: the newest version is saved over while it is worked on, and
+        // what visitors get only follows once it is deployed again
+        int? saved = lambda.ActiveVersion is { } active
+            ? await database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version == active)
+                            .Select(d => (int?)d.Revision)
+                            .FirstOrDefaultAsync(cancellation)
+            : null;
+
+        var online = lambda.ActiveVersion != null ? lambda.ActiveRevision ?? saved : null;
+
         // the two deadlines the maintenance job will act on, so the editor can
         // say when rather than leaving it to be discovered
         return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, DeployedUntil(lambda), KeptUntil(lambda),
-                              lambda.Domain);
+                              lambda.Domain, online, online != null && saved > online);
     }
 
     /// <summary>
@@ -1102,7 +1342,7 @@ public sealed class MetaService : IMetaService
         => await database.Deployments.AsNoTracking()
                          .Where(d => d.LambdaId == lambdaId)
                          .OrderByDescending(d => d.Version)
-                         .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, d.Origin))
+                         .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, d.Origin, d.Revision, d.Modified))
                          .ToListAsync(cancellation);
 
     #endregion

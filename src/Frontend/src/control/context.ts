@@ -29,6 +29,14 @@ export interface Control {
   browse: (version?: number) => void;
   /** The agent changing this lambda, followed wherever the owner is. */
   agent: AgentControl;
+  /** Opens the data of the lambda, which no version holds. */
+  openData: () => void;
+  /**
+   * Starts a new version as a copy of one - the newest when none is named -
+   * and says so. The copy becomes the newest, so it is where work carries on.
+   * Resolves to its number, or to nothing when it could not be made.
+   */
+  startVersion: (from?: number) => Promise<number | null>;
 }
 
 export type Busy = 'deploy' | 'undeploy' | null;

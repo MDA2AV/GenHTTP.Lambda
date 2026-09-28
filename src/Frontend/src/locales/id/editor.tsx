@@ -67,6 +67,7 @@ export const editor: EditorMessages = {
       showcase: 'Showcase',
       domain: 'Domain',
       files: 'File',
+      data: 'Data',
       versions: 'Versi',
       deployments: 'Deployment',
       stats: 'Statistik',
@@ -93,6 +94,8 @@ export const editor: EditorMessages = {
     download: 'Unduh sebagai proyek .NET',
     delete: 'Hapus lambda ini',
     deploy: (version) => `Deploy versi ${version}`,
+    changedSince: 'Ada perubahan yang disimpan sejak online. Pengunjung masih mendapat apa yang di-deploy.',
+    changedShort: 'Berubah sejak online',
     problems: 'Ada masalah baru-baru ini',
     demoTitle: 'Demo, dijaga tetap online oleh instalasi ini dan hanya bisa dibaca.',
     demo: (start) => (
@@ -114,7 +117,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Hapus permanen',
     deleteFailed: 'Lambda gagal dihapus.',
     deleteText: (key) => (
-      <>Semua versi, file, riwayat, dan alamat {key} ikut terhapus. Tindakan ini tidak bisa dibatalkan.</>
+      <>Semua versi, semua datanya, riwayat, dan alamat {key} ikut terhapus. Tindakan ini tidak bisa dibatalkan.</>
     ),
     openInTab: 'Buka di tab baru',
     open: (address) => `Buka ${address} di tab baru`,
@@ -185,6 +188,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>Membaca {file}</>,
       logs: 'Membaca log',
       create: 'Membuat lambda',
+      copy: 'Memulai versi baru',
       write: (files) => <>Mengubah {files || 'file'}</>,
       writeAll: (files) => <>Menulis {files}</>,
       removing: (files) => <>, menghapus {files}</>,
@@ -281,9 +285,15 @@ export const editor: EditorMessages = {
     noDescription: 'Tanpa deskripsi',
     version: (version) => `Versi ${version}`,
     notOnline: 'belum online',
+    changedSinceOnline: 'berubah sejak online',
+    edited: 'diedit',
     wanted: 'Yang diminta',
     noVersions: 'Belum ada versi.',
     storage: 'Penyimpanan',
+    inVersion: (version) => `Di versi ${version}`,
+    noVersion: 'Di versi',
+    inData: 'Di data',
+    sharedByAll: 'Dipakai bersama oleh semua versi',
     browse: 'Lihat',
     code: 'Kode',
     codeWhy: 'C# dikompilasi, tidak pernah disajikan.',
@@ -292,6 +302,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Publik: disajikan oleh kode.',
     assetsPrivate: 'Tidak disajikan oleh kode.',
     data: 'Data',
+    workspace: 'Workspace',
+    workspaceOff: 'nonaktif',
     dataPublic: 'Publik: kode menyajikan workspace.',
     dataPrivate: 'Privat, hanya untuk lambda ini.',
   },
@@ -299,9 +311,16 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('Kode')} dikompilasi dan tidak pernah disajikan. {b('Aset')} (halaman, style, gambar) disimpan bersama setiap
-        versi, dan bersifat publik kalau kode menyajikannya. {b('Data')} adalah apa yang ditulis lambda selama berjalan.
-        Data bukan bagian dari versi mana pun, dan hanya publik kalau kode menyajikannya.
+        File dari satu versi, yaitu programnya. {b('Kode')} dikompilasi dan tidak pernah disajikan. {b('Aset')}{' '}
+        (halaman, script, style, gambar) disimpan bersama kode, ikut di-deploy dan di-rollback bersamanya, dan bersifat
+        publik kalau kode menyajikannya. Apa yang disimpan lambda selama berjalan tidak ada di sini: itu ada di{' '}
+        {b('Data')}.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        File ini milik versi {version} dan ikut berubah bersamanya. Apa yang disimpan lambda selama berjalan sama untuk
+        semua versi, dan ada di {data('Data')}.
       </>
     ),
     edit: 'Edit versi ini',
@@ -323,7 +342,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Disimpan bersama kode, tapi tidak disajikan oleh versi ini.',
     noAssets: 'Tidak ada di versi ini.',
     data: 'Data',
-    dataPublic: 'Publik: versi ini menyajikannya lewat Workspace.',
+    dataPublic: 'Publik: kode yang online menyajikannya lewat Workspace.',
     dataPrivate: 'Privat, hanya untuk lambda ini. Bukan bagian dari versi mana pun.',
     uploadFailed: (path) => `Gagal mengunggah ${path}.`,
     deleteFolder: (path, held) =>
@@ -351,12 +370,63 @@ export const editor: EditorMessages = {
     notText: 'Bukan teks. Unduh untuk melihat isinya.',
   },
 
+  data: {
+    hint:
+      'Data adalah apa yang disimpan lambda selama berjalan. Data milik lambda, bukan milik satu versi: semua versi membaca dan menulis data yang sama, dan apa pun yang Anda lakukan dengan versi tidak mengubahnya. Data baru hilang kalau lambdanya dihapus, atau kalau Anda menonaktifkan jenis data itu.',
+    facts: [
+      ['Dipakai bersama semua versi', 'Versi mana pun yang online membaca dan menulis data yang sama.'],
+      ['Tetap ada saat deploy', 'Deploy, rollback, atau menyalin versi tidak pernah menyentuhnya.'],
+      ['Anda yang atur', 'Setiap jenis hanya aktif selama Anda mau. Menonaktifkannya menghapus isinya.'],
+    ],
+    kinds: {
+      workspace: {
+        name: 'Workspace',
+        what: 'File yang dibaca dan ditulis lambda selama berjalan: unggahan, catatan, apa pun yang disimpannya.',
+      },
+    },
+    on: 'Aktif',
+    off: 'Nonaktif',
+    byDefault: 'Aktif secara default',
+    usage: (items, used, of) => `${items} · ${used} dari ${of}`,
+    offText: 'Nonaktif. Isinya kosong, dan kode yang memakainya akan gagal sampai diaktifkan lagi.',
+    switchOn: 'Aktifkan',
+    switchOff: 'Nonaktifkan',
+    switchLabel: (name) => `Aktifkan atau nonaktifkan ${name.toLowerCase()}`,
+    confirmOff: (name) => `Nonaktifkan ${name.toLowerCase()}?`,
+    confirmText: (items, size) =>
+      `Semua isinya (${items}, ${size}) akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`,
+    confirmEmpty: 'Isinya kosong, jadi tidak ada yang hilang.',
+    inUse: 'Versi yang online memakainya, jadi bagian yang memakainya akan gagal sampai Anda mengaktifkannya lagi.',
+    deleteAndOff: 'Nonaktifkan dan hapus',
+    keep: 'Biarkan aktif',
+    switchedOn: (name) => `${name} aktif. Lambda bisa memakainya mulai request berikutnya.`,
+    switchedOff: (name) => `${name} nonaktif, dan isinya sudah dihapus.`,
+    switchFailed: 'Gagal mengubah statusnya.',
+    readFailed: 'Data gagal dibaca.',
+    demo: 'Demo: datanya untuk dibaca, bukan untuk diubah.',
+    contents: 'Isi workspace',
+    browse: 'File',
+    offBrowse: 'Workspace nonaktif, jadi tidak ada file untuk ditampilkan.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Setiap versi menyimpan apa yang diminta dan apa yang diubah, kalau penulisnya mencatatnya. Versi terlama dihapus begitu jumlahnya lebih dari ${limit}; versi yang sedang online tidak pernah dihapus.`,
+      `Versi adalah programnya: kode dan asetnya. Versi terbaru adalah yang sedang dikerjakan: bisa diubah dan di-deploy ulang sesering yang diperlukan. Versi-versi sebelumnya tetap persis seperti semula, untuk dibandingkan dan untuk rollback. Setiap versi menyimpan apa yang diminta dan apa yang diubah. Versi terlama dihapus begitu jumlahnya lebih dari ${limit}; versi yang sedang online tidak pernah dihapus.`,
     none: 'Belum ada versi.',
     noDescription: 'Tanpa deskripsi',
     online: 'online',
+    newest: 'terbaru',
+    newestTitle: 'Versi yang sedang dikerjakan: menyimpan langsung mengubahnya',
+    edited: 'diedit',
+    saves: (count) => (count === 1 ? 'Disimpan sekali' : `Disimpan ${count} kali`),
+    changedSince: 'berubah sejak online',
+    deployAgain: 'Deploy ulang',
+    deployAgainTitle: 'Deploy apa yang disimpan sejak online',
+    start: 'Versi baru',
+    startTitle: (version) => `Biarkan versi ${version} apa adanya, dan lanjutkan di salinannya`,
+    startFrom: 'Mulai versi baru dari sini',
+    started: (version) => `Versi ${version} dimulai. Sekarang ini versi terbaru, jadi pekerjaan berlanjut di sana.`,
+    startFailed: 'Versi baru gagal dimulai.',
     putOnline: 'Deploy versi ini',
     rollBackTitle: 'Jadikan versi lama ini online lagi',
     deploy: 'Deploy',
@@ -391,6 +461,8 @@ export const editor: EditorMessages = {
       ended: 'berakhir',
     },
     putBack: (version) => `Jadikan versi ${version} online lagi`,
+    revision: (revision) => `simpanan ke-${revision}`,
+    revisionTitle: (revision) => `Isi versi ini setelah simpanan ke-${revision}`,
     timeline: 'Yang online selama tujuh hari terakhir',
     block: (version, from, to) => `Versi ${version}, ${from} sampai ${to ?? 'sekarang'}`,
     weekAgo: 'seminggu lalu',
@@ -578,25 +650,36 @@ export const editor: EditorMessages = {
     notYet: 'Belum bisa dikompilasi.',
     checkFailed: 'Kode gagal diperiksa.',
     saved: (version) => `Disimpan sebagai versi ${version}.`,
+    savedOver: (version) => `Disimpan ke versi ${version}. Deploy untuk membuatnya online.`,
+    savedOverOnline: (version) =>
+      `Disimpan ke versi ${version}. Pengunjung tetap mendapat apa yang di-deploy sampai Anda deploy lagi.`,
     isOnline: (version) => `Versi ${version} sudah online.`,
     notOnline: 'Gagal online. Lihat pesan compiler di bawah.',
     failed: 'Tidak berhasil.',
     unchanged: 'Tidak ada perubahan sejak terakhir disimpan.',
     demo: 'Ini demo, jadi semuanya hanya bisa dibaca. Untuk mengubahnya, buat lambda Anda sendiri dari demo ini. ',
-    edit: 'Edit kode secara manual. Menyimpan membuat versi baru tanpa mengubah yang sedang online; deploy membuatnya online. ',
+    edit: 'Edit kode secara manual. Menyimpan langsung mengubah versi terbaru, sesering yang Anda mau; yang online baru berubah saat Anda deploy. “Versi baru” membiarkan versi awal Anda tetap apa adanya. ',
+    history: (version, newest) =>
+      `Versi ${version} sudah jadi riwayat dan tidak berubah lagi, jadi menyimpan akan membuat versi baru darinya. Versi terbaru adalah versi ${newest}. `,
     files: (entry, cs) => (
       <>
         {entry} mengembalikan apa yang disajikan, file {cs} lainnya berisi tipe, dan file lain disajikan apa adanya.
         Ctrl-S untuk menyimpan, F12 untuk membuka deklarasi.
       </>
     ),
-    newer: (version) => ` Versi ${version} lebih baru dari yang terbuka di sini.`,
     check: 'Periksa',
     save: 'Simpan',
+    saveTitle: (version) => `Simpan ke versi ${version} (Ctrl+S)`,
+    saveNew: 'Versi baru',
+    saveNewTitle: 'Simpan sebagai versi baru, dan biarkan versi awal tetap apa adanya',
     deploy: 'Deploy',
+    older: ', riwayat',
+    newestTag: ', terbaru',
+    unpublished: ', disimpan sejak online',
     binary: (size) => `Bukan teks, jadi tidak ada yang bisa diedit. File ini disajikan apa adanya, ukurannya ${size} kB.`,
     saveAndDeploy: 'Simpan dan deploy',
     saveVersion: 'Simpan versi baru',
+    saveNewAndDeploy: 'Simpan versi baru dan deploy',
     cancel: 'Batal',
     what: 'Apa yang diubah? Opsional, akan ditampilkan di riwayat.',
     placeholder: 'Menambahkan formulir kontak',

@@ -102,9 +102,9 @@ const TOKEN = process.env.AGENT_TOKEN ?? '';
 const ALLOW = [
   'mcp__genhttp__platform_guide', 'mcp__genhttp__list_demos',
   'mcp__genhttp__create_lambda', 'mcp__genhttp__write_code', 'mcp__genhttp__change_code',
-  'mcp__genhttp__check_code', 'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda',
-  'mcp__genhttp__read_logs', 'mcp__genhttp__upload_file', 'mcp__genhttp__list_files',
-  'mcp__genhttp__delete_file'
+  'mcp__genhttp__copy_version', 'mcp__genhttp__check_code',
+  'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda', 'mcp__genhttp__read_logs',
+  'mcp__genhttp__upload_file', 'mcp__genhttp__list_files', 'mcp__genhttp__delete_file'
 ];
 
 /*
@@ -150,14 +150,21 @@ How to work:
 2. Call create_lambda with acceptTerms true. Pick a short, readable public
    key that suits what they asked for.
 3. Write the code with write_code. One page that works beats four that do
-   not. If it wants a front end, serve it and make it look deliberate rather
-   than default. Pass what they asked for, word for word, as specification, and one
-   line on what the version does as change - they read both in the version
-   history, and every later write_code gets its own.
+   not. If it wants a front end, ship its pages, scripts and styles with the
+   code as assets and make it look deliberate rather than default. Pass what
+   they asked for, word for word, as specification, and one line on what the
+   version does as change - they read both in the version history.
 4. Call check_code and fix whatever it complains about. Do not deploy code
    that does not compile.
 5. Call deploy. Nothing is online until you do. If there is time, call
    read_logs to see that it answers without errors.
+6. Everything after the first write_code goes into that same version: pass
+   its number as version to change_code (or write_code) for every fix and
+   improvement, with deploy: true. They asked for one thing, so the history
+   should show one version for it, not one per fix.
+
+Whatever the application keeps - entries, scores, accounts - is data: write
+it to the workspace from the code, never into the files of a version.
 
 {clock}
 
@@ -220,10 +227,14 @@ How to work:
    or replace a passage within one with edits; everything you leave out stays
    as it is. {deploy} Pass what they asked for, in their words, as
    specification, and one line on what this version does as change. They read
-   both in the version history.
-5. If it answers with diagnostics, the code does not compile and nothing new
-   went online: fix what they say with another change_code. What is online
-   stays online until a version compiles.
+   both in the version history. This first save makes a new version: the
+   answer says its number.
+5. Everything after that goes into that same version: pass its number as
+   version to change_code, which saves over it, for every fix and
+   improvement. They asked for one change, so the history should show one
+   version for it, not one per fix. If an answer comes with diagnostics, the
+   code does not compile and nothing new went online: fix what they say that
+   way. What is online stays online until something compiles.
 
 Before each step, write one short sentence for the owner saying what you are
 about to do - "Looking at how the scores are stored", not "Calling
@@ -610,7 +621,7 @@ async function run(job) {
           // exactly like deploying something real.
           if ((from === 'write_code' || from === 'change_code') && body?.ok === true) wrote = true;
 
-          if ((from === 'write_code' || from === 'change_code') && Number.isInteger(body?.version)) {
+          if ((from === 'write_code' || from === 'change_code' || from === 'copy_version') && Number.isInteger(body?.version)) {
             // a failed deploy after a save still names the version it saved
             saved = Math.max(saved ?? 0, body.version);
           }
@@ -898,6 +909,7 @@ function begin(tool, input) {
 
       return { kind: 'write', files: [...files], ...(removed.length ? { removed } : {}) };
     }
+    case 'copy_version': return { kind: 'copy' };
     case 'check_code': return { kind: 'check' };
     case 'deploy':
       return Number.isInteger(input?.version) ? { kind: 'deploy', version: input.version } : { kind: 'deploy' };
@@ -922,6 +934,7 @@ function finish(entry, tool, body) {
   switch (tool) {
     case 'write_code':
     case 'change_code':
+    case 'copy_version':
     case 'deploy':
       if (Number.isInteger(body.version)) entry.version = body.version;
 
@@ -955,6 +968,7 @@ const WORDS = {
   create_lambda: 'Claiming an address',
   write_code: 'Writing the code',
   change_code: 'Changing the code',
+  copy_version: 'Starting a new version',
   check_code: 'Compiling it',
   deploy: 'Putting it online',
   read_lambda: 'Checking what is there',
@@ -969,6 +983,12 @@ function describe(name, input) {
 
   if (short === 'write_code' && input?.files?.length) {
     return `Writing ${input.files.length} file${input.files.length === 1 ? '' : 's'}`;
+  }
+
+  if (short === 'change_code') {
+    const count = (input?.files?.length ?? 0) + (input?.edits?.length ?? 0) + (input?.remove?.length ?? 0);
+
+    return count > 0 ? `Making ${count} change${count === 1 ? '' : 's'}` : WORDS.change_code;
   }
 
   return WORDS[short] ?? `Working (${short})`;

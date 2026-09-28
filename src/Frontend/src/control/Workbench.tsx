@@ -20,15 +20,21 @@ type Busy = 'save' | 'check' | 'deploy' | null;
  *
  * Built like every other section: the files are its views, so they are the
  * pills under the title, and checking, saving and deploying are its actions.
- * Saving asks what changed - the same note an agent leaves - so a version
- * written by hand reads as well in the history as one that was not.
+ *
+ * The newest version is the one being worked on, so saving changes it where
+ * it is - as often as it takes, without a question every time - and what is
+ * online only follows when it is deployed. Keeping it as it is and carrying
+ * on in a new one is a decision rather than a side effect of saving, and asks
+ * what the new version is for: the same note an agent leaves, so a version
+ * written by hand reads as well in the history as one that was not. A version
+ * that is not the newest is history, and saving it can only make a new one.
  */
 export function Workbench({ control, onDirty }: { control: Control; onDirty: (dirty: boolean) => void }) {
   const { privateKey, lambda } = control;
 
   const said = useEditorT().code;
   const toast = useToast();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
 
   // what an agent works on is the newest, so that is where editing starts,
   // unless a particular version was asked for
@@ -43,13 +49,17 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   const [busy, setBusy] = useState<Busy>(null);
   const [reveal, setReveal] = useState<{ line: number; column: number; nonce: number }>();
 
-  /** Whether the save dialog is open, and whether it deploys afterwards. */
+  /** Whether the dialog for a new version is open, and whether it deploys afterwards. */
   const [saving, setSaving] = useState<'save' | 'deploy' | null>(null);
   const [change, setChange] = useState('');
 
   const current = files.find((file) => file.name === active) ?? files[0];
   const code = current?.code ?? '';
   const dirty = saved !== '' && JSON.stringify(files) !== saved;
+
+  // only the newest version is saved over; anything older is history, and
+  // with nothing saved yet there is nothing to save over either
+  const newest = loaded != null && loaded === lambda.latestVersion;
 
   useEffect(() => {
     onDirty(dirty);
@@ -70,6 +80,11 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   useEffect(() => {
     if (requested == null) {
       setSaved(JSON.stringify(files));
+      return;
+    }
+
+    // a version this view just made is already what it shows
+    if (requested === loaded) {
       return;
     }
 
@@ -149,28 +164,48 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
   }
 
-  /** Stores what is in the editor, with the note, and puts it online if asked to. */
-  async function commit(thenDeploy: boolean) {
+  /** Makes the version just saved the one the address shows, so a reload opens it. */
+  function follow(version: number) {
+    setLoaded(version);
+
+    if (Number(params.get('version')) !== version) {
+      setParams({ version: String(version) }, { replace: true });
+    }
+  }
+
+  /**
+   * Stores what is in the editor - over the newest version, or as a new one
+   * with the note - and puts it online if asked to.
+   */
+  async function commit(asNew: boolean, thenDeploy: boolean) {
     setSaving(null);
     setBusy(thenDeploy ? 'deploy' : 'save');
 
     try {
       let target = loaded ?? undefined;
 
-      if (dirty) {
-        const version = await api.save(privateKey, files, change.trim() || undefined);
+      if (dirty || asNew) {
+        const version = asNew || !newest
+          ? await api.save(privateKey, files, change.trim() || undefined)
+          : await api.update(privateKey, loaded!, files);
 
         setSaved(JSON.stringify(files));
-        setLoaded(version.version);
         setChange('');
+        follow(version.version);
 
         target = version.version;
-      }
 
-      if (!thenDeploy) {
-        await control.refresh();
-        toast(said.saved(target));
-        return;
+        if (!thenDeploy) {
+          await control.refresh();
+
+          toast(asNew || !newest
+            ? said.saved(version.version)
+            : version.version === lambda.activeVersion
+              ? said.savedOverOnline(version.version)
+              : said.savedOver(version.version));
+
+          return;
+        }
       }
 
       const result = await api.deploy(privateKey, target);
@@ -189,6 +224,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     }
   }
 
+  /** Saving: over the newest version at once, or - for one that is history - as a new version. */
   const save = useCallback(() => {
     if (busy) {
       return;
@@ -199,22 +235,30 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       return;
     }
 
-    setSaving('save');
-  }, [busy, dirty, toast, said]);
+    if (newest) {
+      commit(false, false);
+    } else {
+      setSaving('save');
+    }
+    // commit reads the state of this render, which is what it should save
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, dirty, newest, toast, said, files]);
 
   function deploy() {
-    if (dirty) {
+    if (dirty && !newest) {
       setSaving('deploy');
     } else {
-      commit(true);
+      commit(false, true);
     }
   }
 
   const online = loaded != null && loaded === lambda.activeVersion;
   // a demo is there to be read: its files open, nothing in them changes
   const demo = isDemo(lambda.tier);
-  const newer = lambda.latestVersion != null && loaded != null && lambda.latestVersion > loaded && !dirty;
   const showDiagnostics = diagnostics.length > 0 || built === 'clean';
+
+  // nothing to put online: what is open is exactly what is online already
+  const settled = !dirty && online && !lambda.activeChanged;
 
   return (
     <Section
@@ -224,15 +268,16 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           {said.title}
           <span className="ml-2 text-sm font-normal text-slate-500">
             {loaded != null ? said.version(loaded) : ''}
-            {dirty ? said.edited : online ? said.online : ''}
+            {loaded != null ? (newest ? said.newestTag : said.older) : ''}
+            {dirty ? said.edited : online ? (lambda.activeChanged ? said.unpublished : said.online) : ''}
           </span>
         </>
       }
       hint={
         <>
           {demo ? said.demo : said.edit}
+          {!demo && loaded != null && !newest && lambda.latestVersion != null && said.history(loaded, lambda.latestVersion)}
           {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>)}
-          {newer && said.newer(lambda.latestVersion!)}
         </>
       }
       actions={
@@ -243,11 +288,30 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           </button>
           {!demo && (
             <>
-              <button type="button" onClick={save} disabled={busy !== null || !dirty} className="btn-ghost !px-3 !py-1.5 text-[13px]" title="Ctrl+S">
-                {busy === 'save' && <IconSpinner />}
-                {said.save}
-              </button>
-              <button type="button" onClick={deploy} disabled={busy !== null || (!dirty && online)} className="btn-primary !px-4 !py-1.5 text-[13px]">
+              {loaded != null && (
+                <button
+                  type="button"
+                  onClick={() => setSaving('save')}
+                  disabled={busy !== null}
+                  className="btn-ghost !px-3 !py-1.5 text-[13px]"
+                  title={said.saveNewTitle}
+                >
+                  {said.saveNew}
+                </button>
+              )}
+              {(newest || loaded == null) && (
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={busy !== null || !dirty}
+                  className="btn-ghost !px-3 !py-1.5 text-[13px]"
+                  title={loaded != null ? said.saveTitle(loaded) : 'Ctrl+S'}
+                >
+                  {busy === 'save' && <IconSpinner />}
+                  {said.save}
+                </button>
+              )}
+              <button type="button" onClick={deploy} disabled={busy !== null || settled} className="btn-primary !px-4 !py-1.5 text-[13px]">
                 {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
                 {said.deploy}
               </button>
@@ -306,7 +370,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       )}
 
       <Dialog
-        title={saving === 'deploy' ? said.saveAndDeploy : said.saveVersion}
+        title={saving === 'deploy' ? said.saveNewAndDeploy : said.saveVersion}
         open={saving !== null}
         onClose={() => setSaving(null)}
         footer={
@@ -314,8 +378,8 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
             <button type="button" onClick={() => setSaving(null)} className="btn-ghost">
               {said.cancel}
             </button>
-            <button type="button" onClick={() => commit(saving === 'deploy')} className="btn-primary">
-              {saving === 'deploy' ? said.saveAndDeploy : said.save}
+            <button type="button" onClick={() => commit(true, saving === 'deploy')} className="btn-primary">
+              {saving === 'deploy' ? said.saveNewAndDeploy : said.saveNew}
             </button>
           </>
         }
@@ -326,7 +390,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
             autoFocus
             value={change}
             onChange={(event) => setChange(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && commit(saving === 'deploy')}
+            onKeyDown={(event) => event.key === 'Enter' && commit(true, saving === 'deploy')}
             maxLength={500}
             placeholder={said.placeholder}
             className="field mt-2"

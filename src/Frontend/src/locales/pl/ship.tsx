@@ -69,7 +69,7 @@ export const ship: Messages['ship'] = {
     ],
     [
       'Jak ją później zmienić?',
-      'Linkiem do edytora, który dostajesz przy publikacji. Daj go agentowi razem z kolejną zmianą albo otwórz go w przeglądarce. Każda zmiana to nowa wersja pod tym samym adresem, a do starszej możesz wrócić w każdej chwili.',
+      'Linkiem do edytora, który dostajesz przy publikacji. Daj go agentowi razem z kolejną zmianą albo otwórz go w przeglądarce. Każda zmiana, o którą poprosisz, to osobna wersja pod tym samym adresem, a do starszej możesz wrócić w każdej chwili.',
     ],
     [
       'Kto zobaczy moją aplikację?',

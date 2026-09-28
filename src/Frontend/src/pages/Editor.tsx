@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
 import type { Busy, Control, Rejection } from '../control/context';
+import { DataTab } from '../control/DataTab';
 import { DeploymentsTab } from '../control/DeploymentsTab';
 import { DomainTab } from '../control/DomainTab';
 import { FilesTab } from '../control/FilesTab';
@@ -31,9 +32,15 @@ interface Props {
   theme: Theme;
 }
 
-type SectionId = 'overview' | 'change' | 'files' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
+type SectionId = 'overview' | 'change' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain';
 
-const SECTIONS: SectionId[] = ['overview', 'change', 'showcase', 'domain', 'files', 'versions', 'deployments', 'stats', 'logs', 'code'];
+/*
+ * Files and Data side by side, because they are the two halves of what a
+ * lambda keeps - the program, which belongs to a version, and what it keeps,
+ * which belongs to the lambda - and somebody looking for one is best shown
+ * the other right beside it.
+ */
+const SECTIONS: SectionId[] = ['overview', 'change', 'showcase', 'domain', 'files', 'data', 'versions', 'deployments', 'stats', 'logs', 'code'];
 
 /**
  * The control center of one lambda.
@@ -193,6 +200,29 @@ export function Editor({ theme }: Props) {
     [privateKey, refresh, toast, said],
   );
 
+  const startVersion = useCallback(
+    async (from?: number) => {
+      const source = from ?? lambda?.latestVersion;
+
+      if (source == null) {
+        return null;
+      }
+
+      try {
+        const copy = await api.copy(privateKey, source);
+
+        await refresh();
+        toast(t.versions.started(copy.version), 'success');
+
+        return copy.version;
+      } catch (error) {
+        toast(error instanceof ApiError ? error.message : t.versions.startFailed, 'error');
+        return null;
+      }
+    },
+    [privateKey, lambda?.latestVersion, refresh, toast, t],
+  );
+
   const undeploy = useCallback(async () => {
     setBusy('undeploy');
 
@@ -309,6 +339,8 @@ export function Editor({ theme }: Props) {
     edit: (version) => go(`${base}/code${version != null ? `?version=${version}` : ''}`),
     browse: (version) => go(`${base}/files${version != null ? `?version=${version}` : ''}`),
     agent,
+    openData: () => go(`${base}/data`),
+    startVersion,
   };
 
   const change = agent.state?.job;
@@ -320,6 +352,10 @@ export function Editor({ theme }: Props) {
   const editorUrl = `${window.location.origin}${lambda.editorPath}`;
   const latest = lambda.latestVersion;
   const ahead = latest != null && latest !== lambda.activeVersion;
+
+  // the version online was saved over since it went online, so deploying it
+  // again is what puts the work online
+  const changed = live && lambda.activeChanged;
   const problems = (summary?.recentProblems.length ?? 0) > 0;
 
   const code = section === 'code';
@@ -393,17 +429,22 @@ export function Editor({ theme }: Props) {
 
           {/* not while the agent is at work: what it saved last may be a
               version it is still fixing, and it deploys what it finishes */}
-          {ahead && latest != null && !demo && !changing && (
-            <button
-              type="button"
-              onClick={() => deploy(latest)}
-              disabled={busy !== null}
-              className="btn-primary mt-4 w-full"
-              title={versions[0]?.change ?? undefined}
-            >
-              {busy === 'deploy' ? <IconSpinner /> : <IconPlay />}
-              {said.deploy(latest)}
-            </button>
+          {(ahead || changed) && latest != null && !demo && !changing && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => deploy(ahead ? latest : lambda.activeVersion!)}
+                disabled={busy !== null}
+                className="btn-primary w-full"
+                title={ahead ? versions[0]?.change ?? undefined : said.changedSince}
+              >
+                {busy === 'deploy' ? <IconSpinner /> : <IconPlay />}
+                {said.deploy(ahead ? latest : lambda.activeVersion!)}
+              </button>
+              {!ahead && (
+                <p className="mt-1.5 text-center text-xs text-slate-500" title={said.changedSince}>{said.changedShort}</p>
+              )}
+            </div>
           )}
         </div>
 
@@ -511,6 +552,8 @@ export function Editor({ theme }: Props) {
           <ChangeTab control={control} />
         ) : section === 'files' ? (
           <FilesTab control={control} />
+        ) : section === 'data' ? (
+          <DataTab control={control} />
         ) : section === 'versions' ? (
           <VersionsTab control={control} />
         ) : section === 'deployments' ? (

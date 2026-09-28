@@ -69,6 +69,7 @@ export const editor: EditorMessages = {
       showcase: 'ショーケース',
       domain: 'ドメイン',
       files: 'ファイル',
+      data: 'データ',
       versions: 'バージョン',
       deployments: 'デプロイ履歴',
       stats: '統計',
@@ -95,6 +96,8 @@ export const editor: EditorMessages = {
     download: '.NETプロジェクトとしてダウンロード',
     delete: 'このlambdaを削除',
     deploy: (version) => `バージョン${version}をデプロイ`,
+    changedSince: 'オンラインになってから上書き保存されています。訪問者には、デプロイしたときの内容が配信されたままです。',
+    changedShort: 'オンラインになってから変更あり',
     problems: '最近エラーが発生しています',
     demoTitle: 'この環境がオンラインに保っている、読み取り専用のデモです。',
     demo: (start) => (
@@ -116,7 +119,7 @@ export const editor: EditorMessages = {
     deleteForGood: '完全に削除',
     deleteFailed: 'lambdaを削除できませんでした。',
     deleteText: (key) => (
-      <>すべてのバージョン、ファイル、履歴、そしてURL（{key}）が削除されます。元に戻すことはできません。</>
+      <>すべてのバージョン、すべてのデータ、履歴、そしてURL（{key}）が削除されます。元に戻すことはできません。</>
     ),
     openInTab: '新しいタブで開く',
     open: (address) => `${address}を新しいタブで開く`,
@@ -181,6 +184,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>{file}の読み込み</>,
       logs: 'ログの確認',
       create: 'lambdaの作成',
+      copy: '新しいバージョンの開始',
       write: (files) => <>{files || 'ファイル'}の変更</>,
       writeAll: (files) => <>{files}の書き込み</>,
       removing: (files) => <>、{files}の削除</>,
@@ -276,9 +280,15 @@ export const editor: EditorMessages = {
     noDescription: '説明なし',
     version: (version) => `バージョン${version}`,
     notOnline: 'まだオンラインではありません',
+    changedSinceOnline: 'オンラインになってから変更あり',
+    edited: '最終編集',
     wanted: '依頼内容',
     noVersions: 'まだバージョンはありません。',
     storage: 'ストレージ',
+    inVersion: (version) => `バージョン${version}に含まれるもの`,
+    noVersion: 'バージョンに含まれるもの',
+    inData: 'データに含まれるもの',
+    sharedByAll: 'すべてのバージョンで共有',
     browse: '一覧を見る',
     code: 'コード',
     codeWhy: 'C#はコンパイルされるだけで、配信はされません。',
@@ -287,6 +297,8 @@ export const editor: EditorMessages = {
     assetsPublic: '公開：コードが配信しています。',
     assetsPrivate: 'コードからは配信されていません。',
     data: 'データ',
+    workspace: 'ワークスペース',
+    workspaceOff: 'オフ',
     dataPublic: '公開：コードがワークスペースを配信しています。',
     dataPrivate: 'lambdaだけが使える非公開のデータです。',
   },
@@ -294,9 +306,17 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('コード')}はコンパイルされるだけで、配信はされません。{b('アセット')}
-        （ページ、スタイル、画像）はバージョンごとに保存され、コードが配信すれば公開されます。{b('データ')}
-        はlambdaが実行中に書き込むものです。どのバージョンにも含まれず、コードが配信する場合にだけ公開されます。
+        1つのバージョンのファイル、つまりプログラムそのものです。{b('コード')}はコンパイルされるだけで、配信はされません。
+        {b('アセット')}
+        （ページ、スクリプト、スタイル、画像）はコードと一緒に保存され、一緒にデプロイ・ロールバックされます。コードが配信すれば公開されます。lambdaが実行中に保存するものはここにはありません。それは
+        {b('データ')}にあります。
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        これらはバージョン{version}
+        のもので、バージョンと一緒に変わります。lambdaが実行中に保存するものはどのバージョンでも同じで、{data('データ')}
+        にあります。
       </>
     ),
     edit: 'このバージョンを編集',
@@ -318,7 +338,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'コードと一緒に保存されていますが、このバージョンでは配信されていません。',
     noAssets: 'このバージョンにはありません。',
     data: 'データ',
-    dataPublic: '公開：このバージョンがWorkspaceで配信しています。',
+    dataPublic: '公開：オンラインのコードがWorkspaceで配信しています。',
     dataPrivate: 'lambdaだけが使える非公開のデータです。どのバージョンにも含まれません。',
     uploadFailed: (path) => `${path}をアップロードできませんでした。`,
     deleteFolder: (path, held) =>
@@ -346,12 +366,62 @@ export const editor: EditorMessages = {
     notText: 'テキストではありません。中身を見るには、ダウンロードしてください。',
   },
 
+  data: {
+    hint:
+      'データは、lambdaが実行中に保存しておくものです。バージョンではなくlambdaのもので、どのバージョンも同じデータを読み書きします。バージョンをどう操作しても、データは変わりません。消えるのは、lambdaを削除したときか、その種類のデータをオフにしたときだけです。',
+    facts: [
+      ['すべてのバージョンで共有', 'どのバージョンがオンラインでも、同じデータを読み書きします。'],
+      ['デプロイしても残る', 'デプロイ、ロールバック、バージョンのコピーでは、一切変わりません。'],
+      ['オン・オフは自分で', '種類ごとに、必要な間だけオンにできます。オフにすると、中身は削除されます。'],
+    ],
+    kinds: {
+      workspace: {
+        name: 'ワークスペース',
+        what: 'lambdaが実行中に読み書きするファイルです。アップロードされたもの、記録など、保存しておきたいものなら何でも。',
+      },
+    },
+    on: 'オン',
+    off: 'オフ',
+    byDefault: '最初からオン',
+    usage: (items, used, of) => `${items} · ${used}／${of}`,
+    offText: 'オフになっています。中身は空で、これを使うコードは、もう一度オンにするまで失敗します。',
+    switchOn: 'オンにする',
+    switchOff: 'オフにする',
+    switchLabel: (name) => `${name}のオン・オフ`,
+    confirmOff: (name) => `${name}をオフにしますか？`,
+    confirmText: (items, size) => `中身（${items}、${size}）はすべて完全に削除されます。元に戻すことはできません。`,
+    confirmEmpty: '空なので、失われるものはありません。',
+    inUse: 'オンラインのバージョンがこれを使っています。もう一度オンにするまで、使っている部分は失敗します。',
+    deleteAndOff: 'オフにして削除',
+    keep: 'オンのままにする',
+    switchedOn: (name) => `${name}をオンにしました。次のリクエストから、lambdaが使えるようになります。`,
+    switchedOff: (name) => `${name}をオフにし、中身を削除しました。`,
+    switchFailed: '切り替えられませんでした。',
+    readFailed: 'データを読み込めませんでした。',
+    demo: 'デモなので、データは読むだけで、変更はできません。',
+    contents: 'ワークスペースの中身',
+    browse: 'ファイル',
+    offBrowse: 'ワークスペースがオフなので、表示するファイルはありません。',
+  },
+
   versions: {
     hint: (limit) =>
-      `各バージョンには、書いた人が残していれば、依頼内容と変更点が記録されます。バージョンが${limit}個を超えると古いものから削除されますが、オンラインのものは削除されません。`,
+      `バージョンはプログラムそのもの、つまりコードとアセットです。最新のバージョンは作業中のもので、何度でも上書き保存して、デプロイし直せます。それより前のバージョンは、比較やロールバックのために、そのままの形で残ります。各バージョンには、依頼内容と変更点が記録されます。バージョンが${limit}個を超えると古いものから削除されますが、オンラインのものは削除されません。`,
     none: 'まだバージョンはありません。',
     noDescription: '説明なし',
     online: 'オンライン',
+    newest: '最新',
+    newestTitle: '作業中のバージョン：保存すると、このバージョンが上書きされます',
+    edited: '最終編集',
+    saves: (count) => `${count}回保存`,
+    changedSince: 'オンラインになってから変更あり',
+    deployAgain: '再デプロイ',
+    deployAgainTitle: 'オンラインになってから保存した内容を反映する',
+    start: '新しいバージョン',
+    startTitle: (version) => `バージョン${version}はそのまま残し、そのコピーで作業を続ける`,
+    startFrom: 'ここから新しいバージョンを始める',
+    started: (version) => `バージョン${version}を作成しました。これが最新なので、ここで作業を続けます。`,
+    startFailed: '新しいバージョンを作成できませんでした。',
     putOnline: 'このバージョンをオンラインにする',
     rollBackTitle: 'この古いバージョンをオンラインに戻す',
     deploy: 'デプロイ',
@@ -386,6 +456,8 @@ export const editor: EditorMessages = {
       ended: '終了',
     },
     putBack: (version) => `バージョン${version}をオンラインに戻す`,
+    revision: (revision) => `${revision}回目の保存`,
+    revisionTitle: (revision) => `${revision}回目に保存した時点のバージョン`,
     timeline: '直近7日間にオンラインだったもの',
     block: (version, from, to) => `バージョン${version}、${from}〜${to ?? '現在'}`,
     weekAgo: '1週間前',
@@ -571,25 +643,36 @@ export const editor: EditorMessages = {
     notYet: 'まだコンパイルできません。',
     checkFailed: 'コードをチェックできませんでした。',
     saved: (version) => `バージョン${version}として保存しました。`,
+    savedOver: (version) => `バージョン${version}に上書き保存しました。オンラインにするには、デプロイしてください。`,
+    savedOverOnline: (version) =>
+      `バージョン${version}に上書き保存しました。もう一度デプロイするまで、訪問者にはデプロイしたときの内容が配信されます。`,
     isOnline: (version) => `バージョン${version}がオンラインになりました。`,
     notOnline: 'オンラインになりませんでした。下のコンパイラーのメッセージを確認してください。',
     failed: 'うまくいきませんでした。',
     unchanged: '前回の保存から変更はありません。',
     demo: 'デモなので、すべて読み取り専用です。変更するには、これをもとに自分のlambdaを作成してください。',
-    edit: 'コードを手で編集します。保存すると新しいバージョンができ、オンラインのものはそのままです。デプロイするとオンラインになります。',
+    edit: 'コードを手で編集します。保存すると最新のバージョンがその場で上書きされ、何度でも保存できます。オンラインのものが変わるのは、デプロイしたときだけです。「新しいバージョン」を使うと、元のバージョンはそのまま残ります。',
+    history: (version, newest) =>
+      `バージョン${version}は履歴なので、そのまま残ります。保存すると、ここから新しいバージョンが作られます。最新はバージョン${newest}です。`,
     files: (entry, cs) => (
       <>
         {entry}が返すものが配信され、ほかの{cs}
         ファイルには型を書きます。それ以外のファイルはそのまま配信されます。Ctrl-Sで保存、F12で宣言へ移動します。
       </>
     ),
-    newer: (version) => `ここで開いているものより新しい、バージョン${version}があります。`,
     check: 'チェック',
     save: '保存',
+    saveTitle: (version) => `バージョン${version}に上書き保存（Ctrl+S）`,
+    saveNew: '新しいバージョン',
+    saveNewTitle: '新しいバージョンとして保存し、元のバージョンはそのまま残す',
     deploy: 'デプロイ',
+    older: '（履歴）',
+    newestTag: '（最新）',
+    unpublished: '（オンラインになってから保存あり）',
     binary: (size) => `テキストではないため、編集できません。このまま配信されます（${size} kB）。`,
     saveAndDeploy: '保存してデプロイ',
     saveVersion: '新しいバージョンとして保存',
+    saveNewAndDeploy: '新しいバージョンとして保存してデプロイ',
     cancel: 'キャンセル',
     what: '何を変更しましたか？（任意。履歴に表示されます）',
     placeholder: 'お問い合わせフォームを追加',

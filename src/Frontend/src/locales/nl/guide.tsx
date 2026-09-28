@@ -59,9 +59,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Geef de editorsleutel aan een agent en vertel wat hij moet bouwen. Hij schrijft nieuwe versies via{' '}
-        {k.link('/#agents', 'MCP')}. Of open {k.b('Code')} en schrijf het zelf: {k.b('Controleren')} compileert
-        zonder iets op te slaan en laat zien wat de compiler ervan vindt, met bestand en regel.
+        Geef de editorsleutel aan een agent en vertel wat hij moet bouwen. Hij werkt via {k.link('/#agents', 'MCP')},
+        met een eigen versie voor alles wat je vraagt. Of open {k.b('Code')} en schrijf het zelf: {k.b('Controleren')}{' '}
+        compileert zonder iets op te slaan en laat zien wat de compiler ervan vindt, met bestand en regel.
       </>
     ),
     (k) => (
@@ -76,7 +76,7 @@ export const guide: Messages['guide'] = {
     <>
       De editorlink opent geen tekstvak maar een dashboard. De meeste code hier schrijven agents, dus het eerste wat
       je ziet, is hoe het met je lambda gaat. In de zijbalk staat de lambda zelf: of hij online is, zijn adres, en een
-      knop als er een nieuwere versie klaarstaat om online te gaan. Daaronder staan de onderdelen. Wat je zelden doet,
+      knop als er iets klaarstaat om online te zetten. Daaronder staan de onderdelen. Wat je zelden doet,
       zoals het adres wijzigen of de lambda verwijderen, zit daar achter het menu {k.b('⋯')}.
     </>
   ),
@@ -92,8 +92,9 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
-    ['Bestanden', () => <>De bestanden van een versie, en de data: wat de lambda opslaat terwijl hij draait. Een slotje of een wereldbol laat zien of ze openbaar bereikbaar zijn.</>],
-    ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug.</>],
+    ['Bestanden', () => <>De bestanden van een versie: de code en assets, het programma zelf. Een slotje of een wereldbol laat zien of ze openbaar bereikbaar zijn.</>],
+    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de workspace. Kijk erin, upload en verwijder bestanden, of zet hem uit.</>],
+    ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Aan de nieuwste wordt gewerkt. Van hieruit deploy je, zet je een versie terug of begin je een nieuwe versie.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
     ['Statistieken', () => <>Requests, fouten, responstijden en de meest opgevraagde paden, over het afgelopen uur of de afgelopen dag.</>],
     ['Logs', () => <>Requests, output en de stacktrace van alles wat misging, live.</>],
@@ -101,8 +102,9 @@ export const guide: Messages['guide'] = {
       'Code',
       (k) => (
         <>
-          Zelf schrijven. {k.b('Controleren')} compileert, {k.b('Opslaan')} maakt een versie, {k.b('Deployen')} zet
-          hem online. {k.code('Ctrl-S')} slaat op; {k.code('F12')} springt naar een declaratie.
+          Zelf schrijven. {k.b('Controleren')} compileert, {k.b('Opslaan')} overschrijft de nieuwste versie,{' '}
+          {k.b('Nieuwe versie')} laat die zoals hij is en begint een nieuwe, {k.b('Deployen')} zet hem online.{' '}
+          {k.code('Ctrl-S')} slaat op; {k.code('F12')} springt naar een declaratie.
         </>
       ),
     ],
@@ -130,9 +132,10 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Agents geven dezelfde twee velden mee aan {k.code('write_code')}. In {k.b('Code')} vraagt opslaan om de
-      wijziging. Beide zijn optioneel. Een lange specificatie wordt afgekapt op 4000 tekens en een wijziging op 500,
-      in plaats van geweigerd.
+      Agents geven dezelfde twee velden mee aan {k.code('write_code')}. In {k.b('Code')} vraagt{' '}
+      {k.b('Nieuwe versie')} om de wijziging. Beide zijn optioneel. Een lange specificatie wordt afgekapt op 4000
+      tekens en een wijziging op 500, in plaats van geweigerd. Overschrijf je een versie, dan blijven de notities
+      staan, tenzij je nieuwe meegeeft.
     </>
   ),
 
@@ -144,14 +147,15 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
-  page: 'Er zijn drie manieren. Welke je wilt, hangt af van waar de pagina staat.',
+  page: 'Er zijn twee manieren om een pagina te serveren, en nog een voor wat mensen ernaast uploaden.',
   inlineTitle: 'Eén pagina, inline geschreven',
   inline: 'Prima voor iets kleins. De pagina zit in de snippet zelf.',
   folderTitle: 'Een map met echte bestanden',
   folder:
     'De juiste keuze voor alles met een stylesheet en een script. Je voegt de bestanden toe zoals een C#-bestand, en ze worden precies zo geserveerd als je ze schreef. Er wordt niets gecompileerd.',
-  workspaceTitle: 'Vanuit de workspace',
-  workspace: 'Voor een pagina die je uploadt in plaats van schrijft, en die je wilt aanpassen zonder opnieuw te deployen.',
+  workspaceTitle: 'Geüploade bestanden, uit de data',
+  workspace:
+    "Voor wat mensen uploaden of wat de lambda aanmaakt, zoals foto's en documenten, geserveerd naast de app. Niet voor de pagina's van de app zelf: die horen in een map met bestanden, zodat ze in dezelfde versie zitten als de code die ze nodig heeft.",
 
   spa: (k) => (
     <>
@@ -194,24 +198,25 @@ export const guide: Messages['guide'] = {
 
   storage: (k) => (
     <>
-      Het onderdeel {k.b('Bestanden')} laat ze allebei zien: de bestanden van een versie, en de workspace als{' '}
-      {k.b('Data')}. Je ziet ook welke openbaar bereikbaar zijn. Codebestanden pas je aan in {k.b('Code')}; data kun
-      je uploaden en verwijderen in {k.b('Bestanden')}. Toch zijn het niet hetzelfde, en het verschil zit in{' '}
-      {k.em('wanneer ze veranderen')}.
+      Een lambda bewaart bestanden op twee plekken, en de editor toont ze apart: {k.b('Bestanden')} bevat de
+      bestanden van een versie (het programma), en {k.b('Data')} bevat de workspace (wat het programma bewaart). Het
+      verschil zit in {k.em('van wie ze zijn')}. De bestanden van een versie horen bij die versie; de data hoort bij de
+      lambda, en elke versie deelt die.
     </>
   ),
-  savedWithCode: 'Opgeslagen met je code',
-  workspaceColumn: 'Workspace',
+  savedWithCode: 'In een versie',
+  workspaceColumn: 'In de data',
   table: [
-    ['wat erin staat', 'elk bestand van je lambda, de C# inbegrepen', 'alles wat is weggeschreven of geüpload'],
-    ['wanneer het verandert', 'als je op Opslaan of Deployen klikt', 'zodra er iets naar wordt geschreven'],
-    ['een deploy', 'vervangt alles', 'raakt het nooit aan'],
-    ['een versie terugzetten', 'haalt de oude bestanden terug', 'geen effect'],
-    ['de lambda klonen', 'gaat mee', 'gaat niet mee'],
+    ['wat erin staat', 'de code en assets: het programma, frontend inbegrepen', 'alles wat de lambda wegschrijft of iemand uploadt'],
+    ['wanneer het verandert', 'als de versie wordt opgeslagen', 'zodra er iets naar wordt geschreven'],
+    ['een deploy', 'zet precies deze bestanden online', 'raakt het nooit aan'],
+    ['terugzetten', 'haalt de oude bestanden terug', 'geen effect: elke versie deelt het'],
+    ['een nieuwe versie', 'begint als kopie ervan', 'geen effect'],
+    ['wanneer het verdwijnt', 'met oude versies, boven de limiet', 'met de lambda, of als je het uitzet'],
   ],
   reachedAs: 'in code te bereiken als',
   storageAside:
-    'Het kan niet één en dezelfde map zijn. Dan zou een deploy alles wissen wat je lambda sindsdien had weggeschreven, of zou er nooit iets weg kunnen uit wat hij meelevert. Een spel met een ranglijst wil het tweede; de pagina die het serveert wil het eerste.',
+    'Het kan niet één en dezelfde plek zijn. Dan zou een deploy alles wissen wat je lambda sindsdien had weggeschreven, of zou er nooit iets weg kunnen uit wat hij meelevert. Een spel met een ranglijst wil het tweede; de pagina die het serveert wil het eerste. Dus de pagina gaat in de versie, en de ranglijst in de data.',
 
   keeping: (k) => (
     <>

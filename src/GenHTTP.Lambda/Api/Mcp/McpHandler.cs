@@ -199,8 +199,15 @@ public sealed class McpHandler : IHandler
                 "read_logs work on them as on your own. Follow their patterns.",
                 "",
                 "Flow: create_lambda, then write_code with deploy: true (check_code first if unsure). Nothing is",
-                "reachable before deploy. For later changes use change_code, which takes only the files or the",
-                "lines that change.",
+                "reachable before deploy. Then keep working in the version that saved: change_code with version",
+                "set to its number saves each fix over it (deploy: true to try it), and takes only the files or",
+                "lines that change. Start a new version once per thing the user asks for, not per fix -",
+                "copy_version starts one without sending files. Older versions are history, to roll back to.",
+                "",
+                "A version is the program: code and assets, the whole front end included. Data - the workspace -",
+                "is what the program keeps: shared by every version, untouched by deploys and rollbacks, gone only",
+                "with the lambda. User data goes in the workspace, never in assets; the front end goes in assets,",
+                "never in the workspace.",
                 "",
                 "Link with relative paths only (\"api/items\", \"app.css\" - no leading slash, never /lambda/...):",
                 "a lambda can also answer at the root of a domain of its own, where absolute paths break.",
@@ -214,8 +221,8 @@ public sealed class McpHandler : IHandler
                 "",
                 "If you can make HTTP requests, prefer the REST API at https://genhttp.dev/api/v1/openapi.json:",
                 "same functionality, fewer tokens, since files are sent directly. A version can be downloaded",
-                "and uploaded as a zip, so you can edit locally and push once. Many environments cannot",
-                "reach it; then use these tools."
+                "and put back as a zip, over the newest version, so you can edit locally and push as often as it",
+                "takes. Many environments cannot reach it; then use these tools."
             ])
         };
     }

@@ -487,8 +487,9 @@ public sealed record LambdaOptions
     /// <summary>
     /// What a lambda in the given tier may keep in its workspace.
     /// </summary>
-    public WorkspaceLimits WorkspaceOf(LambdaTier tier)
-        => new(tier == LambdaTier.Premium ? PremiumWorkspaceBytes : WorkspaceBytes);
+    /// <param name="enabled">Whether its owner left the workspace switched on</param>
+    public WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true)
+        => new(tier == LambdaTier.Premium ? PremiumWorkspaceBytes : WorkspaceBytes, enabled);
 
     #endregion
 

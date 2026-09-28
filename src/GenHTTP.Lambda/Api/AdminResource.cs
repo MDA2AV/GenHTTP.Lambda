@@ -235,7 +235,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
             telemetry.Describe(id),
             [.. versions.Select(VersionResource.Describe)],
             [.. activations.Select(a => new ActivationResponse(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy,
-                                                                (long)((a.Ended ?? now) - a.Started).TotalSeconds))],
+                                                                (long)((a.Ended ?? now) - a.Started).TotalSeconds, a.Revision))],
             // the tiers the operator may move a lambda to, which is every one
             // but the demos': those are the seeder's to hand out
             [.. Enum.GetValues<LambdaTier>().Where(t => t != LambdaTier.Demo).Select(t => t.ToString())]

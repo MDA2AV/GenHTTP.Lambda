@@ -22,7 +22,8 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, Lambd
     {
         var lambda = request.RequireLambda();
 
-        var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, options.WorkspaceOf(lambda.Tier));
+        var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, lambda.ActiveRevision,
+                                                     options.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled));
 
         return await handler.HandleAsync(request);
     }

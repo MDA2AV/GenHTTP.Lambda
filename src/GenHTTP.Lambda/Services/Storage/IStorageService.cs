@@ -8,14 +8,41 @@ public interface IStorageService
 {
 
     /// <summary>
-    /// Stores the code of a newly created version.
+    /// Stores the code of a version, replacing what it held before.
     /// </summary>
+    /// <remarks>
+    /// Written whole or not at all: the newest version is saved over while it
+    /// is worked on, and a save cut short must not leave half of one behind.
+    /// </remarks>
     ValueTask WriteAsync(long lambdaId, int version, string code, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Reads the code of the given version, if it exists.
+    /// Reads the code of the given version, as it was last saved, if it exists.
     /// </summary>
     ValueTask<string?> ReadAsync(long lambdaId, int version, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Keeps the code of a version as it is now, as the code that is online.
+    /// </summary>
+    /// <remarks>
+    /// Called before the version that is online is saved over. What visitors
+    /// get only changes when it is deployed again, and a server that restarts
+    /// in between has to build what was deployed rather than what was saved
+    /// since - so it is set aside first, and only then, since for every other
+    /// lambda the version itself is what is online.
+    /// </remarks>
+    ValueTask PreserveOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Reads the code that is online, given the version that is: what was set
+    /// aside for it if it has been saved over since, the version otherwise.
+    /// </summary>
+    ValueTask<string?> ReadOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Forgets what was set aside as online, once something else is - or nothing.
+    /// </summary>
+    ValueTask DropOnlineAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a single version of a lambda.

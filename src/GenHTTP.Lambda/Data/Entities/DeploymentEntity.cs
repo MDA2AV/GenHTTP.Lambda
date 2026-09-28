@@ -1,9 +1,13 @@
 namespace GenHTTP.Lambda.Data.Entities;
 
 /// <summary>
-/// An immutable version of the code of a lambda. Saving or deploying creates a
-/// new record, existing ones are never updated.
+/// A version of the code of a lambda.
 /// </summary>
+/// <remarks>
+/// The newest version of a lambda is the one being worked on and may be saved
+/// over, which counts up its <see cref="Revision" />; every version before it
+/// is history and never changes again.
+/// </remarks>
 public sealed class DeploymentEntity
 {
 
@@ -17,6 +21,16 @@ public sealed class DeploymentEntity
     public int Version { get; set; }
 
     public DateTime Created { get; set; }
+
+    /// <summary>
+    /// How many times it has been saved, the save that created it included.
+    /// </summary>
+    public int Revision { get; set; } = 1;
+
+    /// <summary>
+    /// When it was last saved over, or null while it is as it was created.
+    /// </summary>
+    public DateTime? Modified { get; set; }
 
     /// <summary>
     /// What the user wanted from this version and why - their requirements,

@@ -64,6 +64,7 @@ export const editor: EditorMessages = {
       showcase: 'Galeria',
       domain: 'Domena',
       files: 'Pliki',
+      data: 'Dane',
       versions: 'Wersje',
       deployments: 'Wdrożenia',
       stats: 'Statystyki',
@@ -90,6 +91,8 @@ export const editor: EditorMessages = {
     download: 'Pobierz jako projekt .NET',
     delete: 'Usuń tę lambdę',
     deploy: (version) => `Wdróż wersję ${version}`,
+    changedSince: 'Nadpisana od czasu wdrożenia. Odwiedzający nadal dostają to, co zostało wdrożone.',
+    changedShort: 'Zmieniona od czasu wdrożenia',
     problems: 'Ostatnio coś poszło nie tak',
     demoTitle: 'Demo utrzymywane online przez tę instalację, tylko do odczytu.',
     demo: (start) => (
@@ -111,7 +114,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Usuń na zawsze',
     deleteFailed: 'Nie udało się usunąć lambdy.',
     deleteText: (key) => (
-      <>Znikną wszystkie wersje, pliki, historia i adres {key}. Tego nie da się cofnąć.</>
+      <>Znikną wszystkie wersje, wszystkie dane, historia i adres {key}. Tego nie da się cofnąć.</>
     ),
     openInTab: 'Otwórz w nowej karcie',
     open: (address) => `Otwórz ${address} w nowej karcie`,
@@ -179,6 +182,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>Czytanie pliku {file}</>,
       logs: 'Czytanie logu',
       create: 'Tworzenie lambdy',
+      copy: 'Rozpoczynanie nowej wersji',
       write: (files) => <>Edycja {files}</>,
       writeAll: (files) => <>Zapisywanie {files}</>,
       removing: (files) => <>, usuwanie {files}</>,
@@ -275,9 +279,15 @@ export const editor: EditorMessages = {
     noDescription: 'Bez opisu',
     version: (version) => `Wersja ${version}`,
     notOnline: 'jeszcze nie online',
+    changedSinceOnline: 'zmieniona od czasu wdrożenia',
+    edited: 'edytowana',
     wanted: 'O co proszono',
     noVersions: 'Jeszcze nie ma wersji.',
     storage: 'Miejsce',
+    inVersion: (version) => `W wersji ${version}`,
+    noVersion: 'W wersji',
+    inData: 'W danych',
+    sharedByAll: 'Wspólne dla wszystkich wersji',
     browse: 'Przeglądaj',
     code: 'Kod',
     codeWhy: 'C# jest kompilowany, nigdy serwowany.',
@@ -286,6 +296,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Publiczne: kod je serwuje.',
     assetsPrivate: 'Kod ich nie serwuje.',
     data: 'Dane',
+    workspace: 'Obszar roboczy',
+    workspaceOff: 'wyłączony',
     dataPublic: 'Publiczne: kod serwuje obszar roboczy.',
     dataPrivate: 'Dostępne tylko dla lambdy.',
   },
@@ -293,9 +305,15 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('Kod')} jest kompilowany i nigdy nie jest serwowany. {b('Zasoby')} – strony, style, obrazki – są zapisywane z
-        każdą wersją i są publiczne, jeśli kod je serwuje. {b('Dane')} to to, co lambda zapisuje w trakcie działania; nie
-        należą do żadnej wersji i są publiczne tylko wtedy, gdy kod je serwuje.
+        Pliki jednej wersji – czyli program. {b('Kod')} jest kompilowany i nigdy nie jest serwowany. {b('Zasoby')} –
+        strony, skrypty, style, obrazki – są zapisywane razem z kodem, razem z nim wdrażane i przywracane, i są publiczne,
+        jeśli kod je serwuje. Tego, co lambda przechowuje w trakcie działania, tu nie ma: to jej {b('Dane')}.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        Te pliki należą do wersji {version} i zmieniają się razem z nią. To, co lambda przechowuje w trakcie działania,
+        jest wspólne dla wszystkich wersji i znajdziesz to w sekcji {data('Dane')}.
       </>
     ),
     edit: 'Edytuj tę wersję',
@@ -317,7 +335,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Zapisane z kodem, ale ta wersja ich nie serwuje.',
     noAssets: 'Brak w tej wersji.',
     data: 'Dane',
-    dataPublic: 'Publiczne: ta wersja serwuje je przez Workspace.',
+    dataPublic: 'Publiczne: kod, który jest online, serwuje je przez Workspace.',
     dataPrivate: 'Dostępne tylko dla lambdy. Nie należą do żadnej wersji.',
     uploadFailed: (path) => `Nie udało się przesłać pliku ${path}.`,
     deleteFolder: (path, held) =>
@@ -347,12 +365,63 @@ export const editor: EditorMessages = {
     notText: 'To nie jest tekst. Pobierz plik, żeby zajrzeć do środka.',
   },
 
+  data: {
+    hint:
+      'Dane to to, co lambda przechowuje w trakcie działania. Należą do lambdy, a nie do wersji: każda wersja czyta i zapisuje te same dane, a nic, co robisz z wersjami, ich nie zmienia. Znikają dopiero wtedy, gdy usuniesz lambdę albo wyłączysz dany rodzaj danych.',
+    facts: [
+      ['Wspólne dla wszystkich wersji', 'Niezależnie od tego, która wersja jest online, czyta i zapisuje te same dane.'],
+      ['Zostają przy wdrożeniu', 'Ani wdrożenie, ani przywrócenie, ani skopiowanie wersji nigdy ich nie rusza.'],
+      ['Ty decydujesz', 'Każdy rodzaj jest włączony tylko wtedy, gdy tego chcesz. Wyłączenie go usuwa to, co w nim jest.'],
+    ],
+    kinds: {
+      workspace: {
+        name: 'Obszar roboczy',
+        what: 'Pliki, które lambda czyta i zapisuje w trakcie działania: przesłane pliki, wpisy, wszystko, co przechowuje.',
+      },
+    },
+    on: 'Włączone',
+    off: 'Wyłączone',
+    byDefault: 'Domyślnie włączone',
+    usage: (items, used, of) => `${items} · ${used} z ${of}`,
+    offText: 'Wyłączony. Nic w nim nie ma, a kod, który z niego korzysta, nie zadziała, dopóki znów go nie włączysz.',
+    switchOn: 'Włącz',
+    switchOff: 'Wyłącz',
+    switchLabel: (name) => `${name}: włącz lub wyłącz`,
+    confirmOff: (name) => `Wyłączyć ${name.toLowerCase()}?`,
+    confirmText: (items, size) =>
+      `Wszystko, co w nim jest – ${items}, ${size} – zostanie usunięte na zawsze. Tego nie da się cofnąć.`,
+    confirmEmpty: 'Jest pusty, więc nic nie przepadnie.',
+    inUse: 'Wersja, która jest online, z niego korzysta, więc tam, gdzie go używa, przestanie działać, dopóki znów go nie włączysz.',
+    deleteAndOff: 'Wyłącz i usuń',
+    keep: 'Zostaw',
+    switchedOn: (name) => `${name} jest włączony. Lambda może z niego korzystać od następnego żądania.`,
+    switchedOff: (name) => `${name} jest wyłączony, a to, co w nim było, zostało usunięte.`,
+    switchFailed: 'Nie udało się tego przełączyć.',
+    readFailed: 'Nie udało się odczytać danych.',
+    demo: 'To demo: jego dane można przeglądać, ale nie zmieniać.',
+    contents: 'Co jest w obszarze roboczym',
+    browse: 'Pliki',
+    offBrowse: 'Obszar roboczy jest wyłączony, więc nie ma plików do pokazania.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Każda wersja pamięta, o co proszono i co zmieniła – jeśli autor to podał. Gdy wersji jest więcej niż ${limit}, najstarsze są usuwane; ta, która jest online, nigdy.`,
+      `Wersja to program: jej kod i zasoby. Nad najnowszą trwa praca – można ją nadpisywać i ponownie wdrażać tyle razy, ile trzeba. Starsze zostają dokładnie takie, jakie były, żeby można je było porównać i do nich wrócić. Każda pamięta, o co proszono i co zmieniła. Gdy wersji jest więcej niż ${limit}, najstarsze są usuwane; ta, która jest online, nigdy.`,
     none: 'Jeszcze nie ma wersji.',
     noDescription: 'Bez opisu',
     online: 'online',
+    newest: 'najnowsza',
+    newestTitle: 'Wersja, nad którą trwa praca: zapisanie ją nadpisuje',
+    edited: 'edytowana',
+    saves: (count) => (count === 1 ? 'Zapisana raz' : `Zapisana ${count} razy`),
+    changedSince: 'zmieniona od czasu wdrożenia',
+    deployAgain: 'Wdróż ponownie',
+    deployAgainTitle: 'Wdróż to, co zapisano od czasu wdrożenia',
+    start: 'Nowa wersja',
+    startTitle: (version) => `Zostaw wersję ${version} bez zmian i pracuj dalej na jej kopii`,
+    startFrom: 'Utwórz nową wersję na podstawie tej',
+    started: (version) => `Utworzono wersję ${version}. Teraz to ona jest najnowsza, więc tu toczy się dalsza praca.`,
+    startFailed: 'Nie udało się utworzyć nowej wersji.',
     putOnline: 'Wdróż tę wersję',
     rollBackTitle: 'Przywróć tę starszą wersję online',
     deploy: 'Wdróż',
@@ -387,6 +456,8 @@ export const editor: EditorMessages = {
       ended: 'zakończone',
     },
     putBack: (version) => `Przywróć online wersję ${version}`,
+    revision: (revision) => `zapis ${revision}`,
+    revisionTitle: (revision) => `Wersja w takim stanie, jak po zapisie nr ${revision}`,
     timeline: 'Co było online w ciągu ostatnich siedmiu dni',
     block: (version, from, to) => `Wersja ${version}, od ${from} do ${to ?? 'teraz'}`,
     weekAgo: 'tydzień temu',
@@ -576,25 +647,36 @@ export const editor: EditorMessages = {
     notYet: 'Jeszcze się nie kompiluje.',
     checkFailed: 'Nie udało się sprawdzić kodu.',
     saved: (version) => `Zapisano jako wersję ${version}.`,
+    savedOver: (version) => `Nadpisano wersję ${version}. Wdróż ją, żeby trafiła online.`,
+    savedOverOnline: (version) =>
+      `Nadpisano wersję ${version}. Odwiedzający dostają to, co wdrożono, dopóki nie wdrożysz jej ponownie.`,
     isOnline: (version) => `Wersja ${version} jest online.`,
     notOnline: 'Nie trafiła online. Zobacz niżej, co mówi kompilator.',
     failed: 'Nie udało się.',
     unchanged: 'Nic się nie zmieniło od ostatniego zapisu.',
     demo: 'To demo, więc wszystko tu jest tylko do odczytu. Żeby coś zmienić, utwórz na jego podstawie własną lambdę. ',
-    edit: 'Edytuj kod ręcznie. Zapisanie tworzy nową wersję i nie rusza tego, co jest online; wdrożenie wrzuca ją online. ',
+    edit: 'Edytuj kod ręcznie. Zapisanie nadpisuje najnowszą wersję – tyle razy, ile chcesz; to, co jest online, zmienia się dopiero po wdrożeniu. „Nowa wersja” zostawia wersję wyjściową bez zmian. ',
+    history: (version, newest) =>
+      `Wersja ${version} należy do historii i się nie zmienia, więc zapisanie utworzy na jej podstawie nową wersję. Najnowsza jest wersja ${newest}. `,
     files: (entry, cs) => (
       <>
         {entry} zwraca to, co jest serwowane, pozostałe pliki {cs} zawierają typy, a każdy inny plik jest serwowany bez
         zmian. Ctrl+S zapisuje, F12 przechodzi do deklaracji.
       </>
     ),
-    newer: (version) => ` Wersja ${version} jest nowsza niż ta, którą masz otwartą.`,
     check: 'Sprawdź',
     save: 'Zapisz',
+    saveTitle: (version) => `Nadpisz wersję ${version} (Ctrl+S)`,
+    saveNew: 'Nowa wersja',
+    saveNewTitle: 'Zapisz jako nową wersję, a wyjściową zostaw bez zmian',
     deploy: 'Wdróż',
+    older: ', historyczna',
+    newestTag: ', najnowsza',
+    unpublished: ', nadpisana od czasu wdrożenia',
     binary: (size) => `Ten plik nie jest tekstem, więc nie da się go edytować. Jest serwowany bez zmian i waży ${size} kB.`,
     saveAndDeploy: 'Zapisz i wdróż',
     saveVersion: 'Zapisz nową wersję',
+    saveNewAndDeploy: 'Zapisz nową wersję i wdróż ją',
     cancel: 'Anuluj',
     what: 'Co zmienia ta wersja? Opcjonalnie – pojawi się w historii.',
     placeholder: 'Dodaje formularz kontaktowy',

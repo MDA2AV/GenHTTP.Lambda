@@ -76,7 +76,7 @@ export const ship = {
     ],
     [
       'How do I change it later?',
-      'With the editor link you got when it was published. Hand it to your agent with the next change, or open it in your browser. Every change becomes a new version at the same address, and you can go back to an older one at any time.',
+      'With the editor link you got when it was published. Hand it to your agent with the next change, or open it in your browser. Every change you ask for becomes a version of its own at the same address, and you can go back to an older one at any time.',
     ],
     [
       'Who can see my app?',

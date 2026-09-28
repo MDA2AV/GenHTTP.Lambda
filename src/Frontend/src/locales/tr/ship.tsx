@@ -70,7 +70,7 @@ export const ship: Messages['ship'] = {
     ],
     [
       'Sonradan nasıl değiştiririm?',
-      'Yayınlandığında aldığınız editör linkiyle. Bir sonraki değişiklikle birlikte ajanınıza verin ya da tarayıcınızda açın. Her değişiklik aynı adreste yeni bir sürüm olur. İstediğiniz zaman eski bir sürüme dönebilirsiniz.',
+      'Yayınlandığında aldığınız editör linkiyle. Bir sonraki değişiklikle birlikte ajanınıza verin ya da tarayıcınızda açın. İstediğiniz her değişiklik aynı adreste ayrı bir sürüm olur. İstediğiniz zaman eski bir sürüme dönebilirsiniz.',
     ],
     [
       'Uygulamamı kimler görebilir?',

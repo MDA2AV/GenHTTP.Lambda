@@ -34,7 +34,7 @@ export const landing = {
     },
     {
       title: 'Keep improving it',
-      body: 'Every app comes with a private editor link. Hand it to your agent along with the next change, or open it yourself. Each change becomes a new version, and the address stays the same.',
+      body: 'Every app comes with a private editor link. Hand it to your agent along with the next change, or open it yourself. Each change you ask for becomes a version of its own, and the address stays the same.',
       alt: "The poll's control center: its versions, each with what was asked for, what it changed and the difference to the one before",
     },
   ],

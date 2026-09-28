@@ -84,7 +84,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             current == null
                 ? null
                 : new ActivationResponse(current.Version, current.Started, current.Origin, null, null,
-                                         (long)(now - current.Started).TotalSeconds),
+                                         (long)(now - current.Started).TotalSeconds, current.Revision),
             Summarize(traffic),
             [.. problems.Select(Describe)],
             await MeasureAsync(privateKey, id, live?.Version ?? latest?.Version),
@@ -175,7 +175,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     }
 
     /// <summary>
-    /// What the lambda keeps: the files of a version and the workspace beside it.
+    /// What the lambda keeps: the files of a version, and its data beside it.
     /// </summary>
     private async ValueTask<StorageSummary> MeasureAsync(string privateKey, long id, int? version)
     {
@@ -207,7 +207,9 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             listing.Files.Count,
             listing.UsedBytes,
             code.Any(f => ServingAssets().IsMatch(f.Code)),
-            code.Any(f => ServingWorkspace().IsMatch(f.Code))
+            code.Any(f => ServingWorkspace().IsMatch(f.Code)),
+            listing.Enabled,
+            code.Any(f => UsingWorkspace().IsMatch(f.Code))
         );
     }
 
@@ -221,6 +223,13 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
     [GeneratedRegex(@"\bWorkspace\s*\.\s*(App|Files|Tree)\s*\(")]
     private static partial Regex ServingWorkspace();
+
+    /// <summary>
+    /// Any use of the workspace at all, to warn whoever is about to switch it
+    /// off that the code online would then fail where it reaches for it.
+    /// </summary>
+    [GeneratedRegex(@"\bWorkspace\s*\.\s*[A-Z]\w*")]
+    private static partial Regex UsingWorkspace();
 
     private static LogLevel Minimum(string? level) => level?.Trim().ToLowerInvariant() switch
     {

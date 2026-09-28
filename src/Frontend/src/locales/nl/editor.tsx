@@ -66,6 +66,7 @@ export const editor: EditorMessages = {
       showcase: 'Showcase',
       domain: 'Domein',
       files: 'Bestanden',
+      data: 'Data',
       versions: 'Versies',
       deployments: 'Deployments',
       stats: 'Statistieken',
@@ -92,6 +93,8 @@ export const editor: EditorMessages = {
     download: 'Downloaden als .NET-project',
     delete: 'Deze lambda verwijderen',
     deploy: (version) => `Versie ${version} deployen`,
+    changedSince: 'Opnieuw opgeslagen sinds hij online ging. Bezoekers krijgen nog steeds wat er gedeployd is.',
+    changedShort: 'Gewijzigd sinds hij online ging',
     problems: 'Er ging onlangs iets mis',
     demoTitle: 'Een demo, online gehouden door deze installatie. Alleen-lezen.',
     demo: (start) => (
@@ -113,7 +116,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Definitief verwijderen',
     deleteFailed: 'De lambda kon niet worden verwijderd.',
     deleteText: (key) => (
-      <>Alle versies, bestanden, de geschiedenis en het adres {key} gaan mee. Dit kun je niet ongedaan maken.</>
+      <>Alle versies, alle data, de geschiedenis en het adres {key} gaan mee. Dit kun je niet ongedaan maken.</>
     ),
     openInTab: 'Openen in nieuw tabblad',
     open: (address) => `${address} openen in een nieuw tabblad`,
@@ -181,6 +184,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>Leest {file}</>,
       logs: 'Leest de logs',
       create: 'Maakt een lambda aan',
+      copy: 'Begint een nieuwe versie',
       write: (files) => <>Wijzigt {files}</>,
       writeAll: (files) => <>Schrijft {files}</>,
       removing: (files) => <>, verwijdert {files}</>,
@@ -278,9 +282,15 @@ export const editor: EditorMessages = {
     noDescription: 'Geen beschrijving',
     version: (version) => `Versie ${version}`,
     notOnline: 'nog niet online',
+    changedSinceOnline: 'gewijzigd sinds hij online ging',
+    edited: 'bewerkt',
     wanted: 'Wat er gevraagd werd',
     noVersions: 'Nog geen versies.',
     storage: 'Opslag',
+    inVersion: (version) => `In versie ${version}`,
+    noVersion: 'In de versie',
+    inData: 'In de data',
+    sharedByAll: 'Gedeeld door elke versie',
     browse: 'Bekijken',
     code: 'Code',
     codeWhy: 'C# wordt gecompileerd, nooit geserveerd.',
@@ -289,6 +299,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Openbaar: de code serveert ze.',
     assetsPrivate: 'Niet geserveerd door de code.',
     data: 'Data',
+    workspace: 'Workspace',
+    workspaceOff: 'uitgezet',
     dataPublic: 'Openbaar: de code serveert de workspace.',
     dataPrivate: 'Alleen voor de lambda zelf.',
   },
@@ -296,9 +308,16 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('Code')} wordt gecompileerd en nooit geserveerd. {b('Assets')}, zoals pagina's, stylesheets en afbeeldingen,
-        worden bij elke versie opgeslagen en zijn openbaar als de code ze serveert. {b('Data')} is wat de lambda
-        wegschrijft terwijl hij draait. Het hoort bij geen enkele versie en is alleen openbaar als de code het serveert.
+        De bestanden van één versie: het programma. {b('Code')} wordt gecompileerd en nooit geserveerd.{' '}
+        {b('Assets')}, zoals pagina's, scripts, stylesheets en afbeeldingen, worden met de code opgeslagen, samen ermee
+        gedeployd en teruggezet, en zijn openbaar als de code ze serveert. Wat de lambda bewaart terwijl hij draait,
+        staat hier niet: dat is zijn {b('Data')}.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        Deze bestanden horen bij versie {version} en veranderen mee. Wat de lambda bewaart terwijl hij draait, is voor
+        elke versie hetzelfde en staat onder {data('Data')}.
       </>
     ),
     edit: 'Deze versie bewerken',
@@ -320,7 +339,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Opgeslagen met de code, maar deze versie serveert ze niet.',
     noAssets: 'Geen assets in deze versie.',
     data: 'Data',
-    dataPublic: 'Openbaar: deze versie serveert de data met Workspace.',
+    dataPublic: 'Openbaar: de code die online staat, serveert de data met Workspace.',
     dataPrivate: 'Alleen voor de lambda zelf. Hoort bij geen enkele versie.',
     uploadFailed: (path) => `${path} kon niet worden geüpload.`,
     deleteFolder: (path, held) =>
@@ -350,12 +369,63 @@ export const editor: EditorMessages = {
     notText: 'Geen tekst. Download het om erin te kijken.',
   },
 
+  data: {
+    hint:
+      'Data is wat de lambda bewaart terwijl hij draait. Het hoort bij de lambda, niet bij een versie: elke versie leest en schrijft dezelfde data, en niets wat je met versies doet, verandert eraan. Het verdwijnt pas als de lambda wordt verwijderd, of als je dat soort data uitzet.',
+    facts: [
+      ['Gedeeld door elke versie', 'Welke versie er ook online staat, hij leest en schrijft dezelfde data.'],
+      ['Blijft bij een deploy', 'Deployen, terugzetten of een versie kopiëren raakt het nooit aan.'],
+      ['Jij zet het aan of uit', 'Elk soort staat alleen aan zolang jij dat wilt. Zet je er een uit, dan wordt verwijderd wat erin zit.'],
+    ],
+    kinds: {
+      workspace: {
+        name: 'Workspace',
+        what: 'Bestanden die de lambda leest en schrijft terwijl hij draait: uploads, gegevens, alles wat hij bewaart.',
+      },
+    },
+    on: 'Aan',
+    off: 'Uit',
+    byDefault: 'Standaard aan',
+    usage: (items, used, of) => `${items} · ${used} van ${of}`,
+    offText: 'Uitgezet. Er staat niets in, en code die het gebruikt, mislukt tot je het weer aanzet.',
+    switchOn: 'Aanzetten',
+    switchOff: 'Uitzetten',
+    switchLabel: (name) => `${name} aan- of uitzetten`,
+    confirmOff: (name) => `De ${name.toLowerCase()} uitzetten?`,
+    confirmText: (items, size) =>
+      `Alles wat erin staat (${items}, ${size}) wordt definitief verwijderd. Dit kun je niet ongedaan maken.`,
+    confirmEmpty: 'Er staat niets in, dus er gaat niets verloren.',
+    inUse: 'De versie die online staat, gebruikt het. Waar hij dat doet, mislukt hij tot je het weer aanzet.',
+    deleteAndOff: 'Uitzetten en verwijderen',
+    keep: 'Aan laten',
+    switchedOn: (name) => `De ${name.toLowerCase()} staat aan. De lambda kan hem gebruiken vanaf zijn volgende request.`,
+    switchedOff: (name) => `De ${name.toLowerCase()} staat uit, en wat erin stond is verwijderd.`,
+    switchFailed: 'Omzetten is niet gelukt.',
+    readFailed: 'De data kon niet worden gelezen.',
+    demo: 'Een demo: de data is er om te bekijken, niet om te veranderen.',
+    contents: 'Wat er in de workspace staat',
+    browse: 'Bestanden',
+    offBrowse: 'De workspace staat uit, dus er zijn geen bestanden om te tonen.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Elke versie bewaart wat er gevraagd werd en wat er veranderde, voor zover dat is ingevuld. Bij meer dan ${limit} versies verdwijnen de oudste. De versie die online staat, verdwijnt nooit.`,
+      `Een versie is het programma: de code en de assets. Aan de nieuwste wordt gewerkt: die kun je zo vaak als nodig overschrijven en opnieuw deployen. De versies daarvoor blijven precies zoals ze waren, om mee te vergelijken en naar terug te gaan. Elke versie bewaart wat er gevraagd werd en wat er veranderde. Bij meer dan ${limit} versies verdwijnen de oudste. De versie die online staat, verdwijnt nooit.`,
     none: 'Nog geen versies.',
     noDescription: 'Geen beschrijving',
     online: 'online',
+    newest: 'nieuwste',
+    newestTitle: 'De versie waaraan gewerkt wordt: opslaan wijzigt hem direct',
+    edited: 'bewerkt',
+    saves: (count) => (count === 1 ? 'Eén keer opgeslagen' : `${count} keer opgeslagen`),
+    changedSince: 'gewijzigd sinds hij online ging',
+    deployAgain: 'Opnieuw deployen',
+    deployAgainTitle: 'Online zetten wat er sindsdien is opgeslagen',
+    start: 'Nieuwe versie',
+    startTitle: (version) => `Versie ${version} laten zoals hij is, en verdergaan in een kopie`,
+    startFrom: 'Vanaf hier een nieuwe versie beginnen',
+    started: (version) => `Versie ${version} aangemaakt. Dat is nu de nieuwste, dus daar werk je verder.`,
+    startFailed: 'De nieuwe versie kon niet worden aangemaakt.',
     putOnline: 'Deze versie online zetten',
     rollBackTitle: 'Deze oudere versie weer online zetten',
     deploy: 'Deployen',
@@ -390,6 +460,8 @@ export const editor: EditorMessages = {
       ended: 'beëindigd',
     },
     putBack: (version) => `Versie ${version} weer online zetten`,
+    revision: (revision) => `${revision}× opgeslagen`,
+    revisionTitle: (revision) => `De versie zoals hij was nadat hij voor de ${revision}e keer werd opgeslagen`,
     timeline: 'Wat er de afgelopen zeven dagen online stond',
     block: (version, from, to) => `Versie ${version}, ${from} tot ${to ?? 'nu'}`,
     weekAgo: 'een week geleden',
@@ -578,25 +650,36 @@ export const editor: EditorMessages = {
     notYet: 'De code compileert nog niet.',
     checkFailed: 'De code kon niet worden gecontroleerd.',
     saved: (version) => `Opgeslagen als versie ${version}.`,
+    savedOver: (version) => `Versie ${version} overschreven. Deploy hem om hem online te zetten.`,
+    savedOverOnline: (version) =>
+      `Versie ${version} overschreven. Bezoekers krijgen wat er gedeployd is, tot je opnieuw deployt.`,
     isOnline: (version) => `Versie ${version} staat online.`,
     notOnline: 'Niet online gegaan. Kijk hieronder wat de compiler zegt.',
     failed: 'Dat is niet gelukt.',
     unchanged: 'Er is niets veranderd sinds je laatst opsloeg.',
     demo: 'Dit is een demo, dus alles hier is alleen-lezen. Maak er je eigen lambda van om hem aan te passen. ',
-    edit: 'Bewerk de code met de hand. Opslaan maakt een nieuwe versie en laat wat online staat met rust. Deployen zet hem online. ',
+    edit: 'Bewerk de code met de hand. Opslaan wijzigt de nieuwste versie direct, zo vaak als je wilt; wat online staat, verandert pas als je deployt. ‘Nieuwe versie’ laat de versie waarmee je begon zoals hij is. ',
+    history: (version, newest) =>
+      `Versie ${version} is geschiedenis en blijft zoals hij is, dus opslaan maakt er een nieuwe versie van. Versie ${newest} is de nieuwste. `,
     files: (entry, cs) => (
       <>
         {entry} geeft terug wat er geserveerd wordt, andere {cs}-bestanden bevatten types, en elk ander bestand wordt
         geserveerd zoals het is. Ctrl-S slaat op, F12 springt naar een declaratie.
       </>
     ),
-    newer: (version) => ` Versie ${version} is nieuwer dan de versie die hier openstaat.`,
     check: 'Controleren',
     save: 'Opslaan',
+    saveTitle: (version) => `Versie ${version} overschrijven (Ctrl+S)`,
+    saveNew: 'Nieuwe versie',
+    saveNewTitle: 'Opslaan als nieuwe versie, en de versie waarmee je begon laten zoals hij is',
     deploy: 'Deployen',
+    older: ', geschiedenis',
+    newestTag: ', nieuwste',
+    unpublished: ', opgeslagen sinds hij online ging',
     binary: (size) => `Geen tekst, dus er valt niets te bewerken. Het wordt geserveerd zoals het is en is ${size} kB groot.`,
     saveAndDeploy: 'Opslaan en deployen',
     saveVersion: 'Nieuwe versie opslaan',
+    saveNewAndDeploy: 'Nieuwe versie opslaan en deployen',
     cancel: 'Annuleren',
     what: 'Wat verandert er? Optioneel, het komt in de geschiedenis.',
     placeholder: 'Voegt een contactformulier toe',

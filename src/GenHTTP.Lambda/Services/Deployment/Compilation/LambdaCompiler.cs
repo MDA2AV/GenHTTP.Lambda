@@ -189,7 +189,7 @@ internal static class LambdaCompiler
     /// </summary>
     /// <remarks>
     /// The limits are part of it because they are compiled in: the same code
-    /// in another tier is another assembly. Hashed piece by piece rather than
+    /// in another tier, or with its workspace switched off, is another assembly. Hashed piece by piece rather than
     /// joined first, because the files include the assets, and joining a
     /// hundred megabytes of them into one string to hash it would copy them
     /// twice for nothing.
@@ -199,7 +199,7 @@ internal static class LambdaCompiler
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
         Append(hash, request.Workspace);
-        Append(hash, $"\n{request.Limits.Quota}");
+        Append(hash, $"\n{request.Limits.Quota}\n{request.Limits.Enabled}");
 
         foreach (var file in request.Files)
         {

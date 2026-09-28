@@ -23,8 +23,9 @@ These, and nothing else:
 | `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
 | `create_lambda` | claims an address and a private key - building only |
 | `read_lambda` | the status, the recent history and the files of a lambda - read it first when changing |
-| `write_code` | replaces every file with a new version, with a `specification` and a `change` note saying why |
-| `change_code` | changes only the files it names, or a passage within one, and keeps the rest |
+| `write_code` | replaces every file, with a `specification` and a `change` note saying why - with `version`, in the version you are working on |
+| `change_code` | changes only the files it names, or a passage within one, and keeps the rest - with `version`, in the version you are working on |
+| `copy_version` | starts a new version from an existing one, without sending files |
 | `check_code` | compiles without deploying |
 | `deploy` | makes it live |
 | `read_logs` | how the live lambda is answering, errors with stack traces |
@@ -89,6 +90,18 @@ yours and nothing else. So:
 - do not explain what you were unable to do at length; say it in a line
 - do not hand back scaffolding and call it done
 - if the request is vague, pick the most obvious useful reading of it
+
+## One version for one request
+
+The first `write_code` saves a version. Every fix after that goes into the
+same version: `change_code` with `version` set to its number saves over it,
+and `deploy: true` puts each attempt online. Somebody asked for one thing, so
+the history they read should show one version for it - not one per typo.
+
+What the application keeps while it runs - entries, scores, accounts - is
+data. It lives in the workspace, which every version shares and no deploy
+touches. The pages, scripts and styles are the program and ship with the
+code as assets.
 
 ## Link with relative paths
 

@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Workspace;
 
 namespace GenHTTP.Lambda.Services.Meta;
 
@@ -52,10 +53,31 @@ public interface IMetaService
     ValueTask<LambdaVersionContent> GetVersionAsync(string privateKey, int version, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Stores the given code as a new version.
+    /// Stores the given code as a new version, which becomes the newest.
     /// </summary>
     /// <param name="note">Why it was written, and which door it came through</param>
     ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Saves the given code over the newest version, which is the one being
+    /// worked on.
+    /// </summary>
+    /// <remarks>
+    /// Refused for any other version: those are history, kept as they were so
+    /// there is something to go back to. What is online does not change until
+    /// the version is deployed again, even where this is the version online.
+    /// Code that is what the version holds already only updates its notes.
+    /// </remarks>
+    /// <param name="version">The number of the newest version, said so a version saved by somebody else meanwhile is not overwritten</param>
+    /// <param name="note">The notes to replace the ones it has, where given, and which door it came through</param>
+    ValueTask<LambdaVersionInfo> UpdateAsync(string privateKey, int version, string code, VersionNote? note = null, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Starts a new version as a copy of an existing one - the newest unless
+    /// another is named - which becomes the newest.
+    /// </summary>
+    /// <param name="note">What the copy is for; left out, it keeps the specification of the one it copies and says what it is a copy of</param>
+    ValueTask<LambdaVersionInfo> CopyAsync(string privateKey, int? version, VersionNote? note = null, CancellationToken cancellation = default);
 
     /// <summary>
     /// Compiles the given code without deploying it.
@@ -120,10 +142,11 @@ public interface IMetaService
     ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
 
     /// <summary>
-    /// The tier of the lambda filed under the given identity, for the services
-    /// whose allowance depends on it. Null when there is no such lambda.
+    /// What the lambda filed under the given identity may keep in its
+    /// workspace, which its tier decides and its owner can switch off. Null
+    /// when there is no such lambda.
     /// </summary>
-    ValueTask<LambdaTier?> GetTierAsync(long lambdaId, CancellationToken cancellation = default);
+    ValueTask<WorkspaceLimits?> GetWorkspaceLimitsAsync(long lambdaId, CancellationToken cancellation = default);
 
     /// <summary>
     /// The identity of a lambda its owner may change, for the services that

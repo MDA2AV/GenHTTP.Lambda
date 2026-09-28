@@ -70,7 +70,7 @@ export const ship: Messages['ship'] = {
     ],
     [
       'Hoe pas ik hem later aan?',
-      'Met de editorlink die je bij het publiceren kreeg. Geef die aan je agent met je volgende wijziging, of open hem in je browser. Elke wijziging wordt een nieuwe versie op hetzelfde adres, en je kunt altijd terug naar een oudere versie.',
+      'Met de editorlink die je bij het publiceren kreeg. Geef die aan je agent met je volgende wijziging, of open hem in je browser. Elke wijziging die je vraagt, wordt een eigen versie op hetzelfde adres, en je kunt altijd terug naar een oudere versie.',
     ],
     [
       'Wie kan mijn app zien?',

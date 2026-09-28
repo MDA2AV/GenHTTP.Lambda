@@ -36,6 +36,16 @@ public sealed class LambdaEntity
     /// </summary>
     public int? ActiveVersion { get; set; }
 
+    /// <summary>
+    /// Which save of the active version is online.
+    /// </summary>
+    /// <remarks>
+    /// The newest version can be saved over while it is online, and what
+    /// visitors get only changes when it is deployed again - so the version
+    /// alone does not say what is being served. Null while nothing is.
+    /// </remarks>
+    public int? ActiveRevision { get; set; }
+
     public DateTime Created { get; set; }
 
     public DateTime Modified { get; set; }

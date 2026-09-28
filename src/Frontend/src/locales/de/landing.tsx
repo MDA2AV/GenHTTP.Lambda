@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Weiter verbessern',
-      body: 'Zu jeder App gehört ein privater Editor-Link. Geben Sie ihn mit dem nächsten Wunsch an Ihren Agenten oder öffnen Sie ihn selbst. Jede Änderung wird eine neue Version, die Adresse bleibt gleich.',
+      body: 'Zu jeder App gehört ein privater Editor-Link. Geben Sie ihn mit dem nächsten Wunsch an Ihren Agenten oder öffnen Sie ihn selbst. Jede Änderung, um die Sie bitten, wird eine eigene Version, die Adresse bleibt gleich.',
       alt: 'Das Kontrollzentrum der Umfrage: ihre Versionen, jeweils mit Wunsch, Änderung und Diff zur vorherigen',
     },
   ],

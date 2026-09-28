@@ -21,6 +21,7 @@ export const editor = {
       showcase: 'Showcase',
       domain: 'Domain',
       files: 'Files',
+      data: 'Data',
       versions: 'Versions',
       deployments: 'Deployments',
       stats: 'Stats',
@@ -47,6 +48,8 @@ export const editor = {
     download: 'Download as a .NET project',
     delete: 'Delete this lambda',
     deploy: (version: number) => `Deploy version ${version}`,
+    changedSince: 'Saved over since it went online. Visitors still get what was deployed.',
+    changedShort: 'Changed since it went online',
     problems: 'Something went wrong recently',
     demoTitle: 'A demo, kept online by this installation and read only.',
     demo: (start: (text: string) => Node) => (
@@ -68,7 +71,7 @@ export const editor = {
     deleteForGood: 'Delete for good',
     deleteFailed: 'The lambda could not be deleted.',
     deleteText: (key: Node) => (
-      <>Every version, its files, its history and the address {key} go with it. This cannot be undone.</>
+      <>Every version, all of its data, its history and the address {key} go with it. This cannot be undone.</>
     ),
     openInTab: 'Open in a new tab',
     open: (address: string) => `Open ${address} in a new tab`,
@@ -132,6 +135,7 @@ export const editor = {
       readFile: (file: Node) => <>Reading {file}</>,
       logs: 'Reading the log',
       create: 'Creating a lambda',
+      copy: 'Starting a new version',
       write: (files: Node) => <>Changing {files}</>,
       writeAll: (files: Node) => <>Writing {files}</>,
       removing: (files: Node) => <>, removing {files}</>,
@@ -228,9 +232,15 @@ export const editor = {
     noDescription: 'No description',
     version: (version: number) => `Version ${version}`,
     notOnline: 'not online yet',
+    changedSinceOnline: 'changed since it went online',
+    edited: 'edited',
     wanted: 'What was wanted',
     noVersions: 'No versions yet.',
     storage: 'Storage',
+    inVersion: (version: number) => `In version ${version}`,
+    noVersion: 'In the version',
+    inData: 'In the data',
+    sharedByAll: 'Shared by every version',
     browse: 'Browse',
     code: 'Code',
     codeWhy: 'C# is compiled, never served.',
@@ -239,6 +249,8 @@ export const editor = {
     assetsPublic: 'Public: the code serves them.',
     assetsPrivate: 'Not served by the code.',
     data: 'Data',
+    workspace: 'Workspace',
+    workspaceOff: 'switched off',
     dataPublic: 'Public: the code serves the workspace.',
     dataPrivate: 'Private to the lambda.',
   },
@@ -246,9 +258,15 @@ export const editor = {
   files: {
     hint: (b: (text: string) => Node) => (
       <>
-        {b('Code')} is compiled and never served. {b('Assets')} - pages, styles, images - are saved with each version and
-        are public if the code serves them. {b('Data')} is what the lambda writes while it runs; it is not part of any
-        version, and is public only if the code serves it.
+        The files of one version - the program. {b('Code')} is compiled and never served. {b('Assets')} - pages,
+        scripts, styles, images - are saved with the code, deployed and rolled back with it, and are public if the code
+        serves them. What the lambda keeps while it runs is not here: that is its {b('Data')}.
+      </>
+    ),
+    scope: (version: number, data: (text: string) => Node) => (
+      <>
+        These belong to version {version} and change with it. What the lambda keeps while it runs is the same for every
+        version, and is under {data('Data')}.
       </>
     ),
     edit: 'Edit this version',
@@ -271,7 +289,7 @@ export const editor = {
     assetsPrivate: 'Saved with the code, but this version does not serve them.',
     noAssets: 'None in this version.',
     data: 'Data',
-    dataPublic: 'Public: this version serves it with Workspace.',
+    dataPublic: 'Public: the code online serves it with Workspace.',
     dataPrivate: 'Private to the lambda. Not part of any version.',
     uploadFailed: (path: string) => `${path} could not be uploaded.`,
     deleteFolder: (path: string, held: number) =>
@@ -301,12 +319,64 @@ export const editor = {
     notText: 'Not text. Download it to look inside.',
   },
 
+  /** The data of a lambda: what it keeps rather than what it is. */
+  data: {
+    hint:
+      'Data is what the lambda keeps while it runs. It belongs to the lambda, not to a version: every version reads and writes the same data, and nothing you do with versions changes it. It goes when the lambda is deleted, or when you switch that kind of data off.',
+    facts: [
+      ['Shared by every version', 'Whichever version is online reads and writes the same data.'],
+      ['Kept when you deploy', 'Deploying, rolling back or copying a version never touches it.'],
+      ['Yours to switch', 'Each kind is on only while you want it. Switching one off deletes what it holds.'],
+    ] as [string, string][],
+    kinds: {
+      workspace: {
+        name: 'Workspace',
+        what: 'Files the lambda reads and writes while it runs: uploads, records, anything it keeps.',
+      },
+    } as Record<string, { name: string; what: string }>,
+    on: 'On',
+    off: 'Off',
+    byDefault: 'On by default',
+    usage: (items: string, used: string, of: string) => `${items} · ${used} of ${of}`,
+    offText: 'Switched off. It holds nothing, and code that uses it fails until it is switched on again.',
+    switchOn: 'Switch on',
+    switchOff: 'Switch off',
+    switchLabel: (name: string) => `${name} on or off`,
+    confirmOff: (name: string) => `Switch the ${name.toLowerCase()} off?`,
+    confirmText: (items: string, size: string) =>
+      `Everything in it - ${items}, ${size} - is deleted for good. This cannot be undone.`,
+    confirmEmpty: 'It is empty, so nothing is lost.',
+    inUse: 'The version online uses it, so it will fail where it does until you switch it on again.',
+    deleteAndOff: 'Switch off and delete',
+    keep: 'Keep it',
+    switchedOn: (name: string) => `The ${name.toLowerCase()} is on. The lambda can use it from its next request.`,
+    switchedOff: (name: string) => `The ${name.toLowerCase()} is off, and what it held is deleted.`,
+    switchFailed: 'That could not be switched.',
+    readFailed: 'The data could not be read.',
+    demo: 'A demo: its data is there to be read, not changed.',
+    contents: 'What the workspace holds',
+    browse: 'Files',
+    offBrowse: 'The workspace is off, so there are no files to show.',
+  },
+
   versions: {
     hint: (limit: number) =>
-      `Each version keeps what was asked for and what it changed, where whoever wrote it said so. The oldest are removed once there are more than ${limit}; the one online never is.`,
+      `A version is the program: its code and its assets. The newest one is being worked on - it can be saved over and deployed again as often as needed. The ones before it stay exactly as they were, to compare with and roll back to. Each keeps what was asked for and what it changed. The oldest are removed once there are more than ${limit}; the one online never is.`,
     none: 'No versions yet.',
     noDescription: 'No description',
     online: 'online',
+    newest: 'newest',
+    newestTitle: 'The version being worked on: saving changes it in place',
+    edited: 'edited',
+    saves: (count: number) => (count === 1 ? 'Saved once' : `Saved ${count} times`),
+    changedSince: 'changed since it went online',
+    deployAgain: 'Deploy again',
+    deployAgainTitle: 'Put what was saved since online',
+    start: 'New version',
+    startTitle: (version: number) => `Keep version ${version} as it is, and carry on in a copy of it`,
+    startFrom: 'Start a new version from here',
+    started: (version: number) => `Version ${version} started. It is the newest now, so that is where work carries on.`,
+    startFailed: 'The new version could not be started.',
     putOnline: 'Put this version online',
     rollBackTitle: 'Put this older version back online',
     deploy: 'Deploy',
@@ -341,6 +411,8 @@ export const editor = {
       ended: 'ended',
     } as Record<string, string>,
     putBack: (version: number) => `Put version ${version} back online`,
+    revision: (revision: number) => `save ${revision}`,
+    revisionTitle: (revision: number) => `The version as it was after its save number ${revision}`,
     timeline: 'What was online over the last seven days',
     block: (version: number, from: string, to: string | null) => `Version ${version}, ${from} to ${to ?? 'now'}`,
     weekAgo: 'a week ago',
@@ -529,25 +601,36 @@ export const editor = {
     notYet: 'It does not compile yet.',
     checkFailed: 'The code could not be checked.',
     saved: (version: number | undefined) => `Saved as version ${version}.`,
+    savedOver: (version: number) => `Saved over version ${version}. Deploy to put it online.`,
+    savedOverOnline: (version: number) =>
+      `Saved over version ${version}. Visitors get what was deployed until you deploy it again.`,
     isOnline: (version: number | undefined) => `Version ${version} is online.`,
     notOnline: 'It did not go online. See what the compiler said below.',
     failed: 'That did not work.',
     unchanged: 'Nothing has changed since the last save.',
     demo: 'A demo, so everything here is read only. Create a lambda of your own from it to change it. ',
-    edit: 'Edit the code by hand. Saving makes a new version and leaves what is online alone; deploying puts it online. ',
+    edit: 'Edit the code by hand. Saving changes the newest version in place, as often as you like; what is online only changes when you deploy. New version keeps the one you started from as it is. ',
+    history: (version: number, newest: number) =>
+      `Version ${version} is history and stays as it is, so saving makes a new version from it. Version ${newest} is the newest. `,
     files: (entry: Node, cs: Node) => (
       <>
         {entry} returns what gets served, other {cs} files hold types, and any other file is served as it is. Ctrl-S
         saves, F12 goes to a declaration.
       </>
     ),
-    newer: (version: number) => ` Version ${version} is newer than the one open here.`,
     check: 'Check',
     save: 'Save',
+    saveTitle: (version: number) => `Save over version ${version} (Ctrl+S)`,
+    saveNew: 'New version',
+    saveNewTitle: 'Save as a new version, and keep the one you started from as it is',
     deploy: 'Deploy',
+    older: ', history',
+    newestTag: ', newest',
+    unpublished: ', saved since it went online',
     binary: (size: number) => `Not text, so there is nothing to edit. It is served as it is and weighs ${size} kB.`,
     saveAndDeploy: 'Save and deploy',
     saveVersion: 'Save a new version',
+    saveNewAndDeploy: 'Save a new version and deploy it',
     cancel: 'Cancel',
     what: 'What does it change? Optional - it is shown in the history.',
     placeholder: 'Adds a contact form',

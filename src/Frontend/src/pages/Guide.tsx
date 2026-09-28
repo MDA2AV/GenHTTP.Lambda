@@ -195,7 +195,10 @@ return Content.From(page);`} />
 
             <h3 className="pt-2 text-sm font-semibold">{said.workspaceTitle}</h3>
             <p>{said.workspace}</p>
-            <Sample code={`return Layout.Create().Add(Workspace.App());`} />
+            <Sample code={`return Layout.Create()
+             .Add("api", api)
+             .Add("uploads", Workspace.Files("uploads"))
+             .Add(Assets.App("site"));`} />
           </Section>
 
           <Section id="spa" title={said.parts.spa}>

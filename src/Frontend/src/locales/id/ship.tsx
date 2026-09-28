@@ -71,7 +71,7 @@ export const ship: Messages['ship'] = {
     ],
     [
       'Bagaimana cara mengubahnya nanti?',
-      'Dengan link editor yang Anda dapat saat aplikasinya dipublikasikan. Berikan ke agen Anda bersama perubahan berikutnya, atau buka di browser. Setiap perubahan jadi versi baru di alamat yang sama, dan Anda bisa kembali ke versi lama kapan saja.',
+      'Dengan link editor yang Anda dapat saat aplikasinya dipublikasikan. Berikan ke agen Anda bersama perubahan berikutnya, atau buka di browser. Setiap perubahan yang Anda minta jadi versinya sendiri di alamat yang sama, dan Anda bisa kembali ke versi lama kapan saja.',
     ],
     [
       'Siapa yang bisa melihat aplikasi saya?',

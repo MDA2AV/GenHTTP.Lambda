@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { ApiError, api, type LambdaFile, type VersionContent, type VersionInfo } from '../api';
-import { IconChevronDown, IconSpinner } from '../components/Icons';
+import { ApiError, api, isDemo, type LambdaFile, type VersionContent, type VersionInfo } from '../api';
+import { IconChevronDown, IconPlus, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import { languageFor, monaco } from '../monaco';
 import type { Theme } from '../theme';
@@ -16,6 +16,10 @@ import { AgentMark, Ago, Empty, Quote, Section } from './ui';
  *
  * A link can name the version to open, with ?version= - which is how the
  * Change section shows what the agent just did.
+ *
+ * The newest is marked as the one being worked on, since it is the only one
+ * that changes; starting a new version is an action of its own here rather
+ * than something every save does.
  */
 export function VersionsTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -23,6 +27,7 @@ export function VersionsTab({ control }: { control: Control }) {
   const [params] = useSearchParams();
   const asked = Number(params.get('version')) || null;
   const [open, setOpen] = useState<number | null>(asked);
+  const [starting, setStarting] = useState(false);
 
   // a link followed while the section is already open still opens its version
   useEffect(() => {
@@ -31,8 +36,39 @@ export function VersionsTab({ control }: { control: Control }) {
     }
   }, [asked]);
 
+  const demo = isDemo(lambda.tier);
+
+  async function start() {
+    setStarting(true);
+
+    const made = await control.startVersion();
+
+    if (made != null) {
+      setOpen(null);
+    }
+
+    setStarting(false);
+  }
+
   return (
-    <Section title={t.frame.sections.versions} hint={t.versions.hint(control.summary?.limits.versions ?? 50)}>
+    <Section
+      title={t.frame.sections.versions}
+      hint={t.versions.hint(control.summary?.limits.versions ?? 50)}
+      actions={
+        !demo && lambda.latestVersion != null && (
+          <button
+            type="button"
+            onClick={start}
+            disabled={starting || control.busy !== null}
+            className="btn-ghost !px-3 !py-1.5 text-[13px]"
+            title={t.versions.startTitle(lambda.latestVersion)}
+          >
+            {starting ? <IconSpinner /> : <IconPlus className="h-3.5 w-3.5" />}
+            {t.versions.start}
+          </button>
+        )
+      }
+    >
       {versions.length === 0 ? (
         <Empty>{t.versions.none}</Empty>
       ) : (
@@ -85,6 +121,11 @@ function Row({
     }
   }, [reveal]);
 
+  // saved over since it went online: what visitors get is an earlier save
+  const changed = live && control.lambda.activeChanged;
+  const edited = version.revision > 1 && version.modified;
+  const demo = isDemo(control.lambda.tier);
+
   return (
     <li ref={row} className="scroll-mt-4">
       <div className="group flex items-center gap-3 py-3">
@@ -94,33 +135,50 @@ function Row({
           <span className="min-w-0 flex-1 truncate text-[15px]" title={version.change ?? undefined}>
             {version.change ?? <span className="text-slate-400">{said.noDescription}</span>}
           </span>
+          {latest && (
+            <span className="hidden shrink-0 rounded-full bg-accent-500/10 px-2 py-0.5 text-[11px] font-medium text-accent-700 dark:text-accent-400 sm:inline"
+                  title={said.newestTitle}>
+              {said.newest}
+            </span>
+          )}
         </button>
 
         <span className="flex shrink-0 items-center gap-3 text-[13px] text-slate-500">
           {live && (
-            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400" title={changed ? said.changedSince : undefined}>
+              <span className={`h-1.5 w-1.5 rounded-full ${changed ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               {said.online}
             </span>
           )}
           <AgentMark origin={version.origin} />
-          <Ago at={version.created} className="hidden w-24 text-right sm:inline" />
+          <span className="hidden w-28 text-right sm:inline" title={said.saves(version.revision)}>
+            {edited ? (
+              <>
+                {said.edited} <Ago at={version.modified} />
+              </>
+            ) : (
+              <Ago at={version.created} />
+            )}
+          </span>
         </span>
 
-        <span className="w-20 shrink-0 text-right">
-          {!live && (
+        <span className="w-24 shrink-0 text-right">
+          {!demo && (!live || changed) && (
             <button
               type="button"
               onClick={() => control.deploy(version.version)}
               disabled={control.busy !== null}
               className="text-[13px] font-medium text-accent-500 opacity-70 hover:underline group-hover:opacity-100 disabled:opacity-40"
-              title={latest ? said.putOnline : said.rollBackTitle}
+              title={changed ? said.deployAgainTitle : latest ? said.putOnline : said.rollBackTitle}
             >
-              {latest ? said.deploy : said.rollBack}
+              {changed ? said.deployAgain : latest ? said.deploy : said.rollBack}
             </button>
           )}
         </span>
       </div>
+      {changed && (
+        <p className="-mt-2 pb-2 pl-7 text-xs text-amber-600 dark:text-amber-400 sm:pl-[3.75rem]">{said.changedSince}</p>
+      )}
 
       {open && <Detail control={control} version={version} previous={previous} />}
     </li>
@@ -212,13 +270,18 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
         </div>
       )}
 
-      <div className="flex gap-4 text-[13px]">
+      <div className="flex flex-wrap gap-4 text-[13px]">
         <button type="button" onClick={() => control.browse(version.version)} className="text-accent-500 hover:underline">
           {said.browse}
         </button>
         <button type="button" onClick={() => control.edit(version.version)} className="text-accent-500 hover:underline">
           {said.edit}
         </button>
+        {!isDemo(control.lambda.tier) && (
+          <button type="button" onClick={() => control.startVersion(version.version)} className="text-accent-500 hover:underline">
+            {said.startFrom}
+          </button>
+        )}
       </div>
     </div>
   );

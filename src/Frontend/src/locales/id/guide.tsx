@@ -59,9 +59,10 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Berikan kunci editor ke agen dan jelaskan apa yang harus dibuat. Agen menulis versi baru lewat{' '}
-        {k.link('/#agents', 'MCP')}. Atau buka {k.b('Kode')} dan tulis sendiri: {k.b('Periksa')} mengompilasi tanpa
-        menyimpan apa pun, lalu menunjukkan pesan compiler, lengkap dengan file dan barisnya.
+        Berikan kunci editor ke agen dan jelaskan apa yang harus dibuat. Agen bekerja lewat {k.link('/#agents', 'MCP')},
+        dengan satu versi untuk setiap hal yang Anda minta. Atau buka {k.b('Kode')} dan tulis sendiri:{' '}
+        {k.b('Periksa')} mengompilasi tanpa menyimpan apa pun, lalu menunjukkan pesan compiler, lengkap dengan file dan
+        barisnya.
       </>
     ),
     (k) => (
@@ -76,7 +77,7 @@ export const guide: Messages['guide'] = {
     <>
       Link editor membuka pusat kontrol, bukan kotak teks. Sebagian besar kode di sini ditulis oleh agen, jadi yang
       pertama tampil di layar adalah kondisi lambda Anda. Sidebar berisi lambda-nya (apakah online, alamatnya, dan tombol
-      kalau ada versi baru yang menunggu untuk online) beserta bagian-bagiannya. Hal yang jarang dilakukan, seperti
+      kalau ada sesuatu yang bisa di-deploy) beserta bagian-bagiannya. Hal yang jarang dilakukan, seperti
       mengganti alamat atau menghapus lambda, ada di menu {k.b('⋯')} di sana.
     </>
   ),
@@ -92,8 +93,9 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
-    ['File', () => <>File dari sebuah versi, beserta datanya: apa yang disimpan lambda selama berjalan. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
-    ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini.</>],
+    ['File', () => <>File dari sebuah versi: kode dan asetnya, yaitu programnya sendiri. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
+    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: workspace. Lihat isinya, unggah dan hapus file, atau nonaktifkan.</>],
+    ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Versi terbaru adalah yang sedang dikerjakan. Deploy, rollback, atau mulai versi baru dari sini.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
     ['Log', () => <>Request yang masuk, apa yang dicetak lambda, dan stack trace dari setiap error, secara langsung.</>],
@@ -101,8 +103,9 @@ export const guide: Messages['guide'] = {
       'Kode',
       (k) => (
         <>
-          Menulis kode secara manual. {k.b('Periksa')} mengompilasi, {k.b('Simpan')} membuat versi, {k.b('Deploy')}{' '}
-          membuatnya online. {k.code('Ctrl-S')} menyimpan; {k.code('F12')} membuka deklarasi.
+          Menulis kode secara manual. {k.b('Periksa')} mengompilasi, {k.b('Simpan')} menyimpan ke versi terbaru,{' '}
+          {k.b('Versi baru')} membiarkannya apa adanya dan memulai versi lain, {k.b('Deploy')} membuatnya online.{' '}
+          {k.code('Ctrl-S')} menyimpan; {k.code('F12')} membuka deklarasi.
         </>
       ),
     ],
@@ -131,9 +134,10 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Agen mengirim dua field yang sama ke {k.code('write_code')}. Di {k.b('Kode')}, Anda akan diminta mengisi
-      perubahannya saat menyimpan. Keduanya opsional. Spesifikasi yang terlalu panjang dipotong di 4.000 karakter, dan
-      perubahan di 500 karakter, bukan ditolak.
+      Agen mengirim dua field yang sama ke {k.code('write_code')}. Di {k.b('Kode')}, {k.b('Versi baru')} meminta Anda
+      mengisi perubahannya. Keduanya opsional. Spesifikasi yang terlalu panjang dipotong di 4.000 karakter, dan
+      perubahan di 500 karakter, bukan ditolak. Menyimpan ke versi yang sama tetap mempertahankan catatannya, kecuali
+      diberi catatan baru.
     </>
   ),
 
@@ -145,14 +149,15 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
-  page: 'Ada tiga cara, dan pilihannya tergantung di mana halamannya berada.',
+  page: 'Ada dua cara untuk menyajikan halaman, dan satu cara lagi untuk file yang diunggah orang di sampingnya.',
   inlineTitle: 'Satu halaman, ditulis inline',
   inline: 'Cocok untuk yang kecil. Halamannya jadi bagian dari snippet.',
   folderTitle: 'Folder berisi file sungguhan',
   folder:
     'Pilihan tepat untuk apa pun yang punya stylesheet dan script. File ditambahkan dengan cara yang sama seperti file C#, dan disajikan persis seperti yang ditulis. Tidak ada yang mengompilasinya.',
-  workspaceTitle: 'Dari workspace',
-  workspace: 'Kalau halamannya diunggah, bukan ditulis, dan harus bisa diubah tanpa deploy ulang.',
+  workspaceTitle: 'File unggahan, dari data',
+  workspace:
+    'Untuk apa yang diunggah orang atau dibuat lambda (gambar, dokumen), disajikan di samping aplikasinya. Bukan untuk halaman aplikasinya sendiri: halaman itu tempatnya di folder file, di mana halaman ikut masuk versi bersama kode yang membutuhkannya.',
 
   spa: (k) => (
     <>
@@ -195,23 +200,25 @@ export const guide: Messages['guide'] = {
 
   storage: (k) => (
     <>
-      Bagian {k.b('File')} menampilkan keduanya (file dari sebuah versi, dan workspace sebagai {k.b('Data')}) dan
-      menunjukkan mana yang bisa diakses publik. File kode diubah di {k.b('Kode')}; data bisa diunggah dan dihapus di{' '}
-      {k.b('File')}. Tapi keduanya bukan hal yang sama, dan bedanya ada di {k.em('kapan masing-masing berubah')}.
+      Lambda menyimpan file di dua tempat, dan editor menampilkannya terpisah: {k.b('File')} berisi file dari sebuah
+      versi (programnya), dan {k.b('Data')} berisi workspace (apa yang disimpan program itu). Bedanya ada di{' '}
+      {k.em('milik siapa')}. File dari sebuah versi milik versi itu; data milik lambda, dan dipakai bersama oleh semua
+      versi.
     </>
   ),
-  savedWithCode: 'Disimpan bersama kode',
-  workspaceColumn: 'Workspace',
+  savedWithCode: 'Di sebuah versi',
+  workspaceColumn: 'Di data',
   table: [
-    ['isinya', 'semua file lambda Anda, termasuk C#-nya', 'apa pun yang sudah ditulis atau diunggah'],
-    ['kapan berubah', 'saat Anda menekan Simpan atau Deploy', 'begitu ada yang ditulis ke dalamnya'],
-    ['saat deploy', 'diganti seluruhnya', 'tidak pernah disentuh'],
-    ['rollback versi', 'file lama kembali', 'tidak berpengaruh'],
-    ['clone lambda', 'ikut disalin', 'tidak ikut'],
+    ['isinya', 'kode dan aset: programnya, termasuk front end', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
+    ['kapan berubah', 'saat versinya disimpan', 'begitu ada yang ditulis ke dalamnya'],
+    ['saat deploy', 'file inilah yang persis dibuat online', 'tidak pernah disentuh'],
+    ['rollback', 'file lama kembali', 'tidak berpengaruh: semua versi memakainya bersama'],
+    ['versi baru', 'dimulai sebagai salinannya', 'tidak berpengaruh'],
+    ['kapan hilang', 'bersama versi lama, setelah melewati batas', 'bersama lambda, atau saat Anda menonaktifkannya'],
   ],
   reachedAs: 'diakses dari kode sebagai',
   storageAside:
-    'Keduanya tidak bisa jadi satu direktori. Kalau jadi satu, deploy akan menghapus semua yang sudah ditulis lambda sejak deploy sebelumnya, atau tidak ada yang bisa dihapus dari file yang dibawanya. Game yang menyimpan papan peringkat butuh yang kedua; halaman yang disajikannya butuh yang pertama.',
+    'Keduanya tidak bisa jadi satu tempat. Kalau jadi satu, deploy akan menghapus semua yang sudah ditulis lambda sejak deploy sebelumnya, atau tidak ada yang bisa dihapus dari file yang dibawanya. Game yang menyimpan papan peringkat butuh yang kedua; halaman yang disajikannya butuh yang pertama. Jadi halamannya masuk ke versi, dan papan peringkatnya ke data.',
 
   keeping: (k) => (
     <>

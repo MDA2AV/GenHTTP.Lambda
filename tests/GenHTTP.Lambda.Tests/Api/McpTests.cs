@@ -76,7 +76,7 @@ public sealed class McpTests
 
         var named = tools.Select(t => t!["name"]!.GetValue<string>()).ToList();
 
-        foreach (var wanted in (string[])["create_lambda", "write_code", "check_code", "deploy", "read_lambda",
+        foreach (var wanted in (string[])["create_lambda", "write_code", "change_code", "copy_version", "check_code", "deploy", "read_lambda",
                                           "read_logs", "upload_file", "list_files", "delete_file", "platform_guide"])
         {
             Assert.Contains(wanted, named);
@@ -555,19 +555,254 @@ public sealed class McpTests
         Assert.Contains("Assets.App(\\u0022site\\u0022)", guide,
                         "the guide has to say a folder can be served by naming it");
 
-        // an agent has no Storage panel, so the guide has to name the tool
-        // that puts a file there and say which way round to prefer
-        Assert.Contains("Workspace.App()", guide, "and that a front end can live in the workspace instead");
+        // an agent has no Data panel, so the guide has to name the tool that
+        // puts a file there - and say that the front end is not what goes there
         Assert.Contains("upload_file", guide, "the guide has to name the tool that puts a file in the workspace");
-        // both ways are ordinary, so the guide has to describe both and say
-        // what decides between them rather than naming a winner
-        Assert.Contains("withTheCode", guide);
-        Assert.Contains("inTheWorkspace", guide);
-        Assert.Contains("whenToPreferIt", guide, "each way has to say what it is for");
+
+        var parsed = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        Assert.Contains("Assets.App", parsed["servingAFrontEnd"]!["rule"]!.GetValue<string>(),
+                        "the front end is part of the program, and shipped with it");
+        Assert.Contains("workspace", parsed["servingAFrontEnd"]!["notFromTheWorkspace"]!.GetValue<string>());
     }
 
     [TestMethod]
-    public async Task AnAgentCanUploadAFrontEndAndHaveItServed()
+    public async Task TheGuideSaysHowVersionsAndDataLive()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        // said before anything else about files, because it decides where
+        // every one of them goes
+        var names = guide.Select(p => p.Key).ToList();
+
+        Assert.IsLessThan(names.IndexOf("assets"), names.IndexOf("lifecycle"), "the lifecycle comes before the details");
+
+        var lifecycle = guide["lifecycle"]!;
+
+        Assert.Contains("version", lifecycle["versions"]!["workInTheNewest"]!.GetValue<string>(), "work happens in the newest version, in place");
+        Assert.Contains("once per thing the user asks for", lifecycle["versions"]!["newVersions"]!.GetValue<string>());
+        Assert.Contains("copy_version", lifecycle["versions"]!["newVersions"]!.GetValue<string>());
+        Assert.Contains("deploy", lifecycle["versions"]!["online"]!.GetValue<string>());
+
+        Assert.Contains("every version", lifecycle["data"]!["what"]!.GetValue<string>());
+        Assert.Contains("rollback", lifecycle["data"]!["lifetime"]!.GetValue<string>());
+        Assert.Contains("ask the user", lifecycle["data"]!["optIn"]!.GetValue<string>(), "data is switched on by the owner, not by an agent");
+
+        Assert.Contains("front end", lifecycle["whereThingsGo"]!["theProgram"]!.GetValue<string>());
+        Assert.Contains("users", lifecycle["whereThingsGo"]!["theData"]!.GetValue<string>());
+
+        var initialized = await CallAsync(fixture, "initialize", new JsonObject());
+
+        var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
+
+        Assert.Contains("change_code with version", instructions, "the instructions every agent reads say it before the guide does");
+        Assert.Contains("never in assets", instructions);
+    }
+
+    [TestMethod]
+    public async Task AnAgentWorksInOneVersionUntilItIsDone()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["acceptTerms"] = true,
+            ["publicKey"] = "one-version"
+        }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var written = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["change"] = "Greets whoever asks",
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"helo\"));" })
+        }));
+
+        Assert.AreEqual(2, written["version"]!.GetValue<int>());
+        Assert.Contains("version: 2", written["next"]!.GetValue<string>(), "the answer says how to keep working in the version it made");
+
+        // the typo, fixed where it is rather than in a version of its own
+        var fixedUp = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["version"] = 2,
+            ["deploy"] = true,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = "helo", ["replace"] = "hello" })
+        }));
+
+        Assert.IsTrue(fixedUp["ok"]!.GetValue<bool>(), fixedUp.ToJsonString());
+        Assert.AreEqual(2, fixedUp["version"]!.GetValue<int>());
+        Assert.AreEqual(2, fixedUp["revision"]!.GetValue<int>());
+
+        using var served = await fixture.GetAsync("/lambda/one-version/");
+
+        Assert.AreEqual("hello", await served.GetContentAsync());
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.AreEqual(2, read["latestVersion"]!.GetValue<int>());
+        Assert.HasCount(2, (JsonArray)read["history"]!, "the starter and the one thing that was asked for");
+        Assert.AreEqual("Greets whoever asks", read["change"]!.GetValue<string>(), "a fix left out of the note keeps it");
+        Assert.IsNull(read["onlineChanged"]);
+    }
+
+    [TestMethod]
+    public async Task ChangingAnOlderVersionIsRefusedWithWhatToDoInstead()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"x\"));" })
+        }));
+
+        var answer = await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["version"] = 1,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "notes.txt", ["code"] = "rewriting history" })
+        });
+
+        Assert.IsTrue(answer["result"]!["isError"]!.GetValue<bool>());
+
+        var problem = Structured(answer)["problem"]!.GetValue<string>();
+
+        Assert.Contains("history", problem);
+        Assert.Contains("copy_version", problem);
+    }
+
+    [TestMethod]
+    public async Task AnAgentStartsTheNextVersionWithoutSendingFiles()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject
+        {
+            ["acceptTerms"] = true,
+            ["publicKey"] = "copied-by-agent"
+        }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["specification"] = "A page that greets",
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"first\"));" })
+        }));
+
+        var copied = Structured(await CallToolAsync(fixture, "copy_version", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["change"] = "Greets in German"
+        }));
+
+        Assert.IsTrue(copied["ok"]!.GetValue<bool>(), copied.ToJsonString());
+        Assert.AreEqual(3, copied["version"]!.GetValue<int>());
+        Assert.Contains("version: 3", copied["next"]!.GetValue<string>());
+
+        Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["version"] = 3,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "lambda.cs", ["find"] = "first", ["replace"] = "erste" })
+        }));
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey, ["version"] = 2 }));
+
+        Assert.Contains("first", ((JsonArray)read["files"]!)[0]!["code"]!.GetValue<string>(), "the version copied is as it was");
+
+        var newest = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.AreEqual("A page that greets", newest["specification"]!.GetValue<string>(), "a copy keeps what the user wanted");
+        Assert.AreEqual("Greets in German", newest["change"]!.GetValue<string>());
+
+        // and a copy of an older version is how an agent rolls back and carries on
+        var back = Structured(await CallToolAsync(fixture, "copy_version", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["version"] = 2,
+            ["deploy"] = true
+        }));
+
+        Assert.AreEqual(4, back["version"]!.GetValue<int>());
+
+        using var served = await fixture.GetAsync("/lambda/copied-by-agent/");
+
+        Assert.AreEqual("first", await served.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task ReadingALambdaSaysWhenWhatIsOnlineIsBehindWhatWasSaved()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"online\"));" })
+        }));
+
+        var saved = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["version"] = 2,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"saved\"));" })
+        }));
+
+        Assert.IsTrue(saved["savedOver"]!.GetValue<bool>());
+        Assert.StartsWith("deploy", saved["next"]!.GetValue<string>());
+
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.IsTrue(read["onlineChanged"]!.GetValue<bool>(), "what visitors get is not what read_lambda shows until it is deployed");
+        Assert.AreEqual(1, read["activeRevision"]!.GetValue<int>());
+        Assert.AreEqual(2, read["revision"]!.GetValue<int>());
+        Assert.IsTrue(read["data"]!["workspace"]!["enabled"]!.GetValue<bool>(), "and it says what data the lambda keeps");
+    }
+
+    [TestMethod]
+    public async Task AnAgentIsToldWhenTheWorkspaceIsOff()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using (var _ = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/data/workspace")) { }
+
+        var listed = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
+
+        Assert.IsFalse(listed["enabled"]!.GetValue<bool>());
+        Assert.Contains("ask the user", listed["note"]!.GetValue<string>());
+
+        var refused = await CallToolAsync(fixture, "upload_file", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey,
+            ["path"] = "a.txt",
+            ["content"] = "a"
+        });
+
+        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
+        Assert.Contains("switched off", Structured(refused)["problem"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task AFileUploadedByAnAgentIsServedAtOnce()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -847,11 +1082,12 @@ public sealed class McpTests
         // while it picks a tool, so both have to say it
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
 
-        var rule = guide["whereFilesGo"]!["rule"]!.GetValue<string>();
+        var rule = guide["lifecycle"]!["whereThingsGo"]!["theData"]!.GetValue<string>();
 
         Assert.Contains("model", rule);
         Assert.Contains("workspace", rule);
-        Assert.Contains("upload_file", guide["whereFilesGo"]!["how"]!.GetValue<string>());
+        Assert.Contains("upload_file", guide["workspace"]!["fromOutside"]!.GetValue<string>());
+        Assert.Contains("workspace", guide["assets"]!["size"]!.GetValue<string>(), "and the assets say where their large files belong");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
 
@@ -859,6 +1095,11 @@ public sealed class McpTests
 
         Assert.Contains("upload_file", Describe("write_code"));
         Assert.Contains("model", Describe("upload_file"));
+
+        // and while it picks one, which way round the program and its data go
+        Assert.Contains("front end", Describe("write_code"));
+        Assert.Contains("Not for the front end", Describe("upload_file"));
+        Assert.Contains("every version", Describe("list_files") + Describe("upload_file"));
     }
 
     #region Plumbing

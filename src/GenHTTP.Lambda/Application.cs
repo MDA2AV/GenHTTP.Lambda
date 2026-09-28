@@ -11,6 +11,7 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Execution;
 using GenHTTP.Lambda.Services.Building;
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Protection;
@@ -116,6 +117,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
+        services.AddSingleton<IDataService, DataService>();
         services.AddSingleton<IShowcaseService, ShowcaseService>();
         services.AddSingleton<SettingsService>();
         services.AddSingleton<DemoSeeder>();

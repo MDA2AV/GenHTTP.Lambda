@@ -8,6 +8,10 @@ namespace GenHTTP.Lambda.Services.Storage;
 /// Stores the code of a lambda as <c>{data}/code/{id}/v{version}.cs</c> and gives
 /// every lambda a private directory below <c>{data}/workspaces/{id}</c>.
 /// </summary>
+/// <remarks>
+/// <c>{data}/code/{id}/online.cs</c> is there only while the version that is
+/// online has been saved over since it was deployed, and holds what it was.
+/// </remarks>
 public sealed class FileSystemStorageService : IStorageService
 {
 
@@ -41,24 +45,68 @@ public sealed class FileSystemStorageService : IStorageService
     #region Functionality
 
     public async ValueTask WriteAsync(long lambdaId, int version, string code, CancellationToken cancellation = default)
+        => await WriteWholeAsync(GetFile(lambdaId, version), code, cancellation);
+
+    public ValueTask<string?> ReadAsync(long lambdaId, int version, CancellationToken cancellation = default)
+        => ReadIfThereAsync(GetFile(lambdaId, version), cancellation);
+
+    public async ValueTask PreserveOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default)
     {
-        var directory = GetCodeDirectory(lambdaId);
+        var code = await ReadAsync(lambdaId, version, cancellation);
 
-        Directory.CreateDirectory(directory);
-
-        await File.WriteAllTextAsync(GetFile(lambdaId, version), code, cancellation);
+        if (code != null)
+        {
+            await WriteWholeAsync(GetOnlineFile(lambdaId), code, cancellation);
+        }
     }
 
-    public async ValueTask<string?> ReadAsync(long lambdaId, int version, CancellationToken cancellation = default)
-    {
-        var file = GetFile(lambdaId, version);
+    public async ValueTask<string?> ReadOnlineAsync(long lambdaId, int version, CancellationToken cancellation = default)
+        => await ReadIfThereAsync(GetOnlineFile(lambdaId), cancellation) ?? await ReadAsync(lambdaId, version, cancellation);
 
+    public ValueTask DropOnlineAsync(long lambdaId, CancellationToken cancellation = default)
+    {
+        var file = GetOnlineFile(lambdaId);
+
+        if (File.Exists(file))
+        {
+            File.Delete(file);
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Writes a file through a temporary one beside it, so it is replaced
+    /// whole or not at all - and a reader that opened it before keeps reading
+    /// what it opened.
+    /// </summary>
+    private static async ValueTask WriteWholeAsync(string file, string code, CancellationToken cancellation)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+
+        var staging = $"{file}.saving";
+
+        await File.WriteAllTextAsync(staging, code, cancellation);
+
+        File.Move(staging, file, true);
+    }
+
+    private static async ValueTask<string?> ReadIfThereAsync(string file, CancellationToken cancellation)
+    {
         if (!File.Exists(file))
         {
             return null;
         }
 
-        return await File.ReadAllTextAsync(file, cancellation);
+        try
+        {
+            return await File.ReadAllTextAsync(file, cancellation);
+        }
+        catch (FileNotFoundException)
+        {
+            // dropped between looking and reading
+            return null;
+        }
     }
 
     public ValueTask DeleteVersionAsync(long lambdaId, int version, CancellationToken cancellation = default)
@@ -107,6 +155,8 @@ public sealed class FileSystemStorageService : IStorageService
     private string GetWorkspaceDirectory(long lambdaId) => Path.Combine(Options.WorkspaceDirectory, lambdaId.ToString());
 
     private string GetFile(long lambdaId, int version) => Path.Combine(GetCodeDirectory(lambdaId), $"v{version}.cs");
+
+    private string GetOnlineFile(long lambdaId) => Path.Combine(GetCodeDirectory(lambdaId), "online.cs");
 
     private static void Remove(string directory)
     {

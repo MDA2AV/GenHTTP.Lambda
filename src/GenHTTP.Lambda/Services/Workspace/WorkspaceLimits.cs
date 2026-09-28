@@ -16,9 +16,14 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// whole number of them and at least one, and so does every folder. Counted in
 /// bytes, an empty file would be free, and a loop writing them would run the
 /// host out of files long before any quota noticed.
+///
+/// Whether the lambda has a workspace at all is baked in the same way, for the
+/// same reasons: its owner can switch it off, and a lambda compiled while it
+/// was on is compiled again once it is not.
 /// </remarks>
 /// <param name="Quota">How much room the workspace may take, in bytes</param>
-public sealed record WorkspaceLimits(long Quota)
+/// <param name="Enabled">Whether the owner left the workspace switched on</param>
+public sealed record WorkspaceLimits(long Quota, bool Enabled = true)
 {
 
     /// <summary>

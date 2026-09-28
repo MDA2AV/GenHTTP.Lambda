@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Continuez à l’améliorer',
-      body: 'Chaque app a son lien d’édition privé. Donnez-le à votre agent avec la prochaine modification, ou ouvrez-le vous-même. Chaque modification crée une nouvelle version, et l’adresse ne change pas.',
+      body: 'Chaque app a son lien d’édition privé. Donnez-le à votre agent avec la prochaine modification, ou ouvrez-le vous-même. Chaque modification que vous demandez devient une version à part entière, et l’adresse ne change pas.',
       alt: 'Le tableau de bord du sondage : ses versions, chacune avec la demande, ce qui a changé et la différence avec la précédente',
     },
   ],

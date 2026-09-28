@@ -63,6 +63,7 @@ export const editor: EditorMessages = {
       showcase: 'Montra',
       domain: 'Domínio',
       files: 'Ficheiros',
+      data: 'Dados',
       versions: 'Versões',
       deployments: 'Deploys',
       stats: 'Estatísticas',
@@ -89,6 +90,8 @@ export const editor: EditorMessages = {
     download: 'Transferir como projeto .NET',
     delete: 'Eliminar esta lambda',
     deploy: (version) => `Fazer deploy da versão ${version}`,
+    changedSince: 'Foi guardada outra vez depois de ficar online. Os visitantes continuam a receber o que ficou online com o deploy.',
+    changedShort: 'Mudou desde que ficou online',
     problems: 'Algo correu mal recentemente',
     demoTitle: 'Uma demo, mantida online por esta instalação e só de leitura.',
     demo: (start) => (
@@ -110,7 +113,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Eliminar de vez',
     deleteFailed: 'Não foi possível eliminar a lambda.',
     deleteText: (key) => (
-      <>Todas as versões, os ficheiros, o histórico e o endereço {key} vão com ela. Não é possível anular.</>
+      <>Todas as versões, todos os dados, o histórico e o endereço {key} vão com ela. Não é possível anular.</>
     ),
     openInTab: 'Abrir num novo separador',
     open: (address) => `Abrir ${address} num novo separador`,
@@ -173,6 +176,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>A ler {file}</>,
       logs: 'A ler o log',
       create: 'A criar uma lambda',
+      copy: 'A começar uma versão nova',
       write: (files) => <>A alterar {files}</>,
       writeAll: (files) => <>A escrever {files}</>,
       removing: (files) => <>, a remover {files}</>,
@@ -269,9 +273,15 @@ export const editor: EditorMessages = {
     noDescription: 'Sem descrição',
     version: (version) => `Versão ${version}`,
     notOnline: 'ainda não está online',
+    changedSinceOnline: 'mudou desde que ficou online',
+    edited: 'editada',
     wanted: 'O que foi pedido',
     noVersions: 'Ainda não há versões.',
     storage: 'Armazenamento',
+    inVersion: (version) => `Na versão ${version}`,
+    noVersion: 'Na versão',
+    inData: 'Nos dados',
+    sharedByAll: 'Partilhados por todas as versões',
     browse: 'Explorar',
     code: 'Código',
     codeWhy: 'O C# é compilado, nunca servido.',
@@ -280,6 +290,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Públicos: o código serve-os.',
     assetsPrivate: 'Não são servidos pelo código.',
     data: 'Dados',
+    workspace: 'Workspace',
+    workspaceOff: 'desligado',
     dataPublic: 'Públicos: o código serve o workspace.',
     dataPrivate: 'Privados: só a lambda os usa.',
   },
@@ -287,9 +299,15 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        O {b('Código')} é compilado e nunca é servido. Os {b('Assets')} (páginas, estilos, imagens) são guardados com
-        cada versão e são públicos se o código os servir. Os {b('Dados')} são o que a lambda escreve enquanto corre: não
-        fazem parte de nenhuma versão e só são públicos se o código os servir.
+        Os ficheiros de uma versão: o programa. O {b('Código')} é compilado e nunca é servido. Os {b('Assets')} (páginas,
+        scripts, estilos, imagens) são guardados com o código, seguem com ele em cada deploy e em cada reversão, e são
+        públicos se o código os servir. O que a lambda guarda enquanto corre não está aqui: são os {b('Dados')} dela.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        Estes ficheiros pertencem à versão {version} e mudam com ela. O que a lambda guarda enquanto corre é igual para
+        todas as versões, e está em {data('Dados')}.
       </>
     ),
     edit: 'Editar esta versão',
@@ -312,7 +330,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Guardados com o código, mas esta versão não os serve.',
     noAssets: 'Nenhum nesta versão.',
     data: 'Dados',
-    dataPublic: 'Públicos: esta versão serve-os com Workspace.',
+    dataPublic: 'Públicos: o código online serve-os com Workspace.',
     dataPrivate: 'Privados: só a lambda os usa. Não fazem parte de nenhuma versão.',
     uploadFailed: (path) => `Não foi possível carregar ${path}.`,
     deleteFolder: (path, held) =>
@@ -342,12 +360,62 @@ export const editor: EditorMessages = {
     notText: 'Não é texto. Transfere-o para ver o conteúdo.',
   },
 
+  data: {
+    hint:
+      'Os dados são o que a lambda guarda enquanto corre. Pertencem à lambda, não a uma versão: todas as versões leem e escrevem os mesmos dados, e nada do que fazes com as versões lhes toca. Só desaparecem quando a lambda é eliminada, ou quando desligas esse tipo de dados.',
+    facts: [
+      ['Partilhados por todas as versões', 'Seja qual for a versão online, lê e escreve os mesmos dados.'],
+      ['Ficam quando fazes deploy', 'Fazer deploy, reverter ou copiar uma versão nunca lhes toca.'],
+      ['Decides tu', 'Cada tipo só está ligado enquanto quiseres. Desligar um deles elimina o que guarda.'],
+    ],
+    kinds: {
+      workspace: {
+        name: 'Workspace',
+        what: 'Ficheiros que a lambda lê e escreve enquanto corre: o que é carregado, registos, tudo o que ela guarda.',
+      },
+    },
+    on: 'Ligado',
+    off: 'Desligado',
+    byDefault: 'Ligado por predefinição',
+    usage: (items, used, of) => `${items} · ${used} de ${of}`,
+    offText: 'Desligado. Não guarda nada, e o código que o usa falha até voltar a ser ligado.',
+    switchOn: 'Ligar',
+    switchOff: 'Desligar',
+    switchLabel: (name) => `${name} ligado ou desligado`,
+    confirmOff: (name) => `Desligar o ${name.toLowerCase()}?`,
+    confirmText: (items, size) => `Tudo o que lá está (${items}, ${size}) é eliminado de vez. Não é possível anular.`,
+    confirmEmpty: 'Está vazio, por isso não se perde nada.',
+    inUse: 'A versão online usa-o, por isso vai falhar onde o usa até voltares a ligá-lo.',
+    deleteAndOff: 'Desligar e eliminar',
+    keep: 'Manter',
+    switchedOn: (name) => `O ${name.toLowerCase()} está ligado. A lambda pode usá-lo a partir do próximo pedido.`,
+    switchedOff: (name) => `O ${name.toLowerCase()} está desligado, e o que guardava foi eliminado.`,
+    switchFailed: 'Não foi possível ligar ou desligar.',
+    readFailed: 'Não foi possível ler os dados.',
+    demo: 'Uma demo: os dados estão lá para serem lidos, não alterados.',
+    contents: 'O que o workspace guarda',
+    browse: 'Ficheiros',
+    offBrowse: 'O workspace está desligado, por isso não há ficheiros para mostrar.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Cada versão guarda o que foi pedido e o que mudou, quando quem a escreveu o indicou. Quando há mais de ${limit}, as mais antigas são removidas; a que está online, nunca.`,
+      `Uma versão é o programa: o código e os assets. A mais recente é aquela em que se está a trabalhar: podes guardar alterações nela e voltar a fazer deploy sempre que for preciso. As anteriores ficam exatamente como estavam, para comparar e para voltar a elas. Cada uma guarda o que foi pedido e o que mudou. Quando há mais de ${limit}, as mais antigas são removidas; a que está online, nunca.`,
     none: 'Ainda não há versões.',
     noDescription: 'Sem descrição',
     online: 'online',
+    newest: 'mais recente',
+    newestTitle: 'A versão em que se está a trabalhar: guardar altera-a diretamente',
+    edited: 'editada',
+    saves: (count) => (count === 1 ? 'Guardada uma vez' : `Guardada ${count} vezes`),
+    changedSince: 'mudou desde que ficou online',
+    deployAgain: 'Voltar a fazer deploy',
+    deployAgainTitle: 'Pôr online o que foi guardado desde que ficou online',
+    start: 'Nova versão',
+    startTitle: (version) => `Manter a versão ${version} como está e continuar numa cópia dela`,
+    startFrom: 'Começar uma nova versão a partir daqui',
+    started: (version) => `A versão ${version} foi criada. Agora é a mais recente, por isso é nela que o trabalho continua.`,
+    startFailed: 'Não foi possível criar a nova versão.',
     putOnline: 'Pôr esta versão online',
     rollBackTitle: 'Voltar a pôr online esta versão anterior',
     deploy: 'Fazer deploy',
@@ -382,6 +450,8 @@ export const editor: EditorMessages = {
       ended: 'terminado',
     },
     putBack: (version) => `Voltar a pôr a versão ${version} online`,
+    revision: (revision) => `revisão ${revision}`,
+    revisionTitle: (revision) => `A versão tal como estava depois de ser guardada pela ${revision}.ª vez`,
     timeline: 'O que esteve online nos últimos sete dias',
     block: (version, from, to) => `Versão ${version}, de ${from} a ${to ?? 'agora'}`,
     weekAgo: 'há uma semana',
@@ -571,25 +641,36 @@ export const editor: EditorMessages = {
     notYet: 'Ainda não compila.',
     checkFailed: 'Não foi possível verificar o código.',
     saved: (version) => `Guardado como versão ${version}.`,
+    savedOver: (version) => `Guardado na versão ${version}. Faz deploy para a pôr online.`,
+    savedOverOnline: (version) =>
+      `Guardado na versão ${version}. Os visitantes continuam a receber o que foi posto online até voltares a fazer deploy.`,
     isOnline: (version) => `A versão ${version} está online.`,
     notOnline: 'Não ficou online. Vê abaixo o que o compilador disse.',
     failed: 'Não correu bem.',
     unchanged: 'Nada mudou desde que guardaste pela última vez.',
     demo: 'É uma demo, por isso aqui tudo é só de leitura. Para a alterar, cria uma lambda tua a partir dela. ',
-    edit: 'Edita o código à mão. Guardar cria uma nova versão e não toca no que está online; fazer deploy põe-na online. ',
+    edit: 'Edita o código à mão. Guardar altera a versão mais recente, sempre que quiseres; o que está online só muda quando fazes deploy. Nova versão mantém tal como está a versão de onde partiste. ',
+    history: (version, newest) =>
+      `A versão ${version} já faz parte do histórico e fica como está, por isso guardar cria uma nova versão a partir dela. A versão ${newest} é a mais recente. `,
     files: (entry, cs) => (
       <>
         {entry} devolve o que é servido, os outros ficheiros {cs} têm tipos, e qualquer outro ficheiro é servido tal como
         está. Ctrl-S guarda, F12 vai para a declaração.
       </>
     ),
-    newer: (version) => ` A versão ${version} é mais recente do que a que está aberta aqui.`,
     check: 'Verificar',
     save: 'Guardar',
+    saveTitle: (version) => `Guardar na versão ${version} (Ctrl+S)`,
+    saveNew: 'Nova versão',
+    saveNewTitle: 'Guardar como nova versão e manter tal como está a versão de onde partiste',
     deploy: 'Fazer deploy',
+    older: ', histórico',
+    newestTag: ', mais recente',
+    unpublished: ', guardada depois de ficar online',
     binary: (size) => `Não é texto, por isso não há nada para editar. É servido tal como está e tem ${size} kB.`,
     saveAndDeploy: 'Guardar e fazer deploy',
     saveVersion: 'Guardar uma nova versão',
+    saveNewAndDeploy: 'Guardar uma nova versão e fazer deploy',
     cancel: 'Cancelar',
     what: 'O que é que muda? Opcional: aparece no histórico.',
     placeholder: 'Adiciona um formulário de contacto',

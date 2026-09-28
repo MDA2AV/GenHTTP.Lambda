@@ -43,4 +43,9 @@ public interface IWorkspaceService
     /// </summary>
     ValueTask DeleteAsync(long lambdaId, string path, CancellationToken cancellation = default);
 
+    /// <summary>
+    /// Removes everything in the workspace, for when it is switched off.
+    /// </summary>
+    ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default);
+
 }

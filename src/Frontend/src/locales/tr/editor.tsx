@@ -63,6 +63,7 @@ export const editor: EditorMessages = {
       showcase: 'Vitrin',
       domain: 'Alan adı',
       files: 'Dosyalar',
+      data: 'Veriler',
       versions: 'Sürümler',
       deployments: 'Yayın geçmişi',
       stats: 'İstatistikler',
@@ -89,6 +90,8 @@ export const editor: EditorMessages = {
     download: '.NET projesi olarak indir',
     delete: 'Bu lambdayı sil',
     deploy: (version) => `${version}. sürümü yayına al`,
+    changedSince: 'Yayına alındıktan sonra üzerine kaydedildi. Ziyaretçiler hâlâ yayına alınan hâlini görüyor.',
+    changedShort: 'Yayına alındıktan sonra değişti',
     problems: 'Son zamanlarda bir şeyler ters gitti',
     demoTitle: 'Bir demo: bu kurulum tarafından yayında tutulur ve salt okunurdur.',
     demo: (start) => (
@@ -110,7 +113,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Kalıcı olarak sil',
     deleteFailed: 'Lambda silinemedi.',
     deleteText: (key) => (
-      <>Tüm sürümleri, dosyaları, geçmişi ve {key} adresi onunla birlikte silinir. Bu işlem geri alınamaz.</>
+      <>Tüm sürümleri, tüm verileri, geçmişi ve {key} adresi onunla birlikte silinir. Bu işlem geri alınamaz.</>
     ),
     openInTab: 'Yeni sekmede aç',
     open: (address) => `${address} adresini yeni sekmede aç`,
@@ -176,6 +179,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>{file} okunuyor</>,
       logs: 'Log okunuyor',
       create: 'Lambda oluşturuluyor',
+      copy: 'Yeni sürüm başlatılıyor',
       write: (files) => (files ? <>{files} değiştiriliyor</> : <>Dosyalar değiştiriliyor</>),
       writeAll: (files) => <>{files} yazılıyor</>,
       removing: (files) => <>, {files} siliniyor</>,
@@ -272,9 +276,15 @@ export const editor: EditorMessages = {
     noDescription: 'Açıklama yok',
     version: (version) => `Sürüm ${version}`,
     notOnline: 'henüz yayında değil',
+    changedSinceOnline: 'yayına alındıktan sonra değişti',
+    edited: 'son düzenleme',
     wanted: 'Ne istendi',
     noVersions: 'Henüz sürüm yok.',
     storage: 'Depolama',
+    inVersion: (version) => `Sürüm ${version} içinde`,
+    noVersion: 'Sürümde',
+    inData: 'Verilerde',
+    sharedByAll: 'Tüm sürümler için ortak',
     browse: 'Göz at',
     code: 'Kod',
     codeWhy: 'C# derlenir, asla sunulmaz.',
@@ -283,6 +293,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Herkese açık: kod bunları sunuyor.',
     assetsPrivate: 'Kod bunları sunmuyor.',
     data: 'Veriler',
+    workspace: 'Çalışma alanı',
+    workspaceOff: 'kapalı',
     dataPublic: 'Herkese açık: kod çalışma alanını sunuyor.',
     dataPrivate: 'Yalnızca lambdaya özel.',
   },
@@ -290,9 +302,16 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('Kod')} derlenir ve asla sunulmaz. {b('Statik dosyalar')} (sayfalar, stiller, görseller) her sürümle birlikte
-        kaydedilir ve kod onları sunuyorsa herkese açıktır. {b('Veriler')}, lambdanın çalışırken yazdıklarıdır. Hiçbir
-        sürümün parçası değildir ve yalnızca kod onları sunuyorsa herkese açıktır.
+        Bir sürümün dosyaları, yani programın kendisi. {b('Kod')} derlenir ve asla sunulmaz. {b('Statik dosyalar')}{' '}
+        (sayfalar, scriptler, stiller, görseller) kodla birlikte kaydedilir, onunla birlikte yayına alınır ve eski bir
+        sürüme dönüldüğünde onunla birlikte geri gelir. Kod onları sunuyorsa herkese açıktır. Lambdanın çalışırken
+        sakladıkları burada değil, {b('Veriler')} bölümündedir.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        Bunlar {version}. sürüme aittir ve onunla birlikte değişir. Lambdanın çalışırken sakladıkları her sürüm için
+        aynıdır ve {data('Veriler')} bölümündedir.
       </>
     ),
     edit: 'Bu sürümü düzenle',
@@ -314,7 +333,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Kodla birlikte kaydedildi ama bu sürüm onları sunmuyor.',
     noAssets: 'Bu sürümde yok.',
     data: 'Veriler',
-    dataPublic: 'Herkese açık: bu sürüm onları Workspace ile sunuyor.',
+    dataPublic: 'Herkese açık: yayındaki kod onları Workspace ile sunuyor.',
     dataPrivate: 'Yalnızca lambdaya özel. Hiçbir sürümün parçası değil.',
     uploadFailed: (path) => `${path} yüklenemedi.`,
     deleteFolder: (path, held) =>
@@ -342,12 +361,62 @@ export const editor: EditorMessages = {
     notText: 'Metin değil. İçine bakmak için indirin.',
   },
 
+  data: {
+    hint:
+      'Veriler, lambdanın çalışırken sakladıklarıdır. Bir sürüme değil, lambdaya aittir: her sürüm aynı verileri okur ve yazar, sürümlerle yaptığınız hiçbir şey onları değiştirmez. Lambda silindiğinde ya da o veri türünü kapattığınızda silinirler.',
+    facts: [
+      ['Tüm sürümler için ortak', 'Hangi sürüm yayındaysa aynı verileri okur ve yazar.'],
+      ['Yayına alınca da kalır', 'Yayına almak, eski bir sürüme dönmek ya da bir sürümü kopyalamak verilere hiç dokunmaz.'],
+      ['Açıp kapatmak sizde', 'Her tür yalnızca siz istediğiniz sürece açıktır. Birini kapatmak, içindekileri siler.'],
+    ],
+    kinds: {
+      workspace: {
+        name: 'Çalışma alanı',
+        what: 'Lambdanın çalışırken okuyup yazdığı dosyalar: yüklemeler, kayıtlar, sakladığı her şey.',
+      },
+    },
+    on: 'Açık',
+    off: 'Kapalı',
+    byDefault: 'Varsayılan olarak açık',
+    usage: (items, used, of) => `${items} · ${used} / ${of}`,
+    offText: 'Kapalı. İçinde hiçbir şey yok ve onu kullanan kod, yeniden açılana kadar hata verir.',
+    switchOn: 'Aç',
+    switchOff: 'Kapat',
+    switchLabel: (name) => `${name}: aç ya da kapat`,
+    confirmOff: (name) => `${name} kapatılsın mı?`,
+    confirmText: (items, size) => `İçindeki her şey (${items}, ${size}) kalıcı olarak silinir. Bu işlem geri alınamaz.`,
+    confirmEmpty: 'İçi boş, yani hiçbir şey kaybolmaz.',
+    inUse: 'Yayındaki sürüm onu kullanıyor. Siz yeniden açana kadar onu kullandığı yerlerde hata verir.',
+    deleteAndOff: 'Kapat ve sil',
+    keep: 'Açık kalsın',
+    switchedOn: (name) => `${name} açık. Lambda onu bir sonraki istekten itibaren kullanabilir.`,
+    switchedOff: (name) => `${name} kapalı ve içindekiler silindi.`,
+    switchFailed: 'Açılıp kapatılamadı.',
+    readFailed: 'Veriler okunamadı.',
+    demo: 'Bir demo: verileri okumak için orada, değiştirmek için değil.',
+    contents: 'Çalışma alanında neler var',
+    browse: 'Dosyalar',
+    offBrowse: 'Çalışma alanı kapalı, bu yüzden gösterilecek dosya yok.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Her sürüm, yazan belirttiyse, ne istendiğini ve neyi değiştirdiğini saklar. En fazla ${limit} sürüm tutulur, fazlası olunca en eskiler silinir. Yayındaki sürüm asla silinmez.`,
+      `Bir sürüm, programın kendisidir: kodu ve statik dosyaları. En yeni sürüm, üzerinde çalışılan sürümdür: gerektiği kadar üzerine kaydedilip yeniden yayına alınabilir. Öncekiler tam olduğu gibi kalır; onlarla karşılaştırabilir ya da onlara geri dönebilirsiniz. Her sürüm, ne istendiğini ve neyi değiştirdiğini saklar. En fazla ${limit} sürüm tutulur, fazlası olunca en eskiler silinir. Yayındaki sürüm asla silinmez.`,
     none: 'Henüz sürüm yok.',
     noDescription: 'Açıklama yok',
     online: 'yayında',
+    newest: 'en yeni',
+    newestTitle: 'Üzerinde çalışılan sürüm: kaydetmek onu yerinde değiştirir',
+    edited: 'son düzenleme',
+    saves: (count) => (count === 1 ? 'Bir kez kaydedildi' : `${count} kez kaydedildi`),
+    changedSince: 'yayına alındıktan sonra değişti',
+    deployAgain: 'Yeniden yayına al',
+    deployAgainTitle: 'Yayına alındıktan sonra kaydedilenleri yayına al',
+    start: 'Yeni sürüm',
+    startTitle: (version) => `${version}. sürümü olduğu gibi bırak ve bir kopyasında devam et`,
+    startFrom: 'Buradan yeni bir sürüm başlat',
+    started: (version) => `Sürüm ${version} başlatıldı. Artık en yeni sürüm o, çalışma orada devam ediyor.`,
+    startFailed: 'Yeni sürüm başlatılamadı.',
     putOnline: 'Bu sürümü yayına al',
     rollBackTitle: 'Bu eski sürümü yeniden yayına al',
     deploy: 'Yayına al',
@@ -382,6 +451,8 @@ export const editor: EditorMessages = {
       ended: 'sona erdi',
     },
     putBack: (version) => `${version}. sürümü yeniden yayına al`,
+    revision: (revision) => `${revision}. kayıt`,
+    revisionTitle: (revision) => `Sürümün ${revision}. kayıttan sonraki hâli`,
     timeline: 'Son yedi günde yayında olanlar',
     block: (version, from, to) => `Sürüm ${version}, ${from} – ${to ?? 'şimdi'}`,
     weekAgo: 'bir hafta önce',
@@ -570,25 +641,36 @@ export const editor: EditorMessages = {
     notYet: 'Henüz derlenmiyor.',
     checkFailed: 'Kod kontrol edilemedi.',
     saved: (version) => `Sürüm ${version} olarak kaydedildi.`,
+    savedOver: (version) => `Sürüm ${version} üzerine kaydedildi. Yayına girmesi için yayına alın.`,
+    savedOverOnline: (version) =>
+      `Sürüm ${version} üzerine kaydedildi. Siz yeniden yayına alana kadar ziyaretçiler yayına alınan hâlini görür.`,
     isOnline: (version) => `Sürüm ${version} yayında.`,
     notOnline: 'Yayına alınamadı. Derleyicinin ne dediğine aşağıdan bakın.',
     failed: 'Bir şeyler ters gitti.',
     unchanged: 'Son kayıttan beri hiçbir şey değişmedi.',
     demo: 'Bu bir demo, buradaki her şey salt okunur. Değiştirmek için bundan kendi lambdanızı oluşturun. ',
-    edit: 'Kodu elle düzenleyin. Kaydettiğinizde yeni bir sürüm oluşur, yayındaki sürüm değişmez. Yayına aldığınızda ise yeni sürüm yayına girer. ',
+    edit: 'Kodu elle düzenleyin. Kaydetmek en yeni sürümü yerinde değiştirir, istediğiniz kadar kaydedebilirsiniz. Yayındaki sürüm yalnızca yayına aldığınızda değişir. “Yeni sürüm” ise başladığınız sürümü olduğu gibi bırakır. ',
+    history: (version, newest) =>
+      `Sürüm ${version} artık geçmişte kaldı ve değişmez, bu yüzden kaydetmek ondan yeni bir sürüm oluşturur. En yeni sürüm: ${newest}. `,
     files: (entry, cs) => (
       <>
         {entry} sunulacak şeyi döndürür, diğer {cs} dosyaları türleri barındırır, geri kalan her dosya olduğu gibi
         sunulur. Ctrl-S kaydeder, F12 bir tanıma gider.
       </>
     ),
-    newer: (version) => ` Sürüm ${version}, burada açık olandan daha yeni.`,
     check: 'Kontrol et',
     save: 'Kaydet',
+    saveTitle: (version) => `Sürüm ${version} üzerine kaydet (Ctrl+S)`,
+    saveNew: 'Yeni sürüm',
+    saveNewTitle: 'Yeni bir sürüm olarak kaydet ve başladığınız sürümü olduğu gibi bırak',
     deploy: 'Yayına al',
+    older: ', geçmiş',
+    newestTag: ', en yeni',
+    unpublished: ', yayına alındıktan sonra kaydedildi',
     binary: (size) => `Metin değil, düzenlenecek bir şey yok. Olduğu gibi sunulur. Boyutu ${size} kB.`,
     saveAndDeploy: 'Kaydet ve yayına al',
     saveVersion: 'Yeni sürüm kaydet',
+    saveNewAndDeploy: 'Yeni sürüm kaydet ve yayına al',
     cancel: 'İptal',
     what: 'Ne değişiyor? İsteğe bağlı, geçmişte gösterilir.',
     placeholder: 'İletişim formu ekler',

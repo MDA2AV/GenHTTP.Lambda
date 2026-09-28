@@ -33,7 +33,7 @@ export interface AgentControl {
 
 /** How many versions a change has saved or put online so far. */
 const milestones = (job?: ChangeJob | null) =>
-  (job?.steps ?? []).filter((step) => step.done && step.version != null && (step.kind === 'write' || step.kind === 'deploy')).length;
+  (job?.steps ?? []).filter((step) => step.done && step.version != null && (step.kind === 'write' || step.kind === 'copy' || step.kind === 'deploy')).length;
 
 export function useAgent({
   privateKey,

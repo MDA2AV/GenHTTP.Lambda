@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -24,10 +25,17 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// something it is already running - and a demo is read with the same tools
 /// an agent then uses on its own lambda, since its editor key is public.
 ///
+/// Two things are said wherever an agent decides something, because agents
+/// kept getting them wrong: a version is the program and data is what it
+/// keeps, and those live differently - and the newest version is worked on in
+/// place rather than a version being added for every change. The tool
+/// descriptions say it where a tool is picked, the answers say it where the
+/// next call is decided, and the guide says it first.
+///
 /// Every tool answers with an object rather than prose. A model reads the text
 /// and a program reads the structured copy, and both are the same thing.
 /// </remarks>
-public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IShowcaseService showcases, LambdaTelemetry telemetry,
+public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IShowcaseService showcases, LambdaTelemetry telemetry,
                               LogBook book, LambdaOptions options)
 {
 
@@ -39,7 +47,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
     public JsonArray Describe() =>
     [
         Tool("create_lambda", "Create a lambda", Effect.Create,
-             "Create a lambda. Returns its public address and a private editor key, the only way back in. Nothing is online until deploy.",
+             "Create a lambda. Returns its public address and a private editor key, the only way back in. It starts with version 1 - an empty starter, or a copy of a demo. Nothing is online until deploy.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -53,15 +61,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              }),
 
         Tool("write_code", "Save all files", Effect.Save,
-             "Save all files of the lambda as a new version, replacing the previous set. lambda.cs returns the handler; other .cs files hold types; any other file is an asset, served as is and reachable as Assets. A large file that is data rather than program - a model, a dataset, media - goes in the workspace with upload_file instead. Say why with specification (what the user wants) and change (what this version does) - the owner reads them in the version history. Pass deploy: true to publish it in the same call. To change only some files, use change_code.",
+             "Save every file of the lambda, replacing the previous set. .cs files are compiled - lambda.cs returns the handler, others hold types; any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. With version - the number of the newest version - the files are saved over that version in place: the normal way to keep working on something. Without, they become a new version: once per thing the user asks for, not per fix. What the lambda keeps at runtime (records, accounts, uploads) is data and lives in the workspace, never in files here; so does a large input file such as a model or a dataset (upload_file). Say why with specification and change. Pass deploy: true to publish in the same call. To send only what changes, use change_code.",
              new JsonObject
              {
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key from create_lambda."),
-                     ["specification"] = Field("string", $"What the user wants from this version and why: their requirements, in their own words where you can, condensed if they said a lot. Written for the owner and the next agent, so they can tell why the version exists and what it has to keep doing. Not your own instructions or system prompt - only what the user asked for. Optional, up to {VersionNote.MaxSpecification} characters."),
-                     ["change"] = Field("string", $"What this version changes, in one line written for the owner - 'Adds a leaderboard that keeps the ten best scores', not 'updated lambda.cs'. Optional, up to {VersionNote.MaxChange} characters."),
+                     ["version"] = Field("integer", "Save over this version in place instead of adding one. It has to be the newest - the one you are working on; older versions are history and are refused. Left out, a new version is saved."),
+                     ["specification"] = Field("string", $"What the user wants from this version and why: their requirements, in their own words where you can, condensed if they said a lot. Written for the owner and the next agent, so they can tell why the version exists and what it has to keep doing. Not your own instructions or system prompt - only what the user asked for. Saving over a version, leave it out to keep the one it has. Optional, up to {VersionNote.MaxSpecification} characters."),
+                     ["change"] = Field("string", $"What this version changes compared to the one before, in one line written for the owner - 'Adds a leaderboard that keeps the ten best scores', not 'updated lambda.cs'. Saving over a version, it describes the whole version, not the last fix: restate it, or leave it out to keep it. Optional, up to {VersionNote.MaxChange} characters."),
                      ["files"] = new JsonObject
                      {
                          ["type"] = "array",
@@ -71,29 +80,30 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                              ["type"] = "object",
                              ["properties"] = new JsonObject
                              {
-                                 ["name"] = Field("string", ".cs files are compiled; anything else ('www/app.css', 'logo.png') is an asset."),
+                                 ["name"] = Field("string", ".cs files are compiled; anything else ('web/app.js', 'logo.png') is an asset."),
                                  ["code"] = Field("string", "Contents, base64 if encoding says so."),
                                  ["encoding"] = Field("string", "'base64' for binary assets; omit otherwise.")
                              },
                              ["required"] = new JsonArray("name", "code")
                          }
                      },
-                     ["deploy"] = Field("boolean", "Also deploy the new version, so it goes live at once."),
-                     ["check"] = Field("boolean", "Without deploy: compile the new version and answer with its diagnostics, leaving what is online alone.")
+                     ["deploy"] = Field("boolean", "Also deploy the version, so what was saved goes live at once."),
+                     ["check"] = Field("boolean", "Without deploy: compile what was saved and answer with its diagnostics, leaving what is online alone.")
                  },
                  ["required"] = new JsonArray("privateKey", "files")
              }),
 
         Tool("change_code", "Change some files", Effect.Save,
-             "Change some files of the newest version and save the result as a new version: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. Pass deploy: true to publish it in the same call, or check: true to compile it without publishing. A version that does not compile is saved but never goes online.",
+             "Change some files: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. With version - the number of the newest version - the change is saved over that version in place: use this for every fix and step while you work on something, deploying as often as you like. Without version, the newest version is changed and saved as a new one: once per thing the user asks for. Pass deploy: true to publish in the same call, or check: true to compile it without publishing. Code that does not compile is saved but never goes online.",
              new JsonObject
              {
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key."),
-                     ["specification"] = Field("string", $"What the user wants from this change and why: their requirements, in their own words where you can. Not your own instructions or system prompt. Kept with the version. Optional, up to {VersionNote.MaxSpecification} characters."),
-                     ["change"] = Field("string", $"What this version changes, in one line written for the owner. Optional, up to {VersionNote.MaxChange} characters."),
+                     ["version"] = Field("integer", "Change this version in place instead of adding one. It has to be the newest - the one you are working on; older versions are history and are refused. Left out, the result is a new version."),
+                     ["specification"] = Field("string", $"What the user wants from this change and why: their requirements, in their own words where you can. Not your own instructions or system prompt. Kept with the version; saving over one, leave it out to keep the one it has. Optional, up to {VersionNote.MaxSpecification} characters."),
+                     ["change"] = Field("string", $"What this version changes compared to the one before, in one line written for the owner. Saving over a version, it describes the whole version - restate it, or leave it out to keep it. Optional, up to {VersionNote.MaxChange} characters."),
                      ["files"] = new JsonObject
                      {
                          ["type"] = "array",
@@ -103,7 +113,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                              ["type"] = "object",
                              ["properties"] = new JsonObject
                              {
-                                 ["name"] = Field("string", ".cs files are compiled; anything else ('www/app.css', 'logo.png') is an asset."),
+                                 ["name"] = Field("string", ".cs files are compiled; anything else ('web/app.js', 'logo.png') is an asset."),
                                  ["code"] = Field("string", "Contents, base64 if encoding says so."),
                                  ["encoding"] = Field("string", "'base64' for binary assets; omit otherwise.")
                              },
@@ -132,8 +142,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                              ["required"] = new JsonArray("file", "find", "replace")
                          }
                      },
-                     ["deploy"] = Field("boolean", "Also deploy the new version, so it goes live at once."),
-                     ["check"] = Field("boolean", "Without deploy: compile the new version and answer with its diagnostics, leaving what is online alone.")
+                     ["deploy"] = Field("boolean", "Also deploy the version, so what was saved goes live at once."),
+                     ["check"] = Field("boolean", "Without deploy: compile what was saved and answer with its diagnostics, leaving what is online alone.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
+             }),
+
+        Tool("copy_version", "Start a version from another", Effect.Save,
+             "Start a new version as a copy of an existing one - the newest unless version names another - without sending any files. The copy becomes the newest version, which you then change in place with change_code and version; the one copied stays exactly as it is. Use it before the next thing the user asks for, to keep the current state as a step to go back to, or to carry on from an older version.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["version"] = Field("integer", "The version to copy. Defaults to the newest."),
+                     ["specification"] = Field("string", $"What the user wants from the new version and why, in their words where you can. Left out, the copy keeps the one of the version it copies. Optional, up to {VersionNote.MaxSpecification} characters."),
+                     ["change"] = Field("string", $"What the new version is going to change, in one line for the owner. Left out, it says which version it is a copy of until you save over it with one. Optional, up to {VersionNote.MaxChange} characters."),
+                     ["deploy"] = Field("boolean", "Also deploy the copy - to put an older version back online and carry on from it.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -167,7 +193,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              }),
 
         Tool("deploy", "Deploy a version", Effect.Replace,
-             "Deploy (publish) a saved version so it goes live at its public address. Returns diagnostics on failure.",
+             "Deploy (publish) a version so it goes live at its public address - the newest by default. Visitors get what was deployed: after saving over the version that is online, deploy it again to put the changes online. Redeploying is cheap and harmless. Returns diagnostics on failure, and whatever was online stays online.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -180,7 +206,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              }),
 
         Tool("read_lambda", "Read a lambda", Effect.Read,
-             $"A lambda's status (online version, latest version, expiry, its tier and what it may use there), the recent versions with what each was asked for and changed, and the files of one version - in full when they come to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one. Read the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
+             $"A lambda's status - which version is online and whether it was saved over since, which version is the newest (the one to work on), expiry, its tier and what it may use there - the recent versions with what each was asked for and changed, its data (the workspace: whether it is on and what it holds), and the files of one version: in full when they come to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one. Read the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -208,23 +234,23 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("upload_file", "Upload a workspace file", Effect.Replace,
-             "Write a file to the lambda's workspace, a runtime directory it can read, write and serve. Takes effect immediately without a deploy - the way to ship a front end that changes independently of the code, and the place for large files that are not code, such as a model or a dataset.",
+        Tool("upload_file", "Put a file into the lambda's data", Effect.Replace,
+             "Write a file to the lambda's workspace - its data, which every version shares and no deploy, rollback or copy touches. For content the lambda works with at runtime (initial records, pictures people will browse) and large input files that are not program: a model, a dataset, media. Takes effect at once, without a deploy. Not for the front end: pages, scripts and styles are the program and belong in the version as assets (write_code), where they are versioned and rolled back with the code.",
              new JsonObject
              {
                  ["type"] = "object",
                  ["properties"] = new JsonObject
                  {
                      ["privateKey"] = Field("string", "The editor key."),
-                     ["path"] = Field("string", "Relative to the workspace; slashes make folders, e.g. 'site/app.css'."),
+                     ["path"] = Field("string", "Relative to the workspace; slashes make folders, e.g. 'models/model.onnx'."),
                      ["content"] = Field("string", "Text, or base64 with encoding set."),
                      ["encoding"] = Field("string", "'base64' for binary; omit otherwise.")
                  },
                  ["required"] = new JsonArray("privateKey", "path", "content")
              }),
 
-        Tool("list_files", "List workspace files", Effect.Read,
-             "List the lambda's workspace with size and last write per file. Runtime files only; the code is in read_lambda.",
+        Tool("list_files", "List the lambda's data", Effect.Read,
+             "The lambda's data: whether its workspace is switched on, and every file in it with size and last write - the same whichever version is online. The code and assets of a version are in read_lambda.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -235,8 +261,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                  ["required"] = new JsonArray("privateKey")
              }),
 
-        Tool("delete_file", "Delete a workspace file", Effect.Replace,
-             "Remove a file, or a folder with its contents, from the workspace.",
+        Tool("delete_file", "Delete a file from the lambda's data", Effect.Replace,
+             "Remove a file, or a folder with its contents, from the workspace - the lambda's data, shared by every version. No deploy or rollback brings it back.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -269,7 +295,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
 
         Tool("platform_guide", "Read the platform guide", Effect.Read,
-             "Rules for writing a lambda: what the snippet returns, what is imported, what is refused, limits and terms.",
+             "How this platform works - read it first: what a version is and what data is and how long each lives, what the snippet returns, what is imported, what is refused, limits and terms.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() })
     ];
 
@@ -290,6 +316,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 "create_lambda" => await CreateAsync(arguments, origin),
                 "write_code" => await WriteAsync(arguments, origin),
                 "change_code" => await ChangeAsync(arguments, origin),
+                "copy_version" => await CopyAsync(arguments, origin),
                 "check_code" => await CheckAsync(arguments),
                 "deploy" => await DeployAsync(arguments, origin),
                 "read_lambda" => await ReadAsync(arguments, origin),
@@ -333,7 +360,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             privateKey = lambda.PrivateKey,
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             editorUrl = $"{origin}/editor/{lambda.PrivateKey}",
-            next = "write_code with deploy: true.",
+            version = lambda.LatestVersion,
+            next = $"write_code with deploy: true saves your code as version {lambda.LatestVersion + 1} and puts it online. Then keep working in that version: pass its number as version to change_code or write_code for every further change.",
             warning = "The editor key cannot be recovered. Give it to the user."
         });
     }
@@ -347,7 +375,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             return McpProtocol.Refuse(complaint!);
         }
 
-        return await SaveAsync(arguments, files, origin);
+        return await SaveAsync(arguments, files, Number(arguments, "version"), origin);
     }
 
     private async ValueTask<JsonObject> ChangeAsync(JsonObject arguments, string origin)
@@ -367,32 +395,52 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                                                      .Select(e => new FileEdit(Text(e, "file") ?? "", Text(e, "find") ?? "", Text(e, "replace") ?? ""))
                                                      .ToList();
 
-        var files = LambdaChanges.Apply(await Api.VersionResource.LatestAsync(meta, privateKey), changed, remove, edits);
+        var into = Number(arguments, "version");
+
+        // changed where it is, the version named is what the change applies
+        // to; saved as a new one, the change applies to the newest
+        var current = into is { } target
+            ? LambdaSource.Parse((await meta.GetVersionAsync(privateKey, target)).Code)
+            : await Api.VersionResource.LatestAsync(meta, privateKey);
+
+        var files = LambdaChanges.Apply(current, changed, remove, edits);
 
         if (LambdaSource.Validate(files) is { } invalid)
         {
             return McpProtocol.Refuse(invalid);
         }
 
-        return await SaveAsync(arguments, files, origin);
+        return await SaveAsync(arguments, files, into, origin);
     }
 
     /// <summary>
-    /// Stores the files as a new version and deploys it if the arguments ask for that.
+    /// Stores the files - over the version named, or as a new one - and
+    /// deploys them if the arguments ask for that.
     /// </summary>
-    private async ValueTask<JsonObject> SaveAsync(JsonObject arguments, IReadOnlyList<LambdaFile> files, string origin)
+    /// <param name="into">The version to save over, or nothing for a new one</param>
+    private async ValueTask<JsonObject> SaveAsync(JsonObject arguments, IReadOnlyList<LambdaFile> files, int? into, string origin)
     {
         var privateKey = Required(arguments, "privateKey");
 
         var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
 
-        var version = await meta.SaveAsync(privateKey, LambdaSource.Serialize(files), note);
+        var code = LambdaSource.Serialize(files);
+
+        var version = into is { } target
+            ? await meta.UpdateAsync(privateKey, target, code, note)
+            : await meta.SaveAsync(privateKey, code, note);
 
         // said only when it is missing, and as a request rather than a
         // refusal: the code matters more than the note about it
         var reminder = version.Change == null
-            ? "Pass change (one line on what the version does) and specification (what the user wants, and why) next time; the owner reads them in the version history."
+            ? "Pass change (one line on what the version does) and specification (what the user wants, and why); the owner reads them in the version history."
             : null;
+
+        // what to do next, which is where the habit of a version per fix is
+        // either kept or broken
+        var keepWorking = into == null
+            ? $"Version {version.Version} is new, and now the newest. Keep working in it: pass version: {version.Version} to change_code or write_code to save every further fix over it, with deploy: true to try each one. Start another version only for the next thing the user asks for."
+            : $"Saved over version {version.Version} (revision {version.Revision}). Keep saving over it while you work on this.";
 
         if (Flag(arguments, "deploy") != true)
         {
@@ -402,7 +450,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 {
                     ok = true,
                     version = version.Version,
-                    next = "deploy",
+                    revision = version.Revision,
+                    savedOver = into != null ? true : (bool?)null,
+                    next = $"deploy, to put it online. {keepWorking}",
                     note = reminder
                 });
             }
@@ -419,14 +469,43 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             {
                 ok = true,
                 version = version.Version,
+                revision = version.Revision,
+                savedOver = into != null ? true : (bool?)null,
                 compiles = outcome.Success,
                 diagnostics = outcome.Diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message }),
-                next = outcome.Success ? "deploy, when it should go online" : "fix the diagnostics with change_code",
+                next = outcome.Success
+                    ? $"deploy, when it should go online. {keepWorking}"
+                    : $"fix the diagnostics with change_code and version: {version.Version}, which saves over the same version.",
                 note = reminder
             });
         }
 
-        return await DeployAsync(privateKey, version.Version, origin, reminder);
+        return await DeployAsync(privateKey, version.Version, origin, keepWorking, reminder);
+    }
+
+    private async ValueTask<JsonObject> CopyAsync(JsonObject arguments, string origin)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
+
+        var copy = await meta.CopyAsync(privateKey, Number(arguments, "version"), note);
+
+        var keepWorking = $"Version {copy.Version} is the newest now. Change it in place - change_code or write_code with version: {copy.Version} - and deploy it as often as you like; the version it copies stays as it was.";
+
+        if (Flag(arguments, "deploy") == true)
+        {
+            return await DeployAsync(privateKey, copy.Version, origin, keepWorking);
+        }
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            version = copy.Version,
+            copied = Number(arguments, "version"),
+            copy.Change,
+            next = keepWorking
+        });
     }
 
     private async ValueTask<JsonObject> CheckAsync(JsonObject arguments)
@@ -453,7 +532,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
     /// </summary>
     /// <remarks>
     /// The editor has a panel for this and an agent had nothing, which made
-    /// serving a front end from the workspace something it could be told
+    /// putting a model or a dataset beside the code something it could be told
     /// about and not do.
     /// </remarks>
     private async ValueTask<JsonObject> UploadAsync(JsonObject arguments)
@@ -493,7 +572,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             ok = true,
             written.Path,
             written.Size,
-            note = "Served immediately, no deploy needed."
+            note = "In the lambda's data: there at once, no deploy needed, and shared by every version."
         });
     }
 
@@ -510,10 +589,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         return McpProtocol.Say(new
         {
+            enabled = listing.Enabled,
             files = listing.Files.Select(f => new { f.Path, f.Size, f.Modified }),
             listing.Folders,
             listing.UsedBytes,
-            listing.QuotaBytes
+            listing.QuotaBytes,
+            note = listing.Enabled
+                ? null
+                : "The owner switched the workspace off: it holds nothing, and code that uses Workspace fails. Only the owner switches it on again - ask the user."
         });
     }
 
@@ -531,7 +614,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
     private ValueTask<JsonObject> DeployAsync(JsonObject arguments, string origin)
         => DeployAsync(Required(arguments, "privateKey"), Number(arguments, "version"), origin);
 
-    private async ValueTask<JsonObject> DeployAsync(string privateKey, int? version, string origin, string? reminder = null)
+    /// <param name="next">What to do after this, as the call that saved the version sees it</param>
+    /// <param name="reminder">What the call that saved the version should have passed and did not</param>
+    private async ValueTask<JsonObject> DeployAsync(string privateKey, int? version, string origin, string? next = null, string? reminder = null)
     {
         var result = await meta.DeployAsync(privateKey, version, VersionOrigins.Agent);
 
@@ -553,7 +638,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 problem = "Not deployed. The diagnostics say whether compiling or building the handler failed. Whatever was online before still is.",
                 version = version ?? current?.LatestVersion,
                 stillOnline = current?.ActiveVersion,
-                diagnostics = result.Diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message })
+                diagnostics = result.Diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message }),
+                next = (version ?? current?.LatestVersion) is { } saved
+                    ? $"Fix it with change_code and version: {saved}, which saves over the same version, and deploy: true."
+                    : null
             }, failed: true);
         }
 
@@ -566,7 +654,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             domainUrl = DomainUrl(lambda),
             version = lambda.ActiveVersion,
+            revision = lambda.ActiveRevision,
             onlineUntil = lambda.DeployedUntil,
+            next = next ?? "Call the public address, then read_logs to see how it answered.",
             note = reminder ?? "Deploying again extends onlineUntil. Once it has been called, read_logs shows how it answered."
         });
     }
@@ -649,6 +739,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
 
         var history = await meta.GetVersionsAsync(privateKey);
 
+        var stores = await data.ListAsync(privateKey);
+
         var only = Text(arguments, "file");
 
         IEnumerable<object> listing;
@@ -691,17 +783,27 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             lambda.Tier,
             limits = Limits(Enum.Parse<LambdaTier>(lambda.Tier)),
             lambda.ActiveVersion,
+            lambda.ActiveRevision,
+            // the version online was saved over after it went online, so what
+            // visitors get is not what read_lambda shows until it is deployed
+            onlineChanged = lambda.ActiveChanged ? true : (bool?)null,
             lambda.LatestVersion,
+            workOn = lambda.LatestVersion is { } newest
+                ? $"Version {newest} is the newest: save further changes over it with version: {newest}. Versions before it are history."
+                : null,
             online = lambda.ActiveVersion != null,
             lambda.DeployedUntil,
             lambda.KeptUntil,
             version,
+            revision = content?.Revision,
             specification = content?.Specification,
             change = content?.Change,
             // the why of the recent past, so a change made on top of somebody
             // else's work can follow what they were trying to do - the one line
             // each, since a specification can be a page and this is read every time
-            history = history.Take(10).Select(v => new { v.Version, v.Created, v.Change, v.Origin }),
+            history = history.Take(10).Select(v => new { v.Version, v.Created, v.Change, v.Origin, revision = v.Revision > 1 ? v.Revision : (int?)null, v.Modified }),
+            // what the lambda keeps, which no version holds and none brings back
+            data = stores.ToDictionary(s => s.Kind, s => (object)new { s.Enabled, items = s.Items, s.UsedBytes, s.QuotaBytes }),
             files = listing,
             filesOmitted = note != null ? true : (bool?)null,
             note
@@ -834,7 +936,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             url = $"{origin}/lambda/{d.Key}/",
             files = DemoCatalog.FilesFor(d).Select(f => f.Name)
         }),
-        howToRead = "read_lambda with the demo's privateKey returns every file and the version history; list_files shows what it stores at runtime; read_logs shows how it answers real traffic. Open the url to use it.",
+        howToRead = "read_lambda with the demo's privateKey returns every file and the version history; list_files shows what it keeps as data; read_logs shows how it answers real traffic. Open the url to use it.",
         readOnly = "Anything that would change a demo is refused. To build on one, create_lambda with its id as template - that gives a lambda of your own with the same files."
     });
 
@@ -850,8 +952,40 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
     private JsonObject Guide() => McpProtocol.Say(new
     {
         ok = true,
-        preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version, POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip of all files as a new version - so edit locally and push once. Every endpoint that saves a version takes ?deploy=true. Many environments cannot reach it; then use these tools.",
+        preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version; PUT /api/v1/lambdas/{privateKey}/versions/{version}/zip saves a zip of all files over the newest version, POST /api/v1/lambdas/{privateKey}/versions/zip as a new one - so edit locally and push as often as it takes. Every endpoint that saves a version takes ?deploy=true. Many environments cannot reach it; then use these tools.",
         whatALambdaIs = "C# that returns a GenHTTP handler, served at /lambda/{publicKey}/. No Main and no project: the snippet is the program.",
+        lifecycle = new
+        {
+            twoKinds = "A lambda holds two kinds of things, and they live differently. Versions are the program. Data is what the program keeps. Getting this right is most of getting a lambda right.",
+            versions = new
+            {
+                what = "A version is the program: every .cs file and every asset - index.html, scripts, styles, icons, the whole front end. They are saved, deployed and rolled back together, and nothing else is in a version.",
+                workInTheNewest = "The newest version is the one being worked on. Change it in place - change_code or write_code with version set to its number - and deploy it as often as you like while you fix, try and adjust. Saving over it and deploying again is normal and harms nothing.",
+                newVersions = "Start a new version once per thing the user asks for, not once per edit: write_code or change_code without version saves one, and copy_version starts one from any version without sending files. Three versions for one request is a history nobody can read.",
+                history = "Every version before the newest is history: kept exactly as it was, to read, compare and roll back to. It cannot be changed; to carry on from an old version, copy it - the copy becomes the newest.",
+                online = "Deploying builds a version and puts it online. Visitors get exactly what was deployed until the next deploy - saving over the version that is online changes nothing they see until you deploy it again. read_lambda says onlineChanged when that is the case.",
+                kept = $"The newest {options.MaxVersions} versions are kept; older ones are removed, never the one online. Fewer, meaningful versions keep more of the history that matters."
+            },
+            data = new
+            {
+                what = "Data belongs to the lambda, not to a version: every version reads and writes the same data. It is where everything the program keeps goes - records, accounts, scores, uploads, anything users create or change.",
+                lifetime = "Data outlives every save, deploy, rollback and copy - no version holds it, so none of them changes it or brings an earlier state back. It goes only when the lambda is deleted, or when its owner switches that kind of data off, which deletes what it held.",
+                kinds = "The workspace - a private directory of files - is the kind there is now. More kinds, such as a database and secrets, will be added the same way; read_lambda lists what a lambda has under data.",
+                optIn = "The owner decides which kinds of data a lambda has. The workspace is on unless the owner switched it off: list_files and read_lambda say whether it is. You cannot switch data on - if it is off, ask the user.",
+                beReady = "Data can be empty: a new lambda has none, and an owner can clear it. Have the code create what it needs on first use, and say so plainly where something it expects is missing, rather than fail."
+            },
+            whereThingsGo = new
+            {
+                theProgram = "In the version, as assets: the app itself - C#, and the whole front end including a single page application's HTML, JavaScript, CSS, images and fonts. Ship it with write_code under a folder such as web/ and serve it with Assets.App(\"web\").",
+                theData = "In the workspace: everything the lambda writes while it runs, everything users create or upload, and large input files that are not program - a model, a dataset, media. Write it with Workspace from the code, or put a file there with upload_file.",
+                neverTheOtherWay = "Never keep user data in assets: they are read only while the lambda runs and replaced on every deploy. Never upload the front end to the workspace: it would not be versioned, a rollback would not bring the matching pages back, and a copy of a version would lack them."
+            },
+            theLambda = new
+            {
+                lifetime = $"A free lambda goes offline after {(int)options.DeploymentLifetime.TotalDays} days without visits or edits, and is removed - versions, data and all - about {(int)options.Retention.TotalDays} days after the last of either. A premium lambda stays online and is kept.",
+                deleting = "Deleting a lambda deletes its versions and its data together. Nothing else deletes versions one by one."
+            }
+        },
         demos = new
         {
             what = "Finished lambdas this platform keeps online, each showing one way to build something. list_demos says what each one shows and when to read it.",
@@ -880,13 +1014,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         },
         assets = new
         {
-            what = "Any file not ending in .cs. Served as is, never compiled, not counted against the code budget.",
-            shipping = "Send with the code: { name: \"www/app.css\", code: \"body { margin: 0 }\" }. Binary files as base64 with encoding \"base64\".",
-            reading = "Assets.Tree(), Assets.Files(), Assets.App() (single page application: index.html answers unmatched paths), Assets.Exists / ReadText / ReadBytes / List / Folders.",
+            what = "Any file not ending in .cs: part of the version, served as is, never compiled, not counted against the code budget. The front end belongs here.",
+            shipping = "Send with the code: { name: \"web/app.css\", code: \"body { margin: 0 }\" }. Binary files as base64 with encoding \"base64\".",
+            reading = "Assets.Tree(), Assets.Files(), Assets.App() (single page application: index.html answers unmatched paths), Assets.Exists / ReadText / ReadBytes / List / Folders. Read only: a lambda cannot write its assets.",
             folders = "Each takes an optional folder: Assets.App(\"site\") serves site/ at the root, so site/app.css is requested as /app.css.",
             inOtherFiles = "Assets means this only in the top-level code of lambda.cs. In other files, and in types, Assets is the Files module's type of the same name - use LambdaEnvironment.Assets there.",
-            serving = "return Layout.Create().Add(\"api\", api).Add(Assets.App(\"site\"));",
+            serving = "return Layout.Create().Add(\"api\", api).Add(Assets.App(\"web\"));",
             contentTypes = "Inferred from the file extension.",
+            size = "Every version keeps its own copy of its assets and is read whole to be saved and deployed, so a large file that is data rather than program - a model, a dataset, video, a library of pictures - belongs in the workspace, where it is kept once.",
             limits = new
             {
                 bytes = options.MaxAssetBytesOf(LambdaTier.Free),
@@ -895,20 +1030,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 names = "Letters, digits, dashes, underscores, dots and slashes. No leading slash, no .."
             }
         },
-        whereFilesGo = new
+        workspace = new
         {
-            rule = "Assets are the program's own files: pages, scripts, stylesheets, icons, small data it cannot run without. A large file that is data rather than program - a machine learning model, a dataset, video, a library of pictures - belongs in the workspace.",
-            why = "Every version keeps its own copy of the assets and is read whole to be saved and deployed, so a large asset costs memory and disk on every change, however small. A workspace file is kept once, as a file, and a new version leaves it alone.",
-            how = "upload_file puts one there. Over HTTP, for more than a tool call carries: PUT /api/v1/lambdas/{privateKey}/files/{path}/content with the file itself as the body (curl -T model.onnx ...), the slashes of the path encoded as %2F - streamed to the disk, however large. Or let the lambda fetch it once with HttpClient and keep it with Workspace.WriteBytes.",
-            use = "Workspace.ReadBytes(\"models/model.onnx\") reads it; Workspace.Files(\"media\") serves a folder of them.",
-            mind = "The workspace is not versioned, rolled back or cloned with the lambda: have the code notice a file that is missing and say so, rather than fail. Its size is limited by tier too - see storage.limits."
-        },
-        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the lambda as a standalone zipped .NET project with no dependency on this platform. Worth telling the user.",
-        importedForYou = ModuleCatalog.Imports,
-        network = "A lambda can make outbound calls with HttpClient and sockets. System.Net.Http and System.Net.Sockets are not imported by default, so write the full type name or add a using. It runs in the shared server process, so give requests a timeout.",
-        storage = new
-        {
-            what = "Workspace: a private directory the lambda can read and write at runtime, for anything that must outlive a request.",
+            what = "The lambda's data, for now: a private directory it reads and writes at runtime, for anything that must outlive a request or a deployment. The same for every version.",
             surface = new[]
             {
                 "Workspace.ReadText(name) / WriteText(name, text)",
@@ -921,6 +1045,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
                 "Workspace.Root - where it is on disk"
             },
             reach = "Workspace can be used from every file, including types in other .cs files.",
+            fromOutside = "upload_file puts a file there, list_files lists it, delete_file removes one. Over HTTP, for more than a tool call carries: PUT /api/v1/lambdas/{privateKey}/files/{path}/content with the file itself as the body (curl -T model.onnx ...), the slashes of the path encoded as %2F - streamed to the disk, however large. Or let the lambda fetch it once with HttpClient and keep it with Workspace.WriteBytes.",
+            serving = "Workspace.Files(\"uploads\") serves a folder of what users uploaded - data, served as data. The app's own pages are assets.",
+            off = "If the owner switched the workspace off, every Workspace member throws an exception saying so. list_files says whether it is on.",
             limits = new
             {
                 bytes = options.WorkspaceOf(LambdaTier.Free).Quota,
@@ -932,30 +1059,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         },
         servingAFrontEnd = new
         {
-            withTheCode = new
-            {
-                how = "write_code with the files (slashes make folders), deploy, serve with Assets.App() or Assets.App(\"site\").",
-                whenToPreferIt = "The front end is part of the program: versioned, rolled back and cloned together with the code. Simplest to write in one pass.",
-                mind = "Counts against the assets limit of the tier; every change needs a deploy.",
-                example = "Every demo serves its front end like this, from web/ - read_lambda demo-crud"
-            },
-            inTheWorkspace = new
-            {
-                how = "Deploy a lambda returning Layout.Create().Add(Workspace.App()), then upload_file index.html and the rest. Served immediately.",
-                whenToPreferIt = "The files change more often than the code, someone else replaces them, or there are many. No redeploys, and they use the workspace quota rather than the assets limit.",
-                mind = "Not versioned and not cloned. Workspace.App() without a folder serves everything the lambda writes - use a folder if it writes anything else."
-            },
-            underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree() or Workspace.Tree().",
-            doNotDoBoth = "Serving both at the same address makes it unclear which one answers."
+            rule = "The front end is part of the program, so it is part of the version: ship index.html, scripts, styles and images as assets and serve them with Assets.App(\"web\"). It is then deployed, rolled back and copied together with the API it talks to.",
+            how = "write_code with the files under a folder (web/index.html, web/app.js, web/app.css), return Layout.Create().Add(\"api\", api).Add(Assets.App(\"web\")), deploy. Change it with change_code and version like any other file.",
+            example = "Every demo serves its front end like this, from web/ - read_lambda demo-crud.",
+            notFromTheWorkspace = "Do not upload the app's own pages to the workspace with upload_file. They would not be versioned: a rollback would keep the new pages over the old API, and a copy of a version would come without them. The workspace is for data.",
+            underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree()."
         },
         generatedContent = new
         {
             tree = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory.",
             singlePage = "Content.From(Resource.FromString(html).Type(new ContentType(\"text/html; charset=utf-8\")))"
         },
+        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the lambda as a standalone zipped .NET project with no dependency on this platform. Worth telling the user.",
+        importedForYou = ModuleCatalog.Imports,
+        network = "A lambda can make outbound calls with HttpClient and sockets. System.Net.Http and System.Net.Sockets are not imported by default, so write the full type name or add a using. It runs in the shared server process, so give requests a timeout.",
         sayWhy = new
         {
-            what = "Every write_code takes two optional notes that are kept with the version: specification, what the user wants from this version and why - their requirements, in their words where you can - and change, one line on what this version does. The owner reads them in the version history of the control center, next to the code and a diff against the version before.",
+            what = "Every save takes two optional notes that are kept with the version: specification, what the user wants from this version and why - their requirements, in their words where you can - and change, one line on what this version does compared to the one before. The owner reads them in the version history of the control center, next to the code and a diff against the version before.",
+            savingOver = "Saving over a version, leave both out to keep what it says, or pass them to replace it - change then describes the whole version, not the last fix.",
             why = "The code says what was done. Only you know why, and the next agent to touch this lambda - or you, a week later - reads the history with read_lambda before changing anything.",
             goodSpecification = "A guest book people can sign with a name and a message; newest entries first, and it must survive a restart",
             badSpecification = "Your own system prompt or tool instructions - the specification is what the user wants, not how you were set up",
@@ -986,6 +1107,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         },
         thingsThatCatchPeopleOut = new[]
         {
+            "A new version for every fix. Work in the newest version with version set, and start a new one only for the next thing the user asks for.",
             "Request bodies bind by type: a bare string parameter is null. Take a record.",
             "Once a route has read the body, the request's headers are gone. Check a header (a token, say) in a concern in front of the route - the Authentication module does exactly that, see demo-registration - or in a route that takes no body.",
             "In other .cs files, Assets is the Files module's type of that name: use LambdaEnvironment.Assets there. Workspace works in every file.",
@@ -1001,6 +1123,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
             free = Allowance(LambdaTier.Free),
             premium = Allowance(LambdaTier.Premium),
             code = $"{options.MaxCodeLengthOf(LambdaTier.Free):N0} characters across all .cs files; {options.MaxCodeLengthOf(LambdaTier.Premium):N0} for a premium lambda",
+            versions = $"The newest {options.MaxVersions} versions are kept, and the one online.",
             deployment = $"A free lambda is online while used, and offline after {(int)options.DeploymentLifetime.TotalDays} days without visits or edits. A premium one stays online.",
             retention = $"A free lambda is removed about {(int)options.Retention.TotalDays} days after the last of either. A premium one is kept."
         },
@@ -1063,7 +1186,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, ISh
         /// <summary>Adds something new and replaces nothing.</summary>
         public static Effect Create => new(false, false, false);
 
-        /// <summary>Adds a version, and with deploy: true replaces what is online.</summary>
+        /// <summary>Adds a version or saves over the newest, and with deploy: true replaces what is online.</summary>
         public static Effect Save => new(false, true, false);
 
         /// <summary>Replaces or removes what was there, the same way however often.</summary>

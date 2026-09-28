@@ -63,6 +63,7 @@ export const editor: EditorMessages = {
       showcase: 'Showcase',
       domain: 'Domain',
       files: 'Dateien',
+      data: 'Daten',
       versions: 'Versionen',
       deployments: 'Deployments',
       stats: 'Statistik',
@@ -89,6 +90,8 @@ export const editor: EditorMessages = {
     download: 'Als .NET-Projekt herunterladen',
     delete: 'Lambda löschen',
     deploy: (version) => `Version ${version} deployen`,
+    changedSince: 'Seit dem Deployment neu gespeichert. Besucher bekommen weiterhin, was deployt wurde.',
+    changedShort: 'Seit dem Deployment geändert',
     problems: 'Zuletzt ist etwas schiefgegangen',
     demoTitle: 'Eine Demo – von dieser Installation online gehalten und schreibgeschützt.',
     demo: (start) => (
@@ -110,7 +113,7 @@ export const editor: EditorMessages = {
     deleteForGood: 'Endgültig löschen',
     deleteFailed: 'Das Lambda konnte nicht gelöscht werden.',
     deleteText: (key) => (
-      <>Alle Versionen, Dateien, der Verlauf und die Adresse {key} werden gelöscht. Das lässt sich nicht rückgängig machen.</>
+      <>Alle Versionen, alle Daten, der Verlauf und die Adresse {key} werden gelöscht. Das lässt sich nicht rückgängig machen.</>
     ),
     openInTab: 'In neuem Tab öffnen',
     open: (address) => `${address} in neuem Tab öffnen`,
@@ -175,6 +178,7 @@ export const editor: EditorMessages = {
       readFile: (file) => <>Liest {file}</>,
       logs: 'Liest das Log',
       create: 'Legt ein Lambda an',
+      copy: 'Beginnt eine neue Version',
       write: (files) => <>Ändert {files}</>,
       writeAll: (files) => <>Schreibt {files}</>,
       removing: (files) => <>, löscht {files}</>,
@@ -272,9 +276,15 @@ export const editor: EditorMessages = {
     noDescription: 'Keine Beschreibung',
     version: (version) => `Version ${version}`,
     notOnline: 'noch nicht online',
+    changedSinceOnline: 'seit dem Deployment geändert',
+    edited: 'bearbeitet',
     wanted: 'Worum gebeten wurde',
     noVersions: 'Noch keine Versionen.',
     storage: 'Speicher',
+    inVersion: (version) => `In Version ${version}`,
+    noVersion: 'In der Version',
+    inData: 'In den Daten',
+    sharedByAll: 'Für alle Versionen dieselben',
     browse: 'Ansehen',
     code: 'Code',
     codeWhy: 'C# wird kompiliert, nie ausgeliefert.',
@@ -283,6 +293,8 @@ export const editor: EditorMessages = {
     assetsPublic: 'Öffentlich: Der Code liefert sie aus.',
     assetsPrivate: 'Vom Code nicht ausgeliefert.',
     data: 'Daten',
+    workspace: 'Workspace',
+    workspaceOff: 'ausgeschaltet',
     dataPublic: 'Öffentlich: Der Code liefert den Workspace aus.',
     dataPrivate: 'Privat, nur für das Lambda.',
   },
@@ -290,9 +302,16 @@ export const editor: EditorMessages = {
   files: {
     hint: (b) => (
       <>
-        {b('Code')} wird kompiliert und nie ausgeliefert. {b('Assets')} – Seiten, Styles, Bilder – werden mit jeder
-        Version gespeichert und sind öffentlich, wenn der Code sie ausliefert. {b('Daten')} schreibt das Lambda zur
-        Laufzeit. Sie gehören zu keiner Version und sind nur öffentlich, wenn der Code sie ausliefert.
+        Die Dateien einer Version – das Programm. {b('Code')} wird kompiliert und nie ausgeliefert. {b('Assets')} –
+        Seiten, Scripts, Styles, Bilder – werden mit dem Code gespeichert, mit ihm deployt und zurückgerollt und sind
+        öffentlich, wenn der Code sie ausliefert. Was das Lambda zur Laufzeit aufbewahrt, steht nicht hier: Das sind
+        seine {b('Daten')}.
+      </>
+    ),
+    scope: (version, data) => (
+      <>
+        Diese Dateien gehören zu Version {version} und ändern sich mit ihr. Was das Lambda zur Laufzeit aufbewahrt, ist
+        für alle Versionen gleich und steht unter {data('Daten')}.
       </>
     ),
     edit: 'Diese Version bearbeiten',
@@ -314,7 +333,7 @@ export const editor: EditorMessages = {
     assetsPrivate: 'Mit dem Code gespeichert, aber diese Version liefert sie nicht aus.',
     noAssets: 'Keine in dieser Version.',
     data: 'Daten',
-    dataPublic: 'Öffentlich: Diese Version liefert sie mit Workspace aus.',
+    dataPublic: 'Öffentlich: Der Code, der online ist, liefert sie mit Workspace aus.',
     dataPrivate: 'Privat, nur für das Lambda. Gehört zu keiner Version.',
     uploadFailed: (path) => `${path} konnte nicht hochgeladen werden.`,
     deleteFolder: (path, held) =>
@@ -344,12 +363,63 @@ export const editor: EditorMessages = {
     notText: 'Kein Text. Laden Sie die Datei herunter, um hineinzusehen.',
   },
 
+  data: {
+    hint:
+      'Daten sind, was das Lambda zur Laufzeit aufbewahrt. Sie gehören dem Lambda, nicht einer Version: Jede Version liest und schreibt dieselben Daten, und nichts, was Sie mit Versionen tun, ändert daran etwas. Gelöscht werden sie erst mit dem Lambda – oder wenn Sie diese Art von Daten ausschalten.',
+    facts: [
+      ['Für alle Versionen dieselben', 'Welche Version auch online ist: Sie liest und schreibt dieselben Daten.'],
+      ['Bleiben beim Deployen', 'Deployen, Zurückrollen oder eine Version kopieren – nichts davon rührt sie an.'],
+      ['Ihre Entscheidung', 'Jede Art ist nur eingeschaltet, solange Sie das wollen. Schalten Sie eine aus, wird gelöscht, was darin liegt.'],
+    ],
+    kinds: {
+      workspace: {
+        name: 'Workspace',
+        what: 'Dateien, die das Lambda zur Laufzeit liest und schreibt: Uploads, Datensätze, alles, was es aufbewahrt.',
+      },
+    },
+    on: 'An',
+    off: 'Aus',
+    byDefault: 'Standardmäßig an',
+    usage: (items, used, of) => `${items} · ${used} von ${of}`,
+    offText: 'Ausgeschaltet. Hier liegt nichts, und Code, der darauf zugreift, schlägt fehl, bis Sie es wieder einschalten.',
+    switchOn: 'Einschalten',
+    switchOff: 'Ausschalten',
+    switchLabel: (name) => `${name} ein- oder ausschalten`,
+    confirmOff: (name) => `${name} ausschalten?`,
+    confirmText: (items, size) =>
+      `Alles darin – ${items}, ${size} – wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.`,
+    confirmEmpty: 'Hier liegt nichts, es geht also nichts verloren.',
+    inUse: 'Die Version, die online ist, greift darauf zu. An diesen Stellen schlägt sie fehl, bis Sie es wieder einschalten.',
+    deleteAndOff: 'Ausschalten und löschen',
+    keep: 'Behalten',
+    switchedOn: (name) => `${name} ist eingeschaltet. Das Lambda kann ab seinem nächsten Request darauf zugreifen.`,
+    switchedOff: (name) => `${name} ist ausgeschaltet, und was darin lag, ist gelöscht.`,
+    switchFailed: 'Das ließ sich nicht umschalten.',
+    readFailed: 'Die Daten konnten nicht gelesen werden.',
+    demo: 'Eine Demo: Die Daten sind zum Lesen da, nicht zum Ändern.',
+    contents: 'Was im Workspace liegt',
+    browse: 'Dateien',
+    offBrowse: 'Der Workspace ist ausgeschaltet, also gibt es keine Dateien zu zeigen.',
+  },
+
   versions: {
     hint: (limit) =>
-      `Jede Version hält fest, worum gebeten wurde und was sie geändert hat – sofern der Autor es angegeben hat. Bei mehr als ${limit} Versionen fallen die ältesten weg; die Version, die online ist, nie.`,
+      `Eine Version ist das Programm: Code und Assets. An der neuesten wird gearbeitet – sie lässt sich so oft wie nötig überschreiben und neu deployen. Die älteren bleiben genau, wie sie waren, zum Vergleichen und Zurückrollen. Jede hält fest, worum gebeten wurde und was sie geändert hat. Bei mehr als ${limit} Versionen fallen die ältesten weg; die Version, die online ist, nie.`,
     none: 'Noch keine Versionen.',
     noDescription: 'Keine Beschreibung',
     online: 'online',
+    newest: 'neueste',
+    newestTitle: 'Die Version, an der gearbeitet wird: Speichern ändert sie direkt',
+    edited: 'bearbeitet',
+    saves: (count) => (count === 1 ? 'Einmal gespeichert' : `${count}-mal gespeichert`),
+    changedSince: 'seit dem Deployment geändert',
+    deployAgain: 'Neu deployen',
+    deployAgainTitle: 'Online stellen, was seitdem gespeichert wurde',
+    start: 'Neue Version',
+    startTitle: (version) => `Version ${version} so lassen, wie sie ist, und in einer Kopie weiterarbeiten`,
+    startFrom: 'Von hier aus eine neue Version beginnen',
+    started: (version) => `Version ${version} angelegt. Sie ist jetzt die neueste, dort geht die Arbeit weiter.`,
+    startFailed: 'Die neue Version konnte nicht angelegt werden.',
     putOnline: 'Diese Version online stellen',
     rollBackTitle: 'Diese ältere Version wieder online stellen',
     deploy: 'Deployen',
@@ -384,6 +454,8 @@ export const editor: EditorMessages = {
       ended: 'beendet',
     },
     putBack: (version) => `Version ${version} wieder online stellen`,
+    revision: (revision) => `Speicherstand ${revision}`,
+    revisionTitle: (revision) => `Die Version, wie sie nach dem ${revision}. Speichern war`,
     timeline: 'Was in den letzten sieben Tagen online war',
     block: (version, from, to) => `Version ${version}, ${from} bis ${to ?? 'jetzt'}`,
     weekAgo: 'vor einer Woche',
@@ -571,25 +643,36 @@ export const editor: EditorMessages = {
     notYet: 'Kompiliert noch nicht.',
     checkFailed: 'Der Code konnte nicht geprüft werden.',
     saved: (version) => `Als Version ${version} gespeichert.`,
+    savedOver: (version) => `Version ${version} überschrieben. Deployen Sie, um sie online zu stellen.`,
+    savedOverOnline: (version) =>
+      `Version ${version} überschrieben. Besucher bekommen, was deployt wurde, bis Sie erneut deployen.`,
     isOnline: (version) => `Version ${version} ist online.`,
     notOnline: 'Ist nicht online gegangen. Was der Compiler sagt, steht unten.',
     failed: 'Das hat nicht geklappt.',
     unchanged: 'Seit dem letzten Speichern hat sich nichts geändert.',
     demo: 'Eine Demo, daher ist hier alles schreibgeschützt. Um etwas zu ändern, erstellen Sie damit ein eigenes Lambda. ',
-    edit: 'Code von Hand bearbeiten. Speichern legt eine neue Version an und lässt, was online ist, unberührt. Deployen stellt sie online. ',
+    edit: 'Code von Hand bearbeiten. Speichern ändert die neueste Version direkt, so oft Sie wollen; was online ist, ändert sich erst beim Deployen. „Neue Version“ lässt die Version, von der Sie ausgegangen sind, wie sie ist. ',
+    history: (version, newest) =>
+      `Version ${version} gehört zum Verlauf und bleibt, wie sie ist. Speichern legt daher eine neue Version daraus an. Version ${newest} ist die neueste. `,
     files: (entry, cs) => (
       <>
         {entry} gibt zurück, was ausgeliefert wird. Weitere {cs}-Dateien enthalten Typen, alle anderen Dateien werden
         ausgeliefert, wie sie sind. Strg+S speichert, F12 springt zur Deklaration.
       </>
     ),
-    newer: (version) => ` Version ${version} ist neuer als die hier geöffnete.`,
     check: 'Prüfen',
     save: 'Speichern',
+    saveTitle: (version) => `Version ${version} überschreiben (Strg+S)`,
+    saveNew: 'Neue Version',
+    saveNewTitle: 'Als neue Version speichern und die Version, von der Sie ausgegangen sind, so lassen, wie sie ist',
     deploy: 'Deployen',
+    older: ', Verlauf',
+    newestTag: ', neueste',
+    unpublished: ', seit dem Deployment neu gespeichert',
     binary: (size) => `Kein Text, also nichts zu bearbeiten. Die Datei wird ausgeliefert, wie sie ist, und ist ${size} kB groß.`,
     saveAndDeploy: 'Speichern und deployen',
     saveVersion: 'Neue Version speichern',
+    saveNewAndDeploy: 'Neue Version speichern und deployen',
     cancel: 'Abbrechen',
     what: 'Was ändert sich? Optional – erscheint im Verlauf.',
     placeholder: 'Fügt ein Kontaktformular hinzu',

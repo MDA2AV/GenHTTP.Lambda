@@ -39,6 +39,7 @@ public static class ApiLayout
                             .Add(Resource<VersionResource>(mode))
                             .Add(Resource<DeploymentResource>(mode))
                             .Add(Resource<FileResource>(mode))
+                            .Add(Resource<DataResource>(mode))
                             .Add(Resource<CodeResource>(mode))
                             .Add(Resource<MonitoringResource>(mode))
                             .Add(Resource<LambdaShowcaseResource>(mode))

@@ -113,6 +113,40 @@ public sealed class ArchiveTests
         Assert.AreEqual(HttpStatusCode.BadRequest, uploaded.StatusCode);
     }
 
+    [TestMethod]
+    public async Task AZipCanBePutBackOverTheNewestVersion()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using (var first = await UploadAsync(fixture, lambda.PrivateKey, Zip(("lambda.cs", Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(\"first\"));")))))
+        {
+            Assert.AreEqual(HttpStatusCode.Created, first.StatusCode);
+        }
+
+        // edited locally and pushed back, as often as it takes, into the same version
+        using var request = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}/versions/2/zip?deploy=true&change=Says%20second", HttpMethod.Put);
+
+        request.Content = new ByteArrayContent(Zip(("lambda.cs", Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(\"second\"));"))));
+        request.Content.Headers.ContentType = new("application/zip");
+
+        using var put = await fixture.Host.GetResponseAsync(request);
+
+        Assert.AreEqual(HttpStatusCode.OK, put.StatusCode, await put.Content.ReadAsStringAsync());
+
+        var saved = await put.GetContentAsync<SavedVersionResponse>();
+
+        Assert.AreEqual(2, saved.Version);
+        Assert.AreEqual(2, saved.Revision);
+        Assert.AreEqual("Says second", saved.Change);
+        Assert.IsTrue(saved.Deployment?.Success);
+
+        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+
+        Assert.AreEqual("second", await served.GetContentAsync());
+    }
+
     private static async Task<HttpResponseMessage> UploadAsync(LambdaFixture fixture, string privateKey, byte[] archive)
     {
         using var request = fixture.Host.GetRequest($"/api/v1/lambdas/{privateKey}/versions/zip", HttpMethod.Post);

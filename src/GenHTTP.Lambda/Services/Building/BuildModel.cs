@@ -46,7 +46,7 @@ public sealed record BuildResult(
 /// </remarks>
 /// <param name="At">Seconds into the run</param>
 /// <param name="Kind">
-/// say, guide, demos, read, logs, write, check, deploy, upload, delete, list or other
+/// say, guide, demos, read, logs, write, copy, check, deploy, upload, delete, list or other
 /// </param>
 /// <param name="Text">What the agent said, for a step of kind say</param>
 /// <param name="Tool">The tool, for a step of a kind this list does not name</param>

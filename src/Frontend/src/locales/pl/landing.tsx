@@ -33,7 +33,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Ulepszaj ją dalej',
-      body: 'Każda aplikacja ma prywatny link do edytora. Daj go agentowi razem z kolejną zmianą albo otwórz go samodzielnie. Każda zmiana to nowa wersja, a adres zostaje ten sam.',
+      body: 'Każda aplikacja ma prywatny link do edytora. Daj go agentowi razem z kolejną zmianą albo otwórz go samodzielnie. Każda zmiana, o którą poprosisz, to osobna wersja, a adres zostaje ten sam.',
       alt: 'Centrum sterowania ankiety: jej wersje, a przy każdej prośba, opis zmiany i różnice względem poprzedniej',
     },
   ],

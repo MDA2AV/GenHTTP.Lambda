@@ -5,28 +5,7 @@ import { absoluteAddress } from '../address';
 import { isActive, type AgentState, type AgentStep, type ChangeJob } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Dialog } from '../components/Dialog';
-import {
-  IconAlert,
-  IconBook,
-  IconCheck,
-  IconChevronDown,
-  IconDots,
-  IconExternal,
-  IconEye,
-  IconFolder,
-  IconInfo,
-  IconLayers,
-  IconList,
-  IconPencil,
-  IconPlay,
-  IconPlus,
-  IconSpark,
-  IconSpinner,
-  IconStop,
-  IconTrash,
-  IconUpload,
-  IconWrench,
-} from '../components/Icons';
+import { IconAlert, IconBook, IconCheck, IconChevronDown, IconDots, IconExternal, IconEye, IconFolder, IconHistory, IconInfo, IconLayers, IconList, IconPencil, IconPlay, IconPlus, IconSpark, IconSpinner, IconStop, IconTrash, IconUpload, IconWrench } from '../components/Icons';
 import { tagOf, useEditorT, useLanguage } from '../i18n';
 import { useOrigin } from '../site';
 import type { Control } from './context';
@@ -813,6 +792,7 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   logs: IconList,
   create: IconPlus,
   write: IconPencil,
+  copy: IconHistory,
   check: IconWrench,
   deploy: IconPlay,
   upload: IconUpload,
@@ -882,6 +862,8 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
       return <>{words.logs}</>;
     case 'create':
       return <>{words.create}</>;
+    case 'copy':
+      return <>{words.copy}</>;
     case 'write': {
       const files = step.files ?? [];
       const removed = step.removed ?? [];
@@ -935,7 +917,7 @@ function Marks({ step, said }: { step: AgentStep; said: Words }) {
 
   const shown: ReactNode[] = [];
 
-  if (step.version != null && (step.kind === 'write' || step.kind === 'read')) {
+  if (step.version != null && (step.kind === 'write' || step.kind === 'read' || step.kind === 'copy')) {
     shown.push(<Mark key="version" tone="plain">{marks.version(step.version)}</Mark>);
   }
 

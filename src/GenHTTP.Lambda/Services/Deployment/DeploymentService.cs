@@ -23,6 +23,12 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 {
     private readonly ConcurrentDictionary<long, CompiledLambda> _deployed = [];
 
+    /// <summary>
+    /// What is online but would not build, and why - so the requests to it
+    /// are told at once instead of each compiling it again.
+    /// </summary>
+    private readonly ConcurrentDictionary<long, Breakage> _broken = [];
+
     // compilation is memory hungry, so only one snippet is built at a time
     private readonly SemaphoreSlim _compiling = new(1, 1);
 
@@ -78,9 +84,17 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    public async ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
+    public ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, int revision, WorkspaceLimits limits, CancellationToken cancellation = default)
+        => ActivateAsync(lambdaId, version, revision, limits, false, cancellation);
+
+    /// <param name="online">
+    /// Whether to build what was deployed - for serving it - rather than the
+    /// version as it was last saved, which is what a deployment puts online
+    /// </param>
+    private async ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, int revision, WorkspaceLimits limits, bool online,
+                                                              CancellationToken cancellation)
     {
-        if (IsDeployed(lambdaId, version, limits))
+        if (IsDeployed(lambdaId, version, revision, limits))
         {
             return CompilationOutcome.Succeeded();
         }
@@ -99,12 +113,13 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         try
         {
-            if (IsDeployed(lambdaId, version, limits))
+            if (IsDeployed(lambdaId, version, revision, limits))
             {
                 return CompilationOutcome.Succeeded();
             }
 
-            var code = await Storage.ReadAsync(lambdaId, version, cancellation);
+            var code = online ? await Storage.ReadOnlineAsync(lambdaId, version, cancellation)
+                              : await Storage.ReadAsync(lambdaId, version, cancellation);
 
             if (code == null)
             {
@@ -121,7 +136,18 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
             var request = new CompilationRequest(files, Storage.GetWorkspace(lambdaId), Storage.GetAssetDirectory(lambdaId),
                                                 Storage.GetAssemblyDirectory(lambdaId), $"{lambdaId}_{version}", true, limits);
 
-            return await CompileAsync(lambdaId, version, request);
+            var outcome = await CompileAsync(lambdaId, version, revision, request);
+
+            if (outcome.Success)
+            {
+                _broken.TryRemove(lambdaId, out _);
+            }
+            else
+            {
+                await RestoreAsync(lambdaId, cancellation);
+            }
+
+            return outcome;
         }
         finally
         {
@@ -129,7 +155,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    private async ValueTask<CompilationOutcome> CompileAsync(long lambdaId, int version, CompilationRequest request)
+    private async ValueTask<CompilationOutcome> CompileAsync(long lambdaId, int version, int revision, CompilationRequest request)
     {
         try
         {
@@ -149,9 +175,9 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                 return CompilationOutcome.Failed(broken);
             }
 
-            _deployed[lambdaId] = new CompiledLambda(version, request.Limits, handler);
+            _deployed[lambdaId] = new CompiledLambda(version, revision, request.Limits, handler);
 
-            Logger.LogInformation("Deployed lambda {LambdaId} in version {Version}", lambdaId, version);
+            Logger.LogInformation("Deployed lambda {LambdaId} in version {Version}, revision {Revision}", lambdaId, version, revision);
 
             return outcome;
         }
@@ -163,30 +189,75 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    public async ValueTask<IHandler> ResolveAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
+    /// <summary>
+    /// Writes the assets of what is being served back, after a version that
+    /// was meant to replace it did not build.
+    /// </summary>
+    /// <remarks>
+    /// The assets of a version are written out before it is compiled, because
+    /// its code may read them while it builds its handler - so a deployment
+    /// that fails has already replaced them, and the handler that is still
+    /// online would serve the assets of code that never went online. That was
+    /// rare while every change was a new version; now the version online is
+    /// saved over and deployed again as a matter of course.
+    /// </remarks>
+    private async ValueTask RestoreAsync(long lambdaId, CancellationToken cancellation)
     {
-        if (_deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version && existing.Limits == limits)
+        if (!_deployed.TryGetValue(lambdaId, out var running))
+        {
+            return;
+        }
+
+        try
+        {
+            var code = await Storage.ReadOnlineAsync(lambdaId, running.Version, cancellation);
+
+            if (code != null)
+            {
+                Materialize(lambdaId, LambdaSource.Parse(code));
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning(e, "The assets of lambda {LambdaId} could not be written back", lambdaId);
+        }
+    }
+
+    public async ValueTask<IHandler> ResolveAsync(long lambdaId, int version, int revision, WorkspaceLimits limits, CancellationToken cancellation = default)
+    {
+        if (_deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version && existing.Revision == revision && existing.Limits == limits)
         {
             return existing.Handler;
         }
 
-        var outcome = await ActivateAsync(lambdaId, version, limits, cancellation);
+        // the same thing failed a moment ago and nothing about it has changed:
+        // compiling it again for every visitor would change nothing but the load
+        if (_broken.TryGetValue(lambdaId, out var breakage) && breakage.Matches(version, revision, limits))
+        {
+            throw new InvalidOperationException(breakage.Message);
+        }
+
+        var outcome = await ActivateAsync(lambdaId, version, revision, limits, true, cancellation);
 
         if (!outcome.Success)
         {
             var message = outcome.Diagnostics.Count > 0 ? outcome.Diagnostics[0].Message : "unknown error";
 
-            throw new InvalidOperationException($"The code of this lambda does not compile: {message}");
+            var reason = $"The code of this lambda does not compile: {message}";
+
+            _broken[lambdaId] = new Breakage(version, revision, limits, reason);
+
+            throw new InvalidOperationException(reason);
         }
 
         return _deployed[lambdaId].Handler;
     }
 
     /// <summary>
-    /// Whether the version is online already, compiled with these limits.
+    /// Whether the version is online already, in this revision, compiled with these limits.
     /// </summary>
-    private bool IsDeployed(long lambdaId, int version, WorkspaceLimits limits)
-        => _deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version && existing.Limits == limits;
+    private bool IsDeployed(long lambdaId, int version, int revision, WorkspaceLimits limits)
+        => _deployed.TryGetValue(lambdaId, out var existing) && existing.Version == version && existing.Revision == revision && existing.Limits == limits;
 
     /// <summary>
     /// Writes what a version ships into the directory the lambda reads it from.
@@ -242,6 +313,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     public void Evict(long lambdaId)
     {
+        _broken.TryRemove(lambdaId, out _);
+
         if (_deployed.TryRemove(lambdaId, out _))
         {
             Logger.LogInformation("Removed the running deployment of lambda {LambdaId}", lambdaId);
@@ -251,10 +324,27 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     public void Dispose()
     {
         _deployed.Clear();
+        _broken.Clear();
 
         _compiling.Dispose();
     }
 
     #endregion
+
+    /// <summary>
+    /// What is online, as it was when it failed to build.
+    /// </summary>
+    /// <remarks>
+    /// Believed for a minute and then tried again, since a snippet can fail
+    /// on something outside itself - a service it calls while it starts up
+    /// being down - that mends without anybody deploying anything.
+    /// </remarks>
+    private sealed record Breakage(int Version, int Revision, WorkspaceLimits Limits, string Message)
+    {
+        private readonly DateTime _noticed = DateTime.UtcNow;
+
+        public bool Matches(int version, int revision, WorkspaceLimits limits)
+            => Version == version && Revision == revision && Limits == limits && DateTime.UtcNow - _noticed < TimeSpan.FromMinutes(1);
+    }
 
 }

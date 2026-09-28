@@ -25,6 +25,13 @@ export interface Lambda {
   domainServed: boolean;
   /** Where to link to it: its domain while that is served, its path otherwise. See address.ts. */
   address: string;
+  /** Which save of the version online is being served; absent while offline. */
+  activeRevision?: number | null;
+  /**
+   * Whether the version online was saved over after it went online. Visitors
+   * get what was deployed, so deploying it again is what changes what they see.
+   */
+  activeChanged: boolean;
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */
@@ -59,6 +66,18 @@ export interface VersionInfo {
   /** What the version changed, in a line. */
   change?: string | null;
   origin?: Origin | null;
+  /**
+   * How many times it was saved, the first save included. Only the newest
+   * version is ever saved over; the ones before it are history.
+   */
+  revision: number;
+  /** When it was last saved over; absent while it is as it was created. */
+  modified?: string | null;
+}
+
+/** A version that was just stored, and whether it went online with it. */
+export interface SavedVersion extends VersionInfo {
+  deployment?: { success: boolean; lambda?: Lambda | null; diagnostics: Diagnostic[] } | null;
 }
 
 /** One stretch of time a version was online. */
@@ -71,6 +90,8 @@ export interface Activation {
   endedBy?: 'replaced' | 'stopped' | 'expired' | 'admin' | null;
   /** How long it was online, or has been so far. */
   seconds: number;
+  /** Which save of the version was online; absent for a stretch from before versions could be saved over. */
+  revision?: number | null;
 }
 
 /** One interval of a lambda's traffic. */
@@ -156,6 +177,10 @@ export interface LambdaSummary {
     workspaceBytes: number;
     servesAssets: boolean;
     servesWorkspace: boolean;
+    /** Whether the owner left the workspace switched on. */
+    workspaceEnabled: boolean;
+    /** Whether the code of that version uses the workspace at all, and so fails where it does once it is off. */
+    usesWorkspace: boolean;
   };
   /** What this lambda may use in its tier. Nothing counts its C# files or assets, only what they come to. */
   limits: {
@@ -233,7 +258,7 @@ export interface BuildResult {
 export interface AgentStep {
   /** Seconds into the run. */
   at: number;
-  kind: 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list' | 'other';
+  kind: 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'copy' | 'check' | 'deploy' | 'upload' | 'delete' | 'list' | 'other';
   /** What the agent said, for "say". */
   text?: string | null;
   /** The tool, for "other". */
@@ -248,7 +273,7 @@ export interface AgentStep {
   path?: string | null;
   /** Whether the tool has answered. */
   done?: boolean | null;
-  /** The version read, saved or put online. */
+  /** The version read, saved, started or put online. */
   version?: number | null;
   /** Whether a write or a deployment went online. */
   online?: boolean | null;
@@ -447,6 +472,28 @@ export interface WorkspaceListing {
   files: WorkspaceEntry[];
   folders: string[];
   /** The room the files and folders take, counted in blocks of 4 KB as the quota is. */
+  usedBytes: number;
+  quotaBytes: number;
+  /** Whether the owner left the workspace switched on; off, it holds nothing. */
+  enabled: boolean;
+}
+
+/**
+ * One kind of data a lambda can keep. Data belongs to the lambda rather than
+ * to a version: every version shares it, and deploying or rolling back leaves
+ * it alone. The workspace is the only kind so far; more are meant to follow,
+ * listed the same way.
+ */
+export interface DataStore {
+  /** Which kind: "workspace", the files the lambda reads and writes. */
+  kind: string;
+  enabled: boolean;
+  /** Whether a lambda has it until its owner decides. */
+  default: boolean;
+  /** When the owner last switched it; absent while it is as it came. */
+  changed?: string | null;
+  /** What it holds: files, for the workspace. */
+  items: number;
   usedBytes: number;
   quotaBytes: number;
 }
@@ -822,9 +869,23 @@ export const api = {
   version: (privateKey: string, version: number) =>
     request<VersionContent>(`/lambdas/${privateKey}/versions/${version}`),
 
-  /** Stores a version; the change and the specification are the why, kept beside the what. */
+  /** Stores a new version; the change and the specification are the why, kept beside the what. */
   save: (privateKey: string, files: LambdaFile[], change?: string, specification?: string) =>
-    request<VersionInfo>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, specification: specification || null })),
+    request<SavedVersion>(`/lambdas/${privateKey}/versions`, send({ files, change: change || null, specification: specification || null })),
+
+  /**
+   * Saves over the newest version, which is the one being worked on. What is
+   * online only changes once it is deployed again; notes left out are kept.
+   */
+  update: (privateKey: string, version: number, files: LambdaFile[], change?: string) =>
+    request<SavedVersion>(`/lambdas/${privateKey}/versions/${version}`, {
+      method: 'PUT',
+      body: JSON.stringify({ files, change: change || null }),
+    }),
+
+  /** Starts a new version as a copy of this one, which becomes the newest. */
+  copy: (privateKey: string, version: number, change?: string) =>
+    request<SavedVersion>(`/lambdas/${privateKey}/versions/${version}/copy`, send({ change: change || null })),
 
   deployment: (privateKey: string) => request<Deployment>(`/lambdas/${privateKey}/deployment`),
 
@@ -879,6 +940,17 @@ export const api = {
 
   deleteFile: (privateKey: string, path: string) =>
     request<void>(`/lambdas/${privateKey}/files/${encodeURIComponent(path)}`, { method: 'DELETE' }),
+
+  /** Every kind of data there is, and how the lambda has it. */
+  data: (privateKey: string) => request<DataStore[]>(`/lambdas/${privateKey}/data`),
+
+  /** Switches a kind of data on. */
+  enableData: (privateKey: string, kind: string) =>
+    request<DataStore>(`/lambdas/${privateKey}/data/${encodeURIComponent(kind)}`, { method: 'PUT' }),
+
+  /** Switches a kind of data off, deleting everything it held. */
+  disableData: (privateKey: string, kind: string) =>
+    request<DataStore>(`/lambdas/${privateKey}/data/${encodeURIComponent(kind)}`, { method: 'DELETE' }),
 
   /*
    * Questions for the compiler. They share one request shape; the ones about

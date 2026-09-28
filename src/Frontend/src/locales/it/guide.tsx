@@ -59,9 +59,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Passa la chiave di modifica a un agente e digli cosa creare: scrive nuove versioni tramite{' '}
-        {k.link('/#agents', 'MCP')}. Oppure apri {k.b('Codice')} e scrivi tu il codice: {k.b('Verifica')} compila senza
-        salvare niente e ti mostra cosa dice il compilatore, con file e riga.
+        Passa la chiave di modifica a un agente e digli cosa creare: lavora tramite {k.link('/#agents', 'MCP')}, con una
+        versione per ogni cosa che chiedi. Oppure apri {k.b('Codice')} e scrivi tu il codice: {k.b('Verifica')} compila
+        senza salvare niente e ti mostra cosa dice il compilatore, con file e riga.
       </>
     ),
     (k) => (
@@ -76,8 +76,8 @@ export const guide: Messages['guide'] = {
     <>
       Il link di modifica apre un pannello di controllo, non un semplice editor di testo: qui gran parte del codice la
       scrivono gli agenti, quindi la prima cosa che vedi è come sta andando la tua lambda. La barra laterale mostra la
-      lambda (se è online, il suo indirizzo e un pulsante quando una versione più recente aspetta di andare online) e le
-      sue sezioni. Le azioni che servono di rado, come cambiare l’indirizzo o eliminarla, sono nel menu {k.b('⋯')}.
+      lambda (se è online, il suo indirizzo e un pulsante quando c’è qualcosa da mettere online) e le sue sezioni. Le
+      azioni che servono di rado, come cambiare l’indirizzo o eliminarla, sono nel menu {k.b('⋯')}.
     </>
   ),
   bits: [
@@ -92,8 +92,9 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
-    ['File', () => <>I file di una versione e i suoi dati, cioè quello che la lambda salva mentre gira. Un lucchetto o un globo indica se sono pubblici.</>],
-    ['Versioni', () => <>Cosa ha cambiato ogni versione, cosa era stato chiesto e le differenze rispetto alla precedente. Da qui fai il deploy o torni indietro.</>],
+    ['File', () => <>I file di una versione: il codice e gli asset, cioè il programma vero e proprio. Un lucchetto o un globo indica se sono pubblici.</>],
+    ['Dati', () => <>Quello che la lambda conserva mentre gira, condiviso da tutte le versioni: il workspace. Puoi guardarci dentro, caricare ed eliminare file, o disattivarlo.</>],
+    ['Versioni', () => <>Cosa ha cambiato ogni versione, cosa era stato chiesto e le differenze rispetto alla precedente. La più recente è quella su cui si lavora. Da qui fai il deploy, torni indietro o inizi una nuova versione.</>],
     ['Deployment', () => <>Cosa è stato online e quando, e cosa l’ha fermato.</>],
     ['Statistiche', () => <>Richieste, errori, tempi di risposta e i percorsi più richiesti, nell’ultima ora o nelle ultime 24 ore.</>],
     ['Log', () => <>Le richieste, cosa ha stampato e lo stack trace di ogni errore, in tempo reale.</>],
@@ -101,8 +102,9 @@ export const guide: Messages['guide'] = {
       'Codice',
       (k) => (
         <>
-          Per scriverlo a mano. {k.b('Verifica')} compila, {k.b('Salva')} crea una versione, {k.b('Deploy')} la mette
-          online. {k.code('Ctrl-S')} salva; {k.code('F12')} va alla dichiarazione.
+          Per scriverlo a mano. {k.b('Verifica')} compila, {k.b('Salva')} aggiorna la versione più recente,{' '}
+          {k.b('Nuova versione')} la lascia com’è e ne inizia un’altra, {k.b('Deploy')} la mette online.{' '}
+          {k.code('Ctrl-S')} salva; {k.code('F12')} va alla dichiarazione.
         </>
       ),
     ],
@@ -130,9 +132,10 @@ export const guide: Messages['guide'] = {
   },
   why2: (k) => (
     <>
-      Gli agenti passano gli stessi due campi a {k.code('write_code')}. In {k.b('Codice')}, quando salvi ti viene chiesta
-      la modifica. Sono entrambi facoltativi: una specifica lunga viene tagliata a 4000 caratteri e una modifica a 500,
-      invece di essere rifiutata.
+      Gli agenti passano gli stessi due campi a {k.code('write_code')}. In {k.b('Codice')}, {k.b('Nuova versione')} ti
+      chiede la modifica. Sono entrambi facoltativi: una specifica lunga viene tagliata a 4000 caratteri e una modifica a
+      500, invece di essere rifiutata. Quando salvi in una versione esistente, le sue note restano, a meno che tu non ne
+      dia di nuove.
     </>
   ),
 
@@ -144,14 +147,15 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
-  page: 'Ci sono tre modi, e quello giusto dipende da dove si trova la pagina.',
+  page: 'Ci sono due modi per servire una pagina, più uno per quello che la gente carica accanto.',
   inlineTitle: 'Una pagina, scritta nel codice',
   inline: 'Va bene per le cose piccole. La pagina fa parte dello snippet.',
   folderTitle: 'Una cartella di file veri',
   folder:
     'Quello che ti serve per qualsiasi cosa con un foglio di stile e uno script. I file si aggiungono come un file C# e vengono serviti esattamente come li hai scritti. Niente li compila.',
-  workspaceTitle: 'Dal workspace',
-  workspace: 'Quando la pagina viene caricata invece che scritta, e deve poter cambiare senza un nuovo deploy.',
+  workspaceTitle: 'File caricati, dai dati',
+  workspace:
+    'Per quello che la gente carica o che la lambda crea (foto, documenti), servito accanto all’app. Non per le pagine dell’app stessa: quelle vanno in una cartella di file, dove seguono le versioni insieme al codice che le usa.',
 
   spa: (k) => (
     <>
@@ -194,23 +198,25 @@ export const guide: Messages['guide'] = {
 
   storage: (k) => (
     <>
-      La sezione {k.b('File')} li mostra entrambi (i file di una versione e il workspace come {k.b('Dati')}) e indica
-      quali sono pubblici. I file del codice si modificano in {k.b('Codice')}; i dati si possono caricare ed eliminare in{' '}
-      {k.b('File')}. Ma non sono la stessa cosa, e la differenza è {k.em('quando cambiano')}.
+      Una lambda tiene i file in due posti, e l’editor li mostra separati: {k.b('File')} contiene i file di una versione
+      (il programma) e {k.b('Dati')} contiene il workspace (quello che il programma conserva). La differenza è{' '}
+      {k.em('di chi sono')}. I file di una versione appartengono a quella versione; i dati appartengono alla lambda, e
+      tutte le versioni li condividono.
     </>
   ),
-  savedWithCode: 'Salvati con il codice',
-  workspaceColumn: 'Workspace',
+  savedWithCode: 'In una versione',
+  workspaceColumn: 'Nei dati',
   table: [
-    ['cosa contiene', 'tutti i file della lambda, C# compreso', 'tutto ciò che è stato scritto o caricato'],
-    ['quando cambia', 'quando premi Salva o Deploy', 'appena ci viene scritto qualcosa'],
-    ['un deploy', 'lo sostituisce tutto', 'non lo tocca mai'],
-    ['tornare a una versione precedente', 'riporta i vecchi file', 'nessun effetto'],
-    ['clonare la lambda', 'viene copiato', 'non viene copiato'],
+    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso', 'quello che scrive la lambda o che carica qualcuno'],
+    ['quando cambia', 'quando la versione viene salvata', 'appena ci viene scritto qualcosa'],
+    ['un deploy', 'mette online esattamente questi file', 'non li tocca mai'],
+    ['tornare indietro', 'riporta i vecchi file', 'nessun effetto: tutte le versioni li condividono'],
+    ['una nuova versione', 'parte da una copia di questi file', 'nessun effetto'],
+    ['quando sparisce', 'con le versioni vecchie, oltre il limite', 'con la lambda, o quando disattivi il workspace'],
   ],
   reachedAs: 'dal codice si raggiunge con',
   storageAside:
-    'Non possono essere un’unica cartella. Se lo fossero, un deploy cancellerebbe tutto ciò che la lambda ha scritto nel frattempo, oppure non si potrebbe mai togliere niente da ciò che pubblica. Un gioco con una classifica vuole la seconda cosa; la pagina che serve vuole la prima.',
+    'Non possono stare in un unico posto. Se ci stessero, un deploy cancellerebbe tutto ciò che la lambda ha scritto nel frattempo, oppure non si potrebbe mai togliere niente da ciò che pubblica. Un gioco con una classifica vuole la seconda cosa; la pagina che serve vuole la prima. Quindi la pagina va nella versione, e la classifica nei dati.',
 
   keeping: (k) => (
     <>

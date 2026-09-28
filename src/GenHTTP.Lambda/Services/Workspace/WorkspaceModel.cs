@@ -16,11 +16,14 @@ public sealed record WorkspaceEntry(string Path, long Size, DateTime Modified);
 /// would make it vanish the moment it was created.
 /// </remarks>
 /// <param name="UsedBytes">The room the files and folders take, counted in blocks as the quota is</param>
+/// <param name="QuotaBytes">The room the tier of the lambda gives it</param>
+/// <param name="Enabled">Whether the owner left the workspace switched on; off, it holds nothing and takes nothing</param>
 public sealed record WorkspaceListing(
     IReadOnlyList<WorkspaceEntry> Files,
     IReadOnlyList<string> Folders,
     long UsedBytes,
-    long QuotaBytes
+    long QuotaBytes,
+    bool Enabled = true
 );
 
 /// <summary>

@@ -24,6 +24,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<SettingEntity> Settings => Set<SettingEntity>();
 
+    public DbSet<DataStoreEntity> DataStores => Set<DataStoreEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -60,6 +62,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.PrivateKey).HasColumnName("private_key");
         lambdas.Property(l => l.Tier).HasColumnName("tier").HasConversion<string>();
         lambdas.Property(l => l.ActiveVersion).HasColumnName("active_version");
+        lambdas.Property(l => l.ActiveRevision).HasColumnName("active_revision");
         lambdas.Property(l => l.Created).HasColumnName("created");
         lambdas.Property(l => l.Modified).HasColumnName("modified");
         lambdas.Property(l => l.Deployed).HasColumnName("deployed");
@@ -80,6 +83,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         deployments.Property(d => d.LambdaId).HasColumnName("lambda_id");
         deployments.Property(d => d.Version).HasColumnName("version");
         deployments.Property(d => d.Created).HasColumnName("created");
+        deployments.Property(d => d.Revision).HasColumnName("revision");
+        deployments.Property(d => d.Modified).HasColumnName("modified");
         deployments.Property(d => d.Specification).HasColumnName("specification");
         deployments.Property(d => d.Change).HasColumnName("change");
         deployments.Property(d => d.Origin).HasColumnName("origin");
@@ -110,6 +115,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         activations.Property(a => a.Id).HasColumnName("id");
         activations.Property(a => a.LambdaId).HasColumnName("lambda_id");
         activations.Property(a => a.Version).HasColumnName("version");
+        activations.Property(a => a.Revision).HasColumnName("revision");
         activations.Property(a => a.Started).HasColumnName("started");
         activations.Property(a => a.Origin).HasColumnName("origin");
         activations.Property(a => a.Ended).HasColumnName("ended");
@@ -149,6 +155,22 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
         settings.Property(s => s.Key).HasColumnName("key");
         settings.Property(s => s.Value).HasColumnName("value");
+
+        var stores = builder.Entity<DataStoreEntity>();
+
+        stores.ToTable("data_stores");
+
+        stores.HasKey(s => new { s.LambdaId, s.Kind });
+
+        stores.Property(s => s.LambdaId).HasColumnName("lambda_id");
+        stores.Property(s => s.Kind).HasColumnName("kind");
+        stores.Property(s => s.Enabled).HasColumnName("enabled");
+        stores.Property(s => s.Changed).HasColumnName("changed");
+
+        stores.HasOne(s => s.Lambda)
+              .WithMany()
+              .HasForeignKey(s => s.LambdaId)
+              .OnDelete(DeleteBehavior.Cascade);
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)
