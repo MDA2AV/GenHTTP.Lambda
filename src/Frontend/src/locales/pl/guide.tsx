@@ -93,7 +93,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Szkice', () => <>Zmiany przygotowywane obok lambdy: każdą wypróbowuje się pod osobnym adresem i scala w kolejną wersję, gdy jest gotowa. Otwarty szkic ma własny kod, dane i logi.</>],
     ['Pliki', () => <>Pliki danej wersji: jej kod i zasoby, czyli sam program. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
-    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: obszar roboczy. Zajrzyj do środka, przesyłaj i usuwaj pliki albo go wyłącz.</>],
+    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: obszar roboczy. Zajrzyj do środka, przesyłaj i usuwaj pliki albo go wyłącz. Są tam też sekrety – tokeny API i dane uwierzytelniające – po włączeniu: można je zastąpić lub usunąć, ale nigdy ponownie pokazać.</>],
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
     ['Statystyki', () => <>Żądania, błędy, czasy odpowiedzi i najczęściej odwiedzane ścieżki z ostatniej godziny albo ostatnich 24 godzin.</>],
@@ -264,6 +264,12 @@ export const guide: Messages['guide'] = {
       Są też {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')} oraz {k.code('Tree')}/{k.code('Files')}/{k.code('App')} do serwowania. Nic więcej w
       systemie plików nie jest dostępne.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Sekrety służą do tokenów API i danych uwierzytelniających, które nigdy nie powinny trafiać do kodu. Włącz je w sekcji {k.b('Dane')}, dodaj jeden i odczytaj go po nazwie przez {k.code('Secret.Read')}. Wartość jest przechowywana w postaci zaszyfrowanej i nigdy nie da się jej ponownie pokazać – ani tobie, ani przez API, ani agentowi – można ją tylko zastąpić lub usunąć. Nowa wartość obowiązuje od następnego żądania, bez wdrażania; wszystkie wersje odczytują te same sekrety, a szkic pracuje na ich kopii. Pobrany projekt odczytuje zamiast tego zmienną środowiskową o tej samej nazwie.
     </>
   ),
 

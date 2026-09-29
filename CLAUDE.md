@@ -78,11 +78,33 @@ the README.
 - A **version** is the program: code *and* assets (a SPA, for example). It never
   changes once saved. Different versions may have different code and different
   assets.
-- **Data** is what the program keeps (today: the workspace; a database and
-  secrets are meant to follow). It belongs to the lambda and is **shared by all
-  versions**. Deploys, rollbacks and merges never touch it.
+- **Data** is what the program keeps (today: the workspace and the secrets; a
+  database is meant to follow). It belongs to the lambda and is **shared by all
+  versions**. Deploys, rollbacks and merges never touch it. Every kind is shown
+  in the editor the same way (pills, then one panel per kind); a new kind fits
+  that, it does not get a screen of its own.
 - User data goes in the workspace, never in assets. The front end goes in the
-  version, never in the workspace.
+  version, never in the workspace. Credentials go in secrets, never in code,
+  assets or the workspace.
+- **Secrets** (API tokens, credentials) are off until switched on - by the owner
+  in the editor, or by an agent through the API or MCP (`enable_data`). Agents
+  can switch a kind on and have **no tool to switch one off**, because that
+  deletes what it held. They are **write only**: set, replaced and deleted by
+  name, and **no interface returns a value** - not to the owner, not to the API,
+  not to an agent - only the lambda's code reads one, `Secret.Read("NAME")`. Do
+  not add a way to read a value back, and do not put one in a log line, an
+  answer or a response of the platform. They are stored in the SQLite database,
+  encrypted (AES-256-GCM) under a key made of the installation's
+  `LAMBDA_SECRETS_KEY` and a salt in the lambda's row: a database backup alone
+  decrypts nothing, and moving to another server takes the database and that
+  key. There is no key rotation. A feature gets a copy of them, and merging
+  never changes the lambda's. They are **not part of the export**: the exported
+  project reads environment variables of the same name, which is why a name is
+  the shape of one. Say plainly that this is not a sandbox: the code of a
+  lambda can return what it reads, so whoever changes the code can reach them.
+- The simple view shows the Data section only while some kind holds something
+  (a workspace with files, a secret) and hides it otherwise, in words of its
+  own ("saved information", "keys and passwords") - not "workspace" or "secret".
 
 Because data outlives versions, a rollback or a newer version reads data written
 by a different one. **Agents find a good compromise between data compatibility

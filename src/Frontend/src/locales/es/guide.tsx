@@ -95,7 +95,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Borradores', () => <>Cambios en los que se trabaja al lado de la lambda: cada uno se prueba en su propia dirección y se fusiona en la siguiente versión cuando está bien. Al abrirlo, un borrador tiene su propio código, sus datos y sus logs.</>],
     ['Archivos', () => <>Los archivos de una versión: su código y sus recursos, el programa en sí. Un candado o un globo indica si el público puede acceder a ellos.</>],
-    ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: el workspace. Puedes ver lo que contiene, subir y eliminar archivos, o desactivarlo.</>],
+    ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: el workspace. Puedes ver lo que contiene, subir y eliminar archivos, o desactivarlo. Los secretos – tokens de API y credenciales – también están ahí una vez activados: se pueden sustituir o eliminar, nunca volver a mostrar.</>],
     ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. Desde aquí despliegas o vuelves atrás, o empiezas un borrador a partir de cualquiera de ellas.</>],
     ['Despliegues', () => <>Qué estuvo en línea y cuándo, y qué lo desconectó.</>],
     ['Estadísticas', () => <>Peticiones, fallos, tiempos de respuesta y las rutas más pedidas, en la última hora o el último día.</>],
@@ -268,6 +268,12 @@ export const guide: Messages['guide'] = {
       También tienes {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')} y {k.code('Tree')}/{k.code('Files')}/{k.code('App')} para servirlo. No se puede acceder a
       nada más del sistema de archivos.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Los secretos sirven para tokens de API y credenciales, que nunca deben ir en el código. Actívalos en {k.b('Datos')}, añade uno y léelo por su nombre con {k.code('Secret.Read')}. El valor se guarda cifrado y no se puede volver a mostrar – ni a ti, ni por la API, ni a un agente – solo sustituir o eliminar. Un valor nuevo se lee desde la siguiente petición, sin desplegar; todas las versiones leen los mismos secretos y un borrador trabaja con una copia. Un proyecto descargado lee en su lugar una variable de entorno con el mismo nombre.
     </>
   ),
 

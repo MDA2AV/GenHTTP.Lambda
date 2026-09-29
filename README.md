@@ -95,7 +95,9 @@ path.
 | `GET /lambdas/:privateKey/agent`                      | the agent's change of it - under way, or the last one - and how many are left today |
 | `POST /lambdas/:privateKey/agent/start` / `stop`      | asks the agent for a change, stops it     |
 | `GET /lambdas/:privateKey/data`                       | the kinds of data it keeps, and how full each is |
-| `GET / PUT / DELETE /lambdas/:privateKey/data/:kind`  | one kind; switches it on; switches it off and deletes what it held |
+| `GET / PUT / DELETE /lambdas/:privateKey/data/:kind`  | one kind (`workspace`, `secrets`); switches it on; switches it off and deletes what it held |
+| `GET /lambdas/:privateKey/secrets`                    | the secrets by name and when each was set - never a value |
+| `PUT / DELETE /lambdas/:privateKey/secrets/:name`     | sets a secret or replaces its value (`{ "value": … }`); deletes it |
 | `GET /lambdas/:privateKey/files`                      | lists the workspace                       |
 | `GET / PUT / DELETE /lambdas/:privateKey/files/:path` | one file, its path encoded (`a%2Fb.txt`), as base64 up to 32 MB |
 | `GET / PUT /lambdas/:privateKey/files/:path/content`  | one file as it is, streamed, however large |
@@ -110,6 +112,7 @@ path.
 | `GET /lambdas/:privateKey/features/:feature/logs`     | what its preview has been doing           |
 | `GET /lambdas/:privateKey/features/:feature/data`, `POST …/data/refresh` | its copy of the data; a fresh copy of the lambda's |
 | `…/features/:feature/workspace[/:path[/content]]`, `…/folders/:path` | its copy of the workspace, as `files` and `folders` are the lambda's |
+| `…/features/:feature/secrets[/:name]`                 | its copy of the secrets, as `secrets` are the lambda's |
 | `POST /lambdas/:privateKey/code/check`                | compiles without saving                   |
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
@@ -174,16 +177,87 @@ once more, so two merges cannot both win. A lambda may have ten features open
 workspace, taken on a thread of its own and swapped in whole, so ten features
 of a premium lambda with a full workspace take ten times its room on disk.
 
-**Data** is what the program keeps: for now the workspace, a private directory
-of files, with a database and secrets meant to follow. It belongs to the lambda
+**Data** is what the program keeps: the workspace, a private directory of files,
+and the secrets, with a database meant to follow. It belongs to the lambda
 rather than to a version - every version reads and writes the same data, and
 deploying, rolling back or merging never touches it. It goes with the lambda,
 or when its owner switches that kind of data off, which deletes what it held -
 the copies features work on included. Each kind is switched on by the owner
 (`PUT …/data/:kind`); the workspace is on unless it was switched off, and a
 lambda whose workspace is off is compiled with one that refuses every call and
-says why. The editor has a **Data** section of its own, beside **Files**, which
-holds the files of a version.
+says why; secrets are off until somebody switches them on. The editor has a
+**Data** section of its own, beside **Files**, which holds the files of a
+version. Every kind is shown there the same way - a row of pills to pick one,
+then a panel with what it is, whether it is on and how full it is, and below
+it what it holds, which is the only part that differs: the files of the
+workspace, the names of the secrets. A kind added later takes a pill and a
+panel, and nothing else about the section changes.
+
+### Secrets
+
+API tokens, passwords and other credentials a lambda needs to call something
+else. They are a kind of data like the workspace - shared by every version,
+untouched by deploying, rolling back and merging, gone with the lambda or when
+they are switched off - with a few rules of their own:
+
+- **Off by default.** They are switched on in the editor, with
+  `PUT /lambdas/:privateKey/data/secrets`, or by an agent with `enable_data`.
+  An agent can switch a kind on and has no tool to switch one off, since
+  switching off deletes what it held; that stays with the owner.
+- **Write only.** A secret is set, replaced and deleted by name, through the
+  editor, the API (`PUT`/`DELETE …/secrets/:name`) and MCP (`set_secret`,
+  `delete_secret`). Nothing answers with a value - not the listing, not the
+  summary, not the export, not a tool - and nobody who can edit a lambda can
+  read one back: the owner, the API client and the agent are in the same
+  position. Only the code of the lambda reads a secret, by name:
+  `Secret.Read("NAME")`, in every file. `Secret.TryRead` answers nothing for a
+  secret that is not there, `Secret.Exists` whether it is, and `Secret.Enabled`
+  whether the owner switched them on - `Read` throws and says which of the two
+  it found. A change takes effect on the next request; nothing has to be
+  deployed.
+- **Encrypted, in the database.** A value is sealed with AES-256-GCM before it
+  is written to the `secrets` table, under a key that is derived (HKDF-SHA256)
+  from two things kept apart: the secret of the installation,
+  `LAMBDA_SECRETS_KEY`, which is not in the database, and a random salt every
+  lambda keeps in its row (`lambdas.secret_salt`), which is. The name of a
+  secret is authenticated with its value, so a row cannot be copied under
+  another name. The database alone therefore decrypts nothing, and neither
+  does the installation's secret alone.
+- **Moving and backing up.** Everything that decrypts a secret is the database
+  and `LAMBDA_SECRETS_KEY`. A backup of the database (SQLite's online backup, or
+  the file while the server is stopped) restores on any server that has the
+  same `LAMBDA_SECRETS_KEY`; a server with another one starts, and a lambda that
+  reads a secret it cannot open is told so where it reads it. Left unset, the
+  server makes a key of its own the first time it starts and keeps it in
+  `secrets.key` in the data directory, readable only by the server, and says so
+  in its log. That is enough to run, and to back up the whole data directory
+  together - but it keeps the two halves in one place. An operator who wants a
+  backup of the database alone to be worthless sets `LAMBDA_SECRETS_KEY` (at
+  least 32 characters; `openssl rand -base64 32`) and keeps it with the
+  secrets of the deployment rather than with the backups. There is no
+  rotation: changing the key makes every stored secret unreadable, so the
+  owners set them again.
+- **Features get a copy.** A feature begins with the lambda's secrets and, like
+  its copy of the workspace, can do what it likes with them:
+  `PUT …/features/:feature/secrets/:name` changes only its copy,
+  `POST …/data/refresh` takes the lambda's again, and its preview reads its
+  own. Merging discards the copy and never changes the lambda's secrets, so a
+  feature that needs a new one needs it set on the lambda too.
+- **Not in the export.** The project `GET …/export` makes has no secrets. There
+  `Secret.Read("NAME")` reads the environment variable `NAME`, which is why a
+  name is the shape of one - letters, digits and underscores, not starting with
+  a digit, at most 64 characters - and the project's README lists the names the
+  code asks for.
+- **Limits.** `LAMBDA_MAX_SECRETS` secrets (50) of at most
+  `LAMBDA_MAX_SECRET_LENGTH` characters (16,384) each. A line break at the end
+  of a value, which a paste brings along, is dropped.
+
+The guard is not a sandbox and this is no exception: the code of a lambda can
+read every secret it has and return it in a response or print it, so whoever
+can change the code can get at them. What is protected is the secret at rest,
+in backups, in the listing, and from everybody who can edit a lambda but does
+not write its code. The log of the server names a secret and never holds a
+value; a lambda that prints one has printed it into its own log.
 
 Deploying picks a version (the latest by default), builds it and makes it live,
 and a lambda has at most one deployment at a time. A deployment that does not
@@ -237,7 +311,8 @@ the brief inside the build container, never in a log line.
 Somebody who had an app built on `/build` wants it to do something else, not
 to look after code, files, versions and deployments. So the editor has two
 views. The **simple** one keeps the overview, Change, the drafts (once there
-are any), a history, the showcase and the domain. Its overview is the app:
+are any), what the app keeps (once it keeps something), a history, the showcase
+and the domain. Its overview is the app:
 whether it is online and where, errors visitors ran into with a button that
 asks the agent to fix them, the latest change, today's hits, and a button to
 ask for the next change. The history is every version as the change it made,
@@ -249,6 +324,15 @@ agent said rather than the tools it called, a draft is what it does rather
 than the files it changes, and a change that does not compile is the agent's
 to fix rather than a list of compiler errors. The **full** view is every
 section, as before.
+
+The **Data** section shows in the simple view only while some kind of data holds
+something - a workspace with files in it, a secret - and is hidden otherwise,
+also when a kind is switched on but empty: nobody who had an app built is asked
+to think about which kinds there are. It is a page of what there is in plain
+words - "saved information" and "keys and passwords" - with the size of it,
+a way to delete everything the app saved, and replacing or removing a key.
+It has no files, no code and no switches. What is populated is known from the
+summary (`storage.workspaceFiles`, `storage.secretCount`).
 
 Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
 when it is created (`POST /lambdas`, `create_lambda`) and changed later
@@ -273,6 +357,14 @@ services that the API resources talk to through interfaces:
   and off by its owner. Only the choice is stored: a lambda without a row for a
   kind has its default, so a kind added to `DataKinds` needs no migration to
   exist. Switching a kind off deletes what it held.
+- **Secrets** (`Services/Secrets`) - `SecretCipher` seals and opens values,
+  `SecretVault` is the only place that does, by lambda and feature id, and
+  keeps what a running lambda needs (whether secrets are on, its key, its
+  sealed values) in memory until something changes it; `SecretService` is the
+  editor key and feature key front of it for the API and MCP. The code of a
+  lambda reaches them through two delegates the compiler hands to its
+  `LambdaEnvironment` before it runs, so the assembly of this application
+  stays invisible to it.
 - **Workspace** (`Services/Workspace`) - the private directory of a lambda,
   reached from the editor. The same directory the generated `Workspace` class
   writes to from inside a lambda, under the same limits, so a file put there by
@@ -342,6 +434,9 @@ Everything is read from the environment on startup, see
 | `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | the same for a premium lambda               |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
 | `LAMBDA_MAX_FEATURES`               | `10`             | features open per lambda - each holds a copy of the workspace, so this bounds the disk they take |
+| `LAMBDA_SECRETS_KEY`                | made and kept in `secrets.key` | the installation's half of the key secrets are encrypted with, 32 characters at least - see Secrets |
+| `LAMBDA_MAX_SECRETS`                | `50`             | secrets a lambda keeps, and each feature a copy of |
+| `LAMBDA_MAX_SECRET_LENGTH`          | `16384`          | characters of one secret's value            |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
@@ -613,7 +708,9 @@ https://genhttp.dev/mcp
 The tools are the shape of the job: `create_lambda`, `update_lambda`, `write_code`, `change_code`,
 `check_code`, `deploy`, `read_lambda`, `read_logs`, the feature tools
 `create_feature`, `update_feature`, `merge_feature` and `delete_feature`, the
-data tools `upload_file`, `list_files` and `delete_file`, `showcase` for listing
+data tools `upload_file`, `list_files` and `delete_file`, `enable_data`
+(switches a kind on, and deliberately never off), `set_secret`, `list_secrets`
+(names, never values) and `delete_secret`, `showcase` for listing
 a lambda on the public showcase - only when its owner asks for it - and
 `list_demos` for reading something that already works. `platform_guide` is the one to call first
 - it opens with how versions, features and data live, then says what a snippet
@@ -651,7 +748,10 @@ characters, and names them with their lengths beyond that; `file` then fetches
 one in full, up to a megabyte, and anything larger is left to the zip of the
 version - a hundred megabytes of base64 is nothing an agent can read. It also
 says which tier the lambda is in and what that allows, and `platform_guide`
-lays out both tiers. The guide, `write_code` and `upload_file` also steer a
+lays out both tiers. The instructions, the guide and the tool descriptions also say where a
+credential goes: into a secret with `set_secret`, read with `Secret.Read`,
+never into the code, an asset or the workspace, and never repeated in an
+answer. The guide, `write_code` and `upload_file` also steer a
 large file that is data rather than program - a model, a dataset, media - into
 the workspace, where it is kept once instead of in every version, and a
 refusal for assets over the limit says the same.
@@ -665,6 +765,11 @@ a JSON file), `demo-registration` (accounts, login and a members page),
 (server-sent events). Their editor key is their public key, and it is meant to
 be announced: `read_lambda`, `list_files` and `read_logs` work on a demo exactly
 as on an agent's own lambda, and the editor at `/editor/demo-crud` shows it.
+
+`demo-registration` reads a secret too, as a demonstration of `Secret.TryRead`:
+a copy of it whose owner switches secrets on and sets `INVITE_CODE` only lets in
+whoever sends that code with their registration, and the landing page asks for
+it. Without the secret anybody can register, as before.
 
 Everything that would change a demo - saving, deploying, stopping, moving,
 deleting, the workspace, the showcase - is refused by its tier, whichever way
@@ -837,7 +942,12 @@ in a browser somebody else uses.
 SQLite through EF Core, migrated on startup by [Evolve][evolve] from the SQL
 files in `Data/Migrations`. To change the schema, add the next
 `V<n>__<name>.sql` next to them - they are embedded resources, and the
-existing ones are never edited.
+existing ones are never edited. Before pushing a new one, check the highest
+`V<n>` on `origin/main`.
+
+What has to be backed up to move an installation is `lambda.db` and, for the
+secrets in it, `LAMBDA_SECRETS_KEY` (or `secrets.key`); the code, workspaces and
+assets are folders of the data directory beside it. See Secrets.
 
 [genhttp]: https://genhttp.org/
 [evolve]: https://evolve-db.netlify.app/

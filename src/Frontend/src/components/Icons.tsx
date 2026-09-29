@@ -201,6 +201,14 @@ export const IconEye = (p: IconProps) => (
   <Svg {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="2.8" /></Svg>
 );
 
+/** An eye with a stroke through it, for hiding what was shown. */
+export const IconEyeOff = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9.9 5.7A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-2.6 3.4M6.4 7.2A16 16 0 0 0 2.5 12S6 18.5 12 18.5a9.4 9.4 0 0 0 4-.9" />
+    <path d="M9.9 9.9a2.8 2.8 0 0 0 4 4M3 3l18 18" />
+  </Svg>
+);
+
 /** A pencil, for writing code. */
 export const IconPencil = (p: IconProps) => (
   <Svg {...p}><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16Z" /><path d="m13.5 6.5 4 4" /></Svg>

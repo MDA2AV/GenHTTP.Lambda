@@ -99,7 +99,7 @@ export const guide = {
     ],
     ['Drafts', () => <>Changes being tried before they go online, each at an address of its own and on test data of its own. Opened, a draft has its own code, test data and logs. The section is there once there is a draft.</>],
     ['Files', () => <>The files of a version: its code and assets, the program itself. A lock or a globe says whether the public can reach them.</>],
-    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the workspace. Look into it, upload and delete files, or switch it off.</>],
+    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the workspace. Look into it, upload and delete files, or switch it off. Secrets - API tokens and credentials - are there too once they are switched on: they can be replaced or deleted, never shown again.</>],
     ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a draft from any of them.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
     ['Stats', () => <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
@@ -271,6 +271,12 @@ export const guide = {
       There is also {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')}, and {k.code('Tree')}/{k.code('Files')}/{k.code('App')} for serving it. Nothing else
       on the file system is reachable.
+    </>
+  )) as Text,
+
+  keeping3: ((k) => (
+    <>
+      Secrets are for API tokens and credentials, which never belong in the code. Switch them on under {k.b('Data')}, add one there, and read it by its name with {k.code('Secret.Read')}. The value is stored encrypted and can never be shown again - not to you, not through the API, not to an agent - only replaced or deleted. A new value is read from the next request on, without deploying; every version reads the same secrets, and a draft works on a copy of them. A project you download reads an environment variable of the same name instead.
     </>
   )) as Text,
 

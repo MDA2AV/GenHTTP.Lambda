@@ -95,7 +95,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Concepten', () => <>Wijzigingen waaraan naast de lambda wordt gewerkt: elk concept probeer je uit op een eigen adres, en het wordt samengevoegd tot de volgende versie zodra het goed is. Open je een concept, dan heeft het zijn eigen code, data en logs.</>],
     ['Bestanden', () => <>De bestanden van een versie: de code en assets, het programma zelf. Een slotje of een wereldbol laat zien of ze openbaar bereikbaar zijn.</>],
-    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de workspace. Kijk erin, upload en verwijder bestanden, of zet hem uit.</>],
+    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de workspace. Kijk erin, upload en verwijder bestanden, of zet hem uit. Ook de secrets – API-tokens en inloggegevens – staan er zodra ze aan staan: ze kunnen worden vervangen of verwijderd, maar nooit meer getoond.</>],
     ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug, en vanuit elke versie kun je een concept starten.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
     ['Statistieken', () => <>Requests, fouten, responstijden en de meest opgevraagde paden, over het afgelopen uur of de afgelopen dag.</>],
@@ -271,6 +271,12 @@ export const guide: Messages['guide'] = {
       Er zijn ook {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')}, en {k.code('Tree')}/{k.code('Files')}/{k.code('App')} om hem te serveren. Verder is
       niets op het bestandssysteem bereikbaar.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Secrets zijn voor API-tokens en inloggegevens, die nooit in de code horen. Zet ze aan onder {k.b('Data')}, voeg er een toe en lees hem op naam met {k.code('Secret.Read')}. De waarde wordt versleuteld opgeslagen en kan nooit meer worden getoond – niet aan jou, niet via de API, niet aan een agent – alleen vervangen of verwijderd. Een nieuwe waarde wordt vanaf het volgende verzoek gelezen, zonder deploy; elke versie leest dezelfde secrets en een concept werkt met een kopie. Een gedownload project leest in plaats daarvan een omgevingsvariabele met dezelfde naam.
     </>
   ),
 

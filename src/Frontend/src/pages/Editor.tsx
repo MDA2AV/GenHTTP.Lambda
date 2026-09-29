@@ -75,15 +75,17 @@ const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
 
 /*
  * What the simple view keeps: the app, asking for a change, the drafts a
- * change can leave to be tried, what changed so far, and how people find it.
- * Change straight after the overview, since asking for one is what the simple
- * view is for. Nothing that is about the code - its files, its data as files,
- * its deployments, its log - and not the figures either, which the overview
- * sums up in the two that matter. The versions are there, as the history:
- * the changes the app went through and a way back to any of them, without
- * the files to compare.
+ * change can leave to be tried, what the app keeps - once there is anything -
+ * what changed so far, and how people find it. Change straight after the
+ * overview, since asking for one is what the simple view is for. Nothing that
+ * is about the code - its files, its deployments, its log - and not the
+ * figures either, which the overview sums up in the two that matter. The data
+ * is there in words of its own and only while some kind holds something: an
+ * owner is not asked to think about which kinds there are. The versions are
+ * there, as the history: the changes the app went through and a way back to
+ * any of them, without the files to compare.
  */
-const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'history', 'showcase', 'domain'];
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'data', 'history', 'showcase', 'domain'];
 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
@@ -416,13 +418,18 @@ export function Editor({ theme }: Props) {
   // the drafts, while there are none: they are met through a change the agent
   // leaves to be tried, or started from a version or the code, and the list
   // of them is nothing to look at until then
+  const keeps = (summary?.storage.workspaceEnabled && summary.storage.workspaceFiles > 0) || (summary?.storage.secretsEnabled && summary.storage.secretCount > 0);
+
   const absent = (id: SectionId) =>
     (hidden && id === 'domain')
     || (demo && (id === 'showcase' || id === 'change' || id === 'features'))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
     // the full view has the versions for it - known once the lambda is,
     // which says which view it opens in
-    || (id === 'history' && lambda != null && !simple);
+    || (id === 'history' && lambda != null && !simple)
+    // the simple view shows what the app keeps only while it keeps something;
+    // not decided before the figures that say so have arrived
+    || (id === 'data' && simple && summary != null && !keeps);
 
   const away = absent(section);
 

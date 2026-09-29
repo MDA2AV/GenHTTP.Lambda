@@ -94,7 +94,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Brouillons', () => <>Des modifications préparées à côté de la lambda : chacune s’essaie à sa propre adresse et s’intègre à la prochaine version une fois au point. Une fois ouvert, un brouillon a son propre code, ses propres données et ses propres logs.</>],
     ['Fichiers', () => <>Les fichiers d’une version : son code et ses assets, le programme lui-même. Un cadenas ou un globe indique si le public peut y accéder.</>],
-    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : le workspace. Regardez ce qu’il contient, importez et supprimez des fichiers, ou désactivez-le.</>],
+    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : le workspace. Regardez ce qu’il contient, importez et supprimez des fichiers, ou désactivez-le. Les secrets – jetons d’API et identifiants – s’y trouvent aussi une fois activés : on peut les remplacer ou les supprimer, jamais les réafficher.</>],
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],
     ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
@@ -271,6 +271,12 @@ export const guide: Messages['guide'] = {
       Il y a aussi {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')}, et {k.code('Tree')}/{k.code('Files')}/{k.code('App')} pour le servir. Rien d’autre du
       système de fichiers n’est accessible.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Les secrets servent aux jetons d’API et aux identifiants, qui n’ont jamais leur place dans le code. Activez-les sous {k.b('Données')}, ajoutez-en un, puis lisez-le par son nom avec {k.code('Secret.Read')}. La valeur est stockée chiffrée et ne peut jamais être réaffichée – ni pour vous, ni via l’API, ni pour un agent – seulement remplacée ou supprimée. Une nouvelle valeur est lue dès la requête suivante, sans déploiement ; toutes les versions lisent les mêmes secrets, et un brouillon travaille sur une copie. Un projet téléchargé lit à la place une variable d’environnement du même nom.
     </>
   ),
 

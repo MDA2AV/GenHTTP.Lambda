@@ -95,7 +95,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Bozze', () => <>Modifiche preparate accanto alla lambda: ognuna si prova a un indirizzo tutto suo e si integra nella prossima versione quando è a posto. Una volta aperta, una bozza ha il suo codice, i suoi dati e i suoi log.</>],
     ['File', () => <>I file di una versione: il codice e gli asset, cioè il programma vero e proprio. Un lucchetto o un globo indica se sono pubblici.</>],
-    ['Dati', () => <>Quello che la lambda conserva mentre gira, condiviso da tutte le versioni: il workspace. Puoi guardarci dentro, caricare ed eliminare file, o disattivarlo.</>],
+    ['Dati', () => <>Quello che la lambda conserva mentre gira, condiviso da tutte le versioni: il workspace. Puoi guardarci dentro, caricare ed eliminare file, o disattivarlo. Anche i segreti – token API e credenziali – sono lì una volta attivati: si possono sostituire o eliminare, mai più mostrare.</>],
     ['Versioni', () => <>Cosa ha cambiato ogni versione, cosa era stato chiesto e le differenze rispetto alla precedente. Da qui fai il deploy o torni indietro, oppure avvii una bozza da una qualsiasi di esse.</>],
     ['Deployment', () => <>Cosa è stato online e quando, e cosa l’ha fermato.</>],
     ['Statistiche', () => <>Richieste, errori, tempi di risposta e i percorsi più richiesti, nell’ultima ora o nelle ultime 24 ore.</>],
@@ -270,6 +270,12 @@ export const guide: Messages['guide'] = {
       Ci sono anche {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')}, e {k.code('Tree')}/{k.code('Files')}/{k.code('App')} per servirlo. Il resto del file
       system non è raggiungibile.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      I segreti servono per i token API e le credenziali, che non vanno mai nel codice. Attivali in {k.b('Dati')}, aggiungine uno e leggilo per nome con {k.code('Secret.Read')}. Il valore viene salvato cifrato e non può più essere mostrato – né a te, né tramite l’API, né a un agente – solo sostituito o eliminato. Un nuovo valore vale dalla richiesta successiva, senza deploy; tutte le versioni leggono gli stessi segreti e una bozza lavora su una copia. Un progetto scaricato legge invece una variabile d’ambiente con lo stesso nome.
     </>
   ),
 

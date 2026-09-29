@@ -96,7 +96,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Draf', () => <>Perubahan yang dikerjakan di samping lambda: masing-masing dicoba di alamatnya sendiri dan digabungkan menjadi versi berikutnya setelah hasilnya pas. Saat dibuka, draf punya kode, data, dan log-nya sendiri.</>],
     ['File', () => <>File dari sebuah versi: kode dan asetnya, yaitu programnya sendiri. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
-    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: workspace. Lihat isinya, unggah dan hapus file, atau nonaktifkan.</>],
+    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: workspace. Lihat isinya, unggah dan hapus file, atau nonaktifkan. Rahasia – token API dan kredensial – juga ada di sini setelah diaktifkan: dapat diganti atau dihapus, tetapi tidak pernah ditampilkan lagi.</>],
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
@@ -271,6 +271,12 @@ export const guide: Messages['guide'] = {
       Ada juga {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')}, dan {k.code('Tree')}/{k.code('Files')}/{k.code('App')} untuk menyajikannya. Selain itu,
       tidak ada bagian file system yang bisa diakses.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Rahasia untuk token API dan kredensial, yang tidak boleh ada di dalam kode. Aktifkan di {k.b('Data')}, tambahkan satu, lalu baca berdasarkan namanya dengan {k.code('Secret.Read')}. Nilainya disimpan terenkripsi dan tidak pernah dapat ditampilkan lagi – tidak kepada Anda, tidak lewat API, tidak kepada agen – hanya dapat diganti atau dihapus. Nilai baru dibaca mulai permintaan berikutnya, tanpa deploy; semua versi membaca rahasia yang sama, dan draf bekerja pada salinannya. Proyek yang diunduh membaca variabel lingkungan dengan nama yang sama sebagai gantinya.
     </>
   ),
 

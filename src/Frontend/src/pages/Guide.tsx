@@ -277,6 +277,19 @@ return Inline.Create()
              });`} />
 
             <p>{said.keeping2(k)}</p>
+
+            <p>{said.keeping3(k)}</p>
+
+            <Sample code={`var token = Secret.Read("WEATHER_API_KEY");
+
+return Inline.Create()
+             .Get("weather", async () =>
+             {
+                 using var http = new System.Net.Http.HttpClient();
+                 http.DefaultRequestHeaders.Add("X-Api-Key", token);
+
+                 return await http.GetStringAsync("https://api.example.com/today");
+             });`} />
           </Section>
 
           <Section id="sockets" title={said.parts.sockets}>

@@ -95,7 +95,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Rascunhos', () => <>Alterações feitas ao lado da lambda: cada uma é experimentada num endereço próprio e integrada na próxima versão quando estiver bem. Aberto, um rascunho tem o seu próprio código, dados e logs.</>],
     ['Ficheiros', () => <>Os ficheiros de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo indica se o público lhes consegue aceder.</>],
-    ['Dados', () => <>O que a lambda guarda enquanto corre, partilhado por todas as versões: o workspace. Vê o que lá está, carrega e elimina ficheiros, ou desliga-o.</>],
+    ['Dados', () => <>O que a lambda guarda enquanto corre, partilhado por todas as versões: o workspace. Vê o que lá está, carrega e elimina ficheiros, ou desliga-o. Os segredos – tokens de API e credenciais – também lá estão depois de ativados: podem ser substituídos ou eliminados, nunca mostrados de novo.</>],
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faz deploy ou reverte a partir daqui, ou começa um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve online e quando, e o que o pôs offline.</>],
     ['Estatísticas', () => <>Pedidos, falhas, tempos de resposta e os caminhos mais pedidos, na última hora ou nas últimas 24 horas.</>],
@@ -268,6 +268,12 @@ export const guide: Messages['guide'] = {
       Há também {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')} e {k.code('Tree')}/{k.code('Files')}/{k.code('App')} para o servir. Mais nada no sistema de
       ficheiros é acessível.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Os segredos servem para tokens de API e credenciais, que nunca devem ficar no código. Ativa-os em {k.b('Dados')}, adiciona um e lê-o pelo nome com {k.code('Secret.Read')}. O valor é guardado cifrado e nunca pode voltar a ser mostrado – nem a ti, nem pela API, nem a um agente –, só substituído ou eliminado. Um valor novo é lido a partir do pedido seguinte, sem deploy; todas as versões leem os mesmos segredos e um rascunho trabalha com uma cópia. Um projeto descarregado lê, em vez disso, uma variável de ambiente com o mesmo nome.
     </>
   ),
 

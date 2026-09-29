@@ -460,7 +460,14 @@ export const editor = {
         name: 'Workspace',
         what: 'Files the lambda reads and writes while it runs: uploads, records, anything it keeps.',
       },
+      secrets: {
+        name: 'Secrets',
+        what: 'API tokens, passwords and other credentials the lambda reads by name. Stored encrypted, and never shown again.',
+      },
     } as Record<string, { name: string; what: string }>,
+    kindsLabel: 'Kinds of data',
+    switchOn: 'Switch on',
+    offCopy: 'This kind of data is off for the app, so the draft has none. Switch it on under Data on the app itself.',
     on: 'On',
     off: 'Off',
     byDefault: 'On by default',
@@ -482,6 +489,98 @@ export const editor = {
     contents: 'What the workspace holds',
     browse: 'Files',
     offBrowse: 'The workspace is off, so there are no files to show.',
+    secretCount: (n: number) => (n === 1 ? '1 secret' : `${n} secrets`),
+    confirmItems: (items: string) =>
+      `Everything in it - ${items}, the copies the drafts hold included - is deleted for good. This cannot be undone.`,
+    inUseSecrets: 'The version online reads secrets, so it fails where it does until you switch them on again and set them.',
+    offSecrets: 'Secrets are switched off. Switch them on to keep API tokens and credentials that your code reads by name.',
+
+    /** The secrets: what is kept, and the one thing that is not possible - reading a value back. */
+    secrets: {
+      privacy:
+        'Values are encrypted when they are stored and can never be read back - not here, not through the API, not by an agent. Only the code of the lambda reads a secret, by its name.',
+      copyPrivacy: 'A test copy for this draft. Its preview reads these values; the lambda\'s own are never touched.',
+      limit: (n: number, limit: number) => `${n} of ${limit}`,
+      add: 'Add a secret',
+      name: 'Name',
+      namePlaceholder: 'STRIPE_API_KEY',
+      nameHelp: 'Letters, digits and underscores. The code asks for the secret by this name.',
+      nameInvalid: 'Use letters, digits and underscores only, and do not start with a digit.',
+      value: 'Value',
+      valuePlaceholder: 'Paste it here',
+      show: 'Show what I type',
+      hide: 'Hide what I type',
+      multiline: 'Several lines',
+      singleLine: 'One line',
+      save: 'Save',
+      cancel: 'Cancel',
+      replace: (name: string) => `Replace the value of ${name}`,
+      replaceShort: 'Replace',
+      replacing: (name: string) => `New value for ${name}`,
+      replaceNote: 'The old value is overwritten. It cannot be shown again either.',
+      hidden: 'Value hidden',
+      hiddenTitle: 'Nobody can read a value back. It can only be replaced.',
+      set: (when: Node) => <>Set {when}</>,
+      read: (name: string) => `Secret.Read("${name}")`,
+      copyRead: (name: string) => `Copy the code that reads ${name}`,
+      copied: 'Copied',
+      delete: (name: string) => `Delete ${name}`,
+      deleteTitle: (name: string) => `Delete ${name}?`,
+      deleteText: 'Code that reads it fails from its next request on. It cannot be got back - it can only be set again, by whoever has the value.',
+      deleteInUse: 'The version online reads secrets, so it may fail where it reads this one.',
+      deleteConfirm: 'Delete it',
+      keep: 'Keep it',
+      saved: (name: string) => `${name} is saved. The code reads it from its next request on.`,
+      deleted: (name: string) => `${name} is deleted.`,
+      saveFailed: 'The secret could not be saved.',
+      deleteFailed: 'The secret could not be deleted.',
+      empty: 'No secrets yet',
+      emptyText:
+        'Keep the API tokens and credentials your code needs here instead of in the code. It reads one with Secret.Read("NAME") - a new value takes effect at once, without a deploy.',
+      emptyCopy: 'This draft has no secrets in its test copy.',
+      full: (limit: number) => `A lambda keeps ${limit} secrets at most. Delete one to add another.`,
+      demo: 'A demo has no secrets to change.',
+    },
+
+    /**
+     * The same data for somebody who had an app built: shown only where there
+     * is something, and without files, code or versions.
+     */
+    simple: {
+      hint:
+        'What your app keeps: information people gave it, pictures they uploaded and the keys it uses to talk to other services. It stays when you change your app.',
+      kinds: {
+        workspace: {
+          name: 'Saved information',
+          what: 'What your app saved while it ran: entries people made, pictures and documents they uploaded.',
+        },
+        secrets: {
+          name: 'Keys and passwords',
+          what: 'Access keys your app uses to talk to other services. They are stored encrypted, and nobody - you included - can read them back.',
+        },
+      } as Record<string, { name: string; what: string }>,
+      none: 'Your app has not stored anything.',
+      items: (n: number) => (n === 1 ? '1 item' : `${n} items`),
+      keys: (n: number) => (n === 1 ? '1 key' : `${n} keys`),
+      deleteAll: 'Delete everything',
+      deleteTitle: 'Delete everything your app saved?',
+      deleteText: (items: string, size: string) =>
+        `All of it - ${items}, ${size} - is deleted for good. Your app keeps working and starts from nothing. This cannot be undone.`,
+      deleteConfirm: 'Delete everything',
+      deleted: 'Everything your app saved is deleted.',
+      deleteFailed: 'That could not be deleted.',
+      secrets: {
+        privacy:
+          'Keys are stored encrypted. Nobody can read one back - not you, not the agent. You can replace one with a new key, or remove it.',
+        add: 'Add a key',
+        empty: 'No keys',
+        emptyText: 'The keys your app uses to talk to other services appear here.',
+        removeTitle: (name: string) => `Remove ${name}?`,
+        removeText: 'Your app stops working where it uses this key, until a new one is added. It cannot be got back.',
+        removeConfirm: 'Remove it',
+        removed: (name: string) => `${name} is removed.`,
+      },
+    },
   },
 
   /**

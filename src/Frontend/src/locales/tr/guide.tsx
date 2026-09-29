@@ -95,7 +95,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Taslaklar', () => <>Lambdanın yanında üzerinde çalışılan değişiklikler: her biri kendi adresinde denenir ve hazır olunca birleştirilip bir sonraki sürüm olur. Açıldığında bir taslağın kendi kodu, verileri ve logları vardır.</>],
     ['Dosyalar', () => <>Bir sürümün dosyaları: kodu ve statik dosyaları, yani programın kendisi. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
-    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: çalışma alanı. İçine bakın, dosya yükleyip silin ya da onu kapatın.</>],
+    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: çalışma alanı. İçine bakın, dosya yükleyip silin ya da onu kapatın. Gizli anahtarlar – API belirteçleri ve kimlik bilgileri – açıldıktan sonra burada yer alır: değiştirilebilir veya silinebilir, ama bir daha gösterilmez.</>],
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
     ['İstatistikler', () => <>Son bir saatin ya da günün istekleri, hataları, yanıt süreleri ve en çok istenen yolları.</>],
@@ -269,6 +269,12 @@ export const guide: Messages['guide'] = {
       Ayrıca {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')} ve içeriği sunmak için {k.code('Tree')}/{k.code('Files')}/{k.code('App')} da var.
       Dosya sisteminin geri kalanına erişilemez.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Gizli anahtarlar, koda asla konmaması gereken API belirteçleri ve kimlik bilgileri içindir. {k.b('Veriler')} bölümünden açın, bir tane ekleyin ve {k.code('Secret.Read')} ile adıyla okuyun. Değer şifrelenmiş olarak saklanır ve bir daha gösterilemez – size de, API üzerinden de, bir ajana da – yalnızca değiştirilebilir ya da silinebilir. Yeni bir değer, dağıtım gerekmeden bir sonraki istekten itibaren okunur; her sürüm aynı gizli anahtarları okur ve bir taslak onların kopyası üzerinde çalışır. İndirilen bir proje bunun yerine aynı adlı bir ortam değişkenini okur.
     </>
   ),
 

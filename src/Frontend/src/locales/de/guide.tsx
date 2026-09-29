@@ -94,7 +94,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Entwürfe', () => <>Änderungen, an denen neben dem Lambda gearbeitet wird: Jede wird unter einer eigenen Adresse ausprobiert und als nächste Version übernommen, sobald alles passt. Geöffnet hat ein Entwurf eigenen Code, eigene Daten und eigene Logs.</>],
     ['Dateien', () => <>Die Dateien einer Version: Code und Assets, das Programm selbst. Ein Schloss oder ein Globus zeigt, ob sie öffentlich erreichbar sind.</>],
-    ['Daten', () => <>Was das Lambda zur Laufzeit aufbewahrt, für alle Versionen gemeinsam: der Workspace. Hineinsehen, Dateien hochladen und löschen oder ihn ausschalten.</>],
+    ['Daten', () => <>Was das Lambda zur Laufzeit aufbewahrt, für alle Versionen gemeinsam: der Workspace. Hineinsehen, Dateien hochladen und löschen oder ihn ausschalten. Auch die Secrets – API-Tokens und Zugangsdaten – liegen dort, sobald sie eingeschaltet sind: Sie lassen sich ersetzen oder löschen, aber nie wieder anzeigen.</>],
     ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen – oder aus jeder von ihnen einen Entwurf beginnen.</>],
     ['Deployments', () => <>Was wann online war und warum es offline ging.</>],
     ['Statistik', () => <>Requests, Fehler, Antwortzeiten und die meistgefragten Pfade der letzten Stunde oder des letzten Tages.</>],
@@ -272,6 +272,12 @@ export const guide: Messages['guide'] = {
       Dazu gibt es {k.code('ReadBytes')}, {k.code('WriteBytes')}, {k.code('Delete')}, {k.code('List')},{' '}
       {k.code('CreateFolder')} und zum Ausliefern {k.code('Tree')}/{k.code('Files')}/{k.code('App')}. Sonst ist nichts
       im Dateisystem erreichbar.
+    </>
+  ),
+
+  keeping3: (k) => (
+    <>
+      Secrets sind für API-Tokens und Zugangsdaten, die nie in den Code gehören. Schalten Sie sie unter {k.b('Daten')} ein, legen Sie dort eines an und lesen Sie es über seinen Namen mit {k.code('Secret.Read')}. Der Wert wird verschlüsselt gespeichert und lässt sich nie wieder anzeigen – weder Ihnen noch über die API noch einem Agenten –, nur ersetzen oder löschen. Ein neuer Wert gilt ab dem nächsten Request, ohne Deploy; alle Versionen lesen dieselben Secrets, und ein Entwurf arbeitet mit einer Kopie davon. Ein heruntergeladenes Projekt liest stattdessen eine Umgebungsvariable mit demselben Namen.
     </>
   ),
 
