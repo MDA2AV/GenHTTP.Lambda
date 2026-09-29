@@ -52,12 +52,15 @@ WORKDIR /app
 
 COPY --from=backend /app ./
 
-# the database, the stored code and the workspaces of the lambdas
+# the database, the stored code and the workspaces of the lambdas - and
+# dumps/, where the runtime writes a dump if the process dies (see
+# docker-compose.ioxide.yml): createdump will not make the folder itself, and a
+# volume only takes it from the image when the volume is new
 # the home directory is not decoration: .NET keeps the certificate store it
 # builds TLS chains from underneath it, and a server that cannot read the
 # issuers of its own certificate cannot send them
 RUN useradd --uid 1001 --home-dir /home/lambda --create-home --shell /usr/sbin/nologin lambda \
- && mkdir -p /data \
+ && mkdir -p /data/dumps \
  && chown -R lambda:lambda /data /app /home/lambda
 
 USER lambda

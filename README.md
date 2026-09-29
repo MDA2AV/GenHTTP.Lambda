@@ -1117,6 +1117,19 @@ go and died partway can be told from one that nothing asked at all. An
 unhandled exception is written into the note before the process goes down,
 because in a container that restarts immediately, stderr is easy to lose.
 
+A note says that a run died, not where. A native crash leaves .NET no chance to
+write anything - heap corruption is one line from glibc and an abort - so the
+ioxide overlay also has the runtime dump the process as it dies:
+`/data/dumps/crash.dmp`, with every thread's stack and the heaps, for
+`dotnet-dump analyze`, and `crash.dmp.crashreport.json` beside it with the same
+stacks as JSON, readable without a debugger. The name is fixed, so each crash
+replaces the last: a lambda can take the process down with unbounded recursion,
+and a dump per crash would let it fill the disk. A dump is the whole memory of
+the process - keys, tokens and the log with every caller's address - so copy it
+off, read it, and delete it. The core the kernel writes as well stays inside the
+container at `/app/core.1` until the next deploy, and a debugger cannot show a
+managed stack from it.
+
 `LAMBDA_LOG_LAMBDA_OUTPUT=false` turns off the gathering of what lambdas
 print, for an installation that would rather not hold a stranger's output in
 memory at all. Their console still reaches stdout; it is simply not collected.
