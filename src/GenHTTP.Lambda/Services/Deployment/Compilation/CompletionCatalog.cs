@@ -62,6 +62,12 @@ public static class CompletionCatalog
                          .Index(Inline.Create().Get(() => Workspace.List()));
             """),
 
+        new("lambda-secret", "snippet", "Read an API token or another secret, set by the owner", """
+            var token = Secret.Read("API_TOKEN");
+
+            return Inline.Create().Get(() => $"The token is {token.Length} characters long");
+            """),
+
         new("lambda-websocket", "snippet", "A websocket, handled as events", """
             var clients = new List<IReactiveConnection>();
 

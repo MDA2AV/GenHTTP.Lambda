@@ -108,7 +108,7 @@ public sealed class McpTests
                            .Order()
                            .ToList();
 
-        CollectionAssert.AreEqual(new[] { "check_code", "list_demos", "list_files", "platform_guide", "read_lambda", "read_logs" },
+        CollectionAssert.AreEqual(new[] { "check_code", "list_demos", "list_files", "list_secrets", "platform_guide", "read_lambda", "read_logs" },
                                   reading, "these look and change nothing, so a client may call them without asking");
 
         var delete = tools.Single(t => t!["name"]!.GetValue<string>() == "delete_file")!;
@@ -643,7 +643,8 @@ public sealed class McpTests
 
         Assert.Contains("every version", lifecycle["data"]!["what"]!.GetValue<string>());
         Assert.Contains("merge", lifecycle["data"]!["lifetime"]!.GetValue<string>());
-        Assert.Contains("ask the user", lifecycle["data"]!["optIn"]!.GetValue<string>(), "data is switched on by the owner, not by an agent");
+        Assert.Contains("enable_data", lifecycle["data"]!["optIn"]!.GetValue<string>(), "an agent switches a kind on");
+        Assert.Contains("no tool", lifecycle["data"]!["optIn"]!.GetValue<string>(), "and cannot switch one off, which deletes what it held");
 
         Assert.Contains("front end", lifecycle["whereThingsGo"]!["theProgram"]!.GetValue<string>());
         Assert.Contains("users", lifecycle["whereThingsGo"]!["theData"]!.GetValue<string>());

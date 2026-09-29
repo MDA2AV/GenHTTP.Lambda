@@ -1,7 +1,9 @@
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +15,7 @@ namespace GenHTTP.Lambda.Services.Data;
 /// Keeps which kinds of data each lambda has, and measures what they hold.
 /// </summary>
 public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IWorkspaceService workspace,
-                                IFeatureService features, ILogger<DataService> logger) : IDataService
+                                IFeatureService features, ISecretVault secrets, LambdaOptions options, ILogger<DataService> logger) : IDataService
 {
 
     #region Functionality
@@ -98,6 +100,13 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
                     return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, listing.Files.Count, listing.UsedBytes, listing.QuotaBytes);
                 }
+            case DataKinds.SecretsId:
+                {
+                    // what is kept while the kind is off is nothing, so it is not counted
+                    var count = state.Enabled ? await secrets.CountAsync(lambdaId, featureId, cancellation) : 0;
+
+                    return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, count, 0, 0, options.MaxSecrets);
+                }
             default:
                 return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, 0, 0, 0);
         }
@@ -108,6 +117,14 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
     /// </summary>
     private async ValueTask ClearAsync(long lambdaId, DataKind kind, CancellationToken cancellation)
     {
+        if (kind.Id == DataKinds.SecretsId)
+        {
+            // the copies of the features go with them
+            await secrets.ClearAsync(lambdaId, cancellation);
+
+            return;
+        }
+
         if (kind.Id != DataKinds.WorkspaceId)
         {
             return;
@@ -160,6 +177,9 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
         }
 
         await database.SaveChangesAsync(cancellation);
+
+        // what the code online reads of it - whether secrets are on - is read again
+        secrets.Forget(lambdaId);
     }
 
     #endregion

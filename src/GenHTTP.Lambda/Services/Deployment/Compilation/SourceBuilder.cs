@@ -37,6 +37,16 @@ internal static class SourceBuilder
 
     internal const string AssetType = "__LambdaAssets";
 
+    internal const string SecretType = "__LambdaSecrets";
+
+    /// <summary>
+    /// The fields of <c>LambdaEnvironment</c> the platform fills in before a
+    /// lambda runs, which is how <c>Secret</c> reaches what it reads.
+    /// </summary>
+    internal const string SecretsEnabledField = "SecretsEnabled";
+
+    internal const string SecretsSourceField = "SecretsSource";
+
     /// <summary>
     /// Holds what every file of a lambda may name without qualifying it.
     /// </summary>
@@ -162,17 +172,22 @@ internal static class SourceBuilder
         builder.AppendLine("{");
         builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
         builder.AppendLine($"    internal static readonly {AssetType} Assets = new {AssetType}({Literal(assets)});");
+        builder.AppendLine($"    internal static readonly {SecretType} Secret = new {SecretType}();");
+        builder.AppendLine($"    internal static global::System.Func<bool> {SecretsEnabledField};");
+        builder.AppendLine($"    internal static global::System.Func<string, string> {SecretsSourceField};");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {ScopeType}");
         builder.AppendLine("{");
         builder.AppendLine($"    internal static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
+        builder.AppendLine($"    internal static {SecretType} Secret => LambdaEnvironment.Secret;");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {EntryType}");
         builder.AppendLine("{");
         builder.AppendLine($"    private static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
         builder.AppendLine($"    private static {AssetType} Assets => LambdaEnvironment.Assets;");
+        builder.AppendLine($"    private static {SecretType} Secret => LambdaEnvironment.Secret;");
         builder.AppendLine();
         builder.AppendLine($"    internal static async global::System.Threading.Tasks.Task<object> {EntryMethod}()");
         builder.AppendLine("    {");
@@ -195,6 +210,7 @@ internal static class SourceBuilder
         builder.AppendLine();
         builder.AppendLine(WorkspaceSource(limits ?? WorkspaceLimits.Standard));
         builder.AppendLine(AssetSource);
+        builder.AppendLine(SecretSource);
 
         return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
     }
@@ -270,6 +286,82 @@ internal static class SourceBuilder
     #endregion
 
     #region Workspace
+
+    /// <summary>
+    /// The secrets of the lambda, handed to the snippet as <c>Secret</c>.
+    /// </summary>
+    /// <remarks>
+    /// Read only, and only by name: there is no listing and nothing that
+    /// writes, because the code of a lambda is the one reader a secret has.
+    /// What it reads through is a pair of delegates the platform sets on
+    /// <c>LambdaEnvironment</c> before the lambda runs, so this class does not
+    /// need to know where secrets are kept - and the assembly of the platform
+    /// stays invisible to the code being compiled, as it does for the workspace.
+    ///
+    /// Secrets are off until the owner switches them on, so <c>Read</c> says
+    /// which of the two it is when it finds nothing: switched off, or not set.
+    /// <c>TryRead</c> and <c>Exists</c> answer nothing and false for both, for
+    /// code that has a fallback; <c>Enabled</c> tells them apart.
+    /// </remarks>
+    private static readonly string SecretSource = $$"""
+        internal sealed class {{SecretType}}
+        {
+            /// <summary>Whether the owner of this lambda switched secrets on.</summary>
+            public bool Enabled
+            {
+                get
+                {
+                    var enabled = LambdaEnvironment.{{SecretsEnabledField}};
+
+                    return enabled != null && enabled();
+                }
+            }
+
+            /// <summary>
+            /// The value of a secret. Throws, and says why, if there is none:
+            /// because secrets are off, or because nothing of that name is set.
+            /// </summary>
+            public string Read(string name)
+            {
+                var value = Fetch(name);
+
+                if (value == null)
+                {
+                    throw new global::System.InvalidOperationException(
+                        "This lambda has no secret called '" + name + "'. Its owner adds it under Data in the editor "
+                      + "(PUT /api/v1/lambdas/{privateKey}/secrets/" + name + ").");
+                }
+
+                return value;
+            }
+
+            /// <summary>The value of a secret, or null if there is none - or if secrets are off.</summary>
+            public string TryRead(string name)
+                => Enabled ? Fetch(name) : null;
+
+            /// <summary>Whether a secret of that name is set.</summary>
+            public bool Exists(string name)
+                => TryRead(name) != null;
+
+            private static string Fetch(string name)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    throw new global::System.ArgumentException("The name of a secret must not be empty.", "name");
+                }
+
+                var source = LambdaEnvironment.{{SecretsSourceField}};
+
+                if (source == null)
+                {
+                    throw new global::System.InvalidOperationException("Secrets cannot be read here: this code is only being checked, not run.");
+                }
+
+                // refuses, with the reason, while the owner has secrets switched off
+                return source(name);
+            }
+        }
+        """;
 
     /// <summary>
     /// What a lambda shipped, as it can read it back.

@@ -234,6 +234,36 @@ public sealed record LambdaOptions
     public int MaxFeatures { get; init; } = 10;
 
     /// <summary>
+    /// The half of the key the secrets of every lambda are encrypted with that
+    /// belongs to this installation, at least 32 characters.
+    /// </summary>
+    /// <remarks>
+    /// The other half is the salt each lambda keeps in the database, so the
+    /// database on its own decrypts nothing - and neither does this on its
+    /// own. Left out, one is made and kept in <see cref="SecretsKeyFile" />
+    /// beside the database, which is enough to run and to back up the whole
+    /// data directory together, but does not keep the two apart: an operator
+    /// who wants a backup of the database alone to be useless sets this, and
+    /// keeps it wherever the backups are not.
+    /// </remarks>
+    public string? SecretsKey { get; init; }
+
+    /// <summary>
+    /// How many secrets a lambda may keep, and each of its features a copy of.
+    /// </summary>
+    public int MaxSecrets { get; init; } = 50;
+
+    /// <summary>
+    /// How long the value of a secret may be, in characters.
+    /// </summary>
+    /// <remarks>
+    /// Room for a certificate or the JSON of a service account, which are the
+    /// largest thing anybody keeps as a secret; anything larger is a file, and
+    /// belongs in the workspace.
+    /// </remarks>
+    public int MaxSecretLength { get; init; } = 16 * 1024;
+
+    /// <summary>
     /// Requests per second a single client may send to the lambda routes.
     /// </summary>
     public int RateLimit { get; init; } = 5000;
@@ -479,6 +509,11 @@ public sealed record LambdaOptions
     public string FeatureDirectory => Path.Combine(DataDirectory, "features");
 
     /// <summary>
+    /// Where the secret of the installation is kept when none is configured.
+    /// </summary>
+    public string SecretsKeyFile => Path.Combine(DataDirectory, "secrets.key");
+
+    /// <summary>
     /// Whether the server should offer a TLS endpoint next to the plain one.
     /// </summary>
     public bool Secure => SecurePort > 0 && !string.IsNullOrWhiteSpace(CertificatePath);
@@ -543,6 +578,9 @@ public sealed record LambdaOptions
             MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             MaxFeatures = ReadInt("LAMBDA_MAX_FEATURES", defaults.MaxFeatures),
+            SecretsKey = ReadOptional("LAMBDA_SECRETS_KEY"),
+            MaxSecrets = ReadInt("LAMBDA_MAX_SECRETS", defaults.MaxSecrets),
+            MaxSecretLength = ReadInt("LAMBDA_MAX_SECRET_LENGTH", defaults.MaxSecretLength),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),

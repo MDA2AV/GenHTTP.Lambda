@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -27,7 +28,7 @@ namespace GenHTTP.Lambda.Api;
 /// than by the public key, because a public key can be given up and claimed
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
-public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, LambdaTelemetry telemetry,
+public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, IDataService data, LambdaTelemetry telemetry,
                                                LogBook book, LambdaOptions options)
 {
 
@@ -199,6 +200,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var listing = await workspace.ListAsync(id);
 
+        var secrets = await data.GetAsync(privateKey, DataKinds.SecretsId);
+
         return new StorageSummary(
             version,
             code.Count,
@@ -210,9 +213,19 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             code.Any(f => ServingAssets().IsMatch(f.Code)),
             code.Any(f => ServingWorkspace().IsMatch(f.Code)),
             listing.Enabled,
-            code.Any(f => UsingWorkspace().IsMatch(f.Code))
+            code.Any(f => UsingWorkspace().IsMatch(f.Code)),
+            secrets.Enabled,
+            secrets.Items,
+            code.Any(f => UsingSecrets().IsMatch(f.Code))
         );
     }
+
+    /// <summary>
+    /// Any use of a secret, to warn whoever is about to switch secrets off that
+    /// the code online would then fail where it reads one.
+    /// </summary>
+    [GeneratedRegex(@"\bSecret\s*\.\s*Read\s*\(")]
+    private static partial Regex UsingSecrets();
 
     /// <summary>
     /// The calls that turn a directory into something served. Read from the

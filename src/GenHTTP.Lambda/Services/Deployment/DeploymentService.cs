@@ -5,6 +5,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -44,16 +45,19 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     private ServerRegistry Servers { get; }
 
+    private ISecretVault Secrets { get; }
+
     private ILogger Logger { get; }
 
     #endregion
 
     #region Initialization
 
-    public DeploymentService(IStorageService storage, ServerRegistry servers, ILogger<DeploymentService> logger)
+    public DeploymentService(IStorageService storage, ServerRegistry servers, ISecretVault secrets, ILogger<DeploymentService> logger)
     {
         Storage = storage;
         Servers = servers;
+        Secrets = secrets;
         Logger = logger;
 
         ModuleCatalog.LoadModules();
@@ -156,7 +160,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
             var request = new CompilationRequest(files, Storage.GetWorkspace(slot.LambdaId, slot.FeatureId),
                                                  Storage.GetAssetDirectory(slot.LambdaId, slot.FeatureId),
-                                                 Storage.GetAssemblyDirectory(slot.LambdaId), name, true, limits);
+                                                 Storage.GetAssemblyDirectory(slot.LambdaId), name, true, limits,
+                                                 Secrets.AccessFor(slot.LambdaId, slot.FeatureId));
 
             var outcome = await CompileAsync(slot, stamp, request);
 

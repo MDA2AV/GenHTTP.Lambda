@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.RegularExpressions;
 
 using Microsoft.CodeAnalysis;
 
@@ -24,7 +25,7 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// folders beside the code. No part of it refers to this platform, and nothing
 /// has to be uncommented or filled in before it runs.
 /// </remarks>
-public static class ProjectPacker
+public static partial class ProjectPacker
 {
     /// <summary>The GenHTTP package that carries everything a lambda may use.</summary>
     private const string Package = "GenHTTP.Full.Ioxide";
@@ -241,6 +242,7 @@ public static class ProjectPacker
             {
                 private static Folder Workspace => Lambda.Workspace;
                 private static Folder Assets => Lambda.Assets;
+                private static Secrets Secret => Lambda.Secret;
 
                 internal static async Task<object> BuildAsync()
                 {
@@ -366,7 +368,29 @@ public static class ProjectPacker
         }
 
         /// <summary>
-        /// The two names a lambda could use without declaring them.
+        /// The secrets of the lambda, which here are environment variables.
+        /// </summary>
+        /// <remarks>
+        /// The platform kept them encrypted beside the lambda and never
+        /// exported them. A secret called STRIPE_API_KEY is now the environment
+        /// variable STRIPE_API_KEY, so it is set wherever the program is run
+        /// rather than stored in it.
+        /// </remarks>
+        public sealed class Secrets
+        {
+            public bool Enabled => true;
+
+            public string Read(string name)
+                => TryRead(name) ?? throw new InvalidOperationException(
+                    $"The secret '{name}' is not set. Set the environment variable {name} before running the program.");
+
+            public string TryRead(string name) => Environment.GetEnvironmentVariable(name);
+
+            public bool Exists(string name) => TryRead(name) != null;
+        }
+
+        /// <summary>
+        /// The names a lambda could use without declaring them.
         /// </summary>
         public static class Lambda
         {
@@ -375,19 +399,24 @@ public static class ProjectPacker
 
             /// <summary>What it writes, which is the workspace folder here.</summary>
             public static readonly Folder Workspace = new("workspace");
+
+            /// <summary>What it kept as secrets, which the environment provides here.</summary>
+            public static readonly Secrets Secret = new();
         }
 
         /// <summary>
-        /// Lets every file say Workspace, the way the platform did.
+        /// Lets every file say Workspace and Secret, the way the platform did.
         /// </summary>
         /// <remarks>
-        /// Only Workspace: Assets is also the name of a type in GenHTTP.Modules.Files,
+        /// Only those two: Assets is also the name of a type in GenHTTP.Modules.Files,
         /// and importing a member of that name as well would make every use of either
         /// ambiguous. Outside Program.cs, the assets are LambdaEnvironment.Assets.
         /// </remarks>
         public static class LambdaScope
         {
             public static Folder Workspace => Lambda.Workspace;
+
+            public static Secrets Secret => Lambda.Secret;
         }
 
         /// <summary>
@@ -398,6 +427,8 @@ public static class ProjectPacker
             public static Folder Workspace => Lambda.Workspace;
 
             public static Folder Assets => Lambda.Assets;
+
+            public static Secrets Secret => Lambda.Secret;
         }
 
         """;
@@ -421,7 +452,7 @@ public static class ProjectPacker
         | `Program.cs` | your snippet, in a program that hosts what it returns |
         {string.Join("\n", files.Where(f => f.IsCode && f.Name != LambdaSource.EntryName)
                                 .Select(f => $"| `{f.Name}` | exactly as you wrote it |"))}
-        | `Lambda.cs` | stand-ins for `Workspace` and `Assets`, as folders |
+        | `Lambda.cs` | stand-ins for `Workspace` and `Assets`, as folders, and for `Secret`, as environment variables |
         | `assets/` | the files your lambda shipped |
         | `workspace/` | what it reads and writes at runtime |
 
@@ -438,7 +469,36 @@ public static class ProjectPacker
         many there may be, what the compiler would refuse - were its own. This
         is your machine and none of them came with it.
 
+        ## Secrets
+
+        The platform kept API tokens and credentials as secrets, encrypted, and
+        never puts them in an export. Here `Secret.Read("NAME")` reads the
+        environment variable `NAME` instead, so they are set where the program
+        runs and are not part of it.
+
+        {Secrets(files)}
+
         """;
+
+    /// <summary>
+    /// Which secrets the code asks for by name, so whoever runs the project
+    /// knows what to set.
+    /// </summary>
+    private static string Secrets(IReadOnlyList<LambdaFile> files)
+    {
+        var names = files.Where(f => f.IsCode)
+                         .SelectMany(f => SecretNames().Matches(f.Code).Select(m => m.Groups[1].Value))
+                         .Distinct(StringComparer.Ordinal)
+                         .Order(StringComparer.Ordinal)
+                         .ToList();
+
+        return names.Count == 0
+            ? "This lambda did not read any secret by name."
+            : "This lambda reads these, so set them before `dotnet run`:\n\n" + string.Join("\n", names.Select(n => $"- `{n}`"));
+    }
+
+    [GeneratedRegex(@"\bSecret\s*\.\s*(?:Read|TryRead|Exists)\s*\(\s*""([A-Za-z_][A-Za-z0-9_]*)""")]
+    private static partial Regex SecretNames();
 
     #endregion
 

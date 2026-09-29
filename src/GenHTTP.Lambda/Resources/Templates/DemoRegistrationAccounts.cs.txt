@@ -13,8 +13,8 @@ using System.Security.Cryptography;
 
 using GenHTTP.Api.Content.Authentication;
 
-/// <summary>What is sent to register or to sign in.</summary>
-public record Credentials(string Name, string Password);
+/// <summary>What is sent to register or to sign in. The invite code only matters to a lambda that asks for one when registering.</summary>
+public record Credentials(string Name, string Password, string InviteCode = null);
 
 /// <summary>What a successful registration or sign in answers with - the token travels in the cookie.</summary>
 public record SignedIn(string Name);

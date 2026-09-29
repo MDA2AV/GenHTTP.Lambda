@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -23,7 +24,8 @@ namespace GenHTTP.Lambda.Services.Features;
 /// service beside the lambdas themselves.
 /// </summary>
 public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IStorageService storage,
-                                   IDeploymentService deployments, LambdaOptions options, LogBook book, ILogger<FeatureService> logger)
+                                   IDeploymentService deployments, ISecretVault secrets, LambdaOptions options, LogBook book,
+                                   ILogger<FeatureService> logger)
     : IFeatureService
 {
 
@@ -178,6 +180,13 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             if (await WorkspaceEnabledAsync(database, lambdaId, cancellation))
             {
                 await storage.CopyWorkspaceAsync(lambdaId, entity.Id, cancellation);
+            }
+
+            // the secrets too: a preview that calls a service the lambda has a key
+            // for should be able to, and it can do what it likes with its copy
+            if (await DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Secrets, cancellation))
+            {
+                await secrets.CopyAsync(lambdaId, entity.Id, cancellation);
             }
         }
         catch
@@ -370,6 +379,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         if (await WorkspaceEnabledAsync(database, lambda.Id, cancellation))
         {
             await storage.CopyWorkspaceAsync(lambda.Id, entity.Id, cancellation);
+        }
+
+        if (await DataSwitches.IsEnabledAsync(database, lambda.Id, DataKinds.Secrets, cancellation))
+        {
+            await secrets.CopyAsync(lambda.Id, entity.Id, cancellation);
         }
 
         // built again on its next request, so code that read the data into

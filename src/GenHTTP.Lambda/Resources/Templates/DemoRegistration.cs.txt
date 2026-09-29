@@ -2,6 +2,8 @@
 // and a members page that only a signed in user gets to see.
 //
 //   POST register         { name, password }   -> sets the session cookie   400 / 409 with the reason
+//                         (+ inviteCode when the lambda has an INVITE_CODE secret: 403 without it)
+//   GET  invite                                -> { required }           whether registering needs an invite code
 //   POST login            { name, password }   -> sets the session cookie   401 when they do not match
 //   POST logout                                -> clears it
 //
@@ -21,11 +23,20 @@
 // no script on the page can read it, and SameSite, so another site cannot make
 // the browser send it along. Everything below api/ is behind the Authentication
 // module, which reads that cookie and hands the signed in member to the routes.
+//
+// Registering can be closed to whoever has no invite: give the lambda a secret
+// called INVITE_CODE (switch Secrets on under Data in the editor, then add it)
+// and only somebody who sends that code along can register. Without the
+// secret, anybody can. Secret.TryRead answers nothing when there is none, or
+// when secrets are off, so the demo works as it is and needs no configuration.
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
 // it - a copy is yours to change.
 // [/demo]
+
+using System.Security.Cryptography;
+using System.Text;
 
 using GenHTTP.Api.Content.Authentication;
 using GenHTTP.Modules.Reflection.Injectors;
@@ -42,7 +53,8 @@ var accounts = new Accounts(
  * only ever be sent back to auth/.
  */
 var account = Inline.Create()
-                    .Post("register", (Credentials body, IRequest request) => SignIn(accounts.Register(body), request))
+                    .Get("invite", () => new Invite(Secret.TryRead("INVITE_CODE") != null))
+                    .Post("register", (Credentials body, IRequest request) => SignIn(accounts.Register(Invited(body)), request))
                     .Post("login", (Credentials body, IRequest request) => SignIn(accounts.Login(body), request))
                     .Post("logout", (IRequest request) =>
                     {
@@ -74,6 +86,30 @@ return Layout.Create()
              .Add(account)
              .Add(Assets.App("web"));
 
+// The invite, if the lambda asks for one. Both sides are hashed before they are
+// compared so that the comparison takes as long for every guess, whatever the
+// length of the code - and the secret is read here, when it is needed, rather
+// than kept in a field.
+static Credentials Invited(Credentials body)
+{
+    var code = Secret.TryRead("INVITE_CODE");
+
+    if (code != null)
+    {
+        var given = SHA256.HashData(Encoding.UTF8.GetBytes(body?.InviteCode ?? ""));
+
+        if (!CryptographicOperations.FixedTimeEquals(given, SHA256.HashData(Encoding.UTF8.GetBytes(code))))
+        {
+            throw new ProviderException(ResponseStatus.Forbidden, "Registering needs the invite code.");
+        }
+    }
+
+    return body;
+}
+
 // the answer to a successful registration or sign in: who you are, and the cookie
 static Result<SignedIn> SignIn((SignedIn Member, string Token) signed, IRequest request)
     => new Result<SignedIn>(signed.Member).Cookie(Session.Cookie, signed.Token, Session.Options(request));
+
+// whether registering asks for an invite code
+record Invite(bool Required);

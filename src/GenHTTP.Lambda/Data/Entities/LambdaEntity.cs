@@ -66,6 +66,18 @@ public sealed class LambdaEntity
     /// </remarks>
     public DateTime? LastSeen { get; set; }
 
+    /// <summary>
+    /// The part of the key its secrets are encrypted with that this lambda
+    /// brings, random and made when it first has a secret.
+    /// </summary>
+    /// <remarks>
+    /// Not a secret on its own, and kept in the row on purpose: with the
+    /// secret of the installation, which is not in the database, it is the
+    /// key. A backup of the database therefore travels with everything but
+    /// half of what opens it.
+    /// </remarks>
+    public byte[]? SecretSalt { get; set; }
+
     public List<DeploymentEntity> Deployments { get; set; } = [];
 
 }

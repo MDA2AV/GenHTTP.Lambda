@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 
 using GenHTTP.Api.Content;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.CodeAnalysis;
@@ -106,7 +107,7 @@ internal static class LambdaCompiler
         if (request.Run && Loaded.TryGetValue(Identify(request), out var known))
         {
             // the very same code is already in the process, just build it again
-            return (CompilationOutcome.Succeeded(), await InvokeAsync(known));
+            return (CompilationOutcome.Succeeded(), await InvokeAsync(known, request.Secrets));
         }
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
@@ -154,7 +155,7 @@ internal static class LambdaCompiler
 
         Loaded[Identify(request)] = lambda;
 
-        return (CompilationOutcome.Succeeded(Translate(emitted.Diagnostics, DiagnosticSeverity.Warning)), await InvokeAsync(lambda));
+        return (CompilationOutcome.Succeeded(Translate(emitted.Diagnostics, DiagnosticSeverity.Warning)), await InvokeAsync(lambda, request.Secrets));
     }
 
     /// <summary>
@@ -162,8 +163,10 @@ internal static class LambdaCompiler
     /// returned. Called on every deployment, so redeploying resets the state a
     /// snippet holds in memory.
     /// </summary>
-    private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda)
+    private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda, SecretAccess? secrets)
     {
+        Connect(lambda, secrets);
+
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
                  ?? throw new InvalidOperationException("The compiled lambda does not contain an entry point.");
 
@@ -181,6 +184,32 @@ internal static class LambdaCompiler
             null => throw new InvalidOperationException("The lambda returned null instead of a handler."),
             _ => throw new InvalidOperationException($"The lambda returned '{result.GetType().Name}', which is neither an IHandler nor an IHandlerBuilder.")
         };
+    }
+
+    /// <summary>
+    /// Hands the code of a lambda the way to its secrets, before any of it runs.
+    /// </summary>
+    /// <remarks>
+    /// Two delegates in fields of the generated <c>LambdaEnvironment</c>, since
+    /// the assembly a snippet is compiled into cannot see this application.
+    /// Set again on every deployment, also when the assembly is one that was
+    /// built before: the access belongs to the lambda or feature it is
+    /// deployed for, and an assembly is only ever reused for that same one.
+    /// </remarks>
+    private static void Connect(LoadedLambda lambda, SecretAccess? secrets)
+    {
+        if (secrets == null)
+        {
+            return;
+        }
+
+        var environment = lambda.Assembly.GetType($"{lambda.Scope}.LambdaEnvironment")
+                       ?? throw new InvalidOperationException("The compiled lambda does not contain its environment.");
+
+        const BindingFlags fields = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
+
+        environment.GetField(SourceBuilder.SecretsEnabledField, fields)?.SetValue(null, secrets.Enabled);
+        environment.GetField(SourceBuilder.SecretsSourceField, fields)?.SetValue(null, secrets.Read);
     }
 
     /// <summary>
@@ -301,5 +330,6 @@ internal static class LambdaCompiler
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
 /// <param name="Limits">What the lambda may keep in its workspace, compiled into it</param>
+/// <param name="Secrets">How the lambda reads its secrets, handed to it when it is run</param>
 internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Assets, string AssemblyDirectory, string Name, bool Run,
-                                          WorkspaceLimits Limits);
+                                          WorkspaceLimits Limits, SecretAccess? Secrets = null);

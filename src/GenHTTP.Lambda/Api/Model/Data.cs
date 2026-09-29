@@ -10,11 +10,12 @@ namespace GenHTTP.Lambda.Api.Model;
 /// deletes what it held. The figures are the ones every kind can give, so a
 /// kind added later is listed the same way.
 /// </remarks>
-/// <param name="Kind">Which kind of data: <c>workspace</c>, the files the lambda reads and writes</param>
+/// <param name="Kind">Which kind of data: <c>workspace</c>, the files the lambda reads and writes, or <c>secrets</c>, the tokens and credentials it reads by name</param>
 /// <param name="Enabled">Whether the lambda has it</param>
 /// <param name="Default">Whether a lambda has it until its owner decides otherwise</param>
 /// <param name="Changed">When the owner last switched it; absent while it is as it came</param>
-/// <param name="Items">What it holds: files, for the workspace</param>
-/// <param name="UsedBytes">The room that takes, as the quota counts it</param>
-/// <param name="QuotaBytes">The room the tier of the lambda gives it</param>
-public sealed record DataStoreResponse(string Kind, bool Enabled, bool Default, DateTime? Changed, int Items, long UsedBytes, long QuotaBytes);
+/// <param name="Items">What it holds: files for the workspace, secrets for the secrets</param>
+/// <param name="UsedBytes">The room that takes, as the quota counts it - the workspace; zero for secrets</param>
+/// <param name="QuotaBytes">The room the tier of the lambda gives it - the workspace; zero for secrets</param>
+/// <param name="Limit">How many items it may hold - the secrets; zero for the workspace, which only the room limits</param>
+public sealed record DataStoreResponse(string Kind, bool Enabled, bool Default, DateTime? Changed, int Items, long UsedBytes, long QuotaBytes, int Limit);

@@ -10,6 +10,7 @@ using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
@@ -44,8 +45,8 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// Every tool answers with an object rather than prose. A model reads the text
 /// and a program reads the structured copy, and both are the same thing.
 /// </remarks>
-public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, IShowcaseService showcases,
-                              LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
+public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, ISecretService secrets, IFeatureService features,
+                              IShowcaseService showcases, LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
 {
 
     #region Catalogue
@@ -275,7 +276,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("read_lambda", "Read a lambda", Effect.Read,
-             $"A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the workspace: whether it is on and what it holds), and the files of one version - or, with feature, of that feature. Files come in full when they add up to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one. Read the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
+             $"A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the workspace and the secrets: whether each is on and what it holds - secret names, never values), and the files of one version - or, with feature, of that feature. Files come in full when they add up to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one. Read the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -348,6 +349,61 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                  ["required"] = new JsonArray("privateKey", "path")
              }),
 
+        Tool("enable_data", "Switch a kind of data on", Effect.Replace,
+             "Switch a kind of data on for the lambda: 'secrets' (API tokens, credentials - off until switched on, and needed before set_secret works) or 'workspace' (on by default). Nothing is deleted. There is deliberately no tool to switch one off, since that deletes what it held: that is the owner's to do in the editor.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["kind"] = Field("string", "'secrets' or 'workspace'.")
+                 },
+                 ["required"] = new JsonArray("privateKey", "kind")
+             }),
+
+        Tool("set_secret", "Set a secret", Effect.Replace,
+             "Store an API token, a password or another credential the lambda needs, encrypted, under a name the code reads with Secret.Read(\"NAME\"). Use it whenever the app calls a service that needs a key - never write a credential into the code, a file, or the workspace. The value is write only: no tool, API or editor ever shows it again, so keep it out of your answers too. Replaces the value if the name exists. Takes effect at once, without a deploy. Needs secrets switched on (enable_data). With feature, sets it in that feature's copy only.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["feature"] = Field("string", "Set it in this feature's copy of the secrets instead."),
+                     ["name"] = Field("string", "Letters, digits and underscores, not starting with a digit, at most 64 characters: the shape of an environment variable, which is what it is called when the lambda is exported. 'STRIPE_API_KEY'."),
+                     ["value"] = Field("string", "The value, up to 16,384 characters.")
+                 },
+                 ["required"] = new JsonArray("privateKey", "name", "value")
+             }),
+
+        Tool("list_secrets", "List a lambda's secrets", Effect.Read,
+             "The names of the lambda's secrets, when each was set, and whether secrets are switched on - never a value, which nothing can read back. Call it to see which names exist before writing code that reads them. With feature, that feature's copy.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
+                     ["feature"] = Field("string", "List this feature's copy instead.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
+             }),
+
+        Tool("delete_secret", "Delete a secret", Effect.Replace,
+             "Delete a secret the lambda no longer needs. Code that reads it fails from its next request on, and it cannot be got back - only set again by whoever has the value. With feature, from that feature's copy only.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["feature"] = Field("string", "Delete it from this feature's copy instead."),
+                     ["name"] = Field("string", "The secret.")
+                 },
+                 ["required"] = new JsonArray("privateKey", "name")
+             }),
+
         Tool("showcase", "Showcase a lambda", Effect.Replace,
              $"List a lambda on the public showcase page, change its entry, or take it off. Not part of building: only do this when the user asks for it. With only privateKey it returns the current entry. An entry needs a title, a description and a picture (a screenshot or short GIF of the lambda in use); it is listed while the lambda is online. {ShowcaseLimits.Tone}",
              new JsonObject
@@ -402,6 +458,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "upload_file" => await UploadAsync(arguments),
                 "list_files" => await FilesAsync(arguments),
                 "delete_file" => await RemoveAsync(arguments),
+                "enable_data" => await EnableDataAsync(arguments),
+                "set_secret" => await SetSecretAsync(arguments),
+                "list_secrets" => await SecretsAsync(arguments),
+                "delete_secret" => await DeleteSecretAsync(arguments),
                 "showcase" => await ShowcaseAsync(arguments, origin),
                 "list_demos" => Demos(origin),
                 "platform_guide" => Guide(),
@@ -860,6 +920,76 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         await workspace.DeleteAsync(id, path, feature);
 
         return McpProtocol.Say(new { ok = true, path });
+    }
+
+    /// <summary>
+    /// Switches a kind of data on.
+    /// </summary>
+    /// <remarks>
+    /// On and never off: an agent that could switch a kind off could delete
+    /// what its owner's visitors keep there with one call. Secrets are the
+    /// reason it exists - they are off until somebody says otherwise, and an
+    /// agent that has been given a key to store has to be able to say so.
+    /// </remarks>
+    private async ValueTask<JsonObject> EnableDataAsync(JsonObject arguments)
+    {
+        var kind = Required(arguments, "kind");
+
+        var store = await data.EnableAsync(Required(arguments, "privateKey"), kind);
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            kind = store.Kind,
+            enabled = store.Enabled,
+            next = store.Kind == DataKinds.SecretsId
+                ? "Secrets are on. set_secret stores a credential, and the code reads it with Secret.Read(\"NAME\") - from its next request on, no deploy needed."
+                : "Switched on."
+        });
+    }
+
+    private async ValueTask<JsonObject> SetSecretAsync(JsonObject arguments)
+    {
+        var name = Required(arguments, "name");
+
+        var feature = Text(arguments, "feature");
+
+        var set = await secrets.SetAsync(Required(arguments, "privateKey"), feature, name, Required(arguments, "value"));
+
+        // said back by name only: what is put in the answer of a tool ends up in a transcript
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            set.Name,
+            set.Updated,
+            note = feature == null
+                ? $"Stored, encrypted. The code reads it with Secret.Read(\"{set.Name}\") - at once, without a deploy. Nothing can read the value back."
+                : $"Stored in the feature's copy only. Its preview reads it with Secret.Read(\"{set.Name}\"); the lambda's own secrets are not touched."
+        });
+    }
+
+    private async ValueTask<JsonObject> SecretsAsync(JsonObject arguments)
+    {
+        var listing = await secrets.ListAsync(Required(arguments, "privateKey"), Text(arguments, "feature"));
+
+        return McpProtocol.Say(new
+        {
+            listing.Enabled,
+            listing.Limit,
+            secrets = listing.Secrets.Select(s => new { s.Name, s.Created, s.Updated }),
+            note = listing.Enabled
+                ? "Names only: a value cannot be read back by anybody. The code reads one with Secret.Read(\"NAME\")."
+                : "Secrets are switched off, so there are none. enable_data with kind 'secrets' switches them on."
+        });
+    }
+
+    private async ValueTask<JsonObject> DeleteSecretAsync(JsonObject arguments)
+    {
+        var name = Required(arguments, "name");
+
+        await secrets.DeleteAsync(Required(arguments, "privateKey"), Text(arguments, "feature"), name);
+
+        return McpProtocol.Say(new { ok = true, deleted = name.Trim() });
     }
 
     /// <summary>
@@ -1375,14 +1505,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 what = "Data belongs to the lambda, not to a version: every version reads and writes the same data. It is where everything the program keeps goes - records, accounts, scores, uploads, anything users create or change.",
                 lifetime = "Data outlives every save, deploy, rollback and merge - no version holds it, so none of them changes it or brings an earlier state back. It goes only when the lambda is deleted, or when its owner switches that kind of data off, which deletes what it held.",
-                kinds = "The workspace - a private directory of files - is the kind there is now. More kinds, such as a database and secrets, will be added the same way; read_lambda lists what a lambda has under data.",
-                optIn = "The owner decides which kinds of data a lambda has. The workspace is on unless the owner switched it off: list_files and read_lambda say whether it is. You cannot switch data on - if it is off, ask the user.",
+                kinds = "Two kinds so far: the workspace - a private directory of files - and secrets - API tokens and credentials the code reads by name. A database will be added the same way; read_lambda lists what a lambda has under data.",
+                optIn = "Each kind is switched on or off, and the owner decides. The workspace is on unless the owner switched it off; secrets are off until somebody switches them on. read_lambda says which are on. enable_data switches a kind on - do that when the app needs it, secrets above all. Switching one off deletes what it held, so there is no tool for it: if the user wants that, they do it under Data in the editor.",
                 beReady = "Data can be empty: a new lambda has none, and an owner can clear it. Have the code create what it needs on first use, and say so plainly where something it expects is missing, rather than fail."
             },
             whereThingsGo = new
             {
                 theProgram = "In the version, as assets: the app itself - C#, and the whole front end including a single page application's HTML, JavaScript, CSS, images and fonts. Ship it with write_code under a folder such as web/ and serve it with Assets.App(\"web\").",
                 theData = "In the workspace: everything the lambda writes while it runs, everything users create or upload, and large input files that are not program - a model, a dataset, media. Write it with Workspace from the code, or put a file there with upload_file.",
+                credentials = "In secrets: every API token, password or key the app needs to call something else. set_secret stores it, Secret.Read(\"NAME\") reads it. Never in code, in assets, in the workspace or in a comment: those are readable by everybody who can read the lambda, and are part of every version and export.",
                 neverTheOtherWay = "Never keep user data in assets: they are read only while the lambda runs and replaced on every deploy. Never upload the front end to the workspace: it would not be versioned, a rollback would not bring the matching pages back, and a feature would work on a copy of it."
             },
             flows = new
@@ -1466,6 +1597,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 exact = "list_files answers with the quota of the lambda at hand."
             },
             note = "Nothing else on the file system is reachable. There is no Append."
+        },
+        secrets = new
+        {
+            what = "The lambda's data, too: API tokens, passwords and other credentials, kept encrypted and read by the code by name. The same for every version; a feature works on a copy of them, taken when it began.",
+            surface = new[]
+            {
+                "Secret.Read(name) - the value; throws, saying whether secrets are off or the name is not set",
+                "Secret.TryRead(name) - the value, or null if there is none or secrets are off",
+                "Secret.Exists(name) - whether it is set",
+                "Secret.Enabled - whether the owner switched secrets on"
+            },
+            reach = "Secret can be used from every file, including types in other .cs files. Read it when it is needed - per request or once on start - rather than copying it into a field of a type that is ever serialised or logged.",
+            howToUseThem = "enable_data with kind 'secrets' once, then set_secret for each credential the user gives you, then write the code with Secret.Read(\"NAME\") and deploy. A value changes without a deploy: the next request reads the new one. list_secrets says which names exist.",
+            writeOnly = "Nothing reads a value back: not list_secrets, not the editor, not the API, not you. Do not echo a credential into your answers, the code, its log or a specification. The user sees the names, when each was set, and can replace or delete them.",
+            notASandbox = "The code of the lambda can read every secret it has and do anything with it, including returning it in a response or writing it to its log. Whoever can change the code can therefore get at the secrets. Never print one, and never put one in a response.",
+            names = "Letters, digits and underscores, not starting with a digit, at most 64 characters: STRIPE_API_KEY. It is the shape of an environment variable because that is what a secret is called in the project the lambda is exported as: the export does not contain the values, and Secret.Read reads the environment variable of that name there.",
+            limits = new { count = options.MaxSecrets, characters = options.MaxSecretLength },
+            features = "A feature has its own copy: set_secret with feature changes only that. The copy is thrown away when the feature is merged or deleted; merging never changes the lambda's secrets, so a feature that needs a new one needs it set on the lambda too."
         },
         servingAFrontEnd = new
         {

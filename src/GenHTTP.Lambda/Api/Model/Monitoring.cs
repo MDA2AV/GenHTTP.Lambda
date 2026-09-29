@@ -68,6 +68,9 @@ public sealed record TrafficSummary(
 /// <param name="ServesWorkspace">Whether it serves the workspace, which makes those files public</param>
 /// <param name="WorkspaceEnabled">Whether the owner left the workspace switched on</param>
 /// <param name="UsesWorkspace">Whether the code of that version uses the workspace at all, and so fails where it does once it is off</param>
+/// <param name="SecretsEnabled">Whether secrets are switched on</param>
+/// <param name="SecretCount">How many secrets there are, never what they hold</param>
+/// <param name="UsesSecrets">Whether the code of that version reads a secret, and so fails where it does once secrets are off</param>
 public sealed record StorageSummary(
     int? Version,
     int CodeFiles,
@@ -79,7 +82,10 @@ public sealed record StorageSummary(
     bool ServesAssets,
     bool ServesWorkspace,
     bool WorkspaceEnabled,
-    bool UsesWorkspace
+    bool UsesWorkspace,
+    bool SecretsEnabled,
+    int SecretCount,
+    bool UsesSecrets
 );
 
 /// <summary>
