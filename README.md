@@ -55,6 +55,11 @@ port, each against its own temporary data directory.
 | Route                | Serves                                                    |
 |----------------------|-----------------------------------------------------------|
 | `/`                  | the landing page                                          |
+| `/build`             | the text box for somebody who wants an app built, no code |
+| `/ship`              | for developers: connect an agent and publish what it built |
+| `/docs`              | the guide for owners                                      |
+| `/showcase`          | the lambdas their owners chose to show                    |
+| `/enterprise`, `/terms`, `/privacy`, `/imprint` | the company pages              |
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/lambda/:publicKey` | the deployed handler                                      |
@@ -109,6 +114,9 @@ path.
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
 | `GET /demos`                                          | the demos, and the keys to read them with |
+| `GET / PUT / DELETE /lambdas/:privateKey/showcase`    | its entry on the showcase: read, list it (title, description, picture), take it off |
+| `GET /lambdas/:privateKey/domain`, `PUT / DELETE`     | the domain of a premium lambda, whether it is served, and what it resolves to |
+| `GET /showcases`, `GET /showcases/:publicKey/image`   | what `/showcase` lists, and a picture |
 | `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
 | `GET /system`                                         | terms, limits, starters, build agent      |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
@@ -234,7 +242,8 @@ whether it is online and where, errors visitors ran into with a button that
 asks the agent to fix them, the latest change, today's hits, and a button to
 ask for the next change. The history is every version as the change it made,
 with a way back to any of them - which is deploying an older version, said as
-what it does. Nothing in it names a version, a file or a log: the Change
+what it does. Nothing in it names a file or a log, and it names a version only where the
+owner has to say which one (the draft dialogs, going back): the Change
 section tells how a change ended without version numbers and shows what the
 agent said rather than the tools it called, a draft is what it does rather
 than the files it changes, and a change that does not compile is the agent's
@@ -604,8 +613,9 @@ https://genhttp.dev/mcp
 The tools are the shape of the job: `create_lambda`, `update_lambda`, `write_code`, `change_code`,
 `check_code`, `deploy`, `read_lambda`, `read_logs`, the feature tools
 `create_feature`, `update_feature`, `merge_feature` and `delete_feature`, the
-data tools `upload_file`, `list_files` and `delete_file`, and `list_demos` for
-reading something that already works. `platform_guide` is the one to call first
+data tools `upload_file`, `list_files` and `delete_file`, `showcase` for listing
+a lambda on the public showcase - only when its owner asks for it - and
+`list_demos` for reading something that already works. `platform_guide` is the one to call first
 - it opens with how versions, features and data live, then says what a snippet
 has to return, what is imported, what is refused, and the handful of things
 that catch people out.
