@@ -4,9 +4,12 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Workspace;
+using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
+
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
@@ -19,7 +22,7 @@ namespace GenHTTP.Lambda.Api;
 /// under the same quota, with the path of a file sent as a single segment with
 /// its slashes encoded.
 /// </remarks>
-public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspaceService workspace)
+public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspaceService workspace, IMetaService meta, ILogger<FeatureWorkspaceResource> logger)
 {
 
     /// <summary>
@@ -66,7 +69,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     {
         var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
-        return await WorkspaceFiles.ReceiveAsync(workspace, lambdaId, featureId, path, request);
+        return await WrittenAsync(privateKey, feature, await WorkspaceFiles.ReceiveAsync(workspace, lambdaId, featureId, path, request));
     }
 
     /// <summary>
@@ -78,7 +81,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     {
         var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
-        return await WorkspaceFiles.WriteAsync(workspace, lambdaId, featureId, path, request);
+        return await WrittenAsync(privateKey, feature, await WorkspaceFiles.WriteAsync(workspace, lambdaId, featureId, path, request));
     }
 
     /// <summary>
@@ -91,6 +94,9 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
         var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
         await workspace.DeleteAsync(lambdaId, path, featureId);
+
+        logger.LogInformation("Deleted {Path} from the workspace of feature '{Feature}' of lambda {Lambda}", path,
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
     }
 
     /// <summary>
@@ -103,7 +109,20 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     {
         var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, true);
 
-        return await WorkspaceFiles.CreateFolderAsync(workspace, lambdaId, featureId, path);
+        var listing = await WorkspaceFiles.CreateFolderAsync(workspace, lambdaId, featureId, path);
+
+        logger.LogInformation("Created the folder {Path} in the workspace of feature '{Feature}' of lambda {Lambda}", path,
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
+
+        return listing;
+    }
+
+    private async ValueTask<WorkspaceEntry> WrittenAsync(string privateKey, string feature, WorkspaceEntry written)
+    {
+        logger.LogInformation("Wrote {Path} ({Size:N0} bytes) to the workspace of feature '{Feature}' of lambda {Lambda}", written.Path, written.Size,
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
+
+        return written;
     }
 
 }

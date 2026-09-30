@@ -6,6 +6,8 @@ using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -22,7 +24,7 @@ namespace GenHTTP.Lambda.Api;
 /// What is on this side is the counting: a few builds per address per day,
 /// because each one spends somebody's subscription.
 /// </remarks>
-public sealed class BuildResource(BuildService builds)
+public sealed class BuildResource(BuildService builds, ILogger<BuildResource> logger)
 {
 
     /// <summary>
@@ -37,6 +39,10 @@ public sealed class BuildResource(BuildService builds)
     public async ValueTask<Result<BuildStarted>> Create(BuildRequest body, IRequest request)
     {
         var started = await builds.StartAsync(body?.Prompt, body?.Model, body?.Password, request.Client.Address);
+
+        // the one argument logged in full however long it is: what people ask
+        // to have built is what the operator most needs to know
+        logger.LogInformation("Started build {Build} with the {Model} model: {Prompt}", started.Id, body?.Model ?? "default", body?.Prompt?.Trim());
 
         return new Result<BuildStarted>(started).Status(ResponseStatus.Accepted);
     }

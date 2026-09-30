@@ -14,6 +14,8 @@ using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -24,8 +26,12 @@ namespace GenHTTP.Lambda.Api;
 /// the key in the path is what authorizes the call - whoever has it may edit
 /// the lambda. Its versions, deployment, files and code live in resources of
 /// their own below the same path.
+///
+/// What is done here is logged by the lambda's public key, never by the key in
+/// the path - so are the other resources below it.
 /// </remarks>
-public sealed class LambdaResource(IMetaService meta, ISecretService secrets, ISourceService sources, DatabaseVault databases, LambdaOptions options)
+public sealed class LambdaResource(IMetaService meta, ISecretService secrets, ISourceService sources, DatabaseVault databases, LambdaOptions options,
+                                   ILogger<LambdaResource> logger)
 {
 
     /// <summary>
@@ -40,6 +46,8 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
         }
 
         var lambda = await meta.CreateAsync(request.PublicKey, request.Template, EditorViews.Parse(request.View) ?? EditorView.Full);
+
+        logger.LogInformation("Created lambda {Lambda} from template {Template}, opening in the {View} view", lambda.PublicKey, request.Template ?? "(none)", lambda.View);
 
         return new Result<LambdaResponse>(LambdaDescription.Of(lambda)).Status(ResponseStatus.Created);
     }
@@ -69,13 +77,22 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     {
         var view = EditorViews.Parse(request.View);
 
-        var lambda = request.PublicKey is { } publicKey
-                   ? await meta.ChangeKeyAsync(privateKey, publicKey)
-                   : await meta.RequireAsync(privateKey);
+        var lambda = await meta.RequireAsync(privateKey);
+
+        if (request.PublicKey is { } publicKey)
+        {
+            var before = lambda.PublicKey;
+
+            lambda = await meta.ChangeKeyAsync(privateKey, publicKey);
+
+            logger.LogInformation("Moved lambda {Before} to the public key {Lambda}", before, lambda.PublicKey);
+        }
 
         if (view is { } wanted)
         {
             lambda = await meta.ChangeViewAsync(privateKey, wanted);
+
+            logger.LogInformation("Set the editor of lambda {Lambda} to open in the {View} view", lambda.PublicKey, lambda.View);
         }
 
         return LambdaDescription.Of(lambda);
@@ -85,7 +102,14 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
     /// Removes the lambda for good.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey")]
-    public async ValueTask Delete(string privateKey) => await meta.DeleteAsync(privateKey);
+    public async ValueTask Delete(string privateKey)
+    {
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
+
+        await meta.DeleteAsync(privateKey);
+
+        logger.LogInformation("Deleted lambda {Lambda}", publicKey);
+    }
 
     /// <summary>
     /// The newest version of the lambda as a .NET 10 project, with a
@@ -161,6 +185,8 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
                 }
             }
         });
+
+        logger.LogInformation("Exported version {Version} of lambda {Lambda} as a project", content.Version, lambda.PublicKey);
 
         return request.Respond()
                       .Content(new ExportContent(archive))

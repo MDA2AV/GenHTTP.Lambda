@@ -9,6 +9,8 @@ using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -20,7 +22,7 @@ namespace GenHTTP.Lambda.Api;
 /// sets - so the owner can read here why the domain is not served, but can
 /// only change the domain itself.
 /// </remarks>
-public sealed class LambdaDomainResource(IMetaService meta)
+public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomainResource> logger)
 {
 
     /// <summary>
@@ -46,14 +48,26 @@ public sealed class LambdaDomainResource(IMetaService meta)
     /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/domain")]
     public async ValueTask<DomainResponse> Put(string privateKey, DomainChangeRequest request)
-        => await DescribeAsync(await meta.ChangeDomainAsync(privateKey, request.Domain));
+    {
+        var lambda = await meta.ChangeDomainAsync(privateKey, request.Domain);
+
+        logger.LogInformation("Set the domain of lambda {Lambda} to {Domain}", lambda.PublicKey, lambda.Domain ?? "(none)");
+
+        return await DescribeAsync(lambda);
+    }
 
     /// <summary>
     /// Stops the lambda answering at its domain. Its path stays as it is.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/domain")]
     public async ValueTask<DomainResponse> Delete(string privateKey)
-        => await DescribeAsync(await meta.ChangeDomainAsync(privateKey, null));
+    {
+        var lambda = await meta.ChangeDomainAsync(privateKey, null);
+
+        logger.LogInformation("Removed the domain of lambda {Lambda}", lambda.PublicKey);
+
+        return await DescribeAsync(lambda);
+    }
 
     internal static async ValueTask<DomainResponse> DescribeAsync(LambdaInfo lambda)
     {

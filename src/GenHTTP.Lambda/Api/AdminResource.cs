@@ -12,6 +12,8 @@ using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -31,7 +33,7 @@ namespace GenHTTP.Lambda.Api;
 /// action is then the same one the owner would take - so a deployment started
 /// here is the same deployment, recorded as the operator's.
 /// </remarks>
-public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, SettingsService settings)
+public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, SettingsService settings, ILogger<AdminResource> logger)
 {
 
     #region Listing
@@ -124,7 +126,9 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var privateKey = await meta.RequirePrivateKeyAsync(publicKey);
 
-        await meta.ChangeTierAsync(privateKey, ParseTier(body.Tier));
+        var changed = await meta.ChangeTierAsync(privateKey, ParseTier(body.Tier));
+
+        logger.LogInformation("The operator moved lambda {Lambda} to the {Tier} tier", changed.PublicKey, changed.Tier);
 
         return await DetailAsync(privateKey);
     }
@@ -138,7 +142,9 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var privateKey = await meta.RequirePrivateKeyAsync(publicKey);
 
-        await meta.ChangeDomainAsync(privateKey, body.Domain);
+        var changed = await meta.ChangeDomainAsync(privateKey, body.Domain);
+
+        logger.LogInformation("The operator set the domain of lambda {Lambda} to {Domain}", changed.PublicKey, changed.Domain ?? "(none)");
 
         return await DetailAsync(privateKey);
     }
@@ -156,6 +162,8 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var result = await meta.DeployAsync(await meta.RequirePrivateKeyAsync(publicKey), body?.Version, VersionOrigins.Admin);
 
+        logger.Deployed(result, publicKey, body?.Version);
+
         var payload = new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
 
         return new Result<DeploymentOutcomeResponse>(payload).Status(result.Success ? ResponseStatus.Ok : ResponseStatus.UnprocessableEntity);
@@ -170,6 +178,8 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey), ActivationEndings.Admin);
 
+        logger.LogInformation("The operator took lambda {Lambda} offline", lambda.PublicKey);
+
         return Summarize(lambda);
     }
 
@@ -181,6 +191,8 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     {
 
         await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey));
+
+        logger.LogInformation("The operator deleted lambda {Lambda}", publicKey);
     }
 
     #endregion
@@ -205,6 +217,9 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     public async ValueTask<SettingsModel> ChangeSettings(SettingsModel body)
     {
         var saved = await settings.SaveAsync(new SiteSettings(body.EnterprisePage, body.BuildBox, body.ChangeBox));
+
+        logger.LogInformation("The operator changed the settings: enterprise page {EnterprisePage}, build box {BuildBox}, change box {ChangeBox}",
+                              saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
 
         return new SettingsModel(saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
     }

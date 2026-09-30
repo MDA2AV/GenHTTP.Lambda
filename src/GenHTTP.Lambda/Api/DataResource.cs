@@ -2,9 +2,13 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Api.Infrastructure;
+using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
+
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
@@ -22,7 +26,7 @@ namespace GenHTTP.Lambda.Api;
 /// <c>/lambdas/{privateKey}/secrets</c>. Kinds that come later are listed here
 /// the same way, each switched on before the lambda can use it.
 /// </remarks>
-public sealed class DataResource(IDataService data)
+public sealed class DataResource(IDataService data, IMetaService meta, ILogger<DataResource> logger)
 {
 
     /// <summary>
@@ -54,7 +58,13 @@ public sealed class DataResource(IDataService data)
     /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/data/:kind")]
     public async ValueTask<DataStoreResponse> Enable(string privateKey, string kind)
-        => Describe(await data.EnableAsync(privateKey, kind));
+    {
+        var store = await data.EnableAsync(privateKey, kind);
+
+        logger.LogInformation("Switched the {Kind} of lambda {Lambda} on", store.Kind, await meta.PublicKeyOfAsync(privateKey));
+
+        return Describe(store);
+    }
 
     /// <summary>
     /// Switches a kind of data off, and deletes everything it held.
@@ -66,7 +76,13 @@ public sealed class DataResource(IDataService data)
     /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/data/:kind")]
     public async ValueTask<DataStoreResponse> Disable(string privateKey, string kind)
-        => Describe(await data.DisableAsync(privateKey, kind));
+    {
+        var store = await data.DisableAsync(privateKey, kind);
+
+        logger.LogInformation("Switched the {Kind} of lambda {Lambda} off, deleting what it held", store.Kind, await meta.PublicKeyOfAsync(privateKey));
+
+        return Describe(store);
+    }
 
     internal static DataStoreResponse Describe(DataStoreInfo store)
         => new(store.Kind, store.Enabled, store.Default, store.Changed, store.Items, store.UsedBytes, store.QuotaBytes, store.MaxItems);

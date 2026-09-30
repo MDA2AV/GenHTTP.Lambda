@@ -39,7 +39,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'Agen menyimpan permintaan Anda, sering kali dengan kata-katanya sendiri, sebagai catatan di versi yang ditulisnya. Beberapa ratus karakter pertamanya masuk ke log layanan build, yang ukurannya juga tetap. Kalau Anda memakai agen Anda sendiri, seperti Claude atau Claude Code, apa yang Anda katakan kepadanya dikirim ke penyedia agen itu, bukan ke kami. Kami hanya menerima kode dan catatan yang dikirim agen itu ke sini.',
+      'Agen menyimpan permintaan Anda, sering kali dengan kata-katanya sendiri, sebagai catatan di versi yang ditulisnya. Permintaan itu sendiri dicatat utuh di log server, dan beberapa ratus karakter pertamanya di log layanan build; ukuran keduanya juga tetap. Kalau Anda memakai agen Anda sendiri, seperti Claude atau Claude Code, apa yang Anda katakan kepadanya dikirim ke penyedia agen itu, bukan ke kami. Kami hanya menerima kode dan catatan yang dikirim agen itu ke sini.',
 
     lambdasTitle: 'Apa yang dilakukan lambda ditentukan pemiliknya',
     lambdas:
@@ -71,5 +71,5 @@ export const privacy: Messages['privacy'] = {
       'Anda juga bisa mengadu ke otoritas perlindungan data, di tempat Anda tinggal atau di tempat kami berada. Otoritas yang membawahi kami adalah Komisioner Perlindungan Data dan Kebebasan Informasi negara bagian Baden-Württemberg di Jerman (LfDI Baden-Württemberg).',
   },
   change: 'Kebijakan ini ikut berubah kalau situsnya berubah. Versi yang berlaku adalah versi yang ada di halaman ini.',
-  updated: 'Terakhir diubah pada 28 September 2026.',
+  updated: 'Terakhir diubah pada 30 September 2026.',
 };

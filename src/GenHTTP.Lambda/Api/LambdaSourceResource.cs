@@ -1,8 +1,12 @@
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Source;
+using GenHTTP.Lambda.Api.Infrastructure;
+using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
+
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
@@ -15,7 +19,7 @@ namespace GenHTTP.Lambda.Api;
 /// choice and never happens on its own: nothing is published until this is
 /// asked for, and what is published is the program - never the data.
 /// </remarks>
-public sealed class LambdaSourceResource(ISourceService sources)
+public sealed class LambdaSourceResource(ISourceService sources, IMetaService meta, ILogger<LambdaSourceResource> logger)
 {
 
     /// <summary>
@@ -43,7 +47,13 @@ public sealed class LambdaSourceResource(ISourceService sources)
     /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/source")]
     public async ValueTask<SourceSettingsResponse> Put(string privateKey, SourceRequest request)
-        => SourceSettingsResponse.Of(await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author)));
+    {
+        var source = await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author));
+
+        logger.LogInformation("Published the source of lambda {Lambda} under {License}", source.PublicKey, source.License);
+
+        return SourceSettingsResponse.Of(source);
+    }
 
     /// <summary>
     /// Takes the source down. Its stars are kept for when it is published
@@ -51,6 +61,11 @@ public sealed class LambdaSourceResource(ISourceService sources)
     /// under the license it came with.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/source")]
-    public async ValueTask Delete(string privateKey) => await sources.WithdrawAsync(privateKey);
+    public async ValueTask Delete(string privateKey)
+    {
+        var source = await sources.WithdrawAsync(privateKey);
+
+        logger.LogInformation("Took the source of lambda {Lambda} down", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
+    }
 
 }

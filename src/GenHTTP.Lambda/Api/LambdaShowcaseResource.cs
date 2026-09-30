@@ -2,9 +2,12 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Showcase;
+using GenHTTP.Lambda.Api.Infrastructure;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
+
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
@@ -17,7 +20,7 @@ namespace GenHTTP.Lambda.Api;
 /// the versions and the deployment on purpose: presenting a lambda is
 /// something done once it works, not a step of making it work.
 /// </remarks>
-public sealed class LambdaShowcaseResource(IShowcaseService showcases, LambdaOptions options)
+public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, LambdaOptions options, ILogger<LambdaShowcaseResource> logger)
 {
 
     /// <summary>
@@ -57,6 +60,8 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, LambdaOpt
 
         var saved = await showcases.SaveAsync(privateKey, new ShowcaseDraft(request.Title, request.Description, image));
 
+        logger.LogInformation("Put lambda {Lambda} into the showcase as '{Title}'", saved.PublicKey, saved.Title);
+
         return ShowcaseResponse.Of(saved);
     }
 
@@ -64,7 +69,12 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, LambdaOpt
     /// Takes the lambda out of the showcase.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/showcase")]
-    public async ValueTask Delete(string privateKey) => await showcases.RemoveAsync(privateKey);
+    public async ValueTask Delete(string privateKey)
+    {
+        await showcases.RemoveAsync(privateKey);
+
+        logger.LogInformation("Took lambda {Lambda} out of the showcase", await meta.PublicKeyOfAsync(privateKey));
+    }
 
     internal static ShowcaseLimitsResponse Limits(LambdaOptions options)
         => new(ShowcaseLimits.MaxTitle, ShowcaseLimits.MaxDescription, options.MaxShowcaseImageBytes,

@@ -38,7 +38,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'Agent zapisuje twoją prośbę – często własnymi słowami – jako notatkę do wersji, którą pisze. Kilkaset pierwszych znaków trafia do logu usługi budowania, który również ma stały rozmiar. Jeśli zamiast tego używasz własnego agenta, na przykład Claude albo Claude Code, to, co mu mówisz, trafia do jego dostawcy, a nie do nas. My dostajemy tylko kod i notatki, które tu przesyła.',
+      'Agent zapisuje twoją prośbę – często własnymi słowami – jako notatkę do wersji, którą pisze. Sama prośba trafia w całości do logu serwera, a kilkaset pierwszych znaków także do logu usługi budowania; oba również mają stały rozmiar. Jeśli zamiast tego używasz własnego agenta, na przykład Claude albo Claude Code, to, co mu mówisz, trafia do jego dostawcy, a nie do nas. My dostajemy tylko kod i notatki, które tu przesyła.',
 
     lambdasTitle: 'O tym, co robi lambda, decyduje jej właściciel',
     lambdas:
@@ -70,5 +70,5 @@ export const privacy: Messages['privacy'] = {
       'Możesz też złożyć skargę do organu nadzorczego ds. ochrony danych – tam, gdzie mieszkasz, albo tam, gdzie mamy siedzibę. Dla nas właściwy jest pełnomocnik ds. ochrony danych i wolności informacji niemieckiego kraju związkowego Badenia-Wirtembergia (LfDI Baden-Württemberg).',
   },
   change: 'Ta polityka zmienia się razem ze stroną. Obowiązuje wersja opublikowana na tej stronie.',
-  updated: 'Ostatnia zmiana: 28 września 2026 r.',
+  updated: 'Ostatnia zmiana: 30 września 2026 r.',
 };

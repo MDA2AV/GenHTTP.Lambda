@@ -40,7 +40,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'Ajan isteğinizi, çoğu zaman kendi cümleleriyle, yazdığı sürümün notu olarak kaydeder. İsteğin ilk birkaç yüz karakteri de oluşturma hizmetinin loguna yazılır. Bu logun da boyutu sabittir. Bunun yerine Claude ya da Claude Code gibi kendi ajanınızı kullanırsanız, ona söyledikleriniz bize değil, o ajanın sağlayıcısına gider. Biz yalnızca ajanın buraya gönderdiği kodu ve notları alırız.',
+      'Ajan isteğinizi, çoğu zaman kendi cümleleriyle, yazdığı sürümün notu olarak kaydeder. İsteğin tamamı sunucunun loguna, ilk birkaç yüz karakteri de oluşturma hizmetinin loguna yazılır. Bu logların da boyutu sabittir. Bunun yerine Claude ya da Claude Code gibi kendi ajanınızı kullanırsanız, ona söyledikleriniz bize değil, o ajanın sağlayıcısına gider. Biz yalnızca ajanın buraya gönderdiği kodu ve notları alırız.',
 
     lambdasTitle: 'Bir lambdanın ne yaptığına sahibi karar verir',
     lambdas:
@@ -72,5 +72,5 @@ export const privacy: Messages['privacy'] = {
       'Yaşadığınız yerdeki ya da bizim bulunduğumuz yerdeki bir veri koruma makamına şikâyette de bulunabilirsiniz. Bizim bağlı olduğumuz makam, Almanya’nın Baden-Württemberg eyaletinin veri koruma ve bilgi edinme özgürlüğü komiserliğidir (LfDI Baden-Württemberg).',
   },
   change: 'Bu politika, site değiştikçe değişir. Geçerli olan, bu sayfadaki sürümdür.',
-  updated: 'Son güncelleme: 28 Eylül 2026.',
+  updated: 'Son güncelleme: 30 Eylül 2026.',
 };

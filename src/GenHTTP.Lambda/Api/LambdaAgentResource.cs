@@ -9,6 +9,8 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -25,7 +27,7 @@ namespace GenHTTP.Lambda.Api;
 /// A process rather than a thing, so it is read at <c>agent</c> and driven
 /// with verbs, the way a deployment is.
 /// </remarks>
-public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, IFeatureService features)
+public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, IFeatureService features, ILogger<LambdaAgentResource> logger)
 {
 
     /// <summary>
@@ -70,6 +72,9 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, 
         var state = await builds.ChangeAsync(lambda, privateKey, current.ActiveVersion, body?.Prompt, body?.Deploy ?? true,
                                              body?.Model, body?.Password, body?.Language, feature, request.Client.Address);
 
+        // logged in full, as the prompts of the build page are
+        logger.LogInformation("Asked the agent to change lambda {Lambda} with the {Model} model: {Prompt}", current.PublicKey, body?.Model ?? "default", body?.Prompt?.Trim());
+
         return new Result<AgentState>(state).Status(ResponseStatus.Accepted);
     }
 
@@ -82,7 +87,11 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, 
     {
         var lambda = await meta.RequireEditableAsync(privateKey);
 
-        return await builds.StopAsync(lambda, request.Client.Address);
+        var state = await builds.StopAsync(lambda, request.Client.Address);
+
+        logger.LogInformation("Stopped the agent changing lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
+
+        return state;
     }
 
 }
