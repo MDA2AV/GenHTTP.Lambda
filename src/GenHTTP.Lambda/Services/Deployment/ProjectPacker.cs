@@ -98,6 +98,9 @@ public static class ProjectPacker
             Write(archive, $"{name}/Platform/Folder.cs", Resource("Folder.cs"));
             Write(archive, $"{name}/Platform/Handlers.cs", Resource("Handlers.cs"));
 
+            // the aspnet image rather than runtime, although nothing here uses
+            // ASP.NET Core: GenHTTP.Full depends on GenHTTP.Testing, which
+            // brings the Kestrel engine and with it Microsoft.AspNetCore.App
             Write(archive, $"{name}/Dockerfile", Resource("Dockerfile").Replace("{assembly}", name));
             Write(archive, $"{name}/.dockerignore", "bin/\nobj/\nworkspace/\n");
             Write(archive, $"{name}/.gitignore", "bin/\nobj/\nworkspace/\n");
