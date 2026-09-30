@@ -1,0 +1,15 @@
+-- The tasks. Applied once, by Evolve, the first time a version that ships it
+-- starts - and never edited afterwards: a change to the table is a new file,
+-- V2__..., which every database that has this one already gets next.
+
+CREATE TABLE tasks
+(
+    id      TEXT    NOT NULL PRIMARY KEY,
+    title   TEXT    NOT NULL,
+    notes   TEXT    NOT NULL DEFAULT '',
+    done    INTEGER NOT NULL DEFAULT 0,
+    created TEXT    NOT NULL,
+    updated TEXT    NOT NULL
+);
+
+CREATE INDEX ix_tasks_created ON tasks (created);

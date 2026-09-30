@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Sayfa sunmak',
     spa: 'Adım adım bir frontend',
     storage: 'Dosyaların durduğu iki yer',
-    keeping: 'Veri saklamak',
+    database: 'Kayıt tutmak',
+    keeping: 'Dosya saklamak',
     secrets: 'Anahtarlar ve parolalar',
     sockets: 'Websocket’ler',
     limits: 'İzin verilmeyenler',
@@ -98,7 +99,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Taslaklar', () => <>Lambdanın yanında üzerinde çalışılan değişiklikler: her biri kendi adresinde denenir ve hazır olunca birleştirilip bir sonraki sürüm olur. Açıldığında bir taslağın kendi kodu, verileri ve logları vardır.</>],
     ['Dosyalar', () => <>Bir sürümün dosyaları: kodu ve statik dosyaları, yani programın kendisi. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
-    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: çalışma alanı ve gizli değerler, her biri kendi sekmesinde. İçlerine bakın, dosya yükleyin, gizli değer ayarlayın ya da bir türü açıp kapatın. Basit görünüm, uygulama bir şey sakladığı anda bu bölümü gösterir.</>],
+    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: veritabanı, çalışma alanı ve gizli değerler, her biri kendi sekmesinde. Tablolara ve dosyalara bakın, dosya yükleyin, gizli değer ayarlayın ya da bir türü açıp kapatın. Basit görünüm, uygulama bir şey sakladığı anda bu bölümü gösterir.</>],
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
     ['İstatistikler', () => <>Son bir saatin ya da günün istekleri, hataları, yanıt süreleri ve en çok istenen yolları.</>],
@@ -136,7 +137,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'İnsanların imza atabileceği bir ziyaretçi defteri; kayıtlar yeniden başlatmada kaybolmamalı',
-    change: 'Kayıtları çalışma alanında tutar, böylece yeniden başlatmada kaybolmazlar',
+    change: 'Kayıtları veritabanında tutar, böylece yeniden başlatmada kaybolmazlar',
   },
   why2: (k) => (
     <>
@@ -299,10 +300,42 @@ export const guide: Messages['guide'] = {
   storageAside:
     'İkisi tek bir yer olamaz. Olsaydı, her yayına alma ya lambdanızın o zamandan beri yazdığı her şeyi silerdi ya da yayına aldığınız dosyalardan hiçbir şey kaldırılamazdı. Skor tablosu tutan bir oyun ikincisini ister, sunduğu sayfa ise birincisini. Bu yüzden sayfa sürüme, skor tablosu da verilere girer.',
 
+  database: (k) => (
+    <>
+      Kayıtlar (girdiler, hesaplar, siparişler, oylar) {k.b('veritabanına')} aittir: lambdanın kendine ait,{' '}
+      {k.b('Veriler')} altında açılan bir SQLite veritabanı. Kod {k.code('Database.GetConnection()')} ile bir bağlantı
+      açar ve veritabanıyla SQL üzerinden konuşur:
+    </>
+  ),
+  database2: (k) => (
+    <>
+      Tablolarını {k.b('migration’lar')} oluşturur: sürümle birlikte {k.code('migrations/')} içinde gelen ve lambda
+      başlarken {k.link('https://evolve-db.netlify.app/', 'Evolve')} tarafından sırayla uygulanan SQL dosyaları. Her biri
+      yalnızca bir kez uygulanır, yani yeni bir sürüm yalnızca yeni olanı çalıştırır. Uygulanmış bir migration’ı asla
+      değiştirmeyin; bir tablodaki değişiklik bir sonraki dosyadır.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Tüm veriler gibi veritabanı da tüm sürümler için ortaktır; yayına alma ve eski bir sürüme dönme ona dokunmaz, bir
+      taslak ise onun bir kopyası üzerinde çalışır. {k.b('Veriler')} altında tablolarını ve içlerindekileri görürsünüz;
+      basit görünüm bunlara kayıt der. {k.b('.NET projesi olarak indir')} onu düz bir SQLite dosyası olarak
+      birlikte getirir.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Bağlantıyı ihtiyaç duyduğunuz yerde açın, işiniz bitince kapatın ve senkron kullanın:{' '}
+      {k.code('ExecuteReaderAsync')} değil, {k.code('ExecuteReader')}. Değerler SQL’in içine değil, parametre olarak
+      girer. {k.link('/editor/demo-crud', 'demo-crud')} demosu bunların hepsini yapar.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')}, lambdanızın okuyup yazabildiği özel bir klasördür. Bir istekten ya da bir yayından daha
-      uzun yaşaması gereken her şeyin yeri burasıdır.
+      {k.code('Workspace')}, lambdanızın okuyup yazabildiği özel bir klasördür ve dosyaların yeridir: birinin yüklediği
+      görseller, lambdanın oluşturduğu bir belge, okuduğu bir model. Kayıtlar veritabanına aittir; bir dosya hakkında
+      bilinenler (kimin ve ne zaman yüklediği) de bir kayıttır.
     </>
   ),
   keeping2: (k) => (
@@ -369,6 +402,8 @@ export const guide: Messages['guide'] = {
       değiştirmeniz gerekmez.
       {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır. Dokümantasyon ve testler
       de {k.code('docs')} ve {k.code('tests')} klasörlerinde gelir.
+      {' '}{k.code('Database')} ise {k.code('database/database.db')} dosyasını açar; indirilen proje bu dosyayı
+      uygulamanızın tuttuğu kayıtlarla birlikte getirir.
     </>
   ),
   awayAside:

@@ -88,6 +88,10 @@ public sealed record TrafficSummary(
 /// The secrets its code reads that have no value yet - which is what its owner
 /// is asked to set, because until then the code that reads them fails
 /// </param>
+/// <param name="DatabaseEnabled">Whether the lambda has its database switched on</param>
+/// <param name="DatabaseTables">How many tables its database holds</param>
+/// <param name="DatabaseBytes">The room its database takes</param>
+/// <param name="UsesDatabase">Whether the code of that version connects to the database, and so fails where it does once it is off</param>
 public sealed record StorageSummary(
     int? Version,
     int CodeFiles,
@@ -102,7 +106,11 @@ public sealed record StorageSummary(
     bool UsesWorkspace,
     bool SecretsEnabled = false,
     int Secrets = 0,
-    List<string>? MissingSecrets = null
+    List<string>? MissingSecrets = null,
+    bool DatabaseEnabled = false,
+    int DatabaseTables = 0,
+    long DatabaseBytes = 0,
+    bool UsesDatabase = false
 );
 
 /// <summary>
@@ -113,6 +121,7 @@ public sealed record StorageSummary(
 /// to, and for the workspace the room they take.
 /// </remarks>
 /// <param name="Features">How many features it may have open at once</param>
+/// <param name="DatabaseBytes">How large its database may grow</param>
 public sealed record SummaryLimits(
     int CodeCharacters,
     long AssetBytes,
@@ -120,7 +129,8 @@ public sealed record SummaryLimits(
     int Versions,
     int DeploymentLifetimeHours,
     int RetentionDays,
-    int Features
+    int Features,
+    long DatabaseBytes = 0
 );
 
 /// <summary>

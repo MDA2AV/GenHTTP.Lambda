@@ -1,0 +1,48 @@
+// Registers the accounts named in accounts.json, for trying the members page
+// with a full list. Every one of them signs in with the password test-password.
+//
+//   node seed.mjs <address>         the preview of a feature - never the app people use
+//
+// The accounts are kept in the app's database, which only the app writes to,
+// so they are made the way everybody's are: one POST register each, signed out
+// again straight away. A name that is taken already is left as it is, so it
+// can run twice. Ends with 1 when a name was refused. Needs Node 18 or later
+// and nothing else.
+
+import { readFile } from 'node:fs/promises';
+
+const password = 'test-password';
+
+const address = process.argv[2];
+
+if (!address) {
+  console.error('Usage: node seed.mjs <address of the app>');
+  process.exit(2);
+}
+
+const base = address.endsWith('/') ? address : `${address}/`;
+
+const names = JSON.parse(await readFile(new URL('accounts.json', import.meta.url), 'utf8'));
+
+let refused = 0;
+
+for (const name of names) {
+  const response = await fetch(new URL('register', base), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, password }),
+  });
+
+  if (response.status === 200) {
+    // the session registering opened is not needed: end it
+    const session = (response.headers.get('set-cookie') ?? '').split(';')[0];
+    await fetch(new URL('logout', base), { method: 'POST', headers: { Cookie: session } });
+  } else if (response.status !== 409) {
+    refused++;
+    console.log(`FAIL ${name} - status ${response.status}: ${await response.text()}`);
+  }
+}
+
+console.log(`${names.length - refused} of ${names.length} accounts are there.`);
+
+process.exit(refused === 0 ? 0 : 1);

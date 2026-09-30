@@ -430,6 +430,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => `${count}개`,
     secretsMissing: (count) => `${count}개 없음`,
     secretsMissingTitle: '코드가 설정되지 않은 시크릿을 읽고 있어서 그 부분에서 실패해요.',
+    database: '데이터베이스',
+    databaseOff: '꺼짐',
+    databaseTables: (count) => `테이블 ${count}개`,
+    databaseOffUsed: '코드가 데이터베이스에 연결하는데, 데이터베이스가 꺼져 있어요.',
   },
 
   files: {
@@ -607,6 +611,14 @@ export const editor: EditorMessages = {
     copyContents: '워크스페이스 복사본에 담긴 것',
     kindsLabel: '데이터 종류',
     kinds: {
+      database: {
+        name: '데이터베이스',
+        what: '람다가 레코드를 보관하는 SQLite 데이터베이스예요. Database.GetConnection()으로 연결해요.',
+        count: (items) => `테이블 ${items}개`,
+        confirmOff: '데이터베이스를 끌까요?',
+        switchedOn: '데이터베이스를 켰어요. 아직 비어 있어요. 람다는 다음 요청 때 데이터베이스를 쓸 수 있는 상태로 다시 시작해요.',
+        switchedOff: '데이터베이스를 끄고, 모든 테이블을 삭제했어요.',
+      },
       workspace: {
         name: '워크스페이스',
         what: '람다가 실행 중에 읽고 쓰는 파일이에요. 업로드된 파일, 기록 등 보관할 건 뭐든지요.',
@@ -641,6 +653,54 @@ export const editor: EditorMessages = {
     browse: '파일',
     offBrowse: '워크스페이스가 꺼져 있어서 보여 줄 파일이 없어요.',
     missingDot: '코드에 설정되지 않은 시크릿이 필요해요',
+    offDot: '코드에 필요한데 꺼져 있어요',
+
+    database: {
+      contents: '테이블',
+      copyContents: '테스트 데이터의 테이블',
+      readOnly: '읽기 전용: 여기 담긴 것은 람다가 써요.',
+      empty: '아직 테이블이 없어요',
+      emptyText: '테이블은 코드가 만들어요. migrations/에 둔 마이그레이션을 람다가 시작할 때 Evolve가 적용해요. 그 뒤로 람다가 보관하는 것이 여기에 나타나요.',
+      offTitle: '데이터베이스가 꺼져 있어요',
+      offText: '켜면 코드가 SQL로 읽고 쓰는 레코드(항목, 계정, 주문 등)를 보관할 수 있어요.',
+      offWanted: '코드가 데이터베이스에 연결하지만 데이터베이스가 꺼져 있어요. 켤 때까지 연결하는 부분은 실패해요.',
+      switchOn: '켜기',
+      howTo: '코드에서',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')} 메서드가 데이터베이스 연결을 열고, 테이블은 {code('migrations/')} 폴더의
+          마이그레이션이 만들어요. 마이그레이션은 Evolve가 적용해요. 다운로드한 프로젝트에서는 평범한 SQLite 파일인{' '}
+          {code('database/database.db')}예요.
+        </>
+      ),
+      copy: '복사',
+      rows: (count) => `행 ${count.toLocaleString()}개`,
+      notCounted: '세지 않음',
+      view: '뷰',
+      migrations: '마이그레이션',
+      migrationsHint: 'Evolve가 적용한 마이그레이션을 기록해 두는 이력이에요. 앱의 레코드가 아니에요.',
+      columns: '열',
+      primaryKey: '기본 키',
+      required: '필수',
+      defaultsTo: (value) => `기본값 ${value}`,
+      untyped: '모든 타입',
+      newestFirst: '최신순',
+      oldestFirst: '오래된 순',
+      sortBy: (column) => `${column} 기준으로 정렬`,
+      page: (from, to, total) => `${total.toLocaleString()}개 중 ${from.toLocaleString()}–${to.toLocaleString()}`,
+      previous: '이전 페이지',
+      next: '다음 페이지',
+      reload: '다시 읽기',
+      readFailed: '테이블을 읽지 못했어요.',
+      noRows: '이 테이블에는 아직 아무것도 없어요.',
+      pick: '테이블을 고르면 내용을 볼 수 있어요.',
+      nullValue: 'NULL',
+      bytes: (size) => `바이너리 · ${size}`,
+      cut: (length) => `… 전체 ${length.toLocaleString()}자`,
+      row: (number) => `${number.toLocaleString()}번째 행`,
+      openRow: '행 전체 보기',
+      close: '닫기',
+    },
 
     secrets: {
       add: '시크릿 추가',
@@ -702,11 +762,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: '앱이 저장한 것과 앱이 쓰는 키예요. 어떤 변경이 온라인이든 그대로 유지돼요.',
+      hint: '앱이 보관하는 것(기록, 저장한 파일)과 앱이 쓰는 키예요. 어떤 변경이 온라인이든 그대로 유지돼요.',
       workspace: '앱이 저장한 것',
-      workspaceText: '사람들이 앱을 쓰는 동안 앱이 저장한 것이에요. 업로드, 입력한 내용 등 보관하는 모든 것이에요.',
+      workspaceText: '사람들이 앱을 쓰는 동안 앱이 저장한 파일이에요. 업로드된 사진이나 문서 같은 것들이에요.',
       workspaceSize: (files, size) => `${files}, ${size}`,
       more: (count) => `외 ${count}개`,
+      database: '기록',
+      databaseTitle: '앱이 보관하는 기록',
+      databaseText: '사람들이 앱을 쓰는 동안 앱이 보관하는 기록(가입, 입력한 내용, 투표 등)을 종류별로 보여 줘요. 새 변경이 온라인에 올라가도 여기는 바뀌지 않아요.',
+      records: (count) => `${count.toLocaleString()}건`,
+      noRecords: '앱이 아직 아무 기록도 보관하지 않았어요.',
       secrets: '키와 비밀번호',
       secretsText: '앱이 다른 서비스에 연결할 때 쓰는 것이에요. 저장하면 아무도 볼 수 없어요. 나도, 에이전트도요.',
       needed: '앱에 필요해요',

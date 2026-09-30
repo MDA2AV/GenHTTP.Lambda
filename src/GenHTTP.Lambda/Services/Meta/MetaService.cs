@@ -2,6 +2,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -57,6 +58,8 @@ public sealed class MetaService : IMetaService
 
     private SecretVault Secrets { get; }
 
+    private DatabaseVault DatabaseVault { get; }
+
     private ILogger Logger { get; }
 
     #endregion
@@ -64,10 +67,12 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaTelemetry activity, LambdaOptions options, LogBook book, DomainRegistry domains, SecretVault secrets, ILogger<MetaService> logger)
+        LambdaTelemetry activity, LambdaOptions options, LogBook book, DomainRegistry domains, SecretVault secrets, DatabaseVault databaseVault,
+        ILogger<MetaService> logger)
     {
         Domains = domains;
         Secrets = secrets;
+        DatabaseVault = databaseVault;
         Databases = databases;
         Storage = storage;
         Deployments = deployments;
@@ -199,6 +204,10 @@ public sealed class MetaService : IMetaService
             lambda.Modified = DateTime.UtcNow;
 
             await database.SaveChangesAsync(cancellation);
+
+            // how large its database may grow is its tier's to say, from the
+            // next connection on
+            DatabaseVault.Invalidate(lambda.Id);
 
             // a domain is served or not by the tier, so the tier moving can
             // take one on or off the air without the domain itself changing
@@ -372,6 +381,13 @@ public sealed class MetaService : IMetaService
             Record(database, entity, LambdaEvents.Created);
 
             await database.SaveChangesAsync(cancellation);
+
+            // a copy of a demo that keeps its records in a database starts
+            // with one, or the first thing it does is fail for want of it
+            if (DemoCatalog.Find(template)?.Database == true)
+            {
+                await DatabaseVault.CreateAsync(entity.Id, cancellation);
+            }
 
             Logger.LogInformation("Created lambda {LambdaId} at '{PublicKey}'", entity.Id, entity.PublicKey);
 
@@ -1026,6 +1042,11 @@ public sealed class MetaService : IMetaService
                                    Origin: VersionOrigins.Template);
 
         await AppendAsync(database, lambda, TemplateCatalog.ForKey(template, lambda.PublicKey), now, note, cancellation);
+
+        if (demo?.Database == true)
+        {
+            database.DataStores.Add(new DataStoreEntity { LambdaId = lambda.Id, Kind = DataKinds.DatabaseId, Enabled = true, Changed = now });
+        }
     }
 
     private async ValueTask<LambdaVersionInfo> AppendAsync(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, VersionNote note, CancellationToken cancellation)
@@ -1206,6 +1227,9 @@ public sealed class MetaService : IMetaService
         await database.SaveChangesAsync(cancellation);
 
         Secrets.Invalidate(lambda.Id);
+
+        // its connections let go of before its files go
+        DatabaseVault.Forget(lambda.Id);
 
         if (lambda.Domain != null)
         {

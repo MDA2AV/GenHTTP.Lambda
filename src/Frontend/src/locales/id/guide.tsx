@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Menyajikan halaman',
     spa: 'Front end, langkah demi langkah',
     storage: 'Dua tempat file disimpan',
-    keeping: 'Menyimpan data',
+    database: 'Menyimpan catatan',
+    keeping: 'Menyimpan file',
     secrets: 'Kunci dan kata sandi',
     sockets: 'Websocket',
     limits: 'Yang tidak diizinkan',
@@ -99,7 +100,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Draf', () => <>Perubahan yang dikerjakan di samping lambda: masing-masing dicoba di alamatnya sendiri dan digabungkan menjadi versi berikutnya setelah hasilnya pas. Saat dibuka, draf punya kode, data, dan log-nya sendiri.</>],
     ['File', () => <>File dari sebuah versi: kode dan asetnya, yaitu programnya sendiri. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
-    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: workspace dan rahasia, masing-masing di tab sendiri. Lihat isinya, unggah file, atur rahasia, atau aktifkan dan nonaktifkan suatu jenis. Tampilan sederhana menampilkannya begitu aplikasi menyimpan sesuatu.</>],
+    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: database, workspace, dan rahasia, masing-masing di tab sendiri. Lihat tabel dan file, unggah file, atur rahasia, atau aktifkan dan nonaktifkan suatu jenis. Tampilan sederhana menampilkannya begitu aplikasi menyimpan sesuatu.</>],
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
@@ -138,7 +139,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'Buku tamu yang bisa diisi orang; entri harus tetap ada setelah restart',
-    change: 'Menyimpan entri di workspace supaya tetap ada setelah restart',
+    change: 'Menyimpan entri di database supaya tetap ada setelah restart',
   },
   why2: (k) => (
     <>
@@ -301,10 +302,41 @@ export const guide: Messages['guide'] = {
   storageAside:
     'Keduanya tidak bisa jadi satu tempat. Kalau jadi satu, deploy akan menghapus semua yang sudah ditulis lambda sejak deploy sebelumnya, atau tidak ada yang bisa dihapus dari file yang dibawanya. Game yang menyimpan papan peringkat butuh yang kedua; halaman yang disajikannya butuh yang pertama. Jadi halamannya masuk ke versi, dan papan peringkatnya ke data.',
 
+  database: (k) => (
+    <>
+      Catatan – entri, akun, pesanan, hasil voting – tempatnya di {k.b('database')}: database SQLite milik lambda itu
+      sendiri, yang diaktifkan di {k.b('Data')}. Kode membuka koneksi dengan {k.code('Database.GetConnection()')} dan
+      berkomunikasi dengannya dalam SQL:
+    </>
+  ),
+  database2: (k) => (
+    <>
+      Tabelnya dibuat oleh {k.b('migrasi')}: file SQL yang dibawa versi di {k.code('migrations/')}, diterapkan
+      berurutan oleh {k.link('https://evolve-db.netlify.app/', 'Evolve')} saat lambda dimulai – masing-masing sekali
+      saja, jadi versi baru hanya menjalankan yang baru. Jangan pernah mengubah migrasi yang sudah diterapkan; perubahan
+      pada tabel dibuat sebagai file berikutnya.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Seperti semua data, database dipakai bersama oleh semua versi, tidak disentuh oleh deploy maupun rollback, dan draf
+      bekerja pada salinannya. Di {k.b('Data')} Anda bisa melihat tabel dan isinya – tampilan sederhana menyebutnya
+      catatan. {k.b('Unduh sebagai proyek .NET')} menyertakannya sebagai file SQLite biasa.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Buka koneksi di tempat Anda membutuhkannya, lalu dispose setelah selesai, dan pakai secara sinkron –{' '}
+      {k.code('ExecuteReader')}, bukan {k.code('ExecuteReaderAsync')}. Nilai dimasukkan sebagai parameter, tidak pernah
+      langsung ke dalam SQL. Demo {k.link('/editor/demo-crud', 'demo-crud')} melakukan semua ini.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')} adalah direktori privat yang boleh dibaca dan ditulis lambda Anda. Di situlah tempat untuk
-      apa pun yang harus bertahan lebih lama dari satu request, atau satu deployment.
+      {k.code('Workspace')} adalah direktori privat yang boleh dibaca dan ditulis lambda Anda: tempat untuk file –
+      gambar yang diunggah seseorang, dokumen yang dibuatnya, model yang dimuatnya. Catatan tempatnya di database, dan
+      apa yang diketahui tentang sebuah file – siapa yang mengunggahnya, kapan – juga termasuk catatan.
     </>
   ),
   keeping2: (k) => (
@@ -371,6 +403,8 @@ export const guide: Messages['guide'] = {
       diubah di kode Anda.
       {' '}{k.code('Secret')} di sana membaca variabel lingkungan dengan nama yang sama; nilainya tetap di sini.
       Dokumentasi dan pengujian ikut serta di {k.code('docs')} dan {k.code('tests')}.
+      {' '}{k.code('Database')} membuka {k.code('database/database.db')}, yang ikut terunduh bersama catatan yang
+      disimpan aplikasi Anda.
     </>
   ),
   awayAside:

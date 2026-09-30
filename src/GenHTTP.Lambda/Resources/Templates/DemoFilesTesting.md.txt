@@ -25,7 +25,6 @@ The gallery keeps the newest 24 uploads, and the script's uploads count like any
 | No extension | `POST api/files?name=…` | 415 |
 | An empty file | `POST api/files?name=….txt` with no body | 400, "The file is empty." |
 | Too large | `POST api/files?name=….txt` with 524289 bytes | 413, "A file can be 512 KB at most." |
-| The list of uploads is not served | `GET files/uploads.json` | 404 |
 | A wrong key | `DELETE api/files/{id}?key=…` | 403, and the file is still served |
 | No key | `DELETE api/files/{id}` | 403 |
 | An unknown upload | `DELETE api/files/nothing?key=…` | 404 |
@@ -36,4 +35,4 @@ The gallery keeps the newest 24 uploads, and the script's uploads count like any
 
 There is no file of test data: the script carries the picture it uploads - a PNG of a single pixel, 70 bytes, as base64 - and makes the text files it needs.
 
-To try the page with a full gallery, upload through the page or the API rather than putting files into the data of a feature by hand. The app lists only what `uploads.json` names: a file put into `uploads/` without an entry there is never shown, and an entry whose file is missing answers 404 when it is opened. The list is also read only once, when the app first needs it, so a changed `uploads.json` shows only after the preview is deployed again.
+To try the page with a full gallery, upload through the page or the API rather than putting files into the data of a feature by hand. The app lists only what its table of uploads names, and only the app writes to its database: a file put into `uploads/` by hand is never shown.

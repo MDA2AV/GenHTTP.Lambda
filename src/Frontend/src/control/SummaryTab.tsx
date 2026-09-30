@@ -218,7 +218,34 @@ export function SummaryTab({ control }: { control: Control }) {
                 <Link to={`${base}/data`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
               </div>
 
-              <div className="mt-2">
+              <div className="mt-2 space-y-3">
+                {/* its records first: that is what most lambdas keep */}
+                {storage.databaseEnabled ? (
+                  <Meter
+                    label={`${said.database} · ${said.databaseTables(storage.databaseTables)}`}
+                    extra={<Exposure open={false} why={said.dataPrivate} />}
+                    used={storage.databaseBytes}
+                    of={limits.databaseBytes}
+                    format={bytes}
+                  />
+                ) : (
+                  <p className="flex items-center justify-between gap-3 text-[13px]">
+                    <span className="text-slate-700 dark:text-slate-300">{said.database}</span>
+                    {storage.usesDatabase ? (
+                      <Link
+                        to={`${base}/data/database`}
+                        className="inline-flex items-center gap-1 text-amber-600 hover:underline dark:text-amber-400"
+                        title={said.databaseOffUsed}
+                      >
+                        <IconAlert className="h-3.5 w-3.5" />
+                        {said.databaseOff}
+                      </Link>
+                    ) : (
+                      <span className="text-slate-500">{said.databaseOff}</span>
+                    )}
+                  </p>
+                )}
+
                 {storage.workspaceEnabled ? (
                   <Meter
                     label={said.workspace}
@@ -235,7 +262,7 @@ export function SummaryTab({ control }: { control: Control }) {
                 )}
 
                 {/* counted in names rather than room: a secret is small, and what matters is whether one is missing */}
-                <p className="mt-3 flex items-center justify-between gap-3 text-[13px]">
+                <p className="flex items-center justify-between gap-3 text-[13px]">
                   <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                     {said.secrets}
                     <Exposure open={false} why={said.dataPrivate} />

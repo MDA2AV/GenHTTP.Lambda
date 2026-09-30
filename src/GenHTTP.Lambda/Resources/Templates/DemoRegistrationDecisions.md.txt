@@ -29,12 +29,12 @@ The pages keep nothing: `session.js` calls the routes with relative paths and th
 
 ## Only hashes are stored
 
-- **Passwords**: a random 16-byte salt per account and PBKDF2 with SHA-256, 100,000 rounds, 32 bytes. Slow on purpose: a stolen file of hashes should take years to guess, not minutes. Compared with `FixedTimeEquals`, so how long the answer takes says nothing about how close a guess was.
-- **Sessions**: a random 32-byte token, of which only the SHA-256 hash is kept. A token is already long and random, so a fast hash is enough, and the file on disk cannot be used to sign in as anybody. Expired sessions are dropped when the lambda starts and whenever a session is opened.
+- **Passwords**: a random 16-byte salt per account and PBKDF2 with SHA-256, 100,000 rounds, 32 bytes. Slow on purpose: a stolen copy of the hashes should take years to guess, not minutes. Compared with `FixedTimeEquals`, so how long the answer takes says nothing about how close a guess was.
+- **Sessions**: a random 32-byte token, of which only the SHA-256 hash is kept. A token is already long and random, so a fast hash is enough, and the database cannot be used to sign in as anybody. Expired sessions are dropped whenever a session is opened, and the sessions of an account that is forgotten go with it.
 
 ## The pepper is a secret, asked for every time
 
-`PASSWORD_PEPPER` is read in `lambda.cs` with `Secret.Exists` before `Secret.Read`, so the lambda runs while secrets are off or the value is not set, and the platform lists the name as optional. Where there is one, the password goes through HMAC-SHA256 keyed with it before PBKDF2. It lives in the lambda's secrets, not beside the hashes, so a copy of `accounts.json` on its own cannot even be guessed at.
+`PASSWORD_PEPPER` is read in `lambda.cs` with `Secret.Exists` before `Secret.Read`, so the lambda runs while secrets are off or the value is not set, and the platform lists the name as optional. Where there is one, the password goes through HMAC-SHA256 keyed with it before PBKDF2. It lives in the lambda's secrets, not beside the hashes, so a copy of the database on its own cannot even be guessed at.
 
 `Accounts` is handed a function rather than the value and asks it every time, so a value entered in the editor counts at once, without a deploy. The platform gives the demo a random value nobody knows; a copy starts without one.
 
@@ -42,21 +42,22 @@ There is no changing it: an account hashed with one pepper is checked with the p
 
 ## Accounts written before the pepper still sign in
 
-`Peppered` was added to `Account` later, as an optional parameter defaulting to false, so a file without it still reads and its accounts count as made without a pepper. An account is checked the way it was made. That is the rule for the stored format: the data outlives every version, so a field added later is optional with a default, and a version put back online must still read what a newer one wrote.
+Every account remembers whether its hash has the pepper in it - the column `peppered` - and is checked the way it was made, so an account made before a pepper was entered still signs in once there is one. That is the rule for the data: it outlives every version, so a column added later comes in a migration of its own with a default, and a version put back online must still work on what a newer one wrote.
 
 Left out: hashing such an account again, with the pepper, when it next signs in - the one moment its password is known. Until then it has the salt and the slow hash, not the pepper.
 
-## Accounts and sessions are two JSON files in the workspace
+## Accounts and sessions are two tables in the database
 
-`accounts.json` and `sessions.json`, read once when the lambda starts and written after every change; every request is answered from memory. A few hundred accounts need no database, and the workspace outlives every deployment, so a new version neither loses an account nor signs anybody out.
+`accounts` and `sessions`, made by `migrations/V1__Create_accounts.sql` - which `lambda.cs` applies with Evolve before it serves anything, as `demo-crud` explains - and read and written by `Accounts` with plain SQL. The database belongs to the lambda, not to a version, so a new version neither loses an account nor signs anybody out. Every request asks it: a connection per call, used synchronously, the values as parameters.
 
-- **One lock around every change and its write**, so two registrations at the same moment cannot both take a name or lose each other's write.
+- **The table decides who gets a name.** The account is the key, and a registration is an `INSERT ... ON CONFLICT DO NOTHING`: of two registrations of one name at the same moment exactly one gets it, without a lock of the app's own.
+- **A session belongs to its account** (`REFERENCES accounts ON DELETE CASCADE`), so an account that is forgotten takes its sessions along, and a session is only good while its account is there.
 - **At most 300 accounts**, the oldest forgotten first, because anybody can register on a demo. A lambda of your own would rather refuse than forget somebody.
-- **Only `lambda.cs` touches `Workspace` and `Secret`.** `Accounts` is handed a way to read and write its files and to read the pepper, so `Accounts.cs` does not care where they come from and can be copied into another lambda as it is.
+- **Only `lambda.cs` touches `Secret`.** `Accounts` is handed a function that reads the pepper, so it does not care where the pepper comes from.
 
 ## Names are one account whatever their case
 
-Accounts are looked up ignoring case, so "Ann" and "ann" are one, kept as first registered - which is the name a sign-in answers with. A name is trimmed and has 2 to 24 letters (of any alphabet), digits, dashes, dots or underscores - no spaces, and no other punctuation. A password has 8 to 200 characters; the upper bound keeps what is hashed within reason.
+An account is its name in capitals (`folded`, the key of the table), so "Ann" and "ann" are one, and so are "Jürgen" and "JÜRGEN" - SQLite's own `COLLATE NOCASE` knows the English letters only. The name is kept as first registered, which is the name a sign-in answers with. A name is trimmed and has 2 to 24 letters (of any alphabet), digits, dashes, dots or underscores - no spaces, and no other punctuation. A password has 8 to 200 characters; the upper bound keeps what is hashed within reason.
 
 ## One answer for an unknown name and a wrong password
 

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { ApiError, api, isDemo, type DataStore, type LambdaFile, type SecretListing, type WorkspaceListing } from '../api';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconDownload, IconFolder, IconHistory, IconKey, IconLayers, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
+import { IconAlert, IconDatabase, IconDownload, IconFolder, IconHistory, IconKey, IconLayers, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
+import { DatabasePanel } from './DatabasePanel';
 import { GroupList, Tree, Viewer, workspaceOf, type Selection } from './FileBrowser';
 import { bytes } from './format';
 import { SecretsPanel } from './SecretsPanel';
@@ -17,6 +18,7 @@ const NO_FILES: LambdaFile[] = [];
 
 /** How a kind of data is drawn wherever it is named. */
 const ICONS: Record<string, (props: { className?: string }) => ReactNode> = {
+  database: IconDatabase,
   workspace: IconFolder,
   secrets: IconKey,
 };
@@ -31,9 +33,11 @@ const ICONS: Record<string, (props: { className?: string }) => ReactNode> = {
  *
  * Every kind of data is one view of the same section, picked from a row of
  * pills under its title: each shows what it is, whether it is on and how full
- * it is the same way, and only what it holds is its own - a tree of files for
- * the workspace, a list of names for the secrets. So a kind added later is
- * found where the others are, and looks like them.
+ * it is the same way, and only what it holds is its own - its tables for the
+ * database, a tree of files for the workspace, a list of names for the
+ * secrets. So a kind added later is found where the others are, and looks
+ * like them. Opened without a kind, it shows the first one that is on, so a
+ * lambda that never switched its database on opens on what it does keep.
  *
  * Opened on a feature, it shows the feature's copy instead - the test data
  * of a draft, to the owner: what the preview reads and writes, taken from
@@ -42,8 +46,9 @@ const ICONS: Record<string, (props: { className?: string }) => ReactNode> = {
  * switches here - only resetting the copy, for a preview that made a mess.
  *
  * The simple view shows the section only once there is something in it, and
- * then only the kinds that hold something - what the app saved, and the keys
- * it uses - in words that do not assume anybody knows what a workspace is.
+ * then only the kinds that hold something - its records, what it saved, and
+ * the keys it uses - in words that do not assume anybody knows what a
+ * database or a workspace is.
  */
 export function DataTab({ control, kind, onKind }: {
   control: Control;
@@ -104,7 +109,7 @@ export function DataTab({ control, kind, onKind }: {
   const shown = (stores ?? []).filter((store) =>
     !simple || store.items > 0 || (store.kind === 'secrets' && (secrets?.missing.length ?? 0) > 0));
 
-  const current = shown.find((store) => store.kind === kind) ?? shown[0] ?? null;
+  const current = shown.find((store) => store.kind === kind) ?? shown.find((store) => store.enabled) ?? shown[0] ?? null;
 
   async function toggle(store: DataStore, on: boolean) {
     setConfirming(null);
@@ -151,6 +156,12 @@ export function DataTab({ control, kind, onKind }: {
 
   const missing = secrets?.missing.length ?? 0;
 
+  // the code connects to a database that is switched off - a draft's code included
+  const wantsDatabase = !feature && !!storage?.usesDatabase && !storage.databaseEnabled;
+
+  /** What a kind is called in the simple view, which does not name databases or workspaces. */
+  const plainName = (id: string) => (id === 'secrets' ? said.simple.secrets : id === 'database' ? said.simple.database : said.simple.workspace);
+
   return (
     <Section
       title={feature ? t.features.views.data : t.frame.sections.data}
@@ -172,7 +183,7 @@ export function DataTab({ control, kind, onKind }: {
           {shown.map((store) => {
             const Icon = ICONS[store.kind] ?? IconLayers;
             const active = store.kind === current?.kind;
-            const wanting = store.kind === 'secrets' && missing > 0;
+            const wanting = (store.kind === 'secrets' && missing > 0) || (store.kind === 'database' && wantsDatabase);
 
             return (
               <button
@@ -184,13 +195,13 @@ export function DataTab({ control, kind, onKind }: {
                 className={pill(active)}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {simple ? (store.kind === 'secrets' ? said.simple.secrets : said.simple.workspace) : name(store.kind)}
+                {simple ? plainName(store.kind) : name(store.kind)}
                 {store.enabled ? (
                   <span className="tabular-nums text-slate-400">{store.items}</span>
                 ) : (
                   <span className="text-[11px] uppercase tracking-wide text-slate-400">{said.off}</span>
                 )}
-                {wanting && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title={said.missingDot} />}
+                {wanting && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title={store.kind === 'database' ? said.offDot : said.missingDot} />}
               </button>
             );
           })}
@@ -236,6 +247,8 @@ export function DataTab({ control, kind, onKind }: {
           <div className={feature || simple ? 'mt-5' : 'mt-8'}>
             {current.kind === 'secrets' ? (
               <SecretsPanel control={control} listing={secrets} readOnly={demo} onChanged={changed} />
+            ) : current.kind === 'database' ? (
+              <DatabasePanel control={control} enabled={current.enabled} readOnly={demo} generation={generation} onChanged={changed} />
             ) : current.kind === 'workspace' ? (
               simple ? (
                 <SavedFiles key={generation} control={control} />
@@ -292,6 +305,7 @@ export function DataTab({ control, kind, onKind }: {
                 : said.confirmEmpty}
             </p>
             {((confirming.kind === 'workspace' && storage?.usesWorkspace)
+              || (confirming.kind === 'database' && storage?.usesDatabase)
               || (confirming.kind === 'secrets' && (secrets?.used.length ?? 0) > 0))
               && control.lambda.activeVersion != null && (
               <p className="flex gap-2 text-amber-700 dark:text-amber-400">

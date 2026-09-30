@@ -13,8 +13,9 @@
 //
 // The files:
 //
-//   lambda.cs     this one: the wiring, and the only file that touches Workspace and Secret
-//   Accounts.cs   accounts, password hashes and sessions, kept in JSON files
+//   lambda.cs     this one: the wiring, bringing the database up to date, and the secret
+//   Accounts.cs   accounts, password hashes and sessions, kept in the database
+//   migrations/   the SQL that makes their tables, applied once by Evolve
 //   web/          the two pages and the script they share
 //
 // A secret, PASSWORD_PEPPER, goes into every password hash where the lambda
@@ -30,17 +31,27 @@
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
-// it - a copy is yours to change.
+// it - a copy is yours to change, and starts with a database of its own.
 // [/demo]
 
 using GenHTTP.Api.Content.Authentication;
 using GenHTTP.Modules.Reflection.Injectors;
 
-var accounts = new Accounts(
-    read: name => Workspace.Exists(name) ? Workspace.ReadText(name) : null,
-    write: (name, text) => Workspace.WriteText(name, text),
-    // Exists is false while secrets are off or the value is not set
-    pepper: () => Secret.Exists("PASSWORD_PEPPER") ? Secret.Read("PASSWORD_PEPPER") : null);
+// every version reads the same database, so each brings it up to the schema
+// it expects first; Evolve applies what is new in migrations/, once each
+using (var connection = Database.GetConnection())
+{
+    var evolve = new Evolve(connection, message => Console.WriteLine(message))
+    {
+        Locations = [Assets.Root + "migrations"],
+        IsEraseDisabled = true
+    };
+
+    evolve.Migrate();
+}
+
+// Exists is false while secrets are off or the value is not set
+var accounts = new Accounts(() => Secret.Exists("PASSWORD_PEPPER") ? Secret.Read("PASSWORD_PEPPER") : null);
 
 /*
  * At the root of the lambda rather than below a folder, and for a reason: a

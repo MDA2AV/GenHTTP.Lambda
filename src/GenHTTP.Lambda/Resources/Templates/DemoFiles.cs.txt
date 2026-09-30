@@ -15,24 +15,38 @@
 //
 //   lambda.cs     this one: the wiring, and the only file that touches Workspace
 //   Gallery.cs    what may be uploaded, where it is kept and the list of it all
+//   migrations/   the SQL that makes the table of uploads, applied once by Evolve
 //   web/          the page and its script
+//
+// Two kinds of data, each where it belongs: the files people upload are files,
+// in the workspace, and what is known about them - who may remove which - is
+// records, in the database.
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
-// it - a copy is yours to change.
+// it - a copy is yours to change, and starts with a database of its own.
 // [/demo]
 
 using GenHTTP.Modules.Security.Providers;
 
+// every version reads the same database, so each brings it up to the schema
+// it expects first; Evolve applies what is new in migrations/, once each
+using (var connection = Database.GetConnection())
+{
+    var evolve = new Evolve(connection, message => Console.WriteLine(message))
+    {
+        Locations = [Assets.Root + "migrations"],
+        IsEraseDisabled = true
+    };
+
+    evolve.Migrate();
+}
+
 // uploads go into their own folder, so that serving it cannot hand out
-// anything else this lambda keeps - like the list of uploads with its keys
+// anything else this lambda keeps in its workspace
 Workspace.CreateFolder("uploads");
 
-var gallery = new Gallery(new Storage(
-    ReadText: name => Workspace.Exists(name) ? Workspace.ReadText(name) : null,
-    WriteText: Workspace.WriteText,
-    WriteBytes: Workspace.WriteBytes,
-    Delete: Workspace.Delete));
+var gallery = new Gallery(new Storage(WriteBytes: Workspace.WriteBytes, Delete: Workspace.Delete));
 
 var api = Inline.Create()
                 .Get("files", () => gallery.List())

@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Eine Seite ausliefern',
     spa: 'Ein Frontend, Schritt für Schritt',
     storage: 'Zwei Orte für Dateien',
-    keeping: 'Daten speichern',
+    database: 'Datensätze speichern',
+    keeping: 'Dateien speichern',
     secrets: 'Schlüssel und Passwörter',
     sockets: 'Websockets',
     limits: 'Was nicht erlaubt ist',
@@ -97,7 +98,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Entwürfe', () => <>Änderungen, an denen neben dem Lambda gearbeitet wird: Jede wird unter einer eigenen Adresse ausprobiert und als nächste Version übernommen, sobald alles passt. Geöffnet hat ein Entwurf eigenen Code, eigene Daten und eigene Logs.</>],
     ['Dateien', () => <>Die Dateien einer Version: Code und Assets, das Programm selbst. Ein Schloss oder ein Globus zeigt, ob sie öffentlich erreichbar sind.</>],
-    ['Daten', () => <>Was das Lambda zur Laufzeit aufbewahrt, für alle Versionen gemeinsam: der Workspace und die Secrets, jeweils mit eigenem Reiter. Hineinsehen, Dateien hochladen, Secrets setzen oder eine Art ein- und ausschalten. Die einfache Ansicht zeigt den Bereich, sobald die App etwas aufbewahrt.</>],
+    ['Daten', () => <>Was das Lambda zur Laufzeit aufbewahrt, für alle Versionen gemeinsam: die Datenbank, der Workspace und die Secrets, jeweils mit eigenem Reiter. In Tabellen und Dateien hineinsehen, Dateien hochladen, Secrets setzen oder eine Art ein- und ausschalten. Die einfache Ansicht zeigt den Bereich, sobald die App etwas aufbewahrt.</>],
     ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen – oder aus jeder von ihnen einen Entwurf beginnen.</>],
     ['Deployments', () => <>Was wann online war und warum es offline ging.</>],
     ['Statistik', () => <>Requests, Fehler, Antwortzeiten und die meistgefragten Pfade der letzten Stunde oder des letzten Tages.</>],
@@ -136,7 +137,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'Ein Gästebuch zum Eintragen; Einträge müssen einen Neustart überstehen',
-    change: 'Speichert Einträge im Workspace, damit sie einen Neustart überstehen',
+    change: 'Speichert Einträge in der Datenbank, damit sie einen Neustart überstehen',
   },
   why2: (k) => (
     <>
@@ -302,10 +303,42 @@ export const guide: Messages['guide'] = {
   storageAside:
     'Ein gemeinsamer Ort geht nicht. Sonst würde ein Deployment entweder alles löschen, was Ihr Lambda seitdem geschrieben hat – oder aus dem, was es ausliefert, ließe sich nie etwas entfernen. Ein Spiel mit Bestenliste braucht das Zweite, die Seite dazu das Erste. Also gehört die Seite in die Version und die Bestenliste in die Daten.',
 
+  database: (k) => (
+    <>
+      Datensätze – Einträge, Konten, Bestellungen, Stimmen – gehören in die {k.b('Datenbank')}: eine eigene
+      SQLite-Datenbank des Lambdas, die Sie unter {k.b('Daten')} einschalten. Der Code öffnet mit{' '}
+      {k.code('Database.GetConnection()')} eine Verbindung und spricht SQL mit ihr:
+    </>
+  ),
+  database2: (k) => (
+    <>
+      Ihre Tabellen legen {k.b('Migrationen')} an: SQL-Dateien in {k.code('migrations/')}, die zur Version gehören und
+      beim Start des Lambdas von {k.link('https://evolve-db.netlify.app/', 'Evolve')} der Reihe nach angewendet werden –
+      jede genau einmal, eine neue Version führt also nur aus, was neu ist. Ändern Sie nie eine Migration, die schon
+      angewendet wurde; eine Änderung an einer Tabelle ist die nächste Datei.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Wie alle Daten teilen sich alle Versionen die Datenbank, Deployments und Zurückrollen lassen sie unberührt, und
+      ein Entwurf arbeitet mit einer Kopie. Unter {k.b('Daten')} sehen Sie ihre Tabellen und was darin steht – die
+      einfache Ansicht nennt sie Einträge. {k.b('Als .NET-Projekt herunterladen')} nimmt sie als gewöhnliche
+      SQLite-Datei mit.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Öffnen Sie eine Verbindung dort, wo Sie sie brauchen, geben Sie sie danach wieder frei, und verwenden Sie sie
+      synchron – {k.code('ExecuteReader')}, nicht {k.code('ExecuteReaderAsync')}. Werte kommen als Parameter hinein, nie
+      in das SQL selbst. Die Demo {k.link('/editor/demo-crud', 'demo-crud')} zeigt all das.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')} ist ein privates Verzeichnis, in dem Ihr Lambda lesen und schreiben darf. Hier gehört alles
-      hin, was einen Request oder ein Deployment überdauern soll.
+      {k.code('Workspace')} ist ein privates Verzeichnis, in dem Ihr Lambda lesen und schreiben darf: der Ort für
+      Dateien – Bilder, die jemand hochlädt, ein Dokument, das es erzeugt, ein Modell, das es lädt. Datensätze gehören in
+      die Datenbank, und auch was man über eine Datei weiß – wer sie hochgeladen hat und wann –, ist ein Datensatz.
     </>
   ),
   keeping2: (k) => (
@@ -373,6 +406,8 @@ export const guide: Messages['guide'] = {
       {k.code('Platform')} – an Ihrem Code ändert sich nichts.
       {' '}{k.code('Secret')} liest dort gleichnamige Umgebungsvariablen; die Werte bleiben hier. Die Dokumentation und
       die Tests kommen in {k.code('docs')} und {k.code('tests')} mit.
+      {' '}{k.code('Database')} öffnet {k.code('database/database.db')}, die der Download samt den Datensätzen enthält,
+      die Ihre App aufbewahrt hat.
     </>
   ),
   awayAside:

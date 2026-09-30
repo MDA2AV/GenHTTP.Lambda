@@ -433,6 +433,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => `${count} rahasia`,
     secretsMissing: (count) => `${count} belum diatur`,
     secretsMissingTitle: 'Kode membaca rahasia yang belum diatur, dan gagal di bagian itu.',
+    database: 'Database',
+    databaseOff: 'nonaktif',
+    databaseTables: (count) => `${count} tabel`,
+    databaseOffUsed: 'Kode terhubung ke database, tetapi database nonaktif.',
   },
 
   files: {
@@ -611,6 +615,14 @@ export const editor: EditorMessages = {
     copyContents: 'Isi salinan workspace',
     kindsLabel: 'Jenis data',
     kinds: {
+      database: {
+        name: 'Database',
+        what: 'Database SQLite tempat lambda menyimpan catatannya, diakses dengan Database.GetConnection().',
+        count: (items) => `${items} tabel`,
+        confirmOff: 'Nonaktifkan database?',
+        switchedOn: 'Database aktif, dan masih kosong. Lambda dimulai ulang dengan database itu pada request berikutnya.',
+        switchedOff: 'Database nonaktif, dan semua tabel di dalamnya sudah dihapus.',
+      },
       workspace: {
         name: 'Workspace',
         what: 'File yang dibaca dan ditulis lambda selama berjalan: unggahan, catatan, apa pun yang disimpannya.',
@@ -645,6 +657,54 @@ export const editor: EditorMessages = {
     browse: 'File',
     offBrowse: 'Workspace nonaktif, jadi tidak ada file untuk ditampilkan.',
     missingDot: 'Kode membutuhkan rahasia yang belum diatur',
+    offDot: 'Kode membutuhkannya, tetapi statusnya nonaktif',
+
+    database: {
+      contents: 'Tabel',
+      copyContents: 'Tabel di data uji',
+      readOnly: 'Hanya baca: isinya ditulis oleh lambda.',
+      empty: 'Belum ada tabel',
+      emptyText: 'Kode yang membuatnya, dengan migrasi di migrations/ yang diterapkan Evolve saat lambda dimulai. Apa yang kemudian disimpannya muncul di sini.',
+      offTitle: 'Database nonaktif',
+      offText: 'Aktifkan untuk menyimpan catatan yang dibaca dan ditulis kode dengan SQL – entri, akun, pesanan.',
+      offWanted: 'Kode terhubung ke database, tetapi database nonaktif: bagian yang terhubung ke database akan gagal sampai database diaktifkan.',
+      switchOn: 'Aktifkan',
+      howTo: 'Di kode',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')} membuka koneksi ke database, dan migrasi di {code('migrations/')} membuat
+          tabelnya, diterapkan oleh Evolve. Di proyek yang diunduh, database ini adalah file SQLite biasa{' '}
+          {code('database/database.db')}.
+        </>
+      ),
+      copy: 'Salin',
+      rows: (count) => `${count.toLocaleString()} baris`,
+      notCounted: 'tidak dihitung',
+      view: 'view',
+      migrations: 'Migrasi',
+      migrationsHint: 'Riwayat migrasi yang sudah diterapkan, dicatat oleh Evolve – bukan catatan aplikasi.',
+      columns: 'Kolom',
+      primaryKey: 'kunci primer',
+      required: 'wajib',
+      defaultsTo: (value) => `nilai default ${value}`,
+      untyped: 'tipe apa pun',
+      newestFirst: 'Terbaru dulu',
+      oldestFirst: 'Terlama dulu',
+      sortBy: (column) => `Urutkan menurut ${column}`,
+      page: (from, to, total) => `${from.toLocaleString()}–${to.toLocaleString()} dari ${total.toLocaleString()}`,
+      previous: 'Halaman sebelumnya',
+      next: 'Halaman berikutnya',
+      reload: 'Baca lagi',
+      readFailed: 'Tabel gagal dibaca.',
+      noRows: 'Tabel ini masih kosong.',
+      pick: 'Pilih tabel untuk melihat isinya.',
+      nullValue: 'NULL',
+      bytes: (size) => `byte · ${size}`,
+      cut: (length) => `… seluruhnya ${length.toLocaleString()} karakter`,
+      row: (number) => `Baris ${number.toLocaleString()}`,
+      openRow: 'Tampilkan seluruh baris',
+      close: 'Tutup',
+    },
 
     secrets: {
       add: 'Tambah rahasia',
@@ -706,11 +766,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: 'Apa yang disimpan aplikasi Anda, dan kunci yang dipakainya. Semua ini tetap sama, perubahan mana pun yang sedang online.',
+      hint: 'Apa yang disimpan aplikasi Anda – catatannya, file yang disimpannya – dan kunci yang dipakainya. Semua ini tetap sama, perubahan mana pun yang sedang online.',
       workspace: 'Disimpan oleh aplikasi Anda',
-      workspaceText: 'Apa yang disimpan aplikasi Anda saat orang memakainya: unggahan, entri, apa pun yang disimpannya.',
+      workspaceText: 'Berkas yang disimpan aplikasi Anda saat orang memakainya: unggahan, gambar, dokumen.',
       workspaceSize: (files, size) => `${files}, ${size}`,
       more: (count) => `dan ${count} lagi`,
+      database: 'Catatan',
+      databaseTitle: 'Catatan yang disimpan aplikasi Anda',
+      databaseText: 'Apa yang dicatat aplikasi Anda saat orang memakainya – pendaftaran, entri, hasil voting – dikelompokkan per jenis. Tidak ada yang berubah di sini saat perubahan baru online.',
+      records: (count) => `${count.toLocaleString()} catatan`,
+      noRecords: 'Aplikasi Anda belum menyimpan catatan apa pun.',
       secrets: 'Kunci dan kata sandi',
       secretsText: 'Yang dipakai aplikasi Anda untuk terhubung ke layanan lain. Setelah disimpan, tidak ada yang bisa melihatnya – tidak Anda, tidak agen.',
       needed: 'Aplikasi Anda membutuhkan ini',

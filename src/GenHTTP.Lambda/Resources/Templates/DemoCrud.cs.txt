@@ -12,25 +12,37 @@
 //
 // The files:
 //
-//   lambda.cs     this one: the wiring, and the only file that touches Workspace
+//   lambda.cs     this one: the wiring, and bringing the database up to date
 //   Tasks.cs      the API - a class whose methods are the routes
-//   Store.cs      a list kept in a JSON file; copy it into your own lambda as it is
+//   Store.cs      the tasks in the database, in plain SQL
+//   migrations/   the SQL that makes the table, applied once by Evolve
 //   web/          the front end, shipped with the code and served as it is
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
-// it - a copy is yours to change.
+// it - a copy is yours to change, and starts with a database of its own.
 // [/demo]
 
-// Workspace is the lambda's private folder and outlives every deployment. The
-// store is handed a way to read and write its file rather than Workspace
-// itself, because only this file can see Workspace - the others hold types.
-var store = new JsonStore<TaskItem>(
-    read: () => Workspace.Exists("tasks.json") ? Workspace.ReadText("tasks.json") : null,
-    write: text => Workspace.WriteText("tasks.json", text),
-    limit: 200);
+// The database belongs to the lambda, not to a version: every version reads
+// the same one, so each brings it up to the schema it expects before it
+// serves anything. The migrations are SQL files shipped as assets, applied in
+// order and once each - Evolve remembers which in a table of its own, so this
+// runs on every start and only ever changes what is new. A migration that was
+// applied is never edited: a change to the schema is the next file, V2__...
+using (var connection = Database.GetConnection())
+{
+    var evolve = new Evolve(connection, message => Console.WriteLine(message))
+    {
+        Locations = [Assets.Root + "migrations"],
+        IsEraseDisabled = true
+    };
 
-if (store.Count == 0)
+    evolve.Migrate();
+}
+
+var store = new TaskStore(limit: 200);
+
+if (store.Count() == 0)
 {
     Tasks.Seed(store);
 }

@@ -5,7 +5,8 @@ namespace GenHTTP.Lambda.Services.Data;
 /// </summary>
 /// <remarks>
 /// What is in a kind of data is reached through the service for that kind -
-/// the files of the workspace through the workspace service. This is the part
+/// the files of the workspace through the workspace service, the tables of the
+/// database through the database service. This is the part
 /// every kind shares, so that the editor, the API and an agent can list the
 /// data of a lambda without knowing each kind there is.
 /// </remarks>

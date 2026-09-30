@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Serwowanie strony',
     spa: 'Frontend krok po kroku',
     storage: 'Dwa miejsca na pliki',
-    keeping: 'Przechowywanie danych',
+    database: 'Przechowywanie rekordów',
+    keeping: 'Przechowywanie plików',
     secrets: 'Klucze i hasła',
     sockets: 'Websockety',
     limits: 'Czego nie da się zrobić',
@@ -96,7 +97,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Szkice', () => <>Zmiany przygotowywane obok lambdy: każdą wypróbowuje się pod osobnym adresem i scala w kolejną wersję, gdy jest gotowa. Otwarty szkic ma własny kod, dane i logi.</>],
     ['Pliki', () => <>Pliki danej wersji: jej kod i zasoby, czyli sam program. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
-    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: obszar roboczy i sekrety, każde na własnej karcie. Przeglądaj je, przesyłaj pliki, ustawiaj sekrety albo włączaj i wyłączaj dany rodzaj. Widok uproszczony pokazuje tę sekcję, gdy tylko aplikacja coś przechowuje.</>],
+    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: baza danych, obszar roboczy i sekrety, każde na własnej karcie. Przeglądaj tabele i pliki, przesyłaj pliki, ustawiaj sekrety albo włączaj i wyłączaj dany rodzaj. Widok uproszczony pokazuje tę sekcję, gdy tylko aplikacja coś przechowuje.</>],
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
     ['Statystyki', () => <>Żądania, błędy, czasy odpowiedzi i najczęściej odwiedzane ścieżki z ostatniej godziny albo ostatnich 24 godzin.</>],
@@ -133,7 +134,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'Księga gości, którą ludzie mogą podpisać; wpisy muszą przetrwać restart',
-    change: 'Trzyma wpisy w obszarze roboczym, żeby przetrwały restart',
+    change: 'Trzyma wpisy w bazie danych, żeby przetrwały restart',
   },
   why2: (k) => (
     <>
@@ -292,10 +293,41 @@ export const guide: Messages['guide'] = {
   storageAside:
     'Nie mogą być jednym miejscem. Gdyby były, każde wdrożenie albo kasowałoby wszystko, co lambda zapisała od poprzedniego, albo z tego, co wdrażasz, nie dałoby się nigdy niczego usunąć. Gra z rankingiem potrzebuje tego drugiego, a strona, którą serwuje – pierwszego. Dlatego strona trafia do wersji, a ranking do danych.',
 
+  database: (k) => (
+    <>
+      Rekordy – wpisy, konta, zamówienia, głosy – należą do {k.b('bazy danych')}: własnej bazy SQLite lambdy, którą
+      włączasz w sekcji {k.b('Dane')}. Kod otwiera połączenie przez {k.code('Database.GetConnection()')} i rozmawia z
+      nią w SQL:
+    </>
+  ),
+  database2: (k) => (
+    <>
+      Jej tabele tworzą {k.b('migracje')}: pliki SQL dostarczane z wersją w {k.code('migrations/')}, które{' '}
+      {k.link('https://evolve-db.netlify.app/', 'Evolve')} stosuje po kolei przy starcie lambdy – każdą tylko raz, więc
+      nowa wersja uruchamia zawsze tylko to, co nowe. Nigdy nie zmieniaj migracji, która została już zastosowana;
+      zmiana tabeli to kolejny plik.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Jak wszystkie dane, baza danych jest wspólna dla wszystkich wersji, wdrożenia i powroty do starszej wersji jej nie
+      ruszają, a szkic pracuje na jej kopii. W sekcji {k.b('Dane')} widzisz jej tabele i to, co w nich jest – widok
+      uproszczony nazywa to wpisami. {k.b('Pobierz jako projekt .NET')} dołącza ją jako zwykły plik SQLite.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Otwieraj połączenie tam, gdzie go potrzebujesz, i zamykaj je po użyciu, a korzystaj z niego synchronicznie –{' '}
+      {k.code('ExecuteReader')}, a nie {k.code('ExecuteReaderAsync')}. Wartości przekazuj jako parametry, nigdy wprost w
+      SQL. Demo {k.link('/editor/demo-crud', 'demo-crud')} robi to wszystko.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')} to prywatny katalog, w którym lambda może czytać i zapisywać. To miejsce na wszystko, co ma
-      przetrwać dłużej niż jedno żądanie albo jedno wdrożenie.
+      {k.code('Workspace')} to prywatny katalog, w którym lambda może czytać i zapisywać: miejsce na pliki – zdjęcia,
+      które ktoś przesyła, dokument, który lambda tworzy, model, który wczytuje. Rekordy należą do bazy danych, a to, co
+      wiadomo o pliku – kto go przesłał i kiedy – też jest rekordem.
     </>
   ),
   keeping2: (k) => (
@@ -361,6 +393,8 @@ export const guide: Messages['guide'] = {
       trzeba nic zmieniać.
       {' '}{k.code('Secret')} odczytuje tam zmienne środowiskowe o tej samej nazwie; wartości zostają tutaj.
       Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}.
+      {' '}{k.code('Database')} otwiera {k.code('database/database.db')} – pobrany projekt zawiera ten plik razem z
+      rekordami, które zapisała twoja aplikacja.
     </>
   ),
   awayAside:

@@ -452,7 +452,12 @@ export function Editor({ theme }: Props) {
   // what the lambda keeps as data, and the secrets its code waits for
   const holding = summary?.storage;
   const missingSecrets = holding?.missingSecrets ?? [];
-  const keeps = holding != null && (holding.workspaceFiles > 0 || holding.secrets > 0 || missingSecrets.length > 0);
+  const keeps = holding != null
+    && (holding.databaseTables > 0 || holding.workspaceFiles > 0 || holding.secrets > 0 || missingSecrets.length > 0);
+
+  // the code connects to a database that is switched off - the agent's to
+  // switch on, so the simple view is not asked about it
+  const databaseWanted = !simple && holding != null && holding.usesDatabase && !holding.databaseEnabled;
 
   // sections that only change the lambda, which a demo does not have - and
   // the drafts, while there are none: they are met through a change the agent
@@ -677,8 +682,8 @@ export function Editor({ theme }: Props) {
         {id === 'logs' && problems && (
           <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
         )}
-        {id === 'data' && missingSecrets.length > 0 && !demo && (
-          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.data.missingDot} />
+        {id === 'data' && (missingSecrets.length > 0 || databaseWanted) && !demo && (
+          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={missingSecrets.length > 0 ? t.data.missingDot : t.data.offDot} />
         )}
         {id === 'change' && changing && (
           <span className="ml-auto" title={said.changeRunning}>

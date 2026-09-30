@@ -33,8 +33,10 @@ What happens in the browser - the landing page moving a signed in visitor on, th
 
 ## Test data
 
-`accounts.json` is twelve accounts in the format the app keeps, for trying the members page with a full list: a name with a letter outside English, one as long as a name may be, and names with dots, dashes and underscores. Every one of them signs in with the password `test-password`.
+`accounts.json` names twelve accounts, for trying the members page with a full list: a name with a letter outside English, one as long as a name may be, and names with dots, dashes and underscores. `seed.mjs` registers them, each with the password `test-password`, and signs each out again:
 
-They are written the way the app wrote accounts before it knew about the pepper - without `peppered` - so signing in with one also checks that accounts from an older version still work, whether the app has a `PASSWORD_PEPPER` or not.
+```
+node .lambda/tests/seed.mjs <address>
+```
 
-Put it into the data of a feature - `upload_file` with the feature, the path `accounts.json` and the content of `.lambda/tests/accounts.json` - then deploy the feature's preview again, since the app reads its files when it starts. Do not register in between: the app writes the accounts it holds over the file whenever somebody does. Never put it into the data of the app itself - anybody who has read this can sign in with these accounts.
+The accounts are kept in the app's database, which only the app writes to, so they are made the way everybody's are; a name that is taken already is left as it is. Run it against the preview of a feature, whose data is a copy thrown away when the feature is put online - never against the app itself, since anybody who has read this can sign in with these accounts.

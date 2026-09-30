@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Secrets;
@@ -23,8 +24,9 @@ namespace GenHTTP.Lambda.Services.Deployment;
 ///
 /// A preview is built exactly like the lambda, from the feature's files, into
 /// a place of its own: its own assets, the feature's copy of the workspace
-/// compiled in as the workspace, and its copy of the secrets to read - so
-/// trying a feature can do anything to the data without the lambda noticing.
+/// compiled in as the workspace, and its copies of the secrets and the
+/// database to read and write - so trying a feature can do anything to the
+/// data without the lambda noticing.
 /// </remarks>
 public sealed class DeploymentService : IDeploymentService, IDisposable
 {
@@ -47,17 +49,20 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     private SecretVault Secrets { get; }
 
+    private DatabaseVault Databases { get; }
+
     private ILogger Logger { get; }
 
     #endregion
 
     #region Initialization
 
-    public DeploymentService(IStorageService storage, ServerRegistry servers, SecretVault secrets, ILogger<DeploymentService> logger)
+    public DeploymentService(IStorageService storage, ServerRegistry servers, SecretVault secrets, DatabaseVault databases, ILogger<DeploymentService> logger)
     {
         Storage = storage;
         Servers = servers;
         Secrets = secrets;
+        Databases = databases;
         Logger = logger;
 
         ModuleCatalog.LoadModules();
@@ -161,7 +166,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
             var request = new CompilationRequest(files, Storage.GetWorkspace(slot.LambdaId, slot.FeatureId),
                                                  Storage.GetAssetDirectory(slot.LambdaId, slot.FeatureId),
                                                  Storage.GetAssemblyDirectory(slot.LambdaId), name, true, limits,
-                                                 Secrets.ReaderFor(slot.LambdaId, slot.FeatureId));
+                                                 Secrets.ReaderFor(slot.LambdaId, slot.FeatureId),
+                                                 Databases.ConnectorFor(slot.LambdaId, slot.FeatureId));
 
             var outcome = await CompileAsync(slot, stamp, request);
 

@@ -26,4 +26,10 @@ The address is where the app answers: the preview of a feature (`https://…/fea
 
 ## Test data
 
-`tasks.json` is a longer list in the format the app keeps, for trying the page with more than a handful of tasks. Put it into the data of a feature - `upload_file` with the feature, the path `tasks.json` and the content of `.lambda/tests/tasks.json` - then deploy the feature's preview again, since the app reads its file when it starts.
+`tasks.json` is a longer list, for trying the page with more than a handful of tasks: one with a title as long as a title may be, some with notes, some done. `seed.mjs` adds them through the API, one `POST tasks/` each:
+
+```
+node .lambda/tests/seed.mjs <address>
+```
+
+The tasks are kept in the app's database, which only the app writes to, so test data goes in the way everybody's tasks do. Run it against the preview of a feature: its data is a copy, thrown away when the feature is put online, and the tasks with it.

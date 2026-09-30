@@ -435,6 +435,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => (count === 1 ? '1 secret' : `${count} secrets`),
     secretsMissing: (count) => `${count} manquant${count === 1 ? '' : 's'}`,
     secretsMissingTitle: 'Le code lit des secrets qui ne sont pas définis, et échoue à ces endroits.',
+    database: 'Base de données',
+    databaseOff: 'désactivée',
+    databaseTables: (tables) => count(tables, 'table', 'tables'),
+    databaseOffUsed: 'Le code se connecte à la base de données, qui est désactivée.',
   },
 
   files: {
@@ -615,6 +619,14 @@ export const editor: EditorMessages = {
     copyContents: 'Ce que contient la copie du workspace',
     kindsLabel: 'Types de données',
     kinds: {
+      database: {
+        name: 'Base de données',
+        what: 'Une base de données SQLite où la lambda garde ses enregistrements, accessible via Database.GetConnection().',
+        count: (items) => count(items, 'table', 'tables'),
+        confirmOff: 'Désactiver la base de données ?',
+        switchedOn: 'La base de données est activée, et vide. La lambda redémarre avec elle à sa prochaine requête.',
+        switchedOff: 'La base de données est désactivée, et toutes ses tables sont supprimées.',
+      },
       workspace: {
         name: 'Workspace',
         what: 'Les fichiers que la lambda lit et écrit pendant qu’elle tourne : fichiers importés, entrées, tout ce qu’elle garde.',
@@ -649,6 +661,54 @@ export const editor: EditorMessages = {
     browse: 'Fichiers',
     offBrowse: 'Le workspace est désactivé : il n’y a aucun fichier à afficher.',
     missingDot: 'Le code a besoin d’un secret qui n’est pas défini',
+    offDot: 'Le code en a besoin, mais elle est désactivée',
+
+    database: {
+      contents: 'Tables',
+      copyContents: 'Tables des données de test',
+      readOnly: 'Lecture seule : ce qui se trouve ici est écrit par la lambda.',
+      empty: 'Aucune table pour l’instant',
+      emptyText: 'Le code les crée, avec une migration dans migrations/ qu’Evolve applique au démarrage de la lambda. Ce qu’elle garde ensuite apparaît ici.',
+      offTitle: 'La base de données est désactivée',
+      offText: 'Activez-la pour garder des enregistrements que le code lit et écrit en SQL : entrées, comptes, commandes.',
+      offWanted: 'Le code se connecte à la base de données, mais elle est désactivée : tout ce qui s’y connecte échoue tant qu’elle n’est pas activée.',
+      switchOn: 'Activer',
+      howTo: 'Dans le code',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')} ouvre une connexion, et les migrations de {code('migrations/')} créent ses
+          tables, appliquées par Evolve. Dans un projet téléchargé, c’est un simple fichier SQLite :{' '}
+          {code('database/database.db')}.
+        </>
+      ),
+      copy: 'Copier',
+      rows: (rows) => `${rows.toLocaleString()} ${rows < 2 ? 'ligne' : 'lignes'}`,
+      notCounted: 'non comptées',
+      view: 'vue',
+      migrations: 'Migrations',
+      migrationsHint: 'L’historique que tient Evolve des migrations qu’il a appliquées, pas des enregistrements de l’application.',
+      columns: 'Colonnes',
+      primaryKey: 'clé primaire',
+      required: 'obligatoire',
+      defaultsTo: (value) => `par défaut : ${value}`,
+      untyped: 'tout type',
+      newestFirst: 'Plus récentes d’abord',
+      oldestFirst: 'Plus anciennes d’abord',
+      sortBy: (column) => `Trier par ${column}`,
+      page: (from, to, total) => `${from.toLocaleString()}–${to.toLocaleString()} sur ${total.toLocaleString()}`,
+      previous: 'Page précédente',
+      next: 'Page suivante',
+      reload: 'Actualiser',
+      readFailed: 'Impossible de lire la table.',
+      noRows: 'Rien dans cette table pour l’instant.',
+      pick: 'Choisissez une table pour voir son contenu.',
+      nullValue: 'NULL',
+      bytes: (size) => `octets · ${size}`,
+      cut: (length) => `… ${length.toLocaleString()} caractères au total`,
+      row: (number) => `Ligne ${number.toLocaleString()}`,
+      openRow: 'Afficher toute la ligne',
+      close: 'Fermer',
+    },
 
     secrets: {
       add: 'Ajouter un secret',
@@ -710,11 +770,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: 'Ce que votre application a enregistré, et les clés qu’elle utilise. Cela reste tel quel, quelle que soit la modification en ligne.',
+      hint: 'Ce que votre application garde – ses entrées, les fichiers qu’elle a enregistrés – et les clés qu’elle utilise. Cela reste tel quel, quelle que soit la modification en ligne.',
       workspace: 'Enregistré par votre application',
-      workspaceText: 'Ce que votre application a enregistré pendant que des gens l’utilisaient : envois, entrées, tout ce qu’elle garde.',
+      workspaceText: 'Les fichiers que votre application a enregistrés pendant que des gens l’utilisaient : envois, images, documents.',
       workspaceSize: (files, size) => `${files}, ${size}`,
       more: (count) => `et ${count} de plus`,
+      database: 'Entrées',
+      databaseTitle: 'Les entrées que garde votre application',
+      databaseText: 'Ce que votre application garde pendant que des gens l’utilisent – inscriptions, messages, votes –, table par table. Rien ici ne change quand une nouvelle modification est mise en ligne.',
+      records: (records) => `${records.toLocaleString()} ${records < 2 ? 'entrée' : 'entrées'}`,
+      noRecords: 'Votre application n’a encore gardé aucune entrée.',
       secrets: 'Clés et mots de passe',
       secretsText: 'Ce qui permet à votre application de se connecter à d’autres services. Une fois enregistrés, personne ne peut plus les voir – ni vous, ni l’agent.',
       needed: 'Votre application en a besoin',

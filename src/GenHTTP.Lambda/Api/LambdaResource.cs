@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -23,7 +24,7 @@ namespace GenHTTP.Lambda.Api;
 /// the lambda. Its versions, deployment, files and code live in resources of
 /// their own below the same path.
 /// </remarks>
-public sealed class LambdaResource(IMetaService meta, ISecretService secrets, LambdaOptions options)
+public sealed class LambdaResource(IMetaService meta, ISecretService secrets, DatabaseVault databases, LambdaOptions options)
 {
 
     /// <summary>
@@ -87,13 +88,16 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, La
 
     /// <summary>
     /// The newest version of the lambda as a .NET 10 project, with a
-    /// Dockerfile, that can be opened and run without this platform.
+    /// Dockerfile, that can be opened and run without this platform - and its
+    /// database, where it has one.
     /// </summary>
     /// <remarks>
     /// A way out. Whatever somebody writes here runs on a machine they do not
     /// own, for as long as it is left running; being able to take it away is
     /// the difference between a place to build something and a place it is
-    /// stuck.
+    /// stuck. The records a lambda keeps are part of what is taken: its
+    /// database comes along as database/database.db, which the project opens
+    /// as it opened it here. The workspace and the values of the secrets stay.
     /// </remarks>
     /// <param name="privateKey">The lambda being taken away</param>
     [ResourceMethod("lambdas/:privateKey/export")]
@@ -117,10 +121,39 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, La
 
         var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow, names);
 
-        var zip = ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code));
+        var id = await meta.RequireIdAsync(privateKey);
+
+        var archive = await Task.Run(() =>
+        {
+            // a copy of what the lambda keeps, packed along and then let go
+            var database = databases.Export(id);
+
+            var target = Path.Combine(Path.GetTempPath(), $"genhttp-lambda-export-{Guid.NewGuid():N}.zip");
+
+            try
+            {
+                using var stream = File.Create(target);
+
+                ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code), stream, database);
+
+                return target;
+            }
+            catch
+            {
+                File.Delete(target);
+                throw;
+            }
+            finally
+            {
+                if (database != null)
+                {
+                    File.Delete(database);
+                }
+            }
+        });
 
         return request.Respond()
-                      .Content(new BinaryContent(zip, "application/zip"))
+                      .Content(new ExportContent(archive))
                       .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}.zip\"")
                       .Build();
     }

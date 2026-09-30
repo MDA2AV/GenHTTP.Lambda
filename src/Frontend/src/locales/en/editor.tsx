@@ -397,6 +397,10 @@ export const editor = {
     secretsCount: (count: number) => (count === 1 ? '1 secret' : `${count} secrets`),
     secretsMissing: (count: number) => `${count} missing`,
     secretsMissingTitle: 'The code reads secrets that are not set, and fails where it does.',
+    database: 'Database',
+    databaseOff: 'switched off',
+    databaseTables: (count: number) => (count === 1 ? '1 table' : `${count} tables`),
+    databaseOffUsed: 'The code connects to the database, which is switched off.',
   },
 
   files: {
@@ -583,6 +587,14 @@ export const editor = {
     copyContents: 'What the test data holds',
     kindsLabel: 'Kinds of data',
     kinds: {
+      database: {
+        name: 'Database',
+        what: 'A SQLite database the lambda keeps its records in, reached with Database.GetConnection().',
+        count: (items: number) => (items === 1 ? '1 table' : `${items} tables`),
+        confirmOff: 'Switch the database off?',
+        switchedOn: 'The database is on, and empty. The lambda starts again with it on its next request.',
+        switchedOff: 'The database is off, and every table in it is deleted.',
+      },
       workspace: {
         name: 'Workspace',
         what: 'Files the lambda reads and writes while it runs: uploads, records, anything it keeps.',
@@ -624,6 +636,54 @@ export const editor = {
     browse: 'Files',
     offBrowse: 'The workspace is off, so there are no files to show.',
     missingDot: 'The code needs a secret that is not set',
+    offDot: 'The code needs it, and it is switched off',
+
+    /** The database: tables, and what is in them - read here, written by the lambda. */
+    database: {
+      contents: 'Tables',
+      copyContents: 'Tables in the test data',
+      readOnly: 'Read only: what is in here is written by the lambda.',
+      empty: 'No tables yet',
+      emptyText: 'The code makes them, with a migration in migrations/ that Evolve applies as the lambda starts. What it then keeps shows up here.',
+      offTitle: 'The database is off',
+      offText: 'Switch it on to keep records the code reads and writes with SQL - entries, accounts, orders.',
+      offWanted: 'The code connects to the database, but it is switched off: whatever connects fails until it is on.',
+      switchOn: 'Switch on',
+      howTo: 'In the code',
+      howToText: (code: (text: string) => Node) => (
+        <>
+          {code('Database.GetConnection()')} opens a connection to it, and the migrations in {code('migrations/')} make its tables,
+          applied by Evolve. In a downloaded project it is the plain SQLite file {code('database/database.db')}.
+        </>
+      ),
+      copy: 'Copy',
+      rows: (count: number) => (count === 1 ? '1 row' : `${count.toLocaleString()} rows`),
+      notCounted: 'not counted',
+      view: 'view',
+      migrations: 'Migrations',
+      migrationsHint: 'The history Evolve keeps of the migrations it applied, not records of the app.',
+      columns: 'Columns',
+      primaryKey: 'primary key',
+      required: 'required',
+      defaultsTo: (value: string) => `defaults to ${value}`,
+      untyped: 'any type',
+      newestFirst: 'Newest first',
+      oldestFirst: 'Oldest first',
+      sortBy: (column: string) => `Sort by ${column}`,
+      page: (from: number, to: number, total: number) => `${from.toLocaleString()}–${to.toLocaleString()} of ${total.toLocaleString()}`,
+      previous: 'Previous page',
+      next: 'Next page',
+      reload: 'Read again',
+      readFailed: 'The table could not be read.',
+      noRows: 'Nothing in this table yet.',
+      pick: 'Pick a table to see what is in it.',
+      nullValue: 'NULL',
+      bytes: (size: string) => `bytes · ${size}`,
+      cut: (length: number) => `… ${length.toLocaleString()} characters in all`,
+      row: (number: number) => `Row ${number.toLocaleString()}`,
+      openRow: 'Show the whole row',
+      close: 'Close',
+    },
 
     /** The secrets: written and replaced, never read back. */
     secrets: {
@@ -690,11 +750,16 @@ export const editor = {
      * saved, and the keys it uses - nothing about files as a program has them.
      */
     simple: {
-      hint: 'What your app has saved, and the keys it uses. It stays as it is whatever change is online.',
+      hint: 'What your app keeps - its records, the files it saved - and the keys it uses. It stays as it is whatever change is online.',
       workspace: 'Saved by your app',
-      workspaceText: 'What your app saved while people used it: uploads, entries, anything it keeps.',
+      workspaceText: 'The files your app saved while people used it: uploads, pictures, documents.',
       workspaceSize: (files: string, size: string) => `${files}, ${size}`,
       more: (count: number) => `and ${count} more`,
+      database: 'Records',
+      databaseTitle: 'Records your app keeps',
+      databaseText: 'What your app keeps while people use it - sign-ups, entries, votes - table by table. Nothing here changes when a new change goes online.',
+      records: (count: number) => (count === 1 ? '1 record' : `${count.toLocaleString()} records`),
+      noRecords: 'Your app has not kept any records yet.',
       secrets: 'Keys and passwords',
       secretsText: 'What your app uses to connect to other services. Once saved, nobody can see them - not you, not the agent.',
       needed: 'Your app needs this',

@@ -1,0 +1,16 @@
+-- What is known about each upload: the file itself is in the workspace, under
+-- the name in url. Applied once, by Evolve; a change is a new file.
+
+CREATE TABLE uploads
+(
+    id       TEXT    NOT NULL PRIMARY KEY,
+    name     TEXT    NOT NULL,
+    size     INTEGER NOT NULL,
+    type     TEXT    NOT NULL,
+    uploaded TEXT    NOT NULL,
+    url      TEXT    NOT NULL,
+    -- a hash of the key the uploader was given to remove it with
+    key_hash TEXT    NOT NULL
+);
+
+CREATE INDEX ix_uploads_uploaded ON uploads (uploaded);

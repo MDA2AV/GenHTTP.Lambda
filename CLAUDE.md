@@ -54,13 +54,15 @@ Give both a good experience. Concretely:
   made. A compile error is the agent's to fix, not something the owner reads.
   Say "version" and its number only where the owner needs to name which one goes
   back online or which one a draft becomes (the draft dialogs do), never as the
-  way to describe a change. Secrets are **keys and passwords**, the workspace is
-  **what your app saved**.
+  way to describe a change. The database is **records** (a table of them, a
+  row is a record), secrets are **keys and passwords**, the workspace is **what
+  your app saved**.
 - The simple view shows the **Data** section only once the app keeps something
-  (a saved file, a secret) or its code waits for a secret, and then only the
-  kinds that hold something: no switches, no folders, no code - a plain list
-  of what was saved, and the keys to enter or replace. Entering one there
-  switches secrets on.
+  (a table, a saved file, a secret) or its code waits for a secret, and then
+  only the kinds that hold something: no switches, no folders, no code, no
+  column types - its records table by table to read, a plain list of what was
+  saved, and the keys to enter or replace. Entering one there switches secrets
+  on.
 - The full view, `/ship`, the API, MCP tools, the guide and the README use the
   precise words (feature, version, merge, base).
 - The view a lambda opens in is a default only (`view`, set at creation and via
@@ -85,12 +87,12 @@ the README.
   what is written about it, its documentation and tests (below). It never
   changes once saved. Different versions may have different code and different
   assets.
-- **Data** is what the program keeps (today: the workspace and the secrets; a
-  database is meant to follow). It belongs to the lambda and is **shared by all
-  versions**. Deploys, rollbacks and merges never touch it.
-- User data goes in the workspace, never in assets. The front end goes in the
-  version, never in the workspace. API keys and passwords go in the secrets,
-  never in code, assets or the workspace.
+- **Data** is what the program keeps: the database, the workspace and the
+  secrets. It belongs to the lambda and is **shared by all versions**.
+  Deploys, rollbacks and merges never touch it.
+- Records go in the database and files in the workspace, never in assets. The
+  front end goes in the version, never in the data. API keys and passwords go
+  in the secrets, never in code, assets, the workspace or the database.
 - Every kind of data is switched on before a lambda can use it. An agent may
   switch one on (`enable_data`) when what it builds needs it; **switching off
   deletes, so only the owner does it**. All kinds share one **Data** section
@@ -122,6 +124,36 @@ the README.
   simple overview ask the owner for them. That is the asymmetric interface for
   secrets: the agent declares the need, the human supplies the value. The build
   agent may switch secrets on and list them, and cannot set or delete one.
+
+### Databases
+
+- **A SQLite file per lambda**, reached with `Database.GetConnection()` (an open
+  Microsoft.Data.Sqlite connection, pooled, one per request, disposed of).
+  **Off by default**; switching it on makes an empty file, switching it off
+  deletes it and the features' copies. Either switch restarts the lambda on its
+  next request, so its startup migrations run against what is there.
+- **Schema by Evolve migrations** shipped as assets in `migrations/`, applied as
+  the lambda starts. A migration that was applied is never edited. Agents are
+  steered to the database for records, and to use it **synchronously** - the
+  Ioxide engine has its own async model; this is a hint, not enforced.
+- **Entity Framework Core is not allowed, and neither is any connection of the
+  lambda's own** (another file, the workspace, a connection string). The code
+  guard refuses them - making a `SqliteConnection` is checked on the
+  compilation, so a target-typed `new()` or a derived class is caught - and the
+  connection handed out carries an authorizer (`ConnectionGuard`) that refuses
+  `ATTACH`, `VACUUM INTO`, the directory pragmas and lifting `max_page_count`,
+  which is the quota. Keep both when touching either.
+- **Not encrypted - decided.** SQLite cannot encrypt; it takes replacing the
+  SQLite of the whole process with a build that can (SQLite3 Multiple Ciphers
+  was tried: well kept, but one maintainer and a small .NET package, while
+  SQLitePCLRaw 3 dropped free encryption builds), and the key would sit in the
+  platform's database on the same volume. Do not bring it back without the
+  owner asking.
+- **The export carries it** as `database/database.db`, an ordinary SQLite file:
+  the owner takes their data away with their code.
+- A feature gets a copy (SQLite backup, consistent); merging throws it away.
+- The editor **reads** it - tables, columns, rows - and never edits it. A change
+  to records is a change to the app.
 
 Because data outlives versions, a rollback or a newer version reads data written
 by a different one. **Agents find a good compromise between data compatibility
@@ -188,7 +220,9 @@ New functionality is developed in a **feature** (a *draft* in the editor):
   runs, the default hosting snippet (`Defaults()`, no port, `RunAsync()`, no
   console output of our own), the snippet in a static `Project` class returned
   by `Project.Create()`, the other files named the .NET way, everything that
-  stands in for the platform in `Platform/`, and a `Dockerfile`. `Program.cs`
+  stands in for the platform in `Platform/`, and a `Dockerfile`. SQLite and
+  Evolve are referenced only where the code uses them, and the database comes
+  along in `database/`. `Program.cs`
   opens with a short note that it was a lambda on genhttp.dev, its metadata,
   and a link to the GenHTTP documentation. A test builds the export of every
   demo; keep it passing.
@@ -209,10 +243,12 @@ how to write apps and to give them a good starting point.
   it makes sense**, so agents learn it by reading them. Every demo has the three
   pages of its documentation and tests and a script its tests run
   (`EveryDemoSaysWhatItIsWhyAndHowItIsTested`); a new demo gets them too. They
-  keep their data in JSON files in the workspace on purpose - do not show a
-  database the platform does not offer. A demo that reads a secret is given a random value by the
-  seeder (`LambdaDemo.Secrets`) and works without one, so a copy runs before
-  its owner switches secrets on (`demo-registration`, `PASSWORD_PEPPER`).
+  keep their records in the database, migrated with Evolve, and files
+  (`demo-files`' uploads) in the workspace; the seeder switches the database on
+  (`LambdaDemo.Database`), and a copy starts with one of its own. A demo that
+  reads a secret is given a random value by the seeder (`LambdaDemo.Secrets`)
+  and works without one, so a copy runs before its owner switches secrets on
+  (`demo-registration`, `PASSWORD_PEPPER`).
 
 ### Tiers
 

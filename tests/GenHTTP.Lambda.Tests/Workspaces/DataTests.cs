@@ -219,7 +219,7 @@ public sealed class DataTests
 
         await fixture.MakeDemoAsync(lambda.PublicKey);
 
-        Assert.HasCount(2, await ListAsync(fixture, lambda.PrivateKey));
+        Assert.HasCount(3, await ListAsync(fixture, lambda.PrivateKey));
 
         using var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/data/workspace");
 

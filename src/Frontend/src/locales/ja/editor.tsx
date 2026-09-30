@@ -431,6 +431,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => `${count}件`,
     secretsMissing: (count) => `${count}件未設定`,
     secretsMissingTitle: 'コードが未設定のシークレットを読んでいて、その部分で失敗します。',
+    database: 'データベース',
+    databaseOff: 'オフ',
+    databaseTables: (count) => `テーブル${count}個`,
+    databaseOffUsed: 'コードはデータベースに接続しますが、データベースはオフです。',
   },
 
   files: {
@@ -611,6 +615,14 @@ export const editor: EditorMessages = {
     copyContents: 'ワークスペースのコピーの中身',
     kindsLabel: 'データの種類',
     kinds: {
+      database: {
+        name: 'データベース',
+        what: 'lambdaがレコードを保存するSQLiteデータベースです。Database.GetConnection()で接続します。',
+        count: (items) => `${items}個のテーブル`,
+        confirmOff: 'データベースをオフにしますか？',
+        switchedOn: 'データベースをオンにしました。中身は空です。lambdaは次のリクエストで、データベースを使える状態で起動し直します。',
+        switchedOff: 'データベースをオフにし、すべてのテーブルを削除しました。',
+      },
       workspace: {
         name: 'ワークスペース',
         what: 'lambdaが実行中に読み書きするファイルです。アップロードされたもの、記録など、保存しておきたいものなら何でも。',
@@ -645,6 +657,54 @@ export const editor: EditorMessages = {
     browse: 'ファイル',
     offBrowse: 'ワークスペースがオフなので、表示するファイルはありません。',
     missingDot: 'コードが、設定されていないシークレットを必要としています',
+    offDot: 'コードが必要としていますが、オフになっています',
+
+    database: {
+      contents: 'テーブル',
+      copyContents: 'テスト用データのテーブル',
+      readOnly: '読み取り専用：中身はlambdaが書き込むものです。',
+      empty: 'テーブルはまだありません',
+      emptyText: 'テーブルはコードが作ります。migrations/に置いたマイグレーションを、lambdaの起動時にEvolveが適用します。そのあとlambdaが保存したものが、ここに表示されます。',
+      offTitle: 'データベースはオフです',
+      offText: 'オンにすると、コードがSQLで読み書きするレコード（投稿、アカウント、注文など）を保存できます。',
+      offWanted: 'コードはデータベースに接続しますが、データベースはオフです。オンにするまで、接続する部分は失敗します。',
+      switchOn: 'オンにする',
+      howTo: 'コードでは',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')}でデータベースへの接続を開きます。テーブルは{code('migrations/')}
+          のマイグレーションが作り、Evolveがそれを適用します。ダウンロードしたプロジェクトでは、ただのSQLiteファイル
+          {code('database/database.db')}になります。
+        </>
+      ),
+      copy: 'コピー',
+      rows: (count) => `${count.toLocaleString()}行`,
+      notCounted: '未集計',
+      view: 'ビュー',
+      migrations: 'マイグレーション',
+      migrationsHint: 'Evolveが、適用したマイグレーションを記録している履歴です。アプリのレコードではありません。',
+      columns: '列',
+      primaryKey: '主キー',
+      required: '必須',
+      defaultsTo: (value) => `既定値：${value}`,
+      untyped: '任意の型',
+      newestFirst: '新しい順',
+      oldestFirst: '古い順',
+      sortBy: (column) => `${column}で並べ替え`,
+      page: (from, to, total) => `${from.toLocaleString()}–${to.toLocaleString()}／${total.toLocaleString()}`,
+      previous: '前のページ',
+      next: '次のページ',
+      reload: '読み込み直す',
+      readFailed: 'テーブルを読み込めませんでした。',
+      noRows: 'このテーブルには、まだ何もありません。',
+      pick: 'テーブルを選ぶと、中身が表示されます。',
+      nullValue: 'NULL',
+      bytes: (size) => `バイナリ · ${size}`,
+      cut: (length) => `… 全${length.toLocaleString()}文字`,
+      row: (number) => `${number.toLocaleString()}行目`,
+      openRow: '行全体を表示',
+      close: '閉じる',
+    },
 
     secrets: {
       add: 'シークレットを追加',
@@ -706,11 +766,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: 'アプリが保存したものと、使っているキーです。どの変更が公開中でも、これは変わりません。',
+      hint: 'アプリが保存しているもの（記録やファイル）と、使っているキーです。どの変更が公開中でも、これは変わりません。',
       workspace: 'アプリが保存したもの',
-      workspaceText: '利用者が使っているあいだにアプリが保存したものです。アップロード、投稿など、保存しているものすべてです。',
+      workspaceText: '利用者が使っているあいだにアプリが保存したファイルです。アップロードされた画像や文書などです。',
       workspaceSize: (files, size) => `${files}、${size}`,
       more: (count) => `ほか${count}件`,
+      database: '記録',
+      databaseTitle: 'アプリが残している記録',
+      databaseText: '利用者が使っているあいだにアプリが残している記録（登録、投稿、投票など）を、種類ごとに表示します。新しい変更を公開しても、ここは何も変わりません。',
+      records: (count) => `${count.toLocaleString()}件`,
+      noRecords: 'アプリはまだ何も記録していません。',
       secrets: 'キーとパスワード',
       secretsText: 'アプリがほかのサービスにつながるために使うものです。保存すると、誰にも見えなくなります。あなたにも、エージェントにもです。',
       needed: 'アプリに必要です',

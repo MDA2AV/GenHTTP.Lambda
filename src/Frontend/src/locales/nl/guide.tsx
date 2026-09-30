@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Een pagina serveren',
     spa: 'Een frontend, stap voor stap',
     storage: 'De twee plekken voor bestanden',
-    keeping: 'Data bewaren',
+    database: 'Records bewaren',
+    keeping: 'Bestanden bewaren',
     secrets: 'Sleutels en wachtwoorden',
     sockets: 'Websockets',
     limits: 'Wat niet mag',
@@ -98,7 +99,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Concepten', () => <>Wijzigingen waaraan naast de lambda wordt gewerkt: elk concept probeer je uit op een eigen adres, en het wordt samengevoegd tot de volgende versie zodra het goed is. Open je een concept, dan heeft het zijn eigen code, data en logs.</>],
     ['Bestanden', () => <>De bestanden van een versie: de code en assets, het programma zelf. Een slotje of een wereldbol laat zien of ze openbaar bereikbaar zijn.</>],
-    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de workspace en de secrets, elk met een eigen tabblad. Bekijk ze, upload bestanden, stel secrets in of zet een soort aan of uit. De eenvoudige weergave toont het zodra de app iets bewaart.</>],
+    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de database, de workspace en de secrets, elk met een eigen tabblad. Bekijk de tabellen en bestanden, upload bestanden, stel secrets in of zet een soort aan of uit. De eenvoudige weergave toont het zodra de app iets bewaart.</>],
     ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug, en vanuit elke versie kun je een concept starten.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
     ['Statistieken', () => <>Requests, fouten, responstijden en de meest opgevraagde paden, over het afgelopen uur of de afgelopen dag.</>],
@@ -137,7 +138,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'Een gastenboek dat mensen kunnen tekenen; berichten moeten een herstart overleven',
-    change: 'Bewaart berichten in de workspace, zodat ze een herstart overleven',
+    change: 'Bewaart berichten in de database, zodat ze een herstart overleven',
   },
   why2: (k) => (
     <>
@@ -300,10 +301,41 @@ export const guide: Messages['guide'] = {
   storageAside:
     'Het kan niet één en dezelfde plek zijn. Dan zou een deploy alles wissen wat je lambda sindsdien had weggeschreven, of zou er nooit iets weg kunnen uit wat hij meelevert. Een spel met een ranglijst wil het tweede; de pagina die het serveert wil het eerste. Dus de pagina gaat in de versie, en de ranglijst in de data.',
 
+  database: (k) => (
+    <>
+      Records – berichten, accounts, bestellingen, stemmen – horen in de {k.b('database')}: een eigen
+      SQLite-database van de lambda, die je aanzet onder {k.b('Data')}. De code opent een verbinding met{' '}
+      {k.code('Database.GetConnection()')} en praat er in SQL mee:
+    </>
+  ),
+  database2: (k) => (
+    <>
+      De tabellen worden gemaakt door {k.b('migraties')}: SQL-bestanden die met de versie meekomen in{' '}
+      {k.code('migrations/')}, en die {k.link('https://evolve-db.netlify.app/', 'Evolve')} op volgorde toepast als de
+      lambda start – elk één keer, dus een nieuwe versie voert alleen uit wat nieuw is. Verander nooit een migratie die
+      al is toegepast; een wijziging aan een tabel is het volgende bestand.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Zoals alle data wordt de database gedeeld door elke versie, laten deploys en terugzetten hem met rust, en werkt
+      een concept op een kopie. Onder {k.b('Data')} zie je de tabellen en wat erin staat – de eenvoudige weergave noemt
+      ze items. {k.b('Downloaden als .NET-project')} neemt hem mee als gewoon SQLite-bestand.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Open een verbinding waar je hem nodig hebt en sluit hem daarna weer, en gebruik hem synchroon:{' '}
+      {k.code('ExecuteReader')}, niet {k.code('ExecuteReaderAsync')}. Waarden gaan erin als parameters, nooit in de SQL
+      zelf. De demo {k.link('/editor/demo-crud', 'demo-crud')} doet het allemaal voor.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')} is een privémap waarin je lambda mag lezen en schrijven. Hier hoort alles wat langer moet
-      bestaan dan een request, of een deployment.
+      {k.code('Workspace')} is een privémap waarin je lambda mag lezen en schrijven: de plek voor bestanden – foto's
+      die iemand uploadt, een document dat hij maakt, een model dat hij laadt. Records horen in de database, en wat je
+      over een bestand weet – wie het uploadde, en wanneer – is ook een record.
     </>
   ),
   keeping2: (k) => (
@@ -370,6 +402,8 @@ export const guide: Messages['guide'] = {
       te veranderen.
       {' '}{k.code('Secret')} leest daar omgevingsvariabelen met dezelfde naam; de waarden blijven hier. De
       documentatie en de tests komen mee in {k.code('docs')} en {k.code('tests')}.
+      {' '}{k.code('Database')} opent {k.code('database/database.db')}, dat de download meelevert met de records die
+      je app bewaarde.
     </>
   ),
   awayAside:

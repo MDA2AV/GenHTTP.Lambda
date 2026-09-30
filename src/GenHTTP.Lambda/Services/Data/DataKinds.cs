@@ -19,11 +19,10 @@ public sealed record DataKind(string Id, bool Default);
 /// holds nothing at all - switching one off deletes what it held.
 ///
 /// The workspace is on by default, since every lambda always had it. Secrets
-/// are off until somebody switches them on - the owner in the editor, or an
-/// agent through the API or MCP when what it builds needs one. A database is
-/// meant to join them here: a kind is added to <see cref="All" />, and
-/// everything that lists them - the API, the editor, what an agent reads -
-/// lists it too.
+/// and the database are off until somebody switches them on - the owner in the
+/// editor, or an agent through the API or MCP when what it builds needs one.
+/// A kind that comes later is added to <see cref="All" />, and everything that
+/// lists them - the API, the editor, what an agent reads - lists it too.
 /// </remarks>
 public static class DataKinds
 {
@@ -38,14 +37,25 @@ public static class DataKinds
     /// </summary>
     public const string SecretsId = "secrets";
 
+    /// <summary>
+    /// The SQLite database a lambda keeps its records in.
+    /// </summary>
+    public const string DatabaseId = "database";
+
     public static readonly DataKind Workspace = new(WorkspaceId, true);
 
     public static readonly DataKind Secrets = new(SecretsId, false);
 
+    public static readonly DataKind Database = new(DatabaseId, false);
+
     /// <summary>
     /// Every kind this installation offers, in the order they are shown.
     /// </summary>
-    public static readonly IReadOnlyList<DataKind> All = [Workspace, Secrets];
+    /// <remarks>
+    /// The database before the workspace: it is where records go, and records
+    /// are what most lambdas keep - the workspace is for files.
+    /// </remarks>
+    public static readonly IReadOnlyList<DataKind> All = [Database, Workspace, Secrets];
 
     /// <summary>
     /// The kind with the given name, or nothing if there is none.
@@ -75,5 +85,12 @@ public static class DataKinds
     /// </summary>
     public const string SecretsOff =
         "The secrets of this lambda are switched off, so it has none to read. Switch them on under Data in the editor, with enable_data (MCP) or with PUT /api/v1/lambdas/{privateKey}/data/secrets, and store the value there.";
+
+    /// <summary>
+    /// What a lambda that asks for a connection is told while its database is
+    /// switched off.
+    /// </summary>
+    public const string DatabaseOff =
+        "The database of this lambda is switched off, so there is nothing to connect to. Switch it on under Data in the editor, with enable_data (MCP) or with PUT /api/v1/lambdas/{privateKey}/data/database.";
 
 }

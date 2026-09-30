@@ -8,45 +8,69 @@
 //
 // The files:
 //
-//   lambda.cs      this one: the wiring, and the only file that touches Workspace
+//   lambda.cs      this one: the wiring, and how the games ended, kept in the database
 //   Lobby.cs       the websocket handler: pairs players, runs games, talks to sockets
 //   Board.cs       the rules and the house's moves - no sockets, easy to reason about
 //   Protocol.cs    every message that goes over the socket, in both directions
+//   migrations/    the SQL that makes the table of outcomes, applied once by Evolve
 //   web/           the page and its script
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
-// it - a copy is yours to change.
+// it - a copy is yours to change, and starts with a database of its own.
 // [/demo]
 
-var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+// every version reads the same database, so each brings it up to the schema
+// it expects first; Evolve applies what is new in migrations/, once each
+using (var connection = Database.GetConnection())
+{
+    var evolve = new Evolve(connection, message => Console.WriteLine(message))
+    {
+        Locations = [Assets.Root + "migrations"],
+        IsEraseDisabled = true
+    };
 
-var stats = Workspace.Exists("stats.json")
-          ? JsonSerializer.Deserialize<Stats>(Workspace.ReadText("stats.json"), json)
-          : new Stats(0, 0, 0, 0);
+    evolve.Migrate();
+}
 
-var writing = new object();
-
-// the lobby calls this whenever a game ends; the counts outlive a restart
+// the lobby calls this whenever a game ends; the counts outlive a restart. One
+// row per outcome, counted up where it is: the database takes one write at a
+// time, so two games ending at once both count
 void Record(string winner)
 {
-    lock (writing)
-    {
-        stats = winner switch
-        {
-            "X" => stats with { Games = stats.Games + 1, X = stats.X + 1 },
-            "O" => stats with { Games = stats.Games + 1, O = stats.O + 1 },
-            _ => stats with { Games = stats.Games + 1, Draws = stats.Draws + 1 }
-        };
+    using var db = Database.GetConnection();
+    using var command = db.CreateCommand();
 
-        Workspace.WriteText("stats.json", JsonSerializer.Serialize(stats, json));
+    command.CommandText = "INSERT INTO outcomes (winner, games) VALUES ($winner, 1) ON CONFLICT (winner) DO UPDATE SET games = games + 1";
+    command.Parameters.AddWithValue("$winner", winner is "X" or "O" ? winner : "draw");
+
+    command.ExecuteNonQuery();
+}
+
+// how the games so far have ended, added up from the outcomes
+Stats Count()
+{
+    using var db = Database.GetConnection();
+    using var command = db.CreateCommand();
+
+    command.CommandText = "SELECT winner, games FROM outcomes";
+
+    using var reader = command.ExecuteReader();
+
+    var counts = new Dictionary<string, int>();
+
+    while (reader.Read())
+    {
+        counts[reader.GetString(0)] = reader.GetInt32(1);
     }
+
+    return new Stats(counts.Values.Sum(), counts.GetValueOrDefault("X"), counts.GetValueOrDefault("O"), counts.GetValueOrDefault("draw"));
 }
 
 var lobby = new Lobby(Record);
 
 var api = Inline.Create()
-                .Get("stats", () => stats);
+                .Get("stats", () => Count());
 
 return Layout.Create()
              .Add("play", Websocket.Reactive().Handler(lobby))

@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Servindo uma página',
     spa: 'Um front-end, passo a passo',
     storage: 'Os dois lugares onde ficam os arquivos',
-    keeping: 'Guardando dados',
+    database: 'Guardando registros',
+    keeping: 'Guardando arquivos',
     secrets: 'Chaves e senhas',
     sockets: 'WebSockets',
     limits: 'O que não é permitido',
@@ -98,7 +99,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Rascunhos', () => <>Mudanças feitas ao lado da lambda: cada uma é testada num endereço próprio e mesclada na próxima versão quando estiver tudo certo. Aberto, um rascunho tem código, dados e log próprios.</>],
     ['Arquivos', () => <>Os arquivos de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo mostra se o público consegue acessar.</>],
-    ['Dados', () => <>O que a lambda guarda enquanto roda, compartilhado por todas as versões: o workspace e os segredos, cada um na sua aba. Veja o que há neles, envie arquivos, defina segredos ou ligue e desligue um tipo. A visão simples mostra a seção assim que o app guarda alguma coisa.</>],
+    ['Dados', () => <>O que a lambda guarda enquanto roda, compartilhado por todas as versões: o banco de dados, o workspace e os segredos, cada um na sua aba. Veja as tabelas e os arquivos, envie arquivos, defina segredos ou ligue e desligue um tipo. A visão simples mostra a seção assim que o app guarda alguma coisa.</>],
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faça deploy ou volte uma versão por aqui, ou comece um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve no ar e quando, e o que tirou do ar.</>],
     ['Métricas', () => <>Requisições, falhas, tempos de resposta e os caminhos mais acessados, na última hora ou nas últimas 24 horas.</>],
@@ -136,7 +137,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'Um livro de visitas para as pessoas assinarem; as mensagens não podem sumir num reinício',
-    change: 'Guarda as mensagens no workspace para não sumirem num reinício',
+    change: 'Guarda as mensagens no banco de dados para não sumirem num reinício',
   },
   why2: (k) => (
     <>
@@ -297,10 +298,42 @@ export const guide: Messages['guide'] = {
   storageAside:
     'Os dois não podem ser um lugar só. Se fossem, um deploy ou apagaria tudo o que a lambda gravou desde então, ou nada nunca poderia sair dos arquivos que vão com ela. Um jogo com ranking quer a segunda opção; a página que ele serve quer a primeira. Então a página fica na versão, e o ranking nos dados.',
 
+  database: (k) => (
+    <>
+      Registros – entradas, contas, pedidos, votos – ficam no {k.b('banco de dados')}: um banco de dados SQLite só da
+      lambda, ligado em {k.b('Dados')}. O código abre uma conexão com {k.code('Database.GetConnection()')} e conversa
+      com ele em SQL:
+    </>
+  ),
+  database2: (k) => (
+    <>
+      As tabelas dele são criadas por {k.b('migrações')}: arquivos SQL que vão com a versão em {k.code('migrations/')},
+      aplicados em ordem pelo {k.link('https://evolve-db.netlify.app/', 'Evolve')} quando a lambda inicia – cada um uma
+      única vez, então uma nova versão só executa o que é novo. Nunca mude uma migração que já foi aplicada; uma
+      mudança numa tabela é o próximo arquivo.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Como todos os dados, o banco de dados é compartilhado por todas as versões, fazer deploy ou voltar uma versão não
+      mexe nele, e um rascunho trabalha numa cópia. Em {k.b('Dados')} você vê as tabelas e as linhas delas, que a
+      visão simples chama de registros. {k.b('Baixar como projeto .NET')} leva o banco junto como um arquivo SQLite
+      comum.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Abra uma conexão onde precisar e libere-a depois, e use-a de forma síncrona – {k.code('ExecuteReader')}, não{' '}
+      {k.code('ExecuteReaderAsync')}. Os valores entram como parâmetros, nunca no SQL. A demo{' '}
+      {k.link('/editor/demo-crud', 'demo-crud')} faz tudo isso.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')} é um diretório privado que sua lambda pode ler e gravar. É o lugar para tudo o que precisa
-      durar mais que uma requisição, ou que um deploy.
+      {k.code('Workspace')} é um diretório privado que sua lambda pode ler e gravar: o lugar para arquivos – fotos que
+      alguém envia, um documento que ela gera, um modelo que ela carrega. Registros ficam no banco de dados, e o que se
+      sabe sobre um arquivo – quem enviou, quando – também é um registro.
     </>
   ),
   keeping2: (k) => (
@@ -367,6 +400,8 @@ export const guide: Messages['guide'] = {
       mudar.
       {' '}{k.code('Secret')} lê lá as variáveis de ambiente de mesmo nome; os valores ficam aqui. A documentação e os
       testes vão junto, em {k.code('docs')} e {k.code('tests')}.
+      {' '}{k.code('Database')} abre {k.code('database/database.db')}, que o download traz com os registros que o seu
+      app guardou.
     </>
   ),
   awayAside:

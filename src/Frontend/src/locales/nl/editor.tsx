@@ -433,6 +433,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => (count === 1 ? '1 secret' : `${count} secrets`),
     secretsMissing: (count) => `${count} ontbreken`,
     secretsMissingTitle: 'De code leest secrets die niet zijn ingesteld, en mislukt waar hij dat doet.',
+    database: 'Database',
+    databaseOff: 'uitgezet',
+    databaseTables: (count) => many(count, 'tabel', 'tabellen'),
+    databaseOffUsed: 'De code maakt verbinding met de database, maar die staat uit.',
   },
 
   files: {
@@ -613,6 +617,14 @@ export const editor: EditorMessages = {
     copyContents: 'Wat er in de kopie van de workspace staat',
     kindsLabel: 'Soorten data',
     kinds: {
+      database: {
+        name: 'Database',
+        what: 'Een SQLite-database waarin de lambda zijn records bewaart, bereikbaar met Database.GetConnection().',
+        count: (items) => (items === 1 ? '1 tabel' : `${items} tabellen`),
+        confirmOff: 'De database uitzetten?',
+        switchedOn: 'De database staat aan, en is leeg. Bij zijn volgende request start de lambda opnieuw, met de database erbij.',
+        switchedOff: 'De database staat uit, en alle tabellen erin zijn verwijderd.',
+      },
       workspace: {
         name: 'Workspace',
         what: 'Bestanden die de lambda leest en schrijft terwijl hij draait: uploads, gegevens, alles wat hij bewaart.',
@@ -647,6 +659,54 @@ export const editor: EditorMessages = {
     browse: 'Bestanden',
     offBrowse: 'De workspace staat uit, dus er zijn geen bestanden om te tonen.',
     missingDot: 'De code heeft een secret nodig dat niet is ingesteld',
+    offDot: 'De code heeft hem nodig, maar hij staat uit',
+
+    database: {
+      contents: 'Tabellen',
+      copyContents: 'Tabellen in de testdata',
+      readOnly: 'Alleen-lezen: wat hier staat, schrijft de lambda.',
+      empty: 'Nog geen tabellen',
+      emptyText: 'De code maakt ze aan, met een migratie in migrations/ die Evolve toepast als de lambda start. Wat hij daarna bewaart, verschijnt hier.',
+      offTitle: 'De database staat uit',
+      offText: 'Zet hem aan om records te bewaren die de code met SQL leest en schrijft: inzendingen, accounts, bestellingen.',
+      offWanted: 'De code maakt verbinding met de database, maar die staat uit: alles wat verbinding maakt, mislukt tot je hem aanzet.',
+      switchOn: 'Aanzetten',
+      howTo: 'In de code',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')} opent er een verbinding mee, en de migraties in {code('migrations/')} maken de
+          tabellen aan, toegepast door Evolve. In een gedownload project is het gewoon het SQLite-bestand{' '}
+          {code('database/database.db')}.
+        </>
+      ),
+      copy: 'Kopiëren',
+      rows: (count) => (count === 1 ? '1 rij' : `${count.toLocaleString()} rijen`),
+      notCounted: 'niet geteld',
+      view: 'view',
+      migrations: 'Migraties',
+      migrationsHint: 'De geschiedenis die Evolve bijhoudt van de migraties die hij heeft toegepast, geen records van de app.',
+      columns: 'Kolommen',
+      primaryKey: 'primaire sleutel',
+      required: 'verplicht',
+      defaultsTo: (value) => `standaard ${value}`,
+      untyped: 'elk type',
+      newestFirst: 'Nieuwste eerst',
+      oldestFirst: 'Oudste eerst',
+      sortBy: (column) => `Sorteren op ${column}`,
+      page: (from, to, total) => `${from.toLocaleString()}–${to.toLocaleString()} van ${total.toLocaleString()}`,
+      previous: 'Vorige pagina',
+      next: 'Volgende pagina',
+      reload: 'Opnieuw laden',
+      readFailed: 'De tabel kon niet worden gelezen.',
+      noRows: 'Nog niets in deze tabel.',
+      pick: 'Kies een tabel om te zien wat erin staat.',
+      nullValue: 'NULL',
+      bytes: (size) => `bytes · ${size}`,
+      cut: (length) => `… ${length.toLocaleString()} tekens in totaal`,
+      row: (number) => `Rij ${number.toLocaleString()}`,
+      openRow: 'De hele rij tonen',
+      close: 'Sluiten',
+    },
 
     secrets: {
       add: 'Secret toevoegen',
@@ -708,11 +768,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: 'Wat je app heeft opgeslagen, en de sleutels die hij gebruikt. Dat blijft zo, welke wijziging er ook online staat.',
+      hint: 'Wat je app bewaart – zijn items en de bestanden die hij heeft opgeslagen – en de sleutels die hij gebruikt. Dat blijft zo, welke wijziging er ook online staat.',
       workspace: 'Opgeslagen door je app',
-      workspaceText: 'Wat je app heeft opgeslagen terwijl mensen hem gebruikten: uploads, inzendingen, alles wat hij bewaart.',
+      workspaceText: 'De bestanden die je app heeft opgeslagen terwijl mensen hem gebruikten: uploads, afbeeldingen, documenten.',
       workspaceSize: (files, size) => `${files}, ${size}`,
       more: (count) => `en nog ${count}`,
+      database: 'Items',
+      databaseTitle: 'Items die je app bijhoudt',
+      databaseText: 'Wat je app bijhoudt terwijl mensen hem gebruiken – aanmeldingen, berichten, stemmen – tabel per tabel. Hier verandert niets als er een nieuwe wijziging online gaat.',
+      records: (count) => (count === 1 ? '1 item' : `${count.toLocaleString()} items`),
+      noRecords: 'Je app heeft nog geen items bijgehouden.',
       secrets: 'Sleutels en wachtwoorden',
       secretsText: 'Waarmee je app verbinding maakt met andere diensten. Eenmaal opgeslagen kan niemand ze meer zien – jij niet en de agent niet.',
       needed: 'Je app heeft dit nodig',

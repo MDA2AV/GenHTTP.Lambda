@@ -6,7 +6,7 @@ Every board is kept on the server. The page sends only which cell was clicked an
 
 ## Rules, sockets and messages each have a file
 
-`Board.cs` holds the rules and the house's moves and knows nothing about sockets, so the part that decides who won reads on its own. `Lobby.cs` talks to the sockets, pairs players and runs the games. `Protocol.cs` has every message in both directions. `lambda.cs` wires them together and is the only file that touches `Workspace`: the lobby is handed a function to call when a game ends, and does not care where the count is kept.
+`Board.cs` holds the rules and the house's moves and knows nothing about sockets, so the part that decides who won reads on its own. `Lobby.cs` talks to the sockets, pairs players and runs the games. `Protocol.cs` has every message in both directions. `lambda.cs` wires them together and is the only file that touches `Database`: the lobby is handed a function to call when a game ends, and does not care where the count is kept.
 
 ## A websocket, because both sides talk
 
@@ -41,12 +41,13 @@ At most one player waits. The next to connect is matched with them, the one who 
 
 `Board.HouseMove` wins if it can, blocks if it must, and otherwise takes the centre, a random corner or a random edge. It plays right after the player's move, under the same lock, so the board that is sent back already has its answer and nothing can happen in between. It does not look further ahead than one move, so a player who makes two threats at once beats it: good enough to lose to sometimes, which is the point.
 
-## Games are kept in memory, the count in the workspace
+## Games are kept in memory, the count in the database
 
-A game lasts a minute and belongs to two open connections, so it is not saved: when a connection is lost, so is the game, and a restart ends every game in progress. How the games ended is kept in `stats.json` in the workspace, which outlives every deployment, so a new version does not reset it. `lambda.cs` reads it once when the lambda starts and writes it, under a lock, whenever a game ends; `GET api/stats` answers from memory.
+A game lasts a minute and belongs to two open connections, so it is not saved: when a connection is lost, so is the game, and a restart ends every game in progress. How the games ended is the table `outcomes` in the database, which belongs to the lambda rather than to a version, so a new version does not reset it. `migrations/V1__Create_outcomes.sql` makes it, and `lambda.cs` applies that with Evolve before it serves anything, as `demo-crud` explains.
 
+- **One row per outcome** - `X`, `O` or `draw` - counted up where it is: `INSERT ... ON CONFLICT (winner) DO UPDATE SET games = games + 1`. The database takes one write at a time, so two games ending at the same moment both count, without a lock of the app's own. `GET api/stats` adds the rows up.
 - **Each game is counted once**, when its last board is sent (`Game.Counted` makes sure of it), and a game that was left before its end is not counted at all.
-- **The file stays readable across versions.** It holds `Stats` in the shape the API answers with. A field added to it has to be optional with a default, so a file written by an older version still reads, and a version put back online still reads what a newer one wrote.
+- **The table stays readable across versions.** A column added to it comes in a migration of its own with a default, so a version put back online still works on what a newer one wrote.
 
 ## The page is part of the program
 

@@ -4,10 +4,16 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 
 /// <summary>
 /// Decides which assemblies a lambda is compiled against. Everything the host
-/// needs to run itself - the database, the compiler, the engine and this
+/// needs to run itself - Entity Framework, the compiler, the engine and this
 /// application - is deliberately left out, so a snippet cannot even name those
 /// types, let alone call them.
 /// </summary>
+/// <remarks>
+/// Microsoft.Data.Sqlite and Evolve are in: a lambda talks to its database
+/// through the one and migrates it with the other. What is under them - the
+/// native SQLite and its bindings - stays out, so the handle of a connection
+/// is a type the code cannot name.
+/// </remarks>
 public static class ReferenceProvider
 {
     private static readonly string[] Excluded =
@@ -18,11 +24,9 @@ public static class ReferenceProvider
         "GenHTTP.Modules.DependencyInjection",
         "GenHTTP.Modules.ReverseProxy",
         "Microsoft.CodeAnalysis",
-        "Microsoft.Data.Sqlite",
         "Microsoft.EntityFrameworkCore",
         "Microsoft.Extensions.DependencyInjection",
         "SQLitePCLRaw",
-        "Evolve",
         "ioxide"
     ];
 

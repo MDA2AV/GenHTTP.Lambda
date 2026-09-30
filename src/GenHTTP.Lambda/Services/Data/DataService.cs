@@ -1,5 +1,7 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Databases;
+using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
@@ -14,7 +16,8 @@ namespace GenHTTP.Lambda.Services.Data;
 /// Keeps which kinds of data each lambda has, and measures what they hold.
 /// </summary>
 public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IWorkspaceService workspace,
-                                IFeatureService features, SecretVault secrets, ILogger<DataService> logger) : IDataService
+                                IFeatureService features, SecretVault secrets, DatabaseVault stores, IDeploymentService deployments,
+                                ILogger<DataService> logger) : IDataService
 {
 
     #region Functionality
@@ -54,6 +57,12 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
         if (!(await ReadAsync(id, cancellation))[wanted.Id].Enabled)
         {
+            // there before it is switched on, so the first request finds it
+            if (wanted.Id == DataKinds.DatabaseId)
+            {
+                await stores.CreateAsync(id, cancellation);
+            }
+
             await SwitchAsync(id, wanted, true, cancellation);
 
             logger.LogInformation("Lambda {LambdaId} switched its {Kind} on", id, wanted.Id);
@@ -105,6 +114,21 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
                     return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, count, 0, 0, SecretVault.MaxSecrets);
                 }
+            case DataKinds.DatabaseId:
+                {
+                    var tier = await TierAsync(lambdaId, cancellation);
+
+                    if (!state.Enabled)
+                    {
+                        return new DataStoreInfo(kind.Id, false, kind.Default, state.Changed, 0, 0, stores.QuotaOf(tier));
+                    }
+
+                    // what it holds is counted in tables, and its room as the
+                    // file takes it on the disk
+                    var tables = await Task.Run(() => CountTables(lambdaId, featureId), cancellation);
+
+                    return new DataStoreInfo(kind.Id, true, kind.Default, state.Changed, tables, stores.SizeOf(lambdaId, featureId), stores.QuotaOf(tier));
+                }
             default:
                 return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, 0, 0, 0);
         }
@@ -119,6 +143,13 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
         {
             // the copies of the features with them, in one go
             await secrets.ClearAsync(lambdaId, cancellation);
+            return;
+        }
+
+        if (kind.Id == DataKinds.DatabaseId)
+        {
+            // the copies of the features with it
+            await stores.ClearAsync(lambdaId, cancellation);
             return;
         }
 
@@ -175,8 +206,44 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
         await database.SaveChangesAsync(cancellation);
 
-        // a lambda reads whether it has secrets as it reads them
+        // a lambda reads whether it has secrets and a database as it uses them
         secrets.Invalidate(lambdaId);
+        stores.Invalidate(lambdaId);
+
+        // and it prepares its database while it starts - migrating it, most
+        // often - so a database that came or went is started with again, the
+        // previews of its features included, on the next request each gets
+        if (kind.Id == DataKinds.DatabaseId)
+        {
+            deployments.EvictAll(lambdaId);
+        }
+    }
+
+    private async ValueTask<LambdaTier> TierAsync(long lambdaId, CancellationToken cancellation)
+    {
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        return await database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.Tier).FirstOrDefaultAsync(cancellation);
+    }
+
+    /// <summary>
+    /// How many tables the app keeps in its database - Evolve's history of
+    /// its migrations among them, since it is a table the app made.
+    /// </summary>
+    private int CountTables(long lambdaId, long? featureId)
+    {
+        using var connection = stores.OpenForReading(lambdaId, featureId);
+
+        if (connection == null)
+        {
+            return 0;
+        }
+
+        using var command = connection.CreateCommand();
+
+        command.CommandText = "SELECT count(*) FROM pragma_table_list WHERE schema = 'main' AND type IN ('table', 'virtual') AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\'";
+
+        return Convert.ToInt32(command.ExecuteScalar());
     }
 
     #endregion

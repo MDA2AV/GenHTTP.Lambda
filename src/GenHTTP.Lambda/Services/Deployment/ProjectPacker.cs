@@ -10,6 +10,7 @@ using Microsoft.CodeAnalysis.Text;
 
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 
@@ -26,13 +27,18 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// What comes out is as small as a GenHTTP project can be. Program.cs hosts
 /// what Project.Create() returns, Project.cs is the snippet, the other files
 /// are the lambda's own, and everything that stands in for the platform -
-/// Workspace, Assets, Secret and the imports a lambda never had to write - sits
-/// in a Platform folder of its own, so it is plain which code is theirs.
+/// Workspace, Assets, Secret, Database and the imports a lambda never had to
+/// write - sits in a Platform folder of its own, so it is plain which code is
+/// theirs.
 ///
 /// What was written about it comes along where a .NET project keeps such
 /// things: the documentation in docs/ and the tests in tests/. Neither is
 /// compiled into the program or copied into its container, as neither was
 /// on the platform.
+///
+/// A lambda with a database takes it along: what the app kept is written into
+/// database/, and the project references SQLite - and Evolve, where the code
+/// migrates with it. One without a database references neither.
 /// </remarks>
 public static class ProjectPacker
 {
@@ -62,6 +68,31 @@ public static class ProjectPacker
     /// </summary>
     private static readonly string FrameworkVersion = GenHttpVersion();
 
+    /// <summary>
+    /// The SQLite library the project talks to its database with.
+    /// </summary>
+    /// <remarks>
+    /// The newest release for the framework the project targets, rather than
+    /// the one this platform runs, which is a preview.
+    /// </remarks>
+    private const string SqlitePackage = "Microsoft.Data.Sqlite";
+
+    private const string SqliteVersion = "10.0.12";
+
+    /// <summary>
+    /// What migrates the database, at the version the platform runs.
+    /// </summary>
+    private const string EvolvePackage = "Evolve";
+
+    private static readonly string EvolveVersion = typeof(EvolveDb.Evolve).Assembly.GetName().Version is { } evolve
+        ? $"{evolve.Major}.{evolve.Minor}.{Math.Max(0, evolve.Build)}"
+        : "3.2.0";
+
+    /// <summary>
+    /// Where the project keeps its database, relative to where it runs.
+    /// </summary>
+    internal const string DatabaseFile = "database/database.db";
+
     #region Functionality
 
     /// <summary>
@@ -69,7 +100,22 @@ public static class ProjectPacker
     /// </summary>
     /// <param name="lambda">What is written into the head of Program.cs</param>
     /// <param name="files">Its files, the snippet first</param>
-    public static byte[] Pack(ExportedLambda lambda, IReadOnlyList<LambdaFile> files)
+    /// <param name="database">A plain copy of its database, to carry along</param>
+    public static byte[] Pack(ExportedLambda lambda, IReadOnlyList<LambdaFile> files, string? database = null)
+    {
+        using var buffer = new MemoryStream();
+
+        Pack(lambda, files, buffer, database);
+
+        return buffer.ToArray();
+    }
+
+    /// <summary>
+    /// Writes the lambda out as a zipped project, into the given stream as it
+    /// goes - so a database of a gigabyte is streamed, not held.
+    /// </summary>
+    /// <param name="database">A plain copy of its database, to carry along</param>
+    public static void Pack(ExportedLambda lambda, IReadOnlyList<LambdaFile> files, Stream target, string? database = null)
     {
         var name = Identifier(lambda.PublicKey);
 
@@ -83,12 +129,17 @@ public static class ProjectPacker
 
         var folders = context.Select(f => Outside(f.Name).Split('/')[0]).Distinct().Order(StringComparer.Ordinal).ToList();
 
-        using var buffer = new MemoryStream();
+        var code = files.Where(f => f.IsCode).ToList();
 
-        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
+        // what the code talks to its database with, and whether it migrates it
+        var data = database != null || code.Any(f => DatabaseService.Uses(f.Code) || f.Code.Contains("Sqlite", StringComparison.Ordinal));
+
+        var evolve = data && code.Any(f => f.Code.Contains("Evolve", StringComparison.Ordinal));
+
+        using (var archive = new ZipArchive(target, ZipArchiveMode.Create, true))
         {
-            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders));
-            Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits, folders));
+            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders, data, evolve));
+            Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits, folders, data ? database != null : null));
             Write(archive, $"{name}/Project.cs", Project(snippet, awaits));
 
             foreach (var file in files.Where(f => f.IsCode && f.Name != LambdaSource.EntryName))
@@ -107,21 +158,35 @@ public static class ProjectPacker
                 Write(archive, $"{name}/{Outside(file.Name)}", file.Bytes);
             }
 
-            Write(archive, $"{name}/Platform/Usings.cs", Usings());
+            Write(archive, $"{name}/Platform/Usings.cs", Usings(data, evolve));
             Write(archive, $"{name}/Platform/LambdaEnvironment.cs", Resource("LambdaEnvironment.cs"));
             Write(archive, $"{name}/Platform/Folder.cs", Resource("Folder.cs"));
             Write(archive, $"{name}/Platform/Secrets.cs", Resource("Secrets.cs"));
             Write(archive, $"{name}/Platform/Handlers.cs", Resource("Handlers.cs"));
 
+            if (data)
+            {
+                Write(archive, $"{name}/Platform/Database.cs", Resource("Database.cs"));
+            }
+
+            if (database != null)
+            {
+                WriteFile(archive, $"{name}/{DatabaseFile}", database);
+            }
+
             // the aspnet image rather than runtime, although nothing here uses
             // ASP.NET Core: GenHTTP.Full depends on GenHTTP.Testing, which
             // brings the Kestrel engine and with it Microsoft.AspNetCore.App
             Write(archive, $"{name}/Dockerfile", Resource("Dockerfile").Replace("{assembly}", name));
-            Write(archive, $"{name}/.dockerignore", $"bin/\nobj/\nworkspace/\n{string.Concat(folders.Select(f => $"{f}/\n"))}");
-            Write(archive, $"{name}/.gitignore", "bin/\nobj/\nworkspace/\n");
-        }
 
-        return buffer.ToArray();
+            // what the app keeps is kept out of the image and out of the
+            // repository: the image mounts it, and data is nobody's source
+            var ignored = data ? "bin/\nobj/\nworkspace/\ndatabase/\n" : "bin/\nobj/\nworkspace/\n";
+
+            // the documentation and the tests are kept out of the image as well
+            Write(archive, $"{name}/.dockerignore", $"{ignored}{string.Concat(folders.Select(f => $"{f}/\n"))}");
+            Write(archive, $"{name}/.gitignore", ignored);
+        }
     }
 
     #endregion
@@ -140,7 +205,9 @@ public static class ProjectPacker
     /// compiled into the program the way nothing in them ever was.
     /// </remarks>
     /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
-    private static string Csproj(bool assets, IReadOnlyList<string> context)
+    /// <param name="data">Whether the code uses a database, which takes SQLite</param>
+    /// <param name="evolve">Whether it migrates it with Evolve</param>
+    private static string Csproj(bool assets, IReadOnlyList<string> context, bool data, bool evolve)
     {
         var copy = assets ? "\n\n    <ItemGroup>\n        <None Update=\"assets/**\" CopyToOutputDirectory=\"PreserveNewest\" />\n    </ItemGroup>" : string.Empty;
 
@@ -148,6 +215,10 @@ public static class ProjectPacker
         {
             copy += $"\n\n    <ItemGroup>\n        <Compile Remove=\"{string.Join(';', context.Select(f => $"{f}/**"))}\" />\n    </ItemGroup>";
         }
+
+        var sqlite = data ? $"\n        <PackageReference Include=\"{SqlitePackage}\" Version=\"{SqliteVersion}\" />" : string.Empty;
+
+        var migrations = evolve ? $"\n        <PackageReference Include=\"{EvolvePackage}\" Version=\"{EvolveVersion}\" />" : string.Empty;
 
         return $"""
             <Project Sdk="Microsoft.NET.Sdk">
@@ -158,7 +229,7 @@ public static class ProjectPacker
                 </PropertyGroup>
 
                 <ItemGroup>
-                    <PackageReference Include="{Package}" Version="{FrameworkVersion}" />
+                    <PackageReference Include="{Package}" Version="{FrameworkVersion}" />{sqlite}{migrations}
                 </ItemGroup>{copy}
 
             </Project>
@@ -170,7 +241,8 @@ public static class ProjectPacker
     /// The host, and a word about where the app came from.
     /// </summary>
     /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
-    private static string Program(ExportedLambda lambda, string name, bool awaits, IReadOnlyList<string> context)
+    /// <param name="database">Whether the project carries the app's database; nothing where it has none</param>
+    private static string Program(ExportedLambda lambda, string name, bool awaits, IReadOnlyList<string> context, bool? database)
     {
         var facts = new List<(string Key, string Value)>
         {
@@ -212,6 +284,19 @@ public static class ProjectPacker
             _ => string.Empty
         };
 
+        var mounted = database != null ? " -v \"$PWD/database:/app/database\"" : string.Empty;
+
+        var stored = database switch
+        {
+            true => $"\n//\n// Its Database is {DatabaseFile}, a SQLite file holding what the app had kept\n// when it was exported.",
+            false => $"\n//\n// Its Database is {DatabaseFile}, made empty the first time the app connects.",
+            null => string.Empty
+        };
+
+        var provided = database != null
+            ? "the Workspace\n// the app writes to, the Assets it shipped with (in assets/), the Secret it\n// reads, from environment variables of the same name, and the Database it\n// keeps its records in."
+            : "the Workspace\n// the app writes to, the Assets it shipped with (in assets/), and the\n// Secret it reads, from environment variables of the same name.";
+
         return $"""
             // This app was built as a lambda on GenHTTP Lambda (https://genhttp.dev),
             // where you describe an app - or let your coding agent write it - and it
@@ -226,12 +311,10 @@ public static class ProjectPacker
             //   dotnet run                    then open http://localhost:8080/
             //
             //   docker build -t {tag} .
-            //   docker run -p 8080:8080{variables} -v {tag}-data:/app/workspace {tag}
+            //   docker run -p 8080:8080{variables}{mounted} -v {tag}-data:/app/workspace {tag}
             //
             // Project.cs holds the code of the lambda and the other .cs files are its
-            // own. Platform/ stands in for what the platform provided: the Workspace
-            // the app writes to, the Assets it shipped with (in assets/), and the
-            // Secret it reads, from environment variables of the same name.{environment}{written}
+            // own. Platform/ stands in for what the platform provided: {provided}{stored}{environment}{written}
 
             using GenHTTP.Engine.Internal;
             using GenHTTP.Modules.Practices;
@@ -318,7 +401,12 @@ public static class ProjectPacker
     /// compiles, which is why the other files of a lambda have none. Global
     /// here, so they compile as they are.
     /// </remarks>
-    private static string Usings()
+    /// <remarks>
+    /// SQLite and Evolve only where the project references them, which is
+    /// where the code uses them - an import of a package that is not there
+    /// does not compile.
+    /// </remarks>
+    private static string Usings(bool data, bool evolve)
     {
         var builder = new StringBuilder();
 
@@ -327,6 +415,11 @@ public static class ProjectPacker
 
         foreach (var import in ModuleCatalog.Imports)
         {
+            if (ModuleCatalog.IsData(import) && !(import == "EvolveDb" ? evolve : data))
+            {
+                continue;
+            }
+
             builder.Append($"global using {import};").Append('\n');
         }
 
@@ -524,6 +617,17 @@ public static class ProjectPacker
 
     private static void Write(ZipArchive archive, string path, string content)
         => Write(archive, path, Encoding.UTF8.GetBytes(content));
+
+    private static void WriteFile(ZipArchive archive, string path, string file)
+    {
+        var entry = archive.CreateEntry(path, CompressionLevel.Optimal);
+
+        using var stream = entry.Open();
+
+        using var source = File.OpenRead(file);
+
+        source.CopyTo(stream);
+    }
 
     private static void Write(ZipArchive archive, string path, byte[] content)
     {

@@ -427,6 +427,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => (count === 1 ? '1 Secret' : `${count} Secrets`),
     secretsMissing: (count) => `${count} fehlen`,
     secretsMissingTitle: 'Der Code liest Secrets, die nicht gesetzt sind, und schlägt an diesen Stellen fehl.',
+    database: 'Datenbank',
+    databaseOff: 'ausgeschaltet',
+    databaseTables: (count) => (count === 1 ? '1 Tabelle' : `${count} Tabellen`),
+    databaseOffUsed: 'Der Code verbindet sich mit der Datenbank, die ausgeschaltet ist.',
   },
 
   files: {
@@ -608,6 +612,14 @@ export const editor: EditorMessages = {
     copyContents: 'Was in der Kopie des Workspace liegt',
     kindsLabel: 'Arten von Daten',
     kinds: {
+      database: {
+        name: 'Datenbank',
+        what: 'Eine SQLite-Datenbank, in der das Lambda seine Datensätze aufbewahrt, erreichbar über Database.GetConnection().',
+        count: (items) => (items === 1 ? '1 Tabelle' : `${items} Tabellen`),
+        confirmOff: 'Datenbank ausschalten?',
+        switchedOn: 'Die Datenbank ist eingeschaltet und leer. Beim nächsten Request startet das Lambda neu, dann mit Datenbank.',
+        switchedOff: 'Die Datenbank ist ausgeschaltet, und alle Tabellen darin sind gelöscht.',
+      },
       workspace: {
         name: 'Workspace',
         what: 'Dateien, die das Lambda zur Laufzeit liest und schreibt: Uploads, Datensätze, alles, was es aufbewahrt.',
@@ -642,6 +654,54 @@ export const editor: EditorMessages = {
     browse: 'Dateien',
     offBrowse: 'Der Workspace ist ausgeschaltet, also gibt es keine Dateien zu zeigen.',
     missingDot: 'Der Code braucht ein Secret, das nicht gesetzt ist',
+    offDot: 'Der Code braucht sie, aber sie ist ausgeschaltet',
+
+    database: {
+      contents: 'Tabellen',
+      copyContents: 'Tabellen in den Testdaten',
+      readOnly: 'Nur zum Lesen: Was hier steht, schreibt das Lambda.',
+      empty: 'Noch keine Tabellen',
+      emptyText: 'Der Code legt sie an – mit einer Migration in migrations/, die Evolve beim Start des Lambdas anwendet. Was es danach aufbewahrt, erscheint hier.',
+      offTitle: 'Die Datenbank ist ausgeschaltet',
+      offText: 'Schalten Sie sie ein, um Datensätze aufzubewahren, die der Code mit SQL liest und schreibt – Einträge, Konten, Bestellungen.',
+      offWanted: 'Der Code verbindet sich mit der Datenbank, aber sie ist ausgeschaltet: Alles, was sich verbindet, schlägt fehl, bis sie eingeschaltet ist.',
+      switchOn: 'Einschalten',
+      howTo: 'Im Code',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')} öffnet eine Verbindung zu ihr, und die Migrationen in {code('migrations/')} legen
+          ihre Tabellen an, angewendet von Evolve. In einem heruntergeladenen Projekt ist sie die einfache SQLite-Datei{' '}
+          {code('database/database.db')}.
+        </>
+      ),
+      copy: 'Kopieren',
+      rows: (count) => (count === 1 ? '1 Zeile' : `${count.toLocaleString()} Zeilen`),
+      notCounted: 'nicht gezählt',
+      view: 'Sicht',
+      migrations: 'Migrationen',
+      migrationsHint: 'Der Verlauf, den Evolve über die angewendeten Migrationen führt – keine Datensätze der App.',
+      columns: 'Spalten',
+      primaryKey: 'Primärschlüssel',
+      required: 'erforderlich',
+      defaultsTo: (value) => `Standardwert ${value}`,
+      untyped: 'beliebiger Typ',
+      newestFirst: 'Neueste zuerst',
+      oldestFirst: 'Älteste zuerst',
+      sortBy: (column) => `Nach ${column} sortieren`,
+      page: (from, to, total) => `${from.toLocaleString()}–${to.toLocaleString()} von ${total.toLocaleString()}`,
+      previous: 'Vorherige Seite',
+      next: 'Nächste Seite',
+      reload: 'Neu laden',
+      readFailed: 'Die Tabelle konnte nicht gelesen werden.',
+      noRows: 'Diese Tabelle ist noch leer.',
+      pick: 'Wählen Sie eine Tabelle, um ihren Inhalt zu sehen.',
+      nullValue: 'NULL',
+      bytes: (size) => `Bytes · ${size}`,
+      cut: (length) => `… insgesamt ${length.toLocaleString()} Zeichen`,
+      row: (number) => `Zeile ${number.toLocaleString()}`,
+      openRow: 'Ganze Zeile anzeigen',
+      close: 'Schließen',
+    },
 
     secrets: {
       add: 'Secret hinzufügen',
@@ -703,11 +763,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: 'Was Ihre App gespeichert hat und welche Schlüssel sie verwendet. Das bleibt so, egal welche Änderung online ist.',
+      hint: 'Was Ihre App aufbewahrt – ihre Einträge, die Dateien, die sie gespeichert hat – und welche Schlüssel sie verwendet. Das bleibt so, egal welche Änderung online ist.',
       workspace: 'Von Ihrer App gespeichert',
-      workspaceText: 'Was Ihre App gespeichert hat, während Leute sie benutzt haben: Uploads, Einträge, alles, was sie aufbewahrt.',
+      workspaceText: 'Die Dateien, die Ihre App gespeichert hat, während Leute sie benutzt haben: Uploads, Bilder, Dokumente.',
       workspaceSize: (files, size) => `${files}, ${size}`,
       more: (count) => `und ${count} weitere`,
+      database: 'Einträge',
+      databaseTitle: 'Einträge, die Ihre App aufbewahrt',
+      databaseText: 'Was Ihre App aufbewahrt, während Leute sie benutzen – Anmeldungen, Beiträge, Stimmen –, Tabelle für Tabelle. Geht eine neue Änderung online, bleibt hier alles, wie es ist.',
+      records: (count) => (count === 1 ? '1 Eintrag' : `${count.toLocaleString()} Einträge`),
+      noRecords: 'Ihre App hat noch keine Einträge gespeichert.',
       secrets: 'Schlüssel und Passwörter',
       secretsText: 'Damit verbindet sich Ihre App mit anderen Diensten. Einmal gespeichert, kann sie niemand mehr sehen – weder Sie noch der Agent.',
       needed: 'Ihre App braucht das',

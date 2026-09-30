@@ -14,31 +14,17 @@ public record TaskItem(string Id, string Title, string Notes, bool Done, DateTim
 /// <summary>What a client sends to add or change a task.</summary>
 public record TaskInput(string Title, string Notes, bool Done);
 
-public class Tasks(JsonStore<TaskItem> store)
+public class Tasks(TaskStore store)
 {
     private const int MaxTitle = 120;
 
     private const int MaxNotes = 1000;
 
     [ResourceMethod]
-    public List<TaskItem> List(string search = null)
-    {
-        var tasks = store.All();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim();
-
-            tasks = tasks.Where(t => t.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
-                                  || t.Notes.Contains(term, StringComparison.OrdinalIgnoreCase))
-                         .ToList();
-        }
-
-        return tasks.OrderBy(t => t.Done).ThenByDescending(t => t.Created).ToList();
-    }
+    public List<TaskItem> List(string search = null) => store.List(search);
 
     [ResourceMethod(":id")]
-    public TaskItem Get(string id) => store.Find(t => t.Id == id) ?? throw Missing(id);
+    public TaskItem Get(string id) => store.Find(id) ?? throw Missing(id);
 
     [ResourceMethod(Method.Post)]
     public Result<TaskItem> Create(TaskInput input)
@@ -64,7 +50,7 @@ public class Tasks(JsonStore<TaskItem> store)
 
         var changed = existing with { Title = title, Notes = notes, Done = input.Done, Updated = DateTime.UtcNow };
 
-        if (!store.Replace(t => t.Id == id, changed))
+        if (!store.Replace(changed))
         {
             // removed by somebody else between the read above and now
             throw Missing(id);
@@ -77,7 +63,7 @@ public class Tasks(JsonStore<TaskItem> store)
     public void Delete(string id)
     {
         // nothing returned is answered with 204 No Content
-        if (!store.Remove(t => t.Id == id))
+        if (!store.Remove(id))
         {
             throw Missing(id);
         }
@@ -116,7 +102,7 @@ public class Tasks(JsonStore<TaskItem> store)
     /// <summary>
     /// Something to look at on the very first start.
     /// </summary>
-    public static void Seed(JsonStore<TaskItem> store)
+    public static void Seed(TaskStore store)
     {
         var now = DateTime.UtcNow;
 

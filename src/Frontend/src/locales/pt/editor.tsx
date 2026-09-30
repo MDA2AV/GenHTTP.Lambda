@@ -418,6 +418,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => (count === 1 ? '1 segredo' : `${count} segredos`),
     secretsMissing: (count) => `${count} faltando`,
     secretsMissingTitle: 'O código lê segredos que não estão definidos, e falha onde faz isso.',
+    database: 'Banco de dados',
+    databaseOff: 'desligado',
+    databaseTables: (count) => (count === 1 ? '1 tabela' : `${count} tabelas`),
+    databaseOffUsed: 'O código se conecta ao banco de dados, que está desligado.',
   },
 
   files: {
@@ -597,6 +601,14 @@ export const editor: EditorMessages = {
     copyContents: 'O que tem na cópia do workspace',
     kindsLabel: 'Tipos de dados',
     kinds: {
+      database: {
+        name: 'Banco de dados',
+        what: 'Um banco de dados SQLite onde a lambda guarda os registros dela, acessado com Database.GetConnection().',
+        count: (items) => (items === 1 ? '1 tabela' : `${items} tabelas`),
+        confirmOff: 'Desligar o banco de dados?',
+        switchedOn: 'O banco de dados está ligado, e vazio. A lambda reinicia com ele na próxima requisição.',
+        switchedOff: 'O banco de dados está desligado, e todas as tabelas dele foram apagadas.',
+      },
       workspace: {
         name: 'Workspace',
         what: 'Arquivos que a lambda lê e grava enquanto roda: o que foi enviado, registros, tudo o que ela guarda.',
@@ -631,6 +643,53 @@ export const editor: EditorMessages = {
     browse: 'Arquivos',
     offBrowse: 'O workspace está desligado, então não há arquivos para mostrar.',
     missingDot: 'O código precisa de um segredo que não está definido',
+    offDot: 'O código precisa dele, mas ele está desligado',
+
+    database: {
+      contents: 'Tabelas',
+      copyContents: 'Tabelas nos dados de teste',
+      readOnly: 'Somente leitura: o que está aqui é gravado pela lambda.',
+      empty: 'Nenhuma tabela ainda',
+      emptyText: 'O código cria as tabelas, com uma migração em migrations/ que o Evolve aplica quando a lambda inicia. O que ela guardar depois aparece aqui.',
+      offTitle: 'O banco de dados está desligado',
+      offText: 'Ligue-o para guardar registros que o código lê e grava com SQL – entradas, contas, pedidos.',
+      offWanted: 'O código se conecta ao banco de dados, mas ele está desligado: o que se conecta falha até ele ser ligado.',
+      switchOn: 'Ligar',
+      howTo: 'No código',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')} abre uma conexão com ele, e as migrações em {code('migrations/')} criam as
+          tabelas, aplicadas pelo Evolve. Num projeto baixado, ele é o arquivo SQLite comum {code('database/database.db')}.
+        </>
+      ),
+      copy: 'Copiar',
+      rows: (count) => (count === 1 ? '1 linha' : `${count.toLocaleString()} linhas`),
+      notCounted: 'sem contagem',
+      view: 'view',
+      migrations: 'Migrações',
+      migrationsHint: 'O histórico que o Evolve mantém das migrações que aplicou, não registros do app.',
+      columns: 'Colunas',
+      primaryKey: 'chave primária',
+      required: 'obrigatória',
+      defaultsTo: (value) => `padrão: ${value}`,
+      untyped: 'qualquer tipo',
+      newestFirst: 'Do mais recente ao mais antigo',
+      oldestFirst: 'Do mais antigo ao mais recente',
+      sortBy: (column) => `Ordenar por ${column}`,
+      page: (from, to, total) => `${from.toLocaleString()}–${to.toLocaleString()} de ${total.toLocaleString()}`,
+      previous: 'Página anterior',
+      next: 'Próxima página',
+      reload: 'Ler de novo',
+      readFailed: 'Não foi possível ler a tabela.',
+      noRows: 'Nada nesta tabela ainda.',
+      pick: 'Escolha uma tabela para ver o que tem nela.',
+      nullValue: 'NULL',
+      bytes: (size) => `bytes · ${size}`,
+      cut: (length) => `… ${length.toLocaleString()} caracteres no total`,
+      row: (number) => `Linha ${number.toLocaleString()}`,
+      openRow: 'Mostrar a linha inteira',
+      close: 'Fechar',
+    },
 
     secrets: {
       add: 'Adicionar segredo',
@@ -692,11 +751,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: 'O que o seu app salvou e as chaves que ele usa. Isso continua igual, seja qual for a mudança no ar.',
+      hint: 'O que o seu app guarda – os registros, os arquivos que ele salvou – e as chaves que ele usa. Isso continua igual, seja qual for a mudança no ar.',
       workspace: 'Salvo pelo seu app',
-      workspaceText: 'O que o seu app salvou enquanto as pessoas o usavam: uploads, entradas, tudo o que ele guarda.',
+      workspaceText: 'Os arquivos que o seu app salvou enquanto as pessoas o usavam: uploads, imagens, documentos.',
       workspaceSize: (files, size) => `${files}, ${size}`,
       more: (count) => `e mais ${count}`,
+      database: 'Registros',
+      databaseTitle: 'Registros que o seu app guarda',
+      databaseText: 'O que o seu app guarda enquanto as pessoas o usam, tabela por tabela: inscrições, entradas, votos. Nada aqui muda quando uma nova mudança vai ao ar.',
+      records: (count) => (count === 1 ? '1 registro' : `${count.toLocaleString()} registros`),
+      noRecords: 'O seu app ainda não guardou nenhum registro.',
       secrets: 'Chaves e senhas',
       secretsText: 'O que o seu app usa para se conectar a outros serviços. Depois de salvas, ninguém consegue vê-las – nem você, nem o agente.',
       needed: 'O seu app precisa disto',

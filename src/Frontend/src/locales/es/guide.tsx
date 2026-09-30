@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Servir una página',
     spa: 'Un frontend, paso a paso',
     storage: 'Los dos lugares donde viven los archivos',
-    keeping: 'Guardar datos',
+    database: 'Guardar registros',
+    keeping: 'Guardar archivos',
     secrets: 'Claves y contraseñas',
     sockets: 'WebSockets',
     limits: 'Lo que no te deja hacer',
@@ -98,7 +99,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Borradores', () => <>Cambios en los que se trabaja al lado de la lambda: cada uno se prueba en su propia dirección y se fusiona en la siguiente versión cuando está bien. Al abrirlo, un borrador tiene su propio código, sus datos y sus logs.</>],
     ['Archivos', () => <>Los archivos de una versión: su código y sus recursos, el programa en sí. Un candado o un globo indica si el público puede acceder a ellos.</>],
-    ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: el workspace y los secretos, cada uno en su pestaña. Míralos, sube archivos, define secretos o activa y desactiva un tipo. La vista simple lo muestra en cuanto la app guarda algo.</>],
+    ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: la base de datos, el workspace y los secretos, cada uno en su pestaña. Mira las tablas y los archivos, sube archivos, define secretos o activa y desactiva un tipo. La vista simple lo muestra en cuanto la app guarda algo.</>],
     ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. Desde aquí despliegas o vuelves atrás, o empiezas un borrador a partir de cualquiera de ellas.</>],
     ['Despliegues', () => <>Qué estuvo en línea y cuándo, y qué lo desconectó.</>],
     ['Estadísticas', () => <>Peticiones, fallos, tiempos de respuesta y las rutas más pedidas, en la última hora o el último día.</>],
@@ -136,7 +137,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'Un libro de visitas que la gente pueda firmar; las entradas tienen que sobrevivir a un reinicio',
-    change: 'Guarda las entradas en el workspace para que sobrevivan a un reinicio',
+    change: 'Guarda las entradas en la base de datos para que sobrevivan a un reinicio',
   },
   why2: (k) => (
     <>
@@ -297,10 +298,41 @@ export const guide: Messages['guide'] = {
   storageAside:
     'No pueden estar en un solo lugar. Si lo estuvieran, un despliegue borraría todo lo que tu lambda haya escrito desde entonces, o nunca se podría quitar nada de lo que publica. Un juego con ranking quiere lo segundo; la página que sirve, lo primero. Por eso la página va en la versión y el ranking, en los datos.',
 
+  database: (k) => (
+    <>
+      Los registros (entradas, cuentas, pedidos, votos) van en la {k.b('base de datos')}: una base de datos SQLite
+      propia de la lambda, que se activa en {k.b('Datos')}. El código abre una conexión con{' '}
+      {k.code('Database.GetConnection()')} y se comunica con ella en SQL:
+    </>
+  ),
+  database2: (k) => (
+    <>
+      Sus tablas las crean las {k.b('migraciones')}: archivos SQL que van con la versión en {k.code('migrations/')} y
+      que {k.link('https://evolve-db.netlify.app/', 'Evolve')} aplica en orden cuando arranca la lambda, cada uno una
+      sola vez, así que una versión nueva solo ejecuta lo que es nuevo. Nunca cambies una migración que ya se aplicó;
+      un cambio en una tabla es el siguiente archivo.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Como todos los datos, la base de datos la comparten todas las versiones, desplegar o volver atrás no la toca, y un
+      borrador trabaja con una copia. En {k.b('Datos')} ves sus tablas y sus filas, que la vista simple llama
+      registros. {k.b('Descargar como proyecto .NET')} la incluye como un archivo SQLite normal.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Abre una conexión donde la necesites y libérala después, y úsala de forma síncrona: {k.code('ExecuteReader')}, no{' '}
+      {k.code('ExecuteReaderAsync')}. Los valores van como parámetros, nunca dentro del SQL. La demo{' '}
+      {k.link('/editor/demo-crud', 'demo-crud')} hace todo esto.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')} es un directorio privado que tu lambda puede leer y escribir. Es el lugar para todo lo que
-      tenga que sobrevivir a una petición o a un despliegue.
+      {k.code('Workspace')} es un directorio privado que tu lambda puede leer y escribir: el lugar para archivos, como
+      las fotos que sube alguien, un documento que genera o un modelo que carga. Los registros van en la base de datos,
+      y lo que se sabe de un archivo (quién lo subió, cuándo) también es un registro.
     </>
   ),
   keeping2: (k) => (
@@ -366,6 +398,8 @@ export const guide: Messages['guide'] = {
       que cambiar nada de tu código.
       {' '}{k.code('Secret')} lee allí las variables de entorno con el mismo nombre; los valores se quedan aquí. La
       documentación y las pruebas también se van contigo, en {k.code('docs')} y {k.code('tests')}.
+      {' '}{k.code('Database')} abre {k.code('database/database.db')}, que la descarga incluye con los registros que
+      guardó tu app.
     </>
   ),
   awayAside:

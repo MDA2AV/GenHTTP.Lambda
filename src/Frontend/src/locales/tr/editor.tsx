@@ -427,6 +427,10 @@ export const editor: EditorMessages = {
     secretsCount: (count) => `${count} gizli değer`,
     secretsMissing: (count) => `${count} eksik`,
     secretsMissingTitle: 'Kod, ayarlanmamış gizli değerleri okuyor ve bu noktalarda başarısız oluyor.',
+    database: 'Veritabanı',
+    databaseOff: 'kapalı',
+    databaseTables: (count) => `${count} tablo`,
+    databaseOffUsed: 'Kod veritabanına bağlanıyor, ancak veritabanı kapalı.',
   },
 
   files: {
@@ -606,6 +610,14 @@ export const editor: EditorMessages = {
     copyContents: 'Çalışma alanının kopyasında neler var',
     kindsLabel: 'Veri türleri',
     kinds: {
+      database: {
+        name: 'Veritabanı',
+        what: 'Lambdanın kayıtlarını tuttuğu, Database.GetConnection() ile erişilen bir SQLite veritabanı.',
+        count: (items) => `${items} tablo`,
+        confirmOff: 'Veritabanı kapatılsın mı?',
+        switchedOn: 'Veritabanı açık ve boş. Lambda bir sonraki istekte veritabanıyla birlikte yeniden başlar.',
+        switchedOff: 'Veritabanı kapalı ve içindeki tüm tablolar silindi.',
+      },
       workspace: {
         name: 'Çalışma alanı',
         what: 'Lambdanın çalışırken okuyup yazdığı dosyalar: yüklemeler, kayıtlar, sakladığı her şey.',
@@ -640,6 +652,54 @@ export const editor: EditorMessages = {
     browse: 'Dosyalar',
     offBrowse: 'Çalışma alanı kapalı, bu yüzden gösterilecek dosya yok.',
     missingDot: 'Kod, ayarlanmamış bir gizli değere ihtiyaç duyuyor',
+    offDot: 'Kod buna ihtiyaç duyuyor, ancak kapalı',
+
+    database: {
+      contents: 'Tablolar',
+      copyContents: 'Test verilerindeki tablolar',
+      readOnly: 'Salt okunur: buradakileri lambda yazar.',
+      empty: 'Henüz tablo yok',
+      emptyText: 'Tabloları kod oluşturur: migrations/ içindeki, lambda başlarken Evolve’un uyguladığı bir migration ile. Lambdanın sonra sakladıkları burada görünür.',
+      offTitle: 'Veritabanı kapalı',
+      offText: 'Kodun SQL ile okuyup yazdığı kayıtları (girdiler, hesaplar, siparişler) saklamak için açın.',
+      offWanted: 'Kod veritabanına bağlanıyor, ancak veritabanı kapalı: siz açana kadar ona bağlanan her şey başarısız olur.',
+      switchOn: 'Aç',
+      howTo: 'Kodda',
+      howToText: (code) => (
+        <>
+          {code('Database.GetConnection()')} veritabanına bir bağlantı açar; tablolarını ise {code('migrations/')} içindeki,
+          Evolve’un uyguladığı migration’lar oluşturur. İndirilen bir projede bu, düz bir SQLite dosyasıdır:{' '}
+          {code('database/database.db')}.
+        </>
+      ),
+      copy: 'Kopyala',
+      rows: (count) => `${count.toLocaleString()} satır`,
+      notCounted: 'sayılmadı',
+      view: 'görünüm',
+      migrations: 'Migration’lar',
+      migrationsHint: 'Evolve’un uyguladığı migration’ların geçmişi; uygulamanın kayıtları değil.',
+      columns: 'Sütunlar',
+      primaryKey: 'birincil anahtar',
+      required: 'zorunlu',
+      defaultsTo: (value) => `varsayılan: ${value}`,
+      untyped: 'herhangi bir tür',
+      newestFirst: 'Önce en yeniler',
+      oldestFirst: 'Önce en eskiler',
+      sortBy: (column) => `${column} sütununa göre sırala`,
+      page: (from, to, total) => `${from.toLocaleString()}–${to.toLocaleString()} / ${total.toLocaleString()}`,
+      previous: 'Önceki sayfa',
+      next: 'Sonraki sayfa',
+      reload: 'Yeniden oku',
+      readFailed: 'Tablo okunamadı.',
+      noRows: 'Bu tabloda henüz bir şey yok.',
+      pick: 'İçinde ne olduğunu görmek için bir tablo seçin.',
+      nullValue: 'NULL',
+      bytes: (size) => `bayt · ${size}`,
+      cut: (length) => `… toplam ${length.toLocaleString()} karakter`,
+      row: (number) => `Satır ${number.toLocaleString()}`,
+      openRow: 'Satırın tamamını göster',
+      close: 'Kapat',
+    },
 
     secrets: {
       add: 'Gizli değer ekle',
@@ -701,11 +761,16 @@ export const editor: EditorMessages = {
     },
 
     simple: {
-      hint: 'Uygulamanızın kaydettikleri ve kullandığı anahtarlar. Hangi değişiklik yayında olursa olsun bunlar aynı kalır.',
+      hint: 'Uygulamanızın sakladıkları (kayıtları ve kaydettiği dosyalar) ve kullandığı anahtarlar. Hangi değişiklik yayında olursa olsun bunlar aynı kalır.',
       workspace: 'Uygulamanızın kaydettikleri',
-      workspaceText: 'İnsanlar kullanırken uygulamanızın kaydettikleri: yüklemeler, girdiler, sakladığı her şey.',
+      workspaceText: 'İnsanlar kullanırken uygulamanızın kaydettiği dosyalar: yüklemeler, resimler, belgeler.',
       workspaceSize: (files, size) => `${files}, ${size}`,
       more: (count) => `ve ${count} tane daha`,
+      database: 'Kayıtlar',
+      databaseTitle: 'Uygulamanızın tuttuğu kayıtlar',
+      databaseText: 'İnsanlar kullanırken uygulamanızın tuttukları (başvurular, girdiler, oylar), tablo tablo. Yeni bir değişiklik yayına girdiğinde buradaki hiçbir şey değişmez.',
+      records: (count) => `${count.toLocaleString()} kayıt`,
+      noRecords: 'Uygulamanız henüz hiç kayıt tutmadı.',
       secrets: 'Anahtarlar ve parolalar',
       secretsText: 'Uygulamanızın diğer hizmetlere bağlanmak için kullandıkları. Kaydedildikten sonra kimse onları göremez – ne siz ne de ajan.',
       needed: 'Uygulamanızın buna ihtiyacı var',
