@@ -13,7 +13,12 @@ public enum LambdaError
     /// <summary>
     /// Allowed in general, but not for this lambda - its tier does not include it.
     /// </summary>
-    Forbidden
+    Forbidden,
+
+    /// <summary>
+    /// Allowed, but asked for too often lately by the same caller.
+    /// </summary>
+    TooMany
 }
 
 /// <summary>
@@ -31,5 +36,7 @@ public sealed class LambdaException(LambdaError error, string message) : Excepti
     public static LambdaException Invalid(string message) => new(LambdaError.Invalid, message);
 
     public static LambdaException Forbidden(string message) => new(LambdaError.Forbidden, message);
+
+    public static LambdaException TooMany(string message) => new(LambdaError.TooMany, message);
 
 }

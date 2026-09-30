@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: 'Memuat…',
   loadingEditor: 'Memuat editor…',
   editorFailed: 'Editor gagal dimuat',
+  pageFailed: 'Halaman gagal dimuat',
   editorFailedWhy: 'Biasanya ini terjadi karena situs diperbarui saat tab ini masih terbuka.',
   reload: 'Muat ulang halaman',
   backToStart: 'Kembali ke beranda',

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import type { Messages } from '../locales/en';
 import type { EditorMessages } from '../locales/en/editor';
+import type { SourceMessages } from '../locales/en/source';
 import { DEFAULT_LANGUAGE, languageOf, preferredLanguage, rememberLanguage, type Language } from './languages';
 
 export * from './languages';
@@ -10,7 +11,8 @@ export * from './languages';
 /*
  * The words of the site, one catalog per language, fetched on their own so a
  * visitor downloads only the language they read. The editor has a catalog of
- * its own, fetched with the editor, since most visitors never open one.
+ * its own, fetched with the editor, since most visitors never open one - and
+ * so do the pages of the published sources, fetched with them.
  *
  * A catalog that is not there yet suspends whoever asked for it. The page a
  * visitor lands on has its catalog fetched before it is drawn (main.tsx), and
@@ -50,6 +52,22 @@ const EDITOR: Record<Language, Loader<EditorMessages>> = {
   tr: () => import('../locales/tr/editor').then((module) => module.editor),
   ja: () => import('../locales/ja/editor').then((module) => module.editor),
   ko: () => import('../locales/ko/editor').then((module) => module.editor),
+};
+
+const SOURCE: Record<Language, Loader<SourceMessages>> = {
+  id: () => import('../locales/id/source').then((module) => module.source),
+  de: () => import('../locales/de/source').then((module) => module.source),
+  en: () => import('../locales/en/source').then((module) => module.source),
+  es: () => import('../locales/es/source').then((module) => module.source),
+  fr: () => import('../locales/fr/source').then((module) => module.source),
+  it: () => import('../locales/it/source').then((module) => module.source),
+  nl: () => import('../locales/nl/source').then((module) => module.source),
+  pl: () => import('../locales/pl/source').then((module) => module.source),
+  pt: () => import('../locales/pt/source').then((module) => module.source),
+  'pt-pt': () => import('../locales/pt-pt/source').then((module) => module.source),
+  tr: () => import('../locales/tr/source').then((module) => module.source),
+  ja: () => import('../locales/ja/source').then((module) => module.source),
+  ko: () => import('../locales/ko/source').then((module) => module.source),
 };
 
 /** Catalogs by language, with the fetch that is bringing one while it is on its way. */
@@ -103,6 +121,8 @@ const site = new Catalogs(SITE);
 
 const editor = new Catalogs(EDITOR);
 
+const source = new Catalogs(SOURCE);
+
 /** Fetches the words of the site in a language, before a page in it is drawn. */
 export function loadSite(language: Language): Promise<Messages> {
   return site.load(language);
@@ -113,9 +133,18 @@ export function loadEditor(language: Language): Promise<EditorMessages> {
   return editor.load(language);
 }
 
+/** Fetches the words of the published sources' pages in a language, together with those pages. */
+export function loadSource(language: Language): Promise<SourceMessages> {
+  return source.load(language);
+}
+
 /** Everything a page in the given language needs, fetched before going there. */
 export async function prepare(language: Language): Promise<void> {
-  await Promise.all([site.load(language), editor.used ? editor.load(language) : undefined]);
+  await Promise.all([
+    site.load(language),
+    editor.used ? editor.load(language) : undefined,
+    source.used ? source.load(language) : undefined,
+  ]);
 }
 
 /* ------------------------------------------------ what the visitor prefers */
@@ -165,6 +194,11 @@ export function useT(): Messages {
 /** The words of the editor, in the language of the page. */
 export function useEditorT(): EditorMessages {
   return editor.read(useLanguage());
+}
+
+/** The words of the published sources' pages, in the language of the page. */
+export function useSourceT(): SourceMessages {
+  return source.read(useLanguage());
 }
 
 /** Every catalog at once, for rendering the pages when the frontend is built. */

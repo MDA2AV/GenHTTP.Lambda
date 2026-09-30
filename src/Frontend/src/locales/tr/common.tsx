@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: 'Yükleniyor…',
   loadingEditor: 'Editör yükleniyor…',
   editorFailed: 'Editör yüklenemedi',
+  pageFailed: 'Sayfa yüklenemedi',
   editorFailedWhy: 'Bu genellikle sekme açıkken sitenin güncellendiği anlamına gelir.',
   reload: 'Sayfayı yenile',
   backToStart: 'Ana sayfaya dön',

@@ -13,6 +13,7 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Showcase;
+using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -53,7 +54,8 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// and a program reads the structured copy, and both are the same thing.
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
-                              IDatabaseService databases, IShowcaseService showcases, LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
+                              IDatabaseService databases, IShowcaseService showcases, ISourceService sources, LambdaTelemetry telemetry, LogBook book,
+                              LambdaOptions options)
 {
 
     #region Catalogue
@@ -445,6 +447,21 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                  ["required"] = new JsonArray("privateKey")
              }),
 
+        Tool("open_source", "Publish a lambda's source code", Effect.Replace,
+             $"Publish a lambda's source code at /source/{{publicKey}} for anybody to read, star and download as a .NET project, change the license it is published under, or take it down. What is published is the program and what is written about it - every version's code, front end, documentation and tests, and the history of what each changed - never its data: not the database, not the workspace, not a secret's value. Not part of building: only do this when the user asks for it, and ask which license if they did not say (MIT unless they want another). With only privateKey it returns whether it is published. Once published, everything in every version is public, older ones included: keep keys, passwords and personal data out of the files - in secrets and the database.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["license"] = Field("string", $"The SPDX identifier of the license: {string.Join(", ", SourceLicenses.All.Select(l => l.Id))}. Left out, it stays as it is - {SourceLicenses.Default} when first published."),
+                     ["author"] = Field("string", $"Who holds the copyright, as the license names them - the user's name or organization, only if they gave it. Left out, it stays as it is; empty, the license names 'the authors of' the lambda. Up to {SourceLicenses.MaxAuthor} characters."),
+                     ["remove"] = Field("boolean", "Take the source down instead. Its stars are kept for when it is published again.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
+             }),
+
         Tool("list_demos", "List the demos", Effect.Read,
              "Demos this platform keeps online, each a finished lambda showing one way to build something: a REST API over records, registration and login, a websocket game, uploads, live updates. Their keys are public and read only: read the closest one with read_lambda (and list_files, read_logs) before writing similar code. create_lambda with a demo's id as template starts from a copy.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
@@ -489,6 +506,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "list_secrets" => await SecretsAsync(arguments),
                 "delete_secret" => await DeleteSecretAsync(arguments),
                 "showcase" => await ShowcaseAsync(arguments, origin),
+                "open_source" => await OpenSourceAsync(arguments, origin),
                 "list_demos" => Demos(origin),
                 "platform_guide" => Guide(),
                 _ => McpProtocol.Refuse($"There is no tool called '{name}'.")
@@ -1353,6 +1371,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             }
         }
 
+        // whose code is public, which changes what may be written into it
+        var published = await sources.GetAsync(privateKey) is { Published: true } source ? source : null;
+
         var archive = feature != null
             ? $"GET /api/v1/lambdas/{{privateKey}}/features/{feature.Feature.Key}/zip"
             : $"GET /api/v1/lambdas/{{privateKey}}/versions/{version}/zip";
@@ -1472,6 +1493,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             version,
             specification = content?.Specification,
             change = content?.Change,
+            openSource = published == null
+                ? null
+                : new
+                {
+                    license = published.License,
+                    url = $"{origin}/source/{lambda.PublicKey}",
+                    note = "The owner published this lambda's source: every version is public, and so is what you save next - code, assets, documentation, tests and each version's change line. Keep keys, passwords and personal data out of the files; they belong in secrets and the database, which are never published."
+                },
             feature = working,
             // what the app is for and why it is built as it is, before anything
             // else about it: what a change has to keep
@@ -1671,6 +1700,67 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             entry.Online,
             page = $"{origin}/showcase",
             note = entry.Online ? null : "Listed once the lambda is online again - deploy it."
+        });
+    }
+
+    /// <summary>
+    /// Reads, publishes or takes down the source of a lambda.
+    /// </summary>
+    /// <remarks>
+    /// One tool, like the showcase, for the same reason: it is used rarely,
+    /// and every tool listed is read by every agent in every conversation.
+    /// </remarks>
+    private async ValueTask<JsonObject> OpenSourceAsync(JsonObject arguments, string origin)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        SourceSettings? source;
+
+        if (Flag(arguments, "remove") == true)
+        {
+            source = await sources.WithdrawAsync(privateKey);
+
+            return McpProtocol.Say(new
+            {
+                ok = true,
+                published = false,
+                stars = source?.Stars,
+                note = "Taken down: the page and the downloads are gone. Whatever somebody downloaded while it was published stays theirs under the license it came with."
+            });
+        }
+
+        var license = Text(arguments, "license");
+        var author = arguments.TryGetPropertyValue("author", out var named) && named != null ? named.ToString() : null;
+
+        source = license == null && author == null
+            ? await sources.GetAsync(privateKey)
+            : await sources.PublishAsync(privateKey, new SourceDraft(license, author));
+
+        if (source is not { Published: true })
+        {
+            return McpProtocol.Say(new
+            {
+                ok = true,
+                published = false,
+                stars = source?.Stars,
+                licenses = SourceLicenses.All.Select(l => new { l.Id, l.Name, kind = l.Kind.ToString() }),
+                note = "Not published. Pass license (and author, if the user named one) to publish it - only if the user asked for that."
+            });
+        }
+
+        var chosen = SourceLicenses.Find(source.License)!;
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            published = true,
+            license = chosen.Id,
+            licenseName = chosen.Name,
+            source.Author,
+            holder = SourceLicenses.Holder(source.Author, source.PublicKey),
+            source.Stars,
+            url = $"{origin}/source/{source.PublicKey}",
+            note = "Everything in every version is public now, older versions included - code, assets, documentation, tests and the one line each version says it changed. Never write keys, passwords or personal data into files: secrets and the database stay private."
         });
     }
 
@@ -1935,6 +2025,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             what = "The owner can list a lambda on the public showcase page with a title, a short description and a picture. The showcase tool does it.",
             when = "Only when the user asks. It is not part of building or deploying.",
             tone = ShowcaseLimits.Tone
+        },
+        openSource = new
+        {
+            what = "The owner can publish a lambda's source code at /source/{publicKey} under a license: anybody reads every version's code, front end, documentation and tests there, sees what each version changed, stars it, and downloads any version as the .NET project the export makes - with a LICENSE, and without the data. The open_source tool does it.",
+            when = "Only when the user asks. Ask which license if they did not say: MIT unless they want another.",
+            neverPublished = "The data - the database, the workspace and the values of the secrets - what the owner asked for in their words (the specification), and anything about who uses it: traffic, logs, visitors.",
+            thenPublic = "Once published, every version is public, the ones saved before included. Keys, passwords and personal data never go into files anyway; for a published lambda it matters at once.",
+            licenses = SourceLicenses.All.Select(l => new { l.Id, l.Name, kind = l.Kind.ToString() }),
+            startingFromOne = "A published source downloads as a .NET project, not as a lambda. To make a lambda of it: Project.cs holds the snippet as the body of Build() with the types after the class - put the body back into lambda.cs with those types below it; the other .cs files stay as they are; assets/ is what goes at the root of the version; docs/ and tests/ go into .lambda/docs/ and .lambda/tests/; Platform/, Program.cs, the .csproj and the Dockerfile are the platform's and stay behind. Keep to the terms of its LICENSE."
         },
         afterDeploying = new
         {

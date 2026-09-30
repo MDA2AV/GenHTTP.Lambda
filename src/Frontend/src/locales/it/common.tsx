@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: 'Caricamento…',
   loadingEditor: 'Caricamento dell’editor…',
   editorFailed: 'Impossibile caricare l’editor',
+  pageFailed: 'Impossibile caricare la pagina',
   editorFailedWhy: 'Di solito vuol dire che il sito è stato aggiornato mentre questa scheda era aperta.',
   reload: 'Ricarica la pagina',
   backToStart: 'Torna alla home',

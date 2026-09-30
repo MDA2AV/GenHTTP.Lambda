@@ -77,6 +77,25 @@ public sealed class FileSystemStorageService : IStorageService
             File.Delete(file);
         }
 
+        // and the project its published source was packed into, which no
+        // visitor can ask for any more
+        var packed = Path.Combine(Options.SourceDirectory, lambdaId.ToString());
+
+        if (Directory.Exists(packed))
+        {
+            foreach (var project in Directory.EnumerateFiles(packed, $"v{version}-*"))
+            {
+                try
+                {
+                    File.Delete(project);
+                }
+                catch (IOException)
+                {
+                    // being read right now: the cache lets go of it in time
+                }
+            }
+        }
+
         return ValueTask.CompletedTask;
     }
 
@@ -87,6 +106,8 @@ public sealed class FileSystemStorageService : IStorageService
         Remove(Path.Combine(Options.DatabaseDirectory, lambdaId.ToString()));
         Remove(GetAssetDirectory(lambdaId));
         Remove(Path.Combine(Options.FeatureDirectory, lambdaId.ToString()));
+        // what its published source was packed into, if it was published
+        Remove(Path.Combine(Options.SourceDirectory, lambdaId.ToString()));
 
         // the generated assembly stays: it cannot be unloaded and GenHTTP builds
         // its invocation code from the files behind the loaded assemblies, so

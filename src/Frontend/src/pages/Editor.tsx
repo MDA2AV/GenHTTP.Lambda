@@ -14,12 +14,13 @@ import {
   type Lambda,
   type LambdaFile,
   type LambdaSummary,
+  type SourceSettings,
   type VersionInfo,
 } from '../api';
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner, IconViewFull, IconViewSimple } from '../components/Icons';
+import { IconAlert, IconCheck, IconCode, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner, IconViewFull, IconViewSimple } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
@@ -37,6 +38,7 @@ import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
 import { ShowcaseTab } from '../control/ShowcaseTab';
 import { SimpleOverview } from '../control/SimpleOverview';
+import { SourceTab } from '../control/SourceTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
@@ -44,6 +46,7 @@ import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui'
 import { useView, type View } from '../control/view';
 import { SharedWordsContext } from '../control/words';
 import { useEditorT } from '../i18n';
+import { Link as SiteLink } from '../i18n/links';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 import { usePageMeta } from '../meta';
@@ -54,12 +57,12 @@ interface Props {
 
 type SectionId =
   | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs'
-  | 'showcase' | 'domain' | 'history';
+  | 'showcase' | 'source' | 'domain' | 'history';
 
 type GroupId = 'build' | 'program' | 'run' | 'sharing';
 
 /*
- * The full view's sections, in groups, because fourteen of them in one list
+ * The full view's sections, in groups, because fifteen of them in one list
  * is a list nobody reads: the groups are what somebody scans for, and the
  * section is found inside the one it belongs to. Every section stays one
  * click away - folding some behind pills in others would have made the list
@@ -68,20 +71,22 @@ type GroupId = 'build' | 'program' | 'run' | 'sharing';
  *
  * The overview and the documentation first, under no heading: how the
  * lambda is doing, and what it is and why - where anybody starts, a stranger
- * reading a demo included. Then where a change is made: Change and the
- * drafts, the code, and the tests that say whether a change works. Then the
- * program and what it keeps, side by side - the files of a version and the
- * data of the lambda are the two halves of what a lambda holds, and
- * somebody looking for one is best shown the other right beside it - with
- * the versions they belong to. Then how it runs. Then how people find it:
- * the showcase and the domain, set once and rarely looked at again.
+ * reading a demo included. Then how people find it and what they get to see
+ * of it: the showcase, its published source and its domain - right under
+ * what the lambda is, since those are what it is to everybody else. Then
+ * where a change is made: Change and the drafts, the code, and the tests
+ * that say whether a change works. Then the program and what it keeps, side
+ * by side - the files of a version and the data of the lambda are the two
+ * halves of what a lambda holds, and somebody looking for one is best shown
+ * the other right beside it - with the versions they belong to. Then how it
+ * runs.
  */
 const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: null, sections: ['overview', 'docs'] },
+  { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
   { id: 'build', sections: ['change', 'features', 'code', 'tests'] },
   { id: 'program', sections: ['files', 'data', 'versions'] },
   { id: 'run', sections: ['deployments', 'stats', 'logs'] },
-  { id: 'sharing', sections: ['showcase', 'domain'] },
 ];
 
 const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
@@ -111,8 +116,10 @@ const WRITABLE = ['code', 'docs', 'tests'];
  * history: the changes the app went through and a way back to any of them,
  * without the files to compare. The data is there once the app keeps any -
  * what it saved, and the keys it uses - and not while there is nothing in it.
+ * Publishing its code is there, next to the showcase: it is the owner's to
+ * decide whoever built the app, and said in the same words in both views.
  */
-const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 'history', 'data', 'showcase', 'domain'];
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 'history', 'data', 'showcase', 'source', 'domain'];
 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
@@ -165,6 +172,8 @@ export function Editor({ theme }: Props) {
   const [summary, setSummary] = useState<LambdaSummary | null>(null);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [features, setFeatures] = useState<Feature[] | null>(null);
+  /** Whether its code is published, for the link to where it is read. */
+  const [source, setSource] = useState<SourceSettings | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [rejection, setRejection] = useState<Rejection | null>(null);
@@ -225,12 +234,13 @@ export function Editor({ theme }: Props) {
   const refresh = useCallback(async () => {
     const mine = ++issued.current;
 
-    const [current, history, figures, open] = await Promise.all([
+    const [current, history, figures, open, published] = await Promise.all([
       api.get(privateKey),
       api.versions(privateKey),
       api.summary(privateKey).catch(() => null),
       // one that could not be read is not one that is gone: the last list stays
       api.feature.list(privateKey).catch(() => null),
+      api.source(privateKey).catch(() => undefined),
     ]);
 
     if (mine < applied.current) {
@@ -248,6 +258,10 @@ export function Editor({ theme }: Props) {
 
     if (figures) {
       setSummary(figures);
+    }
+
+    if (published !== undefined) {
+      setSource(published.source ?? null);
     }
   }, [privateKey]);
 
@@ -465,7 +479,7 @@ export function Editor({ theme }: Props) {
   // of them is nothing to look at until then
   const absent = (id: SectionId) =>
     (hidden && id === 'domain')
-    || (demo && (id === 'showcase' || id === 'change' || id === 'features'))
+    || (demo && (id === 'showcase' || id === 'source' || id === 'change' || id === 'features'))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
     // the simple view has the data once the app keeps any, or waits for a key
     || (id === 'data' && simple && section !== 'data' && !keeps)
@@ -773,6 +787,17 @@ export function Editor({ theme }: Props) {
           <div className="mt-3 space-y-0.5">
             {domainUrl && <Address url={domainUrl} live={live} primary />}
             <Address url={publicUrl} live={live} primary={!domainUrl} />
+            {/* where anybody reads its code, once its owner published it */}
+            {source?.published && (
+              <SiteLink
+                to={source.path}
+                target="_blank"
+                className="flex items-center gap-1.5 pt-0.5 text-xs text-slate-500 hover:text-accent-600 hover:underline dark:hover:text-accent-400"
+              >
+                <IconCode className="h-3.5 w-3.5" />
+                {t.openSource.sidebar} · {source.license.id}
+              </SiteLink>
+            )}
           </div>
 
           {/* not while the agent is at work: what it saved last may be a
@@ -987,6 +1012,8 @@ export function Editor({ theme }: Props) {
           <LogsTab control={control} />
         ) : section === 'showcase' && !demo ? (
           <ShowcaseTab control={control} />
+        ) : section === 'source' && !demo ? (
+          <SourceTab control={control} onChanged={() => refresh().catch(() => undefined)} />
         ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />
         ) : simple ? (

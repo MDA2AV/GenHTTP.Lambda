@@ -227,6 +227,42 @@ New functionality is developed in a **feature** (a *draft* in the editor):
   and a link to the GenHTTP documentation. A test builds the export of every
   demo; keep it passing.
 
+### Open source
+
+An owner may publish the code of a lambda at `/source/{publicKey}`, for anybody
+to read, star and download.
+
+- **Publishing is the owner's choice**: opt-in, never automatic, and only with
+  the private key - the editor's **Open source** section (both views, after the
+  showcase), `PUT …/source`, or the `open_source` tool, which agents use only
+  when the user asks. A license is picked from a short list (`SourceLicenses`),
+  **MIT by default**.
+- **What is published is the program and what is written about it**: every
+  version, as the export packs it, with a `LICENSE`. **Never the data** - no
+  database, no workspace, no secret's value; `ProjectPacker.Publish` takes no
+  database, keep it that way - and **never what only the owner may know**: the
+  specification (their words), the editor key, traffic, logs, visitors. A
+  version is described by its change line.
+- **Just the source.** No issues, pull requests, wikis or projects, and nothing
+  on `/source` acts on the lambda. Whoever wants to build on it downloads it;
+  `platform_guide` (`openSource.startingFromOne`) tells an agent how a download
+  becomes a lambda again.
+- `/source` is a part of the frontend of its own (`src/Frontend/src/source`),
+  in a frame of its own, not in the landing page's menu - but in the site's
+  colours, languages and addresses per language. Not prerendered: the server
+  names each page after its lambda, marks it up as `SoftwareSourceCode`, and
+  lists every published source in the sitemap. An unpublished source is not
+  found, the same as a key nobody has.
+- **The versions are the single source of truth.** A version is packed once
+  into `/data/sources/{lambda}` and served from there - a cache, held to
+  `LAMBDA_SOURCE_CACHE_BYTES`, keyed by everything it is packed with.
+- **Stars are a `POST` with a signed ticket** the page was handed at least a
+  second before, never a link; each address stars once, remembered in memory
+  as a keyed hash and never on disk. The count is in the database and survives
+  taking the source down.
+- The demos are published under MIT by the installation, being there to be
+  read and built on; nobody can change that.
+
 ### Demos
 
 The demos (`DemoCatalog`, files in `Resources/Templates`) exist to show agents
@@ -285,9 +321,10 @@ rules that matter:
   language.
 - Links inside a lambda's front end are relative, never `/lambda/...`: a lambda
   also answers at a domain of its own, and a feature at `/features/{key}/`.
-- The full view's sidebar is **grouped** (overview and documentation; build;
-  program and data; run; sharing). A new section joins the group it belongs to
-  rather than the end of the list.
+- The full view's sidebar is **grouped** (overview and documentation; sharing -
+  showcase, open source, domain - second, as the owner decided; build; program
+  and data; run). A new section joins the group it belongs to rather than the
+  end of the list.
 
 ### Frameworks: GenHTTP and Ioxide
 

@@ -117,6 +117,8 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         await ProvideDatabaseAsync(demo, cancellation);
 
+        await PublishSourceAsync(demo, cancellation);
+
         var wanted = TemplateCatalog.ForKey(demo.Id, demo.Key, demo: true);
 
         var lambda = await meta.GetAsync(demo.Key, cancellation);
@@ -291,6 +293,36 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         stores.Invalidate(id);
 
         logger.LogInformation("Gave the demo '{Demo}' a database", demo.Id);
+    }
+
+    /// <summary>
+    /// Publishes the source of a demo, under the license the catalogue gives it.
+    /// </summary>
+    /// <remarks>
+    /// A demo is there to be read and built on, which is exactly what a
+    /// published source is for - so the installation publishes its own, and
+    /// the listing of sources is never empty. Written here rather than through
+    /// the source service, which refuses a demo like everything else that
+    /// would change one; once published it is left as it is.
+    /// </remarks>
+    private async ValueTask PublishSourceAsync(LambdaDemo demo, CancellationToken cancellation)
+    {
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        var id = await database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).FirstAsync(cancellation);
+
+        if (await database.Sources.AnyAsync(s => s.LambdaId == id, cancellation))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+
+        database.Sources.Add(new SourceEntity { LambdaId = id, Published = true, License = demo.License, PublishedAt = now, Updated = now });
+
+        await database.SaveChangesAsync(cancellation);
+
+        logger.LogInformation("Published the source of the demo '{Demo}' under {License}", demo.Id, demo.License);
     }
 
     /// <summary>

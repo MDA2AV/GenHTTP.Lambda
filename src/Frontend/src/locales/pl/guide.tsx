@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websockety',
     limits: 'Czego nie da się zrobić',
     away: 'Zabierz kod ze sobą',
+    open: 'Publikowanie kodu',
     agents: 'Niech zrobi to agent',
   },
 
@@ -117,8 +118,8 @@ export const guide: Messages['guide'] = {
   sections: (k) => (
     <>
       Każda sekcja działa tak samo: tytuł, {k.b('ⓘ')} z wyjaśnieniem, akcje po prawej i – jeśli sekcja ma kilka widoków
-      – rząd zakładek pod spodem. W sekcji {k.b('Kod')} zakładki to pliki. Widok pełny zbiera sekcje w grupy: gdzie
-      powstają zmiany, program i jego dane, jak lambda działa i jak ludzie do niej trafiają.
+      – rząd zakładek pod spodem. W sekcji {k.b('Kod')} zakładki to pliki. Widok pełny zbiera sekcje w grupy: jak
+      ludzie trafiają do lambdy, gdzie powstają zmiany, program i jego dane oraz jak lambda działa.
     </>
   ),
   editorAside:
@@ -399,6 +400,25 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Warto to wiedzieć, zanim cokolwiek tu zbudujesz: to, co piszesz, należy do ciebie i możesz to zabrać w całości. To, że kod działa na tej maszynie, w niczym go do niej nie przywiązuje.',
+
+  open: (k) => (
+    <>
+      Jeśli to, co zbudujesz, może pomóc komuś innemu, opublikuj kod: otwórz sekcję {k.b('Open source')} w centrum
+      sterowania, wybierz licencję – MIT, chyba że wolisz inną – i włącz publikację. Kod dostanie własną stronę wśród{' '}
+      {k.link('/source', 'aplikacji open source')}, gdzie każdy może go przeczytać, dać mu gwiazdkę i pobrać dowolną
+      wersję jako ten sam projekt, który daje {k.b('Pobierz jako projekt .NET')}, razem z licencją.
+    </>
+  ),
+  open2: () => (
+    <>
+      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami i zmianą, którą wprowadziła.
+      To, co aplikacja przechowuje – jej rekordy, zapisane pliki, wartości kluczy i haseł – nigdy nie jest publikowane,
+      podobnie jak twoje prośby, sformułowane twoimi słowami, i to, kto korzysta z aplikacji. Po wyłączeniu strona
+      znika; gwiazdki zostają zachowane na wypadek ponownej publikacji.
+    </>
+  ),
+  openAside:
+    'Wszystko, co jest w kodzie, staje się publiczne, łącznie z wcześniejszymi wersjami. Miejsce klucza czy hasła jest wśród kluczy i haseł w sekcji Dane, nigdy w kodzie – opublikowanym czy nie.',
 
   agents: (k) => (
     <>

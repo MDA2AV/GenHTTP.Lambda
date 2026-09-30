@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: 'Chargement…',
   loadingEditor: 'Chargement de l’éditeur…',
   editorFailed: 'Impossible de charger l’éditeur',
+  pageFailed: 'Impossible de charger la page',
   editorFailedWhy: 'En général, c’est que le site a été mis à jour pendant que cet onglet était ouvert.',
   reload: 'Recharger la page',
   backToStart: 'Retour à l’accueil',

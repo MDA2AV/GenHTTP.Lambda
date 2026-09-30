@@ -27,6 +27,7 @@ export const guide = {
     sockets: 'Websockets',
     limits: 'What it will not let you do',
     away: 'Taking it away',
+    open: 'Publishing the code',
     agents: 'Letting an agent do it',
   },
 
@@ -124,8 +125,8 @@ export const guide = {
     <>
       Every section works the same way: its title, an {k.b('ⓘ')} that explains it, its actions on the right, and -
       where it has more than one view - a row of pills underneath. The pills of the code are its files. The full
-      view gathers the sections in groups: where a change is made, the program and its data, how it runs, and how
-      people find it.
+      view gathers the sections in groups: how people find it, where a change is made, the program and its data,
+      and how it runs.
     </>
   )) as Text,
   editorAside:
@@ -408,6 +409,25 @@ export const guide = {
   )) as Text,
   awayAside:
     'Worth knowing before you build anything here: what you write is yours and it leaves whole. Nothing about running it on this machine locks it to this machine.',
+
+  open: ((k) => (
+    <>
+      If what you built could help somebody else, publish its code: open {k.b('Open source')} in the control center,
+      pick a license - MIT, unless you want another - and switch it on. Its code gets a page of its own among the{' '}
+      {k.link('/source', 'open source apps')}, where anybody can read it, star it, and download any version as the
+      same project {k.b('Download')} gives you, with the license beside it.
+    </>
+  )) as Text,
+  open2: (() => (
+    <>
+      Every version is published, the earlier ones too, with its documentation, its tests and the change each one
+      made. What the app keeps is never published - its records, the files it saved, the values of its keys and
+      passwords - and neither is what you asked for in your own words, or who uses the app. Switch it off and the page
+      is gone; its stars are kept for when you publish it again.
+    </>
+  )) as Text,
+  openAside:
+    'Everything in the code becomes public, the earlier versions included. A key or a password belongs with the keys and passwords under Data, never in the code - published or not.',
 
   agents: ((k) => (
     <>

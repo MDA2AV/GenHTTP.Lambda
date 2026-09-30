@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'WebSockets',
     limits: 'Ce que vous ne pouvez pas faire',
     away: 'Repartir avec votre code',
+    open: 'Publier le code',
     agents: 'Laisser faire un agent',
   },
 
@@ -120,8 +121,8 @@ export const guide: Messages['guide'] = {
     <>
       Chaque section fonctionne de la même façon : son titre, un {k.b('ⓘ')} qui l’explique, ses actions à droite et, quand
       elle a plusieurs vues, une rangée d’onglets en dessous. Pour le code, les onglets sont ses fichiers. La vue
-      complète range les sections en groupes : là où se fait une modification, le programme et ses données, son
-      fonctionnement, et la façon dont on la trouve.
+      complète range les sections en groupes : la façon dont on la trouve, là où se fait une modification, le
+      programme et ses données, et son fonctionnement.
     </>
   ),
   editorAside:
@@ -411,6 +412,27 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Bon à savoir avant de construire quoi que ce soit ici : ce que vous écrivez vous appartient, et repart avec vous en entier. Le faire tourner sur cette machine ne vous enferme pas sur cette machine.',
+
+  open: (k) => (
+    <>
+      Si ce que vous avez construit peut servir à d’autres, publiez son code : ouvrez {k.b('Open source')} dans le
+      tableau de bord, choisissez une licence – MIT, sauf si vous en voulez une autre – et activez la publication. Le
+      code obtient sa propre page parmi les {k.link('/source', 'apps open source')}, où n’importe qui peut le lire, lui
+      donner une étoile et télécharger n’importe quelle version sous la forme du même projet que{' '}
+      {k.b('Télécharger en projet .NET')}, licence comprise.
+    </>
+  ),
+  open2: () => (
+    <>
+      Chaque version est publiée, les plus anciennes aussi, avec sa documentation, ses tests et la modification qu’elle
+      a apportée. Ce que garde l’application n’est jamais publié – ses enregistrements, les fichiers qu’elle a
+      enregistrés, les valeurs de ses clés et mots de passe –, pas plus que ce que vous avez demandé avec vos propres
+      mots, ni qui utilise l’application. Désactivez la publication et la page disparaît ; ses étoiles sont conservées
+      pour le jour où vous publierez à nouveau le code.
+    </>
+  ),
+  openAside:
+    'Tout ce qui est dans le code devient public, les versions précédentes comprises. Une clé ou un mot de passe a sa place avec les clés et mots de passe, sous Données, jamais dans le code – publié ou non.',
 
   agents: (k) => (
     <>

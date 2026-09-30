@@ -1345,6 +1345,79 @@ public sealed class McpTests
         Assert.Contains("every version", Describe("list_files") + Describe("upload_file"));
     }
 
+    [TestMethod]
+    public async Task AnAgentPublishesASourceOnlyWhenItIsAsked()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["publicKey"] = "shared" }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        // asked with only the key, it says how things are and changes nothing
+        var state = Structured(await CallToolAsync(fixture, "open_source", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.IsFalse(state["published"]!.GetValue<bool>());
+        Assert.Contains("only if the user asked", state["note"]!.GetValue<string>());
+
+        using (var nothing = await fixture.GetAsync("/api/v1/sources/shared"))
+        {
+            Assert.AreEqual(HttpStatusCode.NotFound, nothing.StatusCode);
+        }
+
+        var published = Structured(await CallToolAsync(fixture, "open_source", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["license"] = "apache-2.0",
+            ["author"] = "Jane Doe"
+        }));
+
+        Assert.IsTrue(published["published"]!.GetValue<bool>());
+        Assert.AreEqual("Apache-2.0", published["license"]!.GetValue<string>(), "the identifier however it was capitalised");
+        Assert.AreEqual("Jane Doe", published["holder"]!.GetValue<string>());
+        Assert.EndsWith("/source/shared", published["url"]!.GetValue<string>());
+        Assert.Contains("never write keys", published["note"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase);
+
+        // and from then on, whoever reads the lambda is told its files are public
+        var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.AreEqual("Apache-2.0", read["openSource"]!["license"]!.GetValue<string>());
+        Assert.Contains("public", read["openSource"]!["note"]!.GetValue<string>());
+
+        var wrong = await CallToolAsync(fixture, "open_source", new JsonObject { ["privateKey"] = privateKey, ["license"] = "proprietary" });
+
+        Assert.IsTrue(wrong["result"]!["isError"]!.GetValue<bool>());
+
+        var removed = Structured(await CallToolAsync(fixture, "open_source", new JsonObject { ["privateKey"] = privateKey, ["remove"] = true }));
+
+        Assert.IsFalse(removed["published"]!.GetValue<bool>());
+
+        var after = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
+
+        Assert.IsNull(after["openSource"]);
+    }
+
+    [TestMethod]
+    public async Task TheGuideSaysWhatAPublishedSourceHoldsAndWhatItNeverDoes()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        var open = guide["openSource"]!;
+
+        Assert.Contains("Only when the user asks", open["when"]!.GetValue<string>());
+        Assert.Contains("database", open["neverPublished"]!.GetValue<string>());
+        Assert.Contains("lambda.cs", open["startingFromOne"]!.GetValue<string>(), "how an agent makes a lambda of a download");
+
+        var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
+
+        var tool = tools.Single(t => t!["name"]!.GetValue<string>() == "open_source")!;
+
+        Assert.Contains("never its data", tool["description"]!.GetValue<string>());
+        Assert.IsFalse(tool["annotations"]!["readOnlyHint"]!.GetValue<bool>());
+    }
+
     #region Plumbing
 
     private static JsonObject Structured(JsonObject answer) => (JsonObject)answer["result"]!["structuredContent"]!;

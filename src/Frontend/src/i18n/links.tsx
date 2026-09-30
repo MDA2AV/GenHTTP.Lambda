@@ -15,6 +15,13 @@ import { inLanguage, type Language } from './languages';
 const LOCALIZED = new Set(Object.keys(pages));
 
 /**
+ * Whether a path is a public page in every language: one of the build's, or
+ * the page of a published source - "/source/quiz" and whatever is below it,
+ * which the build cannot list.
+ */
+export const isLocalized = (path: string) => LOCALIZED.has(path) || path.startsWith('/source/');
+
+/**
  * A link to a public page, in the given language: "/build" is "/de/build"
  * in German, and "/#agents" is "/de#agents". Anything else - the editor, the
  * lambdas, an address elsewhere - has no language, and stays as it is.
@@ -28,7 +35,7 @@ export function localize(language: Language, to: string): string {
   const path = cut < 0 ? to : to.slice(0, cut);
   const rest = cut < 0 ? '' : to.slice(cut);
 
-  return LOCALIZED.has(path) ? inLanguage(language, path) + rest : to;
+  return isLocalized(path) ? inLanguage(language, path) + rest : to;
 }
 
 /** Localizes links for the language of the page being looked at. */

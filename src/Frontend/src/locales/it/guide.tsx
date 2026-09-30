@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'WebSocket',
     limits: 'Cosa non puoi fare',
     away: 'Portarla via',
+    open: 'Pubblicare il codice',
     agents: 'Lasciar fare a un agente',
   },
 
@@ -121,7 +122,7 @@ export const guide: Messages['guide'] = {
     <>
       Ogni sezione funziona allo stesso modo: il titolo, il pulsante {k.b('ⓘ')} che la spiega, le azioni a destra e,
       dove ci sono più viste, una fila di schede sotto. Nel codice, le schede sono i file. La vista completa raccoglie
-      le sezioni in gruppi: dove si fa una modifica, il programma e i suoi dati, come gira e come la gente la trova.
+      le sezioni in gruppi: come la gente la trova, dove si fa una modifica, il programma e i suoi dati, e come gira.
     </>
   ),
   editorAside:
@@ -405,6 +406,26 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Meglio saperlo prima di creare qualsiasi cosa qui: quello che scrivi è tuo e te lo porti via intero. Farlo girare su questo server non ti lega a questo server.',
+
+  open: (k) => (
+    <>
+      Se quello che hai creato può servire a qualcun altro, pubblicane il codice: apri {k.b('Open source')} nel
+      pannello di controllo, scegli una licenza (MIT, se non ne vuoi un’altra) e attiva l’opzione. Il codice ottiene una
+      pagina tutta sua tra le {k.link('/source', 'app open source')}, dove chiunque può leggerlo, dargli una stella e
+      scaricare qualsiasi versione come lo stesso progetto che ti dà {k.b('Scarica come progetto .NET')}, con accanto la
+      licenza.
+    </>
+  ),
+  open2: () => (
+    <>
+      Viene pubblicata ogni versione, anche quelle precedenti, con la sua documentazione, i suoi test e la modifica che
+      ha fatto. Quello che l’app conserva non viene mai pubblicato (le sue voci, i file che ha salvato, i valori delle
+      sue chiavi e password), e nemmeno quello che hai chiesto con le tue parole o chi usa l’app. Se disattivi
+      l’opzione, la pagina sparisce; le sue stelle restano, per quando pubblicherai di nuovo il codice.
+    </>
+  ),
+  openAside:
+    'Tutto quello che c’è nel codice diventa pubblico, comprese le versioni precedenti. Una chiave o una password va tra le chiavi e password in Dati, mai nel codice, che sia pubblicato o no.',
 
   agents: (k) => (
     <>

@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websockets',
     limits: 'Was nicht erlaubt ist',
     away: 'Alles mitnehmen',
+    open: 'Den Code veröffentlichen',
     agents: 'Mit einem Agenten arbeiten',
   },
 
@@ -120,8 +121,8 @@ export const guide: Messages['guide'] = {
     <>
       Alle Bereiche funktionieren gleich: oben der Titel, ein {k.b('ⓘ')} mit Erklärung, rechts die Aktionen und – wo es
       mehrere Ansichten gibt – darunter eine Reihe von Tabs. Beim Code sind die Tabs seine Dateien. Die vollständige
-      Ansicht fasst die Bereiche in Gruppen zusammen: wo eine Änderung entsteht, das Programm und seine Daten, wie es
-      läuft und wie Leute es finden.
+      Ansicht fasst die Bereiche in Gruppen zusammen: wie Leute es finden, wo eine Änderung entsteht, das Programm und
+      seine Daten und wie es läuft.
     </>
   ),
   editorAside:
@@ -412,6 +413,27 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Gut zu wissen, bevor Sie hier etwas bauen: Was Sie schreiben, gehört Ihnen, und Sie können es komplett mitnehmen. Dass es auf unserem Server läuft, bindet es nicht an unseren Server.',
+
+  open: (k) => (
+    <>
+      Wenn das, was Sie gebaut haben, anderen helfen könnte, veröffentlichen Sie den Code: Öffnen Sie im
+      Kontrollzentrum {k.b('Open Source')}, wählen Sie eine Lizenz – MIT, sofern Sie keine andere möchten – und schalten
+      Sie die Veröffentlichung ein. Der Code bekommt eine eigene Seite unter den{' '}
+      {k.link('/source', 'Open-Source-Apps')}. Dort kann ihn jeder lesen, mit einem Stern versehen und jede Version als
+      dasselbe Projekt herunterladen, das Ihnen {k.b('Als .NET-Projekt herunterladen')} liefert – mit der Lizenz daneben.
+    </>
+  ),
+  open2: () => (
+    <>
+      Veröffentlicht wird jede Version, auch die früheren, mit ihrer Dokumentation, ihren Tests und der Änderung, die
+      sie gemacht hat. Was die App aufbewahrt, wird nie veröffentlicht – ihre Datensätze, die Dateien, die sie
+      gespeichert hat, die Werte ihrer Schlüssel und Passwörter –, ebenso wenig wie das, worum Sie in Ihren eigenen
+      Worten gebeten haben, oder wer die App nutzt. Schalten Sie die Veröffentlichung aus, ist die Seite weg; ihre
+      Sterne bleiben erhalten, falls Sie den Code wieder veröffentlichen.
+    </>
+  ),
+  openAside:
+    'Alles im Code wird öffentlich, auch die früheren Versionen. Ein Schlüssel oder Passwort gehört zu den Schlüsseln und Passwörtern unter Daten, nie in den Code – ob veröffentlicht oder nicht.',
 
   agents: (k) => (
     <>

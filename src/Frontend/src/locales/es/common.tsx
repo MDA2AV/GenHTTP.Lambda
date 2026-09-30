@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: 'Cargando…',
   loadingEditor: 'Cargando el editor…',
   editorFailed: 'No se pudo cargar el editor',
+  pageFailed: 'No se pudo cargar la página',
   editorFailedWhy: 'Suele pasar cuando el sitio se actualiza mientras tienes esta pestaña abierta.',
   reload: 'Recargar la página',
   backToStart: 'Volver al inicio',

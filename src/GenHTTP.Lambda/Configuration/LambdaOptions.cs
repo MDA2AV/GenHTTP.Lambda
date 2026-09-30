@@ -250,6 +250,19 @@ public sealed record LambdaOptions
     public int MaxFeatures { get; init; } = 10;
 
     /// <summary>
+    /// How much room the published sources may take on disk, packed.
+    /// </summary>
+    /// <remarks>
+    /// A published source is packed into a project once per version and kept,
+    /// so that it is not packed again for every visitor. Anybody may ask for
+    /// any version of it, though, and a premium lambda may ship a hundred
+    /// megabytes of assets fifty times over - so the cache is held to this,
+    /// and the version read least recently is packed again should somebody
+    /// ask for it once more.
+    /// </remarks>
+    public long SourceCacheBytes { get; init; } = 2048L * 1024 * 1024;
+
+    /// <summary>
     /// Requests per second a single client may send to the lambda routes.
     /// </summary>
     public int RateLimit { get; init; } = 5000;
@@ -516,6 +529,13 @@ public sealed record LambdaOptions
     public string FeatureDirectory => Path.Combine(DataDirectory, "features");
 
     /// <summary>
+    /// Where the published sources are kept packed, one folder per lambda and
+    /// a project per version - a cache, made again from the versions whenever
+    /// something in it is missing.
+    /// </summary>
+    public string SourceDirectory => Path.Combine(DataDirectory, "sources");
+
+    /// <summary>
     /// Where the key the secrets are sealed with is kept, when
     /// <see cref="SecretsKey"/> does not give one.
     /// </summary>
@@ -593,6 +613,7 @@ public sealed record LambdaOptions
             MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             MaxFeatures = ReadInt("LAMBDA_MAX_FEATURES", defaults.MaxFeatures),
+            SourceCacheBytes = ReadLong("LAMBDA_SOURCE_CACHE_BYTES", defaults.SourceCacheBytes),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),

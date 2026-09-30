@@ -13,6 +13,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Source;
 
 namespace GenHTTP.Lambda.Services.Deployment;
 
@@ -39,6 +40,11 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// A lambda with a database takes it along: what the app kept is written into
 /// database/, and the project references SQLite - and Evolve, where the code
 /// migrates with it. One without a database references neither.
+///
+/// The same project is what a lambda whose owner published its source is read
+/// as on /source, and downloaded as from there - without the database, which
+/// is data and never published, and with the license it is published under
+/// in LICENSE, where every project keeps it.
 /// </remarks>
 public static class ProjectPacker
 {
@@ -111,10 +117,32 @@ public static class ProjectPacker
     }
 
     /// <summary>
+    /// Writes the lambda out as the project its published source is read and
+    /// downloaded as: its program and what is written about it, with the
+    /// license it is published under.
+    /// </summary>
+    /// <remarks>
+    /// Apart from <see cref="Pack(ExportedLambda, IReadOnlyList{LambdaFile}, Stream, string?)" />
+    /// on purpose, and without a database to pass: the export is its owner's
+    /// and takes the records along, a published source is everybody's and
+    /// never holds data - not the database, not the workspace, not a secret's
+    /// value. What cannot be handed in cannot be let out by mistake.
+    /// </remarks>
+    public static void Publish(ExportedLambda lambda, IReadOnlyList<LambdaFile> files, Stream target)
+    {
+        if (lambda.License == null)
+        {
+            throw new ArgumentException("A published source is packed with the license it is published under.", nameof(lambda));
+        }
+
+        Pack(lambda, files, target, database: null);
+    }
+
+    /// <summary>
     /// Writes the lambda out as a zipped project, into the given stream as it
     /// goes - so a database of a gigabyte is streamed, not held.
     /// </summary>
-    /// <param name="database">A plain copy of its database, to carry along</param>
+    /// <param name="database">A plain copy of its database, to carry along - its owner's export only, see <see cref="Publish" /></param>
     public static void Pack(ExportedLambda lambda, IReadOnlyList<LambdaFile> files, Stream target, string? database = null)
     {
         var name = Identifier(lambda.PublicKey);
@@ -172,6 +200,11 @@ public static class ProjectPacker
             if (database != null)
             {
                 WriteFile(archive, $"{name}/{DatabaseFile}", database);
+            }
+
+            if (lambda.License is { } license)
+            {
+                Write(archive, $"{name}/LICENSE", SourceLicenses.Text(license.License, lambda.Saved.Year, license.Holder));
             }
 
             // the aspnet image rather than runtime, although nothing here uses
@@ -255,7 +288,23 @@ public static class ProjectPacker
             facts.Add(("Change", OneLine(lambda.Change)));
         }
 
-        facts.Add(("Exported", Day(lambda.Exported)));
+        if (lambda.License is { } license)
+        {
+            facts.Add(("License", $"{license.License.Id}, see LICENSE"));
+
+            if (license.Page != null)
+            {
+                facts.Add(("Source", license.Page));
+            }
+        }
+
+        // a published source is packed once per version and read by anybody,
+        // so it carries nothing that changes from one day to the next
+        if (lambda.Exported is { } exported)
+        {
+            facts.Add(("Exported", Day(exported)));
+        }
+
         facts.Add(("GenHTTP", FrameworkVersion));
 
         var width = facts.Max(f => f.Key.Length) + 2;
@@ -562,6 +611,12 @@ public static class ProjectPacker
     #region Plumbing
 
     /// <summary>
+    /// The folder the project of a lambda is packed into, which is also the
+    /// name of the project.
+    /// </summary>
+    public static string Folder(string publicKey) => Identifier(publicKey);
+
+    /// <summary>
     /// A name that is legal as both a folder and a project.
     /// </summary>
     private static string Identifier(string publicKey)
@@ -650,7 +705,15 @@ public static class ProjectPacker
 /// <param name="Saved">When that version was saved</param>
 /// <param name="Change">What that version changed, in a line</param>
 /// <param name="Address">Where the lambda is online, if the installation knows its own address</param>
-/// <param name="Exported">When the export was made</param>
+/// <param name="Exported">When the export was made, or nothing for a project packed to be published</param>
 /// <param name="Secrets">The names of the secrets it keeps or reads, which become environment variables - never their values</param>
-public sealed record ExportedLambda(string PublicKey, int Version, DateTime Saved, string? Change, string? Address, DateTime Exported,
-                                    IReadOnlyList<string>? Secrets = null);
+/// <param name="License">The license its source is published under, if its owner published it</param>
+public sealed record ExportedLambda(string PublicKey, int Version, DateTime Saved, string? Change, string? Address, DateTime? Exported,
+                                    IReadOnlyList<string>? Secrets = null, ExportedLicense? License = null);
+
+/// <summary>
+/// The license a packed project is under, written into its LICENSE.
+/// </summary>
+/// <param name="Holder">Who holds the copyright, as the license names them</param>
+/// <param name="Page">Where the source is published, if the installation knows its own address</param>
+public sealed record ExportedLicense(SourceLicense License, string Holder, string? Page);

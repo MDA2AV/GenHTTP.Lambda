@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: '불러오는 중…',
   loadingEditor: '에디터를 불러오는 중…',
   editorFailed: '에디터를 불러오지 못했어요',
+  pageFailed: '페이지를 불러오지 못했어요',
   editorFailedWhy: '보통 이 탭을 열어 둔 사이에 사이트가 업데이트돼서 그래요.',
   reload: '새로고침',
   backToStart: '처음으로',

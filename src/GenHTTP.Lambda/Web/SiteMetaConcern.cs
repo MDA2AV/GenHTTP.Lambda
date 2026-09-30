@@ -5,6 +5,9 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Source;
+
 using GenHTTP.Modules.IO;
 
 namespace GenHTTP.Lambda.Web;
@@ -15,9 +18,11 @@ namespace GenHTTP.Lambda.Web;
 /// AI catalog, and the index page named
 /// as the public page that was asked for, in the language its address names,
 /// with that page's content already in it. A public page asked for without a
-/// language is sent on to the one the visitor prefers. The editor and the
-/// administration are handed the index page for the client to draw, the
-/// bundle's files go through, and any other address is not found.
+/// language is sent on to the one the visitor prefers. The page of a published
+/// source is named after the lambda, and not found where its source is not
+/// published. The editor and the administration are handed the index page for
+/// the client to draw, the bundle's files go through, and any other address is
+/// not found.
 /// </summary>
 public sealed class SiteMetaConcern : IConcern
 {
@@ -32,15 +37,18 @@ public sealed class SiteMetaConcern : IConcern
 
     private Func<ValueTask<string>> Index { get; }
 
+    private ISourceService Sources { get; }
+
     #endregion
 
     #region Initialization
 
-    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, Func<ValueTask<string>> index)
+    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<ValueTask<string>> index)
     {
         Content = content;
         Meta = meta;
         Prerender = prerender;
+        Sources = sources;
         Index = index;
     }
 
@@ -63,7 +71,7 @@ public sealed class SiteMetaConcern : IConcern
                 return Answer(request, Meta.Robots(), "text/plain; charset=utf-8");
 
             case "/sitemap.xml":
-                var sitemap = Meta.Sitemap();
+                var sitemap = Meta.Sitemap(await Sources.ListAddressesAsync());
 
                 // without a public address there is nothing to list pages
                 // under, and the index page is not a sitemap either
@@ -87,6 +95,11 @@ public sealed class SiteMetaConcern : IConcern
             markup = await Prerender.RenderAsync(markup, page, request);
 
             return Answer(request, markup, "text/html; charset=utf-8");
+        }
+
+        if (SourcePath(path) is { } source)
+        {
+            return await SourceAsync(request, source.Language, source.Key, source.Path);
         }
 
         if (ToLanguage(request, path) is { } redirect)
@@ -163,6 +176,77 @@ public sealed class SiteMetaConcern : IConcern
     }
 
     /// <summary>
+    /// The page of a published source - its files, its documentation and its
+    /// history below it - named after the lambda in the language its address
+    /// names, or sent on to a language where it names none.
+    /// </summary>
+    /// <remarks>
+    /// Not rendered like the pages of the build, since the build cannot know
+    /// which sources there are: named, described and marked up as source code
+    /// here, and drawn by the client. A source that is not published is not
+    /// found - asked for, it looks the same as a key nobody has.
+    /// </remarks>
+    private async ValueTask<IResponse> SourceAsync(IRequest request, string? language, string key, string path)
+    {
+        if (language == null)
+        {
+            var headers = request.Header.Headers;
+
+            var preferred = SiteLanguages.Negotiate(headers.GetCookie(SiteLanguages.Cookie), headers.GetEntry("Accept-Language"));
+
+            return request.Respond()
+                          .Status(ResponseStatus.Found)
+                          .Header("Location", SiteLanguages.In(preferred, path) + Query(request))
+                          .Header("Vary", "Accept-Language, Cookie")
+                          .Build();
+        }
+
+        var project = await Sources.GetProjectAsync(key);
+
+        if (project == null)
+        {
+            return request.Respond()
+                          .Status(ResponseStatus.NotFound)
+                          .Content(Resource.FromString(await Index()).Type(new ContentType("text/html; charset=utf-8")).Build())
+                          .Build();
+        }
+
+        var entry = project.Entry;
+
+        var name = entry.Title ?? entry.PublicKey;
+
+        var about = entry.About ?? entry.Description;
+
+        var image = entry.Picture is { } picture ? $"/api/v1/showcases/{entry.PublicKey}/image?v={picture.Ticks}" : null;
+
+        var page = Meta.Source(language, path, name, about, image) with { ImageType = image != null ? entry.PictureType : null };
+
+        var schema = new SourceSchema(name, about, SourceLicenses.Find(entry.License)?.Url ?? entry.License, project.Author, entry.Updated,
+                                      entry.Online ? LambdaDescription.Address(entry.PublicKey, entry.Tier.ToString(), entry.Domain) : null);
+
+        return Answer(request, Meta.RenderSource(await Index(), page, schema), "text/html; charset=utf-8");
+    }
+
+    /// <summary>
+    /// The page of a published source a path is below, and the language it
+    /// names: "/de/source/quiz/docs" is the German page of quiz, "/source/quiz"
+    /// the one in no language - or nothing, for any other path.
+    /// </summary>
+    private static (string? Language, string Key, string Path)? SourcePath(string path)
+    {
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        var offset = segments.Length > 0 && SiteLanguages.IsLanguage(segments[0]) ? 1 : 0;
+
+        if (segments.Length < offset + 2 || segments[offset] != "source")
+        {
+            return null;
+        }
+
+        return (offset == 1 ? segments[0] : null, segments[offset + 1], "/" + string.Join('/', segments.Skip(offset)));
+    }
+
+    /// <summary>
     /// The query of the request, to be passed along with it.
     /// </summary>
     private static string Query(IRequest request)
@@ -203,9 +287,9 @@ public sealed class SiteMetaConcern : IConcern
 /// <summary>
 /// Builds a <see cref="SiteMetaConcern" /> for a handler.
 /// </summary>
-public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, Func<ValueTask<string>> index) : IConcernBuilder
+public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<ValueTask<string>> index) : IConcernBuilder
 {
 
-    public IConcern Build(IHandler content) => new SiteMetaConcern(content, meta, prerender, index);
+    public IConcern Build(IHandler content) => new SiteMetaConcern(content, meta, prerender, sources, index);
 
 }

@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: 'Ładowanie…',
   loadingEditor: 'Ładowanie edytora…',
   editorFailed: 'Nie udało się załadować edytora',
+  pageFailed: 'Nie udało się załadować strony',
   editorFailedWhy: 'Zwykle oznacza to, że strona została zaktualizowana, gdy ta karta była otwarta.',
   reload: 'Odśwież stronę',
   backToStart: 'Wróć na stronę główną',
