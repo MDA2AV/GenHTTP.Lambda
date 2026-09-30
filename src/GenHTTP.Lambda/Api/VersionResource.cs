@@ -11,6 +11,8 @@ using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -24,7 +26,7 @@ namespace GenHTTP.Lambda.Api;
 /// Every way of storing one takes an optional specification and change: what
 /// the user wanted and what was done about it, which the code alone cannot say.
 /// </remarks>
-public sealed class VersionResource(IMetaService meta, LambdaOptions options)
+public sealed class VersionResource(IMetaService meta, LambdaOptions options, ILogger<VersionResource> logger)
 {
 
     /// <summary>
@@ -66,6 +68,8 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
         var content = await meta.GetVersionAsync(privateKey, version);
 
         var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code));
+
+        logger.LogInformation("Downloaded version {Version} of lambda {Lambda} as a zip archive", version, lambda.PublicKey);
 
         return request.Respond()
                       .Content(new BinaryContent(zip, "application/zip"))
@@ -148,11 +152,17 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
 
         var version = await meta.SaveAsync(privateKey, Serialize(files), note);
 
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
+
+        logger.LogInformation("Saved version {Version} of lambda {Lambda} with {Files} file(s)", version.Version, publicKey, files!.Count);
+
         DeploymentOutcomeResponse? deployment = null;
 
         if (deploy == true)
         {
             var result = await meta.DeployAsync(privateKey, version.Version, VersionOrigins.Api);
+
+            logger.Deployed(result, publicKey, version.Version);
 
             deployment = new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
         }

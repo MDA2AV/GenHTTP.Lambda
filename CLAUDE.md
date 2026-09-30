@@ -94,7 +94,10 @@ Give both a good experience. Concretely:
 A lambda has a **public key** (part of its URL, may be changed) and a **private
 key** (the editor link). Whoever holds the private key owns the lambda, and
 **editing is only possible with it**. The private key is shown only to the
-creator. It travels in a brief, never in a log line. There are no accounts.
+creator. It travels in a brief, never in a log line the platform writes about
+what was done. The request line is the exception, decided by the owner: it logs
+the path as requested, so `/api/v1/lambdas/{privateKey}/…` carries the key, and
+that is fine - the log is behind the admin token. There are no accounts.
 
 The one place that authenticates differently is `/admin`: `X-Admin-Token`, see
 the README.
@@ -343,6 +346,25 @@ rules that matter:
   showcase, open source, domain - second, as the owner decided; build; program
   and data; run). A new section joins the group it belongs to rather than the
   end of the list.
+
+### Logging what was done
+
+Every API call that changes something, and every MCP tool call, logs at
+information level **what it did** once it has done it - the operation and its
+arguments in words ("Published the source of lambda quiz under MIT"), not the
+request. A new endpoint or tool gets its line in the same change; the helpers
+are in `OperationLog`.
+
+- A lambda is named by its **public key** (`PublicKeyOfAsync`), a feature by
+  its **name** (`NameOfAsync`). Never the editor key, never a feature's key.
+- Arguments that are sensitive or long are left out: secret values (the name
+  only), code, file contents, pictures, specifications, descriptions.
+- **The one exception: the prompts of the build agent** - on `/build` and in the
+  editor's Change section - are logged in full, because the owner wants to know
+  what people ask for. The privacy page says so; keep it saying so.
+- API reads are not logged (the editor polls), apart from exports and
+  downloads; an agent's reads through MCP are.
+- A refused request is not logged here - its request line has the status.
 
 ### Frameworks: GenHTTP and Ioxide
 

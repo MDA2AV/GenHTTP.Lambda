@@ -40,7 +40,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'Der Agent speichert Ihre Anfrage – oft in eigenen Worten – als Notiz zu der Version, die er schreibt. Die ersten paar hundert Zeichen davon landen im Log des Build-Dienstes, das ebenfalls eine feste Größe hat. Nutzen Sie stattdessen Ihren eigenen Agenten, etwa Claude oder Claude Code, geht das, was Sie ihm sagen, an dessen Anbieter und nicht an uns. Wir bekommen nur den Code und die Notizen, die er hierher schickt.',
+      'Der Agent speichert Ihre Anfrage – oft in eigenen Worten – als Notiz zu der Version, die er schreibt. Die Anfrage selbst wird vollständig in das Log des Servers geschrieben, ihre ersten paar hundert Zeichen zusätzlich in das Log des Build-Dienstes; beide haben ebenfalls eine feste Größe. Nutzen Sie stattdessen Ihren eigenen Agenten, etwa Claude oder Claude Code, geht das, was Sie ihm sagen, an dessen Anbieter und nicht an uns. Wir bekommen nur den Code und die Notizen, die er hierher schickt.',
 
     lambdasTitle: 'Was ein Lambda tut, entscheidet sein Besitzer',
     lambdas:
@@ -72,5 +72,5 @@ export const privacy: Messages['privacy'] = {
       'Sie können sich auch bei einer Datenschutz-Aufsichtsbehörde beschweren – dort, wo Sie wohnen, oder dort, wo wir sitzen. Für uns zuständig ist der Landesbeauftragte für den Datenschutz und die Informationsfreiheit Baden-Württemberg (LfDI Baden-Württemberg).',
   },
   change: 'Diese Erklärung ändert sich, wenn sich die Seite ändert. Es gilt die Fassung auf dieser Seite.',
-  updated: 'Zuletzt geändert am 28. September 2026.',
+  updated: 'Zuletzt geändert am 30. September 2026.',
 };

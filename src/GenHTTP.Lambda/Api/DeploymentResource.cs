@@ -8,6 +8,8 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -19,7 +21,7 @@ namespace GenHTTP.Lambda.Api;
 /// a delete on something that does not quite exist. There is only ever one,
 /// hence the singular.
 /// </remarks>
-public sealed class DeploymentResource(IMetaService meta)
+public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentResource> logger)
 {
 
     /// <summary>
@@ -45,6 +47,8 @@ public sealed class DeploymentResource(IMetaService meta)
     {
         var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigins.Api);
 
+        logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), request?.Version);
+
         var payload = new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
 
         return new Result<DeploymentOutcomeResponse>(payload).Status(result.Success ? ResponseStatus.Ok : ResponseStatus.UnprocessableEntity);
@@ -55,7 +59,13 @@ public sealed class DeploymentResource(IMetaService meta)
     /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/deployment/stop")]
     public async ValueTask<LambdaResponse> Stop(string privateKey)
-        => LambdaDescription.Of(await meta.UndeployAsync(privateKey, ActivationEndings.Stopped));
+    {
+        var lambda = await meta.UndeployAsync(privateKey, ActivationEndings.Stopped);
+
+        logger.LogInformation("Took lambda {Lambda} offline", lambda.PublicKey);
+
+        return LambdaDescription.Of(lambda);
+    }
 
     /// <summary>
     /// Every stretch of time the lambda was online, newest first.

@@ -14,6 +14,8 @@ using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -34,7 +36,8 @@ namespace GenHTTP.Lambda.Api;
 /// the feature is left to whoever works on it; once they are in, moving the
 /// feature's base to that version with a patch allows the merge.
 /// </remarks>
-public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, LogBook book, LambdaOptions options)
+public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, LogBook book, LambdaOptions options,
+                                     ILogger<FeatureResource> logger)
 {
 
     #region The features
@@ -58,6 +61,8 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     public async ValueTask<Result<FeatureResponse>> Create(string privateKey, CreateFeatureRequest request)
     {
         var created = await features.CreateAsync(privateKey, new FeatureDraft(request.Name, request.Specification, request.Base, VersionOrigins.Api));
+
+        logger.LogInformation("Started feature '{Feature}' of lambda {Lambda} from version {Version}", created.Name, await meta.PublicKeyOfAsync(privateKey), created.Base);
 
         return new Result<FeatureResponse>(Describe(created)).Status(ResponseStatus.Created);
     }
@@ -84,14 +89,26 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// </remarks>
     [ResourceMethod(Method.Patch, "lambdas/:privateKey/features/:feature")]
     public async ValueTask<FeatureResponse> Update(string privateKey, string feature, UpdateFeatureRequest request)
-        => Describe(await features.UpdateAsync(privateKey, feature, new FeatureUpdate(request.Name, request.Specification, request.Change, request.Base)));
+    {
+        var updated = await features.UpdateAsync(privateKey, feature, new FeatureUpdate(request.Name, request.Specification, request.Change, request.Base));
+
+        logger.LogInformation("Changed feature '{Feature}' of lambda {Lambda}, based on version {Version}", updated.Name, await meta.PublicKeyOfAsync(privateKey), updated.Base);
+
+        return Describe(updated);
+    }
 
     /// <summary>
     /// Deletes a feature, its preview and its copy of the data.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/features/:feature")]
     public async ValueTask Delete(string privateKey, string feature)
-        => await features.DeleteAsync(privateKey, feature);
+    {
+        var name = await features.NameOfAsync(privateKey, feature);
+
+        await features.DeleteAsync(privateKey, feature);
+
+        logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, await meta.PublicKeyOfAsync(privateKey));
+    }
 
     #endregion
 
@@ -130,6 +147,8 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
         var found = await features.GetAsync(privateKey, feature);
 
         var zip = LambdaArchive.Pack(LambdaSource.Parse(found.Code));
+
+        logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} as a zip archive", found.Feature.Name, await meta.PublicKeyOfAsync(privateKey));
 
         return request.Respond()
                       .Content(new BinaryContent(zip, "application/zip"))
@@ -174,7 +193,11 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [ResourceMethod(Method.Post, "lambdas/:privateKey/features/:feature/preview/start")]
     public async ValueTask<Result<FeaturePreviewResponse>> Start(string privateKey, string feature)
     {
-        var outcome = Describe(await features.DeployAsync(privateKey, feature));
+        var deployment = await features.DeployAsync(privateKey, feature);
+
+        logger.Previewed(deployment, await meta.PublicKeyOfAsync(privateKey));
+
+        var outcome = Describe(deployment);
 
         return new Result<FeaturePreviewResponse>(outcome).Status(outcome.Success ? ResponseStatus.Ok : ResponseStatus.UnprocessableEntity);
     }
@@ -184,7 +207,13 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/features/:feature/preview/stop")]
     public async ValueTask<FeatureResponse> Stop(string privateKey, string feature)
-        => Describe(await features.UndeployAsync(privateKey, feature));
+    {
+        var stopped = await features.UndeployAsync(privateKey, feature);
+
+        logger.LogInformation("Took the preview of feature '{Feature}' of lambda {Lambda} offline", stopped.Name, await meta.PublicKeyOfAsync(privateKey));
+
+        return Describe(stopped);
+    }
 
     /// <summary>
     /// What the preview of a feature has been doing, oldest first - kept apart
@@ -228,7 +257,13 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/features/:feature/data/refresh")]
     public async ValueTask<FeatureResponse> Refresh(string privateKey, string feature)
-        => Describe(await features.RefreshDataAsync(privateKey, feature));
+    {
+        var refreshed = await features.RefreshDataAsync(privateKey, feature);
+
+        logger.LogInformation("Gave feature '{Feature}' of lambda {Lambda} a fresh copy of the data", refreshed.Name, await meta.PublicKeyOfAsync(privateKey));
+
+        return Describe(refreshed);
+    }
 
     #endregion
 
@@ -250,7 +285,25 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var note = new VersionNote(request?.Specification, request?.Change, VersionOrigins.Api);
 
+        var name = await features.NameOfAsync(privateKey, feature);
+
         var merged = await features.MergeAsync(privateKey, feature, note, request?.Deploy == true);
+
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
+
+        if (merged.Merged)
+        {
+            logger.LogInformation("Merged feature '{Feature}' of lambda {Lambda} as version {Version}", name, publicKey, merged.Version?.Version);
+        }
+        else
+        {
+            logger.LogInformation("Feature '{Feature}' of lambda {Lambda} was not merged: its code does not compile", name, publicKey);
+        }
+
+        if (merged.Deployment is { } online)
+        {
+            logger.Deployed(online, publicKey, merged.Version?.Version);
+        }
 
         var deployment = merged.Deployment is { } result
             ? new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics)
@@ -271,11 +324,19 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var saved = await features.SaveAsync(privateKey, feature, VersionResource.Serialize(files), new VersionNote(specification, change), after);
 
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
+
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} with {Files} file(s)", saved.Name, publicKey, files!.Count);
+
         FeaturePreviewResponse? preview = null;
 
         if (deploy == true)
         {
-            preview = Describe(await features.DeployAsync(privateKey, feature));
+            var deployment = await features.DeployAsync(privateKey, feature);
+
+            logger.Previewed(deployment, publicKey);
+
+            preview = Describe(deployment);
 
             return new FeatureSavedResponse(preview.Feature, preview);
         }

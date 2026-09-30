@@ -39,7 +39,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. De eerste paar honderd tekens ervan komen in het log van de bouwdienst, dat ook een vaste grootte heeft. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
+      'De agent bewaart je verzoek, vaak in zijn eigen woorden, als notitie bij de versie die hij schrijft. Het verzoek zelf komt volledig in het log van de server, en de eerste paar honderd tekens ervan in het log van de bouwdienst; beide hebben ook een vaste grootte. Gebruik je in plaats daarvan je eigen agent, zoals Claude of Claude Code? Dan gaat wat je hem vertelt naar de aanbieder van die agent, niet naar ons. Wij krijgen alleen de code en de notities die hij hierheen stuurt.',
 
     lambdasTitle: 'Wat een lambda doet, bepaalt de eigenaar',
     lambdas:
@@ -71,5 +71,5 @@ export const privacy: Messages['privacy'] = {
       'Je kunt ook een klacht indienen bij een toezichthouder voor gegevensbescherming, waar je woont of waar wij zitten. Voor ons is dat de toezichthouder voor gegevensbescherming en informatievrijheid van de Duitse deelstaat Baden-Württemberg (LfDI Baden-Württemberg).',
   },
   change: 'Dit beleid verandert als de site verandert. De versie op deze pagina is de versie die geldt.',
-  updated: 'Laatst gewijzigd op 28 september 2026.',
+  updated: 'Laatst gewijzigd op 30 september 2026.',
 };

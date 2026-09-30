@@ -40,7 +40,7 @@ export const privacy = {
       </>
     ),
     agentKept:
-      "The agent saves your request, often in its own words, as the note on the version it writes, and the first few hundred characters of it go into the build service's log, which has a fixed size as well. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
+      "The agent saves your request, often in its own words, as the note on the version it writes. The request itself is written in full into the server's log, and its first few hundred characters into the build service's log; both have a fixed size as well. If you use your own agent instead, such as Claude or Claude Code, what you tell it goes to that agent's provider, not to us: we only receive the code and the notes it sends here.",
 
     lambdasTitle: 'What a lambda does is up to its owner',
     lambdas:
@@ -71,5 +71,5 @@ export const privacy = {
       'You can also complain to a data protection authority, where you live or where we are. Ours is the State Commissioner for Data Protection and Freedom of Information of Baden-Württemberg (LfDI Baden-Württemberg).',
   },
   change: 'This policy changes when the site does. The version that applies is the one on this page.',
-  updated: 'Last changed on 28 September 2026.',
+  updated: 'Last changed on 30 September 2026.',
 };

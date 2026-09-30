@@ -42,7 +42,7 @@ export const privacy: Messages['privacy'] = {
       </>
     ),
     agentKept:
-      'L’agent enregistre votre demande, souvent reformulée avec ses propres mots, comme note de la version qu’il écrit, et ses premières centaines de caractères vont dans le journal du service de création, qui a lui aussi une taille fixe. Si vous utilisez plutôt votre propre agent, comme Claude ou Claude Code, ce que vous lui dites va chez le fournisseur de cet agent, pas chez nous : nous recevons seulement le code et les notes qu’il envoie ici.',
+      'L’agent enregistre votre demande, souvent reformulée avec ses propres mots, comme note de la version qu’il écrit. La demande elle-même est écrite en entier dans le journal du serveur, et ses premières centaines de caractères dans celui du service de création ; tous deux ont eux aussi une taille fixe. Si vous utilisez plutôt votre propre agent, comme Claude ou Claude Code, ce que vous lui dites va chez le fournisseur de cet agent, pas chez nous : nous recevons seulement le code et les notes qu’il envoie ici.',
 
     lambdasTitle: 'Ce que fait une lambda dépend de son propriétaire',
     lambdas:
@@ -74,5 +74,5 @@ export const privacy: Messages['privacy'] = {
       'Vous pouvez aussi adresser une réclamation à une autorité de protection des données, là où vous vivez ou là où nous sommes. Pour nous, c’est le commissaire à la protection des données et à la liberté d’information du Land de Bade-Wurtemberg, en Allemagne (LfDI Baden-Württemberg).',
   },
   change: 'Cette politique change quand le site change. C’est la version de cette page qui s’applique.',
-  updated: 'Dernière modification : 28 septembre 2026.',
+  updated: 'Dernière modification : 30 septembre 2026.',
 };

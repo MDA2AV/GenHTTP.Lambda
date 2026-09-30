@@ -16,6 +16,9 @@ using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
+using GenHTTP.Lambda.Api.Infrastructure;
+
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api.Mcp;
 
@@ -52,10 +55,14 @@ namespace GenHTTP.Lambda.Api.Mcp;
 ///
 /// Every tool answers with an object rather than prose. A model reads the text
 /// and a program reads the structured copy, and both are the same thing.
+///
+/// Every tool that did something logs what it did, as the API does - reads
+/// included, since what an agent looks at is how it goes about its work. See
+/// <see cref="OperationLog"/> for what is left out.
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
                               IDatabaseService databases, IShowcaseService showcases, ISourceService sources, LambdaTelemetry telemetry, LogBook book,
-                              LambdaOptions options)
+                              LambdaOptions options, ILogger<McpTools> logger)
 {
 
     #region Catalogue
@@ -507,8 +514,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "delete_secret" => await DeleteSecretAsync(arguments),
                 "showcase" => await ShowcaseAsync(arguments, origin),
                 "open_source" => await OpenSourceAsync(arguments, origin),
-                "list_demos" => Demos(origin),
-                "platform_guide" => Guide(),
+                "list_demos" => ListDemos(origin),
+                "platform_guide" => ReadGuide(),
                 _ => McpProtocol.Refuse($"There is no tool called '{name}'.")
             };
         }
@@ -537,6 +544,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var lambda = await meta.CreateAsync(Text(arguments, "publicKey"), Text(arguments, "template"), view);
 
+        logger.LogInformation("Created lambda {Lambda} from template {Template}, opening in the {View} view", lambda.PublicKey,
+                              Text(arguments, "template") ?? "(none)", lambda.View);
+
         return McpProtocol.Say(new
         {
             ok = true,
@@ -557,6 +567,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var view = EditorViews.Parse(Required(arguments, "view"))!.Value;
 
         var lambda = await meta.ChangeViewAsync(privateKey, view);
+
+        logger.LogInformation("Set the editor of lambda {Lambda} to open in the {View} view", lambda.PublicKey, lambda.View);
 
         return McpProtocol.Say(new
         {
@@ -644,10 +656,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (Text(arguments, "feature") is { } feature)
         {
-            return await SaveFeatureAsync(arguments, privateKey, feature, code, note, origin, read, documentation);
+            return await SaveFeatureAsync(arguments, privateKey, feature, code, files.Count, note, origin, read, documentation);
         }
 
         var version = await meta.SaveAsync(privateKey, code, note);
+
+        logger.LogInformation("Saved version {Version} of lambda {Lambda} with {Files} file(s)", version.Version, await meta.PublicKeyOfAsync(privateKey), files.Count);
 
         // said only when it is missing, and as a request rather than a
         // refusal: the code matters more than the note about it
@@ -696,10 +710,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Stores the files as the feature's, and puts its preview online or
     /// compiles it if the arguments ask for that.
     /// </summary>
-    private async ValueTask<JsonObject> SaveFeatureAsync(JsonObject arguments, string privateKey, string feature, string code, VersionNote note, string origin,
-                                                         int? read, string? documentation)
+    private async ValueTask<JsonObject> SaveFeatureAsync(JsonObject arguments, string privateKey, string feature, string code, int files, VersionNote note,
+                                                         string origin, int? read, string? documentation)
     {
         var saved = await features.SaveAsync(privateKey, feature, code, note, read);
+
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} with {Files} file(s)", saved.Name, await meta.PublicKeyOfAsync(privateKey), files);
 
         if (Flag(arguments, "deploy") == true)
         {
@@ -741,7 +757,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             return McpProtocol.Refuse(complaint!);
         }
 
-        var outcome = await meta.CheckAsync(Required(arguments, "privateKey"), LambdaSource.Serialize(files));
+        var privateKey = Required(arguments, "privateKey");
+
+        var outcome = await meta.CheckAsync(privateKey, LambdaSource.Serialize(files));
+
+        logger.LogInformation("Checked {Files} file(s) for lambda {Lambda}, which compile: {Compiles}", files.Count, await meta.PublicKeyOfAsync(privateKey), outcome.Success);
 
         return McpProtocol.Say(new
         {
@@ -762,6 +782,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var created = await features.CreateAsync(privateKey, new FeatureDraft(Text(arguments, "name"), Text(arguments, "specification"),
                                                                               Number(arguments, "base"), VersionOrigins.Agent));
 
+        logger.LogInformation("Started feature '{Feature}' of lambda {Lambda} from version {Version}", created.Name, await meta.PublicKeyOfAsync(privateKey), created.Base);
+
         return McpProtocol.Say(new
         {
             ok = true,
@@ -772,9 +794,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<JsonObject> UpdateFeatureAsync(JsonObject arguments, string origin)
     {
-        var updated = await features.UpdateAsync(Required(arguments, "privateKey"), Required(arguments, "feature"),
+        var privateKey = Required(arguments, "privateKey");
+
+        var updated = await features.UpdateAsync(privateKey, Required(arguments, "feature"),
                                                  new FeatureUpdate(Text(arguments, "name"), Text(arguments, "specification"), Text(arguments, "change"),
                                                                    Number(arguments, "base")));
+
+        logger.LogInformation("Changed feature '{Feature}' of lambda {Lambda}, based on version {Version}", updated.Name, await meta.PublicKeyOfAsync(privateKey), updated.Base);
 
         return McpProtocol.Say(new
         {
@@ -792,7 +818,25 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
 
+        var name = await features.NameOfAsync(privateKey, Required(arguments, "feature"));
+
         var merged = await features.MergeAsync(privateKey, Required(arguments, "feature"), note, Flag(arguments, "deploy") == true);
+
+        var publicKey = await meta.PublicKeyOfAsync(privateKey);
+
+        if (merged.Merged)
+        {
+            logger.LogInformation("Merged feature '{Feature}' of lambda {Lambda} as version {Version}", name, publicKey, merged.Version?.Version);
+        }
+        else
+        {
+            logger.LogInformation("Feature '{Feature}' of lambda {Lambda} was not merged: its code does not compile", name, publicKey);
+        }
+
+        if (merged.Deployment is { } online)
+        {
+            logger.Deployed(online, publicKey, merged.Version?.Version);
+        }
 
         if (!merged.Merged)
         {
@@ -851,7 +895,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var feature = Required(arguments, "feature");
 
-        await features.DeleteAsync(Required(arguments, "privateKey"), feature);
+        var privateKey = Required(arguments, "privateKey");
+
+        var name = await features.NameOfAsync(privateKey, feature);
+
+        await features.DeleteAsync(privateKey, feature);
+
+        logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, await meta.PublicKeyOfAsync(privateKey));
 
         return McpProtocol.Say(new { ok = true, deleted = feature.Trim().ToLowerInvariant() });
     }
@@ -955,6 +1005,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var written = await workspace.WriteAsync(id, path, stream, featureId: feature);
 
+        logger.LogInformation("Wrote {Path} ({Size:N0} bytes) to the workspace of {Owner}", written.Path, written.Size, await OwnerOfAsync(privateKey, Text(arguments, "feature")));
+
         return McpProtocol.Say(new
         {
             ok = true,
@@ -968,9 +1020,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<JsonObject> FilesAsync(JsonObject arguments)
     {
-        var (id, feature) = await WorkspaceOfAsync(Required(arguments, "privateKey"), Text(arguments, "feature"), false);
+        var privateKey = Required(arguments, "privateKey");
+
+        var (id, feature) = await WorkspaceOfAsync(privateKey, Text(arguments, "feature"), false);
 
         var listing = await workspace.ListAsync(id, feature);
+
+        logger.LogInformation("Listed the workspace of {Owner}", await OwnerOfAsync(privateKey, Text(arguments, "feature")));
 
         return McpProtocol.Say(new
         {
@@ -987,7 +1043,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<JsonObject> EnableDataAsync(JsonObject arguments)
     {
-        var store = await data.EnableAsync(Required(arguments, "privateKey"), Required(arguments, "kind"));
+        var privateKey = Required(arguments, "privateKey");
+
+        var store = await data.EnableAsync(privateKey, Required(arguments, "kind"));
+
+        logger.LogInformation("Switched the {Kind} of lambda {Lambda} on", store.Kind, await meta.PublicKeyOfAsync(privateKey));
 
         return McpProtocol.Say(new
         {
@@ -1014,7 +1074,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var feature = Text(arguments, "feature");
 
-        var stored = await secrets.SetAsync(Required(arguments, "privateKey"), Required(arguments, "name"), Required(arguments, "value"), feature);
+        var privateKey = Required(arguments, "privateKey");
+
+        var stored = await secrets.SetAsync(privateKey, Required(arguments, "name"), Required(arguments, "value"), feature);
+
+        // the name only - the value is not repeated anywhere, here least of all
+        logger.LogInformation("Set the secret {Name} of {Owner}", stored.Name, await OwnerOfAsync(privateKey, feature));
 
         return McpProtocol.Say(new
         {
@@ -1031,7 +1096,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private async ValueTask<JsonObject> SecretsAsync(JsonObject arguments)
     {
-        var listing = await secrets.ListAsync(Required(arguments, "privateKey"), Text(arguments, "feature"));
+        var privateKey = Required(arguments, "privateKey");
+
+        var listing = await secrets.ListAsync(privateKey, Text(arguments, "feature"));
+
+        logger.LogInformation("Listed the secrets of {Owner}", await OwnerOfAsync(privateKey, Text(arguments, "feature")));
 
         return McpProtocol.Say(new
         {
@@ -1062,6 +1131,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var feature = Text(arguments, "feature");
 
         var table = Text(arguments, "table");
+
+        logger.LogInformation("Read the database of {Owner}, table {Table}", await OwnerOfAsync(privateKey, feature), table ?? "(all)");
 
         if (table == null)
         {
@@ -1111,21 +1182,40 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var name = Required(arguments, "name");
 
-        await secrets.DeleteAsync(Required(arguments, "privateKey"), name, Text(arguments, "feature"));
+        var privateKey = Required(arguments, "privateKey");
+
+        var feature = Text(arguments, "feature");
+
+        await secrets.DeleteAsync(privateKey, name, feature);
+
+        logger.LogInformation("Deleted the secret {Name} of {Owner}", name.Trim(), await OwnerOfAsync(privateKey, feature));
 
         return McpProtocol.Say(new { ok = true, deleted = name.Trim() });
     }
 
     private async ValueTask<JsonObject> RemoveAsync(JsonObject arguments)
     {
-        var (id, feature) = await WorkspaceOfAsync(Required(arguments, "privateKey"), Text(arguments, "feature"), true);
+        var privateKey = Required(arguments, "privateKey");
+
+        var (id, feature) = await WorkspaceOfAsync(privateKey, Text(arguments, "feature"), true);
 
         var path = Required(arguments, "path");
 
         await workspace.DeleteAsync(id, path, feature);
 
+        logger.LogInformation("Deleted {Path} from the workspace of {Owner}", path, await OwnerOfAsync(privateKey, Text(arguments, "feature")));
+
         return McpProtocol.Say(new { ok = true, path });
     }
+
+    /// <summary>
+    /// Whose data a call is about, to name it in a log line: the lambda, or a
+    /// feature of it.
+    /// </summary>
+    private async ValueTask<string> OwnerOfAsync(string privateKey, string? feature)
+        => feature == null
+         ? $"lambda {await meta.PublicKeyOfAsync(privateKey)}"
+         : $"feature '{await features.NameOfAsync(privateKey, feature)}' of lambda {await meta.PublicKeyOfAsync(privateKey)}";
 
     /// <summary>
     /// The workspace a call is about: the lambda's own, or a feature's copy.
@@ -1159,6 +1249,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     private async ValueTask<JsonObject> DeployVersionAsync(string privateKey, int? version, string origin, string? reminder = null, string? documentation = null)
     {
         var result = await meta.DeployAsync(privateKey, version, VersionOrigins.Agent);
+
+        logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), version);
 
         if (!result.Success)
         {
@@ -1202,6 +1294,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     private async ValueTask<JsonObject> DeployFeatureAsync(string privateKey, string feature, string origin)
     {
         var result = await features.DeployAsync(privateKey, feature);
+
+        logger.Previewed(result, await meta.PublicKeyOfAsync(privateKey));
 
         if (!result.Success)
         {
@@ -1266,6 +1360,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         }
 
         var lambda = await meta.GetAsync(privateKey);
+
+        logger.LogInformation("Read the logs of {Owner}", await OwnerOfAsync(privateKey, feature));
 
         var since = arguments.TryGetPropertyValue("since", out var cursor) && cursor is JsonValue value && value.TryGetValue<long>(out var from)
                   ? from
@@ -1369,6 +1465,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
                 files = LambdaSource.Parse(content.Code);
             }
+        }
+
+        if (feature != null)
+        {
+            logger.LogInformation("Read feature '{Feature}' of lambda {Lambda}", feature.Feature.Name, lambda.PublicKey);
+        }
+        else
+        {
+            logger.LogInformation("Read version {Version} of lambda {Lambda}", version?.ToString() ?? "(none)", lambda.PublicKey);
         }
 
         // whose code is public, which changes what may be written into it
@@ -1646,6 +1751,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             await showcases.RemoveAsync(privateKey);
 
+            logger.LogInformation("Took lambda {Lambda} out of the showcase", await meta.PublicKeyOfAsync(privateKey));
+
             return McpProtocol.Say(new { ok = true, showcased = false });
         }
 
@@ -1658,6 +1765,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         if (title == null && description == null && encoded == null)
         {
             entry = await showcases.GetAsync(privateKey);
+
+            logger.LogInformation("Read the showcase entry of lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
         }
         else
         {
@@ -1679,6 +1788,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             var current = await showcases.GetAsync(privateKey);
 
             entry = await showcases.SaveAsync(privateKey, new ShowcaseDraft(title ?? current?.Title, description ?? current?.Description, image));
+
+            logger.LogInformation("Put lambda {Lambda} into the showcase as '{Title}'", entry.PublicKey, entry.Title);
         }
 
         if (entry == null)
@@ -1720,6 +1831,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             source = await sources.WithdrawAsync(privateKey);
 
+            logger.LogInformation("Took the source of lambda {Lambda} down", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
+
             return McpProtocol.Say(new
             {
                 ok = true,
@@ -1732,9 +1845,18 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var license = Text(arguments, "license");
         var author = arguments.TryGetPropertyValue("author", out var named) && named != null ? named.ToString() : null;
 
-        source = license == null && author == null
-            ? await sources.GetAsync(privateKey)
-            : await sources.PublishAsync(privateKey, new SourceDraft(license, author));
+        if (license == null && author == null)
+        {
+            source = await sources.GetAsync(privateKey);
+
+            logger.LogInformation("Read whether the source of lambda {Lambda} is published", await meta.PublicKeyOfAsync(privateKey));
+        }
+        else
+        {
+            source = await sources.PublishAsync(privateKey, new SourceDraft(license, author));
+
+            logger.LogInformation("Published the source of lambda {Lambda} under {License}", source.PublicKey, source.License);
+        }
 
         if (source is not { Published: true })
         {
@@ -1762,6 +1884,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             url = $"{origin}/source/{source.PublicKey}",
             note = "Everything in every version is public now, older versions included - code, assets, documentation, tests and the one line each version says it changed. Never write keys, passwords or personal data into files: secrets and the database stay private."
         });
+    }
+
+    private JsonObject ListDemos(string origin)
+    {
+        logger.LogInformation("Listed the demos");
+
+        return Demos(origin);
     }
 
     private static JsonObject Demos(string origin) => McpProtocol.Say(new
@@ -1796,6 +1925,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     #endregion
 
     #region Guide
+
+    private JsonObject ReadGuide()
+    {
+        logger.LogInformation("Read the platform guide");
+
+        return Guide();
+    }
 
     private JsonObject Guide() => McpProtocol.Say(new
     {

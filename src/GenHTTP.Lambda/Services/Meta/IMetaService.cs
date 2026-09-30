@@ -169,4 +169,10 @@ public interface IMetaService
     /// </summary>
     ValueTask<string?> GetPrivateKeyAsync(string publicKey, CancellationToken cancellation = default);
 
+    /// <summary>
+    /// The public key behind an editor key, for naming a lambda where the
+    /// editor key must not appear - in a log line.
+    /// </summary>
+    ValueTask<string?> GetPublicKeyAsync(string privateKey, CancellationToken cancellation = default);
+
 }

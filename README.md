@@ -1172,6 +1172,23 @@ what the server and the lambdas said. A warning the server logs *about* a
 lambda - the one the error handler writes when it throws - is filed under that
 lambda too, with the stack trace that was kept from the visitor.
 
+Besides the request line, every call to the API that changes something, and
+every MCP tool an agent calls, logs what it did in words: `Published the source
+of lambda quiz under MIT`, `Merged feature 'Dark mode' of lambda quiz as
+version 4`, `Set the secret SHOP_KEY of lambda quiz`. The source says which door
+it came through - a `…Resource` for the API, `McpTools` for an agent - and the
+line carries the caller like any other. A lambda is named by its public key and
+a feature by its name, never by the editor key or the feature's key; a secret
+by its name, never its value; and code, file contents, pictures, specifications
+and descriptions are left out. The one exception is what people ask the build
+agent for: the prompt of a build on `/build`, and of a change asked for in the
+editor, is logged in full, because it is what tells the operator what this
+platform is being used for. Reads through the API are not logged, apart from
+exports and downloads - the editor reads all the time, and those lines would
+bury the rest; an agent's reads are (`Read version 3 of lambda quiz`), since
+what it looks at is how it goes about the job. A refused request is logged by its
+request line alone. `OperationLog` holds the helpers and says why.
+
 Every line says which protocol it arrived over, which country the address is
 registered in, and which address it was being written for. That is what turns a
 path being hit five hundred times a minute from a mystery into a question, and

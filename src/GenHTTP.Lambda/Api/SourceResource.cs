@@ -12,6 +12,8 @@ using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -27,7 +29,7 @@ namespace GenHTTP.Lambda.Api;
 /// data: the files come out of the zip it was packed into once, never out of
 /// the lambda's database, workspace or secrets.
 /// </remarks>
-public sealed class SourceResource(ISourceService sources, StarGuard stars)
+public sealed class SourceResource(ISourceService sources, StarGuard stars, ILogger<SourceResource> logger)
 {
 
     public const int PageSize = 24;
@@ -222,6 +224,8 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars)
     {
         var archive = await RequireAsync(publicKey, version);
 
+        logger.LogInformation("Downloaded version {Version} of the published source of lambda {Lambda}", version, publicKey);
+
         return request.Respond()
                       .Content(new FileContent(new FileInfo(archive.File), "application/zip"))
                       .Header("Content-Disposition", $"attachment; filename=\"{Safe(publicKey)}-v{version}.zip\"")
@@ -267,6 +271,15 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars)
         }
 
         var count = await sources.StarAsync(publicKey, starred) ?? throw NotPublished(publicKey);
+
+        if (starred)
+        {
+            logger.LogInformation("Starred the source of lambda {Lambda}, which has {Stars} star(s) now", publicKey, count);
+        }
+        else
+        {
+            logger.LogInformation("Took back a star of the source of lambda {Lambda}, which has {Stars} star(s) now", publicKey, count);
+        }
 
         return new StarResponse(count, starred, true);
     }

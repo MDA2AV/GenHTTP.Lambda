@@ -2,9 +2,14 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Api.Infrastructure;
+using GenHTTP.Lambda.Services.Features;
+using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
+
+using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
@@ -21,7 +26,7 @@ namespace GenHTTP.Lambda.Api;
 /// they are switched on (<c>PUT /lambdas/{privateKey}/data/secrets</c>), and
 /// switching them off deletes them.
 /// </remarks>
-public sealed class SecretResource(ISecretService secrets)
+public sealed class SecretResource(ISecretService secrets, IMetaService meta, IFeatureService features, ILogger<SecretResource> logger)
 {
 
     #region The lambda's
@@ -43,13 +48,24 @@ public sealed class SecretResource(ISecretService secrets)
     /// <param name="name">Letters, digits and underscores, not starting with a digit: <c>STRIPE_KEY</c></param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/secrets/:name")]
     public async ValueTask<SecretResponse> Put(string privateKey, string name, SecretRequest request)
-        => Describe(await secrets.SetAsync(privateKey, name, request.Value));
+    {
+        var secret = await secrets.SetAsync(privateKey, name, request.Value);
+
+        logger.LogInformation("Set the secret {Name} of lambda {Lambda}", secret.Name, await meta.PublicKeyOfAsync(privateKey));
+
+        return Describe(secret);
+    }
 
     /// <summary>
     /// Removes a secret.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/secrets/:name")]
-    public async ValueTask Delete(string privateKey, string name) => await secrets.DeleteAsync(privateKey, name);
+    public async ValueTask Delete(string privateKey, string name)
+    {
+        await secrets.DeleteAsync(privateKey, name);
+
+        logger.LogInformation("Deleted the secret {Name} of lambda {Lambda}", name.Trim(), await meta.PublicKeyOfAsync(privateKey));
+    }
 
     #endregion
 
@@ -68,13 +84,26 @@ public sealed class SecretResource(ISecretService secrets)
     /// </summary>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/features/:feature/secrets/:name")]
     public async ValueTask<SecretResponse> PutOfFeature(string privateKey, string feature, string name, SecretRequest request)
-        => Describe(await secrets.SetAsync(privateKey, name, request.Value, feature));
+    {
+        var secret = await secrets.SetAsync(privateKey, name, request.Value, feature);
+
+        logger.LogInformation("Set the secret {Name} of feature '{Feature}' of lambda {Lambda}", secret.Name,
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
+
+        return Describe(secret);
+    }
 
     /// <summary>
     /// Removes a secret from a feature's copy.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/features/:feature/secrets/:name")]
-    public async ValueTask DeleteOfFeature(string privateKey, string feature, string name) => await secrets.DeleteAsync(privateKey, name, feature);
+    public async ValueTask DeleteOfFeature(string privateKey, string feature, string name)
+    {
+        await secrets.DeleteAsync(privateKey, name, feature);
+
+        logger.LogInformation("Deleted the secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(),
+                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
+    }
 
     #endregion
 

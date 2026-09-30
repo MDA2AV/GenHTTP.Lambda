@@ -8,6 +8,8 @@ using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
+using Microsoft.Extensions.Logging;
+
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
@@ -21,7 +23,7 @@ namespace GenHTTP.Lambda.Api;
 /// for it. A feature's copy of the workspace is reached the same way below
 /// <c>/lambdas/{privateKey}/features/{feature}/workspace</c>.
 /// </remarks>
-public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
+public sealed class FileResource(IMetaService meta, IWorkspaceService workspace, ILogger<FileResource> logger)
 {
 
     /// <summary>
@@ -65,7 +67,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
     /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path/content")]
     public async ValueTask<WorkspaceEntry> PutContent(string privateKey, string path, IRequest request)
-        => await WorkspaceFiles.ReceiveAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path, request);
+        => await WrittenAsync(privateKey, await WorkspaceFiles.ReceiveAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path, request));
 
     /// <summary>
     /// Writes a file, replacing it if it is already there.
@@ -73,7 +75,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
     /// <param name="path">The path of the file within the workspace</param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path")]
     public async ValueTask<WorkspaceEntry> Put(string privateKey, string path, FileRequest request)
-        => await WorkspaceFiles.WriteAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path, request);
+        => await WrittenAsync(privateKey, await WorkspaceFiles.WriteAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path, request));
 
     /// <summary>
     /// Removes a file, or a folder and everything in it.
@@ -81,7 +83,11 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
     /// <param name="path">The path within the workspace</param>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/files/:path")]
     public async ValueTask Delete(string privateKey, string path)
-        => await workspace.DeleteAsync(await meta.RequireEditableAsync(privateKey), path);
+    {
+        await workspace.DeleteAsync(await meta.RequireEditableAsync(privateKey), path);
+
+        logger.LogInformation("Deleted {Path} from the workspace of lambda {Lambda}", path, await meta.PublicKeyOfAsync(privateKey));
+    }
 
     /// <summary>
     /// Makes a folder, so files can be put into it.
@@ -90,6 +96,19 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace)
     /// <returns>The workspace afterwards</returns>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/folders/:path")]
     public async ValueTask<WorkspaceListing> PutFolder(string privateKey, string path)
-        => await WorkspaceFiles.CreateFolderAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path);
+    {
+        var listing = await WorkspaceFiles.CreateFolderAsync(workspace, await meta.RequireEditableAsync(privateKey), null, path);
+
+        logger.LogInformation("Created the folder {Path} in the workspace of lambda {Lambda}", path, await meta.PublicKeyOfAsync(privateKey));
+
+        return listing;
+    }
+
+    private async ValueTask<WorkspaceEntry> WrittenAsync(string privateKey, WorkspaceEntry written)
+    {
+        logger.LogInformation("Wrote {Path} ({Size:N0} bytes) to the workspace of lambda {Lambda}", written.Path, written.Size, await meta.PublicKeyOfAsync(privateKey));
+
+        return written;
+    }
 
 }
