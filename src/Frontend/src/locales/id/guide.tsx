@@ -296,14 +296,16 @@ export const guide: Messages['guide'] = {
   away: (k) => (
     <>
       {k.b('Unduh sebagai proyek .NET')} di editor memberi Anda semuanya: solution yang bisa Anda buka, jalankan dengan{' '}
-      {k.code('dotnet run')}, dan simpan. Isinya satu package reference, tanpa jejak platform ini sama sekali.
+      {k.code('dotnet run')}, dan simpan. Ia hanya membutuhkan paket GenHTTP, dan disertai {k.code('Dockerfile')}{' '}
+      untuk membangun dan menjalankannya sebagai container.
     </>
   ),
   away2: (k) => (
     <>
-      Snippet Anda menjadi isi {k.code('Program.cs')}, dibungkus host yang menyajikan apa yang dikembalikannya. File Anda
-      yang lain ikut persis seperti yang Anda tulis. {k.code('Workspace')} dan {k.code('Assets')} menjadi dua folder di
-      samping kode, dengan method yang sama, jadi tidak ada yang perlu diubah di kode Anda.
+      Snippet Anda menjadi {k.code('Project.cs')}, dan {k.code('Program.cs')} menyajikan apa yang dikembalikannya. File
+      Anda yang lain ikut persis seperti yang Anda tulis. {k.code('Workspace')} dan {k.code('Assets')} menjadi dua folder
+      di samping program, dengan method yang sama, terpisah di folder {k.code('Platform')}, jadi tidak ada yang perlu
+      diubah di kode Anda.
     </>
   ),
   awayAside:

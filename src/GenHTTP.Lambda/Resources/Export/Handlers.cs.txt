@@ -1,0 +1,15 @@
+namespace Platform;
+
+/// <summary>
+/// Turns whatever Project returned into the handler the server runs.
+/// </summary>
+public static class Handlers
+{
+    public static IHandler From(object built) => built switch
+    {
+        IHandler handler => handler,
+        IHandlerBuilder builder => builder.Build(),
+        null => throw new InvalidOperationException("The app returned nothing to serve."),
+        _ => throw new InvalidOperationException($"The app returned {built.GetType().Name}, which is not a handler.")
+    };
+}

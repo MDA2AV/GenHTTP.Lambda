@@ -289,14 +289,16 @@ export const guide: Messages['guide'] = {
   away: (k) => (
     <>
       {k.b('Pobierz jako projekt .NET')} w menu edytora daje ci całość: solution, które możesz otworzyć, uruchomić przez{' '}
-      {k.code('dotnet run')} i zachować na zawsze. Ma jedną referencję do pakietu i ani śladu tej platformy.
+      {k.code('dotnet run')} i zachować na zawsze. Potrzebuje tylko pakietu GenHTTP, a w zestawie jest{' '}
+      {k.code('Dockerfile')}, żeby zbudować i uruchomić je jako kontener.
     </>
   ),
   away2: (k) => (
     <>
-      Twój snippet staje się treścią {k.code('Program.cs')}, opakowaną w hosta, który serwuje to, co snippet zwraca.
+      Twój snippet staje się plikiem {k.code('Project.cs')}, a {k.code('Program.cs')} serwuje to, co snippet zwraca.
       Pozostałe pliki trafiają do projektu bez zmian. {k.code('Workspace')} i {k.code('Assets')} stają się
-      dwoma folderami obok kodu, z tymi samymi metodami, więc w kodzie nie trzeba nic zmieniać.
+      dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze {k.code('Platform')}, więc w kodzie nie
+      trzeba nic zmieniać.
     </>
   ),
   awayAside:

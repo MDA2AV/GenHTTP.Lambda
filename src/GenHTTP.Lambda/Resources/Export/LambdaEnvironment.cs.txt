@@ -1,0 +1,26 @@
+namespace Platform;
+
+/// <summary>
+/// The two folders the platform provided.
+/// </summary>
+public static class LambdaEnvironment
+{
+    /// <summary>What the app writes, kept in "workspace" in the directory it runs in.</summary>
+    public static readonly Folder Workspace = new("workspace");
+
+    /// <summary>What the app shipped with, copied beside the program when it is built.</summary>
+    public static readonly Folder Assets = new(Path.Combine(AppContext.BaseDirectory, "assets"));
+}
+
+/// <summary>
+/// Lets every file say Workspace, as it could on the platform.
+/// </summary>
+/// <remarks>
+/// Only Workspace: GenHTTP.Modules.Files has a type called Assets, and a
+/// member of the same name imported beside it would make both ambiguous.
+/// Outside Project.cs, the assets are LambdaEnvironment.Assets.
+/// </remarks>
+public static class LambdaScope
+{
+    public static Folder Workspace => LambdaEnvironment.Workspace;
+}

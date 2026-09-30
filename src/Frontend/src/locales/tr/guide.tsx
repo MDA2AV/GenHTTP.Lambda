@@ -294,15 +294,16 @@ export const guide: Messages['guide'] = {
   away: (k) => (
     <>
       Editördeki {k.b('.NET projesi olarak indir')} ile lambdanın tamamını alırsınız: açabileceğiniz,{' '}
-      {k.code('dotnet run')} ile çalıştırabileceğiniz ve saklayabileceğiniz bir solution. İçinde tek bir paket referansı
-      var, bu platformdan ise hiçbir iz yok.
+      {k.code('dotnet run')} ile çalıştırabileceğiniz ve saklayabileceğiniz bir solution. Yalnızca GenHTTP paketine
+      ihtiyaç duyar ve container olarak derleyip çalıştırmanız için bir {k.code('Dockerfile')} ile gelir.
     </>
   ),
   away2: (k) => (
     <>
-      Kod parçanız {k.code('Program.cs')} dosyasının gövdesi olur ve döndürdüğü şeyi sunan bir host içine yerleşir.
-      Diğer dosyalarınız tam yazdığınız gibi gelir. {k.code('Workspace')} ve {k.code('Assets')} kodun yanında iki klasör
-      olur ve aynı metotlarla çalışır. Yani kodunuzda hiçbir şeyi değiştirmeniz gerekmez.
+      Kod parçanız {k.code('Project.cs')} olur, {k.code('Program.cs')} de döndürdüğü şeyi sunar. Diğer dosyalarınız
+      tam yazdığınız gibi gelir. {k.code('Workspace')} ve {k.code('Assets')} programın yanında, ayrı bir{' '}
+      {k.code('Platform')} klasöründe iki klasör olur ve aynı metotlarla çalışır. Yani kodunuzda hiçbir şeyi
+      değiştirmeniz gerekmez.
     </>
   ),
   awayAside:

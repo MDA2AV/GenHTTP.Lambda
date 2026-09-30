@@ -80,7 +80,7 @@ path.
 |-------------------------------------------------------|-------------------------------------------|
 | `POST /lambdas`                                       | creates a lambda (optionally with `view`: `Full` or `Simple`) |
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key, its `view`), removes it |
-| `GET /lambdas/:privateKey/export`                     | the lambda as a runnable project (zip)    |
+| `GET /lambdas/:privateKey/export`                     | the newest version as a runnable .NET 10 project with a Dockerfile (zip), see below |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
 | `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
@@ -258,6 +258,26 @@ default: whoever switches at the foot of the sidebar (in the menu on a phone)
 has chosen for themselves, for that lambda, which is kept in their browser and
 never sent anywhere - so an operator looking at somebody's lambda in the full
 view leaves it simple for its owner.
+
+### Taking a lambda away
+
+The code belongs to whoever made the lambda, so `GET …/export` (the editor's
+Download) packs its newest version into an ordinary .NET 10 project that runs
+without this platform (`Services/Deployment/ProjectPacker.cs`):
+
+| File | What it is |
+|---|---|
+| `Program.cs` | the default GenHTTP host, `Host.Create().Handler(Project.Create()).Defaults().RunAsync()`, under a header naming the lambda, its version and change, the export date and where to read about GenHTTP |
+| `Project.cs` | `lambda.cs`: its statements are the body of `Project.Create()` (`CreateAsync()` when they `await`), its types sit beside the class, made public as on the platform |
+| `*.cs` | the other files, their code unchanged, the first letter of the name capitalized |
+| `Platform/` | what the platform provided: `Workspace` and `Assets` as folders, the switch that turns what `Project` returns into a handler, and the imports every lambda gets as global usings |
+| `assets/` | the files the version ships, copied beside the program on build |
+| `Dockerfile` | builds and runs it; the workspace is `/app/workspace` |
+
+It references `GenHTTP.Full` - the internal engine, which runs wherever .NET
+does - at the version this server runs, so it behaves as the lambda did. Data is
+not part of it: the workspace starts empty. A test builds the export of every
+demo with the .NET SDK, so it needs the package feed.
 
 ## How it is put together
 
