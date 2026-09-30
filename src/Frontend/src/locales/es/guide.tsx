@@ -95,6 +95,7 @@ export const guide: Messages['guide'] = {
           Di qué debería ser distinto y el agente de este servidor lo hace mientras miras. Trabaja en un borrador, lo
           prueba ahí y lo fusiona en la siguiente versión cuando funciona. Desactiva{' '}
           {k.b('Ponerlo en línea al terminar')} para probar tú el borrador antes.
+          Solo trabaja en tu app: si lo que pides no tiene que ver con ella o busca hacer daño, lo rechaza y te dice por qué.
         </>
       ),
     ],

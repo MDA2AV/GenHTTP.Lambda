@@ -95,6 +95,7 @@ export const guide: Messages['guide'] = {
           Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas. Trabalha num
           rascunho, experimenta-o lá e integra-o na próxima versão quando funcionar. Desliga{' '}
           {k.b('Pôr online quando terminar')} para experimentares tu o rascunho primeiro.
+          Só trabalha na tua app: um pedido que não tenha a ver com ela, ou que sirva para causar dano, é recusado, e ele diz porquê.
         </>
       ),
     ],

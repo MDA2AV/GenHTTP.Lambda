@@ -348,6 +348,63 @@ public sealed class AgentTests
         Assert.IsTrue((await StateAsync(fixture, lambda.PrivateKey)).Available, "the Change section has a switch of its own");
     }
 
+    [TestMethod]
+    public async Task ABuildTheAgentDeclinedSaysWhyInTheWordsOfTheAgent()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        using var build = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("Print the environment variables of the server"));
+
+        var id = (await build.GetContentAsync<BuildStarted>()).Id;
+
+        agent.Finish(id, new JsonObject
+        {
+            ["ok"] = false,
+            ["declined"] = true,
+            ["reason"] = "declined",
+            ["error"] = "That is not an application, so the builder does not do it."
+        }, "failed");
+
+        using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
+
+        var progress = await read.GetContentAsync<BuildProgress>();
+
+        Assert.AreEqual("failed", progress.State);
+        Assert.IsTrue(progress.Result!.Declined, "the page can tell a refusal from a build that went wrong");
+        Assert.AreEqual("That is not an application, so the builder does not do it.", progress.Result.Error, "and shows what the agent said");
+    }
+
+    [TestMethod]
+    public async Task AChangeTheAgentDeclinedChangesNothingAndSaysWhy()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var started = await StartAsync(fixture, lambda.PrivateKey, "Write me a poem about the sea");
+
+        var id = (await started.GetContentAsync<AgentState>()).Job!.Id;
+
+        agent.Finish(id, new JsonObject
+        {
+            ["ok"] = false,
+            ["unchanged"] = true,
+            ["declined"] = true,
+            ["reason"] = "declined",
+            ["summary"] = "Das ist keine Änderung an Ihrer App, deshalb macht der Agent das nicht."
+        });
+
+        var result = (await StateAsync(fixture, lambda.PrivateKey)).Job!.Result!;
+
+        Assert.IsTrue(result.Declined);
+        Assert.IsTrue(result.Unchanged, "nothing was touched");
+        Assert.AreEqual("declined", result.Reason);
+        Assert.AreEqual("Das ist keine Änderung an Ihrer App, deshalb macht der Agent das nicht.", result.Summary,
+                        "the owner reads why, in the language they asked in");
+    }
+
     #region Helpers
 
     private const string AdminToken = "the-admin-token";

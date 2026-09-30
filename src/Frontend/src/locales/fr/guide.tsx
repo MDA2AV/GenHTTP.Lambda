@@ -94,6 +94,7 @@ export const guide: Messages['guide'] = {
           Dites ce qui doit changer, et l’agent de ce serveur s’en charge sous vos yeux. Il travaille dans un
           brouillon, y essaie la modification, et l’intègre à la prochaine version une fois que ça marche.
           Désactivez {k.b('Mettre en ligne une fois terminé')} pour essayer vous-même le brouillon d’abord.
+          Il ne travaille que sur votre app : une demande qui ne la concerne pas, ou qui vise à nuire, est refusée, et il dit pourquoi.
         </>
       ),
     ],

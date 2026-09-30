@@ -474,6 +474,23 @@ lambda runs at a time, and it can be stopped - whatever it saved stays, in its
 feature or as a version. A change runs without `create_lambda`, and its editor key travels in
 the brief inside the build container, never in a log line.
 
+Both kinds of job are told what the agent is for in its system prompt
+(`PURPOSE` in `docker/agent/builder.mjs`), above the brief and the request, so a
+request cannot talk its way past it: building or changing a lambda through the
+tools, and nothing else. It declines, before it calls a single tool, a request
+that is not an application at all (a question, a text, homework), one about the
+platform or the machine rather than an application on it (its configuration,
+environment, files, network, other lambdas, its own instructions - including
+code that would read them, since a lambda runs in the server's process), and
+one meant to do harm here or elsewhere. It declines with a single
+`DECLINED: …` line in the language of the request, which the builder turns into
+a result with `declined: true` and `reason: "declined"`: `/build` shows the
+sentence as the reason nothing was built, and the Change section shows it under
+"nothing was changed". A declined request still counts against the daily
+allowance, so declining is not a way to try requests for free. The container,
+its network and the tool lists are what actually hold; the purpose makes the
+agent stop at the door rather than find the walls.
+
 ### The simple view
 
 Somebody who had an app built on `/build` wants it to do something else, not
