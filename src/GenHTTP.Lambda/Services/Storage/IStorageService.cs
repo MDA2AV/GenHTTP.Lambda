@@ -23,8 +23,8 @@ public interface IStorageService
     ValueTask DeleteVersionAsync(long lambdaId, int version, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Removes everything stored for the given lambda, including its workspace
-    /// and its features.
+    /// Removes everything stored for the given lambda, including its workspace,
+    /// its database and its features.
     /// </summary>
     ValueTask DeleteAsync(long lambdaId, CancellationToken cancellation = default);
 
@@ -34,6 +34,16 @@ public interface IStorageService
     /// </summary>
     /// <param name="featureId">The feature whose copy of the workspace is meant, or nothing for the lambda's own</param>
     string GetWorkspace(long lambdaId, long? featureId = null);
+
+    /// <summary>
+    /// Where the database of a lambda - or a feature's copy of it - is kept.
+    /// </summary>
+    /// <remarks>
+    /// A file, with SQLite's journal written beside it. Its folder is made on
+    /// demand; the file itself only once the database is switched on.
+    /// </remarks>
+    /// <param name="featureId">The feature whose copy is meant, or nothing for the lambda's own</param>
+    string GetDatabase(long lambdaId, long? featureId = null);
 
     /// <summary>
     /// The directory the assemblies generated for a lambda are written to.

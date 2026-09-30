@@ -6,7 +6,9 @@
 // done, and each stream writes at its own pace. A queue that falls behind
 // forgets its oldest updates, which is fine: only the newest counts matter.
 //
-// The counts are read and written through the functions lambda.cs hands in.
+// The counts are kept in the lambda's database, a row per option, and counted
+// up there: the database takes one write at a time, so two votes at the same
+// moment both count.
 
 using System.Threading.Channels;
 
@@ -25,8 +27,6 @@ public record Update(string Event, object Data);
 
 public sealed class Poll
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-
     private const string Question = "Tabs or spaces?";
 
     private static readonly (string Id, string Label)[] Choices =
@@ -36,31 +36,30 @@ public sealed class Poll
         ("formatter", "Whatever the formatter says")
     ];
 
-    private readonly Action<string> _write;
-
-    private readonly Dictionary<string, int> _votes;
-
     private readonly List<Listener> _listeners = [];
 
     private readonly object _lock = new();
 
-    public Poll(Func<string> read, Action<string> write)
-    {
-        _write = write;
-
-        var text = read();
-
-        _votes = string.IsNullOrWhiteSpace(text) ? [] : JsonSerializer.Deserialize<Dictionary<string, int>>(text, Json) ?? [];
-    }
-
     public Results Results()
     {
-        lock (_lock)
-        {
-            var options = Choices.Select(c => new Option(c.Id, c.Label, _votes.GetValueOrDefault(c.Id))).ToList();
+        var votes = new Dictionary<string, int>();
 
-            return new Results(Question, options, options.Sum(o => o.Votes));
+        using (var db = Database.GetConnection())
+        using (var command = db.CreateCommand())
+        {
+            command.CommandText = "SELECT option, votes FROM votes";
+
+            using var reader = command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                votes[reader.GetString(0)] = reader.GetInt32(1);
+            }
         }
+
+        var options = Choices.Select(c => new Option(c.Id, c.Label, votes.GetValueOrDefault(c.Id))).ToList();
+
+        return new Results(Question, options, options.Sum(o => o.Votes));
     }
 
     public void Cast(Vote vote)
@@ -72,11 +71,13 @@ public sealed class Poll
             throw new ProviderException(ResponseStatus.BadRequest, $"Vote for one of: {string.Join(", ", Choices.Select(c => c.Id))}.");
         }
 
-        lock (_lock)
+        using (var db = Database.GetConnection())
+        using (var command = db.CreateCommand())
         {
-            _votes[option] = _votes.GetValueOrDefault(option) + 1;
+            command.CommandText = "INSERT INTO votes (option, votes) VALUES ($option, 1) ON CONFLICT (option) DO UPDATE SET votes = votes + 1";
+            command.Parameters.AddWithValue("$option", option);
 
-            _write(JsonSerializer.Serialize(_votes, Json));
+            command.ExecuteNonQuery();
         }
 
         Tell(new Update(null, Results()));

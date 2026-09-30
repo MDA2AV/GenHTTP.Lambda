@@ -1,0 +1,8 @@
+-- How the games ended: one row per outcome - X, O or draw - with how many
+-- ended that way. Applied once, by Evolve; a change is a new file.
+
+CREATE TABLE outcomes
+(
+    winner TEXT    NOT NULL PRIMARY KEY,
+    games  INTEGER NOT NULL DEFAULT 0
+);

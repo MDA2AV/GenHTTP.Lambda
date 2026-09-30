@@ -1,0 +1,28 @@
+-- Accounts and the sessions signed in with them. Applied once, by Evolve;
+-- a change to either table is a new file, never an edit of this one.
+
+CREATE TABLE accounts
+(
+    -- as it was first registered, which is how it is shown
+    name     TEXT    NOT NULL,
+    joined   TEXT    NOT NULL,
+    -- the name in capitals, which is what makes an account: "Ada" and "ada"
+    -- are one, and so are "Jürgen" and "JÜRGEN" - SQLite's own NOCASE knows
+    -- the English letters only
+    folded   TEXT    NOT NULL PRIMARY KEY,
+    salt     TEXT    NOT NULL,
+    hash     TEXT    NOT NULL,
+    -- whether the hash has the pepper in it, so accounts made before there
+    -- was one still sign in
+    peppered INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE sessions
+(
+    -- a hash of the token the cookie carries, never the token itself
+    token_hash TEXT NOT NULL PRIMARY KEY,
+    account    TEXT NOT NULL REFERENCES accounts (folded) ON DELETE CASCADE,
+    expires    TEXT NOT NULL
+);
+
+CREATE INDEX ix_accounts_joined ON accounts (joined);

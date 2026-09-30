@@ -13,6 +13,14 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 /// them - a lambda may use HttpClient and sockets directly.
 /// </summary>
 /// <remarks>
+/// A database is a file, so it is held to the same rule: a lambda uses the
+/// connection <c>Database.GetConnection()</c> hands it and makes none of its
+/// own - nor points one at another file, nor loads native code into one. The
+/// names that would do that are refused here, and making a connection is
+/// refused by <see cref="InspectConstruction"/>, which needs the compiler to
+/// tell what a target-typed <c>new()</c> makes.
+/// </remarks>
+/// <remarks>
 /// This is governance, not a sandbox - the compiled code still runs in process.
 /// The second half of the story is <see cref="ReferenceProvider" />, which simply
 /// does not hand the compiler the assemblies that would make most of this reachable.
@@ -34,12 +42,13 @@ public static class CodeGuard
         "System.Runtime.InteropServices",
         "System.Runtime.Loader",
         "System.Security",
+        "System.Linq.Expressions",
         "Microsoft.CodeAnalysis",
         "Microsoft.Data",
         "Microsoft.EntityFrameworkCore",
         "Microsoft.Extensions.DependencyInjection",
         "Microsoft.Win32",
-        "Evolve",
+        "SQLitePCL",
         "GenHTTP.Lambda",
         "GenHTTP.Engine",
         "GenHTTP.Modules.DependencyInjection",
@@ -75,6 +84,10 @@ public static class CodeGuard
                     CheckNamespace(qualified.ToString(), qualified.GetLocation(), findings);
                     break;
 
+                case MemberAccessExpressionSyntax access when access.Parent is not MemberAccessExpressionSyntax && Chain(access) is { } chain:
+                    CheckChain(chain, access.GetLocation(), findings);
+                    break;
+
                 case IdentifierNameSyntax identifier
                     when !IsHarmlessMember(identifier) && !declared.Contains(identifier.Identifier.ValueText):
                     CheckName(identifier.Identifier.ValueText, identifier.GetLocation(), findings);
@@ -105,10 +118,13 @@ public static class CodeGuard
     /// or making a token is something every lambda with accounts has to do,
     /// while System.Security.Cryptography.X509Certificates reads the stores of
     /// the host. The types in here that reach the host are banned by name.
+    /// Microsoft.Data.Sqlite is what a lambda talks to its database with; what
+    /// in it would open another database is banned by name as well.
     /// </remarks>
     private static readonly HashSet<string> AllowedNamespaces = new(StringComparer.Ordinal)
     {
-        "System.Security.Cryptography"
+        "System.Security.Cryptography",
+        "Microsoft.Data.Sqlite"
     };
 
     private static void CheckNamespace(string name, Location location, List<CompilationDiagnostic> findings)
@@ -126,6 +142,72 @@ public static class CodeGuard
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// Checks a name written out in full where an expression goes, such as
+    /// <c>System.Linq.Expressions.Expression.Constant(1)</c>.
+    /// </summary>
+    /// <remarks>
+    /// A type named in a declaration is a qualified name, which the check
+    /// above reads; the same name in an expression is a chain of member
+    /// accesses, and a banned namespace written out there used to go through.
+    /// Where the namespace ends and the type begins is not written anywhere,
+    /// so a chain is refused when it starts with a banned namespace - unless
+    /// it goes on into an allowed one inside it, and from there into one of
+    /// its types rather than into the certificates below it.
+    /// </remarks>
+    private static void CheckChain(string chain, Location location, List<CompilationDiagnostic> findings)
+    {
+        var banned = BannedNamespaces.Where(b => chain.StartsWith(b + ".", StringComparison.Ordinal)).MaxBy(b => b.Length);
+
+        if (banned == null)
+        {
+            return;
+        }
+
+        var allowed = AllowedNamespaces.Where(a => a.Length > banned.Length && chain.StartsWith(a + ".", StringComparison.Ordinal)).MaxBy(a => a.Length);
+
+        if (allowed != null && !chain[(allowed.Length + 1)..].StartsWith("X509Certificates", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        findings.Add(Reject($"'{banned}' is not available inside a lambda.", location));
+    }
+
+    /// <summary>
+    /// The names of a chain of member accesses from its start, joined by dots,
+    /// or nothing where it does not start with a plain name.
+    /// </summary>
+    private static string? Chain(MemberAccessExpressionSyntax access)
+    {
+        var names = new List<string>();
+
+        ExpressionSyntax current = access;
+
+        while (current is MemberAccessExpressionSyntax member)
+        {
+            names.Add(member.Name.Identifier.ValueText);
+
+            current = member.Expression;
+        }
+
+        switch (current)
+        {
+            case IdentifierNameSyntax start:
+                names.Add(start.Identifier.ValueText);
+                break;
+            case AliasQualifiedNameSyntax global:
+                names.Add(global.Name.Identifier.ValueText);
+                break;
+            default:
+                return null;
+        }
+
+        names.Reverse();
+
+        return string.Join('.', names);
     }
 
     /// <summary>
@@ -249,6 +331,61 @@ public static class CodeGuard
         }
     }
 
+    /// <summary>
+    /// Refuses code that makes a database connection of its own: with
+    /// <c>new SqliteConnection(...)</c>, with a target-typed <c>new(...)</c>,
+    /// or through a class of its own derived from one.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the compilation rather than of the text, because
+    /// <c>SqliteConnection connection = new("Data Source=/data/lambda.db");</c>
+    /// names no type where the connection is made, and an alias or a derived
+    /// class names another one. Only the object creations are bound, and only
+    /// in files that have any - the rest is what the compiler binds anyway.
+    /// </remarks>
+    public static IReadOnlyList<CompilationDiagnostic> InspectConstruction(Microsoft.CodeAnalysis.Compilation compilation)
+    {
+        var connection = compilation.GetTypeByMetadataName("Microsoft.Data.Sqlite.SqliteConnection");
+
+        if (connection == null)
+        {
+            return [];
+        }
+
+        var findings = new List<CompilationDiagnostic>();
+
+        foreach (var tree in compilation.SyntaxTrees)
+        {
+            SemanticModel? model = null;
+
+            foreach (var node in tree.GetRoot().DescendantNodes())
+            {
+                INamedTypeSymbol? type = node switch
+                {
+                    BaseObjectCreationExpressionSyntax creation => (model ??= compilation.GetSemanticModel(tree)).GetTypeInfo(creation).Type as INamedTypeSymbol,
+                    ClassDeclarationSyntax { BaseList: not null } declaration => (model ??= compilation.GetSemanticModel(tree)).GetDeclaredSymbol(declaration)?.BaseType,
+                    _ => null
+                };
+
+                for (var current = type; current != null; current = current.BaseType)
+                {
+                    if (SymbolEqualityComparer.Default.Equals(current, connection))
+                    {
+                        var span = node.GetLocation().GetMappedLineSpan();
+
+                        findings.Add(new CompilationDiagnostic("Error", "LAMBDA0001",
+                            "A lambda does not make database connections of its own: Database.GetConnection() opens one to the lambda's own database.",
+                            span.StartLinePosition.Line + 1, span.StartLinePosition.Character + 1, span.HasMappedPath ? span.Path : null));
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        return findings;
+    }
+
     private static CompilationDiagnostic Reject(string message, Location location)
     {
         var position = location.GetLineSpan().StartLinePosition;
@@ -293,7 +430,13 @@ public static class CodeGuard
             "MethodInfo", "FieldInfo", "PropertyInfo", "ConstructorInfo", "MemberInfo", "TypeInfo", "Module",
             "GetType", "GetTypeInfo", "GetMethod", "GetMethods", "GetField", "GetFields", "GetProperty",
             "GetProperties", "GetConstructor", "GetConstructors", "GetMember", "GetMembers", "InvokeMember",
-            "CreateInstance", "CreateDelegate", "DynamicInvoke");
+            "CreateInstance", "CreateDelegate", "DynamicInvoke", "TypeDescriptor");
+
+        // the connection Database.GetConnection() hands out is the only one: these
+        // would make another, point one at another file, or load native code into it
+        Add("use Database.GetConnection() for the lambda's own database", "ConnectionString", "SqliteConnectionStringBuilder",
+            "SqliteFactory", "DbProviderFactories", "DbProviderFactory", "DbDataSource", "CreateDataSource", "LoadExtension",
+            "EnableExtensions", "ClearPool", "ClearAllPools");
 
         Add("native interop is disabled", "Marshal", "NativeLibrary", "NativeMemory", "GCHandle", "SafeHandle",
             "DllImport", "DllImportAttribute", "LibraryImport", "LibraryImportAttribute", "UnmanagedCallersOnly");

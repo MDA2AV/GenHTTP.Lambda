@@ -1,117 +1,143 @@
-// A list of records kept in one JSON file: all the storage a lambda needs for
-// a few hundred of them. Nothing in here is specific to tasks - copy the file
-// into your own lambda as it is.
+// The tasks, kept in the lambda's database: a table the migration in
+// migrations/ makes, read and written with plain SQL.
 //
-//   - The file is read once, when the lambda starts, and every read after that
-//     is answered from memory.
-//   - Every change is made and written back under one lock, so two requests at
-//     the same moment cannot lose each other's change or interleave their writes.
-//   - At most `limit` records are kept, the oldest going first. Anybody can
+//   - Every call opens a connection with Database.GetConnection() and disposes
+//     of it when it is done. Connections are pooled, so that costs nothing,
+//     and a connection is never shared between two requests at once.
+//   - Every call is synchronous - ExecuteReader, not ExecuteReaderAsync. The
+//     database is a file on the same machine, and the server this runs on has
+//     an asynchronous model of its own that a blocking call does not disturb.
+//   - Values go in as parameters ($title), never pasted into the SQL, so what
+//     somebody types cannot change what the statement does.
+//   - At most `limit` tasks are kept, the oldest going first. Anybody can
 //     write to a demo, so it must not grow without bound. For your own, the
-//     real limit is the room the workspace may take, which list_files says.
-//
-// The store is handed a way to read and write its file rather than reaching
-// for Workspace itself, so it does not care where that file lives.
+//     real limit is the room the database may take, which read_database says.
 
-public sealed class JsonStore<T>
+using System.Globalization;
+
+public sealed class TaskStore(int limit)
 {
-    // the same shape the API answers with, so the file reads like the responses
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private const string Columns = "id, title, notes, done, created, updated";
 
-    private readonly List<T> _items;
-
-    private readonly Action<string> _write;
-
-    private readonly int _limit;
-
-    private readonly object _lock = new();
-
-    public JsonStore(Func<string> read, Action<string> write, int limit)
+    public long Count()
     {
-        _write = write;
-        _limit = limit;
+        using var db = Database.GetConnection();
+        using var command = db.CreateCommand();
 
-        var text = read();
+        command.CommandText = "SELECT count(*) FROM tasks";
 
-        _items = string.IsNullOrWhiteSpace(text) ? [] : JsonSerializer.Deserialize<List<T>>(text, Json) ?? [];
+        return (long)command.ExecuteScalar();
     }
 
-    public int Count
+    /// <summary>Every task, open ones first and the newest of each first - or those matching a search.</summary>
+    public List<TaskItem> List(string search)
     {
-        get { lock (_lock) { return _items.Count; } }
+        using var db = Database.GetConnection();
+        using var command = db.CreateCommand();
+
+        command.CommandText = $"SELECT {Columns} FROM tasks WHERE $term IS NULL OR title LIKE $term ESCAPE '\\' OR notes LIKE $term ESCAPE '\\' ORDER BY done, created DESC";
+
+        // a search for "50%" looks for "50%", not for anything starting with 50
+        var term = string.IsNullOrWhiteSpace(search)
+            ? null
+            : "%" + search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+
+        command.Parameters.AddWithValue("$term", (object)term ?? DBNull.Value);
+
+        return Read(command);
     }
 
-    /// <summary>A copy of every record, safe to filter and sort outside the lock.</summary>
-    public List<T> All()
+    public TaskItem Find(string id)
     {
-        lock (_lock)
+        using var db = Database.GetConnection();
+        using var command = db.CreateCommand();
+
+        command.CommandText = $"SELECT {Columns} FROM tasks WHERE id = $id";
+        command.Parameters.AddWithValue("$id", id);
+
+        return Read(command).FirstOrDefault();
+    }
+
+    public void Add(TaskItem task)
+    {
+        using var db = Database.GetConnection();
+
+        // both statements or neither: the task is not added if making room fails
+        using var transaction = db.BeginTransaction();
+
+        using (var insert = db.CreateCommand())
         {
-            return [.. _items];
-        }
-    }
+            insert.CommandText = $"INSERT INTO tasks ({Columns}) VALUES ($id, $title, $notes, $done, $created, $updated)";
 
-    public T Find(Func<T, bool> match)
-    {
-        lock (_lock)
+            Bind(insert, task);
+
+            insert.ExecuteNonQuery();
+        }
+
+        using (var trim = db.CreateCommand())
         {
-            return _items.FirstOrDefault(match);
+            trim.CommandText = "DELETE FROM tasks WHERE id NOT IN (SELECT id FROM tasks ORDER BY created DESC LIMIT $limit)";
+            trim.Parameters.AddWithValue("$limit", limit);
+
+            trim.ExecuteNonQuery();
         }
+
+        transaction.Commit();
     }
 
-    public void Add(T item)
+    /// <summary>Replaces a task, and says whether there was one to replace.</summary>
+    public bool Replace(TaskItem task)
     {
-        lock (_lock)
-        {
-            _items.Add(item);
+        using var db = Database.GetConnection();
+        using var command = db.CreateCommand();
 
-            if (_items.Count > _limit)
-            {
-                _items.RemoveRange(0, _items.Count - _limit);
-            }
+        command.CommandText = "UPDATE tasks SET title = $title, notes = $notes, done = $done, created = $created, updated = $updated WHERE id = $id";
 
-            Save();
-        }
+        Bind(command, task);
+
+        return command.ExecuteNonQuery() > 0;
     }
 
-    /// <summary>Replaces the first record that matches, and says whether there was one.</summary>
-    public bool Replace(Func<T, bool> match, T item)
+    /// <summary>Removes a task, and says whether there was one.</summary>
+    public bool Remove(string id)
     {
-        lock (_lock)
-        {
-            var index = _items.FindIndex(i => match(i));
+        using var db = Database.GetConnection();
+        using var command = db.CreateCommand();
 
-            if (index < 0)
-            {
-                return false;
-            }
+        command.CommandText = "DELETE FROM tasks WHERE id = $id";
+        command.Parameters.AddWithValue("$id", id);
 
-            _items[index] = item;
-
-            Save();
-
-            return true;
-        }
+        return command.ExecuteNonQuery() > 0;
     }
 
-    /// <summary>Removes the first record that matches, and says whether there was one.</summary>
-    public bool Remove(Func<T, bool> match)
+    private static void Bind(SqliteCommand command, TaskItem task)
     {
-        lock (_lock)
-        {
-            var index = _items.FindIndex(i => match(i));
-
-            if (index < 0)
-            {
-                return false;
-            }
-
-            _items.RemoveAt(index);
-
-            Save();
-
-            return true;
-        }
+        command.Parameters.AddWithValue("$id", task.Id);
+        command.Parameters.AddWithValue("$title", task.Title);
+        command.Parameters.AddWithValue("$notes", task.Notes);
+        command.Parameters.AddWithValue("$done", task.Done);
+        command.Parameters.AddWithValue("$created", Time(task.Created));
+        command.Parameters.AddWithValue("$updated", Time(task.Updated));
     }
 
-    private void Save() => _write(JsonSerializer.Serialize(_items, Json));
+    private static List<TaskItem> Read(SqliteCommand command)
+    {
+        using var reader = command.ExecuteReader();
+
+        var tasks = new List<TaskItem>();
+
+        while (reader.Read())
+        {
+            tasks.Add(new TaskItem(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetBoolean(3),
+                                   Time(reader.GetString(4)), Time(reader.GetString(5))));
+        }
+
+        return tasks;
+    }
+
+    // times as ISO 8601 text in UTC: they sort as they should, read well in
+    // the editor's view of the database, and come back as the time they were
+    private static string Time(DateTime value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+
+    private static DateTime Time(string value) => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 }

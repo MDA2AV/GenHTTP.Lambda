@@ -16,9 +16,10 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// lambda of one's own from a demo is the ordinary creation flow with that
 /// template chosen.
 ///
-/// Every demo keeps what it stores in JSON files in its workspace. That is on
-/// purpose: it is what every lambda can do today, and a demo showing a
-/// database the platform does not offer yet would teach the wrong thing.
+/// Every demo keeps its records in its database, in tables its migrations
+/// make, applied by Evolve as it starts - the way an agent is meant to - and
+/// files, where it has any, in its workspace. A lambda started as a copy of
+/// one starts with a database of its own, switched on.
 /// </remarks>
 public static class DemoCatalog
 {
@@ -27,34 +28,38 @@ public static class DemoCatalog
     [
         new("demo-crud", "Records you can list, add, change and remove",
             "Keep track of things", "A list people can add to, change and tick off - tasks, notes, bookmarks or a small inventory.",
-            "A task list: a REST API with list, search, read, create, update and delete, stored in a JSON file, with an OpenAPI document, Scalar to try it, and a page that uses it.",
-            "A class-based webservice ([ResourceMethod]), status codes (201, 400, 404), validation, a reusable JSON file store with a lock and a size cap, OpenAPI and Scalar, and a front end shipped as assets in a folder.",
-            "Anything that keeps a list of things: notes, bookmarks, inventory, a small admin tool."),
+            "A task list: a REST API with list, search, read, create, update and delete, kept in the lambda's database, with an OpenAPI document, Scalar to try it, and a page that uses it.",
+            "A class-based webservice ([ResourceMethod]), status codes (201, 400, 404), validation, a table made by an Evolve migration shipped in migrations/, a store in plain SQL with parameters, a transaction and a size cap, synchronous calls on a connection per request, OpenAPI and Scalar, and a front end shipped as assets in a folder.",
+            "Anything that keeps a list of things: notes, bookmarks, inventory, a small admin tool.",
+            Database: true),
 
         new("demo-registration", "Registration and login",
             "Let people sign up", "Accounts people register and sign in with, and pages only they get to see.",
             "A landing page that asks you to register or sign in, and a members page only a signed in user gets to see.",
-            "Accounts in a JSON file with salted PBKDF2 password hashes, peppered with a secret (Secret.Exists and Secret.Read) where the lambda has one; sessions in an HttpOnly, SameSite cookie set with Result<T>.Cookie and read with GetCookie, stored only as hashes and expiring; the Authentication module (ApiKeyAuthentication with a cookie extractor) guarding api/; the signed in user injected into routes with UserInjector<T>; a stored format that stays readable when a field is added; and two pages that decide where to send you.",
+            "Accounts in the lambda's database with salted PBKDF2 password hashes, peppered with a secret (Secret.Exists and Secret.Read) where the lambda has one; a name unique however it is written (COLLATE NOCASE) and taken by one registration only (ON CONFLICT); sessions in an HttpOnly, SameSite cookie set with Result<T>.Cookie and read with GetCookie, stored only as hashes and expiring, removed with their account by a foreign key; the Authentication module (ApiKeyAuthentication with a cookie extractor) guarding api/; the signed in user injected into routes with UserInjector<T>; and two pages that decide where to send you.",
             "Anything with users: sign up, sign in, sign out, content only members see. Anything that needs a secret.",
-            Secrets: ["PASSWORD_PEPPER"]),
+            Secrets: ["PASSWORD_PEPPER"], Database: true),
 
         new("demo-game", "A multiplayer game over a websocket",
             "A game to play together", "Something several people play at the same time, live in their browsers.",
             "Tic-tac-toe against whoever else opens the page, or against the house when nobody is around. The server keeps the board and decides every move.",
-            "A reactive websocket handler (IReactiveHandler), typed JSON messages both ways with ReadPayloadAsync<T> and WritePayloadAsync, matchmaking and per-game state, a server that validates every move, one write at a time per socket, and a single page application talking to it.",
-            "Anything live between several browsers: games, shared boards, chat, collaboration."),
+            "A reactive websocket handler (IReactiveHandler), typed JSON messages both ways with ReadPayloadAsync<T> and WritePayloadAsync, matchmaking and per-game state, a server that validates every move, one write at a time per socket, counts kept in the database with an upsert (ON CONFLICT DO UPDATE), and a single page application talking to it.",
+            "Anything live between several browsers: games, shared boards, chat, collaboration.",
+            Database: true),
 
         new("demo-files", "Uploads and serving files",
             "Share files and pictures", "People upload pictures or documents, and everybody else can see them.",
             "Upload a picture or a document and everybody sees it in the gallery; you can remove what you uploaded.",
-            "Taking a raw request body as a Stream, checking its type and size, storing it in the workspace, serving a workspace folder with Workspace.Files() and nosniff, keeping the metadata in JSON, and why only a fixed list of file types is served back.",
-            "Anything users upload to: avatars, attachments, a gallery, a file drop."),
+            "Taking a raw request body as a Stream, checking its type and size, storing it in the workspace, serving a workspace folder with Workspace.Files() and nosniff, keeping what is known about each upload in the database - files in the workspace, records in the database - and why only a fixed list of file types is served back.",
+            "Anything users upload to: avatars, attachments, a gallery, a file drop.",
+            Database: true),
 
         new("demo-live", "Live updates with server-sent events",
             "Show things as they happen", "A page that updates by itself the moment something changes - votes, scores, a dashboard.",
             "A poll whose bars move for everybody the moment anybody votes, with a count of who is watching.",
-            "EventSource.Create() streaming to many browsers, objects sent as JSON messages and a named event beside them, a POST that changes state and notifies every listener, keeping a stream alive with comments, and the browser's EventSource reconnecting on its own.",
-            "One-way live data: dashboards, feeds, progress, notifications, scoreboards. Simpler than a websocket when the browser only listens.")
+            "EventSource.Create() streaming to many browsers, objects sent as JSON messages and a named event beside them, a POST that counts a vote in the database and notifies every listener, keeping a stream alive with comments, and the browser's EventSource reconnecting on its own.",
+            "One-way live data: dashboards, feeds, progress, notifications, scoreboards. Simpler than a websocket when the browser only listens.",
+            Database: true)
     ];
 
     #region Functionality
@@ -94,8 +99,12 @@ public static class DemoCatalog
 /// The secrets it is given, each a random value nobody knows - so its secrets
 /// are switched on and listed like any owner's, and read by its code
 /// </param>
+/// <param name="Database">
+/// Whether it keeps its records in a database - which the demo, and every
+/// lambda started as a copy of it, has switched on from the start
+/// </param>
 public sealed record LambdaDemo(string Id, string Name, string Goal, string Pitch, string Description, string Shows, string ReadWhen,
-                                IReadOnlyList<string>? Secrets = null)
+                                IReadOnlyList<string>? Secrets = null, bool Database = false)
 {
 
     /// <summary>

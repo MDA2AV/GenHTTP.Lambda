@@ -11,13 +11,14 @@ namespace GenHTTP.Lambda.Api.Model;
 /// kind added later is listed the same way.
 /// </remarks>
 /// <param name="Kind">
-/// Which kind of data: <c>workspace</c>, the files the lambda reads and writes,
-/// or <c>secrets</c>, the API keys and passwords it reads and nobody sees
+/// Which kind of data: <c>database</c>, the SQLite database the lambda keeps its
+/// records in, <c>workspace</c>, the files it reads and writes, or <c>secrets</c>,
+/// the API keys and passwords it reads and nobody sees
 /// </param>
 /// <param name="Enabled">Whether the lambda has it</param>
 /// <param name="Default">Whether a lambda has it until its owner decides otherwise</param>
 /// <param name="Changed">When the owner last switched it; absent while it is as it came</param>
-/// <param name="Items">What it holds: files, for the workspace; values, for the secrets</param>
+/// <param name="Items">What it holds: tables, for the database; files, for the workspace; values, for the secrets</param>
 /// <param name="UsedBytes">The room that takes, as the quota counts it; zero for a kind counted in things</param>
 /// <param name="QuotaBytes">The room the tier of the lambda gives it; zero for a kind counted in things</param>
 /// <param name="MaxItems">How many things it may hold, for a kind counted in things such as the secrets</param>
@@ -56,3 +57,55 @@ public sealed record SecretListingResponse(bool Enabled, List<SecretResponse> Se
 /// </summary>
 /// <param name="Value">The value, up to 32 KB - sent once, and never shown again</param>
 public sealed record SecretRequest(string Value);
+
+/// <summary>
+/// The database of a lambda, or a feature's copy of it.
+/// </summary>
+/// <param name="Enabled">Whether the lambda has its database switched on (<c>PUT …/data/database</c>)</param>
+/// <param name="UsedBytes">The room it takes on disk</param>
+/// <param name="QuotaBytes">How large it may grow in the tier of the lambda</param>
+/// <param name="Tables">Every table and view, tables first</param>
+/// <param name="Used">
+/// Whether the code connects to it with <c>Database.GetConnection()</c> - the
+/// version online and the newest one, or the feature's files
+/// </param>
+public sealed record DatabaseResponse(bool Enabled, long UsedBytes, long QuotaBytes, List<DatabaseTableResponse> Tables, bool Used);
+
+/// <summary>
+/// One table or view of a database.
+/// </summary>
+/// <param name="Kind"><c>table</c> or <c>view</c></param>
+/// <param name="Rows">How many rows it holds; absent where counting took too long</param>
+/// <param name="Migrations">Whether it is the history Evolve keeps of the migrations it applied</param>
+public sealed record DatabaseTableResponse(string Name, string Kind, long? Rows, List<DatabaseColumnResponse> Columns, bool Migrations);
+
+/// <summary>
+/// One column of a table or view.
+/// </summary>
+/// <param name="Type">The type it was declared with, as written</param>
+/// <param name="PrimaryKey">Whether it is the primary key, or part of it</param>
+/// <param name="Default">The expression it defaults to, as written</param>
+public sealed record DatabaseColumnResponse(string Name, string Type, bool NotNull, bool PrimaryKey, string? Default);
+
+/// <summary>
+/// A page of the rows of a table.
+/// </summary>
+/// <param name="Rows">
+/// Each row as its values, in the order of the columns: numbers, text, null -
+/// an integer beyond what JavaScript holds exactly as text, text of more than
+/// 2000 characters as <c>{ text, length }</c>, and bytes as <c>{ blob }</c>, their length
+/// </param>
+/// <param name="Total">How many rows the table holds</param>
+/// <param name="Order">The column they are sorted by; absent for the order they were written in</param>
+public sealed record DatabaseRowsResponse(string Table, List<DatabaseColumnResponse> Columns, List<List<object?>> Rows, long Total, int Offset, int Limit,
+                                          string? Order, bool Descending);
+
+/// <summary>
+/// A text too long to send whole: its beginning, and how long it is.
+/// </summary>
+public sealed record TextValue(string Text, int Length);
+
+/// <summary>
+/// A value of bytes, told by its length.
+/// </summary>
+public sealed record BlobValue(long Blob);

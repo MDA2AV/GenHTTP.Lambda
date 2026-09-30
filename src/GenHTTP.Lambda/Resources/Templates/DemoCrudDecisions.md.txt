@@ -4,17 +4,21 @@
 
 `Tasks.cs` is a webservice: every public method with `[ResourceMethod]` is a route. A parameter named like a segment of the path (`:id`) comes from the path, a record from the JSON body, anything else from the query, and what a method returns is sent as camel case JSON. It is how GenHTTP writes a REST API, and it gives the OpenAPI description (`AddOpenApi()`) and the page to try it (`AddScalar()`) for nothing.
 
-## The tasks are one JSON file in the workspace
+## The tasks are a table in the database
 
-`tasks.json`, kept by `JsonStore<T>` in `Store.cs`. A few hundred records need no database, and the workspace outlives every deployment, so a new version never loses the list. The file is read once when the lambda starts and written after every change; every read is answered from memory.
+`tasks`, read and written by `TaskStore` in `Store.cs` with plain SQL. The database belongs to the lambda, not to a version, so a new version never loses the list. Every request asks the database rather than a copy in memory, so there is nothing to keep in step and nothing to load when the lambda starts.
 
-- **One lock around every change and its write**, so two requests at the same moment cannot lose each other's change or mix their writes.
-- **At most 200 tasks**, the oldest going first, because anybody can write to the list.
-- **Only `lambda.cs` touches `Workspace`.** The store is handed a way to read and write its file, so `Store.cs` does not care where the file lives and can be copied into another lambda as it is.
+- **A connection per call.** Every method opens one with `Database.GetConnection()` and disposes of it when it is done. Connections are pooled, so that costs nothing, and no connection is shared between two requests.
+- **Synchronous calls** - `ExecuteReader`, not `ExecuteReaderAsync`. The database is a file on the same machine, and the server has an asynchronous model of its own that a short blocking call does not disturb.
+- **Values are parameters** (`$title`), never pasted into the SQL, so what somebody types cannot change what a statement does. A search escapes `%` and `_`, so looking for "50%" finds "50%".
+- **At most 200 tasks**, the oldest going first, because anybody can write to the list. Adding a task and making room are one transaction: the task is not added if making room fails.
+- **Times are ISO 8601 text in UTC.** They sort as they should and read well in the editor's view of the database.
 
-## The stored format stays readable
+## The table is made by a migration, applied by Evolve
 
-The file holds the records in the shape the API answers with. The data outlives every version, so a field added to `TaskItem` has to be optional with a default: a file written by an older version must still read, and a version put back online must still read what a newer one wrote.
+`migrations/V1__Create_tasks.sql` makes the table. `lambda.cs` hands the folder to Evolve before it serves anything; Evolve applies the files this database has not had yet, in order and once each, and remembers which in a table of its own. It runs on every start and only ever changes what is new, and a feature tries a new migration on its copy of the data before it is put online.
+
+A migration that was applied is never edited - Evolve refuses to start when one changed - so a change to the table is the next file, `V2__...`. The data outlives every version, and a version put back online runs against a table a newer one migrated. So a change adds rather than alters: a new column gets a default, nothing an older version reads is dropped or renamed, and the queries name their columns rather than asking for `*`.
 
 ## Problems are status codes with a message
 
@@ -26,4 +30,4 @@ Checking the input and looking a task up throw `ProviderException` with the stat
 
 ## A first start is not empty
 
-With no tasks at all, three are added that point at the code, so the page shows what it does before anybody has used it.
+With no tasks at all, three are added that point at the code, so the page shows what it does before anybody has used it. They are added by the program rather than by the migration: a migration makes the table, and the rows are data.

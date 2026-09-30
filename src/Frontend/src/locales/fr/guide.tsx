@@ -17,7 +17,8 @@ export const guide: Messages['guide'] = {
     page: 'Servir une page',
     spa: 'Un front-end, étape par étape',
     storage: 'Les deux endroits où vivent les fichiers',
-    keeping: 'Garder des données',
+    database: 'Garder des enregistrements',
+    keeping: 'Garder des fichiers',
     secrets: 'Clés et mots de passe',
     sockets: 'WebSockets',
     limits: 'Ce que vous ne pouvez pas faire',
@@ -97,7 +98,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Brouillons', () => <>Des modifications préparées à côté de la lambda : chacune s’essaie à sa propre adresse et s’intègre à la prochaine version une fois au point. Une fois ouvert, un brouillon a son propre code, ses propres données et ses propres logs.</>],
     ['Fichiers', () => <>Les fichiers d’une version : son code et ses assets, le programme lui-même. Un cadenas ou un globe indique si le public peut y accéder.</>],
-    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : le workspace et les secrets, chacun dans son onglet. Consultez-les, envoyez des fichiers, définissez des secrets, ou activez et désactivez un type. La vue simple l’affiche dès que l’application garde quelque chose.</>],
+    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : la base de données, le workspace et les secrets, chacun dans son onglet. Consultez les tables et les fichiers, envoyez des fichiers, définissez des secrets, ou activez et désactivez un type. La vue simple l’affiche dès que l’application garde quelque chose.</>],
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],
     ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
@@ -136,7 +137,7 @@ export const guide: Messages['guide'] = {
   ),
   whySample: {
     specification: 'Un livre d’or que les gens peuvent signer ; les messages doivent survivre à un redémarrage',
-    change: 'Garde les messages dans le workspace pour qu’ils survivent à un redémarrage',
+    change: 'Garde les messages dans la base de données pour qu’ils survivent à un redémarrage',
   },
   why2: (k) => (
     <>
@@ -301,10 +302,43 @@ export const guide: Messages['guide'] = {
   storageAside:
     'Impossible d’en faire un seul endroit. Sinon, soit un déploiement effacerait tout ce que votre lambda a écrit depuis, soit rien ne pourrait jamais être retiré de ce qu’elle publie. Un jeu qui tient un classement a besoin du second cas ; la page qu’il sert, du premier. La page va donc dans la version, et le classement dans les données.',
 
+  database: (k) => (
+    <>
+      Les enregistrements – entrées, comptes, commandes, votes – ont leur place dans la {k.b('base de données')} : une
+      base SQLite propre à la lambda, que vous activez sous {k.b('Données')}. Le code ouvre une connexion avec{' '}
+      {k.code('Database.GetConnection()')} et lui parle en SQL :
+    </>
+  ),
+  database2: (k) => (
+    <>
+      Ses tables sont créées par des {k.b('migrations')} : des fichiers SQL livrés avec la version dans{' '}
+      {k.code('migrations/')}, appliqués dans l’ordre par {k.link('https://evolve-db.netlify.app/', 'Evolve')} au
+      démarrage de la lambda – chacun une seule fois, si bien qu’une nouvelle version n’exécute que ce qui est nouveau.
+      Ne modifiez jamais une migration déjà appliquée ; un changement de table, c’est le fichier suivant.
+    </>
+  ),
+  database3: (k) => (
+    <>
+      Comme toutes les données, la base est partagée par toutes les versions, laissée intacte par les déploiements et
+      les retours en arrière, et un brouillon travaille sur une copie. Sous {k.b('Données')}, vous voyez ses tables et
+      leur contenu – la vue simple les appelle des entrées. {k.b('Télécharger en projet .NET')} l’emporte sous forme
+      de simple fichier SQLite.
+    </>
+  ),
+  databaseAside: (k) => (
+    <>
+      Ouvrez une connexion là où vous en avez besoin, libérez-la ensuite, et utilisez-la de façon synchrone :{' '}
+      {k.code('ExecuteReader')}, pas {k.code('ExecuteReaderAsync')}. Les valeurs passent en paramètres, jamais dans le
+      SQL. La démo {k.link('/editor/demo-crud', 'demo-crud')} fait tout cela.
+    </>
+  ),
+
   keeping: (k) => (
     <>
-      {k.code('Workspace')} est un dossier privé que votre lambda peut lire et écrire. C’est là que va tout ce qui doit
-      survivre à une requête, ou à un déploiement.
+      {k.code('Workspace')} est un dossier privé que votre lambda peut lire et écrire : l’endroit pour les fichiers –
+      les images que quelqu’un importe, un document qu’elle produit, un modèle qu’elle charge. Les enregistrements ont
+      leur place dans la base de données, et ce que l’on sait d’un fichier – qui l’a importé, quand – est aussi un
+      enregistrement.
     </>
   ),
   keeping2: (k) => (
@@ -371,6 +405,8 @@ export const guide: Messages['guide'] = {
       côté du programme, avec les mêmes méthodes, à part dans un dossier {k.code('Platform')} : rien à changer dans votre code.
       {' '}{k.code('Secret')} y lit les variables d’environnement du même nom ; les valeurs restent ici. La
       documentation et les tests suivent dans {k.code('docs')} et {k.code('tests')}.
+      {' '}{k.code('Database')} ouvre {k.code('database/database.db')}, que le téléchargement contient avec les
+      enregistrements gardés par votre application.
     </>
   ),
   awayAside:

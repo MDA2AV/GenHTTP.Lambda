@@ -32,8 +32,10 @@ These, and nothing else:
 | `check_code` | compiles without saving or deploying |
 | `deploy` | makes a version live - with `feature`, puts that feature online at its preview address instead |
 | `read_logs` | how the live lambda is answering, errors with stack traces - with `feature`, how its preview is |
-| `list_files`, `upload_file`, `delete_file` | the workspace, where a lambda keeps its data - with `feature`, that feature's copy of it |
-| `enable_data`, `list_secrets` | switches secrets on; lists the secrets by name, and which ones the code reads that have no value yet |
+| `list_files`, `upload_file`, `delete_file` | the workspace, where a lambda keeps its files - with `feature`, that feature's copy of it |
+| `enable_data` | switches the database or the secrets on |
+| `read_database` | the tables of the database and their rows - with `feature`, that feature's copy |
+| `list_secrets` | lists the secrets by name, and which ones the code reads that have no value yet |
 
 `write_code` and `change_code` take `deploy: true` to go online in the same
 call, and `check: true` to compile what they saved without putting it
@@ -121,9 +123,16 @@ yours and nothing else. So:
 ## Program and data
 
 What the application keeps while it runs - entries, scores, accounts - is
-data. It lives in the workspace, which every version shares and no deploy,
-rollback or merge touches. The pages, scripts and styles are the program and
-ship with the code as assets.
+data, which every version shares and no deploy, rollback or merge touches.
+Records go in the database: switch it on with `enable_data` (kind `database`),
+ship the tables as SQL migrations in `migrations/` (`V1__Create_entries.sql`)
+applied with Evolve at the top of `lambda.cs`, and read and write them with
+`Database.GetConnection()` and plain SQL with parameters, synchronously -
+`demo-crud` shows all of it. Uploaded files go in the workspace. A migration
+that ran is never changed: a change to a table is the next file, and it only
+adds - a column with a default, a new table - so the data already there keeps
+working. The pages, scripts and styles are the program and ship with the code
+as assets.
 
 An API key, a password or a token for another service is data too, and never
 code: read it with `Secret.Read("NAME")` - or `Secret.Exists` first, if the

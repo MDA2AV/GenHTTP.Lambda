@@ -60,6 +60,8 @@
         <EmbeddedResource Include="Resources/Templates/*.md.txt" WithCulture="false" />
         <EmbeddedResource Include="Resources/Templates/*.mjs.txt" WithCulture="false" />
         <EmbeddedResource Include="Resources/Templates/*.json.txt" WithCulture="false" />
+        <!-- and the migrations of its database, which ship as assets like a page does -->
+        <EmbeddedResource Include="Resources/Templates/*.sql.txt" WithCulture="false" />
         <!-- the files every exported project gets, see ProjectPacker -->
         <EmbeddedResource Include="Resources/Export/*.txt" WithCulture="false" />
     </ItemGroup>

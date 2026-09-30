@@ -17,8 +17,8 @@ docker compose up --build
 ```
 
 The application is then available at <http://localhost:8080/>. Its data - the
-SQLite database, the stored code and the lambda workspaces - lives in a named
-volume mounted at `/data`.
+SQLite database, the stored code, and the workspaces and databases of the
+lambdas - lives in a named volume mounted at `/data`.
 
 ## Developing locally
 
@@ -80,7 +80,7 @@ path.
 |-------------------------------------------------------|-------------------------------------------|
 | `POST /lambdas`                                       | creates a lambda (optionally with `view`: `Full` or `Simple`) |
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key, its `view`), removes it |
-| `GET /lambdas/:privateKey/export`                     | the newest version as a runnable .NET 10 project with a Dockerfile (zip), see below |
+| `GET /lambdas/:privateKey/export`                     | the newest version as a runnable .NET 10 project with a Dockerfile (zip), with its database, see below |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
 | `GET /lambdas/:privateKey/versions/:version`          | reads one version (`?folder=.lambda/` for its documentation and tests alone) |
 | `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
@@ -95,7 +95,9 @@ path.
 | `GET /lambdas/:privateKey/agent`                      | the agent's change of it - under way, or the last one - and how many are left today |
 | `POST /lambdas/:privateKey/agent/start` / `stop`      | asks the agent for a change, stops it     |
 | `GET /lambdas/:privateKey/data`                       | the kinds of data it keeps, and how full each is |
-| `GET / PUT / DELETE /lambdas/:privateKey/data/:kind`  | one kind (`workspace`, `secrets`); switches it on; switches it off and deletes what it held |
+| `GET / PUT / DELETE /lambdas/:privateKey/data/:kind`  | one kind (`database`, `workspace`, `secrets`); switches it on; switches it off and deletes what it held |
+| `GET /lambdas/:privateKey/database`                   | its database: tables and views, their columns and rows, how full it is, whether the code connects |
+| `GET /lambdas/:privateKey/database/tables/:table`     | a page of one table's rows, newest first (`offset`, `limit`, `order`, `descending`) |
 | `GET /lambdas/:privateKey/secrets`                    | the secrets by name, which names the code reads, and which of those have no value |
 | `PUT / DELETE /lambdas/:privateKey/secrets/:name`     | stores a value (`{ "value": … }`), never read back; removes one |
 | `GET /lambdas/:privateKey/files`                      | lists the workspace                       |
@@ -113,6 +115,7 @@ path.
 | `GET /lambdas/:privateKey/features/:feature/data`, `POST …/data/refresh` | its copy of the data; a fresh copy of the lambda's |
 | `…/features/:feature/workspace[/:path[/content]]`, `…/folders/:path` | its copy of the workspace, as `files` and `folders` are the lambda's |
 | `…/features/:feature/secrets[/:name]`                 | its copy of the secrets, as `secrets` are the lambda's |
+| `…/features/:feature/database[/tables/:table]`        | its copy of the database, as `database` is the lambda's |
 | `POST /lambdas/:privateKey/code/check`                | compiles without saving                   |
 | `POST /lambdas/:privateKey/code/semantics`, `completions`, `definition` | what the editor asks the compiler |
 | `GET /keys/:publicKey`                                | whether a key is free, and if not, online |
@@ -175,19 +178,20 @@ version's changes in and then says so by moving its `base` (`PATCH`, or
 `update_feature`), and the merge takes the lambda's lock and checks the base
 once more, so two merges cannot both win. A lambda may have ten features open
 (`LAMBDA_MAX_FEATURES`); a demo has none. Each holds a full copy of the
-workspace, taken on a thread of its own and swapped in whole, so ten features
-of a premium lambda with a full workspace take ten times its room on disk.
+workspace and of the database, taken on a thread of its own and swapped in
+whole, so ten features of a premium lambda with a full workspace take ten times
+its room on disk.
 
-**Data** is what the program keeps: the workspace, a private directory of
-files, and the secrets, with a database meant to follow. It belongs to the
-lambda rather than to a version - every version reads and writes the same
-data, and deploying, rolling back or merging never touches it. It goes with
-the lambda, or when that kind of data is switched off, which deletes what it
-held - the copies features work on included. Each kind is switched on before
-the lambda can use it (`PUT …/data/:kind`, `enable_data`): the workspace is on
-unless it was switched off, and a lambda whose workspace is off is compiled
-with one that refuses every call and says why; the secrets are off until
-somebody switches them on. An agent may switch a kind on when what it builds
+**Data** is what the program keeps: the database, a SQLite database for its
+records; the workspace, a private directory of files; and the secrets. It
+belongs to the lambda rather than to a version - every version reads and
+writes the same data, and deploying, rolling back or merging never touches it.
+It goes with the lambda, or when that kind of data is switched off, which
+deletes what it held - the copies features work on included. Each kind is
+switched on before the lambda can use it (`PUT …/data/:kind`, `enable_data`):
+the workspace is on unless it was switched off, and a lambda whose workspace
+is off is compiled with one that refuses every call and says why; the database
+and the secrets are off until somebody switches them on. An agent may switch a kind on when what it builds
 needs one; switching off deletes, so only the owner does that. The editor has
 a **Data** section of its own, beside **Files**, which holds the files of a
 version. Every kind is one view of it, picked from a row of pills under its
@@ -276,6 +280,80 @@ drafts, the code, the tests), the program and what it keeps (files, data,
 versions), how it runs (deployments, stats, logs), and how people find it
 (showcase, domain). On a phone the groups are a rule apart in the row of
 sections.
+### Databases
+
+Records - entries, accounts, orders, votes - go in the database: a SQLite file
+of the lambda's own, which its code opens a connection to and talks to in SQL.
+Its schema is migrations shipped with the version and applied by
+[Evolve][evolve] as the lambda starts:
+
+```csharp
+// migrations/V1__Create_notes.sql: CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL);
+using (var connection = Database.GetConnection())
+{
+    new Evolve(connection) { Locations = [Assets.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+}
+
+return Inline.Create().Get("count", () =>
+{
+    using var db = Database.GetConnection();
+    using var command = db.CreateCommand();
+
+    command.CommandText = "SELECT count(*) FROM notes";
+
+    return (long)command.ExecuteScalar();
+});
+```
+
+`Database.GetConnection()` hands out an open `SqliteConnection` of
+Microsoft.Data.Sqlite, taken from a pool, which the caller disposes of - one
+per request, never one shared between requests. `Microsoft.Data.Sqlite` and
+`EvolveDb` are imported in every file, like the GenHTTP modules. Agents are
+told to use it synchronously: the database is a file on the same machine, and
+the engine has an asynchronous model of its own that a blocking call here does
+not disturb. The demos all keep their records like this, `demo-crud` the
+plainest of them.
+
+- **Off until switched on.** Switching it on (the editor, `PUT …/data/database`,
+  `enable_data`) makes it: an empty file, in write-ahead logging, so readers
+  never wait for a writer. Switching it off deletes it, the copies of the
+  features included. Either way the lambda and its previews are started again
+  on their next request, so what they do as they start - migrating - is done
+  against what is there now. A lambda created as a copy of a demo that keeps
+  one starts with its own, switched on.
+- **The one file it opens.** A lambda does not make connections of its own.
+  The code guard refuses Entity Framework, `new SqliteConnection(...)` - also as
+  a target-typed `new(...)`, through an alias or a class derived from it, which
+  is asked of the compiler rather than read off the text - and the names that
+  would point a connection elsewhere or load native code into it
+  (`ConnectionString`, `LoadExtension`, `DbProviderFactories`, …). The
+  connection it is handed carries an authorizer SQLite asks about every
+  statement: `ATTACH` and `VACUUM INTO`, which reach other files, are refused,
+  as are the pragmas that would point it at other directories or lift its
+  quota, and SQLite's defensive mode is on. The handle underneath is a type
+  the code cannot name.
+- **Its room.** `LAMBDA_DATABASE_BYTES` (256 MB) and
+  `LAMBDA_PREMIUM_DATABASE_BYTES` (2 GB), enforced by SQLite with
+  `max_page_count` on every connection: past it a write fails with *database or
+  disk is full*.
+- **Features get a copy.** Taken with SQLite's backup, which reads the database
+  in one transaction while the lambda goes on writing, so it is the database
+  as it was at one moment. A preview migrates its copy as it starts, which is
+  where a migration is tried first; merging throws the copy away.
+- **Read by the owner, written by the lambda.** The editor shows its tables,
+  their columns and rows under Data (`GET …/database`); `read_database` does
+  the same for an agent. Nothing but the lambda writes to it.
+- **Versions share it.** A rollback runs an older version against a schema a
+  newer one migrated; Evolve lets a version start whose migrations are fewer
+  than the database's, and agents are told to change a schema additively, and
+  never to edit a migration that was applied.
+
+The databases are not encrypted. SQLite has no encryption of its own: it
+would take replacing the SQLite of the whole process with a build that has
+(SQLite3 Multiple Ciphers was tried, and is maintained by one person for
+.NET), and the key would sit in the platform's database on the same volume -
+so it would protect a copy of `/data/databases` on its own and nothing more.
+Protect the data volume and its backups instead.
 
 ### Secrets
 
@@ -402,10 +480,10 @@ section tells how a change ended without version numbers and shows what the
 agent said rather than the tools it called, a draft is what it does rather
 than the files it changes, and a change that does not compile is the agent's
 to fix rather than a list of compiler errors. Its data shows only the kinds
-that hold something, in its own words: what the app saved, as a plain list to
-download from, and its keys and passwords, which the owner can enter and
-replace - the ones the app is waiting for first, and the overview asks for
-them too. Entering one there switches secrets on if the agent left them off.
+that hold something, in its own words: its records, table by table, to read
+and never to edit; what the app saved, as a plain list to download from; and
+its keys and passwords, which the owner can enter and replace - the ones the
+app is waiting for first, and the overview asks for them too. Entering one there switches secrets on if the agent left them off.
 The **full** view is every section, as before.
 
 Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
@@ -428,15 +506,23 @@ without this platform (`Services/Deployment/ProjectPacker.cs`):
 | `Program.cs` | the default GenHTTP host, `Host.Create().Handler(Project.Create()).Defaults().RunAsync()`, under a header naming the lambda, its version and change, the export date, where to read about GenHTTP, and the environment variables its secrets become (as `-e` flags in the `docker run` line too) |
 | `Project.cs` | `lambda.cs`: its statements are the body of `Project.Create()` (`CreateAsync()` when they `await`), its types sit beside the class, made public as on the platform |
 | `*.cs` | the other files, their code unchanged, the first letter of the name capitalized |
-| `Platform/` | what the platform provided: `Workspace` and `Assets` as folders, `Secret` reading environment variables of the same name (the values are never exported), the switch that turns what `Project` returns into a handler, and the imports every lambda gets as global usings |
+| `Platform/` | what the platform provided: `Workspace` and `Assets` as folders, `Secret` reading environment variables of the same name (the values are never exported), `Database` opening `database/database.db` where the code uses one, the switch that turns what `Project` returns into a handler, and the imports every lambda gets as global usings |
 | `assets/` | the files the version ships, copied beside the program on build |
 | `docs/`, `tests/` | its documentation and its tests, from `.lambda/`; neither compiled nor copied into the container |
-| `Dockerfile` | builds and runs it; the workspace is `/app/workspace` |
+| `database/database.db` | the lambda's database, an ordinary SQLite file - its records go with it |
+| `Dockerfile` | builds and runs it; the workspace is `/app/workspace`, the database folder is mounted at `/app/database` |
 
 It references `GenHTTP.Full` - the internal engine, which runs wherever .NET
-does - at the version this server runs, so it behaves as the lambda did. Data is
-not part of it: the workspace starts empty. A test builds the export of every
-demo with the .NET SDK, so it needs the package feed.
+does - at the version this server runs, so it behaves as the lambda did, and
+`Microsoft.Data.Sqlite` and `Evolve` only where the code uses them. Of the data,
+the database comes along - copied with SQLite's backup, so it is whole even
+while the lambda writes to it, and any SQLite tool reads it - while the
+workspace starts empty and the values of the secrets stay here. `database/` is
+in `.gitignore` and `.dockerignore`: records are nobody's source, and the image
+mounts them rather than carrying them. The archive is packed into a temporary
+file and streamed from there, since a database may be as large as the tier
+allows. A test builds the export of every demo with the .NET SDK, so it needs
+the package feed.
 
 ## How it is put together
 
@@ -464,6 +550,12 @@ services that the API resources talk to through interfaces:
   database. `SecretCipher` holds the installation's key and seals and opens
   values, `SecretVault` stores them and is what a running lambda reads through,
   and `SecretService` is what the API and MCP call - by name, never by value.
+- **Databases** (`Services/Databases`) - the database of each lambda, a SQLite
+  file below `/data/databases/{lambda}`, and a copy per feature beside its
+  files. `DatabaseVault` makes, copies, exports and deletes them and is what a
+  running lambda connects through, `ConnectionGuard` is the authorizer and the
+  limits every connection it hands out carries, and `DatabaseService` is what
+  the API and MCP read tables and rows with.
 - **Features** (`Services/Features`) - changes worked on beside a lambda. A
   row per feature says what it is based on and whether its preview is online;
   its files (`files.json`), what its preview serves (`preview.json`), its copy
@@ -523,8 +615,10 @@ Everything is read from the environment on startup, see
 | `LAMBDA_PREMIUM_MAX_ASSET_BYTES`    | `134217728`      | the same for a premium lambda, never less   |
 | `LAMBDA_WORKSPACE_BYTES`            | `268435456`      | the room a workspace may take in all        |
 | `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | the same for a premium lambda               |
+| `LAMBDA_DATABASE_BYTES`             | `268435456`      | how large the database of a lambda may grow |
+| `LAMBDA_PREMIUM_DATABASE_BYTES`     | `2147483648`     | the same for a premium lambda, never less   |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
-| `LAMBDA_MAX_FEATURES`               | `10`             | features open per lambda - each holds a copy of the workspace, so this bounds the disk they take |
+| `LAMBDA_MAX_FEATURES`               | `10`             | features open per lambda - each holds a copy of the workspace and the database, so this bounds the disk they take |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
@@ -799,7 +893,7 @@ The tools are the shape of the job: `create_lambda`, `update_lambda`, `write_cod
 `check_code`, `deploy`, `read_lambda`, `read_logs`, the feature tools
 `create_feature`, `update_feature`, `merge_feature` and `delete_feature`, the
 data tools `upload_file`, `list_files`, `delete_file`, `enable_data`,
-`set_secret`, `list_secrets` and `delete_secret`, `showcase` for listing
+`read_database`, `set_secret`, `list_secrets` and `delete_secret`, `showcase` for listing
 a lambda on the public showcase - only when its owner asks for it - and
 `list_demos` for reading something that already works. `platform_guide` is the one to call first
 - it opens with how versions, features and data live, then says what a snippet
@@ -818,11 +912,15 @@ never carry `onlineUntil`, which only a deployment of the lambda does.
 in. The same rules are said wherever an agent decides something - in the
 instructions it reads on connecting, in the tool descriptions and answers, and
 in the guide: a new lambda is written as versions, one that exists is changed
-in a feature, and the front end goes in the version and user data in the
-workspace, never the other way round - and an API key in the secrets, never in
-the code. `read_lambda` also lists the open features, says which data the
-lambda has switched on, and names the secrets it keeps and the ones its code
-reads that are missing. An agent is steered to leave the value to the owner,
+in a feature, and the front end goes in the version, records in the database
+and uploaded files in the workspace, never the other way round - and an API key
+in the secrets, never in the code. Agents are steered to the database for
+anything they would otherwise keep in a JSON file: switched on with
+`enable_data`, its schema as Evolve migrations in `migrations/`, SQL with
+parameters on a connection per request, synchronously - and `read_database`
+to see that it worked. `read_lambda` also lists the open features, says which
+data the lambda has switched on, and names the secrets it keeps and the ones
+its code reads that are missing. An agent is steered to leave the value to the owner,
 who enters it in the editor where the value never passes through the agent;
 `set_secret` is for a value the user handed it, and its answer never repeats
 it. The build agent may switch secrets on and list them, and has no tool to
@@ -857,9 +955,12 @@ refusal for assets over the limit says the same.
 
 The installation keeps a handful of finished lambdas online in the `Demo` tier,
 each showing one way to build something: `demo-crud` (a REST API over records in
-a JSON file), `demo-registration` (accounts, login and a members page),
-`demo-game` (a websocket game), `demo-files` (uploads) and `demo-live`
-(server-sent events). Their editor key is their public key, and it is meant to
+its database), `demo-registration` (accounts, login and a members page),
+`demo-game` (a websocket game), `demo-files` (uploads in the workspace, what is
+known about them in the database) and `demo-live` (server-sent events). Each
+keeps its records in its database, with its schema as Evolve migrations in
+`migrations/`, and the seeder switches it on; a lambda created from one starts
+with a database of its own. Their editor key is their public key, and it is meant to
 be announced: `read_lambda`, `list_files` and `read_logs` work on a demo exactly
 as on an agent's own lambda, and the editor at `/editor/demo-crud` shows it.
 

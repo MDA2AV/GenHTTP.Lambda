@@ -21,7 +21,8 @@ export const guide = {
     page: 'Serving a page',
     spa: 'A front end, step by step',
     storage: 'The two places files live',
-    keeping: 'Keeping data',
+    database: 'Keeping records',
+    keeping: 'Keeping files',
     secrets: 'Keys and passwords',
     sockets: 'Websockets',
     limits: 'What it will not let you do',
@@ -102,7 +103,7 @@ export const guide = {
     ],
     ['Drafts', () => <>Changes being tried before they go online, each at an address of its own and on test data of its own. Opened, a draft has its own code, test data and logs. The section is there once there is a draft.</>],
     ['Files', () => <>The files of a version: its code and assets, the program itself. A lock or a globe says whether the public can reach them.</>],
-    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the workspace and the secrets, each a pill of its own. Look into them, upload files, set secrets, or switch a kind on or off. The simple view shows it once the app keeps something.</>],
+    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the database, the workspace and the secrets, each a pill of its own. Look into the tables and files, upload files, set secrets, or switch a kind on or off. The simple view shows it once the app keeps something.</>],
     ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a draft from any of them.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
     ['Stats', () => <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
@@ -140,7 +141,7 @@ export const guide = {
   )) as Text,
   whySample: {
     specification: 'A guest book people can sign; entries must survive a restart',
-    change: 'Keeps entries in the workspace so they survive a restart',
+    change: 'Keeps entries in the database so they survive a restart',
   },
   why2: ((k) => (
     <>
@@ -300,10 +301,41 @@ export const guide = {
   storageAside:
     'They cannot be one place. If they were, a deploy would either wipe everything your lambda had written since, or nothing could ever be removed from what it ships. A game that keeps a leaderboard wants the second; the page it serves wants the first. So the page goes in the version, and the leaderboard in the data.',
 
+  database: ((k) => (
+    <>
+      Records - entries, accounts, orders, votes - belong in the {k.b('database')}: a SQLite database of the lambda's
+      own, switched on under {k.b('Data')}. The code opens a connection with {k.code('Database.GetConnection()')} and
+      talks to it in SQL:
+    </>
+  )) as Text,
+  database2: ((k) => (
+    <>
+      Its tables are made by {k.b('migrations')}: SQL files shipped with the version in {k.code('migrations/')}, applied
+      in order by {k.link('https://evolve-db.netlify.app/', 'Evolve')} as the lambda starts - each once, so a new
+      version only ever runs what is new. Never change a migration that was applied; a change to a table is the next
+      file.
+    </>
+  )) as Text,
+  database3: ((k) => (
+    <>
+      Like all data, the database is shared by every version, left alone by deploys and rollbacks, and a draft works
+      on a copy of it. Under {k.b('Data')} you see its tables and what is in them - the simple view calls them records.{' '}
+      {k.b('Download')} carries it along as an ordinary SQLite file.
+    </>
+  )) as Text,
+  databaseAside: ((k) => (
+    <>
+      Open a connection where you need it and dispose of it, and use it synchronously - {k.code('ExecuteReader')}, not{' '}
+      {k.code('ExecuteReaderAsync')}. Values go in as parameters, never into the SQL. The{' '}
+      {k.link('/editor/demo-crud', 'demo-crud')} demo does all of it.
+    </>
+  )) as Text,
+
   keeping: ((k) => (
     <>
-      {k.code('Workspace')} is a private directory your lambda may read and write. It is the place for anything that
-      has to outlive a request, or a deployment.
+      {k.code('Workspace')} is a private directory your lambda may read and write: the place for files - pictures
+      somebody uploads, a document it makes, a model it loads. Records belong in the database, and what is known about
+      a file - who uploaded it, when - is a record too.
     </>
   )) as Text,
   keeping2: ((k) => (
@@ -370,6 +402,8 @@ export const guide = {
       change.
       {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here. The
       documentation and the tests come along in {k.code('docs')} and {k.code('tests')}.
+      {' '}{k.code('Database')} opens {k.code('database/database.db')}, which the download carries with the records
+      your app kept.
     </>
   )) as Text,
   awayAside:

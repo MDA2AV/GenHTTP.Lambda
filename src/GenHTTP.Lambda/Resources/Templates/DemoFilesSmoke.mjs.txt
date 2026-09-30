@@ -132,9 +132,6 @@ try {
   const large = await upload(`${stem}.txt`, Buffer.alloc(limit + 1, 'x'), 'text/plain');
   check('a file of 512 KB and one byte is refused', large.status === 413, `status ${large.status}`);
 
-  const hashes = await call('GET', 'files/uploads.json');
-  check('the list with the key hashes is not served', hashes.status === 404, `status ${hashes.status}`);
-
   if (image.entry) {
     const wrong = await call('DELETE', `api/files/${image.entry.id}?key=not-the-key`);
     check('removing with a wrong key is refused', wrong.status === 403, `status ${wrong.status}`);

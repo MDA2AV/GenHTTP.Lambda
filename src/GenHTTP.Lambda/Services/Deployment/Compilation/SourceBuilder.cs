@@ -39,9 +39,11 @@ internal static class SourceBuilder
 
     internal const string SecretType = "__LambdaSecrets";
 
+    internal const string DatabaseType = "__LambdaDatabase";
+
     /// <summary>
-    /// The field of the generated secrets class the platform puts the function
-    /// that reads them into, once the lambda is loaded.
+    /// The field of the generated secrets and database classes the platform
+    /// puts the function they read with into, once the lambda is loaded.
     /// </summary>
     internal const string SecretSource = "_source";
 
@@ -171,12 +173,17 @@ internal static class SourceBuilder
         builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
         builder.AppendLine($"    internal static readonly {AssetType} Assets = new {AssetType}({Literal(assets)});");
         builder.AppendLine($"    internal static readonly {SecretType} Secret = new {SecretType}();");
+        builder.AppendLine($"    internal static readonly {DatabaseType} Database = new {DatabaseType}();");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {ScopeType}");
         builder.AppendLine("{");
         builder.AppendLine($"    internal static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
         builder.AppendLine($"    internal static {SecretType} Secret => LambdaEnvironment.Secret;");
+        // not a member of the entry class like the two before it, only here:
+        // a class of the author's own called Database is common enough, and
+        // it should mean the same thing in lambda.cs as in every other file
+        builder.AppendLine($"    internal static {DatabaseType} Database => LambdaEnvironment.Database;");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {EntryType}");
@@ -207,6 +214,7 @@ internal static class SourceBuilder
         builder.AppendLine(WorkspaceSource(limits ?? WorkspaceLimits.Standard));
         builder.AppendLine(AssetSource);
         builder.AppendLine(SecretSourceCode);
+        builder.AppendLine(DatabaseSourceCode);
 
         return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
     }
@@ -459,6 +467,36 @@ internal static class SourceBuilder
 
             private static global::System.Func<string, bool, string> Source()
                 => {{SecretSource}} ?? throw new global::System.InvalidOperationException("The secrets of this lambda are not available here.");
+        }
+        """;
+
+    /// <summary>
+    /// The database of the lambda, as its code connects to it:
+    /// <c>using var connection = Database.GetConnection();</c>
+    /// </summary>
+    /// <remarks>
+    /// Like the secrets, the class holds a function the platform hands it once
+    /// the lambda is loaded, and the code never sees where the database is.
+    /// Each call opens a connection of its own, taken from a pool, which the
+    /// caller disposes of - one per request, not one shared between requests.
+    ///
+    /// Throws while the database is switched off, with what to do about it,
+    /// which is what the log then says.
+    /// </remarks>
+    private static readonly string DatabaseSourceCode = $$"""
+        internal sealed class {{DatabaseType}}
+        {
+            private static global::System.Func<global::Microsoft.Data.Sqlite.SqliteConnection> {{SecretSource}} = null;
+
+            /// <summary>
+            /// An open connection to the database of this lambda. Dispose of it
+            /// when done - it goes back to a pool, so one per request costs
+            /// nothing. Use it synchronously: Execute, not ExecuteAsync.
+            /// </summary>
+            public global::Microsoft.Data.Sqlite.SqliteConnection GetConnection() => Source()();
+
+            private static global::System.Func<global::Microsoft.Data.Sqlite.SqliteConnection> Source()
+                => {{SecretSource}} ?? throw new global::System.InvalidOperationException("The database of this lambda is not available here.");
         }
         """;
 

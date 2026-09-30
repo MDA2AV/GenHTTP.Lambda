@@ -15,18 +15,30 @@
 //
 // The files:
 //
-//   lambda.cs     this one: the wiring, and the only file that touches Workspace
+//   lambda.cs     this one: the wiring, and bringing the database up to date
 //   Poll.cs       the question, the counts, and everybody who is listening
+//   migrations/   the SQL that makes the table of votes, applied once by Evolve
 //   web/          the page and its script
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
-// it - a copy is yours to change.
+// it - a copy is yours to change, and starts with a database of its own.
 // [/demo]
 
-var poll = new Poll(
-    read: () => Workspace.Exists("votes.json") ? Workspace.ReadText("votes.json") : null,
-    write: text => Workspace.WriteText("votes.json", text));
+// every version reads the same database, so each brings it up to the schema
+// it expects first; Evolve applies what is new in migrations/, once each
+using (var connection = Database.GetConnection())
+{
+    var evolve = new Evolve(connection, message => Console.WriteLine(message))
+    {
+        Locations = [Assets.Root + "migrations"],
+        IsEraseDisabled = true
+    };
+
+    evolve.Migrate();
+}
+
+var poll = new Poll();
 
 var api = Inline.Create()
                 .Get("poll", () => poll.Results())

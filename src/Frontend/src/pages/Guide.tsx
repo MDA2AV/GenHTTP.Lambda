@@ -25,6 +25,7 @@ const PARTS = [
   'page',
   'spa',
   'storage',
+  'database',
   'keeping',
   'secrets',
   'sockets',
@@ -274,24 +275,71 @@ return Content.From(page);`} />
             <Aside>{said.storageAside}</Aside>
           </Section>
 
-          <Section id="keeping" title={said.parts.keeping}>
-            <p>{said.keeping(k)}</p>
+          <Section id="database" title={said.parts.database}>
+            <p>{said.database(k)}</p>
 
-            <Sample code={`var notes = new List<string>();
+            <Sample code={`// migrations/V1__Create_notes.sql:
+//   CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL);
 
-if (Workspace.Exists("notes.json"))
+using (var connection = Database.GetConnection())
 {
-    notes.AddRange(JsonSerializer.Deserialize<List<string>>(Workspace.ReadText("notes.json")) ?? []);
+    new Evolve(connection) { Locations = [Assets.Root + "migrations"] }.Migrate();
 }
 
 return Inline.Create()
-             .Get("notes", () => notes)
-             .Post("notes", (string text) =>
+             .Get("notes", () =>
              {
-                 notes.Add(text);
-                 Workspace.WriteText("notes.json", JsonSerializer.Serialize(notes));
-                 return notes.Count;
-             });`} />
+                 using var db = Database.GetConnection();
+                 using var command = db.CreateCommand();
+
+                 command.CommandText = "SELECT text FROM notes ORDER BY id";
+
+                 using var reader = command.ExecuteReader();
+
+                 var notes = new List<string>();
+
+                 while (reader.Read())
+                 {
+                     notes.Add(reader.GetString(0));
+                 }
+
+                 return notes;
+             })
+             .Post("notes", (Note note) =>
+             {
+                 using var db = Database.GetConnection();
+                 using var command = db.CreateCommand();
+
+                 command.CommandText = "INSERT INTO notes (text) VALUES ($text)";
+                 command.Parameters.AddWithValue("$text", note.Text);
+
+                 return command.ExecuteNonQuery();
+             });
+
+record Note(string Text);`} />
+
+            <p>{said.database2(k)}</p>
+            <p>{said.database3(k)}</p>
+
+            <Aside>{said.databaseAside(k)}</Aside>
+          </Section>
+
+          <Section id="keeping" title={said.parts.keeping}>
+            <p>{said.keeping(k)}</p>
+
+            <Sample code={`// uploads go into a folder of their own, served as they are
+Workspace.CreateFolder("photos");
+
+return Layout.Create()
+             .Add("photos", Workspace.Files("photos"))
+             .Add("upload", Inline.Create().Post(async (Stream body) =>
+             {
+                 using var content = new MemoryStream();
+
+                 await body.CopyToAsync(content);
+
+                 Workspace.WriteBytes($"photos/{Guid.NewGuid():N}.jpg", content.ToArray());
+             }));`} />
 
             <p>{said.keeping2(k)}</p>
           </Section>

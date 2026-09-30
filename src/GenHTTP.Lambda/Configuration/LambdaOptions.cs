@@ -210,6 +210,22 @@ public sealed record LambdaOptions
     public long PremiumWorkspaceBytes { get; init; } = 2048L * 1024 * 1024;
 
     /// <summary>
+    /// How large the database of a lambda outside the premium tier may grow.
+    /// </summary>
+    /// <remarks>
+    /// Room of its own rather than a share of the workspace's: the two are
+    /// switched on and off apart, and a lambda that keeps its records in the
+    /// database and its uploads in the workspace should not have either fill
+    /// the other.
+    /// </remarks>
+    public long DatabaseBytes { get; init; } = 256L * 1024 * 1024;
+
+    /// <summary>
+    /// How large the database of a premium lambda may grow.
+    /// </summary>
+    public long PremiumDatabaseBytes { get; init; } = 2048L * 1024 * 1024;
+
+    /// <summary>
     /// How large the picture promoting a lambda in the showcase may be.
     /// </summary>
     /// <remarks>
@@ -227,9 +243,9 @@ public sealed record LambdaOptions
     /// How many features a lambda may have open at once.
     /// </summary>
     /// <remarks>
-    /// Each one holds a copy of the lambda's files and of its workspace, so a
-    /// lambda at the limit of its workspace takes that room again for every
-    /// feature it has open.
+    /// Each one holds a copy of the lambda's files, of its workspace and of its
+    /// database, so a lambda at the limit of either takes that room again for
+    /// every feature it has open.
     /// </remarks>
     public int MaxFeatures { get; init; } = 10;
 
@@ -483,6 +499,12 @@ public sealed record LambdaOptions
 
     public string WorkspaceDirectory => Path.Combine(DataDirectory, "workspaces");
 
+    /// <summary>
+    /// Where the databases of the lambdas are kept, a folder each - the
+    /// database, and the journal SQLite keeps beside it.
+    /// </summary>
+    public string DatabaseDirectory => Path.Combine(DataDirectory, "databases");
+
     public string AssemblyDirectory => Path.Combine(DataDirectory, "assemblies");
 
     public string AssetDirectory => Path.Combine(DataDirectory, "assets");
@@ -528,6 +550,11 @@ public sealed record LambdaOptions
     public WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true)
         => new(tier == LambdaTier.Premium ? PremiumWorkspaceBytes : WorkspaceBytes, enabled);
 
+    /// <summary>
+    /// How large the database of a lambda in the given tier may grow.
+    /// </summary>
+    public long DatabaseOf(LambdaTier tier) => tier == LambdaTier.Premium ? Math.Max(PremiumDatabaseBytes, DatabaseBytes) : DatabaseBytes;
+
     #endregion
 
     #region Functionality
@@ -561,6 +588,8 @@ public sealed record LambdaOptions
             PremiumMaxAssetBytes = ReadInt("LAMBDA_PREMIUM_MAX_ASSET_BYTES", defaults.PremiumMaxAssetBytes),
             WorkspaceBytes = ReadLong("LAMBDA_WORKSPACE_BYTES", defaults.WorkspaceBytes),
             PremiumWorkspaceBytes = ReadLong("LAMBDA_PREMIUM_WORKSPACE_BYTES", defaults.PremiumWorkspaceBytes),
+            DatabaseBytes = ReadLong("LAMBDA_DATABASE_BYTES", defaults.DatabaseBytes),
+            PremiumDatabaseBytes = ReadLong("LAMBDA_PREMIUM_DATABASE_BYTES", defaults.PremiumDatabaseBytes),
             MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             MaxFeatures = ReadInt("LAMBDA_MAX_FEATURES", defaults.MaxFeatures),

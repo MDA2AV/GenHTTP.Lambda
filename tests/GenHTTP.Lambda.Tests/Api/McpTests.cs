@@ -108,7 +108,7 @@ public sealed class McpTests
                            .Order()
                            .ToList();
 
-        CollectionAssert.AreEqual(new[] { "check_code", "list_demos", "list_files", "list_secrets", "platform_guide", "read_lambda", "read_logs" },
+        CollectionAssert.AreEqual(new[] { "check_code", "list_demos", "list_files", "list_secrets", "platform_guide", "read_database", "read_lambda", "read_logs" },
                                   reading, "these look and change nothing, so a client may call them without asking");
 
         var delete = tools.Single(t => t!["name"]!.GetValue<string>() == "delete_file")!;
@@ -647,7 +647,8 @@ public sealed class McpTests
         Assert.Contains("only the owner", lifecycle["data"]!["optIn"]!.GetValue<string>(), "and never switches anything off, which deletes it");
 
         Assert.Contains("front end", lifecycle["whereThingsGo"]!["theProgram"]!.GetValue<string>());
-        Assert.Contains("users", lifecycle["whereThingsGo"]!["theData"]!.GetValue<string>());
+        Assert.Contains("accounts", lifecycle["whereThingsGo"]!["theRecords"]!.GetValue<string>());
+        Assert.Contains("upload", lifecycle["whereThingsGo"]!["theFiles"]!.GetValue<string>());
 
         Assert.Contains("No feature needed", lifecycle["flows"]!["newLambda"]!.GetValue<string>(), "the flow without features stays");
         Assert.Contains("create_feature", lifecycle["flows"]!["changeALambda"]!.GetValue<string>());
@@ -1286,6 +1287,36 @@ public sealed class McpTests
     }
 
     [TestMethod]
+    public async Task AgentsAreToldToKeepRecordsInTheDatabase()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // said where an agent decides it: on connecting, in the guide, and
+        // where it picks the tool that saves the code
+        var initialized = await CallAsync(fixture, "initialize", new JsonObject());
+
+        var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
+
+        Assert.Contains("Database.GetConnection()", instructions);
+        Assert.Contains("Evolve", instructions);
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        Assert.Contains("database", guide["lifecycle"]!["whereThingsGo"]!["theRecords"]!.GetValue<string>());
+        Assert.Contains("Evolve", guide["database"]!["migrations"]!["example"]!.GetValue<string>());
+        Assert.Contains("synchronously", guide["database"]!["usage"]!["synchronous"]!.GetValue<string>());
+        Assert.Contains("Entity Framework", guide["database"]!["notAllowed"]!.GetValue<string>());
+
+        var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
+
+        string Describe(string name) => tools.Single(t => t!["name"]!.GetValue<string>() == name)!["description"]!.GetValue<string>();
+
+        Assert.Contains("database", Describe("write_code"));
+        Assert.Contains("'database'", Describe("enable_data"));
+        Assert.Contains("Read only", Describe("read_database"), "and nothing but the lambda writes to it");
+    }
+
+    [TestMethod]
     public async Task AgentsAreToldToKeepLargeDataInTheWorkspace()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
@@ -1294,7 +1325,7 @@ public sealed class McpTests
         // while it picks a tool, so both have to say it
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
 
-        var rule = guide["lifecycle"]!["whereThingsGo"]!["theData"]!.GetValue<string>();
+        var rule = guide["lifecycle"]!["whereThingsGo"]!["theFiles"]!.GetValue<string>();
 
         Assert.Contains("model", rule);
         Assert.Contains("workspace", rule);

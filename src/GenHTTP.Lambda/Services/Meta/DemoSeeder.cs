@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
 
@@ -28,7 +29,8 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// because a demo is the one kind of lambda whose editor key is chosen - it
 /// is its public key, announced - and whose tier nobody else may set.
 /// </remarks>
-public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbContext> databases, SecretVault secrets, ILogger<DemoSeeder> logger)
+public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbContext> databases, SecretVault secrets, DatabaseVault stores,
+                               ILogger<DemoSeeder> logger)
 {
 
     /// <summary>
@@ -112,6 +114,8 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         }
 
         await ProvideSecretsAsync(demo, cancellation);
+
+        await ProvideDatabaseAsync(demo, cancellation);
 
         var wanted = TemplateCatalog.ForKey(demo.Id, demo.Key, demo: true);
 
@@ -242,6 +246,51 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
             logger.LogInformation("Gave the demo '{Demo}' the secret {Name}", demo.Id, name);
         }
+    }
+
+    /// <summary>
+    /// Switches the database of a demo on, and makes it where it is not there -
+    /// the first start, or a demo that kept its records elsewhere before.
+    /// </summary>
+    /// <remarks>
+    /// Past the tier like the secrets. What a demo's visitors wrote into its
+    /// database stays across restarts and new versions; its code migrates it.
+    /// </remarks>
+    private async ValueTask ProvideDatabaseAsync(LambdaDemo demo, CancellationToken cancellation)
+    {
+        if (!demo.Database)
+        {
+            return;
+        }
+
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        var id = await database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).FirstAsync(cancellation);
+
+        var store = await database.DataStores.FirstOrDefaultAsync(s => s.LambdaId == id && s.Kind == DataKinds.DatabaseId, cancellation);
+
+        if (store is { Enabled: true } && stores.Exists(id))
+        {
+            return;
+        }
+
+        await stores.CreateAsync(id, cancellation);
+
+        if (store == null)
+        {
+            database.DataStores.Add(new DataStoreEntity { LambdaId = id, Kind = DataKinds.DatabaseId, Enabled = true, Changed = DateTime.UtcNow });
+        }
+        else
+        {
+            store.Enabled = true;
+            store.Changed = DateTime.UtcNow;
+        }
+
+        await database.SaveChangesAsync(cancellation);
+
+        stores.Invalidate(id);
+
+        logger.LogInformation("Gave the demo '{Demo}' a database", demo.Id);
     }
 
     /// <summary>

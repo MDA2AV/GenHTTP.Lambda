@@ -56,6 +56,21 @@ public static class ModuleCatalog
     ];
 
     /// <summary>
+    /// What a lambda talks to its database with - the connection
+    /// <c>Database.GetConnection()</c> hands out, and Evolve to migrate it.
+    /// </summary>
+    /// <remarks>
+    /// An exported project references their packages only where its code uses
+    /// them, and imports them only then - see <see cref="IsData"/>.
+    /// </remarks>
+    public static IReadOnlyList<string> Data { get; } = ["Microsoft.Data.Sqlite", "EvolveDb"];
+
+    /// <summary>
+    /// Whether an import is one of <see cref="Data"/>.
+    /// </summary>
+    public static bool IsData(string import) => Data.Contains(import);
+
+    /// <summary>
     /// The namespaces every lambda gets for free.
     /// </summary>
     public static IReadOnlyList<string> Imports { get; } = BuildImports();
@@ -105,7 +120,7 @@ public static class ModuleCatalog
             "GenHTTP.Api.Protocol"
         ];
 
-        return [..system, ..api, ..Modules.Select(m => $"GenHTTP.Modules.{m}"), ..Nested];
+        return [..system, ..api, ..Modules.Select(m => $"GenHTTP.Modules.{m}"), ..Nested, ..Data];
     }
 
 }

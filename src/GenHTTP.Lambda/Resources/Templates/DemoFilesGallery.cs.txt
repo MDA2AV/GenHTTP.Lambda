@@ -6,13 +6,16 @@
 // extension. Accept an .html or .svg from a stranger and serve it from here,
 // and their script runs on this lambda's address, with its users' tokens.
 //
-// This class is handed the few things it needs to do with the workspace
-// rather than all of it.
+// The files go into the workspace, through the few things this class is handed
+// to do with it; the list of them - names, types, who may remove which - is a
+// table in the database. Every call opens a connection of its own, uses it
+// synchronously and lets it go.
 
+using System.Globalization;
 using System.Security.Cryptography;
 
 /// <summary>What the gallery may do with the workspace.</summary>
-public record Storage(Func<string, string> ReadText, Action<string, string> WriteText, Action<string, byte[]> WriteBytes, Action<string> Delete);
+public record Storage(Action<string, byte[]> WriteBytes, Action<string> Delete);
 
 /// <summary>One upload as everybody sees it.</summary>
 /// <param name="Url">Where it is served, relative to the lambda</param>
@@ -20,9 +23,6 @@ public record Upload(string Id, string Name, long Size, string Type, DateTime Up
 
 /// <summary>What the uploader gets back: the entry, and the key to remove it with.</summary>
 public record Uploaded(Upload Upload, string Key);
-
-/// <summary>An upload as it is kept: with a hash of its key.</summary>
-public record Entry(Upload Upload, string KeyHash);
 
 public sealed class Gallery(Storage storage)
 {
@@ -44,18 +44,24 @@ public sealed class Gallery(Storage storage)
         [".txt"] = "text/plain"
     };
 
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-
-    private readonly object _lock = new();
-
-    private List<Entry> _entries;
-
     public List<Upload> List()
     {
-        lock (_lock)
+        using var db = Database.GetConnection();
+        using var command = db.CreateCommand();
+
+        command.CommandText = "SELECT id, name, size, type, uploaded, url FROM uploads ORDER BY uploaded DESC";
+
+        using var reader = command.ExecuteReader();
+
+        var uploads = new List<Upload>();
+
+        while (reader.Read())
         {
-            return Entries().OrderByDescending(e => e.Upload.Uploaded).Select(e => e.Upload).ToList();
+            uploads.Add(new Upload(reader.GetString(0), reader.GetString(1), reader.GetInt64(2), reader.GetString(3),
+                                   DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), reader.GetString(5)));
         }
+
+        return uploads;
     }
 
     public async Task<Uploaded> UploadAsync(string name, Stream body)
@@ -89,20 +95,29 @@ public sealed class Gallery(Storage storage)
 
         var upload = new Upload(id, name.Length > 80 ? name[..80] : name, content.Length, type, DateTime.UtcNow, $"files/{stored}");
 
-        lock (_lock)
+        // the file first: an entry without its file would be a broken picture
+        storage.WriteBytes($"uploads/{stored}", content);
+
+        using var db = Database.GetConnection();
+
+        using (var insert = db.CreateCommand())
         {
-            storage.WriteBytes($"uploads/{stored}", content);
+            insert.CommandText = "INSERT INTO uploads (id, name, size, type, uploaded, url, key_hash) VALUES ($id, $name, $size, $type, $uploaded, $url, $key)";
+            insert.Parameters.AddWithValue("$id", upload.Id);
+            insert.Parameters.AddWithValue("$name", upload.Name);
+            insert.Parameters.AddWithValue("$size", upload.Size);
+            insert.Parameters.AddWithValue("$type", upload.Type);
+            insert.Parameters.AddWithValue("$uploaded", upload.Uploaded.ToString("O", CultureInfo.InvariantCulture));
+            insert.Parameters.AddWithValue("$url", upload.Url);
+            insert.Parameters.AddWithValue("$key", Hash(key));
 
-            var entries = Entries();
+            insert.ExecuteNonQuery();
+        }
 
-            entries.Add(new Entry(upload, Hash(key)));
-
-            while (entries.Count > MaxUploads)
-            {
-                Drop(entries, entries.MinBy(e => e.Upload.Uploaded));
-            }
-
-            Save();
+        // the oldest go, file and entry, once there are too many
+        foreach (var old in Oldest(db))
+        {
+            Drop(db, old.Id, old.Url);
         }
 
         return new Uploaded(upload, key);
@@ -110,22 +125,31 @@ public sealed class Gallery(Storage storage)
 
     public void Remove(string id, string key)
     {
-        lock (_lock)
+        using var db = Database.GetConnection();
+
+        string url, keyHash;
+
+        using (var find = db.CreateCommand())
         {
-            var entries = Entries();
+            find.CommandText = "SELECT url, key_hash FROM uploads WHERE id = $id";
+            find.Parameters.AddWithValue("$id", id ?? "");
 
-            var entry = entries.Find(e => e.Upload.Id == id)
-                     ?? throw new ProviderException(ResponseStatus.NotFound, "There is no such upload.");
+            using var reader = find.ExecuteReader();
 
-            if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entry.KeyHash), Encoding.UTF8.GetBytes(Hash(key ?? ""))))
+            if (!reader.Read())
             {
-                throw new ProviderException(ResponseStatus.Forbidden, "Only whoever uploaded this can remove it.");
+                throw new ProviderException(ResponseStatus.NotFound, "There is no such upload.");
             }
 
-            Drop(entries, entry);
-
-            Save();
+            (url, keyHash) = (reader.GetString(0), reader.GetString(1));
         }
+
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(keyHash), Encoding.UTF8.GetBytes(Hash(key ?? ""))))
+        {
+            throw new ProviderException(ResponseStatus.Forbidden, "Only whoever uploaded this can remove it.");
+        }
+
+        Drop(db, id, url);
     }
 
     /// <summary>
@@ -154,26 +178,37 @@ public sealed class Gallery(Storage storage)
         return buffer.ToArray();
     }
 
-    private void Drop(List<Entry> entries, Entry entry)
+    /// <summary>The uploads beyond the newest ones kept.</summary>
+    private static List<(string Id, string Url)> Oldest(SqliteConnection db)
     {
-        entries.Remove(entry);
+        using var command = db.CreateCommand();
 
-        storage.Delete(entry.Upload.Url.Replace("files/", "uploads/"));
-    }
+        command.CommandText = "SELECT id, url FROM uploads ORDER BY uploaded DESC LIMIT -1 OFFSET $keep";
+        command.Parameters.AddWithValue("$keep", MaxUploads);
 
-    private List<Entry> Entries()
-    {
-        if (_entries == null)
+        using var reader = command.ExecuteReader();
+
+        var oldest = new List<(string, string)>();
+
+        while (reader.Read())
         {
-            var text = storage.ReadText("uploads.json");
-
-            _entries = string.IsNullOrWhiteSpace(text) ? [] : JsonSerializer.Deserialize<List<Entry>>(text, Json) ?? [];
+            oldest.Add((reader.GetString(0), reader.GetString(1)));
         }
 
-        return _entries;
+        return oldest;
     }
 
-    private void Save() => storage.WriteText("uploads.json", JsonSerializer.Serialize(_entries, Json));
+    private void Drop(SqliteConnection db, string id, string url)
+    {
+        using var command = db.CreateCommand();
+
+        command.CommandText = "DELETE FROM uploads WHERE id = $id";
+        command.Parameters.AddWithValue("$id", id);
+
+        command.ExecuteNonQuery();
+
+        storage.Delete(url.Replace("files/", "uploads/"));
+    }
 
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
 }

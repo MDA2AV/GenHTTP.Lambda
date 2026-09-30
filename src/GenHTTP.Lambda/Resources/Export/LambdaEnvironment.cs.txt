@@ -3,7 +3,7 @@ namespace Platform;
 /// <summary>
 /// What the platform provided: two folders, and the secrets.
 /// </summary>
-public static class LambdaEnvironment
+public static partial class LambdaEnvironment
 {
     /// <summary>What the app writes, kept in "workspace" in the directory it runs in.</summary>
     public static readonly Folder Workspace = new("workspace");
@@ -23,7 +23,7 @@ public static class LambdaEnvironment
 /// the same name imported beside it would make both ambiguous. Outside
 /// Project.cs, the assets are LambdaEnvironment.Assets.
 /// </remarks>
-public static class LambdaScope
+public static partial class LambdaScope
 {
     public static Folder Workspace => LambdaEnvironment.Workspace;
 

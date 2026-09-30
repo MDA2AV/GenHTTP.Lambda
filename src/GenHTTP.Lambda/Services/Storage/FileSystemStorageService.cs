@@ -84,6 +84,7 @@ public sealed class FileSystemStorageService : IStorageService
     {
         Remove(GetCodeDirectory(lambdaId));
         Remove(GetWorkspaceDirectory(lambdaId));
+        Remove(Path.Combine(Options.DatabaseDirectory, lambdaId.ToString()));
         Remove(GetAssetDirectory(lambdaId));
         Remove(Path.Combine(Options.FeatureDirectory, lambdaId.ToString()));
 
@@ -106,6 +107,17 @@ public sealed class FileSystemStorageService : IStorageService
         Directory.CreateDirectory(directory);
 
         return directory;
+    }
+
+    public string GetDatabase(long lambdaId, long? featureId = null)
+    {
+        var directory = featureId is { } feature
+            ? GetFeatureDirectory(lambdaId, feature)
+            : Path.Combine(Options.DatabaseDirectory, lambdaId.ToString());
+
+        Directory.CreateDirectory(directory);
+
+        return Path.Combine(directory, "database.db");
     }
 
     public string GetAssemblyDirectory(long lambdaId) => Path.Combine(Options.AssemblyDirectory, lambdaId.ToString());

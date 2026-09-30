@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -24,7 +25,7 @@ namespace GenHTTP.Lambda.Services.Features;
 /// service beside the lambdas themselves.
 /// </summary>
 public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IStorageService storage,
-                                   IDeploymentService deployments, SecretVault secrets, LambdaOptions options, LogBook book,
+                                   IDeploymentService deployments, SecretVault secrets, DatabaseVault stores, LambdaOptions options, LogBook book,
                                    ILogger<FeatureService> logger)
     : IFeatureService
 {
@@ -184,10 +185,16 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
             // and of the secrets, so the preview can call what the lambda calls
             await secrets.CopyAsync(lambdaId, entity.Id, cancellation);
+
+            // and of the database, so the preview can change its records -
+            // and its schema - without the lambda's visitors noticing
+            await stores.CopyAsync(lambdaId, entity.Id, cancellation);
         }
         catch
         {
             await database.Secrets.Where(s => s.FeatureId == entity.Id).ExecuteDeleteAsync(CancellationToken.None);
+
+            stores.RemoveCopy(lambdaId, entity.Id);
 
             await storage.DeleteFeatureAsync(lambdaId, entity.Id, CancellationToken.None);
 
@@ -381,6 +388,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         await secrets.CopyAsync(lambda.Id, entity.Id, cancellation);
 
+        await stores.CopyAsync(lambda.Id, entity.Id, cancellation);
+
         // built again on its next request, so code that read the data into
         // memory when it started reads the fresh copy rather than writing the
         // old one back over it
@@ -536,6 +545,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             {
                 deployments.EvictPreview(lambdaId, featureId);
 
+                stores.RemoveCopy(lambdaId, featureId);
+
                 await storage.DeleteFeatureAsync(lambdaId, featureId, cancellation);
 
                 swept++;
@@ -618,6 +629,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         secrets.Invalidate(lambdaId);
 
         deployments.EvictPreview(lambdaId, feature.Id);
+
+        // its copy of the database is let go of before its folder goes
+        stores.RemoveCopy(lambdaId, feature.Id);
 
         await storage.DeleteFeatureAsync(lambdaId, feature.Id, CancellationToken.None);
 

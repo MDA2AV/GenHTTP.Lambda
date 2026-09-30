@@ -119,6 +119,30 @@ export const IconFolder = (p: IconProps) => (
   <Svg {...p}><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Svg>
 );
 
+/** A database: the cylinder everybody draws for one. */
+export const IconDatabase = (p: IconProps) => (
+  <Svg {...p}><ellipse cx="12" cy="6" rx="7.5" ry="2.75" /><path d="M4.5 6v12c0 1.5 3.4 2.75 7.5 2.75s7.5-1.25 7.5-2.75V6M4.5 12c0 1.5 3.4 2.75 7.5 2.75s7.5-1.25 7.5-2.75" /></Svg>
+);
+
+/** A table of rows and columns, for one table of a database. */
+export const IconTable = (p: IconProps) => (
+  <Svg {...p}><rect x="3.5" y="4.5" width="17" height="15" /><path d="M3.5 9.5h17M3.5 14.5h17M9.5 9.5v10" /></Svg>
+);
+
+/** Reading something again. */
+export const IconRefresh = (p: IconProps) => (
+  <Svg {...p}><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" /></Svg>
+);
+
+/** Which way a column is sorted: up for ascending. */
+export const IconArrowUp = (p: IconProps) => <Svg {...p}><path d="M12 19V5M6 11l6-6 6 6" /></Svg>;
+
+export const IconArrowDown = (p: IconProps) => <Svg {...p}><path d="M12 5v14M6 13l6 6 6-6" /></Svg>;
+
+export const IconChevronLeft = (p: IconProps) => <Svg {...p}><path d="m15 6-6 6 6 6" /></Svg>;
+
+export const IconChevronRight = (p: IconProps) => <Svg {...p}><path d="m9 6 6 6-6 6" /></Svg>;
+
 export const IconTrash = (p: IconProps) => (
   <Svg {...p}><path d="M4 7h16M10 11v6M14 11v6" /><path d="M6 7l1 13h10l1-13M9 7V4h6v3" /></Svg>
 );

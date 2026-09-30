@@ -18,7 +18,7 @@ A file is kept as `uploads/{id}{extension}`, the id 8 random bytes in hex, with 
 
 ## Uploads are served from a folder of their own, with nosniff
 
-`Workspace.Files("uploads")` serves the folder at `files/`, and `SnifferPreventionConcernBuilder` adds `X-Content-Type-Options: nosniff`, which tells the browser to believe the type it is sent rather than guess one from the content. Only the gallery writes to that folder, and only files it accepted. The list of uploads, `uploads.json`, lies beside it rather than in it, so serving the folder cannot hand out the list with its key hashes. `lambda.cs` creates the folder when it starts, because a folder that is not there cannot be served.
+`Workspace.Files("uploads")` serves the folder at `files/`, and `SnifferPreventionConcernBuilder` adds `X-Content-Type-Options: nosniff`, which tells the browser to believe the type it is sent rather than guess one from the content. Only the gallery writes to that folder, and only files it accepted. The list of uploads is in the database rather than in the folder, so serving the folder cannot hand out the list with its key hashes. `lambda.cs` creates the folder when it starts, because a folder that is not there cannot be served.
 
 ## The key to remove an upload is kept as a hash
 
@@ -26,17 +26,18 @@ Uploading answers with a key of 16 random bytes; the list keeps only its SHA-256
 
 The page keeps the keys in `localStorage`: the uploader's browser stands in for an account, since there is none.
 
-## The list is one JSON file in the workspace
+## The files are in the workspace, the list of them in the database
 
-`uploads.json`, kept by `Gallery`, read the first time it is needed and written after every change; every listing is answered from memory. The workspace outlives every deployment, so a new version keeps the gallery.
+Two kinds of data, each where it belongs: what people upload are files, kept in the workspace and served from there; what is known about them - the name they were given, their type, when they came and the hash of the key that removes them - are records, the table `uploads` in the database. `migrations/V1__Create_uploads.sql` makes it, and `lambda.cs` applies that with Evolve before it serves anything, as `demo-crud` explains. Both belong to the lambda rather than to a version, so a new version keeps the gallery.
 
-- **One lock around every change and its writes**, so two uploads at the same moment cannot lose each other's entry, and an upload cannot race its removal.
+- **The file first, then its entry.** An upload writes the file and then adds the row, so the gallery never lists a picture whose file is not there yet; a removal drops the row, then the file.
 - **At most 24 uploads.** Past that the oldest is dropped, its file with it, because anybody can upload.
-- **Only `lambda.cs` touches `Workspace`.** `Gallery` is handed a `Storage` with the four things it does there, so `Gallery.cs` can be copied into another lambda as it is.
+- **A connection per call**, used synchronously, the values as parameters - as in `demo-crud`.
+- **Only `lambda.cs` touches `Workspace`.** `Gallery` is handed a `Storage` with the two things it does there - write a file, delete one - so it does not care where the files live.
 
-## The stored format stays readable
+## The table stays readable
 
-Each upload is kept as `{ "upload": { … }, "keyHash": "…" }`: the entry in the shape the API answers with, and the hash beside it. The data outlives every version, so a field added to `Upload` or `Entry` has to be optional - read from a file an older version wrote, it arrives as its default, `null` or `0`, and the code must cope with that. A version put back online still reads what a newer one wrote, but drops the fields it does not know the next time it saves. Renaming or removing a field loses it for every other version.
+The data outlives every version, so a column added to `uploads` comes in a migration of its own with a default, and the code must cope with the default in rows an older version wrote. A version put back online still works on what a newer one wrote, as long as nothing it reads was dropped or renamed.
 
 ## Problems are status codes with a message
 

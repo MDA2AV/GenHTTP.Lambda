@@ -40,7 +40,12 @@ internal static class LambdaCompiler
         .WithSpecificDiagnosticOptions(new Dictionary<string, ReportDiagnostic>
         {
             // "async method lacks await" - most snippets are plain synchronous code
-            ["CS1998"] = ReportDiagnostic.Suppress
+            ["CS1998"] = ReportDiagnostic.Suppress,
+            // "assuming assembly reference ... matches identity": a library built
+            // against an older framework than the one it runs on - Microsoft.Data.Sqlite
+            // on .NET 11 - which the SDK silences in every project for the same reason
+            ["CS1701"] = ReportDiagnostic.Suppress,
+            ["CS1702"] = ReportDiagnostic.Suppress
         });
 
     #region Functionality
@@ -125,6 +130,13 @@ internal static class LambdaCompiler
             CompilationOptions
         );
 
+        var constructed = CodeGuard.InspectConstruction(compilation);
+
+        if (constructed.Count > 0)
+        {
+            return (CompilationOutcome.Failed([.. constructed]), null);
+        }
+
         if (!request.Run)
         {
             using var check = new MemoryStream();
@@ -163,16 +175,19 @@ internal static class LambdaCompiler
     /// snippet holds in memory.
     /// </summary>
     /// <remarks>
-    /// The secrets are connected first, because the top of a snippet is where
-    /// an API key is most often read.
+    /// The secrets and the database are connected first, because the top of a
+    /// snippet is where an API key is most often read and a database migrated.
     /// </remarks>
     private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda, CompilationRequest request)
     {
         if (request.Secrets != null)
         {
-            lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.SecretType}")?
-                  .GetField(SourceBuilder.SecretSource, BindingFlags.Static | BindingFlags.NonPublic)?
-                  .SetValue(null, request.Secrets);
+            Connect(lambda, SourceBuilder.SecretType, request.Secrets);
+        }
+
+        if (request.Database != null)
+        {
+            Connect(lambda, SourceBuilder.DatabaseType, request.Database);
         }
 
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
@@ -193,6 +208,14 @@ internal static class LambdaCompiler
             _ => throw new InvalidOperationException($"The lambda returned '{result.GetType().Name}', which is neither an IHandler nor an IHandlerBuilder.")
         };
     }
+
+    /// <summary>
+    /// Hands a generated class the function it reads through.
+    /// </summary>
+    private static void Connect(LoadedLambda lambda, string type, object source)
+        => lambda.Assembly.GetType($"{lambda.Scope}.{type}")?
+                 .GetField(SourceBuilder.SecretSource, BindingFlags.Static | BindingFlags.NonPublic)?
+                 .SetValue(null, source);
 
     /// <summary>
     /// Identifies a snippet by what it compiles to, so redeploying unchanged
@@ -256,9 +279,10 @@ internal static class LambdaCompiler
             var span = diagnostic.Location.GetMappedLineSpan();
 
             // a mapped path is one of the user's files; anything else came out
-            // of the generated wrapper and has no line worth pointing at
-            var written = span.Path != SourceBuilder.GeneratedFile
-                       && !span.Path.EndsWith(".generated.cs", StringComparison.Ordinal);
+            // of the generated wrapper, or is about no file at all - a
+            // reference, say - and has no line worth pointing at
+            var written = span.Path is { } path && path != SourceBuilder.GeneratedFile
+                       && !path.EndsWith(".generated.cs", StringComparison.Ordinal);
 
             result.Add(new CompilationDiagnostic(
                 severity == DiagnosticSeverity.Error ? "Error" : "Warning",
@@ -266,7 +290,7 @@ internal static class LambdaCompiler
                 Describe(diagnostic),
                 written ? span.StartLinePosition.Line + 1 : 0,
                 written ? span.StartLinePosition.Character + 1 : 0,
-                written ? (span.Path.Length > 0 ? span.Path : SourceBuilder.UserFile) : null
+                written ? (span.Path!.Length > 0 ? span.Path : SourceBuilder.UserFile) : null
             ));
         }
 
@@ -277,12 +301,32 @@ internal static class LambdaCompiler
     {
         // raised on the generated entry point, so the raw message would point nowhere
         "CS0161" => "The code must end with a return statement that returns a handler.",
+        // the top level of lambda.cs is read as a script, where a using declaration
+        // is read as a using directive - and the raw message says nothing about that
+        "CS1002" when IsUsingDeclaration(diagnostic) => diagnostic.GetMessage()
+            + ". A using declaration (using var ...) cannot stand at the top level of lambda.cs: write using (var connection = Database.GetConnection()) { ... } there, or declare it inside the method or route that needs it.",
         // outside the top-level code of lambda.cs, Assets is the type the Files
         // module declares under that name, and the raw message says nothing about why
         "CS0117" when MeantTheLambdaAssets(diagnostic) => diagnostic.GetMessage()
             + ". Outside the top-level code of lambda.cs, Assets is the Files module's type; what the lambda shipped is LambdaEnvironment.Assets.",
         _ => diagnostic.GetMessage()
     };
+
+    /// <summary>
+    /// Whether a diagnostic stands on a line that declares something with
+    /// <c>using var</c>.
+    /// </summary>
+    private static bool IsUsingDeclaration(Diagnostic diagnostic)
+    {
+        if (diagnostic.Location.SourceTree is not { } tree)
+        {
+            return false;
+        }
+
+        var line = tree.GetText().Lines.GetLineFromPosition(diagnostic.Location.SourceSpan.Start).ToString().TrimStart();
+
+        return line.StartsWith("using var ", StringComparison.Ordinal) || line.StartsWith("await using var ", StringComparison.Ordinal);
+    }
 
     /// <summary>
     /// What the lambda's own Assets offers, which the Files module's type of the
@@ -315,5 +359,7 @@ internal static class LambdaCompiler
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
 /// <param name="Limits">What the lambda may keep in its workspace, compiled into it</param>
 /// <param name="Secrets">What the lambda reads its secrets with, once it runs</param>
+/// <param name="Database">What the lambda connects to its database with, once it runs</param>
 internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Assets, string AssemblyDirectory, string Name, bool Run,
-                                          WorkspaceLimits Limits, Func<string, bool, string?>? Secrets = null);
+                                          WorkspaceLimits Limits, Func<string, bool, string?>? Secrets = null,
+                                          Func<Microsoft.Data.Sqlite.SqliteConnection>? Database = null);

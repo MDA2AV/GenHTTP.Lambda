@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -52,7 +53,7 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// and a program reads the structured copy, and both are the same thing.
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
-                              IShowcaseService showcases, LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
+                              IDatabaseService databases, IShowcaseService showcases, LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
 {
 
     #region Catalogue
@@ -91,7 +92,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("write_code", "Save all files", Effect.Save,
-             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are what is written about the program - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data - kept with the version, never compiled or served; any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime (records, accounts, uploads) is data and lives in the workspace, never in files here; so does a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
+             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are what is written about the program - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data - kept with the version, never compiled or served; any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime is data, never files here: records and accounts in the database (Database.GetConnection(), its schema as Evolve migrations shipped here in migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -282,7 +283,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("read_lambda", "Read a lambda", Effect.Read,
-             $"A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the workspace and the secrets: whether each is on, what it holds, and which secrets the code reads that have no value yet), and one version - or, with feature, that feature: its documentation (what the app is and why, the technical decisions), how it is tested, and its files. The documentation comes first and in full up to {ContextBudget:N0} characters; the files come in full when they add up to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one - a test script or its data too. Read the documentation and the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
+             $"A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the database, the workspace and the secrets: whether each is on, what it holds, and which secrets the code reads that have no value yet), and one version - or, with feature, that feature: its documentation (what the app is and why, the technical decisions), how it is tested, and its files. The documentation comes first and in full up to {ContextBudget:N0} characters; the files come in full when they add up to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one - a test script or its data too. Read the documentation and the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -313,7 +314,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("upload_file", "Put a file into the lambda's data", Effect.Replace,
-             "Write a file to the lambda's workspace - its data, which every version shares and no deploy, rollback or merge touches. With feature, to that feature's copy of the data instead, for trying things out without touching the real one. For content the lambda works with at runtime (initial records, pictures people will browse) and large input files that are not program: a model, a dataset, media. Takes effect at once, without a deploy. Not for the front end: pages, scripts and styles are the program and belong in the version as assets (write_code).",
+             "Write a file to the lambda's workspace - its data, which every version shares and no deploy, rollback or merge touches. With feature, to that feature's copy of the data instead, for trying things out without touching the real one. For files the lambda works with at runtime (pictures people will browse) and large input files that are not program: a model, a dataset, media. Records belong in the database, where the code writes them. Takes effect at once, without a deploy. Not for the front end: pages, scripts and styles are the program and belong in the version as assets (write_code).",
              new JsonObject
              {
                  ["type"] = "object",
@@ -356,7 +357,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("enable_data", "Switch on a kind of data", Effect.Replace,
-             "Switch on a kind of data the lambda needs and does not have: 'secrets' (off until switched on) or 'workspace' (on unless the owner switched it off). Do it when what you build needs it - an API key for a service it calls needs secrets. Takes effect at once, without a deploy. There is no tool to switch one off: that deletes what it held, and is the owner's to do in the editor.",
+             "Switch on a kind of data the lambda needs and does not have: 'database' (a SQLite database for its records - off until switched on, which makes it, empty), 'secrets' (off until switched on) or 'workspace' (on unless the owner switched it off). Do it when what you build needs it - records need the database, an API key for a service it calls needs secrets. Takes effect at once, without a deploy; switching the database on starts the lambda again on its next request, so its migrations run. There is no tool to switch one off: that deletes what it held, and is the owner's to do in the editor.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -366,6 +367,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                      ["kind"] = Field("string", $"Which kind: {string.Join(" or ", DataKinds.All.Select(k => $"'{k.Id}'"))}.")
                  },
                  ["required"] = new JsonArray("privateKey", "kind")
+             }),
+
+        Tool("read_database", "Read the lambda's database", Effect.Read,
+             $"The lambda's database - its records, shared by every version: whether it is switched on, how full it is, and its tables and views with their columns and how many rows each holds. With table, a page of that table's rows, newest first, up to {MaxDatabaseRows} at a time. Read only: the lambda writes it, through Database.GetConnection(). Use it to see that migrations were applied and records were written. With feature, that feature's copy.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
+                     ["feature"] = Field("string", "Read this feature's copy of the database instead."),
+                     ["table"] = Field("string", "A table or view to read the rows of; left out, the tables are listed."),
+                     ["offset"] = Field("integer", "Rows to skip, for the next page."),
+                     ["limit"] = Field("integer", $"Rows to read, up to {MaxDatabaseRows}. Left out, 20."),
+                     ["order"] = Field("string", "A column to sort by; left out, the order the rows were written in."),
+                     ["ascending"] = Field("boolean", "Oldest or smallest first, rather than newest or largest.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
              }),
 
         Tool("set_secret", "Store a secret", Effect.Replace,
@@ -465,6 +484,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "list_files" => await FilesAsync(arguments),
                 "delete_file" => await RemoveAsync(arguments),
                 "enable_data" => await EnableDataAsync(arguments),
+                "read_database" => await DatabaseAsync(arguments),
                 "set_secret" => await SetSecretAsync(arguments),
                 "list_secrets" => await SecretsAsync(arguments),
                 "delete_secret" => await DeleteSecretAsync(arguments),
@@ -956,9 +976,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             ok = true,
             kind = store.Kind,
             enabled = store.Enabled,
-            next = store.Kind == DataKinds.SecretsId
-                ? "Secrets are on, and empty. Store a value the user gave you with set_secret, or tell the user to set it under Data > Secrets in the editor. The code reads it with Secret.Read(\"NAME\")."
-                : "On from the lambda's next request, without a deploy."
+            next = store.Kind switch
+            {
+                DataKinds.SecretsId => "Secrets are on, and empty. Store a value the user gave you with set_secret, or tell the user to set it under Data > Secrets in the editor. The code reads it with Secret.Read(\"NAME\").",
+                DataKinds.DatabaseId => "The database is on, and empty. Ship its schema as SQL migrations in migrations/ (V1__Create_items.sql) and apply them with Evolve at the top of lambda.cs - see platform_guide under database, or demo-crud. The code connects with Database.GetConnection(); read_database shows what it holds.",
+                _ => "On from the lambda's next request, without a deploy."
+            }
         });
     }
 
@@ -1006,6 +1029,65 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     : null
         });
     }
+
+    /// <summary>
+    /// The tables of a lambda's database, or a page of the rows of one.
+    /// </summary>
+    /// <remarks>
+    /// Rows go out as objects keyed by column, which is what a model reads
+    /// best; the editor gets arrays, which is what a grid draws best.
+    /// </remarks>
+    private async ValueTask<JsonObject> DatabaseAsync(JsonObject arguments)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        var feature = Text(arguments, "feature");
+
+        var table = Text(arguments, "table");
+
+        if (table == null)
+        {
+            var overview = await databases.GetAsync(privateKey, feature);
+
+            return McpProtocol.Say(new
+            {
+                enabled = overview.Enabled,
+                overview.UsedBytes,
+                overview.QuotaBytes,
+                usedByCode = overview.Used,
+                tables = overview.Tables.Select(t => new
+                {
+                    t.Name,
+                    kind = t.Kind == "table" ? null : t.Kind,
+                    t.Rows,
+                    columns = t.Columns.Select(c => $"{c.Name} {c.Type}{(c.PrimaryKey ? " PRIMARY KEY" : "")}{(c.NotNull && !c.PrimaryKey ? " NOT NULL" : "")}".TrimEnd()),
+                    migrations = t.Migrations ? "Evolve's record of the migrations it applied" : null
+                }),
+                note = !overview.Enabled
+                    ? "The database is switched off. enable_data with kind 'database' switches it on when what you build keeps records."
+                    : overview.Tables.Count == 0
+                        ? "The database is empty: no migration has made a table yet. Ship them in migrations/ and apply them with Evolve as the lambda starts."
+                        : null
+            });
+        }
+
+        var rows = await databases.ReadAsync(privateKey, table, Number(arguments, "offset") ?? 0, Math.Clamp(Number(arguments, "limit") ?? 20, 1, MaxDatabaseRows),
+                                             Text(arguments, "order"), Flag(arguments, "ascending") != true, feature);
+
+        return McpProtocol.Say(new
+        {
+            rows.Table,
+            rows.Total,
+            rows.Offset,
+            rows = rows.Rows.Select(r => rows.Columns.Select((c, i) => (c.Name, Value: r[i])).ToDictionary(p => p.Name, p => p.Value)),
+            next = rows.Offset + rows.Rows.Count < rows.Total ? rows.Offset + rows.Rows.Count : (int?)null
+        });
+    }
+
+    /// <summary>
+    /// The most rows read_database answers with at once.
+    /// </summary>
+    private const int MaxDatabaseRows = 100;
 
     private async ValueTask<JsonObject> DeleteSecretAsync(JsonObject arguments)
     {
@@ -1364,8 +1446,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 ? "The lambda is online: make changes in a feature - create_feature, or continue one listed under features."
                 : null,
             // what the lambda keeps, which no version holds and none brings back
-            data = stores.ToDictionary(s => s.Kind, s => s.Kind == DataKinds.SecretsId
-                ? (object)new
+            data = stores.ToDictionary(s => s.Kind, s => s.Kind switch
+            {
+                DataKinds.SecretsId => (object)new
                 {
                     s.Enabled,
                     names = kept.Secrets.Select(n => n.Name),
@@ -1373,8 +1456,19 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     note = kept.Missing.Count > 0
                         ? "The code reads secrets that have no value yet: Secret.Read throws until the user sets them under Data > Secrets in the editor (or you store one they gave you with set_secret)."
                         : null
-                }
-                : new { s.Enabled, items = s.Items, s.UsedBytes, s.QuotaBytes }),
+                },
+                DataKinds.DatabaseId => new
+                {
+                    s.Enabled,
+                    tables = s.Items,
+                    s.UsedBytes,
+                    s.QuotaBytes,
+                    note = !s.Enabled && files.Any(f => f.IsCode && DatabaseService.Uses(f.Code))
+                        ? "The code connects to the database, which is switched off: Database.GetConnection() throws until it is on (enable_data with kind 'database')."
+                        : s.Enabled ? "read_database lists its tables and reads their rows." : null
+                },
+                _ => new { s.Enabled, items = s.Items, s.UsedBytes, s.QuotaBytes }
+            }),
             version,
             specification = content?.Specification,
             change = content?.Change,
@@ -1498,6 +1592,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             codeCharacters = options.MaxCodeLengthOf(tier),
             assetBytes = options.MaxAssetBytesOf(tier),
             workspaceBytes = workspace.Quota,
+            databaseBytes = options.DatabaseOf(tier),
             features = options.MaxFeatures
         };
     }
@@ -1640,14 +1735,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 what = "Data belongs to the lambda, not to a version: every version reads and writes the same data. It is where everything the program keeps goes - records, accounts, scores, uploads, anything users create or change.",
                 lifetime = "Data outlives every save, deploy, rollback and merge - no version holds it, so none of them changes it or brings an earlier state back. It goes only when the lambda is deleted, or when its owner switches that kind of data off, which deletes what it held.",
-                kinds = "There are two kinds: the workspace, a private directory of files, and the secrets - API keys, passwords and tokens the code reads by name and nobody sees. More kinds, such as a database, will be added the same way; read_lambda lists what a lambda has under data.",
-                optIn = "Each kind is switched on before the lambda can use it. The workspace is on unless the owner switched it off; the secrets are off until switched on. enable_data switches on what what you build needs - secrets for an API key. Switching a kind off deletes what it held, so only the owner does that, in the editor; a workspace the owner switched off is theirs to decide about - ask before switching it on again.",
+                kinds = "There are three kinds: the database, a SQLite database for records; the workspace, a private directory of files; and the secrets - API keys, passwords and tokens the code reads by name and nobody sees. read_lambda lists what a lambda has under data.",
+                optIn = "Each kind is switched on before the lambda can use it. The workspace is on unless the owner switched it off; the database and the secrets are off until switched on. enable_data switches on what what you build needs - the database for records, secrets for an API key. Switching a kind off deletes what it held, so only the owner does that, in the editor; a kind the owner switched off is theirs to decide about - ask before switching it on again.",
                 beReady = "Data can be empty: a new lambda has none, and an owner can clear it. Have the code create what it needs on first use, and say so plainly where something it expects is missing, rather than fail."
             },
             whereThingsGo = new
             {
                 theProgram = "In the version, as assets: the app itself - C#, and the whole front end including a single page application's HTML, JavaScript, CSS, images and fonts. Ship it with write_code under a folder such as web/ and serve it with Assets.App(\"web\").",
-                theData = "In the workspace: everything the lambda writes while it runs, everything users create or upload, and large input files that are not program - a model, a dataset, media. Write it with Workspace from the code, or put a file there with upload_file.",
+                theRecords = "In the database: everything the lambda keeps as records while it runs - entries, accounts, sessions, orders, votes, scores. Its schema is SQL migrations shipped in the version, applied by Evolve as the lambda starts; the rows are data. Prefer it to JSON files: it takes one write at a time, so two requests cannot lose each other's change, and it finds a record without reading all of them.",
+                theFiles = "In the workspace: files the lambda writes or users upload - pictures, documents - and large input files that are not program - a model, a dataset, media. Write them with Workspace from the code, or put one there with upload_file. What is known about a file - who uploaded it, when - is a record, in the database.",
                 neverTheOtherWay = "Never keep user data in assets: they are read only while the lambda runs and replaced on every deploy. Never upload the front end to the workspace: it would not be versioned, a rollback would not bring the matching pages back, and a feature would work on a copy of it."
             },
             flows = new
@@ -1667,7 +1763,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             why = "The code says what the program does. It does not say what the user wants, what has to keep working, or why it is built this way - and the next agent to change the lambda, or you a week later, starts from nothing without that. The owner reads it too: the editor shows the documentation of every version, and product.md is the one page the owner of an app they had built reads.",
             product = ".lambda/docs/product.md - what the app is, in a sentence or two first (the editor shows that paragraph on the overview); who uses it and what for, as use cases; each feature and why it exists; and what it deliberately does not do. In the user's terms, from what they asked for and why - every request folded in, not a list of changes. No code and no file names: its reader is the owner.",
             decisions = ".lambda/docs/decisions.md - the technical decisions and why they were made: how the program is put together, how the data is stored and kept readable across versions, which secrets it reads and what for, what was considered and left out. One short entry per decision - what was decided, why, and what a change has to keep in mind. When a decision changes, change its entry: the versions keep the history.",
-            testing = ".lambda/tests/README.md - how to test the app automatically: what has to keep working, one line per behaviour worth checking; how each is checked (the request, and the answer expected); what data a test needs; and how to run the scripts beside it against an address - a feature's previewUrl, and never the live lambda for a test that writes. Scripts go beside it in .lambda/tests/ - a Node script that takes the address (node smoke.mjs <url>: Node has fetch and WebSocket built in, nothing to install), curl, or a .http file - and so does test data, such as JSON to put into a feature's copy of the data with upload_file before the tests run.",
+            testing = ".lambda/tests/README.md - how to test the app automatically: what has to keep working, one line per behaviour worth checking; how each is checked (the request, and the answer expected); what data a test needs; and how to run the scripts beside it against an address - a feature's previewUrl, and never the live lambda for a test that writes. Scripts go beside it in .lambda/tests/ - a Node script that takes the address (node smoke.mjs <url>: Node has fetch and WebSocket built in, nothing to install), curl, or a .http file - and so does test data: files to put into a feature's copy of the workspace with upload_file, and records as a script that adds them through the app's own routes against the previewUrl (only the app writes to its database; demo-crud's seed.mjs does it).",
             more = "More pages go beside them in .lambda/docs/ (api.md, data.md) and are shown in the editor too; a picture a page links to - ![Flow](flow.svg) - is shown where it is linked.",
             when = "Write all three with a new lambda, in the same write_code as the code. With every change, update what it affects in the same save - in a feature, so they are merged with the code and the version it becomes is described as it is. A lambda that has none gets them with its next change. read_lambda and every save say when one is missing.",
             use = "Read them before changing a lambda: read_lambda hands them over first. Before merging a feature, run what tests/README.md describes against its previewUrl, fix what fails, and add a check for what the change does.",
@@ -1747,6 +1843,47 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             },
             note = "Nothing else on the file system is reachable. There is no Append."
         },
+        database = new
+        {
+            what = "A SQLite database of the lambda's own, for its records. Data like the workspace - shared by every version, untouched by deploys, rollbacks and merges; a feature works on a copy of it, which its merge throws away.",
+            switchedOn = "Off until switched on: enable_data with kind 'database', which makes it, empty. Switched on or off, the lambda starts again on its next request. While it is off, Database.GetConnection() throws.",
+            surface = new[]
+            {
+                "Database.GetConnection() - an open Microsoft.Data.Sqlite SqliteConnection to the lambda's database; dispose of it when done",
+                "connection.CreateCommand(), command.Parameters.AddWithValue(\"$name\", value), ExecuteNonQuery() / ExecuteScalar() / ExecuteReader()",
+                "connection.BeginTransaction() - for statements that belong together",
+                "new Evolve(connection) { Locations = [Assets.Root + \"migrations\"], IsEraseDisabled = true }.Migrate() - applies the migrations"
+            },
+            imported = "Microsoft.Data.Sqlite and EvolveDb are imported in every file: SqliteConnection, SqliteCommand, SqliteException and Evolve need no using.",
+            reach = "Database can be used from every file, like Workspace. A type of your own called Database hides it; the platform's is LambdaEnvironment.Database.",
+            migrations = new
+            {
+                how = "The schema is SQL files shipped with the version as assets, in migrations/: V1__Create_tasks.sql, V2__Add_due_date.sql - a V, a number, two underscores, a name. Evolve applies each once, in order, and remembers which in a table of its own (changelog). Apply them as the lambda starts, at the top of lambda.cs, before it serves anything.",
+                example = "using (var connection = Database.GetConnection())\n{\n    var evolve = new Evolve(connection, message => Console.WriteLine(message))\n    {\n        Locations = [Assets.Root + \"migrations\"],\n        IsEraseDisabled = true\n    };\n\n    evolve.Migrate();\n}",
+                neverEdit = "Never change or rename a migration that was applied - Evolve refuses to start on a checksum that no longer matches, and a database that already ran it would never run the change. A change to the schema is the next file.",
+                compatible = "Every version reads the same database, and a rollback runs an older version against a schema a newer one migrated. Keep changes additive where it costs little - new tables, new columns with a default, never dropping or renaming what an older version reads - rather than building machinery for compatibility nobody needs. An older version runs fine against a database with migrations it does not know.",
+                features = "A feature migrates its own copy when its preview starts, so a migration is tried there first; merged and deployed, it runs against the lambda's database."
+            },
+            usage = new
+            {
+                connectionPerCall = "Open a connection where it is used and dispose of it: using var db = Database.GetConnection(); inside a route, a method or a store class. Connections are pooled, so that costs nothing, and one connection is never shared between requests.",
+                synchronous = "Use it synchronously - ExecuteReader, ExecuteNonQuery, not their Async forms. The database is a file on the same machine, and the server has an asynchronous model of its own that a blocking call here does not disturb.",
+                parameters = "Put values in as parameters ($title), never into the SQL text: what somebody typed must not change what a statement does.",
+                concurrency = "SQLite takes one write at a time and lets readers read meanwhile, so an UPDATE ... SET votes = votes + 1 or an INSERT ... ON CONFLICT DO UPDATE counts every request - no locks of your own.",
+                times = "Store times as ISO 8601 text in UTC (value.ToString(\"O\")) and read them back with DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind): they sort as text and read well.",
+                topLevel = "At the top level of lambda.cs, write using (var connection = Database.GetConnection()) { ... } - a using declaration (using var) is not allowed there. Inside methods and routes, using var is fine."
+            },
+            notAllowed = "Entity Framework Core is not available, and a lambda does not open connections of its own - new SqliteConnection(...), a connection string, ATTACH and VACUUM INTO are refused. The database is the one file Database.GetConnection() opens.",
+            fromOutside = "read_database lists the tables and reads their rows - with feature, a feature's copy. The owner sees the same in the editor under Data. Nothing writes to it but the lambda.",
+            exported = "The export carries the database as database/database.db, and Database.GetConnection() opens it there with plain Microsoft.Data.Sqlite.",
+            limits = new
+            {
+                bytes = options.DatabaseOf(LambdaTier.Free),
+                premiumBytes = options.DatabaseOf(LambdaTier.Premium),
+                full = "Past its room, a write fails with SQLite's 'database or disk is full'. read_database says how full it is."
+            },
+            demo = "Every demo keeps its records like this - read_lambda demo-crud: lambda.cs migrates, Store.cs reads and writes, migrations/ holds the schema."
+        },
         secrets = new
         {
             what = "API keys, passwords, tokens, connection strings: whatever the code needs and must not contain. Data like the workspace - shared by every version, untouched by deploys, rollbacks and merges; a feature works on a copy.",
@@ -1779,7 +1916,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             tree = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory.",
             singlePage = "Content.From(Resource.FromString(html).Type(new ContentType(\"text/html; charset=utf-8\")))"
         },
-        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the newest version as a standalone zipped .NET 10 project with a Dockerfile: Program.cs hosts it, Project.cs is lambda.cs, the other files keep their code, the documentation and tests go to docs/ and tests/, and Platform/ stands in for Workspace, Assets and the implicit imports. It needs nothing from this platform. Worth telling the user.",
+        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the newest version as a standalone zipped .NET 10 project with a Dockerfile: Program.cs hosts it, Project.cs is lambda.cs, the other files keep their code, the documentation and tests go to docs/ and tests/, and Platform/ stands in for Workspace, Assets, Secret, Database and the implicit imports. The database comes along as a SQLite file. It needs nothing from this platform. Worth telling the user.",
         importedForYou = ModuleCatalog.Imports,
         network = "A lambda can make outbound calls with HttpClient and sockets. System.Net.Http and System.Net.Sockets are not imported by default, so write the full type name or add a using. It runs in the shared server process, so give requests a timeout.",
         sayWhy = new
@@ -1820,6 +1957,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             "A new version for every attempt at changing a lambda that is online. Work in a feature, try it at its preview address, and merge it once.",
             "An API key or password in the code, where every version, export and reader of the history keeps it. Read it with Secret.Read(\"NAME\") and have the user set it under Data > Secrets.",
             "A change that leaves .lambda/docs/ as it was. The next agent reads the documentation first and works from what it says - so out of date, it is worse than none.",
+            "Records in a JSON file in the workspace, rewritten whole on every change. Keep them in the database: enable_data with kind 'database', a migration, Database.GetConnection().",
+            "using var connection = Database.GetConnection(); at the top level of lambda.cs does not compile there. Write using (var connection = ...) { ... }, or open it inside the method that needs it.",
+            "Editing a migration that was applied. Evolve refuses to start on the changed checksum; add the next file instead.",
             "Request bodies bind by type: a bare string parameter is null. Take a record.",
             "Once a route has read the body, the request's headers are gone. Check a header (a token, say) in a concern in front of the route - the Authentication module does exactly that, see demo-registration - or in a route that takes no body.",
             "In other .cs files, Assets is the Files module's type of that name: use LambdaEnvironment.Assets there. Workspace works in every file.",
@@ -1836,7 +1976,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             premium = Allowance(LambdaTier.Premium),
             code = $"{options.MaxCodeLengthOf(LambdaTier.Free):N0} characters across all .cs files; {options.MaxCodeLengthOf(LambdaTier.Premium):N0} for a premium lambda",
             versions = $"The newest {options.MaxVersions} versions are kept, and the one online.",
-            features = $"Up to {options.MaxFeatures} features open at once; each holds a copy of the files and of the workspace, within the same limits.",
+            features = $"Up to {options.MaxFeatures} features open at once; each holds a copy of the files, the workspace and the database, within the same limits.",
             deployment = $"A free lambda is online while used, and offline after {(int)options.DeploymentLifetime.TotalDays} days without visits or edits. A premium one stays online. A feature's preview of a free lambda goes offline after as long without being worked on.",
             retention = $"A free lambda is removed about {(int)options.Retention.TotalDays} days after the last of either. A premium one is kept."
         },
@@ -1852,7 +1992,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         return $"Code: {options.MaxCodeLengthOf(tier):N0} characters, in any number of .cs files. "
              + $"Assets: {Size(options.MaxAssetBytesOf(tier))} in all, any number of them. "
-             + $"Workspace: {Size(workspace.Quota)} in all, in any number of files.";
+             + $"Workspace: {Size(workspace.Quota)} in all, in any number of files. "
+             + $"Database: {Size(options.DatabaseOf(tier))}.";
     }
 
     private static string Size(long bytes) => bytes switch

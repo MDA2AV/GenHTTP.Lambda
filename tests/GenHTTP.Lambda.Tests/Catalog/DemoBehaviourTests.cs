@@ -95,6 +95,18 @@ public sealed class DemoBehaviourTests
 
         Assert.AreEqual(HttpStatusCode.Conflict, again.StatusCode, "names are unique, whatever their case");
 
+        using (var umlaut = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/register",
+                                                    new { name = "Jürgen", password = "correct horse" }, "application/json"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, umlaut.StatusCode);
+        }
+
+        using (var shouted = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/register",
+                                                     new { name = "JÜRGEN", password = "something else" }, "application/json"))
+        {
+            Assert.AreEqual(HttpStatusCode.Conflict, shouted.StatusCode, "in every alphabet, not only in English");
+        }
+
         using var wrong = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/login",
                                                   new { name = "ada", password = "wrong password" }, "application/json");
 
@@ -121,10 +133,15 @@ public sealed class DemoBehaviourTests
 
         Assert.AreEqual(HttpStatusCode.Forbidden, after.StatusCode, "a session that was signed out is worth nothing");
 
-        var stored = await fixture.Application.Services.GetRequiredService<IWorkspaceService>()
-                                  .ReadAsync((await fixture.Meta.GetIdAsync("demo-registration"))!.Value, "accounts.json");
+        // what the owner sees in the database: the account, and nothing of its password
+        using (var accounts = await fixture.GetAsync("/api/v1/lambdas/demo-registration/database/tables/accounts"))
+        {
+            var stored = await accounts.Content.ReadAsStringAsync();
 
-        Assert.DoesNotContain("correct horse", Encoding.UTF8.GetString(stored!.Content), "passwords are never stored");
+            Assert.AreEqual(HttpStatusCode.OK, accounts.StatusCode, stored);
+            Assert.Contains("\"ada\"", stored);
+            Assert.DoesNotContain("correct horse", stored, "passwords are never stored");
+        }
 
         using var members = await fixture.GetAsync("/lambda/demo-registration/members.html");
 

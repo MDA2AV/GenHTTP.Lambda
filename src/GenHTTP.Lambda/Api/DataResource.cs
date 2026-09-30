@@ -14,7 +14,9 @@ namespace GenHTTP.Lambda.Api;
 /// <remarks>
 /// A version is the program - its code and assets - and is replaced by the
 /// next one; data is what the program keeps, shared by every version and left
-/// alone by deploying and rolling back. The workspace is on unless its owner
+/// alone by deploying and rolling back. The database is off until it is
+/// switched on, which makes it; its tables are under
+/// <c>/lambdas/{privateKey}/database</c>. The workspace is on unless its owner
 /// switched it off; its files are under <c>/lambdas/{privateKey}/files</c>.
 /// The secrets are off until they are switched on; their names are under
 /// <c>/lambdas/{privateKey}/secrets</c>. Kinds that come later are listed here
@@ -33,7 +35,7 @@ public sealed class DataResource(IDataService data)
     /// <summary>
     /// One kind of data, and how the lambda has it.
     /// </summary>
-    /// <param name="kind">Which kind: <c>workspace</c> or <c>secrets</c></param>
+    /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod("lambdas/:privateKey/data/:kind")]
     public async ValueTask<DataStoreResponse> Get(string privateKey, string kind)
         => Describe(await data.GetAsync(privateKey, kind));
@@ -43,10 +45,13 @@ public sealed class DataResource(IDataService data)
     /// </summary>
     /// <remarks>
     /// Nothing happens if it is on already. The lambda can use it from its
-    /// next request on, without being deployed again. The secrets start empty:
-    /// their values are set under <c>/lambdas/{privateKey}/secrets</c>.
+    /// next request on, without being deployed again. The database is made
+    /// empty, and the lambda is started again on its next request, so what it
+    /// does with its database as it starts - migrating it - is done. The
+    /// secrets start empty: their values are set under
+    /// <c>/lambdas/{privateKey}/secrets</c>.
     /// </remarks>
-    /// <param name="kind">Which kind: <c>workspace</c> or <c>secrets</c></param>
+    /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/data/:kind")]
     public async ValueTask<DataStoreResponse> Enable(string privateKey, string kind)
         => Describe(await data.EnableAsync(privateKey, kind));
@@ -58,7 +63,7 @@ public sealed class DataResource(IDataService data)
     /// This cannot be undone. From its next request on, code that uses it is
     /// refused with an exception saying that it is off.
     /// </remarks>
-    /// <param name="kind">Which kind: <c>workspace</c> or <c>secrets</c></param>
+    /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/data/:kind")]
     public async ValueTask<DataStoreResponse> Disable(string privateKey, string kind)
         => Describe(await data.DisableAsync(privateKey, kind));

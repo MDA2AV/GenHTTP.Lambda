@@ -4,6 +4,8 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
@@ -28,8 +30,8 @@ namespace GenHTTP.Lambda.Api;
 /// than by the public key, because a public key can be given up and claimed
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
-public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, LambdaTelemetry telemetry,
-                                               LogBook book, LambdaOptions options)
+public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
+                                               LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
 {
 
     #region Functionality
@@ -100,7 +102,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                 options.MaxVersions,
                 (int)options.DeploymentLifetime.TotalHours,
                 (int)options.Retention.TotalDays,
-                options.MaxFeatures
+                options.MaxFeatures,
+                options.DatabaseOf(tier)
             ),
             Document(files)
         );
@@ -232,6 +235,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var kept = await secrets.ListAsync(privateKey);
 
+        var database = await data.GetAsync(privateKey, DataKinds.DatabaseId);
+
         return new StorageSummary(
             version,
             code.Count,
@@ -246,7 +251,11 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             code.Any(f => UsingWorkspace().IsMatch(f.Code)),
             kept.Enabled,
             kept.Secrets.Count,
-            [.. kept.Missing]
+            [.. kept.Missing],
+            database.Enabled,
+            database.Items,
+            database.UsedBytes,
+            code.Any(f => DatabaseService.Uses(f.Code))
         );
     }
 

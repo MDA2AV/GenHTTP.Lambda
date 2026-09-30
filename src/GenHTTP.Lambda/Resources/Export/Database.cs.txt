@@ -1,0 +1,42 @@
+using Microsoft.Data.Sqlite;
+
+namespace Platform;
+
+/// <summary>
+/// The database the app keeps its records in: a SQLite file, in "database" in
+/// the directory it runs in, as the export wrote it out.
+/// </summary>
+public sealed class SqliteFile
+{
+    private readonly string _connection;
+
+    public SqliteFile(string file)
+    {
+        var path = Path.GetFullPath(file);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+        _connection = new SqliteConnectionStringBuilder { DataSource = path, ForeignKeys = true, DefaultTimeout = 10 }.ToString();
+    }
+
+    /// <summary>An open connection to the database. Dispose of it when done - connections are pooled.</summary>
+    public SqliteConnection GetConnection()
+    {
+        var connection = new SqliteConnection(_connection);
+
+        connection.Open();
+
+        return connection;
+    }
+}
+
+public static partial class LambdaEnvironment
+{
+    /// <summary>What the app keeps its records in, as it did on the platform.</summary>
+    public static readonly SqliteFile Database = new(Path.Combine("database", "database.db"));
+}
+
+public static partial class LambdaScope
+{
+    public static SqliteFile Database => LambdaEnvironment.Database;
+}

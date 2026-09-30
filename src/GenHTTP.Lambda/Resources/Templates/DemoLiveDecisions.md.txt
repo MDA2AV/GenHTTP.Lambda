@@ -24,13 +24,13 @@ The counts are an ordinary message: `Results` is sent as JSON without an event t
 
 When there was no update for 20 seconds, the stream writes a comment (`: still here`), which the browser ignores. Proxies close responses that look idle; the comment keeps this one open. It also matters for the count of watchers: the stream only learns that a browser has gone when a write fails, so without the comment a browser that left would be counted until the next vote or the next browser coming or going.
 
-## Counts in the workspace, listeners in memory
+## Counts in the database, listeners in memory
 
-The counts are `votes.json` in the workspace, a map from the id of an option to its votes. It is read once when the lambda starts and written after every vote, under the poll's lock, so two votes at the same moment cannot lose each other. The workspace outlives every deployment, so a new version or a restart keeps the votes. The listeners are only in memory: a restart ends every stream anyway, and the browsers connect again. Only `lambda.cs` touches `Workspace`; `Poll` is handed a way to read and write, so it does not care where the file lives.
+The counts are the table `votes` in the database, one row per option with its votes, made by `migrations/V1__Create_votes.sql` - which `lambda.cs` applies with Evolve before it serves anything, as `demo-crud` explains. A vote counts itself up where it is, `INSERT ... ON CONFLICT (option) DO UPDATE SET votes = votes + 1`: the database takes one write at a time, so two votes at the same moment cannot lose each other, without a lock of the app's own. The database belongs to the lambda rather than to a version, so a new version or a restart keeps the votes. The listeners are only in memory: a restart ends every stream anyway, and the browsers connect again.
 
-## The stored format is keyed by id
+## The votes are keyed by id
 
-Only the options in `Poll.cs` are shown, and their votes are looked up by `id`. A label can be changed without losing its votes, a new option starts at zero, and an option taken out is no longer shown or counted in the total, but its votes stay in the file and come back if it is added again. Changing an `id` loses its votes, so keep the ids when changing the answers.
+Only the options in `Poll.cs` are shown, and their votes are looked up by `id`. A label can be changed without losing its votes, a new option starts at zero, and an option taken out is no longer shown or counted in the total, but its row stays in the table and its votes come back if it is added again. Changing an `id` loses its votes, so keep the ids when changing the answers.
 
 ## The question and the answers are part of the program
 

@@ -168,6 +168,14 @@ export interface LambdaSummary {
     secrets: number;
     /** The secrets its code reads that have no value yet, and so fail. */
     missingSecrets?: string[] | null;
+    /** Whether the lambda has its database switched on. */
+    databaseEnabled: boolean;
+    /** How many tables its database holds. */
+    databaseTables: number;
+    /** The room its database takes. */
+    databaseBytes: number;
+    /** Whether the code of that version connects to the database, and so fails where it does once it is off. */
+    usesDatabase: boolean;
   };
   /** What the documentation of the version the storage is about says, and which of its pages it has. */
   documentation: DocumentationSummary;
@@ -181,6 +189,8 @@ export interface LambdaSummary {
     retentionDays: number;
     /** How many features it may have open at once. */
     features: number;
+    /** How large its database may grow. */
+    databaseBytes: number;
   };
 }
 
@@ -518,24 +528,75 @@ export interface WorkspaceListing {
 /**
  * One kind of data a lambda can keep. Data belongs to the lambda rather than
  * to a version: every version shares it, and deploying or rolling back leaves
- * it alone. The workspace and the secrets so far; more are meant to follow,
- * listed the same way.
+ * it alone. The database, the workspace and the secrets so far; a kind that
+ * comes later is listed the same way.
  */
 export interface DataStore {
-  /** Which kind: "workspace", the files the lambda reads and writes, or "secrets". */
+  /** Which kind: "database", the records the lambda keeps, "workspace", the files it reads and writes, or "secrets". */
   kind: string;
   enabled: boolean;
   /** Whether a lambda has it until its owner decides. */
   default: boolean;
   /** When the owner last switched it; absent while it is as it came. */
   changed?: string | null;
-  /** What it holds: files, for the workspace; values, for the secrets. */
+  /** What it holds: tables, for the database; files, for the workspace; values, for the secrets. */
   items: number;
   /** The room that takes, for a kind counted in room. */
   usedBytes: number;
   quotaBytes: number;
   /** How many things it may hold, for a kind counted in things. */
   maxItems?: number | null;
+}
+
+/** One column of a table in a lambda's database. */
+export interface DatabaseColumn {
+  name: string;
+  /** The type it was declared with, as written; SQLite does not insist on it. */
+  type: string;
+  notNull: boolean;
+  primaryKey: boolean;
+  default?: string | null;
+}
+
+/** One table or view of a lambda's database. */
+export interface DatabaseTable {
+  name: string;
+  kind: 'table' | 'view';
+  /** Absent where counting them took too long. */
+  rows?: number | null;
+  columns: DatabaseColumn[];
+  /** Whether it is the history Evolve keeps of the migrations it applied, rather than records of the app. */
+  migrations: boolean;
+}
+
+/** The database of a lambda, or of a draft's copy of it. */
+export interface DatabaseInfo {
+  enabled: boolean;
+  usedBytes: number;
+  quotaBytes: number;
+  tables: DatabaseTable[];
+  /** Whether the code connects to it. */
+  used: boolean;
+}
+
+/**
+ * A value in a row: a number, text or nothing - an integer beyond what a
+ * JavaScript number holds exactly as text, a long text cut short with its
+ * length, bytes by their length.
+ */
+export type DatabaseValue = null | number | string | { text: string; length: number } | { blob: number };
+
+/** A page of the rows of a table. */
+export interface DatabaseRows {
+  table: string;
+  columns: DatabaseColumn[];
+  rows: DatabaseValue[][];
+  total: number;
+  offset: number;
+  limit: number;
+  /** The column they are sorted by; absent for the order they were written in. */
+  order?: string | null;
+  descending: boolean;
 }
 
 /** One secret, as anybody but the lambda sees it: never its value. */
@@ -1070,6 +1131,25 @@ export const api = {
   /** Switches a kind of data off, deleting everything it held. */
   disableData: (privateKey: string, kind: string) =>
     request<DataStore>(`/lambdas/${privateKey}/data/${encodeURIComponent(kind)}`, { method: 'DELETE' }),
+
+  /**
+   * The database of a lambda - or, given a feature, of its copy. Read only:
+   * what is in it is written by the lambda.
+   */
+  database: {
+    get: (privateKey: string, feature?: string) =>
+      request<DatabaseInfo>(`/lambdas/${privateKey}${feature ? `/features/${feature}` : ''}/database`),
+
+    rows: (privateKey: string, table: string, page: { offset: number; limit: number; order?: string | null; descending: boolean }, feature?: string) => {
+      const query = new URLSearchParams({ offset: String(page.offset), limit: String(page.limit), descending: String(page.descending) });
+
+      if (page.order) {
+        query.set('order', page.order);
+      }
+
+      return request<DatabaseRows>(`/lambdas/${privateKey}${feature ? `/features/${feature}` : ''}/database/tables/${encodeURIComponent(table)}?${query}`);
+    },
+  },
 
   /**
    * The secrets of a lambda - or, given a feature, of its copy. A value goes

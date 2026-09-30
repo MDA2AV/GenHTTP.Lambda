@@ -108,9 +108,10 @@ const ALLOW = [
   'mcp__genhttp__check_code', 'mcp__genhttp__deploy', 'mcp__genhttp__read_lambda',
   'mcp__genhttp__read_logs', 'mcp__genhttp__upload_file', 'mcp__genhttp__list_files',
   'mcp__genhttp__delete_file',
-  // it switches secrets on and says which the code reads; the values are the
-  // owner's to enter, so it has no way to set or remove one
-  'mcp__genhttp__enable_data', 'mcp__genhttp__list_secrets'
+  // it switches the database and secrets on, reads the database to see that
+  // its migrations ran, and says which secrets the code reads; the values are
+  // the owner's to enter, so it has no way to set or remove one
+  'mcp__genhttp__enable_data', 'mcp__genhttp__read_database', 'mcp__genhttp__list_secrets'
 ];
 
 /*
@@ -1117,7 +1118,8 @@ const WORDS = {
   upload_file: 'Uploading a file',
   list_files: 'Listing the files',
   delete_file: 'Removing a file',
-  enable_data: 'Making room for keys and passwords',
+  enable_data: 'Making room for what it keeps',
+  read_database: 'Checking what it saved',
   list_secrets: 'Checking which keys it needs'
 };
 

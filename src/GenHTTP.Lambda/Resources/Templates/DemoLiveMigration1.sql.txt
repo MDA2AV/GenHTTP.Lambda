@@ -1,0 +1,8 @@
+-- The votes: one row per option, with how many it has. Applied once, by
+-- Evolve; a change is a new file.
+
+CREATE TABLE votes
+(
+    option TEXT    NOT NULL PRIMARY KEY,
+    votes  INTEGER NOT NULL DEFAULT 0
+);
