@@ -264,3 +264,33 @@ export const IconViewSimple = (p: IconProps) => (
 export const IconViewFull = (p: IconProps) => (
   <Svg {...p}><path d="M3.5 4.5h17v15h-17Z" /><path d="M9 4.5v15" /><path d="M12 9h5.5M12 12h5.5M12 15h3.5M5.5 8.5h1.5M5.5 11.5h1.5" /></Svg>
 );
+
+/** A star, filled once given and outlined before - the stars of a published source. */
+export const IconStar = ({ className = 'h-4 w-4', filled = false }: IconProps & { filled?: boolean }) => (
+  <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...stroke} fill={filled ? 'currentColor' : 'none'}>
+    <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9L12 3.5Z" />
+  </svg>
+);
+
+/** A pair of scales, for the license something is published under. */
+export const IconScale = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 4v16M8 20h8M5 7h14" />
+    <path d="m5 7-3 6a3 3 0 0 0 6 0L5 7ZM19 7l-3 6a3 3 0 0 0 6 0l-3-6Z" />
+  </Svg>
+);
+
+/** A sheet with a corner folded, for one file. */
+export const IconFile = (p: IconProps) => (
+  <Svg {...p}><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4Z" /><path d="M14 3v4h4" /></Svg>
+);
+
+/** Angle brackets, for source code. */
+export const IconCode = (p: IconProps) => (
+  <Svg {...p}><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14" /></Svg>
+);
+
+/** A magnifying glass, for searching. */
+export const IconSearch = (p: IconProps) => (
+  <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.4-4.4" /></Svg>
+);

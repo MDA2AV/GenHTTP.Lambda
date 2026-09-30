@@ -465,3 +465,54 @@
 .monaco-editor .overflow-guard {
   border-radius: 0;
 }
+
+/*
+ * Code as the pages of a published source colour it (source/highlight.ts):
+ * the colours the editor gives the same code, Visual Studio's, so a lambda
+ * reads the same whether its owner or anybody else is reading it.
+ */
+.hljs {
+  color: #1f2328;
+}
+
+html.dark .hljs {
+  color: #d4d4d4;
+}
+
+.hljs :is(.hljs-keyword, .hljs-literal, .hljs-built_in, .hljs-section) { color: #0000ff; }
+.hljs :is(.hljs-type, .hljs-title.class_, .hljs-title.class_.inherited__) { color: #2b91af; }
+.hljs :is(.hljs-string, .hljs-regexp, .hljs-link) { color: #a31515; }
+.hljs .hljs-number { color: #098658; }
+.hljs :is(.hljs-comment, .hljs-quote) { color: #008000; font-style: italic; }
+.hljs :is(.hljs-meta, .hljs-doctag) { color: #808080; }
+.hljs .hljs-title.function_ { color: #74531f; }
+.hljs :is(.hljs-params, .hljs-variable, .hljs-template-variable) { color: #1f377f; }
+.hljs :is(.hljs-attr, .hljs-attribute, .hljs-property) { color: #e50000; }
+.hljs :is(.hljs-tag, .hljs-name, .hljs-selector-tag, .hljs-selector-class, .hljs-selector-id) { color: #800000; }
+.hljs .hljs-bullet { color: #0451a5; }
+.hljs .hljs-addition { color: #22863a; }
+.hljs .hljs-deletion { color: #b31d28; }
+
+html.dark .hljs :is(.hljs-keyword, .hljs-literal, .hljs-built_in, .hljs-section) { color: #569cd6; }
+html.dark .hljs :is(.hljs-type, .hljs-title.class_, .hljs-title.class_.inherited__) { color: #4ec9b0; }
+html.dark .hljs :is(.hljs-string, .hljs-regexp, .hljs-link) { color: #d69d85; }
+html.dark .hljs .hljs-number { color: #b5cea8; }
+html.dark .hljs :is(.hljs-comment, .hljs-quote) { color: #57a64a; }
+html.dark .hljs :is(.hljs-meta, .hljs-doctag) { color: #9b9b9b; }
+html.dark .hljs .hljs-title.function_ { color: #dcdcaa; }
+html.dark .hljs :is(.hljs-params, .hljs-variable, .hljs-template-variable) { color: #9cdcfe; }
+html.dark .hljs :is(.hljs-attr, .hljs-attribute, .hljs-property) { color: #9cdcfe; }
+html.dark .hljs :is(.hljs-tag, .hljs-name) { color: #569cd6; }
+html.dark .hljs :is(.hljs-selector-tag, .hljs-selector-class, .hljs-selector-id) { color: #d7ba7d; }
+html.dark .hljs .hljs-bullet { color: #6796e6; }
+html.dark .hljs .hljs-addition { color: #81c995; }
+html.dark .hljs .hljs-deletion { color: #f28b82; }
+
+.hljs .hljs-emphasis { font-style: italic; }
+.hljs :is(.hljs-strong, .hljs-section) { font-weight: 600; }
+
+/* a version being packed, for as long as that takes */
+@keyframes packing {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}

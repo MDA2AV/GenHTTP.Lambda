@@ -59,6 +59,8 @@ port, each against its own temporary data directory.
 | `/ship`              | for developers: connect an agent and publish what it built |
 | `/docs`              | the guide for owners                                      |
 | `/showcase`          | the lambdas their owners chose to show                    |
+| `/source`            | the lambdas whose owners published their code             |
+| `/source/:publicKey` | the published code of one: its files, documentation, tests and changes, per version |
 | `/enterprise`, `/terms`, `/privacy`, `/imprint` | the company pages              |
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
@@ -123,6 +125,13 @@ path.
 | `GET / PUT / DELETE /lambdas/:privateKey/showcase`    | its entry on the showcase: read, list it (title, description, picture), take it off |
 | `GET /lambdas/:privateKey/domain`, `PUT / DELETE`     | the domain of a premium lambda, whether it is served, and what it resolves to |
 | `GET /showcases`, `GET /showcases/:publicKey/image`   | what `/showcase` lists, and a picture |
+| `GET / PUT / DELETE /lambdas/:privateKey/source`      | whether its code is published and under which license, the licenses on offer; publishes it or changes the license (`license`, `author`); takes it down |
+| `GET /sources`                                        | what `/source` lists (`search`, `order`: `stars`, `updated`, `published`, `skip`, `take`) |
+| `GET /sources/:publicKey`                             | a published source: what it is, its license, where it runs, every version and what it changed, a ticket to star it with |
+| `GET /sources/:publicKey/versions/:version`           | the files of a version as its project has them, packed on the first request |
+| `GET /sources/:publicKey/versions/:version/files/:path`, `…/raw/:path` | one file, its path encoded: its text; as it is (`?download=1` to save it) |
+| `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
+| `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
 | `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
 | `GET /system`                                         | terms, limits, starters, build agent      |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
@@ -274,12 +283,14 @@ to have the agent correct it rather than to edit it. The overview of either
 view opens with the product page's first paragraph, and the full one says which
 of the three pages the version has.
 
-With fourteen sections, the full view's sidebar is in groups: the overview and
-the documentation on their own, then where a change is made (Change, the
+With fifteen sections, the full view's sidebar is in groups: the overview and
+the documentation on their own, then how people find it and what they get to
+see of it (showcase, open source, domain) - what the lambda is to everybody
+else, right under what it is - then where a change is made (Change, the
 drafts, the code, the tests), the program and what it keeps (files, data,
-versions), how it runs (deployments, stats, logs), and how people find it
-(showcase, domain). On a phone the groups are a rule apart in the row of
-sections.
+versions), and how it runs (deployments, stats, logs). On a phone the groups
+are a rule apart in the row of sections.
+
 ### Databases
 
 Records - entries, accounts, orders, votes - go in the database: a SQLite file
@@ -469,7 +480,7 @@ Somebody who had an app built on `/build` wants it to do something else, not
 to look after code, files, versions and deployments. So the editor has two
 views. The **simple** one keeps the overview, About (what the app is for),
 Change, the drafts (once there are any), a history, the data (once the app
-keeps any, or its code waits for a secret), the showcase and the domain. Its
+keeps any, or its code waits for a secret), the showcase, open source and the domain. Its
 overview is the app: what it is for, whether it is online and where, errors visitors ran into with a button that
 asks the agent to fix them, the latest change, today's hits, and a button to
 ask for the next change. The history is every version as the change it made,
@@ -524,6 +535,86 @@ file and streamed from there, since a database may be as large as the tier
 allows. A test builds the export of every demo with the .NET SDK, so it needs
 the package feed.
 
+### Publishing the source
+
+An owner may publish the code of a lambda as open source: under **Open
+source** in the editor, in both views, right after the showcase, or with the
+`open_source` tool - and only with the editor key, like everything else about
+a lambda. Nothing is published until they ask, and taking it down again is one
+switch. Publishing asks for a license, MIT unless another is picked from a
+short list - MIT, Apache 2.0, BSD 3-Clause, MPL 2.0, GPL 3.0 or later, AGPL
+3.0 or later, the Unlicense (`SourceLicenses`) - and, optionally, the name the
+license gives as the holder of the copyright; without one it names "the
+authors of" the lambda, since there are no accounts to take a name from.
+
+What is published is the program and what is written about it: **every
+version**, as the export packs it - `Project.cs`, the other files, `assets/`,
+`docs/`, `tests/`, `Platform/`, the project file, the `Dockerfile` - with the
+license in `LICENSE` and named in the header of `Program.cs`. The history says
+what each version changed, in the line it was saved with. What is never
+published:
+
+- **The data.** No database - not even an empty one - no workspace, no value
+  of a secret. `ProjectPacker.Publish` takes no database to pack, so there is
+  nothing to leave in by mistake, and a test looks for a record, a saved file
+  and a secret's value in every file of the download.
+- **What only the owner may know.** Not the specification - what was asked for,
+  in the owner's words - not the editor key, and nothing about who uses it: no
+  traffic, no log, no visitor.
+
+`/source` lists every published source, searched by its key, what its
+documentation says it is and what the showcase says about it where it is
+there, ordered by stars, by the newest version or by when it was published.
+`/source/:publicKey` is one: what it is, its license, who holds it, where it
+runs - its own domain while it has one - and four views of the version being
+read: its **code**, a tree of the files marked by what each is to the lambda
+with the file open beside it, coloured by highlight.js with the editor's
+colours, and lines to link to (`#L12-L20`); its **documentation**, the pages
+of `docs/` rendered as the editor renders them, pictures beside them
+included; its **tests**, `tests/README.md` with the scripts and data beside
+it; and its **changes**, every version newest first. The newest version is
+read unless another is picked, which the address keeps (`?version=7`) from one
+view to the next. Any version downloads as a zip. There are no issues, pull
+requests or wikis, and no way to act on the lambda from there; somebody who
+wants to build on it downloads it, and `platform_guide` tells an agent how a
+download becomes a lambda again. A small notice says what a lambda is and
+leads to `/build`. The pages are a part of the frontend of their own
+(`src/Frontend/src/source`), in a frame of their own without the site's menu,
+fetched with their words and highlighter only by whoever opens them, in every
+language under the same addresses as every other public page. They are not
+prerendered: the server names each after its lambda, describes it with the
+first paragraph of its documentation, marks it up as `SoftwareSourceCode` for
+search engines, and lists every published source in the sitemap in every
+language. A source that is not published is not found, the same as a key
+nobody has.
+
+A version is packed once, on the first request for it, and kept below
+`/data/sources/{lambda}` - a cache and nothing more, since the versions are
+what the source is. What it is packed with besides the version - the license,
+the holder, the key, the build of the packer - is hashed into the name of the
+file, so changing the license packs again and the old one goes. Packing reads
+and compresses a whole version, so one version is packed once however many ask
+for it at the same moment, two at a time for the whole server, and the cache
+is held to `LAMBDA_SOURCE_CACHE_BYTES` by letting go of the projects read least
+recently. The page shows that a version is being packed, and a download waits
+for it before it starts. A file of a version is read out of its zip as it is
+sent; one sent as it is (`…/raw/`) comes from the site's origin, so it is sent
+as text or bytes - a picture as a picture - never sniffed, and under a
+sandboxing content security policy, so a page a lambda ships cannot run here.
+
+Anybody may star a source. A star is a `POST` with a ticket the page was handed
+with the source, signed by the server and at least a second old, so a link, a
+crawler or a script posting blind stars nothing. An address stars a source
+once and changes only so many stars in ten minutes; which address starred what
+is kept in memory as a keyed hash, never on disk, and forgotten on a restart.
+The count is in the database (`sources.stars`) and survives taking the source
+down and publishing it again.
+
+The export of a lambda whose source is published carries the same `LICENSE`.
+The demos are published under MIT by the installation, being there to be read
+and built on; nobody else can change that, and their editor shows no Open
+source section.
+
 ## How it is put together
 
 A single .NET 11 project hosted by `GenHTTP.Full.Ioxide`, wired up in
@@ -562,6 +653,12 @@ services that the API resources talk to through interfaces:
   of the workspace and its preview's assets live below
   `/data/features/{lambda}/{feature}`, so deleting a feature is deleting a
   folder. Merging goes through Meta, under the same lock every save takes.
+- **Source** (`Services/Source`) - whether the owner published the code of a
+  lambda and under which license, and its stars (`sources`); `SourceCache`
+  packs a version into the project a visitor reads and downloads, once, below
+  `/data/sources/{lambda}`, and `StarGuard` hands out the tickets a star is
+  given with and remembers who starred what. Kept apart from Meta like the
+  showcase: nothing about building a lambda reads or changes it.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached - one handler for what a
@@ -619,6 +716,7 @@ Everything is read from the environment on startup, see
 | `LAMBDA_PREMIUM_DATABASE_BYTES`     | `2147483648`     | the same for a premium lambda, never less   |
 | `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
 | `LAMBDA_MAX_FEATURES`               | `10`             | features open per lambda - each holds a copy of the workspace and the database, so this bounds the disk they take |
+| `LAMBDA_SOURCE_CACHE_BYTES`         | `2147483648`     | what the published sources may take on disk, packed; the least recently read go first |
 | `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
@@ -894,7 +992,8 @@ The tools are the shape of the job: `create_lambda`, `update_lambda`, `write_cod
 `create_feature`, `update_feature`, `merge_feature` and `delete_feature`, the
 data tools `upload_file`, `list_files`, `delete_file`, `enable_data`,
 `read_database`, `set_secret`, `list_secrets` and `delete_secret`, `showcase` for listing
-a lambda on the public showcase - only when its owner asks for it - and
+a lambda on the public showcase and `open_source` for publishing its code -
+only when its owner asks for either - and
 `list_demos` for reading something that already works. `platform_guide` is the one to call first
 - it opens with how versions, features and data live, then says what a snippet
 has to return, what is imported, what is refused, and the handful of things
@@ -941,6 +1040,14 @@ Every version keeps its documentation and tests in `.lambda/` (see
 ones who write them: `read_lambda` hands them over first, and every save that
 leaves a page out says which.
 
+`open_source` publishes a lambda's code, changes its license or takes it down;
+with only the editor key it says how things are and changes nothing. It is not
+part of building, and its description says so: only when the user asks, and
+asking which license when they did not say. Once a lambda is published,
+`read_lambda` says so in `openSource`, with a note that everything saved from
+then on is public, the versions before included - so an agent keeps keys,
+passwords and personal data out of the files, where they never belong anyway.
+
 `read_lambda` sends every file of the program while together they come to 30,000
 characters, and names them with their lengths beyond that; `file` then fetches
 one in full, up to a megabyte, and anything larger is left to the zip of the
@@ -965,8 +1072,9 @@ be announced: `read_lambda`, `list_files` and `read_logs` work on a demo exactly
 as on an agent's own lambda, and the editor at `/editor/demo-crud` shows it.
 
 Everything that would change a demo - saving, deploying, stopping, moving,
-deleting, the workspace, the showcase - is refused by its tier, whichever way
-the request comes in. `create_lambda` with a demo's id as its template starts a
+deleting, the workspace, the showcase, its license - is refused by its tier,
+whichever way the request comes in. Their code is published on `/source` under
+MIT by the seeder, so anybody can read and download a demo there as well. `create_lambda` with a demo's id as its template starts a
 lambda of one's own from a copy. Keys starting with `demo-` cannot be claimed.
 
 The demos are seeded in the background after startup from the hidden templates

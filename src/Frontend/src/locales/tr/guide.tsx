@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websocket’ler',
     limits: 'İzin verilmeyenler',
     away: 'Kodunuzu alıp gitmek',
+    open: 'Kodu yayımlamak',
     agents: 'İşi bir ajana bırakmak',
   },
 
@@ -120,8 +121,8 @@ export const guide: Messages['guide'] = {
     <>
       Her bölüm aynı şekilde çalışır: başlığı, onu açıklayan bir {k.b('ⓘ')} simgesi, sağda eylemleri ve birden fazla
       görünümü varsa altında bir sıra sekme. Kod bölümünde bu sekmeler dosyalardır. Tam görünüm bölümleri gruplar
-      hâlinde toplar: değişikliğin yapıldığı yer, program ve verileri, nasıl çalıştığı ve insanların onu nasıl
-      bulduğu.
+      hâlinde toplar: insanların onu nasıl bulduğu, değişikliğin yapıldığı yer, program ile verileri ve nasıl
+      çalıştığı.
     </>
   ),
   editorAside:
@@ -408,6 +409,26 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Burada bir şey yapmadan önce bilmekte fayda var: yazdığınız kod sizindir ve eksiksiz olarak sizinle gelir. Onu bu makinede çalıştırmak, onu bu makineye bağlamaz.',
+
+  open: (k) => (
+    <>
+      Yaptığınız şey başka birinin işine yarayabilecekse kodunu yayımlayın: kontrol panelinde {k.b('Açık kaynak')}{' '}
+      bölümünü açın, bir lisans seçin (başka bir lisans istemiyorsanız MIT) ve düğmeyi açın. Kodu,{' '}
+      {k.link('/source', 'açık kaynak uygulamalar')} arasında kendi sayfasını alır. Orada herkes onu okuyabilir, ona
+      yıldız verebilir ve herhangi bir sürümünü, {k.b('.NET projesi olarak indir')} ile aldığınız projenin aynısı
+      olarak, yanında lisansıyla birlikte indirebilir.
+    </>
+  ),
+  open2: () => (
+    <>
+      Her sürüm yayımlanır, öncekiler de; her biri dokümantasyonu, testleri ve yaptığı değişiklikle birlikte.
+      Uygulamanın sakladıkları (kayıtları, kaydettiği dosyalar, anahtarlarının ve parolalarının değerleri) asla
+      yayımlanmaz; kendi sözlerinizle ne istediğiniz ve uygulamayı kimlerin kullandığı da. Kapattığınızda sayfa
+      kaldırılır; yıldızları ise yeniden yayımladığınızda geri gelmek üzere saklanır.
+    </>
+  ),
+  openAside:
+    'Koddaki her şey herkese açık hâle gelir, önceki sürümler de dahil. Bir anahtarın ya da parolanın yeri, Veriler altındaki anahtarlar ve parolalardır; yayımlansın ya da yayımlanmasın, asla kod değildir.',
 
   agents: (k) => (
     <>

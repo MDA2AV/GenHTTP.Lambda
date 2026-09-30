@@ -13,7 +13,13 @@ const bundle = new URL('./.prerender/prerender.js', import.meta.url);
 
 const { prerender } = await import(bundle.href);
 
-const result = await prerender(Object.keys(pages));
+// not the templates for pages the build cannot know (/source/:key), and not the
+// pages whose content is all fetched, which are drawn by the browser (/source)
+const rendered = Object.entries(pages)
+  .filter(([path, page]) => !path.includes(':') && page.prerender !== false)
+  .map(([path]) => path);
+
+const result = await prerender(rendered);
 
 for (const [path, markup] of Object.entries(result.pages)) {
   if (markup.length === 0) {

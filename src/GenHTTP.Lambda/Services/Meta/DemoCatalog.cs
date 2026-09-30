@@ -103,8 +103,12 @@ public static class DemoCatalog
 /// Whether it keeps its records in a database - which the demo, and every
 /// lambda started as a copy of it, has switched on from the start
 /// </param>
+/// <param name="License">
+/// The license its source is published under on /source, which the
+/// installation does for every demo - they are there to be read and built on
+/// </param>
 public sealed record LambdaDemo(string Id, string Name, string Goal, string Pitch, string Description, string Shows, string ReadWhen,
-                                IReadOnlyList<string>? Secrets = null, bool Database = false)
+                                IReadOnlyList<string>? Secrets = null, bool Database = false, string License = "MIT")
 {
 
     /// <summary>

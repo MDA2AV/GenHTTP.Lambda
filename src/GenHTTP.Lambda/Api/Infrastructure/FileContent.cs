@@ -8,15 +8,16 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 /// <remarks>
 /// Streamed rather than read, so a file costs a buffer while it is sent,
 /// however large it is - which is the point of answering with it instead of
-/// its bytes. Always sent as bytes to download: the API shares its origin with
-/// the editor, and a page somebody uploaded must not run there.
+/// its bytes. Sent as bytes to download unless said otherwise: the API shares
+/// its origin with the editor, and a page somebody uploaded must not run there.
 /// </remarks>
-public sealed class FileContent(FileInfo file) : IResponseContent
+/// <param name="type">What it is sent as - a zip, say, which is no page either</param>
+public sealed class FileContent(FileInfo file, string type = "application/octet-stream") : IResponseContent
 {
 
     public ulong? Length => (ulong)file.Length;
 
-    public ContentType? Type => new("application/octet-stream");
+    public ContentType? Type => new(type);
 
     public ReadOnlyMemory<byte>? Encoding => null;
 

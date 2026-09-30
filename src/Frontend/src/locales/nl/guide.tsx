@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websockets',
     limits: 'Wat niet mag',
     away: 'Alles meenemen',
+    open: 'De code publiceren',
     agents: 'Het aan een agent overlaten',
   },
 
@@ -121,8 +122,8 @@ export const guide: Messages['guide'] = {
     <>
       Elk onderdeel werkt hetzelfde: een titel, een {k.b('ⓘ')} met uitleg, acties rechts en, als er meer dan één
       weergave is, een rij tabs eronder. Bij de code zijn de tabs de bestanden. De volledige weergave deelt de
-      onderdelen in groepen in: waar een wijziging gemaakt wordt, het programma en zijn data, hoe hij draait, en hoe
-      mensen hem vinden.
+      onderdelen in groepen in: hoe mensen hem vinden, waar een wijziging gemaakt wordt, het programma en zijn data,
+      en hoe hij draait.
     </>
   ),
   editorAside:
@@ -408,6 +409,25 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Goed om te weten voordat je hier iets bouwt: wat je schrijft is van jou, en je neemt het in zijn geheel mee. Dat je code hier draait, betekent niet dat hij hier vastzit.',
+
+  open: (k) => (
+    <>
+      Kan wat je gebouwd hebt iemand anders helpen, publiceer dan de code: open {k.b('Open source')} in het
+      dashboard, kies een licentie – MIT, tenzij je een andere wilt – en zet het aan. De code krijgt een eigen pagina
+      tussen de {k.link('/source', 'open-source-apps')}, waar iedereen hem kan lezen, een ster kan geven en elke versie
+      kan downloaden als hetzelfde project dat {k.b('Downloaden als .NET-project')} je geeft, met de licentie erbij.
+    </>
+  ),
+  open2: () => (
+    <>
+      Elke versie wordt gepubliceerd, ook de eerdere, met de documentatie, de tests en de wijziging die elke versie
+      maakte. Wat de app bewaart, wordt nooit gepubliceerd – de records, de bestanden die hij opsloeg, de waarden van
+      zijn sleutels en wachtwoorden – en ook niet wat je in je eigen woorden vroeg, of wie de app gebruikt. Zet je het
+      uit, dan is de pagina weg; de sterren blijven bewaard voor als je de code opnieuw publiceert.
+    </>
+  ),
+  openAside:
+    'Alles in de code wordt openbaar, de eerdere versies inbegrepen. Een sleutel of wachtwoord hoort bij de sleutels en wachtwoorden onder Data, nooit in de code – gepubliceerd of niet.',
 
   agents: (k) => (
     <>

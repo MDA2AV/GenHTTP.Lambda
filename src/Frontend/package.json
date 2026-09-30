@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "highlight.js": "^11.11.1",
     "markdown-it": "^14.3.2",
     "monaco-editor": "^0.52.2",
     "react": "^18.3.1",

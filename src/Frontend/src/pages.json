@@ -275,6 +275,146 @@
       }
     }
   },
+  "/source": {
+    "image": "/social/default.png",
+    "prerender": false,
+    "text": {
+      "id": {
+        "title": "Aplikasi Open Source",
+        "description": "Kode sumber aplikasi web yang dibuat di sini dengan agen AI: setiap versi, lengkap dengan dokumentasi dan pengujiannya. Baca online atau unduh sebagai proyek .NET.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "Open-Source-Apps",
+        "description": "Der Quellcode von Web-Apps, die hier mit einem KI-Agenten gebaut wurden: jede Version mit Dokumentation und Tests. Online lesen oder als .NET-Projekt laden.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "Open Source Apps",
+        "description": "The source code of web apps built here with an AI agent: every version, with its documentation and tests. Read it online or download a .NET project to run."
+      },
+      "es": {
+        "title": "Apps de código abierto",
+        "description": "El código fuente de apps web creadas aquí con un agente de IA: cada versión, con su documentación y sus pruebas. Léelo en línea o descarga un proyecto .NET.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Apps open source",
+        "description": "Le code source d’apps web créées ici avec un agent IA : chaque version, avec sa documentation et ses tests. Lisez-le en ligne ou téléchargez un projet .NET.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "App open source",
+        "description": "Il codice sorgente di app web create qui con un agente AI: ogni versione, con documentazione e test. Leggilo online o scarica un progetto .NET da avviare.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "Open-source-apps",
+        "description": "De broncode van webapps die hier met een AI-agent zijn gebouwd: elke versie, met documentatie en tests. Lees hem online of download een .NET-project.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Aplikacje open source",
+        "description": "Kod źródłowy aplikacji webowych zbudowanych tu z agentem AI: każda wersja z dokumentacją i testami. Czytaj go online albo pobierz projekt .NET.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Apps de código aberto",
+        "description": "O código-fonte de apps web criados aqui com um agente de IA: cada versão, com documentação e testes. Leia online ou baixe um projeto .NET para rodar.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Apps de código aberto",
+        "description": "O código-fonte de apps web criadas aqui com um agente de IA: cada versão, com documentação e testes. Lê-o online ou descarrega um projeto .NET.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "Açık kaynak uygulamalar",
+        "description": "Burada yapay zekâ ajanıyla yapılan web uygulamalarının kaynak kodu: her sürüm, dokümantasyonu ve testleriyle. Çevrimiçi okuyun ya da .NET projesi olarak indirin.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "オープンソースのアプリ",
+        "description": "AIエージェントと一緒にここで作られたWebアプリのソースコードです。すべてのバージョンを、ドキュメントやテストと一緒に読めます。.NETプロジェクトとしてダウンロードもできます。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "오픈 소스 앱",
+        "description": "여기서 AI 에이전트로 만든 웹앱의 소스 코드예요. 모든 버전을 문서, 테스트와 함께 온라인에서 읽거나 .NET 프로젝트로 내려받을 수 있어요.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
+  },
+  "/source/:key": {
+    "image": "/social/default.png",
+    "prerender": false,
+    "text": {
+      "id": {
+        "title": "Kode sumber {name}",
+        "description": "Kode sumber {name}, aplikasi web yang dibuat dengan agen AI di GenHTTP Lambda. Baca setiap versi, dokumentasi, dan pengujiannya, atau unduh sebagai proyek .NET.",
+        "image": "/social/id/default.jpg"
+      },
+      "de": {
+        "title": "Quellcode von {name}",
+        "description": "Quellcode von {name}, einer Web-App, die mit einem KI-Agenten auf GenHTTP Lambda gebaut wurde. Jede Version lesen oder als .NET-Projekt herunterladen.",
+        "image": "/social/de/default.jpg"
+      },
+      "en": {
+        "title": "Source code of {name}",
+        "description": "Source code of {name}, a web app built with an AI agent on GenHTTP Lambda. Read every version, its docs and tests, or download it as a .NET project."
+      },
+      "es": {
+        "title": "Código fuente de {name}",
+        "description": "Código fuente de {name}, una app web creada con un agente de IA en GenHTTP Lambda. Lee cada versión, su documentación y sus pruebas, o descárgala como proyecto .NET.",
+        "image": "/social/es/default.jpg"
+      },
+      "fr": {
+        "title": "Code source de {name}",
+        "description": "Code source de {name}, une app web créée avec un agent IA sur GenHTTP Lambda. Lisez chaque version, sa documentation et ses tests, ou téléchargez-la en projet .NET.",
+        "image": "/social/fr/default.jpg"
+      },
+      "it": {
+        "title": "Codice sorgente di {name}",
+        "description": "Codice sorgente di {name}, un’app web creata con un agente AI su GenHTTP Lambda. Leggi ogni versione, la documentazione e i test, o scaricala come progetto .NET.",
+        "image": "/social/it/default.jpg"
+      },
+      "nl": {
+        "title": "Broncode van {name}",
+        "description": "Broncode van {name}, een webapp gebouwd met een AI-agent op GenHTTP Lambda. Lees elke versie, de documentatie en de tests, of download hem als .NET-project.",
+        "image": "/social/nl/default.jpg"
+      },
+      "pl": {
+        "title": "Kod źródłowy: {name}",
+        "description": "Kod źródłowy aplikacji {name}, zbudowanej z agentem AI na GenHTTP Lambda. Przeczytaj każdą wersję, dokumentację i testy albo pobierz projekt .NET.",
+        "image": "/social/pl/default.jpg"
+      },
+      "pt": {
+        "title": "Código-fonte de {name}",
+        "description": "Código-fonte de {name}, um app web criado com um agente de IA no GenHTTP Lambda. Leia cada versão, a documentação e os testes, ou baixe como projeto .NET.",
+        "image": "/social/pt/default.jpg"
+      },
+      "pt-pt": {
+        "title": "Código-fonte de {name}",
+        "description": "Código-fonte de {name}, uma app web criada com um agente de IA no GenHTTP Lambda. Lê cada versão, a documentação e os testes, ou descarrega-a como projeto .NET.",
+        "image": "/social/pt-pt/default.jpg"
+      },
+      "tr": {
+        "title": "{name} kaynak kodu",
+        "description": "GenHTTP Lambda’da yapay zekâ ajanıyla yapılan {name} web uygulamasının kaynak kodu. Her sürümü, dokümantasyonu ve testleri okuyun ya da .NET projesi olarak indirin.",
+        "image": "/social/tr/default.jpg"
+      },
+      "ja": {
+        "title": "{name} のソースコード",
+        "description": "GenHTTP LambdaでAIエージェントと一緒に作られたWebアプリ「{name}」のソースコードです。すべてのバージョンとドキュメント、テストを読めて、.NETプロジェクトとしてダウンロードできます。",
+        "image": "/social/ja/default.jpg"
+      },
+      "ko": {
+        "title": "{name} 소스 코드",
+        "description": "GenHTTP Lambda에서 AI 에이전트로 만든 웹앱 {name}의 소스 코드예요. 모든 버전과 문서, 테스트를 읽거나 .NET 프로젝트로 내려받아 보세요.",
+        "image": "/social/ko/default.jpg"
+      }
+    }
+  },
   "/enterprise": {
     "image": "/social/enterprise.png",
     "text": {

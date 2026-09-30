@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websocket',
     limits: 'Yang tidak diizinkan',
     away: 'Membawa kode Anda keluar',
+    open: 'Memublikasikan kode',
     agents: 'Menyerahkannya ke agen',
   },
 
@@ -121,8 +122,8 @@ export const guide: Messages['guide'] = {
     <>
       Setiap bagian bekerja dengan cara yang sama: judulnya, tombol {k.b('ⓘ')} yang menjelaskannya, aksinya di kanan,
       dan (kalau punya lebih dari satu tampilan) deretan tab di bawahnya. Tab di bagian kode adalah file-filenya.
-      Tampilan lengkap mengelompokkan bagian-bagiannya: tempat perubahan dibuat, program dan datanya, cara berjalannya,
-      dan cara orang menemukannya.
+      Tampilan lengkap mengelompokkan bagian-bagiannya: cara orang menemukannya, tempat perubahan dibuat, program dan
+      datanya, dan cara berjalannya.
     </>
   ),
   editorAside:
@@ -409,6 +410,27 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Penting diketahui sebelum Anda membangun apa pun di sini: yang Anda tulis adalah milik Anda, dan bisa dibawa keluar utuh. Menjalankannya di server ini tidak membuatnya terkunci di server ini.',
+
+  open: (k) => (
+    <>
+      Kalau yang Anda buat bisa berguna bagi orang lain, publikasikan kodenya: buka {k.b('Open Source')} di pusat
+      kontrol, pilih lisensi - MIT, kecuali Anda menginginkan yang lain - lalu aktifkan. Kodenya mendapat halaman
+      sendiri di antara {k.link('/source', 'aplikasi Open Source')}, tempat siapa pun bisa membacanya, memberinya
+      bintang, dan mengunduh versi mana pun sebagai proyek yang sama dengan yang Anda dapat dari{' '}
+      {k.b('Unduh sebagai proyek .NET')}, lengkap dengan lisensinya.
+    </>
+  ),
+  open2: () => (
+    <>
+      Setiap versi dipublikasikan, termasuk yang lebih lama, beserta dokumentasi, pengujian, dan perubahan yang dibuat
+      masing-masing. Apa yang disimpan aplikasi tidak pernah dipublikasikan - catatannya, file yang disimpannya, nilai
+      kunci dan kata sandinya - begitu pula apa yang Anda minta dengan kata-kata Anda sendiri, atau siapa yang memakai
+      aplikasinya. Nonaktifkan, dan halamannya hilang; bintangnya tetap disimpan untuk saat Anda memublikasikannya
+      lagi.
+    </>
+  ),
+  openAside:
+    'Semua yang ada di kode menjadi publik, termasuk versi-versi sebelumnya. Kunci atau kata sandi tempatnya di kunci dan kata sandi di bagian Data, tidak pernah di kode - dipublikasikan atau tidak.',
 
   agents: (k) => (
     <>

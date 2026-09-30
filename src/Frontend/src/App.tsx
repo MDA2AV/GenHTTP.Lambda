@@ -17,26 +17,26 @@ import { Showcase } from './pages/Showcase';
 import { Privacy } from './pages/Privacy';
 import { Ship } from './pages/Ship';
 import { Terms } from './pages/Terms';
-import { useTheme } from './theme';
-import { loadEditor, useLanguage, useT } from './i18n';
-import { inLanguage, isLanguage, preferredLanguage } from './i18n/languages';
-import pages from './pages.json';
+import { useTheme, type Theme } from './theme';
+import { loadEditor, loadSource, useLanguage, useT } from './i18n';
+import { inLanguage, isLanguage, languageOf, preferredLanguage } from './i18n/languages';
+import { isLocalized } from './i18n/links';
 
 // Monaco is most of the bundle, so the landing page never downloads it
 const RELOADED = 'lambda-reloaded-for-chunk';
 
 /**
- * Loads the editor, and recovers from the one way that reliably fails: the
- * application was deployed again while this tab was open, so the index it was
- * built from names a chunk the server no longer has. Fetching the page again
- * is all it takes, and the flag keeps a genuinely broken build from turning
- * that into a loop.
+ * Loads a part of the application fetched only by whoever opens it, and
+ * recovers from the one way that reliably fails: the application was deployed
+ * again while this tab was open, so the index it was built from names a chunk
+ * the server no longer has. Fetching the page again is all it takes, and the
+ * flag keeps a genuinely broken build from turning that into a loop.
  */
-const Editor = lazy(() =>
-  Promise.all([import('./pages/Editor'), loadEditor(preferredLanguage())])
-    .then(([module]) => {
+function recovering<T>(load: () => Promise<T>): Promise<T> {
+  return load()
+    .then((loaded) => {
       sessionStorage.removeItem(RELOADED);
-      return { default: module.Editor };
+      return loaded;
     })
     .catch((error: unknown) => {
       if (sessionStorage.getItem(RELOADED) === null) {
@@ -45,7 +45,26 @@ const Editor = lazy(() =>
       }
 
       throw error;
-    }),
+    });
+}
+
+/**
+ * The editor, with its words - and those of the published sources, whose
+ * licenses its Open source section describes in the same sentences.
+ */
+const Editor = lazy(() =>
+  recovering(() => Promise.all([import('./pages/Editor'), loadEditor(preferredLanguage()), loadSource(preferredLanguage())]))
+    .then(([module]) => ({ default: module.Editor })),
+);
+
+/** The pages of the published sources, with their words and their highlighter. */
+const Source = lazy(() =>
+  recovering(() =>
+    Promise.all([
+      import('./source/SourceApp'),
+      loadSource(typeof window === 'undefined' ? preferredLanguage() : (languageOf(window.location.pathname) ?? preferredLanguage())),
+    ]),
+  ).then(([module]) => ({ default: module.SourceApp })),
 );
 
 export function App() {
@@ -85,6 +104,11 @@ export function App() {
                 <Admin theme={theme} />
               </Shell>
             }
+          />
+          {/* in a frame of their own, see SourceApp */}
+          <Route
+            path="/:language/source/*"
+            element={<SourceRoute theme={theme} onToggleTheme={toggleTheme} />}
           />
           <Route
             path="*"
@@ -132,8 +156,37 @@ function Localized() {
   );
 }
 
-/** Paths that are a public page without a language. */
-const UNLOCALIZED = new Set(Object.keys(pages));
+/**
+ * The published sources, in the language their address names - or, where
+ * the first segment is no language, whatever else the address is.
+ */
+function SourceRoute({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
+  const { language } = useParams();
+
+  if (!isLanguage(language)) {
+    return (
+      <Shell theme={theme} onToggleTheme={onToggleTheme}>
+        <NotFound />
+      </Shell>
+    );
+  }
+
+  return (
+    <ChunkBoundary page>
+      <Suspense fallback={<SourceLoading />}>
+        <Source theme={theme} onToggleTheme={onToggleTheme} />
+      </Suspense>
+    </ChunkBoundary>
+  );
+}
+
+function SourceLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center text-slate-500">
+      <IconSpinner />
+    </div>
+  );
+}
 
 /**
  * A public page asked for without a language. The server answers those with
@@ -146,7 +199,7 @@ function Unlocalized() {
 
   const page = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
 
-  if (!UNLOCALIZED.has(page)) {
+  if (!isLocalized(page)) {
     return <NotFound />;
   }
 
@@ -177,7 +230,7 @@ function useScrollToTop(): void {
  * Catches an editor that refuses to load. Without one the failed import leaves
  * the fallback on screen for good, which reads as a spinner that never stops.
  */
-class ChunkBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+class ChunkBoundary extends Component<{ children: ReactNode; page?: boolean }, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -189,16 +242,17 @@ class ChunkBoundary extends Component<{ children: ReactNode }, { failed: boolean
       return this.props.children;
     }
 
-    return <ChunkFailure />;
+    return <ChunkFailure page={this.props.page} />;
   }
 }
 
-function ChunkFailure() {
+/** The editor, or a page of the published sources, that would not load. */
+function ChunkFailure({ page = false }: { page?: boolean }) {
   const t = useT();
 
   return (
     <div className="mx-auto max-w-md px-5 py-20 text-center">
-      <h1 className="text-lg font-semibold">{t.common.editorFailed}</h1>
+      <h1 className="text-lg font-semibold">{page ? t.common.pageFailed : t.common.editorFailed}</h1>
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{t.common.editorFailedWhy}</p>
       <button
         type="button"

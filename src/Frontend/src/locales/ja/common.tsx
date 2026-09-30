@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: '読み込み中…',
   loadingEditor: 'エディターを読み込み中…',
   editorFailed: 'エディターを読み込めませんでした',
+  pageFailed: 'ページを読み込めませんでした',
   editorFailedWhy: 'このタブを開いている間にサイトが更新された可能性があります。',
   reload: 'ページを再読み込み',
   backToStart: 'トップに戻る',

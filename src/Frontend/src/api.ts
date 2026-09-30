@@ -866,6 +866,135 @@ export interface OwnShowcase {
   limits: ShowcaseLimits;
 }
 
+/** A license a source can be published under. */
+export interface License {
+  /** Its SPDX identifier, which is how it is asked for. */
+  id: string;
+  name: string;
+  /** Roughly what it asks of whoever reuses the code. */
+  kind: 'Permissive' | 'Copyleft' | 'PublicDomain';
+  /** Where it is described in full. */
+  url: string;
+}
+
+/** A published source, as the listing shows it. */
+export interface SourceEntry {
+  publicKey: string;
+  /** What its owner calls it on the showcase, if it is there. */
+  title?: string | null;
+  /** The first paragraph of its documentation: what it is. */
+  about?: string | null;
+  /** What its owner says about it on the showcase, if it is there. */
+  description?: string | null;
+  license: License;
+  stars: number;
+  /** Whether the app answers right now. */
+  online: boolean;
+  /** Where the app answers - its domain while it has one, its path otherwise. See address.ts. */
+  address: string;
+  /** Where its source is read, without a language. */
+  path: string;
+  /** Its picture on the showcase, if it has one. */
+  imagePath?: string | null;
+  latestVersion?: number | null;
+  /** When its newest version was saved. */
+  updated?: string | null;
+  publishedAt: string;
+}
+
+export interface SourceListing {
+  entries: SourceEntry[];
+  total: number;
+  next?: number | null;
+}
+
+export type SourceOrder = 'stars' | 'updated' | 'published';
+
+/** A version as the history of a published source lists it: what it changed, never what was asked for. */
+export interface SourceVersion {
+  version: number;
+  created: string;
+  change?: string | null;
+  origin?: Origin | null;
+  /** Whether this is the version online. */
+  online: boolean;
+  zipPath: string;
+}
+
+export interface SourceProject {
+  source: SourceEntry;
+  author?: string | null;
+  /** Who the license names: the author, or the authors of the lambda. */
+  holder: string;
+  activeVersion?: number | null;
+  created: string;
+  /** Newest first. */
+  versions: SourceVersion[];
+  /** Sent with a star, good for a day from a second on. */
+  starTicket: string;
+}
+
+/** What a file of a packed project is to somebody reading it. */
+export type SourceKind = 'code' | 'asset' | 'docs' | 'tests' | 'platform' | 'project';
+
+export interface SourceFile {
+  /** Its path below the project's folder. */
+  path: string;
+  size: number;
+  kind: SourceKind;
+}
+
+export interface SourceTree {
+  publicKey: string;
+  version: number;
+  /** The folder the project is in, inside the zip. */
+  root: string;
+  /** How large the zip is. */
+  bytes: number;
+  files: SourceFile[];
+  zipPath: string;
+}
+
+export interface SourceFileContent {
+  path: string;
+  size: number;
+  kind: SourceKind;
+  /** Whether it is text; its text is in content unless it is too long to show. */
+  text: boolean;
+  content?: string | null;
+  /** Where it is fetched as it is. */
+  rawPath: string;
+}
+
+export interface StarResult {
+  stars: number;
+  starred: boolean;
+  /** Whether this one changed the count. */
+  counted: boolean;
+}
+
+/** Whether a lambda's source is published, as its owner sees it. */
+export interface SourceSettings {
+  published: boolean;
+  license: License;
+  author?: string | null;
+  holder: string;
+  stars: number;
+  publishedAt: string;
+  updated: string;
+  /** Where it is read, without a language. */
+  path: string;
+}
+
+export interface OwnSource {
+  /** Absent while it never was published. */
+  source?: SourceSettings | null;
+  /** The default first. */
+  licenses: License[];
+  default: string;
+  maxAuthor: number;
+}
+
 /** Which pages the site links to, as the operator switched them. */
 export interface Features {
   enterprise: boolean;
@@ -1030,6 +1159,50 @@ export const api = {
     request<ShowcaseEntry>(`/lambdas/${privateKey}/showcase`, { method: 'PUT', body: JSON.stringify(entry) }),
 
   removeShowcase: (privateKey: string) => request<void>(`/lambdas/${privateKey}/showcase`, { method: 'DELETE' }),
+
+  /** Whether the lambda's source is published, and under which license. */
+  source: (privateKey: string) => request<OwnSource>(`/lambdas/${privateKey}/source`),
+
+  /** Publishes the source, or changes its license. Left out, a field stays as it is; an empty author names nobody. */
+  publishSource: (privateKey: string, settings: { license?: string; author?: string }) =>
+    request<SourceSettings>(`/lambdas/${privateKey}/source`, { method: 'PUT', body: JSON.stringify(settings) }),
+
+  withdrawSource: (privateKey: string) => request<void>(`/lambdas/${privateKey}/source`, { method: 'DELETE' }),
+
+  /**
+   * The published sources, for anybody to read. A path of a file travels as
+   * one segment with its slashes encoded, as the workspace's do.
+   */
+  sources: {
+    list: (options: { search?: string; order?: SourceOrder; skip?: number; take?: number } = {}) => {
+      const query = new URLSearchParams();
+
+      if (options.search) query.set('search', options.search);
+      if (options.order) query.set('order', options.order);
+      if (options.skip) query.set('skip', String(options.skip));
+      if (options.take) query.set('take', String(options.take));
+
+      return request<SourceListing>(`/sources/?${query}`);
+    },
+
+    get: (publicKey: string) => request<SourceProject>(`/sources/${encodeURIComponent(publicKey)}`),
+
+    /** The files of a version - packed on the first request for it, which may take a moment. */
+    tree: (publicKey: string, version: number) =>
+      request<SourceTree>(`/sources/${encodeURIComponent(publicKey)}/versions/${version}`),
+
+    file: (publicKey: string, version: number, path: string) =>
+      request<SourceFileContent>(`/sources/${encodeURIComponent(publicKey)}/versions/${version}/files/${encodeURIComponent(path)}`),
+
+    /** Where a file is fetched as it is: a picture as a picture, anything else as text or bytes. */
+    rawUrl: (publicKey: string, version: number, path: string, download = false) =>
+      `${base}/sources/${encodeURIComponent(publicKey)}/versions/${version}/raw/${encodeURIComponent(path)}${download ? '?download=1' : ''}`,
+
+    zipUrl: (publicKey: string, version: number) => `${base}/sources/${encodeURIComponent(publicKey)}/versions/${version}/zip`,
+
+    star: (publicKey: string, ticket: string, starred: boolean) =>
+      request<StarResult>(`/sources/${encodeURIComponent(publicKey)}/star`, send({ ticket, starred })),
+  },
 
   domain: (privateKey: string) => request<DomainState>(`/lambdas/${privateKey}/domain`),
 

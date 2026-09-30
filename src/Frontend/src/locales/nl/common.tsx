@@ -24,6 +24,7 @@ export const common: Messages['common'] = {
   loading: 'Laden…',
   loadingEditor: 'Editor laden…',
   editorFailed: 'De editor kon niet worden geladen',
+  pageFailed: 'De pagina kon niet worden geladen',
   editorFailedWhy: 'Meestal komt dit doordat de site is bijgewerkt terwijl dit tabblad openstond.',
   reload: 'Pagina herladen',
   backToStart: 'Terug naar de startpagina',

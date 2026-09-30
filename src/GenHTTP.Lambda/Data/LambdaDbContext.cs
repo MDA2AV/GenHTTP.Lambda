@@ -22,6 +22,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<ShowcaseEntity> Showcases => Set<ShowcaseEntity>();
 
+    public DbSet<SourceEntity> Sources => Set<SourceEntity>();
+
     public DbSet<SettingEntity> Settings => Set<SettingEntity>();
 
     public DbSet<DataStoreEntity> DataStores => Set<DataStoreEntity>();
@@ -148,6 +150,27 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
                  .WithOne()
                  .HasForeignKey<ShowcaseEntity>(s => s.LambdaId)
                  .OnDelete(DeleteBehavior.Cascade);
+
+        var sources = builder.Entity<SourceEntity>();
+
+        sources.ToTable("sources");
+
+        sources.HasKey(s => s.LambdaId);
+
+        sources.Property(s => s.LambdaId).HasColumnName("lambda_id").ValueGeneratedNever();
+        sources.Property(s => s.Published).HasColumnName("published");
+        sources.Property(s => s.License).HasColumnName("license");
+        sources.Property(s => s.Author).HasColumnName("author");
+        sources.Property(s => s.Stars).HasColumnName("stars");
+        sources.Property(s => s.About).HasColumnName("about");
+        sources.Property(s => s.AboutVersion).HasColumnName("about_version");
+        sources.Property(s => s.PublishedAt).HasColumnName("published_at");
+        sources.Property(s => s.Updated).HasColumnName("updated");
+
+        sources.HasOne(s => s.Lambda)
+               .WithOne()
+               .HasForeignKey<SourceEntity>(s => s.LambdaId)
+               .OnDelete(DeleteBehavior.Cascade);
 
         var settings = builder.Entity<SettingEntity>();
 

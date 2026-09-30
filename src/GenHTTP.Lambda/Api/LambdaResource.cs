@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Services.Source;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -24,7 +25,7 @@ namespace GenHTTP.Lambda.Api;
 /// the lambda. Its versions, deployment, files and code live in resources of
 /// their own below the same path.
 /// </remarks>
-public sealed class LambdaResource(IMetaService meta, ISecretService secrets, DatabaseVault databases, LambdaOptions options)
+public sealed class LambdaResource(IMetaService meta, ISecretService secrets, ISourceService sources, DatabaseVault databases, LambdaOptions options)
 {
 
     /// <summary>
@@ -119,7 +120,16 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, Da
 
         var names = kept.Secrets.Select(s => s.Name).Union(kept.Used, StringComparer.Ordinal).ToList();
 
-        var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow, names);
+        // a lambda whose source is published is taken away under the same
+        // license everybody else downloads it under
+        var published = await sources.GetAsync(privateKey) is { Published: true } source ? source : null;
+
+        var license = published != null && SourceLicenses.Find(published.License) is { } found
+            ? new ExportedLicense(found, SourceLicenses.Holder(published.Author, lambda.PublicKey),
+                                  options.PublicUrl is { } root ? $"{root}/source/{lambda.PublicKey}" : null)
+            : null;
+
+        var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow, names, license);
 
         var id = await meta.RequireIdAsync(privateKey);
 

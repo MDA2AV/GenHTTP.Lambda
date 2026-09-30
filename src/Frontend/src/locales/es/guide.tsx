@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'WebSockets',
     limits: 'Lo que no te deja hacer',
     away: 'Llévate tu código',
+    open: 'Publicar el código',
     agents: 'Que lo haga un agente',
   },
 
@@ -120,8 +121,8 @@ export const guide: Messages['guide'] = {
     <>
       Todas las secciones funcionan igual: su título, un {k.b('ⓘ')} que la explica, sus acciones a la derecha y, si
       tiene más de una vista, una fila de pestañas debajo. En el código, las pestañas son sus archivos. La vista
-      completa agrupa las secciones: dónde se hace un cambio, el programa y sus datos, cómo se ejecuta y cómo la
-      encuentra la gente.
+      completa agrupa las secciones: cómo la encuentra la gente, dónde se hace un cambio, el programa y sus datos, y
+      cómo se ejecuta.
     </>
   ),
   editorAside:
@@ -404,6 +405,25 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Conviene saberlo antes de crear nada aquí: lo que escribes es tuyo y te lo llevas entero. Ejecutarlo en esta máquina no te ata a esta máquina.',
+
+  open: (k) => (
+    <>
+      Si lo que creaste puede ayudar a otras personas, publica su código: abre {k.b('Código abierto')} en el centro de
+      control, elige una licencia (MIT, salvo que quieras otra) y actívalo. Su código tendrá su propia página entre las{' '}
+      {k.link('/source', 'apps de código abierto')}, donde cualquiera puede leerlo, darle una estrella y descargar
+      cualquier versión como el mismo proyecto que te da {k.b('Descargar como proyecto .NET')}, con la licencia al lado.
+    </>
+  ),
+  open2: () => (
+    <>
+      Se publican todas las versiones, también las anteriores, con su documentación, sus pruebas y el cambio que hizo
+      cada una. Lo que conserva la app nunca se publica (sus registros, los archivos que guardó, los valores de sus
+      claves y contraseñas), como tampoco lo que pediste con tus propias palabras ni quién usa la app. Si lo
+      desactivas, la página desaparece; sus estrellas se conservan para cuando vuelvas a publicarlo.
+    </>
+  ),
+  openAside:
+    'Todo lo que hay en el código se hace público, incluidas las versiones anteriores. Una clave o una contraseña va en Claves y contraseñas, dentro de Datos, nunca en el código, esté publicado o no.',
 
   agents: (k) => (
     <>

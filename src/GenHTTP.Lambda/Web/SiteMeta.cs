@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Source;
 
 namespace GenHTTP.Lambda.Web;
 
@@ -48,6 +49,25 @@ public sealed class SiteMeta
 
     private static readonly Regex LangAttribute = new("\\slang=\"[^\"]*\"", RegexOptions.IgnoreCase);
 
+    /// <summary>
+    /// The entry of <c>pages.json</c> that names the page of every published
+    /// source, with <c>{name}</c> where the name of the lambda goes.
+    /// </summary>
+    /// <remarks>
+    /// A template rather than a page: its address has a placeholder in it, so
+    /// it is never looked up, listed or rendered as one - only its words are
+    /// used, which is how a page the build cannot know is named in every
+    /// language the build does know.
+    /// </remarks>
+    public const string SourceTemplate = "/source/:key";
+
+    /// <summary>
+    /// What the page of a published source is called where the build named it
+    /// nothing.
+    /// </summary>
+    private static readonly SiteText SourceFallback = new("{name} - Source code",
+        "The source code of {name}, an app built with GenHTTP Lambda: read it, download it and run it anywhere.");
+
     #region Get-/Setters
 
     private string PageFile { get; }
@@ -86,7 +106,7 @@ public sealed class SiteMeta
 
         var bare = SiteLanguages.Without(normalized);
 
-        if (!ReadPages().TryGetValue(bare, out var entry) || !entry.Text.TryGetValue(language, out var text))
+        if (!Pages().TryGetValue(bare, out var entry) || !entry.Text.TryGetValue(language, out var text))
         {
             return null;
         }
@@ -101,12 +121,51 @@ public sealed class SiteMeta
     /// <summary>
     /// Whether the path is a public page asked for without a language.
     /// </summary>
-    public bool IsPage(string path) => ReadPages().ContainsKey(Normalize(path));
+    public bool IsPage(string path) => Pages().ContainsKey(Normalize(path));
 
     /// <summary>
     /// Whether the build named any public pages at all.
     /// </summary>
-    public bool HasPages => ReadPages().Count > 0;
+    public bool HasPages => Pages().Count > 0;
+
+    /// <summary>
+    /// The page of a published source, in a language: named after the lambda
+    /// in the words the build gave the page, and described by what the lambda
+    /// says it is.
+    /// </summary>
+    /// <param name="path">Its path without a language: /source/{key}, and whatever follows</param>
+    /// <param name="name">What the lambda is called</param>
+    /// <param name="about">What it says it is, if it says</param>
+    /// <param name="image">Its picture on the showcase, if it has one</param>
+    public SitePage Source(string language, string path, string name, string? about, string? image)
+    {
+        var entry = ReadPages().GetValueOrDefault(SourceTemplate);
+
+        var text = entry?.Text.GetValueOrDefault(language) ?? entry?.Text.GetValueOrDefault(SiteLanguages.Default) ?? SourceFallback;
+
+        var languages = entry != null ? SiteLanguages.All.Where(entry.Text.ContainsKey).ToList() : [.. SiteLanguages.All];
+
+        if (!languages.Contains(language))
+        {
+            languages.Add(language);
+        }
+
+        var description = string.IsNullOrWhiteSpace(about) ? text.Description.Replace("{name}", name, StringComparison.Ordinal) : about;
+
+        return new SitePage(language, path, text.Title.Replace("{name}", name, StringComparison.Ordinal), description, languages,
+                            image ?? text.Image ?? entry?.Image);
+    }
+
+    /// <summary>
+    /// The page of a published source, named, with what a search engine is
+    /// told about the code beside it in schema.org terms.
+    /// </summary>
+    public string RenderSource(string markup, SitePage page, SourceSchema schema)
+    {
+        markup = Render(markup, page);
+
+        return PublicUrl == null ? markup : InHead(markup, StructuredData.RenderSource(schema, PublicUrl, SiteLanguages.In(page.Language, page.Path), page.Language));
+    }
 
     /// <summary>
     /// The index page, named as the given page and in its language.
@@ -140,7 +199,7 @@ public sealed class SiteMeta
         var image = Encode((PublicUrl ?? string.Empty) + picture);
 
         markup = SetMeta(markup, "property", "og:image", image);
-        markup = SetMeta(markup, "property", "og:image:type", ImageType(picture));
+        markup = SetMeta(markup, "property", "og:image:type", ImageTypeOf(page, picture));
         markup = SetMeta(markup, "property", "og:image:alt", title);
         markup = SetMeta(markup, "name", "twitter:image", image);
 
@@ -210,7 +269,8 @@ public sealed class SiteMeta
     /// with the addresses of its translations - or nothing, when there is no
     /// public address to list them under.
     /// </summary>
-    public string? Sitemap()
+    /// <param name="sources">The published sources, each a page in every language the page of one is written in</param>
+    public string? Sitemap(IReadOnlyList<SourceAddress>? sources = null)
     {
         if (PublicUrl == null)
         {
@@ -220,7 +280,7 @@ public sealed class SiteMeta
         XNamespace ns = "http://www.sitemaps.org/schemas/sitemap/0.9";
         XNamespace xhtml = "http://www.w3.org/1999/xhtml";
 
-        var pages = ReadPages();
+        var pages = Pages();
 
         XElement Alternate(string hreflang, string path)
             => new(xhtml + "link",
@@ -236,9 +296,26 @@ public sealed class SiteMeta
                                                                                                            .Select(hreflang => Alternate(hreflang, SiteLanguages.In(other, page.Key)))),
                                                              Alternate("x-default", page.Key))));
 
+        // the page of each published source, when its newest version was saved
+        // being when it last changed
+        var template = ReadPages().GetValueOrDefault(SourceTemplate);
+
+        var written = template != null ? SiteLanguages.All.Where(template.Text.ContainsKey).ToList() : [.. SiteLanguages.All];
+
+        var published = (sources ?? []).SelectMany(source => written.Select(language =>
+        {
+            var path = $"/source/{source.PublicKey}";
+
+            return new XElement(ns + "url",
+                new XElement(ns + "loc", PublicUrl + SiteLanguages.In(language, path)),
+                source.Updated is { } updated ? new XElement(ns + "lastmod", updated.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)) : null,
+                written.SelectMany(other => SiteLanguages.HreflangsOf(other).Select(hreflang => Alternate(hreflang, SiteLanguages.In(other, path)))),
+                Alternate("x-default", path));
+        }));
+
         var sitemap = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
-            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls)
+            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls, published)
         );
 
         return sitemap.Declaration + "\n" + sitemap;
@@ -257,7 +334,7 @@ public sealed class SiteMeta
     {
         var root = PublicUrl ?? string.Empty;
 
-        var pages = ReadPages();
+        var pages = Pages();
 
         var summary = pages.TryGetValue("/", out var front) && front.Text.TryGetValue("en", out var home)
                           ? home.Description
@@ -341,6 +418,13 @@ public sealed class SiteMeta
         return JsonSerializer.Serialize(catalog, new JsonSerializerOptions { WriteIndented = true });
     }
 
+    /// <summary>
+    /// The pages of the build, without the templates for the pages it cannot
+    /// know - whose addresses have a placeholder in them.
+    /// </summary>
+    private IReadOnlyDictionary<string, SiteEntry> Pages()
+        => ReadPages().Where(p => !p.Key.Contains(':')).ToDictionary(p => p.Key, p => p.Value);
+
     private IReadOnlyDictionary<string, SiteEntry> ReadPages()
     {
         // read every time, because "npm run build" updates a running server;
@@ -370,6 +454,12 @@ public sealed class SiteMeta
         => path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
                ? "image/jpeg"
                : "image/png";
+
+    /// <summary>
+    /// The type of a picture that is not one of the site's own, as it was
+    /// sniffed when it was uploaded - or what its name says.
+    /// </summary>
+    private static string ImageTypeOf(SitePage page, string picture) => page.ImageType ?? ImageType(picture);
 
     /// <summary>
     /// The opening tag of the document, in the given language.
@@ -412,7 +502,9 @@ public sealed class SiteMeta
 /// <param name="Language">The language it is shown in</param>
 /// <param name="Path">Its path without a language, as <c>pages.json</c> spells it</param>
 /// <param name="Languages">Every language the page is written in, its own included</param>
-public sealed record SitePage(string Language, string Path, string Title, string Description, IReadOnlyList<string> Languages, string? Image = null);
+/// <param name="ImageType">What the picture is, where its name does not say - an owner's picture on the showcase</param>
+public sealed record SitePage(string Language, string Path, string Title, string Description, IReadOnlyList<string> Languages, string? Image = null,
+                              string? ImageType = null);
 
 /// <summary>
 /// A page as <c>pages.json</c> has it: its picture, and its words by language.

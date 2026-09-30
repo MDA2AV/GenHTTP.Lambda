@@ -64,6 +64,8 @@
         <EmbeddedResource Include="Resources/Templates/*.sql.txt" WithCulture="false" />
         <!-- the files every exported project gets, see ProjectPacker -->
         <EmbeddedResource Include="Resources/Export/*.txt" WithCulture="false" />
+        <!-- the texts of the licenses a lambda's source can be published under, see SourceLicenses -->
+        <EmbeddedResource Include="Resources/Licenses/*.txt" WithCulture="false" />
     </ItemGroup>
 
 </Project>

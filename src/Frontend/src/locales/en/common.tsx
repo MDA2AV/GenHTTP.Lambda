@@ -27,6 +27,7 @@ export const common = {
   loading: 'Loading…',
   loadingEditor: 'Loading the editor…',
   editorFailed: 'The editor could not be loaded',
+  pageFailed: 'This page could not be loaded',
   editorFailedWhy: 'This usually means the site was updated while this tab was open.',
   reload: 'Reload the page',
   backToStart: 'Back to the start',
