@@ -1,18 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { ApiError, api, isDemo, type DataStore, type LambdaFile, type WorkspaceListing } from '../api';
+import { ApiError, api, isDemo, type DataStore, type LambdaFile, type SecretListing, type WorkspaceListing } from '../api';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconFolder, IconHistory, IconLayers, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
+import { IconAlert, IconDownload, IconFolder, IconHistory, IconKey, IconLayers, IconSpinner, IconTrash, IconUpload } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { GroupList, Tree, Viewer, workspaceOf, type Selection } from './FileBrowser';
 import { bytes } from './format';
+import { SecretsPanel } from './SecretsPanel';
 import { Exposure } from './SummaryTab';
-import { Meter, Section, Switch } from './ui';
+import { Ago, Meter, Section, Switch, pill } from './ui';
 
 /** No files of a version are shown here; the viewer is handed none. */
 const NO_FILES: LambdaFile[] = [];
+
+/** How a kind of data is drawn wherever it is named. */
+const ICONS: Record<string, (props: { className?: string }) => ReactNode> = {
+  workspace: IconFolder,
+  secrets: IconKey,
+};
 
 /**
  * What the lambda keeps, as opposed to what it is.
@@ -20,59 +27,84 @@ const NO_FILES: LambdaFile[] = [];
  * A version is the program and is replaced by the next one; data belongs to
  * the lambda, is shared by every version and outlives all of them. The page
  * says that first, in three lines, because it is what decides where anything
- * goes. Then the kinds of data there are, each switched on or off by the
- * owner - only the workspace so far, listed the way every kind will be - and
- * then what the workspace holds.
+ * goes.
+ *
+ * Every kind of data is one view of the same section, picked from a row of
+ * pills under its title: each shows what it is, whether it is on and how full
+ * it is the same way, and only what it holds is its own - a tree of files for
+ * the workspace, a list of names for the secrets. So a kind added later is
+ * found where the others are, and looks like them.
  *
  * Opened on a feature, it shows the feature's copy instead - the test data
  * of a draft, to the owner: what the preview reads and writes, taken from
  * the lambda when the feature began and thrown away when it goes online.
- * That is said in a line rather than three, since it is all there is to know
- * about it. Which kinds there are is still the lambda's to switch, so there
- * are no switches here - only resetting the copy, for a preview that has
- * made a mess of it.
+ * Which kinds there are is still the lambda's to switch, so there are no
+ * switches here - only resetting the copy, for a preview that made a mess.
+ *
+ * The simple view shows the section only once there is something in it, and
+ * then only the kinds that hold something - what the app saved, and the keys
+ * it uses - in words that do not assume anybody knows what a workspace is.
  */
-export function DataTab({ control }: { control: Control }) {
+export function DataTab({ control, kind, onKind }: {
+  control: Control;
+  /** The kind the address names; the first there is when it names none. */
+  kind?: string;
+  onKind: (kind: string) => void;
+}) {
   const t = useEditorT();
   const said = t.data;
   const toast = useToast();
 
   const [stores, setStores] = useState<DataStore[] | null>(null);
-  const [listing, setListing] = useState<WorkspaceListing | null>(null);
+  const [secrets, setSecrets] = useState<SecretListing | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Selection | null>(null);
   const [switching, setSwitching] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<DataStore | null>(null);
   const [recopying, setRecopying] = useState<'asking' | 'busy' | null>(null);
 
+  /** Counts every change to what is held, so the views below read again. */
+  const [generation, setGeneration] = useState(0);
+
   // what a demo keeps is there to be read, not replaced
   const demo = isDemo(control.lambda.tier);
+  const simple = control.simple;
 
   const feature = control.feature?.info ?? null;
-  const workspace = workspaceOf(control);
 
   const reload = useCallback(async () => {
     try {
-      const [found, files] = await Promise.all([
+      const [found, kept] = await Promise.all([
         feature ? api.feature.data(control.privateKey, feature.key) : api.data(control.privateKey),
-        workspace.list(),
+        api.secrets.list(control.privateKey, feature?.key),
       ]);
 
       setStores(found);
-      setListing(files);
+      setSecrets(kept);
       setFailure(null);
     } catch (error) {
       setFailure(error instanceof ApiError ? error.message : said.readFailed);
     }
-    // the accessor is made again with every render; the feature it reads from is what matters
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [control.privateKey, feature?.key, said]);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
-  const name = (kind: string) => said.kinds[kind]?.name ?? kind;
+  const changed = useCallback(async () => {
+    setGeneration((was) => was + 1);
+    await reload();
+  }, [reload]);
+
+  const words = (id: string) => said.kinds[id];
+  const name = (id: string) => words(id)?.name ?? id;
+
+  // the simple view names only what holds something, or what the app is
+  // waiting for - an empty kind is nothing to look at for somebody who does
+  // not know it exists
+  const shown = (stores ?? []).filter((store) =>
+    !simple || store.items > 0 || (store.kind === 'secrets' && (secrets?.missing.length ?? 0) > 0));
+
+  const current = shown.find((store) => store.kind === kind) ?? shown[0] ?? null;
 
   async function toggle(store: DataStore, on: boolean) {
     setConfirming(null);
@@ -81,14 +113,13 @@ export function DataTab({ control }: { control: Control }) {
     try {
       if (on) {
         await api.enableData(control.privateKey, store.kind);
-        toast(said.switchedOn(name(store.kind)), 'success');
+        toast(words(store.kind)?.switchedOn ?? said.on, 'success');
       } else {
         await api.disableData(control.privateKey, store.kind);
-        setSelected(null);
-        toast(said.switchedOff(name(store.kind)));
+        toast(words(store.kind)?.switchedOff ?? said.off);
       }
 
-      await Promise.all([reload(), control.refresh()]);
+      await Promise.all([changed(), control.refresh()]);
     } catch (error) {
       toast(error instanceof ApiError ? error.message : said.switchFailed, 'error');
     } finally {
@@ -106,10 +137,9 @@ export function DataTab({ control }: { control: Control }) {
 
     try {
       await api.feature.refresh(control.privateKey, feature.key);
-      setSelected(null);
       toast(said.recopied, 'success');
 
-      await Promise.all([reload(), control.feature?.refresh()]);
+      await Promise.all([changed(), control.feature?.refresh()]);
     } catch (error) {
       toast(error instanceof ApiError ? error.message : said.recopyFailed, 'error');
     } finally {
@@ -118,13 +148,14 @@ export function DataTab({ control }: { control: Control }) {
   }
 
   const storage = control.summary?.storage;
-  const kept = stores?.find((s) => s.kind === 'workspace');
+
+  const missing = secrets?.missing.length ?? 0;
 
   return (
     <Section
       title={feature ? t.features.views.data : t.frame.sections.data}
-      hint={feature ? undefined : said.hint}
-      actions={feature && (
+      hint={feature ? undefined : simple ? said.simple.hint : said.hint}
+      actions={feature && !simple && (
         <button
           type="button"
           onClick={() => setRecopying('asking')}
@@ -136,12 +167,41 @@ export function DataTab({ control }: { control: Control }) {
           {said.recopy}
         </button>
       )}
+      pills={shown.length > (simple ? 1 : 0) && (
+        <div role="tablist" aria-label={said.kindsLabel} className="flex flex-wrap gap-1.5">
+          {shown.map((store) => {
+            const Icon = ICONS[store.kind] ?? IconLayers;
+            const active = store.kind === current?.kind;
+            const wanting = store.kind === 'secrets' && missing > 0;
+
+            return (
+              <button
+                key={store.kind}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => onKind(store.kind)}
+                className={pill(active)}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {simple ? (store.kind === 'secrets' ? said.simple.secrets : said.simple.workspace) : name(store.kind)}
+                {store.enabled ? (
+                  <span className="tabular-nums text-slate-400">{store.items}</span>
+                ) : (
+                  <span className="text-[11px] uppercase tracking-wide text-slate-400">{said.off}</span>
+                )}
+                {wanting && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title={said.missingDot} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     >
       {demo && <p className="-mt-1 mb-4 text-[13px] text-slate-500">{said.demo}</p>}
 
       {feature ? (
         <p className="max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{said.featureHint}</p>
-      ) : (
+      ) : !simple && (
         <dl className="grid gap-4 sm:grid-cols-3">
           {said.facts.map(([title, text]) => (
             <div key={title} className="border-l-2 border-accent-500/40 pl-3 dark:border-accent-400/40">
@@ -158,51 +218,32 @@ export function DataTab({ control }: { control: Control }) {
         <div className="mt-6 flex items-center gap-2 text-sm text-slate-500">
           <IconSpinner /> {t.files.reading}
         </div>
-      ) : !feature && (
-        // which kinds of data there are is the lambda's to switch, so a draft does not list them
-        <ul className="mt-6 space-y-3">
-          {(stores ?? []).map((store) => (
-            <li key={store.kind}>
-              <Store
-                store={store}
-                name={name(store.kind)}
-                what={said.kinds[store.kind]?.what}
-                publicly={store.kind === 'workspace' && !!storage?.servesWorkspace}
-                busy={switching === store.kind}
-                readOnly={demo}
-                onToggle={() => (store.enabled ? setConfirming(store) : toggle(store, true))}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {kept && (
-        <div className="mt-8">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium">
-            <IconFolder className="h-4 w-4 text-slate-400" />
-            {feature ? said.copyContents : said.contents}
-          </h2>
-
-          {kept.enabled ? (
-            <div className="grid gap-5 lg:grid-cols-[17rem,1fr]">
-              <nav aria-label={said.browse} className="lg:max-h-[40rem] lg:overflow-y-auto">
-                <WorkspaceFiles
-                  control={control}
-                  listing={listing}
-                  publicly={feature ? null : !!storage?.servesWorkspace}
-                  readOnly={demo}
-                  selected={selected?.group === 'data' ? selected.path : null}
-                  onSelect={(path) => setSelected(path ? { group: 'data', path } : null)}
-                  onChanged={reload}
-                />
-              </nav>
-
-              <Viewer control={control} selection={selected} files={NO_FILES} listing={listing} />
-            </div>
-          ) : (
-            <p className="surface p-6 text-center text-sm text-slate-500">{said.offBrowse}</p>
+      ) : current === null ? (
+        simple && <p className="mt-6 text-sm text-slate-500">{said.simple.nothing}</p>
+      ) : (
+        <div className={simple ? 'mt-2' : 'mt-6'}>
+          {/* which kinds there are is the lambda's to switch, so a draft has no switch */}
+          {!feature && !simple && (
+            <Store
+              store={current}
+              publicly={current.kind === 'workspace' ? !!storage?.servesWorkspace : null}
+              busy={switching === current.kind}
+              readOnly={demo}
+              onToggle={() => (current.enabled ? setConfirming(current) : toggle(current, true))}
+            />
           )}
+
+          <div className={feature || simple ? 'mt-5' : 'mt-8'}>
+            {current.kind === 'secrets' ? (
+              <SecretsPanel control={control} listing={secrets} readOnly={demo} onChanged={changed} />
+            ) : current.kind === 'workspace' ? (
+              simple ? (
+                <SavedFiles key={generation} control={control} />
+              ) : (
+                <WorkspaceView key={generation} control={control} store={current} readOnly={demo} onChanged={changed} />
+              )
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -225,7 +266,7 @@ export function DataTab({ control }: { control: Control }) {
       </Dialog>
 
       <Dialog
-        title={confirming ? said.confirmOff(name(confirming.kind)) : ''}
+        title={confirming ? (words(confirming.kind)?.confirmOff ?? '') : ''}
         open={confirming !== null}
         onClose={() => setConfirming(null)}
         footer={
@@ -243,10 +284,16 @@ export function DataTab({ control }: { control: Control }) {
           <>
             <p className="text-slate-600 dark:text-slate-400">
               {confirming.items > 0 || confirming.usedBytes > 0
-                ? said.confirmText(t.files.count(confirming.items), bytes(confirming.usedBytes))
+                ? said.confirmText(
+                    [words(confirming.kind)?.count(confirming.items), confirming.usedBytes > 0 ? bytes(confirming.usedBytes) : null]
+                      .filter(Boolean)
+                      .join(', '),
+                  )
                 : said.confirmEmpty}
             </p>
-            {confirming.kind === 'workspace' && storage?.usesWorkspace && control.lambda.activeVersion != null && (
+            {((confirming.kind === 'workspace' && storage?.usesWorkspace)
+              || (confirming.kind === 'secrets' && (secrets?.used.length ?? 0) > 0))
+              && control.lambda.activeVersion != null && (
               <p className="flex gap-2 text-amber-700 dark:text-amber-400">
                 <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 {said.inUse}
@@ -260,11 +307,9 @@ export function DataTab({ control }: { control: Control }) {
 }
 
 /** One kind of data: what it is for, whether it is on, and how full it is. */
-function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
+function Store({ store, publicly, busy, readOnly, onToggle }: {
   store: DataStore;
-  name: string;
-  what?: string;
-  /** Whether the code online serves it; null where that says nothing, as for the copy of a feature. */
+  /** Whether the code online serves it; null where that says nothing. */
   publicly: boolean | null;
   busy: boolean;
   readOnly: boolean;
@@ -272,7 +317,15 @@ function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
 }) {
   const t = useEditorT();
   const said = t.data;
+  const words = said.kinds[store.kind];
+  const name = words?.name ?? store.kind;
   const id = `data-${store.kind}`;
+  const Icon = ICONS[store.kind] ?? IconLayers;
+
+  // a kind counts what it holds either in room or in things, and says so
+  const counted = store.maxItems != null
+    ? <Meter label={words?.count(store.items) ?? store.items} used={store.items} of={store.maxItems} format={String} />
+    : <Meter label={words?.count(store.items) ?? store.items} used={store.usedBytes} of={store.quotaBytes} format={bytes} />;
 
   return (
     <div className={`surface flex items-start gap-4 p-4 ${store.enabled ? '' : 'bg-slate-50 dark:bg-ink-900'}`}>
@@ -281,7 +334,7 @@ function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
           store.enabled ? 'bg-accent-500/10 text-accent-600 dark:text-accent-400' : 'bg-slate-400/10 text-slate-400'
         }`}
       >
-        {store.kind === 'workspace' ? <IconFolder className="h-[18px] w-[18px]" /> : <IconLayers className="h-[18px] w-[18px]" />}
+        <Icon className="h-[18px] w-[18px]" />
       </span>
 
       <div className="min-w-0 flex-1">
@@ -302,12 +355,10 @@ function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
           )}
         </div>
 
-        {what && <p className="mt-1 text-[13px] text-slate-500">{what}</p>}
+        {words?.what && <p className="mt-1 max-w-2xl text-[13px] text-slate-500">{words.what}</p>}
 
         {store.enabled ? (
-          <div className="mt-3 max-w-lg">
-            <Meter label={t.files.count(store.items)} used={store.usedBytes} of={store.quotaBytes} format={bytes} />
-          </div>
+          <div className="mt-3 max-w-lg">{counted}</div>
         ) : (
           <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-400">{said.offText}</p>
         )}
@@ -319,6 +370,134 @@ function Store({ store, name, what, publicly, busy, readOnly, onToggle }: {
           <span className="sr-only">{said.switchLabel(name)}</span>
           <Switch on={store.enabled} onToggle={() => !busy && onToggle()} labelledBy={id} />
         </div>
+      )}
+    </div>
+  );
+}
+
+/** What the workspace holds, browsed as a tree beside what the selected file holds. */
+function WorkspaceView({ control, store, readOnly, onChanged }: {
+  control: Control;
+  store: DataStore;
+  readOnly: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const t = useEditorT();
+  const said = t.data;
+  const feature = control.feature?.info ?? null;
+  const storage = control.summary?.storage;
+
+  const [listing, setListing] = useState<WorkspaceListing | null>(null);
+  const [selected, setSelected] = useState<Selection | null>(null);
+
+  const workspace = workspaceOf(control);
+
+  const read = useCallback(async () => {
+    setListing(await workspace.list());
+    // the accessor is made again with every render; the feature it reads from is what matters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [control.privateKey, feature?.key]);
+
+  useEffect(() => {
+    read().catch(() => undefined);
+  }, [read]);
+
+  if (!store.enabled) {
+    return <p className="surface p-6 text-center text-sm text-slate-500">{said.offBrowse}</p>;
+  }
+
+  return (
+    <>
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-medium">
+        <IconFolder className="h-4 w-4 text-slate-400" />
+        {feature ? said.copyContents : said.contents}
+      </h2>
+
+      <div className="grid gap-5 lg:grid-cols-[17rem,1fr]">
+        <nav aria-label={said.browse} className="lg:max-h-[40rem] lg:overflow-y-auto">
+          <WorkspaceFiles
+            control={control}
+            listing={listing}
+            publicly={feature ? null : !!storage?.servesWorkspace}
+            readOnly={readOnly}
+            selected={selected?.group === 'data' ? selected.path : null}
+            onSelect={(path) => setSelected(path ? { group: 'data', path } : null)}
+            onChanged={async () => {
+              await read();
+              await onChanged();
+            }}
+          />
+        </nav>
+
+        <Viewer control={control} selection={selected} files={NO_FILES} listing={listing} />
+      </div>
+    </>
+  );
+}
+
+/**
+ * What the app saved, for the simple view: a plain list with a way to take a
+ * copy, newest first - without folders to open, uploads or deleting, which
+ * are what the full view is for.
+ */
+function SavedFiles({ control }: { control: Control }) {
+  const t = useEditorT();
+  const said = t.data.simple;
+  const [listing, setListing] = useState<WorkspaceListing | null>(null);
+  const [all, setAll] = useState(false);
+
+  const workspace = workspaceOf(control);
+
+  useEffect(() => {
+    workspace.list().then(setListing).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [control.privateKey]);
+
+  if (!listing) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <IconSpinner /> {t.files.reading}
+      </div>
+    );
+  }
+
+  const files = [...listing.files].sort((a, b) => b.modified.localeCompare(a.modified));
+  const visible = all ? files : files.slice(0, 12);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="flex items-center gap-2 text-[15px] font-medium">
+          <IconFolder className="h-4 w-4 text-accent-500 dark:text-accent-400" />
+          {said.workspace}
+        </h2>
+        <p className="mt-1 max-w-2xl text-[13px] text-slate-600 dark:text-slate-400">{said.workspaceText}</p>
+        <p className="mt-2 text-[13px] text-slate-500">{said.workspaceSize(t.data.kinds.workspace.count(files.length), bytes(listing.usedBytes))}</p>
+      </div>
+
+      <ul className="surface divide-y divide-slate-200 dark:divide-ink-800">
+        {visible.map((file) => (
+          <li key={file.path} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+            <span className="min-w-0 flex-1 truncate" title={file.path}>{file.path}</span>
+            <span className="hidden shrink-0 tabular-nums text-slate-500 sm:inline">{bytes(file.size)}</span>
+            <Ago at={file.modified} className="hidden shrink-0 text-slate-500 md:inline" />
+            <a
+              href={workspace.url(file.path)}
+              download
+              className="shrink-0 p-1 text-slate-400 hover:text-accent-500"
+              aria-label={t.files.download}
+              title={t.files.download}
+            >
+              <IconDownload className="h-4 w-4" />
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      {files.length > visible.length && (
+        <button type="button" onClick={() => setAll(true)} className="text-[13px] text-accent-500 hover:underline">
+          {said.more(files.length - visible.length)}
+        </button>
       )}
     </div>
   );

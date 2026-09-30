@@ -34,8 +34,9 @@ public static class DemoCatalog
         new("demo-registration", "Registration and login",
             "Let people sign up", "Accounts people register and sign in with, and pages only they get to see.",
             "A landing page that asks you to register or sign in, and a members page only a signed in user gets to see.",
-            "Accounts in a JSON file with salted PBKDF2 password hashes; sessions in an HttpOnly, SameSite cookie set with Result<T>.Cookie and read with GetCookie, stored only as hashes and expiring; the Authentication module (ApiKeyAuthentication with a cookie extractor) guarding api/; the signed in user injected into routes with UserInjector<T>; and two pages that decide where to send you.",
-            "Anything with users: sign up, sign in, sign out, content only members see."),
+            "Accounts in a JSON file with salted PBKDF2 password hashes, peppered with a secret (Secret.Exists and Secret.Read) where the lambda has one; sessions in an HttpOnly, SameSite cookie set with Result<T>.Cookie and read with GetCookie, stored only as hashes and expiring; the Authentication module (ApiKeyAuthentication with a cookie extractor) guarding api/; the signed in user injected into routes with UserInjector<T>; a stored format that stays readable when a field is added; and two pages that decide where to send you.",
+            "Anything with users: sign up, sign in, sign out, content only members see. Anything that needs a secret.",
+            Secrets: ["PASSWORD_PEPPER"]),
 
         new("demo-game", "A multiplayer game over a websocket",
             "A game to play together", "Something several people play at the same time, live in their browsers.",
@@ -89,7 +90,12 @@ public static class DemoCatalog
 /// <param name="Description">What a visitor can do with it</param>
 /// <param name="Shows">What reading its code teaches, so an agent can pick the one to read</param>
 /// <param name="ReadWhen">The kinds of request it is the right starting point for</param>
-public sealed record LambdaDemo(string Id, string Name, string Goal, string Pitch, string Description, string Shows, string ReadWhen)
+/// <param name="Secrets">
+/// The secrets it is given, each a random value nobody knows - so its secrets
+/// are switched on and listed like any owner's, and read by its code
+/// </param>
+public sealed record LambdaDemo(string Id, string Name, string Goal, string Pitch, string Description, string Shows, string ReadWhen,
+                                IReadOnlyList<string>? Secrets = null)
 {
 
     /// <summary>

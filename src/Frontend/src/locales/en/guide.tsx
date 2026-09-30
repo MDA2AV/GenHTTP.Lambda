@@ -21,6 +21,7 @@ export const guide = {
     spa: 'A front end, step by step',
     storage: 'The two places files live',
     keeping: 'Keeping data',
+    secrets: 'Keys and passwords',
     sockets: 'Websockets',
     limits: 'What it will not let you do',
     away: 'Taking it away',
@@ -99,7 +100,7 @@ export const guide = {
     ],
     ['Drafts', () => <>Changes being tried before they go online, each at an address of its own and on test data of its own. Opened, a draft has its own code, test data and logs. The section is there once there is a draft.</>],
     ['Files', () => <>The files of a version: its code and assets, the program itself. A lock or a globe says whether the public can reach them.</>],
-    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the workspace. Look into it, upload and delete files, or switch it off.</>],
+    ['Data', () => <>What the lambda keeps while it runs, shared by every version: the workspace and the secrets, each a pill of its own. Look into them, upload files, set secrets, or switch a kind on or off. The simple view shows it once the app keeps something.</>],
     ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a draft from any of them.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
     ['Stats', () => <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
@@ -274,6 +275,28 @@ export const guide = {
     </>
   )) as Text,
 
+  secrets: ((k) => (
+    <>
+      An API key, a password or a token belongs in the {k.b('secrets')}, not in the code - where every version,
+      every download and everybody reading the history would have it. The code reads one by name:
+    </>
+  )) as Text,
+  secrets2: ((k) => (
+    <>
+      Switch secrets on under {k.b('Data')} and set the value there. Once saved, it is never shown again - not to
+      you, not to an agent; you can only replace it. The list says which names the code reads that have no value
+      yet, and the overview asks for them. {k.code('Secret.Exists')} says whether one is set, for code that works
+      without it. Like all data, secrets are shared by every version, and a draft works on a copy of them.
+    </>
+  )) as Text,
+  secretsAside: ((k) => (
+    <>
+      They are stored encrypted, with a key that is not in the database. In a downloaded project,{' '}
+      {k.code('Secret.Read("NAME")')} reads the environment variable {k.code('NAME')} - the values themselves stay
+      here.
+    </>
+  )) as Text,
+
   sockets: ((k) => (
     <>
       Supported, and not an afterthought. The {k.link('/editor/demo-game', 'demo-game')} demo pairs players and runs
@@ -306,6 +329,7 @@ export const guide = {
       come across exactly as you wrote them. {k.code('Workspace')} and {k.code('Assets')} become two folders beside
       the program, with the same methods, kept apart in a {k.code('Platform')} folder - so nothing in your code has to
       change.
+      {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here.
     </>
   )) as Text,
   awayAside:

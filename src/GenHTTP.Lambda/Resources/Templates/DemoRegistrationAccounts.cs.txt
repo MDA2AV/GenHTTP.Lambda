@@ -6,6 +6,12 @@
 // a hash of each is stored, so the file on disk cannot be used to sign in as
 // anybody.
 //
+// Where the lambda has one, a pepper goes into every hash as well: a secret
+// kept in the lambda's secrets rather than beside the hashes, so a copy of
+// accounts.json on its own cannot even be guessed at. An account remembers
+// whether it was peppered, so accounts made before there was a pepper still
+// sign in - data outlives the version that wrote it.
+//
 // Both live in JSON files, which this class reads and writes through the
 // functions it is handed.
 
@@ -25,8 +31,11 @@ public record Profile(string Name, DateTime Joined, int Members);
 /// <summary>Somebody on the members page's list.</summary>
 public record Newcomer(string Name, DateTime Joined);
 
-/// <summary>A stored account. The password itself is not kept anywhere.</summary>
-public record Account(string Name, string Salt, string Hash, DateTime Joined);
+/// <summary>
+/// A stored account. The password itself is not kept anywhere. Peppered is
+/// new, and missing from accounts written before it - which reads as false.
+/// </summary>
+public record Account(string Name, string Salt, string Hash, DateTime Joined, bool Peppered = false);
 
 /// <summary>A stored session: the hash of the token, whose it is, and until when.</summary>
 public record StoredSession(string TokenHash, string Name, DateTime Expires);
@@ -75,16 +84,20 @@ public sealed class Accounts
 
     private readonly Action<string, string> _write;
 
+    private readonly Func<string> _pepper;
+
     private readonly Dictionary<string, Account> _accounts;
 
     private readonly Dictionary<string, StoredSession> _sessions;
 
     private readonly object _lock = new();
 
-    public Accounts(Func<string, string> read, Action<string, string> write)
+    /// <param name="pepper">Reads the pepper, or null where there is none - asked each time, so a new one counts at once</param>
+    public Accounts(Func<string, string> read, Action<string, string> write, Func<string> pepper)
     {
         _read = read;
         _write = write;
+        _pepper = pepper;
 
         _accounts = Load<Account>("accounts.json").ToDictionary(a => a.Name, StringComparer.OrdinalIgnoreCase);
 
@@ -111,7 +124,9 @@ public sealed class Accounts
 
         var salt = RandomNumberGenerator.GetBytes(16);
 
-        var account = new Account(name, Convert.ToBase64String(salt), Hash(password, salt), DateTime.UtcNow);
+        var pepper = _pepper();
+
+        var account = new Account(name, Convert.ToBase64String(salt), Hash(password, salt, pepper), DateTime.UtcNow, pepper != null);
 
         lock (_lock)
         {
@@ -230,14 +245,32 @@ public sealed class Accounts
 
     #region Hashing
 
-    // slow on purpose: a stolen file of hashes should take years to guess, not minutes
-    private static string Hash(string password, byte[] salt)
-        => Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(password, salt, 100_000, HashAlgorithmName.SHA256, 32));
+    // slow on purpose: a stolen file of hashes should take years to guess, not
+    // minutes; the pepper, mixed in first, is what the file does not contain
+    private static string Hash(string password, byte[] salt, string pepper)
+    {
+        var input = pepper == null
+            ? password
+            : Convert.ToBase64String(HMACSHA256.HashData(Encoding.UTF8.GetBytes(pepper), Encoding.UTF8.GetBytes(password)));
 
-    // compared in constant time, so how long the answer takes says nothing about how close a guess was
-    private static bool Matches(Account account, string password)
-        => CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(Hash(password, Convert.FromBase64String(account.Salt))),
-                                                   Convert.FromBase64String(account.Hash));
+        return Convert.ToBase64String(Rfc2898DeriveBytes.Pbkdf2(input, salt, 100_000, HashAlgorithmName.SHA256, 32));
+    }
+
+    // compared in constant time, so how long the answer takes says nothing
+    // about how close a guess was; an account made without a pepper is
+    // checked without one, and one made with it cannot be checked without it
+    private bool Matches(Account account, string password)
+    {
+        var pepper = account.Peppered ? _pepper() : null;
+
+        if (account.Peppered && pepper == null)
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(Hash(password, Convert.FromBase64String(account.Salt), pepper)),
+                                                       Convert.FromBase64String(account.Hash));
+    }
 
     // a token is already random and long, so a fast hash is enough here
     private static string HashToken(string token)

@@ -17,6 +17,7 @@ export const guide: Messages['guide'] = {
     spa: 'Een frontend, stap voor stap',
     storage: 'De twee plekken voor bestanden',
     keeping: 'Data bewaren',
+    secrets: 'Sleutels en wachtwoorden',
     sockets: 'Websockets',
     limits: 'Wat niet mag',
     away: 'Alles meenemen',
@@ -95,7 +96,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Concepten', () => <>Wijzigingen waaraan naast de lambda wordt gewerkt: elk concept probeer je uit op een eigen adres, en het wordt samengevoegd tot de volgende versie zodra het goed is. Open je een concept, dan heeft het zijn eigen code, data en logs.</>],
     ['Bestanden', () => <>De bestanden van een versie: de code en assets, het programma zelf. Een slotje of een wereldbol laat zien of ze openbaar bereikbaar zijn.</>],
-    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de workspace. Kijk erin, upload en verwijder bestanden, of zet hem uit.</>],
+    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de workspace en de secrets, elk met een eigen tabblad. Bekijk ze, upload bestanden, stel secrets in of zet een soort aan of uit. De eenvoudige weergave toont het zodra de app iets bewaart.</>],
     ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug, en vanuit elke versie kun je een concept starten.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
     ['Statistieken', () => <>Requests, fouten, responstijden en de meest opgevraagde paden, over het afgelopen uur of de afgelopen dag.</>],
@@ -274,6 +275,28 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  secrets: (k) => (
+    <>
+      Een API-sleutel, een wachtwoord of een token hoort in de {k.b('secrets')}, niet in de code – waar elke versie,
+      elke download en iedereen die de geschiedenis leest hem zou hebben. De code leest een secret op naam:
+    </>
+  ),
+  secrets2: (k) => (
+    <>
+      Zet secrets aan onder {k.b('Data')} en stel de waarde daar in. Eenmaal opgeslagen wordt hij nooit meer getoond –
+      niet aan jou en niet aan een agent; je kunt hem alleen vervangen. De lijst laat zien welke namen de code leest
+      waarvoor nog geen waarde is ingesteld, en het overzicht vraagt erom. {k.code('Secret.Exists')} zegt of er een is
+      ingesteld, voor code die ook zonder kan. Zoals alle data delen alle versies de secrets, en een concept werkt op
+      een kopie.
+    </>
+  ),
+  secretsAside: (k) => (
+    <>
+      Ze worden versleuteld opgeslagen, met een sleutel die niet in de database staat. In een gedownload project leest{' '}
+      {k.code('Secret.Read("NAME")')} de omgevingsvariabele {k.code('NAME')} – de waarden zelf blijven hier.
+    </>
+  ),
+
   sockets: (k) => (
     <>
       Ondersteund, en niet als bijzaak. De demo {k.link('/editor/demo-game', 'demo-game')} koppelt spelers aan elkaar
@@ -306,6 +329,7 @@ export const guide: Messages['guide'] = {
       bestanden komen precies mee zoals je ze schreef. {k.code('Workspace')} en {k.code('Assets')} worden twee mappen
       naast het programma, met dezelfde methodes, apart in een map {k.code('Platform')} - dus er hoeft niets in je code
       te veranderen.
+      {' '}{k.code('Secret')} leest daar omgevingsvariabelen met dezelfde naam; de waarden blijven hier.
     </>
   ),
   awayAside:

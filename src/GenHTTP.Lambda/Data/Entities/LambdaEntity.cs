@@ -66,6 +66,16 @@ public sealed class LambdaEntity
     /// </remarks>
     public DateTime? LastSeen { get; set; }
 
+    /// <summary>
+    /// The lambda's half of the key its secrets are sealed with.
+    /// </summary>
+    /// <remarks>
+    /// Random, and made when the first secret is stored. The other half is the
+    /// installation's and is not in the database, so neither opens anything
+    /// on its own.
+    /// </remarks>
+    public byte[]? SecretSalt { get; set; }
+
     public List<DeploymentEntity> Deployments { get; set; } = [];
 
 }

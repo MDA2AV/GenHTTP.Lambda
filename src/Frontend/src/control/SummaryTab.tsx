@@ -206,6 +206,27 @@ export function SummaryTab({ control }: { control: Control }) {
                     <span className="text-slate-500">{said.workspaceOff}</span>
                   </p>
                 )}
+
+                {/* counted in names rather than room: a secret is small, and what matters is whether one is missing */}
+                <p className="mt-3 flex items-center justify-between gap-3 text-[13px]">
+                  <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                    {said.secrets}
+                    <Exposure open={false} why={said.dataPrivate} />
+                  </span>
+                  <span className="flex items-center gap-2 text-slate-500">
+                    {(storage.missingSecrets?.length ?? 0) > 0 && (
+                      <Link
+                        to={`${base}/data/secrets`}
+                        className="inline-flex items-center gap-1 text-amber-600 hover:underline dark:text-amber-400"
+                        title={said.secretsMissingTitle}
+                      >
+                        <IconAlert className="h-3.5 w-3.5" />
+                        {said.secretsMissing(storage.missingSecrets!.length)}
+                      </Link>
+                    )}
+                    <span className="tabular-nums">{storage.secretsEnabled ? said.secretsCount(storage.secrets) : said.secretsOff}</span>
+                  </span>
+                </p>
               </div>
             </div>
           </div>

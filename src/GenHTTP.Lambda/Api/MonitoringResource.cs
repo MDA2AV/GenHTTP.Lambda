@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -27,7 +28,7 @@ namespace GenHTTP.Lambda.Api;
 /// than by the public key, because a public key can be given up and claimed
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
-public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, LambdaTelemetry telemetry,
+public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, LambdaTelemetry telemetry,
                                                LogBook book, LambdaOptions options)
 {
 
@@ -199,6 +200,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var listing = await workspace.ListAsync(id);
 
+        var kept = await secrets.ListAsync(privateKey);
+
         return new StorageSummary(
             version,
             code.Count,
@@ -210,7 +213,10 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             code.Any(f => ServingAssets().IsMatch(f.Code)),
             code.Any(f => ServingWorkspace().IsMatch(f.Code)),
             listing.Enabled,
-            code.Any(f => UsingWorkspace().IsMatch(f.Code))
+            code.Any(f => UsingWorkspace().IsMatch(f.Code)),
+            kept.Enabled,
+            kept.Secrets.Count,
+            [.. kept.Missing]
         );
     }
 

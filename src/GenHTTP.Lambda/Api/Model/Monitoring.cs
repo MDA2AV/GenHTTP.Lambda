@@ -68,6 +68,12 @@ public sealed record TrafficSummary(
 /// <param name="ServesWorkspace">Whether it serves the workspace, which makes those files public</param>
 /// <param name="WorkspaceEnabled">Whether the owner left the workspace switched on</param>
 /// <param name="UsesWorkspace">Whether the code of that version uses the workspace at all, and so fails where it does once it is off</param>
+/// <param name="SecretsEnabled">Whether the lambda has secrets switched on</param>
+/// <param name="Secrets">How many secrets it keeps - by name only, anywhere but in the lambda</param>
+/// <param name="MissingSecrets">
+/// The secrets its code reads that have no value yet - which is what its owner
+/// is asked to set, because until then the code that reads them fails
+/// </param>
 public sealed record StorageSummary(
     int? Version,
     int CodeFiles,
@@ -79,7 +85,10 @@ public sealed record StorageSummary(
     bool ServesAssets,
     bool ServesWorkspace,
     bool WorkspaceEnabled,
-    bool UsesWorkspace
+    bool UsesWorkspace,
+    bool SecretsEnabled = false,
+    int Secrets = 0,
+    List<string>? MissingSecrets = null
 );
 
 /// <summary>

@@ -31,7 +31,7 @@ public sealed class DataTests
 
         var stores = await ListAsync(fixture, lambda.PrivateKey);
 
-        var workspace = stores.Single();
+        var workspace = stores.Single(s => s.Kind == "workspace");
 
         Assert.AreEqual("workspace", workspace.Kind);
         Assert.IsTrue(workspace.Enabled);
@@ -63,7 +63,7 @@ public sealed class DataTests
 
         Assert.AreEqual("kept", await read.GetContentAsync());
 
-        var workspace = (await ListAsync(fixture, lambda.PrivateKey)).Single();
+        var workspace = (await ListAsync(fixture, lambda.PrivateKey)).Single(s => s.Kind == "workspace");
 
         Assert.AreEqual(1, workspace.Items);
         Assert.AreEqual(WorkspaceLimits.Block, workspace.UsedBytes);
@@ -219,7 +219,7 @@ public sealed class DataTests
 
         await fixture.MakeDemoAsync(lambda.PublicKey);
 
-        Assert.HasCount(1, await ListAsync(fixture, lambda.PrivateKey));
+        Assert.HasCount(2, await ListAsync(fixture, lambda.PrivateKey));
 
         using var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/data/workspace");
 

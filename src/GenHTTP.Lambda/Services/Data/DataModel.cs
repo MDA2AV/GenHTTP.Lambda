@@ -13,10 +13,12 @@ namespace GenHTTP.Lambda.Services.Data;
 /// <param name="Enabled">Whether the lambda has it</param>
 /// <param name="Default">Whether a lambda has it until its owner decides</param>
 /// <param name="Changed">When the owner last switched it, or nothing if it is as it was by default</param>
-/// <param name="Items">What it holds: files for the workspace</param>
-/// <param name="UsedBytes">The room that takes</param>
-/// <param name="QuotaBytes">The room the lambda's tier gives it</param>
-public sealed record DataStoreInfo(string Kind, bool Enabled, bool Default, DateTime? Changed, int Items, long UsedBytes, long QuotaBytes);
+/// <param name="Items">What it holds: files for the workspace, values for the secrets</param>
+/// <param name="UsedBytes">The room that takes, for a kind counted in room</param>
+/// <param name="QuotaBytes">The room the lambda's tier gives it, for a kind counted in room</param>
+/// <param name="MaxItems">How many things it may hold, for a kind counted in things</param>
+public sealed record DataStoreInfo(string Kind, bool Enabled, bool Default, DateTime? Changed, int Items, long UsedBytes, long QuotaBytes,
+                                   int? MaxItems = null);
 
 /// <summary>
 /// Whether a lambda has a kind of data, as the owner left it.

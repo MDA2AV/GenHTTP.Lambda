@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
 import { isActive, isDemo } from '../api';
-import { IconAlert, IconCheck, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconCopy, IconExternal, IconKey, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { count, span } from './format';
+import { Names } from './SecretsPanel';
 import { AgentMark, Ago, Figure, Section, Sparkline } from './ui';
 
 /**
@@ -41,6 +42,8 @@ export function SimpleOverview({ control }: { control: Control }) {
     >
       <div className="max-w-4xl space-y-8">
         <Status control={control} />
+
+        {!demo && <NeedsKey control={control} />}
 
         {problems && !demo && <Problems control={control} />}
 
@@ -174,6 +177,35 @@ function Copy({ value }: { value: string }) {
 }
 
 /* ------------------------------------------------------------ is it wrong */
+
+/**
+ * That the app reads a key nobody has given it yet - an API key the agent
+ * wrote the code for and could not know. Only the owner can give it, so it
+ * is said first, with the button that asks for it.
+ */
+function NeedsKey({ control }: { control: Control }) {
+  const said = useEditorT().simple;
+  const missing = control.summary?.storage.missingSecrets ?? [];
+
+  if (missing.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="flex flex-wrap items-center gap-x-4 gap-y-3 border border-amber-500/40 bg-amber-500/5 px-5 py-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+        <IconKey className="h-[18px] w-[18px]" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h2 className="text-sm font-medium">{said.needsKey(missing.length)}</h2>
+        <p className="mt-0.5 text-[13px] text-slate-600 dark:text-slate-400">{said.needsKeyText(<Names names={missing} />)}</p>
+      </div>
+      <button type="button" onClick={() => control.openData('secrets', missing[0])} className="btn-primary !px-4 !py-1.5 text-[13px]">
+        {said.enterKey}
+      </button>
+    </section>
+  );
+}
 
 /**
  * That visitors ran into errors, without the errors: what they say is for

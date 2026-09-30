@@ -40,6 +40,7 @@ public static class ApiLayout
                             .Add(Resource<DeploymentResource>(mode))
                             .Add(Resource<FileResource>(mode))
                             .Add(Resource<DataResource>(mode))
+                            .Add(Resource<SecretResource>(mode))
                             .Add(Resource<FeatureResource>(mode))
                             .Add(Resource<FeatureWorkspaceResource>(mode))
                             .Add(Resource<CodeResource>(mode))

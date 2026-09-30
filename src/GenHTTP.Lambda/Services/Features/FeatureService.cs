@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -23,7 +24,8 @@ namespace GenHTTP.Lambda.Services.Features;
 /// service beside the lambdas themselves.
 /// </summary>
 public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IStorageService storage,
-                                   IDeploymentService deployments, LambdaOptions options, LogBook book, ILogger<FeatureService> logger)
+                                   IDeploymentService deployments, SecretVault secrets, LambdaOptions options, LogBook book,
+                                   ILogger<FeatureService> logger)
     : IFeatureService
 {
 
@@ -179,9 +181,14 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             {
                 await storage.CopyWorkspaceAsync(lambdaId, entity.Id, cancellation);
             }
+
+            // and of the secrets, so the preview can call what the lambda calls
+            await secrets.CopyAsync(lambdaId, entity.Id, cancellation);
         }
         catch
         {
+            await database.Secrets.Where(s => s.FeatureId == entity.Id).ExecuteDeleteAsync(CancellationToken.None);
+
             await storage.DeleteFeatureAsync(lambdaId, entity.Id, CancellationToken.None);
 
             database.Features.Remove(entity);
@@ -371,6 +378,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         {
             await storage.CopyWorkspaceAsync(lambda.Id, entity.Id, cancellation);
         }
+
+        await secrets.CopyAsync(lambda.Id, entity.Id, cancellation);
 
         // built again on its next request, so code that read the data into
         // memory when it started reads the fresh copy rather than writing the
@@ -598,9 +607,15 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// </remarks>
     private async ValueTask RemoveAsync(LambdaDbContext database, long lambdaId, FeatureEntity feature, CancellationToken cancellation)
     {
+        // the copy of the secrets cascades in the schema, but only where the
+        // connection has foreign keys switched on
+        await database.Secrets.Where(s => s.FeatureId == feature.Id).ExecuteDeleteAsync(cancellation);
+
         database.Features.Remove(feature);
 
         await database.SaveChangesAsync(cancellation);
+
+        secrets.Invalidate(lambdaId);
 
         deployments.EvictPreview(lambdaId, feature.Id);
 

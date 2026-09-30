@@ -494,7 +494,7 @@ public sealed class FeatureTests
 
         using (var data = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/data"))
         {
-            Assert.AreEqual(2, (await data.GetContentAsync<List<DataStoreResponse>>()).Single().Items, "its data counts its copy");
+            Assert.AreEqual(2, (await data.GetContentAsync<List<DataStoreResponse>>()).Single(s => s.Kind == "workspace").Items, "its data counts its copy");
         }
 
         // a fresh copy of the real thing, and the preview reads it again

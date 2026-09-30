@@ -25,6 +25,7 @@ const PARTS = [
   'spa',
   'storage',
   'keeping',
+  'secrets',
   'sockets',
   'limits',
   'away',
@@ -277,6 +278,21 @@ return Inline.Create()
              });`} />
 
             <p>{said.keeping2(k)}</p>
+          </Section>
+
+          <Section id="secrets" title={said.parts.secrets}>
+            <p>{said.secrets(k)}</p>
+
+            <Sample code={`var weather = new System.Net.Http.HttpClient();
+
+weather.DefaultRequestHeaders.Add("X-Api-Key", Secret.Read("WEATHER_API_KEY"));
+
+return Inline.Create()
+             .Get("today", async () => await weather.GetStringAsync("https://weather.example/today"));`} />
+
+            <p>{said.secrets2(k)}</p>
+
+            <Aside>{said.secretsAside(k)}</Aside>
           </Section>
 
           <Section id="sockets" title={said.parts.sockets}>

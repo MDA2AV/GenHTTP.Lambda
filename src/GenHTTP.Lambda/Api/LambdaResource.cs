@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Secrets;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -22,7 +23,7 @@ namespace GenHTTP.Lambda.Api;
 /// the lambda. Its versions, deployment, files and code live in resources of
 /// their own below the same path.
 /// </remarks>
-public sealed class LambdaResource(IMetaService meta, LambdaOptions options)
+public sealed class LambdaResource(IMetaService meta, ISecretService secrets, LambdaOptions options)
 {
 
     /// <summary>
@@ -109,7 +110,12 @@ public sealed class LambdaResource(IMetaService meta, LambdaOptions options)
 
         var address = options.PublicUrl is { } site ? $"{site}/lambda/{lambda.PublicKey}/" : null;
 
-        var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow);
+        // the names say which variables to set; the values stay here
+        var kept = await secrets.ListAsync(privateKey);
+
+        var names = kept.Secrets.Select(s => s.Name).Union(kept.Used, StringComparer.Ordinal).ToList();
+
+        var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow, names);
 
         var zip = ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code));
 
