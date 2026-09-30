@@ -95,6 +95,7 @@ export const guide: Messages['guide'] = {
           Zeg wat er anders moet, en de agent op deze server doet het terwijl jij meekijkt. Hij werkt in een concept,
           probeert het daar uit en voegt het samen tot de volgende versie zodra het werkt. Zet{' '}
           {k.b('Online zetten als het klaar is')} uit als je het concept eerst zelf wilt uitproberen.
+          Hij werkt alleen aan je app: een verzoek dat er niets mee te maken heeft, of dat schade moet aanrichten, wijst hij af, en hij zegt waarom.
         </>
       ),
     ],

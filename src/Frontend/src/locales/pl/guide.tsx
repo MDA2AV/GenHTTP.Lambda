@@ -93,6 +93,7 @@ export const guide: Messages['guide'] = {
           Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach. Pracuje w szkicu, tam sprawdza
           zmianę, a gdy działa, scala szkic w kolejną wersję. Wyłącz {k.b('Wdróż po zakończeniu')}, jeśli chcesz
           najpierw samodzielnie wypróbować szkic.
+          Zajmuje się tylko twoją aplikacją: prośbę, która jej nie dotyczy albo ma komuś zaszkodzić, odrzuca i mówi dlaczego.
         </>
       ),
     ],

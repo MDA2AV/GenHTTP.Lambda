@@ -276,6 +276,8 @@ export interface BuildResult {
   error?: string;
   detail?: string;
   deployed?: boolean;
+  /** The agent would not build it; error is what it said, in the language of the request. */
+  declined?: boolean;
 }
 
 /**
@@ -339,7 +341,9 @@ export interface ChangeResult {
   unchanged?: boolean | null;
   cancelled?: boolean | null;
   /** What cut it short, whether or not it had saved something by then. */
-  reason?: 'unauthorised' | 'timeout' | 'turns' | 'nothing' | null;
+  reason?: 'unauthorised' | 'timeout' | 'turns' | 'nothing' | 'declined' | null;
+  /** The agent would not make the change; summary is what it said. */
+  declined?: boolean | null;
   /** What the agent said at the end, for the owner. */
   summary?: string | null;
   /** In English, for when there are no words of our own for it. */

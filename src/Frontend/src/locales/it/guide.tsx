@@ -95,6 +95,7 @@ export const guide: Messages['guide'] = {
           Scrivi cosa deve cambiare e l’agente di questo server lo fa sotto i tuoi occhi. Lavora su una bozza,
           prova lì la modifica e la integra nella prossima versione quando funziona. Disattiva{' '}
           {k.b('Metti online a lavoro finito')} per provare prima tu la bozza.
+          Lavora solo sulla tua app: una richiesta che non la riguarda, o che serve a fare danni, viene rifiutata, e ti dice perché.
         </>
       ),
     ],

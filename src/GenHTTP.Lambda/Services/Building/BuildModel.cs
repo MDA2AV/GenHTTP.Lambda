@@ -21,6 +21,11 @@ public sealed record BuildProgress(string State, IReadOnlyList<string> Events, B
 /// </summary>
 /// <param name="Keep">What the person needs to be told about the editor key</param>
 /// <param name="Detail">What went wrong, in the words of whatever it went wrong in</param>
+/// <param name="Declined">
+/// The agent would not build what was asked for, because it is not an application
+/// or not one this platform is for; <c>Error</c> is what it said, in the language
+/// of the request
+/// </param>
 public sealed record BuildResult(
     bool Ok,
     bool? Deployed,
@@ -31,7 +36,8 @@ public sealed record BuildResult(
     string? Summary,
     string? Keep,
     string? Error,
-    string? Detail
+    string? Detail,
+    bool? Declined = null
 );
 
 /// <summary>
@@ -97,8 +103,10 @@ public sealed record AgentStep(
 /// <param name="Cancelled">Somebody stopped it</param>
 /// <param name="Reason">
 /// What cut it short - timeout, turns (it used up its steps) or unauthorised - or,
-/// with nothing saved and nothing said, nothing
+/// with nothing saved and nothing said, nothing; declined when the agent would
+/// not make the change at all
 /// </param>
+/// <param name="Declined">The agent would not make the change; <c>Summary</c> says why</param>
 /// <param name="Summary">What the agent said at the end, for the owner</param>
 /// <param name="Error">What went wrong, in English, for a client without words of its own</param>
 /// <param name="Detail">What went wrong, in the words of whatever it went wrong in</param>
@@ -120,7 +128,8 @@ public sealed record ChangeResult(
     string? Detail = null,
     string? Feature = null,
     string? FeatureName = null,
-    bool? Preview = null
+    bool? Preview = null,
+    bool? Declined = null
 );
 
 /// <summary>

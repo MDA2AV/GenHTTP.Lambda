@@ -96,6 +96,7 @@ export const guide: Messages['guide'] = {
           Tulis apa yang perlu diubah, dan agen di server ini akan mengerjakannya sementara Anda melihat. Agen bekerja di
           sebuah draf, mencobanya di sana, lalu menggabungkannya menjadi versi berikutnya begitu berhasil. Matikan{' '}
           {k.b('Langsung online setelah selesai')} kalau Anda ingin mencoba drafnya sendiri dulu.
+          Agen hanya mengerjakan aplikasi Anda: permintaan yang tidak berkaitan dengannya, atau yang bertujuan merugikan, akan ditolak beserta alasannya.
         </>
       ),
     ],

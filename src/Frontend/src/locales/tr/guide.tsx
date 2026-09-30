@@ -95,6 +95,7 @@ export const guide: Messages['guide'] = {
           Neyin farklı olması gerektiğini yazın, gerisini bu sunucudaki ajan siz izlerken halleder. Bir taslakta çalışır,
           değişikliği orada dener ve çalışınca birleştirip bir sonraki sürüm yapar. Taslağı önce kendiniz denemek
           isterseniz {k.b('Bitince yayına al')} seçeneğini kapatın.
+          Ajan yalnızca uygulamanız üzerinde çalışır: Uygulamayla ilgisi olmayan ya da zarar vermeye yönelik bir isteği reddeder ve nedenini söyler.
         </>
       ),
     ],

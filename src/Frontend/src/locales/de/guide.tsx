@@ -94,6 +94,7 @@ export const guide: Messages['guide'] = {
           Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um, während Sie zusehen. Er arbeitet
           in einem Entwurf, probiert die Änderung dort aus und übernimmt sie als nächste Version, sobald sie funktioniert.
           Schalten Sie {k.b('Nach Abschluss online stellen')} aus, um den Entwurf zuerst selbst auszuprobieren.
+          Er arbeitet nur an Ihrer App: Eine Bitte, die nichts mit ihr zu tun hat oder Schaden anrichten soll, lehnt er ab und sagt, warum.
         </>
       ),
     ],

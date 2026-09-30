@@ -99,6 +99,7 @@ export const guide = {
           Say what should be different, and the agent on this server does it while you watch. It tries the change on a
           draft - a copy with an address of its own - and puts it online once it works. Switch off{' '}
           {k.b('Put it online when it is done')} to try the draft yourself first.
+          It only works on your app: a request that is not about it, or that is meant to do harm, is turned down, and it says why.
         </>
       ),
     ],

@@ -10,6 +10,24 @@ that only lives in a chat is lost. The [README](README.md) has the reference
 inside its throwaway container, not a steering file for people working on this
 repository. Do not merge the two.
 
+## What the build agent is for
+
+The build agent (`/build` and the editor's Change section) builds or changes a
+lambda through the platform's tools, and nothing else. That is its system
+prompt (`PURPOSE` in `docker/agent/builder.mjs`), kept apart from the brief
+because the brief carries a request typed by anybody. Before calling any tool
+it declines, with one `DECLINED: …` line in the language of the request:
+
+- anything that is not an application - questions, texts, homework, chat;
+- anything about the platform or the machine rather than an application on it,
+  including code that would read the server's environment, files or network;
+- anything meant to do harm, to this server or to others.
+
+The builder reports it as `declined` (`reason: "declined"`), and the pages
+show the agent's sentence. Ordinary applications - ones that call public APIs,
+keep data, have accounts, or merely sound alarming - are not declined. Keep
+`PURPOSE`, `AGENTS.md` ("What not to build") and the README saying the same.
+
 ## What this is
 
 A platform on which somebody describes an app - or an agent writes a C# snippet
