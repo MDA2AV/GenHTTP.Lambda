@@ -17,5 +17,28 @@ services:
   lambda:
     environment:
       LAMBDA_ENGINE: ioxide
+      # A dump of the process when it dies of something it could not catch.
+      #
+      # A native crash leaves .NET no chance to say anything: heap corruption
+      # is one line from glibc - "corrupted size vs. prev_size" - and an abort.
+      # The core the kernel writes instead lands inside the container, where
+      # the next deploy throws it away, and lacks what a debugger needs to show
+      # a managed stack. The runtime's own dump has it: every thread's stack and
+      # the heaps (type 2), with crash.dmp.crashreport.json beside it holding
+      # the same stacks as JSON, readable without a debugger.
+      #
+      # Here rather than in the main file because the engine being measured is
+      # where a native crash is most likely to come from.
+      #
+      # One name, so each crash replaces the last. A lambda can take the
+      # process down with nothing more than unbounded recursion, and a dump per
+      # crash - two gigabytes and more - would let it fill the disk. The folder
+      # has to exist: the image makes it, createdump does not. A dump is the
+      # whole memory of the process - keys, tokens and the log with every
+      # caller's address - so copy it off, read it, and delete it.
+      DOTNET_DbgEnableMiniDump: 1
+      DOTNET_DbgMiniDumpType: 2
+      DOTNET_DbgMiniDumpName: /data/dumps/crash.dmp
+      DOTNET_EnableCrashReport: 1
     security_opt:
       - seccomp=./seccomp-ioxide.json
