@@ -241,12 +241,22 @@ public sealed class SiteMeta
     /// <remarks>
     /// The lambdas are not excluded. What somebody builds and shares is theirs
     /// to have found, and it lives under <c>/lambda</c> for as long as it does.
+    ///
+    /// Nor is the part of the API the pages of the published sources are drawn
+    /// from: they are not prerendered, and a crawler that renders one may only
+    /// fetch what it is allowed to - so without it, it would find each page
+    /// named and described, and empty. The same goes for the showcase pictures
+    /// those pages show and are previewed with. The zip of a version stays
+    /// out: it is a download, and packing it is work nobody reads.
     /// </remarks>
     public string Robots()
     {
         var robots = new StringBuilder();
 
         robots.Append("User-agent: *\n")
+              .Append("Allow: /api/v1/sources/\n")
+              .Append("Allow: /api/v1/showcases/\n")
+              .Append("Disallow: /api/v1/sources/*/zip\n")
               .Append("Disallow: /api/\n")
               .Append("Disallow: /mcp\n")
               .Append("Disallow: /start\n")

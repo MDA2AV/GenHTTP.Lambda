@@ -171,6 +171,21 @@ public sealed class SourcePageTests
         Assert.IsNotNull(quiz.Element(ns + "lastmod"), "when its newest version was saved");
     }
 
+    [TestMethod]
+    public async Task ACrawlerMayFetchWhatThePageOfASourceIsDrawnFrom()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(Site());
+
+        using var response = await fixture.GetAsync("/robots.txt");
+
+        var rules = (await response.Content.ReadAsStringAsync()).Split('\n');
+
+        CollectionAssert.Contains(rules, "Allow: /api/v1/sources/", "the page is not prerendered: what it shows comes from here");
+        CollectionAssert.Contains(rules, "Allow: /api/v1/showcases/", "and its picture from here");
+        CollectionAssert.Contains(rules, "Disallow: /api/v1/sources/*/zip", "a download is no page");
+        CollectionAssert.Contains(rules, "Disallow: /api/", "the rest of the API stays out");
+    }
+
     private static async Task<LambdaResponse> PublishAsync(LambdaFixture fixture, string key, string? product)
     {
         var lambda = await fixture.CreateLambdaAsync(key);

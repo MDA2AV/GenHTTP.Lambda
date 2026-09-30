@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
@@ -420,6 +421,78 @@ public sealed class SourceTests
         var none = await (await fixture.GetAsync("/api/v1/sources/?search=spreadsheet")).GetContentAsync<SourceListingResponse>();
 
         Assert.AreEqual(0, none.Total);
+    }
+
+    [TestMethod]
+    public async Task WhatTheShowcaseSaysIsShownWhereThereIsOne()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var shown = await fixture.CreateLambdaAsync("shown");
+        var plain = await fixture.CreateLambdaAsync("plain");
+
+        await fixture.DeployAsync(shown.PrivateKey);
+
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+
+        using (var showcase = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{shown.PrivateKey}/showcase",
+                                                      new ShowcaseRequest("Pub quiz", "Scores for the Tuesday quiz.", Convert.ToBase64String(png))))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, showcase.StatusCode, await showcase.Content.ReadAsStringAsync());
+        }
+
+        await PublishAsync(fixture, shown.PrivateKey, new SourceRequest(null, null));
+        await PublishAsync(fixture, plain.PrivateKey, new SourceRequest(null, null));
+
+        var withShowcase = (await ProjectAsync(fixture, "shown")).Source;
+
+        Assert.AreEqual("Pub quiz", withShowcase.Title);
+        Assert.AreEqual("Scores for the Tuesday quiz.", withShowcase.Description);
+        Assert.IsNotNull(withShowcase.ImagePath);
+
+        using (var picture = await fixture.GetAsync(withShowcase.ImagePath!))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, picture.StatusCode, "the picture the page shows is there to be fetched");
+        }
+
+        var without = (await ProjectAsync(fixture, "plain")).Source;
+
+        Assert.IsNull(without.Title, "a source does not need to be on the showcase");
+        Assert.IsNull(without.Description);
+        Assert.IsNull(without.ImagePath);
+    }
+
+    [TestMethod]
+    public async Task ThePageLeadsToTheAppWhereItsVisitorsFindIt()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("shop");
+
+        await fixture.DeployAsync(lambda.PrivateKey, Snippet);
+
+        await PublishAsync(fixture, lambda.PrivateKey, new SourceRequest(null, null));
+
+        var before = await ProjectAsync(fixture, "shop");
+
+        Assert.IsTrue(before.Source.Online);
+        Assert.AreEqual("/lambda/shop/", before.Source.Address, "its path on the platform, while it has no domain");
+        Assert.IsTrue(before.Versions[0].Online, "and which version is the one online");
+
+        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+
+        using (var domain = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("shop.example.com")))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, domain.StatusCode, await domain.Content.ReadAsStringAsync());
+        }
+
+        var after = await ProjectAsync(fixture, "shop");
+
+        Assert.AreEqual("https://shop.example.com/", after.Source.Address, "its own domain, once it has one");
+
+        var listed = await (await fixture.GetAsync("/api/v1/sources/")).GetContentAsync<SourceListingResponse>();
+
+        Assert.AreEqual("https://shop.example.com/", listed.Entries.Single(e => e.PublicKey == "shop").Address);
     }
 
     #endregion

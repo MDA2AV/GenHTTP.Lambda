@@ -585,8 +585,11 @@ language under the same addresses as every other public page. They are not
 prerendered: the server names each after its lambda, describes it with the
 first paragraph of its documentation, marks it up as `SoftwareSourceCode` for
 search engines, and lists every published source in the sitemap in every
-language. A source that is not published is not found, the same as a key
-nobody has.
+language. Since what a page shows is fetched from `/api/v1/sources/`,
+`robots.txt` allows crawlers that part of the API (and the showcase pictures),
+while it keeps them out of the rest of it and out of the zips - otherwise a
+crawler that renders the page would find it named, and empty. A source that is
+not published is not found, the same as a key nobody has.
 
 A version is packed once, on the first request for it, and kept below
 `/data/sources/{lambda}` - a cache and nothing more, since the versions are
