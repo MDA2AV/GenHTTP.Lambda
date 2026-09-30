@@ -62,6 +62,8 @@ export const editor: EditorMessages = {
     title: 'Éditeur',
     sections: {
       overview: 'Vue d’ensemble',
+      docs: 'Documentation',
+      tests: 'Tests',
       change: 'Modifier',
       features: 'Brouillons',
       showcase: 'Vitrine',
@@ -76,12 +78,18 @@ export const editor: EditorMessages = {
       code: 'Code',
     },
     sectionsLabel: 'Sections',
+    groups: {
+      build: 'Développement',
+      program: 'Programme et données',
+      run: 'Fonctionnement',
+      sharing: 'Partage',
+    },
     loadFailed: 'Impossible de charger cette lambda.',
     online: (version) => `La version ${version} est en ligne.`,
     deployFailed: 'Impossible de déployer la lambda.',
     offline: 'Mise hors ligne. Le code est toujours là.',
     offlineFailed: 'Impossible de mettre la lambda hors ligne.',
-    leave: 'Les modifications non enregistrées du code seront perdues. Quitter quand même ?',
+    leave: 'Les modifications non enregistrées seront perdues. Quitter quand même ?',
     nothingTitle: 'Ce lien n’ouvre rien',
     createNew: 'Créer une nouvelle lambda',
     loading: 'Chargement de votre lambda…',
@@ -136,11 +144,13 @@ export const editor: EditorMessages = {
     simple: 'Simple',
     full: 'Complet',
     simpleTitle: 'Votre application, son état et un champ pour demander des modifications',
-    fullTitle: 'Toutes les sections : le code, les fichiers, les données, les versions et les journaux',
+    fullTitle: 'Toutes les sections : le code, la documentation, les tests, les fichiers, les données, les versions et les journaux',
     simpleNote: 'Votre application et un champ pour demander des modifications.',
     fullNote: 'Toutes les sections, code compris.',
     toFull: 'Afficher toutes les sections',
     toSimple: 'Passer à l’affichage simple',
+    about: 'À propos',
+    aboutMore: 'En savoir plus sur votre application',
     outsideTitle: 'Cette page fait partie de l’affichage complet',
     outsideText: 'L’affichage simple masque le code, les fichiers et l’historique. Affichez toutes les sections pour les utiliser ici.',
     back: 'Retour à votre application',
@@ -364,6 +374,10 @@ export const editor: EditorMessages = {
 
   summary: {
     reading: 'Chargement de l’état…',
+    readDocs: 'Lire la documentation',
+    written: 'Documentation et tests',
+    writtenWhy: 'Jamais compilés, jamais servis. Gardés avec chaque version, et comptés avec les assets.',
+    writtenMissing: 'Pas encore rédigé',
     hint: (since, kept, retention, tier) =>
       `Le trafic est compté depuis le dernier démarrage du serveur (${since}). ` +
       (kept
@@ -454,6 +468,10 @@ export const editor: EditorMessages = {
     assetsPublic: 'Publics : cette version les sert avec Assets.',
     assetsPrivate: 'Enregistrés avec le code, mais cette version ne les sert pas.',
     noAssets: 'Aucun dans cette version.',
+    context: 'Documentation et tests',
+    contextWhy: 'Jamais compilés, jamais servis : ce qui est écrit sur cette version, pour qui la lit ou la modifie.',
+    contextUsage: (files, size) => `${files}, ${size} – comptés avec les assets`,
+    noContext: 'Rien n’est encore écrit sur cette version.',
     data: 'Données',
     dataPublic: 'Publiques : le code en ligne les sert avec Workspace.',
     dataPrivate: 'Privées, réservées à la lambda. Ne font partie d’aucune version.',
@@ -483,6 +501,97 @@ export const editor: EditorMessages = {
     missing: (name) => `Cette version n’a pas de fichier nommé ${name}.`,
     saved: 'enregistré',
     notText: 'Ce n’est pas du texte. Téléchargez-le pour voir ce qu’il contient.',
+  },
+
+  context: {
+    docs: {
+      title: 'Documentation',
+      titleSimple: 'À propos de votre application',
+      hint: 'Ce qu’est cette application, à qui elle s’adresse et pourquoi, et pourquoi elle est construite ainsi. Les agents la rédigent à chaque modification, et elle est gardée avec chaque version : une version plus ancienne revient avec la documentation qui valait pour elle.',
+      hintSimple: 'À quoi sert votre application et pourquoi, tel que l’agent l’a compris à partir de vos demandes. Il tient cette description à jour à chaque modification.',
+      inDraft: 'La documentation de ce brouillon. Elle devient celle de votre application quand le brouillon est mis en ligne.',
+      pages: { product: 'Produit', decisions: 'Décisions' },
+      emptyTitle: 'Rien n’est encore rédigé',
+      emptyText: (code) => (
+        <>
+          Les agents rédigent la documentation avec leurs modifications : ce qu’est l’application, à qui elle s’adresse
+          et pourquoi dans {code('.lambda/docs/product.md')}, et pourquoi elle est construite ainsi dans{' '}
+          {code('decisions.md')}. Elle fait partie de la version, à côté du code.
+        </>
+      ),
+      emptySimpleTitle: 'Rien n’est encore écrit sur votre application',
+      emptySimple: 'L’agent peut décrire à quoi sert votre application et pourquoi, à partir de ce que vous avez demandé, puis tenir cette description à jour.',
+      ask: 'Demander à l’agent de la rédiger',
+      describe: 'Demander à l’agent de la décrire',
+      writePrompt: 'Rédige la documentation de cette application : ce qu’elle est, à qui elle s’adresse et pourquoi, et les décisions techniques qui la sous-tendent.',
+      describePrompt: 'Décris à quoi sert cette application et pourquoi, pour que je puisse le lire sous « À propos ».',
+      decisionsPrompt: 'Consigne les décisions techniques derrière cette application, et pourquoi elles ont été prises.',
+      missingProduct: 'Pas encore de page produit',
+      missingProductText: 'Ce qu’est l’application, à qui elle s’adresse, ce qu’on en fait et pourquoi, avec les mots de la personne qui l’a demandée.',
+      missingDecisions: 'Aucune décision consignée pour l’instant',
+      missingDecisionsText: 'Comment l’application est construite et pourquoi : comment elle garde ses données, de quoi elle dépend, ce qui a été laissé de côté. Ce que doit savoir la prochaine personne qui la modifiera.',
+      correctText: 'L’agent rédige ce texte à partir de ce que vous avez demandé, et le tient à jour à chaque modification. Quelque chose est faux ou manque ? Dites-le-lui.',
+      correct: 'Le dire à l’agent',
+      correctPrompt: 'Corrige la description de l’application : ',
+      placeholder: 'Explique pourquoi les entrées sont gardées un an',
+    },
+    tests: {
+      title: 'Tests',
+      hint: 'Comment cette application est testée automatiquement, et les scripts et les données qu’utilisent les tests. Les agents les tiennent à jour et les lancent avant de considérer une modification comme terminée. Ils sont gardés avec chaque version.',
+      inDraft: 'Les tests de ce brouillon. Ils deviennent ceux de votre application quand le brouillon est mis en ligne : lancez-les d’abord sur son aperçu.',
+      pages: { testing: 'Comment elle est testée' },
+      emptyTitle: 'Pas encore de tests',
+      emptyText: (code) => (
+        <>
+          La façon dont l’application est testée (ce qui doit continuer à marcher, comment le vérifier et comment lancer
+          les scripts prévus pour cela) est décrite par les agents dans {code('.lambda/tests/README.md')}, avec les
+          scripts et les données de test à côté.
+        </>
+      ),
+      ask: 'Demander à l’agent d’écrire des tests',
+      writePrompt: 'Écris les tests de cette application : ce qui doit continuer à marcher et comment le vérifier automatiquement, avec un script à lancer sur son aperçu.',
+      missing: 'Rien n’indique encore comment elle est testée',
+      missingText: 'Ce qui doit continuer à marcher, comment chaque point est vérifié, et comment lancer les scripts qui l’accompagnent.',
+      placeholder: 'Vérifie qu’une liste pleine refuse les nouvelles entrées',
+    },
+    files: 'Fichiers',
+    noFiles: 'Aucun fichier à côté des pages.',
+    none: 'à écrire',
+    missingPill: 'Pas encore rédigée',
+    changedIn: (version) => `Modifiée dans la version ${version}`,
+    changedInDraft: 'Modifiée dans ce brouillon',
+    showChanges: 'Voir ce qui a changé',
+    hideChanges: 'Masquer ce qui a changé',
+    noChanges: 'Rien n’a changé.',
+    edit: 'Modifier',
+    olderVersion: 'Une version ne change jamais : une page se modifie sur la version la plus récente, ou dans un brouillon.',
+    writeIt: 'L’écrire vous-même',
+    askPage: 'Demander à l’agent de la rédiger',
+    editInCode: 'Ouvrir dans le code',
+    cancel: 'Annuler',
+    save: 'Enregistrer',
+    write: 'Écrire',
+    preview: 'Aperçu',
+    writeOrPreview: 'Écriture ou aperçu',
+    discard: 'Vos modifications de cette page seront perdues. Les abandonner ?',
+    reading: 'Lecture…',
+    readFailed: 'Impossible de lire ce contenu.',
+    saveFailed: 'Impossible d’enregistrer.',
+    savedDraft: 'Enregistré dans le brouillon.',
+    savedVersion: (version) => `Enregistré en version ${version}.`,
+    savedOnline: (version) => `Enregistré en version ${version}, et en ligne.`,
+    savedNotOnline: (version) => `Enregistré en version ${version}, mais pas mis en ligne.`,
+    saveTitle: 'Enregistrer en nouvelle version',
+    saveText: (newest) =>
+      `Une version ne change jamais : cette page est donc enregistrée dans la suivante, par-dessus la version ${newest}, sans rien changer d’autre.`,
+    clash: (version) => `La version ${version} a été enregistrée depuis que vous avez commencé, et elle a aussi modifié cette page. Enregistrer remplace ce changement.`,
+    alsoOnline: 'La mettre aussi en ligne',
+    alsoOnlineNote: 'Seule la documentation change, les visiteurs ne voient donc rien de nouveau, mais ce qui est en ligne reste la version la plus récente.',
+    skeleton: {
+      product: '# Nom de l’application\n\nCe qu’elle est, en une ou deux phrases.\n\n## À qui elle s’adresse\n\n## Ce qu’on en fait\n\n## Fonctionnalités, et pourquoi elles existent\n\n## Ce qu’elle ne fait pas\n',
+      decisions: '# Décisions\n\n## Une décision\n\nCe qui a été décidé, pourquoi, et ce qu’une modification doit garder à l’esprit.\n',
+      testing: '# Comment elle est testée\n\nComment lancer les tests, et sur quelle adresse.\n\n## Ce qui doit continuer à marcher\n\n| Comportement | Requête | Attendu |\n|---|---|---|\n| | | |\n',
+    },
   },
 
   data: {
@@ -694,7 +803,7 @@ export const editor: EditorMessages = {
     leaks: (path, files) =>
       `Dans ${files}, les liens vers ${path} utilisent le chemin complet. Depuis l’aperçu, ils mènent à la lambda en ligne et à ses vraies données, pas à la copie de ce brouillon. Les chemins relatifs (« api/items ») restent dans l’aperçu.`,
     mergeButton: 'Intégrer',
-    saveFirst: 'Enregistrez d’abord le code : l’aperçu et l’intégration utilisent ce qui est enregistré.',
+    saveFirst: 'Enregistrez d’abord vos modifications : l’aperçu et l’intégration utilisent ce qui est enregistré.',
     mergeAndDeploy: (version) => `Intégrer et mettre la version ${version} en ligne`,
     mergeText: (version) =>
       `Il devient la version ${version}. Le brouillon disparaît avec son aperçu et sa copie des données. Les données de la lambda elle-même restent telles quelles.`,
@@ -732,7 +841,9 @@ export const editor: EditorMessages = {
     viewsLabel: 'Le brouillon',
     views: {
       overview: 'Brouillon',
+      docs: 'Documentation',
       code: 'Code',
+      tests: 'Tests',
       data: 'Données',
       logs: 'Logs',
     },
@@ -756,6 +867,7 @@ export const editor: EditorMessages = {
     first: 'La première version.',
     status: { added: 'ajouté', removed: 'supprimé', changed: 'modifié', same: 'inchangé' },
     browse: 'Parcourir ses fichiers',
+    docs: 'Lire sa documentation',
     edit: 'Modifier à partir d’ici',
     feature: 'Démarrer un brouillon à partir d’ici',
     featureTitle:
@@ -992,10 +1104,11 @@ export const editor: EditorMessages = {
     changedElsewhere:
       'Le brouillon a été enregistré ailleurs depuis que vous l’avez ouvert, peut-être par l’agent. Chargez ce qui est enregistré avant d’enregistrer ici ; vos modifications ne seraient pas enregistrées par-dessus.',
     readAgain: 'Charger ce qui est enregistré',
-    files: (entry, cs) => (
+    files: (entry, cs, context) => (
       <>
         {entry} renvoie ce qui est servi, les autres fichiers {cs} contiennent des types, et tout autre fichier est servi
-        tel quel. Ctrl-S enregistre, F12 va à une déclaration.
+        tel quel, sauf ce qui se trouve dans {context} : la documentation et les tests, jamais compilés ni servis. Ctrl-S
+        enregistre, F12 va à une déclaration.
       </>
     ),
     newer: (version) => ` La version ${version} est plus récente que celle ouverte ici.`,
@@ -1026,6 +1139,8 @@ export const editor: EditorMessages = {
     deep: 'Six niveaux de dossiers au maximum.',
     characters: 'Lettres, chiffres, tirets, tirets bas et points, séparés par des slashs.',
     extension: 'Il faut une extension, pour que le fichier soit servi correctement.',
+    context: 'Dans .lambda/, seulement docs/ et tests/ : lettres, chiffres, tirets, tirets bas et points, séparés par des slashs.',
+    contextFiles: 'Documentation et tests : font partie de la version, jamais compilés ni servis',
     exists: 'Un fichier porte déjà ce nom.',
     remove: (name) => `Supprimer ${name} ? Son contenu sera supprimé aussi.`,
     there: (name) => `${name} existe déjà.`,
@@ -1033,7 +1148,7 @@ export const editor: EditorMessages = {
     errors: 'contient des erreurs',
     removeFile: (name) => `Supprimer ${name}`,
     removeTitle: 'Supprimer ce fichier',
-    placeholder: 'Types.cs ou site/index.html',
+    placeholder: 'Types.cs, site/index.html ou .lambda/docs/api.md',
     newFile: 'Nouveau fichier',
     uploadTitle: 'Importer un fichier (image, police, page)',
     upload: 'Importer un fichier',

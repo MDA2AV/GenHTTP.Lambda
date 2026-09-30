@@ -33,24 +33,36 @@ public static class TemplateCatalog
 
         new("demo-crud", "DemoCrud",
             ("Tasks.cs", "DemoCrudTasks"), ("Store.cs", "DemoCrudStore"),
-            ("web/index.html", "DemoCrudPage"), ("web/app.js", "DemoCrudApp"), ("web/base.css", "DemoStyle")),
+            ("web/index.html", "DemoCrudPage"), ("web/app.js", "DemoCrudApp"), ("web/base.css", "DemoStyle"),
+            (LambdaSource.ProductDoc, "DemoCrudProduct"), (LambdaSource.DecisionsDoc, "DemoCrudDecisions"),
+            (LambdaSource.TestingDoc, "DemoCrudTesting"), (".lambda/tests/smoke.mjs", "DemoCrudSmoke"),
+            (".lambda/tests/tasks.json", "DemoCrudTestTasks")),
 
         new("demo-registration", "DemoRegistration",
             ("Accounts.cs", "DemoRegistrationAccounts"),
             ("web/index.html", "DemoRegistrationLanding"), ("web/members.html", "DemoRegistrationMembers"),
-            ("web/session.js", "DemoRegistrationSession"), ("web/base.css", "DemoStyle")),
+            ("web/session.js", "DemoRegistrationSession"), ("web/base.css", "DemoStyle"),
+            (LambdaSource.ProductDoc, "DemoRegistrationProduct"), (LambdaSource.DecisionsDoc, "DemoRegistrationDecisions"),
+            (LambdaSource.TestingDoc, "DemoRegistrationTesting"), (".lambda/tests/smoke.mjs", "DemoRegistrationSmoke"),
+            (".lambda/tests/accounts.json", "DemoRegistrationTestAccounts")),
 
         new("demo-game", "DemoGame",
             ("Lobby.cs", "DemoGameLobby"), ("Board.cs", "DemoGameBoard"), ("Protocol.cs", "DemoGameProtocol"),
-            ("web/index.html", "DemoGamePage"), ("web/game.js", "DemoGameScript"), ("web/base.css", "DemoStyle")),
+            ("web/index.html", "DemoGamePage"), ("web/game.js", "DemoGameScript"), ("web/base.css", "DemoStyle"),
+            (LambdaSource.ProductDoc, "DemoGameProduct"), (LambdaSource.DecisionsDoc, "DemoGameDecisions"),
+            (LambdaSource.TestingDoc, "DemoGameTesting"), (".lambda/tests/smoke.mjs", "DemoGameSmoke")),
 
         new("demo-files", "DemoFiles",
             ("Gallery.cs", "DemoFilesGallery"),
-            ("web/index.html", "DemoFilesPage"), ("web/app.js", "DemoFilesApp"), ("web/base.css", "DemoStyle")),
+            ("web/index.html", "DemoFilesPage"), ("web/app.js", "DemoFilesApp"), ("web/base.css", "DemoStyle"),
+            (LambdaSource.ProductDoc, "DemoFilesProduct"), (LambdaSource.DecisionsDoc, "DemoFilesDecisions"),
+            (LambdaSource.TestingDoc, "DemoFilesTesting"), (".lambda/tests/smoke.mjs", "DemoFilesSmoke")),
 
         new("demo-live", "DemoLive",
             ("Poll.cs", "DemoLivePoll"),
-            ("web/index.html", "DemoLivePage"), ("web/app.js", "DemoLiveApp"), ("web/base.css", "DemoStyle"))
+            ("web/index.html", "DemoLivePage"), ("web/app.js", "DemoLiveApp"), ("web/base.css", "DemoStyle"),
+            (LambdaSource.ProductDoc, "DemoLiveProduct"), (LambdaSource.DecisionsDoc, "DemoLiveDecisions"),
+            (LambdaSource.TestingDoc, "DemoLiveTesting"), (".lambda/tests/smoke.mjs", "DemoLiveSmoke"))
     ];
 
     #region Functionality

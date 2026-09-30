@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { absoluteAddress, isDomain, platformPath } from '../address';
@@ -24,6 +24,7 @@ import { useToast } from '../components/Toast';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
 import type { Busy, Control, FeatureControl, FeatureView, Rejection } from '../control/context';
+import { ContextTab } from '../control/ContextTab';
 import { DataTab } from '../control/DataTab';
 import { DeploymentsTab } from '../control/DeploymentsTab';
 import { DomainTab } from '../control/DomainTab';
@@ -52,39 +53,66 @@ interface Props {
 }
 
 type SectionId =
-  | 'overview' | 'change' | 'features' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs' | 'code' | 'showcase' | 'domain'
-  | 'history';
+  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs'
+  | 'showcase' | 'domain' | 'history';
+
+type GroupId = 'build' | 'program' | 'run' | 'sharing';
 
 /*
- * The showcase and the domain right after the overview: both are about how
- * people find the lambda, which is what an owner looks after first. Features
- * - drafts, to the owner - right after Change: both are where a change of
- * the lambda is made. Files and Data side by side, because they are the two
- * halves of what a lambda keeps - the program, which belongs to a version,
- * and what it keeps, which belongs to the lambda - and somebody looking for
- * one is best shown the other right beside it.
+ * The full view's sections, in groups, because fourteen of them in one list
+ * is a list nobody reads: the groups are what somebody scans for, and the
+ * section is found inside the one it belongs to. Every section stays one
+ * click away - folding some behind pills in others would have made the list
+ * shorter by making the log, which developers open all the time, further
+ * away.
+ *
+ * The overview and the documentation first, under no heading: how the
+ * lambda is doing, and what it is and why - where anybody starts, a stranger
+ * reading a demo included. Then where a change is made: Change and the
+ * drafts, the code, and the tests that say whether a change works. Then the
+ * program and what it keeps, side by side - the files of a version and the
+ * data of the lambda are the two halves of what a lambda holds, and
+ * somebody looking for one is best shown the other right beside it - with
+ * the versions they belong to. Then how it runs. Then how people find it:
+ * the showcase and the domain, set once and rarely looked at again.
  */
-const SECTIONS: SectionId[] = ['overview', 'showcase', 'domain', 'change', 'features', 'files', 'data', 'versions', 'deployments', 'stats', 'logs', 'code'];
+const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
+  { id: null, sections: ['overview', 'docs'] },
+  { id: 'build', sections: ['change', 'features', 'code', 'tests'] },
+  { id: 'program', sections: ['files', 'data', 'versions'] },
+  { id: 'run', sections: ['deployments', 'stats', 'logs'] },
+  { id: 'sharing', sections: ['showcase', 'domain'] },
+];
+
+const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
 
 /*
- * What a feature is worked on with. The rest - the showcase, the domain, the
- * figures, the deployments - belongs to the lambda, which the feature leaves
- * alone until it is put online.
+ * What a feature is worked on with: what it is, what is written about it,
+ * its code and its tests, its copy of the data and what its preview said.
+ * The rest - the showcase, the domain, the figures, the deployments -
+ * belongs to the lambda, which the feature leaves alone until it is put
+ * online.
  */
-const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
+const FEATURE_VIEWS: FeatureView[] = ['overview', 'docs', 'code', 'tests', 'data', 'logs'];
+
+/** The views something can be written and left unsaved in. */
+const WRITABLE = ['code', 'docs', 'tests'];
 
 /*
- * What the simple view keeps: the app, asking for a change, the drafts a
- * change can leave to be tried, what changed so far, what the app keeps, and
- * how people find it. Change straight after the overview, since asking for
- * one is what the simple view is for. Nothing that is about the code - its
+ * What the simple view keeps: the app, what it is for, asking for a change,
+ * the drafts a change can leave to be tried, what changed so far, what the
+ * app keeps, and how people find it. What it is for right after the
+ * overview, as in the full view - it is what the agent understood from what
+ * was asked, which is worth checking - and Change after that, since asking
+ * for one is what the simple view is for. Its tests are not there: they are
+ * the agent's to keep and to run. Nothing that is about the code - its
  * files, its deployments, its log - and not the figures either, which the
  * overview sums up in the two that matter. The versions are there, as the
  * history: the changes the app went through and a way back to any of them,
  * without the files to compare. The data is there once the app keeps any -
  * what it saved, and the keys it uses - and not while there is nothing in it.
  */
-const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'history', 'data', 'showcase', 'domain'];
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 'history', 'data', 'showcase', 'domain'];
 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
@@ -391,9 +419,14 @@ export function Editor({ theme }: Props) {
   // where the code being edited is: the lambda's, or the open feature's
   const coding = featureKey ? (featureView === 'code' ? `${base}/features/${featureKey}/code` : null) : section === 'code' ? `${base}/code` : null;
 
+  // where something can be left unsaved: the code, or a page of the documentation or the tests
+  const editing = featureKey
+    ? (WRITABLE.includes(featureView) ? `${base}/features/${featureKey}/${featureView}` : null)
+    : WRITABLE.includes(section) ? `${base}/${section}` : null;
+
   const go = useCallback(
     (to: string) => {
-      if (coding && dirty.current && !to.startsWith(coding) && !window.confirm(said.leave)) {
+      if (editing && dirty.current && !to.startsWith(editing) && !window.confirm(said.leave)) {
         return false;
       }
 
@@ -403,7 +436,7 @@ export function Editor({ theme }: Props) {
 
       return true;
     },
-    [coding, navigate, said],
+    [editing, navigate, said],
   );
 
   /*
@@ -519,8 +552,24 @@ export function Editor({ theme }: Props) {
     refresh,
     deploy,
     undeploy,
-    edit: (version) => go(open && version == null ? featurePath(open.key, 'code') : `${base}/code${version != null ? `?version=${version}` : ''}`),
+    edit: (version, file) => {
+      const query = new URLSearchParams();
+
+      if (version != null && !(open && version == null)) {
+        query.set('version', String(version));
+      }
+
+      if (file) {
+        query.set('file', file);
+      }
+
+      const search = query.toString() ? `?${query}` : '';
+
+      go(open && version == null ? `${featurePath(open.key, 'code')}${search}` : `${base}/code${search}`);
+    },
     browse: (version) => go(`${base}/files${version != null ? `?version=${version}` : ''}`),
+    openContext: (area, version) =>
+      go(open && version == null ? featurePath(open.key, area) : `${base}/${area}${version != null ? `?version=${version}` : ''}`),
     agent,
     openData: (kind, set) => go(`${featureKey && open ? featurePath(featureKey, 'data') : `${base}/data`}${kind ? `/${kind}` : ''}${set ? `?set=${encodeURIComponent(set)}` : ''}`),
     startFeature: (from, files) => setCreating({ base: from, files }),
@@ -590,6 +639,61 @@ export function Editor({ theme }: Props) {
   const problems = (summary?.recentProblems.length ?? 0) > 0;
 
   const code = coding != null;
+
+  /** One section in the sidebar, with what is worth noticing about it beside its name. */
+  const entry = (id: SectionId) => {
+    const to = id === 'overview' ? base : `${base}/${id}`;
+    const current = section === id;
+
+    return (
+      <Link
+        key={id}
+        to={to}
+        onClick={(event) => {
+          event.preventDefault();
+
+          // the section already open, asked for again, is asked for
+          // as it is now
+          if (current) {
+            refresh().catch(() => undefined);
+          } else {
+            go(to);
+          }
+        }}
+        aria-current={current ? 'page' : undefined}
+        className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm md:border-b-0 md:border-l-2 ${
+          current
+            ? 'border-accent-500 font-medium text-ink-900 dark:border-accent-400 dark:text-slate-100 md:bg-slate-100 md:dark:bg-ink-850'
+            : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+        }`}
+      >
+        {simple && id === 'docs' ? t.simple.about : said.sections[id]}
+        {id === 'versions' && versions.length > 0 && (
+          <span className="ml-auto text-xs tabular-nums text-slate-400">{versions.length}</span>
+        )}
+        {id === 'features' && (features?.length ?? 0) > 0 && (
+          <span className="ml-auto text-xs tabular-nums text-slate-400">{features!.length}</span>
+        )}
+        {id === 'logs' && problems && (
+          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
+        )}
+        {id === 'data' && missingSecrets.length > 0 && !demo && (
+          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.data.missingDot} />
+        )}
+        {id === 'change' && changing && (
+          <span className="ml-auto" title={said.changeRunning}>
+            <IconSpinner className="h-3.5 w-3.5 text-accent-500 dark:text-accent-400" />
+          </span>
+        )}
+        {id === 'change' && !changing && agent.unseen && (
+          <span
+            className={`ml-auto h-1.5 w-1.5 rounded-full ${change?.result?.ok ? 'bg-emerald-500' : 'bg-amber-500'}`}
+            title={said.changeEnded}
+          />
+        )}
+      </Link>
+    );
+  };
 
   /*
    * One centred column holding the sidebar and the section beside it, the
@@ -743,59 +847,30 @@ export function Editor({ theme }: Props) {
           )
         ) : (
         <nav aria-label={said.sectionsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-          {(simple ? SIMPLE_SECTIONS : SECTIONS).filter((id) => !absent(id)).map((id) => {
-            const to = id === 'overview' ? base : `${base}/${id}`;
-            const current = section === id;
+          {simple
+            ? SIMPLE_SECTIONS.filter((id) => !absent(id)).map(entry)
+            : GROUPS.map((group) => {
+                const shown = group.sections.filter((id) => !absent(id));
 
-            return (
-              <Link
-                key={id}
-                to={to}
-                onClick={(event) => {
-                  event.preventDefault();
+                if (shown.length === 0) {
+                  return null;
+                }
 
-                  // the section already open, asked for again, is asked for
-                  // as it is now
-                  if (current) {
-                    refresh().catch(() => undefined);
-                  } else {
-                    go(to);
-                  }
-                }}
-                aria-current={current ? 'page' : undefined}
-                className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm md:border-b-0 md:border-l-2 ${
-                  current
-                    ? 'border-accent-500 font-medium text-ink-900 dark:border-accent-400 dark:text-slate-100 md:bg-slate-100 md:dark:bg-ink-850'
-                    : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
-                }`}
-              >
-                {said.sections[id]}
-                {id === 'versions' && versions.length > 0 && (
-                  <span className="ml-auto text-xs tabular-nums text-slate-400">{versions.length}</span>
-                )}
-                {id === 'features' && (features?.length ?? 0) > 0 && (
-                  <span className="ml-auto text-xs tabular-nums text-slate-400">{features!.length}</span>
-                )}
-                {id === 'logs' && problems && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
-                )}
-                {id === 'data' && missingSecrets.length > 0 && !demo && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.data.missingDot} />
-                )}
-                {id === 'change' && changing && (
-                  <span className="ml-auto" title={said.changeRunning}>
-                    <IconSpinner className="h-3.5 w-3.5 text-accent-500 dark:text-accent-400" />
-                  </span>
-                )}
-                {id === 'change' && !changing && agent.unseen && (
-                  <span
-                    className={`ml-auto h-1.5 w-1.5 rounded-full ${change?.result?.ok ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                    title={said.changeEnded}
-                  />
-                )}
-              </Link>
-            );
-          })}
+                return (
+                  <Fragment key={group.id ?? 'top'}>
+                    {group.id && (
+                      <>
+                        {/* a row along the top on a phone: a rule between the groups rather than their names */}
+                        <span aria-hidden="true" className="my-2 w-px shrink-0 self-stretch bg-slate-200 dark:bg-ink-800 md:hidden" />
+                        <span className="hidden px-3 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wide text-slate-400 md:block">
+                          {said.groups[group.id]}
+                        </span>
+                      </>
+                    )}
+                    {shown.map(entry)}
+                  </Fragment>
+                );
+              })}
         </nav>
         )}
 
@@ -874,6 +949,8 @@ export function Editor({ theme }: Props) {
             <FeatureMissing onBack={() => go(`${base}/features`)} onVersions={() => go(`${base}/versions`)} />
           ) : featureView === 'code' ? (
             <Workbench key={open.key} control={control} onDirty={onDirty} />
+          ) : featureView === 'docs' || featureView === 'tests' ? (
+            <ContextTab key={`${open.key}-${featureView}`} control={control} area={featureView} onDirty={onDirty} />
           ) : featureView === 'data' ? (
             <DataTab key={open.key} control={control} kind={dataKind} onKind={(kind) => go(`${featurePath(open.key, 'data')}/${kind}`)} />
           ) : featureView === 'logs' ? (
@@ -883,6 +960,8 @@ export function Editor({ theme }: Props) {
           )
         ) : section === 'code' ? (
           <Workbench control={control} onDirty={onDirty} />
+        ) : section === 'docs' || section === 'tests' ? (
+          <ContextTab key={section} control={control} area={section} onDirty={onDirty} />
         ) : section === 'features' && !demo ? (
           <FeaturesTab control={control} />
         ) : section === 'change' && !demo ? (

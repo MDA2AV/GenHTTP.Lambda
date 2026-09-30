@@ -50,7 +50,9 @@ public static class LambdaArchive
     /// </summary>
     /// <remarks>
     /// Folders, hidden files and the metadata left by operating systems are
-    /// skipped. If everything sits in a single top level folder (as when a
+    /// skipped - except <c>.lambda/</c> at the root, which is the version's
+    /// documentation and tests rather than something an editor or a tool left
+    /// behind. If everything sits in a single top level folder (as when a
     /// folder is zipped rather than its contents), that folder is removed.
     /// Text stays text, anything else is carried as base64.
     /// </remarks>
@@ -85,7 +87,7 @@ public static class LambdaArchive
         {
             var name = entry.FullName.Replace('\\', '/');
 
-            if (name.EndsWith('/') || IsIgnored(name))
+            if (name.EndsWith('/') || IsLitter(name))
             {
                 continue;
             }
@@ -93,22 +95,31 @@ public static class LambdaArchive
             entries.Add((name, entry));
         }
 
-        var prefix = CommonFolder(entries.Select(e => e.Name).ToList());
+        // the wrapping folder is found among what is plainly the lambda's,
+        // so a hidden file beside it does not hide that it is there
+        var prefix = CommonFolder(entries.Select(e => e.Name).Where(n => !IsHidden(n)).ToList());
 
         var files = new List<LambdaFile>(entries.Count);
 
         long total = 0;
 
-        foreach (var (name, entry) in entries)
+        foreach (var (full, entry) in entries)
         {
+            var name = full.StartsWith(prefix, StringComparison.Ordinal) ? full[prefix.Length..] : full;
+
+            if (IsHidden(name))
+            {
+                continue;
+            }
+
             var bytes = await ReadAsync(entry, maxBytes - total);
 
             total += bytes.Length;
 
-            files.Add(ToFile(name[prefix.Length..], bytes));
+            files.Add(ToFile(name, bytes));
         }
 
-        return files.OrderBy(f => f.Name == LambdaSource.EntryName ? 0 : f.IsCode ? 1 : 2)
+        return files.OrderBy(f => f.Name == LambdaSource.EntryName ? 0 : f.IsCode ? 1 : f.IsAsset ? 2 : 3)
                     .ThenBy(f => f.Name, StringComparer.Ordinal)
                     .ToList();
     }
@@ -183,12 +194,35 @@ public static class LambdaArchive
         }
     }
 
-    private static bool IsIgnored(string name)
+    /// <summary>
+    /// What an operating system leaves in an archive, wherever it is.
+    /// </summary>
+    private static bool IsLitter(string name)
     {
         var segments = name.Split('/');
 
-        return segments.Any(s => s.StartsWith('.') || s == "__MACOSX")
-            || segments[^1] is "Thumbs.db" or "desktop.ini";
+        return segments.Contains("__MACOSX") || segments[^1] is "Thumbs.db" or "desktop.ini";
+    }
+
+    /// <summary>
+    /// Whether a file is hidden - a repository, an editor's settings - rather
+    /// than part of the lambda. The context at the root is not.
+    /// </summary>
+    private static bool IsHidden(string name)
+    {
+        var segments = name.Split('/');
+
+        var start = LambdaSource.IsContext(name) ? 1 : 0;
+
+        for (var i = start; i < segments.Length; i++)
+        {
+            if (segments[i].StartsWith('.'))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string CommonFolder(List<string> names)

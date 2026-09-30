@@ -336,6 +336,128 @@
   .chip {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium;
   }
+
+  /*
+   * A page of the documentation or the tests of a lambda. Set for reading
+   * rather than for scanning: a measure of about seventy characters, headings
+   * that divide rather than announce, and code in the face the editor uses.
+   */
+  .markdown {
+    @apply max-w-[46rem] break-words text-[15px] leading-relaxed text-slate-800 dark:text-slate-300;
+  }
+
+  .markdown > :first-child {
+    @apply mt-0;
+  }
+
+  .markdown :is(h1, h2, h3, h4) {
+    @apply scroll-mt-4 font-semibold tracking-tight text-ink-900 dark:text-slate-100;
+  }
+
+  .markdown h1 {
+    @apply mb-4 mt-8 text-2xl;
+  }
+
+  .markdown h2 {
+    @apply mb-3 mt-9 border-b border-slate-200 pb-1.5 text-lg dark:border-ink-800;
+  }
+
+  .markdown h3 {
+    @apply mb-2 mt-6 text-base;
+  }
+
+  .markdown h4 {
+    @apply mb-2 mt-5 text-[13px] uppercase tracking-wide text-slate-500;
+  }
+
+  .markdown p {
+    @apply my-3;
+  }
+
+  .markdown :is(ul, ol) {
+    @apply my-3 pl-6;
+  }
+
+  .markdown ul {
+    @apply list-disc;
+  }
+
+  .markdown ol {
+    @apply list-decimal;
+  }
+
+  .markdown li {
+    @apply my-1 marker:text-slate-400;
+  }
+
+  .markdown li > :is(ul, ol, p) {
+    @apply my-1;
+  }
+
+  .markdown li.task {
+    @apply -ml-5 list-none;
+  }
+
+  .markdown li.task input {
+    @apply mr-1.5 align-middle accent-accent-500;
+  }
+
+  .markdown a {
+    @apply text-accent-600 hover:underline dark:text-accent-400;
+  }
+
+  /* relative, and to nothing the editor can open: words with a hint of where they point */
+  .markdown a[data-nowhere] {
+    @apply cursor-help text-inherit underline decoration-slate-400 decoration-dotted underline-offset-2 dark:text-inherit;
+  }
+
+  .markdown strong {
+    @apply font-semibold text-ink-900 dark:text-slate-100;
+  }
+
+  .markdown :not(pre) > code {
+    @apply bg-slate-100 px-1 py-0.5 font-mono text-[0.86em] text-ink-900 dark:bg-ink-850 dark:text-slate-200;
+  }
+
+  .markdown pre {
+    @apply my-4 overflow-x-auto border border-slate-200 bg-slate-50 p-3 text-[12.5px] leading-5 dark:border-ink-800 dark:bg-ink-900;
+  }
+
+  .markdown pre code {
+    @apply font-mono;
+  }
+
+  .markdown blockquote {
+    @apply my-4 border-l-2 border-slate-300 pl-4 text-slate-600 dark:border-ink-700 dark:text-slate-400;
+  }
+
+  .markdown hr {
+    @apply my-8 border-slate-200 dark:border-ink-800;
+  }
+
+  .markdown .table {
+    @apply my-4 overflow-x-auto;
+  }
+
+  .markdown table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .markdown th {
+    @apply border-b border-slate-300 px-3 py-2 text-left font-semibold dark:border-ink-700;
+  }
+
+  .markdown td {
+    @apply border-b border-slate-200 px-3 py-2 align-top dark:border-ink-800;
+  }
+
+  .markdown img {
+    @apply my-4 max-w-full;
+  }
+
+  .markdown .missing {
+    @apply border border-dashed border-slate-300 px-1.5 text-sm text-slate-500 dark:border-ink-700;
+  }
 }
 
 /* the editor sits flush inside its frame */

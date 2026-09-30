@@ -1,0 +1,63 @@
+# Decisions
+
+## The routes are small functions
+
+`lambda.cs` wires everything with `Inline.Create()`: `register`, `login` and `logout` at the root, `api/me` and `api/members` below `api/`, and `Assets.App("web")` last, so the pages answer only what the routes did not. Five routes that each hand over to one method of `Accounts` need no webservice class; `demo-crud` shows that way for an API with more to it.
+
+## Signing in happens at the root of the lambda
+
+A cookie set without a path belongs to the folder of the address that set it. Set by `login`, the session covers the whole lambda, wherever it is mounted: below `/lambda/{key}/`, at a domain of its own, at the preview of a feature. Set by `auth/login`, it would only ever be sent back to `auth/`. A path of `/` is not the way out either: it would send the cookie to every other lambda on the same host.
+
+## The session is a cookie the browser keeps
+
+A successful registration or sign-in answers with the name and sets the cookie `session` - with `Result<T>.Cookie`, read back with `GetCookie`. It is:
+
+- **HttpOnly**, so no script can read it, and a script injected into a page cannot steal it.
+- **SameSite=Lax**, so another site cannot make the browser send it along with a form of its own.
+- **Secure** where the page came over HTTPS, so it never travels in the clear.
+- **Seven days** long (`Max-Age`), counted from the sign-in.
+
+The pages keep nothing: `session.js` calls the routes with relative paths and the browser sends the cookie by itself. A token in the page's storage was the alternative, and any script on the page could read it. Signing out forgets the session on the server and answers 204 with the cookie emptied and `Max-Age=0`, which tells the browser to drop it.
+
+## The Authentication module guards `api/`
+
+`ApiKeyAuthentication` with an extractor that reads the cookie rather than a header, and an authenticator that turns the token into a `Member` or null. Without a cookie it answers 401, with one it does not know 403, before any route runs. The routes ask for a `Member` parameter and `UserInjector<Member>` fills it in, so no route can forget to check. The pages take either as signed out: the members page sends the visitor back to the landing page, and shows any other failure as it is.
+
+## The pages are not what is protected
+
+`members.html` is a plain file anybody could download; what it shows comes from `api/`. The landing page asks `api/me` and moves a signed in visitor on, the members page asks too and sends a signed out one back. Hiding the file as well would protect nothing the API does not, and anything written into it is public.
+
+## Only hashes are stored
+
+- **Passwords**: a random 16-byte salt per account and PBKDF2 with SHA-256, 100,000 rounds, 32 bytes. Slow on purpose: a stolen file of hashes should take years to guess, not minutes. Compared with `FixedTimeEquals`, so how long the answer takes says nothing about how close a guess was.
+- **Sessions**: a random 32-byte token, of which only the SHA-256 hash is kept. A token is already long and random, so a fast hash is enough, and the file on disk cannot be used to sign in as anybody. Expired sessions are dropped when the lambda starts and whenever a session is opened.
+
+## The pepper is a secret, asked for every time
+
+`PASSWORD_PEPPER` is read in `lambda.cs` with `Secret.Exists` before `Secret.Read`, so the lambda runs while secrets are off or the value is not set, and the platform lists the name as optional. Where there is one, the password goes through HMAC-SHA256 keyed with it before PBKDF2. It lives in the lambda's secrets, not beside the hashes, so a copy of `accounts.json` on its own cannot even be guessed at.
+
+`Accounts` is handed a function rather than the value and asks it every time, so a value entered in the editor counts at once, without a deploy. The platform gives the demo a random value nobody knows; a copy starts without one.
+
+There is no changing it: an account hashed with one pepper is checked with the pepper there is now, so a replaced or removed value locks those accounts out until the old one is back.
+
+## Accounts written before the pepper still sign in
+
+`Peppered` was added to `Account` later, as an optional parameter defaulting to false, so a file without it still reads and its accounts count as made without a pepper. An account is checked the way it was made. That is the rule for the stored format: the data outlives every version, so a field added later is optional with a default, and a version put back online must still read what a newer one wrote.
+
+Left out: hashing such an account again, with the pepper, when it next signs in - the one moment its password is known. Until then it has the salt and the slow hash, not the pepper.
+
+## Accounts and sessions are two JSON files in the workspace
+
+`accounts.json` and `sessions.json`, read once when the lambda starts and written after every change; every request is answered from memory. A few hundred accounts need no database, and the workspace outlives every deployment, so a new version neither loses an account nor signs anybody out.
+
+- **One lock around every change and its write**, so two registrations at the same moment cannot both take a name or lose each other's write.
+- **At most 300 accounts**, the oldest forgotten first, because anybody can register on a demo. A lambda of your own would rather refuse than forget somebody.
+- **Only `lambda.cs` touches `Workspace` and `Secret`.** `Accounts` is handed a way to read and write its files and to read the pepper, so `Accounts.cs` does not care where they come from and can be copied into another lambda as it is.
+
+## Names are one account whatever their case
+
+Accounts are looked up ignoring case, so "Ann" and "ann" are one, kept as first registered - which is the name a sign-in answers with. A name is trimmed and has 2 to 24 letters (of any alphabet), digits, dashes, dots or underscores - no spaces, and no other punctuation. A password has 8 to 200 characters; the upper bound keeps what is hashed within reason.
+
+## One answer for an unknown name and a wrong password
+
+Both are refused with 401 and the same message, so the message does not tell who has an account. Registering has to say that a name is taken (409), and the members page shows the newest names; the rest of the input problems are 400, each with the reason, which the page shows beside the form.

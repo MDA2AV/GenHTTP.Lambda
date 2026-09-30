@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'İlk lambdanız',
     editor: 'Kontrol paneli',
     why: 'Nedenini yazmak',
+    written: 'Dokümantasyon ve testler',
     features: 'Güvenle değiştirmek',
     files: 'Birden fazla dosya',
     page: 'Sayfa sunmak',
@@ -83,7 +84,8 @@ export const guide: Messages['guide'] = {
     </>
   ),
   bits: [
-    ['Genel bakış', () => <>Yayında olup olmadığı, bugün kaç istek aldığı ve kaçının başarısız olduğu, son değişiklik ve ne kadar yer kaldığı.</>],
+    ['Genel bakış', () => <>Uygulamanın ne olduğu, yayında olup olmadığı, bugün kaç istek aldığı ve kaçının başarısız olduğu, son değişiklik ve ne kadar yer kaldığı.</>],
+    ['Dokümantasyon', () => <>Uygulamanın ne olduğu, kimin için ve neden var olduğu ve neden bu şekilde yapıldığı. Ajanlar yazar, her sürümle birlikte saklanır.</>],
     [
       'Değiştir',
       (k) => (
@@ -111,11 +113,14 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
+    ['Testler', () => <>Uygulamanın otomatik olarak nasıl test edildiği, bunun için gereken scriptler ve test verileriyle birlikte. Yalnızca tam görünümde.</>],
   ],
   sections: (k) => (
     <>
       Her bölüm aynı şekilde çalışır: başlığı, onu açıklayan bir {k.b('ⓘ')} simgesi, sağda eylemleri ve birden fazla
-      görünümü varsa altında bir sıra sekme. Kod bölümünde bu sekmeler dosyalardır.
+      görünümü varsa altında bir sıra sekme. Kod bölümünde bu sekmeler dosyalardır. Tam görünüm bölümleri gruplar
+      hâlinde toplar: değişikliğin yapıldığı yer, program ve verileri, nasıl çalıştığı ve insanların onu nasıl
+      bulduğu.
     </>
   ),
   editorAside:
@@ -141,6 +146,41 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  written: (k) => (
+    <>
+      Her sürüm, kendisi hakkında yazılanları programının yanında saklar: {k.b('dokümantasyonunu')} (uygulamanın ne
+      olduğu, kimin için ve neden var olduğu, neden bu şekilde yapıldığı) ve {k.b('testlerini')}: çalıştığının otomatik
+      olarak nasıl kontrol edileceği, bunun için gereken scriptler ve test verileriyle birlikte. Ajanlar bunları yeni bir
+      lambdayla birlikte yazar ve her değişiklikte günceller. Lambdayı değiştirecek bir sonraki ajan önce bunları okur;
+      böylece uygulamanın ne için olduğunu ve neyin çalışmaya devam etmesi gerektiğini bilir. Kod tek başına bunu
+      söylemez.
+    </>
+  ),
+  writtenFiles: [
+    ['.lambda/docs/product.md', 'uygulamanın ne olduğu, kimin için olduğu, insanların onunla ne yaptığı ve nedeni'],
+    ['.lambda/docs/decisions.md', 'teknik kararlar ve neden alındıkları'],
+    ['.lambda/tests/README.md', 'uygulamanın otomatik olarak nasıl test edildiği ve testlerin nasıl çalıştırılacağı'],
+    ['.lambda/tests/…', 'testlerin kullandığı scriptler ve test verileri'],
+  ],
+  written2: (k) => (
+    <>
+      Bunlar, {k.code('.lambda')} klasöründe duran ve sürümün diğer dosyaları gibi olan dosyalardır: geçmiş, bir sürümün
+      onlarda neyi değiştirdiğini gösterir; eski bir sürüme dönmek, o sürüm için geçerli olan dokümantasyonu geri
+      getirir; bir taslağın da kendine ait, onunla birlikte yayına giren bir kopyası vardır. Asla derlenmez ve asla
+      sunulmazlar; bir sürümün statik dosyaları için tanınan sınıra dahil edilirler.
+    </>
+  ),
+  written3: (k) => (
+    <>
+      Kontrol panelinde {k.b('Dokümantasyon')} okunacak sayfaları, {k.b('Testler')} ise uygulamanın nasıl test
+      edildiğini ve yanındaki dosyaları gösterir; sürüm, dosyalarında olduğu gibi seçilir. Bir sayfa orada da
+      düzenlenebilir; bu, bir sonraki sürümü kaydeder. Sade görünüm dokümantasyonu {k.b('Hakkında')} olarak adlandırır
+      ve yalnızca uygulamanın ne için olduğunu gösterir. Düzeltmek için ajana söyleyin.
+    </>
+  ),
+  writtenAside:
+    'Ajanla konuştuğunuz dilde, uygulamayı bir sonraki değiştirecek kişi için yazılırlar; bu bir insan da olabilir, bir ajan da. Kodun bir kopyası değildirler: uygulamanın ne için olduğunu ve nedenini anlatırlar.',
+
   features: (k) => (
     <>
       Bir sürüm, kaydedildikten sonra bir daha değişmez. Her birini saklamaya değer kılan da bu: herhangi biriyle
@@ -151,8 +191,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        {k.b('Taslaklar')} bölümünden ya da herhangi bir sürümden başlatın. Taslak, o sürümün kodunun ve statik
-        dosyalarının, bir de lambdanın verilerinin kopyasıdır.
+        {k.b('Sürümler')} altındaki herhangi bir sürümden başlatın ya da ajanın başlatmasına izin verin. Taslak, o sürümün
+        kodunun, statik dosyalarının, dokümantasyonunun ve testlerinin, bir de lambdanın verilerinin kopyasıdır.
       </>
     ),
     (k) => (
@@ -248,7 +288,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Bir sürümde',
   workspaceColumn: 'Verilerde',
   table: [
-    ['ne tutar', 'kod ve statik dosyalar: frontend dahil programın kendisi', 'lambdanın yazdığı ya da birinin yüklediği her şey'],
+    ['ne tutar', 'kod ve statik dosyalar: frontend dahil programın kendisi, bir de dokümantasyonu ve testleri', 'lambdanın yazdığı ya da birinin yüklediği her şey'],
     ['ne zaman değişir', 'hiçbir zaman: her değişiklik yeni bir sürümdür', 'içine bir şey yazıldığı anda'],
     ['yayına alma', 'tam olarak bu dosyaları yayına alır', 'ona hiç dokunmaz'],
     ['eski bir sürüme dönmek', 'eski dosyaları geri getirir', 'etkisi yok: her sürüm onu paylaşır'],
@@ -327,7 +367,8 @@ export const guide: Messages['guide'] = {
       tam yazdığınız gibi gelir. {k.code('Workspace')} ve {k.code('Assets')} programın yanında, ayrı bir{' '}
       {k.code('Platform')} klasöründe iki klasör olur ve aynı metotlarla çalışır. Yani kodunuzda hiçbir şeyi
       değiştirmeniz gerekmez.
-      {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır.
+      {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır. Dokümantasyon ve testler
+      de {k.code('docs')} ve {k.code('tests')} klasörlerinde gelir.
     </>
   ),
   awayAside:
@@ -345,7 +386,8 @@ export const guide: Messages['guide'] = {
       Ajan çalışırken nedenini de söyler ({k.code('write_code')} aracı spesifikasyonu ve değişikliği alır) ve yayına
       aldığı şeye bakabilir: {k.code('read_logs')} aracı lambdanın son isteklerini, yazdırdıklarını ve fırlattığı her
       hatanın stack trace’ini döndürür. Ajan, kodunun çalıştığını varsaymak yerine böyle öğrenir. Siz de aynı şeyi
-      kontrol panelinde izlersiniz.
+      kontrol panelinde izlersiniz. Ajan çalışırken dokümantasyonu ve testleri de yazar, bir şeyi değiştirmeden önce
+      onları okur ve bir taslağı yayına almadan önce testleri taslağın adresi üzerinde çalıştırır.
     </>
   ),
   more: 'Daha fazlası →',

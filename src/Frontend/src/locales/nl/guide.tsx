@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Je eerste lambda',
     editor: 'Het dashboard',
     why: 'Uitleggen waarom',
+    written: 'Documentatie en tests',
     features: 'Veilig aanpassen',
     files: 'Meer dan één bestand',
     page: 'Een pagina serveren',
@@ -83,7 +84,8 @@ export const guide: Messages['guide'] = {
     </>
   ),
   bits: [
-    ['Overzicht', () => <>Of hij online is, hoeveel requests hij vandaag had en hoeveel daarvan misgingen, de laatste wijziging, en hoeveel ruimte er nog over is.</>],
+    ['Overzicht', () => <>Wat de app is, of hij online is, hoeveel requests hij vandaag had en hoeveel daarvan misgingen, de laatste wijziging, en hoeveel ruimte er nog over is.</>],
+    ['Documentatie', () => <>Wat de app is, voor wie hij is en waarom, en waarom hij gebouwd is zoals hij is – geschreven door agents, bewaard bij elke versie.</>],
     [
       'Aanpassen',
       (k) => (
@@ -112,11 +114,14 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
+    ['Tests', () => <>Hoe de app automatisch getest wordt, met de scripts en testdata daarvoor. Alleen in de volledige weergave.</>],
   ],
   sections: (k) => (
     <>
       Elk onderdeel werkt hetzelfde: een titel, een {k.b('ⓘ')} met uitleg, acties rechts en, als er meer dan één
-      weergave is, een rij tabs eronder. Bij de code zijn de tabs de bestanden.
+      weergave is, een rij tabs eronder. Bij de code zijn de tabs de bestanden. De volledige weergave deelt de
+      onderdelen in groepen in: waar een wijziging gemaakt wordt, het programma en zijn data, hoe hij draait, en hoe
+      mensen hem vinden.
     </>
   ),
   editorAside:
@@ -143,6 +148,40 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  written: (k) => (
+    <>
+      Bij elke versie hoort, naast het programma, wat erover geschreven is: de {k.b('documentatie')} – wat de app is,
+      voor wie hij is en waarom, en waarom hij gebouwd is zoals hij is – en de {k.b('tests')}: hoe je automatisch
+      controleert dat hij werkt, met de scripts en testdata daarvoor. Agents schrijven ze bij een nieuwe lambda en
+      houden ze bij met elke wijziging. De volgende agent die de lambda aanpast, leest ze eerst, zodat hij weet waar
+      de app voor is en wat moet blijven werken – wat de code alleen niet vertelt.
+    </>
+  ),
+  writtenFiles: [
+    ['.lambda/docs/product.md', 'wat de app is, voor wie hij is, wat mensen ermee doen en waarom'],
+    ['.lambda/docs/decisions.md', 'de technische beslissingen, en waarom ze genomen zijn'],
+    ['.lambda/tests/README.md', 'hoe de app automatisch getest wordt, en hoe je de tests uitvoert'],
+    ['.lambda/tests/…', 'de scripts en testdata die de tests gebruiken'],
+  ],
+  written2: (k) => (
+    <>
+      Het zijn bestanden van de versie zoals alle andere, in de map {k.code('.lambda')}: de geschiedenis laat zien
+      wat een versie erin veranderde, terugzetten haalt de documentatie terug die voor die versie gold, en een concept
+      heeft een eigen kopie die met het concept mee online gaat. Ze worden nooit gecompileerd en nooit geserveerd, en
+      tellen mee voor de ruimte die de assets van een versie mogen innemen.
+    </>
+  ),
+  written3: (k) => (
+    <>
+      In het dashboard toont {k.b('Documentatie')} de pagina's om te lezen, en {k.b('Tests')} hoe de app getest wordt
+      en de bestanden ernaast; de versie kies je net als bij de bestanden. Je kunt een pagina daar ook bewerken; dat
+      slaat de volgende versie op. De eenvoudige weergave noemt de documentatie {k.b('Over de app')} en toont alleen
+      waar de app voor is – wil je dat verbeteren, zeg het dan tegen de agent.
+    </>
+  ),
+  writtenAside:
+    'Ze worden geschreven in de taal die je met de agent gebruikt, voor wie de app hierna aanpast – een mens of een agent. Geen kopie van de code: waar hij voor is, en waarom.',
+
   features: (k) => (
     <>
       Een versie verandert nooit meer als hij eenmaal is opgeslagen, en juist daardoor is elke versie het bewaren
@@ -153,8 +192,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Start het onder {k.b('Concepten')}, of vanuit een willekeurige versie. Het is een kopie van de code en assets
-        van die versie, en van de data van de lambda.
+        Start het onder {k.b('Concepten')}, of vanuit een willekeurige versie. Het is een kopie van de code, assets,
+        documentatie en tests van die versie, en van de data van de lambda.
       </>
     ),
     (k) => (
@@ -250,7 +289,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'In een versie',
   workspaceColumn: 'In de data',
   table: [
-    ['wat erin staat', 'de code en assets: het programma, frontend inbegrepen', 'alles wat de lambda wegschrijft of iemand uploadt'],
+    ['wat erin staat', 'de code en assets: het programma, frontend inbegrepen – en de documentatie en tests ervan', 'alles wat de lambda wegschrijft of iemand uploadt'],
     ['wanneer het verandert', 'nooit: een wijziging is een nieuwe versie', 'zodra er iets naar wordt geschreven'],
     ['een deploy', 'zet precies deze bestanden online', 'raakt het nooit aan'],
     ['terugzetten', 'haalt de oude bestanden terug', 'geen effect: elke versie deelt het'],
@@ -329,7 +368,8 @@ export const guide: Messages['guide'] = {
       bestanden komen precies mee zoals je ze schreef. {k.code('Workspace')} en {k.code('Assets')} worden twee mappen
       naast het programma, met dezelfde methodes, apart in een map {k.code('Platform')} - dus er hoeft niets in je code
       te veranderen.
-      {' '}{k.code('Secret')} leest daar omgevingsvariabelen met dezelfde naam; de waarden blijven hier.
+      {' '}{k.code('Secret')} leest daar omgevingsvariabelen met dezelfde naam; de waarden blijven hier. De
+      documentatie en de tests komen mee in {k.code('docs')} en {k.code('tests')}.
     </>
   ),
   awayAside:
@@ -346,7 +386,8 @@ export const guide: Messages['guide'] = {
       Onderweg legt hij uit waarom: {k.code('write_code')} krijgt de specificatie en de wijziging mee. En hij kan bekijken
       wat hij heeft gedeployd: {k.code('read_logs')} geeft de recente requests van de lambda, de output en de
       stacktrace van elke exception. Zo controleert een agent of zijn code werkt, in plaats van het aan te nemen.
-      Jij ziet hetzelfde in het dashboard.
+      Jij ziet hetzelfde in het dashboard. Hij schrijft de documentatie en de tests terwijl hij werkt, leest ze voordat
+      hij iets verandert, en voert de tests uit op het adres van een concept voordat hij het concept online zet.
     </>
   ),
   more: 'Meer daarover →',

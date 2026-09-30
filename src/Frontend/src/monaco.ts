@@ -11,6 +11,9 @@ import 'monaco-editor/esm/vs/basic-languages/html/html.contribution';
 import 'monaco-editor/esm/vs/basic-languages/css/css.contribution';
 import 'monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution';
 import 'monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution';
+// and what the documentation and the tests of a version are written in
+import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution';
+import 'monaco-editor/esm/vs/basic-languages/shell/shell.contribution';
 import { language as csharp } from 'monaco-editor/esm/vs/basic-languages/csharp/csharp';
 
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
@@ -34,7 +37,8 @@ const GRAMMARS: Record<string, string> = {
   json: 'json',
   svg: 'html',
   txt: 'plaintext',
-  md: 'plaintext',
+  md: 'markdown',
+  sh: 'shell',
 };
 
 export function languageFor(name: string): string {

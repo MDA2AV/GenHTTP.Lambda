@@ -77,6 +77,10 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                            .Reverse()
                            .ToList();
 
+        var measured = live?.Version ?? latest?.Version;
+
+        var files = await FilesOfAsync(privateKey, measured);
+
         return new LambdaSummaryResponse(
             LambdaDescription.Of(lambda),
             live == null ? null : VersionResource.Describe(live),
@@ -88,7 +92,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                                          (long)(now - current.Started).TotalSeconds),
             Summarize(traffic),
             [.. problems.Select(Describe)],
-            await MeasureAsync(privateKey, id, live?.Version ?? latest?.Version),
+            await MeasureAsync(privateKey, id, measured, files),
             new SummaryLimits(
                 options.MaxCodeLengthOf(tier),
                 options.MaxAssetBytesOf(tier),
@@ -97,7 +101,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                 (int)options.DeploymentLifetime.TotalHours,
                 (int)options.Retention.TotalDays,
                 options.MaxFeatures
-            )
+            ),
+            Document(files)
         );
     }
 
@@ -177,25 +182,50 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     }
 
     /// <summary>
-    /// What the lambda keeps: the files of a version, and its data beside it.
+    /// The files of the version the summary is about.
     /// </summary>
-    private async ValueTask<StorageSummary> MeasureAsync(string privateKey, long id, int? version)
+    private async ValueTask<IReadOnlyList<LambdaFile>> FilesOfAsync(string privateKey, int? version)
     {
-        IReadOnlyList<LambdaFile> files = [];
-
-        if (version is { } wanted)
+        if (version is not { } wanted)
         {
-            try
-            {
-                files = LambdaSource.Parse((await meta.GetVersionAsync(privateKey, wanted)).Code);
-            }
-            catch (LambdaException)
-            {
-                // a version whose code has gone missing is reported as empty
-                // rather than making the whole summary unavailable
-            }
+            return [];
         }
 
+        try
+        {
+            return LambdaSource.Parse((await meta.GetVersionAsync(privateKey, wanted)).Code);
+        }
+        catch (LambdaException)
+        {
+            // a version whose code has gone missing is reported as empty
+            // rather than making the whole summary unavailable
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// What the documentation of that version says the app is, and which of
+    /// its pages there are.
+    /// </summary>
+    private static DocumentationSummary Document(IReadOnlyList<LambdaFile> files)
+    {
+        var product = ContextPages.Read(files, LambdaSource.ProductDoc);
+
+        return new DocumentationSummary(
+            ContextPages.FirstParagraph(product),
+            !string.IsNullOrWhiteSpace(product),
+            !string.IsNullOrWhiteSpace(ContextPages.Read(files, LambdaSource.DecisionsDoc)),
+            !string.IsNullOrWhiteSpace(ContextPages.Read(files, LambdaSource.TestingDoc)),
+            files.Count(f => f.IsContext),
+            LambdaSource.ContextBytes(files)
+        );
+    }
+
+    /// <summary>
+    /// What the lambda keeps: the files of a version, and its data beside it.
+    /// </summary>
+    private async ValueTask<StorageSummary> MeasureAsync(string privateKey, long id, int? version, IReadOnlyList<LambdaFile> files)
+    {
         var code = files.Where(f => f.IsCode).ToList();
 
         var listing = await workspace.ListAsync(id);
@@ -206,7 +236,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             version,
             code.Count,
             LambdaSource.Length(files),
-            files.Count - code.Count,
+            files.Count(f => f.IsAsset),
             LambdaSource.AssetBytes(files),
             listing.Files.Count,
             listing.UsedBytes,

@@ -1,0 +1,103 @@
+// Checks the API of the task list from the outside.
+//
+//   node smoke.mjs <address>        the preview of a feature, or a copy of your own
+//
+// Adds a task of its own, reads, searches, changes and removes it, checks
+// what is refused and that the page and the API description are served - and
+// removes what it added, whatever happens. Ends with 1, naming what failed,
+// when something did not pass. Needs Node 18 or later and nothing else.
+
+const address = process.argv[2];
+
+if (!address) {
+  console.error('Usage: node smoke.mjs <address of the app>');
+  process.exit(2);
+}
+
+const base = address.endsWith('/') ? address : `${address}/`;
+
+const failures = [];
+
+function check(what, passed, detail = '') {
+  console.log(`${passed ? 'ok  ' : 'FAIL'} ${what}${passed || !detail ? '' : ` - ${detail}`}`);
+
+  if (!passed) {
+    failures.push(what);
+  }
+}
+
+/** Calls the app with a path relative to it, the way its own page does. */
+async function call(method, path, body) {
+  const response = await fetch(new URL(path, base), {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch { }
+
+  return { status: response.status, json, type: response.headers.get('content-type') ?? '' };
+}
+
+// unlike anything a person would call a task, so it cannot be mistaken for
+// one - and a single word, so searching for it needs nothing encoded
+const title = `smoketest-${Date.now()}`;
+
+let id = null;
+
+try {
+  const list = await call('GET', 'tasks/');
+  check('the list is served', list.status === 200 && Array.isArray(list.json), `status ${list.status}`);
+
+  const added = await call('POST', 'tasks/', { title, notes: 'added by the smoke test', done: false });
+  id = added.json?.id ?? null;
+  check('a task is added', added.status === 201 && typeof id === 'string', `status ${added.status}`);
+
+  if (id) {
+    const read = await call('GET', `tasks/${id}`);
+    check('it is read back', read.status === 200 && read.json?.title === title, `status ${read.status}`);
+
+    const found = await call('GET', `tasks/?search=${encodeURIComponent(title.toUpperCase())}`);
+    check('search finds it, whatever the case', found.status === 200 && found.json?.some((t) => t.id === id), `status ${found.status}`);
+
+    const changed = await call('PUT', `tasks/${id}`, { title: `${title} (done)`, notes: '', done: true });
+    check('it is changed', changed.status === 200 && changed.json?.done === true && changed.json?.title === `${title} (done)`,
+          `status ${changed.status}`);
+
+    const tasks = (await call('GET', 'tasks/')).json ?? [];
+    const firstDone = tasks.findIndex((t) => t.done);
+    check('open tasks come before done ones', firstDone < 0 || tasks.slice(firstDone).every((t) => t.done));
+  }
+
+  const unknown = await call('GET', 'tasks/there-is-no-such-task');
+  check('an unknown task is not found', unknown.status === 404, `status ${unknown.status}`);
+
+  const untitled = await call('POST', 'tasks/', { title: '   ', notes: '', done: false });
+  check('a task without a title is refused', untitled.status === 400, `status ${untitled.status}`);
+
+  const long = await call('POST', 'tasks/', { title: 'x'.repeat(121), notes: '', done: false });
+  check('a title of 121 characters is refused', long.status === 400, `status ${long.status}`);
+
+  const page = await call('GET', './');
+  check('the page is served', page.status === 200 && page.type.includes('text/html'), `status ${page.status}`);
+
+  const described = await call('GET', 'openapi.json');
+  check('the API is described', described.status === 200 && described.json?.paths != null, `status ${described.status}`);
+} catch (error) {
+  check(`${base} answers`, false, error.message);
+} finally {
+  if (id) {
+    const removed = await call('DELETE', `tasks/${id}`).catch(() => null);
+    check('it is removed', removed?.status === 204, `status ${removed?.status}`);
+
+    const gone = await call('GET', `tasks/${id}`).catch(() => null);
+    check('and gone afterwards', gone?.status === 404, `status ${gone?.status}`);
+  }
+}
+
+console.log(failures.length === 0 ? '\nAll passed.' : `\n${failures.length} failed.`);
+
+process.exit(failures.length === 0 ? 0 : 1);

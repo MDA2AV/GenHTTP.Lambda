@@ -82,14 +82,14 @@ path.
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key, its `view`), removes it |
 | `GET /lambdas/:privateKey/export`                     | the newest version as a runnable .NET 10 project with a Dockerfile (zip), see below |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
-| `GET /lambdas/:privateKey/versions/:version`          | reads one version                         |
+| `GET /lambdas/:privateKey/versions/:version`          | reads one version (`?folder=.lambda/` for its documentation and tests alone) |
 | `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
 | `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
 | `POST /lambdas/:privateKey/versions/changes`          | changes some files of the newest version, as a new one |
 | `GET /lambdas/:privateKey/deployment`                 | what is online, and until when            |
 | `POST /lambdas/:privateKey/deployment/start` / `stop` | puts a version online, takes it off       |
 | `GET /lambdas/:privateKey/deployment/history`         | every stretch it was online, and what ended it |
-| `GET /lambdas/:privateKey/summary`                    | the dashboard: state, traffic, problems, storage |
+| `GET /lambdas/:privateKey/summary`                    | the dashboard: state, traffic, problems, storage, what the documentation says |
 | `GET /lambdas/:privateKey/traffic`                    | requests by minute and quarter hour, statuses, paths |
 | `GET /lambdas/:privateKey/logs`                       | its own log, followed with `?since=`; no visitor addresses |
 | `GET /lambdas/:privateKey/agent`                      | the agent's change of it - under way, or the last one - and how many are left today |
@@ -103,7 +103,7 @@ path.
 | `GET / PUT /lambdas/:privateKey/files/:path/content`  | one file as it is, streamed, however large |
 | `PUT /lambdas/:privateKey/folders/:path`              | makes a folder                            |
 | `GET / POST /lambdas/:privateKey/features`            | lists the features, starts one (`name`, `specification`, `base`) |
-| `GET / PATCH / DELETE /lambdas/:privateKey/features/:feature` | one feature with its files; changes its name, notes or `base`; deletes it |
+| `GET / PATCH / DELETE /lambdas/:privateKey/features/:feature` | one feature with its files (`?folder=` as for a version); changes its name, notes or `base`; deletes it |
 | `PUT /lambdas/:privateKey/features/:feature/files`    | replaces its files (`?deploy=true` puts its preview online) |
 | `POST /lambdas/:privateKey/features/:feature/changes` | changes some of its files                 |
 | `GET / PUT /lambdas/:privateKey/features/:feature/zip`| its files as a zip; a zip put back into it |
@@ -150,7 +150,8 @@ opens an explanation of how each one is extended.
 A lambda keeps three kinds of things, and they live differently.
 
 A **version** is the program: every C# file and every asset, the front end
-included. A version never changes once it is saved, which is what makes every
+included - and, beside it in `.lambda/`, its documentation and its tests (see
+below). A version never changes once it is saved, which is what makes every
 one worth keeping - any of them can be compared with, and put back online
 exactly as it was. Saving files (`POST …/versions`, `write_code`) makes a new
 one.
@@ -206,11 +207,75 @@ feature behind the newest version is **out of date**, and the agent is offered
 to bring it up to date. The drafts have a section of their own, shown once
 there is one, and opened on one the editor becomes the draft's: the sidebar
 holds it, with the buttons that try it and put it online, and its views are
-its code, its test data and its preview's log. Showcase, domain, figures and
+its documentation, its code, its tests, its test data and its preview's log. Showcase, domain, figures and
 deployments stay with the lambda. A version offers to start a draft from it,
 the save dialog of the code offers to save what was typed as a new draft
 instead of a version, and a change the agent leaves as a draft can be tried
 and put online from the Change section.
+
+### Documentation and tests
+
+Every version keeps what is written about it beside its program, so that
+whoever changes it next - an agent, most of the time - starts from what the
+app is for and what has to keep working, which the code does not say:
+
+| File | What it holds |
+|---|---|
+| `.lambda/docs/product.md` | what the app is, who it is for, what people do with it and why - in the terms of whoever asked for it; its first paragraph is the app in a sentence or two |
+| `.lambda/docs/decisions.md` | the technical decisions, and why they were made |
+| `.lambda/docs/…` | more pages, and pictures the pages show |
+| `.lambda/tests/README.md` | how the app is tested automatically: what has to keep working, how each of it is checked, how to run the scripts |
+| `.lambda/tests/…` | the scripts and the test data they use |
+
+They are files of the version rather than fields in the database, because
+they describe that version of the program: saved, compared in the history,
+rolled back, copied into a feature and merged with it like any other file, in
+the zip and in the export, with no table and no migration. Rolling back brings
+back the documentation that was true of the version. A dot folder, because the
+root of a version is the root its assets are served from, where a leading dot
+means "not served" - and no asset has ever been allowed a name starting with
+one, so no version saved before could have meant anything else by it. The
+documentation and the tests are one kind of file, **context**
+(`LambdaSource.IsContext`), whichever of the two they are: never compiled,
+whatever they are called (a test in C# is not code), never served, and left out
+of what identifies a build, so a version that only changes them builds to the
+same assembly. Their names are held to `docs/` and `tests/` below `.lambda/`,
+with the rules of an asset but no extension needed; a page is text. They count
+towards the allowance of the assets, since every version carries its own copy
+of them as it does of its assets.
+
+A zip of a version or a feature holds them, which is how an agent working
+locally reads and writes them without further calls - `.lambda` is a hidden
+folder, so a zip is made of the folder's contents (`zip -r ../f.zip .`), not of
+`*`. The agents are told everywhere they decide something - the instructions,
+the tool descriptions, the answers and `platform_guide`
+(`documentationAndTests`) - to read them before changing a lambda, to write
+all three pages with a new lambda, to update what a change affects in the same
+save, and to run the tests against a feature's preview before merging it.
+`read_lambda` hands them over first and apart from the program's files, within
+a budget of their own, and every save, deployment and preview that leaves a
+page out says which. Every demo has all three and a script its tests run,
+checked by a test.
+
+In the editor they are two sections. **Documentation** is second in the
+sidebar, after the overview, in both views; **Tests** is in the full view only.
+Both are one component over their folder: the pages rendered to be read, each a
+pill, with the other files behind a **Files** pill, and the version picked as
+it is for its files. A page the version changed is marked, and shows the
+difference on request. On the newest version or in a draft a page can be
+edited, beside a preview of it; saved, it is the next version (a draft saves in
+place), put online with it when the newest version was online. The simple view
+calls the documentation **About** and shows the product page alone, with a way
+to have the agent correct it rather than to edit it. The overview of either
+view opens with the product page's first paragraph, and the full one says which
+of the three pages the version has.
+
+With fourteen sections, the full view's sidebar is in groups: the overview and
+the documentation on their own, then where a change is made (Change, the
+drafts, the code, the tests), the program and what it keeps (files, data,
+versions), how it runs (deployments, stats, logs), and how people find it
+(showcase, domain). On a phone the groups are a rule apart in the row of
+sections.
 
 ### Secrets
 
@@ -324,10 +389,10 @@ the brief inside the build container, never in a log line.
 
 Somebody who had an app built on `/build` wants it to do something else, not
 to look after code, files, versions and deployments. So the editor has two
-views. The **simple** one keeps the overview, Change, the drafts (once there
-are any), a history, the data (once the app keeps any, or its code waits for a
-secret), the showcase and the domain. Its overview is the app:
-whether it is online and where, errors visitors ran into with a button that
+views. The **simple** one keeps the overview, About (what the app is for),
+Change, the drafts (once there are any), a history, the data (once the app
+keeps any, or its code waits for a secret), the showcase and the domain. Its
+overview is the app: what it is for, whether it is online and where, errors visitors ran into with a button that
 asks the agent to fix them, the latest change, today's hits, and a button to
 ask for the next change. The history is every version as the change it made,
 with a way back to any of them - which is deploying an older version, said as
@@ -365,6 +430,7 @@ without this platform (`Services/Deployment/ProjectPacker.cs`):
 | `*.cs` | the other files, their code unchanged, the first letter of the name capitalized |
 | `Platform/` | what the platform provided: `Workspace` and `Assets` as folders, `Secret` reading environment variables of the same name (the values are never exported), the switch that turns what `Project` returns into a handler, and the imports every lambda gets as global usings |
 | `assets/` | the files the version ships, copied beside the program on build |
+| `docs/`, `tests/` | its documentation and its tests, from `.lambda/`; neither compiled nor copied into the container |
 | `Dockerfile` | builds and runs it; the workspace is `/app/workspace` |
 
 It references `GenHTTP.Full` - the internal engine, which runs wherever .NET
@@ -587,8 +653,9 @@ files change, so a renewal is picked up without a restart.
 
 ### Shipping assets
 
-A lambda is not only C#. Any file whose name does not end in `.cs` is an asset:
-it is served as it is, never compiled, and costs none of the code budget.
+A lambda is not only C#. Any file whose name does not end in `.cs` is an asset,
+unless it is in `.lambda/`, which holds the documentation and the tests: it is
+served as it is, never compiled, and costs none of the code budget.
 
 ```
 lambda.cs      the snippet
@@ -771,7 +838,12 @@ to its diff in the control center, and `read_lambda` hands the recent history
 back so the next agent can read why before it changes anything. `read_logs`
 lets an agent see how what it deployed is answering, stack traces included.
 
-`read_lambda` sends every file of a version while together they come to 30,000
+Every version keeps its documentation and tests in `.lambda/` (see
+[Documentation and tests](#documentation-and-tests)), and the agents are the
+ones who write them: `read_lambda` hands them over first, and every save that
+leaves a page out says which.
+
+`read_lambda` sends every file of the program while together they come to 30,000
 characters, and names them with their lengths beyond that; `file` then fetches
 one in full, up to a megabyte, and anything larger is left to the zip of the
 version - a hundred megabytes of base64 is nothing an agent can read. It also

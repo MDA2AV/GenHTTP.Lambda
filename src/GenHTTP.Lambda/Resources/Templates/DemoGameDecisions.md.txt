@@ -1,0 +1,58 @@
+# Decisions
+
+## The server decides, the browser draws
+
+Every board is kept on the server. The page sends only which cell was clicked and draws the board it is sent back; it never decides anything. `Board.Play` accepts a move only when the game is not over, it is that side's turn, and the cell is between 0 and 8 and free - anything can be sent down a socket, so a changed page or a hand-written client must not be able to cheat. A refused move is not answered: the board stays as it was, and the player sees nothing change.
+
+## Rules, sockets and messages each have a file
+
+`Board.cs` holds the rules and the house's moves and knows nothing about sockets, so the part that decides who won reads on its own. `Lobby.cs` talks to the sockets, pairs players and runs the games. `Protocol.cs` has every message in both directions. `lambda.cs` wires them together and is the only file that touches `Workspace`: the lobby is handed a function to call when a game ends, and does not care where the count is kept.
+
+## A websocket, because both sides talk
+
+The browser sends moves, the server sends boards to both players the moment one moves. A websocket carries both directions on one connection; server-sent events would need a second channel for the moves, and polling would make the other player wait. `demo-live` shows server-sent events, for when the browser only listens.
+
+`Websocket.Reactive().Handler(lobby)` serves it at `play`: one `Lobby`, an `IReactiveHandler`, is called with `OnConnected`, `OnMessage` and `OnClose` for every socket, and keeps who is waiting, who plays whom and each game's board.
+
+## The messages are records with a type
+
+`Protocol.cs` has one record per message, and the comment at its top lists them all. `ReadPayloadAsync<T>` and `WritePayloadAsync` turn them into JSON and back, in camel case like the REST API, leaving out what is null. Every message has a `type`, so either side knows what it got.
+
+- **Browser to server**: `{ "type": "move", "cell": 4 }` to play a cell, numbered 0 to 8 from left to right and top to bottom; `{ "type": "house" }` to stop waiting and play the house; `{ "type": "again" }` to find the next game.
+- **Server to browser**: `{ "type": "waiting" }` while there is nobody to play; `{ "type": "left" }` when the opponent went away; and after every move the board, to both players, each with their own `you` and `opponent`:
+
+```json
+{ "type": "board", "you": "X", "cells": "XXXOO....", "turn": "O", "opponent": "a player", "winner": "X", "line": [0, 1, 2] }
+```
+
+`cells` is the board as nine characters, `turn` whose move it is, `winner` is `"X"`, `"O"` or `"draw"` once the game is over, and `line` the three cells that won. While the game is on, `winner` and `line` are left out.
+
+A frame that cannot be read as a message is ignored rather than dropping the player.
+
+## One lock for the lobby, one write at a time per socket
+
+The callbacks of different sockets run at the same time, so everything the lobby shares - who is waiting, the players, the boards - is changed under one lock. Two writes to the same socket at once corrupt it, so every player has a semaphore that `Send` holds while it writes. The writing happens outside the lock: a slow browser must not hold up every other game while its frame is on its way.
+
+## Matching is first come, first served
+
+At most one player waits. The next to connect is matched with them, the one who waited as X, who starts. A player who waits can ask for the house instead, and after a game `again` puts them back into the lobby - in the middle of a game it does nothing. When a player leaves a game before its end, the other is sent `left` and is matched again only when they ask. A socket that is dropped without being closed counts as leaving too.
+
+## The house moves under the same lock as the move it answers
+
+`Board.HouseMove` wins if it can, blocks if it must, and otherwise takes the centre, a random corner or a random edge. It plays right after the player's move, under the same lock, so the board that is sent back already has its answer and nothing can happen in between. It does not look further ahead than one move, so a player who makes two threats at once beats it: good enough to lose to sometimes, which is the point.
+
+## Games are kept in memory, the count in the workspace
+
+A game lasts a minute and belongs to two open connections, so it is not saved: when a connection is lost, so is the game, and a restart ends every game in progress. How the games ended is kept in `stats.json` in the workspace, which outlives every deployment, so a new version does not reset it. `lambda.cs` reads it once when the lambda starts and writes it, under a lock, whenever a game ends; `GET api/stats` answers from memory.
+
+- **Each game is counted once**, when its last board is sent (`Game.Counted` makes sure of it), and a game that was left before its end is not counted at all.
+- **The file stays readable across versions.** It holds `Stats` in the shape the API answers with. A field added to it has to be optional with a default, so a file written by an older version still reads, and a version put back online still reads what a newer one wrote.
+
+## The page is part of the program
+
+`web/` is shipped with the code and served by `Assets.App("web")`, added last so it answers only what `play` and `api` did not. The page builds the socket's address from its own - `play` relative to the page, with the scheme swapped to `ws:` or `wss:` - so it works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike. When the socket closes it connects again after two seconds, and when a connection hangs without opening it says after five that something in between may not pass websockets on.
+
+## What was left out
+
+- **Rooms, invitations and names.** Matching whoever waits needs none of them, and keeps who is waiting to a single field.
+- **Coming back to a game.** A new socket is a new player: telling that somebody returned would need an identity the app does not have.

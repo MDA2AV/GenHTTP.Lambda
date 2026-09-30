@@ -65,12 +65,13 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// <summary>
     /// Reads a feature with its files.
     /// </summary>
+    /// <param name="folder">Only the files below this folder - <c>.lambda/</c> for its documentation and tests - rather than every one</param>
     [ResourceMethod("lambdas/:privateKey/features/:feature")]
-    public async ValueTask<FeatureContentResponse> Get(string privateKey, string feature)
+    public async ValueTask<FeatureContentResponse> Get(string privateKey, string feature, string? folder)
     {
         var found = await features.GetAsync(privateKey, feature);
 
-        return new FeatureContentResponse(Describe(found.Feature), LambdaSource.Parse(found.Code));
+        return new FeatureContentResponse(Describe(found.Feature), VersionResource.Below(LambdaSource.Parse(found.Code), VersionResource.Decode(folder)));
     }
 
     /// <summary>

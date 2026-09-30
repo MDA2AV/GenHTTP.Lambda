@@ -1,0 +1,37 @@
+# Uploads
+
+A shared gallery: anybody who opens it can put up a picture or a document, everybody sees it, and whoever put a file up can take it down again. Pictures, PDFs and text files of up to 512 KB are accepted.
+
+<!-- [demo] -->
+This is one of the demos of GenHTTP Lambda, kept online and read only. To build on it, create a lambda of your own from it - a copy is yours to change.
+
+<!-- [/demo] -->
+## Who it is for
+
+Anybody who wants to pass pictures or documents around a group without accounts or a file-sharing service - the photos of an evening, screenshots for a discussion, the handout of a meeting. And developers who want to see how an app takes in uploads and serves them back, as a start for avatars, attachments or a file drop of their own.
+
+## What people do with it
+
+- **Upload a file** by dropping it on the page or choosing it: a PNG, JPEG, GIF or WebP picture, a PDF, or a text file.
+- **Look through the gallery.** Pictures show as small previews, other files by their type, with the name and size underneath; a click opens the file in a new tab.
+- **Remove their own uploads.** The browser that put a file up remembers that it may take it down, and shows a Remove button on it.
+- **Use the API directly** to upload from a script or another app - the requests are listed with the tests.
+
+## Features, and why they are there
+
+- **The gallery survives every new version.** The files and the list of them are kept as the app's data, not in the program, so putting a change online never loses what people uploaded.
+- **Only pictures, PDFs and text files.** A web page or a drawing with a script in it, put up by a stranger and opened from the app's address, would run as if the app itself had sent it. A short list of types that cannot do that keeps it out.
+- **A file opens as what its name says it is.** The browser is told the type of each file and not to guess another one, so a text file that contains the markup of a page shows as text.
+- **The name somebody gave a file is only shown.** The app keeps each file under a name it makes up. What the uploader called it is displayed, without any folders in front and cut to 80 characters, and never decides where the file is kept or how it is served.
+- **Only the uploader can remove a file.** Uploading answers with a key that only the uploader's browser keeps, and removing needs it. There are no accounts, so that browser is what tells the uploader apart from everybody else.
+- **Limits.** A file can be 512 KB at most, and the gallery keeps the newest 24 files, the oldest going first. Anybody can upload, so it must not grow without end.
+- **Clear refusals.** A file of a type that is not accepted, an empty one or one that is too large is refused with a message that says why, and the page shows it under the place to drop files.
+
+## What it does not do
+
+- No accounts: everybody sees every upload, and a file can only be removed from the browser that put it up - once that browser's data is cleared, the file stays until newer uploads push it out. `demo-registration` shows how to add accounts.
+- Nothing is private: every upload is listed, and anybody can open it.
+- No captions, folders, renaming or replacing: to change a file, remove it and upload it again.
+- No check of what is inside a file: it is accepted by the ending of its name. A file whose name ends in .png but that is not a picture is kept all the same, and shows as broken.
+- No resizing: the gallery shows pictures as they were uploaded, scaled down by the browser.
+- No live updates: somebody else's upload shows after a reload. `demo-live` shows how to send changes to every browser as they happen.

@@ -1,0 +1,40 @@
+# How it is tested
+
+`smoke.mjs` checks the app from the outside, the way a browser uses it. It registers an account of its own, reads what only a member may read with the session cookie it was given, signs in again and signs out, checks what is refused - no session, a session the app does not know, a name that is taken, a wrong password, names and passwords that are not allowed - and that the pages are served. It ends the sessions it opened, whatever happens.
+
+```
+node .lambda/tests/smoke.mjs <address>
+```
+
+The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. It needs Node 18 or later and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not.
+
+The account it registers stays: the app has no way to remove one. Its name is `smoketest-` and the time of the run, so it cannot be mistaken for a person's. Against the preview of a feature that costs nothing, since a feature has a copy of the data and putting it online throws the copy away.
+
+What happens in the browser - the landing page moving a signed in visitor on, the members page sending a signed out one back - is not covered; it follows from the answers of `api/me`, which are.
+
+## What has to keep working
+
+| Behaviour | Request | Expected |
+|---|---|---|
+| The landing page | `GET ./` | 200, HTML |
+| The members page is a plain file | `GET members.html` | 200, HTML - to anybody |
+| No session | `GET api/me`, `GET api/members` without the cookie | 401 |
+| A session the app does not know | `GET api/me` with `Cookie: session=…` made up | 403 |
+| An account is registered | `POST register` with `{ "name": "…", "password": "…" }` | 200, `{ "name": … }` and nothing else; the token only in `Set-Cookie: session=…` |
+| The cookie | the `Set-Cookie` of registering or signing in | `HttpOnly`, `SameSite=Lax`, `Max-Age=604800`, no `Path`; `Secure` over HTTPS |
+| Who you are | `GET api/me` with the cookie | 200, `name`, `joined` and `members`, the number of accounts |
+| The newest members | `GET api/members` with the cookie | 200, at most 10 of `{ name, joined }`, the newest first, nothing about passwords |
+| A name that is taken | `POST register` with the same name in another case | 409, "That name is taken." |
+| A wrong password | `POST login` with a password that does not match | 401, "That name and password do not go together.", no cookie |
+| A name without an account | `POST login` with it | 401, the very same message |
+| Signing in | `POST login` with the name in any case | 200, the name as registered, a new cookie; earlier sessions keep working |
+| Signing out | `POST logout` with the cookie | 204, `Set-Cookie: session=` with `Max-Age=0`; the session is refused with 403 afterwards, the others are not |
+| Names and passwords that are not allowed | `POST register` with a name of 1 or 25 characters, a name with a space, a password of 7 characters | 400, with the reason |
+
+## Test data
+
+`accounts.json` is twelve accounts in the format the app keeps, for trying the members page with a full list: a name with a letter outside English, one as long as a name may be, and names with dots, dashes and underscores. Every one of them signs in with the password `test-password`.
+
+They are written the way the app wrote accounts before it knew about the pepper - without `peppered` - so signing in with one also checks that accounts from an older version still work, whether the app has a `PASSWORD_PEPPER` or not.
+
+Put it into the data of a feature - `upload_file` with the feature, the path `accounts.json` and the content of `.lambda/tests/accounts.json` - then deploy the feature's preview again, since the app reads its files when it starts. Do not register in between: the app writes the accounts it holds over the file whenever somebody does. Never put it into the data of the app itself - anybody who has read this can sign in with these accounts.

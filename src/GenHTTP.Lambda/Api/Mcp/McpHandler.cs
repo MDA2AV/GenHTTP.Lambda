@@ -216,6 +216,14 @@ public sealed class McpHandler : IHandler
                 "data, which its merge throws away. User data goes in the workspace, never in assets; the front",
                 "end goes in assets, never in the workspace.",
                 "",
+                "Every version also keeps what is written about it, in .lambda/ beside the program - never",
+                "compiled, never served: docs/product.md (what the app is, who it is for, why it exists and what",
+                "people do with it, in the user's terms), docs/decisions.md (the technical decisions and why) and",
+                "tests/README.md (how to test it automatically), with the scripts and data the tests use in",
+                "tests/. Read them before you change a lambda. Write them with a new lambda, and update what a",
+                "change affects in the same save - in a feature they are merged with the code. Run the tests",
+                "against the feature's preview before you merge it.",
+                "",
                 "API keys, passwords and tokens are secrets, never code: read them with Secret.Read(\"NAME\").",
                 "Switch secrets on with enable_data, and let the user set the values under Data > Secrets in the",
                 "editor - read_lambda and list_secrets list the names the code reads that have no value yet.",
@@ -238,8 +246,9 @@ public sealed class McpHandler : IHandler
                 "",
                 "If you can make HTTP requests, prefer the REST API at https://genhttp.dev/api/v1/openapi.json:",
                 "same functionality, fewer tokens, since files are sent directly. A feature can be downloaded",
-                "and put back as a zip, so you can edit locally and push as often as it takes. Many environments",
-                "cannot reach it; then use these tools."
+                "and put back as a zip, so you can edit locally and push as often as it takes - the zip holds",
+                ".lambda/ too, so zip the folder's contents with it ('zip -r ../f.zip .', not '*'). Many",
+                "environments cannot reach it; then use these tools."
             ])
         };
     }

@@ -22,7 +22,7 @@ These, and nothing else:
 | `platform_guide` | how lambdas work here - read it first when building |
 | `list_demos` | finished lambdas to read before writing - their keys are public and read only, so `read_lambda` opens them |
 | `create_lambda` | claims an address and a private key - building only, with `view: "Simple"` |
-| `read_lambda` | the status, the recent history, the open features and the files of a lambda - read it first when changing |
+| `read_lambda` | the status, what is written about it, the recent history, the open features and the files of a lambda - read it first when changing |
 | `write_code` | replaces every file with a new version, with a `specification` and a `change` note saying why - with `feature`, in that feature instead |
 | `change_code` | changes only the files it names, or a passage within one, and keeps the rest - with `feature`, in that feature instead |
 | `create_feature` | starts a feature: a copy of the newest version and of the data, with a preview address of its own - changing only |
@@ -131,6 +131,21 @@ application can do without it - and switch secrets on with `enable_data`. You
 cannot set the value and must not make one up: the owner enters it in their
 control center, which asks them for every name the code reads that has no
 value. Say in one line which one they need to enter and where to get it.
+
+## What is written about it
+
+Every version keeps, beside its code and assets, what is written about it in
+`.lambda/`: `docs/product.md` - what the application is, who it is for and
+why, in the terms of the person who asked for it; `docs/decisions.md` - how
+it is built and why; and `tests/README.md` - how to check that it works.
+They are files like any other, saved with `write_code` and `change_code`,
+and never compiled or served. The owner reads `product.md` in their control
+center, so write it for them, in the language of their request.
+
+Write all three when you build something. When you change something, read
+them first - they say what has to keep working - and keep them true in the
+same feature: a page that describes what the application no longer does
+misleads the next change more than no page at all.
 
 ## Link with relative paths
 

@@ -26,7 +26,8 @@ public record Entry(Upload Upload, string KeyHash);
 
 public sealed class Gallery(Storage storage)
 {
-    // under the workspace's limit of 1 MB a file, and small enough for a demo
+    // the workspace limits only the room all files take together, so each
+    // upload is held small enough that the gallery stays at 12 MB at most
     private const int MaxBytes = 512 * 1024;
 
     // anybody can upload to a demo, so it keeps the newest ones only

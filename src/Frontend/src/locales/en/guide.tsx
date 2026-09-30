@@ -15,6 +15,7 @@ export const guide = {
     first: 'Your first one',
     editor: 'The control center',
     why: 'Saying why',
+    written: 'Documentation and tests',
     features: 'Changing it safely',
     files: 'More than one file',
     page: 'Serving a page',
@@ -87,7 +88,8 @@ export const guide = {
     </>
   )) as Text,
   bits: [
-    ['Overview', () => <>Whether it is online, how many requests it had today and how many failed, the latest change, and how much room is left.</>],
+    ['Overview', () => <>What the app is, whether it is online, how many requests it had today and how many failed, the latest change, and how much room is left.</>],
+    ['Documentation', () => <>What the app is, who it is for and why, and why it is built the way it is - written by agents, kept with each version.</>],
     [
       'Change',
       (k) => (
@@ -115,11 +117,14 @@ export const guide = {
         </>
       ),
     ],
+    ['Tests', () => <>How the app is tested automatically, with the scripts and test data for it. In the full view only.</>],
   ] as [string, Text][],
   sections: ((k) => (
     <>
       Every section works the same way: its title, an {k.b('ⓘ')} that explains it, its actions on the right, and -
-      where it has more than one view - a row of pills underneath. The pills of the code are its files.
+      where it has more than one view - a row of pills underneath. The pills of the code are its files. The full
+      view gathers the sections in groups: where a change is made, the program and its data, how it runs, and how
+      people find it.
     </>
   )) as Text,
   editorAside:
@@ -145,6 +150,40 @@ export const guide = {
     </>
   )) as Text,
 
+  written: ((k) => (
+    <>
+      Every version keeps what is written about it beside its program: its {k.b('documentation')} - what the app is,
+      who it is for and why, and why it is built the way it is - and its {k.b('tests')}: how to check automatically
+      that it works, with the scripts and test data for it. Agents write them with a new lambda and keep them up to
+      date with every change. The next agent to change the lambda reads them first, so it knows what the app is for
+      and what has to keep working - which the code alone does not say.
+    </>
+  )) as Text,
+  writtenFiles: [
+    ['.lambda/docs/product.md', 'what the app is, who it is for, what people do with it and why'],
+    ['.lambda/docs/decisions.md', 'the technical decisions, and why they were made'],
+    ['.lambda/tests/README.md', 'how the app is tested automatically, and how to run the tests'],
+    ['.lambda/tests/…', 'the scripts and test data the tests use'],
+  ] as [string, string][],
+  written2: ((k) => (
+    <>
+      They are files of the version like any other, in the folder {k.code('.lambda')}: the history shows what a
+      version changed in them, rolling back brings back the documentation that was true of that version, and a draft
+      has a copy of its own that goes online with it. They are never compiled and never served, and count towards
+      what the assets of a version may come to.
+    </>
+  )) as Text,
+  written3: ((k) => (
+    <>
+      In the control center, {k.b('Documentation')} shows the pages to read, and {k.b('Tests')} how the app is tested
+      and the files beside it; the version is picked as it is for its files. A page can be edited there too, which
+      saves the next version. The simple view calls the documentation {k.b('About')} and shows only what the app is
+      for - to correct it, tell the agent.
+    </>
+  )) as Text,
+  writtenAside:
+    'They are written in the language you use with the agent, for whoever changes the app next - a person or an agent. Not a copy of the code: what it is for, and why.',
+
   features: ((k) => (
     <>
       A version never changes once it is saved - which is what makes every one worth keeping: any of them can be
@@ -156,7 +195,7 @@ export const guide = {
     (k) => (
       <>
         Start it from any version under {k.b('Versions')}, or let the agent start one. It is a copy of that version's
-        code and assets, and of the lambda's data.
+        code, assets, documentation and tests, and of the lambda's data.
       </>
     ),
     (k) => (
@@ -250,7 +289,7 @@ export const guide = {
   savedWithCode: 'In a version',
   workspaceColumn: 'In the data',
   table: [
-    ['what it holds', 'the code and assets: the program, front end included', 'whatever the lambda writes, or somebody uploads'],
+    ['what it holds', 'the code and assets: the program, front end included - and its documentation and tests', 'whatever the lambda writes, or somebody uploads'],
     ['when it changes', 'never - a change is a new version', 'the moment something is written to it'],
     ['a deploy', 'puts exactly these files online', 'never touches it'],
     ['rolling back', 'brings the old files back', 'no effect: every version shares it'],
@@ -329,7 +368,8 @@ export const guide = {
       come across exactly as you wrote them. {k.code('Workspace')} and {k.code('Assets')} become two folders beside
       the program, with the same methods, kept apart in a {k.code('Platform')} folder - so nothing in your code has to
       change.
-      {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here.
+      {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here. The
+      documentation and the tests come along in {k.code('docs')} and {k.code('tests')}.
     </>
   )) as Text,
   awayAside:
@@ -346,7 +386,8 @@ export const guide = {
       It says why as it goes - {k.code('write_code')} takes the specification and the change - and it can look at
       what it deployed: {k.code('read_logs')} answers with the lambda's recent requests, what it printed and the
       stack trace of anything it threw, which is how an agent finds out its code works rather than assuming it. You
-      watch the same thing in the control center.
+      watch the same thing in the control center. It writes the documentation and the tests as it goes, reads them
+      before it changes anything, and runs the tests against a draft's address before it puts the draft online.
     </>
   )) as Text,
   more: 'More about that →',

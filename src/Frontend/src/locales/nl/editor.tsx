@@ -62,6 +62,8 @@ export const editor: EditorMessages = {
     title: 'Editor',
     sections: {
       overview: 'Overzicht',
+      docs: 'Documentatie',
+      tests: 'Tests',
       change: 'Aanpassen',
       features: 'Concepten',
       showcase: 'Showcase',
@@ -76,12 +78,18 @@ export const editor: EditorMessages = {
       code: 'Code',
     },
     sectionsLabel: 'Onderdelen',
+    groups: {
+      build: 'Bouwen',
+      program: 'Programma en data',
+      run: 'Draaien',
+      sharing: 'Delen',
+    },
     loadFailed: 'Deze lambda kon niet worden geladen.',
     online: (version) => `Versie ${version} staat online.`,
     deployFailed: 'De lambda kon niet worden gedeployd.',
     offline: 'Offline gehaald. De code staat er nog.',
     offlineFailed: 'De lambda kon niet offline worden gehaald.',
-    leave: 'Je niet-opgeslagen wijzigingen in de code gaan verloren. Toch weggaan?',
+    leave: 'Je niet-opgeslagen wijzigingen gaan verloren. Toch weggaan?',
     nothingTitle: 'Deze link opent niets',
     createNew: 'Nieuwe lambda aanmaken',
     loading: 'Je lambda laden…',
@@ -136,11 +144,13 @@ export const editor: EditorMessages = {
     simple: 'Eenvoudig',
     full: 'Volledig',
     simpleTitle: 'Uw app, hoe het ermee staat en een veld om wijzigingen te vragen',
-    fullTitle: 'Alle onderdelen: de code, de bestanden, de gegevens, de versies en de logs',
+    fullTitle: 'Alle onderdelen: de code, de documentatie, de tests, de bestanden, de gegevens, de versies en de logs',
     simpleNote: 'Uw app en een veld om wijzigingen te vragen.',
     fullNote: 'Alle onderdelen, inclusief de code.',
     toFull: 'Alle onderdelen tonen',
     toSimple: 'Naar de eenvoudige weergave',
+    about: 'Over de app',
+    aboutMore: 'Meer over je app',
     outsideTitle: 'Dit hoort bij de volledige weergave',
     outsideText: 'De eenvoudige weergave laat de code, de bestanden en de geschiedenis weg. Toon alle onderdelen om er hier mee te werken.',
     back: 'Terug naar uw app',
@@ -362,6 +372,10 @@ export const editor: EditorMessages = {
 
   summary: {
     reading: 'Status laden…',
+    readDocs: 'Documentatie lezen',
+    written: 'Documentatie en tests',
+    writtenWhy: 'Nooit gecompileerd en nooit geserveerd. Bewaard bij elke versie, en meegeteld bij de assets.',
+    writtenMissing: 'Nog niet geschreven',
     hint: (since, kept, retention, tier) =>
       `Het verkeer wordt geteld sinds de laatste start van de server (${since}). ` +
       (kept
@@ -453,6 +467,10 @@ export const editor: EditorMessages = {
     assetsPublic: 'Openbaar: deze versie serveert ze met Assets.',
     assetsPrivate: 'Opgeslagen met de code, maar deze versie serveert ze niet.',
     noAssets: 'Geen assets in deze versie.',
+    context: 'Documentatie en tests',
+    contextWhy: 'Nooit gecompileerd en nooit geserveerd: wat er over deze versie geschreven is, voor wie hem leest of aanpast.',
+    contextUsage: (files, size) => `${files}, ${size} – meegeteld bij de assets`,
+    noContext: 'Er is nog niets over deze versie geschreven.',
     data: 'Data',
     dataPublic: 'Openbaar: de code die online staat, serveert de data met Workspace.',
     dataPrivate: 'Alleen voor de lambda zelf. Hoort bij geen enkele versie.',
@@ -482,6 +500,96 @@ export const editor: EditorMessages = {
     missing: (name) => `Deze versie heeft geen bestand met de naam ${name}.`,
     saved: 'opgeslagen',
     notText: 'Geen tekst. Download het om erin te kijken.',
+  },
+
+  context: {
+    docs: {
+      title: 'Documentatie',
+      titleSimple: 'Over je app',
+      hint: 'Wat deze app is, voor wie hij is en waarom – en waarom hij gebouwd is zoals hij is. Agents schrijven het bij elke wijziging en het wordt bij elke versie bewaard, dus een oudere versie komt terug met de documentatie die toen voor hem gold.',
+      hintSimple: 'Waar je app voor is en waarom, zoals de agent het begreep uit wat je vroeg. Hij houdt dit bij met elke wijziging.',
+      inDraft: 'De documentatie van dit concept. Die wordt de documentatie van je app zodra het concept online gaat.',
+      pages: { product: 'Product', decisions: 'Beslissingen' },
+      emptyTitle: 'Nog niets geschreven',
+      emptyText: (code) => (
+        <>
+          Agents schrijven de documentatie bij hun wijzigingen: wat de app is, voor wie hij is en waarom in{' '}
+          {code('.lambda/docs/product.md')}, en waarom hij gebouwd is zoals hij is in {code('decisions.md')}. Het hoort
+          bij de versie, naast de code.
+        </>
+      ),
+      emptySimpleTitle: 'Er is nog niets over je app geschreven',
+      emptySimple: 'De agent kan beschrijven waar je app voor is en waarom, op basis van wat je vroeg – daarna houdt hij de beschrijving bij.',
+      ask: 'De agent vragen het te schrijven',
+      describe: 'De agent vragen hem te beschrijven',
+      writePrompt: 'Schrijf de documentatie van deze app: wat hij is, voor wie hij is en waarom, en de technische beslissingen erachter.',
+      describePrompt: 'Beschrijf waar deze app voor is en waarom, zodat ik het kan lezen onder ‘Over de app’.',
+      decisionsPrompt: 'Leg de technische beslissingen achter deze app vast, en waarom ze genomen zijn.',
+      missingProduct: 'Nog geen productpagina',
+      missingProductText: 'Wat de app is, voor wie hij is, wat mensen ermee doen en waarom – in de woorden van wie erom vroeg.',
+      missingDecisions: 'Nog geen beslissingen vastgelegd',
+      missingDecisionsText: 'Hoe de app gebouwd is en waarom: hoe hij zijn data bewaart, waar hij van afhangt, wat er is weggelaten. Wat wie hem hierna aanpast, moet weten.',
+      correctText: 'De agent schrijft dit op basis van wat je vroeg, en houdt het bij met elke wijziging. Klopt er iets niet of ontbreekt er iets? Laat het hem weten.',
+      correct: 'Laat het de agent weten',
+      correctPrompt: 'Verbeter de beschrijving van de app: ',
+      placeholder: 'Legt uit waarom inzendingen een jaar bewaard blijven',
+    },
+    tests: {
+      title: 'Tests',
+      hint: 'Hoe deze app automatisch getest wordt, en de scripts en data die de tests gebruiken. Agents houden het bij en voeren de tests uit voordat ze een wijziging klaar noemen. Het wordt bij elke versie bewaard.',
+      inDraft: 'De tests van dit concept. Ze worden de tests van je app zodra het concept online gaat – voer ze eerst uit op de voorvertoning ervan.',
+      pages: { testing: 'Hoe het getest wordt' },
+      emptyTitle: 'Nog geen tests',
+      emptyText: (code) => (
+        <>
+          Hoe de app getest wordt – wat moet blijven werken, hoe je dat controleert en hoe je de scripts ervoor uitvoert
+          – schrijven agents in {code('.lambda/tests/README.md')}, met de scripts en de testdata ernaast.
+        </>
+      ),
+      ask: 'De agent vragen tests te schrijven',
+      writePrompt: 'Schrijf de tests van deze app: wat moet blijven werken en hoe je dat automatisch controleert, met een script om op de voorvertoning uit te voeren.',
+      missing: 'Nog niet beschreven hoe het getest wordt',
+      missingText: 'Wat moet blijven werken, hoe elk onderdeel daarvan gecontroleerd wordt, en hoe je de scripts ernaast uitvoert.',
+      placeholder: 'Controleert dat een volle lijst geen nieuwe inzendingen aanneemt',
+    },
+    files: 'Bestanden',
+    noFiles: 'Geen bestanden naast de pagina’s.',
+    none: 'geen',
+    missingPill: 'Nog niet geschreven',
+    changedIn: (version) => `Gewijzigd in versie ${version}`,
+    changedInDraft: 'Gewijzigd in dit concept',
+    showChanges: 'Wijzigingen tonen',
+    hideChanges: 'Wijzigingen verbergen',
+    noChanges: 'Er is niets veranderd.',
+    edit: 'Bewerken',
+    olderVersion: 'Een versie verandert nooit: een pagina bewerk je in de nieuwste versie, of in een concept.',
+    writeIt: 'Zelf schrijven',
+    askPage: 'De agent vragen het te schrijven',
+    editInCode: 'Openen in de code',
+    cancel: 'Annuleren',
+    save: 'Opslaan',
+    write: 'Schrijven',
+    preview: 'Voorbeeld',
+    writeOrPreview: 'Schrijven of voorbeeld',
+    discard: 'Je wijzigingen aan deze pagina gaan verloren. Weggooien?',
+    reading: 'Lezen…',
+    readFailed: 'Dit kon niet worden gelezen.',
+    saveFailed: 'Dat kon niet worden opgeslagen.',
+    savedDraft: 'Opgeslagen in het concept.',
+    savedVersion: (version) => `Opgeslagen als versie ${version}.`,
+    savedOnline: (version) => `Opgeslagen als versie ${version}, en online.`,
+    savedNotOnline: (version) => `Opgeslagen als versie ${version}, maar niet online gegaan.`,
+    saveTitle: 'Opslaan als nieuwe versie',
+    saveText: (newest) =>
+      `Een versie verandert nooit, dus deze pagina wordt opgeslagen als de volgende – bovenop versie ${newest}, met al het andere zoals het is.`,
+    clash: (version) => `Versie ${version} is opgeslagen sinds je begon, en die heeft deze pagina ook gewijzigd. Opslaan vervangt dat.`,
+    alsoOnline: 'Ook online zetten',
+    alsoOnlineNote: 'Alleen de documentatie verandert, dus bezoekers zien niets nieuws – maar wat online staat, blijft de nieuwste versie.',
+    skeleton: {
+      product: '# Naam van de app\n\nWat het is, in een zin of twee.\n\n## Voor wie het is\n\n## Wat mensen ermee doen\n\n## Functies, en waarom ze er zijn\n\n## Wat het niet doet\n',
+      decisions: '# Beslissingen\n\n## Een beslissing\n\nWat er besloten is, waarom, en waar een wijziging rekening mee moet houden.\n',
+      testing: '# Hoe het getest wordt\n\nHoe je de tests uitvoert, en op welk adres.\n\n## Wat moet blijven werken\n\n| Gedrag | Request | Verwacht |\n|---|---|---|\n| | | |\n',
+    },
   },
 
   data: {
@@ -692,7 +800,7 @@ export const editor: EditorMessages = {
     leaks: (path, files) =>
       `In ${files} wordt naar ${path} gelinkt met het volledige pad. Vanuit de voorvertoning is dat de lambda die online staat, met de echte data, niet de kopie van dit concept. Relatieve paden (‘api/items’) blijven in de voorvertoning.`,
     mergeButton: 'Samenvoegen',
-    saveFirst: 'Sla eerst de code op: de voorvertoning en het samenvoegen gebruiken wat is opgeslagen.',
+    saveFirst: 'Sla eerst je wijzigingen op: de voorvertoning en het samenvoegen gebruiken wat is opgeslagen.',
     mergeAndDeploy: (version) => `Samenvoegen en versie ${version} online zetten`,
     mergeText: (version) =>
       `Het wordt versie ${version}. Het concept verdwijnt dan, met zijn voorvertoning en zijn kopie van de data. De data van de lambda zelf blijft zoals die is.`,
@@ -729,7 +837,9 @@ export const editor: EditorMessages = {
     viewsLabel: 'Het concept',
     views: {
       overview: 'Concept',
+      docs: 'Documentatie',
       code: 'Code',
+      tests: 'Tests',
       data: 'Data',
       logs: 'Logs',
     },
@@ -753,6 +863,7 @@ export const editor: EditorMessages = {
     first: 'De eerste versie.',
     status: { added: 'toegevoegd', removed: 'verwijderd', changed: 'gewijzigd', same: 'gelijk' },
     browse: 'Bestanden bekijken',
+    docs: 'Documentatie lezen',
     edit: 'Vanaf hier bewerken',
     feature: 'Vanaf hier een concept starten',
     featureTitle:
@@ -988,10 +1099,11 @@ export const editor: EditorMessages = {
     inFeature: (name) => `in ‘${name}’`,
     changedElsewhere: 'Het concept is ergens anders opgeslagen sinds je het opende, misschien door de agent. Laad wat er is opgeslagen voordat je hier opslaat; je wijzigingen zouden er niet overheen worden opgeslagen.',
     readAgain: 'Laden wat er is opgeslagen',
-    files: (entry, cs) => (
+    files: (entry, cs, context) => (
       <>
         {entry} geeft terug wat er geserveerd wordt, andere {cs}-bestanden bevatten types, en elk ander bestand wordt
-        geserveerd zoals het is. Ctrl-S slaat op, F12 springt naar een declaratie.
+        geserveerd zoals het is – behalve wat in de map {context} staat: de documentatie en de tests, die nooit
+        gecompileerd of geserveerd worden. Ctrl-S slaat op, F12 springt naar een declaratie.
       </>
     ),
     newer: (version) => ` Versie ${version} is nieuwer dan de versie die hier openstaat.`,
@@ -1022,6 +1134,8 @@ export const editor: EditorMessages = {
     deep: 'Maximaal zes mappen diep.',
     characters: 'Letters, cijfers, streepjes, underscores en punten, gescheiden door slashes.',
     extension: 'Het bestand heeft een extensie nodig, zodat het als het juiste type geserveerd wordt.',
+    context: 'In .lambda/ alleen docs/ en tests/ – letters, cijfers, streepjes, underscores en punten, gescheiden door slashes.',
+    contextFiles: 'Documentatie en tests: onderdeel van de versie, nooit gecompileerd of geserveerd',
     exists: 'Er is al een bestand met die naam.',
     remove: (name) => `${name} verwijderen? De inhoud gaat mee.`,
     there: (name) => `${name} bestaat al.`,
@@ -1029,7 +1143,7 @@ export const editor: EditorMessages = {
     errors: 'bevat fouten',
     removeFile: (name) => `${name} verwijderen`,
     removeTitle: 'Dit bestand verwijderen',
-    placeholder: 'Types.cs of site/index.html',
+    placeholder: 'Types.cs, site/index.html of .lambda/docs/api.md',
     newFile: 'Nieuw bestand',
     uploadTitle: 'Een bestand uploaden: een afbeelding, een font, een pagina',
     upload: 'Bestand uploaden',

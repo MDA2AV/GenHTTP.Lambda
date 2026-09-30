@@ -39,11 +39,17 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     }
 
     /// <summary>
-    /// Reads the code of a single version.
+    /// Reads the files of a single version.
     /// </summary>
+    /// <remarks>
+    /// Every file unless a folder is named. Its documentation and its tests
+    /// are <c>?folder=.lambda/</c>, which is how they are read without every
+    /// asset of the version coming along.
+    /// </remarks>
+    /// <param name="folder">Only the files below this folder, such as <c>.lambda/</c></param>
     [ResourceMethod("lambdas/:privateKey/versions/:version")]
-    public async ValueTask<VersionContentResponse> Get(string privateKey, int version)
-        => Describe(await meta.GetVersionAsync(privateKey, version));
+    public async ValueTask<VersionContentResponse> Get(string privateKey, int version, string? folder)
+        => Describe(await meta.GetVersionAsync(privateKey, version), Decode(folder));
 
     /// <summary>
     /// Downloads the files of a single version as a zip archive.
@@ -174,8 +180,14 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options)
     internal static VersionResponse Describe(LambdaVersionInfo version)
         => new(version.Version, version.Created, version.Specification, version.Change, version.Origin);
 
-    internal static VersionContentResponse Describe(LambdaVersionContent content)
-        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, LambdaSource.Parse(content.Code));
+    internal static VersionContentResponse Describe(LambdaVersionContent content, string? folder = null)
+        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, Below(LambdaSource.Parse(content.Code), folder));
+
+    /// <summary>
+    /// The files below a folder, or all of them when none is named.
+    /// </summary>
+    internal static IReadOnlyList<LambdaFile> Below(IReadOnlyList<LambdaFile> files, string? folder)
+        => string.IsNullOrEmpty(folder) ? files : [.. files.Where(f => f.Name.StartsWith(folder, StringComparison.Ordinal))];
 
     /// <summary>
     /// Turns what was submitted into the single blob a version is stored as.

@@ -1,0 +1,52 @@
+# Decisions
+
+## A file is the body of the request, as it is
+
+`POST api/files?name=…` takes the file as the raw body, bound as a `Stream`, and its name from the query. The page sends it with `fetch(url, { method: 'POST', body: file })`. A multipart form would need taking apart on the server and brings nothing a single file needs; the price is that a plain HTML form cannot upload here without the script.
+
+## The body is read no further than the limit
+
+`Gallery.ReadAsync` reads 16 KB at a time and answers 413 as soon as more than 512 KB have arrived, whatever the request announced. Nobody can make the lambda hold a large file in memory, and a request that claims to be small and is not is cut off all the same. 512 KB is plenty for pictures on a page anybody can write to: the 24 files the gallery keeps come to 12 MB at most.
+
+## Only a fixed list of types, decided by the extension
+
+`Gallery.Types` maps the extensions it accepts - `.png .jpg .jpeg .gif .webp .pdf .txt` - to their types, and anything else is refused with 415 before the body is read. A file is served with the content type of its extension, and an `.html` or `.svg` from a stranger, served from the lambda's address, would run its script there - where it can read what the lambda's pages keep in the browser, the keys to remove uploads among them.
+
+## The stored name is made up
+
+A file is kept as `uploads/{id}{extension}`, the id 8 random bytes in hex, with `.jpeg` kept as `.jpg`. What the uploader called it is only the `name` of its entry - without any folders in front, cut to 80 characters - and only ever shown as text; the page escapes it. So a name cannot place a file elsewhere, overwrite another one or choose how it is served.
+
+## Uploads are served from a folder of their own, with nosniff
+
+`Workspace.Files("uploads")` serves the folder at `files/`, and `SnifferPreventionConcernBuilder` adds `X-Content-Type-Options: nosniff`, which tells the browser to believe the type it is sent rather than guess one from the content. Only the gallery writes to that folder, and only files it accepted. The list of uploads, `uploads.json`, lies beside it rather than in it, so serving the folder cannot hand out the list with its key hashes. `lambda.cs` creates the folder when it starts, because a folder that is not there cannot be served.
+
+## The key to remove an upload is kept as a hash
+
+Uploading answers with a key of 16 random bytes; the list keeps only its SHA-256, and a removal compares it in fixed time (`CryptographicOperations.FixedTimeEquals`). The key itself is sent once and stored nowhere on the server, so whoever reads the data cannot remove anything. A plain hash is enough because the key is random, not something a person chose. A wrong or missing key is 403.
+
+The page keeps the keys in `localStorage`: the uploader's browser stands in for an account, since there is none.
+
+## The list is one JSON file in the workspace
+
+`uploads.json`, kept by `Gallery`, read the first time it is needed and written after every change; every listing is answered from memory. The workspace outlives every deployment, so a new version keeps the gallery.
+
+- **One lock around every change and its writes**, so two uploads at the same moment cannot lose each other's entry, and an upload cannot race its removal.
+- **At most 24 uploads.** Past that the oldest is dropped, its file with it, because anybody can upload.
+- **Only `lambda.cs` touches `Workspace`.** `Gallery` is handed a `Storage` with the four things it does there, so `Gallery.cs` can be copied into another lambda as it is.
+
+## The stored format stays readable
+
+Each upload is kept as `{ "upload": { … }, "keyHash": "…" }`: the entry in the shape the API answers with, and the hash beside it. The data outlives every version, so a field added to `Upload` or `Entry` has to be optional - read from a file an older version wrote, it arrives as its default, `null` or `0`, and the code must cope with that. A version put back online still reads what a newer one wrote, but drops the fields it does not know the next time it saves. Renaming or removing a field loses it for every other version.
+
+## Problems are status codes with a message
+
+Checking an upload and looking one up throw `ProviderException` with the status to answer: 415 for a type that is not accepted, 400 for an empty file, 413 for one that is too large, 404 for an upload that is not there, 403 for a key that does not fit. Uploading answers 201 with the entry and the key, removing 204. The page shows the message the server sent rather than a code.
+
+## The page is part of the program
+
+`web/` is shipped with the code and served by `Assets.App("web")`, added without a path, so it answers everything outside `api/` and `files/` - an unknown address with the page. It calls both with relative paths, and the `url` of an entry is relative too (`files/{id}.png`), so everything works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike.
+
+## Left out
+
+- **Looking inside a file** to check that it is what its name says. Served with the type of its extension and nosniff, a mislabelled file shows as broken or as text, never as a page, so the check would only turn away broken files - at the cost of code for every type.
+- **Thumbnails and resizing**: the browser scales the pictures down, which is enough for files of 512 KB at most.

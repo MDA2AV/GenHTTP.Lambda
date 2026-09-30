@@ -28,6 +28,11 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// are the lambda's own, and everything that stands in for the platform -
 /// Workspace, Assets, Secret and the imports a lambda never had to write - sits
 /// in a Platform folder of its own, so it is plain which code is theirs.
+///
+/// What was written about it comes along where a .NET project keeps such
+/// things: the documentation in docs/ and the tests in tests/. Neither is
+/// compiled into the program or copied into its container, as neither was
+/// on the platform.
 /// </remarks>
 public static class ProjectPacker
 {
@@ -72,14 +77,18 @@ public static class ProjectPacker
 
         var awaits = Awaits(snippet);
 
-        var assets = files.Where(f => !f.IsCode).ToList();
+        var assets = files.Where(f => f.IsAsset).ToList();
+
+        var context = files.Where(f => f.IsContext).ToList();
+
+        var folders = context.Select(f => Outside(f.Name).Split('/')[0]).Distinct().Order(StringComparer.Ordinal).ToList();
 
         using var buffer = new MemoryStream();
 
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
         {
-            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0));
-            Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits));
+            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders));
+            Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits, folders));
             Write(archive, $"{name}/Project.cs", Project(snippet, awaits));
 
             foreach (var file in files.Where(f => f.IsCode && f.Name != LambdaSource.EntryName))
@@ -93,6 +102,11 @@ public static class ProjectPacker
                 Write(archive, $"{name}/assets/{file.Name}", file.Bytes);
             }
 
+            foreach (var file in context)
+            {
+                Write(archive, $"{name}/{Outside(file.Name)}", file.Bytes);
+            }
+
             Write(archive, $"{name}/Platform/Usings.cs", Usings());
             Write(archive, $"{name}/Platform/LambdaEnvironment.cs", Resource("LambdaEnvironment.cs"));
             Write(archive, $"{name}/Platform/Folder.cs", Resource("Folder.cs"));
@@ -103,7 +117,7 @@ public static class ProjectPacker
             // ASP.NET Core: GenHTTP.Full depends on GenHTTP.Testing, which
             // brings the Kestrel engine and with it Microsoft.AspNetCore.App
             Write(archive, $"{name}/Dockerfile", Resource("Dockerfile").Replace("{assembly}", name));
-            Write(archive, $"{name}/.dockerignore", "bin/\nobj/\nworkspace/\n");
+            Write(archive, $"{name}/.dockerignore", $"bin/\nobj/\nworkspace/\n{string.Concat(folders.Select(f => $"{f}/\n"))}");
             Write(archive, $"{name}/.gitignore", "bin/\nobj/\nworkspace/\n");
         }
 
@@ -121,11 +135,19 @@ public static class ProjectPacker
     /// <remarks>
     /// No nullable context and no implicit usings, as on the platform: the
     /// lambda was written without either, and Platform/Usings.cs brings in
-    /// exactly what it had.
+    /// exactly what it had. The documentation and the tests are kept out of
+    /// the build, because a test script ending in .cs would otherwise be
+    /// compiled into the program the way nothing in them ever was.
     /// </remarks>
-    private static string Csproj(bool assets)
+    /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
+    private static string Csproj(bool assets, IReadOnlyList<string> context)
     {
         var copy = assets ? "\n\n    <ItemGroup>\n        <None Update=\"assets/**\" CopyToOutputDirectory=\"PreserveNewest\" />\n    </ItemGroup>" : string.Empty;
+
+        if (context.Count > 0)
+        {
+            copy += $"\n\n    <ItemGroup>\n        <Compile Remove=\"{string.Join(';', context.Select(f => $"{f}/**"))}\" />\n    </ItemGroup>";
+        }
 
         return $"""
             <Project Sdk="Microsoft.NET.Sdk">
@@ -147,7 +169,8 @@ public static class ProjectPacker
     /// <summary>
     /// The host, and a word about where the app came from.
     /// </summary>
-    private static string Program(ExportedLambda lambda, string name, bool awaits)
+    /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
+    private static string Program(ExportedLambda lambda, string name, bool awaits, IReadOnlyList<string> context)
     {
         var facts = new List<(string Key, string Value)>
         {
@@ -181,6 +204,14 @@ public static class ProjectPacker
             : "\n//\n// Its secrets are environment variables here - set them before it starts; the\n// values stayed on the platform, where nobody can read them back:\n//\n"
             + string.Join("\n", secrets.Select(s => $"//   {s}"));
 
+        var written = (context.Contains("docs"), context.Contains("tests")) switch
+        {
+            (true, true) => "\n//\n// docs/ says what the app is for and why it is built the way it is, and tests/\n// how it is tested - as they were written beside it on the platform.",
+            (true, false) => "\n//\n// docs/ says what the app is for and why it is built the way it is, as it was\n// written beside it on the platform.",
+            (false, true) => "\n//\n// tests/ says how it is tested, as it was written beside it on the platform.",
+            _ => string.Empty
+        };
+
         return $"""
             // This app was built as a lambda on GenHTTP Lambda (https://genhttp.dev),
             // where you describe an app - or let your coding agent write it - and it
@@ -200,7 +231,7 @@ public static class ProjectPacker
             // Project.cs holds the code of the lambda and the other .cs files are its
             // own. Platform/ stands in for what the platform provided: the Workspace
             // the app writes to, the Assets it shipped with (in assets/), and the
-            // Secret it reads, from environment variables of the same name.{environment}
+            // Secret it reads, from environment variables of the same name.{environment}{written}
 
             using GenHTTP.Engine.Internal;
             using GenHTTP.Modules.Practices;
@@ -464,6 +495,11 @@ public static class ProjectPacker
 
         return slash < path.Length ? path[..slash] + char.ToUpperInvariant(path[slash]) + path[(slash + 1)..] : path;
     }
+
+    /// <summary>
+    /// Where a file of the context goes in the project: .lambda/docs/x.md to docs/x.md.
+    /// </summary>
+    private static string Outside(string name) => name[LambdaSource.ContextFolder.Length..];
 
     private static string Day(DateTime value) => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 

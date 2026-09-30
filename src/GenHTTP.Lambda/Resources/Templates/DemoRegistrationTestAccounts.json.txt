@@ -1,0 +1,14 @@
+[
+  { "name": "ada", "salt": "is8Jhu0dRcSpyuBg+0lVyQ==", "hash": "Vumq9R7R2u0EXKd0LSDP8xvoqOkuH9F4S5jMNcI/M20=", "joined": "2026-01-05T09:00:00Z" },
+  { "name": "grace.hopper", "salt": "8oTR9CyNmV/ggFRJwxI0CA==", "hash": "1AwVhvOSOqwE349Z4rVS+WycoVtkgvKDARcOoVDxDZc=", "joined": "2026-01-08T10:07:00Z" },
+  { "name": "linus_t", "salt": "f8gy6XVjfWSufjMwpbj72g==", "hash": "IjnVLVyDvyegyPaoZX+ZPDCe0uuaq6BkSNPrUG4r2cw=", "joined": "2026-01-11T11:14:00Z" },
+  { "name": "Jürgen", "salt": "L6zQe2QRqc5WKNaTGafqsg==", "hash": "5no19qhnBfzKzYqmZdKbWuucb9+D8ZFrYCETp0IRWKI=", "joined": "2026-01-14T12:21:00Z" },
+  { "name": "margaret-h", "salt": "GV8LrJiiWiujD6u1fBxKDw==", "hash": "4z5A6OJw97I2B0aDJuJZ7W3WPG0qzTAlh1Cyi6cZooQ=", "joined": "2026-01-17T13:28:00Z" },
+  { "name": "ken", "salt": "e7VhH+Je5TCAMQK/KR/eVg==", "hash": "7UC9l/b/QSJVroE3Fgn1NrdyWbGUIxAj3cUn6vw3SbM=", "joined": "2026-01-20T09:35:00Z" },
+  { "name": "dennis", "salt": "7faCgayAnBiNNa+gpe961A==", "hash": "J3t2T8VyBnO/mNf0FDqsXMayG7sxyUjarMuVOeoS/J0=", "joined": "2026-01-23T10:42:00Z" },
+  { "name": "barbara.l", "salt": "GL9ouZZeuC7X7K1oyJdK6w==", "hash": "6dx2J+QMb7WNYiFfVW3eX1vay6d94MueXyYHQXiNhKM=", "joined": "2026-01-26T11:49:00Z" },
+  { "name": "alan", "salt": "qrptB0zdz3tJ6fc0zhsrew==", "hash": "hccB9gUCE0ZrLYeA1wyaDMrylQ636Kob3gGr4RJcyKs=", "joined": "2026-01-29T12:56:00Z" },
+  { "name": "edsger", "salt": "QcAU/HDtyDwsdJzh1Jg8aA==", "hash": "y0tpmdzP8jxO20E20K6hc4SzCd6gluBpjgIfK9BwuHA=", "joined": "2026-02-01T13:03:00Z" },
+  { "name": "frances_a", "salt": "xVPVhNf0NOefS7REdAzzqw==", "hash": "F0yA45pTWM3bopycC5k5k2LP+oQfcJtVYqJPbD7jmi4=", "joined": "2026-02-04T09:10:00Z" },
+  { "name": "the-longest-name-allowed", "salt": "irza4K1OezDYjH8deX2EPA==", "hash": "GW5Uub1TduIUHwCARJcbVvnAPI2mwIo5QoVj37C0G/4=", "joined": "2026-02-07T10:17:00Z" }
+]

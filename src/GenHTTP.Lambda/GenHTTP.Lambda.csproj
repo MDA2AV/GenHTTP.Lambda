@@ -56,6 +56,10 @@
         <EmbeddedResource Include="Resources/Templates/*.html.txt" WithCulture="false" />
         <EmbeddedResource Include="Resources/Templates/*.js.txt" WithCulture="false" />
         <EmbeddedResource Include="Resources/Templates/*.css.txt" WithCulture="false" />
+        <!-- and what is written about it: its documentation, its tests and their data -->
+        <EmbeddedResource Include="Resources/Templates/*.md.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.mjs.txt" WithCulture="false" />
+        <EmbeddedResource Include="Resources/Templates/*.json.txt" WithCulture="false" />
         <!-- the files every exported project gets, see ProjectPacker -->
         <EmbeddedResource Include="Resources/Export/*.txt" WithCulture="false" />
     </ItemGroup>

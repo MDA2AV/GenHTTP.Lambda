@@ -314,7 +314,9 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
             foreach (var file in files)
             {
-                if (file.IsCode)
+                // the documentation and the tests are never served, so they
+                // never reach the directory anything is served from
+                if (!file.IsAsset)
                 {
                     continue;
                 }

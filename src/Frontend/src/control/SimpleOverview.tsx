@@ -41,6 +41,8 @@ export function SimpleOverview({ control }: { control: Control }) {
       )}
     >
       <div className="max-w-4xl space-y-8">
+        <About control={control} />
+
         <Status control={control} />
 
         {!demo && <NeedsKey control={control} />}
@@ -53,6 +55,29 @@ export function SimpleOverview({ control }: { control: Control }) {
         </div>
       </div>
     </Section>
+  );
+}
+
+/* ------------------------------------------------------------ what it is */
+
+/**
+ * What the app is for, in the sentence or two the agent opens its
+ * description with - worth reading on the first screen, since it is what the
+ * agent understood from what was asked.
+ */
+function About({ control }: { control: Control }) {
+  const said = useEditorT().simple;
+  const about = control.summary?.documentation.about;
+
+  if (!about) {
+    return null;
+  }
+
+  return (
+    <p className="text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
+      {about}{' '}
+      <Link to={`/editor/${control.privateKey}/docs`} className="whitespace-nowrap text-[13px] text-accent-500 hover:underline">{said.aboutMore}</Link>
+    </p>
   );
 }
 

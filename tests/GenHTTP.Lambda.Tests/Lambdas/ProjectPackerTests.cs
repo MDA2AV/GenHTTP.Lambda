@@ -194,6 +194,46 @@ public sealed class ProjectPackerTests
         Assert.Contains("global using static Platform.LambdaScope;", usings);
     }
 
+    [TestMethod]
+    public void TheDocumentationAndTheTestsLeaveWithIt()
+    {
+        IReadOnlyList<LambdaFile> documented =
+        [
+            .. Files,
+            new(LambdaSource.ProductDoc, "# Books\n\nA shelf of books.\n"),
+            new(LambdaSource.TestingDoc, "# How it is tested\n"),
+            new(".lambda/tests/Check.cs", "this would not compile"),
+        ];
+
+        var zip = ProjectPacker.Pack(Lambda, documented);
+
+        var names = Names(zip);
+
+        Assert.Contains("my-lambda/docs/product.md", names, "where a .NET project keeps its documentation");
+        Assert.Contains("my-lambda/tests/README.md", names);
+        Assert.Contains("my-lambda/tests/Check.cs", names, "a test keeps the name it had");
+        Assert.IsFalse(names.Any(n => n.Contains(".lambda", StringComparison.Ordinal)), "the folder is the platform's, not the project's");
+        Assert.DoesNotContain("my-lambda/assets/.lambda/docs/product.md", names, "and none of it is an asset");
+
+        Assert.Contains("<Compile Remove=\"docs/**;tests/**\" />", Read(zip, "my-lambda/my-lambda.csproj"), "a test written in C# is not compiled into the program");
+
+        var ignored = Read(zip, "my-lambda/.dockerignore");
+
+        Assert.Contains("docs/", ignored, "nor copied into its container");
+        Assert.Contains("tests/", ignored);
+
+        Assert.Contains("docs/ says what the app is for", Read(zip, "my-lambda/Program.cs"), "and the program says where to read about it");
+    }
+
+    [TestMethod]
+    public void AProjectWithoutDocumentationSaysNothingAboutIt()
+    {
+        var zip = ProjectPacker.Pack(Lambda, Files);
+
+        Assert.DoesNotContain("Compile Remove", Read(zip, "my-lambda/my-lambda.csproj"));
+        Assert.DoesNotContain("docs/", Read(zip, "my-lambda/Program.cs"));
+    }
+
     #endregion
 
     #region Acceptance

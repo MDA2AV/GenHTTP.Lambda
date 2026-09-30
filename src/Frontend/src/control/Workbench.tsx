@@ -12,6 +12,7 @@ import { useEditorT } from '../i18n';
 import { languageFor } from '../monaco';
 import type { Control } from './context';
 import { Section } from './ui';
+import { CONTEXT, isCode } from './written';
 
 type Busy = 'save' | 'check' | 'deploy' | null;
 
@@ -29,6 +30,10 @@ type Busy = 'save' | 'check' | 'deploy' | null;
  * online at its preview address in the same step, so there is one button
  * rather than two that only make sense to somebody who knows the difference.
  * Nothing a visitor of the lambda gets changes either way.
+ *
+ * The documentation and the tests of the version are its files too, and are
+ * here after the program's, so a change and what it means for them can be
+ * made and saved in one. Reading them is what their own sections are for.
  */
 export function Workbench({ control, onDirty }: { control: Control; onDirty: (dirty: boolean) => void }) {
   const { privateKey, lambda } = control;
@@ -70,13 +75,18 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     setFiles((all) => all.map((file) => (file.name === active ? { ...file, code: next } : file)));
   }, [active]);
 
+  // a file asked for by name - from the documentation or the tests - is where editing starts
+  const asked = params.get('file');
+
   const adopt = useCallback((incoming: LambdaFile[]) => {
     const usable = incoming.length > 0 ? incoming : [{ name: ENTRY, code: '' }];
 
     setFiles(usable);
     setSaved(JSON.stringify(usable));
-    setActive((was) => (usable.some((file) => file.name === was) ? was : usable[0].name));
-  }, []);
+    setActive((was) => (asked && usable.some((file) => file.name === asked)
+      ? asked
+      : usable.some((file) => file.name === was) ? was : usable[0].name));
+  }, [asked]);
 
   useEffect(() => {
     if (feature || requested == null) {
@@ -156,7 +166,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   /** Where a name was declared, and going there - only ever to a file of this lambda. */
   const goToDefinition = useCallback(
     async (line: number, column: number) => {
-      if (!active.endsWith('.cs')) {
+      if (!isCode(active)) {
         return;
       }
 
@@ -321,7 +331,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       hint={
         <>
           {feature ? said.editFeature : demo ? said.demo : said.edit}
-          {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>)}
+          {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>, <code className="font-mono">{CONTEXT}</code>)}
           {newer && said.newer(lambda.latestVersion!)}
         </>
       }

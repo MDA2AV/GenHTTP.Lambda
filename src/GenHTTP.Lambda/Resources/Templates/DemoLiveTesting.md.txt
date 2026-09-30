@@ -1,0 +1,32 @@
+# How it is tested
+
+`smoke.mjs` checks the app from the outside, the way two browsers would. It reads the poll, opens two event streams, casts one vote and waits for it to arrive on both, checks what is refused and that the page is served - and closes its streams, whatever happens.
+
+```
+node .lambda/tests/smoke.mjs <address>
+```
+
+The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. The vote it casts stays, since the poll has no way to take one back; on the preview of a feature it only lands in the feature's copy of the data, which is thrown away when the feature is merged. It needs Node 18 or later and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not. Every wait has a limit of five seconds, so an app that hangs or a stream that stays silent fails rather than keeps the script waiting.
+
+Others may be watching and voting while it runs, so it checks for at least as many watchers as it has streams open and at least one more vote, not exact numbers. It votes for the first option `api/poll` lists, so it still fits when the answers are changed.
+
+## What has to keep working
+
+| Behaviour | Request | Expected |
+|---|---|---|
+| The poll is served | `GET api/poll` | 200, `{ "question": "…", "options": [{ "id", "label", "votes" }], "total": … }`, the total being the sum of the votes |
+| The stream | `GET events` | 200, `text/event-stream`, kept open |
+| It starts with the counts | `GET events` | first an ordinary message, without an event type, whose data is the counts as JSON, as `api/poll` answers them |
+| It says how many are watching | `GET events` | then `event: watchers` with the number of open streams, itself included |
+| Somebody joins | a second `GET events` | every open stream gets `event: watchers` with the new number |
+| A vote | `POST api/votes` with `{ "option": "tabs" }` | 204, no body |
+| It reaches everybody | every open `GET events` | a message with the new counts |
+| It is kept | `GET api/poll` | the option has one vote more |
+| An option that is not there | `POST api/votes` with `{ "option": "nothing" }` | 400, "Vote for one of: tabs, spaces, formatter." |
+| No option | `POST api/votes` with `{}` | 400, the same message |
+| The page | `GET ./` | 200, HTML |
+| Its script | `GET app.js` | 200, JavaScript |
+| Nothing happens | an open `GET events`, 20 seconds without a vote | a comment, `: still here` |
+| Somebody leaves | a stream is closed | the others get `event: watchers` with the lower number, once a write to the closed one has failed |
+
+The script leaves out the last two rows: the first takes 20 quiet seconds, and the second depends on when the server next writes to the stream that was closed.

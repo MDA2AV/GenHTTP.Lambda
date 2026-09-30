@@ -13,6 +13,7 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <param name="Latest">The newest version, which may be ahead of what is online</param>
 /// <param name="Versions">How many versions are kept</param>
 /// <param name="RecentProblems">The last few warnings and errors, newest first</param>
+/// <param name="Documentation">What the documentation of the version the storage is about says, and which of its pages it has</param>
 public sealed record LambdaSummaryResponse(
     LambdaResponse Lambda,
     VersionResponse? Live,
@@ -22,8 +23,21 @@ public sealed record LambdaSummaryResponse(
     TrafficSummary Traffic,
     IReadOnlyList<OwnerLogEntry> RecentProblems,
     StorageSummary Storage,
-    SummaryLimits Limits
+    SummaryLimits Limits,
+    DocumentationSummary Documentation
 );
+
+/// <summary>
+/// What a version says about itself: the context kept in <c>.lambda/</c>
+/// beside its program.
+/// </summary>
+/// <param name="About">The first paragraph of its product page, as plain text - what the app is, in a sentence or two</param>
+/// <param name="Product">Whether it has a product page: what the app is, for whom, and why</param>
+/// <param name="Decisions">Whether it says which technical decisions were made, and why</param>
+/// <param name="Tests">Whether it says how it is tested</param>
+/// <param name="Files">How many files its documentation and tests come to</param>
+/// <param name="Bytes">What those weigh, which counts towards what its assets may come to</param>
+public sealed record DocumentationSummary(string? About, bool Product, bool Decisions, bool Tests, int Files, long Bytes);
 
 /// <summary>
 /// How much a lambda is being used, and how well it is answering.
@@ -60,7 +74,7 @@ public sealed record TrafficSummary(
 /// <param name="Version">The version the code figures are about: the one online, else the newest</param>
 /// <param name="CodeFiles">C# files, which are compiled and never served</param>
 /// <param name="CodeCharacters">Characters of C#, which is what the code budget counts</param>
-/// <param name="Assets">Files saved with the code that are not C#, served as they are when the code asks</param>
+/// <param name="Assets">Files saved with the code that are not C# and not its documentation or tests, served as they are when the code asks</param>
 /// <param name="AssetBytes">What those weigh, decoded</param>
 /// <param name="WorkspaceFiles">Files in the workspace - the lambda's data, which it writes at runtime and every version shares</param>
 /// <param name="WorkspaceBytes">The room those take</param>
