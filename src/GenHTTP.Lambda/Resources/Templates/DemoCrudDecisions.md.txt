@@ -1,0 +1,29 @@
+# Decisions
+
+## The API is a class whose methods are the routes
+
+`Tasks.cs` is a webservice: every public method with `[ResourceMethod]` is a route. A parameter named like a segment of the path (`:id`) comes from the path, a record from the JSON body, anything else from the query, and what a method returns is sent as camel case JSON. It is how GenHTTP writes a REST API, and it gives the OpenAPI description (`AddOpenApi()`) and the page to try it (`AddScalar()`) for nothing.
+
+## The tasks are one JSON file in the workspace
+
+`tasks.json`, kept by `JsonStore<T>` in `Store.cs`. A few hundred records need no database, and the workspace outlives every deployment, so a new version never loses the list. The file is read once when the lambda starts and written after every change; every read is answered from memory.
+
+- **One lock around every change and its write**, so two requests at the same moment cannot lose each other's change or mix their writes.
+- **At most 200 tasks**, the oldest going first, because anybody can write to the list.
+- **Only `lambda.cs` touches `Workspace`.** The store is handed a way to read and write its file, so `Store.cs` does not care where the file lives and can be copied into another lambda as it is.
+
+## The stored format stays readable
+
+The file holds the records in the shape the API answers with. The data outlives every version, so a field added to `TaskItem` has to be optional with a default: a file written by an older version must still read, and a version put back online must still read what a newer one wrote.
+
+## Problems are status codes with a message
+
+Checking the input and looking a task up throw `ProviderException` with the status to answer: 400 with the reason for input that is not valid, 404 for a task that is not there. Adding answers 201, removing 204. The page shows the message the server sent rather than a code.
+
+## The page is part of the program
+
+`web/` is shipped with the code and served by `Assets.App("web")`, added last so it answers only what the API did not. It calls the API with relative paths (`tasks/`), so it works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike.
+
+## A first start is not empty
+
+With no tasks at all, three are added that point at the code, so the page shows what it does before anybody has used it.

@@ -22,6 +22,8 @@ interface Props {
   onDefinition?: (line: number, column: number) => void;
   /** Shown rather than edited - the files section reads code, it does not change it. */
   readOnly?: boolean;
+  /** Whether long lines wrap, which prose wants and code does not. */
+  wrap?: boolean;
 }
 
 const SINGLE = '\u0000single';
@@ -36,7 +38,7 @@ const SINGLE = '\u0000single';
  * pushed into the model when it differs, otherwise every keystroke would
  * reset the caret.
  */
-export function CodeEditor({ value, language, theme, diagnostics, path, reveal, onChange, onSave, onDefinition, readOnly = false }: Props) {
+export function CodeEditor({ value, language, theme, diagnostics, path, reveal, onChange, onSave, onDefinition, readOnly = false, wrap = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
 
@@ -96,6 +98,7 @@ export function CodeEditor({ value, language, theme, diagnostics, path, reveal, 
       scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
       readOnly,
       domReadOnly: readOnly,
+      wordWrap: wrap ? 'on' : 'off',
     });
 
     editor.current = instance;

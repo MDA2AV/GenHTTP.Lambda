@@ -1,0 +1,238 @@
+// Plays the game from the outside, over the same websocket as its page.
+//
+//   node smoke.mjs <address>        the preview of a feature, or a copy of your own
+//
+// Two players play each other to a win, meet again for a game one of them
+// leaves, and a third plays the house to the end; on the way it checks that
+// moves out of turn, on a taken cell, before a game and after its end are
+// refused, and that finished games are counted. Stops at the first step of a
+// game that goes wrong, closes its sockets whatever happens, and ends with 1,
+// naming what failed, when something did not pass. Needs Node 22 or later
+// (for its WebSocket) and nothing else.
+
+const address = process.argv[2];
+
+if (!address) {
+  console.error('Usage: node smoke.mjs <address of the app>');
+  process.exit(2);
+}
+
+const base = address.endsWith('/') ? address : `${address}/`;
+
+// the socket's address the way the page builds it: relative, with the scheme
+// swapped, so it works below /lambda/{key}/ and at the root of a domain alike
+const play = new URL('play', base);
+play.protocol = play.protocol === 'https:' ? 'wss:' : 'ws:';
+
+// how long an answer may take before it counts as not coming at all
+const patience = 5000;
+
+const failures = [];
+
+function check(what, passed, detail = '') {
+  console.log(`${passed ? 'ok  ' : 'FAIL'} ${what}${passed || !detail ? '' : ` - ${detail}`}`);
+
+  if (!passed) {
+    failures.push(what);
+  }
+
+  return passed;
+}
+
+// A game is a sequence: once a step has gone wrong, the ones after it start
+// from a state nobody knows and would only report the same failure again.
+class Stopped extends Error { }
+
+function must(what, passed, detail) {
+  if (!check(what, passed, detail)) {
+    throw new Stopped();
+  }
+}
+
+const seen = (...messages) => `got ${messages.map((m) => JSON.stringify(m)).join(' and ')}`;
+
+/** Calls the app with a path relative to it, the way its own page does. */
+async function call(path) {
+  const response = await fetch(new URL(path, base), { signal: AbortSignal.timeout(patience) });
+
+  const text = await response.text();
+
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch { }
+
+  return { status: response.status, json, type: response.headers.get('content-type') ?? '' };
+}
+
+const sockets = [];
+
+/**
+ * Opens the game's socket, as a browser opening the page does, and keeps
+ * what the server sends until it is asked for, so nothing sent between two
+ * steps is missed.
+ */
+async function join(name) {
+  const socket = new WebSocket(play);
+  sockets.push(socket);
+
+  const arrived = [];
+  const waiting = [];
+
+  socket.addEventListener('message', (event) => {
+    let message;
+    try { message = JSON.parse(event.data); } catch { message = { type: `not JSON: ${event.data}` }; }
+
+    const deliver = waiting.shift();
+    deliver ? deliver(message) : arrived.push(message);
+  });
+
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${name} could not connect to ${play} within ${patience / 1000} s`)), patience);
+
+    socket.addEventListener('open', () => { clearTimeout(timer); resolve(); });
+    socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error(`${name} could not connect to ${play}`)); });
+  });
+
+  return {
+    send: (message) => socket.send(JSON.stringify(message)),
+
+    close: () => socket.close(),
+
+    /** The next message from the server; an error when none comes in time. */
+    next: () => arrived.length > 0 ? Promise.resolve(arrived.shift()) : new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        waiting.splice(waiting.indexOf(deliver), 1);
+        reject(new Error(`nothing came to ${name} within ${patience / 1000} s`));
+      }, patience);
+
+      const deliver = (message) => { clearTimeout(timer); resolve(message); };
+      waiting.push(deliver);
+    }),
+  };
+}
+
+const both = (x, o) => Promise.all([x.next(), o.next()]);
+
+const count = (cells, mark) => [...cells].filter((c) => c === mark).length;
+
+// A refused move is not answered at all. So each one is sent just before a
+// message that is, on the same socket: the app handles a socket's messages
+// in order, and what comes back shows whether the refused move had an effect.
+
+try {
+  const page = await call('./');
+  check('the page is served', page.status === 200 && page.type.includes('text/html'), `status ${page.status}`);
+
+  const stats = await call('api/stats');
+  const before = stats.json;
+  check('the count of games is served', stats.status === 200 && ['games', 'x', 'o', 'draws'].every((k) => Number.isInteger(before?.[k])),
+        `status ${stats.status}`);
+
+  // two players: whoever waited plays X and starts
+
+  const first = await join('the first player');
+
+  let got = await first.next();
+  must('a player alone is told to wait', got.type === 'waiting', `${seen(got)} - is somebody else playing at this address?`);
+
+  const second = await join('the second player');
+
+  let [x, o] = await both(first, second);
+  must('a second player is matched with the one waiting',
+       x.type === 'board' && x.you === 'X' && o.you === 'O' && x.cells === '.........' && x.turn === 'X' && x.opponent === 'a player',
+       seen(x, o));
+
+  first.send({ type: 'move', cell: 0 });
+  [x, o] = await both(first, second);
+  must('a move is accepted and both players see it', x.cells === 'X........' && o.cells === 'X........' && o.turn === 'O', seen(x, o));
+
+  second.send({ type: 'move', cell: 0 });
+  second.send({ type: 'move', cell: 4 });
+  [x, o] = await both(first, second);
+  must('a cell that is taken is refused', x.cells === 'X...O....' && o.cells === 'X...O....', seen(x, o));
+
+  for (const [player, cell] of [[first, 1], [second, 3], [first, 2]]) {
+    player.send({ type: 'move', cell });
+    [x, o] = await both(first, second);
+  }
+
+  must('three in a row wins, and both players are told who won with which cells',
+       x.cells === 'XXXOO....' && x.winner === 'X' && o.winner === 'X' && o.line?.join() === '0,1,2', seen(x, o));
+
+  second.send({ type: 'move', cell: 8 });
+  second.send({ type: 'again' });
+  got = await second.next();
+  must('a move after the end is refused', got.type !== 'board', seen(got));
+  must('"again" after a game waits for the next one', got.type === 'waiting', seen(got));
+
+  // the same two again, the other way round: the second player waited this time
+
+  first.send({ type: 'again' });
+  [o, x] = await both(first, second);
+  must('two players who ask again are matched, the one who waited as X',
+       x.type === 'board' && x.you === 'X' && o.you === 'O' && x.cells === '.........', seen(x, o));
+
+  first.send({ type: 'move', cell: 4 });
+  first.close();
+  got = await second.next();
+  must('a move out of turn is refused', got.type !== 'board', seen(got));
+  must('a player whose opponent leaves is told so', got.type === 'left', seen(got));
+
+  // a third player, and nobody to play but the house
+
+  const third = await join('the third player');
+
+  got = await third.next();
+  must('a player whose opponent left is not matched again until asking', got.type === 'waiting', seen(got));
+
+  third.send({ type: 'move', cell: 4 });
+  third.send({ type: 'house' });
+  let board = await third.next();
+  must('a player who waits can play the house instead, as X',
+       board.type === 'board' && board.you === 'X' && board.opponent === 'the house' && board.turn === 'X', seen(board));
+  must('a move before the game has started is refused', board.cells === '.........', seen(board));
+
+  // X plays the first free cell; nine cells are full after X's fifth move at the latest
+  let unanswered = null;
+
+  for (let moves = 0; moves < 5 && !board.winner && !unanswered; moves++) {
+    third.send({ type: 'move', cell: board.cells.indexOf('.') });
+    board = await third.next();
+
+    const answered = board.type === 'board'
+                  && (board.winner != null || (count(board.cells, 'O') === count(board.cells, 'X') && board.turn === 'X'));
+
+    if (!answered) {
+      unanswered = board;
+    }
+  }
+
+  must('the house answers every move at once', !unanswered, seen(unanswered));
+  must('a game against the house comes to an end', ['X', 'O', 'draw'].includes(board.winner), seen(board));
+
+  // the first game went to X, the one against the house to whoever won it -
+  // and the game that was left before anybody moved counts for nothing
+  const expected = before && {
+    games: before.games + 2,
+    x: before.x + 1 + (board.winner === 'X' ? 1 : 0),
+    o: before.o + (board.winner === 'O' ? 1 : 0),
+    draws: before.draws + (board.winner === 'draw' ? 1 : 0),
+  };
+
+  const after = await call('api/stats');
+  check('finished games are counted, the one that was left is not',
+        expected != null && ['games', 'x', 'o', 'draws'].every((k) => after.json?.[k] === expected[k]),
+        `expected ${JSON.stringify(expected)}, ${seen(after.json)}`);
+} catch (error) {
+  if (!(error instanceof Stopped)) {
+    check(`${base} answers in time`, false, error.message);
+  }
+} finally {
+  // closed rather than dropped, so the app lets go of these players at once
+  for (const socket of sockets) {
+    socket.close();
+  }
+}
+
+console.log(failures.length === 0 ? '\nAll passed.' : `\n${failures.length} failed.`);
+
+process.exit(failures.length === 0 ? 0 : 1);

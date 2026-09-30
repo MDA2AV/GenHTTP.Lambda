@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Twoja pierwsza lambda',
     editor: 'Centrum sterowania',
     why: 'Opisz, dlaczego',
+    written: 'Dokumentacja i testy',
     features: 'Bezpieczne zmiany',
     files: 'Więcej niż jeden plik',
     page: 'Serwowanie strony',
@@ -81,7 +82,8 @@ export const guide: Messages['guide'] = {
     </>
   ),
   bits: [
-    ['Przegląd', () => <>Czy jest online, ile dziś było żądań i ile z nich się nie udało, ostatnia zmiana i ile zostało miejsca.</>],
+    ['Przegląd', () => <>Czym jest aplikacja, czy jest online, ile dziś było żądań i ile z nich się nie udało, ostatnia zmiana i ile zostało miejsca.</>],
+    ['Dokumentacja', () => <>Czym jest aplikacja, dla kogo i po co, i dlaczego jest zbudowana właśnie tak – pisana przez agentów, zachowywana z każdą wersją.</>],
     [
       'Zmień',
       (k) => (
@@ -109,11 +111,13 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
+    ['Testy', () => <>Jak aplikacja jest testowana automatycznie, razem ze skryptami i danymi testowymi. Tylko w widoku pełnym.</>],
   ],
   sections: (k) => (
     <>
       Każda sekcja działa tak samo: tytuł, {k.b('ⓘ')} z wyjaśnieniem, akcje po prawej i – jeśli sekcja ma kilka widoków
-      – rząd zakładek pod spodem. W sekcji {k.b('Kod')} zakładki to pliki.
+      – rząd zakładek pod spodem. W sekcji {k.b('Kod')} zakładki to pliki. Widok pełny zbiera sekcje w grupy: gdzie
+      powstają zmiany, program i jego dane, jak lambda działa i jak ludzie do niej trafiają.
     </>
   ),
   editorAside:
@@ -139,6 +143,40 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  written: (k) => (
+    <>
+      Każda wersja przechowuje obok programu to, co o niej napisano: {k.b('dokumentację')} – czym jest aplikacja, dla
+      kogo i po co, i dlaczego jest zbudowana właśnie tak – oraz {k.b('testy')}: jak automatycznie sprawdzić, że
+      działa, razem ze skryptami i danymi testowymi. Agenci piszą je przy tworzeniu nowej lambdy i aktualizują przy
+      każdej zmianie. Następny agent, który zmienia lambdę, najpierw je czyta, więc wie, do czego służy aplikacja i co
+      musi działać dalej – czego sam kod nie mówi.
+    </>
+  ),
+  writtenFiles: [
+    ['.lambda/docs/product.md', 'czym jest aplikacja, dla kogo, co ludzie z nią robią i po co'],
+    ['.lambda/docs/decisions.md', 'decyzje techniczne i dlaczego je podjęto'],
+    ['.lambda/tests/README.md', 'jak aplikacja jest testowana automatycznie i jak uruchomić testy'],
+    ['.lambda/tests/…', 'skrypty i dane testowe, których używają testy'],
+  ],
+  written2: (k) => (
+    <>
+      To pliki wersji jak wszystkie inne, w folderze {k.code('.lambda')}: historia pokazuje, co wersja w nich
+      zmieniła, powrót do starszej wersji przywraca dokumentację, która była dla niej aktualna, a szkic ma własną
+      kopię, która trafia online razem z nim. Nigdy nie są kompilowane ani serwowane i wliczają się do limitu zasobów
+      wersji.
+    </>
+  ),
+  written3: (k) => (
+    <>
+      W centrum sterowania sekcja {k.b('Dokumentacja')} pokazuje strony do przeczytania, a {k.b('Testy')} – jak
+      aplikacja jest testowana i pliki, które leżą obok; wersję wybiera się tak samo jak w plikach. Stronę można tam
+      też edytować – zapisanie tworzy kolejną wersję. Widok prosty nazywa dokumentację {k.b('O aplikacji')} i pokazuje
+      tylko, do czego służy aplikacja – żeby to poprawić, powiedz agentowi.
+    </>
+  ),
+  writtenAside:
+    'Są pisane w języku, którego używasz w rozmowie z agentem, dla tego, kto jako następny zmieni aplikację – człowieka albo agenta. To nie kopia kodu, tylko to, do czego aplikacja służy i dlaczego.',
+
   features: (k) => (
     <>
       Zapisana wersja nigdy się nie zmienia – i właśnie dlatego każdą warto zachować: każdą można porównać i przywrócić
@@ -149,8 +187,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Utwórz go w sekcji {k.b('Szkice')} albo na bazie dowolnej wersji. To kopia kodu i zasobów tej wersji oraz
-        danych lambdy.
+        Utwórz go w sekcji {k.b('Szkice')} albo na bazie dowolnej wersji. To kopia kodu, zasobów, dokumentacji i
+        testów tej wersji oraz danych lambdy.
       </>
     ),
     (k) => (
@@ -243,7 +281,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'W wersji',
   workspaceColumn: 'W danych',
   table: [
-    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem', 'wszystko, co zapisze lambda albo ktoś prześle'],
+    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem – oraz jego dokumentacja i testy', 'wszystko, co zapisze lambda albo ktoś prześle'],
     ['kiedy się zmienia', 'nigdy – zmiana to nowa wersja', 'w chwili, gdy coś zostanie zapisane'],
     ['wdrożenie', 'wrzuca online dokładnie te pliki', 'nigdy ich nie rusza'],
     ['powrót do starszej wersji', 'przywraca stare pliki', 'bez wpływu: wszystkie wersje je współdzielą'],
@@ -322,6 +360,7 @@ export const guide: Messages['guide'] = {
       dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze {k.code('Platform')}, więc w kodzie nie
       trzeba nic zmieniać.
       {' '}{k.code('Secret')} odczytuje tam zmienne środowiskowe o tej samej nazwie; wartości zostają tutaj.
+      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}.
     </>
   ),
   awayAside:
@@ -337,7 +376,9 @@ export const guide: Messages['guide'] = {
     <>
       Przy okazji mówi, dlaczego coś robi – {k.code('write_code')} przyjmuje specyfikację i zmianę – i może sprawdzić, co
       wdrożył: {k.code('read_logs')} zwraca ostatnie żądania lambdy, to, co wypisała, i stack trace każdego wyjątku. Tak
-      agent dowiaduje się, że jego kod działa, zamiast to zakładać. Ty widzisz to samo w centrum sterowania.
+      agent dowiaduje się, że jego kod działa, zamiast to zakładać. Ty widzisz to samo w centrum sterowania. W trakcie
+      pracy pisze dokumentację i testy, czyta je, zanim cokolwiek zmieni, i uruchamia testy pod adresem szkicu, zanim
+      wrzuci szkic online.
     </>
   ),
   more: 'Więcej o tym →',

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import type { LambdaFile } from '../api';
 import { encodeBytes, readable } from '../bytes';
 import { pill } from '../control/ui';
+import { CONTEXT, DOCS, TESTS, isCode, isContext } from '../control/written';
 import { useEditorT } from '../i18n';
 import type { EditorMessages } from '../locales/en/editor';
 import { IconPlus, IconTrash, IconUpload } from './Icons';
@@ -65,10 +66,38 @@ function checkAsset(name: string, said: Said): string | null {
 }
 
 /**
+ * What a file of the documentation or the tests may be called: below
+ * .lambda/docs/ or .lambda/tests/ and nowhere else in it, with the rules of
+ * an asset below that - but no extension needed, since nothing is served.
+ * The same rule the server applies.
+ */
+function checkContext(name: string, said: Said): string | null {
+  const rest = name.startsWith(DOCS) ? name.slice(DOCS.length) : name.startsWith(TESTS) ? name.slice(TESTS.length) : null;
+
+  if (rest === null || rest === '' || rest.endsWith('/') || name.length > 160) {
+    return said.context;
+  }
+
+  const parts = rest.split('/');
+
+  if (parts.length > 6 || parts.some((part) => !part || part.length > 60 || part.startsWith('.') || !/^[A-Za-z0-9._-]+$/.test(part))) {
+    return said.context;
+  }
+
+  return null;
+}
+
+/**
  * What a new file starts as. Never empty: an empty file is valid and says
  * nothing about what it is for.
  */
 function starterFor(name: string): string {
+  if (isContext(name) && name.endsWith('.md')) {
+    const stem = name.slice(name.lastIndexOf('/') + 1, -3);
+
+    return `# ${stem.charAt(0).toUpperCase()}${stem.slice(1)}\n`;
+  }
+
   if (name.endsWith('.cs')) {
     const stem = name.slice(0, -3);
 
@@ -128,7 +157,9 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
 
     const wanted = typed.includes('.') ? typed : `${typed}.cs`;
 
-    const wrong = wanted.endsWith('.cs') ? checkCode(wanted, said) : checkAsset(wanted, said);
+    const wrong = wanted.toLowerCase().startsWith('.lambda')
+      ? checkContext(wanted, said)
+      : wanted.endsWith('.cs') ? checkCode(wanted, said) : checkAsset(wanted, said);
 
     if (wrong) {
       setProblem(wrong);
@@ -176,7 +207,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
       return;
     }
 
-    const folder = !active.endsWith('.cs') && active.includes('/') ? active.slice(0, active.lastIndexOf('/') + 1) : '';
+    const folder = !isCode(active) && active.includes('/') ? active.slice(0, active.lastIndexOf('/') + 1) : '';
 
     const added: LambdaFile[] = [];
 
@@ -205,42 +236,60 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
     }
   }
 
+  // the program first; what is written about it after a rule, and quieter
+  const program = files.filter((file) => !isContext(file.name));
+  const context = files.filter((file) => isContext(file.name));
+
+  const tab = (file: LambdaFile) => {
+    const open = file.name === active;
+
+    return (
+      <span key={file.name} className={`${pill(open)} !py-0.5 !pr-1.5`}>
+        <button
+          type="button"
+          onClick={() => onSelect(file.name)}
+          className="py-0.5 font-mono text-[12.5px]"
+          title={file.name === ENTRY ? said.entry : file.name}
+        >
+          {isContext(file.name) ? (
+            <>
+              <span className="text-slate-400">{CONTEXT}</span>
+              {file.name.slice(CONTEXT.length)}
+            </>
+          ) : file.name}
+          {faulty?.has(file.name) && <span className="ml-1.5 text-red-500" aria-label={said.errors}>•</span>}
+        </button>
+
+        {/* the same room on every pill, shown or not, so opening a file
+            does not widen its pill and push the others along */}
+        {file.name !== ENTRY && editable ? (
+          <button
+            type="button"
+            onClick={() => remove(file.name)}
+            className={`rounded-full p-0.5 text-slate-400 hover:text-red-500 ${open ? '' : 'invisible'}`}
+            aria-label={said.removeFile(file.name)}
+            title={said.removeTitle}
+            tabIndex={open ? 0 : -1}
+          >
+            <IconTrash className="h-3 w-3" />
+          </button>
+        ) : (
+          <span className="w-4" aria-hidden="true" />
+        )}
+      </span>
+    );
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {files.map((file) => {
-        const open = file.name === active;
+      {program.map(tab)}
 
-        return (
-          <span key={file.name} className={`${pill(open)} !py-0.5 !pr-1.5`}>
-            <button
-              type="button"
-              onClick={() => onSelect(file.name)}
-              className="py-0.5 font-mono text-[12.5px]"
-              title={file.name === ENTRY ? said.entry : file.name}
-            >
-              {file.name}
-              {faulty?.has(file.name) && <span className="ml-1.5 text-red-500" aria-label={said.errors}>•</span>}
-            </button>
-
-            {/* the same room on every pill, shown or not, so opening a file
-                does not widen its pill and push the others along */}
-            {file.name !== ENTRY && editable ? (
-              <button
-                type="button"
-                onClick={() => remove(file.name)}
-                className={`rounded-full p-0.5 text-slate-400 hover:text-red-500 ${open ? '' : 'invisible'}`}
-                aria-label={said.removeFile(file.name)}
-                title={said.removeTitle}
-                tabIndex={open ? 0 : -1}
-              >
-                <IconTrash className="h-3 w-3" />
-              </button>
-            ) : (
-              <span className="w-4" aria-hidden="true" />
-            )}
-          </span>
-        );
-      })}
+      {context.length > 0 && (
+        <span role="group" aria-label={said.contextFiles} title={said.contextFiles} className="contents">
+          <span aria-hidden="true" className="mx-1 h-5 w-px bg-slate-300 dark:bg-ink-700" />
+          {context.map(tab)}
+        </span>
+      )}
 
       {!editable ? null : adding ? (
         <form onSubmit={add} className="flex items-center gap-2">

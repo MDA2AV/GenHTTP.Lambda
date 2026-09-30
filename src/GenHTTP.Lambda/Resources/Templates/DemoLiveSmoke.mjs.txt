@@ -1,0 +1,237 @@
+// Checks the live poll from the outside.
+//
+//   node smoke.mjs <address>        the preview of a feature, or a copy of your own
+//
+// Reads the poll, opens two event streams the way two browsers would, casts
+// one vote and waits for it to arrive on both, and checks what is refused and
+// that the page is served. The vote stays: the poll has no way to take one
+// back. Ends with 1, naming what failed, when something did not pass. Needs
+// Node 18 or later and nothing else.
+
+const address = process.argv[2];
+
+if (!address) {
+  console.error('Usage: node smoke.mjs <address of the app>');
+  process.exit(2);
+}
+
+const base = address.endsWith('/') ? address : `${address}/`;
+
+// how long to wait for an answer or an event before calling it a failure
+const PATIENCE = 5000;
+
+const failures = [];
+
+function check(what, passed, detail = '') {
+  console.log(`${passed ? 'ok  ' : 'FAIL'} ${what}${passed || !detail ? '' : ` - ${detail}`}`);
+
+  if (!passed) {
+    failures.push(what);
+  }
+}
+
+// every wait has its own limit; this is for whatever hangs anyway, since a
+// stream that never ends must not keep the script waiting either
+const watchdog = setTimeout(() => {
+  check('the checks finish within a minute', false);
+  console.log(`\n${failures.length} failed.`);
+  process.exit(1);
+}, 60000);
+
+/** Calls the app with a path relative to it, the way its own page does. */
+async function call(method, path, body) {
+  const response = await fetch(new URL(path, base), {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(PATIENCE),
+  });
+
+  const text = await response.text();
+
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch { }
+
+  return { status: response.status, json, type: response.headers.get('content-type') ?? '' };
+}
+
+/**
+ * Opens the event stream and reads it the way EventSource does: lines of
+ * "event:" and "data:", an empty line ending each event, and lines starting
+ * with a colon being comments. Events are kept until they are asked for.
+ */
+async function listen() {
+  const controller = new AbortController();
+
+  const connecting = setTimeout(() => controller.abort(), PATIENCE);
+
+  const response = await fetch(new URL('events', base), { signal: controller.signal });
+
+  clearTimeout(connecting);
+
+  const events = [];
+  const waiting = [];
+
+  const wakeAll = () => waiting.splice(0).forEach((wake) => wake());
+
+  let ended = false;
+
+  let type = null;
+  let data = [];
+
+  function line(text) {
+    if (text === '') {
+      if (data.length > 0) {
+        events.push({ type: type ?? 'message', data: data.join('\n') });
+        wakeAll();
+      }
+
+      type = null;
+      data = [];
+      return;
+    }
+
+    if (text.startsWith(':')) {
+      return;
+    }
+
+    const colon = text.indexOf(':');
+    const field = colon < 0 ? text : text.slice(0, colon);
+    const value = colon < 0 ? '' : text.slice(colon + 1).replace(/^ /, '');
+
+    if (field === 'event') type = value;
+    if (field === 'data') data.push(value);
+  }
+
+  // reads in the background until the stream is closed or aborted
+  (async () => {
+    let rest = '';
+
+    try {
+      for await (const chunk of response.body.pipeThrough(new TextDecoderStream())) {
+        const lines = (rest + chunk).split(/\r?\n/);
+        rest = lines.pop();
+        lines.forEach(line);
+      }
+    } catch { }
+
+    // nothing more is coming, so nobody needs to wait for it
+    ended = true;
+    wakeAll();
+  })();
+
+  return {
+    status: response.status,
+    type: response.headers.get('content-type') ?? '',
+
+    /** The first event from now on that matches, or null when none came in time or the stream ended. */
+    async next(matches) {
+      const until = Date.now() + PATIENCE;
+
+      for (;;) {
+        const index = events.findIndex(matches);
+
+        if (index >= 0) {
+          return events.splice(0, index + 1).pop();
+        }
+
+        const left = until - Date.now();
+
+        if (left <= 0 || ended) {
+          return null;
+        }
+
+        await new Promise((wake) => {
+          const timer = setTimeout(wake, left);
+          waiting.push(() => { clearTimeout(timer); wake(); });
+        });
+      }
+    },
+
+    close: () => controller.abort(),
+  };
+}
+
+function counts(event) {
+  try { return event?.type === 'message' ? JSON.parse(event.data) : null; } catch { return null; }
+}
+
+const watchers = (event) => (event?.type === 'watchers' ? Number(event.data) : null);
+
+function isPoll(poll) {
+  return typeof poll?.question === 'string'
+      && Array.isArray(poll.options) && poll.options.length > 0
+      && poll.options.every((o) => typeof o.id === 'string' && typeof o.label === 'string' && Number.isInteger(o.votes))
+      && poll.total === poll.options.reduce((sum, o) => sum + o.votes, 0);
+}
+
+const streams = [];
+
+try {
+  const poll = await call('GET', 'api/poll');
+  check('the poll is served', poll.status === 200 && isPoll(poll.json), `status ${poll.status}`);
+
+  const first = await listen();
+  streams.push(first);
+  check('the stream is an event stream', first.status === 200 && first.type.includes('text/event-stream'),
+        `status ${first.status}, ${first.type}`);
+
+  const opening = counts(await first.next((e) => e.type === 'message'));
+  check('it starts with the counts as they are', isPoll(opening) && opening.total >= (poll.json?.total ?? 0),
+        opening ? `total ${opening.total}` : 'nothing came');
+
+  // others may be watching too, so the counts are at least what this script
+  // has open, not exactly that
+  const watching = watchers(await first.next((e) => e.type === 'watchers'));
+  check('it says how many are watching, itself included', watching >= 1, `got ${watching}`);
+
+  const second = await listen();
+  streams.push(second);
+
+  const joined = watchers(await second.next((e) => e.type === 'watchers'));
+  check('a second stream is counted beside the first', joined >= 2, `got ${joined}`);
+
+  const told = watchers(await first.next((e) => e.type === 'watchers' && Number(e.data) >= 2));
+  check('the first stream is told that somebody joined', told >= 2, `got ${told}`);
+
+  // the first option there is, so the script still fits when the question is changed
+  const option = poll.json?.options?.[0]?.id;
+
+  if (option) {
+    const before = (await call('GET', 'api/poll')).json?.options.find((o) => o.id === option)?.votes ?? 0;
+
+    const voted = await call('POST', 'api/votes', { option });
+    check(`a vote for "${option}" is accepted`, voted.status === 204, `status ${voted.status}`);
+
+    // others may vote at the same time, so at least one more, not exactly one
+    const counted = (event) => counts(event)?.options.find((o) => o.id === option)?.votes > before;
+
+    check('it arrives on the first stream', counts(await first.next(counted)) != null);
+    check('and on the second', counts(await second.next(counted)) != null);
+
+    const after = (await call('GET', 'api/poll')).json?.options.find((o) => o.id === option)?.votes ?? 0;
+    check('and is kept', after > before, `${before} before, ${after} after`);
+  }
+
+  const unknown = await call('POST', 'api/votes', { option: 'smoketest-not-an-option' });
+  check('a vote for an option that is not there is refused', unknown.status === 400 && typeof unknown.json?.message === 'string',
+        `status ${unknown.status}`);
+
+  const empty = await call('POST', 'api/votes', {});
+  check('a vote without an option is refused', empty.status === 400, `status ${empty.status}`);
+
+  const page = await call('GET', './');
+  check('the page is served', page.status === 200 && page.type.includes('text/html'), `status ${page.status}`);
+
+  const script = await call('GET', 'app.js');
+  check('its script is served', script.status === 200 && script.type.includes('javascript'), `status ${script.status}`);
+} catch (error) {
+  check(`${base} answers`, false, error.message);
+} finally {
+  streams.forEach((stream) => stream.close());
+  clearTimeout(watchdog);
+}
+
+console.log(failures.length === 0 ? '\nAll passed.' : `\n${failures.length} failed.`);
+
+process.exit(failures.length === 0 ? 0 : 1);

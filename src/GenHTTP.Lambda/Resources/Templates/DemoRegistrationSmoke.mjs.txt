@@ -1,0 +1,181 @@
+// Checks registration, signing in and the members' API from the outside.
+//
+//   node smoke.mjs <address>        the preview of a feature, or a copy of your own
+//
+// Registers an account of its own, reads what only a member may read with
+// its session, signs in and out, and checks what is refused: a request
+// without a session, one with a session the app does not know, a name that is
+// taken, a wrong password, a name or password that is not allowed. Ends its
+// sessions whatever happens. The account itself stays - the app has no way to
+// remove one - which is why a feature's preview, whose data is a copy, is the
+// place to run it. Ends with 1, naming what failed, when something did not
+// pass. Needs Node 18 or later and nothing else.
+
+const address = process.argv[2];
+
+if (!address) {
+  console.error('Usage: node smoke.mjs <address of the app>');
+  process.exit(2);
+}
+
+const base = address.endsWith('/') ? address : `${address}/`;
+
+const failures = [];
+
+function check(what, passed, detail = '') {
+  console.log(`${passed ? 'ok  ' : 'FAIL'} ${what}${passed || !detail ? '' : ` - ${detail}`}`);
+
+  if (!passed) {
+    failures.push(what);
+  }
+}
+
+/**
+ * Calls the app with a path relative to it, the way its pages do. A browser
+ * keeps the session cookie and sends it by itself; here it is passed along
+ * by hand, so the test can hold two sessions at once and forged ones.
+ */
+async function call(method, path, { body, session } = {}) {
+  const headers = {};
+
+  if (body) headers['Content-Type'] = 'application/json';
+  if (session) headers['Cookie'] = `session=${session}`;
+
+  const response = await fetch(new URL(path, base), {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch { }
+
+  const cookie = response.headers.get('set-cookie') ?? '';
+  const token = /^session=([^;]*)/.exec(cookie)?.[1] ?? null;
+
+  return { status: response.status, json, text, cookie, token, type: response.headers.get('content-type') ?? '' };
+}
+
+// a name nobody would pick, so it cannot be mistaken for a person's, and new
+// on every run, since an account cannot be removed - 23 characters, one
+// fewer than a name may have
+const name = `smoketest-${Date.now()}`;
+const password = 'correct-horse-battery';
+
+// every session this run opened, ended at the end whatever happens
+const sessions = new Set();
+
+try {
+  const landing = await call('GET', './');
+  check('the landing page is served', landing.status === 200 && landing.type.includes('text/html'), `status ${landing.status}`);
+
+  const page = await call('GET', 'members.html');
+  check('the members page is served to anybody - the API behind it is what is protected',
+        page.status === 200 && page.type.includes('text/html'), `status ${page.status}`);
+
+  const anonymous = await call('GET', 'api/me');
+  check('without a session, who you are is refused with 401', anonymous.status === 401, `status ${anonymous.status}`);
+
+  const anonymousList = await call('GET', 'api/members');
+  check('without a session, the members are refused with 401', anonymousList.status === 401, `status ${anonymousList.status}`);
+
+  const forged = await call('GET', 'api/me', { session: 'not-a-session-this-app-knows' });
+  check('a session the app does not know is refused with 403', forged.status === 403, `status ${forged.status}`);
+
+  const registered = await call('POST', 'register', { body: { name, password } });
+  const first = registered.token;
+  if (first) sessions.add(first);
+
+  check('an account is registered', registered.status === 200 && registered.json?.name === name && !!first,
+        `status ${registered.status}`);
+
+  if (first) {
+    check('the answer is the name alone - the session travels only in the cookie',
+          Object.keys(registered.json ?? {}).join() === 'name' && !registered.text.includes(first));
+
+    const flags = registered.cookie.toLowerCase();
+    check('the cookie is HttpOnly and SameSite=Lax, lasts seven days and has no path of its own',
+          flags.includes('httponly') && flags.includes('samesite=lax') && flags.includes('max-age=604800') && !flags.includes('path='),
+          registered.cookie);
+
+    if (base.startsWith('https:')) {
+      check('over HTTPS the cookie is Secure', flags.includes('secure'), registered.cookie);
+    }
+
+    const me = await call('GET', 'api/me', { session: first });
+    check('with the session, the app knows who you are',
+          me.status === 200 && me.json?.name === name && !Number.isNaN(Date.parse(me.json?.joined)) && me.json?.members >= 1,
+          `status ${me.status}`);
+
+    const members = await call('GET', 'api/members', { session: first });
+    const list = Array.isArray(members.json) ? members.json : [];
+    check('the newest members are listed, the new account among them',
+          members.status === 200 && list.length <= 10 && list.some((m) => m.name === name), `status ${members.status}`);
+
+    const joined = list.map((m) => Date.parse(m.joined));
+    check('the newest come first', joined.every((time, i) => i === 0 || joined[i - 1] >= time));
+
+    const said = JSON.stringify([me.json, members.json]).toLowerCase();
+    check('nothing about a password is sent back', !['password', 'hash', 'salt'].some((word) => said.includes(`"${word}"`)));
+  }
+
+  const taken = await call('POST', 'register', { body: { name: name.toUpperCase(), password } });
+  check('a name that is taken is refused with 409, whatever the case', taken.status === 409, `status ${taken.status}`);
+
+  const wrong = await call('POST', 'login', { body: { name, password: 'not-the-password' } });
+  check('a wrong password is refused with 401', wrong.status === 401 && !wrong.token, `status ${wrong.status}`);
+
+  const unknown = await call('POST', 'login', { body: { name: `${name}x`, password } });
+  check('a name without an account gets the very same answer',
+        unknown.status === 401 && unknown.json?.message === wrong.json?.message, `status ${unknown.status}`);
+
+  const signedIn = await call('POST', 'login', { body: { name: name.toUpperCase(), password } });
+  const second = signedIn.token;
+  if (second) sessions.add(second);
+
+  check('signing in works whatever the case, and answers with the name as registered',
+        signedIn.status === 200 && signedIn.json?.name === name && !!second && second !== first, `status ${signedIn.status}`);
+
+  if (first && second) {
+    const still = await call('GET', 'api/me', { session: first });
+    check('signing in again leaves the first session alone', still.status === 200, `status ${still.status}`);
+
+    const out = await call('POST', 'logout', { session: first });
+    check('signing out answers 204 and tells the browser to forget the cookie',
+          out.status === 204 && out.token === '' && /max-age=0/i.test(out.cookie), `status ${out.status}, ${out.cookie}`);
+
+    sessions.delete(first);
+
+    const ended = await call('GET', 'api/me', { session: first });
+    check('a session signed out of is refused with 403', ended.status === 403, `status ${ended.status}`);
+
+    const other = await call('GET', 'api/me', { session: second });
+    check('and the other session still works', other.status === 200, `status ${other.status}`);
+  }
+
+  const refused = [
+    ['a name of 1 character', { name: 'a', password }],
+    ['a name of 25 characters', { name: 'n'.repeat(25), password }],
+    ['a name with a space', { name: 'smoke test', password }],
+    ['a password of 7 characters', { name: `${name.slice(0, 22)}-p`, password: 'x'.repeat(7) }],
+  ];
+
+  for (const [what, body] of refused) {
+    const answer = await call('POST', 'register', { body });
+    check(`${what} is refused with 400, saying why`, answer.status === 400 && !!answer.json?.message && !answer.token,
+          `status ${answer.status}`);
+  }
+} catch (error) {
+  check(`${base} answers`, false, error.message);
+} finally {
+  for (const session of sessions) {
+    const out = await call('POST', 'logout', { session }).catch(() => null);
+    check('the sessions of this run are ended', out?.status === 204, `status ${out?.status}`);
+  }
+}
+
+console.log(failures.length === 0 ? '\nAll passed.' : `\n${failures.length} failed.`);
+
+process.exit(failures.length === 0 ? 0 : 1);

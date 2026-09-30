@@ -6,6 +6,7 @@ import { useEditorT } from '../i18n';
 import { ChangeList } from './Changes';
 import type { Control } from './context';
 import { AgentMark, Ago, Quote, Section } from './ui';
+import { isContext } from './written';
 
 /**
  * One feature - a draft, to the owner: what it changes, what was asked for,
@@ -61,7 +62,8 @@ export function FeatureTab({ control, onNotes, onRebase }: {
 
   // from the preview, a full path to the lambda is the live lambda - and its real data
   const own = `/lambda/${control.lambda.publicKey}/`;
-  const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && file.code.includes(own)).map((file) => file.name);
+  // the program only: documentation naming the address says where it is, and links nowhere
+  const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && !isContext(file.name) && file.code.includes(own)).map((file) => file.name);
 
   return (
     <Section

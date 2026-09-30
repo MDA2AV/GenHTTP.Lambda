@@ -823,11 +823,17 @@ public sealed class MetaService : IMetaService
             throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, options.MaxCodeLengthOf(LambdaTier.Premium), $"{options.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
         }
 
+        // the documentation and the tests are carried the same way as the
+        // assets - a copy in every version - so they share the allowance
         var assets = options.MaxAssetBytesOf(tier);
 
-        if (LambdaSource.AssetBytes(files) > assets)
+        var context = LambdaSource.ContextBytes(files);
+
+        if (LambdaSource.AssetBytes(files) + context > assets)
         {
-            throw LambdaException.Invalid($"The assets must not exceed {Readable(assets)} in total.{Beyond(tier, assets, options.MaxAssetBytesOf(LambdaTier.Premium), Readable(options.MaxAssetBytesOf(LambdaTier.Premium)))} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
+            var what = context > 0 ? "The assets, the documentation and the tests" : "The assets";
+
+            throw LambdaException.Invalid($"{what} must not exceed {Readable(assets)} in total.{Beyond(tier, assets, options.MaxAssetBytesOf(LambdaTier.Premium), Readable(options.MaxAssetBytesOf(LambdaTier.Premium)))} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
         }
     }
 

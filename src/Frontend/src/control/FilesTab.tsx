@@ -9,6 +9,7 @@ import { GroupList, Tree, Viewer, sizeOf, type Selection } from './FileBrowser';
 import { bytes, servesAssets } from './format';
 import { Exposure } from './SummaryTab';
 import { Section, pill } from './ui';
+import { isAsset, isCode, isContext } from './written';
 
 /**
  * The files of one version - the program - and which of them anybody on the
@@ -17,6 +18,11 @@ import { Section, pill } from './ui';
  * Code and assets belong to a version, so the version is this section's view,
  * and nothing else is here: what the lambda keeps while it runs belongs to
  * the lambda rather than to any version, and has a section of its own.
+ *
+ * What is written about the version - its documentation and its tests - is
+ * shown too, as the third thing it holds, never compiled and never served:
+ * this is where all of a version's files are, and its own sections are where
+ * it is read.
  */
 export function FilesTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -63,8 +69,9 @@ export function FilesTab({ control }: { control: Control }) {
   }, [control.privateKey, wanted, said]);
 
   const files = content?.files ?? [];
-  const code = files.filter((f) => f.name.endsWith('.cs'));
-  const assets = files.filter((f) => !f.name.endsWith('.cs'));
+  const code = files.filter((f) => isCode(f.name));
+  const assets = files.filter((f) => isAsset(f.name));
+  const context = files.filter((f) => isContext(f.name));
 
   const source = code.map((f) => f.code).join('\n');
   const limits = summary?.limits;
@@ -157,6 +164,19 @@ export function FilesTab({ control }: { control: Control }) {
                   selected={selected?.group === 'assets' ? selected.path : null}
                   onSelect={(path) => setSelected({ group: 'assets', path })}
                   empty={said.noAssets}
+                />
+              </GroupList>
+
+              <GroupList
+                title={said.context}
+                exposure={<Exposure open={false} why={said.contextWhy} />}
+                usage={said.contextUsage(said.count(context.length), bytes(context.reduce((total, f) => total + sizeOf(f), 0)))}
+              >
+                <Tree
+                  entries={context.map((f) => ({ path: f.name, size: sizeOf(f) }))}
+                  selected={selected?.group === 'context' ? selected.path : null}
+                  onSelect={(path) => setSelected({ group: 'context', path })}
+                  empty={said.noContext}
                 />
               </GroupList>
             </nav>

@@ -5,7 +5,8 @@ using System.Text.Json.Serialization;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
-/// One file of a lambda: either C# to compile, or an asset to serve.
+/// One file of a lambda: C# to compile, an asset to serve, or part of what is
+/// written about it - its documentation and its tests.
 /// </summary>
 /// <param name="Name">What it is called, which is also what diagnostics name</param>
 /// <param name="Code">Its contents, base64 when <paramref name="Encoding" /> says so</param>
@@ -15,14 +16,23 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
 
     /// <summary>Whether this is C# rather than something to serve.</summary>
     /// <remarks>
-    /// Not serialised, along with Bytes. This record is the API's shape as
-    /// well as the storage one, and both of these are worked out from what is
-    /// already there - so sending them put a second, base64 copy of every
-    /// file into every response that carried one, roughly doubling it, to say
-    /// something the caller could see for itself from the name.
+    /// Not serialised, along with Bytes and the other kinds. This record is
+    /// the API's shape as well as the storage one, and all of these are
+    /// worked out from what is already there - so sending them put a second,
+    /// base64 copy of every file into every response that carried one,
+    /// roughly doubling it, to say something the caller could see for itself
+    /// from the name.
     /// </remarks>
     [JsonIgnore]
     public bool IsCode => LambdaSource.IsCode(Name);
+
+    /// <summary>Whether this is documentation or a test rather than part of the program.</summary>
+    [JsonIgnore]
+    public bool IsContext => LambdaSource.IsContext(Name);
+
+    /// <summary>Whether this is shipped to be served: neither code nor context.</summary>
+    [JsonIgnore]
+    public bool IsAsset => LambdaSource.IsAsset(Name);
 
     /// <summary>The bytes of an asset, whatever it was sent as.</summary>
     [JsonIgnore]
@@ -43,6 +53,18 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
 ///
 /// The first file is the snippet - the statements that return a handler. The
 /// rest are ordinary C#: types, and nothing that has to run.
+///
+/// Beside the program, a version keeps what is written about it - its
+/// context - under <c>.lambda/</c>: its documentation in <c>docs/</c> and how
+/// it is tested in <c>tests/</c>. Those files are the version's like any
+/// other - saved, compared, rolled back, copied into a feature and merged with
+/// it - because they describe that version of the program. They are never
+/// compiled and never served, whatever they are called: a test script ending
+/// in <c>.cs</c> is not code, and a page of documentation is not an asset.
+/// A dot folder, because the root of a version is the root of what its assets
+/// are served from, where a leading dot is the convention for "not served" -
+/// and because no asset has ever been allowed a name starting with one, so no
+/// version saved before this can have meant anything else by it.
 /// </remarks>
 public static class LambdaSource
 {
@@ -52,8 +74,56 @@ public static class LambdaSource
     /// </summary>
     public const string EntryName = "lambda.cs";
 
-    /// <summary>Whether a name is C# rather than something to serve.</summary>
-    public static bool IsCode(string? name) => name?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) == true;
+    #region Context
+
+    /// <summary>
+    /// Where a version keeps what is written about it, rather than the program.
+    /// </summary>
+    public const string ContextFolder = ".lambda/";
+
+    /// <summary>
+    /// The documentation of a version: what it is and why, and how it is built and why.
+    /// </summary>
+    public const string DocsFolder = ".lambda/docs/";
+
+    /// <summary>
+    /// How a version is tested, and the scripts and data the tests use.
+    /// </summary>
+    public const string TestsFolder = ".lambda/tests/";
+
+    /// <summary>
+    /// What the app is, who it is for, why it exists and what people do with
+    /// it - in the terms of the people who asked for it. The one page of the
+    /// context that the owner of an app they had built reads as well.
+    /// </summary>
+    public const string ProductDoc = ".lambda/docs/product.md";
+
+    /// <summary>
+    /// The technical decisions behind the program, and why they were made.
+    /// </summary>
+    public const string DecisionsDoc = ".lambda/docs/decisions.md";
+
+    /// <summary>
+    /// How the app is tested automatically: what is checked, how, and how the
+    /// scripts beside it are run.
+    /// </summary>
+    public const string TestingDoc = ".lambda/tests/README.md";
+
+    /// <summary>
+    /// The pages every version is meant to have, in the order they are read.
+    /// </summary>
+    public static readonly IReadOnlyList<string> ExpectedContext = [ProductDoc, DecisionsDoc, TestingDoc];
+
+    #endregion
+
+    /// <summary>Whether a name is C# to compile, rather than something to serve or part of the context.</summary>
+    public static bool IsCode(string? name) => name?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) == true && !IsContext(name);
+
+    /// <summary>Whether a name belongs to the context of a version: its documentation or its tests.</summary>
+    public static bool IsContext(string? name) => name?.StartsWith(ContextFolder, StringComparison.Ordinal) == true;
+
+    /// <summary>Whether a name is an asset: shipped with the program and served when the code asks.</summary>
+    public static bool IsAsset(string? name) => name != null && !IsCode(name) && !IsContext(name);
 
     private static readonly JsonSerializerOptions Format = new()
     {
@@ -157,24 +227,49 @@ public static class LambdaSource
 
         foreach (var file in files)
         {
-            if (file.IsCode)
+            if (file.IsAsset)
             {
-                continue;
-            }
-
-            if (file.Encoding == "base64")
-            {
-                // a file that is not the base64 it claims to be is caught by
-                // Validate; here it simply counts for nothing
-                total += Base64.IsValid(file.Code, out var decoded) ? decoded : 0;
-            }
-            else
-            {
-                total += System.Text.Encoding.UTF8.GetByteCount(file.Code);
+                total += Bytes(file);
             }
         }
 
         return total;
+    }
+
+    /// <summary>
+    /// How many bytes the documentation and the tests of a version come to.
+    /// </summary>
+    /// <remarks>
+    /// Held to the same allowance as the assets. The allowance is there
+    /// because every version carries its own copy of everything that is not
+    /// code and is read whole to be saved - which is as true of a test's data
+    /// as of a picture a page shows.
+    /// </remarks>
+    public static long ContextBytes(IReadOnlyList<LambdaFile> files)
+    {
+        long total = 0;
+
+        foreach (var file in files)
+        {
+            if (file.IsContext)
+            {
+                total += Bytes(file);
+            }
+        }
+
+        return total;
+    }
+
+    private static long Bytes(LambdaFile file)
+    {
+        if (file.Encoding == "base64")
+        {
+            // a file that is not the base64 it claims to be is caught by
+            // Validate; here it simply counts for nothing
+            return Base64.IsValid(file.Code, out var decoded) ? decoded : 0;
+        }
+
+        return System.Text.Encoding.UTF8.GetByteCount(file.Code);
     }
 
     /// <summary>
@@ -197,7 +292,22 @@ public static class LambdaSource
 
         foreach (var file in files)
         {
-            if (file.IsCode)
+            if (file.Name.StartsWith(".lambda", StringComparison.OrdinalIgnoreCase))
+            {
+                // said apart from code and assets, because somebody writing
+                // here meant the context and should be told where in it
+                // things go - a C# file included, which is a test here
+                if (!IsValidContextName(file.Name))
+                {
+                    return $"'{file.Name}' is not a usable name. {ContextFolder} holds the documentation in {DocsFolder} and the tests in {TestsFolder}; below those, use letters, digits, dashes, underscores, dots and slashes, and no names starting with a dot.";
+                }
+
+                if (file.Encoding == "base64" && file.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"'{file.Name}' is a page of the documentation and has to be text (UTF-8), not base64.";
+                }
+            }
+            else if (file.IsCode)
             {
                 if (!IsValidName(file.Name))
                 {
@@ -276,6 +386,70 @@ public static class LambdaSource
         // something to infer a content type from; a file with no extension
         // would be served as a download and surprise whoever shipped it
         return Path.GetExtension(name).Length > 1;
+    }
+
+    /// <summary>
+    /// Whether a name is one a file of the context may have.
+    /// </summary>
+    /// <remarks>
+    /// Below <c>.lambda/docs/</c> or <c>.lambda/tests/</c> and nowhere else in
+    /// it, so the folder keeps the shape every reader - the editor, an agent,
+    /// the export - expects. Below that, the rules of an asset, because these
+    /// end up as real files too - in a zip, in an exported project - with one
+    /// difference: no extension is needed, since nothing infers a content type
+    /// from one here and a test may well be a Makefile.
+    /// </remarks>
+    public static bool IsValidContextName(string? name)
+    {
+        if (name == null || name.Length > 160)
+        {
+            return false;
+        }
+
+        string rest;
+
+        if (name.StartsWith(DocsFolder, StringComparison.Ordinal))
+        {
+            rest = name[DocsFolder.Length..];
+        }
+        else if (name.StartsWith(TestsFolder, StringComparison.Ordinal))
+        {
+            rest = name[TestsFolder.Length..];
+        }
+        else
+        {
+            return false;
+        }
+
+        if (rest.Length == 0 || rest.EndsWith('/'))
+        {
+            return false;
+        }
+
+        var segments = rest.Split('/');
+
+        if (segments.Length > 6)
+        {
+            return false;
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment.Length is 0 or > 60 || segment.StartsWith('.'))
+            {
+                return false;
+            }
+
+            foreach (var character in segment)
+            {
+                if (!char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_' or '.'))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

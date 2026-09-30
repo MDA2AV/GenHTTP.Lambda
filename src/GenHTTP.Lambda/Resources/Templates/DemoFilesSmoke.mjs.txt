@@ -1,0 +1,176 @@
+// Checks the uploads and the gallery from the outside.
+//
+//   node smoke.mjs <address>        the preview of a feature, or a copy of your own
+//
+// Uploads a small picture and a text file of its own, finds them in the
+// gallery and reads them back with their types, checks what is refused - other
+// types, empty and too large files, removing without the key - and removes
+// what it uploaded, whatever happens. Ends with 1, naming what failed, when
+// something did not pass. Needs Node 18 or later and nothing else.
+
+const address = process.argv[2];
+
+if (!address) {
+  console.error('Usage: node smoke.mjs <address of the app>');
+  process.exit(2);
+}
+
+const base = address.endsWith('/') ? address : `${address}/`;
+
+const failures = [];
+
+function check(what, passed, detail = '') {
+  console.log(`${passed ? 'ok  ' : 'FAIL'} ${what}${passed || !detail ? '' : ` - ${detail}`}`);
+
+  if (!passed) {
+    failures.push(what);
+  }
+}
+
+/** Calls the app with a path relative to it, the way its own page does. */
+async function call(method, path, body, type) {
+  const response = await fetch(new URL(path, base), {
+    method,
+    headers: type ? { 'Content-Type': type } : {},
+    body,
+  });
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+
+  let json = null;
+  try { json = bytes.length ? JSON.parse(bytes.toString('utf8')) : null; } catch { }
+
+  return {
+    status: response.status,
+    json,
+    bytes,
+    type: response.headers.get('content-type') ?? '',
+    nosniff: response.headers.get('x-content-type-options') === 'nosniff',
+  };
+}
+
+// everything the app accepted, with the key it answered - removed at the end,
+// including what it should have refused
+const uploaded = [];
+
+/**
+ * Uploads the way the page does: the file itself as the body, its name in the
+ * query. The names here need nothing encoded - a slash may stand in a query
+ * as it is.
+ */
+async function upload(name, content, type) {
+  const response = await call('POST', `api/files?name=${name}`, content, type);
+
+  const { upload: entry, key } = response.json ?? {};
+
+  if (response.status === 201 && entry?.id && key) {
+    uploaded.push({ ...entry, key });
+  }
+
+  return { ...response, entry };
+}
+
+// unlike anything a person would upload, so it cannot be mistaken for one
+const stem = `smoketest-${Date.now()}`;
+
+// a PNG of a single pixel, 70 bytes - carried here, so the test needs no files
+const picture = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+
+// as large as a file may be
+const limit = 512 * 1024;
+
+// where the app keeps a file: under an id of its own and the extension of its type
+const stored = (extension) => new RegExp(`^files/[0-9a-f]{16}\\.${extension}$`);
+
+try {
+  const list = await call('GET', 'api/files');
+  check('the gallery is served', list.status === 200 && Array.isArray(list.json), `status ${list.status}`);
+
+  const image = await upload(`${stem}.png`, picture, 'image/png');
+  check('a picture is uploaded',
+        image.status === 201 && image.entry?.name === `${stem}.png` && image.entry?.type === 'image/png' && image.entry?.size === picture.length,
+        `status ${image.status}`);
+
+  // exactly at the limit, and named with folders in front, as only a script would send it
+  const note = await upload(`some/folder/${stem}.txt`, Buffer.alloc(limit, 'smoke test\n'), 'text/plain');
+  check('a text file of exactly 512 KB is accepted', note.status === 201 && note.entry?.size === limit, `status ${note.status}`);
+
+  if (image.entry) {
+    check('it is kept under a name the app made up', stored('png').test(image.entry.url), image.entry.url);
+
+    const served = await call('GET', image.entry.url);
+    check('the picture is served as it was uploaded', served.status === 200 && served.bytes.equals(picture), `status ${served.status}`);
+    check('as image/png, with nosniff', served.type.startsWith('image/png') && served.nosniff, `${served.type}, nosniff ${served.nosniff}`);
+  }
+
+  if (note.entry) {
+    check('folders in front of a name are dropped', note.entry.name === `${stem}.txt` && stored('txt').test(note.entry.url),
+          `${note.entry.name} at ${note.entry.url}`);
+
+    const served = await call('GET', note.entry.url);
+    check('a text file is served as text, with nosniff', served.status === 200 && served.type.startsWith('text/plain') && served.nosniff,
+          `status ${served.status}, ${served.type}, nosniff ${served.nosniff}`);
+  }
+
+  const gallery = (await call('GET', 'api/files')).json ?? [];
+  const at = (entry) => gallery.findIndex((u) => u.id === entry?.id);
+  check('both are in the gallery, the newest first', at(note.entry) >= 0 && at(image.entry) > at(note.entry));
+  check('the gallery shows no keys', gallery.every((u) => !('key' in u) && !('keyHash' in u)));
+
+  // what a browser would run as a page, if it were served from here
+  for (const [extension, type] of [['html', 'text/html'], ['svg', 'image/svg+xml']]) {
+    const refused = await upload(`${stem}.${extension}`, Buffer.from('<script>alert(1)</script>'), type);
+    check(`an .${extension} file is refused`, refused.status === 415 && typeof refused.json?.message === 'string', `status ${refused.status}`);
+  }
+
+  const bare = await upload(stem, Buffer.from('a name without an extension'), 'text/plain');
+  check('a name without an extension is refused', bare.status === 415, `status ${bare.status}`);
+
+  const empty = await upload(`${stem}.txt`, new Uint8Array(0), 'text/plain');
+  check('an empty file is refused', empty.status === 400, `status ${empty.status}`);
+
+  const large = await upload(`${stem}.txt`, Buffer.alloc(limit + 1, 'x'), 'text/plain');
+  check('a file of 512 KB and one byte is refused', large.status === 413, `status ${large.status}`);
+
+  const hashes = await call('GET', 'files/uploads.json');
+  check('the list with the key hashes is not served', hashes.status === 404, `status ${hashes.status}`);
+
+  if (image.entry) {
+    const wrong = await call('DELETE', `api/files/${image.entry.id}?key=not-the-key`);
+    check('removing with a wrong key is refused', wrong.status === 403, `status ${wrong.status}`);
+
+    const keyless = await call('DELETE', `api/files/${image.entry.id}`);
+    check('and without one', keyless.status === 403, `status ${keyless.status}`);
+
+    const still = await call('GET', image.entry.url);
+    check('the picture is still served afterwards', still.status === 200, `status ${still.status}`);
+  }
+
+  const unknown = await call('DELETE', 'api/files/there-is-no-such-upload?key=not-the-key');
+  check('removing an unknown upload is not found', unknown.status === 404, `status ${unknown.status}`);
+
+  const page = await call('GET', './');
+  check('the page is served', page.status === 200 && page.type.includes('text/html'), `status ${page.status}`);
+} catch (error) {
+  check(`${base} answers`, false, error.message);
+} finally {
+  for (const entry of uploaded) {
+    const what = `the .${entry.url.split('.').pop()} upload`;
+
+    const removed = await call('DELETE', `api/files/${entry.id}?key=${entry.key}`).catch(() => null);
+    check(`${what} is removed with its key`, removed?.status === 204, `status ${removed?.status}`);
+
+    const gone = await call('GET', entry.url).catch(() => null);
+    check(`${what} is no longer served`, gone?.status === 404, `status ${gone?.status}`);
+  }
+
+  if (uploaded.length > 0) {
+    const gallery = await call('GET', 'api/files').catch(() => null);
+    check('nothing of the test is left in the gallery',
+          Array.isArray(gallery?.json) && gallery.json.every((u) => !uploaded.some((e) => e.id === u.id)));
+  }
+}
+
+console.log(failures.length === 0 ? '\nAll passed.' : `\n${failures.length} failed.`);
+
+process.exit(failures.length === 0 ? 0 : 1);

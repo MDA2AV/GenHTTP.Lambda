@@ -19,6 +19,7 @@ const PARTS = [
   'first',
   'editor',
   'why',
+  'written',
   'features',
   'files',
   'page',
@@ -147,6 +148,21 @@ export function Guide() {
   "change": ${JSON.stringify(said.whySample.change)}
 }`} />
             <p>{said.why2(k)}</p>
+          </Section>
+
+          <Section id="written" title={said.parts.written}>
+            <p>{said.written(k)}</p>
+            <dl className="surface divide-y divide-slate-200 dark:divide-ink-800">
+              {said.writtenFiles.map(([name, what]) => (
+                <div key={name} className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:gap-4">
+                  <dt className="shrink-0 font-mono text-[13px] text-slate-900 sm:w-56 dark:text-slate-100">{name}</dt>
+                  <dd className="min-w-0 flex-1 text-sm">{what}</dd>
+                </div>
+              ))}
+            </dl>
+            <p>{said.written2(k)}</p>
+            <p>{said.written3(k)}</p>
+            <Aside>{said.writtenAside}</Aside>
           </Section>
 
           <Section id="features" title={said.parts.features}>

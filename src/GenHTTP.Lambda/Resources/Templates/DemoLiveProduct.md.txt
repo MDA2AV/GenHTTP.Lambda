@@ -1,0 +1,35 @@
+# Live poll
+
+A poll with one question whose bars move for everybody the moment anybody votes, with a count of how many are watching. Nobody has to reload: every open page is told as soon as something changes.
+
+<!-- [demo] -->
+This is one of the demos of GenHTTP Lambda, kept online and read only. To build on it, create a lambda of your own from it - a copy is yours to change.
+
+<!-- [/demo] -->
+## Who it is for
+
+Anybody who wants a quick show of hands from a meeting, a class or an audience, and to watch the answers come in. And developers who want to see how a server keeps a page up to date by itself - the way a dashboard, a scoreboard or a progress bar would.
+
+## What people do with it
+
+- **Vote** for one of the answers. The page remembers the vote in that browser, marks it and stops offering the buttons.
+- **Watch the results** as others vote: every answer with its number of votes, its share and a bar.
+- **See that it is live**: the line under the poll says whether the page is connected and how many browsers have it open.
+- **Use it from somewhere else**: `api/poll` answers with the question and the counts, and `events` sends every change as it happens, so another page or a screen in a room can show the same results.
+
+## Features, and why they are there
+
+- **Changes arrive without a reload.** The moment a vote is counted, every open page gets the new counts, and whenever somebody comes or goes, the new number of watchers. That is what the app is for.
+- **It connects again by itself.** When the connection drops - the server restarting, a phone waking up, a change of network - the line says "Reconnecting...", and the page connects again on its own and starts from the counts as they are then.
+- **The votes survive every new version.** They are kept as the app's data, not in the program, so putting a change online does not start the poll over.
+- **A count of who is watching.** It shows that the page is live and that others are there. It goes up the moment somebody opens the page and down a little after somebody leaves, since the server only notices a page is gone when it next tries to reach it.
+- **A slow connection holds nobody up.** A page that cannot keep up skips counts in between and gets the newest, because only the newest counts matter.
+- **Only the answers on offer count.** A vote for anything else is refused with a message that lists the answers.
+
+## What it does not do
+
+- One vote per browser is a courtesy, not a rule: the server counts every vote it gets, and another browser or cleared browser data votes again. `demo-registration` shows how to add accounts, which one vote per person would need.
+- No taking a vote back, and no starting the counts over from the page.
+- One question with fixed answers, which are part of the program: asking something else is a change to the app, not something done on the page.
+- No history: only the current counts, not who voted or when.
+- The page only listens; a vote is an ordinary request. `demo-game` shows a live connection that carries traffic both ways, for when the browser has a lot to say.

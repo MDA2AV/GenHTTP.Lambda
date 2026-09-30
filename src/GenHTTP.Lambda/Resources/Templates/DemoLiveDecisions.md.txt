@@ -1,0 +1,49 @@
+# Decisions
+
+## Server-sent events, not a websocket
+
+The page only listens; what it has to say - a vote - is an ordinary `POST api/votes`. For traffic in one direction, server-sent events are the simpler tool: one long HTTP response the server keeps writing to, which passes proxies like any other, and in the browser `new EventSource('events')`, which parses the events and reconnects on its own. A websocket, as in `demo-game`, needs a protocol of its own in both directions and pays off when the browser talks back a lot.
+
+## One generator per browser
+
+`EventSource.Create().Generator(...)` in `lambda.cs` runs once for every browser on `events`, for as long as it stays connected. It sends the counts as they are, then waits for updates and writes each one. It returns, and the response ends, when a write fails because the browser has gone.
+
+## Every update is the whole state
+
+Each stream starts with the full counts, and every vote sends the full counts again, never only what changed. A page that connects or reconnects draws from the current state straight away, and an update that is missed or skipped does no harm, because the next one carries everything.
+
+## Two kinds of event
+
+The counts are an ordinary message: `Results` is sent as JSON without an event type, which is what the browser's `message` listener receives. The number of watchers is an event of its own, `watchers`, with the bare number as its data, sent to every stream whenever somebody connects or leaves. The page tells the two apart by their type rather than by looking into the data.
+
+## A queue per listener, the oldest dropped
+
+`Poll.cs` gives every stream a `Listener`: a bounded channel of eight updates that drops the oldest when it is full. A vote puts the new counts into every queue and is done, and each stream writes them at its own pace. So a vote never waits on a slow browser, and a browser that falls behind loses counts in between, never the newest. That is only acceptable because every update is the whole state.
+
+## A comment after 20 quiet seconds
+
+When there was no update for 20 seconds, the stream writes a comment (`: still here`), which the browser ignores. Proxies close responses that look idle; the comment keeps this one open. It also matters for the count of watchers: the stream only learns that a browser has gone when a write fails, so without the comment a browser that left would be counted until the next vote or the next browser coming or going.
+
+## Counts in the workspace, listeners in memory
+
+The counts are `votes.json` in the workspace, a map from the id of an option to its votes. It is read once when the lambda starts and written after every vote, under the poll's lock, so two votes at the same moment cannot lose each other. The workspace outlives every deployment, so a new version or a restart keeps the votes. The listeners are only in memory: a restart ends every stream anyway, and the browsers connect again. Only `lambda.cs` touches `Workspace`; `Poll` is handed a way to read and write, so it does not care where the file lives.
+
+## The stored format is keyed by id
+
+Only the options in `Poll.cs` are shown, and their votes are looked up by `id`. A label can be changed without losing its votes, a new option starts at zero, and an option taken out is no longer shown or counted in the total, but its votes stay in the file and come back if it is added again. Changing an `id` loses its votes, so keep the ids when changing the answers.
+
+## The question and the answers are part of the program
+
+They are constants in `Poll.cs`, not data. The demo is about live updates, and a way to set up polls would be more code than the point it makes.
+
+## One vote per browser is up to the browser
+
+The page remembers in `localStorage` that it voted and disables the buttons. The server cannot tell browsers apart without accounts, so it counts every valid vote and does not pretend otherwise; `demo-registration` shows accounts.
+
+## A vote answers with nothing
+
+`POST api/votes` answers 204 without a body. The page does not redraw from it: the new counts arrive on the stream like everybody else's, so there is one way the page learns about votes, its own included. A vote without an option, or for one that is not there, throws `ProviderException` with 400 and a message that lists the options.
+
+## The page is part of the program
+
+`web/` is shipped with the code and served by `Assets.App("web")`, added last so it answers only what `api` and `events` did not. It uses relative addresses (`events`, `api/votes`), so it works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike.

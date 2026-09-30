@@ -63,6 +63,8 @@ export const editor: EditorMessages = {
     title: 'Editor',
     sections: {
       overview: 'Ringkasan',
+      docs: 'Dokumentasi',
+      tests: 'Pengujian',
       change: 'Ubah',
       features: 'Draf',
       showcase: 'Showcase',
@@ -77,12 +79,18 @@ export const editor: EditorMessages = {
       code: 'Kode',
     },
     sectionsLabel: 'Bagian',
+    groups: {
+      build: 'Pengembangan',
+      program: 'Program dan data',
+      run: 'Operasional',
+      sharing: 'Berbagi',
+    },
     loadFailed: 'Lambda ini gagal dimuat.',
     online: (version) => `Versi ${version} sudah online.`,
     deployFailed: 'Lambda gagal di-deploy.',
     offline: 'Sudah dimatikan. Kodenya masih ada.',
     offlineFailed: 'Lambda gagal dimatikan.',
-    leave: 'Perubahan kode yang belum disimpan akan hilang. Tetap keluar?',
+    leave: 'Perubahan yang belum disimpan akan hilang. Tetap keluar?',
     nothingTitle: 'Link ini tidak membuka apa pun',
     createNew: 'Buat lambda baru',
     loading: 'Memuat lambda Anda…',
@@ -137,11 +145,13 @@ export const editor: EditorMessages = {
     simple: 'Sederhana',
     full: 'Lengkap',
     simpleTitle: 'Aplikasi Anda, keadaannya, dan kolom untuk meminta perubahan',
-    fullTitle: 'Semua bagian: kode, file, data, versi, dan log',
+    fullTitle: 'Semua bagian: kode, dokumentasi, pengujian, file, data, versi, dan log',
     simpleNote: 'Aplikasi Anda dan kolom untuk meminta perubahan.',
     fullNote: 'Semua bagian, termasuk kodenya.',
     toFull: 'Tampilkan semua bagian',
     toSimple: 'Beralih ke tampilan sederhana',
+    about: 'Tentang',
+    aboutMore: 'Selengkapnya tentang aplikasi Anda',
     outsideTitle: 'Ini bagian dari tampilan lengkap',
     outsideText: 'Tampilan sederhana tidak menampilkan kode, file, dan riwayat. Tampilkan semua bagian untuk mengerjakannya di sini.',
     back: 'Kembali ke aplikasi Anda',
@@ -362,6 +372,10 @@ export const editor: EditorMessages = {
 
   summary: {
     reading: 'Membaca kondisinya…',
+    readDocs: 'Baca dokumentasi',
+    written: 'Dokumentasi dan pengujian',
+    writtenWhy: 'Tidak pernah dikompilasi dan tidak pernah disajikan. Disimpan bersama setiap versi, dan dihitung bersama aset.',
+    writtenMissing: 'Belum ditulis',
     hint: (since, kept, retention, tier) =>
       `Trafik dihitung sejak server terakhir dimulai (${since}). ` +
       (kept
@@ -453,6 +467,10 @@ export const editor: EditorMessages = {
     assetsPublic: 'Publik: versi ini menyajikannya lewat Assets.',
     assetsPrivate: 'Disimpan bersama kode, tapi tidak disajikan oleh versi ini.',
     noAssets: 'Tidak ada di versi ini.',
+    context: 'Dokumentasi dan pengujian',
+    contextWhy: 'Tidak pernah dikompilasi dan tidak pernah disajikan: apa yang ditulis tentang versi ini, untuk siapa pun yang membaca atau mengubahnya.',
+    contextUsage: (files, size) => `${files}, ${size} - dihitung bersama aset`,
+    noContext: 'Belum ada yang ditulis tentang versi ini.',
     data: 'Data',
     dataPublic: 'Publik: kode yang online menyajikannya lewat Workspace.',
     dataPrivate: 'Privat, hanya untuk lambda ini. Bukan bagian dari versi mana pun.',
@@ -480,6 +498,96 @@ export const editor: EditorMessages = {
     missing: (name) => `Versi ini tidak punya file bernama ${name}.`,
     saved: 'tersimpan',
     notText: 'Bukan teks. Unduh untuk melihat isinya.',
+  },
+
+  context: {
+    docs: {
+      title: 'Dokumentasi',
+      titleSimple: 'Tentang aplikasi Anda',
+      hint: 'Apa aplikasi ini, untuk siapa dan mengapa - dan mengapa aplikasi ini dibuat seperti ini. Agen menulisnya di setiap perubahan dan dokumentasi disimpan bersama setiap versi, jadi versi lama kembali bersama dokumentasi yang berlaku untuknya.',
+      hintSimple: 'Untuk apa aplikasi Anda dan mengapa, sesuai pemahaman agen dari apa yang Anda minta. Agen memperbaruinya di setiap perubahan.',
+      inDraft: 'Dokumentasi draf ini. Dokumentasi ini menjadi milik aplikasi Anda saat draf dijadikan online.',
+      pages: { product: 'Produk', decisions: 'Keputusan' },
+      emptyTitle: 'Belum ada yang ditulis',
+      emptyText: (code) => (
+        <>
+          Agen menulis dokumentasi bersama perubahannya: apa aplikasinya, untuk siapa dan mengapa di{' '}
+          {code('.lambda/docs/product.md')}, dan mengapa aplikasi dibuat seperti ini di {code('decisions.md')}.
+          Dokumentasi adalah bagian dari versi, di samping kode.
+        </>
+      ),
+      emptySimpleTitle: 'Belum ada yang ditulis tentang aplikasi Anda',
+      emptySimple: 'Agen dapat menjelaskan untuk apa aplikasi Anda dan mengapa, berdasarkan apa yang Anda minta - lalu terus memperbarui penjelasan itu.',
+      ask: 'Minta agen menulisnya',
+      describe: 'Minta agen menjelaskannya',
+      writePrompt: 'Tulis dokumentasi aplikasi ini: apa aplikasinya, untuk siapa dan mengapa, serta keputusan teknis di baliknya.',
+      describePrompt: 'Jelaskan untuk apa aplikasi ini dan mengapa, agar bisa saya baca di bagian Tentang.',
+      decisionsPrompt: 'Tuliskan keputusan teknis di balik aplikasi ini, dan alasan keputusan itu diambil.',
+      missingProduct: 'Belum ada halaman produk',
+      missingProductText: 'Apa aplikasinya, untuk siapa, apa yang dilakukan orang dengannya, dan mengapa - dengan kata-kata orang yang memintanya.',
+      missingDecisions: 'Belum ada keputusan yang dicatat',
+      missingDecisionsText: 'Bagaimana aplikasi dibuat dan mengapa: bagaimana datanya disimpan, apa saja yang dibutuhkannya, apa yang sengaja ditinggalkan. Hal yang perlu diketahui siapa pun yang mengubahnya berikutnya.',
+      correctText: 'Agen menulis ini dari apa yang Anda minta, dan memperbaruinya di setiap perubahan. Ada yang salah atau kurang? Sampaikan kepada agen.',
+      correct: 'Sampaikan kepada agen',
+      correctPrompt: 'Perbaiki deskripsi aplikasi ini: ',
+      placeholder: 'Menjelaskan mengapa entri disimpan selama setahun',
+    },
+    tests: {
+      title: 'Pengujian',
+      hint: 'Bagaimana aplikasi ini diuji secara otomatis, serta script dan data yang dipakai pengujiannya. Agen menjaganya tetap mutakhir dan menjalankannya sebelum menyatakan sebuah perubahan selesai. Disimpan bersama setiap versi.',
+      inDraft: 'Pengujian draf ini. Pengujian ini menjadi milik aplikasi Anda saat draf dijadikan online - jalankan dulu terhadap pratinjaunya.',
+      pages: { testing: 'Cara pengujiannya' },
+      emptyTitle: 'Belum ada pengujian',
+      emptyText: (code) => (
+        <>
+          Bagaimana aplikasi diuji (apa yang harus tetap berfungsi, cara memeriksanya, dan cara menjalankan script-nya)
+          ditulis agen di {code('.lambda/tests/README.md')}, dengan script dan data uji di sampingnya.
+        </>
+      ),
+      ask: 'Minta agen menulis pengujian',
+      writePrompt: 'Tulis pengujian untuk aplikasi ini: apa yang harus tetap berfungsi dan cara memeriksanya secara otomatis, dengan script yang dijalankan terhadap pratinjaunya.',
+      missing: 'Belum dijelaskan cara pengujiannya',
+      missingText: 'Apa yang harus tetap berfungsi, bagaimana masing-masing diperiksa, dan cara menjalankan script di sampingnya.',
+      placeholder: 'Memeriksa bahwa daftar yang penuh menolak entri baru',
+    },
+    files: 'File',
+    noFiles: 'Tidak ada file di samping halaman-halaman ini.',
+    none: 'belum ada',
+    missingPill: 'Belum ditulis',
+    changedIn: (version) => `Diubah di versi ${version}`,
+    changedInDraft: 'Diubah di draf ini',
+    showChanges: 'Tampilkan perubahannya',
+    hideChanges: 'Sembunyikan perubahannya',
+    noChanges: 'Tidak ada yang berubah.',
+    edit: 'Edit',
+    olderVersion: 'Versi tidak pernah berubah: halaman diedit di versi terbaru, atau di draf.',
+    writeIt: 'Tulis sendiri',
+    askPage: 'Minta agen menulisnya',
+    editInCode: 'Buka di kode',
+    cancel: 'Batal',
+    save: 'Simpan',
+    write: 'Tulis',
+    preview: 'Pratinjau',
+    writeOrPreview: 'Tulis atau pratinjau',
+    discard: 'Perubahan Anda pada halaman ini akan hilang. Buang perubahannya?',
+    reading: 'Membaca…',
+    readFailed: 'Gagal dibaca.',
+    saveFailed: 'Gagal disimpan.',
+    savedDraft: 'Disimpan ke draf.',
+    savedVersion: (version) => `Disimpan sebagai versi ${version}.`,
+    savedOnline: (version) => `Disimpan sebagai versi ${version}, dan sudah online.`,
+    savedNotOnline: (version) => `Disimpan sebagai versi ${version}, tetapi gagal online.`,
+    saveTitle: 'Simpan sebagai versi baru',
+    saveText: (newest) =>
+      `Versi tidak pernah berubah, jadi halaman ini disimpan sebagai versi berikutnya - di atas versi ${newest}, dengan semua hal lain tetap seperti semula.`,
+    clash: (version) => `Versi ${version} disimpan sejak Anda mulai, dan versi itu juga mengubah halaman ini. Menyimpan akan menggantikan perubahan itu.`,
+    alsoOnline: 'Sekaligus jadikan online',
+    alsoOnlineNote: 'Hanya dokumentasi yang berubah, jadi pengunjung tidak melihat hal baru - tetapi yang online tetap versi terbaru.',
+    skeleton: {
+      product: '# Nama aplikasi\n\nApa aplikasinya, dalam satu atau dua kalimat.\n\n## Untuk siapa\n\n## Apa yang dilakukan orang dengannya\n\n## Fitur, dan mengapa ada\n\n## Apa yang tidak dilakukannya\n',
+      decisions: '# Keputusan\n\n## Sebuah keputusan\n\nApa yang diputuskan, mengapa, dan apa yang harus diperhatikan saat mengubahnya.\n',
+      testing: '# Cara pengujiannya\n\nCara menjalankan pengujian, dan terhadap alamat mana.\n\n## Apa yang harus tetap berfungsi\n\n| Perilaku | Request | Hasil yang diharapkan |\n|---|---|---|\n| | | |\n',
+    },
   },
 
   data: {
@@ -690,7 +798,7 @@ export const editor: EditorMessages = {
     leaks: (path, files) =>
       `Di ${files}, tautan ke ${path} memakai path lengkap. Dari pratinjau, tautan itu mengarah ke lambda yang online beserta data aslinya, bukan ke salinan milik draf ini. Path relatif (“api/items”) tetap berada di pratinjau.`,
     mergeButton: 'Gabungkan',
-    saveFirst: 'Simpan kodenya dulu: pratinjau dan penggabungan memakai yang tersimpan.',
+    saveFirst: 'Simpan perubahan Anda dulu: pratinjau dan penggabungan memakai yang tersimpan.',
     mergeAndDeploy: (version) => `Gabungkan dan jadikan versi ${version} online`,
     mergeText: (version) =>
       `Draf ini menjadi versi ${version}. Drafnya ikut hilang, termasuk pratinjau dan salinan datanya. Data lambda sendiri tetap apa adanya.`,
@@ -726,7 +834,9 @@ export const editor: EditorMessages = {
     viewsLabel: 'Draf',
     views: {
       overview: 'Draf',
+      docs: 'Dokumentasi',
       code: 'Kode',
+      tests: 'Pengujian',
       data: 'Data',
       logs: 'Log',
     },
@@ -750,6 +860,7 @@ export const editor: EditorMessages = {
     first: 'Versi pertama.',
     status: { added: 'ditambahkan', removed: 'dihapus', changed: 'diubah', same: 'sama' },
     browse: 'Lihat file-nya',
+    docs: 'Baca dokumentasinya',
     edit: 'Edit dari sini',
     feature: 'Mulai draf dari sini',
     featureTitle: 'Kerjakan perubahan dari versi ini di samping lambda, lalu gabungkan menjadi versi berikutnya setelah hasilnya pas',
@@ -983,10 +1094,11 @@ export const editor: EditorMessages = {
     inFeature: (name) => `di draf “${name}”`,
     changedElsewhere: 'Draf ini disimpan dari tempat lain sejak Anda membukanya, mungkin oleh agen. Muat yang tersimpan sebelum menyimpan di sini; perubahan Anda tidak akan disimpan di atasnya.',
     readAgain: 'Muat yang tersimpan',
-    files: (entry, cs) => (
+    files: (entry, cs, context) => (
       <>
-        {entry} mengembalikan apa yang disajikan, file {cs} lainnya berisi tipe, dan file lain disajikan apa adanya.
-        Ctrl-S untuk menyimpan, F12 untuk membuka deklarasi.
+        {entry} mengembalikan apa yang disajikan, file {cs} lainnya berisi tipe, dan file lain disajikan apa adanya -
+        kecuali yang ada di {context}: dokumentasi dan pengujian, yang tidak pernah dikompilasi atau disajikan. Ctrl-S
+        untuk menyimpan, F12 untuk membuka deklarasi.
       </>
     ),
     newer: (version) => ` Versi ${version} lebih baru dari yang terbuka di sini.`,
@@ -1017,6 +1129,8 @@ export const editor: EditorMessages = {
     deep: 'Maksimal enam level folder.',
     characters: 'Huruf, angka, tanda hubung, garis bawah, dan titik, dipisahkan garis miring.',
     extension: 'Perlu ekstensi, supaya bisa disajikan dengan tipe yang benar.',
+    context: 'Di .lambda/, hanya docs/ dan tests/ - huruf, angka, tanda hubung, garis bawah, dan titik, dipisahkan garis miring.',
+    contextFiles: 'Dokumentasi dan pengujian: bagian dari versi, tidak pernah dikompilasi atau disajikan',
     exists: 'Sudah ada file dengan nama itu.',
     remove: (name) => `Hapus ${name}? Isinya ikut terhapus.`,
     there: (name) => `${name} sudah ada.`,
@@ -1024,7 +1138,7 @@ export const editor: EditorMessages = {
     errors: 'ada error',
     removeFile: (name) => `Hapus ${name}`,
     removeTitle: 'Hapus file ini',
-    placeholder: 'Types.cs atau site/index.html',
+    placeholder: 'Types.cs, site/index.html, atau .lambda/docs/api.md',
     newFile: 'File baru',
     uploadTitle: 'Unggah file: gambar, font, atau halaman',
     upload: 'Unggah file',

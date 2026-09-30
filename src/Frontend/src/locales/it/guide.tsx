@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'La tua prima lambda',
     editor: 'Il pannello di controllo',
     why: 'Spiegare il perché',
+    written: 'Documentazione e test',
     features: 'Cambiarla senza rischi',
     files: 'Più di un file',
     page: 'Servire una pagina',
@@ -83,7 +84,8 @@ export const guide: Messages['guide'] = {
     </>
   ),
   bits: [
-    ['Panoramica', () => <>Se è online, quante richieste ha ricevuto oggi e quante sono fallite, l’ultima modifica e quanto spazio resta.</>],
+    ['Panoramica', () => <>Cos’è l’app, se è online, quante richieste ha ricevuto oggi e quante sono fallite, l’ultima modifica e quanto spazio resta.</>],
+    ['Documentazione', () => <>Cos’è l’app, per chi è e perché, e perché è costruita così: la scrivono gli agenti e resta con ogni versione.</>],
     [
       'Modifica',
       (k) => (
@@ -112,11 +114,13 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
+    ['Test', () => <>Come viene testata automaticamente l’app, con gli script e i dati di test che servono. Solo nella vista completa.</>],
   ],
   sections: (k) => (
     <>
       Ogni sezione funziona allo stesso modo: il titolo, il pulsante {k.b('ⓘ')} che la spiega, le azioni a destra e,
-      dove ci sono più viste, una fila di schede sotto. Nel codice, le schede sono i file.
+      dove ci sono più viste, una fila di schede sotto. Nel codice, le schede sono i file. La vista completa raccoglie
+      le sezioni in gruppi: dove si fa una modifica, il programma e i suoi dati, come gira e come la gente la trova.
     </>
   ),
   editorAside:
@@ -143,6 +147,40 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  written: (k) => (
+    <>
+      Ogni versione conserva, accanto al suo programma, quello che è scritto su di lei: la sua {k.b('documentazione')}{' '}
+      (cos’è l’app, per chi è e perché, e perché è costruita così) e i suoi {k.b('test')}: come verificare
+      automaticamente che funziona, con gli script e i dati di test che servono. Gli agenti li scrivono insieme a una
+      nuova lambda e li tengono aggiornati a ogni modifica. Il prossimo agente che modifica la lambda li legge per prima
+      cosa, così sa a cosa serve l’app e cosa deve continuare a funzionare: cose che il codice da solo non dice.
+    </>
+  ),
+  writtenFiles: [
+    ['.lambda/docs/product.md', 'cos’è l’app, per chi è, cosa ci fa la gente e perché'],
+    ['.lambda/docs/decisions.md', 'le decisioni tecniche, e perché sono state prese'],
+    ['.lambda/tests/README.md', 'come viene testata automaticamente l’app, e come eseguire i test'],
+    ['.lambda/tests/…', 'gli script e i dati di test usati dai test'],
+  ],
+  written2: (k) => (
+    <>
+      Sono file della versione come tutti gli altri, nella cartella {k.code('.lambda')}: la cronologia mostra cosa ci
+      ha cambiato una versione, tornando indietro torna la documentazione che valeva per quella versione, e una bozza ne
+      ha una copia sua che va online insieme a lei. Non vengono mai compilati né serviti, e contano nello spazio a
+      disposizione per gli asset di una versione.
+    </>
+  ),
+  written3: (k) => (
+    <>
+      Nel pannello di controllo, {k.b('Documentazione')} mostra le pagine da leggere, e {k.b('Test')} come viene
+      testata l’app e i file che ci sono accanto; la versione si sceglie come per i suoi file. Lì si può anche
+      modificare una pagina, e così si salva la versione successiva. La vista semplice chiama la documentazione{' '}
+      {k.b('Informazioni')} e mostra solo a cosa serve l’app: per correggerla, dillo all’agente.
+    </>
+  ),
+  writtenAside:
+    'Sono scritti nella lingua che usi con l’agente, per chi modificherà l’app dopo, che sia una persona o un agente. Non sono una copia del codice: dicono a cosa serve l’app, e perché.',
+
   features: (k) => (
     <>
       Una versione, una volta salvata, non cambia più, ed è per questo che vale la pena conservarle tutte: ognuna si può
@@ -153,8 +191,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Avviala in {k.b('Bozze')}, o da una versione qualsiasi. È una copia del codice e degli asset di quella
-        versione, e dei dati della lambda.
+        Avviala in {k.b('Bozze')}, o da una versione qualsiasi. È una copia del codice, degli asset, della
+        documentazione e dei test di quella versione, e dei dati della lambda.
       </>
     ),
     (k) => (
@@ -249,7 +287,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'In una versione',
   workspaceColumn: 'Nei dati',
   table: [
-    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso', 'quello che scrive la lambda o che carica qualcuno'],
+    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso, con la sua documentazione e i suoi test', 'quello che scrive la lambda o che carica qualcuno'],
     ['quando cambia', 'mai: una modifica è una nuova versione', 'appena ci viene scritto qualcosa'],
     ['un deploy', 'mette online esattamente questi file', 'non li tocca mai'],
     ['tornare indietro', 'riporta i vecchi file', 'nessun effetto: tutte le versioni li condividono'],
@@ -327,7 +365,8 @@ export const guide: Messages['guide'] = {
       arrivano esattamente come li hai scritti. {k.code('Workspace')} e {k.code('Assets')} diventano due cartelle
       accanto al programma, con gli stessi metodi, a parte in una cartella {k.code('Platform')}, quindi nel tuo codice non
       devi cambiare niente.
-      {' '}{k.code('Secret')} lì legge le variabili d’ambiente con lo stesso nome; i valori restano qui.
+      {' '}{k.code('Secret')} lì legge le variabili d’ambiente con lo stesso nome; i valori restano qui. Anche la
+      documentazione e i test vengono con te, in {k.code('docs')} e {k.code('tests')}.
     </>
   ),
   awayAside:
@@ -344,7 +383,8 @@ export const guide: Messages['guide'] = {
       Mentre lavora spiega il perché ({k.code('write_code')} riceve la specifica e la modifica) e può controllare quello
       che ha pubblicato: {k.code('read_logs')} restituisce le richieste recenti della lambda, cosa ha stampato e lo stack
       trace di ogni eccezione. È così che un agente scopre che il suo codice funziona, invece di darlo per scontato. Tu
-      vedi le stesse cose nel pannello di controllo.
+      vedi le stesse cose nel pannello di controllo. Man mano scrive la documentazione e i test, li legge prima di
+      cambiare qualcosa ed esegue i test sull’indirizzo di una bozza prima di metterla online.
     </>
   ),
   more: 'Scopri di più →',

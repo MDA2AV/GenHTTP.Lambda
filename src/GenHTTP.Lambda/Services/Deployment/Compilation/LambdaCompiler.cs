@@ -203,7 +203,9 @@ internal static class LambdaCompiler
     /// in another tier, or with its workspace switched off, is another
     /// assembly. Hashed piece by piece rather than joined first, because the
     /// files include the assets, and joining a hundred megabytes of them into
-    /// one string to hash it would copy them twice for nothing.
+    /// one string to hash it would copy them twice for nothing. The
+    /// documentation and the tests are left out: they change nothing that is
+    /// built, so a version that only changes them builds to the same assembly.
     /// </remarks>
     private static string Identify(CompilationRequest request)
     {
@@ -212,7 +214,7 @@ internal static class LambdaCompiler
         Append(hash, request.Workspace);
         Append(hash, $"\n{request.Limits.Quota}\n{request.Limits.Enabled}");
 
-        foreach (var file in request.Files)
+        foreach (var file in request.Files.Where(f => !f.IsContext))
         {
             Append(hash, "\n");
             Append(hash, file.Name);

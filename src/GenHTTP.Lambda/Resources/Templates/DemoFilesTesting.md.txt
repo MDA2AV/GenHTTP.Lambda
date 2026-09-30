@@ -1,0 +1,39 @@
+# How it is tested
+
+`smoke.mjs` checks the app from the outside. It uploads a small picture and a text file of its own, finds them in the gallery and reads them back with their types, checks what is refused - other types, empty and too large files, removing without the key - and removes what it uploaded, whatever happens.
+
+```
+node .lambda/tests/smoke.mjs <address>
+```
+
+The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. It needs Node 18 or later and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not.
+
+The gallery keeps the newest 24 uploads, and the script's uploads count like any others: once the gallery is full, each of them pushes the oldest file out for good. Run it against a feature's preview, whose data is a copy, rather than against the gallery people use.
+
+## What has to keep working
+
+| Behaviour | Request | Expected |
+|---|---|---|
+| The gallery is served | `GET api/files` | 200, an array of uploads, the newest first, without keys |
+| A picture is uploaded | `POST api/files?name=….png` with the file as the body | 201, `{ "upload": { "id", "name", "size", "type", "uploaded", "url" }, "key" }` |
+| It is kept under a made-up name | the `url` of the upload | `files/` and 16 hex digits, then the extension |
+| It is served as uploaded | `GET` its `url` | 200, the same bytes, `Content-Type: image/png`, `X-Content-Type-Options: nosniff` |
+| A file of exactly 512 KB | `POST api/files?name=….txt` with 524288 bytes | 201 |
+| Folders in the name are dropped | `POST api/files?name=some/folder/….txt` | 201, the `name` without the folders |
+| Text is served as text | `GET` its `url` | 200, `text/plain`, nosniff |
+| A type a browser could run | `POST api/files?name=….html`, or `.svg` | 415, with a message |
+| No extension | `POST api/files?name=…` | 415 |
+| An empty file | `POST api/files?name=….txt` with no body | 400, "The file is empty." |
+| Too large | `POST api/files?name=….txt` with 524289 bytes | 413, "A file can be 512 KB at most." |
+| The list of uploads is not served | `GET files/uploads.json` | 404 |
+| A wrong key | `DELETE api/files/{id}?key=…` | 403, and the file is still served |
+| No key | `DELETE api/files/{id}` | 403 |
+| An unknown upload | `DELETE api/files/nothing?key=…` | 404 |
+| An upload is removed | `DELETE api/files/{id}?key={its key}` | 204; gone from the gallery, and its `url` answers 404 |
+| The page | `GET ./` | 200, HTML |
+
+## Test data
+
+There is no file of test data: the script carries the picture it uploads - a PNG of a single pixel, 70 bytes, as base64 - and makes the text files it needs.
+
+To try the page with a full gallery, upload through the page or the API rather than putting files into the data of a feature by hand. The app lists only what `uploads.json` names: a file put into `uploads/` without an entry there is never shown, and an entry whose file is missing answers 404 when it is opened. The list is also read only once, when the app first needs it, so a changed `uploads.json` shows only after the preview is deployed again.

@@ -32,6 +32,33 @@ public sealed class DemoTests
         }
     }
 
+    /// <summary>
+    /// The demos are what agents learn from, so they show what is written
+    /// beside a program as well as the program.
+    /// </summary>
+    [TestMethod]
+    public async Task EveryDemoSaysWhatItIsWhyAndHowItIsTested()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedDemosAsync();
+
+        foreach (var demo in DemoCatalog.All)
+        {
+            var files = DemoCatalog.FilesFor(demo);
+
+            Assert.IsEmpty(ContextPages.Missing(files), $"{demo.Id} has all three pages");
+            Assert.IsTrue(files.Any(f => f.Name == ".lambda/tests/smoke.mjs"), $"{demo.Id} has a script its tests run");
+
+            using var summary = await fixture.GetAsync($"/api/v1/lambdas/{demo.Key}/summary");
+
+            var about = (await summary.GetContentAsync<LambdaSummaryResponse>()).Documentation.About;
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(about), $"{demo.Id} says what it is in a paragraph the overview shows");
+            Assert.IsLessThan(280, about!.Length, $"{demo.Id} says it in a paragraph, not a page");
+        }
+    }
+
     [TestMethod]
     public async Task EveryDemoIsOfferedAndOnline()
     {

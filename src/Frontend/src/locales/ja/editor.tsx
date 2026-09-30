@@ -65,6 +65,8 @@ export const editor: EditorMessages = {
     title: 'エディター',
     sections: {
       overview: '概要',
+      docs: 'ドキュメント',
+      tests: 'テスト',
       change: '変更依頼',
       features: '下書き',
       showcase: 'ショーケース',
@@ -79,12 +81,18 @@ export const editor: EditorMessages = {
       code: 'コード',
     },
     sectionsLabel: 'セクション',
+    groups: {
+      build: '開発',
+      program: 'プログラムとデータ',
+      run: '運用',
+      sharing: '共有',
+    },
     loadFailed: 'このlambdaを読み込めませんでした。',
     online: (version) => `バージョン${version}がオンラインになりました。`,
     deployFailed: 'lambdaをデプロイできませんでした。',
     offline: 'オフラインにしました。コードはそのまま残っています。',
     offlineFailed: 'lambdaをオフラインにできませんでした。',
-    leave: '保存していないコードの変更は失われます。このまま移動しますか？',
+    leave: '保存していない変更は失われます。このまま移動しますか？',
     nothingTitle: 'このリンクの先には何もありません',
     createNew: '新しいlambdaを作成',
     loading: 'lambdaを読み込み中…',
@@ -139,11 +147,13 @@ export const editor: EditorMessages = {
     simple: 'シンプル',
     full: 'すべて',
     simpleTitle: 'アプリ、その状態、変更を依頼する入力欄',
-    fullTitle: 'すべてのセクション：コード、ファイル、データ、バージョン、ログ',
+    fullTitle: 'すべてのセクション：コード、ドキュメント、テスト、ファイル、データ、バージョン、ログ',
     simpleNote: 'アプリと、変更を依頼する入力欄です。',
     fullNote: 'コードを含むすべてのセクションです。',
     toFull: 'すべてのセクションを表示',
     toSimple: 'シンプル表示に切り替える',
+    about: 'アプリについて',
+    aboutMore: 'アプリについてくわしく',
     outsideTitle: 'このページはすべて表示でのみ使えます',
     outsideText: 'シンプル表示では、コード・ファイル・履歴は表示されません。ここで扱うには、すべてのセクションを表示してください。',
     back: 'アプリに戻る',
@@ -360,6 +370,10 @@ export const editor: EditorMessages = {
 
   summary: {
     reading: '状態を確認中…',
+    readDocs: 'ドキュメントを読む',
+    written: 'ドキュメントとテスト',
+    writtenWhy: 'コンパイルも配信もされません。バージョンごとに保存され、アセットの容量に含まれます。',
+    writtenMissing: 'まだ書かれていません',
     hint: (since, kept, retention, tier) =>
       `アクセス数は、サーバーの前回起動時（${since}）から集計しています。` +
       (kept
@@ -452,6 +466,10 @@ export const editor: EditorMessages = {
     assetsPublic: '公開：このバージョンがAssetsで配信しています。',
     assetsPrivate: 'コードと一緒に保存されていますが、このバージョンでは配信されていません。',
     noAssets: 'このバージョンにはありません。',
+    context: 'ドキュメントとテスト',
+    contextWhy: 'コンパイルも配信もされません。このバージョンについて書かれたもので、読む人や変更する人のためのものです。',
+    contextUsage: (files, size) => `${files}、${size}（アセットの容量に含む）`,
+    noContext: 'このバージョンについては、まだ何も書かれていません。',
     data: 'データ',
     dataPublic: '公開：オンラインのコードがWorkspaceで配信しています。',
     dataPrivate: 'lambdaだけが使える非公開のデータです。どのバージョンにも含まれません。',
@@ -479,6 +497,97 @@ export const editor: EditorMessages = {
     missing: (name) => `このバージョンには、${name}というファイルはありません。`,
     saved: '最終保存',
     notText: 'テキストではありません。中身を見るには、ダウンロードしてください。',
+  },
+
+  context: {
+    docs: {
+      title: 'ドキュメント',
+      titleSimple: 'あなたのアプリについて',
+      hint: 'このアプリが何で、誰のために、なぜあるのか。そして、なぜこのように作られているのか。エージェントが変更のたびに書き、バージョンごとに保存されるので、古いバージョンに戻すと、そのバージョンに合ったドキュメントも一緒に戻ります。',
+      hintSimple: 'アプリが何のためにあり、なぜ必要なのかを、あなたの依頼からエージェントが理解したとおりに書いたものです。変更のたびに、エージェントが最新の内容に保ちます。',
+      inDraft: 'この下書きのドキュメントです。下書きを確定すると、アプリのドキュメントになります。',
+      pages: { product: 'プロダクト', decisions: '設計判断' },
+      emptyTitle: 'まだ何も書かれていません',
+      emptyText: (code) => (
+        <>
+          エージェントは、変更と一緒にドキュメントを書きます。アプリが何で、誰のために、なぜあるのかを
+          {code('.lambda/docs/product.md')}に、なぜこのように作られているのかを{code('decisions.md')}
+          に書きます。ドキュメントはバージョンの一部で、コードの隣にあります。
+        </>
+      ),
+      emptySimpleTitle: 'アプリについて、まだ何も書かれていません',
+      emptySimple: 'あなたの依頼をもとに、アプリが何のためにあり、なぜ必要なのかをエージェントが説明できます。その後は、エージェントがその説明を最新の内容に保ちます。',
+      ask: 'エージェントに書いてもらう',
+      describe: 'エージェントに説明してもらう',
+      writePrompt: 'このアプリのドキュメントを書いてください。アプリが何で、誰のために、なぜあるのか、そしてその背景にある技術的な判断です。',
+      describePrompt: 'このアプリが何のためにあり、なぜ必要なのかを、「アプリについて」で読めるように説明してください。',
+      decisionsPrompt: 'このアプリの背景にある技術的な判断と、そう判断した理由を書き留めてください。',
+      missingProduct: 'プロダクトのページはまだありません',
+      missingProductText: 'アプリが何で、誰のためのもので、利用者がそれで何をするのか、そしてその理由。依頼した人の言葉で書きます。',
+      missingDecisions: '設計判断はまだ書かれていません',
+      missingDecisionsText: 'アプリがどう作られていて、なぜそうなのか。データの保存方法、依存しているもの、あえて入れなかったもの。次に変更する人が知っておくべきことです。',
+      correctText: 'あなたの依頼をもとにエージェントが書き、変更のたびに最新の内容に保ちます。間違っているところや足りないところがあれば、エージェントに伝えてください。',
+      correct: 'エージェントに伝える',
+      correctPrompt: 'アプリの説明を次のように直してください：',
+      placeholder: '記録を1年間保存する理由を説明',
+    },
+    tests: {
+      title: 'テスト',
+      hint: 'このアプリを自動でテストする方法と、テストが使うスクリプトとデータです。エージェントが最新の内容に保ち、変更を完了とする前に実行します。バージョンごとに保存されます。',
+      inDraft: 'この下書きのテストです。下書きを確定するとアプリのテストになります。その前に、下書きのプレビューに対して実行してください。',
+      pages: { testing: 'テストの方法' },
+      emptyTitle: 'テストはまだありません',
+      emptyText: (code) => (
+        <>
+          アプリのテスト方法（動き続けなければならないこと、その確かめ方、そのためのスクリプトの実行方法）は、エージェントが
+          {code('.lambda/tests/README.md')}
+          に書きます。スクリプトとテストデータは、その隣に置きます。
+        </>
+      ),
+      ask: 'エージェントにテストを書いてもらう',
+      writePrompt: 'このアプリのテストを書いてください。動き続けなければならないことと、それを自動で確かめる方法を、プレビューに対して実行できるスクリプトと一緒にお願いします。',
+      missing: 'テストの方法はまだ書かれていません',
+      missingText: '動き続けなければならないこと、それぞれの確かめ方、隣にあるスクリプトの実行方法。',
+      placeholder: 'リストがいっぱいのときに新しい項目を受け付けないことを確認',
+    },
+    files: 'ファイル',
+    noFiles: 'ページのほかにファイルはありません。',
+    none: 'なし',
+    missingPill: 'まだ書かれていません',
+    changedIn: (version) => `バージョン${version}で変更`,
+    changedInDraft: 'この下書きで変更',
+    showChanges: '変更点を表示',
+    hideChanges: '変更点を隠す',
+    noChanges: '変更はありません。',
+    edit: '編集',
+    olderVersion: 'バージョンは変わりません。ページを編集できるのは、最新のバージョンか下書きの中だけです。',
+    writeIt: '自分で書く',
+    askPage: 'エージェントに書いてもらう',
+    editInCode: 'コードで開く',
+    cancel: 'キャンセル',
+    save: '保存',
+    write: '編集',
+    preview: 'プレビュー',
+    writeOrPreview: '編集とプレビューの切り替え',
+    discard: 'このページへの変更は失われます。破棄しますか？',
+    reading: '読み込み中…',
+    readFailed: '読み込めませんでした。',
+    saveFailed: '保存できませんでした。',
+    savedDraft: '下書きに保存しました。',
+    savedVersion: (version) => `バージョン${version}として保存しました。`,
+    savedOnline: (version) => `バージョン${version}として保存し、オンラインにしました。`,
+    savedNotOnline: (version) => `バージョン${version}として保存しましたが、オンラインにはなりませんでした。`,
+    saveTitle: '新しいバージョンとして保存',
+    saveText: (newest) =>
+      `バージョンは変わらないので、このページは次のバージョンとして保存されます。バージョン${newest}をもとにし、ほかはすべてそのままです。`,
+    clash: (version) => `編集を始めたあとにバージョン${version}が保存され、このページも変更されています。保存すると、その変更は置き換えられます。`,
+    alsoOnline: 'オンラインにもする',
+    alsoOnlineNote: '変わるのはドキュメントだけなので、訪問者に見えるものは変わりません。ただし、オンラインのものが最新のバージョンのままになります。',
+    skeleton: {
+      product: '# アプリの名前\n\nこれが何かを1〜2文で。\n\n## 誰のためのものか\n\n## 利用者がこれで何をするか\n\n## 機能と、それがある理由\n\n## しないこと\n',
+      decisions: '# 設計判断\n\n## ある判断\n\n何を決めたか、なぜそうしたか、変更するときに何に気をつけるべきか。\n',
+      testing: '# テストの方法\n\nテストの実行方法と、どのURLに対して実行するか。\n\n## 動き続けなければならないこと\n\n| 動作 | リクエスト | 期待される結果 |\n|---|---|---|\n| | | |\n',
+    },
   },
 
   data: {
@@ -687,7 +796,7 @@ export const editor: EditorMessages = {
     leaks: (path, files) =>
       `${files}では、${path}へのリンクが完全なパスで書かれています。プレビューからだと、この下書きのデータのコピーではなく、オンラインのlambdaとその実際のデータにつながります。相対パス（「api/items」）なら、プレビューの中にとどまります。`,
     mergeButton: '確定',
-    saveFirst: '先にコードを保存してください。プレビューと確定には、保存されている内容が使われます。',
+    saveFirst: '先に変更を保存してください。プレビューと確定には、保存されている内容が使われます。',
     mergeAndDeploy: (version) => `確定してバージョン${version}をオンラインにする`,
     mergeText: (version) =>
       `バージョン${version}になります。下書き（プレビューとデータのコピー）はなくなります。lambda自体のデータはそのまま残ります。`,
@@ -723,7 +832,9 @@ export const editor: EditorMessages = {
     viewsLabel: '下書き',
     views: {
       overview: '下書き',
+      docs: 'ドキュメント',
       code: 'コード',
+      tests: 'テスト',
       data: 'データ',
       logs: 'ログ',
     },
@@ -747,6 +858,7 @@ export const editor: EditorMessages = {
     first: '最初のバージョンです。',
     status: { added: '追加', removed: '削除', changed: '変更', same: '変更なし' },
     browse: 'ファイルを見る',
+    docs: 'ドキュメントを読む',
     edit: 'ここから編集',
     feature: 'ここから下書きを作る',
     featureTitle: 'このバージョンの変更をlambdaとは別に進め、うまくいったら確定して次のバージョンにする',
@@ -979,10 +1091,11 @@ export const editor: EditorMessages = {
     changedElsewhere:
       'この下書きは、開いたあとにほかの場所で保存されています（エージェントかもしれません）。ここで保存する前に、保存されている内容を読み込んでください。ここでの変更で上書きすることはできません。',
     readAgain: '保存されている内容を読み込む',
-    files: (entry, cs) => (
+    files: (entry, cs, context) => (
       <>
         {entry}が返すものが配信され、ほかの{cs}
-        ファイルには型を書きます。それ以外のファイルはそのまま配信されます。Ctrl-Sで保存、F12で宣言へ移動します。
+        ファイルには型を書きます。それ以外のファイルはそのまま配信されます。ただし、{context}
+        の中にあるもの（ドキュメントとテスト）は、コンパイルも配信もされません。Ctrl-Sで保存、F12で宣言へ移動します。
       </>
     ),
     newer: (version) => `ここで開いているものより新しい、バージョン${version}があります。`,
@@ -1013,6 +1126,8 @@ export const editor: EditorMessages = {
     deep: 'フォルダーは6階層までです。',
     characters: '英数字、ハイフン、アンダースコア、ドットを使い、スラッシュで区切ります。',
     extension: '正しい形式で配信できるよう、拡張子が必要です。',
+    context: '.lambda/の中では、docs/とtests/だけが使えます。英数字、ハイフン、アンダースコア、ドットを使い、スラッシュで区切ります。',
+    contextFiles: 'ドキュメントとテスト：バージョンの一部ですが、コンパイルも配信もされません',
     exists: '同じ名前のファイルがすでにあります。',
     remove: (name) => `${name}を削除しますか？　中身も削除されます。`,
     there: (name) => `${name}はすでにあります。`,
@@ -1020,7 +1135,7 @@ export const editor: EditorMessages = {
     errors: 'エラーあり',
     removeFile: (name) => `${name}を削除`,
     removeTitle: 'このファイルを削除',
-    placeholder: '例：Types.cs、site/index.html',
+    placeholder: '例：Types.cs、site/index.html、.lambda/docs/api.md',
     newFile: '新しいファイル',
     uploadTitle: 'ファイルをアップロード（画像、フォント、ページなど）',
     upload: 'ファイルをアップロード',

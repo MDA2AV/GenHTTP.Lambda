@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Lambda pertama Anda',
     editor: 'Pusat kontrol',
     why: 'Mencatat alasan',
+    written: 'Dokumentasi dan pengujian',
     features: 'Mengubah dengan aman',
     files: 'Lebih dari satu file',
     page: 'Menyajikan halaman',
@@ -84,7 +85,8 @@ export const guide: Messages['guide'] = {
     </>
   ),
   bits: [
-    ['Ringkasan', () => <>Apakah lambda online, berapa request hari ini dan berapa yang gagal, perubahan terakhir, dan sisa ruang penyimpanan.</>],
+    ['Ringkasan', () => <>Apa aplikasinya, apakah lambda online, berapa request hari ini dan berapa yang gagal, perubahan terakhir, dan sisa ruang penyimpanan.</>],
+    ['Dokumentasi', () => <>Apa aplikasinya, untuk siapa dan mengapa, dan mengapa aplikasi dibuat seperti itu - ditulis oleh agen, disimpan bersama setiap versi.</>],
     [
       'Ubah',
       (k) => (
@@ -112,11 +114,14 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
+    ['Pengujian', () => <>Bagaimana aplikasi diuji secara otomatis, dengan script dan data uji untuk itu. Hanya di tampilan lengkap.</>],
   ],
   sections: (k) => (
     <>
       Setiap bagian bekerja dengan cara yang sama: judulnya, tombol {k.b('ⓘ')} yang menjelaskannya, aksinya di kanan,
       dan (kalau punya lebih dari satu tampilan) deretan tab di bawahnya. Tab di bagian kode adalah file-filenya.
+      Tampilan lengkap mengelompokkan bagian-bagiannya: tempat perubahan dibuat, program dan datanya, cara berjalannya,
+      dan cara orang menemukannya.
     </>
   ),
   editorAside:
@@ -144,6 +149,41 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  written: (k) => (
+    <>
+      Setiap versi menyimpan apa yang ditulis tentangnya di samping programnya: {k.b('dokumentasinya')} (apa
+      aplikasinya, untuk siapa dan mengapa, dan mengapa aplikasi dibuat seperti itu) dan {k.b('pengujiannya')}: cara
+      memeriksa secara otomatis bahwa aplikasi berfungsi, dengan script dan data uji untuk itu. Agen menulis keduanya
+      bersama lambda baru dan memperbaruinya di setiap perubahan. Agen berikutnya yang mengubah lambda membacanya lebih
+      dulu, sehingga tahu untuk apa aplikasi itu dan apa yang harus tetap berfungsi - hal yang tidak bisa diketahui dari
+      kodenya saja.
+    </>
+  ),
+  writtenFiles: [
+    ['.lambda/docs/product.md', 'apa aplikasinya, untuk siapa, apa yang dilakukan orang dengannya, dan mengapa'],
+    ['.lambda/docs/decisions.md', 'keputusan teknis, dan alasan keputusan itu diambil'],
+    ['.lambda/tests/README.md', 'bagaimana aplikasi diuji secara otomatis, dan cara menjalankan pengujiannya'],
+    ['.lambda/tests/…', 'script dan data uji yang dipakai pengujian'],
+  ],
+  written2: (k) => (
+    <>
+      Keduanya adalah file versi seperti file lainnya, di folder {k.code('.lambda')}: riwayat menunjukkan apa yang
+      diubah sebuah versi di dalamnya, rollback mengembalikan dokumentasi yang berlaku untuk versi itu, dan draf punya
+      salinannya sendiri yang ikut online bersamanya. Keduanya tidak pernah dikompilasi dan tidak pernah disajikan, dan
+      dihitung dalam batas ukuran aset sebuah versi.
+    </>
+  ),
+  written3: (k) => (
+    <>
+      Di pusat kontrol, {k.b('Dokumentasi')} menampilkan halaman untuk dibaca, dan {k.b('Pengujian')} menampilkan cara
+      aplikasi diuji beserta file di sampingnya; versinya dipilih seperti untuk file-filenya. Halaman juga bisa diedit
+      di sana, yang akan menyimpan versi berikutnya. Tampilan sederhana menyebut dokumentasi {k.b('Tentang')} dan hanya
+      menampilkan untuk apa aplikasi itu. Untuk memperbaikinya, sampaikan kepada agen.
+    </>
+  ),
+  writtenAside:
+    'Keduanya ditulis dalam bahasa yang Anda pakai dengan agen, untuk siapa pun yang mengubah aplikasi berikutnya - manusia atau agen. Bukan salinan kode, melainkan untuk apa aplikasi itu, dan mengapa.',
+
   features: (k) => (
     <>
       Versi tidak pernah berubah setelah disimpan, dan justru itulah yang membuat setiap versi layak disimpan: versi
@@ -154,8 +194,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Mulai di {k.b('Draf')}, atau dari versi mana pun. Draf adalah salinan kode dan aset versi itu, dan salinan data
-        lambda.
+        Mulai dari versi mana pun di {k.b('Versi')}, atau biarkan agen memulainya. Draf adalah salinan kode, aset,
+        dokumentasi, dan pengujian versi itu, serta salinan data lambda.
       </>
     ),
     (k) => (
@@ -250,7 +290,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Di sebuah versi',
   workspaceColumn: 'Di data',
   table: [
-    ['isinya', 'kode dan aset: programnya, termasuk front end', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
+    ['isinya', 'kode dan aset: programnya, termasuk front end - beserta dokumentasi dan pengujiannya', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
     ['kapan berubah', 'tidak pernah: perubahan menjadi versi baru', 'begitu ada yang ditulis ke dalamnya'],
     ['saat deploy', 'file inilah yang persis dibuat online', 'tidak pernah disentuh'],
     ['rollback', 'file lama kembali', 'tidak berpengaruh: semua versi memakainya bersama'],
@@ -330,6 +370,7 @@ export const guide: Messages['guide'] = {
       di samping program, dengan method yang sama, terpisah di folder {k.code('Platform')}, jadi tidak ada yang perlu
       diubah di kode Anda.
       {' '}{k.code('Secret')} di sana membaca variabel lingkungan dengan nama yang sama; nilainya tetap di sini.
+      Dokumentasi dan pengujian ikut serta di {k.code('docs')} dan {k.code('tests')}.
     </>
   ),
   awayAside:
@@ -347,7 +388,8 @@ export const guide: Messages['guide'] = {
       Agen mencatat alasannya sambil bekerja ({k.code('write_code')} menerima spesifikasi dan perubahan), dan bisa melihat
       apa yang sudah di-deploy-nya. {k.code('read_logs')} menjawab dengan request terbaru lambda, apa yang dicetaknya, dan
       stack trace dari setiap exception. Dari situ agen tahu kodenya benar-benar jalan, bukan sekadar menebak. Anda
-      memantau hal yang sama di pusat kontrol.
+      memantau hal yang sama di pusat kontrol. Agen menulis dokumentasi dan pengujian sambil bekerja, membacanya
+      sebelum mengubah apa pun, dan menjalankan pengujian terhadap alamat draf sebelum menjadikan draf itu online.
     </>
   ),
   more: 'Selengkapnya →',

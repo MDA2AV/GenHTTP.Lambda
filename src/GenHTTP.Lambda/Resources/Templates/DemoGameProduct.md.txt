@@ -1,0 +1,34 @@
+# Tic-tac-toe
+
+Tic-tac-toe in the browser against whoever else has the page open, or against the house when nobody is around. The server keeps every board and decides every move, so both players always see the same game.
+
+<!-- [demo] -->
+This is one of the demos of GenHTTP Lambda, kept online and read only. To build on it, create a lambda of your own from it - a copy is yours to change.
+
+<!-- [/demo] -->
+## Who it is for
+
+Two people who want a quick game without accounts or installing anything: both open the page, and the second is matched with the first. Anybody on their own who wants a game in between, against the house. And developers who want to see how several browsers are kept in step live, with the server as the referee.
+
+## What people do with it
+
+- **Play somebody else.** The first to open the page waits; the next one is matched with them. Whoever waited plays X and starts.
+- **Play the house** instead of waiting: the app itself plays O and answers each move at once.
+- **Play again** once a game is over, or when the opponent has left: the player is matched with whoever is waiting, or waits again.
+- **See how the games have ended**: how many were played, won by X, won by O and drawn. The count is shown under the board, brought up to date after every game, and also served as JSON at `api/stats`.
+
+## Features, and why they are there
+
+- **The server is the referee.** It checks every move - that it is that player's turn, that the cell is free, that the game is not over - and ignores anything else. The page only draws what it is sent, so changing the page does not help anybody cheat.
+- **Both players see each move the moment it is made.** The page keeps a connection open, and the server sends the board to both players after every move. Nobody reloads or waits for the page to ask.
+- **The house**, because nobody else being around is the usual case for a small app. It wins when it can, blocks when it must, and otherwise takes the centre, a corner or what is left - good enough to lose to sometimes.
+- **A player whose opponent leaves is told so**, and can start again rather than wait for a move that never comes.
+- **The count survives every new version.** It is kept as the app's data, not in the program, so putting a change online does not reset it. A game that one player left before its end is not counted.
+- **The page reconnects by itself** when its connection drops. When a connection hangs without ever opening, it says after five seconds that something between the browser and the server may not let it through, rather than wait quietly.
+
+## What it does not do
+
+- No choosing whom to play: the next person to open the page plays whoever is waiting. No rooms, invitations or names - the opponent is "a player" or "the house".
+- No accounts and no scores per person: the count is for the app as a whole. `demo-registration` shows how to add accounts.
+- Games in progress are not saved. A player who reloads the page or loses the connection starts over, and the game is lost for both.
+- Only tic-tac-toe, on a board of three by three. Against the house, the player always plays X and moves first.

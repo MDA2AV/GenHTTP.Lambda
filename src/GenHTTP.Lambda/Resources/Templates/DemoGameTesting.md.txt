@@ -1,0 +1,38 @@
+# How it is tested
+
+`smoke.mjs` plays the game from the outside, over the same websocket as the page. Two players play each other to a win, meet again for a game one of them leaves, and a third plays the house to the end. On the way it checks that moves out of turn, on a taken cell, before a game and after its end are refused, and that finished games are counted - and it closes its sockets, whatever happens.
+
+```
+node .lambda/tests/smoke.mjs <address>
+```
+
+The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. It needs Node 22 or later, for its WebSocket, and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not. A game is a sequence, so it stops at the first step that goes wrong, and nothing waits for ever: an answer that does not come within five seconds is a failure.
+
+It plays real games, so run it where nobody else is playing at the time: a visitor waiting at that address would be matched with it, and the count would be off. The two games it finishes stay in the count; on a preview that is the feature's copy of the data, which merging the feature throws away.
+
+## What has to keep working
+
+| Behaviour | Request | Expected |
+|---|---|---|
+| The page | `GET ./` | 200, HTML |
+| The count | `GET api/stats` | 200, `{ "games", "x", "o", "draws" }`, all numbers |
+| A player alone waits | open the socket at `play`, `ws:` or `wss:` like the page | `{ "type": "waiting" }` |
+| Two players are matched | a second socket | both get a `board`: the one who waited as `"you": "X"`, the other as `"O"`, `"cells": "........."`, `"turn": "X"`, `"opponent": "a player"` |
+| A move | X sends `{ "type": "move", "cell": 0 }` | both get the board `X........`, `"turn": "O"` |
+| A taken cell | O sends `move` with cell 0, then with cell 4 | the board that comes back is `X...O....` |
+| A win | X completes the top row | both get `"winner": "X"` and `"line": [0, 1, 2]` |
+| After the end | a `move`, then `{ "type": "again" }` | no board, then `waiting` |
+| Again | the other player sends `again` too | both get a new board, the one who waited as X |
+| Out of turn | O sends `move` before X has played, then closes its socket | no board |
+| The opponent leaves | one player closes the socket during a game | the other gets `{ "type": "left" }`, and is not matched again until sending `again` |
+| Before a game | a waiting player sends `move`, then `{ "type": "house" }` | the board is empty |
+| The house | a waiting player sends `{ "type": "house" }` | a `board` with `"opponent": "the house"`, the player as X and to move |
+| The house answers | X plays a free cell | the board that comes back has the house's O as well, and X to move - or the game is over |
+| A game against the house ends | X plays on | a `winner` of `"X"`, `"O"` or `"draw"` by X's fifth move |
+| Games are counted | `GET api/stats` after the games | one more game for each finished game and one more for its winner; a game left before its end not at all |
+
+A refused move is not answered at all. So the script sends each one just before a message that is answered, on the same socket: the app handles a socket's messages in order, and what comes back shows that the refused move changed nothing.
+
+## Test data
+
+None: every game starts on an empty board, and the count starts at zero when the app has not kept one yet.

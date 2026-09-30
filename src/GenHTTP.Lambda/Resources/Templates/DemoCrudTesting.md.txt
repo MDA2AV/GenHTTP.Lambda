@@ -1,0 +1,29 @@
+# How it is tested
+
+`smoke.mjs` checks the API from the outside. It adds a task of its own, reads, searches, changes and removes it, checks what is refused and that the page and the API description are served - and removes what it added, whatever happens.
+
+```
+node .lambda/tests/smoke.mjs <address>
+```
+
+The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. It needs Node 18 or later and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not.
+
+## What has to keep working
+
+| Behaviour | Request | Expected |
+|---|---|---|
+| The list is served | `GET tasks/` | 200, an array: open tasks before done ones, the newest first |
+| A task is added | `POST tasks/` with `{ "title": "…", "notes": "…", "done": false }` | 201, the task with its `id` |
+| A task is read | `GET tasks/{id}` | 200, the task |
+| An unknown task | `GET tasks/nothing` | 404, with a message |
+| Search | `GET tasks/?search=…` | the tasks whose title or notes contain it, whatever the case |
+| A task is changed | `PUT tasks/{id}` with the same body as adding | 200, the task as changed |
+| No title | `POST tasks/` with a title of spaces | 400, "A task needs a title." |
+| Too long | `POST tasks/` with a title of 121 characters | 400 |
+| A task is removed | `DELETE tasks/{id}` | 204, and 404 when it is read again |
+| The page | `GET ./` | 200, HTML |
+| The API is described | `GET openapi.json` | 200, the OpenAPI document |
+
+## Test data
+
+`tasks.json` is a longer list in the format the app keeps, for trying the page with more than a handful of tasks. Put it into the data of a feature - `upload_file` with the feature, the path `tasks.json` and the content of `.lambda/tests/tasks.json` - then deploy the feature's preview again, since the app reads its file when it starts.

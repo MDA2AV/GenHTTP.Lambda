@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import { isDemo } from '../api';
-import { IconAlert, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { ago, bytes, count, local, millis, percent, span } from './format';
@@ -10,6 +10,11 @@ import { AgentMark, Ago, Figure, LiveDot, Meter, Quote, Section, Sparkline } fro
 /**
  * Whether it is working, in the order somebody asks: is it up, is anybody
  * using it, is it failing, what changed last, and is there room left.
+ *
+ * Above all of that, what the app is - the paragraph its documentation opens
+ * with, the way a repository is described in a line under its name - since
+ * whoever opens a lambda they did not write, a demo included, asks that
+ * first.
  */
 export function SummaryTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -30,7 +35,7 @@ export function SummaryTab({ control }: { control: Control }) {
     );
   }
 
-  const { traffic, storage, limits, activation, latest } = summary;
+  const { traffic, storage, limits, activation, latest, documentation } = summary;
 
   const live = lambda.activeVersion != null;
   const errorTone = traffic.dayFailed === 0 ? (traffic.dayRequests > 0 ? 'good' : 'default') : traffic.dayFailed / traffic.dayRequests > 0.05 ? 'bad' : 'warn';
@@ -40,6 +45,13 @@ export function SummaryTab({ control }: { control: Control }) {
       title={title}
       hint={said.hint(ago(traffic.since, t.shared), !!lambda.keptUntil, limits.retentionDays, lambda.tier)}
     >
+      {documentation.about && (
+        <p className="mb-5 max-w-3xl text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
+          {documentation.about}{' '}
+          <Link to={`${base}/docs`} className="whitespace-nowrap text-[13px] text-accent-500 hover:underline">{said.readDocs}</Link>
+        </p>
+      )}
+
       <p className="text-[15px]">
         {live
           ? said.onlineFor(
@@ -180,6 +192,21 @@ export function SummaryTab({ control }: { control: Control }) {
                   of={limits.assetBytes}
                   format={bytes}
                 />
+
+                {/* counted in pages rather than room: what matters is whether one is missing */}
+                {storage.version != null && (
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-[13px]">
+                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                      {said.written}
+                      <Exposure open={false} why={said.writtenWhy} />
+                    </span>
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <Written to={`${base}/docs`} done={documentation.product} label={t.context.docs.pages.product} missing={said.writtenMissing} />
+                      <Written to={`${base}/docs?page=decisions.md`} done={documentation.decisions} label={t.context.docs.pages.decisions} missing={said.writtenMissing} />
+                      <Written to={`${base}/tests`} done={documentation.tests} label={t.frame.sections.tests} missing={said.writtenMissing} />
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -255,6 +282,25 @@ function distinct<T extends { text: string }>(lines: T[]): T[] {
     seen.add(key);
     return true;
   });
+}
+
+/** One page of the documentation or the tests, and whether the version has it. */
+function Written({ to, done, label, missing }: { to: string; done: boolean; label: string; missing: string }) {
+  return (
+    <Link
+      to={to}
+      title={done ? undefined : missing}
+      className={`inline-flex items-center gap-1 hover:underline ${done ? 'text-slate-600 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'}`}
+    >
+      {done ? (
+        <IconCheck className="h-3.5 w-3.5 text-emerald-500" />
+      ) : (
+        <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full border border-dashed border-slate-400" />
+      )}
+      {label}
+      {!done && <span className="sr-only">: {missing}</span>}
+    </Link>
+  );
 }
 
 /** Whether the public can reach it, as an icon, with the reason on hover. */

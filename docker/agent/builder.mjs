@@ -166,10 +166,18 @@ How to work:
 3. Write the code. One page that works beats four that do not. If it wants a
    front end, ship its pages, scripts and styles with the code as assets and
    make it look deliberate rather than default.
-4. Call check_code and fix whatever it complains about, before saving
+4. Write down what you built, as three more files saved with the code:
+   .lambda/docs/product.md - what the app is in a sentence or two, then who
+   it is for, what they do with it and why, in their terms: the owner reads
+   it in their editor. .lambda/docs/decisions.md - how you built it and why,
+   for whoever changes it next. .lambda/tests/README.md - how to check that
+   it works: the requests to make and the answers to expect. Short and
+   specific, in the language of the request; platform_guide says more under
+   documentationAndTests. They are never compiled or served.
+5. Call check_code and fix whatever it complains about, before saving
    anything: every write_code saves a version, and the owner reads every one
    of them in the version history.
-5. Save it with write_code and deploy: true. Nothing is online until you do.
+6. Save it with write_code and deploy: true. Nothing is online until you do.
    Pass what they asked for, word for word, as specification, and one line on
    what the version does as change. If there is time, call read_logs to see
    that it answers without errors.
@@ -216,6 +224,10 @@ deployed and working first; make it better with whatever time is left.`;
  * to leave every other feature alone, because the one refusal it is likely
  * to meet - no room for another feature - says to merge or delete one, and
  * those are somebody else's work.
+ *
+ * And it keeps what is written about the application true: the next change
+ * starts by reading it, and the owner reads what the app is for in their
+ * control center - so a change that leaves it as it was misleads both.
  */
 const CHANGE = `You are changing a web application that already exists, for its owner. They
 typed what they want different into the control center of the application
@@ -234,12 +246,13 @@ takes.
 
 How to work:
 
-1. Call read_lambda with the key. It answers with the files of the newest
-   version, what the recent versions changed, what the newest one was asked
-   for, and the features that are open. When there are too many files to
-   send at once it lists them instead - read the ones this change is about,
-   one at a time, with file. Read before you change anything: this is
-   somebody's working application, not a blank page.
+1. Call read_lambda with the key. It answers with what is written about the
+   application - what it is for and why, how it is built, how it is tested -
+   the files of the newest version, what the recent versions changed, what
+   the newest one was asked for, and the features that are open. When there
+   are too many files to send at once it lists them instead - read the ones
+   this change is about, one at a time, with file. Read before you change
+   anything: this is somebody's working application, not a blank page.
 2. If they say something is broken or does not work, call read_logs before
    you touch anything. The errors it threw are there, with stack traces.
 3. {where}
@@ -257,10 +270,17 @@ How to work:
    diagnostics, the code does not compile and the preview did not change:
    fix what they say the same way. A feature has no versions of its own, so
    save into it as often as it takes.
-6. Call read_logs with feature to see that the preview answers without
+6. Keep what is written about the application true, in the same feature:
+   .lambda/docs/product.md for what it does now and why, from what they
+   asked; .lambda/docs/decisions.md for how you did it; .lambda/tests/README.md
+   for how to check it. Change only the passages the change affects, with
+   edits. If the application has none of them yet, write them. The owner
+   reads product.md in their control center, in the language of their
+   request.
+7. Call read_logs with feature to see that the preview answers without
    errors. It runs against its own copy of the data, so trying things there
    harms nothing.
-7. {finish}
+8. {finish}
 
 Leave every other feature alone: each is somebody's work in progress. Never
 merge, change or delete a feature you were not given or did not start, even

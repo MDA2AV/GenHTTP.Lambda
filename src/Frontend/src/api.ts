@@ -169,6 +169,8 @@ export interface LambdaSummary {
     /** The secrets its code reads that have no value yet, and so fail. */
     missingSecrets?: string[] | null;
   };
+  /** What the documentation of the version the storage is about says, and which of its pages it has. */
+  documentation: DocumentationSummary;
   /** What this lambda may use in its tier. Nothing counts its C# files or assets, only what they come to. */
   limits: {
     codeCharacters: number;
@@ -180,6 +182,33 @@ export interface LambdaSummary {
     /** How many features it may have open at once. */
     features: number;
   };
+}
+
+/** What a version says about itself, in .lambda/ beside its program. */
+export interface DocumentationSummary {
+  /** The first paragraph of its product page, as plain text: what the app is, in a sentence or two. */
+  about?: string | null;
+  product: boolean;
+  decisions: boolean;
+  tests: boolean;
+  /** How many files the documentation and the tests come to. */
+  files: number;
+  /** What those weigh, which counts towards what the assets may come to. */
+  bytes: number;
+}
+
+/** Changes to some files: files added or replaced, names removed, passages replaced within a file. */
+export interface FileChanges {
+  files?: LambdaFile[];
+  remove?: string[];
+  edits?: { file: string; find: string; replace: string }[];
+  change?: string | null;
+  specification?: string | null;
+}
+
+/** A version just saved, and how putting it online went when that was asked for. */
+export interface SavedVersion extends VersionInfo {
+  deployment?: DeploymentResult | null;
 }
 
 export interface LambdaFile {
@@ -965,8 +994,13 @@ export const api = {
 
   versions: (privateKey: string) => request<VersionInfo[]>(`/lambdas/${privateKey}/versions`),
 
-  version: (privateKey: string, version: number) =>
-    request<VersionContent>(`/lambdas/${privateKey}/versions/${version}`),
+  /** One version with its files - only those below a folder when one is named, such as '.lambda/' for what is written about it. */
+  version: (privateKey: string, version: number, folder?: string) =>
+    request<VersionContent>(`/lambdas/${privateKey}/versions/${version}${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`),
+
+  /** Changes some files of the newest version and saves that as a new one, putting it online too when asked. */
+  changeVersion: (privateKey: string, changes: FileChanges, deploy = false) =>
+    request<SavedVersion>(`/lambdas/${privateKey}/versions/changes${deploy ? '?deploy=true' : ''}`, send(changes)),
 
   /** Stores a version; the change and the specification are the why, kept beside the what. */
   save: (privateKey: string, files: LambdaFile[], change?: string, specification?: string) =>
@@ -1066,7 +1100,13 @@ export const api = {
     create: (privateKey: string, name: string, specification?: string, base?: number) =>
       request<Feature>(`/lambdas/${privateKey}/features`, send({ name, specification: specification || null, base: base ?? null })),
 
-    get: (privateKey: string, feature: string) => request<FeatureContent>(`/lambdas/${privateKey}/features/${feature}`),
+    /** One feature with its files - only those below a folder when one is named. */
+    get: (privateKey: string, feature: string, folder?: string) =>
+      request<FeatureContent>(`/lambdas/${privateKey}/features/${feature}${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`),
+
+    /** Changes some of its files, leaving the rest as they are, and puts its preview online as well if asked. */
+    change: (privateKey: string, feature: string, changes: FileChanges, deploy = false) =>
+      request<FeatureSaved>(`/lambdas/${privateKey}/features/${feature}/changes${deploy ? '?deploy=true' : ''}`, send(changes)),
 
     /** What is left out stays as it is. */
     update: (privateKey: string, feature: string, update: { name?: string; specification?: string; change?: string; base?: number }) =>

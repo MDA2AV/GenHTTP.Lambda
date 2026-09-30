@@ -107,9 +107,13 @@ function useColoured(code: string, language: string, theme: Theme): string[] | n
   return lines;
 }
 
+/** Prose, whose lines are paragraphs: wrapped to be read, where code keeps its lines as they are. */
+const PROSE = /\.(md|markdown|txt)$/i;
+
 function Patch({ diff, before, after, theme }: { diff: FileDiff; before: string; after: string; theme: Theme }) {
   const said = useEditorT().versions;
   const language = languageFor(diff.name);
+  const wrap = PROSE.test(diff.name);
   const old = useColoured(before, language, theme);
   const now = useColoured(after, language, theme);
 
@@ -126,7 +130,7 @@ function Patch({ diff, before, after, theme }: { diff: FileDiff; before: string;
       <table className="w-full border-collapse font-mono text-[12.5px] leading-5">
         <tbody>
           {diff.hunks.map((hunk, h) => (
-            <Hunk key={h} lines={hunk.lines} separator={h > 0} old={old} now={now} />
+            <Hunk key={h} lines={hunk.lines} separator={h > 0} old={old} now={now} wrap={wrap} />
           ))}
         </tbody>
       </table>
@@ -134,7 +138,13 @@ function Patch({ diff, before, after, theme }: { diff: FileDiff; before: string;
   );
 }
 
-function Hunk({ lines, separator, old, now }: { lines: DiffLine[]; separator: boolean; old: string[] | null; now: string[] | null }) {
+function Hunk({ lines, separator, old, now, wrap }: {
+  lines: DiffLine[];
+  separator: boolean;
+  old: string[] | null;
+  now: string[] | null;
+  wrap: boolean;
+}) {
   return (
     <>
       {separator && (
@@ -148,19 +158,22 @@ function Hunk({ lines, separator, old, now }: { lines: DiffLine[]; separator: bo
           <td className="w-4 select-none align-top text-slate-500">
             {line.kind === 'added' ? '+' : line.kind === 'removed' ? '−' : ''}
           </td>
-          <Code text={line.text} html={(line.kind === 'removed' ? old : now)?.[line.number - 1]} />
+          <Code text={line.text} html={(line.kind === 'removed' ? old : now)?.[line.number - 1]} wrap={wrap} />
         </tr>
       ))}
     </>
   );
 }
 
-function Code({ text, html }: { text: string; html?: string }) {
+function Code({ text, html, wrap }: { text: string; html?: string; wrap: boolean }) {
+  const layout = wrap ? 'whitespace-pre-wrap break-words pr-4' : 'whitespace-pre pr-4';
+
   // an empty line has no text to hold the row open, coloured or not
   if (text === '' || html === undefined) {
-    return <td className="whitespace-pre pr-4">{text || ' '}</td>;
+    return <td className={layout}>{text || ' '}</td>;
   }
 
-  // monaco escapes the source as it renders it
-  return <td className="whitespace-pre pr-4" dangerouslySetInnerHTML={{ __html: html }} />;
+  // monaco escapes the source as it renders it - and writes every space as a
+  // non-breaking one, which prose has to have back to wrap at all
+  return <td className={layout} dangerouslySetInnerHTML={{ __html: wrap ? html.replace(/\u00a0|&nbsp;/g, ' ') : html }} />;
 }

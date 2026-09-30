@@ -1,0 +1,39 @@
+# Members
+
+A members area: people register with a name and a password, and once signed in they see a page only members get to see - who they are, when they joined and who joined last. Passwords are never stored, and a sign-in lasts a week unless they sign out.
+
+<!-- [demo] -->
+This is one of the demos of GenHTTP Lambda, kept online and read only. To build on it, create a lambda of your own from it - a copy is yours to change.
+
+<!-- [/demo] -->
+## Who it is for
+
+Anybody who wants part of an app to be for registered people only - a club, a course, a small community - and anybody whose app needs accounts at all: signing up, signing in, signing out, and something only members see. And developers who want to see how accounts, passwords and sessions are handled.
+
+## What people do with it
+
+- **Register** with a name and a password, and are signed in straight away.
+- **Sign in** later, on this device or another. A name is the same whatever the case it is typed in: "Ann" and "ann" are one account.
+- **See the members page**: their name, when they joined, how many members there are, and the ten who joined last.
+- **Sign out**, which ends the sign-in on this device. Other devices stay signed in.
+
+## Features, and why they are there
+
+- **Passwords are never stored.** The app keeps a fingerprint of each password that cannot be turned back into it, and that takes long to work out on purpose. Whoever gets hold of the saved accounts still has nobody's password, and every guess at one costs them that time.
+- **An extra key, if you give it one.** In the editor, under Data, you can enter a key named `PASSWORD_PEPPER`. It goes into the fingerprint of every password made from then on and is kept apart from the accounts, so the saved accounts on their own are not even enough to start guessing. The app works just the same without it, and accounts made before it was entered keep working.
+- **Once entered, keep that key.** Replacing it, or removing it, means everybody who registered while it was there can no longer sign in - until the old one is put back.
+- **The browser remembers the sign-in, for a week.** It is kept in a way no script on a page can read and no other website can make use of, so the pages themselves hold nothing to steal.
+- **A name nobody has and a wrong password are refused with the same message**, so the sign-in form does not say which of the two it was. Registering does say when a name is taken - it cannot do otherwise.
+- **Clear refusals.** A name has 2 to 24 letters, digits, dashes, dots or underscores, and a password at least 8 characters. Anything else is refused with a message that says why, and the page shows it beside the form.
+- **At most 300 accounts.** Anybody can register, so the list must not grow without end: when a new account would be the 301st, the oldest is forgotten. An app of your own would rather refuse new accounts than forget somebody - change this before you rely on it.
+- **Accounts and sign-ins survive every new version.** They are kept as the app's data, not in the program, so putting a change online neither loses an account nor signs anybody out.
+
+## What it does not do
+
+- The members page itself is not hidden: it is a plain page anybody can open. What is protected is what it shows, which it asks for with the visitor's sign-in. Anything written into the page is public; what only members may see has to come from the app behind the same check.
+- No changing a password, no resetting a forgotten one, and no removing an account.
+- No email addresses: a name and a password are all there is, so nothing is confirmed and nothing can be sent.
+- No roles: every member sees the same, and nobody is an administrator.
+- No limit on attempts: failed sign-ins are neither slowed down nor locked out, beyond the time each fingerprint takes to work out.
+- No signing out everywhere at once.
+- Members keep nothing of their own yet. `demo-crud` shows how to keep records, and `demo-files` how to take uploads.

@@ -1,0 +1,32 @@
+# Tasks
+
+A shared task list: anybody who opens it can add a task, tick it off, change it and remove it, and finds the list as it was left the next time. Everything the page does goes through a small REST API, which can be used on its own.
+
+<!-- [demo] -->
+This is one of the demos of GenHTTP Lambda, kept online and read only. To build on it, create a lambda of your own from it - a copy is yours to change.
+
+<!-- [/demo] -->
+## Who it is for
+
+Anybody who keeps a short list together with others - chores, shopping, the to-dos of a small team - and does not want accounts for it. And developers who want to see a REST API beside the page that uses it.
+
+## What people do with it
+
+- **Add a task** with a title and, if they like, a few notes.
+- **Tick it off** once it is done. Done tasks move to the end of the list.
+- **Change** its title or notes, or **remove** it.
+- **Search** the titles and notes.
+- **Use the API directly**: try it at `scalar/`, or read its description at `openapi.json`, to add tasks from somewhere else.
+
+## Features, and why they are there
+
+- **The list survives every new version.** It is kept as the app's data, not in the program, so putting a change online never loses what people entered.
+- **What is still to do comes first.** Open tasks before done ones, the newest first - that is what people open the list for.
+- **Limits.** A title has up to 120 characters and notes up to 1000, and the list keeps at most 200 tasks, the oldest going first. Anybody can write to it, so it must not grow without end.
+- **Clear refusals.** A task without a title, or with one that is too long, is refused with a message that says why, and the page shows it beside the form.
+
+## What it does not do
+
+- No accounts: everybody sees and changes the same list. `demo-registration` shows how to add them.
+- No due dates, priorities or categories.
+- No live updates: somebody else's change shows after a reload. `demo-live` shows how to send changes to every browser as they happen.

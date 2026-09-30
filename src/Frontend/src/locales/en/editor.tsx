@@ -17,6 +17,8 @@ export const editor = {
     title: 'Editor',
     sections: {
       overview: 'Overview',
+      docs: 'Documentation',
+      tests: 'Tests',
       change: 'Change',
       features: 'Drafts',
       showcase: 'Showcase',
@@ -31,12 +33,19 @@ export const editor = {
       code: 'Code',
     },
     sectionsLabel: 'Sections',
+    /** The groups the sections of the full view are gathered in, under the overview and the documentation. */
+    groups: {
+      build: 'Build',
+      program: 'Program and data',
+      run: 'Run',
+      sharing: 'Sharing',
+    },
     loadFailed: 'This lambda could not be loaded.',
     online: (version: number | string) => `Version ${version} is online.`,
     deployFailed: 'The lambda could not be deployed.',
     offline: 'Taken offline. The code is still here.',
     offlineFailed: 'The lambda could not be taken offline.',
-    leave: 'Your unsaved changes in the code will be lost. Leave anyway?',
+    leave: 'Your unsaved changes will be lost. Leave anyway?',
     nothingTitle: 'This link does not open anything',
     createNew: 'Create a new lambda',
     loading: 'Loading your lambda…',
@@ -97,11 +106,14 @@ export const editor = {
     simple: 'Simple',
     full: 'Full',
     simpleTitle: 'Your app, how it is doing, and a box to ask for changes',
-    fullTitle: 'Every section: the code, the files, the data, the versions and the logs',
+    fullTitle: 'Every section: the code, the documentation, the tests, the files, the data, the versions and the logs',
     simpleNote: 'Your app and a box to ask for changes.',
     fullNote: 'Every section, the code included.',
     toFull: 'Show every section',
     toSimple: 'Switch to the simple view',
+    /** The documentation, in the simple view: what the app is for. */
+    about: 'About',
+    aboutMore: 'More about your app',
 
     outsideTitle: 'This is part of the full view',
     outsideText: 'The simple view leaves out the code, the files and the history. Show every section to work with them here.',
@@ -324,6 +336,10 @@ export const editor = {
 
   summary: {
     reading: 'Reading how it is doing…',
+    readDocs: 'Read the documentation',
+    written: 'Documentation and tests',
+    writtenWhy: 'Never compiled and never served. Kept with each version, and counted with the assets.',
+    writtenMissing: 'Not written yet',
     hint: (since: string, kept: boolean, retention: number, tier: string) =>
       `Traffic is counted since the server last started (${since}). ` +
       (kept
@@ -415,6 +431,10 @@ export const editor = {
     assetsPublic: 'Public: this version serves them with Assets.',
     assetsPrivate: 'Saved with the code, but this version does not serve them.',
     noAssets: 'None in this version.',
+    context: 'Documentation and tests',
+    contextWhy: 'Never compiled and never served: what is written about this version, for whoever reads or changes it.',
+    contextUsage: (files: string, size: string) => `${files}, ${size} - counted with the assets`,
+    noContext: 'Nothing written about this version yet.',
     data: 'Data',
     dataPublic: 'Public: the code online serves it with Workspace.',
     dataPrivate: 'Private to the lambda. Not part of any version.',
@@ -444,6 +464,101 @@ export const editor = {
     missing: (name: string) => `This version has no file called ${name}.`,
     saved: 'saved',
     notText: 'Not text. Download it to look inside.',
+  },
+
+  /**
+   * What a version says about itself beside its program: its documentation
+   * and its tests, in .lambda/. The simple view has the documentation only,
+   * and of it only what the app is for - called "About" there.
+   */
+  context: {
+    docs: {
+      title: 'Documentation',
+      titleSimple: 'About your app',
+      hint: 'What this app is, who it is for and why - and why it is built the way it is. Agents write it with every change and it is kept with each version, so an older version comes back with the documentation that was true of it.',
+      hintSimple: 'What your app is for and why, as the agent understood it from what you asked. It keeps this up to date with every change.',
+      inDraft: "This draft's documentation. It becomes your app's when the draft goes online.",
+      pages: { product: 'Product', decisions: 'Decisions' },
+      emptyTitle: 'Nothing written yet',
+      emptyText: (code: (text: string) => Node) => (
+        <>
+          Agents write the documentation with their changes: what the app is, who it is for and why in{' '}
+          {code('.lambda/docs/product.md')}, and why it is built the way it is in {code('decisions.md')}. It is part of
+          the version, beside the code.
+        </>
+      ),
+      emptySimpleTitle: 'Nothing written about your app yet',
+      emptySimple: 'The agent can describe what your app is for and why, from what you asked for - it keeps the description up to date from then on.',
+      ask: 'Ask the agent to write it',
+      describe: 'Ask the agent to describe it',
+      writePrompt: 'Write the documentation of this app: what it is, who it is for and why, and the technical decisions behind it.',
+      describePrompt: 'Describe what this app is for and why, for me to read under About.',
+      decisionsPrompt: 'Write down the technical decisions behind this app, and why they were made.',
+      missingProduct: 'No product page yet',
+      missingProductText: 'What the app is, who it is for, what people do with it and why - in the words of whoever asked for it.',
+      missingDecisions: 'No decisions written down yet',
+      missingDecisionsText: 'How the app is built and why: how it keeps its data, what it depends on, what was left out. What whoever changes it next needs to know.',
+      correctText: 'The agent writes this from what you asked for, and keeps it up to date with every change. Something wrong or missing? Tell it.',
+      correct: 'Tell the agent',
+      correctPrompt: 'Correct the description of the app: ',
+      placeholder: 'Explains why entries are kept for a year',
+    },
+    tests: {
+      title: 'Tests',
+      hint: 'How this app is tested automatically, and the scripts and data the tests use. Agents keep it up to date and run it before they call a change done. It is kept with each version.',
+      inDraft: "This draft's tests. They become your app's when the draft goes online - run them against its preview first.",
+      pages: { testing: 'How it is tested' },
+      emptyTitle: 'No tests yet',
+      emptyText: (code: (text: string) => Node) => (
+        <>
+          How the app is tested - what has to keep working, how to check it, and how to run the scripts for it - is
+          written by agents in {code('.lambda/tests/README.md')}, with the scripts and the test data beside it.
+        </>
+      ),
+      ask: 'Ask the agent to write tests',
+      writePrompt: 'Write the tests of this app: what has to keep working and how to check it automatically, with a script to run against its preview.',
+      missing: 'Not said yet how it is tested',
+      missingText: 'What has to keep working, how each of it is checked, and how to run the scripts beside it.',
+      placeholder: 'Checks that a full list refuses new entries',
+    },
+    files: 'Files',
+    noFiles: 'No files beside the pages.',
+    none: 'none',
+    missingPill: 'Not written yet',
+    changedIn: (version: number) => `Changed in version ${version}`,
+    changedInDraft: 'Changed in this draft',
+    showChanges: 'Show what changed',
+    hideChanges: 'Hide what changed',
+    noChanges: 'Nothing changed.',
+    edit: 'Edit',
+    olderVersion: 'A version never changes: a page is edited on the newest version, or in a draft.',
+    writeIt: 'Write it yourself',
+    askPage: 'Ask the agent to write it',
+    editInCode: 'Open in the code',
+    cancel: 'Cancel',
+    save: 'Save',
+    write: 'Write',
+    preview: 'Preview',
+    writeOrPreview: 'Write or preview',
+    discard: 'Your changes to this page will be lost. Discard them?',
+    reading: 'Reading…',
+    readFailed: 'This could not be read.',
+    saveFailed: 'That could not be saved.',
+    savedDraft: 'Saved in the draft.',
+    savedVersion: (version: number) => `Saved as version ${version}.`,
+    savedOnline: (version: number) => `Saved as version ${version}, and online.`,
+    savedNotOnline: (version: number) => `Saved as version ${version}, but it did not go online.`,
+    saveTitle: 'Save as a new version',
+    saveText: (newest: number) =>
+      `A version never changes, so this page is saved as the next one - on top of version ${newest}, with everything else as it is.`,
+    clash: (version: number) => `Version ${version} was saved since you began, and it changed this page too. Saving replaces that.`,
+    alsoOnline: 'Put it online too',
+    alsoOnlineNote: 'Only the documentation changes, so visitors see nothing new - but what is online stays the newest version.',
+    skeleton: {
+      product: '# Name of the app\n\nWhat it is, in a sentence or two.\n\n## Who it is for\n\n## What people do with it\n\n## Features, and why they are there\n\n## What it does not do\n',
+      decisions: '# Decisions\n\n## A decision\n\nWhat was decided, why, and what a change has to keep in mind.\n',
+      testing: '# How it is tested\n\nHow to run the tests, and against which address.\n\n## What has to keep working\n\n| Behaviour | Request | Expected |\n|---|---|---|\n| | | |\n',
+    },
   },
 
   /** The data of a lambda: what it keeps rather than what it is. */
@@ -671,7 +786,7 @@ export const editor = {
     leaks: (path: string, files: string) =>
       `${files} link to ${path}, which is your live app. From the preview, those links read and change its real data instead of the test data. Ask the agent to link without that part ("api/items").`,
     mergeButton: 'Put online',
-    saveFirst: 'Save the code first: the preview and putting it online use what is saved.',
+    saveFirst: 'Save your changes first: the preview and putting it online use what is saved.',
     mergeAndDeploy: (_version: number) => 'Put online',
     mergeText: (version: number) =>
       `It becomes version ${version} of your app and goes online. Your app's data stays as it is.`,
@@ -708,7 +823,9 @@ export const editor = {
     viewsLabel: 'The draft',
     views: {
       overview: 'Draft',
+      docs: 'Documentation',
       code: 'Code',
+      tests: 'Tests',
       data: 'Test data',
       logs: 'Logs',
     },
@@ -732,6 +849,7 @@ export const editor = {
     first: 'The first version.',
     status: { added: 'added', removed: 'removed', changed: 'changed', same: 'same' } as Record<string, string>,
     browse: 'Browse its files',
+    docs: 'Read its documentation',
     edit: 'Edit from here',
     feature: 'Start a draft from here',
     featureTitle: 'Try a change on a copy of this version, without touching what is online',
@@ -966,10 +1084,11 @@ export const editor = {
     inFeature: (name: string) => `in “${name}”`,
     changedElsewhere: 'This draft was saved elsewhere since you opened it - by the agent, perhaps. Load what is saved before saving here; your changes would not be saved over it.',
     readAgain: 'Load what is saved',
-    files: (entry: Node, cs: Node) => (
+    files: (entry: Node, cs: Node, context: Node) => (
       <>
-        {entry} returns what gets served, other {cs} files hold types, and any other file is served as it is. Ctrl-S
-        saves, F12 goes to a declaration.
+        {entry} returns what gets served, other {cs} files hold types, and any other file is served as it is - except
+        what is in {context}: the documentation and the tests, never compiled or served. Ctrl-S saves, F12 goes to a
+        declaration.
       </>
     ),
     newer: (version: number) => ` Version ${version} is newer than the one open here.`,
@@ -1001,6 +1120,8 @@ export const editor = {
     deep: 'At most six folders deep.',
     characters: 'Letters, digits, dashes, underscores and dots, separated by slashes.',
     extension: 'It needs an extension, so it can be served as the right thing.',
+    context: 'In .lambda/, only docs/ and tests/ - letters, digits, dashes, underscores and dots, separated by slashes.',
+    contextFiles: 'Documentation and tests: part of the version, never compiled or served',
     exists: 'There is already a file with that name.',
     remove: (name: string) => `Remove ${name}? Its contents go with it.`,
     there: (name: string) => `${name} is already there.`,
@@ -1008,7 +1129,7 @@ export const editor = {
     errors: 'has errors',
     removeFile: (name: string) => `Remove ${name}`,
     removeTitle: 'Remove this file',
-    placeholder: 'Types.cs or site/index.html',
+    placeholder: 'Types.cs, site/index.html or .lambda/docs/api.md',
     newFile: 'New file',
     uploadTitle: 'Upload a file - an image, a font, a page',
     upload: 'Upload a file',

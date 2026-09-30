@@ -59,6 +59,8 @@ export const editor: EditorMessages = {
     title: 'Editor',
     sections: {
       overview: 'Panoramica',
+      docs: 'Documentazione',
+      tests: 'Test',
       change: 'Modifica',
       features: 'Bozze',
       showcase: 'Vetrina',
@@ -73,12 +75,18 @@ export const editor: EditorMessages = {
       code: 'Codice',
     },
     sectionsLabel: 'Sezioni',
+    groups: {
+      build: 'Sviluppo',
+      program: 'Programma e dati',
+      run: 'Esecuzione',
+      sharing: 'Condivisione',
+    },
     loadFailed: 'Impossibile caricare questa lambda.',
     online: (version) => `La versione ${version} è online.`,
     deployFailed: 'Il deploy della lambda non è riuscito.',
     offline: 'Messa offline. Il codice è ancora qui.',
     offlineFailed: 'Impossibile mettere offline la lambda.',
-    leave: 'Le modifiche non salvate al codice andranno perse. Vuoi uscire lo stesso?',
+    leave: 'Le modifiche non salvate andranno perse. Vuoi uscire lo stesso?',
     nothingTitle: 'Questo link non apre niente',
     createNew: 'Crea una nuova lambda',
     loading: 'Caricamento della lambda…',
@@ -133,11 +141,13 @@ export const editor: EditorMessages = {
     simple: 'Semplice',
     full: 'Completa',
     simpleTitle: 'La Sua app, il suo stato e un campo per chiedere modifiche',
-    fullTitle: 'Tutte le sezioni: codice, file, dati, versioni e log',
+    fullTitle: 'Tutte le sezioni: codice, documentazione, test, file, dati, versioni e log',
     simpleNote: 'La Sua app e un campo per chiedere modifiche.',
     fullNote: 'Tutte le sezioni, codice compreso.',
     toFull: 'Mostra tutte le sezioni',
     toSimple: 'Passa alla vista semplice',
+    about: 'Informazioni',
+    aboutMore: 'Altro sull’app',
     outsideTitle: 'Questa sezione fa parte della vista completa',
     outsideText: 'La vista semplice nasconde il codice, i file e la cronologia. Mostri tutte le sezioni per lavorarci qui.',
     back: 'Torna alla Sua app',
@@ -360,6 +370,10 @@ export const editor: EditorMessages = {
 
   summary: {
     reading: 'Lettura dello stato…',
+    readDocs: 'Leggi la documentazione',
+    written: 'Documentazione e test',
+    writtenWhy: 'Mai compilati e mai serviti. Conservati con ogni versione e contati insieme agli asset.',
+    writtenMissing: 'Ancora da scrivere',
     hint: (since, kept, retention, tier) =>
       `Il traffico è contato dall’ultimo avvio del server (${since}). ` +
       (kept
@@ -450,6 +464,10 @@ export const editor: EditorMessages = {
     assetsPublic: 'Pubblici: questa versione li serve con Assets.',
     assetsPrivate: 'Salvati con il codice, ma questa versione non li serve.',
     noAssets: 'Nessuno in questa versione.',
+    context: 'Documentazione e test',
+    contextWhy: 'Mai compilati e mai serviti: quello che è scritto su questa versione, per chi la legge o la modifica.',
+    contextUsage: (files, size) => `${files}, ${size} - contati insieme agli asset`,
+    noContext: 'Non c’è ancora niente di scritto su questa versione.',
     data: 'Dati',
     dataPublic: 'Pubblici: il codice online li serve con Workspace.',
     dataPrivate: 'Privati, solo per la lambda. Non fanno parte di nessuna versione.',
@@ -479,6 +497,96 @@ export const editor: EditorMessages = {
     missing: (name) => `Questa versione non ha nessun file chiamato ${name}.`,
     saved: 'salvato',
     notText: 'Non è testo. Scaricalo per vedere cosa contiene.',
+  },
+
+  context: {
+    docs: {
+      title: 'Documentazione',
+      titleSimple: 'Informazioni sulla tua app',
+      hint: 'Cos’è questa app, per chi è e perché, e perché è costruita così. Gli agenti la scrivono a ogni modifica e resta con ogni versione, così una versione precedente torna insieme alla documentazione che valeva per lei.',
+      hintSimple: 'A cosa serve la tua app e perché, per come l’ha capito l’agente da quello che hai chiesto. L’agente tiene questa descrizione aggiornata a ogni modifica.',
+      inDraft: 'La documentazione di questa bozza. Diventa quella della tua app quando la bozza va online.',
+      pages: { product: 'Prodotto', decisions: 'Decisioni' },
+      emptyTitle: 'Non c’è ancora niente di scritto',
+      emptyText: (code) => (
+        <>
+          Gli agenti scrivono la documentazione insieme alle loro modifiche: cos’è l’app, per chi è e perché in{' '}
+          {code('.lambda/docs/product.md')}, e perché è costruita così in {code('decisions.md')}. Fa parte della
+          versione, accanto al codice.
+        </>
+      ),
+      emptySimpleTitle: 'Non c’è ancora niente di scritto sulla tua app',
+      emptySimple: 'L’agente può descrivere a cosa serve la tua app e perché, partendo da quello che hai chiesto, e da lì in poi tiene aggiornata la descrizione.',
+      ask: 'Chiedi all’agente di scriverla',
+      describe: 'Chiedi all’agente di descriverla',
+      writePrompt: 'Scrivi la documentazione di questa app: cos’è, per chi è e perché, e le decisioni tecniche che ci stanno dietro.',
+      describePrompt: 'Descrivi a cosa serve questa app e perché, così posso leggerlo in «Informazioni».',
+      decisionsPrompt: 'Metti per iscritto le decisioni tecniche dietro questa app, e perché sono state prese.',
+      missingProduct: 'Non c’è ancora una pagina sul prodotto',
+      missingProductText: 'Cos’è l’app, per chi è, cosa ci fa la gente e perché, con le parole di chi l’ha chiesta.',
+      missingDecisions: 'Nessuna decisione ancora messa per iscritto',
+      missingDecisionsText: 'Come è costruita l’app e perché: come conserva i dati, da cosa dipende, cosa è stato lasciato fuori. Quello che deve sapere chi la modificherà dopo.',
+      correctText: 'L’agente scrive questo testo partendo da quello che hai chiesto, e lo tiene aggiornato a ogni modifica. Qualcosa non va o manca? Diglielo.',
+      correct: 'Dillo all’agente',
+      correctPrompt: 'Correggi la descrizione dell’app: ',
+      placeholder: 'Spiega perché le voci vengono conservate per un anno',
+    },
+    tests: {
+      title: 'Test',
+      hint: 'Come viene testata automaticamente questa app, e gli script e i dati che usano i test. Gli agenti li tengono aggiornati e li eseguono prima di dare per conclusa una modifica. Restano con ogni versione.',
+      inDraft: 'I test di questa bozza. Diventano quelli della tua app quando la bozza va online: prima eseguili sulla sua anteprima.',
+      pages: { testing: 'Come viene testata' },
+      emptyTitle: 'Ancora nessun test',
+      emptyText: (code) => (
+        <>
+          Come viene testata l’app (cosa deve continuare a funzionare, come verificarlo e come eseguire gli script per
+          farlo) lo scrivono gli agenti in {code('.lambda/tests/README.md')}, con gli script e i dati di test accanto.
+        </>
+      ),
+      ask: 'Chiedi all’agente di scrivere i test',
+      writePrompt: 'Scrivi i test di questa app: cosa deve continuare a funzionare e come verificarlo automaticamente, con uno script da eseguire sulla sua anteprima.',
+      missing: 'Non è ancora detto come viene testata',
+      missingText: 'Cosa deve continuare a funzionare, come si verifica ciascuna cosa e come eseguire gli script che ci sono accanto.',
+      placeholder: 'Verifica che una lista piena rifiuti nuove voci',
+    },
+    files: 'File',
+    noFiles: 'Nessun file oltre alle pagine.',
+    none: 'assente',
+    missingPill: 'Non ancora scritta',
+    changedIn: (version) => `Modificata nella versione ${version}`,
+    changedInDraft: 'Modificata in questa bozza',
+    showChanges: 'Mostra cosa è cambiato',
+    hideChanges: 'Nascondi cosa è cambiato',
+    noChanges: 'Non è cambiato niente.',
+    edit: 'Modifica',
+    olderVersion: 'Una versione non cambia mai: una pagina si modifica sulla versione più recente, o in una bozza.',
+    writeIt: 'Scrivila tu',
+    askPage: 'Chiedi all’agente di scriverla',
+    editInCode: 'Apri nel codice',
+    cancel: 'Annulla',
+    save: 'Salva',
+    write: 'Scrivi',
+    preview: 'Anteprima',
+    writeOrPreview: 'Scrittura o anteprima',
+    discard: 'Le modifiche a questa pagina andranno perse. Vuoi scartarle?',
+    reading: 'Lettura…',
+    readFailed: 'Impossibile leggere questo contenuto.',
+    saveFailed: 'Impossibile salvare.',
+    savedDraft: 'Salvato nella bozza.',
+    savedVersion: (version) => `Salvata come versione ${version}.`,
+    savedOnline: (version) => `Salvata come versione ${version}, e online.`,
+    savedNotOnline: (version) => `Salvata come versione ${version}, ma non è andata online.`,
+    saveTitle: 'Salva come nuova versione',
+    saveText: (newest) =>
+      `Una versione non cambia mai, quindi questa pagina viene salvata come la prossima: sopra la versione ${newest}, con tutto il resto com’è.`,
+    clash: (version) => `La versione ${version} è stata salvata da quando hai iniziato, e ha modificato anche questa pagina. Salvando la sostituisci.`,
+    alsoOnline: 'Mettila anche online',
+    alsoOnlineNote: 'Cambia solo la documentazione, quindi i visitatori non vedono niente di nuovo, ma quello che è online resta la versione più recente.',
+    skeleton: {
+      product: '# Nome dell’app\n\nCos’è, in una o due frasi.\n\n## Per chi è\n\n## Cosa ci fa la gente\n\n## Funzionalità, e perché ci sono\n\n## Cosa non fa\n',
+      decisions: '# Decisioni\n\n## Una decisione\n\nCosa è stato deciso, perché, e cosa deve tenere presente una modifica.\n',
+      testing: '# Come viene testata\n\nCome eseguire i test, e su quale indirizzo.\n\n## Cosa deve continuare a funzionare\n\n| Comportamento | Richiesta | Risultato atteso |\n|---|---|---|\n| | | |\n',
+    },
   },
 
   data: {
@@ -689,7 +797,7 @@ export const editor: EditorMessages = {
     leaks: (path, files) =>
       `In ${files} i link a ${path} usano il percorso completo. Dall’anteprima portano alla lambda online e ai suoi dati veri, non alla copia di questa bozza. I percorsi relativi («api/items») restano nell’anteprima.`,
     mergeButton: 'Integra',
-    saveFirst: 'Prima salva il codice: l’anteprima e l’integrazione usano quello che è salvato.',
+    saveFirst: 'Prima salva le modifiche: l’anteprima e l’integrazione usano quello che è salvato.',
     mergeAndDeploy: (version) => `Integra e metti online la versione ${version}`,
     mergeText: (version) =>
       `Diventa la versione ${version}. La bozza sparisce, insieme alla sua anteprima e alla sua copia dei dati. I dati della lambda restano come sono.`,
@@ -726,7 +834,9 @@ export const editor: EditorMessages = {
     viewsLabel: 'La bozza',
     views: {
       overview: 'Bozza',
+      docs: 'Documentazione',
       code: 'Codice',
+      tests: 'Test',
       data: 'Dati',
       logs: 'Log',
     },
@@ -750,6 +860,7 @@ export const editor: EditorMessages = {
     first: 'La prima versione.',
     status: { added: 'aggiunto', removed: 'rimosso', changed: 'modificato', same: 'invariato' },
     browse: 'Sfoglia i file',
+    docs: 'Leggi la sua documentazione',
     edit: 'Modifica da qui',
     feature: 'Avvia una bozza da qui',
     featureTitle: 'Lavora a una modifica di questa versione accanto alla lambda, e integrala nella prossima versione quando è a posto',
@@ -984,10 +1095,11 @@ export const editor: EditorMessages = {
     changedElsewhere:
       'La bozza è stata salvata altrove da quando l’hai aperta, forse dall’agente. Carica quello che è salvato prima di salvare qui; le tue modifiche non verrebbero salvate sopra.',
     readAgain: 'Carica quello che è salvato',
-    files: (entry, cs) => (
+    files: (entry, cs, context) => (
       <>
         {entry} restituisce ciò che viene servito, gli altri file {cs} contengono i tipi e ogni altro file viene servito
-        così com’è. Ctrl-S salva, F12 va alla dichiarazione.
+        così com’è, tranne quello che si trova in {context}: la documentazione e i test, mai compilati né serviti. Ctrl-S
+        salva, F12 va alla dichiarazione.
       </>
     ),
     newer: (version) => ` La versione ${version} è più recente di quella aperta qui.`,
@@ -1018,6 +1130,8 @@ export const editor: EditorMessages = {
     deep: 'Al massimo sei livelli di cartelle.',
     characters: 'Lettere, numeri, trattini, underscore e punti, separati da barre.',
     extension: 'Serve un’estensione, così il file viene servito nel formato giusto.',
+    context: 'In .lambda/, solo docs/ e tests/: lettere, numeri, trattini, underscore e punti, separati da barre.',
+    contextFiles: 'Documentazione e test: parte della versione, mai compilati né serviti',
     exists: 'Esiste già un file con questo nome.',
     remove: (name) => `Rimuovere ${name}? Anche il suo contenuto andrà perso.`,
     there: (name) => `${name} esiste già.`,
@@ -1025,7 +1139,7 @@ export const editor: EditorMessages = {
     errors: 'contiene errori',
     removeFile: (name) => `Rimuovi ${name}`,
     removeTitle: 'Rimuovi questo file',
-    placeholder: 'Types.cs o site/index.html',
+    placeholder: 'Types.cs, site/index.html o .lambda/docs/api.md',
     newFile: 'Nuovo file',
     uploadTitle: 'Carica un file: un’immagine, un font, una pagina',
     upload: 'Carica un file',

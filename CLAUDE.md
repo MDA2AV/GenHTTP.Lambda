@@ -81,7 +81,8 @@ the README.
 
 ### Versions, data, and how they differ
 
-- A **version** is the program: code *and* assets (a SPA, for example). It never
+- A **version** is the program: code *and* assets (a SPA, for example) - and
+  what is written about it, its documentation and tests (below). It never
   changes once saved. Different versions may have different code and different
   assets.
 - **Data** is what the program keeps (today: the workspace and the secrets; a
@@ -127,6 +128,36 @@ by a different one. **Agents find a good compromise between data compatibility
 across versions and the effort it costs**: prefer additive, tolerant formats
 (optional fields, defaults for what is missing) over migrations, and do not
 build machinery for compatibility that nobody needs.
+
+### Documentation and tests
+
+Every version keeps what is written about it beside its program, in
+`.lambda/`: `docs/product.md` (what the app is, for whom, why, what people do
+with it - in the user's terms; its first paragraph is the app in a sentence or
+two), `docs/decisions.md` (the technical decisions and why), `tests/README.md`
+(how it is tested automatically), and beside those more pages, pictures, test
+scripts and test data.
+
+- **Files of the version, not fields in the database.** They describe that
+  version, so they are saved, diffed, rolled back, copied into a feature and
+  merged with it like any file, and travel in the zip and the export. Do not
+  move them into SQLite or into the workspace.
+- Documentation and tests are **one kind of file** (context,
+  `LambdaSource.IsContext`), stored and shown by one mechanism: markdown pages
+  with files beside them. Do not build them as two features.
+- Never compiled (whatever they are called), never served, left out of what
+  identifies a build, counted towards the asset allowance.
+- **Agents write them, humans read them** - the asymmetric interface again.
+  Agents write all three with a new lambda, update what a change affects in
+  the same save, read them before changing a lambda, and run the tests against
+  a feature's preview before merging. This is said the same way in the MCP
+  instructions, the tool descriptions and answers, `platform_guide`
+  (`documentationAndTests`), the build agent's brief, the guide and the README -
+  keep them the same.
+- The editor: **Documentation** is the second section after the overview, in
+  both views; **Tests** is in the full view only. The simple view calls the
+  documentation **About** and shows the product page alone, to be corrected by
+  telling the agent rather than by editing it.
 
 ### Features ("Drafts")
 
@@ -175,9 +206,11 @@ how to write apps and to give them a good starting point.
   (<https://genhttp.org/documentation/content/>) and use its **high-level APIs
   wherever possible** rather than inventing their own functionality.
 - **When you add functionality to the platform, add it to the demos as well if
-  it makes sense**, so agents learn it by reading them. They keep their data in
-  JSON files in the workspace on purpose - do not show a database the platform
-  does not offer. A demo that reads a secret is given a random value by the
+  it makes sense**, so agents learn it by reading them. Every demo has the three
+  pages of its documentation and tests and a script its tests run
+  (`EveryDemoSaysWhatItIsWhyAndHowItIsTested`); a new demo gets them too. They
+  keep their data in JSON files in the workspace on purpose - do not show a
+  database the platform does not offer. A demo that reads a secret is given a random value by the
   seeder (`LambdaDemo.Secrets`) and works without one, so a copy runs before
   its owner switches secrets on (`demo-registration`, `PASSWORD_PEPPER`).
 
@@ -216,6 +249,9 @@ rules that matter:
   language.
 - Links inside a lambda's front end are relative, never `/lambda/...`: a lambda
   also answers at a domain of its own, and a feature at `/features/{key}/`.
+- The full view's sidebar is **grouped** (overview and documentation; build;
+  program and data; run; sharing). A new section joins the group it belongs to
+  rather than the end of the list.
 
 ### Frameworks: GenHTTP and Ioxide
 

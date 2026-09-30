@@ -66,6 +66,8 @@ export const editor: EditorMessages = {
     title: '에디터',
     sections: {
       overview: '개요',
+      docs: '문서',
+      tests: '테스트',
       change: '수정 요청',
       features: '초안',
       showcase: '쇼케이스',
@@ -80,12 +82,18 @@ export const editor: EditorMessages = {
       code: '코드',
     },
     sectionsLabel: '섹션',
+    groups: {
+      build: '개발',
+      program: '프로그램과 데이터',
+      run: '운영',
+      sharing: '공유',
+    },
     loadFailed: '이 람다를 불러오지 못했어요.',
     online: (version) => `버전 ${version}, 이제 온라인이에요.`,
     deployFailed: '람다를 배포하지 못했어요.',
     offline: '오프라인으로 전환했어요. 코드는 그대로 있어요.',
     offlineFailed: '람다를 오프라인으로 전환하지 못했어요.',
-    leave: '저장하지 않은 코드 변경 사항이 사라져요. 그래도 나갈까요?',
+    leave: '저장하지 않은 변경 사항이 사라져요. 그래도 나갈까요?',
     nothingTitle: '이 링크로 열 수 있는 게 없어요',
     createNew: '새 람다 만들기',
     loading: '람다를 불러오는 중…',
@@ -140,11 +148,13 @@ export const editor: EditorMessages = {
     simple: '간단히',
     full: '전체',
     simpleTitle: '앱, 앱의 상태, 수정 요청 입력란',
-    fullTitle: '모든 섹션: 코드, 파일, 데이터, 버전, 로그',
+    fullTitle: '모든 섹션: 코드, 문서, 테스트, 파일, 데이터, 버전, 로그',
     simpleNote: '앱과 수정 요청 입력란을 보여 줘요.',
     fullNote: '코드를 포함한 모든 섹션을 보여 줘요.',
     toFull: '모든 섹션 보기',
     toSimple: '간단히 보기로 전환',
+    about: '앱 소개',
+    aboutMore: '앱 소개 더 보기',
     outsideTitle: '이 페이지는 전체 보기에 속해요',
     outsideText: '간단히 보기에서는 코드, 파일, 기록이 보이지 않아요. 여기서 사용하려면 모든 섹션을 표시하세요.',
     back: '앱으로 돌아가기',
@@ -359,6 +369,10 @@ export const editor: EditorMessages = {
 
   summary: {
     reading: '상태를 확인하는 중…',
+    readDocs: '문서 읽기',
+    written: '문서와 테스트',
+    writtenWhy: '컴파일되지도, 제공되지도 않아요. 버전마다 함께 보관되고, 에셋 용량에 포함돼요.',
+    writtenMissing: '아직 작성되지 않음',
     hint: (since, kept, retention, tier) =>
       `트래픽은 서버가 마지막으로 시작된 뒤부터 집계해요(${since}). ` +
       (kept
@@ -449,6 +463,10 @@ export const editor: EditorMessages = {
     assetsPublic: '공개: 이 버전이 Assets로 제공해요.',
     assetsPrivate: '코드와 함께 저장되지만, 이 버전은 제공하지 않아요.',
     noAssets: '이 버전에는 없어요.',
+    context: '문서와 테스트',
+    contextWhy: '컴파일되지도, 제공되지도 않아요. 이 버전에 대해 적어 둔 것으로, 이 버전을 읽거나 고칠 사람을 위한 거예요.',
+    contextUsage: (files, size) => `${files}, ${size} (에셋 용량에 포함)`,
+    noContext: '이 버전에 대해 아직 작성된 게 없어요.',
     data: '데이터',
     dataPublic: '공개: 온라인 코드가 Workspace로 제공해요.',
     dataPrivate: '람다만 볼 수 있어요. 어떤 버전에도 속하지 않아요.',
@@ -476,6 +494,96 @@ export const editor: EditorMessages = {
     missing: (name) => `이 버전에는 ${name} 파일이 없어요.`,
     saved: '저장됨',
     notText: '텍스트가 아니에요. 다운로드해서 확인하세요.',
+  },
+
+  context: {
+    docs: {
+      title: '문서',
+      titleSimple: '내 앱 소개',
+      hint: '이 앱이 무엇이고, 누구를 위한 것이며, 왜 있는지, 그리고 왜 이렇게 만들어졌는지 적은 거예요. 에이전트가 수정할 때마다 작성하고 버전마다 함께 보관되기 때문에, 이전 버전으로 돌아가면 그 버전에 맞는 문서도 함께 돌아와요.',
+      hintSimple: '앱이 무엇을 위한 것이고 왜 필요한지, 요청한 내용을 바탕으로 에이전트가 이해한 대로 적은 거예요. 수정할 때마다 에이전트가 최신 내용으로 고쳐 둬요.',
+      inDraft: '이 초안의 문서예요. 초안을 확정하면 앱의 문서가 돼요.',
+      pages: { product: '제품', decisions: '설계 결정' },
+      emptyTitle: '아직 작성된 게 없어요',
+      emptyText: (code) => (
+        <>
+          에이전트는 수정하면서 문서도 작성해요. 앱이 무엇이고, 누구를 위한 것이며, 왜 있는지는{' '}
+          {code('.lambda/docs/product.md')}에, 왜 이렇게 만들어졌는지는 {code('decisions.md')}에 적어요. 문서는 버전의
+          일부로, 코드 옆에 있어요.
+        </>
+      ),
+      emptySimpleTitle: '아직 앱 소개가 없어요',
+      emptySimple: '요청한 내용을 바탕으로, 앱이 무엇을 위한 것이고 왜 필요한지 에이전트가 설명해 줄 수 있어요. 그 뒤로는 에이전트가 설명을 최신 내용으로 유지해요.',
+      ask: '에이전트에게 작성 요청하기',
+      describe: '에이전트에게 설명 요청하기',
+      writePrompt: '이 앱의 문서를 작성해 주세요. 앱이 무엇이고, 누구를 위한 것이며, 왜 있는지, 그리고 그 바탕이 된 기술적 결정을 적어 주세요.',
+      describePrompt: '이 앱이 무엇을 위한 것이고 왜 필요한지, 내가 ‘앱 소개’에서 읽을 수 있게 설명해 주세요.',
+      decisionsPrompt: '이 앱의 바탕이 된 기술적 결정과, 그렇게 결정한 이유를 적어 주세요.',
+      missingProduct: '아직 제품 페이지가 없어요',
+      missingProductText: '앱이 무엇이고, 누구를 위한 것이며, 사람들이 앱으로 무엇을 하고 왜 그런지를 요청한 사람의 말로 적어요.',
+      missingDecisions: '아직 적어 둔 설계 결정이 없어요',
+      missingDecisionsText: '앱이 어떻게, 왜 그렇게 만들어졌는지. 데이터를 어떻게 보관하는지, 무엇에 의존하는지, 무엇을 뺐는지. 다음에 고칠 사람이 알아야 할 것들이에요.',
+      correctText: '요청한 내용을 바탕으로 에이전트가 작성하고, 수정할 때마다 최신 내용으로 유지해요. 틀리거나 빠진 게 있나요? 에이전트에게 말해 주세요.',
+      correct: '에이전트에게 말하기',
+      correctPrompt: '앱 설명을 이렇게 고쳐 주세요: ',
+      placeholder: '항목을 1년 동안 보관하는 이유 설명',
+    },
+    tests: {
+      title: '테스트',
+      hint: '이 앱을 자동으로 테스트하는 방법과, 테스트에 쓰는 스크립트와 데이터예요. 에이전트가 최신 상태로 유지하고, 수정을 마치기 전에 실행해요. 버전마다 함께 보관돼요.',
+      inDraft: '이 초안의 테스트예요. 초안을 확정하면 앱의 테스트가 돼요. 그 전에 초안의 미리 보기를 대상으로 실행해 보세요.',
+      pages: { testing: '테스트 방법' },
+      emptyTitle: '아직 테스트가 없어요',
+      emptyText: (code) => (
+        <>
+          앱을 테스트하는 방법(계속 동작해야 하는 것, 그걸 확인하는 방법, 이를 위한 스크립트 실행 방법)은 에이전트가{' '}
+          {code('.lambda/tests/README.md')}에 적고, 스크립트와 테스트 데이터는 그 옆에 둬요.
+        </>
+      ),
+      ask: '에이전트에게 테스트 작성 요청하기',
+      writePrompt: '이 앱의 테스트를 작성해 주세요. 계속 동작해야 하는 것과 그걸 자동으로 확인하는 방법을, 미리 보기를 대상으로 실행할 스크립트와 함께 만들어 주세요.',
+      missing: '아직 테스트 방법이 적혀 있지 않아요',
+      missingText: '계속 동작해야 하는 것, 각각을 확인하는 방법, 옆에 있는 스크립트를 실행하는 방법.',
+      placeholder: '목록이 가득 차면 새 항목을 거부하는지 확인',
+    },
+    files: '파일',
+    noFiles: '페이지 말고 다른 파일은 없어요.',
+    none: '없음',
+    missingPill: '아직 작성되지 않음',
+    changedIn: (version) => `버전 ${version}에서 바뀜`,
+    changedInDraft: '이 초안에서 바뀜',
+    showChanges: '바뀐 내용 보기',
+    hideChanges: '바뀐 내용 숨기기',
+    noChanges: '바뀐 게 없어요.',
+    edit: '편집',
+    olderVersion: '버전은 바뀌지 않아요. 페이지는 최신 버전이나 초안에서 편집해요.',
+    writeIt: '직접 작성하기',
+    askPage: '에이전트에게 작성 요청하기',
+    editInCode: '코드에서 열기',
+    cancel: '취소',
+    save: '저장',
+    write: '작성',
+    preview: '미리 보기',
+    writeOrPreview: '작성 또는 미리 보기',
+    discard: '이 페이지에서 바꾼 내용이 사라져요. 버릴까요?',
+    reading: '읽는 중…',
+    readFailed: '읽지 못했어요.',
+    saveFailed: '저장하지 못했어요.',
+    savedDraft: '초안에 저장했어요.',
+    savedVersion: (version) => `저장했어요 (버전 ${version}).`,
+    savedOnline: (version) => `저장하고 온라인에 올렸어요 (버전 ${version}).`,
+    savedNotOnline: (version) => `저장했지만 온라인에 올리지 못했어요 (버전 ${version}).`,
+    saveTitle: '새 버전으로 저장',
+    saveText: (newest) =>
+      `버전은 바뀌지 않기 때문에, 이 페이지는 다음 버전으로 저장돼요. 버전 ${newest} 기준이고, 나머지는 모두 그대로예요.`,
+    clash: (version) => `편집을 시작한 뒤에 새 버전(버전 ${version})이 저장됐고, 거기서도 이 페이지가 바뀌었어요. 저장하면 그 내용을 대체해요.`,
+    alsoOnline: '온라인에도 올리기',
+    alsoOnlineNote: '문서만 바뀌기 때문에 방문자에게 새로 보이는 건 없어요. 다만 온라인 버전이 계속 최신 버전으로 유지돼요.',
+    skeleton: {
+      product: '# 앱 이름\n\n이 앱이 무엇인지 한두 문장으로.\n\n## 누구를 위한 앱인가\n\n## 사람들이 이 앱으로 하는 일\n\n## 기능과 그 기능이 있는 이유\n\n## 하지 않는 일\n',
+      decisions: '# 설계 결정\n\n## 결정 하나\n\n무엇을 결정했는지, 왜 그랬는지, 수정할 때 무엇을 염두에 둬야 하는지.\n',
+      testing: '# 테스트 방법\n\n테스트를 실행하는 방법과, 어느 주소를 대상으로 하는지.\n\n## 계속 동작해야 하는 것\n\n| 동작 | 요청 | 기대 결과 |\n|---|---|---|\n| | | |\n',
+    },
   },
 
   data: {
@@ -684,7 +792,7 @@ export const editor: EditorMessages = {
     leaks: (path, files) =>
       `${files}의 링크가 전체 경로(${path})를 쓰고 있어요. 미리 보기에서 이 링크는 이 초안의 데이터 복사본이 아니라, 온라인에 있는 람다와 실제 데이터로 이어져요. 상대 경로(‘api/items’)는 미리 보기 안에 머물러요.`,
     mergeButton: '확정',
-    saveFirst: '먼저 코드를 저장하세요. 미리 보기와 확정에는 저장된 내용이 쓰여요.',
+    saveFirst: '먼저 변경 사항을 저장하세요. 미리 보기와 확정에는 저장된 내용이 쓰여요.',
     mergeAndDeploy: (version) => `확정하고 버전 ${version} 온라인에 올리기`,
     mergeText: (version) =>
       `다음 버전(버전 ${version})이 돼요. 초안(미리 보기와 데이터 복사본)은 함께 사라져요. 람다의 데이터 자체는 그대로 남아요.`,
@@ -720,7 +828,9 @@ export const editor: EditorMessages = {
     viewsLabel: '초안',
     views: {
       overview: '초안',
+      docs: '문서',
       code: '코드',
+      tests: '테스트',
       data: '데이터',
       logs: '로그',
     },
@@ -744,6 +854,7 @@ export const editor: EditorMessages = {
     first: '첫 번째 버전이에요.',
     status: { added: '추가됨', removed: '삭제됨', changed: '변경됨', same: '같음' },
     browse: '파일 둘러보기',
+    docs: '문서 읽기',
     edit: '여기서부터 편집',
     feature: '여기서 초안 만들기',
     featureTitle: '이 버전을 람다와 따로 고쳐 보고, 제대로 되면 확정해서 다음 버전으로 만들기',
@@ -975,10 +1086,10 @@ export const editor: EditorMessages = {
     inFeature: (name) => `‘${name}’ 초안`,
     changedElsewhere: '이 초안은 연 뒤에 다른 곳에서 저장됐어요. 아마 에이전트일 거예요. 여기서 저장하기 전에 저장된 내용을 불러오세요. 여기서 바꾼 내용은 그 위에 저장되지 않아요.',
     readAgain: '저장된 내용 불러오기',
-    files: (entry, cs) => (
+    files: (entry, cs, context) => (
       <>
-        {entry} 파일이 반환하는 것이 제공되고, 다른 {cs} 파일에는 타입을 두고, 그 밖의 파일은 그대로 제공돼요. Ctrl-S로
-        저장하고, F12로 선언으로 이동해요.
+        {entry} 파일이 반환하는 것이 제공되고, 다른 {cs} 파일에는 타입을 두고, 그 밖의 파일은 그대로 제공돼요. 단,{' '}
+        {context} 안에 있는 문서와 테스트는 컴파일되지도 제공되지도 않아요. Ctrl-S로 저장하고, F12로 선언으로 이동해요.
       </>
     ),
     newer: (version) => ` 여기 열린 것보다 새로운 버전이 있어요 (버전 ${version}).`,
@@ -1009,6 +1120,8 @@ export const editor: EditorMessages = {
     deep: '폴더는 최대 6단계까지 만들 수 있어요.',
     characters: '영문자, 숫자, 하이픈, 밑줄, 점을 쓸 수 있고, 슬래시로 구분해요.',
     extension: '알맞은 형식으로 제공하려면 확장자가 필요해요.',
+    context: '.lambda/ 안에는 docs/와 tests/만 둘 수 있어요. 영문자, 숫자, 하이픈, 밑줄, 점을 쓸 수 있고, 슬래시로 구분해요.',
+    contextFiles: '문서와 테스트: 버전의 일부이지만, 컴파일되지도 제공되지도 않아요',
     exists: '같은 이름의 파일이 이미 있어요.',
     remove: (name) => `${name} 파일을 삭제할까요? 내용도 함께 사라져요.`,
     there: (name) => `${name} 파일이 이미 있어요.`,
@@ -1016,7 +1129,7 @@ export const editor: EditorMessages = {
     errors: '오류 있음',
     removeFile: (name) => `${name} 삭제`,
     removeTitle: '이 파일 삭제',
-    placeholder: 'Types.cs 또는 site/index.html',
+    placeholder: 'Types.cs, site/index.html 또는 .lambda/docs/api.md',
     newFile: '새 파일',
     uploadTitle: '파일 업로드 (이미지, 폰트, 페이지)',
     upload: '파일 업로드',

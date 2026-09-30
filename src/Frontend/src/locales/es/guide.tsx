@@ -11,6 +11,7 @@ export const guide: Messages['guide'] = {
     first: 'Tu primera lambda',
     editor: 'El centro de control',
     why: 'Explicar el porqué',
+    written: 'Documentación y pruebas',
     features: 'Cambiarla sin riesgo',
     files: 'Más de un archivo',
     page: 'Servir una página',
@@ -83,7 +84,8 @@ export const guide: Messages['guide'] = {
     </>
   ),
   bits: [
-    ['Resumen', () => <>Si está en línea, cuántas peticiones tuvo hoy y cuántas fallaron, el último cambio y cuánto espacio le queda.</>],
+    ['Resumen', () => <>Qué es la app, si está en línea, cuántas peticiones tuvo hoy y cuántas fallaron, el último cambio y cuánto espacio le queda.</>],
+    ['Documentación', () => <>Qué es la app, para quién es y por qué, y por qué está hecha como está: la escriben los agentes y se guarda con cada versión.</>],
     [
       'Cambiar',
       (k) => (
@@ -111,11 +113,14 @@ export const guide: Messages['guide'] = {
         </>
       ),
     ],
+    ['Pruebas', () => <>Cómo se prueba la app automáticamente, con los scripts y los datos de prueba necesarios. Solo en la vista completa.</>],
   ],
   sections: (k) => (
     <>
       Todas las secciones funcionan igual: su título, un {k.b('ⓘ')} que la explica, sus acciones a la derecha y, si
-      tiene más de una vista, una fila de pestañas debajo. En el código, las pestañas son sus archivos.
+      tiene más de una vista, una fila de pestañas debajo. En el código, las pestañas son sus archivos. La vista
+      completa agrupa las secciones: dónde se hace un cambio, el programa y sus datos, cómo se ejecuta y cómo la
+      encuentra la gente.
     </>
   ),
   editorAside:
@@ -141,6 +146,40 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  written: (k) => (
+    <>
+      Cada versión guarda, junto a su programa, lo que está escrito sobre ella: su {k.b('documentación')} (qué es la
+      app, para quién es y por qué, y por qué está hecha como está) y sus {k.b('pruebas')}: cómo comprobar
+      automáticamente que funciona, con los scripts y los datos de prueba necesarios. Los agentes las escriben con una
+      lambda nueva y las mantienen al día con cada cambio. El próximo agente que cambie la lambda las lee primero, así
+      que sabe para qué sirve la app y qué tiene que seguir funcionando, algo que el código por sí solo no dice.
+    </>
+  ),
+  writtenFiles: [
+    ['.lambda/docs/product.md', 'qué es la app, para quién es, qué hace la gente con ella y por qué'],
+    ['.lambda/docs/decisions.md', 'las decisiones técnicas, y por qué se tomaron'],
+    ['.lambda/tests/README.md', 'cómo se prueba la app automáticamente, y cómo ejecutar las pruebas'],
+    ['.lambda/tests/…', 'los scripts y los datos de prueba que usan las pruebas'],
+  ],
+  written2: (k) => (
+    <>
+      Son archivos de la versión como cualquier otro, en la carpeta {k.code('.lambda')}: el historial muestra qué
+      cambió en ellos una versión, volver atrás trae de vuelta la documentación que era cierta para esa versión, y un
+      borrador tiene su propia copia, que se pone en línea con él. Nunca se compilan ni se sirven, y cuentan para el
+      límite de los recursos de una versión.
+    </>
+  ),
+  written3: (k) => (
+    <>
+      En el centro de control, {k.b('Documentación')} muestra las páginas para leer, y {k.b('Pruebas')} cómo se
+      prueba la app y los archivos que la acompañan; la versión se elige igual que para sus archivos. Ahí también se
+      puede editar una página, lo que guarda la siguiente versión. La vista sencilla llama a la documentación{' '}
+      {k.b('Acerca de')} y solo muestra para qué sirve la app: para corregirla, díselo al agente.
+    </>
+  ),
+  writtenAside:
+    'Se escriben en el idioma que usas con el agente, para quien cambie la app después, sea una persona o un agente. No son una copia del código: dicen para qué sirve la app, y por qué.',
+
   features: (k) => (
     <>
       Una versión nunca cambia una vez guardada, y eso es lo que hace que valga la pena conservarlas todas: cualquiera de
@@ -151,8 +190,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Empiézalo en {k.b('Borradores')} o desde cualquier versión. Es una copia del código y los recursos de esa
-        versión, y de los datos de la lambda.
+        Empiézalo en {k.b('Borradores')} o desde cualquier versión. Es una copia del código, los recursos, la
+        documentación y las pruebas de esa versión, y de los datos de la lambda.
       </>
     ),
     (k) => (
@@ -247,7 +286,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'En una versión',
   workspaceColumn: 'En los datos',
   table: [
-    ['qué contiene', 'el código y los recursos: el programa, frontend incluido', 'lo que escribe la lambda o sube alguien'],
+    ['qué contiene', 'el código y los recursos: el programa, frontend incluido, y su documentación y sus pruebas', 'lo que escribe la lambda o sube alguien'],
     ['cuándo cambia', 'nunca: un cambio es una versión nueva', 'en cuanto se escribe algo en ellos'],
     ['un despliegue', 'pone en línea exactamente estos archivos', 'nunca los toca'],
     ['volver atrás', 'trae de vuelta los archivos anteriores', 'no les afecta: todas las versiones los comparten'],
@@ -325,7 +364,8 @@ export const guide: Messages['guide'] = {
       archivos llegan exactamente como los escribiste. {k.code('Workspace')} y {k.code('Assets')} se convierten en dos
       carpetas junto al programa, con los mismos métodos, aparte en una carpeta {k.code('Platform')}, así que no tienes
       que cambiar nada de tu código.
-      {' '}{k.code('Secret')} lee allí las variables de entorno con el mismo nombre; los valores se quedan aquí.
+      {' '}{k.code('Secret')} lee allí las variables de entorno con el mismo nombre; los valores se quedan aquí. La
+      documentación y las pruebas también se van contigo, en {k.code('docs')} y {k.code('tests')}.
     </>
   ),
   awayAside:
@@ -342,7 +382,8 @@ export const guide: Messages['guide'] = {
       El agente explica el porqué sobre la marcha ({k.code('write_code')} recibe la especificación y el cambio) y puede
       revisar lo que desplegó: {k.code('read_logs')} devuelve las peticiones recientes de la lambda, lo que imprimió y el
       stack trace de cualquier excepción. Así un agente comprueba que su código funciona en vez de suponerlo. Tú ves lo
-      mismo en el centro de control.
+      mismo en el centro de control. Escribe la documentación y las pruebas a medida que trabaja, las lee antes de
+      cambiar nada y ejecuta las pruebas contra la dirección de un borrador antes de ponerlo en línea.
     </>
   ),
   more: 'Más sobre esto →',
