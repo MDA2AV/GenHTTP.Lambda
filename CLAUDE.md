@@ -76,7 +76,10 @@ Give both a good experience. Concretely:
 A lambda has a **public key** (part of its URL, may be changed) and a **private
 key** (the editor link). Whoever holds the private key owns the lambda, and
 **editing is only possible with it**. The private key is shown only to the
-creator. It travels in a brief, never in a log line. There are no accounts.
+creator. It travels in a brief, never in a log line the platform writes about
+what was done. The request line is the exception, decided by the owner: it logs
+the path as requested, so `/api/v1/lambdas/{privateKey}/…` carries the key, and
+that is fine - the log is behind the admin token. There are no accounts.
 
 The one place that authenticates differently is `/admin`: `X-Admin-Token`, see
 the README.
