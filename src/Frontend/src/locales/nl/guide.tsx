@@ -296,14 +296,16 @@ export const guide: Messages['guide'] = {
   away: (k) => (
     <>
       Met {k.b('Downloaden als .NET-project')} in de editor krijg je alles mee: een solution die je kunt openen,
-      kunt draaien met {k.code('dotnet run')} en mag houden. Er zit één package reference in en geen spoor van dit platform.
+      kunt draaien met {k.code('dotnet run')} en mag houden. Hij heeft alleen het GenHTTP-package nodig, en er zit een{' '}
+      {k.code('Dockerfile')} bij om hem als container te bouwen en te draaien.
     </>
   ),
   away2: (k) => (
     <>
-      Je snippet wordt de body van {k.code('Program.cs')}, in een host die serveert wat hij teruggeeft. Je andere
+      Je snippet wordt {k.code('Project.cs')}, en {k.code('Program.cs')} serveert wat hij teruggeeft. Je andere
       bestanden komen precies mee zoals je ze schreef. {k.code('Workspace')} en {k.code('Assets')} worden twee mappen
-      naast de code, met dezelfde methodes, dus er hoeft niets in je code te veranderen.
+      naast het programma, met dezelfde methodes, apart in een map {k.code('Platform')} - dus er hoeft niets in je code
+      te veranderen.
     </>
   ),
   awayAside:

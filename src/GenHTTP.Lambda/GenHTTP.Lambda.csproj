@@ -56,6 +56,8 @@
         <EmbeddedResource Include="Resources/Templates/*.html.txt" WithCulture="false" />
         <EmbeddedResource Include="Resources/Templates/*.js.txt" WithCulture="false" />
         <EmbeddedResource Include="Resources/Templates/*.css.txt" WithCulture="false" />
+        <!-- the files every exported project gets, see ProjectPacker -->
+        <EmbeddedResource Include="Resources/Export/*.txt" WithCulture="false" />
     </ItemGroup>
 
 </Project>

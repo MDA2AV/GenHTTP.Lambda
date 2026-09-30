@@ -114,6 +114,15 @@ New functionality is developed in a **feature** (a *draft* in the editor):
 - **The code belongs to whoever created the lambda.** We do not interfere with
   it. They can export it as a runnable C# project (`GET …/export`) and run it
   elsewhere. Do not add lock-in, and keep the export working.
+- The export is **as small as a GenHTTP project can be**: .NET 10,
+  `GenHTTP.Full` (the internal engine, not Ioxide) at the version the server
+  runs, the default hosting snippet (`Defaults()`, no port, `RunAsync()`, no
+  console output of our own), the snippet in a static `Project` class returned
+  by `Project.Create()`, the other files named the .NET way, everything that
+  stands in for the platform in `Platform/`, and a `Dockerfile`. `Program.cs`
+  opens with a short note that it was a lambda on genhttp.dev, its metadata,
+  and a link to the GenHTTP documentation. A test builds the export of every
+  demo; keep it passing.
 
 ### Demos
 

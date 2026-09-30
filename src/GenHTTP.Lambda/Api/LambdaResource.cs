@@ -2,6 +2,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
@@ -21,7 +22,7 @@ namespace GenHTTP.Lambda.Api;
 /// the lambda. Its versions, deployment, files and code live in resources of
 /// their own below the same path.
 /// </remarks>
-public sealed class LambdaResource(IMetaService meta)
+public sealed class LambdaResource(IMetaService meta, LambdaOptions options)
 {
 
     /// <summary>
@@ -84,7 +85,8 @@ public sealed class LambdaResource(IMetaService meta)
     public async ValueTask Delete(string privateKey) => await meta.DeleteAsync(privateKey);
 
     /// <summary>
-    /// The lambda as a project that can be opened and run.
+    /// The newest version of the lambda as a .NET 10 project, with a
+    /// Dockerfile, that can be opened and run without this platform.
     /// </summary>
     /// <remarks>
     /// A way out. Whatever somebody writes here runs on a machine they do not
@@ -105,7 +107,11 @@ public sealed class LambdaResource(IMetaService meta)
 
         var content = await meta.GetVersionAsync(privateKey, latest);
 
-        var zip = ProjectPacker.Pack(lambda.PublicKey, LambdaSource.Parse(content.Code));
+        var address = options.PublicUrl is { } site ? $"{site}/lambda/{lambda.PublicKey}/" : null;
+
+        var exported = new ExportedLambda(lambda.PublicKey, content.Version, content.Created, content.Change, address, DateTime.UtcNow);
+
+        var zip = ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code));
 
         return request.Respond()
                       .Content(new BinaryContent(zip, "application/zip"))

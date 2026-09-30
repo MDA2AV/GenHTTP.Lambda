@@ -286,15 +286,15 @@ export const guide: Messages['guide'] = {
   away: (k) => (
     <>
       에디터에서 {k.b('.NET 프로젝트로 다운로드')}를 누르면 전체를 통째로 받을 수 있어요. 바로 열어서{' '}
-      {k.code('dotnet run')}으로 실행하고, 계속 가지고 있을 수 있는 솔루션이에요. 패키지 참조는 하나뿐이고, 이
-      플랫폼의 흔적은 전혀 없어요.
+      {k.code('dotnet run')}으로 실행하고, 계속 가지고 있을 수 있는 솔루션이에요. GenHTTP 패키지만 있으면 되고,
+      컨테이너로 빌드하고 실행할 수 있는 {k.code('Dockerfile')}도 함께 들어 있어요.
     </>
   ),
   away2: (k) => (
     <>
-      스니펫은 {k.code('Program.cs')}의 본문이 되고, 반환하는 것을 제공하는 호스트로 감싸져요. 다른 파일은 작성한
-      그대로 옮겨져요. {k.code('Workspace')}와 {k.code('Assets')}는 코드 옆의 폴더 두 개가 되고, 메서드도 같아서 코드를
-      하나도 바꿀 필요가 없어요.
+      스니펫은 {k.code('Project.cs')}가 되고, {k.code('Program.cs')}가 그 반환값을 제공해요. 다른 파일은 작성한
+      그대로 옮겨져요. {k.code('Workspace')}와 {k.code('Assets')}는 프로그램 옆의 폴더 두 개가 되어{' '}
+      {k.code('Platform')} 폴더에 따로 들어가고, 메서드도 같아서 코드를 하나도 바꿀 필요가 없어요.
     </>
   ),
   awayAside:

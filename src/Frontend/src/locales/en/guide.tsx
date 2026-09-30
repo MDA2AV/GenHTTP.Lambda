@@ -296,14 +296,16 @@ export const guide = {
   away: ((k) => (
     <>
       {k.b('Download')} in the editor gives you the whole thing as a .NET project: a solution you can open,{' '}
-      {k.code('dotnet run')}, and keep. It has one package reference and no trace of this platform in it.
+      {k.code('dotnet run')}, and keep. It needs nothing but the GenHTTP package, and comes with a{' '}
+      {k.code('Dockerfile')} to build and run it as a container.
     </>
   )) as Text,
   away2: ((k) => (
     <>
-      Your snippet becomes the body of {k.code('Program.cs')}, wrapped in a host that serves what it returns. Your
-      other files come across exactly as you wrote them. {k.code('Workspace')} and {k.code('Assets')} become two
-      folders beside the code, with the same methods, so nothing in your code has to change.
+      Your snippet becomes {k.code('Project.cs')}, and {k.code('Program.cs')} serves what it returns. Your other files
+      come across exactly as you wrote them. {k.code('Workspace')} and {k.code('Assets')} become two folders beside
+      the program, with the same methods, kept apart in a {k.code('Platform')} folder - so nothing in your code has to
+      change.
     </>
   )) as Text,
   awayAside:
