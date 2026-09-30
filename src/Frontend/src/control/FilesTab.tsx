@@ -115,7 +115,7 @@ export function FilesTab({ control }: { control: Control }) {
             <IconLayers className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
             <span>
               {said.scope(wanted, (text) => (
-                <button type="button" onClick={control.openData} className="text-accent-500 hover:underline">
+                <button type="button" onClick={() => control.openData()} className="text-accent-500 hover:underline">
                   {text}
                 </button>
               ))}

@@ -26,8 +26,8 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// What comes out is as small as a GenHTTP project can be. Program.cs hosts
 /// what Project.Create() returns, Project.cs is the snippet, the other files
 /// are the lambda's own, and everything that stands in for the platform -
-/// Workspace, Assets and the imports a lambda never had to write - sits in a
-/// Platform folder of its own, so it is plain which code is theirs.
+/// Workspace, Assets, Secret and the imports a lambda never had to write - sits
+/// in a Platform folder of its own, so it is plain which code is theirs.
 /// </remarks>
 public static class ProjectPacker
 {
@@ -96,6 +96,7 @@ public static class ProjectPacker
             Write(archive, $"{name}/Platform/Usings.cs", Usings());
             Write(archive, $"{name}/Platform/LambdaEnvironment.cs", Resource("LambdaEnvironment.cs"));
             Write(archive, $"{name}/Platform/Folder.cs", Resource("Folder.cs"));
+            Write(archive, $"{name}/Platform/Secrets.cs", Resource("Secrets.cs"));
             Write(archive, $"{name}/Platform/Handlers.cs", Resource("Handlers.cs"));
 
             // the aspnet image rather than runtime, although nothing here uses
@@ -170,6 +171,16 @@ public static class ProjectPacker
 
         var handler = awaits ? "await Project.CreateAsync()" : "Project.Create()";
 
+        // the names of the secrets, never their values, which stay on the platform
+        var secrets = lambda.Secrets?.Order(StringComparer.Ordinal).ToList() ?? [];
+
+        var variables = string.Concat(secrets.Select(s => $" -e {s}"));
+
+        var environment = secrets.Count == 0
+            ? string.Empty
+            : "\n//\n// Its secrets are environment variables here - set them before it starts; the\n// values stayed on the platform, where nobody can read them back:\n//\n"
+            + string.Join("\n", secrets.Select(s => $"//   {s}"));
+
         return $"""
             // This app was built as a lambda on GenHTTP Lambda (https://genhttp.dev),
             // where you describe an app - or let your coding agent write it - and it
@@ -184,11 +195,12 @@ public static class ProjectPacker
             //   dotnet run                    then open http://localhost:8080/
             //
             //   docker build -t {tag} .
-            //   docker run -p 8080:8080 -v {tag}-data:/app/workspace {tag}
+            //   docker run -p 8080:8080{variables} -v {tag}-data:/app/workspace {tag}
             //
             // Project.cs holds the code of the lambda and the other .cs files are its
             // own. Platform/ stands in for what the platform provided: the Workspace
-            // the app writes to, and the Assets it shipped with (in assets/).
+            // the app writes to, the Assets it shipped with (in assets/), and the
+            // Secret it reads, from environment variables of the same name.{environment}
 
             using GenHTTP.Engine.Internal;
             using GenHTTP.Modules.Practices;
@@ -499,4 +511,6 @@ public static class ProjectPacker
 /// <param name="Change">What that version changed, in a line</param>
 /// <param name="Address">Where the lambda is online, if the installation knows its own address</param>
 /// <param name="Exported">When the export was made</param>
-public sealed record ExportedLambda(string PublicKey, int Version, DateTime Saved, string? Change, string? Address, DateTime Exported);
+/// <param name="Secrets">The names of the secrets it keeps or reads, which become environment variables - never their values</param>
+public sealed record ExportedLambda(string PublicKey, int Version, DateTime Saved, string? Change, string? Address, DateTime Exported,
+                                    IReadOnlyList<string>? Secrets = null);

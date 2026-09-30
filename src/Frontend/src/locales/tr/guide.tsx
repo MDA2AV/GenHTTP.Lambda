@@ -17,6 +17,7 @@ export const guide: Messages['guide'] = {
     spa: 'Adım adım bir frontend',
     storage: 'Dosyaların durduğu iki yer',
     keeping: 'Veri saklamak',
+    secrets: 'Anahtarlar ve parolalar',
     sockets: 'Websocket’ler',
     limits: 'İzin verilmeyenler',
     away: 'Kodunuzu alıp gitmek',
@@ -95,7 +96,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Taslaklar', () => <>Lambdanın yanında üzerinde çalışılan değişiklikler: her biri kendi adresinde denenir ve hazır olunca birleştirilip bir sonraki sürüm olur. Açıldığında bir taslağın kendi kodu, verileri ve logları vardır.</>],
     ['Dosyalar', () => <>Bir sürümün dosyaları: kodu ve statik dosyaları, yani programın kendisi. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
-    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: çalışma alanı. İçine bakın, dosya yükleyip silin ya da onu kapatın.</>],
+    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: çalışma alanı ve gizli değerler, her biri kendi sekmesinde. İçlerine bakın, dosya yükleyin, gizli değer ayarlayın ya da bir türü açıp kapatın. Basit görünüm, uygulama bir şey sakladığı anda bu bölümü gösterir.</>],
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
     ['İstatistikler', () => <>Son bir saatin ya da günün istekleri, hataları, yanıt süreleri ve en çok istenen yolları.</>],
@@ -272,6 +273,28 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  secrets: (k) => (
+    <>
+      Bir API anahtarı, parola veya token koda değil {k.b('gizli değerlere')} aittir; kodda her sürüm, her indirme ve
+      geçmişi okuyan herkes ona sahip olurdu. Kod bir gizli değeri adıyla okur:
+    </>
+  ),
+  secrets2: (k) => (
+    <>
+      Gizli değerleri {k.b('Veriler')} altında açın ve değeri orada ayarlayın. Kaydedildikten sonra bir daha gösterilmez –
+      ne size ne de bir ajana; yalnızca değiştirebilirsiniz. Liste, kodun okuduğu ama henüz değeri olmayan adları
+      gösterir, genel bakış da bunları ister. {k.code('Secret.Exists')} bir değerin ayarlı olup olmadığını söyler; onsuz
+      da çalışan kod için. Tüm veriler gibi gizli değerler de tüm sürümler için ortaktır ve bir taslak bir kopya
+      üzerinde çalışır.
+    </>
+  ),
+  secretsAside: (k) => (
+    <>
+      Veritabanında bulunmayan bir anahtarla şifrelenmiş olarak saklanırlar. İndirilen bir projede{' '}
+      {k.code('Secret.Read("NAME")')} {k.code('NAME')} ortam değişkenini okur – değerlerin kendisi burada kalır.
+    </>
+  ),
+
   sockets: (k) => (
     <>
       Destekleniyor, hem de sonradan akla gelmiş bir özellik olarak değil. {k.link('/editor/demo-game', 'demo-game')}{' '}
@@ -304,6 +327,7 @@ export const guide: Messages['guide'] = {
       tam yazdığınız gibi gelir. {k.code('Workspace')} ve {k.code('Assets')} programın yanında, ayrı bir{' '}
       {k.code('Platform')} klasöründe iki klasör olur ve aynı metotlarla çalışır. Yani kodunuzda hiçbir şeyi
       değiştirmeniz gerekmez.
+      {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır.
     </>
   ),
   awayAside:

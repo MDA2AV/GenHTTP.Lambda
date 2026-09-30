@@ -1,6 +1,10 @@
+using System.Security.Cryptography;
+
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Secrets;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,7 +28,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// because a demo is the one kind of lambda whose editor key is chosen - it
 /// is its public key, announced - and whose tier nobody else may set.
 /// </remarks>
-public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbContext> databases, ILogger<DemoSeeder> logger)
+public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbContext> databases, SecretVault secrets, ILogger<DemoSeeder> logger)
 {
 
     /// <summary>
@@ -106,6 +110,8 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         {
             return false;
         }
+
+        await ProvideSecretsAsync(demo, cancellation);
 
         var wanted = TemplateCatalog.ForKey(demo.Id, demo.Key, demo: true);
 
@@ -190,6 +196,52 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Switches the secrets of a demo on and gives it the ones it reads,
+    /// each a random value made here and never seen by anybody.
+    /// </summary>
+    /// <remarks>
+    /// Written past the tier on purpose, like the rest of the seeding: nobody
+    /// else may change a demo. A secret that is there already is kept, so
+    /// what the demo sealed with it stays readable across restarts.
+    /// </remarks>
+    private async ValueTask ProvideSecretsAsync(LambdaDemo demo, CancellationToken cancellation)
+    {
+        if (demo.Secrets is not { Count: > 0 } wanted)
+        {
+            return;
+        }
+
+        await using var database = await databases.CreateDbContextAsync(cancellation);
+
+        var id = await database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).FirstAsync(cancellation);
+
+        var store = await database.DataStores.FirstOrDefaultAsync(s => s.LambdaId == id && s.Kind == DataKinds.SecretsId, cancellation);
+
+        if (store == null)
+        {
+            database.DataStores.Add(new DataStoreEntity { LambdaId = id, Kind = DataKinds.SecretsId, Enabled = true, Changed = DateTime.UtcNow });
+        }
+        else if (!store.Enabled)
+        {
+            store.Enabled = true;
+            store.Changed = DateTime.UtcNow;
+        }
+
+        await database.SaveChangesAsync(cancellation);
+
+        secrets.Invalidate(id);
+
+        var present = (await secrets.ListAsync(id, null, cancellation)).Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
+
+        foreach (var name in wanted.Where(n => !present.Contains(n)))
+        {
+            await secrets.StoreAsync(id, null, name, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)), cancellation);
+
+            logger.LogInformation("Gave the demo '{Demo}' the secret {Name}", demo.Id, name);
+        }
     }
 
     /// <summary>

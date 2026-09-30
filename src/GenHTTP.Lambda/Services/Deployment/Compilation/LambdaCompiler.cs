@@ -106,7 +106,7 @@ internal static class LambdaCompiler
         if (request.Run && Loaded.TryGetValue(Identify(request), out var known))
         {
             // the very same code is already in the process, just build it again
-            return (CompilationOutcome.Succeeded(), await InvokeAsync(known));
+            return (CompilationOutcome.Succeeded(), await InvokeAsync(known, request));
         }
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
@@ -154,7 +154,7 @@ internal static class LambdaCompiler
 
         Loaded[Identify(request)] = lambda;
 
-        return (CompilationOutcome.Succeeded(Translate(emitted.Diagnostics, DiagnosticSeverity.Warning)), await InvokeAsync(lambda));
+        return (CompilationOutcome.Succeeded(Translate(emitted.Diagnostics, DiagnosticSeverity.Warning)), await InvokeAsync(lambda, request));
     }
 
     /// <summary>
@@ -162,8 +162,19 @@ internal static class LambdaCompiler
     /// returned. Called on every deployment, so redeploying resets the state a
     /// snippet holds in memory.
     /// </summary>
-    private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda)
+    /// <remarks>
+    /// The secrets are connected first, because the top of a snippet is where
+    /// an API key is most often read.
+    /// </remarks>
+    private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda, CompilationRequest request)
     {
+        if (request.Secrets != null)
+        {
+            lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.SecretType}")?
+                  .GetField(SourceBuilder.SecretSource, BindingFlags.Static | BindingFlags.NonPublic)?
+                  .SetValue(null, request.Secrets);
+        }
+
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
                  ?? throw new InvalidOperationException("The compiled lambda does not contain an entry point.");
 
@@ -301,5 +312,6 @@ internal static class LambdaCompiler
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
 /// <param name="Limits">What the lambda may keep in its workspace, compiled into it</param>
+/// <param name="Secrets">What the lambda reads its secrets with, once it runs</param>
 internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Assets, string AssemblyDirectory, string Name, bool Run,
-                                          WorkspaceLimits Limits);
+                                          WorkspaceLimits Limits, Func<string, bool, string?>? Secrets = null);

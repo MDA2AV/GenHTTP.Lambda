@@ -28,6 +28,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<FeatureEntity> Features => Set<FeatureEntity>();
 
+    public DbSet<SecretEntity> Secrets => Set<SecretEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -70,6 +72,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.LastSeen).HasColumnName("last_seen");
         lambdas.Property(l => l.Domain).HasColumnName("domain");
         lambdas.Property(l => l.View).HasColumnName("editor_view").HasConversion<string>();
+        lambdas.Property(l => l.SecretSalt).HasColumnName("secret_salt");
 
         lambdas.HasIndex(l => l.PublicKey).IsUnique();
         lambdas.HasIndex(l => l.PrivateKey).IsUnique();
@@ -199,6 +202,32 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
                 .WithMany()
                 .HasForeignKey(f => f.LambdaId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+        var secrets = builder.Entity<SecretEntity>();
+
+        secrets.ToTable("secrets");
+
+        secrets.HasKey(s => s.Id);
+
+        secrets.Property(s => s.Id).HasColumnName("id");
+        secrets.Property(s => s.LambdaId).HasColumnName("lambda_id");
+        secrets.Property(s => s.FeatureId).HasColumnName("feature_id");
+        secrets.Property(s => s.Name).HasColumnName("name");
+        secrets.Property(s => s.Value).HasColumnName("value");
+        secrets.Property(s => s.Created).HasColumnName("created");
+        secrets.Property(s => s.Changed).HasColumnName("changed");
+
+        secrets.HasIndex(s => new { s.LambdaId, s.FeatureId, s.Name });
+
+        secrets.HasOne<LambdaEntity>()
+               .WithMany()
+               .HasForeignKey(s => s.LambdaId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        secrets.HasOne<FeatureEntity>()
+               .WithMany()
+               .HasForeignKey(s => s.FeatureId)
+               .OnDelete(DeleteBehavior.Cascade);
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

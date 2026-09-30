@@ -17,6 +17,7 @@ export const guide: Messages['guide'] = {
     spa: 'Frontend krok po kroku',
     storage: 'Dwa miejsca na pliki',
     keeping: 'Przechowywanie danych',
+    secrets: 'Klucze i hasła',
     sockets: 'Websockety',
     limits: 'Czego nie da się zrobić',
     away: 'Zabierz kod ze sobą',
@@ -93,7 +94,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Szkice', () => <>Zmiany przygotowywane obok lambdy: każdą wypróbowuje się pod osobnym adresem i scala w kolejną wersję, gdy jest gotowa. Otwarty szkic ma własny kod, dane i logi.</>],
     ['Pliki', () => <>Pliki danej wersji: jej kod i zasoby, czyli sam program. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
-    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: obszar roboczy. Zajrzyj do środka, przesyłaj i usuwaj pliki albo go wyłącz.</>],
+    ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: obszar roboczy i sekrety, każde na własnej karcie. Przeglądaj je, przesyłaj pliki, ustawiaj sekrety albo włączaj i wyłączaj dany rodzaj. Widok uproszczony pokazuje tę sekcję, gdy tylko aplikacja coś przechowuje.</>],
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
     ['Statystyki', () => <>Żądania, błędy, czasy odpowiedzi i najczęściej odwiedzane ścieżki z ostatniej godziny albo ostatnich 24 godzin.</>],
@@ -267,6 +268,27 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  secrets: (k) => (
+    <>
+      Klucz API, hasło czy token należy do {k.b('sekretów')}, a nie do kodu – tam miałaby go każda wersja, każde
+      pobranie i każdy, kto czyta historię. Kod odczytuje sekret po nazwie:
+    </>
+  ),
+  secrets2: (k) => (
+    <>
+      Włącz sekrety w sekcji {k.b('Dane')} i ustaw tam wartość. Po zapisaniu nigdy nie jest już pokazywana – ani tobie,
+      ani agentowi; możesz ją tylko zastąpić. Lista pokazuje, które nazwy kod odczytuje, choć nie mają jeszcze wartości,
+      a przegląd o nie prosi. {k.code('Secret.Exists')} mówi, czy sekret jest ustawiony – dla kodu, który działa i bez
+      niego. Jak wszystkie dane, sekrety są wspólne dla wszystkich wersji, a szkic pracuje na kopii.
+    </>
+  ),
+  secretsAside: (k) => (
+    <>
+      Są przechowywane w postaci zaszyfrowanej, kluczem, którego nie ma w bazie danych. W pobranym projekcie{' '}
+      {k.code('Secret.Read("NAME")')} odczytuje zmienną środowiskową {k.code('NAME')} – same wartości zostają tutaj.
+    </>
+  ),
+
   sockets: (k) => (
     <>
       Obsługiwane – i to nie na doczepkę. Demo {k.link('/editor/demo-game', 'demo-game')} łączy graczy w pary i prowadzi
@@ -299,6 +321,7 @@ export const guide: Messages['guide'] = {
       Pozostałe pliki trafiają do projektu bez zmian. {k.code('Workspace')} i {k.code('Assets')} stają się
       dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze {k.code('Platform')}, więc w kodzie nie
       trzeba nic zmieniać.
+      {' '}{k.code('Secret')} odczytuje tam zmienne środowiskowe o tej samej nazwie; wartości zostają tutaj.
     </>
   ),
   awayAside:

@@ -37,6 +37,14 @@ internal static class SourceBuilder
 
     internal const string AssetType = "__LambdaAssets";
 
+    internal const string SecretType = "__LambdaSecrets";
+
+    /// <summary>
+    /// The field of the generated secrets class the platform puts the function
+    /// that reads them into, once the lambda is loaded.
+    /// </summary>
+    internal const string SecretSource = "_source";
+
     /// <summary>
     /// Holds what every file of a lambda may name without qualifying it.
     /// </summary>
@@ -162,17 +170,20 @@ internal static class SourceBuilder
         builder.AppendLine("{");
         builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
         builder.AppendLine($"    internal static readonly {AssetType} Assets = new {AssetType}({Literal(assets)});");
+        builder.AppendLine($"    internal static readonly {SecretType} Secret = new {SecretType}();");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {ScopeType}");
         builder.AppendLine("{");
         builder.AppendLine($"    internal static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
+        builder.AppendLine($"    internal static {SecretType} Secret => LambdaEnvironment.Secret;");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {EntryType}");
         builder.AppendLine("{");
         builder.AppendLine($"    private static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
         builder.AppendLine($"    private static {AssetType} Assets => LambdaEnvironment.Assets;");
+        builder.AppendLine($"    private static {SecretType} Secret => LambdaEnvironment.Secret;");
         builder.AppendLine();
         builder.AppendLine($"    internal static async global::System.Threading.Tasks.Task<object> {EntryMethod}()");
         builder.AppendLine("    {");
@@ -195,6 +206,7 @@ internal static class SourceBuilder
         builder.AppendLine();
         builder.AppendLine(WorkspaceSource(limits ?? WorkspaceLimits.Standard));
         builder.AppendLine(AssetSource);
+        builder.AppendLine(SecretSourceCode);
 
         return CSharpSyntaxTree.ParseText(builder.ToString(), RegularOptions, GeneratedFile);
     }
@@ -413,6 +425,40 @@ internal static class SourceBuilder
 
                 return resolved;
             }
+        }
+        """;
+
+    /// <summary>
+    /// The secrets of the lambda, as its code reads them: <c>Secret.Read("STRIPE_KEY")</c>.
+    /// </summary>
+    /// <remarks>
+    /// The values are not compiled in. The class holds a function the
+    /// platform hands it once the lambda is loaded, which reads the current
+    /// value on every call - so a secret changed in the editor is what the
+    /// next request reads, and no value ends up in an assembly on the disk.
+    /// The field is private: code of the lambda that names it does not compile,
+    /// and reaching it any other way needs reflection, which the guard refuses.
+    ///
+    /// Exists answers false while secrets are switched off rather than
+    /// throwing, so code that works with and without a value works in either
+    /// case; Read throws with what to do, which is what the log then says.
+    /// </remarks>
+    private static readonly string SecretSourceCode = $$"""
+        internal sealed class {{SecretType}}
+        {
+            private static global::System.Func<string, bool, string> {{SecretSource}} = null;
+
+            /// <summary>
+            /// The value of a secret. Throws, saying how to set it, when there
+            /// is none of that name.
+            /// </summary>
+            public string Read(string name) => Source()(name, true);
+
+            /// <summary>Whether a secret of that name is set.</summary>
+            public bool Exists(string name) => Source()(name, false) != null;
+
+            private static global::System.Func<string, bool, string> Source()
+                => {{SecretSource}} ?? throw new global::System.InvalidOperationException("The secrets of this lambda are not available here.");
         }
         """;
 

@@ -162,6 +162,12 @@ export interface LambdaSummary {
     workspaceEnabled: boolean;
     /** Whether the code of that version uses the workspace at all, and so fails where it does once it is off. */
     usesWorkspace: boolean;
+    /** Whether the lambda has secrets switched on. */
+    secretsEnabled: boolean;
+    /** How many secrets it keeps. */
+    secrets: number;
+    /** The secrets its code reads that have no value yet, and so fail. */
+    missingSecrets?: string[] | null;
   };
   /** What this lambda may use in its tier. Nothing counts its C# files or assets, only what they come to. */
   limits: {
@@ -483,21 +489,46 @@ export interface WorkspaceListing {
 /**
  * One kind of data a lambda can keep. Data belongs to the lambda rather than
  * to a version: every version shares it, and deploying or rolling back leaves
- * it alone. The workspace is the only kind so far; more are meant to follow,
+ * it alone. The workspace and the secrets so far; more are meant to follow,
  * listed the same way.
  */
 export interface DataStore {
-  /** Which kind: "workspace", the files the lambda reads and writes. */
+  /** Which kind: "workspace", the files the lambda reads and writes, or "secrets". */
   kind: string;
   enabled: boolean;
   /** Whether a lambda has it until its owner decides. */
   default: boolean;
   /** When the owner last switched it; absent while it is as it came. */
   changed?: string | null;
-  /** What it holds: files, for the workspace. */
+  /** What it holds: files, for the workspace; values, for the secrets. */
   items: number;
+  /** The room that takes, for a kind counted in room. */
   usedBytes: number;
   quotaBytes: number;
+  /** How many things it may hold, for a kind counted in things. */
+  maxItems?: number | null;
+}
+
+/** One secret, as anybody but the lambda sees it: never its value. */
+export interface Secret {
+  name: string;
+  created: string;
+  changed: string;
+  /** Whether the code reads it by that name. */
+  used: boolean;
+}
+
+/** The secrets of a lambda, or of a draft's copy of them. */
+export interface SecretListing {
+  enabled: boolean;
+  secrets: Secret[];
+  /** Every name the code reads. */
+  used: string[];
+  /** Names the code reads that have no value yet - and fails without. */
+  missing: string[];
+  /** Names the code asks about first, and does without. */
+  optional: string[];
+  limit: number;
 }
 
 /**
@@ -1005,6 +1036,24 @@ export const api = {
   /** Switches a kind of data off, deleting everything it held. */
   disableData: (privateKey: string, kind: string) =>
     request<DataStore>(`/lambdas/${privateKey}/data/${encodeURIComponent(kind)}`, { method: 'DELETE' }),
+
+  /**
+   * The secrets of a lambda - or, given a feature, of its copy. A value goes
+   * in and never comes out: there is no call that reads one.
+   */
+  secrets: {
+    list: (privateKey: string, feature?: string) =>
+      request<SecretListing>(`/lambdas/${privateKey}${feature ? `/features/${feature}` : ''}/secrets`),
+
+    set: (privateKey: string, name: string, value: string, feature?: string) =>
+      request<Secret>(`/lambdas/${privateKey}${feature ? `/features/${feature}` : ''}/secrets/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value }),
+      }),
+
+    remove: (privateKey: string, name: string, feature?: string) =>
+      request<void>(`/lambdas/${privateKey}${feature ? `/features/${feature}` : ''}/secrets/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  },
 
   /**
    * The features of a lambda: changes worked on beside it, each with a copy

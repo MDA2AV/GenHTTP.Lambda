@@ -17,6 +17,7 @@ export const guide: Messages['guide'] = {
     spa: 'Un front-end, étape par étape',
     storage: 'Les deux endroits où vivent les fichiers',
     keeping: 'Garder des données',
+    secrets: 'Clés et mots de passe',
     sockets: 'WebSockets',
     limits: 'Ce que vous ne pouvez pas faire',
     away: 'Repartir avec votre code',
@@ -94,7 +95,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Brouillons', () => <>Des modifications préparées à côté de la lambda : chacune s’essaie à sa propre adresse et s’intègre à la prochaine version une fois au point. Une fois ouvert, un brouillon a son propre code, ses propres données et ses propres logs.</>],
     ['Fichiers', () => <>Les fichiers d’une version : son code et ses assets, le programme lui-même. Un cadenas ou un globe indique si le public peut y accéder.</>],
-    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : le workspace. Regardez ce qu’il contient, importez et supprimez des fichiers, ou désactivez-le.</>],
+    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : le workspace et les secrets, chacun dans son onglet. Consultez-les, envoyez des fichiers, définissez des secrets, ou activez et désactivez un type. La vue simple l’affiche dès que l’application garde quelque chose.</>],
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],
     ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
@@ -274,6 +275,29 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  secrets: (k) => (
+    <>
+      Une clé d’API, un mot de passe ou un jeton a sa place dans les {k.b('secrets')}, pas dans le code – où chaque
+      version, chaque téléchargement et chaque lecteur de l’historique l’aurait. Le code lit un secret par son nom :
+    </>
+  ),
+  secrets2: (k) => (
+    <>
+      Activez les secrets sous {k.b('Données')} et définissez-y la valeur. Une fois enregistrée, elle n’est plus
+      jamais affichée – ni à vous, ni à un agent ; vous pouvez seulement la remplacer. La liste indique quels noms le
+      code lit sans qu’une valeur soit définie, et la vue d’ensemble les demande. {k.code('Secret.Exists')} indique
+      si un secret est défini, pour du code qui s’en passe. Comme toutes les données, les secrets sont partagés par
+      toutes les versions, et un brouillon travaille sur une copie.
+    </>
+  ),
+  secretsAside: (k) => (
+    <>
+      Ils sont stockés chiffrés, avec une clé qui ne se trouve pas dans la base de données. Dans un projet téléchargé,{' '}
+      {k.code('Secret.Read("NAME")')} lit la variable d’environnement {k.code('NAME')} – les valeurs elles-mêmes restent
+      ici.
+    </>
+  ),
+
   sockets: (k) => (
     <>
       Pris en charge, et pas à moitié. La démo {k.link('/editor/demo-game', 'demo-game')} forme des paires de joueurs et
@@ -305,6 +329,7 @@ export const guide: Messages['guide'] = {
       Votre snippet devient {k.code('Project.cs')}, et {k.code('Program.cs')} sert ce qu’il renvoie. Vos autres
       fichiers sont repris exactement tels quels. {k.code('Workspace')} et {k.code('Assets')} deviennent deux dossiers à
       côté du programme, avec les mêmes méthodes, à part dans un dossier {k.code('Platform')} : rien à changer dans votre code.
+      {' '}{k.code('Secret')} y lit les variables d’environnement du même nom ; les valeurs restent ici.
     </>
   ),
   awayAside:

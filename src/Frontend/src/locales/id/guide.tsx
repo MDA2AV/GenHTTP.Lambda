@@ -17,6 +17,7 @@ export const guide: Messages['guide'] = {
     spa: 'Front end, langkah demi langkah',
     storage: 'Dua tempat file disimpan',
     keeping: 'Menyimpan data',
+    secrets: 'Kunci dan kata sandi',
     sockets: 'Websocket',
     limits: 'Yang tidak diizinkan',
     away: 'Membawa kode Anda keluar',
@@ -96,7 +97,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Draf', () => <>Perubahan yang dikerjakan di samping lambda: masing-masing dicoba di alamatnya sendiri dan digabungkan menjadi versi berikutnya setelah hasilnya pas. Saat dibuka, draf punya kode, data, dan log-nya sendiri.</>],
     ['File', () => <>File dari sebuah versi: kode dan asetnya, yaitu programnya sendiri. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
-    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: workspace. Lihat isinya, unggah dan hapus file, atau nonaktifkan.</>],
+    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: workspace dan rahasia, masing-masing di tab sendiri. Lihat isinya, unggah file, atur rahasia, atau aktifkan dan nonaktifkan suatu jenis. Tampilan sederhana menampilkannya begitu aplikasi menyimpan sesuatu.</>],
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
@@ -274,6 +275,28 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  secrets: (k) => (
+    <>
+      Kunci API, kata sandi, atau token tempatnya di {k.b('rahasia')}, bukan di kode – di sana setiap versi, setiap
+      unduhan, dan siapa pun yang membaca riwayatnya akan memilikinya. Kode membaca rahasia berdasarkan namanya:
+    </>
+  ),
+  secrets2: (k) => (
+    <>
+      Aktifkan rahasia di {k.b('Data')} dan atur nilainya di sana. Setelah disimpan, nilainya tidak pernah ditampilkan
+      lagi – tidak kepada Anda, tidak kepada agen; Anda hanya bisa menggantinya. Daftarnya menunjukkan nama yang dibaca
+      kode tetapi belum punya nilai, dan ikhtisar memintanya. {k.code('Secret.Exists')} memberi tahu apakah rahasia
+      sudah diatur, untuk kode yang tetap berjalan tanpanya. Seperti semua data, rahasia dipakai bersama oleh semua
+      versi, dan draf bekerja pada salinannya.
+    </>
+  ),
+  secretsAside: (k) => (
+    <>
+      Rahasia disimpan terenkripsi, dengan kunci yang tidak ada di database. Di proyek yang diunduh,{' '}
+      {k.code('Secret.Read("NAME")')} membaca variabel lingkungan {k.code('NAME')} – nilainya sendiri tetap di sini.
+    </>
+  ),
+
   sockets: (k) => (
     <>
       Didukung, dan bukan sekadar tambahan. Demo {k.link('/editor/demo-game', 'demo-game')} memasangkan pemain dan
@@ -306,6 +329,7 @@ export const guide: Messages['guide'] = {
       Anda yang lain ikut persis seperti yang Anda tulis. {k.code('Workspace')} dan {k.code('Assets')} menjadi dua folder
       di samping program, dengan method yang sama, terpisah di folder {k.code('Platform')}, jadi tidak ada yang perlu
       diubah di kode Anda.
+      {' '}{k.code('Secret')} di sana membaca variabel lingkungan dengan nama yang sama; nilainya tetap di sini.
     </>
   ),
   awayAside:

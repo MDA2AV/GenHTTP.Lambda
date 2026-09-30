@@ -33,6 +33,7 @@ These, and nothing else:
 | `deploy` | makes a version live - with `feature`, puts that feature online at its preview address instead |
 | `read_logs` | how the live lambda is answering, errors with stack traces - with `feature`, how its preview is |
 | `list_files`, `upload_file`, `delete_file` | the workspace, where a lambda keeps its data - with `feature`, that feature's copy of it |
+| `enable_data`, `list_secrets` | switches secrets on; lists the secrets by name, and which ones the code reads that have no value yet |
 
 `write_code` and `change_code` take `deploy: true` to go online in the same
 call, and `check: true` to compile what they saved without putting it
@@ -123,6 +124,13 @@ What the application keeps while it runs - entries, scores, accounts - is
 data. It lives in the workspace, which every version shares and no deploy,
 rollback or merge touches. The pages, scripts and styles are the program and
 ship with the code as assets.
+
+An API key, a password or a token for another service is data too, and never
+code: read it with `Secret.Read("NAME")` - or `Secret.Exists` first, if the
+application can do without it - and switch secrets on with `enable_data`. You
+cannot set the value and must not make one up: the owner enters it in their
+control center, which asks them for every name the code reads that has no
+value. Say in one line which one they need to enter and where to get it.
 
 ## Link with relative paths
 

@@ -54,7 +54,13 @@ Give both a good experience. Concretely:
   made. A compile error is the agent's to fix, not something the owner reads.
   Say "version" and its number only where the owner needs to name which one goes
   back online or which one a draft becomes (the draft dialogs do), never as the
-  way to describe a change.
+  way to describe a change. Secrets are **keys and passwords**, the workspace is
+  **what your app saved**.
+- The simple view shows the **Data** section only once the app keeps something
+  (a saved file, a secret) or its code waits for a secret, and then only the
+  kinds that hold something: no switches, no folders, no code - a plain list
+  of what was saved, and the keys to enter or replace. Entering one there
+  switches secrets on.
 - The full view, `/ship`, the API, MCP tools, the guide and the README use the
   precise words (feature, version, merge, base).
 - The view a lambda opens in is a default only (`view`, set at creation and via
@@ -78,11 +84,43 @@ the README.
 - A **version** is the program: code *and* assets (a SPA, for example). It never
   changes once saved. Different versions may have different code and different
   assets.
-- **Data** is what the program keeps (today: the workspace; a database and
-  secrets are meant to follow). It belongs to the lambda and is **shared by all
+- **Data** is what the program keeps (today: the workspace and the secrets; a
+  database is meant to follow). It belongs to the lambda and is **shared by all
   versions**. Deploys, rollbacks and merges never touch it.
 - User data goes in the workspace, never in assets. The front end goes in the
-  version, never in the workspace.
+  version, never in the workspace. API keys and passwords go in the secrets,
+  never in code, assets or the workspace.
+- Every kind of data is switched on before a lambda can use it. An agent may
+  switch one on (`enable_data`) when what it builds needs it; **switching off
+  deletes, so only the owner does it**. All kinds share one **Data** section
+  in the editor, one pill each, drawn the same way; only what a kind holds is
+  shown its own way. A new kind joins `DataKinds` and that section - it does
+  not get a menu entry of its own.
+
+### Secrets
+
+- **A value is written and never read back** - not by the editor, the API, MCP
+  or the owner. Only the lambda reads it (`Secret.Read`, `Secret.Exists`). No
+  answer, log line or note may contain a value; name only.
+- **Off by default.** Names are environment variable names (letters, digits,
+  underscore, no leading digit, case sensitive), because an exported project
+  reads `Secret.Read("X")` from `$X`. Values are not exported.
+- Stored in SQLite, sealed with AES-GCM under a key made from the
+  installation's key (`LAMBDA_SECRETS_KEY`, or `secrets.key` in the data
+  directory - never in the database) and a random per-lambda salt; the name is
+  associated data. Backup and migration = the database + the installation's
+  key. Do not put the installation's key in the database, and do not describe
+  the encryption as isolating lambdas from each other: they share a process.
+- Read at runtime through a function handed to the compiled lambda, never
+  compiled in, so a changed value applies without a deploy.
+- A feature gets a copy (copied sealed); merging throws it away.
+- Agents are steered to write `Secret.Read("NAME")`, switch secrets on and let
+  the **owner enter the value in the editor**, so it never passes through the
+  agent. The platform lists the names the code reads that have no value
+  (`missing`; only-`Exists` ones are `optional`), and the editor and the
+  simple overview ask the owner for them. That is the asymmetric interface for
+  secrets: the agent declares the need, the human supplies the value. The build
+  agent may switch secrets on and list them, and cannot set or delete one.
 
 Because data outlives versions, a rollback or a newer version reads data written
 by a different one. **Agents find a good compromise between data compatibility
@@ -139,7 +177,9 @@ how to write apps and to give them a good starting point.
 - **When you add functionality to the platform, add it to the demos as well if
   it makes sense**, so agents learn it by reading them. They keep their data in
   JSON files in the workspace on purpose - do not show a database the platform
-  does not offer.
+  does not offer. A demo that reads a secret is given a random value by the
+  seeder (`LambdaDemo.Secrets`) and works without one, so a copy runs before
+  its owner switches secrets on (`demo-registration`, `PASSWORD_PEPPER`).
 
 ### Tiers
 

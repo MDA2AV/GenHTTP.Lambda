@@ -75,15 +75,16 @@ const FEATURE_VIEWS: FeatureView[] = ['overview', 'code', 'data', 'logs'];
 
 /*
  * What the simple view keeps: the app, asking for a change, the drafts a
- * change can leave to be tried, what changed so far, and how people find it.
- * Change straight after the overview, since asking for one is what the simple
- * view is for. Nothing that is about the code - its files, its data as files,
- * its deployments, its log - and not the figures either, which the overview
- * sums up in the two that matter. The versions are there, as the history:
- * the changes the app went through and a way back to any of them, without
- * the files to compare.
+ * change can leave to be tried, what changed so far, what the app keeps, and
+ * how people find it. Change straight after the overview, since asking for
+ * one is what the simple view is for. Nothing that is about the code - its
+ * files, its deployments, its log - and not the figures either, which the
+ * overview sums up in the two that matter. The versions are there, as the
+ * history: the changes the app went through and a way back to any of them,
+ * without the files to compare. The data is there once the app keeps any -
+ * what it saved, and the keys it uses - and not while there is nothing in it.
  */
-const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'history', 'showcase', 'domain'];
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'change', 'features', 'history', 'data', 'showcase', 'domain'];
 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
@@ -126,6 +127,9 @@ export function Editor({ theme }: Props) {
   const featureView: FeatureView = FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview';
 
   const section: SectionId = segment === 'edit' ? 'code' : ([...SECTIONS, ...SIMPLE_SECTIONS].find((id) => id === segment) ?? 'overview');
+
+  // the kind of data open: /data/secrets, or /features/{key}/data/secrets
+  const dataKind = featureKey ? (featureView === 'data' ? parts[3] : undefined) : section === 'data' ? parts[1] : undefined;
 
   const [lambda, setLambda] = useState<Lambda | null>(null);
   const { view, choose } = useView(lambda?.publicKey, lambda?.view);
@@ -412,6 +416,11 @@ export function Editor({ theme }: Props) {
   // a demo is read by anybody holding its announced key, and changed by nobody
   const demo = lambda != null && isDemo(lambda.tier);
 
+  // what the lambda keeps as data, and the secrets its code waits for
+  const holding = summary?.storage;
+  const missingSecrets = holding?.missingSecrets ?? [];
+  const keeps = holding != null && (holding.workspaceFiles > 0 || holding.secrets > 0 || missingSecrets.length > 0);
+
   // sections that only change the lambda, which a demo does not have - and
   // the drafts, while there are none: they are met through a change the agent
   // leaves to be tried, or started from a version or the code, and the list
@@ -420,6 +429,8 @@ export function Editor({ theme }: Props) {
     (hidden && id === 'domain')
     || (demo && (id === 'showcase' || id === 'change' || id === 'features'))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
+    // the simple view has the data once the app keeps any, or waits for a key
+    || (id === 'data' && simple && section !== 'data' && !keeps)
     // the full view has the versions for it - known once the lambda is,
     // which says which view it opens in
     || (id === 'history' && lambda != null && !simple);
@@ -511,7 +522,7 @@ export function Editor({ theme }: Props) {
     edit: (version) => go(open && version == null ? featurePath(open.key, 'code') : `${base}/code${version != null ? `?version=${version}` : ''}`),
     browse: (version) => go(`${base}/files${version != null ? `?version=${version}` : ''}`),
     agent,
-    openData: () => go(`${base}/data`),
+    openData: (kind, set) => go(`${featureKey && open ? featurePath(featureKey, 'data') : `${base}/data`}${kind ? `/${kind}` : ''}${set ? `?set=${encodeURIComponent(set)}` : ''}`),
     startFeature: (from, files) => setCreating({ base: from, files }),
     openFeature: (key, view) => go(featurePath(key, view)),
     putOnline: (key) => setMerging(key),
@@ -768,6 +779,9 @@ export function Editor({ theme }: Props) {
                 {id === 'logs' && problems && (
                   <span className="ml-auto h-1.5 w-1.5 rounded-full bg-red-500" title={said.problems} />
                 )}
+                {id === 'data' && missingSecrets.length > 0 && !demo && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-amber-500" title={t.data.missingDot} />
+                )}
                 {id === 'change' && changing && (
                   <span className="ml-auto" title={said.changeRunning}>
                     <IconSpinner className="h-3.5 w-3.5 text-accent-500 dark:text-accent-400" />
@@ -861,7 +875,7 @@ export function Editor({ theme }: Props) {
           ) : featureView === 'code' ? (
             <Workbench key={open.key} control={control} onDirty={onDirty} />
           ) : featureView === 'data' ? (
-            <DataTab key={open.key} control={control} />
+            <DataTab key={open.key} control={control} kind={dataKind} onKind={(kind) => go(`${featurePath(open.key, 'data')}/${kind}`)} />
           ) : featureView === 'logs' ? (
             <LogsTab key={open.key} control={control} />
           ) : (
@@ -876,7 +890,7 @@ export function Editor({ theme }: Props) {
         ) : section === 'files' ? (
           <FilesTab control={control} />
         ) : section === 'data' ? (
-          <DataTab control={control} />
+          <DataTab control={control} kind={dataKind} onKind={(kind) => go(`${base}/data/${kind}`)} />
         ) : section === 'history' && simple ? (
           <HistoryTab control={control} />
         ) : section === 'versions' ? (

@@ -17,6 +17,7 @@ export const guide: Messages['guide'] = {
     spa: 'Um front-end, passo a passo',
     storage: 'Os dois lugares onde ficam os arquivos',
     keeping: 'Guardando dados',
+    secrets: 'Chaves e senhas',
     sockets: 'WebSockets',
     limits: 'O que não é permitido',
     away: 'Levando seu código embora',
@@ -95,7 +96,7 @@ export const guide: Messages['guide'] = {
     ],
     ['Rascunhos', () => <>Mudanças feitas ao lado da lambda: cada uma é testada num endereço próprio e mesclada na próxima versão quando estiver tudo certo. Aberto, um rascunho tem código, dados e log próprios.</>],
     ['Arquivos', () => <>Os arquivos de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo mostra se o público consegue acessar.</>],
-    ['Dados', () => <>O que a lambda guarda enquanto roda, compartilhado por todas as versões: o workspace. Veja o que tem nele, envie e exclua arquivos, ou desligue.</>],
+    ['Dados', () => <>O que a lambda guarda enquanto roda, compartilhado por todas as versões: o workspace e os segredos, cada um na sua aba. Veja o que há neles, envie arquivos, defina segredos ou ligue e desligue um tipo. A visão simples mostra a seção assim que o app guarda alguma coisa.</>],
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faça deploy ou volte uma versão por aqui, ou comece um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve no ar e quando, e o que tirou do ar.</>],
     ['Métricas', () => <>Requisições, falhas, tempos de resposta e os caminhos mais acessados, na última hora ou nas últimas 24 horas.</>],
@@ -270,6 +271,28 @@ export const guide: Messages['guide'] = {
     </>
   ),
 
+  secrets: (k) => (
+    <>
+      Uma chave de API, uma senha ou um token vai nos {k.b('segredos')}, não no código – onde ficaria em cada versão, em
+      cada download e à vista de quem ler o histórico. O código lê um segredo pelo nome:
+    </>
+  ),
+  secrets2: (k) => (
+    <>
+      Ligue os segredos em {k.b('Dados')} e defina o valor ali. Depois de salvo, ele nunca mais é mostrado – nem para
+      você, nem para um agente; você só pode substituí-lo. A lista mostra quais nomes o código lê que ainda não têm
+      valor, e a visão geral pede por eles. {k.code('Secret.Exists')} diz se um segredo está definido, para código que
+      funciona sem ele. Como todos os dados, os segredos são compartilhados por todas as versões, e um rascunho trabalha
+      numa cópia.
+    </>
+  ),
+  secretsAside: (k) => (
+    <>
+      Eles são guardados criptografados, com uma chave que não fica no banco de dados. Num projeto baixado,{' '}
+      {k.code('Secret.Read("NAME")')} lê a variável de ambiente {k.code('NAME')} – os valores ficam aqui.
+    </>
+  ),
+
   sockets: (k) => (
     <>
       Suporte completo, pensado desde o início. A demo {k.link('/editor/demo-game', 'demo-game')} forma pares de
@@ -302,6 +325,7 @@ export const guide: Messages['guide'] = {
       arquivos vão exatamente como você escreveu. {k.code('Workspace')} e {k.code('Assets')} viram duas pastas ao lado
       do programa, com os mesmos métodos, separadas numa pasta {k.code('Platform')}, então nada no seu código precisa
       mudar.
+      {' '}{k.code('Secret')} lê lá as variáveis de ambiente de mesmo nome; os valores ficam aqui.
     </>
   ),
   awayAside:

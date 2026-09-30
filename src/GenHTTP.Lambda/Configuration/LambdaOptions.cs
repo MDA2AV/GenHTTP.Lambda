@@ -458,6 +458,21 @@ public sealed record LambdaOptions
     /// </remarks>
     public string? AcmeDirectory { get; init; }
 
+    /// <summary>
+    /// The installation's half of the key the secrets of every lambda are
+    /// sealed with: 32 bytes in base64, or a passphrase of at least 32
+    /// characters.
+    /// </summary>
+    /// <remarks>
+    /// Left empty, a random key is made on first use and kept in
+    /// <see cref="SecretsKeyFile"/>. Either way it is not in the database, which
+    /// is the point: a copy of the database opens no secret without it. Moving
+    /// to another server, or restoring a backup, takes the database and this
+    /// key - set it here on the new server, or copy the key file along.
+    /// Losing it loses every secret; the lambdas and everything else stay.
+    /// </remarks>
+    public string? SecretsKey { get; init; }
+
     #region Derived
 
     public string DatabaseFile => Path.Combine(DataDirectory, "lambda.db");
@@ -477,6 +492,12 @@ public sealed record LambdaOptions
     /// preview serves, one folder per lambda and feature.
     /// </summary>
     public string FeatureDirectory => Path.Combine(DataDirectory, "features");
+
+    /// <summary>
+    /// Where the key the secrets are sealed with is kept, when
+    /// <see cref="SecretsKey"/> does not give one.
+    /// </summary>
+    public string SecretsKeyFile => Path.Combine(DataDirectory, "secrets.key");
 
     /// <summary>
     /// Whether the server should offer a TLS endpoint next to the plain one.
@@ -565,6 +586,7 @@ public sealed record LambdaOptions
             CertificatePassword = ReadOptional("LAMBDA_CERTIFICATE_PASSWORD"),
             CertificateDirectory = ReadOptional("LAMBDA_CERTIFICATE_DIRECTORY"),
             AcmeDirectory = ReadOptional("LAMBDA_ACME_DIRECTORY"),
+            SecretsKey = ReadOptional("LAMBDA_SECRETS_KEY"),
             McpOrigins = (ReadOptional("LAMBDA_MCP_ORIGINS") ?? "")
                          .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             PublicUrl = ReadOptional("LAMBDA_PUBLIC_URL")?.TrimEnd('/')

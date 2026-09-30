@@ -13,9 +13,15 @@
 //
 // The files:
 //
-//   lambda.cs     this one: the wiring, and the only file that touches Workspace
+//   lambda.cs     this one: the wiring, and the only file that touches Workspace and Secret
 //   Accounts.cs   accounts, password hashes and sessions, kept in JSON files
 //   web/          the two pages and the script they share
+//
+// A secret, PASSWORD_PEPPER, goes into every password hash where the lambda
+// has one - see Accounts.cs. Secrets are data, set by the owner under Data >
+// Secrets in the editor and never shown again; the code reads them by name.
+// Without one the demo works just the same, so a copy of it runs before
+// anybody has switched secrets on.
 //
 // The session is a cookie the browser keeps and sends by itself: HttpOnly, so
 // no script on the page can read it, and SameSite, so another site cannot make
@@ -32,7 +38,9 @@ using GenHTTP.Modules.Reflection.Injectors;
 
 var accounts = new Accounts(
     read: name => Workspace.Exists(name) ? Workspace.ReadText(name) : null,
-    write: (name, text) => Workspace.WriteText(name, text));
+    write: (name, text) => Workspace.WriteText(name, text),
+    // Exists is false while secrets are off or the value is not set
+    pepper: () => Secret.Exists("PASSWORD_PEPPER") ? Secret.Read("PASSWORD_PEPPER") : null);
 
 /*
  * At the root of the lambda rather than below a folder, and for a reason: a

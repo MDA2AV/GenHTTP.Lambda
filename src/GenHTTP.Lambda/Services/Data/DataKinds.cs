@@ -18,10 +18,12 @@ public sealed record DataKind(string Id, bool Default);
 /// each is somewhere personal data can end up, and because a kind switched off
 /// holds nothing at all - switching one off deletes what it held.
 ///
-/// The workspace is the only one so far, and on by default, since every
-/// lambda always had it. A database and secrets are meant to join it here:
-/// a kind is added to <see cref="All" />, and everything that lists them - the
-/// API, the editor, what an agent reads - lists it too.
+/// The workspace is on by default, since every lambda always had it. Secrets
+/// are off until somebody switches them on - the owner in the editor, or an
+/// agent through the API or MCP when what it builds needs one. A database is
+/// meant to join them here: a kind is added to <see cref="All" />, and
+/// everything that lists them - the API, the editor, what an agent reads -
+/// lists it too.
 /// </remarks>
 public static class DataKinds
 {
@@ -31,12 +33,19 @@ public static class DataKinds
     /// </summary>
     public const string WorkspaceId = "workspace";
 
+    /// <summary>
+    /// The API keys, passwords and tokens a lambda reads and nobody sees.
+    /// </summary>
+    public const string SecretsId = "secrets";
+
     public static readonly DataKind Workspace = new(WorkspaceId, true);
+
+    public static readonly DataKind Secrets = new(SecretsId, false);
 
     /// <summary>
     /// Every kind this installation offers, in the order they are shown.
     /// </summary>
-    public static readonly IReadOnlyList<DataKind> All = [Workspace];
+    public static readonly IReadOnlyList<DataKind> All = [Workspace, Secrets];
 
     /// <summary>
     /// The kind with the given name, or nothing if there is none.
@@ -59,5 +68,12 @@ public static class DataKinds
     /// </remarks>
     public const string WorkspaceOff =
         "The workspace of this lambda is switched off, so it cannot keep files. Its owner can switch it on under Data in the editor (PUT /api/v1/lambdas/{privateKey}/data/workspace).";
+
+    /// <summary>
+    /// What a lambda that reads a secret, or whoever tries to store one, is
+    /// told while its secrets are switched off.
+    /// </summary>
+    public const string SecretsOff =
+        "The secrets of this lambda are switched off, so it has none to read. Switch them on under Data in the editor, with enable_data (MCP) or with PUT /api/v1/lambdas/{privateKey}/data/secrets, and store the value there.";
 
 }

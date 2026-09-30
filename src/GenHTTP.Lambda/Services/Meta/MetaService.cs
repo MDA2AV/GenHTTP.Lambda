@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
@@ -54,6 +55,8 @@ public sealed class MetaService : IMetaService
 
     private DomainRegistry Domains { get; }
 
+    private SecretVault Secrets { get; }
+
     private ILogger Logger { get; }
 
     #endregion
@@ -61,9 +64,10 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaTelemetry activity, LambdaOptions options, LogBook book, DomainRegistry domains, ILogger<MetaService> logger)
+        LambdaTelemetry activity, LambdaOptions options, LogBook book, DomainRegistry domains, SecretVault secrets, ILogger<MetaService> logger)
     {
         Domains = domains;
+        Secrets = secrets;
         Databases = databases;
         Storage = storage;
         Deployments = deployments;
@@ -1187,11 +1191,15 @@ public sealed class MetaService : IMetaService
 
         await database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
 
+        await database.Secrets.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+
         await database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
 
         database.Lambdas.Remove(lambda);
 
         await database.SaveChangesAsync(cancellation);
+
+        Secrets.Invalidate(lambda.Id);
 
         if (lambda.Domain != null)
         {

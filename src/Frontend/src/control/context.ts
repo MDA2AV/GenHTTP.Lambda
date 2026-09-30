@@ -31,8 +31,11 @@ export interface Control {
   browse: (version?: number) => void;
   /** The agent changing this lambda, followed wherever the owner is. */
   agent: AgentControl;
-  /** Opens the data of the lambda, which no version holds. */
-  openData: () => void;
+  /**
+   * Opens the data of the lambda, which no version holds - at one kind of
+   * it, and with the dialog that sets the secret named, if one is.
+   */
+  openData: (kind?: string, set?: string) => void;
   /**
    * Asks for a new feature, starting from a version - the newest when none is
    * named - and holding the files given instead of that version's, if any.
