@@ -239,6 +239,19 @@ public sealed class DemoBehaviourTests
 
         Assert.HasCount(1, lines, "the counts arrive as the first message, as JSON");
         Assert.Contains("\"total\":1", lines[0]);
+
+        // then how many are watching, under an event type of its own - which
+        // is what the page listens for, so without the type it never shows
+        while (await reader.ReadLineAsync(timeout.Token) is { } line)
+        {
+            if (line == "event: watchers")
+            {
+                Assert.AreEqual("data: 1", await reader.ReadLineAsync(timeout.Token));
+                return;
+            }
+        }
+
+        Assert.Fail("the number of watchers did not arrive as an event of its own");
     }
 
     [TestMethod]

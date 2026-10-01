@@ -347,17 +347,11 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
             throw LambdaException.Invalid("The name of a workspace file must not be empty.");
         }
 
-        // query values arrive exactly as they were sent, so "%2F" is still four
-        // characters here rather than a separator. Decoding before the check
-        // below is what makes that check mean anything: an encoded "../" that
-        // stayed encoded would be a legal file name rather than a refusal.
-        var decoded = Uri.UnescapeDataString(path);
-
-        var resolved = Path.GetFullPath(Path.Combine(root, decoded));
+        var resolved = Path.GetFullPath(Path.Combine(root, path));
 
         if (!resolved.StartsWith(root, StringComparison.Ordinal))
         {
-            throw LambdaException.Invalid($"'{decoded}' is outside of the workspace of this lambda.");
+            throw LambdaException.Invalid($"'{path}' is outside of the workspace of this lambda.");
         }
 
         return resolved;

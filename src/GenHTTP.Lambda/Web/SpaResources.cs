@@ -88,7 +88,6 @@ public sealed class SpaResources
         // one from a server that answers a range with the whole file
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .Add(RangeSupport.Create())
-                                    .Add(new JpegTypeConcernBuilder())
                                     .Add(new SiteMetaConcernBuilder(Meta, Prerender, Sources, ReadIndexAsync))
                                     .Add(CacheControl.NoCache());
     }

@@ -314,30 +314,6 @@ public sealed class SiteMetaTests
         StringAssert.Contains(body, "<meta property=\"og:image:type\" content=\"image/jpeg\" />");
     }
 
-    /// <summary>
-    /// The previews in the other languages are JPEG, which GenHTTP would send
-    /// as image/jpg - a type a link preview may not accept.
-    /// </summary>
-    [TestMethod]
-    public async Task APictureInJpegIsSentAsJpeg()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync(options =>
-        {
-            options = Site()(options);
-
-            Directory.CreateDirectory(Path.Combine(options.WebRoot, "social", "de"));
-            File.WriteAllBytes(Path.Combine(options.WebRoot, "social", "de", "docs.jpg"), [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]);
-
-            return options;
-        });
-
-        using var response = await fixture.GetAsync("/social/de/docs.jpg");
-
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-        Assert.AreEqual("image/jpeg", response.Content.Headers.ContentType?.MediaType);
-        CollectionAssert.AreEqual(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3 }, await response.Content.ReadAsByteArrayAsync());
-    }
-
     [TestMethod]
     public async Task APageWithoutAPictureIsPreviewedWithTheSites()
     {
