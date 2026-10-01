@@ -1,9 +1,9 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  title: 'Fikirden web sitesine.',
+  title: 'Yapay zekâ ile web sitesi yapın.',
   intro:
-    'Aklınızdaki web sitesini veya uygulamayı anlatın. Yapay zekâ sizin için oluşturur, biz kendi sunucularımızda barındırırız ve siteniz, herkese gönderebileceğiniz bir linkle hemen yayına girer. Kodlama yok, hosting kurulumu yok, hesap yok.',
+    'Aklınızdaki web sitesini veya uygulamayı kendi cümlelerinizle anlatın. Yapay zekâ sizin için yapar, biz barındırırız ve siteniz dakikalar içinde, herkese gönderebileceğiniz bir linkle yayında olur. Ücretsiz; kod bilmenize ya da üye olmanıza gerek yok.',
   placeholder: 'Şöyle bir web sitesi istiyorum…',
   working: 'çalışıyor…',
   shortcut: 'ctrl + enter',
@@ -17,10 +17,11 @@ export const build: Messages['build'] = {
     'Burada yeni web siteleri oluşturulur. Mevcut bir siteyi değiştirmek için editör linkini açın ve “Değiştir” bölümünde neyin farklı olması gerektiğini anlatın.',
   ideas: [
     'üyelerin etkinliklere kaydolabildiği bir kulüp sitesi',
+    'kimse aynı yemeği getirmesin diye bir piknik listesi',
     'düğünümüz için bir anı defteri',
     'insanların oy verip sonuçları gördüğü bir anket',
     'haftalık bilgi yarışması gecemiz için bir skor tablosu',
-    'herkesin görebileceği, açılışımıza geri sayım',
+    'arkadaşların iyi dileklerini yazdığı bir doğum günü sayfası',
   ],
   ahead: (waiting) =>
     waiting === 1 ? 'Sizinkinden önce bir web sitesi var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} web sitesi var.`,
@@ -28,17 +29,45 @@ export const build: Messages['build'] = {
 
   points: [
     {
-      title: 'Anlatılır, kodlanmaz',
-      text: 'Web sitenizin ne yapması gerektiğini kendi cümlelerinizle söyleyin. Kodlama ya da teknik bilgi gerekmez.',
+      title: 'Kod bilmenize gerek yok',
+      text: 'Web sitenizin ne yapması gerektiğini, bir arkadaşınıza anlatır gibi kendi cümlelerinizle söyleyin. Yapay zekâ sizin için yapar; teknik bilgi gerekmez.',
     },
     {
-      title: 'Hosting dahil',
-      text: 'Web siteniz bizim sunucularımızda çalışır. Hosting, güvenlik ve güncellemelerle biz ilgileniriz; kurmanız ya da takip etmeniz gereken bir şey yoktur.',
+      title: 'Ücretsiz hosting dahil',
+      text: 'Web siteniz bizim sunucularımızda çalışır. Hosting paketi, sunucu ya da domain satın almanız, bir şey kurmanız gerekmez; güvenlik ve güncellemelerle biz ilgileniriz.',
     },
     {
       title: 'Dakikalar içinde yayında',
-      text: 'Paylaşabileceğiniz linki hemen alırsınız. Site kayıtları, oyları ve skorları da hatırlayabilir; böylece herkes aynı şeyi görür.',
+      text: 'Paylaşabileceğiniz linki hemen alırsınız. Site, insanların girdiklerini hatırlar: kayıtlar, oylar, mesajlar, skorlar. Böylece herkes aynı şeyi görür.',
     },
+  ],
+
+  questionsTitle: 'Başlamadan önce',
+  questions: (offline, removed) => [
+    [
+      'Yapay zekâ ile gerçekten ücretsiz web sitesi yapılabilir mi?',
+      `Evet. Kendi cümlelerinizle anlatın; yapay zekâ siteyi yapar, yayına alır ve linkini size verir. Üyelik yok, kredi kartı yok, deneme süresi yok. Site, insanlar kullandığı sürece yayında kalır: ${offline} gün boyunca ziyaret veya değişiklik olmazsa yayından kaldırılır, ${removed} gün sonra da silinir.`,
+    ],
+    [
+      'Hosting, sunucu ya da domain gerekir mi?',
+      'Hayır. Web siteniz bizim sunucularımızda çalışır; hosting, güvenlik ve güncellemeler dahildir. Linkinizi hemen alırsınız, yani domain satın almanız da gerekmez.',
+    ],
+    [
+      'Kod bilmeden uygulama yapabilir miyim?',
+      'Evet. Hiç kod görmezsiniz. Ne yapması gerektiğini bir arkadaşınıza anlatır gibi söyleyin, gerisini yapay zekâ halleder: bir web sitesi, küçük bir uygulama ya da bir oyun.',
+    ],
+    [
+      'İnsanlar bir şeyler girebilir mi? Kayıt, oy, mesaj?',
+      'Evet. Web siteniz insanların girdiklerini hatırlar; linki açan herkes aynı kayıtları, oyları ve skorları görür.',
+    ],
+    [
+      'Başkaları siteyi nasıl açar?',
+      'Linkle; herhangi bir tarayıcıda, telefonda ya da bilgisayarda. Kurulacak bir şey yoktur, arada bir uygulama mağazası da yoktur.',
+    ],
+    [
+      'Sonradan nasıl değiştiririm?',
+      'Web sitenizle birlikte aldığınız editör linkini açın ve burada olduğu gibi neyin farklı olması gerektiğini anlatın. Bir değişikliği beğenmezseniz sitenin önceki hâline dönebilirsiniz.',
+    ],
   ],
 
   yourApp: 'Web siteniz',

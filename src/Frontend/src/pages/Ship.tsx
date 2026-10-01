@@ -43,7 +43,11 @@ export function Ship() {
       <section className="relative z-10 -mt-[3.75rem] px-5 pb-20 pt-[calc(3.75rem+2.5rem)] sm:px-6 lg:flex lg:min-h-[92vh] lg:items-center lg:pb-24">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
           <div>
-            <h1 className="rise text-[2.6rem] font-bold leading-[1.02] tracking-tight sm:text-6xl">
+            <p className="rise text-balance text-xs font-medium uppercase tracking-[0.2em] text-accent-600 dark:text-accent-400">
+              {said.eyebrow}
+            </p>
+
+            <h1 className="rise mt-4 text-[2.6rem] font-bold leading-[1.02] tracking-tight sm:text-6xl">
               {said.title}
             </h1>
 

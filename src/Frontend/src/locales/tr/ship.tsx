@@ -1,23 +1,24 @@
 import type { Messages } from '../en';
 
 export const ship: Messages['ship'] = {
-  title: 'Laptopunuzdan herkesin ekranına.',
+  eyebrow: 'Vibe coding için ücretsiz hosting',
+  title: 'Localhost’tan herkesin ekranına.',
   intro:
-    'Kodlama ajanınızla bir şey yaptınız ama yalnızca sizin bilgisayarınızda çalışıyor. Ajanınızdan onu burada yayınlamasını isteyin. Birkaç dakika sonra herkesin açabileceği bir linki olur. Üstelik bir şeyleri hatırlayabilir, yani insanlar orada birlikte oynayabilir, sohbet edebilir, paylaşım yapabilir.',
-  facts: ['Ücretsiz', 'Hesap yok', 'Kurulum yok'],
+    'Claude Code, Codex ya da Cursor ile bir uygulama yaptınız ama yalnızca sizin bilgisayarınızda çalışıyor. Ajanınızdan onu burada yayınlamasını isteyin. Birkaç dakika sonra herkesin açabileceği bir linki, kendi veritabanı ve onu açmış herkesle canlı bir bağlantısı olur. Böylece insanlar orada birlikte oynayabilir, sohbet edebilir, paylaşım yapabilir.',
+  facts: ['Ücretsiz', 'Üyelik yok', 'Kredi kartı yok', 'Kurulum yok'],
   connect: 'Ajanınızı bağlayın',
   seeOthers: 'Başkalarının yayınladıklarına bakın',
 
-  stepsTitle: 'Üç adım, biri de tek bir cümle',
+  stepsTitle: 'Localhost’taki uygulamanızı üç adımda yayınlayın',
   step: (n) => `Adım ${n}`,
   steps: [
     {
       title: 'Bir kez bağlayın',
-      body: 'Claude, Cursor ya da hangi ajanla çalışıyorsanız, ona tek bir adres ekleyin. Bir dakikadan kısa sürer ve yalnızca bir kez yaparsınız.',
+      body: 'Claude Code, Codex, Cursor ya da hangi ajanla çalışıyorsanız, ona tek bir adres ekleyin: bir uzak MCP sunucusu. Bir dakikadan kısa sürer ve yalnızca bir kez yaparsınız.',
     },
     {
       title: 'Yayınlamasını isteyin',
-      body: 'Ajanınıza uygulamayı burada yayınlamasını söyleyin. Ajan uygulamanızı paketler, yayınlar ve yanıt verip vermediğini kontrol eder.',
+      body: 'Ajanınıza uygulamayı burada yayınlamasını söyleyin. Ajan uygulamanızı paketler, yayınlar ve yanıt verip vermediğini kontrol eder. GitHub reposu, deploy pipeline’ı ya da Docker gerekmez.',
     },
     {
       title: 'Linki paylaşın',
@@ -25,23 +26,23 @@ export const ship: Messages['ship'] = {
     },
   ],
 
-  togetherTitle: 'Sadece bir sayfa değil. İnsanların buluştuğu bir yer.',
+  togetherTitle: 'Sadece hosting değil. Veritabanı ve çok oyunculu mod dahil.',
   together:
-    'Çoğu barındırma hizmeti her ziyaretçiye uygulamanın ayrı bir kopyasını verir ve herkes tek başına oynar. Burada her uygulamanın kendi hafızası ve onu açmış herkesle canlı bir bağlantısı var. Birinin yaptığı hamle diğerlerinin ekranında anında görünür. Paylaşılanlar da ertesi gün hâlâ orada olur.',
+    'Çoğu hosting hizmeti her ziyaretçiye uygulamanın ayrı bir kopyasını verir ve herkes tek başına oynar: bir tarayıcının localStorage’da tuttuğunu bir sonraki hiç görmez. Burada her uygulamanın kendi veritabanı ve onu açmış herkesle canlı bir bağlantısı var. Birinin yaptığı hamle diğerlerinin ekranında anında görünür. Paylaşılanlar da ertesi gün hâlâ orada olur.',
   together2:
-    'Üye olmanız gereken bir veritabanı yok, bağlamanız gereken ikinci bir servis yok. Bir arkadaşınıza anlatır gibi isteyin.',
+    'Üye olmanız gereken bir Supabase ya da Firebase yok, bağlamanız gereken bir backend yok, kiralamanız gereken bir sunucu yok. Bir arkadaşınıza anlatır gibi isteyin.',
   kinds: [
     { name: 'Çok oyunculu oyunlar', ask: 'En fazla sekiz arkadaş aynı tura katılabilsin ve birbirinin hamlelerini canlı görsün.' },
     { name: 'Sohbet odaları', ask: 'Linki olan herkesin konuşabileceği bir oda ekle, son yüz mesajı da sakla.' },
     { name: 'Ortak listeler', ask: 'Eşya listesini tüm ekip aynı anda düzenleyebilsin.' },
-    { name: 'Skorlar ve rekorlar', ask: 'Herkesin en iyi süresini tutan bir skor tablosu yap, ilk onu da başlangıç ekranında göster.' },
+    { name: 'Skor tabloları', ask: 'Herkesin en iyi süresini tutan bir skor tablosu yap, ilk onu da başlangıç ekranında göster.' },
     { name: 'Küçük sosyal ağlar', ask: 'Düğün misafirleri aynı duvara fotoğraf yükleyip birbirininkileri beğenebilsin.' },
   ],
   quote: (text) => `“${text}”`,
 
-  connectTitle: 'Ajanınızı bir kez bağlayın',
+  connectTitle: 'Claude Code, Codex ya da Cursor’ı bir kez bağlayın',
   connectText:
-    'Ajanınıza bu adresi verin. Bundan sonra burada nasıl yayınlayacağını bilir. Anahtar ya da giriş gerekmez.',
+    'Ajanınıza MCP sunucumuzun bu adresini verin. Bundan sonra burada nasıl yayınlayacağını bilir. Anahtar ya da giriş gerekmez.',
   sayLike: 'Sonra projenizde şuna benzer bir şey söyleyin',
   asks: [
     'Bu uygulamayı GenHTTP Lambda’da yayınla ve linki bana gönder.',
@@ -49,20 +50,36 @@ export const ship: Messages['ship'] = {
   ],
 
   domainChip: 'Uygulamanız tutunca',
-  domainTitle: 'Kendine ait bir adı olsun',
+  domainTitle: 'Kendine ait bir alan adı olsun',
   domainText:
     'Aynı uygulama, aynı editör linki. Ama bu kez size ait bir adreste. Söylemesi de akılda tutması da daha kolay. İnsanlar paylaşmaya başladığında da daha profesyonel durur.',
   domainSubject: 'Uygulamam için alan adı',
   domainAsk: 'Alan adı için bize yazın',
 
-  questionsTitle: 'Sormadan önce',
+  questionsTitle: 'Yayınlamadan önce',
   questions: (offline, removed, showcase, terms) => [
     [
       'Gerçekten ücretsiz mi?',
       <>
-        Evet. Kart yok, deneme süresi yok, hesap yok. Uygulamanız insanlar kullandığı sürece yayında kalır. Tek bir ziyaret ya
-        da değişiklik olmadan {offline} gün geçerse yayından kalkar, {removed} gün geçerse silinir.
+        Evet. Üyelik yok, kredi kartı yok, deneme süresi yok. Uygulamanız insanlar kullandığı sürece yayında kalır. Tek bir
+        ziyaret ya da değişiklik olmadan {offline} gün geçerse yayından kalkar, {removed} gün geçerse silinir.
       </>,
+    ],
+    [
+      'Claude Code, Codex ya da Cursor uygulamamı burada yayınlayabilir mi?',
+      'Evet; uzak MCP sunucusu ekleyebilen her ajan yayınlayabilir. Yukarıdaki adresle bir kez bağlayın, sonra yayınlamasını isteyin: ajan uygulamayı yayınlar, yanıt verip vermediğini kontrol eder ve linki size gönderir.',
+    ],
+    [
+      'Arkadaşlarım localhost linkimi neden açamıyor?',
+      'Çünkü localhost sizin kendi bilgisayarınızdır: adres yalnızca orada ve yalnızca uygulama çalışırken işe yarar. Bir tünel, laptopunuz açık kaldığı sürece ona herkese açık bir adres ödünç verir. Burada yayınlanan uygulama ise bizim sunucularımızda çalışır; linki, laptopunuz kapalıyken de açılır.',
+    ],
+    [
+      'Sunucu, backend ya da Supabase gerekir mi?',
+      'Hayır. Her uygulamanın kendi veritabanı, dosya depolama alanı ve onu açmış herkesle canlı bir bağlantısı vardır. Kiralanacak bir sunucu ya da kurulacak ikinci bir servis yoktur; sizin tarafınızda çalışır halde tutmanız gereken bir şey de yoktur.',
+    ],
+    [
+      'Oyunumu sunucu çalıştırmadan çok oyunculu yapabilir miyim?',
+      'Evet. Bir tarayıcının localStorage’da tuttuğunu bir sonraki hiç görmez; bu yüzden ortak kısmın bir sunucuda durması gerekir. Burada o sunucu bizim. Ajanınızdan oyunu çok oyunculu yapmasını isteyin; her hamle, oyunu açmış herkese ulaşır.',
     ],
     [
       'Uygulamamın belli bir şekilde yapılmış olması gerekiyor mu?',
@@ -71,6 +88,14 @@ export const ship: Messages['ship'] = {
     [
       'Sonradan nasıl değiştiririm?',
       'Yayınlandığında aldığınız editör linkiyle. Bir sonraki değişiklikle birlikte ajanınıza verin ya da tarayıcınızda açın. Her değişiklik aynı adreste yeni bir sürüm olur. İstediğiniz zaman eski bir sürüme dönebilirsiniz.',
+    ],
+    [
+      'API anahtarlarım nereye gider?',
+      'Koda değil. Ajanınız anahtarı adıyla ister, değerini siz editöre yazarsınız. Kimse onu geri okuyamaz; ne editör ne de ajan.',
+    ],
+    [
+      'Kodumu alıp götürebilir miyim?',
+      'Evet, kod sizin. İstediğiniz zaman editörden, kendi başına çalışan bir proje olarak indirin; veritabanı da dahil.',
     ],
     [
       'Uygulamamı kimler görebilir?',
@@ -88,7 +113,7 @@ export const ship: Messages['ship'] = {
   closeTitle: 'Sizin bilgisayarınızda çalışıyor.',
   closeAccent: 'Şimdi herkesinkinde çalışsın.',
   noAgent: 'Ajanınız yok mu? Burada oluşturun',
-  closeFacts: 'Ücretsiz. Hesap yok. Kurulum yok.',
+  closeFacts: 'Ücretsiz. Üyelik yok. Kurulum yok.',
 
   scene: {
     label:
@@ -109,7 +134,7 @@ export const ship: Messages['ship'] = {
   rows: [
     'Hesap açmadan başlamak',
     'Zaten kullandığınız ajandan yayınlamak',
-    'Canlı ortak veri: sohbet, çok oyunculu, rekorlar',
+    'Veritabanı ve canlı veri: sohbet, çok oyunculu, rekorlar',
     'İlk linkin maliyeti',
   ],
   us: ['Evet', 'Bir kez bağlayın, sonra isteyin', 'Her uygulamada hazır', 'Ücretsiz'],

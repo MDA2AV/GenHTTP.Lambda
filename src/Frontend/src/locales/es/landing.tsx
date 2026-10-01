@@ -1,14 +1,14 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Programación con agentes de IA',
+  eyebrow: 'Creador de apps con IA, hosting incluido',
   headline: 'Describe una app.',
   headlineAccent: 'Tu agente la publica.',
   intro:
-    'Encuestas, libros de visitas, rankings, pequeñas tiendas. Cuéntale lo que necesitas a nuestro agente o al que ya usas. Recibes una app que funciona y un enlace para compartirla. Y puedes seguir puliéndola mucho después de la primera versión.',
+    'Encuestas, libros de visitas, rankings, juegos multijugador. Cuéntale lo que necesitas a nuestro agente de IA o al que ya usas. Recibes una app que funciona, ya alojada, con un enlace para compartirla. Y puedes seguir puliéndola mucho después de la primera versión.',
   build: 'Crea tu app',
   ownAgent: 'Usa tu propio agente',
-  free: 'Gratis. Sin cuenta y sin instalar nada.',
+  free: 'Gratis. Sin registro, sin tarjeta y sin instalar nada.',
   seeIt: 'Míralo en acción',
 
   videoTitle: 'De una frase a una app en línea',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
   videoNote: 'La creación se muestra acelerada. Todo lo demás, en tiempo real.',
   tryIt: 'Pruébalo tú',
 
-  oneShotTitle: 'No se queda en la primera versión',
+  oneShotTitle: 'No es un generador de apps desechables',
   oneShotText:
     'La mayoría de los generadores te dan un resultado y ahí te dejan. Aquí la app sigue funcionando donde se creó, así que tú y tu agente pueden seguir trabajando en ella.',
   steps: [
@@ -28,7 +28,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Recibe tu app y un enlace',
-      body: 'La app se crea, se despliega y te llega como una dirección pública para compartir. Guarda sus datos (votos, puntuaciones, mensajes), así que todos los que la abren ven lo mismo.',
+      body: 'La app se crea, se aloja y te llega como una dirección pública para compartir. Sin servidor, plan de hosting, dominio ni base de datos que configurar: de eso nos encargamos nosotros. Guarda sus datos (votos, puntuaciones, mensajes), así que todos los que la abren ven lo mismo.',
       alt: 'La encuesta del almuerzo terminada, abierta en un navegador',
     },
     {
@@ -43,11 +43,14 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Listo. La versión 4 ya está en línea en la misma dirección, y la 3 sigue disponible si quieres volver atrás.',
 
-  agentsTitle: 'Usa tu agente favorito',
+  agentsTitle: 'Usa tu propio agente: Claude, Codex, Cursor',
   agentsText:
-    '¿Ya trabajas con Claude u otro asistente? Conéctalo a esta dirección y podrá crear, desplegar y actualizar apps aquí, directamente desde la conversación que ya tienes abierta.',
+    '¿Ya haces vibe coding con Claude Code, Codex, Cursor u otro asistente? Conéctalo a esta dirección (un servidor MCP remoto, sin clave) y podrá crear, desplegar y actualizar apps aquí, directamente desde la conversación que ya tienes abierta.',
   thenAsk: (em) => (
     <>Después, solo pídele: {em('crea una lista de inscripción para el evento del equipo y publícala')}.</>
+  ),
+  hostIt: (link) => (
+    <>¿Tu app solo funciona en localhost? {link('Súbela a internet aquí')}.</>
   ),
 
   contactTitle: 'Hablemos',

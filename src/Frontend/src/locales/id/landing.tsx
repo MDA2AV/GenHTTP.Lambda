@@ -1,14 +1,14 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Platform agentic coding',
+  eyebrow: 'AI pembuat aplikasi + hosting',
   headline: 'Ceritakan ide aplikasi Anda.',
   headlineAccent: 'Agen Anda yang membuatnya online.',
   intro:
-    'Polling, buku tamu, papan peringkat, toko kecil. Ceritakan yang Anda butuhkan ke agen kami atau ke agen yang sudah Anda pakai. Hasilnya: aplikasi yang langsung jalan, lengkap dengan link untuk dibagikan. Aplikasinya tetap bisa diubah, jadi versi pertama barulah permulaan.',
+    'Polling, buku tamu, papan peringkat, game multiplayer. Ceritakan yang Anda butuhkan ke agen AI kami atau ke agen yang sudah Anda pakai. Hasilnya: aplikasi yang langsung jalan dan di-hosting oleh kami, lengkap dengan link untuk dibagikan. Aplikasinya tetap bisa diubah, jadi versi pertama barulah permulaan.',
   build: 'Buat aplikasi',
   ownAgent: 'Pakai agen Anda sendiri',
-  free: 'Gratis. Tanpa akun, tanpa instalasi.',
+  free: 'Gratis. Tanpa daftar, tanpa kartu kredit, tanpa instalasi.',
   seeIt: 'Lihat cara kerjanya',
 
   videoTitle: 'Dari satu kalimat jadi aplikasi online',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
   videoNote: 'Bagian build dipercepat. Sisanya real-time.',
   tryIt: 'Coba sendiri',
 
-  oneShotTitle: 'Bukan sekali pakai',
+  oneShotTitle: 'Bukan generator aplikasi sekali pakai',
   oneShotText:
     'Kebanyakan generator memberi hasil, lalu Anda ditinggal begitu saja. Di sini, aplikasinya tetap berjalan di tempat ia dibuat, jadi Anda dan agen Anda bisa terus mengembangkannya.',
   steps: [
@@ -28,7 +28,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Dapatkan aplikasi jadi dan link-nya',
-      body: 'Aplikasinya dibuat dan di-deploy, lalu Anda dapat alamat publik untuk dibagikan. Datanya tetap tersimpan (vote, skor, pesan), jadi semua orang yang membukanya melihat data yang sama.',
+      body: 'Aplikasinya dibuat dan di-hosting, lalu Anda dapat alamat publik untuk dibagikan. Tidak perlu menyiapkan server, paket hosting, domain, atau database, karena bagian itu kami yang urus. Datanya tetap tersimpan (vote, skor, pesan), jadi semua orang yang membukanya melihat data yang sama.',
       alt: 'Polling makan siang yang sudah jadi, terbuka di browser',
     },
     {
@@ -43,11 +43,14 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Beres. Versi 4 sudah online di alamat yang sama. Versi 3 masih ada kalau Anda mau kembali.',
 
-  agentsTitle: 'Bawa agen favorit Anda',
+  agentsTitle: 'Bawa agen Anda sendiri: Claude, Codex, Cursor',
   agentsText:
-    'Sudah pakai Claude atau asisten lain? Hubungkan ke alamat ini, lalu agen Anda bisa membuat, men-deploy, dan memperbarui aplikasi di sini. Langsung dari percakapan yang sedang Anda buka.',
+    'Sudah vibe coding dengan Claude Code, Codex, Cursor, atau asisten lain? Hubungkan ke alamat ini (MCP server remote, tanpa API key), lalu agen Anda bisa membuat, men-deploy, dan memperbarui aplikasi di sini. Langsung dari percakapan yang sedang Anda buka.',
   thenAsk: (em) => (
     <>Lalu tinggal minta: {em('buatkan form pendaftaran online untuk acara tim kami')}.</>
+  ),
+  hostIt: (link) => (
+    <>Aplikasi Anda baru jalan di localhost? {link('Deploy aplikasi hasil vibe coding Anda di sini')}.</>
   ),
 
   contactTitle: 'Hubungi kami',

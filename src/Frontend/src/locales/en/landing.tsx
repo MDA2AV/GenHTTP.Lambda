@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 
 export const landing = {
-  eyebrow: 'An agentic coding platform',
+  eyebrow: 'AI app builder with free hosting',
   headline: 'Describe an app.',
   headlineAccent: 'Your agent puts it online.',
   intro:
-    'Polls, guestbooks, leaderboards, small shops. Describe what you need to our agent or to the one you already use, and receive a working app with a shareable link. Your app stays editable, so you can keep refining it long after the first version.',
+    'Polls, guestbooks, leaderboards, multiplayer games. Describe what you need to our AI agent or to the one you already use, and get a working app, hosted for you, with a link to share. It stays editable, so you can keep refining it long after the first version.',
   build: 'Build something',
   ownAgent: 'Use your own agent',
-  free: 'Free to use. No account, nothing to install.',
+  free: 'Free. No sign-up, no credit card, nothing to install.',
   seeIt: 'See it in action',
 
   videoTitle: 'From a sentence to a live app',
@@ -17,7 +17,7 @@ export const landing = {
   videoNote: 'The build is shown sped up. Everything else is in real time.',
   tryIt: 'Try it yourself',
 
-  oneShotTitle: 'Not a one-shot',
+  oneShotTitle: 'Not a one-shot app generator',
   oneShotText:
     'Most generators produce a result and leave you with it. Here the app keeps running where it was built, so you and your agent can continue working on it.',
   /** How one app goes, from the sentence to the third change. */
@@ -29,7 +29,7 @@ export const landing = {
     },
     {
       title: 'Get a working app and a link',
-      body: 'The app is built, deployed and returned as a public address you can share. It keeps its data - votes, scores, messages - so everyone who opens it sees the same state.',
+      body: 'The app is built, hosted and returned as a public address you can share. No server, hosting plan, domain or database to set up - that part is ours. It keeps its data - votes, scores, messages - so everyone who opens it sees the same state.',
       alt: 'The finished lunch poll, open in a browser',
     },
     {
@@ -44,11 +44,15 @@ export const landing = {
   weekAnswer:
     'Done. Version 4 is live at the same address, and version 3 is still available if you want to roll back.',
 
-  agentsTitle: 'Bring your favourite agent',
+  agentsTitle: 'Bring your own agent: Claude, Codex, Cursor',
   agentsText:
-    'Already working with Claude or another assistant? Connect it to this address and it can build, deploy and update apps here - directly from the conversation you already have open.',
+    'Already vibe coding with Claude Code, Codex, Cursor or another assistant? Connect it to this address - a remote MCP server, no key needed - and it can build, deploy and update apps here, straight from the conversation you already have open.',
   thenAsk: (em: (text: string) => ReactNode) => (
     <>Then simply ask: {em('build a sign-up sheet for our team event and put it online')}.</>
+  ),
+  /** Under the agents, for whoever has the app already and only needs it online. */
+  hostIt: (link: (text: string) => ReactNode) => (
+    <>Built something that only runs on localhost? {link('Host your vibe-coded app here')}.</>
   ),
 
   contactTitle: 'Talk to us',

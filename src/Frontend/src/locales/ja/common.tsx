@@ -2,7 +2,7 @@ import type { Messages } from '../en';
 
 export const shell: Messages['shell'] = {
   main: 'メインメニュー',
-  build: 'サイトを作る',
+  build: 'ホームページ作成',
   ship: '公開する',
   showcase: 'ショーケース',
   enterprise: 'エンタープライズ',

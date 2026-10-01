@@ -1,14 +1,14 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Plateforme de codage agentique',
+  eyebrow: 'Créateur d’apps IA, hébergement compris',
   headline: 'Décrivez une app.',
   headlineAccent: 'Votre agent la met en ligne.',
   intro:
-    'Sondages, livres d’or, classements, petites boutiques. Décrivez ce qu’il vous faut à notre agent, ou à celui que vous utilisez déjà. Vous recevez une app qui marche, avec un lien à partager. Et elle reste modifiable : vous pourrez la peaufiner bien après la première version.',
+    'Sondages, livres d’or, classements, jeux multijoueurs. Décrivez ce qu’il vous faut à notre agent IA, ou à celui que vous utilisez déjà. Vous recevez une app qui marche, hébergée pour vous, avec un lien à partager. Et elle reste modifiable : vous pourrez la peaufiner bien après la première version.',
   build: 'Créer une app',
   ownAgent: 'Utiliser votre agent',
-  free: 'Gratuit. Sans compte, rien à installer.',
+  free: 'Gratuit. Sans inscription, sans carte bancaire, rien à installer.',
   seeIt: 'Voir la démo',
 
   videoTitle: 'D’une phrase à une app en ligne',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
   videoNote: 'La création est accélérée. Tout le reste est en temps réel.',
   tryIt: 'À vous de jouer',
 
-  oneShotTitle: 'Pas du jetable',
+  oneShotTitle: 'Pas un générateur d’apps jetables',
   oneShotText:
     'La plupart des générateurs vous livrent un résultat, et c’est tout. Ici, l’app continue de tourner là où elle a été créée, et vous pouvez la faire évoluer avec votre agent.',
   steps: [
@@ -28,7 +28,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Recevez une app et un lien',
-      body: 'L’app est créée, déployée, et vous recevez une adresse publique à partager. Elle garde ses données (votes, scores, messages) : tous ceux qui l’ouvrent voient la même chose.',
+      body: 'L’app est créée, hébergée, et vous recevez une adresse publique à partager. Serveur, hébergeur, nom de domaine, base de données : rien à configurer, nous nous en chargeons. Elle garde ses données (votes, scores, messages), et tous ceux qui l’ouvrent voient la même chose.',
       alt: 'Le sondage terminé, ouvert dans un navigateur',
     },
     {
@@ -43,13 +43,16 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'C’est fait. La version 4 est en ligne, à la même adresse. La version 3 est toujours là si vous voulez revenir en arrière.',
 
-  agentsTitle: 'Branchez votre agent préféré',
+  agentsTitle: 'Branchez votre agent : Claude, Codex, Cursor',
   agentsText:
-    'Vous utilisez déjà Claude ou un autre assistant ? Connectez-le à cette adresse. Il pourra créer, déployer et modifier des apps ici, sans quitter la conversation en cours.',
+    'Vous faites déjà du vibe coding avec Claude Code, Codex, Cursor ou un autre assistant ? Connectez-le à cette adresse (un serveur MCP distant, sans clé) : il pourra créer, déployer et modifier des apps ici, sans quitter la conversation en cours.',
   thenAsk: (em) => (
     <>
       Ensuite, il suffit de demander : {em('fais une liste d’inscription pour notre sortie d’équipe et mets-la en ligne')}.
     </>
+  ),
+  hostIt: (link) => (
+    <>Votre app ne tourne que sur localhost ? {link('Mettez-la en ligne ici')}.</>
   ),
 
   contactTitle: 'Parlons-en',

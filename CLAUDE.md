@@ -87,6 +87,30 @@ Give both a good experience. Concretely:
   `PATCH`). The build agent creates `Simple` lambdas, everything else `Full`.
   Whoever switches views has chosen for themselves, in their browser.
 
+### The words each page is found by
+
+The public pages are written in the words people type into a search engine -
+checked against what Google suggests in each language, not guessed - and each
+page has words of its own, so they do not compete:
+
+- `/` - an **AI app builder with free hosting**, for both groups. "Agentic
+  coding" is searched by developers choosing a coding agent, so it stays out
+  of the title.
+- `/build` - **create a website with AI**, free, **no sign-up**, in the word
+  each language uses for a website (ホームページ, 홈페이지, página web …);
+  searches for an "app" mostly mean a phone app.
+- `/ship` - **host a vibe-coded app**, publish it from Claude Code, Codex or
+  Cursor, from **localhost**, with a database and multiplayer built in. "Ship"
+  is nobody's search word, and "publish an app" means the app stores, so the
+  verb comes with "web" or "online".
+- What nobody should need - a server, a hosting plan, a domain, a sign-up, a
+  credit card - is said as **not their concern**: "hosting included", "no
+  sign-up", and the questions people ask ("Do I need a server?") answered in
+  a folded list. Words nobody searches for (Kubernetes, devops, IDE) stay off.
+- The words go in the title and description (`pages.json`), the H1 and the
+  H2s; the rest of the copy stays as short as it was. Nothing is claimed that
+  the platform does not keep: no "unlimited", no "forever".
+
 ## Domain model
 
 ### Keys and ownership
