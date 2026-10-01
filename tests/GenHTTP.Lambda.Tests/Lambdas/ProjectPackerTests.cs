@@ -4,10 +4,13 @@ using System.Net;
 
 using GenHTTP.Api.Content;
 
+using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Tests.Infrastructure;
+
+using GenHTTP.Testing;
 
 namespace GenHTTP.Lambda.Tests.Lambdas;
 
@@ -293,6 +296,55 @@ public sealed class ProjectPackerTests
         foreach (var (demo, exit, output) in await Task.WhenAll(builds))
         {
             Assert.AreEqual(0, exit, $"The export of {demo} does not build:\n{output}");
+        }
+    }
+
+    /// <summary>
+    /// What /source hands out to download - the same project without the
+    /// database, which is data and never published - builds as well.
+    /// </summary>
+    /// <remarks>
+    /// Packed apart from the export (<see cref="ProjectPacker.Publish" />), so
+    /// what it references is decided without a database to go by: a project
+    /// that keeps its records with Entity Framework has to reference it from
+    /// its code alone.
+    /// </remarks>
+    [TestMethod]
+    public async Task EveryDemoPublishesASourceThatBuilds()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedDemosAsync();
+
+        var listing = await (await fixture.GetAsync("/api/v1/sources/?take=48")).GetContentAsync<SourceListingResponse>();
+
+        var builds = new List<Task<(string Demo, int Exit, string Output)>>();
+
+        foreach (var demo in DemoCatalog.All)
+        {
+            var entry = listing.Entries.Single(e => e.PublicKey == demo.Id);
+
+            using var answer = await fixture.GetAsync($"/api/v1/sources/{demo.Id}/versions/{entry.LatestVersion}/zip");
+
+            Assert.AreEqual(HttpStatusCode.OK, answer.StatusCode, demo.Id);
+
+            var directory = Path.Combine(fixture.Options.DataDirectory, "sources", demo.Id);
+
+            await ZipFile.ExtractToDirectoryAsync(new MemoryStream(await answer.Content.ReadAsByteArrayAsync()), directory);
+
+            var project = Directory.GetFiles(directory, "*.csproj", SearchOption.AllDirectories).Single();
+
+            Assert.IsFalse(Directory.Exists(Path.Combine(Path.GetDirectoryName(project)!, "database")), $"{demo.Id}: a published source carries no database");
+
+            // every demo keeps its records with Entity Framework, so every project needs it
+            Assert.Contains("<PackageReference Include=\"Microsoft.EntityFrameworkCore.Sqlite\"", await File.ReadAllTextAsync(project), demo.Id);
+
+            builds.Add(BuildAsync(demo.Id, Path.GetDirectoryName(project)!));
+        }
+
+        foreach (var (demo, exit, output) in await Task.WhenAll(builds))
+        {
+            Assert.AreEqual(0, exit, $"The published source of {demo} does not build:\n{output}");
         }
     }
 
