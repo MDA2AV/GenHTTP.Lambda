@@ -264,8 +264,9 @@ folder, so a zip is made of the folder's contents (`zip -r ../f.zip .`), not of
 the tool descriptions, the answers and `platform_guide`
 (`documentationAndTests`) - to read them before changing a lambda, to write
 all three pages with a new lambda, to update what a change affects in the same
-save, and to run the tests against a feature's preview before merging it.
-`read_lambda` hands them over first and apart from the program's files, within
+save, and to run the tests against a feature's preview before merging it -
+all of it in proportion to the lambda: a small one gets a few lines a page and
+one quick check, not a test suite. `read_lambda` hands them over first and apart from the program's files, within
 a budget of their own, and every save, deployment and preview that leaves a
 page out says which. Every demo has all three and a script its tests run,
 checked by a test.

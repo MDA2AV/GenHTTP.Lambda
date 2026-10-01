@@ -168,6 +168,10 @@ them first - they say what has to keep working - and keep them true in the
 same feature: a page that describes what the application no longer does
 misleads the next change more than no page at all.
 
+Keep them in proportion to the application. A small one needs a short
+paragraph per page and one quick check, not a test suite or pages of their
+own for every topic; they grow as the application does.
+
 ## Link with relative paths
 
 Every link, script, stylesheet, image, `fetch`, form action and websocket

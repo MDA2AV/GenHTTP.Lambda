@@ -385,10 +385,11 @@ public sealed class DocumentationTests
         }
 
         StringAssert.Contains(instructions, "update", "and say to keep them up to date");
+        StringAssert.Contains(instructions, "in proportion", "without a test suite for a small lambda");
 
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", []))["documentationAndTests"]!;
 
-        foreach (var part in (string[])["product", "decisions", "testing", "when", "use"])
+        foreach (var part in (string[])["product", "decisions", "testing", "howMuch", "when", "use"])
         {
             Assert.IsNotNull(guide[part], $"the guide says {part}");
         }

@@ -240,7 +240,12 @@ scripts and test data.
 - **Agents write them, humans read them** - the asymmetric interface again.
   Agents write all three with a new lambda, update what a change affects in
   the same save, read them before changing a lambda, and run the tests against
-  a feature's preview before merging. This is said the same way in the MCP
+  a feature's preview before merging.
+- **In proportion to the lambda - decided.** A small lambda gets a short
+  paragraph a page and one quick check, not a test suite, extra pages or seeded
+  test data; they grow with the app. Agents overdid it for small lambdas, so
+  this is said wherever they are told to write them. The demos have more,
+  because they teach. This is said the same way in the MCP
   instructions, the tool descriptions and answers, `platform_guide`
   (`documentationAndTests`), the build agent's brief, the guide and the README -
   keep them the same.
@@ -542,6 +547,12 @@ touches all that apply:
 4. The API description (Scalar at `/api/v1/scalar/`, from the resources).
 
 The same rule is worded the same way in all of them.
+
+The MCP instructions (`McpHandler`) are **short**: how to get from nothing to
+something online, how a lambda that exists is changed, and the rules an agent
+would otherwise break before it reads the guide (where data goes, the
+database, waiting for tasks, relative paths, secrets, documentation). The rest
+is in `platform_guide` and the tool descriptions; do not repeat it there.
 
 ## Working conventions
 
