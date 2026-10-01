@@ -57,13 +57,20 @@ public static class ModuleCatalog
 
     /// <summary>
     /// What a lambda talks to its database with - the connection
-    /// <c>Database.GetConnection()</c> hands out, and Evolve to migrate it.
+    /// <c>Database.GetConnection()</c> hands out, Entity Framework Core to
+    /// keep its records with on that connection, and Evolve to migrate it.
     /// </summary>
     /// <remarks>
     /// An exported project references their packages only where its code uses
     /// them, and imports them only then - see <see cref="IsData"/>.
     /// </remarks>
-    public static IReadOnlyList<string> Data { get; } = ["Microsoft.Data.Sqlite", "EvolveDb"];
+    public static IReadOnlyList<string> Data { get; } = [SqliteImport, EntityFrameworkImport, EvolveImport];
+
+    internal const string SqliteImport = "Microsoft.Data.Sqlite";
+
+    internal const string EntityFrameworkImport = "Microsoft.EntityFrameworkCore";
+
+    internal const string EvolveImport = "EvolveDb";
 
     /// <summary>
     /// Whether an import is one of <see cref="Data"/>.

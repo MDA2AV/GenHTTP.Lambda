@@ -306,7 +306,8 @@ export const guide: Messages['guide'] = {
     <>
       Kayıtlar (girdiler, hesaplar, siparişler, oylar) {k.b('veritabanına')} aittir: lambdanın kendine ait,{' '}
       {k.b('Veriler')} altında açılan bir SQLite veritabanı. Kod {k.code('Database.GetConnection()')} ile bir bağlantı
-      açar ve veritabanıyla SQL üzerinden konuşur:
+      açar ve tabloları eşleyen kendi bağlamıyla veritabanını{' '}
+      {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')} üzerinden okuyup yazar:
     </>
   ),
   database2: (k) => (
@@ -327,9 +328,10 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Bağlantıyı ihtiyaç duyduğunuz yerde açın, işiniz bitince kapatın ve senkron kullanın:{' '}
-      {k.code('ExecuteReaderAsync')} değil, {k.code('ExecuteReader')}. Değerler SQL’in içine değil, parametre olarak
-      girer. {k.link('/editor/demo-crud', 'demo-crud')} demosu bunların hepsini yapar.
+      Bağlamı ihtiyaç duyduğunuz yerde oluşturun, işiniz bitince serbest bırakın ve senkron kullanın:{' '}
+      {k.code('ToListAsync')} ve {k.code('SaveChangesAsync')} değil, {k.code('ToList')} ve {k.code('SaveChanges')}.
+      Tabloları migration’lar oluşturur, asla Entity Framework değil. {k.link('/editor/demo-crud', 'demo-crud')} demosu
+      bunların hepsini yapar.
     </>
   ),
 

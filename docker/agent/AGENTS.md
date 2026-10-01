@@ -126,9 +126,14 @@ What the application keeps while it runs - entries, scores, accounts - is
 data, which every version shares and no deploy, rollback or merge touches.
 Records go in the database: switch it on with `enable_data` (kind `database`),
 ship the tables as SQL migrations in `migrations/` (`V1__Create_entries.sql`)
-applied with Evolve at the top of `lambda.cs`, and read and write them with
-`Database.GetConnection()` and plain SQL with parameters, synchronously -
-`demo-crud` shows all of it. Uploaded files go in the workspace. A migration
+applied with Evolve at the top of `lambda.cs` - never Entity Framework's
+migrations, `EnsureCreated` or `Migrate`. Read and write them with Entity
+Framework Core: a `DbContext` of your own that maps those tables, on the
+connection `Database.GetConnection()` opens (`new Records(Database.GetConnection())`,
+configured with `options.UseSqlite(connection, contextOwnsConnection: true)`),
+one per request. Use it synchronously - `ToList`, `FirstOrDefault`, `Find`,
+`SaveChanges`, `ExecuteUpdate`, never their `Async` forms. `demo-crud` shows
+all of it. Uploaded files go in the workspace. A migration
 that ran is never changed: a change to a table is the next file, and it only
 adds - a column with a default, a new table - so the data already there keeps
 working. The pages, scripts and styles are the program and ship with the code

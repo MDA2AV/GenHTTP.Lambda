@@ -18,7 +18,11 @@ namespace GenHTTP.Lambda.Services.Deployment.Compilation;
 /// own - nor points one at another file, nor loads native code into one. The
 /// names that would do that are refused here, and making a connection is
 /// refused by <see cref="InspectConstruction"/>, which needs the compiler to
-/// tell what a target-typed <c>new()</c> makes.
+/// tell what a target-typed <c>new()</c> makes. Entity Framework Core works on
+/// that same connection: its public surface is there, its internals - where
+/// a context's services and options could be pointed at another file - are
+/// not, and <see cref="InspectEntityFramework"/> refuses a context configured
+/// with anything but a connection.
 /// </remarks>
 /// <remarks>
 /// This is governance, not a sandbox - the compiled code still runs in process.
@@ -120,15 +124,66 @@ public static class CodeGuard
     /// the host. The types in here that reach the host are banned by name.
     /// Microsoft.Data.Sqlite is what a lambda talks to its database with; what
     /// in it would open another database is banned by name as well.
+    ///
+    /// Entity Framework Core is the namespace a context, its sets and its
+    /// queries are written in, and the three below it that describing a
+    /// model takes: its builders, a converter for a value SQLite has no type
+    /// for, and the entries of the change tracker. Its Infrastructure,
+    /// Storage, Internal and the rest stay out - that is where the services
+    /// and the options of a context are, and with them another connection.
     /// </remarks>
     private static readonly HashSet<string> AllowedNamespaces = new(StringComparer.Ordinal)
     {
         "System.Security.Cryptography",
-        "Microsoft.Data.Sqlite"
+        "Microsoft.Data.Sqlite",
+        "Microsoft.EntityFrameworkCore",
+        "Microsoft.EntityFrameworkCore.ChangeTracking",
+        "Microsoft.EntityFrameworkCore.Metadata.Builders",
+        "Microsoft.EntityFrameworkCore.Storage.ValueConversion"
     };
+
+    /// <summary>
+    /// The namespaces directly inside an allowed one, by their full names.
+    /// </summary>
+    /// <remarks>
+    /// What follows an allowed namespace in a name is one of its types or a
+    /// namespace inside it, and the text does not say which:
+    /// <c>Microsoft.EntityFrameworkCore.DbContext</c> is written exactly like
+    /// <c>Microsoft.EntityFrameworkCore.Infrastructure</c>. The references a
+    /// lambda is compiled against do say, so they are asked once.
+    /// </remarks>
+    private static readonly Lazy<HashSet<string>> Nested = new(FindNested, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private static HashSet<string> FindNested()
+    {
+        var global = CSharpCompilation.Create("namespaces", references: ReferenceProvider.Resolve()).GlobalNamespace;
+
+        var nested = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var allowed in AllowedNamespaces)
+        {
+            INamespaceSymbol? space = global;
+
+            foreach (var part in allowed.Split('.'))
+            {
+                space = space?.GetNamespaceMembers().FirstOrDefault(n => n.Name == part);
+            }
+
+            foreach (var inner in space?.GetNamespaceMembers() ?? [])
+            {
+                nested.Add($"{allowed}.{inner.Name}");
+            }
+        }
+
+        return nested;
+    }
 
     private static void CheckNamespace(string name, Location location, List<CompilationDiagnostic> findings)
     {
+        // global::System.Reflection is System.Reflection, and the arguments
+        // of a generic type are names of their own, checked where they stand
+        name = Plain(name);
+
         if (AllowedNamespaces.Contains(name) || AllowedNamespaces.Any(a => IsTypeOf(name, a)))
         {
             return;
@@ -138,10 +193,23 @@ public static class CodeGuard
         {
             if (name.Equals(banned, StringComparison.Ordinal) || name.StartsWith(banned + ".", StringComparison.Ordinal))
             {
-                findings.Add(Reject($"'{banned}' is not available inside a lambda.", location));
+                findings.Add(Reject($"'{Refused(name, banned)}' is not available inside a lambda.", location));
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// The namespace to name when refusing one: the banned one, or - below a
+    /// namespace that is allowed - the one inside it the name went on into,
+    /// so a refused Microsoft.EntityFrameworkCore.Infrastructure does not
+    /// read as if Entity Framework were refused altogether.
+    /// </summary>
+    private static string Refused(string name, string banned)
+    {
+        var allowed = AllowedNamespaces.Where(a => name.StartsWith(a + ".", StringComparison.Ordinal)).MaxBy(a => a.Length);
+
+        return allowed == null ? banned : $"{allowed}.{name[(allowed.Length + 1)..].Split('.')[0]}";
     }
 
     /// <summary>
@@ -152,10 +220,9 @@ public static class CodeGuard
     /// A type named in a declaration is a qualified name, which the check
     /// above reads; the same name in an expression is a chain of member
     /// accesses, and a banned namespace written out there used to go through.
-    /// Where the namespace ends and the type begins is not written anywhere,
-    /// so a chain is refused when it starts with a banned namespace - unless
-    /// it goes on into an allowed one inside it, and from there into one of
-    /// its types rather than into the certificates below it.
+    /// A chain is refused when it starts with a banned namespace - unless it
+    /// goes on into an allowed one, the banned one itself or one inside it,
+    /// and from there into one of its types rather than a namespace below it.
     /// </remarks>
     private static void CheckChain(string chain, Location location, List<CompilationDiagnostic> findings)
     {
@@ -166,14 +233,14 @@ public static class CodeGuard
             return;
         }
 
-        var allowed = AllowedNamespaces.Where(a => a.Length > banned.Length && chain.StartsWith(a + ".", StringComparison.Ordinal)).MaxBy(a => a.Length);
+        var allowed = AllowedNamespaces.Where(a => a.Length >= banned.Length && chain.StartsWith(a + ".", StringComparison.Ordinal)).MaxBy(a => a.Length);
 
-        if (allowed != null && !chain[(allowed.Length + 1)..].StartsWith("X509Certificates", StringComparison.Ordinal))
+        if (allowed != null && !Nested.Value.Contains($"{allowed}.{chain[(allowed.Length + 1)..].Split('.')[0]}"))
         {
             return;
         }
 
-        findings.Add(Reject($"'{banned}' is not available inside a lambda.", location));
+        findings.Add(Reject($"'{Refused(chain, banned)}' is not available inside a lambda.", location));
     }
 
     /// <summary>
@@ -212,7 +279,7 @@ public static class CodeGuard
 
     /// <summary>
     /// Whether a qualified name is a type directly inside the given namespace
-    /// - one segment more, and not the certificates namespace below it.
+    /// - one segment more, and not a namespace below it.
     /// </summary>
     private static bool IsTypeOf(string name, string space)
     {
@@ -223,7 +290,23 @@ public static class CodeGuard
 
         var rest = name[(space.Length + 1)..];
 
-        return !rest.Contains('.') && rest != "X509Certificates";
+        return !rest.Contains('.') && !Nested.Value.Contains(name);
+    }
+
+    /// <summary>
+    /// A qualified name as the namespaces read it: without <c>global::</c> in
+    /// front and without the arguments of a generic type at its end.
+    /// </summary>
+    private static string Plain(string name)
+    {
+        if (name.StartsWith("global::", StringComparison.Ordinal))
+        {
+            name = name["global::".Length..];
+        }
+
+        var generic = name.IndexOf('<');
+
+        return generic < 0 ? name : name[..generic];
     }
 
     /// <summary>
@@ -379,6 +462,90 @@ public static class CodeGuard
 
                         break;
                     }
+                }
+            }
+        }
+
+        return findings;
+    }
+
+    /// <summary>
+    /// What a lambda is told that configures a context with anything but a connection.
+    /// </summary>
+    internal const string ContextMessage =
+        "A lambda's DbContext works on the connection Database.GetConnection() opens: options.UseSqlite(connection, contextOwnsConnection: true), " +
+        "with the connection handed to the context from outside it - new Records(Database.GetConnection()). A connection string would open a database of its own.";
+
+    /// <summary>
+    /// What a lambda is told that asks Entity Framework for its schema.
+    /// </summary>
+    internal const string SchemaMessage =
+        "A lambda's schema is SQL migrations shipped in migrations/ and applied by Evolve as it starts, not Entity Framework's EnsureCreated, EnsureDeleted or Migrate: " +
+        "add the next file (V2__Add_due_date.sql) and map the context onto the tables it makes.";
+
+    /// <summary>
+    /// The names of what is refused about Entity Framework, and so are bound to see whether they are its.
+    /// </summary>
+    private static readonly HashSet<string> EntityFrameworkNames = new(StringComparer.Ordinal)
+    {
+        "UseSqlite", "EnsureCreated", "EnsureCreatedAsync", "EnsureDeleted", "EnsureDeletedAsync", "Migrate", "MigrateAsync"
+    };
+
+    /// <summary>
+    /// Refuses a context that is not on the lambda's connection, and the ways
+    /// Entity Framework would make or drop the schema itself.
+    /// </summary>
+    /// <remarks>
+    /// <c>UseSqlite</c> with a connection string, or with nothing and the
+    /// string set later, has Entity Framework open a connection of its own -
+    /// to whatever file the string names, and without what the platform does
+    /// to the connections it hands out. Only the overloads that take a
+    /// connection are left, and the only connection a lambda has is its own.
+    ///
+    /// The schema belongs to Evolve: <c>EnsureDeleted</c> deletes the file
+    /// behind the connection, which only the owner does, by switching the
+    /// database off; <c>EnsureCreated</c> and <c>Migrate</c> make tables
+    /// Evolve knows nothing about, and the next migration then fails on them.
+    ///
+    /// Asked of the compilation, since Evolve's own <c>Migrate()</c> is the
+    /// very thing a lambda is meant to call - only Entity Framework's is
+    /// refused. Only the names in question are bound.
+    /// </remarks>
+    public static IReadOnlyList<CompilationDiagnostic> InspectEntityFramework(Microsoft.CodeAnalysis.Compilation compilation)
+    {
+        var connection = compilation.GetTypeByMetadataName("System.Data.Common.DbConnection");
+
+        var findings = new List<CompilationDiagnostic>();
+
+        foreach (var tree in compilation.SyntaxTrees)
+        {
+            SemanticModel? model = null;
+
+            foreach (var name in tree.GetRoot().DescendantNodes().OfType<SimpleNameSyntax>())
+            {
+                if (!EntityFrameworkNames.Contains(name.Identifier.ValueText))
+                {
+                    continue;
+                }
+
+                // what does not bind does not compile either, and says so itself
+                if ((model ??= compilation.GetSemanticModel(tree)).GetSymbolInfo(name).Symbol is not IMethodSymbol method
+                    || method.ContainingNamespace?.ToDisplayString().StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal) != true)
+                {
+                    continue;
+                }
+
+                var message = method.Name == "UseSqlite"
+                    ? method.Parameters.Any(p => SymbolEqualityComparer.Default.Equals(p.Type, connection)) ? null : ContextMessage
+                    : SchemaMessage;
+
+                if (message != null)
+                {
+                    var span = name.GetLocation().GetMappedLineSpan();
+
+                    findings.Add(new CompilationDiagnostic("Error", "LAMBDA0001", message,
+                                                           span.StartLinePosition.Line + 1, span.StartLinePosition.Character + 1,
+                                                           span.HasMappedPath ? span.Path : null));
                 }
             }
         }
@@ -543,7 +710,11 @@ public static class CodeGuard
         // would make another, point one at another file, or load native code into it
         Add("use Database.GetConnection() for the lambda's own database", "ConnectionString", "SqliteConnectionStringBuilder",
             "SqliteFactory", "DbProviderFactories", "DbProviderFactory", "DbDataSource", "CreateDataSource", "LoadExtension",
-            "EnableExtensions", "ClearPool", "ClearAllPools");
+            "EnableExtensions", "ClearPool", "ClearAllPools", "GetConnectionString", "SetConnectionString");
+
+        // dynamic binds members at runtime, by the type an object turns out to
+        // have - which is everything this guard reads the code for, skipped
+        Add("binding at runtime goes around what a lambda may name", "dynamic");
 
         Add("native interop is disabled", "Marshal", "NativeLibrary", "NativeMemory", "GCHandle", "SafeHandle",
             "DllImport", "DllImportAttribute", "LibraryImport", "LibraryImportAttribute", "UnmanagedCallersOnly");

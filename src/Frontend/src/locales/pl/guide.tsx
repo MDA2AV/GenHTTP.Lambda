@@ -298,8 +298,9 @@ export const guide: Messages['guide'] = {
   database: (k) => (
     <>
       Rekordy – wpisy, konta, zamówienia, głosy – należą do {k.b('bazy danych')}: własnej bazy SQLite lambdy, którą
-      włączasz w sekcji {k.b('Dane')}. Kod otwiera połączenie przez {k.code('Database.GetConnection()')} i rozmawia z
-      nią w SQL:
+      włączasz w sekcji {k.b('Dane')}. Kod otwiera połączenie przez {k.code('Database.GetConnection()')} i czyta oraz
+      zapisuje dane za pomocą {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, z własnym
+      kontekstem, który mapuje tabele:
     </>
   ),
   database2: (k) => (
@@ -319,9 +320,9 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Otwieraj połączenie tam, gdzie go potrzebujesz, i zamykaj je po użyciu, a korzystaj z niego synchronicznie –{' '}
-      {k.code('ExecuteReader')}, a nie {k.code('ExecuteReaderAsync')}. Wartości przekazuj jako parametry, nigdy wprost w
-      SQL. Demo {k.link('/editor/demo-crud', 'demo-crud')} robi to wszystko.
+      Twórz kontekst tam, gdzie go potrzebujesz, i zwalniaj go po użyciu, a korzystaj z niego synchronicznie –{' '}
+      {k.code('ToList')} i {k.code('SaveChanges')}, a nie {k.code('ToListAsync')} i {k.code('SaveChangesAsync')}.
+      Tabele tworzą migracje, nigdy Entity Framework. Demo {k.link('/editor/demo-crud', 'demo-crud')} robi to wszystko.
     </>
   ),
 

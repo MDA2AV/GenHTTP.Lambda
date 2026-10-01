@@ -654,14 +654,15 @@ export const editor: EditorMessages = {
       empty: 'Ainda não há tabelas',
       emptyText: 'O código cria-as, com uma migração em migrations/ que o Evolve aplica quando a lambda arranca. O que ela guardar a partir daí aparece aqui.',
       offTitle: 'A base de dados está desligada',
-      offText: 'Liga-a para guardar registos que o código lê e escreve com SQL: entradas, contas, encomendas.',
+      offText: 'Liga-a para guardar registos que o código lê e escreve com o Entity Framework Core ou com SQL: entradas, contas, encomendas.',
       offWanted: 'O código acede à base de dados, mas ela está desligada: tudo o que a usa falha até a ligares.',
       switchOn: 'Ligar',
       howTo: 'No código',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')} abre uma ligação à base de dados, e as migrações em {code('migrations/')}, aplicadas
-          pelo Evolve, criam as tabelas dela. Num projeto transferido, é um simples ficheiro SQLite: {code('database/database.db')}.
+          {code('Database.GetConnection()')} abre uma ligação à base de dados – para um {code('DbContext')} do Entity
+          Framework Core, ou para SQL – e as migrações em {code('migrations/')}, aplicadas pelo Evolve, criam as tabelas
+          dela. Num projeto transferido, é um simples ficheiro SQLite: {code('database/database.db')}.
         </>
       ),
       copy: 'Copiar',

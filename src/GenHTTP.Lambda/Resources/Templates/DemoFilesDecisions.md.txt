@@ -32,7 +32,8 @@ Two kinds of data, each where it belongs: what people upload are files, kept in 
 
 - **The file first, then its entry.** An upload writes the file and then adds the row, so the gallery never lists a picture whose file is not there yet; a removal drops the row, then the file.
 - **At most 24 uploads.** Past that the oldest is dropped, its file with it, because anybody can upload.
-- **A connection per call**, used synchronously, the values as parameters - as in `demo-crud`.
+- **Entity Framework Core on a connection per call**, used synchronously - as in `demo-crud`. `GalleryContext` maps `uploads` onto `UploadEntry`, the hash included; the list everybody sees is a projection into `Upload`, so the hash is never even read for it.
+- **One save for the new entry and the old ones going.** The entry is added and the uploads past the newest are removed in the same `SaveChanges`, which is one transaction.
 - **Only `lambda.cs` touches `Workspace`.** `Gallery` is handed a `Storage` with the two things it does there - write a file, delete one - so it does not care where the files live.
 
 ## The table stays readable

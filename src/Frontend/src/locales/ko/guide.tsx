@@ -296,7 +296,8 @@ export const guide: Messages['guide'] = {
   database: (k) => (
     <>
       기록(글, 계정, 주문, 투표 등)은 {k.b('데이터베이스')}에 두세요. 람다 전용 SQLite 데이터베이스로,
-      {' '}{k.b('데이터')}에서 켜요. 코드는 {k.code('Database.GetConnection()')}으로 연결을 열고 SQL로 주고받아요.
+      {' '}{k.b('데이터')}에서 켜요. 코드는 {k.code('Database.GetConnection()')}으로 연결을 열고, 테이블을 매핑하는
+      자체 컨텍스트를 두어 {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}로 읽고 써요.
     </>
   ),
   database2: (k) => (
@@ -316,9 +317,9 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      연결은 필요한 곳에서 열고 다 쓰면 바로 해제하세요. 또 동기 방식으로 쓰세요. {k.code('ExecuteReaderAsync')} 대신{' '}
-      {k.code('ExecuteReader')}를 쓰면 돼요. 값은 SQL에 직접 넣지 말고 매개변수로 넘기세요.{' '}
-      {k.link('/editor/demo-crud', 'demo-crud')} 데모가 이 모든 걸 보여 줘요.
+      컨텍스트는 필요한 곳에서 만들고 다 쓰면 바로 해제하세요. 또 동기 방식으로 쓰세요. {k.code('ToListAsync')}와{' '}
+      {k.code('SaveChangesAsync')} 대신 {k.code('ToList')}와 {k.code('SaveChanges')}를 쓰면 돼요. 테이블은 Entity
+      Framework가 아니라 마이그레이션이 만들어요. {k.link('/editor/demo-crud', 'demo-crud')} 데모가 이 모든 걸 보여 줘요.
     </>
   ),
 

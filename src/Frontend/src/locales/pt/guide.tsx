@@ -303,8 +303,9 @@ export const guide: Messages['guide'] = {
   database: (k) => (
     <>
       Registros – entradas, contas, pedidos, votos – ficam no {k.b('banco de dados')}: um banco de dados SQLite só da
-      lambda, ligado em {k.b('Dados')}. O código abre uma conexão com {k.code('Database.GetConnection()')} e conversa
-      com ele em SQL:
+      lambda, ligado em {k.b('Dados')}. O código abre uma conexão com {k.code('Database.GetConnection()')} e lê e grava
+      nele por meio do {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, com um contexto
+      próprio que mapeia as tabelas:
     </>
   ),
   database2: (k) => (
@@ -325,9 +326,9 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Abra uma conexão onde precisar e libere-a depois, e use-a de forma síncrona – {k.code('ExecuteReader')}, não{' '}
-      {k.code('ExecuteReaderAsync')}. Os valores entram como parâmetros, nunca no SQL. A demo{' '}
-      {k.link('/editor/demo-crud', 'demo-crud')} faz tudo isso.
+      Crie um contexto onde precisar e libere-o depois, e use-o de forma síncrona – {k.code('ToList')} e{' '}
+      {k.code('SaveChanges')}, não {k.code('ToListAsync')} e {k.code('SaveChangesAsync')}. Quem cria as tabelas são as
+      migrações, nunca o Entity Framework. A demo {k.link('/editor/demo-crud', 'demo-crud')} faz tudo isso.
     </>
   ),
 

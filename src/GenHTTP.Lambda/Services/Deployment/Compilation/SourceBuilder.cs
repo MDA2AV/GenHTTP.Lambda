@@ -479,7 +479,9 @@ internal static class SourceBuilder
 
     /// <summary>
     /// The database of the lambda, as its code connects to it:
-    /// <c>using var connection = Database.GetConnection();</c>
+    /// <c>using var connection = Database.GetConnection();</c>, or
+    /// <c>using var db = new Records(Database.GetConnection());</c> for a
+    /// context of Entity Framework Core.
     /// </summary>
     /// <remarks>
     /// Like the secrets, the class holds a function the platform hands it once
@@ -496,9 +498,11 @@ internal static class SourceBuilder
             private static global::System.Func<global::Microsoft.Data.Sqlite.SqliteConnection> {{SecretSource}} = null;
 
             /// <summary>
-            /// An open connection to the database of this lambda. Dispose of it
-            /// when done - it goes back to a pool, so one per request costs
-            /// nothing. Use it synchronously: Execute, not ExecuteAsync.
+            /// An open connection to the database of this lambda, for plain SQL
+            /// or for a DbContext of Entity Framework Core (UseSqlite(connection,
+            /// contextOwnsConnection: true)). Dispose of it when done - it goes
+            /// back to a pool, so one per request costs nothing. Use it
+            /// synchronously: ToList and SaveChanges, not their Async forms.
             /// </summary>
             public global::Microsoft.Data.Sqlite.SqliteConnection GetConnection() => Source()();
 

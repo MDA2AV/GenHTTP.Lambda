@@ -6,9 +6,9 @@
 // done, and each stream writes at its own pace. A queue that falls behind
 // forgets its oldest updates, which is fine: only the newest counts matter.
 //
-// The counts are kept in the lambda's database, a row per option, and counted
-// up there: the database takes one write at a time, so two votes at the same
-// moment both count.
+// The counts are kept in the lambda's database, a row per option, read and
+// written through Entity Framework Core and counted up there: the database
+// takes one write at a time, so two votes at the same moment both count.
 
 using System.Threading.Channels;
 
@@ -24,6 +24,27 @@ public record Results(string Question, List<Option> Options, int Total);
 /// ordinary message.
 /// </summary>
 public record Update(string Event, object Data);
+
+/// <summary>How many votes an option has, as the table holds it.</summary>
+public sealed class Tally
+{
+    public string Option { get; set; }
+
+    public int Votes { get; set; }
+}
+
+/// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
+public sealed class PollContext(SqliteConnection connection) : DbContext
+{
+    public DbSet<Tally> Tallies => Set<Tally>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    // the table is the migration's; this says how to read it
+    protected override void OnModelCreating(ModelBuilder model)
+        => model.Entity<Tally>().ToTable("votes").HasKey(t => t.Option);
+}
 
 public sealed class Poll
 {
@@ -42,19 +63,11 @@ public sealed class Poll
 
     public Results Results()
     {
-        var votes = new Dictionary<string, int>();
+        Dictionary<string, int> votes;
 
-        using (var db = Database.GetConnection())
-        using (var command = db.CreateCommand())
+        using (var db = new PollContext(Database.GetConnection()))
         {
-            command.CommandText = "SELECT option, votes FROM votes";
-
-            using var reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                votes[reader.GetString(0)] = reader.GetInt32(1);
-            }
+            votes = db.Tallies.ToDictionary(t => t.Option, t => t.Votes);
         }
 
         var options = Choices.Select(c => new Option(c.Id, c.Label, votes.GetValueOrDefault(c.Id))).ToList();
@@ -71,13 +84,20 @@ public sealed class Poll
             throw new ProviderException(ResponseStatus.BadRequest, $"Vote for one of: {string.Join(", ", Choices.Select(c => c.Id))}.");
         }
 
-        using (var db = Database.GetConnection())
-        using (var command = db.CreateCommand())
+        using (var db = new PollContext(Database.GetConnection()))
         {
-            command.CommandText = "INSERT INTO votes (option, votes) VALUES ($option, 1) ON CONFLICT (option) DO UPDATE SET votes = votes + 1";
-            command.Parameters.AddWithValue("$option", option);
+            // the transaction takes the database's one writer's place before it
+            // reads, so two first votes cannot both find no row and both add one
+            using var transaction = db.Database.BeginTransaction();
 
-            command.ExecuteNonQuery();
+            // one UPDATE ... SET votes = votes + 1, without reading the row first
+            if (db.Tallies.Where(t => t.Option == option).ExecuteUpdate(s => s.SetProperty(t => t.Votes, t => t.Votes + 1)) == 0)
+            {
+                db.Tallies.Add(new Tally { Option = option, Votes = 1 });
+                db.SaveChanges();
+            }
+
+            transaction.Commit();
         }
 
         Tell(new Update(null, Results()));

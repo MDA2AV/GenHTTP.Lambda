@@ -309,7 +309,9 @@ export const guide: Messages['guide'] = {
     <>
       Datensätze – Einträge, Konten, Bestellungen, Stimmen – gehören in die {k.b('Datenbank')}: eine eigene
       SQLite-Datenbank des Lambdas, die Sie unter {k.b('Daten')} einschalten. Der Code öffnet mit{' '}
-      {k.code('Database.GetConnection()')} eine Verbindung und spricht SQL mit ihr:
+      {k.code('Database.GetConnection()')} eine Verbindung und liest und schreibt über{' '}
+      {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, mit einem eigenen Kontext, der die
+      Tabellen abbildet:
     </>
   ),
   database2: (k) => (
@@ -330,9 +332,10 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Öffnen Sie eine Verbindung dort, wo Sie sie brauchen, geben Sie sie danach wieder frei, und verwenden Sie sie
-      synchron – {k.code('ExecuteReader')}, nicht {k.code('ExecuteReaderAsync')}. Werte kommen als Parameter hinein, nie
-      in das SQL selbst. Die Demo {k.link('/editor/demo-crud', 'demo-crud')} zeigt all das.
+      Legen Sie einen Kontext dort an, wo Sie ihn brauchen, geben Sie ihn danach wieder frei, und verwenden Sie ihn
+      synchron – {k.code('ToList')} und {k.code('SaveChanges')}, nicht {k.code('ToListAsync')} und{' '}
+      {k.code('SaveChangesAsync')}. Die Tabellen legen die Migrationen an, nie Entity Framework. Die Demo{' '}
+      {k.link('/editor/demo-crud', 'demo-crud')} zeigt all das.
     </>
   ),
 

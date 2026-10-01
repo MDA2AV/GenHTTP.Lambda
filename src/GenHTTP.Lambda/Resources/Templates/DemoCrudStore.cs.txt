@@ -1,143 +1,150 @@
 // The tasks, kept in the lambda's database: a table the migration in
-// migrations/ makes, read and written with plain SQL.
+// migrations/ makes, read and written through Entity Framework Core.
 //
-//   - Every call opens a connection with Database.GetConnection() and disposes
-//     of it when it is done. Connections are pooled, so that costs nothing,
-//     and a connection is never shared between two requests at once.
-//   - Every call is synchronous - ExecuteReader, not ExecuteReaderAsync. The
-//     database is a file on the same machine, and the server this runs on has
-//     an asynchronous model of its own that a blocking call does not disturb.
-//   - Values go in as parameters ($title), never pasted into the SQL, so what
-//     somebody types cannot change what the statement does.
+//   - TaskContext maps the table onto TaskItem. It makes no schema: the table
+//     is the migration's, and the context only says how to read it.
+//   - Every call makes a context on a connection of its own -
+//     new TaskContext(Database.GetConnection()) - and disposes of it, which
+//     disposes of the connection too. Connections are pooled, so that costs
+//     nothing, and a context is never shared between two requests at once.
+//   - Every call is synchronous - ToList, Find, SaveChanges, not their Async
+//     forms. The database is a file on the same machine, and the server this
+//     runs on has an asynchronous model of its own that a blocking call does
+//     not disturb.
+//   - Queries are LINQ, so what somebody types goes in as a parameter and
+//     cannot change what the statement does.
 //   - At most `limit` tasks are kept, the oldest going first. Anybody can
 //     write to a demo, so it must not grow without bound. For your own, the
 //     real limit is the room the database may take, which read_database says.
 
 using System.Globalization;
 
+/// <summary>A stored task, as the table holds it and the API sends it.</summary>
+public sealed class TaskItem
+{
+    public string Id { get; set; }
+
+    public string Title { get; set; }
+
+    public string Notes { get; set; } = "";
+
+    public bool Done { get; set; }
+
+    public DateTime Created { get; set; }
+
+    public DateTime Updated { get; set; }
+}
+
+/// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
+public sealed class TaskContext(SqliteConnection connection) : DbContext
+{
+    public DbSet<TaskItem> Tasks => Set<TaskItem>();
+
+    // the context closes the connection it was handed when it is disposed of;
+    // inside a DbContext, Database is the context's own, which is why the
+    // connection comes in from outside
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    protected override void OnModelCreating(ModelBuilder model)
+    {
+        // SQLite does not mind the case of a name, so Title is the column
+        // title without saying so - only the table needs naming
+        var task = model.Entity<TaskItem>().ToTable("tasks");
+
+        // times as ISO 8601 text in UTC: they sort as they should, read well
+        // in the editor's view of the database, and come back as the time
+        // they were - Entity Framework's own format would lose the UTC
+        task.Property(t => t.Created).HasConversion(t => Write(t), t => Read(t));
+        task.Property(t => t.Updated).HasConversion(t => Write(t), t => Read(t));
+    }
+
+    private static string Write(DateTime value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
+
+    private static DateTime Read(string value) => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+}
+
 public sealed class TaskStore(int limit)
 {
-    private const string Columns = "id, title, notes, done, created, updated";
-
-    public long Count()
+    public int Count()
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new TaskContext(Database.GetConnection());
 
-        command.CommandText = "SELECT count(*) FROM tasks";
-
-        return (long)command.ExecuteScalar();
+        return db.Tasks.Count();
     }
 
     /// <summary>Every task, open ones first and the newest of each first - or those matching a search.</summary>
     public List<TaskItem> List(string search)
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new TaskContext(Database.GetConnection());
 
-        command.CommandText = $"SELECT {Columns} FROM tasks WHERE $term IS NULL OR title LIKE $term ESCAPE '\\' OR notes LIKE $term ESCAPE '\\' ORDER BY done, created DESC";
+        // read only, so the context need not keep track of what it handed out
+        var tasks = db.Tasks.AsNoTracking();
 
-        // a search for "50%" looks for "50%", not for anything starting with 50
-        var term = string.IsNullOrWhiteSpace(search)
-            ? null
-            : "%" + search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            // a search for "50%" looks for "50%", not for anything starting with 50
+            var term = "%" + search.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
 
-        command.Parameters.AddWithValue("$term", (object)term ?? DBNull.Value);
+            // LIKE rather than Contains, which SQLite would compare case by case
+            tasks = tasks.Where(t => EF.Functions.Like(t.Title, term, "\\") || EF.Functions.Like(t.Notes, term, "\\"));
+        }
 
-        return Read(command);
+        return tasks.OrderBy(t => t.Done).ThenByDescending(t => t.Created).ToList();
     }
 
     public TaskItem Find(string id)
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new TaskContext(Database.GetConnection());
 
-        command.CommandText = $"SELECT {Columns} FROM tasks WHERE id = $id";
-        command.Parameters.AddWithValue("$id", id);
-
-        return Read(command).FirstOrDefault();
+        return db.Tasks.AsNoTracking().FirstOrDefault(t => t.Id == id);
     }
 
     public void Add(TaskItem task)
     {
-        using var db = Database.GetConnection();
+        using var db = new TaskContext(Database.GetConnection());
 
-        // both statements or neither: the task is not added if making room fails
-        using var transaction = db.BeginTransaction();
+        // both or neither: the task is not added if making room fails
+        using var transaction = db.Database.BeginTransaction();
 
-        using (var insert = db.CreateCommand())
-        {
-            insert.CommandText = $"INSERT INTO tasks ({Columns}) VALUES ($id, $title, $notes, $done, $created, $updated)";
+        db.Tasks.Add(task);
+        db.SaveChanges();
 
-            Bind(insert, task);
-
-            insert.ExecuteNonQuery();
-        }
-
-        using (var trim = db.CreateCommand())
-        {
-            trim.CommandText = "DELETE FROM tasks WHERE id NOT IN (SELECT id FROM tasks ORDER BY created DESC LIMIT $limit)";
-            trim.Parameters.AddWithValue("$limit", limit);
-
-            trim.ExecuteNonQuery();
-        }
+        // everything past the newest `limit` goes, in one statement
+        db.Tasks.OrderByDescending(t => t.Created).Skip(limit).ExecuteDelete();
 
         transaction.Commit();
     }
 
-    /// <summary>Replaces a task, and says whether there was one to replace.</summary>
-    public bool Replace(TaskItem task)
+    /// <summary>Changes a task, and hands it back - or nothing, where there is none.</summary>
+    public TaskItem Change(string id, string title, string notes, bool done)
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new TaskContext(Database.GetConnection());
 
-        command.CommandText = "UPDATE tasks SET title = $title, notes = $notes, done = $done, created = $created, updated = $updated WHERE id = $id";
+        // tracked, so SaveChanges writes what changed on it and nothing else
+        var task = db.Tasks.Find(id);
 
-        Bind(command, task);
+        if (task == null)
+        {
+            return null;
+        }
 
-        return command.ExecuteNonQuery() > 0;
+        task.Title = title;
+        task.Notes = notes;
+        task.Done = done;
+        task.Updated = DateTime.UtcNow;
+
+        db.SaveChanges();
+
+        return task;
     }
 
     /// <summary>Removes a task, and says whether there was one.</summary>
     public bool Remove(string id)
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new TaskContext(Database.GetConnection());
 
-        command.CommandText = "DELETE FROM tasks WHERE id = $id";
-        command.Parameters.AddWithValue("$id", id);
-
-        return command.ExecuteNonQuery() > 0;
+        // a DELETE straight away, without reading the task first
+        return db.Tasks.Where(t => t.Id == id).ExecuteDelete() > 0;
     }
-
-    private static void Bind(SqliteCommand command, TaskItem task)
-    {
-        command.Parameters.AddWithValue("$id", task.Id);
-        command.Parameters.AddWithValue("$title", task.Title);
-        command.Parameters.AddWithValue("$notes", task.Notes);
-        command.Parameters.AddWithValue("$done", task.Done);
-        command.Parameters.AddWithValue("$created", Time(task.Created));
-        command.Parameters.AddWithValue("$updated", Time(task.Updated));
-    }
-
-    private static List<TaskItem> Read(SqliteCommand command)
-    {
-        using var reader = command.ExecuteReader();
-
-        var tasks = new List<TaskItem>();
-
-        while (reader.Read())
-        {
-            tasks.Add(new TaskItem(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetBoolean(3),
-                                   Time(reader.GetString(4)), Time(reader.GetString(5))));
-        }
-
-        return tasks;
-    }
-
-    // times as ISO 8601 text in UTC: they sort as they should, read well in
-    // the editor's view of the database, and come back as the time they were
-    private static string Time(DateTime value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
-
-    private static DateTime Time(string value) => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 }

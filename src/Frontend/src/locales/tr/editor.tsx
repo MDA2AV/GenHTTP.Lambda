@@ -662,15 +662,15 @@ export const editor: EditorMessages = {
       empty: 'Henüz tablo yok',
       emptyText: 'Tabloları kod oluşturur: migrations/ içindeki, lambda başlarken Evolve’un uyguladığı bir migration ile. Lambdanın sonra sakladıkları burada görünür.',
       offTitle: 'Veritabanı kapalı',
-      offText: 'Kodun SQL ile okuyup yazdığı kayıtları (girdiler, hesaplar, siparişler) saklamak için açın.',
+      offText: 'Kodun Entity Framework Core veya SQL ile okuyup yazdığı kayıtları (girdiler, hesaplar, siparişler) saklamak için açın.',
       offWanted: 'Kod veritabanına bağlanıyor, ancak veritabanı kapalı: siz açana kadar ona bağlanan her şey başarısız olur.',
       switchOn: 'Aç',
       howTo: 'Kodda',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')} veritabanına bir bağlantı açar; tablolarını ise {code('migrations/')} içindeki,
-          Evolve’un uyguladığı migration’lar oluşturur. İndirilen bir projede bu, düz bir SQLite dosyasıdır:{' '}
-          {code('database/database.db')}.
+          {code('Database.GetConnection()')} veritabanına, Entity Framework Core’daki bir {code('DbContext')} ya da SQL
+          için bir bağlantı açar; tablolarını ise {code('migrations/')} içindeki, Evolve’un uyguladığı migration’lar
+          oluşturur. İndirilen bir projede bu, düz bir SQLite dosyasıdır: {code('database/database.db')}.
         </>
       ),
       copy: 'Kopyala',

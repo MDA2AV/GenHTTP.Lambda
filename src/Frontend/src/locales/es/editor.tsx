@@ -654,14 +654,15 @@ export const editor: EditorMessages = {
       empty: 'Todavía no hay tablas',
       emptyText: 'Las crea el código, con una migración en migrations/ que Evolve aplica cuando arranca la lambda. Lo que guarde después aparece aquí.',
       offTitle: 'La base de datos está desactivada',
-      offText: 'Actívala para guardar registros que el código lee y escribe con SQL: entradas, cuentas, pedidos.',
+      offText: 'Actívala para guardar registros que el código lee y escribe con Entity Framework Core o con SQL: entradas, cuentas, pedidos.',
       offWanted: 'El código se conecta a la base de datos, pero está desactivada: lo que se conecta falla hasta que se active.',
       switchOn: 'Activar',
       howTo: 'En el código',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')} abre una conexión con ella, y las migraciones de {code('migrations/')} crean sus
-          tablas; las aplica Evolve. En un proyecto descargado es el archivo SQLite normal {code('database/database.db')}.
+          {code('Database.GetConnection()')} abre una conexión con ella (para un {code('DbContext')} de Entity Framework
+          Core o para SQL), y las migraciones de {code('migrations/')} crean sus tablas; las aplica Evolve. En un proyecto
+          descargado es el archivo SQLite normal {code('database/database.db')}.
         </>
       ),
       copy: 'Copiar',

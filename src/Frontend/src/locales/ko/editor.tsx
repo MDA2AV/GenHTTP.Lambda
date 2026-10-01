@@ -663,14 +663,15 @@ export const editor: EditorMessages = {
       empty: '아직 테이블이 없어요',
       emptyText: '테이블은 코드가 만들어요. migrations/에 둔 마이그레이션을 람다가 시작할 때 Evolve가 적용해요. 그 뒤로 람다가 보관하는 것이 여기에 나타나요.',
       offTitle: '데이터베이스가 꺼져 있어요',
-      offText: '켜면 코드가 SQL로 읽고 쓰는 레코드(항목, 계정, 주문 등)를 보관할 수 있어요.',
+      offText: '켜면 코드가 Entity Framework Core나 SQL로 읽고 쓰는 레코드(항목, 계정, 주문 등)를 보관할 수 있어요.',
       offWanted: '코드가 데이터베이스에 연결하지만 데이터베이스가 꺼져 있어요. 켤 때까지 연결하는 부분은 실패해요.',
       switchOn: '켜기',
       howTo: '코드에서',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')} 메서드가 데이터베이스 연결을 열고, 테이블은 {code('migrations/')} 폴더의
-          마이그레이션이 만들어요. 마이그레이션은 Evolve가 적용해요. 다운로드한 프로젝트에서는 평범한 SQLite 파일인{' '}
+          {code('Database.GetConnection()')} 메서드가 데이터베이스 연결을 열어요. Entity Framework Core의{' '}
+          {code('DbContext')}에도, SQL에도 쓸 수 있어요. 테이블은 {code('migrations/')} 폴더의 마이그레이션이 만들고,
+          마이그레이션은 Evolve가 적용해요. 다운로드한 프로젝트에서는 평범한 SQLite 파일인{' '}
           {code('database/database.db')}예요.
         </>
       ),

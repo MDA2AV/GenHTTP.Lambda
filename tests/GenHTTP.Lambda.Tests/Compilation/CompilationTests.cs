@@ -116,6 +116,8 @@ public sealed class CompilationTests
     [DataRow("System.Diagnostics.Process.Start(\"sh\"); return Content.From(Resource.FromString(\"x\"));", "other processes")]
     [DataRow("var type = typeof(object).Assembly; return Content.From(Resource.FromString(\"x\"));", "reflection")]
     [DataRow("Environment.Exit(1); return Content.From(Resource.FromString(\"x\"));", "the lifetime of the host")]
+    [DataRow("dynamic o = new object(); return Content.From(Resource.FromString(\"x\"));", "members bound at runtime, which the guard never sees")]
+    [DataRow("global::System.Reflection.Emit.DynamicMethod m = null; return Content.From(Resource.FromString(\"x\"));", "a banned namespace behind global::")]
     public async Task TheHostIsOffLimits(string code, string because)
     {
         await using var fixture = await LambdaFixture.CreateAsync();

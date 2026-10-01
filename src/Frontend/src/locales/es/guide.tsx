@@ -304,7 +304,9 @@ export const guide: Messages['guide'] = {
     <>
       Los registros (entradas, cuentas, pedidos, votos) van en la {k.b('base de datos')}: una base de datos SQLite
       propia de la lambda, que se activa en {k.b('Datos')}. El código abre una conexión con{' '}
-      {k.code('Database.GetConnection()')} y se comunica con ella en SQL:
+      {k.code('Database.GetConnection()')} y lee y escribe los datos mediante{' '}
+      {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, con un contexto propio que mapea las
+      tablas:
     </>
   ),
   database2: (k) => (
@@ -324,9 +326,9 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Abre una conexión donde la necesites y libérala después, y úsala de forma síncrona: {k.code('ExecuteReader')}, no{' '}
-      {k.code('ExecuteReaderAsync')}. Los valores van como parámetros, nunca dentro del SQL. La demo{' '}
-      {k.link('/editor/demo-crud', 'demo-crud')} hace todo esto.
+      Crea un contexto donde lo necesites y libéralo después, y úsalo de forma síncrona: {k.code('ToList')} y{' '}
+      {k.code('SaveChanges')}, no {k.code('ToListAsync')} y {k.code('SaveChangesAsync')}. Las tablas las crean las
+      migraciones, nunca Entity Framework. La demo {k.link('/editor/demo-crud', 'demo-crud')} hace todo esto.
     </>
   ),
 

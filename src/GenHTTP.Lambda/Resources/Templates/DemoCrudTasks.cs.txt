@@ -8,9 +8,6 @@
 // Problems are thrown as ProviderException with the status to answer, which
 // the platform turns into a response with that status and the message.
 
-/// <summary>A stored task.</summary>
-public record TaskItem(string Id, string Title, string Notes, bool Done, DateTime Created, DateTime Updated);
-
 /// <summary>What a client sends to add or change a task.</summary>
 public record TaskInput(string Title, string Notes, bool Done);
 
@@ -33,7 +30,7 @@ public class Tasks(TaskStore store)
 
         var now = DateTime.UtcNow;
 
-        var task = new TaskItem(Guid.NewGuid().ToString("n")[..10], title, notes, input.Done, now, now);
+        var task = new TaskItem { Id = Guid.NewGuid().ToString("n")[..10], Title = title, Notes = notes, Done = input.Done, Created = now, Updated = now };
 
         store.Add(task);
 
@@ -46,17 +43,7 @@ public class Tasks(TaskStore store)
     {
         var (title, notes) = Validate(input);
 
-        var existing = Get(id);
-
-        var changed = existing with { Title = title, Notes = notes, Done = input.Done, Updated = DateTime.UtcNow };
-
-        if (!store.Replace(changed))
-        {
-            // removed by somebody else between the read above and now
-            throw Missing(id);
-        }
-
-        return changed;
+        return store.Change(id, title, notes, input.Done) ?? throw Missing(id);
     }
 
     [ResourceMethod(Method.Delete, ":id")]
@@ -106,8 +93,8 @@ public class Tasks(TaskStore store)
     {
         var now = DateTime.UtcNow;
 
-        store.Add(new TaskItem("welcome1", "Read Tasks.cs to see the routes", "Every public method with [ResourceMethod] is one of them.", false, now, now));
-        store.Add(new TaskItem("welcome2", "Try the API in scalar/", "", false, now.AddSeconds(1), now.AddSeconds(1)));
-        store.Add(new TaskItem("welcome3", "Open the page", "", true, now.AddSeconds(2), now.AddSeconds(2)));
+        store.Add(new TaskItem { Id = "welcome1", Title = "Read Tasks.cs to see the routes", Notes = "Every public method with [ResourceMethod] is one of them.", Created = now, Updated = now });
+        store.Add(new TaskItem { Id = "welcome2", Title = "Try the API in scalar/", Created = now.AddSeconds(1), Updated = now.AddSeconds(1) });
+        store.Add(new TaskItem { Id = "welcome3", Title = "Open the page", Done = true, Created = now.AddSeconds(2), Updated = now.AddSeconds(2) });
     }
 }

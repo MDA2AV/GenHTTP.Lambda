@@ -667,15 +667,15 @@ export const editor: EditorMessages = {
       empty: 'Belum ada tabel',
       emptyText: 'Kode yang membuatnya, dengan migrasi di migrations/ yang diterapkan Evolve saat lambda dimulai. Apa yang kemudian disimpannya muncul di sini.',
       offTitle: 'Database nonaktif',
-      offText: 'Aktifkan untuk menyimpan catatan yang dibaca dan ditulis kode dengan SQL – entri, akun, pesanan.',
+      offText: 'Aktifkan untuk menyimpan catatan yang dibaca dan ditulis kode dengan Entity Framework Core atau SQL – entri, akun, pesanan.',
       offWanted: 'Kode terhubung ke database, tetapi database nonaktif: bagian yang terhubung ke database akan gagal sampai database diaktifkan.',
       switchOn: 'Aktifkan',
       howTo: 'Di kode',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')} membuka koneksi ke database, dan migrasi di {code('migrations/')} membuat
-          tabelnya, diterapkan oleh Evolve. Di proyek yang diunduh, database ini adalah file SQLite biasa{' '}
-          {code('database/database.db')}.
+          {code('Database.GetConnection()')} membuka koneksi ke database – untuk {code('DbContext')} dari Entity Framework
+          Core, atau untuk SQL – dan migrasi di {code('migrations/')} membuat tabelnya, diterapkan oleh Evolve. Di proyek
+          yang diunduh, database ini adalah file SQLite biasa {code('database/database.db')}.
         </>
       ),
       copy: 'Salin',
