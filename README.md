@@ -682,7 +682,12 @@ services that the API resources talk to through interfaces:
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached - one handler for what a
-  lambda has online, and one for the preview of each of its features.
+  lambda has online, and one for the preview of each of its features. An
+  assembly stays loaded for the life of the process, so a build is known by
+  its code: a version that changes only assets, documentation or tests gets a
+  new handler from the assembly already loaded rather than being compiled
+  again. Lambdas are compiled against the metadata of the platform's
+  assemblies, read once and kept - the metadata alone, not the whole files.
 - **Execution** (`Services/Execution`) - an `IHandler`, not a web service: it
   looks up the handler for a request and runs it.
 - **Protection** (`Services/Protection`) - concerns in front of execution that

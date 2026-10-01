@@ -224,22 +224,28 @@ internal static class LambdaCompiler
     /// code does not add another assembly to the process.
     /// </summary>
     /// <remarks>
-    /// The limits are part of it because they are compiled in: the same code
-    /// in another tier, or with its workspace switched off, is another
-    /// assembly. Hashed piece by piece rather than joined first, because the
-    /// files include the assets, and joining a hundred megabytes of them into
-    /// one string to hash it would copy them twice for nothing. The
-    /// documentation and the tests are left out: they change nothing that is
-    /// built, so a version that only changes them builds to the same assembly.
+    /// The directories and the limits are part of it because they are compiled
+    /// in: the same code in another tier, with its workspace switched off, or
+    /// as the preview of a feature, is another assembly. Beyond those it is the
+    /// code files and nothing else. The assets are read from their directory
+    /// while the lambda runs - only where that directory is gets compiled in -
+    /// and the documentation and the tests are never built, so a version that
+    /// only changes those builds its handler from the assembly already loaded.
+    /// Compiling it again would cost seconds and add an assembly that, loaded
+    /// into the default context, stays for the life of the process.
+    ///
+    /// Hashed piece by piece rather than joined first, so a large file is not
+    /// copied only to be hashed.
     /// </remarks>
     private static string Identify(CompilationRequest request)
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
         Append(hash, request.Workspace);
+        Append(hash, $"\n{request.Assets}");
         Append(hash, $"\n{request.Limits.Quota}\n{request.Limits.Enabled}");
 
-        foreach (var file in request.Files.Where(f => !f.IsContext))
+        foreach (var file in request.Files.Where(f => f.IsCode))
         {
             Append(hash, "\n");
             Append(hash, file.Name);
