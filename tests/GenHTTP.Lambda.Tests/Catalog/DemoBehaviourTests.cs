@@ -76,20 +76,31 @@ public sealed class DemoBehaviourTests
 
         await fixture.SeedDemosAsync();
 
-        // the three it starts with, and two hundred more
+        // the three it starts with - stamped a second apart, the last two in
+        // the future - and two hundred more
+        var written = await ListAsync();
+
         for (var i = 0; i < 200; i++)
         {
             using var created = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-crud/tasks/", new { title = $"Task {i}", notes = "", done = false }, "application/json");
 
             Assert.AreEqual(HttpStatusCode.Created, created.StatusCode);
+
+            written.Add(await Json(created));
         }
 
-        using var listed = await fixture.GetAsync("/lambda/demo-crud/tasks/", "application/json");
+        var newest = written.OrderByDescending(t => t!["created"]!.GetValue<DateTime>()).Take(200).Select(Id).Order().ToList();
 
-        var tasks = JsonNode.Parse(await listed.Content.ReadAsStringAsync())!.AsArray();
+        CollectionAssert.AreEqual(newest, (await ListAsync()).Select(Id).Order().ToList(), "the newest two hundred stay, the oldest went first");
 
-        Assert.HasCount(200, tasks);
-        Assert.IsFalse(tasks.Any(t => t!["id"]!.GetValue<string>().StartsWith("welcome", StringComparison.Ordinal)), "the oldest went first");
+        async Task<List<JsonNode?>> ListAsync()
+        {
+            using var listed = await fixture.GetAsync("/lambda/demo-crud/tasks/", "application/json");
+
+            return [.. JsonNode.Parse(await listed.Content.ReadAsStringAsync())!.AsArray()];
+        }
+
+        static string Id(JsonNode? task) => task!["id"]!.GetValue<string>();
     }
 
     [TestMethod]
