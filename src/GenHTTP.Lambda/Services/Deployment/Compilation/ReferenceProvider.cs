@@ -1,3 +1,5 @@
+using System.Reflection.PortableExecutable;
+
 using Microsoft.CodeAnalysis;
 
 namespace GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -52,7 +54,7 @@ public static class ReferenceProvider
 
             try
             {
-                references.Add(MetadataReference.CreateFromFile(assembly));
+                references.Add(Read(assembly));
             }
             catch (Exception)
             {
@@ -61,6 +63,28 @@ public static class ReferenceProvider
         }
 
         return [..references];
+    }
+
+    /// <summary>
+    /// Reads the metadata of an assembly, and nothing else of it.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MetadataReference.CreateFromFile(string, MetadataReferenceProperties, DocumentationProvider)" />
+    /// copies the whole file into native memory - its IL and its precompiled
+    /// code as well - and keeps it for as long as the reference lives, which
+    /// here is the life of the process. Over the three hundred assemblies a
+    /// lambda may reference that came to ninety megabytes, of which the
+    /// compiler reads the metadata alone: a reference is compiled against,
+    /// never run. Mapping the files instead would cost as little memory but
+    /// hold every one of them open.
+    /// </remarks>
+    private static MetadataReference Read(string assembly)
+    {
+        using var stream = File.OpenRead(assembly);
+
+        var module = ModuleMetadata.CreateFromStream(stream, PEStreamOptions.PrefetchMetadata);
+
+        return AssemblyMetadata.Create(module).GetReference(filePath: assembly);
     }
 
     /// <summary>

@@ -252,6 +252,34 @@ public sealed class SourceTests
     }
 
     [TestMethod]
+    public async Task AVersionThatOnlyChangesItsAssetsIsServedWithoutBeingCompiledAgain()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("restyled");
+
+        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, "return Assets.Files();"),
+            new LambdaFile("app.css", "body { color: red }")
+        ]));
+
+        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, "return Assets.Files();"),
+            new LambdaFile("app.css", "body { color: blue }")
+        ]));
+
+        using var css = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/app.css");
+
+        Assert.Contains("blue", await css.Content.ReadAsStringAsync(), "the new version serves its own assets");
+
+        // every assembly compiled for a lambda is written beside the others, and
+        // stays loaded for as long as the process runs
+        var compiled = Directory.GetFiles(fixture.Options.AssemblyDirectory, "*.dll", SearchOption.AllDirectories);
+
+        Assert.HasCount(1, compiled, "the code did not change, so neither does what it compiles to");
+    }
+
+    [TestMethod]
     public async Task AHelperNamedAfterABannedTypeIsTheAuthorsOwn()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
