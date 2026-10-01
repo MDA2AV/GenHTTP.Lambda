@@ -9,7 +9,7 @@ public static partial class LambdaEnvironment
     public static readonly Folder Workspace = new("workspace");
 
     /// <summary>What the app shipped with, copied beside the program when it is built.</summary>
-    public static readonly Folder Assets = new(Path.Combine(AppContext.BaseDirectory, "assets"));
+    public static readonly AssetFolder Assets = new(Path.Combine(AppContext.BaseDirectory, "assets"));
 
     /// <summary>The secrets it reads, which are environment variables here.</summary>
     public static readonly Secrets Secret = new();

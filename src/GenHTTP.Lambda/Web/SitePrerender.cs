@@ -75,7 +75,7 @@ public sealed partial class SitePrerender
     /// The index page with the content of the given page in it, or as it is if
     /// there is none to put there.
     /// </summary>
-    public async ValueTask<string> RenderAsync(string markup, SitePage page, IRequest request)
+    public string Render(string markup, SitePage page, IRequest request)
     {
         var prerendered = Read();
 
@@ -101,7 +101,7 @@ public sealed partial class SitePrerender
         string content;
 
         // the showcase as it is right now, or as it is drawn while it loads
-        if (page.Path == Showcase && await ListShowcaseAsync() is { } listing && RenderShowcase(prerendered, page.Language, listing, facts) is { } showcase)
+        if (page.Path == Showcase && ListShowcase() is { } listing && RenderShowcase(prerendered, page.Language, listing, facts) is { } showcase)
         {
             content = showcase;
             facts = facts with { Showcase = listing };
@@ -188,11 +188,11 @@ public sealed partial class SitePrerender
     private static string Shown(string address)
         => address.StartsWith('/') ? address : Regex.Replace(address, "^https?://", string.Empty).TrimEnd('/');
 
-    private async ValueTask<ShowcaseListingResponse?> ListShowcaseAsync()
+    private ShowcaseListingResponse? ListShowcase()
     {
         try
         {
-            return await new ShowcaseResource(Showcases).List(0, null);
+            return new ShowcaseResource(Showcases).List(0, null);
         }
         catch (Exception e)
         {

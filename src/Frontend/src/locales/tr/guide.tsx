@@ -385,7 +385,7 @@ export const guide: Messages['guide'] = {
   ),
 
   limits:
-    'Kodunuz ortak bir sunucuda çalışır. Bu yüzden C# dilinin bazı kısımları derlenmeden önce reddedilir: süreç başlatmak, kendi soketlerinizi açmak, assembly yüklemek, çalışma alanınızın dışında dosya sistemine erişmek ve bunları aşmak için reflection kullanmak.',
+    'Kodunuz ortak bir sunucuda çalışır. Bu yüzden C# dilinin bazı kısımları derlenmeden önce reddedilir: süreç başlatmak, kendi soketlerinizi açmak, assembly yüklemek, çalışma alanınızın dışında dosya sistemine erişmek ve bunları aşmak için reflection kullanmak. Bir task’ı await yerine .Result veya .Wait() ile beklemek de reddedilir: istekler çekirdek başına tek bir thread üzerinde çalışır ve task, onu bekleyen thread’in ta kendisinde tamamlanmak zorunda kalırdı.',
   limits2:
     'Geri kalan her şey mevcut, GenHTTP modül API’sinin tamamı dahil. Bir şey reddedilirse sadece başarısız olduğu değil, hangi satırda ve neden reddedildiği de söylenir.',
 

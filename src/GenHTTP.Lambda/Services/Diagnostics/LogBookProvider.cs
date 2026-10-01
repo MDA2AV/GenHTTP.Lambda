@@ -41,17 +41,9 @@ public sealed class LogBookProvider(LogBook book, TextWriter? console = null, Lo
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
-        /// <summary>
-        /// Whether the book is already going to have this line, better.
-        /// </summary>
-        /// <remarks>
-        /// The engine writes one per request with the method, the path and the
-        /// status. CallerConcern writes its own with the address it came from
-        /// as well, which is the part anybody actually needs, so the engine's
-        /// would only be the same line without the useful field on it. Both
-        /// still reach stdout - this only decides what the ring keeps.
-        /// </remarks>
-        private bool Duplicated() => source == "Requests";
+        // the engine's own line per request is switched off where the host is
+        // configured (see Application.Configure): CallerConcern writes one
+        // with the caller on it, which is the part anybody actually needs
 
         // what is worth keeping is decided by the filters on the factory, the
         // same ones that decide what reaches the console
@@ -60,11 +52,6 @@ public sealed class LogBookProvider(LogBook book, TextWriter? console = null, Lo
         public void Log<TState>(LogLevel level, EventId id, TState state, Exception? error, Func<TState, Exception?, string> format)
         {
             if (!IsEnabled(level))
-            {
-                return;
-            }
-
-            if (Duplicated())
             {
                 return;
             }

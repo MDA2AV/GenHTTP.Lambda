@@ -5,7 +5,7 @@ namespace Platform;
 
 /// <summary>
 /// A folder the app reads and writes, with the methods the platform gave
-/// Workspace and Assets.
+/// Workspace - and what AssetFolder reads the assets with.
 /// </summary>
 public sealed class Folder
 {
@@ -90,4 +90,39 @@ public sealed class Folder
     }
 
     private string[] Relative(string[] paths) => [.. paths.Select(p => p[_root.Length..].Replace('\\', '/'))];
+}
+
+/// <summary>
+/// What the app shipped with: read like any folder, and served from the
+/// directory itself, which is what the platform did.
+/// </summary>
+public sealed class AssetFolder(string root)
+{
+    private readonly Folder _folder = new(root);
+
+    /// <summary>The absolute path the assets were copied to.</summary>
+    public string Root => _folder.Root;
+
+    public bool Exists(string name) => _folder.Exists(name);
+
+    public string ReadText(string name) => _folder.ReadText(name);
+
+    public byte[] ReadBytes(string name) => _folder.ReadBytes(name);
+
+    public string[] List() => _folder.List();
+
+    public string[] Folders() => _folder.Folders();
+
+    public IResourceTree Tree() => _folder.Tree();
+
+    public IResourceTree Tree(string folder) => _folder.Tree(folder);
+
+    /// <summary>Serves the assets as files.</summary>
+    public FileAssetsBuilder Files() => Assets.From(Root);
+
+    public FileAssetsBuilder Files(string folder) => Assets.From(Path.Combine(Root, folder));
+
+    public SinglePageBuilder App() => _folder.App();
+
+    public SinglePageBuilder App(string folder) => _folder.App(folder);
 }

@@ -268,7 +268,7 @@ public sealed class SourceTests
 
         await TreeAsync(fixture, "starred", 1);
 
-        var packed = Path.Combine(fixture.Options.SourceDirectory, (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value.ToString());
+        var packed = Path.Combine(fixture.Options.SourceDirectory, (fixture.Meta.GetId(lambda.PrivateKey))!.Value.ToString());
 
         Assert.AreEqual(1, Directory.GetFiles(packed, "*.zip").Length, "packed once, on the first read");
 
@@ -479,7 +479,7 @@ public sealed class SourceTests
         Assert.AreEqual("/lambda/shop/", before.Source.Address, "its path on the platform, while it has no domain");
         Assert.IsTrue(before.Versions[0].Online, "and which version is the one online");
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         using (var domain = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/domain", new DomainChangeRequest("shop.example.com")))
         {
@@ -610,7 +610,7 @@ public sealed class SourceTests
 
         await TreeAsync(fixture, "temporary", 1);
 
-        var packed = Path.Combine(fixture.Options.SourceDirectory, (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value.ToString());
+        var packed = Path.Combine(fixture.Options.SourceDirectory, (fixture.Meta.GetId(lambda.PrivateKey))!.Value.ToString());
 
         Assert.IsTrue(Directory.Exists(packed));
 

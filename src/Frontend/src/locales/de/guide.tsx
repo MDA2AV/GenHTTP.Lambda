@@ -389,7 +389,7 @@ export const guide: Messages['guide'] = {
   ),
 
   limits:
-    'Ihr Code läuft auf einem gemeinsam genutzten Server. Deshalb wird manches in C# schon vor dem Kompilieren abgelehnt: Prozesse starten, eigene Sockets öffnen, Assemblies laden, auf das Dateisystem außerhalb Ihres Workspace zugreifen – und Reflection, die all das umgehen soll.',
+    'Ihr Code läuft auf einem gemeinsam genutzten Server. Deshalb wird manches in C# schon vor dem Kompilieren abgelehnt: Prozesse starten, eigene Sockets öffnen, Assemblies laden, auf das Dateisystem außerhalb Ihres Workspace zugreifen – und Reflection, die all das umgehen soll. Ebenso das Warten auf einen Task mit .Result oder .Wait() statt await: Anfragen laufen auf einem Thread pro Kern, und der Task müsste genau auf dem Thread fertig werden, der auf ihn wartet.',
   limits2:
     'Alles andere ist da, auch die komplette API der GenHTTP-Module. Wird etwas abgelehnt, sehen Sie, in welcher Zeile und warum – nicht nur, dass es fehlschlug.',
 

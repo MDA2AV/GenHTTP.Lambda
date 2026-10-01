@@ -37,17 +37,17 @@ public static class OperationLog
     /// <summary>
     /// The public key of the lambda of the editor key, to name it in a log line.
     /// </summary>
-    public static async ValueTask<string> PublicKeyOfAsync(this IMetaService meta, string privateKey)
-        => await meta.GetPublicKeyAsync(privateKey) ?? Unknown;
+    public static string PublicKeyOf(this IMetaService meta, string privateKey)
+        => meta.GetPublicKey(privateKey) ?? Unknown;
 
     /// <summary>
     /// The name of a feature, to name it in a log line.
     /// </summary>
-    public static async ValueTask<string> NameOfAsync(this IFeatureService features, string privateKey, string feature)
+    public static string NameOf(this IFeatureService features, string privateKey, string feature)
     {
         var key = feature.Trim().ToLowerInvariant();
 
-        return (await features.ListAsync(privateKey)).FirstOrDefault(f => f.Key == key)?.Name ?? Unknown;
+        return (features.List(privateKey)).FirstOrDefault(f => f.Key == key)?.Name ?? Unknown;
     }
 
     /// <summary>

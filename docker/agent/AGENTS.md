@@ -134,6 +134,13 @@ adds - a column with a default, a new table - so the data already there keeps
 working. The pages, scripts and styles are the program and ship with the code
 as assets.
 
+Never wait for a task: `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`,
+`Task.WaitAll`, `Task.WaitAny` and `SemaphoreSlim.Wait()` are refused.
+Requests run on one thread per core, and a task finishes on the thread that
+would be waiting for it - so it never would. Await it instead (handlers and
+routes may be async), or call the synchronous method where there is one, as
+with the database.
+
 An API key, a password or a token for another service is data too, and never
 code: read it with `Secret.Read("NAME")` - or `Secret.Exists` first, if the
 application can do without it - and switch secrets on with `enable_data`. You

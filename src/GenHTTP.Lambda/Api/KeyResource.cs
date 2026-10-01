@@ -24,9 +24,9 @@ public sealed class KeyResource(IMetaService meta)
     /// </summary>
     /// <param name="publicKey">The key, normalized the way it would be stored</param>
     [ResourceMethod(":publicKey")]
-    public async ValueTask<KeyResponse> Get(string publicKey)
+    public KeyResponse Get(string publicKey)
     {
-        var status = await meta.DescribeKeyAsync(publicKey);
+        var status = meta.DescribeKey(publicKey);
 
         return new KeyResponse(status.PublicKey, status.Valid, status.Available, status.Exists, status.Deployed, status.Reason);
     }

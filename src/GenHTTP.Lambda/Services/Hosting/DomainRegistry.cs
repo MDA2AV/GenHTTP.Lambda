@@ -31,7 +31,7 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
     /// One reload at a time: two running side by side could finish in either
     /// order, and the one that read the database first would win.
     /// </summary>
-    private readonly SemaphoreSlim _reloading = new(1, 1);
+    private readonly Lock _reloading = new();
 
     #region Get-/Setters
 
@@ -54,18 +54,16 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
     /// Reads the served domains again. Called once on startup and after
     /// anything that changes a domain or a tier.
     /// </summary>
-    public async ValueTask ReloadAsync(CancellationToken cancellation = default)
+    public void Reload()
     {
-        await _reloading.WaitAsync(cancellation);
-
-        try
+        lock (_reloading)
         {
-            await using var database = await databases.CreateDbContextAsync(cancellation);
+            using var database = databases.CreateDbContext();
 
-            var served = await database.Lambdas.AsNoTracking()
-                                       .Where(l => l.Tier == LambdaTier.Premium && l.Domain != null)
-                                       .Select(l => new { l.Id, Domain = l.Domain! })
-                                       .ToListAsync(cancellation);
+            var served = database.Lambdas.AsNoTracking()
+                                 .Where(l => l.Tier == LambdaTier.Premium && l.Domain != null)
+                                 .Select(l => new { l.Id, Domain = l.Domain! })
+                                 .ToList();
 
             var previous = _domains.Count;
 
@@ -75,10 +73,6 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
             {
                 logger.LogInformation("Serving {Count} custom domain(s)", _domains.Count);
             }
-        }
-        finally
-        {
-            _reloading.Release();
         }
     }
 

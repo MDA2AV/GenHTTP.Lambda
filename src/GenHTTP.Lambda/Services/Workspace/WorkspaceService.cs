@@ -17,9 +17,9 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
     #region Functionality
 
-    public async ValueTask<WorkspaceListing> ListAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)
+    public WorkspaceListing List(long lambdaId, long? featureId = null)
     {
-        var limits = await LimitsAsync(lambdaId, cancellation);
+        var limits = Limits(lambdaId);
 
         // switched off, it holds nothing - and looking is no reason to make
         // the directory it would have
@@ -59,11 +59,11 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         return new WorkspaceListing(files, folders, used, limits.Quota);
     }
 
-    public ValueTask<FileInfo?> FindAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
+    public FileInfo? Find(long lambdaId, string path, long? featureId = null)
     {
         var resolved = Resolve(Root(lambdaId, featureId), path);
 
-        return ValueTask.FromResult(File.Exists(resolved) ? new FileInfo(resolved) : null);
+        return File.Exists(resolved) ? new FileInfo(resolved) : null;
     }
 
     public async ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
@@ -83,7 +83,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
     public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
                                                       CancellationToken cancellation = default)
     {
-        var limits = await RequireEnabledAsync(lambdaId, cancellation);
+        var limits = RequireEnabled(lambdaId);
 
         var root = Root(lambdaId, featureId);
 
@@ -152,9 +152,9 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         return new WorkspaceEntry(Relative(root, resolved), info.Length, info.LastWriteTimeUtc);
     }
 
-    public async ValueTask CreateFolderAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
+    public void CreateFolder(long lambdaId, string path, long? featureId = null)
     {
-        var limits = await RequireEnabledAsync(lambdaId, cancellation);
+        var limits = RequireEnabled(lambdaId);
 
         var root = Root(lambdaId, featureId);
 
@@ -182,16 +182,14 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         logger.LogInformation("Workspace of lambda {LambdaId} gained folder '{Path}'", lambdaId, path);
     }
 
-    public ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
+    public void Delete(long lambdaId, string path, long? featureId = null)
     {
         var resolved = Resolve(Root(lambdaId, featureId), path);
 
         Delete(resolved);
-
-        return ValueTask.CompletedTask;
     }
 
-    public ValueTask ClearAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default)
+    public void Clear(long lambdaId, long? featureId = null)
     {
         var root = Root(lambdaId, featureId);
 
@@ -201,8 +199,6 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         }
 
         logger.LogInformation("Workspace of lambda {LambdaId} (feature {FeatureId}) was emptied", lambdaId, featureId);
-
-        return ValueTask.CompletedTask;
     }
 
     /// <summary>
@@ -299,8 +295,8 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
     /// moved to another tier is held to the limits of the new one - the same
     /// ones its own code will be compiled with on its next request.
     /// </remarks>
-    private async ValueTask<WorkspaceLimits> LimitsAsync(long lambdaId, CancellationToken cancellation)
-        => await meta.GetWorkspaceLimitsAsync(lambdaId, cancellation) ?? options.WorkspaceOf(LambdaTier.Free);
+    private WorkspaceLimits Limits(long lambdaId)
+        => meta.GetWorkspaceLimits(lambdaId) ?? options.WorkspaceOf(LambdaTier.Free);
 
     /// <summary>
     /// The limits of a workspace that is switched on, or a refusal saying how
@@ -310,9 +306,9 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
     /// Refused here as the lambda itself refuses it, so a file uploaded by
     /// hand cannot land where the lambda has been told there is nothing.
     /// </remarks>
-    private async ValueTask<WorkspaceLimits> RequireEnabledAsync(long lambdaId, CancellationToken cancellation)
+    private WorkspaceLimits RequireEnabled(long lambdaId)
     {
-        var limits = await LimitsAsync(lambdaId, cancellation);
+        var limits = Limits(lambdaId);
 
         return limits.Enabled ? limits : throw LambdaException.Conflict(DataKinds.WorkspaceOff);
     }

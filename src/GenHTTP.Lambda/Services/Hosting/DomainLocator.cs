@@ -21,18 +21,18 @@ namespace GenHTTP.Lambda.Services.Hosting;
 public sealed class DomainLocator(IMetaService meta) : ILambdaLocator
 {
 
-    public async ValueTask<ResolvedLambda?> LocateAsync(IRequest request)
+    public ResolvedLambda? Locate(IRequest request)
     {
         if (request.GetDomain() is not { } domain)
         {
             return null;
         }
 
-        return await meta.ResolveAsync(domain.LambdaId);
+        return meta.Resolve(domain.LambdaId);
     }
 
-    public ValueTask<IResponse> UnavailableAsync(IRequest request)
-        => new(LambdaErrorMapper.Render(request, request.Header.Headers.GetEntry("Accept"), ResponseStatus.ServiceUnavailable, "Offline",
-                                        "This site is not online at the moment. Please try again later.", null));
+    public IResponse Unavailable(IRequest request)
+        => LambdaErrorMapper.Render(request, request.Header.Headers.GetEntry("Accept"), ResponseStatus.ServiceUnavailable, "Offline",
+                                        "This site is not online at the moment. Please try again later.", null);
 
 }

@@ -142,7 +142,7 @@ public sealed class DemoTests
             Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode, $"{method} {path} should be refused");
         }
 
-        var lambda = await fixture.Meta.GetAsync(key);
+        var lambda = fixture.Meta.Get(key);
 
         Assert.AreEqual(1, lambda!.LatestVersion, "nothing was saved");
         Assert.IsNotNull(lambda.ActiveVersion, "and it is still online");
@@ -170,10 +170,10 @@ public sealed class DemoTests
 
         var lambda = await fixture.CreateLambdaAsync("somebodys");
 
-        await Assert.ThrowsExactlyAsync<LambdaException>(async () => await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Demo),
+        await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Demo),
                                                          "the seeder would delete it on the next start");
 
-        await Assert.ThrowsExactlyAsync<LambdaException>(async () => await fixture.ChangeTierAsync("demo-crud", LambdaTier.Free),
+        await Assert.ThrowsExactlyAsync<LambdaException>(async () => fixture.ChangeTier("demo-crud", LambdaTier.Free),
                                                          "and it would be anybody's to change");
     }
 
@@ -226,9 +226,9 @@ public sealed class DemoTests
         await fixture.SeedDemosAsync();
 
         // far enough ahead that everything else would be long gone
-        await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow.AddYears(1));
+        fixture.Meta.RunMaintenance(DateTime.UtcNow.AddYears(1));
 
-        var status = await fixture.Meta.DescribeKeyAsync("demo-crud");
+        var status = fixture.Meta.DescribeKey("demo-crud");
 
         Assert.IsTrue(status.Exists, "a demo nobody has opened for a year is still wanted");
         Assert.IsTrue(status.Deployed, "and it should still be answering");
@@ -243,7 +243,7 @@ public sealed class DemoTests
 
         await fixture.SeedDemosAsync();
 
-        var versions = await fixture.Meta.GetVersionsAsync("demo-crud");
+        var versions = fixture.Meta.GetVersions("demo-crud");
 
         Assert.HasCount(1, versions, "a demo that is current is left alone");
         Assert.AreEqual(VersionOrigins.System, versions[0].Origin);
@@ -260,10 +260,10 @@ public sealed class DemoTests
 
         await fixture.SeedDemosAsync();
 
-        Assert.IsFalse((await fixture.Meta.DescribeKeyAsync("example-gone-away")).Exists,
+        Assert.IsFalse((fixture.Meta.DescribeKey("example-gone-away")).Exists,
                        "a demo dropped from the catalogue should not sit on its key for ever");
 
-        Assert.IsTrue((await fixture.Meta.DescribeKeyAsync("demo-crud")).Exists);
+        Assert.IsTrue((fixture.Meta.DescribeKey("demo-crud")).Exists);
     }
 
 }

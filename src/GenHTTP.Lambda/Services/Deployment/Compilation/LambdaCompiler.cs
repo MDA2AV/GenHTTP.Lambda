@@ -130,11 +130,13 @@ internal static class LambdaCompiler
             CompilationOptions
         );
 
-        var constructed = CodeGuard.InspectConstruction(compilation);
+        // what needs the compiler to tell: a connection made without naming
+        // its type, and a task waited for rather than awaited
+        List<CompilationDiagnostic> constructed = [.. CodeGuard.InspectConstruction(compilation), .. CodeGuard.InspectWaiting(compilation)];
 
         if (constructed.Count > 0)
         {
-            return (CompilationOutcome.Failed([.. constructed]), null);
+            return (CompilationOutcome.Failed(constructed), null);
         }
 
         if (!request.Run)

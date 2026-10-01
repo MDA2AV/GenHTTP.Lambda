@@ -202,7 +202,7 @@ public sealed class ShowcaseTests
 
         var telemetry = fixture.Application.Services.GetRequiredService<LambdaTelemetry>();
 
-        var id = await fixture.Meta.GetIdAsync(busy.PrivateKey);
+        var id = fixture.Meta.GetId(busy.PrivateKey);
 
         for (var i = 0; i < 200; i++)
         {

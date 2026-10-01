@@ -206,23 +206,24 @@ public sealed class LogBook
 
         var trace = Shorten(detail, MaxDetail);
 
+        /*
+         * What makes two lines the same is given by whoever wrote them, not
+         * read off the text.
+         *
+         * A request line carries how long it took, and no two requests take
+         * the same number of microseconds - so keying on the text meant every
+         * line was unique and nothing ever folded. Sixty identical requests
+         * came out as fifty-eight lines. The caller knows which parts identify
+         * the thing and which parts are measurements of it; only the caller
+         * can. Put together out here, like the rest, since the lock is held
+         * by every request on every core.
+         */
+        var key = folding == null || Fold <= TimeSpan.Zero
+            ? null
+            : $"{level}\u0000{where}\u0000{lambda}\u0000{lambdaId}\u0000{featureId}\u0000{domain}\u0000{client}\u0000{folding}";
+
         lock (Gate)
         {
-            /*
-             * What makes two lines the same is given by whoever wrote them,
-             * not read off the text.
-             *
-             * A request line carries how long it took, and no two requests
-             * take the same number of microseconds - so keying on the text
-             * meant every line was unique and nothing ever folded. Sixty
-             * identical requests came out as fifty-eight lines. The caller
-             * knows which parts identify the thing and which parts are
-             * measurements of it; only the caller can.
-             */
-            var key = folding == null
-                ? null
-                : $"{level}\u0000{where}\u0000{lambda}\u0000{lambdaId}\u0000{featureId}\u0000{domain}\u0000{client}\u0000{folding}";
-
             Run? open = null;
 
             if (Fold > TimeSpan.Zero && key != null)
@@ -320,6 +321,8 @@ public sealed class LogBook
     {
         var wanted = Math.Clamp(limit, 1, 50_000);
 
+        var lowest = Rank(minimum);
+
         var matched = new List<LogLine>();
 
         long cursor;
@@ -338,13 +341,29 @@ public sealed class LogBook
             // arriving for the first time, cannot be given what is gone
             missed = since > 0 && since + 1 < oldest ? (int)(oldest - since - 1) : 0;
 
-            for (var i = 0; i < Count; i++)
+            /*
+             * Newest first, stopping at the reader's cursor - and, for a
+             * reader without one, as soon as it has its screenful.
+             *
+             * Every request on every core writes its line under this lock, so
+             * the walk is what all of them wait for. It used to be the whole
+             * ring every time: a million lines, for an editor asking every few
+             * seconds whether its lambda had said anything new. Now it costs
+             * what is new since the reader last asked.
+             */
+            for (var i = Count - 1; i >= 0; i--)
             {
                 var line = Lines[(Head + i) % Capacity];
 
-                if (line == null || line.Seq <= since)
+                if (line == null)
                 {
                     continue;
+                }
+
+                // sequences grow along the ring, so everything older was seen
+                if (line.Seq <= since)
+                {
+                    break;
                 }
 
                 if (lambda != null && !string.Equals(line.Lambda, lambda, StringComparison.Ordinal))
@@ -369,32 +388,38 @@ public sealed class LogBook
                     continue;
                 }
 
-                if (Rank(line.Level) < Rank(minimum))
+                if (Rank(line.Level) < lowest)
                 {
                     continue;
                 }
 
-                matched.Add(line);
+                /*
+                 * The newest, because the tail is the point.
+                 *
+                 * What does not fit is only counted as missed for a reader
+                 * that had a cursor, which bounds the walk by what is new.
+                 * One arriving without one is asking for the tail, not
+                 * falling behind it, and telling somebody who has just opened
+                 * the page that two hundred lines got past them is alarming
+                 * and untrue - so for them the walk ends with the screenful.
+                 */
+                if (matched.Count < wanted)
+                {
+                    matched.Add(line);
+                }
+                else if (since > 0)
+                {
+                    missed++;
+                }
+                else
+                {
+                    break;
+                }
             }
         }
 
-        if (matched.Count > wanted)
-        {
-            /*
-             * The newest, because the tail is the point.
-             *
-             * Only counted as missed for a reader that had a cursor. One
-             * arriving without one is asking for the tail, not falling behind
-             * it, and telling somebody who has just opened the page that two
-             * hundred lines got past them is alarming and untrue.
-             */
-            if (since > 0)
-            {
-                missed += matched.Count - wanted;
-            }
-
-            matched.RemoveRange(0, matched.Count - wanted);
-        }
+        // walked newest first, read oldest first
+        matched.Reverse();
 
         return (matched, cursor, missed);
     }

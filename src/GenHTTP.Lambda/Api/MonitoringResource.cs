@@ -31,7 +31,7 @@ namespace GenHTTP.Lambda.Api;
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
 public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
-                                               LambdaTelemetry telemetry, LogBook book, LambdaOptions options)
+                                               LambdaTelemetry telemetry, LogBook book, LambdaOptions options, VersionFactsCache facts)
 {
 
     #region Functionality
@@ -43,13 +43,13 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     [ResourceMethod("lambdas/:privateKey/summary")]
     public async ValueTask<LambdaSummaryResponse> Summary(string privateKey)
     {
-        var lambda = await meta.RequireAsync(privateKey);
+        var lambda = meta.Require(privateKey);
 
-        var id = await meta.RequireIdAsync(privateKey);
+        var id = meta.RequireId(privateKey);
 
-        var versions = await meta.GetVersionsAsync(privateKey);
+        var versions = meta.GetVersions(privateKey);
 
-        var activations = await meta.GetActivationsAsync(privateKey);
+        var activations = meta.GetActivations(privateKey);
 
         var now = DateTime.UtcNow;
 
@@ -81,7 +81,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var measured = live?.Version ?? latest?.Version;
 
-        var files = await FilesOfAsync(privateKey, measured);
+        var known = await FactsOfAsync(privateKey, id, measured);
 
         return new LambdaSummaryResponse(
             LambdaDescription.Of(lambda),
@@ -94,7 +94,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                                          (long)(now - current.Started).TotalSeconds),
             Summarize(traffic),
             [.. problems.Select(Describe)],
-            await MeasureAsync(privateKey, id, measured, files),
+            Measure(privateKey, id, measured, known),
             new SummaryLimits(
                 options.MaxCodeLengthOf(tier),
                 options.MaxAssetBytesOf(tier),
@@ -105,7 +105,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
                 options.MaxFeatures,
                 options.DatabaseOf(tier)
             ),
-            Document(files)
+            known.Documentation
         );
     }
 
@@ -118,8 +118,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     /// says, so a restart starts every figure here again from nothing.
     /// </remarks>
     [ResourceMethod("lambdas/:privateKey/traffic")]
-    public async ValueTask<LambdaTraffic> Traffic(string privateKey)
-        => telemetry.Describe(await meta.RequireIdAsync(privateKey));
+    public LambdaTraffic Traffic(string privateKey)
+        => telemetry.Describe(meta.RequireId(privateKey));
 
     /// <summary>
     /// What the lambda and the server about it have said, oldest first.
@@ -136,9 +136,9 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     /// shortens how far back this reaches; it is for watching, not keeping.
     /// </remarks>
     [ResourceMethod("lambdas/:privateKey/logs")]
-    public async ValueTask<OwnerLogResponse> Logs(string privateKey, long? since, string? level, int? limit)
+    public OwnerLogResponse Logs(string privateKey, long? since, string? level, int? limit)
     {
-        var id = await meta.RequireIdAsync(privateKey);
+        var id = meta.RequireId(privateKey);
 
         var wanted = Math.Clamp(limit ?? (since.HasValue ? 1000 : 500), 1, 2000);
 
@@ -185,25 +185,46 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     }
 
     /// <summary>
-    /// The files of the version the summary is about.
+    /// What the version the summary is about is made of - read off it once,
+    /// since it never changes (see <see cref="VersionFactsCache"/>).
     /// </summary>
-    private async ValueTask<IReadOnlyList<LambdaFile>> FilesOfAsync(string privateKey, int? version)
+    private async ValueTask<VersionFacts> FactsOfAsync(string privateKey, long id, int? version)
     {
         if (version is not { } wanted)
         {
-            return [];
+            return VersionFactsCache.Empty;
         }
 
-        try
+        return await facts.GetAsync(id, wanted, async () =>
         {
-            return LambdaSource.Parse((await meta.GetVersionAsync(privateKey, wanted)).Code);
-        }
-        catch (LambdaException)
-        {
-            // a version whose code has gone missing is reported as empty
-            // rather than making the whole summary unavailable
-            return [];
-        }
+            try
+            {
+                return Read(LambdaSource.Parse((meta.GetVersion(privateKey, wanted)).Code));
+            }
+            catch (LambdaException)
+            {
+                // a version whose code has gone missing is reported as empty
+                // rather than making the whole summary unavailable
+                return null;
+            }
+        });
+    }
+
+    private static VersionFacts Read(IReadOnlyList<LambdaFile> files)
+    {
+        var code = files.Where(f => f.IsCode).ToList();
+
+        return new VersionFacts(
+            code.Count,
+            LambdaSource.Length(files),
+            files.Count(f => f.IsAsset),
+            LambdaSource.AssetBytes(files),
+            code.Any(f => ServingAssets().IsMatch(f.Code)),
+            code.Any(f => ServingWorkspace().IsMatch(f.Code)),
+            code.Any(f => UsingWorkspace().IsMatch(f.Code)),
+            code.Any(f => DatabaseService.Uses(f.Code)),
+            Document(files)
+        );
     }
 
     /// <summary>
@@ -227,35 +248,33 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     /// <summary>
     /// What the lambda keeps: the files of a version, and its data beside it.
     /// </summary>
-    private async ValueTask<StorageSummary> MeasureAsync(string privateKey, long id, int? version, IReadOnlyList<LambdaFile> files)
+    private StorageSummary Measure(string privateKey, long id, int? version, VersionFacts known)
     {
-        var code = files.Where(f => f.IsCode).ToList();
+        var listing = workspace.List(id);
 
-        var listing = await workspace.ListAsync(id);
+        var kept = secrets.List(privateKey);
 
-        var kept = await secrets.ListAsync(privateKey);
-
-        var database = await data.GetAsync(privateKey, DataKinds.DatabaseId);
+        var database = data.Get(privateKey, DataKinds.DatabaseId);
 
         return new StorageSummary(
             version,
-            code.Count,
-            LambdaSource.Length(files),
-            files.Count(f => f.IsAsset),
-            LambdaSource.AssetBytes(files),
+            known.CodeFiles,
+            known.CodeLength,
+            known.AssetFiles,
+            known.AssetBytes,
             listing.Files.Count,
             listing.UsedBytes,
-            code.Any(f => ServingAssets().IsMatch(f.Code)),
-            code.Any(f => ServingWorkspace().IsMatch(f.Code)),
+            known.ServesAssets,
+            known.ServesWorkspace,
             listing.Enabled,
-            code.Any(f => UsingWorkspace().IsMatch(f.Code)),
+            known.UsesWorkspace,
             kept.Enabled,
             kept.Secrets.Count,
             [.. kept.Missing],
             database.Enabled,
             database.Items,
             database.UsedBytes,
-            code.Any(f => DatabaseService.Uses(f.Code))
+            known.UsesDatabase
         );
     }
 

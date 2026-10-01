@@ -15,25 +15,24 @@ public interface IMetaService
     /// Tells whether a public key could be claimed, and whether a lambda is
     /// already answering there.
     /// </summary>
-    ValueTask<KeyStatus> DescribeKeyAsync(string? publicKey, CancellationToken cancellation = default);
+    KeyStatus DescribeKey(string? publicKey);
 
     /// <summary>
     /// Creates a new lambda, generating a public key if none was requested and
     /// seeding it with the given template (the default one if none was named).
     /// </summary>
     /// <param name="view">How its editor opens for somebody who has not chosen a view of their own</param>
-    ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full,
-                                      CancellationToken cancellation = default);
+    LambdaInfo Create(string? publicKey, string? template = null, EditorView view = EditorView.Full);
 
     /// <summary>
     /// Reads a lambda by the private key of its editor.
     /// </summary>
-    ValueTask<LambdaInfo?> GetAsync(string privateKey, CancellationToken cancellation = default);
+    LambdaInfo? Get(string privateKey);
 
     /// <summary>
     /// Looks up the deployed lambda behind a public key, if there is one.
     /// </summary>
-    ValueTask<ResolvedLambda?> ResolveAsync(string publicKey, CancellationToken cancellation = default);
+    ResolvedLambda? Resolve(string publicKey);
 
     /// <summary>
     /// Looks up the deployed lambda with the given identity, if it is deployed.
@@ -42,17 +41,17 @@ public interface IMetaService
     /// For the routes that know a lambda by something other than its key -
     /// its domain - and so should not care when the key changes.
     /// </remarks>
-    ValueTask<ResolvedLambda?> ResolveAsync(long id, CancellationToken cancellation = default);
+    ResolvedLambda? Resolve(long id);
 
     /// <summary>
     /// Lists the stored versions of a lambda, newest first.
     /// </summary>
-    ValueTask<IReadOnlyList<LambdaVersionInfo>> GetVersionsAsync(string privateKey, CancellationToken cancellation = default);
+    IReadOnlyList<LambdaVersionInfo> GetVersions(string privateKey);
 
     /// <summary>
     /// Reads a single version including its code.
     /// </summary>
-    ValueTask<LambdaVersionContent> GetVersionAsync(string privateKey, int version, CancellationToken cancellation = default);
+    LambdaVersionContent GetVersion(string privateKey, int version);
 
     /// <summary>
     /// Stores the given code as a new version.
@@ -67,8 +66,7 @@ public interface IMetaService
     /// merged only on top of the version it is based on, and refused if
     /// another was saved first
     /// </param>
-    ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, int? after = null,
-                                           CancellationToken cancellation = default);
+    LambdaVersionInfo Save(string privateKey, string code, VersionNote? note = null, int? after = null);
 
     /// <summary>
     /// Compiles the given code without deploying it.
@@ -85,28 +83,28 @@ public interface IMetaService
     /// Takes the lambda off the air, keeping its code.
     /// </summary>
     /// <param name="endedBy">Why, for the deployment history: stopped by the owner unless said otherwise</param>
-    ValueTask<LambdaInfo> UndeployAsync(string privateKey, string? endedBy = null, CancellationToken cancellation = default);
+    LambdaInfo Undeploy(string privateKey, string? endedBy = null);
 
     /// <summary>
     /// Every stretch of time the lambda was online, newest first.
     /// </summary>
-    ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default);
+    IReadOnlyList<LambdaActivation> GetActivations(string privateKey);
 
     /// <summary>
     /// Moves the lambda to another public key.
     /// </summary>
-    ValueTask<LambdaInfo> ChangeKeyAsync(string privateKey, string? publicKey, CancellationToken cancellation = default);
+    LambdaInfo ChangeKey(string privateKey, string? publicKey);
 
     /// <summary>
     /// Changes how the editor of the lambda opens for somebody who has not
     /// chosen a view of their own.
     /// </summary>
-    ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, CancellationToken cancellation = default);
+    LambdaInfo ChangeView(string privateKey, EditorView view);
 
     /// <summary>
     /// Moves the lambda to another tier. Only ever done by an administrator.
     /// </summary>
-    ValueTask<LambdaInfo> ChangeTierAsync(string privateKey, LambdaTier tier, CancellationToken cancellation = default);
+    LambdaInfo ChangeTier(string privateKey, LambdaTier tier);
 
     /// <summary>
     /// Sets the domain the lambda answers at, or removes it when nothing is given.
@@ -115,35 +113,35 @@ public interface IMetaService
     /// Only a premium lambda may be given one. Removing one is always allowed,
     /// so a lambda that dropped out of the tier can still let go of it.
     /// </remarks>
-    ValueTask<LambdaInfo> ChangeDomainAsync(string privateKey, string? domain, CancellationToken cancellation = default);
+    LambdaInfo ChangeDomain(string privateKey, string? domain);
 
     /// <summary>
     /// Removes the lambda, its versions and its workspace.
     /// </summary>
-    ValueTask DeleteAsync(string privateKey, CancellationToken cancellation = default);
+    void Delete(string privateKey);
 
     /// <summary>
     /// Undeploys and removes lambdas that have outlived their tier.
     /// </summary>
-    ValueTask<MaintenanceReport> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default);
+    MaintenanceReport RunMaintenance(DateTime now);
 
     /// <summary>
     /// Counts the lambdas, the deployed ones and the versions kept for them.
     /// </summary>
-    ValueTask<LambdaCounts> CountAsync(CancellationToken cancellation = default);
+    LambdaCounts Count();
 
     /// <summary>
     /// The identity a lambda is filed under, for the services that store things
     /// beside the database. Null when the key belongs to nothing.
     /// </summary>
-    ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default);
+    long? GetId(string privateKey);
 
     /// <summary>
     /// What the lambda filed under the given identity may keep in its
     /// workspace, which its tier decides and its owner can switch off. Null
     /// when there is no such lambda.
     /// </summary>
-    ValueTask<WorkspaceLimits?> GetWorkspaceLimitsAsync(long lambdaId, CancellationToken cancellation = default);
+    WorkspaceLimits? GetWorkspaceLimits(long lambdaId);
 
     /// <summary>
     /// The identity of a lambda its owner may change, for the services that
@@ -153,26 +151,25 @@ public interface IMetaService
     /// Refuses a demo, whose editor key is announced: reading one is the
     /// point, and anybody could otherwise replace what it serves.
     /// </remarks>
-    ValueTask<long> RequireEditableAsync(string privateKey, CancellationToken cancellation = default);
+    long RequireEditable(string privateKey);
 
     /// <summary>
     /// One page of the lambdas on the installation, newest first.
     /// </summary>
     /// <param name="search">Narrows the listing to public keys or domains containing this</param>
     /// <param name="tier">Narrows the listing to one tier</param>
-    ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null,
-                                    CancellationToken cancellation = default);
+    LambdaPage List(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null);
 
     /// <summary>
     /// The editor key behind a public one, for the operations that act on a
     /// lambda without having been given its link.
     /// </summary>
-    ValueTask<string?> GetPrivateKeyAsync(string publicKey, CancellationToken cancellation = default);
+    string? GetPrivateKey(string publicKey);
 
     /// <summary>
     /// The public key behind an editor key, for naming a lambda where the
     /// editor key must not appear - in a log line.
     /// </summary>
-    ValueTask<string?> GetPublicKeyAsync(string privateKey, CancellationToken cancellation = default);
+    string? GetPublicKey(string privateKey);
 
 }

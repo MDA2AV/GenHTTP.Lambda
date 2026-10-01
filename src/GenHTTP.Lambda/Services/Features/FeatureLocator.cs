@@ -22,7 +22,7 @@ namespace GenHTTP.Lambda.Services.Features;
 public sealed class FeatureLocator(IFeatureService features) : ILambdaLocator
 {
 
-    public async ValueTask<ResolvedLambda?> LocateAsync(IRequest request)
+    public ResolvedLambda? Locate(IRequest request)
     {
         var target = request.Header.Target;
 
@@ -31,7 +31,7 @@ public sealed class FeatureLocator(IFeatureService features) : ILambdaLocator
             return null;
         }
 
-        var lambda = await features.ResolvePreviewAsync(segment.Decode());
+        var lambda = features.ResolvePreview(segment.Decode());
 
         if (lambda != null)
         {
@@ -42,8 +42,8 @@ public sealed class FeatureLocator(IFeatureService features) : ILambdaLocator
         return lambda;
     }
 
-    public ValueTask<IResponse> UnavailableAsync(IRequest request)
-        => new(LambdaErrorMapper.Render(request, request.Header.Headers.GetEntry("Accept"), ResponseStatus.NotFound, "Not online",
-                                        "This preview is not online. It may have been merged, deleted or taken offline.", null));
+    public IResponse Unavailable(IRequest request)
+        => LambdaErrorMapper.Render(request, request.Header.Headers.GetEntry("Accept"), ResponseStatus.NotFound, "Not online",
+                                        "This preview is not online. It may have been merged, deleted or taken offline.", null);
 
 }

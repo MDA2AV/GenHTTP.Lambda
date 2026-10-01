@@ -381,7 +381,7 @@ export const guide: Messages['guide'] = {
   ),
 
   limits:
-    'O teu código corre num servidor partilhado, por isso parte do C# é recusada antes de compilar: iniciar processos, abrir sockets próprios, carregar assemblies, aceder ao sistema de ficheiros fora do teu workspace, e usar reflection para contornar qualquer uma destas regras.',
+    'O teu código corre num servidor partilhado, por isso parte do C# é recusada antes de compilar: iniciar processos, abrir sockets próprios, carregar assemblies, aceder ao sistema de ficheiros fora do teu workspace, e usar reflection para contornar qualquer uma destas regras. O mesmo vale para esperar por uma task com .Result ou .Wait() em vez de usar await: os pedidos correm numa thread por núcleo, e a task teria de terminar precisamente na thread que está à espera dela.',
   limits2:
     'Todo o resto está lá, incluindo toda a API de módulos do GenHTTP. Se algo for recusado, ficas a saber em que linha e porquê, e não apenas que falhou.',
 

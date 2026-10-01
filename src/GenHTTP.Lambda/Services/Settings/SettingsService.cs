@@ -20,62 +20,50 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
 
     private const string ChangeBoxKey = "change-box";
 
-    private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly Lock _lock = new();
 
     private SiteSettings? _current;
 
     /// <summary>
     /// The settings as they stand.
     /// </summary>
-    public async ValueTask<SiteSettings> GetAsync(CancellationToken cancellation = default)
+    public SiteSettings Get()
     {
         if (_current is { } current)
         {
             return current;
         }
 
-        await _lock.WaitAsync(cancellation);
-
-        try
+        lock (_lock)
         {
-            return _current ??= await ReadAsync(cancellation);
-        }
-        finally
-        {
-            _lock.Release();
+            return _current ??= Read();
         }
     }
 
     /// <summary>
     /// Replaces the settings.
     /// </summary>
-    public async ValueTask<SiteSettings> SaveAsync(SiteSettings settings, CancellationToken cancellation = default)
+    public SiteSettings Save(SiteSettings settings)
     {
-        await _lock.WaitAsync(cancellation);
-
-        try
+        lock (_lock)
         {
-            await using var database = await databases.CreateDbContextAsync(cancellation);
+            using var database = databases.CreateDbContext();
 
-            await WriteAsync(database, EnterprisePageKey, settings.EnterprisePage, cancellation);
-            await WriteAsync(database, BuildBoxKey, settings.BuildBox, cancellation);
-            await WriteAsync(database, ChangeBoxKey, settings.ChangeBox, cancellation);
+            Write(database, EnterprisePageKey, settings.EnterprisePage);
+            Write(database, BuildBoxKey, settings.BuildBox);
+            Write(database, ChangeBoxKey, settings.ChangeBox);
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
 
             return _current = settings;
         }
-        finally
-        {
-            _lock.Release();
-        }
     }
 
-    private async ValueTask<SiteSettings> ReadAsync(CancellationToken cancellation)
+    private SiteSettings Read()
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var stored = await database.Settings.AsNoTracking().ToDictionaryAsync(s => s.Key, s => s.Value, cancellation);
+        var stored = database.Settings.AsNoTracking().ToDictionary(s => s.Key, s => s.Value);
 
         return new SiteSettings(
             EnterprisePage: Flag(stored, EnterprisePageKey, SiteSettings.Default.EnterprisePage),
@@ -87,11 +75,11 @@ public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases
     private static bool Flag(Dictionary<string, string> stored, string key, bool fallback)
         => stored.TryGetValue(key, out var value) && bool.TryParse(value, out var parsed) ? parsed : fallback;
 
-    private static async ValueTask WriteAsync(LambdaDbContext database, string key, bool value, CancellationToken cancellation)
+    private static void Write(LambdaDbContext database, string key, bool value)
     {
         var text = value.ToString().ToLowerInvariant();
 
-        var existing = await database.Settings.FindAsync([key], cancellation);
+        var existing = database.Settings.Find(key);
 
         if (existing == null)
         {

@@ -31,7 +31,7 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds, S
     /// The terms, limits and editor vocabulary of this installation.
     /// </summary>
     [ResourceMethod]
-    public async ValueTask<PlatformResponse> Get() => new(
+    public PlatformResponse Get() => new(
         Terms,
         Describe(),
         options.MaxCodeLength,
@@ -39,7 +39,7 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds, S
         (int)options.Retention.TotalDays,
         ModuleCatalog.Imports,
         CompletionCatalog.Items,
-        new BuildAvailability(await builds.BuildsOfferedAsync(), builds.PerDay, builds.HasSecondModel)
+        new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel)
     );
 
     /// <summary>
@@ -50,9 +50,9 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds, S
     /// vocabulary and is too much to ask for on every page.
     /// </remarks>
     [ResourceMethod("features")]
-    public async ValueTask<FeaturesResponse> GetFeatures()
+    public FeaturesResponse GetFeatures()
     {
-        var current = await settings.GetAsync();
+        var current = settings.Get();
 
         return new FeaturesResponse(current.EnterprisePage);
     }

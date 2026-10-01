@@ -29,18 +29,18 @@ public sealed class LambdaResolutionConcern(IHandler content, ILambdaLocator loc
 
     public ValueTask PrepareAsync(IServer server) => content.PrepareAsync(server);
 
-    public async ValueTask<IResponse?> HandleAsync(IRequest request)
+    public ValueTask<IResponse?> HandleAsync(IRequest request)
     {
-        var lambda = await locator.LocateAsync(request);
+        var lambda = locator.Locate(request);
 
         if (lambda == null)
         {
-            return await locator.UnavailableAsync(request);
+            return new(locator.Unavailable(request));
         }
 
         request.SetLambda(lambda);
 
-        return await content.HandleAsync(request);
+        return content.HandleAsync(request);
     }
 
     #endregion

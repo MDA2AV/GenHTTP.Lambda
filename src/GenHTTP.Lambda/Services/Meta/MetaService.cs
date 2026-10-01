@@ -37,8 +37,14 @@ public sealed class MetaService : IMetaService
     /// before, with somebody else's save landing in between. Striped rather
     /// than one per lambda so it does not grow with them; two lambdas sharing
     /// a stripe merely wait for each other.
+    ///
+    /// Plain locks, held only while the change is read and written - never
+    /// across an await, which is why a deployment compiles before it takes
+    /// one (see <see cref="DeployAsync"/>). A lock is held by a thread, and a
+    /// reactor that awaited under one would hand it to whatever request it
+    /// resumed next.
     /// </remarks>
-    private readonly SemaphoreSlim[] _stripes = [.. Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1))];
+    private readonly Lock[] _stripes = [.. Enumerable.Range(0, 64).Select(_ => new Lock())];
 
     #region Get-/Setters
 
@@ -62,14 +68,27 @@ public sealed class MetaService : IMetaService
 
     private ILogger Logger { get; }
 
+    /// <summary>
+    /// The lambdas being served, by the key in their path.
+    /// </summary>
+    private ResolutionCache<string> ByKey { get; }
+
+    /// <summary>
+    /// The lambdas being served, by id - how a lambda's own domain finds it.
+    /// </summary>
+    private ResolutionCache<long> ById { get; }
+
     #endregion
 
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
         LambdaTelemetry activity, LambdaOptions options, LogBook book, DomainRegistry domains, SecretVault secrets, DatabaseVault databaseVault,
-        ILogger<MetaService> logger)
+        DatabaseChanges changes, ILogger<MetaService> logger)
     {
+        ByKey = new ResolutionCache<string>(changes);
+        ById = new ResolutionCache<long>(changes);
+
         Domains = domains;
         Secrets = secrets;
         DatabaseVault = databaseVault;
@@ -86,18 +105,18 @@ public sealed class MetaService : IMetaService
 
     #region Keys
 
-    public async ValueTask<KeyStatus> DescribeKeyAsync(string? publicKey, CancellationToken cancellation = default)
+    public KeyStatus DescribeKey(string? publicKey)
     {
         // looked up even when it could not be claimed: a key that is refused
         // today may still belong to a lambda from before the rule was made
         var valid = LambdaKeys.TryNormalize(publicKey, out var normalized, out var reason);
 
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await database.Lambdas.AsNoTracking()
-                                   .Where(l => l.PublicKey == normalized)
-                                   .Select(l => new { l.ActiveVersion })
-                                   .FirstOrDefaultAsync(cancellation);
+        var lambda = database.Lambdas.AsNoTracking()
+                             .Where(l => l.PublicKey == normalized)
+                             .Select(l => new { l.ActiveVersion })
+                             .FirstOrDefault();
 
         if (valid && lambda != null)
         {
@@ -114,22 +133,22 @@ public sealed class MetaService : IMetaService
         return new KeyStatus(normalized, valid, lambda != null, lambda?.ActiveVersion != null, reason);
     }
 
-    public async ValueTask<LambdaInfo> ChangeKeyAsync(string privateKey, string? publicKey, CancellationToken cancellation = default)
+    public LambdaInfo ChangeKey(string privateKey, string? publicKey)
     {
         if (!LambdaKeys.TryNormalize(publicKey, out var normalized, out var reason))
         {
             throw LambdaException.Invalid(reason!);
         }
 
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
         EnsureEditable(lambda);
 
         if (lambda.PublicKey == normalized)
         {
-            return await DescribeAsync(database, lambda, cancellation);
+            return Describe(database, lambda);
         }
 
         if (LambdaKeys.IsDemo(normalized))
@@ -137,7 +156,7 @@ public sealed class MetaService : IMetaService
             throw LambdaException.Invalid(LambdaKeys.DemoReason);
         }
 
-        if (await database.Lambdas.AnyAsync(l => l.PublicKey == normalized, cancellation))
+        if (database.Lambdas.Any(l => l.PublicKey == normalized))
         {
             throw LambdaException.Conflict("This key is already in use.");
         }
@@ -147,18 +166,18 @@ public sealed class MetaService : IMetaService
         lambda.PublicKey = normalized;
         lambda.Modified = DateTime.UtcNow;
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
         Logger.LogInformation("Lambda {LambdaId} moved from '{Previous}' to '{Current}'", lambda.Id, previous, normalized);
 
-        return await DescribeAsync(database, lambda, cancellation);
+        return Describe(database, lambda);
     }
 
-    public async ValueTask<LambdaInfo> ChangeViewAsync(string privateKey, EditorView view, CancellationToken cancellation = default)
+    public LambdaInfo ChangeView(string privateKey, EditorView view)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
         EnsureEditable(lambda);
 
@@ -169,24 +188,24 @@ public sealed class MetaService : IMetaService
             lambda.View = view;
             lambda.Modified = DateTime.UtcNow;
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
 
             Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' now opens in the {Current} view rather than the {Previous} one",
                                   lambda.Id, lambda.PublicKey, view, previous);
         }
 
-        return await DescribeAsync(database, lambda, cancellation);
+        return Describe(database, lambda);
     }
 
     #endregion
 
     #region Hosting
 
-    public async ValueTask<LambdaInfo> ChangeTierAsync(string privateKey, LambdaTier tier, CancellationToken cancellation = default)
+    public LambdaInfo ChangeTier(string privateKey, LambdaTier tier)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
         if (lambda.Tier != tier && (tier == LambdaTier.Demo || lambda.Tier == LambdaTier.Demo))
         {
@@ -203,7 +222,7 @@ public sealed class MetaService : IMetaService
             lambda.Tier = tier;
             lambda.Modified = DateTime.UtcNow;
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
 
             // how large its database may grow is its tier's to say, from the
             // next connection on
@@ -211,16 +230,16 @@ public sealed class MetaService : IMetaService
 
             // a domain is served or not by the tier, so the tier moving can
             // take one on or off the air without the domain itself changing
-            await Domains.ReloadAsync(cancellation);
+            Domains.Reload();
 
             Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' moved from the {Previous} to the {Current} tier",
                                   lambda.Id, lambda.PublicKey, previous, tier);
         }
 
-        return await DescribeAsync(database, lambda, cancellation);
+        return Describe(database, lambda);
     }
 
-    public async ValueTask<LambdaInfo> ChangeDomainAsync(string privateKey, string? domain, CancellationToken cancellation = default)
+    public LambdaInfo ChangeDomain(string privateKey, string? domain)
     {
         string? normalized = null;
 
@@ -229,15 +248,15 @@ public sealed class MetaService : IMetaService
             throw LambdaException.Invalid(reason!);
         }
 
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
         EnsureEditable(lambda);
 
         if (lambda.Domain == normalized)
         {
-            return await DescribeAsync(database, lambda, cancellation);
+            return Describe(database, lambda);
         }
 
         if (normalized != null)
@@ -247,7 +266,7 @@ public sealed class MetaService : IMetaService
                 throw LambdaException.Forbidden("A domain of its own is part of the premium tier, which this lambda is not in.");
             }
 
-            if (await database.Lambdas.AnyAsync(l => l.Domain == normalized && l.Id != lambda.Id, cancellation))
+            if (database.Lambdas.Any(l => l.Domain == normalized && l.Id != lambda.Id))
             {
                 throw LambdaException.Conflict("This domain is already used by another lambda.");
             }
@@ -260,7 +279,7 @@ public sealed class MetaService : IMetaService
 
         try
         {
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
         }
         catch (DbUpdateException)
         {
@@ -268,12 +287,12 @@ public sealed class MetaService : IMetaService
             throw LambdaException.Conflict("This domain is already used by another lambda.");
         }
 
-        await Domains.ReloadAsync(cancellation);
+        Domains.Reload();
 
         Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' changed its domain from '{Previous}' to '{Current}'",
                               lambda.Id, lambda.PublicKey, previous ?? "-", normalized ?? "-");
 
-        return await DescribeAsync(database, lambda, cancellation);
+        return Describe(database, lambda);
     }
 
     /// <summary>
@@ -316,8 +335,7 @@ public sealed class MetaService : IMetaService
 
     #region Lifecycle
 
-    public async ValueTask<LambdaInfo> CreateAsync(string? publicKey, string? template = null, EditorView view = EditorView.Full,
-                                                   CancellationToken cancellation = default)
+    public LambdaInfo Create(string? publicKey, string? template = null, EditorView view = EditorView.Full)
     {
         var requested = !string.IsNullOrWhiteSpace(publicKey);
 
@@ -339,7 +357,7 @@ public sealed class MetaService : IMetaService
             }
         }
 
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
         var now = DateTime.UtcNow;
 
@@ -361,7 +379,7 @@ public sealed class MetaService : IMetaService
 
             try
             {
-                await database.SaveChangesAsync(cancellation);
+                database.SaveChanges();
             }
             catch (DbUpdateException) when (!requested)
             {
@@ -374,38 +392,38 @@ public sealed class MetaService : IMetaService
                 throw LambdaException.Conflict("This key is already in use.");
             }
 
-            await SeedAsync(database, entity, template, now, cancellation);
+            Seed(database, entity, template, now);
 
             // after the insert rather than before: the id the event refers to
             // is the one the database just handed out
             Record(database, entity, LambdaEvents.Created);
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
 
             // a copy of a demo that keeps its records in a database starts
             // with one, or the first thing it does is fail for want of it
             if (DemoCatalog.Find(template)?.Database == true)
             {
-                await DatabaseVault.CreateAsync(entity.Id, cancellation);
+                DatabaseVault.Create(entity.Id);
             }
 
             Logger.LogInformation("Created lambda {LambdaId} at '{PublicKey}'", entity.Id, entity.PublicKey);
 
-            return await DescribeAsync(database, entity, cancellation);
+            return Describe(database, entity);
         }
 
         throw LambdaException.Conflict("Unable to find a free key, please try again.");
     }
 
-    public async ValueTask DeleteAsync(string privateKey, CancellationToken cancellation = default)
+    public void Delete(string privateKey)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
         EnsureEditable(lambda);
 
-        await RemoveAsync(database, lambda, cancellation);
+        Remove(database, lambda);
 
         Logger.LogInformation("Deleted lambda {LambdaId} at '{PublicKey}'", lambda.Id, lambda.PublicKey);
     }
@@ -414,106 +432,101 @@ public sealed class MetaService : IMetaService
 
     #region Reading
 
-    public async ValueTask<LambdaInfo?> GetAsync(string privateKey, CancellationToken cancellation = default)
+    public LambdaInfo? Get(string privateKey)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation);
+        var lambda = database.Lambdas.FirstOrDefault(l => l.PrivateKey == privateKey);
 
-        return lambda == null ? null : await DescribeAsync(database, lambda, cancellation);
+        return lambda == null ? null : Describe(database, lambda);
     }
 
-    public async ValueTask<ResolvedLambda?> ResolveAsync(string publicKey, CancellationToken cancellation = default)
+    /// <remarks>
+    /// Asked on every request a lambda serves, so it is answered from memory
+    /// (see <see cref="ResolutionCache{TKey}"/>) and, where it has to ask the
+    /// database, asks synchronously: SQLite answers synchronously either way,
+    /// and the asynchronous path only adds to what the answer costs.
+    /// </remarks>
+    public ResolvedLambda? Resolve(string publicKey)
+        => ByKey.Resolve(publicKey, key => Resolve(database => database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PublicKey == key)));
+
+    public ResolvedLambda? Resolve(long id)
+        => ById.Resolve(id, wanted => Resolve(database => database.Lambdas.AsNoTracking().FirstOrDefault(l => l.Id == wanted)));
+
+    private ResolvedLambda? Resolve(Func<LambdaDbContext, LambdaEntity?> find)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await database.Lambdas.AsNoTracking()
-                                   .FirstOrDefaultAsync(l => l.PublicKey == publicKey, cancellation);
+        var lambda = find(database);
 
-        return await ResolveAsync(database, lambda, cancellation);
-    }
-
-    public async ValueTask<ResolvedLambda?> ResolveAsync(long id, CancellationToken cancellation = default)
-    {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
-
-        var lambda = await database.Lambdas.AsNoTracking()
-                                   .FirstOrDefaultAsync(l => l.Id == id, cancellation);
-
-        return await ResolveAsync(database, lambda, cancellation);
-    }
-
-    private static async ValueTask<ResolvedLambda?> ResolveAsync(LambdaDbContext database, LambdaEntity? lambda, CancellationToken cancellation)
-    {
         if (lambda?.ActiveVersion == null)
         {
             return null;
         }
 
-        var deployment = await database.Deployments.AsNoTracking()
-                                       .FirstOrDefaultAsync(d => d.LambdaId == lambda.Id && d.Version == lambda.ActiveVersion, cancellation);
+        var deployment = database.Deployments.AsNoTracking()
+                                 .FirstOrDefault(d => d.LambdaId == lambda.Id && d.Version == lambda.ActiveVersion);
 
         if (deployment == null)
         {
             return null;
         }
 
-        var workspace = await DataSwitches.IsEnabledAsync(database, lambda.Id, DataKinds.Workspace, cancellation);
+        var workspace = DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace);
 
         return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created, workspace);
     }
 
-    public async ValueTask<IReadOnlyList<LambdaVersionInfo>> GetVersionsAsync(string privateKey, CancellationToken cancellation = default)
+    public IReadOnlyList<LambdaVersionInfo> GetVersions(string privateKey)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
-        return await ListVersionsAsync(database, lambda.Id, cancellation);
+        return ListVersions(database, lambda.Id);
     }
 
-    public async ValueTask<LambdaVersionContent> GetVersionAsync(string privateKey, int version, CancellationToken cancellation = default)
+    public LambdaVersionContent GetVersion(string privateKey, int version)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
-        var deployment = await database.Deployments.AsNoTracking()
-                                       .FirstOrDefaultAsync(d => d.LambdaId == lambda.Id && d.Version == version, cancellation)
+        var deployment = database.Deployments.AsNoTracking()
+                                 .FirstOrDefault(d => d.LambdaId == lambda.Id && d.Version == version)
                       ?? throw LambdaException.NotFound($"Version {version} does not exist.");
 
-        var code = await Storage.ReadAsync(lambda.Id, version, cancellation)
+        var code = Storage.Read(lambda.Id, version)
                 ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
         return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Specification, deployment.Change, deployment.Origin);
     }
 
-    public async ValueTask<IReadOnlyList<LambdaActivation>> GetActivationsAsync(string privateKey, CancellationToken cancellation = default)
+    public IReadOnlyList<LambdaActivation> GetActivations(string privateKey)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        var lambda = Require(database, privateKey);
 
-        return await database.Activations.AsNoTracking()
-                             .Where(a => a.LambdaId == lambda.Id)
-                             .OrderByDescending(a => a.Started)
-                             .ThenByDescending(a => a.Id)
-                             .Select(a => new LambdaActivation(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy))
-                             .ToListAsync(cancellation);
+        return database.Activations.AsNoTracking()
+                       .Where(a => a.LambdaId == lambda.Id)
+                       .OrderByDescending(a => a.Started)
+                       .ThenByDescending(a => a.Id)
+                       .Select(a => new LambdaActivation(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy))
+                       .ToList();
     }
 
     #endregion
 
     #region Editing
 
-    public async ValueTask<LambdaVersionInfo> SaveAsync(string privateKey, string code, VersionNote? note = null, int? after = null,
-                                                        CancellationToken cancellation = default)
+    public LambdaVersionInfo Save(string privateKey, string code, VersionNote? note = null, int? after = null)
     {
         var files = Validate(code);
 
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+        var (lambda, held) = Locked(database, privateKey);
 
         using var turn = held;
 
@@ -523,8 +536,8 @@ public sealed class MetaService : IMetaService
 
         if (after is { } expected)
         {
-            var newest = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                                       .MaxAsync(d => (int?)d.Version, cancellation);
+            var newest = database.Deployments.Where(d => d.LambdaId == lambda.Id)
+                                 .Max(d => (int?)d.Version);
 
             if (newest != expected)
             {
@@ -534,7 +547,7 @@ public sealed class MetaService : IMetaService
 
         ValidateAllowance(files, lambda.Tier, Options);
 
-        var version = await AppendAsync(database, lambda, code, DateTime.UtcNow, note, cancellation);
+        var version = Append(database, lambda, code, DateTime.UtcNow, note);
 
         Logger.LogInformation("Saved version {Version} of lambda {LambdaId}", version.Version, lambda.Id);
 
@@ -545,32 +558,57 @@ public sealed class MetaService : IMetaService
     {
         var files = Validate(code);
 
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        long id;
 
-        var lambda = await RequireAsync(database, privateKey, cancellation);
+        WorkspaceLimits limits;
 
-        ValidateAllowance(files, lambda.Tier, Options);
+        using (var database = Databases.CreateDbContext())
+        {
+            var lambda = Require(database, privateKey);
 
-        return await Deployments.ValidateAsync(code, lambda.Id, await WorkspaceOfAsync(database, lambda, cancellation), cancellation);
+            ValidateAllowance(files, lambda.Tier, Options);
+
+            (id, limits) = (lambda.Id, WorkspaceOf(database, lambda));
+        }
+
+        return await Deployments.ValidateAsync(code, id, limits, cancellation);
     }
 
+    /// <remarks>
+    /// Compiled before the lambda's turn is taken, and written once it is: the
+    /// turn is a lock, held by a thread, and compiling takes seconds away
+    /// from it (see <see cref="_stripes"/>). Two deployments of one lambda can
+    /// therefore finish in either order. What is served stays what the
+    /// database says is online all the same, because a request compares the
+    /// build it finds with the version online and builds again where they
+    /// differ.
+    /// </remarks>
     public async ValueTask<DeploymentResult> DeployAsync(string privateKey, int? version, string? origin = null, CancellationToken cancellation = default)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        long id;
 
-        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+        string publicKey;
 
-        using var turn = held;
+        int target;
 
-        EnsureEditable(lambda, origin);
+        WorkspaceLimits limits;
 
-        var target = version ?? await database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                                              .MaxAsync(d => (int?)d.Version, cancellation)
+        using (var database = Databases.CreateDbContext())
+        {
+            var lambda = Require(database, privateKey);
+
+            EnsureEditable(lambda, origin);
+
+            target = version ?? database.Deployments.Where(d => d.LambdaId == lambda.Id)
+                                        .Max(d => (int?)d.Version)
                   ?? throw LambdaException.Invalid("There is nothing to deploy yet, save the code first.");
 
-        if (!await database.Deployments.AnyAsync(d => d.LambdaId == lambda.Id && d.Version == target, cancellation))
-        {
-            throw LambdaException.NotFound($"Version {target} does not exist.");
+            if (!database.Deployments.Any(d => d.LambdaId == lambda.Id && d.Version == target))
+            {
+                throw LambdaException.NotFound($"Version {target} does not exist.");
+            }
+
+            (id, publicKey, limits) = (lambda.Id, lambda.PublicKey, WorkspaceOf(database, lambda));
         }
 
         /*
@@ -583,17 +621,37 @@ public sealed class MetaService : IMetaService
         CompilationOutcome outcome;
 
         using (Options.CaptureLambdaOutput
-               ? LambdaOutput.Enter(new OutputScope(lambda.PublicKey, Book, Options.MaxOutputLines, lambda.Id))
+               ? LambdaOutput.Enter(new OutputScope(publicKey, Book, Options.MaxOutputLines, id))
                : null)
         {
-            outcome = await Deployments.ActivateAsync(lambda.Id, target, await WorkspaceOfAsync(database, lambda, cancellation), cancellation);
+            outcome = await Deployments.ActivateAsync(id, target, limits, cancellation);
         }
+
+        return Activated(privateKey, target, origin, outcome);
+    }
+
+    /// <summary>
+    /// Writes down what a deployment came to, in the lambda's turn.
+    /// </summary>
+    private DeploymentResult Activated(string privateKey, int target, string? origin, CompilationOutcome outcome)
+    {
+        using var database = Databases.CreateDbContext();
+
+        var (lambda, held) = Locked(database, privateKey);
+
+        using var turn = held;
 
         if (!outcome.Success)
         {
             Logger.LogInformation("Deployment of lambda {LambdaId} was rejected with {Count} error(s)", lambda.Id, outcome.Diagnostics.Count);
 
-            return new DeploymentResult(false, await DescribeAsync(database, lambda, cancellation), outcome.Diagnostics);
+            return new DeploymentResult(false, Describe(database, lambda), outcome.Diagnostics);
+        }
+
+        // pruned while it was being compiled, by saves landing in between
+        if (!database.Deployments.Any(d => d.LambdaId == lambda.Id && d.Version == target))
+        {
+            throw LambdaException.NotFound($"Version {target} does not exist anymore.");
         }
 
         var now = DateTime.UtcNow;
@@ -602,7 +660,7 @@ public sealed class MetaService : IMetaService
         lambda.Deployed = now;
         lambda.Modified = now;
 
-        await CloseActivationAsync(database, lambda.Id, now, ActivationEndings.Replaced, cancellation);
+        CloseActivation(database, lambda.Id, now, ActivationEndings.Replaced);
 
         database.Activations.Add(new ActivationEntity
         {
@@ -614,18 +672,18 @@ public sealed class MetaService : IMetaService
 
         Record(database, lambda, LambdaEvents.Deployed);
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
-        await PruneActivationsAsync(database, lambda.Id, cancellation);
+        PruneActivations(database, lambda.Id);
 
-        return new DeploymentResult(true, await DescribeAsync(database, lambda, cancellation), outcome.Diagnostics);
+        return new DeploymentResult(true, Describe(database, lambda), outcome.Diagnostics);
     }
 
-    public async ValueTask<LambdaInfo> UndeployAsync(string privateKey, string? endedBy = null, CancellationToken cancellation = default)
+    public LambdaInfo Undeploy(string privateKey, string? endedBy = null)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var (lambda, held) = await LockedAsync(database, privateKey, cancellation);
+        var (lambda, held) = Locked(database, privateKey);
 
         using var turn = held;
 
@@ -636,18 +694,18 @@ public sealed class MetaService : IMetaService
             lambda.ActiveVersion = null;
             lambda.Deployed = null;
 
-            await CloseActivationAsync(database, lambda.Id, DateTime.UtcNow, endedBy ?? ActivationEndings.Stopped, cancellation);
+            CloseActivation(database, lambda.Id, DateTime.UtcNow, endedBy ?? ActivationEndings.Stopped);
 
             Record(database, lambda, LambdaEvents.Undeployed);
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
 
             Deployments.Evict(lambda.Id);
 
             Logger.LogInformation("Undeployed lambda {LambdaId} at '{PublicKey}'", lambda.Id, lambda.PublicKey);
         }
 
-        return await DescribeAsync(database, lambda, cancellation);
+        return Describe(database, lambda);
     }
 
     #endregion
@@ -662,7 +720,7 @@ public sealed class MetaService : IMetaService
     /// counters, and a lambda that has had no traffic since should keep the
     /// date it already had rather than be pushed back to the epoch.
     /// </remarks>
-    private async ValueTask RecordUseAsync(LambdaDbContext database, CancellationToken cancellation)
+    private void RecordUse(LambdaDbContext database)
     {
         var seen = Activity.Describe()
                            .Where(a => a.LastSeen != null)
@@ -675,7 +733,7 @@ public sealed class MetaService : IMetaService
 
         var keys = seen.Keys.ToList();
 
-        var rows = await database.Lambdas.Where(l => keys.Contains(l.PublicKey)).ToListAsync(cancellation);
+        var rows = database.Lambdas.Where(l => keys.Contains(l.PublicKey)).ToList();
 
         var moved = 0;
 
@@ -690,7 +748,7 @@ public sealed class MetaService : IMetaService
 
         if (moved > 0)
         {
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
         }
     }
 
@@ -705,9 +763,9 @@ public sealed class MetaService : IMetaService
     private static DateTime Quiet(LambdaEntity lambda)
         => lambda.LastSeen > lambda.Modified ? lambda.LastSeen.Value : lambda.Modified;
 
-    public async ValueTask<MaintenanceReport> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default)
+    public MaintenanceReport RunMaintenance(DateTime now)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
         /*
          * What counts as use, written down before anything is decided by it.
@@ -718,27 +776,27 @@ public sealed class MetaService : IMetaService
          * this moment is not swept by figures taken before its traffic was
          * recorded.
          */
-        await RecordUseAsync(database, cancellation);
+        RecordUse(database);
 
         var abandoned = now - Options.Retention;
 
         // demos are the installation's own, and being untouched is their
         // normal state rather than a sign that nobody wants them; premium
         // lambdas are kept by their tier (see Kept)
-        var expired = await database.Lambdas
-                                    .Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.Modified < abandoned
+        var expired = database.Lambdas
+                              .Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.Modified < abandoned
                                              && (l.LastSeen == null || l.LastSeen < abandoned))
-                                    .ToListAsync(cancellation);
+                                    .ToList();
 
         foreach (var lambda in expired)
         {
-            await RemoveAsync(database, lambda, cancellation);
+            Remove(database, lambda);
         }
 
         var quiet = now - Options.DeploymentLifetime;
 
-        var running = await database.Lambdas.Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.ActiveVersion != null)
-                                    .ToListAsync(cancellation);
+        var running = database.Lambdas.Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.ActiveVersion != null)
+                              .ToList();
 
         var undeployed = 0;
 
@@ -772,7 +830,7 @@ public sealed class MetaService : IMetaService
             lambda.ActiveVersion = null;
             lambda.Deployed = null;
 
-            await CloseActivationAsync(database, lambda.Id, now, ActivationEndings.Expired, cancellation);
+            CloseActivation(database, lambda.Id, now, ActivationEndings.Expired);
 
             Deployments.Evict(lambda.Id);
 
@@ -781,7 +839,7 @@ public sealed class MetaService : IMetaService
 
         if (undeployed > 0)
         {
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
         }
 
         if (undeployed > 0 || expired.Count > 0)
@@ -859,22 +917,22 @@ public sealed class MetaService : IMetaService
     private static string Readable(long bytes)
         => bytes % (1024 * 1024) == 0 ? $"{bytes / 1024 / 1024} MB" : $"{bytes / 1024} KB";
 
-    public async ValueTask<LambdaCounts> CountAsync(CancellationToken cancellation = default)
+    public LambdaCounts Count()
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
         return new LambdaCounts(
-            await database.Lambdas.CountAsync(cancellation),
-            await database.Lambdas.CountAsync(l => l.ActiveVersion != null, cancellation),
-            await database.Deployments.CountAsync(cancellation)
+            database.Lambdas.Count(),
+            database.Lambdas.Count(l => l.ActiveVersion != null),
+            database.Deployments.Count()
         );
     }
 
-    public async ValueTask<long> RequireEditableAsync(string privateKey, CancellationToken cancellation = default)
+    public long RequireEditable(string privateKey)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var lambda = await database.Lambdas.AsNoTracking().FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
+        var lambda = database.Lambdas.AsNoTracking().FirstOrDefault(l => l.PrivateKey == privateKey)
                   ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
         EnsureEditable(lambda);
@@ -882,47 +940,46 @@ public sealed class MetaService : IMetaService
         return lambda.Id;
     }
 
-    public async ValueTask<long?> GetIdAsync(string privateKey, CancellationToken cancellation = default)
+    public long? GetId(string privateKey)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        return await database.Lambdas.AsNoTracking()
-                             .Where(l => l.PrivateKey == privateKey)
-                             .Select(l => (long?)l.Id)
-                             .FirstOrDefaultAsync(cancellation);
+        return database.Lambdas.AsNoTracking()
+                       .Where(l => l.PrivateKey == privateKey)
+                       .Select(l => (long?)l.Id)
+                       .FirstOrDefault();
     }
 
-    public async ValueTask<WorkspaceLimits?> GetWorkspaceLimitsAsync(long lambdaId, CancellationToken cancellation = default)
+    public WorkspaceLimits? GetWorkspaceLimits(long lambdaId)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var tier = await database.Lambdas.AsNoTracking()
-                                 .Where(l => l.Id == lambdaId)
-                                 .Select(l => (LambdaTier?)l.Tier)
-                                 .FirstOrDefaultAsync(cancellation);
+        var tier = database.Lambdas.AsNoTracking()
+                           .Where(l => l.Id == lambdaId)
+                           .Select(l => (LambdaTier?)l.Tier)
+                           .FirstOrDefault();
 
         if (tier == null)
         {
             return null;
         }
 
-        return Options.WorkspaceOf(tier.Value, await DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Workspace, cancellation));
+        return Options.WorkspaceOf(tier.Value, DataSwitches.IsEnabled(database, lambdaId, DataKinds.Workspace));
     }
 
     /// <summary>
     /// What the lambda may keep in its workspace, which is compiled into it.
     /// </summary>
-    private async ValueTask<WorkspaceLimits> WorkspaceOfAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
-        => Options.WorkspaceOf(lambda.Tier, await DataSwitches.IsEnabledAsync(database, lambda.Id, DataKinds.Workspace, cancellation));
+    private WorkspaceLimits WorkspaceOf(LambdaDbContext database, LambdaEntity lambda)
+        => Options.WorkspaceOf(lambda.Tier, DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace));
 
-    public async ValueTask<LambdaPage> ListAsync(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null,
-                                                 CancellationToken cancellation = default)
+    public LambdaPage List(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        var total = await database.Lambdas.AsNoTracking().CountAsync(cancellation);
+        var total = database.Lambdas.AsNoTracking().Count();
 
-        var deployed = await database.Lambdas.AsNoTracking().CountAsync(l => l.ActiveVersion != null, cancellation);
+        var deployed = database.Lambdas.AsNoTracking().Count(l => l.ActiveVersion != null);
 
         var query = database.Lambdas.AsNoTracking();
 
@@ -941,22 +998,22 @@ public sealed class MetaService : IMetaService
             query = query.Where(l => l.Tier == wanted);
         }
 
-        var matched = await query.CountAsync(cancellation);
+        var matched = query.Count();
 
-        var lambdas = await query.OrderByDescending(l => l.Created)
-                                 .Skip(skip)
-                                 .Take(take)
-                                 .ToListAsync(cancellation);
+        var lambdas = query.OrderByDescending(l => l.Created)
+                           .Skip(skip)
+                           .Take(take)
+                           .ToList();
 
-        var counts = await database.Deployments.AsNoTracking()
-                                   .GroupBy(d => d.LambdaId)
-                                   .Select(g => new { LambdaId = g.Key, Count = g.Count() })
-                                   .ToDictionaryAsync(g => g.LambdaId, g => g.Count, cancellation);
+        var counts = database.Deployments.AsNoTracking()
+                             .GroupBy(d => d.LambdaId)
+                             .Select(g => new { LambdaId = g.Key, Count = g.Count() })
+                             .ToDictionary(g => g.LambdaId, g => g.Count);
 
-        var latest = await database.Deployments.AsNoTracking()
-                                   .GroupBy(d => d.LambdaId)
-                                   .Select(g => new { LambdaId = g.Key, Version = g.Max(d => d.Version) })
-                                   .ToDictionaryAsync(g => g.LambdaId, g => (int?)g.Version, cancellation);
+        var latest = database.Deployments.AsNoTracking()
+                             .GroupBy(d => d.LambdaId)
+                             .Select(g => new { LambdaId = g.Key, Version = g.Max(d => d.Version) })
+                             .ToDictionary(g => g.LambdaId, g => (int?)g.Version);
 
         return new LambdaPage([.. lambdas.Select(l => new LambdaOverview(
             l.PublicKey,
@@ -973,85 +1030,94 @@ public sealed class MetaService : IMetaService
         ))], matched, total, deployed);
     }
 
-    public async ValueTask<string?> GetPrivateKeyAsync(string publicKey, CancellationToken cancellation = default)
+    public string? GetPrivateKey(string publicKey)
     {
         if (!LambdaKeys.TryNormalize(publicKey, out var normalized, out _))
         {
             return null;
         }
 
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        return await database.Lambdas.AsNoTracking()
-                             .Where(l => l.PublicKey == normalized)
-                             .Select(l => l.PrivateKey)
-                             .FirstOrDefaultAsync(cancellation);
+        return database.Lambdas.AsNoTracking()
+                       .Where(l => l.PublicKey == normalized)
+                       .Select(l => l.PrivateKey)
+                       .FirstOrDefault();
     }
 
-    public async ValueTask<string?> GetPublicKeyAsync(string privateKey, CancellationToken cancellation = default)
+    public string? GetPublicKey(string privateKey)
     {
-        await using var database = await Databases.CreateDbContextAsync(cancellation);
+        using var database = Databases.CreateDbContext();
 
-        return await database.Lambdas.AsNoTracking()
-                             .Where(l => l.PrivateKey == privateKey)
-                             .Select(l => l.PublicKey)
-                             .FirstOrDefaultAsync(cancellation);
+        return database.Lambdas.AsNoTracking()
+                       .Where(l => l.PrivateKey == privateKey)
+                       .Select(l => l.PublicKey)
+                       .FirstOrDefault();
     }
 
-    private static async ValueTask<LambdaEntity> RequireAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
-        => await database.Lambdas.FirstOrDefaultAsync(l => l.PrivateKey == privateKey, cancellation)
+    private static LambdaEntity Require(LambdaDbContext database, string privateKey)
+        => database.Lambdas.FirstOrDefault(l => l.PrivateKey == privateKey)
         ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
     /// <summary>
     /// The lambda of the key, read once it is its turn to change (see <see cref="_stripes" />).
     /// </summary>
     /// <returns>The lambda, and the turn - to be disposed of once the change is written</returns>
-    private async ValueTask<(LambdaEntity Lambda, IDisposable Turn)> LockedAsync(LambdaDbContext database, string privateKey, CancellationToken cancellation)
+    private (LambdaEntity Lambda, IDisposable Turn) Locked(LambdaDbContext database, string privateKey)
     {
-        var id = await database.Lambdas.AsNoTracking()
-                               .Where(l => l.PrivateKey == privateKey)
-                               .Select(l => (long?)l.Id)
-                               .FirstOrDefaultAsync(cancellation)
+        var id = database.Lambdas.AsNoTracking()
+                         .Where(l => l.PrivateKey == privateKey)
+                         .Select(l => (long?)l.Id)
+                         .FirstOrDefault()
               ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
-        var stripe = _stripes[(int)((ulong)id % (ulong)_stripes.Length)];
-
-        await stripe.WaitAsync(cancellation);
+        var turn = new Turn(_stripes[(int)((ulong)id % (ulong)_stripes.Length)]);
 
         try
         {
             // read after waiting, so what it decides on is what the change
             // before it left behind
-            return (await RequireAsync(database, privateKey, cancellation), new Turn(stripe));
+            return (Require(database, privateKey), turn);
         }
         catch
         {
-            stripe.Release();
+            turn.Dispose();
             throw;
         }
     }
 
-    private sealed class Turn(SemaphoreSlim stripe) : IDisposable
+    /// <summary>
+    /// A stripe taken, given back once.
+    /// </summary>
+    private sealed class Turn : IDisposable
     {
+        private readonly Lock _stripe;
+
         private int _released;
+
+        public Turn(Lock stripe)
+        {
+            _stripe = stripe;
+            _stripe.Enter();
+        }
 
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _released, 1) == 0)
             {
-                stripe.Release();
+                _stripe.Exit();
             }
         }
     }
 
-    private async ValueTask SeedAsync(LambdaDbContext database, LambdaEntity lambda, string? template, DateTime now, CancellationToken cancellation)
+    private void Seed(LambdaDbContext database, LambdaEntity lambda, string? template, DateTime now)
     {
         var demo = DemoCatalog.Find(template);
 
         var note = new VersionNote(Change: demo != null ? $"Started as a copy of the demo '{demo.Id}'" : "Started empty",
                                    Origin: VersionOrigins.Template);
 
-        await AppendAsync(database, lambda, TemplateCatalog.ForKey(template, lambda.PublicKey), now, note, cancellation);
+        Append(database, lambda, TemplateCatalog.ForKey(template, lambda.PublicKey), now, note);
 
         if (demo?.Database == true)
         {
@@ -1059,16 +1125,16 @@ public sealed class MetaService : IMetaService
         }
     }
 
-    private async ValueTask<LambdaVersionInfo> AppendAsync(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, VersionNote note, CancellationToken cancellation)
+    private LambdaVersionInfo Append(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, VersionNote note)
     {
-        var version = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                                    .MaxAsync(d => (int?)d.Version, cancellation) + 1 ?? 1;
+        var version = database.Deployments.Where(d => d.LambdaId == lambda.Id)
+                              .Max(d => (int?)d.Version) + 1 ?? 1;
 
         var specification = Tidy(note.Specification, VersionNote.MaxSpecification);
 
         var change = Tidy(note.Change, VersionNote.MaxChange);
 
-        await Storage.WriteAsync(lambda.Id, version, code, cancellation);
+        Storage.Write(lambda.Id, version, code);
 
         database.Deployments.Add(new DeploymentEntity
         {
@@ -1084,9 +1150,9 @@ public sealed class MetaService : IMetaService
 
         Record(database, lambda, LambdaEvents.Saved);
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
-        await PruneAsync(database, lambda, cancellation);
+        Prune(database, lambda);
 
         return new LambdaVersionInfo(version, now, specification, change, note.Origin);
     }
@@ -1115,10 +1181,10 @@ public sealed class MetaService : IMetaService
     /// <summary>
     /// Ends whatever stretch of being online is still open.
     /// </summary>
-    private static async ValueTask CloseActivationAsync(LambdaDbContext database, long lambdaId, DateTime now, string endedBy, CancellationToken cancellation)
+    private static void CloseActivation(LambdaDbContext database, long lambdaId, DateTime now, string endedBy)
     {
-        var open = await database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended == null)
-                                 .ToListAsync(cancellation);
+        var open = database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended == null)
+                           .ToList();
 
         foreach (var activation in open)
         {
@@ -1137,35 +1203,35 @@ public sealed class MetaService : IMetaService
     /// </remarks>
     private const int MaxActivations = 200;
 
-    private static async ValueTask PruneActivationsAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation)
+    private static void PruneActivations(LambdaDbContext database, long lambdaId)
     {
-        var obsolete = await database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended != null)
-                                     .OrderByDescending(a => a.Started)
-                                     .ThenByDescending(a => a.Id)
-                                     .Skip(MaxActivations)
-                                     .ToListAsync(cancellation);
+        var obsolete = database.Activations.Where(a => a.LambdaId == lambdaId && a.Ended != null)
+                               .OrderByDescending(a => a.Started)
+                               .ThenByDescending(a => a.Id)
+                               .Skip(MaxActivations)
+                               .ToList();
 
         if (obsolete.Count > 0)
         {
             database.Activations.RemoveRange(obsolete);
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
         }
     }
 
     /// <summary>
     /// Keeps the version history bounded, never touching the version that is live.
     /// </summary>
-    private async ValueTask PruneAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
+    private void Prune(LambdaDbContext database, LambdaEntity lambda)
     {
         // the base of a feature is kept like the version online: it is what
         // the feature is compared with, and what it is shown to change
-        var bases = await database.Features.Where(f => f.LambdaId == lambda.Id).Select(f => f.BaseVersion).ToListAsync(cancellation);
+        var bases = database.Features.Where(f => f.LambdaId == lambda.Id).Select(f => f.BaseVersion).ToList();
 
-        var obsolete = await database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion && !bases.Contains(d.Version))
-                                     .OrderByDescending(d => d.Version)
-                                     .Skip(Options.MaxVersions)
-                                     .ToListAsync(cancellation);
+        var obsolete = database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion && !bases.Contains(d.Version))
+                               .OrderByDescending(d => d.Version)
+                               .Skip(Options.MaxVersions)
+                               .ToList();
 
         if (obsolete.Count == 0)
         {
@@ -1174,12 +1240,12 @@ public sealed class MetaService : IMetaService
 
         foreach (var deployment in obsolete)
         {
-            await Storage.DeleteVersionAsync(lambda.Id, deployment.Version, cancellation);
+            Storage.DeleteVersion(lambda.Id, deployment.Version);
         }
 
         database.Deployments.RemoveRange(obsolete);
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
     }
 
     /// <summary>
@@ -1209,7 +1275,7 @@ public sealed class MetaService : IMetaService
         });
     }
 
-    private async ValueTask RemoveAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
+    private void Remove(LambdaDbContext database, LambdaEntity lambda)
     {
         // with every preview of its features, which go with it
         Deployments.EvictAll(lambda.Id);
@@ -1222,19 +1288,19 @@ public sealed class MetaService : IMetaService
 
         // the key cascades in the schema, but only where the connection has
         // foreign keys switched on - said here so it does not depend on that
-        await database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+        database.Activations.Where(a => a.LambdaId == lambda.Id).ExecuteDelete();
 
-        await database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+        database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
 
-        await database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+        database.DataStores.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
 
-        await database.Secrets.Where(s => s.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+        database.Secrets.Where(s => s.LambdaId == lambda.Id).ExecuteDelete();
 
-        await database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDeleteAsync(cancellation);
+        database.Features.Where(f => f.LambdaId == lambda.Id).ExecuteDelete();
 
         database.Lambdas.Remove(lambda);
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
         Secrets.Invalidate(lambda.Id);
 
@@ -1243,16 +1309,16 @@ public sealed class MetaService : IMetaService
 
         if (lambda.Domain != null)
         {
-            await Domains.ReloadAsync(cancellation);
+            Domains.Reload();
         }
 
-        await Storage.DeleteAsync(lambda.Id, cancellation);
+        Storage.Delete(lambda.Id);
     }
 
-    private async ValueTask<LambdaInfo> DescribeAsync(LambdaDbContext database, LambdaEntity lambda, CancellationToken cancellation)
+    private LambdaInfo Describe(LambdaDbContext database, LambdaEntity lambda)
     {
-        var latest = await database.Deployments.Where(d => d.LambdaId == lambda.Id)
-                                   .MaxAsync(d => (int?)d.Version, cancellation);
+        var latest = database.Deployments.Where(d => d.LambdaId == lambda.Id)
+                             .Max(d => (int?)d.Version);
 
         // the two deadlines the maintenance job will act on, so the editor can
         // say when rather than leaving it to be discovered
@@ -1273,12 +1339,12 @@ public sealed class MetaService : IMetaService
     private DateTime? KeptUntil(LambdaEntity lambda)
         => !Kept(lambda) ? Quiet(lambda) + Options.Retention : null;
 
-    private static async ValueTask<IReadOnlyList<LambdaVersionInfo>> ListVersionsAsync(LambdaDbContext database, long lambdaId, CancellationToken cancellation)
-        => await database.Deployments.AsNoTracking()
-                         .Where(d => d.LambdaId == lambdaId)
-                         .OrderByDescending(d => d.Version)
-                         .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, d.Origin))
-                         .ToListAsync(cancellation);
+    private static IReadOnlyList<LambdaVersionInfo> ListVersions(LambdaDbContext database, long lambdaId)
+        => database.Deployments.AsNoTracking()
+                   .Where(d => d.LambdaId == lambdaId)
+                   .OrderByDescending(d => d.Version)
+                   .Select(d => new LambdaVersionInfo(d.Version, d.Created, d.Specification, d.Change, d.Origin))
+                   .ToList();
 
     #endregion
 

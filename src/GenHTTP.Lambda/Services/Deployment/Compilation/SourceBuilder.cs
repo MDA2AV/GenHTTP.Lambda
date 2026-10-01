@@ -353,12 +353,19 @@ internal static class SourceBuilder
                 => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(Folder(folder)).Build();
 
             /// <summary>A handler that serves the assets as files.</summary>
-            public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files()
-                => global::GenHTTP.Modules.Files.Assets.From(Tree());
+            /// <remarks>
+            /// Served from the directory rather than through a tree, which on the
+            /// ioxide engine is its own file handler: descriptors opened once and
+            /// read off the ring. The assets of a build do not change while it is
+            /// served - a deployment writes them before it builds the handler - so
+            /// the directory is never walked again to see whether they did.
+            /// </remarks>
+            public global::GenHTTP.Modules.Files.Multi.FileAssetsBuilder Files()
+                => global::GenHTTP.Modules.Files.Assets.From(_root).RefreshInterval(global::System.Threading.Timeout.InfiniteTimeSpan);
 
             /// <summary>A handler that serves one folder of the assets as files.</summary>
-            public global::GenHTTP.Modules.Files.Multi.TreeAssetsBuilder Files(string folder)
-                => global::GenHTTP.Modules.Files.Assets.From(Tree(folder));
+            public global::GenHTTP.Modules.Files.Multi.FileAssetsBuilder Files(string folder)
+                => global::GenHTTP.Modules.Files.Assets.From(Folder(folder)).RefreshInterval(global::System.Threading.Timeout.InfiniteTimeSpan);
 
             /// <summary>
             /// A single page application over the assets: index.html is the

@@ -150,7 +150,7 @@ public sealed class WorkspaceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
+        var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
 
         var workspace = fixture.Application.Services.GetRequiredService<IWorkspaceService>();
 
@@ -159,7 +159,7 @@ public sealed class WorkspaceTests
         await Assert.ThrowsExactlyAsync<LambdaException>(async () =>
             await workspace.WriteAsync(id, "models/model.bin", new MemoryStream(new byte[1000]), expected: 5000));
 
-        var listing = await workspace.ListAsync(id);
+        var listing = workspace.List(id);
 
         Assert.IsEmpty(listing.Files, "the part that arrived is not taken for the whole");
         Assert.IsEmpty(listing.Folders);

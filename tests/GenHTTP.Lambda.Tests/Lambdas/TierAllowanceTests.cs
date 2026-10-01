@@ -39,7 +39,7 @@ public sealed class TierAllowanceTests
             Assert.Contains("premium tier may have 900 characters", said, "and whoever reads it learns there is more");
         }
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         using (var saved = await SaveAsync(fixture, lambda.PrivateKey, Coding(700)))
         {
@@ -112,7 +112,7 @@ public sealed class TierAllowanceTests
             Assert.Contains("workspace", said, "and says where a large file that is not code belongs");
         }
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         using (var saved = await SaveAsync(fixture, lambda.PrivateKey, Shipping(2048)))
         {
@@ -142,7 +142,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
         }
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         using (var saved = await UploadAsync(fixture, lambda.PrivateKey, archive))
         {
@@ -219,7 +219,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
         }
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         using (var written = await PutAsync(fixture, lambda.PrivateKey, "big.bin", file))
         {
@@ -244,7 +244,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         using (var first = await PutAsync(fixture, lambda.PrivateKey, "a.bin", new byte[2 * WorkspaceLimits.Block]))
         {
@@ -281,7 +281,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync("squeezed");
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
@@ -289,7 +289,7 @@ public sealed class TierAllowanceTests
 
         // how a workspace ends up past its quota: filled under a larger one,
         // which is what leaving the premium tier does to it
-        var id = (await fixture.Meta.GetIdAsync(lambda.PrivateKey))!.Value;
+        var id = (fixture.Meta.GetId(lambda.PrivateKey))!.Value;
 
         await File.WriteAllBytesAsync(Path.Combine(fixture.Options.WorkspaceDirectory, id.ToString(), "x.bin"), new byte[2 * WorkspaceLimits.Block]);
 
@@ -320,7 +320,7 @@ public sealed class TierAllowanceTests
 
         var lambda = await fixture.CreateLambdaAsync("hoarder");
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
@@ -407,14 +407,14 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode, "more than a free lambda may write");
         }
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         using (var written = await fixture.GetAsync($"/lambda/mover/write?name=big.bin&size={size}"))
         {
             Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, "promoted, and not deployed again");
         }
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Free);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Free);
 
         using var demoted = await fixture.GetAsync($"/lambda/mover/write?name=other.bin&size={size}");
 
@@ -438,7 +438,7 @@ public sealed class TierAllowanceTests
             """);
 
         // built again on the next request, like every lambda after a restart
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => fixture.GetAsync("/lambda/crowded/")));
 
@@ -477,7 +477,7 @@ public sealed class TierAllowanceTests
         Assert.AreEqual(32 * 1024 * 1024, free.Limits.AssetBytes);
         Assert.AreEqual(256L * 1024 * 1024, free.Limits.WorkspaceBytes);
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         var premium = await SummaryAsync(fixture, lambda.PrivateKey);
 

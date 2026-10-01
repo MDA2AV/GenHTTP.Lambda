@@ -88,7 +88,7 @@ public sealed class SpaResources
         // one from a server that answers a range with the whole file
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .Add(RangeSupport.Create())
-                                    .Add(new SiteMetaConcernBuilder(Meta, Prerender, Sources, ReadIndexAsync))
+                                    .Add(new SiteMetaConcernBuilder(Meta, Prerender, Sources, ReadIndex))
                                     .Add(CacheControl.NoCache());
     }
 
@@ -110,9 +110,9 @@ public sealed class SpaResources
     /// Answers with the application itself, using the given status - so a
     /// missing lambda stays a 404 while still rendering a proper page.
     /// </summary>
-    public async ValueTask<IResponse> RenderAsync(IRequest request, ResponseStatus status)
+    public IResponse Render(IRequest request, ResponseStatus status)
     {
-        var markup = Available ? await ReadIndexAsync() : PlaceholderMarkup;
+        var markup = Available ? ReadIndex() : PlaceholderMarkup;
 
         return request.Respond()
                       .Status(status)
@@ -121,7 +121,33 @@ public sealed class SpaResources
                       .Build();
     }
 
-    private async ValueTask<string> ReadIndexAsync() => await File.ReadAllTextAsync(IndexFile);
+    /// <summary>
+    /// The shell every page is rendered into.
+    /// </summary>
+    /// <remarks>
+    /// Read for every page served, so held in memory and only read again once
+    /// the file on disk is newer - which, while the frontend is developed
+    /// against a running server, it will be after every build.
+    /// </remarks>
+    private string ReadIndex()
+    {
+        var written = File.GetLastWriteTimeUtc(IndexFile);
+
+        if (_index is { } known && known.Written == written)
+        {
+            return known.Markup;
+        }
+
+        var markup = File.ReadAllText(IndexFile);
+
+        _index = new IndexCopy(written, markup);
+
+        return markup;
+    }
+
+    private volatile IndexCopy? _index;
+
+    private sealed record IndexCopy(DateTime Written, string Markup);
 
     /// <summary>
     /// Whether the client would rather see a page than a JSON document.

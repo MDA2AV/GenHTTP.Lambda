@@ -39,16 +39,33 @@ public sealed class ThrottleConcern(IHandler content, LambdaThrottle throttle, L
 
         try
         {
-            var execution = content.HandleAsync(request).AsTask();
+            var execution = content.HandleAsync(request);
 
-            var completed = await Task.WhenAny(execution, Task.Delay(options.ExecutionTimeout));
-
-            if (completed != execution)
+            /*
+             * Most lambdas answer before they ever wait, and an answer that is
+             * already there cannot be late. Only one that is still under way
+             * gets a clock - which used to be started for every request, a
+             * timer per request left running for the whole timeout after the
+             * answer had long gone out.
+             */
+            if (execution.IsCompletedSuccessfully)
             {
-                throw new ProviderException(ResponseStatus.GatewayTimeout, $"The lambda did not respond within {options.ExecutionTimeout.TotalSeconds:0} seconds.");
+                // finished, so awaiting it hands the answer straight back
+                return await execution;
             }
 
-            return await execution;
+            var pending = execution.AsTask();
+
+            try
+            {
+                // stops its clock once the lambda answers, unlike a delay raced against it
+                return await pending.WaitAsync(options.ExecutionTimeout);
+            }
+            catch (TimeoutException timeout) when (!ReferenceEquals(timeout, pending.Exception?.InnerException))
+            {
+                // the clock's, and not one the lambda threw itself
+                throw new ProviderException(ResponseStatus.GatewayTimeout, $"The lambda did not respond within {options.ExecutionTimeout.TotalSeconds:0} seconds.");
+            }
         }
         finally
         {

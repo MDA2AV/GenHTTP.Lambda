@@ -50,6 +50,11 @@ using var loggers = LoggerFactory.Create(builder =>
 
     // the query log of entity framework would drown out everything else
     builder.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
+
+    // and so would ASP.NET Core under the Kestrel engine, with two lines per
+    // request - written to the console while the request waits, and into the
+    // book where, each with its own duration, nothing ever folded them
+    builder.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
 });
 
 var logger = loggers.CreateLogger("GenHTTP.Lambda");

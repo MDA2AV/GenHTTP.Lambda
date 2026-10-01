@@ -347,6 +347,55 @@ rules that matter:
   and data; run). A new section joins the group it belongs to rather than the
   end of the list.
 
+### Serving, and the threads it runs on
+
+On Ioxide a request runs on a **reactor**: one thread per core that owns that
+core's connections and resumes each request inline where its I/O completed.
+Whatever a request does there, every other connection of that core waits for.
+.NET `async` works on it (ioxide posts continuations back to the reactor), but
+the platform's database is SQLite, which answers synchronously whatever the
+method is called - so the code is written the way it runs:
+
+- **Synchronous by default - decided.** Services, resources and MCP tools are
+  plain methods returning plain values, and every query is a synchronous EF
+  call (`ToList`, `FirstOrDefault`, `SaveChanges`, `CreateDbContext`). A
+  method is `async` only where it awaits something that really leaves the
+  thread: compiling, packing, copying a workspace or a database, reading a
+  lambda's own database for the editor (it may be slow by design), a request
+  body, the network. Do not add an async path beside a synchronous one.
+- **Enforced when it compiles.** `src/GenHTTP.Lambda/BannedSymbols.txt`
+  (Microsoft.CodeAnalysis.BannedApiAnalyzers, RS0030) refuses EF Core's async
+  methods, waiting for a task and the `File.*Async` helpers, each with the
+  reason. It lists every overload by its id, generated from the assemblies; a
+  new overload in a new version of EF is added the same way.
+- **Serving a lambda does not touch the database.** What answers to a key, an
+  id or a preview key is held by `ResolutionCache`, and every write to the
+  platform's database makes it stale (`DatabaseChanges`, an EF interceptor).
+  So every write goes through EF; one that does not is never seen by the
+  caches.
+- **Long work leaves the reactor in one hop**, through `Offload`: compiling and
+  binding with Roslyn, packing, copying a workspace or a database. Not in many
+  small asynchronous steps (`File.ReadAllTextAsync` hops out and back per
+  buffer), and not in place. A version's file is read and written in place:
+  it is bounded by its tier's allowance, and saving one is rare.
+- **Locks are plain locks (`Lock`), never held across an await.** What compiles
+  under a lambda's or a feature's turn compiles first and takes the turn to
+  write down what it came to (`MetaService.DeployAsync`,
+  `FeatureService.DeployAsync`, `MergeAsync`); serving compares the build it
+  finds with what is online and builds again where they differ, so the order
+  two deployments finish in does not matter. A lock that has to be held across
+  an await is a `SemaphoreSlim` taken with `WaitAsync` (copying a feature's
+  data), never with `Wait()`.
+- **Never wait on a task** (`.Result`, `.Wait()`, `GetAwaiter().GetResult()`):
+  on a reactor its continuation is posted to the very thread that is waiting,
+  and that core deadlocks for good. Lambdas are held to the same by the code
+  guard (`CodeGuard.InspectWaiting`), and agents are told so.
+- **No lock that every request takes may be held for more than a moment.** The
+  log ring's is the one every request takes: an append happens under it, and a
+  reader walks back from the newest line only as far as its cursor.
+- What is read off a version is read once: a version never changes
+  (`VersionFactsCache`).
+
 ### Logging what was done
 
 Every API call that changes something, and every MCP tool call, logs at

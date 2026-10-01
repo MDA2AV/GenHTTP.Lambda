@@ -36,7 +36,7 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/domain")]
     public async ValueTask<DomainResponse> Get(string privateKey)
-        => await DescribeAsync(await meta.RequireAsync(privateKey));
+        => await DescribeAsync(meta.Require(privateKey));
 
     /// <summary>
     /// Sets the domain the lambda answers at.
@@ -49,7 +49,7 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     [ResourceMethod(Method.Put, "lambdas/:privateKey/domain")]
     public async ValueTask<DomainResponse> Put(string privateKey, DomainChangeRequest request)
     {
-        var lambda = await meta.ChangeDomainAsync(privateKey, request.Domain);
+        var lambda = meta.ChangeDomain(privateKey, request.Domain);
 
         logger.LogInformation("Set the domain of lambda {Lambda} to {Domain}", lambda.PublicKey, lambda.Domain ?? "(none)");
 
@@ -62,7 +62,7 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/domain")]
     public async ValueTask<DomainResponse> Delete(string privateKey)
     {
-        var lambda = await meta.ChangeDomainAsync(privateKey, null);
+        var lambda = meta.ChangeDomain(privateKey, null);
 
         logger.LogInformation("Removed the domain of lambda {Lambda}", lambda.PublicKey);
 

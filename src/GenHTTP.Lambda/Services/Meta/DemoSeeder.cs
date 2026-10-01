@@ -62,7 +62,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
             logger.LogInformation("Prepared {Count} demo(s)", seeded);
         }
 
-        await RetireAsync(cancellation);
+        Retire();
     }
 
     /// <summary>
@@ -74,14 +74,14 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// something nobody maintains. The examples this tier replaced leave the
     /// same way. Only the tier is gone by: nothing else is ever put into it.
     /// </remarks>
-    private async ValueTask RetireAsync(CancellationToken cancellation)
+    private void Retire()
     {
         var wanted = DemoCatalog.All.Select(e => e.Key).ToHashSet(StringComparer.Ordinal);
 
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var retired = await database.Lambdas.Where(l => l.Tier == LambdaTier.Demo)
-                                    .ToListAsync(cancellation);
+        var retired = database.Lambdas.Where(l => l.Tier == LambdaTier.Demo)
+                              .ToList();
 
         foreach (var lambda in retired.Where(l => !wanted.Contains(l.PublicKey)))
         {
@@ -90,9 +90,9 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
                 // out of the tier first, which is what makes it removable at all
                 lambda.Tier = LambdaTier.Free;
 
-                await database.SaveChangesAsync(cancellation);
+                database.SaveChanges();
 
-                await meta.DeleteAsync(lambda.PrivateKey, cancellation);
+                meta.Delete(lambda.PrivateKey);
 
                 logger.LogInformation("Retired the demo at '{Key}', which is no longer one", lambda.PublicKey);
             }
@@ -108,22 +108,22 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// </summary>
     private async ValueTask<bool> SeedAsync(LambdaDemo demo, CancellationToken cancellation)
     {
-        if (!await ClaimAsync(demo, cancellation))
+        if (!Claim(demo))
         {
             return false;
         }
 
-        await ProvideSecretsAsync(demo, cancellation);
+        ProvideSecrets(demo);
 
-        await ProvideDatabaseAsync(demo, cancellation);
+        ProvideDatabase(demo);
 
-        await PublishSourceAsync(demo, cancellation);
+        PublishSource(demo);
 
         var wanted = TemplateCatalog.ForKey(demo.Id, demo.Key, demo: true);
 
-        var lambda = await meta.GetAsync(demo.Key, cancellation);
+        var lambda = meta.Get(demo.Key);
 
-        var current = await CurrentCodeAsync(demo.Key, lambda, cancellation);
+        var current = CurrentCode(demo.Key, lambda);
 
         if (current == wanted && lambda?.ActiveVersion != null)
         {
@@ -134,7 +134,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         {
             var change = current == null ? "Set up as a demo" : "Brought up to date with its template";
 
-            await meta.SaveAsync(demo.Key, wanted, new VersionNote(Specification: demo.Description, Change: change, Origin: VersionOrigins.System), cancellation: cancellation);
+            meta.Save(demo.Key, wanted, new VersionNote(Specification: demo.Description, Change: change, Origin: VersionOrigins.System));
 
             if (current != null)
             {
@@ -161,11 +161,11 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// somebody - claimed before the prefix was kept for demos - and is left
     /// alone rather than taken over. The demo is missing until it is gone.
     /// </remarks>
-    private async ValueTask<bool> ClaimAsync(LambdaDemo demo, CancellationToken cancellation)
+    private bool Claim(LambdaDemo demo)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var entity = await database.Lambdas.FirstOrDefaultAsync(l => l.PublicKey == demo.Key, cancellation);
+        var entity = database.Lambdas.FirstOrDefault(l => l.PublicKey == demo.Key);
 
         if (entity == null)
         {
@@ -180,7 +180,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
                 Modified = now
             });
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
 
             logger.LogInformation("Created the demo '{Demo}'", demo.Id);
 
@@ -198,7 +198,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         {
             entity.PrivateKey = demo.Key;
 
-            await database.SaveChangesAsync(cancellation);
+            database.SaveChanges();
         }
 
         return true;
@@ -213,18 +213,18 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// else may change a demo. A secret that is there already is kept, so
     /// what the demo sealed with it stays readable across restarts.
     /// </remarks>
-    private async ValueTask ProvideSecretsAsync(LambdaDemo demo, CancellationToken cancellation)
+    private void ProvideSecrets(LambdaDemo demo)
     {
         if (demo.Secrets is not { Count: > 0 } wanted)
         {
             return;
         }
 
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var id = await database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).FirstAsync(cancellation);
+        var id = database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).First();
 
-        var store = await database.DataStores.FirstOrDefaultAsync(s => s.LambdaId == id && s.Kind == DataKinds.SecretsId, cancellation);
+        var store = database.DataStores.FirstOrDefault(s => s.LambdaId == id && s.Kind == DataKinds.SecretsId);
 
         if (store == null)
         {
@@ -236,15 +236,15 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
             store.Changed = DateTime.UtcNow;
         }
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
         secrets.Invalidate(id);
 
-        var present = (await secrets.ListAsync(id, null, cancellation)).Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
+        var present = (secrets.List(id, null)).Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
 
         foreach (var name in wanted.Where(n => !present.Contains(n)))
         {
-            await secrets.StoreAsync(id, null, name, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)), cancellation);
+            secrets.Store(id, null, name, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
 
             logger.LogInformation("Gave the demo '{Demo}' the secret {Name}", demo.Id, name);
         }
@@ -258,25 +258,25 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// Past the tier like the secrets. What a demo's visitors wrote into its
     /// database stays across restarts and new versions; its code migrates it.
     /// </remarks>
-    private async ValueTask ProvideDatabaseAsync(LambdaDemo demo, CancellationToken cancellation)
+    private void ProvideDatabase(LambdaDemo demo)
     {
         if (!demo.Database)
         {
             return;
         }
 
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var id = await database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).FirstAsync(cancellation);
+        var id = database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).First();
 
-        var store = await database.DataStores.FirstOrDefaultAsync(s => s.LambdaId == id && s.Kind == DataKinds.DatabaseId, cancellation);
+        var store = database.DataStores.FirstOrDefault(s => s.LambdaId == id && s.Kind == DataKinds.DatabaseId);
 
         if (store is { Enabled: true } && stores.Exists(id))
         {
             return;
         }
 
-        await stores.CreateAsync(id, cancellation);
+        stores.Create(id);
 
         if (store == null)
         {
@@ -288,7 +288,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
             store.Changed = DateTime.UtcNow;
         }
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
         stores.Invalidate(id);
 
@@ -305,13 +305,13 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// the source service, which refuses a demo like everything else that
     /// would change one; once published it is left as it is.
     /// </remarks>
-    private async ValueTask PublishSourceAsync(LambdaDemo demo, CancellationToken cancellation)
+    private void PublishSource(LambdaDemo demo)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var id = await database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).FirstAsync(cancellation);
+        var id = database.Lambdas.Where(l => l.PublicKey == demo.Key).Select(l => l.Id).First();
 
-        if (await database.Sources.AnyAsync(s => s.LambdaId == id, cancellation))
+        if (database.Sources.Any(s => s.LambdaId == id))
         {
             return;
         }
@@ -320,7 +320,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         database.Sources.Add(new SourceEntity { LambdaId = id, Published = true, License = demo.License, PublishedAt = now, Updated = now });
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
         logger.LogInformation("Published the source of the demo '{Demo}' under {License}", demo.Id, demo.License);
     }
@@ -328,7 +328,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
     /// <summary>
     /// The code of the newest version, or null where there is none.
     /// </summary>
-    private async ValueTask<string?> CurrentCodeAsync(string key, LambdaInfo? lambda, CancellationToken cancellation)
+    private string? CurrentCode(string key, LambdaInfo? lambda)
     {
         if (lambda?.LatestVersion is not { } version)
         {
@@ -337,7 +337,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         try
         {
-            return (await meta.GetVersionAsync(key, version, cancellation)).Code;
+            return (meta.GetVersion(key, version)).Code;
         }
         catch (Exception)
         {

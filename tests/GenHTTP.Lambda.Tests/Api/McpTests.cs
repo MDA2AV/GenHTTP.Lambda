@@ -190,7 +190,7 @@ public sealed class McpTests
         var answer = await CallToolAsync(fixture, "create_lambda", new JsonObject());
 
         Assert.IsTrue(answer["result"]!["isError"]!.GetValue<bool>());
-        Assert.AreEqual(0, (await fixture.Meta.CountAsync()).Lambdas, "and no lambda was made anyway");
+        Assert.AreEqual(0, fixture.Meta.Count().Lambdas, "and no lambda was made anyway");
     }
 
     [TestMethod]
@@ -216,7 +216,7 @@ public sealed class McpTests
         var full = Structured(await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey, ["view"] = "full" }));
 
         Assert.AreEqual("Full", full["view"]!.GetValue<string>());
-        Assert.AreEqual("Full", (await fixture.Meta.GetAsync(privateKey))!.View, "and it is kept");
+        Assert.AreEqual("Full", (fixture.Meta.Get(privateKey))!.View, "and it is kept");
     }
 
     [TestMethod]
@@ -242,7 +242,7 @@ public sealed class McpTests
         var wrong = await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["view"] = "minimal" });
 
         Assert.IsTrue(wrong["result"]!["isError"]!.GetValue<bool>());
-        Assert.AreEqual(1, (await fixture.Meta.CountAsync()).Lambdas, "and no lambda was made for it");
+        Assert.AreEqual(1, fixture.Meta.Count().Lambdas, "and no lambda was made for it");
     }
 
     [TestMethod]
@@ -469,7 +469,7 @@ public sealed class McpTests
 
         Assert.IsTrue(written["ok"]!.GetValue<bool>(), written.ToJsonString());
 
-        var versions = await fixture.Meta.GetVersionsAsync(privateKey);
+        var versions = fixture.Meta.GetVersions(privateKey);
 
         Assert.AreEqual("a page that says hello", versions[0].Specification);
         Assert.AreEqual("Answers every request with hello", versions[0].Change);
@@ -483,7 +483,7 @@ public sealed class McpTests
 
         Structured(await CallToolAsync(fixture, "deploy", new JsonObject { ["privateKey"] = privateKey }));
 
-        var history = await fixture.Meta.GetActivationsAsync(privateKey);
+        var history = fixture.Meta.GetActivations(privateKey);
 
         Assert.AreEqual("agent", history[0].Origin);
     }
@@ -545,7 +545,7 @@ public sealed class McpTests
 
         Assert.IsTrue(changed["ok"]!.GetValue<bool>(), changed.ToJsonString());
 
-        var versions = await fixture.Meta.GetVersionsAsync(privateKey);
+        var versions = fixture.Meta.GetVersions(privateKey);
 
         Assert.AreEqual("Adds a readme", versions[0].Change);
         Assert.AreEqual("agent", versions[0].Origin);
@@ -1251,7 +1251,7 @@ public sealed class McpTests
         Assert.AreEqual(fixture.Options.MaxAssetBytesOf(LambdaTier.Free), free["assetBytes"]!.GetValue<int>());
         Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Free).Quota, free["workspaceBytes"]!.GetValue<long>());
 
-        await fixture.ChangeTierAsync(lambda.PrivateKey, LambdaTier.Premium);
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         var premium = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 

@@ -32,7 +32,7 @@ public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemet
     /// <param name="minutes">How far back the readings should reach</param>
     /// <param name="days">How far back the business events should reach</param>
     [ResourceMethod]
-    public async ValueTask<TelemetryResponse> Get(int? minutes, int? days, IRequest request)
+    public TelemetryResponse Get(int? minutes, int? days, IRequest request)
     {
         AdminGate.RequireForFigures(request, options);
 
@@ -41,13 +41,13 @@ public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemet
         // a different window from the readings on purpose: memory is watched
         // over an hour, and whether anybody is using the platform is a
         // question about weeks
-        var history = await events.HistoryAsync(days ?? 30);
+        var history = events.History(days ?? 30);
 
         var series = telemetry.Series(window);
 
         var latest = series.Count > 0 ? series[^1] : telemetry.Sample();
 
-        var counts = await meta.CountAsync();
+        var counts = meta.Count();
 
         var server = registry.Instance;
 

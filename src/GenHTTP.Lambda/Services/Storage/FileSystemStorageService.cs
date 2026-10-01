@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 
 using Microsoft.Extensions.Logging;
 
@@ -47,16 +48,18 @@ public sealed class FileSystemStorageService : IStorageService
 
     #region Versions
 
-    public async ValueTask WriteAsync(long lambdaId, int version, string code, CancellationToken cancellation = default)
+    public void Write(long lambdaId, int version, string code)
     {
         var directory = GetCodeDirectory(lambdaId);
 
         Directory.CreateDirectory(directory);
 
-        await File.WriteAllTextAsync(GetFile(lambdaId, version), code, cancellation);
+        // in one write, rather than an asynchronous step per buffer: a version
+        // is held to the allowance of its tier, and saving one is rare
+        File.WriteAllText(GetFile(lambdaId, version), code);
     }
 
-    public async ValueTask<string?> ReadAsync(long lambdaId, int version, CancellationToken cancellation = default)
+    public string? Read(long lambdaId, int version)
     {
         var file = GetFile(lambdaId, version);
 
@@ -65,10 +68,10 @@ public sealed class FileSystemStorageService : IStorageService
             return null;
         }
 
-        return await File.ReadAllTextAsync(file, cancellation);
+        return File.ReadAllText(file);
     }
 
-    public ValueTask DeleteVersionAsync(long lambdaId, int version, CancellationToken cancellation = default)
+    public void DeleteVersion(long lambdaId, int version)
     {
         var file = GetFile(lambdaId, version);
 
@@ -95,11 +98,9 @@ public sealed class FileSystemStorageService : IStorageService
                 }
             }
         }
-
-        return ValueTask.CompletedTask;
     }
 
-    public ValueTask DeleteAsync(long lambdaId, CancellationToken cancellation = default)
+    public void Delete(long lambdaId)
     {
         Remove(GetCodeDirectory(lambdaId));
         Remove(GetWorkspaceDirectory(lambdaId));
@@ -115,8 +116,6 @@ public sealed class FileSystemStorageService : IStorageService
         // follows. The next start of the server wipes the directory instead.
 
         Logger.LogInformation("Removed stored content of lambda {LambdaId}", lambdaId);
-
-        return ValueTask.CompletedTask;
     }
 
     public string GetWorkspace(long lambdaId, long? featureId = null)
@@ -152,17 +151,17 @@ public sealed class FileSystemStorageService : IStorageService
 
     #region Features
 
-    public ValueTask WriteFeatureAsync(long lambdaId, long featureId, string code, CancellationToken cancellation = default)
-        => WriteWholeAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "files.json"), code, cancellation);
+    public void WriteFeature(long lambdaId, long featureId, string code)
+        => WriteWhole(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "files.json"), code);
 
-    public ValueTask<string?> ReadFeatureAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
-        => ReadIfThereAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "files.json"), cancellation);
+    public string? ReadFeature(long lambdaId, long featureId)
+        => ReadIfThere(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "files.json"));
 
-    public ValueTask WritePreviewAsync(long lambdaId, long featureId, string code, CancellationToken cancellation = default)
-        => WriteWholeAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"), code, cancellation);
+    public void WritePreview(long lambdaId, long featureId, string code)
+        => WriteWhole(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"), code);
 
-    public ValueTask<string?> ReadPreviewAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
-        => ReadIfThereAsync(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"), cancellation);
+    public string? ReadPreview(long lambdaId, long featureId)
+        => ReadIfThere(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"));
 
     /// <remarks>
     /// Copied beside the copy it replaces and swapped in once complete, so a
@@ -177,7 +176,9 @@ public sealed class FileSystemStorageService : IStorageService
 
         var source = GetWorkspaceDirectory(lambdaId);
 
-        await Task.Run(() =>
+        // a whole workspace, gigabytes in the premium tier: copied away from the
+        // reactor (see Offload)
+        await Offload.Run(() =>
         {
             Remove(staging);
 
@@ -202,11 +203,9 @@ public sealed class FileSystemStorageService : IStorageService
         }, cancellation);
     }
 
-    public ValueTask DeleteFeatureAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
+    public void DeleteFeature(long lambdaId, long featureId)
     {
         Remove(GetFeatureDirectory(lambdaId, featureId));
-
-        return ValueTask.CompletedTask;
     }
 
     public IEnumerable<(long LambdaId, long FeatureId)> ListFeatures()
@@ -267,22 +266,22 @@ public sealed class FileSystemStorageService : IStorageService
     /// whole or not at all - and a reader that opened it before keeps reading
     /// what it opened.
     /// </summary>
-    private static async ValueTask WriteWholeAsync(string file, string code, CancellationToken cancellation)
+    private static void WriteWhole(string file, string code)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
 
         var staging = $"{file}.saving";
 
-        await File.WriteAllTextAsync(staging, code, cancellation);
+        File.WriteAllText(staging, code);
 
         File.Move(staging, file, true);
     }
 
-    private static async ValueTask<string?> ReadIfThereAsync(string file, CancellationToken cancellation)
+    private static string? ReadIfThere(string file)
     {
         try
         {
-            return File.Exists(file) ? await File.ReadAllTextAsync(file, cancellation) : null;
+            return File.Exists(file) ? File.ReadAllText(file) : null;
         }
         catch (FileNotFoundException)
         {

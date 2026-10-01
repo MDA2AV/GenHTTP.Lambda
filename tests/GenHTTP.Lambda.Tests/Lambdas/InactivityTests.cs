@@ -33,7 +33,7 @@ public sealed class InactivityTests
         await Touch(fixture, "popular", deployed: DateTime.UtcNow.AddDays(-14),
                     modified: DateTime.UtcNow.AddDays(-14), lastSeen: DateTime.UtcNow.AddMinutes(-5));
 
-        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
+        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
 
         Assert.AreEqual(0, report.Undeployed, "being used is what keeps it up, not being recent");
         Assert.AreEqual(0, report.Deleted);
@@ -56,7 +56,7 @@ public sealed class InactivityTests
 
         await Touch(fixture, "forgotten", deployed: old, modified: old, lastSeen: old);
 
-        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
+        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
 
         Assert.AreEqual(1, report.Undeployed);
         Assert.AreEqual(0, report.Deleted, "offline, but still there to be deployed again");
@@ -79,7 +79,7 @@ public sealed class InactivityTests
         await Touch(fixture, "tended", deployed: DateTime.UtcNow.AddDays(-60),
                     modified: DateTime.UtcNow.AddDays(-1), lastSeen: null);
 
-        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
+        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
 
         Assert.AreEqual(0, report.Undeployed);
     }
@@ -101,7 +101,7 @@ public sealed class InactivityTests
 
         await Touch(fixture, "an-example", deployed: old, modified: old, lastSeen: old, demo: true);
 
-        var report = await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
+        var report = fixture.Meta.RunMaintenance(DateTime.UtcNow);
 
         Assert.AreEqual(0, report.Undeployed);
         Assert.AreEqual(0, report.Deleted);
@@ -120,7 +120,7 @@ public sealed class InactivityTests
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
-        await fixture.Meta.RunMaintenanceAsync(DateTime.UtcNow);
+        fixture.Meta.RunMaintenance(DateTime.UtcNow);
 
         await using var database = await Databases(fixture).CreateDbContextAsync();
 

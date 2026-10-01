@@ -29,6 +29,55 @@ public sealed class CompilationTests
     }
 
     [TestMethod]
+    [DataRow("var x = Task.FromResult(1).Result;\nreturn Inline.Create();", ".Result")]
+    [DataRow("var x = new ValueTask<int>(1).Result;\nreturn Inline.Create();", ".Result of a value task")]
+    [DataRow("Task<int>? t = null;\nvar x = t?.Result;\nreturn Inline.Create();", ".Result behind a null check")]
+    [DataRow("Task.Delay(1).Wait();\nreturn Inline.Create();", ".Wait()")]
+    [DataRow("var x = Task.FromResult(1).GetAwaiter().GetResult();\nreturn Inline.Create();", ".GetAwaiter().GetResult()")]
+    [DataRow("var x = Task.FromResult(1).ConfigureAwait(false).GetAwaiter().GetResult();\nreturn Inline.Create();", "a configured awaiter")]
+    [DataRow("Task.WaitAll(Task.Delay(1));\nreturn Inline.Create();", "Task.WaitAll")]
+    [DataRow("var s = new SemaphoreSlim(1);\ns.Wait();\nreturn Inline.Create();", "a semaphore taken synchronously")]
+    [DataRow("return Inline.Create().Get(() => Load().Result);\n\nstatic async Task<string> Load() { await Task.Yield(); return \"x\"; }", "in a route")]
+    public async Task WaitingForATaskIsRefused(string code, string how)
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var outcome = await fixture.Deployments.ValidateAsync(code);
+
+        Assert.IsFalse(outcome.Success, how);
+        Assert.IsTrue(outcome.Diagnostics.Any(d => (d.Message.Contains("await", StringComparison.OrdinalIgnoreCase) && d.Message.Contains("one thread per core", StringComparison.Ordinal)) || d.Message.Contains("WaitAsync", StringComparison.Ordinal)), $"{how}: refused for waiting, saying what to do instead");
+    }
+
+    [TestMethod]
+    public async Task AwaitingAndAResultOfItsOwnAreFine()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var outcome = await fixture.Deployments.ValidateAsync("""
+            var gate = new SemaphoreSlim(1);
+
+            return Inline.Create().Get(async () =>
+            {
+                await gate.WaitAsync();
+
+                try
+                {
+                    await Task.Delay(1);
+                    return new Outcome(42).Result;
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            });
+
+            record Outcome(int Result);
+            """);
+
+        Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
+    }
+
+    [TestMethod]
     public async Task SyntaxErrorsPointAtTheirLine()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
@@ -49,11 +98,11 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = await fixture.Meta.CreateAsync(null);
+        var lambda = fixture.Meta.Create(null);
 
         // what the snippet returns is only known once it ran, so this is caught
         // when the lambda is deployed rather than when its code is checked
-        await fixture.Meta.SaveAsync(lambda.PrivateKey, "return 42;");
+        fixture.Meta.Save(lambda.PrivateKey, "return 42;");
 
         var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 
@@ -129,9 +178,9 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = await fixture.Meta.CreateAsync(null);
+        var lambda = fixture.Meta.Create(null);
 
-        await fixture.Meta.SaveAsync(lambda.PrivateKey, """
+        fixture.Meta.Save(lambda.PrivateKey, """
             Workspace.WriteText("note.txt", "kept");
 
             return Content.From(Resource.FromString(Workspace.ReadText("note.txt")));
@@ -155,7 +204,7 @@ public sealed class CompilationTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = await fixture.Meta.CreateAsync(null);
+        var lambda = fixture.Meta.Create(null);
 
         // a store in a file of its own is the first thing an agent writes, and
         // Workspace used to exist only in the top-level code of lambda.cs - so
@@ -221,12 +270,12 @@ public sealed class CompilationTests
             record Entry(string Name);
             """;
 
-        var first = await fixture.Meta.CreateAsync(null);
-        var second = await fixture.Meta.CreateAsync(null);
+        var first = fixture.Meta.Create(null);
+        var second = fixture.Meta.Create(null);
 
         foreach (var lambda in new[] { first, second })
         {
-            await fixture.Meta.SaveAsync(lambda.PrivateKey, Code);
+            fixture.Meta.Save(lambda.PrivateKey, Code);
 
             var deployment = await fixture.Meta.DeployAsync(lambda.PrivateKey, null);
 

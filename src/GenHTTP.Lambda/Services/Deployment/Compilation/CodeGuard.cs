@@ -386,6 +386,113 @@ public static class CodeGuard
         return findings;
     }
 
+    /// <summary>
+    /// What a lambda is told that waits for a task instead of awaiting it.
+    /// </summary>
+    internal const string WaitingMessage =
+        "A lambda does not wait for a task (.Result, .Wait(), .GetAwaiter().GetResult(), Task.WaitAll, Task.WaitAny): " +
+        "requests are served on one thread per core, and the task has to finish on the very thread that would be waiting for it - " +
+        "so it never does, and every request on that thread waits with it. Await the task instead and make the method async " +
+        "(GenHTTP handlers and resource methods may return Task<T> or ValueTask<T>), or call the synchronous method where there is one.";
+
+    /// <summary>
+    /// What a lambda is told that takes a semaphore synchronously.
+    /// </summary>
+    internal const string SemaphoreMessage =
+        "A lambda takes a SemaphoreSlim with 'await semaphore.WaitAsync()', not with Wait(): Wait() holds the thread that serves " +
+        "this core's requests, and the request that would release the semaphore may be waiting to run on that same thread. " +
+        "For a short section without any await in it, a plain lock statement does the job.";
+
+    /// <summary>
+    /// The names that may be a wait for a task, and so are bound to see whether they are.
+    /// </summary>
+    private static readonly HashSet<string> Waits = new(StringComparer.Ordinal) { "Result", "Wait", "WaitAll", "WaitAny", "GetResult" };
+
+    /// <summary>
+    /// Refuses code that blocks the thread it runs on until a task has
+    /// finished: <c>.Result</c>, <c>.Wait()</c>, <c>.GetAwaiter().GetResult()</c>,
+    /// <c>Task.WaitAll</c> and <c>Task.WaitAny</c> - and a semaphore taken with
+    /// <c>Wait()</c>.
+    /// </summary>
+    /// <remarks>
+    /// Not a matter of style here. On the ioxide engine a request runs on a
+    /// reactor, one thread per core, and the continuations of what it awaits
+    /// are posted back to that thread. A request that blocks it waiting for a
+    /// task waits for work queued behind itself: that core never serves
+    /// anything again, the lambda's requests and everybody else's alike. On
+    /// Kestrel it merely costs a thread, which is why such code works on a
+    /// developer's machine and must not get further than this.
+    ///
+    /// Asked of the compilation, like <see cref="InspectConstruction"/>, so a
+    /// property of somebody's own type that happens to be called Result is
+    /// theirs to read. Only names that could be a wait are bound.
+    /// </remarks>
+    public static IReadOnlyList<CompilationDiagnostic> InspectWaiting(Microsoft.CodeAnalysis.Compilation compilation)
+    {
+        var task = compilation.GetTypeByMetadataName("System.Threading.Tasks.Task");
+        var valueTask = compilation.GetTypeByMetadataName("System.Threading.Tasks.ValueTask");
+        var semaphore = compilation.GetTypeByMetadataName("System.Threading.SemaphoreSlim");
+
+        var findings = new List<CompilationDiagnostic>();
+
+        foreach (var tree in compilation.SyntaxTrees)
+        {
+            SemanticModel? model = null;
+
+            foreach (var name in tree.GetRoot().DescendantNodes().OfType<IdentifierNameSyntax>())
+            {
+                if (!Waits.Contains(name.Identifier.ValueText) || name.Parent is not (MemberAccessExpressionSyntax or MemberBindingExpressionSyntax))
+                {
+                    continue;
+                }
+
+                var symbol = (model ??= compilation.GetSemanticModel(tree)).GetSymbolInfo(name).Symbol;
+
+                var message = symbol switch
+                {
+                    IPropertySymbol { Name: "Result" } property when IsTask(property.ContainingType) => WaitingMessage,
+                    IMethodSymbol { Name: "Wait" or "WaitAll" or "WaitAny" } method when IsTask(method.ContainingType) => WaitingMessage,
+                    IMethodSymbol { Name: "GetResult" } method when IsAwaiter(method.ContainingType) => WaitingMessage,
+                    IMethodSymbol { Name: "Wait" } method when SymbolEqualityComparer.Default.Equals(method.ContainingType, semaphore) => SemaphoreMessage,
+                    _ => null
+                };
+
+                if (message != null)
+                {
+                    var span = name.GetLocation().GetMappedLineSpan();
+
+                    findings.Add(new CompilationDiagnostic("Error", "LAMBDA0001", message,
+                                                           span.StartLinePosition.Line + 1, span.StartLinePosition.Character + 1,
+                                                           span.HasMappedPath ? span.Path : null));
+                }
+            }
+        }
+
+        return findings;
+
+        bool IsTask(INamedTypeSymbol? type)
+        {
+            for (var current = type; current != null; current = current.BaseType)
+            {
+                var definition = current.OriginalDefinition;
+
+                if (SymbolEqualityComparer.Default.Equals(definition, task) || SymbolEqualityComparer.Default.Equals(definition, valueTask)
+                    || definition.ToDisplayString() is "System.Threading.Tasks.Task<TResult>" or "System.Threading.Tasks.ValueTask<TResult>")
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // the awaiters of tasks, configured or not, which is where GetResult blocks
+        static bool IsAwaiter(INamedTypeSymbol? type)
+            => type != null
+            && type.Name.EndsWith("Awaiter", StringComparison.Ordinal)
+            && type.ContainingNamespace?.ToDisplayString() == "System.Runtime.CompilerServices";
+    }
+
     private static CompilationDiagnostic Reject(string message, Location location)
     {
         var position = location.GetLineSpan().StartLinePosition;

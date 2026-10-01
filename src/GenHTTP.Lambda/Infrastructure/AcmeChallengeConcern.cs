@@ -71,7 +71,7 @@ public sealed class AcmeChallengeConcern(IHandler content, string root) : IConce
         }
 
         return request.Respond()
-                      .Content(await File.ReadAllTextAsync(file), ContentType.TextPlain)
+                      .Content(File.ReadAllText(file), ContentType.TextPlain)
                       .Header("Cache-Control", "no-store")
                       .Build();
     }

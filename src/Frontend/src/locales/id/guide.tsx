@@ -386,7 +386,7 @@ export const guide: Messages['guide'] = {
   ),
 
   limits:
-    'Kode Anda berjalan di server bersama, jadi sebagian C# ditolak sebelum dikompilasi: menjalankan proses, membuka socket sendiri, memuat assembly, mengakses file system di luar workspace Anda, dan reflection yang dipakai untuk mengakali semua itu.',
+    'Kode Anda berjalan di server bersama, jadi sebagian C# ditolak sebelum dikompilasi: menjalankan proses, membuka socket sendiri, memuat assembly, mengakses file system di luar workspace Anda, dan reflection yang dipakai untuk mengakali semua itu. Begitu pula menunggu task dengan .Result atau .Wait() alih-alih await: request berjalan di satu thread per core, dan task tersebut harus selesai justru di thread yang sedang menunggunya.',
   limits2:
     'Semua yang lain tersedia, termasuk seluruh API modul GenHTTP. Kalau ada yang ditolak, Anda diberi tahu baris mana dan alasannya, bukan sekadar pesan gagal.',
 
