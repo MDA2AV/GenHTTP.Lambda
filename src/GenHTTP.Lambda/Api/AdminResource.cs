@@ -44,12 +44,12 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// <param name="search">Only lambdas whose key or domain contains this</param>
     /// <param name="tier">Only lambdas of this tier</param>
     [ResourceMethod("lambdas")]
-    public async ValueTask<AdminListingResponse> GetLambdas(string? search, int? page, string? tier)
+    public AdminListingResponse GetLambdas(string? search, int? page, string? tier)
     {
 
         var wanted = Math.Max(1, page ?? 1);
 
-        var result = await meta.ListAsync(search, (wanted - 1) * PageSize, PageSize, string.IsNullOrEmpty(tier) ? null : ParseTier(tier));
+        var result = meta.List(search, (wanted - 1) * PageSize, PageSize, string.IsNullOrEmpty(tier) ? null : ParseTier(tier));
 
         // the counters are held per lambda in memory, so this is a lookup
         // rather than a join - and a lambda nobody has called is simply absent
@@ -92,22 +92,22 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// versions and when it was online.
     /// </summary>
     [ResourceMethod("lambdas/:publicKey")]
-    public async ValueTask<AdminLambdaDetail> GetLambda(string publicKey)
+    public AdminLambdaDetail GetLambda(string publicKey)
     {
 
-        var privateKey = await meta.RequirePrivateKeyAsync(publicKey);
+        var privateKey = meta.RequirePrivateKey(publicKey);
 
-        return await DetailAsync(privateKey);
+        return Detail(privateKey);
     }
 
     /// <summary>
     /// The code of one version of a lambda.
     /// </summary>
     [ResourceMethod("lambdas/:publicKey/versions/:version")]
-    public async ValueTask<VersionContentResponse> GetVersion(string publicKey, int version)
+    public VersionContentResponse GetVersion(string publicKey, int version)
     {
 
-        var content = await meta.GetVersionAsync(await meta.RequirePrivateKeyAsync(publicKey), version);
+        var content = meta.GetVersion(meta.RequirePrivateKey(publicKey), version);
 
         return VersionResource.Describe(content);
     }
@@ -121,32 +121,32 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// keeps the domain configured but stops serving it.
     /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:publicKey/tier")]
-    public async ValueTask<AdminLambdaDetail> ChangeTier(string publicKey, TierRequest body)
+    public AdminLambdaDetail ChangeTier(string publicKey, TierRequest body)
     {
 
-        var privateKey = await meta.RequirePrivateKeyAsync(publicKey);
+        var privateKey = meta.RequirePrivateKey(publicKey);
 
-        var changed = await meta.ChangeTierAsync(privateKey, ParseTier(body.Tier));
+        var changed = meta.ChangeTier(privateKey, ParseTier(body.Tier));
 
         logger.LogInformation("The operator moved lambda {Lambda} to the {Tier} tier", changed.PublicKey, changed.Tier);
 
-        return await DetailAsync(privateKey);
+        return Detail(privateKey);
     }
 
     /// <summary>
     /// Sets or removes the domain of a lambda, the way its owner would.
     /// </summary>
     [ResourceMethod(Method.Put, "lambdas/:publicKey/domain")]
-    public async ValueTask<AdminLambdaDetail> ChangeDomain(string publicKey, DomainChangeRequest body)
+    public AdminLambdaDetail ChangeDomain(string publicKey, DomainChangeRequest body)
     {
 
-        var privateKey = await meta.RequirePrivateKeyAsync(publicKey);
+        var privateKey = meta.RequirePrivateKey(publicKey);
 
-        var changed = await meta.ChangeDomainAsync(privateKey, body.Domain);
+        var changed = meta.ChangeDomain(privateKey, body.Domain);
 
         logger.LogInformation("The operator set the domain of lambda {Lambda} to {Domain}", changed.PublicKey, changed.Domain ?? "(none)");
 
-        return await DetailAsync(privateKey);
+        return Detail(privateKey);
     }
 
     /// <summary>
@@ -160,7 +160,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     public async ValueTask<Result<DeploymentOutcomeResponse>> StartDeployment(string publicKey, DeploymentRequest? body)
     {
 
-        var result = await meta.DeployAsync(await meta.RequirePrivateKeyAsync(publicKey), body?.Version, VersionOrigins.Admin);
+        var result = await meta.DeployAsync(meta.RequirePrivateKey(publicKey), body?.Version, VersionOrigins.Admin);
 
         logger.Deployed(result, publicKey, body?.Version);
 
@@ -173,10 +173,10 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// Takes a lambda offline without removing it.
     /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:publicKey/deployment/stop")]
-    public async ValueTask<LambdaOverviewResponse> StopDeployment(string publicKey)
+    public LambdaOverviewResponse StopDeployment(string publicKey)
     {
 
-        var lambda = await meta.UndeployAsync(await meta.RequirePrivateKeyAsync(publicKey), ActivationEndings.Admin);
+        var lambda = meta.Undeploy(meta.RequirePrivateKey(publicKey), ActivationEndings.Admin);
 
         logger.LogInformation("The operator took lambda {Lambda} offline", lambda.PublicKey);
 
@@ -187,10 +187,10 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// Removes a lambda and everything stored for it.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:publicKey")]
-    public async ValueTask Delete(string publicKey)
+    public void Delete(string publicKey)
     {
 
-        await meta.DeleteAsync(await meta.RequirePrivateKeyAsync(publicKey));
+        meta.Delete(meta.RequirePrivateKey(publicKey));
 
         logger.LogInformation("The operator deleted lambda {Lambda}", publicKey);
     }
@@ -203,9 +203,9 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// What the operator has switched on or off.
     /// </summary>
     [ResourceMethod("settings")]
-    public async ValueTask<SettingsModel> GetSettings()
+    public SettingsModel GetSettings()
     {
-        var current = await settings.GetAsync();
+        var current = settings.Get();
 
         return new SettingsModel(current.EnterprisePage, current.BuildBox, current.ChangeBox);
     }
@@ -214,9 +214,9 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// Replaces the settings. They apply to the next page anybody opens.
     /// </summary>
     [ResourceMethod(Method.Put, "settings")]
-    public async ValueTask<SettingsModel> ChangeSettings(SettingsModel body)
+    public SettingsModel ChangeSettings(SettingsModel body)
     {
-        var saved = await settings.SaveAsync(new SiteSettings(body.EnterprisePage, body.BuildBox, body.ChangeBox));
+        var saved = settings.Save(new SiteSettings(body.EnterprisePage, body.BuildBox, body.ChangeBox));
 
         logger.LogInformation("The operator changed the settings: enterprise page {EnterprisePage}, build box {BuildBox}, change box {ChangeBox}",
                               saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
@@ -233,15 +233,15 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// </summary>
     private const int PageSize = 20;
 
-    private async ValueTask<AdminLambdaDetail> DetailAsync(string privateKey)
+    private AdminLambdaDetail Detail(string privateKey)
     {
-        var lambda = await meta.RequireAsync(privateKey);
+        var lambda = meta.Require(privateKey);
 
-        var id = await meta.RequireIdAsync(privateKey);
+        var id = meta.RequireId(privateKey);
 
-        var versions = await meta.GetVersionsAsync(privateKey);
+        var versions = meta.GetVersions(privateKey);
 
-        var activations = await meta.GetActivationsAsync(privateKey);
+        var activations = meta.GetActivations(privateKey);
 
         var now = DateTime.UtcNow;
 

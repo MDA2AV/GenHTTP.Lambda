@@ -1,5 +1,6 @@
 using System.Net;
 
+using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Tests.Infrastructure;
 
 using GenHTTP.Testing;
@@ -51,6 +52,69 @@ public sealed class ExecutionTests
         using var updated = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
 
         Assert.AreEqual("draft", await updated.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task AMovedLambdaAnswersAtItsNewKeyAndNoLongerAtItsOldOne()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("first-key");
+
+        await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"here\"));");
+
+        // served once, so what answers to the key is remembered
+        using var before = await fixture.GetAsync("/lambda/first-key/");
+
+        Assert.AreEqual("here", await before.GetContentAsync());
+
+        using var moved = await fixture.SendAsync(HttpMethod.Patch, $"/api/v1/lambdas/{lambda.PrivateKey}", new UpdateLambdaRequest("second-key"));
+
+        Assert.AreEqual(HttpStatusCode.OK, moved.StatusCode);
+
+        using var old = await fixture.GetAsync("/lambda/first-key/");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, old.StatusCode, "the old key is given up at once");
+
+        using var current = await fixture.GetAsync("/lambda/second-key/");
+
+        Assert.AreEqual("here", await current.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task AKeyAskedForBeforeItWasTakenAnswersOnceItIs()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // nothing there yet, which is remembered as well
+        using var missing = await fixture.GetAsync("/lambda/later/");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode);
+
+        var lambda = await fixture.CreateLambdaAsync("later");
+
+        await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"arrived\"));");
+
+        using var found = await fixture.GetAsync("/lambda/later/");
+
+        Assert.AreEqual("arrived", await found.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task ATimeoutALambdaThrowsIsItsOwnFailureAndNotTheClocks()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("impatient");
+
+        await fixture.DeployAsync(lambda.PrivateKey, """
+            return Inline.Create().Get(async () => { await Task.Yield(); if (DateTime.UtcNow.Year > 2000) throw new TimeoutException("the upstream gave up"); return "never"; });
+            """);
+
+        using var response = await fixture.GetAsync("/lambda/impatient/");
+
+        Assert.AreNotEqual(HttpStatusCode.GatewayTimeout, response.StatusCode, "the lambda answered in time, with a failure of its own");
+        Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
     }
 
     [TestMethod]

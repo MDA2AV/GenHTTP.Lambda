@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -38,9 +39,11 @@ public sealed class CodeResource(IMetaService meta)
     [ResourceMethod(Method.Post, "lambdas/:privateKey/code/semantics")]
     public async ValueTask<SemanticsResponse> Semantics(string privateKey, CodeRequest request)
     {
-        await meta.RequireIdAsync(privateKey);
+        meta.RequireId(privateKey);
 
-        var tokens = SemanticClassifier.Classify(Select(request));
+        // binding with Roslyn, asked while somebody types: tens to hundreds of
+        // milliseconds that a reactor would not be serving anybody (see Offload)
+        var tokens = await Offload.Run(() => SemanticClassifier.Classify(Select(request)));
 
         return new SemanticsResponse([.. tokens.Select(t => new SemanticToken(t.Line, t.Column, t.Length, t.Kind))]);
     }
@@ -51,9 +54,9 @@ public sealed class CodeResource(IMetaService meta)
     [ResourceMethod(Method.Post, "lambdas/:privateKey/code/completions")]
     public async ValueTask<CompletionsResponse> Completions(string privateKey, CodeRequest request)
     {
-        await meta.RequireIdAsync(privateKey);
+        meta.RequireId(privateKey);
 
-        var found = CompletionResolver.Resolve(Select(request), request.Line, request.Column);
+        var found = await Offload.Run(() => CompletionResolver.Resolve(Select(request), request.Line, request.Column));
 
         return new CompletionsResponse([.. found.Select(c => new ResolvedCompletionResponse(c.Label, c.Kind, c.Detail, c.Documentation))]);
     }
@@ -70,14 +73,14 @@ public sealed class CodeResource(IMetaService meta)
     [ResourceMethod(Method.Post, "lambdas/:privateKey/code/definition")]
     public async ValueTask<DefinitionResponse> Definition(string privateKey, CodeRequest request)
     {
-        await meta.RequireIdAsync(privateKey);
+        meta.RequireId(privateKey);
 
         var files = request.Files ?? [];
 
-        var found = DefinitionResolver.Resolve(files,
-                                               request.File ?? files.FirstOrDefault()?.Name ?? LambdaSource.EntryName,
-                                               request.Line,
-                                               request.Column);
+        var found = await Offload.Run(() => DefinitionResolver.Resolve(files,
+                                                                       request.File ?? files.FirstOrDefault()?.Name ?? LambdaSource.EntryName,
+                                                                       request.Line,
+                                                                       request.Column));
 
         return found == null
              ? new DefinitionResponse(null, 0, 0, 0)

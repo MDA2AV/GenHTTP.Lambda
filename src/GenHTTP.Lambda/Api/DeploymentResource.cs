@@ -28,9 +28,9 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     /// What is online, and for how long.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/deployment")]
-    public async ValueTask<DeploymentResponse> Get(string privateKey)
+    public DeploymentResponse Get(string privateKey)
     {
-        var lambda = await meta.RequireAsync(privateKey);
+        var lambda = meta.Require(privateKey);
 
         return new DeploymentResponse(lambda.ActiveVersion != null, lambda.ActiveVersion, lambda.DeployedAt, lambda.DeployedUntil);
     }
@@ -47,7 +47,7 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     {
         var result = await meta.DeployAsync(privateKey, request?.Version, VersionOrigins.Api);
 
-        logger.Deployed(result, await meta.PublicKeyOfAsync(privateKey), request?.Version);
+        logger.Deployed(result, meta.PublicKeyOf(privateKey), request?.Version);
 
         var payload = new DeploymentOutcomeResponse(result.Success, result.Lambda == null ? null : LambdaDescription.Of(result.Lambda), result.Diagnostics);
 
@@ -58,9 +58,9 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     /// Takes the lambda off the air, keeping its code.
     /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/deployment/stop")]
-    public async ValueTask<LambdaResponse> Stop(string privateKey)
+    public LambdaResponse Stop(string privateKey)
     {
-        var lambda = await meta.UndeployAsync(privateKey, ActivationEndings.Stopped);
+        var lambda = meta.Undeploy(privateKey, ActivationEndings.Stopped);
 
         logger.LogInformation("Took lambda {Lambda} offline", lambda.PublicKey);
 
@@ -76,11 +76,11 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     /// uses, or the operator. The newest entry has no end while it is live.
     /// </remarks>
     [ResourceMethod("lambdas/:privateKey/deployment/history")]
-    public async ValueTask<List<ActivationResponse>> History(string privateKey)
+    public List<ActivationResponse> History(string privateKey)
     {
         var now = DateTime.UtcNow;
 
-        var activations = await meta.GetActivationsAsync(privateKey);
+        var activations = meta.GetActivations(privateKey);
 
         return activations.Select(a => new ActivationResponse(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy,
                                                               (long)((a.Ended ?? now) - a.Started).TotalSeconds))

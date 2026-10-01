@@ -61,7 +61,7 @@ public sealed class AgentTests
         Assert.AreEqual("de", sent["language"]!.GetValue<string>());
         Assert.AreEqual(1, sent["before"]!.GetValue<int>(), "what was online, to offer putting it back");
 
-        var id = await fixture.Meta.GetIdAsync(lambda.PrivateKey);
+        var id = fixture.Meta.GetId(lambda.PrivateKey);
 
         Assert.AreEqual(id!.Value.ToString(), sent["lambda"]!.GetValue<string>(), "filed under the lambda, to be found by it");
 

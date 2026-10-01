@@ -25,19 +25,19 @@ public interface ISourceService
     /// Whether the lambda behind an editor key is published, or nothing when
     /// it never was.
     /// </summary>
-    ValueTask<SourceSettings?> GetAsync(string privateKey, CancellationToken cancellation = default);
+    SourceSettings? Get(string privateKey);
 
     /// <summary>
     /// Publishes the source of a lambda, or changes the license it is
     /// published under.
     /// </summary>
-    ValueTask<SourceSettings> PublishAsync(string privateKey, SourceDraft draft, CancellationToken cancellation = default);
+    SourceSettings Publish(string privateKey, SourceDraft draft);
 
     /// <summary>
     /// Takes the source down. Its stars are kept for when it is published
     /// again; nothing happens when it was not published.
     /// </summary>
-    ValueTask<SourceSettings?> WithdrawAsync(string privateKey, CancellationToken cancellation = default);
+    SourceSettings? Withdraw(string privateKey);
 
     #endregion
 
@@ -47,12 +47,12 @@ public interface ISourceService
     /// One page of the published sources.
     /// </summary>
     /// <param name="search">Words the key, the title or what it is about have to contain</param>
-    ValueTask<SourceListing> ListAsync(string? search, SourceOrder order, int skip, int take, CancellationToken cancellation = default);
+    SourceListing List(string? search, SourceOrder order, int skip, int take);
 
     /// <summary>
     /// The published source at a public key, or nothing where there is none.
     /// </summary>
-    ValueTask<SourceProject?> GetProjectAsync(string publicKey, CancellationToken cancellation = default);
+    SourceProject? GetProject(string publicKey);
 
     /// <summary>
     /// A version of a published source, packed - or nothing where there is no
@@ -65,19 +65,19 @@ public interface ISourceService
     /// no such source.
     /// </summary>
     /// <returns>How many stars it has now</returns>
-    ValueTask<int?> StarAsync(string publicKey, bool starred, CancellationToken cancellation = default);
+    int? Star(string publicKey, bool starred);
 
     /// <summary>
     /// How many stars a published source has, and the identity it is filed
     /// under for the guard that counts each visitor's star once. Nothing where
     /// there is no such source.
     /// </summary>
-    ValueTask<SourceStars?> GetStarsAsync(string publicKey, CancellationToken cancellation = default);
+    SourceStars? GetStars(string publicKey);
 
     /// <summary>
     /// Every published source, for the sitemap.
     /// </summary>
-    ValueTask<IReadOnlyList<SourceAddress>> ListAddressesAsync(CancellationToken cancellation = default);
+    IReadOnlyList<SourceAddress> ListAddresses();
 
     #endregion
 

@@ -65,7 +65,7 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     /// <param name="skip">How many to leave out, from the start</param>
     /// <param name="take">How many to answer with, at most 48</param>
     [ResourceMethod]
-    public async ValueTask<SourceListingResponse> List(string? search, string? order, int? skip, int? take)
+    public SourceListingResponse List(string? search, string? order, int? skip, int? take)
     {
         var from = Math.Max(0, skip ?? 0);
 
@@ -76,7 +76,7 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
             _ => SourceOrder.Stars
         };
 
-        var page = await sources.ListAsync(search, ordered, from, take ?? PageSize);
+        var page = sources.List(search, ordered, from, take ?? PageSize);
 
         var next = from + page.Entries.Count;
 
@@ -92,9 +92,9 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     /// changes anything.
     /// </remarks>
     [ResourceMethod(":publicKey")]
-    public async ValueTask<SourceProjectResponse> Get(string publicKey)
+    public SourceProjectResponse Get(string publicKey)
     {
-        var project = await sources.GetProjectAsync(publicKey) ?? throw NotPublished(publicKey);
+        var project = sources.GetProject(publicKey) ?? throw NotPublished(publicKey);
 
         var entry = SourceEntryResponse.Of(project.Entry);
 
@@ -240,13 +240,13 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     /// source once, and only so many in a while.
     /// </remarks>
     [ResourceMethod(Method.Post, ":publicKey/star")]
-    public async ValueTask<StarResponse> Star(string publicKey, IRequest request, StarRequest body)
+    public StarResponse Star(string publicKey, IRequest request, StarRequest body)
     {
         var client = request.Client.Address;
 
         var now = DateTime.UtcNow;
 
-        var current = await sources.GetStarsAsync(publicKey) ?? throw NotPublished(publicKey);
+        var current = sources.GetStars(publicKey) ?? throw NotPublished(publicKey);
 
         if (!stars.Accepts(publicKey, body?.Ticket, now))
         {
@@ -264,7 +264,7 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
                 return new StarResponse(current.Stars, starred, false);
         }
 
-        var count = await sources.StarAsync(publicKey, starred) ?? throw NotPublished(publicKey);
+        var count = sources.Star(publicKey, starred) ?? throw NotPublished(publicKey);
 
         if (starred)
         {

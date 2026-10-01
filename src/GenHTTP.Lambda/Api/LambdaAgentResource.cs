@@ -42,7 +42,7 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, 
     [ResourceMethod("lambdas/:privateKey/agent")]
     public async ValueTask<AgentState> Get(string privateKey, IRequest request)
     {
-        var lambda = await meta.RequireEditableAsync(privateKey);
+        var lambda = meta.RequireEditable(privateKey);
 
         return await builds.StateAsync(lambda, request.Client.Address);
     }
@@ -63,11 +63,11 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/start")]
     public async ValueTask<Result<AgentState>> Start(string privateKey, ChangeRequest body, IRequest request)
     {
-        var lambda = await meta.RequireEditableAsync(privateKey);
+        var lambda = meta.RequireEditable(privateKey);
 
-        var current = await meta.RequireAsync(privateKey);
+        var current = meta.Require(privateKey);
 
-        var feature = body?.Feature is { Length: > 0 } key ? (await features.GetAsync(privateKey, key)).Feature.Key : null;
+        var feature = body?.Feature is { Length: > 0 } key ? (features.Get(privateKey, key)).Feature.Key : null;
 
         var state = await builds.ChangeAsync(lambda, privateKey, current.ActiveVersion, body?.Prompt, body?.Deploy ?? true,
                                              body?.Model, body?.Password, body?.Language, feature, request.Client.Address);
@@ -85,11 +85,11 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, 
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/stop")]
     public async ValueTask<AgentState> Stop(string privateKey, IRequest request)
     {
-        var lambda = await meta.RequireEditableAsync(privateKey);
+        var lambda = meta.RequireEditable(privateKey);
 
         var state = await builds.StopAsync(lambda, request.Client.Address);
 
-        logger.LogInformation("Stopped the agent changing lambda {Lambda}", await meta.PublicKeyOfAsync(privateKey));
+        logger.LogInformation("Stopped the agent changing lambda {Lambda}", meta.PublicKeyOf(privateKey));
 
         return state;
     }

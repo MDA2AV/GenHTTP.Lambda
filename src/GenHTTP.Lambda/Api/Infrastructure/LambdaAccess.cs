@@ -20,20 +20,20 @@ public static class LambdaAccess
     /// <summary>
     /// The lambda the editor key belongs to.
     /// </summary>
-    public static async ValueTask<LambdaInfo> RequireAsync(this IMetaService meta, string privateKey)
-        => await meta.GetAsync(privateKey) ?? throw LambdaException.NotFound(Missing);
+    public static LambdaInfo Require(this IMetaService meta, string privateKey)
+        => meta.Get(privateKey) ?? throw LambdaException.NotFound(Missing);
 
     /// <summary>
     /// The identity the lambda of the editor key is filed under, for the
     /// services that keep things per lambda.
     /// </summary>
-    public static async ValueTask<long> RequireIdAsync(this IMetaService meta, string privateKey)
-        => await meta.GetIdAsync(privateKey) ?? throw LambdaException.NotFound(Missing);
+    public static long RequireId(this IMetaService meta, string privateKey)
+        => meta.GetId(privateKey) ?? throw LambdaException.NotFound(Missing);
 
     /// <summary>
     /// The editor key of the lambda at a public key, for the operator.
     /// </summary>
-    public static async ValueTask<string> RequirePrivateKeyAsync(this IMetaService meta, string publicKey)
-        => await meta.GetPrivateKeyAsync(publicKey) ?? throw LambdaException.NotFound($"There is no lambda at '{publicKey}'.");
+    public static string RequirePrivateKey(this IMetaService meta, string publicKey)
+        => meta.GetPrivateKey(publicKey) ?? throw LambdaException.NotFound($"There is no lambda at '{publicKey}'.");
 
 }

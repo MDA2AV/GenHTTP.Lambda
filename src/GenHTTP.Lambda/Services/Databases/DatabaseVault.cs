@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Storage;
 
@@ -151,7 +152,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// not wait for a writer, which is what a lambda serving requests at once
     /// needs.
     /// </remarks>
-    public ValueTask CreateAsync(long lambdaId, CancellationToken cancellation = default)
+    public void Create(long lambdaId)
     {
         using (var connection = new SqliteConnection(ConnectionString(storage.GetDatabase(lambdaId), false, pooled: false)))
         {
@@ -166,8 +167,6 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
         Invalidate(lambdaId);
 
         logger.LogInformation("Lambda {LambdaId} has a database now", lambdaId);
-
-        return ValueTask.CompletedTask;
     }
 
     /// <summary>
@@ -187,7 +186,8 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
 
         if (Load(lambdaId, 0).Enabled)
         {
-            await Task.Run(() => Backup(storage.GetDatabase(lambdaId), target), cancellation);
+            // a whole database, a gigabyte in the premium tier (see Offload)
+            await Offload.Run(() => Backup(storage.GetDatabase(lambdaId), target), cancellation);
         }
 
         Invalidate(lambdaId);
@@ -202,14 +202,14 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// Deletes the database of a lambda, the copies of its features included
     /// - a database switched on again later is a new one.
     /// </summary>
-    public async ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default)
+    public void Clear(long lambdaId)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var features = await database.Features.AsNoTracking()
-                                     .Where(f => f.LambdaId == lambdaId)
-                                     .Select(f => f.Id)
-                                     .ToListAsync(cancellation);
+        var features = database.Features.AsNoTracking()
+                               .Where(f => f.LambdaId == lambdaId)
+                               .Select(f => f.Id)
+                               .ToList();
 
         Invalidate(lambdaId);
 

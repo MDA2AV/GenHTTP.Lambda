@@ -16,6 +16,9 @@
 
         <PackageVersion Include="Evolve" Version="3.2.0" />
 
+        <!-- refuses, at compile time, what the server must not call: see BannedSymbols.txt -->
+        <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+
         <!-- reads the MaxMind DB format, which is how the free DB-IP databases
              ship: a memory mapped search trie rather than a table, so a
              hundred and fifty megabyte file costs page cache and not heap -->

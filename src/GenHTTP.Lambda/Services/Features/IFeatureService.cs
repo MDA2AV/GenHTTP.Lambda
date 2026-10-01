@@ -21,12 +21,12 @@ public interface IFeatureService
     /// <summary>
     /// The features of a lambda, the most recently changed first.
     /// </summary>
-    ValueTask<IReadOnlyList<FeatureInfo>> ListAsync(string privateKey, CancellationToken cancellation = default);
+    IReadOnlyList<FeatureInfo> List(string privateKey);
 
     /// <summary>
     /// One feature, with its files.
     /// </summary>
-    ValueTask<FeatureContent> GetAsync(string privateKey, string feature, CancellationToken cancellation = default);
+    FeatureContent Get(string privateKey, string feature);
 
     /// <summary>
     /// Branches a feature off a version: a copy of its files, and a copy of the
@@ -37,7 +37,7 @@ public interface IFeatureService
     /// <summary>
     /// Renames a feature, changes what is said about it, or moves its base.
     /// </summary>
-    ValueTask<FeatureInfo> UpdateAsync(string privateKey, string feature, FeatureUpdate update, CancellationToken cancellation = default);
+    FeatureInfo Update(string privateKey, string feature, FeatureUpdate update);
 
     /// <summary>
     /// Saves the given files as the feature's, replacing what it held.
@@ -47,8 +47,7 @@ public interface IFeatureService
     /// The save of its files these were made from, to be refused as a conflict when the feature was saved
     /// again since - by somebody else, whose save would otherwise be lost without a trace
     /// </param>
-    ValueTask<FeatureInfo> SaveAsync(string privateKey, string feature, string code, VersionNote? note = null, int? after = null,
-                                     CancellationToken cancellation = default);
+    FeatureInfo Save(string privateKey, string feature, string code, VersionNote? note = null, int? after = null);
 
     /// <summary>
     /// Puts the feature's files online at its own address, with its own copy
@@ -59,7 +58,7 @@ public interface IFeatureService
     /// <summary>
     /// Takes the preview of a feature offline.
     /// </summary>
-    ValueTask<FeatureInfo> UndeployAsync(string privateKey, string feature, CancellationToken cancellation = default);
+    FeatureInfo Undeploy(string privateKey, string feature);
 
     /// <summary>
     /// Replaces the feature's copy of the data with a fresh copy of the lambda's.
@@ -82,31 +81,30 @@ public interface IFeatureService
     /// <summary>
     /// Removes a feature, its preview and its copy of the data.
     /// </summary>
-    ValueTask DeleteAsync(string privateKey, string feature, CancellationToken cancellation = default);
+    void Delete(string privateKey, string feature);
 
     /// <summary>
     /// The identities a feature's files and data are kept under, for the
     /// services that reach into its copy of the workspace.
     /// </summary>
     /// <param name="editable">Whether it is about to be changed, which is refused for a demo</param>
-    ValueTask<(long LambdaId, long FeatureId)> RequireAsync(string privateKey, string feature, bool editable,
-                                                            CancellationToken cancellation = default);
+    (long LambdaId, long FeatureId) Require(string privateKey, string feature, bool editable);
 
     /// <summary>
     /// The preview a request to <c>/features/{key}/</c> is for, if it is online.
     /// </summary>
-    ValueTask<ResolvedLambda?> ResolvePreviewAsync(string key, CancellationToken cancellation = default);
+    ResolvedLambda? ResolvePreview(string key);
 
     /// <summary>
     /// Takes the previews of free lambdas offline once their feature was left
     /// alone for as long as a deployment of the lambda itself would be.
     /// </summary>
-    ValueTask<int> RunMaintenanceAsync(DateTime now, CancellationToken cancellation = default);
+    int RunMaintenance(DateTime now);
 
     /// <summary>
     /// Removes the files of features that no longer exist.
     /// </summary>
     /// <returns>How many were removed</returns>
-    ValueTask<int> SweepAsync(CancellationToken cancellation = default);
+    int Sweep();
 
 }

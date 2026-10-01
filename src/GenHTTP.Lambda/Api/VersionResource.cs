@@ -33,9 +33,9 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     /// Lists the stored versions, newest first.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/versions")]
-    public async ValueTask<List<VersionResponse>> List(string privateKey)
+    public List<VersionResponse> List(string privateKey)
     {
-        var versions = await meta.GetVersionsAsync(privateKey);
+        var versions = meta.GetVersions(privateKey);
 
         return versions.Select(Describe).ToList();
     }
@@ -50,8 +50,8 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     /// </remarks>
     /// <param name="folder">Only the files below this folder, such as <c>.lambda/</c></param>
     [ResourceMethod("lambdas/:privateKey/versions/:version")]
-    public async ValueTask<VersionContentResponse> Get(string privateKey, int version, string? folder)
-        => Describe(await meta.GetVersionAsync(privateKey, version), folder);
+    public VersionContentResponse Get(string privateKey, int version, string? folder)
+        => Describe(meta.GetVersion(privateKey, version), folder);
 
     /// <summary>
     /// Downloads the files of a single version as a zip archive.
@@ -61,11 +61,11 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     /// be changed locally and uploaded again as a new version.
     /// </remarks>
     [ResourceMethod("lambdas/:privateKey/versions/:version/zip")]
-    public async ValueTask<IResponse> GetArchive(string privateKey, int version, IRequest request)
+    public IResponse GetArchive(string privateKey, int version, IRequest request)
     {
-        var lambda = await meta.RequireAsync(privateKey);
+        var lambda = meta.Require(privateKey);
 
-        var content = await meta.GetVersionAsync(privateKey, version);
+        var content = meta.GetVersion(privateKey, version);
 
         var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code));
 
@@ -93,7 +93,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     {
         // looked up before the body is read, because how much of it may be
         // read depends on the tier - and a key that names nothing needs none
-        var lambda = await meta.RequireAsync(privateKey);
+        var lambda = meta.Require(privateKey);
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
@@ -113,7 +113,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/changes")]
     public async ValueTask<Result<SavedVersionResponse>> Change(string privateKey, bool? deploy, VersionChangeRequest request)
     {
-        var files = LambdaChanges.Apply(await LatestAsync(meta, privateKey), request.Files, request.Remove, request.Edits);
+        var files = LambdaChanges.Apply(Latest(meta, privateKey), request.Files, request.Remove, request.Edits);
 
         return await SaveAsync(privateKey, files, deploy, request.Specification, request.Change);
     }
@@ -138,9 +138,9 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     {
         var note = new VersionNote(specification, change, VersionOrigins.Api);
 
-        var version = await meta.SaveAsync(privateKey, Serialize(files), note);
+        var version = meta.Save(privateKey, Serialize(files), note);
 
-        var publicKey = await meta.PublicKeyOfAsync(privateKey);
+        var publicKey = meta.PublicKeyOf(privateKey);
 
         logger.LogInformation("Saved version {Version} of lambda {Lambda} with {Files} file(s)", version.Version, publicKey, files!.Count);
 
@@ -163,16 +163,16 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
     /// <summary>
     /// The files of the newest version of a lambda.
     /// </summary>
-    internal static async ValueTask<IReadOnlyList<LambdaFile>> LatestAsync(IMetaService meta, string privateKey)
+    internal static IReadOnlyList<LambdaFile> Latest(IMetaService meta, string privateKey)
     {
-        var lambda = await meta.RequireAsync(privateKey);
+        var lambda = meta.Require(privateKey);
 
         if (lambda.LatestVersion is not { } latest)
         {
             return [];
         }
 
-        return LambdaSource.Parse((await meta.GetVersionAsync(privateKey, latest)).Code);
+        return LambdaSource.Parse((meta.GetVersion(privateKey, latest)).Code);
     }
 
     internal static VersionResponse Describe(LambdaVersionInfo version)

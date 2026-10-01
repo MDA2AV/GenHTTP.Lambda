@@ -183,7 +183,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// Moves a lambda to a tier, which only an administrator can do.
     /// </summary>
-    public async ValueTask ChangeTierAsync(string privateKey, LambdaTier tier) => await Meta.ChangeTierAsync(privateKey, tier);
+    public void ChangeTier(string privateKey, LambdaTier tier) => Meta.ChangeTier(privateKey, tier);
 
     /// <summary>
     /// Creates a lambda through the API, the way the creation assistant does.

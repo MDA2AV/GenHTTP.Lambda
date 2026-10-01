@@ -16,15 +16,17 @@ public sealed class MaintenanceJob(IMetaService meta, IFeatureService features, 
 
     public TimeSpan Interval => options.MaintenanceInterval;
 
-    public async ValueTask ExecuteAsync(CancellationToken cancellation)
+    public ValueTask ExecuteAsync(CancellationToken cancellation)
     {
         var now = DateTime.UtcNow;
 
-        await meta.RunMaintenanceAsync(now, cancellation);
+        meta.RunMaintenance(now);
 
-        await features.RunMaintenanceAsync(now, cancellation);
+        features.RunMaintenance(now);
 
-        await features.SweepAsync(cancellation);
+        features.Sweep();
+
+        return ValueTask.CompletedTask;
     }
 
 }

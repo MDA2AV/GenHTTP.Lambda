@@ -80,12 +80,12 @@ public sealed partial class BuildService : IDisposable
     public bool Available => _client != null;
 
     /// <summary>Whether the box on /build is offered: there is an agent, and the operator has not switched it off.</summary>
-    public async ValueTask<bool> BuildsOfferedAsync()
-        => Available && (await _settings.GetAsync()).BuildBox;
+    public bool BuildsOffered()
+        => Available && (_settings.Get()).BuildBox;
 
     /// <summary>Whether the box in the Change section is offered: there is an agent, and the operator has not switched it off.</summary>
-    public async ValueTask<bool> ChangesOfferedAsync()
-        => Available && (await _settings.GetAsync()).ChangeBox;
+    public bool ChangesOffered()
+        => Available && (_settings.Get()).ChangeBox;
 
     /// <summary>How many builds one address is allowed in a day.</summary>
     public int PerDay => _options.AgentBuildsPerDay;
@@ -106,7 +106,7 @@ public sealed partial class BuildService : IDisposable
     {
         var agent = Required();
 
-        if (!await BuildsOfferedAsync())
+        if (!BuildsOffered())
         {
             throw new ProviderException(ResponseStatus.NotFound, "Nothing is built from here on this installation.");
         }
@@ -209,7 +209,7 @@ public sealed partial class BuildService : IDisposable
     /// <param name="lambda">The lambda, by the id it is filed under</param>
     public async ValueTask<AgentState> StateAsync(long lambda, IPAddress? caller)
     {
-        if (!await ChangesOfferedAsync())
+        if (!ChangesOffered())
         {
             return new AgentState(false, PerDay, 0, HasSecondModel, null);
         }
@@ -232,7 +232,7 @@ public sealed partial class BuildService : IDisposable
     {
         var agent = Required();
 
-        if (!await ChangesOfferedAsync())
+        if (!ChangesOffered())
         {
             throw new ProviderException(ResponseStatus.NotFound, "Changes are not asked for from here on this installation.");
         }

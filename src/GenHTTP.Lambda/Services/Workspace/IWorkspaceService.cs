@@ -18,12 +18,12 @@ public interface IWorkspaceService
     /// <summary>
     /// Lists the files of a workspace with what is left of its quota.
     /// </summary>
-    ValueTask<WorkspaceListing> ListAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default);
+    WorkspaceListing List(long lambdaId, long? featureId = null);
 
     /// <summary>
     /// Makes a folder, so that files can be put into it afterwards.
     /// </summary>
-    ValueTask CreateFolderAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default);
+    void CreateFolder(long lambdaId, string path, long? featureId = null);
 
     /// <summary>
     /// Reads a single file, or null if there is none by that name.
@@ -34,7 +34,7 @@ public interface IWorkspaceService
     /// Finds a single file to stream as it is, or null if there is none by
     /// that name.
     /// </summary>
-    ValueTask<FileInfo?> FindAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default);
+    FileInfo? Find(long lambdaId, string path, long? featureId = null);
 
     /// <summary>
     /// Writes a file, replacing it if it exists.
@@ -46,11 +46,11 @@ public interface IWorkspaceService
     /// <summary>
     /// Removes a file, if it is there.
     /// </summary>
-    ValueTask DeleteAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default);
+    void Delete(long lambdaId, string path, long? featureId = null);
 
     /// <summary>
     /// Removes everything in the workspace, for when it is switched off.
     /// </summary>
-    ValueTask ClearAsync(long lambdaId, long? featureId = null, CancellationToken cancellation = default);
+    void Clear(long lambdaId, long? featureId = null);
 
 }

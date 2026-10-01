@@ -33,16 +33,16 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     /// Every kind of data there is, and how the lambda has it.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/data")]
-    public async ValueTask<List<DataStoreResponse>> List(string privateKey)
-        => [.. (await data.ListAsync(privateKey)).Select(Describe)];
+    public List<DataStoreResponse> List(string privateKey)
+        => [.. (data.List(privateKey)).Select(Describe)];
 
     /// <summary>
     /// One kind of data, and how the lambda has it.
     /// </summary>
     /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod("lambdas/:privateKey/data/:kind")]
-    public async ValueTask<DataStoreResponse> Get(string privateKey, string kind)
-        => Describe(await data.GetAsync(privateKey, kind));
+    public DataStoreResponse Get(string privateKey, string kind)
+        => Describe(data.Get(privateKey, kind));
 
     /// <summary>
     /// Switches a kind of data on.
@@ -57,11 +57,11 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     /// </remarks>
     /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/data/:kind")]
-    public async ValueTask<DataStoreResponse> Enable(string privateKey, string kind)
+    public DataStoreResponse Enable(string privateKey, string kind)
     {
-        var store = await data.EnableAsync(privateKey, kind);
+        var store = data.Enable(privateKey, kind);
 
-        logger.LogInformation("Switched the {Kind} of lambda {Lambda} on", store.Kind, await meta.PublicKeyOfAsync(privateKey));
+        logger.LogInformation("Switched the {Kind} of lambda {Lambda} on", store.Kind, meta.PublicKeyOf(privateKey));
 
         return Describe(store);
     }
@@ -75,11 +75,11 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     /// </remarks>
     /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/data/:kind")]
-    public async ValueTask<DataStoreResponse> Disable(string privateKey, string kind)
+    public DataStoreResponse Disable(string privateKey, string kind)
     {
-        var store = await data.DisableAsync(privateKey, kind);
+        var store = data.Disable(privateKey, kind);
 
-        logger.LogInformation("Switched the {Kind} of lambda {Lambda} off, deleting what it held", store.Kind, await meta.PublicKeyOfAsync(privateKey));
+        logger.LogInformation("Switched the {Kind} of lambda {Lambda} off, deleting what it held", store.Kind, meta.PublicKeyOf(privateKey));
 
         return Describe(store);
     }

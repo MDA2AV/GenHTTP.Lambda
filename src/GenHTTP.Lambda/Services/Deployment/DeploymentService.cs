@@ -83,7 +83,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         try
         {
-            var (outcome, _) = await LambdaCompiler.CompileAsync(request);
+            // seconds of work, which a reactor would spend not serving (see Offload)
+            var (outcome, _) = await Offload.Run(() => LambdaCompiler.CompileAsync(request), cancellation);
 
             return outcome;
         }
@@ -100,25 +101,25 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     }
 
     public ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
-        => ActivateAsync(new Slot(lambdaId, null), version, limits, _ => Storage.ReadAsync(lambdaId, version, cancellation), cancellation);
+        => ActivateAsync(new Slot(lambdaId, null), version, limits, () => Storage.Read(lambdaId, version), cancellation);
 
     public ValueTask<IHandler> ResolveAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
-        => ResolveAsync(new Slot(lambdaId, null), version, limits, _ => Storage.ReadAsync(lambdaId, version, cancellation), cancellation);
+        => ResolveAsync(new Slot(lambdaId, null), version, limits, () => Storage.Read(lambdaId, version), cancellation);
 
     public ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, string code, WorkspaceLimits limits,
                                                       CancellationToken cancellation = default)
-        => ActivateAsync(new Slot(lambdaId, featureId), preview, limits, _ => ValueTask.FromResult<string?>(code), cancellation);
+        => ActivateAsync(new Slot(lambdaId, featureId), preview, limits, () => code, cancellation);
 
     public ValueTask<IHandler> ResolvePreviewAsync(long lambdaId, long featureId, int preview, WorkspaceLimits limits,
                                                    CancellationToken cancellation = default)
-        => ResolveAsync(new Slot(lambdaId, featureId), preview, limits, _ => Storage.ReadPreviewAsync(lambdaId, featureId, cancellation), cancellation);
+        => ResolveAsync(new Slot(lambdaId, featureId), preview, limits, () => Storage.ReadPreview(lambdaId, featureId), cancellation);
 
     /// <summary>
     /// Builds what a slot is to serve and makes it what it serves.
     /// </summary>
     /// <param name="stamp">Which build this is: the version, or the deployment of a preview</param>
     /// <param name="read">Where the code comes from</param>
-    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<CancellationToken, ValueTask<string?>> read,
+    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
                                                               CancellationToken cancellation)
     {
         if (IsDeployed(slot, stamp, limits))
@@ -145,47 +146,63 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
                 return CompilationOutcome.Succeeded();
             }
 
-            var code = await read(cancellation);
-
-            if (code == null)
-            {
-                return CompilationOutcome.Failed(slot.FeatureId == null
-                    ? $"Version {stamp} of this lambda does not exist anymore."
-                    : "The preview of this feature has nothing to serve anymore.");
-            }
-
-            var files = LambdaSource.Parse(code);
-
-            // what this version ships is written out before it is compiled, so the
-            // handler it returns is serving the assets of the version going online
-            // rather than whatever the last one left behind
-            Materialize(slot, files);
-
-            var name = slot.FeatureId is { } feature ? $"{slot.LambdaId}_f{feature}_{stamp}" : $"{slot.LambdaId}_{stamp}";
-
-            var request = new CompilationRequest(files, Storage.GetWorkspace(slot.LambdaId, slot.FeatureId),
-                                                 Storage.GetAssetDirectory(slot.LambdaId, slot.FeatureId),
-                                                 Storage.GetAssemblyDirectory(slot.LambdaId), name, true, limits,
-                                                 Secrets.ReaderFor(slot.LambdaId, slot.FeatureId),
-                                                 Databases.ConnectorFor(slot.LambdaId, slot.FeatureId));
-
-            var outcome = await CompileAsync(slot, stamp, request);
-
-            if (outcome.Success)
-            {
-                _broken.TryRemove(slot, out _);
-            }
-            else
-            {
-                await RestoreAsync(slot, cancellation);
-            }
-
-            return outcome;
+            /*
+             * Reading, unpacking, writing out and compiling a version takes
+             * from a moment to seconds. The request that asked for it waits
+             * either way; the other connections of its reactor should not
+             * have to (see Offload).
+             */
+            return await Offload.Run(() => BuildAsync(slot, stamp, limits, read, cancellation), cancellation);
         }
         finally
         {
             _compiling.Release();
         }
+    }
+
+    /// <summary>
+    /// Reads, writes out and compiles what a slot is to serve - under the lock
+    /// and away from the reactor, see the activation above.
+    /// </summary>
+    private async ValueTask<CompilationOutcome> BuildAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
+                                                           CancellationToken cancellation)
+    {
+        var code = read();
+
+        if (code == null)
+        {
+            return CompilationOutcome.Failed(slot.FeatureId == null
+                ? $"Version {stamp} of this lambda does not exist anymore."
+                : "The preview of this feature has nothing to serve anymore.");
+        }
+
+        var files = LambdaSource.Parse(code);
+
+        // what this version ships is written out before it is compiled, so the
+        // handler it returns is serving the assets of the version going online
+        // rather than whatever the last one left behind
+        Materialize(slot, files);
+
+        var name = slot.FeatureId is { } feature ? $"{slot.LambdaId}_f{feature}_{stamp}" : $"{slot.LambdaId}_{stamp}";
+
+        var request = new CompilationRequest(files, Storage.GetWorkspace(slot.LambdaId, slot.FeatureId),
+                                             Storage.GetAssetDirectory(slot.LambdaId, slot.FeatureId),
+                                             Storage.GetAssemblyDirectory(slot.LambdaId), name, true, limits,
+                                             Secrets.ReaderFor(slot.LambdaId, slot.FeatureId),
+                                             Databases.ConnectorFor(slot.LambdaId, slot.FeatureId));
+
+        var outcome = await CompileAsync(slot, stamp, request);
+
+        if (outcome.Success)
+        {
+            _broken.TryRemove(slot, out _);
+        }
+        else
+        {
+            Restore(slot);
+        }
+
+        return outcome;
     }
 
     private async ValueTask<CompilationOutcome> CompileAsync(Slot slot, int stamp, CompilationRequest request)
@@ -234,7 +251,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// deployed again and again while a feature is worked on, which made this
     /// a matter of course rather than a rarity.
     /// </remarks>
-    private async ValueTask RestoreAsync(Slot slot, CancellationToken cancellation)
+    private void Restore(Slot slot)
     {
         if (!_deployed.TryGetValue(slot, out var running))
         {
@@ -244,8 +261,8 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         try
         {
             var code = slot.FeatureId is { } feature
-                ? await Storage.ReadPreviewAsync(slot.LambdaId, feature, cancellation)
-                : await Storage.ReadAsync(slot.LambdaId, running.Stamp, cancellation);
+                ? Storage.ReadPreview(slot.LambdaId, feature)
+                : Storage.Read(slot.LambdaId, running.Stamp);
 
             if (code != null)
             {
@@ -258,7 +275,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<CancellationToken, ValueTask<string?>> read,
+    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
                                                    CancellationToken cancellation)
     {
         if (_deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Limits == limits)

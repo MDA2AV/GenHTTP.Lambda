@@ -29,11 +29,11 @@ public sealed class ShowcaseResource(IShowcaseService showcases)
     /// <param name="skip">How many to leave out, from the start</param>
     /// <param name="take">How many to answer with, at most 48</param>
     [ResourceMethod]
-    public async ValueTask<ShowcaseListingResponse> List(int? skip, int? take)
+    public ShowcaseListingResponse List(int? skip, int? take)
     {
         var from = Math.Max(0, skip ?? 0);
 
-        var page = await showcases.ListAsync(from, take ?? PageSize);
+        var page = showcases.List(from, take ?? PageSize);
 
         var next = from + page.Entries.Count;
 
@@ -48,9 +48,9 @@ public sealed class ShowcaseResource(IShowcaseService showcases)
     /// the entry last changed: a new picture is a new address.
     /// </remarks>
     [ResourceMethod(":publicKey/image")]
-    public async ValueTask<IResponse> Image(string publicKey, IRequest request)
+    public IResponse Image(string publicKey, IRequest request)
     {
-        var image = await showcases.GetImageAsync(publicKey)
+        var image = showcases.GetImage(publicKey)
                  ?? throw LambdaException.NotFound($"There is no showcase for '{publicKey}'.");
 
         return request.Respond()

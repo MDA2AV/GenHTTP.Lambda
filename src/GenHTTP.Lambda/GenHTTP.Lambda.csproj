@@ -38,6 +38,9 @@
         <PackageReference Include="Evolve" />
         <PackageReference Include="MaxMind.Db" />
 
+        <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+        <AdditionalFiles Include="BannedSymbols.txt" />
+
     </ItemGroup>
 
     <ItemGroup>

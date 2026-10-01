@@ -158,24 +158,24 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// What is stored for the lambda, or for a feature's copy, by name.
     /// </summary>
-    public async ValueTask<IReadOnlyList<SecretEntity>> ListAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
+    public IReadOnlyList<SecretEntity> List(long lambdaId, long? featureId)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        return await database.Secrets.AsNoTracking()
-                             .Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId)
-                             .OrderBy(s => s.Name)
-                             .ToListAsync(cancellation);
+        return database.Secrets.AsNoTracking()
+                       .Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId)
+                       .OrderBy(s => s.Name)
+                       .ToList();
     }
 
     /// <summary>
     /// How many secrets the lambda has, or a feature's copy of them.
     /// </summary>
-    public async ValueTask<int> CountAsync(long lambdaId, long? featureId, CancellationToken cancellation = default)
+    public int Count(long lambdaId, long? featureId)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        return await database.Secrets.CountAsync(s => s.LambdaId == lambdaId && s.FeatureId == featureId, cancellation);
+        return database.Secrets.Count(s => s.LambdaId == lambdaId && s.FeatureId == featureId);
     }
 
     /// <summary>
@@ -185,13 +185,13 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// Whether the lambda has secrets switched on is the caller's to check;
     /// the demos are set up here with the check deliberately left out.
     /// </remarks>
-    public async ValueTask<SecretEntity> StoreAsync(long lambdaId, long? featureId, string name, string value, CancellationToken cancellation = default)
+    public SecretEntity Store(long lambdaId, long? featureId, string name, string value)
     {
         Validate(name, value);
 
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var lambda = await database.Lambdas.FirstOrDefaultAsync(l => l.Id == lambdaId, cancellation)
+        var lambda = database.Lambdas.FirstOrDefault(l => l.Id == lambdaId)
                   ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
         // the lambda's half of its key, made the first time it needs one
@@ -201,13 +201,13 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
 
         var sealedValue = cipher.Seal(cipher.KeyOf(lambda.SecretSalt), name, value);
 
-        var existing = await database.Secrets.FirstOrDefaultAsync(s => s.LambdaId == lambdaId && s.FeatureId == featureId && s.Name == name, cancellation);
+        var existing = database.Secrets.FirstOrDefault(s => s.LambdaId == lambdaId && s.FeatureId == featureId && s.Name == name);
 
         var now = DateTime.UtcNow;
 
         if (existing == null)
         {
-            if (await database.Secrets.CountAsync(s => s.LambdaId == lambdaId && s.FeatureId == featureId, cancellation) >= MaxSecrets)
+            if (database.Secrets.Count(s => s.LambdaId == lambdaId && s.FeatureId == featureId) >= MaxSecrets)
             {
                 throw LambdaException.Conflict($"A lambda may keep {MaxSecrets} secrets. Delete one it no longer needs first.");
             }
@@ -222,7 +222,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
             existing.Changed = now;
         }
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
         Invalidate(lambdaId);
 
@@ -232,12 +232,12 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// <summary>
     /// Removes a secret, and says whether there was one.
     /// </summary>
-    public async ValueTask<bool> RemoveAsync(long lambdaId, long? featureId, string name, CancellationToken cancellation = default)
+    public bool Remove(long lambdaId, long? featureId, string name)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var removed = await database.Secrets.Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId && s.Name == name)
-                                    .ExecuteDeleteAsync(cancellation);
+        var removed = database.Secrets.Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId && s.Name == name)
+                              .ExecuteDelete();
 
         Invalidate(lambdaId);
 
@@ -251,15 +251,15 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// Copied sealed: the copy is the lambda's, under the lambda's key, so
     /// nothing is opened to make it.
     /// </remarks>
-    public async ValueTask CopyAsync(long lambdaId, long featureId, CancellationToken cancellation = default)
+    public void Copy(long lambdaId, long featureId)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        await database.Secrets.Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId).ExecuteDeleteAsync(cancellation);
+        database.Secrets.Where(s => s.LambdaId == lambdaId && s.FeatureId == featureId).ExecuteDelete();
 
-        var own = await database.Secrets.AsNoTracking()
-                                .Where(s => s.LambdaId == lambdaId && s.FeatureId == null)
-                                .ToListAsync(cancellation);
+        var own = database.Secrets.AsNoTracking()
+                          .Where(s => s.LambdaId == lambdaId && s.FeatureId == null)
+                          .ToList();
 
         database.Secrets.AddRange(own.Select(s => new SecretEntity
         {
@@ -271,7 +271,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
             Changed = s.Changed
         }));
 
-        await database.SaveChangesAsync(cancellation);
+        database.SaveChanges();
 
         Invalidate(lambdaId);
     }
@@ -281,14 +281,14 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
     /// its half of the key with them - secrets stored later are sealed with a
     /// new one.
     /// </summary>
-    public async ValueTask ClearAsync(long lambdaId, CancellationToken cancellation = default)
+    public void Clear(long lambdaId)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        await database.Secrets.Where(s => s.LambdaId == lambdaId).ExecuteDeleteAsync(cancellation);
+        database.Secrets.Where(s => s.LambdaId == lambdaId).ExecuteDelete();
 
-        await database.Lambdas.Where(l => l.Id == lambdaId)
-                      .ExecuteUpdateAsync(u => u.SetProperty(l => l.SecretSalt, (byte[]?)null), cancellation);
+        database.Lambdas.Where(l => l.Id == lambdaId)
+                      .ExecuteUpdate(u => u.SetProperty(l => l.SecretSalt, (byte[]?)null));
 
         Invalidate(lambdaId);
     }

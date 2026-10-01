@@ -20,7 +20,7 @@ public sealed class EventReader(IDbContextFactory<LambdaDbContext> databases)
     /// A day-by-day count of each kind of event, oldest first.
     /// </summary>
     /// <param name="days">How far back to go</param>
-    public async ValueTask<EventHistory> HistoryAsync(int days, CancellationToken cancellation = default)
+    public EventHistory History(int days)
     {
         var span = Math.Clamp(days, 1, 365);
 
@@ -28,17 +28,17 @@ public sealed class EventReader(IDbContextFactory<LambdaDbContext> databases)
         // than whatever fraction the clock happens to be at
         var from = DateTime.UtcNow.Date.AddDays(-(span - 1));
 
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var rows = await database.Events
-                                 .Where(e => e.Occurred >= from)
-                                 .Select(e => new { e.Kind, e.Occurred })
-                                 .ToListAsync(cancellation);
+        var rows = database.Events
+                           .Where(e => e.Occurred >= from)
+                           .Select(e => new { e.Kind, e.Occurred })
+                           .ToList();
 
-        var totals = await database.Events
-                                   .GroupBy(e => e.Kind)
-                                   .Select(g => new { Kind = g.Key, Count = g.Count() })
-                                   .ToListAsync(cancellation);
+        var totals = database.Events
+                             .GroupBy(e => e.Kind)
+                             .Select(g => new { Kind = g.Key, Count = g.Count() })
+                             .ToList();
 
         var buckets = new Dictionary<string, int[]>();
 

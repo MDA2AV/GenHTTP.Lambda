@@ -407,7 +407,7 @@ public static class ProjectPacker
         builder.Append("public static class Project").Append('\n');
         builder.Append("{").Append('\n');
         builder.Append("    // Workspace comes from Platform/LambdaEnvironment.cs, for every file").Append('\n');
-        builder.Append("    private static Platform.Folder Assets => Platform.LambdaEnvironment.Assets;").Append('\n');
+        builder.Append("    private static Platform.AssetFolder Assets => Platform.LambdaEnvironment.Assets;").Append('\n');
         builder.Append('\n');
 
         if (awaits)

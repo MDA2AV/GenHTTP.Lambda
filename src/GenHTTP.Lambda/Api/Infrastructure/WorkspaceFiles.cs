@@ -29,7 +29,7 @@ internal static class WorkspaceFiles
 
     public static async ValueTask<FileResponse> ReadAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path, string where)
     {
-        var found = await workspace.FindAsync(lambdaId, path, featureId)
+        var found = workspace.Find(lambdaId, path, featureId)
                  ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
 
         if (found.Length > EncodedLimit)
@@ -43,9 +43,9 @@ internal static class WorkspaceFiles
         return new FileResponse(file.Path, Convert.ToBase64String(file.Content), file.Content.Length);
     }
 
-    public static async ValueTask<IResponse> StreamAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path, IRequest request)
+    public static IResponse Send(IWorkspaceService workspace, long lambdaId, long? featureId, string path, IRequest request)
     {
-        var found = await workspace.FindAsync(lambdaId, path, featureId)
+        var found = workspace.Find(lambdaId, path, featureId)
                  ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
 
         // a name in the workspace may hold anything but a slash, a quote or a
@@ -91,11 +91,11 @@ internal static class WorkspaceFiles
         return await workspace.WriteAsync(lambdaId, path, stream, featureId: featureId);
     }
 
-    public static async ValueTask<WorkspaceListing> CreateFolderAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path)
+    public static WorkspaceListing CreateFolder(IWorkspaceService workspace, long lambdaId, long? featureId, string path)
     {
-        await workspace.CreateFolderAsync(lambdaId, path, featureId);
+        workspace.CreateFolder(lambdaId, path, featureId);
 
-        return await workspace.ListAsync(lambdaId, featureId);
+        return workspace.List(lambdaId, featureId);
     }
 
 }

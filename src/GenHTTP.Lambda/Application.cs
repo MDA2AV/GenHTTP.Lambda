@@ -78,7 +78,7 @@ public sealed class Application : IAsyncDisposable
         Scheduler = Services.GetRequiredService<BackgroundScheduler>();
 
         // before the first request, which is asked about against it
-        Services.GetRequiredService<DomainRegistry>().ReloadAsync().AsTask().GetAwaiter().GetResult();
+        Services.GetRequiredService<DomainRegistry>().Reload();
 
         Handler = BuildHandler(Services, options);
     }
@@ -109,7 +109,12 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton(loggers);
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
 
-        services.AddDbContextFactory<LambdaDbContext>(builder => builder.UseSqlite(options.ConnectionString));
+        // pooled, because a context is made for nearly every call to the API;
+        // the interceptor tells the caches that something was written
+        services.AddSingleton<DatabaseChanges>();
+
+        services.AddPooledDbContextFactory<LambdaDbContext>((provider, builder) => builder.UseSqlite(options.ConnectionString)
+                                                                                          .AddInterceptors(provider.GetRequiredService<DatabaseChanges>()));
 
         services.AddSingleton<ServerRegistry>();
 
@@ -137,6 +142,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<McpTools>();
         services.AddSingleton<BuildService>();
         services.AddSingleton<EventReader>();
+        services.AddSingleton<VersionFactsCache>();
 
         services.AddSingleton<SiteMeta>();
         services.AddSingleton<SitePrerender>();
@@ -214,7 +220,13 @@ public sealed class Application : IAsyncDisposable
     /// </summary>
     public IServerHost Configure(IServerHost host)
         => host.Handler(Handler)
-               .Logging(Services.GetRequiredService<ILoggerFactory>())
+               /*
+                * Without the engine's line per request: CallerConcern writes
+                * a better one, with who was asking. The engine's was only
+                * thrown away again, after a frame around every request and
+                * the formatting it took to throw it away.
+                */
+               .Logging(Services.GetRequiredService<ILoggerFactory>(), logRequests: false)
                .Development(Options.Development)
                .AddDependencyInjection(Services)
                .Add(Registry.Capture())

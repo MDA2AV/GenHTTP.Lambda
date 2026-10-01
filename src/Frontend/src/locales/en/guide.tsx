@@ -385,7 +385,7 @@ export const guide = {
   )) as Text,
 
   limits:
-    'Your code runs on a shared server, so some of C# is refused before it compiles: starting processes, opening sockets of your own, loading assemblies, reaching the file system outside your workspace, and reflection used to get around any of that.',
+    'Your code runs on a shared server, so some of C# is refused before it compiles: starting processes, opening sockets of your own, loading assemblies, reaching the file system outside your workspace, and reflection used to get around any of that. So is waiting for a task with .Result or .Wait() instead of awaiting it: requests run on one thread per core, and the task would have to finish on the very thread that is waiting for it.',
   limits2:
     'Everything else is there, including the whole of the GenHTTP module API. If something is refused you are told which line and why, not simply that it failed.',
 

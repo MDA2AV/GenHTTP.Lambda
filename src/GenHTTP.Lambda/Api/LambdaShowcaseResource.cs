@@ -27,9 +27,9 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     /// The entry of the lambda, if it has one, and what may go into one.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/showcase")]
-    public async ValueTask<OwnShowcaseResponse> Get(string privateKey)
+    public OwnShowcaseResponse Get(string privateKey)
     {
-        var showcase = await showcases.GetAsync(privateKey);
+        var showcase = showcases.Get(privateKey);
 
         return new OwnShowcaseResponse(showcase == null ? null : ShowcaseResponse.Of(showcase), Limits(options));
     }
@@ -42,7 +42,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     /// another is sent. The entry is only listed while the lambda is online.
     /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/showcase")]
-    public async ValueTask<ShowcaseResponse> Put(string privateKey, ShowcaseRequest request)
+    public ShowcaseResponse Put(string privateKey, ShowcaseRequest request)
     {
         byte[]? image = null;
 
@@ -58,7 +58,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
             }
         }
 
-        var saved = await showcases.SaveAsync(privateKey, new ShowcaseDraft(request.Title, request.Description, image));
+        var saved = showcases.Save(privateKey, new ShowcaseDraft(request.Title, request.Description, image));
 
         logger.LogInformation("Put lambda {Lambda} into the showcase as '{Title}'", saved.PublicKey, saved.Title);
 
@@ -69,11 +69,11 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     /// Takes the lambda out of the showcase.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/showcase")]
-    public async ValueTask Delete(string privateKey)
+    public void Delete(string privateKey)
     {
-        await showcases.RemoveAsync(privateKey);
+        showcases.Remove(privateKey);
 
-        logger.LogInformation("Took lambda {Lambda} out of the showcase", await meta.PublicKeyOfAsync(privateKey));
+        logger.LogInformation("Took lambda {Lambda} out of the showcase", meta.PublicKeyOf(privateKey));
     }
 
     internal static ShowcaseLimitsResponse Limits(LambdaOptions options)

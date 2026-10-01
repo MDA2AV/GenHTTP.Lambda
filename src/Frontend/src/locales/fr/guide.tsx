@@ -389,7 +389,7 @@ export const guide: Messages['guide'] = {
   ),
 
   limits:
-    'Votre code tourne sur un serveur partagé. Une partie de C# est donc refusée avant même la compilation : lancer des processus, ouvrir vos propres sockets, charger des assemblies, accéder au système de fichiers en dehors de votre workspace, et la réflexion utilisée pour contourner tout ça.',
+    'Votre code tourne sur un serveur partagé. Une partie de C# est donc refusée avant même la compilation : lancer des processus, ouvrir vos propres sockets, charger des assemblies, accéder au système de fichiers en dehors de votre workspace, et la réflexion utilisée pour contourner tout ça. De même pour l’attente d’une tâche avec .Result ou .Wait() au lieu de await : les requêtes s’exécutent sur un thread par cœur, et la tâche devrait se terminer sur le thread même qui l’attend.',
   limits2:
     'Tout le reste est là, y compris toute l’API des modules GenHTTP. Si quelque chose est refusé, on vous dit quelle ligne et pourquoi, pas simplement que ça a échoué.',
 

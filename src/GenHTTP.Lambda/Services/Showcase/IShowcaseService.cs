@@ -14,26 +14,26 @@ public interface IShowcaseService
     /// <summary>
     /// The entry of the lambda behind an editor key, if it has one.
     /// </summary>
-    ValueTask<ShowcaseInfo?> GetAsync(string privateKey, CancellationToken cancellation = default);
+    ShowcaseInfo? Get(string privateKey);
 
     /// <summary>
     /// Creates or replaces the entry of a lambda.
     /// </summary>
-    ValueTask<ShowcaseInfo> SaveAsync(string privateKey, ShowcaseDraft draft, CancellationToken cancellation = default);
+    ShowcaseInfo Save(string privateKey, ShowcaseDraft draft);
 
     /// <summary>
     /// Takes the lambda out of the showcase. Nothing happens when it was not in it.
     /// </summary>
-    ValueTask RemoveAsync(string privateKey, CancellationToken cancellation = default);
+    void Remove(string privateKey);
 
     /// <summary>
     /// One page of the entries of lambdas that are online, the most active first.
     /// </summary>
-    ValueTask<ShowcasePage> ListAsync(int skip, int take, CancellationToken cancellation = default);
+    ShowcasePage List(int skip, int take);
 
     /// <summary>
     /// The picture of the entry of the lambda at a public key.
     /// </summary>
-    ValueTask<ShowcaseImage?> GetImageAsync(string publicKey, CancellationToken cancellation = default);
+    ShowcaseImage? GetImage(string publicKey);
 
 }

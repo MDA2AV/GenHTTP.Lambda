@@ -686,7 +686,10 @@ services that the API resources talk to through interfaces:
 - **Execution** (`Services/Execution`) - an `IHandler`, not a web service: it
   looks up the handler for a request and runs it.
 - **Protection** (`Services/Protection`) - concerns in front of execution that
-  resolve the lambda, rate limit per client and cap concurrency.
+  resolve the lambda, rate limit per client and cap concurrency. A lambda is
+  resolved from memory (`Services/Meta/ResolutionCache.cs`), which every write
+  to the database makes stale (`Data/DatabaseChanges.cs`), so serving a lambda
+  does not query the database.
 - **Background** (`Services/Background`) - a small scheduler that undeploys
   free tier lambdas a day after their last deployment and removes them after
   30 days without a save.
@@ -705,6 +708,24 @@ already imported, so no `using` directives are needed. A guard
 processes, reflection, sockets or the internals of this application before it
 is ever compiled, and a lambda that does need files gets a directory of its
 own under `/data/workspaces`.
+
+It also refuses code that waits for a task: `.Result`, `.Wait()`,
+`.GetAwaiter().GetResult()`, `Task.WaitAll`, `Task.WaitAny` and
+`SemaphoreSlim.Wait()`, asked of the compiler so a `Result` of the code's own
+is not mistaken for one. Requests run on one thread per core, and a task
+finishes on the thread that would be waiting for it - so it never would, and
+that core would serve nothing again. Agents are told to await instead, or to
+call the synchronous method where there is one, as with the database.
+
+On the ioxide engine requests run on its reactors, one thread per core. The
+platform's database is SQLite, which answers synchronously, so the services,
+resources and MCP tools are synchronous: plain methods, synchronous EF calls,
+plain locks. What takes long - compiling and binding with Roslyn, packing,
+copying a workspace or a database - is handed to the thread pool in one hop
+(`Infrastructure/Offload.cs`) and the request resumes on its reactor
+afterwards. `src/GenHTTP.Lambda/BannedSymbols.txt` refuses the asynchronous EF
+calls and waiting for a task when the server is compiled. CLAUDE.md has the
+rules.
 
 Compiled lambdas run in the server process. The guard raises the cost of
 misbehaving; it is not a sandbox, which is why the container runs unprivileged
@@ -889,7 +910,11 @@ return Layout.Create()
 `Assets.App()` is a single page application over them: `index.html` is the
 shell and a path matching no file is answered with it. `Assets.Tree()` and
 `Assets.Files()` are there for anything less opinionated, and content types
-come from the extension.
+come from the extension. `Assets.Files()` serves from the directory itself
+rather than through a tree, which on the ioxide engine is its native file
+handler - descriptors opened once, read off the ring, never walked again,
+since the assets of a build do not change while it is served. The workspace
+is written while the lambda runs, so `Workspace.Files()` stays a tree.
 
 The directory is rewritten from the version being deployed, so an asset dropped
 from a version stops being served rather than lingering. `LAMBDA_MAX_ASSET_BYTES`

@@ -22,7 +22,7 @@ public sealed class DemoResource(IMetaService meta)
     /// Every demo, with what reading it teaches and the key to read it with.
     /// </summary>
     [ResourceMethod]
-    public async ValueTask<IReadOnlyList<DemoResponse>> Get()
+    public IReadOnlyList<DemoResponse> Get()
     {
         var demos = new List<DemoResponse>();
 
@@ -31,7 +31,7 @@ public sealed class DemoResource(IMetaService meta)
             // read from the lambda rather than assumed: the demos are prepared
             // in the background after startup, so for a few seconds after a
             // restart they exist as code and not yet as something that answers
-            var status = await meta.DescribeKeyAsync(demo.Key);
+            var status = meta.DescribeKey(demo.Key);
 
             demos.Add(new DemoResponse(
                 demo.Id,

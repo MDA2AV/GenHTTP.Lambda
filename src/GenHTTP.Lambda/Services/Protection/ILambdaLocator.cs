@@ -19,11 +19,11 @@ public interface ILambdaLocator
     /// <summary>
     /// The deployed lambda the request is for, or nothing if there is none.
     /// </summary>
-    ValueTask<ResolvedLambda?> LocateAsync(IRequest request);
+    ResolvedLambda? Locate(IRequest request);
 
     /// <summary>
     /// What a request is told when there is no lambda to answer it.
     /// </summary>
-    ValueTask<IResponse> UnavailableAsync(IRequest request);
+    IResponse Unavailable(IRequest request);
 
 }

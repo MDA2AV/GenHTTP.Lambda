@@ -15,11 +15,11 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// says how the request itself went.
 /// </summary>
 /// <remarks>
-/// The engine logs a line per request already, but it has only the parts it
-/// needs - the method, the path, the status - and not who was asking, which is
-/// the first thing wanted when a path is being hit five hundred times a minute
-/// and nobody knows by what. So the book takes this one instead and skips the
-/// engine's; both still reach stdout, because that is the engine's to write.
+/// The engine can log a line per request, but it has only the parts it needs
+/// - the method, the path, the status - and not who was asking, which is the
+/// first thing wanted when a path is being hit five hundred times a minute and
+/// nobody knows by what. So this one is written instead, and the engine's is
+/// switched off (see Application.Configure).
 ///
 /// Outermost, so the mark is in place before anything below can log under it,
 /// and so the duration covers the whole answer rather than the part after the

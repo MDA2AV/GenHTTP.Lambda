@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Features;
@@ -39,18 +40,18 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
     public async ValueTask<DatabaseOverview> GetAsync(string privateKey, string? feature = null, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId) = await ResolveAsync(privateKey, feature, cancellation);
+        var (lambdaId, featureId) = Resolve(privateKey, feature);
 
-        var (enabled, tier) = await StateAsync(lambdaId, cancellation);
+        var (enabled, tier) = State(lambdaId);
 
-        var used = await UsedAsync(lambdaId, featureId, cancellation);
+        var used = Used(lambdaId, featureId);
 
         if (!enabled)
         {
             return new DatabaseOverview(false, 0, vault.QuotaOf(tier), [], used);
         }
 
-        var tables = await Task.Run(() =>
+        var tables = await Offload.Run(() =>
         {
             using var connection = vault.OpenForReading(lambdaId, featureId);
 
@@ -63,9 +64,9 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
     public async ValueTask<DatabaseRows> ReadAsync(string privateKey, string table, int offset = 0, int limit = 50, string? order = null, bool descending = true,
                                                    string? feature = null, CancellationToken cancellation = default)
     {
-        var (lambdaId, featureId) = await ResolveAsync(privateKey, feature, cancellation);
+        var (lambdaId, featureId) = Resolve(privateKey, feature);
 
-        var (enabled, _) = await StateAsync(lambdaId, cancellation);
+        var (enabled, _) = State(lambdaId);
 
         if (!enabled)
         {
@@ -74,7 +75,7 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
         var name = table ?? string.Empty;
 
-        return await Task.Run(() =>
+        return await Offload.Run(() =>
         {
             using var connection = vault.OpenForReading(lambdaId, featureId)
                                 ?? throw LambdaException.NotFound($"There is no table called '{name}': the database is empty.");
@@ -284,47 +285,47 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
     #region Helpers
 
-    private async ValueTask<(long LambdaId, long? FeatureId)> ResolveAsync(string privateKey, string? feature, CancellationToken cancellation)
+    private (long LambdaId, long? FeatureId) Resolve(string privateKey, string? feature)
     {
         if (!string.IsNullOrWhiteSpace(feature))
         {
-            var (lambdaId, featureId) = await features.RequireAsync(privateKey, feature, false, cancellation);
+            var (lambdaId, featureId) = features.Require(privateKey, feature, false);
 
             return (lambdaId, featureId);
         }
 
-        return (await meta.GetIdAsync(privateKey, cancellation) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted)."), null);
+        return (meta.GetId(privateKey) ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted)."), null);
     }
 
-    private async ValueTask<(bool Enabled, LambdaTier Tier)> StateAsync(long lambdaId, CancellationToken cancellation)
+    private (bool Enabled, LambdaTier Tier) State(long lambdaId)
     {
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var tier = await database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.Tier).FirstOrDefaultAsync(cancellation);
+        var tier = database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.Tier).FirstOrDefault();
 
-        return (await DataSwitches.IsEnabledAsync(database, lambdaId, DataKinds.Database, cancellation), tier);
+        return (DataSwitches.IsEnabled(database, lambdaId, DataKinds.Database), tier);
     }
 
     /// <summary>
     /// Whether the code connects to the database: the feature's own, or the
     /// lambda's - what is online and what was saved last.
     /// </summary>
-    private async ValueTask<bool> UsedAsync(long lambdaId, long? featureId, CancellationToken cancellation)
+    private bool Used(long lambdaId, long? featureId)
     {
         if (featureId is { } feature)
         {
-            return UsedIn(await storage.ReadFeatureAsync(lambdaId, feature, cancellation));
+            return UsedIn(storage.ReadFeature(lambdaId, feature));
         }
 
-        await using var database = await databases.CreateDbContextAsync(cancellation);
+        using var database = databases.CreateDbContext();
 
-        var active = await database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.ActiveVersion).FirstOrDefaultAsync(cancellation);
+        var active = database.Lambdas.AsNoTracking().Where(l => l.Id == lambdaId).Select(l => l.ActiveVersion).FirstOrDefault();
 
-        var newest = await database.Deployments.AsNoTracking().Where(d => d.LambdaId == lambdaId).MaxAsync(d => (int?)d.Version, cancellation);
+        var newest = database.Deployments.AsNoTracking().Where(d => d.LambdaId == lambdaId).Max(d => (int?)d.Version);
 
         foreach (var version in new[] { active, newest }.OfType<int>().Distinct())
         {
-            if (await UsesAsync(lambdaId, version, cancellation))
+            if (Uses(lambdaId, version))
             {
                 return true;
             }
@@ -336,14 +337,14 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
     /// <summary>
     /// Whether one version connects, remembered - a version never changes.
     /// </summary>
-    private async ValueTask<bool> UsesAsync(long lambdaId, int version, CancellationToken cancellation)
+    private bool Uses(long lambdaId, int version)
     {
         if (_uses.TryGetValue((lambdaId, version), out var known))
         {
             return known;
         }
 
-        var found = UsedIn(await storage.ReadAsync(lambdaId, version, cancellation));
+        var found = UsedIn(storage.Read(lambdaId, version));
 
         if (_uses.Count > 4096)
         {

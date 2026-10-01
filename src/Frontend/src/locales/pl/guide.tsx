@@ -376,7 +376,7 @@ export const guide: Messages['guide'] = {
   ),
 
   limits:
-    'Twój kod działa na wspólnym serwerze, więc część C# jest odrzucana jeszcze przed kompilacją: uruchamianie procesów, otwieranie własnych socketów, ładowanie assembly, sięganie do systemu plików poza obszarem roboczym i refleksja użyta, żeby to wszystko obejść.',
+    'Twój kod działa na wspólnym serwerze, więc część C# jest odrzucana jeszcze przed kompilacją: uruchamianie procesów, otwieranie własnych socketów, ładowanie assembly, sięganie do systemu plików poza obszarem roboczym i refleksja użyta, żeby to wszystko obejść. Tak samo czekanie na zadanie przez .Result lub .Wait() zamiast await: żądania działają na jednym wątku na rdzeń, a zadanie musiałoby się zakończyć na tym samym wątku, który na nie czeka.',
   limits2:
     'Cała reszta jest dostępna, łącznie z pełnym API modułów GenHTTP. Jeśli coś zostanie odrzucone, dowiesz się, w której linii i dlaczego – a nie tylko, że się nie udało.',
 

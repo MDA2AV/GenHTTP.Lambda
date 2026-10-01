@@ -80,11 +80,11 @@ public sealed class LifetimeTests
 
         // maintenance run as if two hours had passed: the code is older than
         // that, so a lifetime measured from the code would take this offline
-        var report = await meta.RunMaintenanceAsync(DateTime.UtcNow.AddHours(2));
+        var report = meta.RunMaintenance(DateTime.UtcNow.AddHours(2));
 
         Assert.AreEqual(0, report.Undeployed, "a deployment two hours old is not stale");
 
-        var still = await meta.GetAsync(lambda.PrivateKey);
+        var still = meta.Get(lambda.PrivateKey);
 
         Assert.IsNotNull(still?.ActiveVersion);
     }
@@ -100,11 +100,11 @@ public sealed class LifetimeTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        var report = await meta.RunMaintenanceAsync(DateTime.UtcNow.AddDays(2));
+        var report = meta.RunMaintenance(DateTime.UtcNow.AddDays(2));
 
         Assert.AreEqual(1, report.Undeployed);
 
-        var after = await meta.GetAsync(lambda.PrivateKey);
+        var after = meta.Get(lambda.PrivateKey);
 
         Assert.IsNull(after?.ActiveVersion);
         Assert.IsNull(after?.DeployedUntil, "and it no longer claims to be online until anything");

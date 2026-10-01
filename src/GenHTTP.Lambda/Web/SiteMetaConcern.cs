@@ -35,7 +35,7 @@ public sealed class SiteMetaConcern : IConcern
 
     private SitePrerender Prerender { get; }
 
-    private Func<ValueTask<string>> Index { get; }
+    private Func<string> Index { get; }
 
     private ISourceService Sources { get; }
 
@@ -43,7 +43,7 @@ public sealed class SiteMetaConcern : IConcern
 
     #region Initialization
 
-    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<ValueTask<string>> index)
+    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<string> index)
     {
         Content = content;
         Meta = meta;
@@ -71,7 +71,7 @@ public sealed class SiteMetaConcern : IConcern
                 return Answer(request, Meta.Robots(), "text/plain; charset=utf-8");
 
             case "/sitemap.xml":
-                var sitemap = Meta.Sitemap(await Sources.ListAddressesAsync());
+                var sitemap = Meta.Sitemap(Sources.ListAddresses());
 
                 // without a public address there is nothing to list pages
                 // under, and the index page is not a sitemap either
@@ -90,16 +90,16 @@ public sealed class SiteMetaConcern : IConcern
 
         if (page != null)
         {
-            var markup = Meta.Render(await Index(), page);
+            var markup = Meta.Render(Index(), page);
 
-            markup = await Prerender.RenderAsync(markup, page, request);
+            markup = Prerender.Render(markup, page, request);
 
             return Answer(request, markup, "text/html; charset=utf-8");
         }
 
         if (SourcePath(path) is { } source)
         {
-            return await SourceAsync(request, source.Language, source.Key, source.Path);
+            return Source(request, source.Language, source.Key, source.Path);
         }
 
         if (ToLanguage(request, path) is { } redirect)
@@ -115,7 +115,7 @@ public sealed class SiteMetaConcern : IConcern
 
         if (IsClientRoute(path))
         {
-            return Answer(request, await Index(), "text/html; charset=utf-8");
+            return Answer(request, Index(), "text/html; charset=utf-8");
         }
 
         // a person is shown the application's own page for it, and anything
@@ -123,7 +123,7 @@ public sealed class SiteMetaConcern : IConcern
         return PrefersMarkup(request)
                    ? request.Respond()
                             .Status(ResponseStatus.NotFound)
-                            .Content(Resource.FromString(await Index()).Type(new ContentType("text/html; charset=utf-8")).Build())
+                            .Content(Resource.FromString(Index()).Type(new ContentType("text/html; charset=utf-8")).Build())
                             .Build()
                    : null;
     }
@@ -186,7 +186,7 @@ public sealed class SiteMetaConcern : IConcern
     /// here, and drawn by the client. A source that is not published is not
     /// found - asked for, it looks the same as a key nobody has.
     /// </remarks>
-    private async ValueTask<IResponse> SourceAsync(IRequest request, string? language, string key, string path)
+    private IResponse Source(IRequest request, string? language, string key, string path)
     {
         if (language == null)
         {
@@ -201,13 +201,13 @@ public sealed class SiteMetaConcern : IConcern
                           .Build();
         }
 
-        var project = await Sources.GetProjectAsync(key);
+        var project = Sources.GetProject(key);
 
         if (project == null)
         {
             return request.Respond()
                           .Status(ResponseStatus.NotFound)
-                          .Content(Resource.FromString(await Index()).Type(new ContentType("text/html; charset=utf-8")).Build())
+                          .Content(Resource.FromString(Index()).Type(new ContentType("text/html; charset=utf-8")).Build())
                           .Build();
         }
 
@@ -224,7 +224,7 @@ public sealed class SiteMetaConcern : IConcern
         var schema = new SourceSchema(name, about, SourceLicenses.Find(entry.License)?.Url ?? entry.License, project.Author, entry.Updated,
                                       entry.Online ? LambdaDescription.Address(entry.PublicKey, entry.Tier.ToString(), entry.Domain) : null);
 
-        return Answer(request, Meta.RenderSource(await Index(), page, schema), "text/html; charset=utf-8");
+        return Answer(request, Meta.RenderSource(Index(), page, schema), "text/html; charset=utf-8");
     }
 
     /// <summary>
@@ -287,7 +287,7 @@ public sealed class SiteMetaConcern : IConcern
 /// <summary>
 /// Builds a <see cref="SiteMetaConcern" /> for a handler.
 /// </summary>
-public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<ValueTask<string>> index) : IConcernBuilder
+public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<string> index) : IConcernBuilder
 {
 
     public IConcern Build(IHandler content) => new SiteMetaConcern(content, meta, prerender, sources, index);

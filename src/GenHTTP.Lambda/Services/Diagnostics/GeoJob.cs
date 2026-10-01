@@ -82,7 +82,7 @@ public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions optio
                 // leaves yesterday's copy rather than half of today's
                 var scratch = name + ".writing";
 
-                await File.WriteAllTextAsync(scratch, body, cancellation);
+                File.WriteAllText(scratch, body);
 
                 File.Move(scratch, name, true);
 

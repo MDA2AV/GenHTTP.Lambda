@@ -113,7 +113,7 @@ public sealed class ActivityTests
 
         Assert.ContainsSingle((await DescribeAsync(fixture)).Lambdas.Where(l => l.PublicKey == "temporary"));
 
-        await fixture.Meta.DeleteAsync(lambda.PrivateKey);
+        fixture.Meta.Delete(lambda.PrivateKey);
 
         Assert.IsEmpty((await DescribeAsync(fixture)).Lambdas.Where(l => l.PublicKey == "temporary"));
     }

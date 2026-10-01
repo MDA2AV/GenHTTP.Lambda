@@ -35,8 +35,8 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     /// The secrets by name, and which names the code reads.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/secrets")]
-    public async ValueTask<SecretListingResponse> List(string privateKey)
-        => Describe(await secrets.ListAsync(privateKey));
+    public SecretListingResponse List(string privateKey)
+        => Describe(secrets.List(privateKey));
 
     /// <summary>
     /// Stores a value under a name, replacing the one there.
@@ -47,11 +47,11 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     /// </remarks>
     /// <param name="name">Letters, digits and underscores, not starting with a digit: <c>STRIPE_KEY</c></param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/secrets/:name")]
-    public async ValueTask<SecretResponse> Put(string privateKey, string name, SecretRequest request)
+    public SecretResponse Put(string privateKey, string name, SecretRequest request)
     {
-        var secret = await secrets.SetAsync(privateKey, name, request.Value);
+        var secret = secrets.Set(privateKey, name, request.Value);
 
-        logger.LogInformation("Set the secret {Name} of lambda {Lambda}", secret.Name, await meta.PublicKeyOfAsync(privateKey));
+        logger.LogInformation("Set the secret {Name} of lambda {Lambda}", secret.Name, meta.PublicKeyOf(privateKey));
 
         return Describe(secret);
     }
@@ -60,11 +60,11 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     /// Removes a secret.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/secrets/:name")]
-    public async ValueTask Delete(string privateKey, string name)
+    public void Delete(string privateKey, string name)
     {
-        await secrets.DeleteAsync(privateKey, name);
+        secrets.Delete(privateKey, name);
 
-        logger.LogInformation("Deleted the secret {Name} of lambda {Lambda}", name.Trim(), await meta.PublicKeyOfAsync(privateKey));
+        logger.LogInformation("Deleted the secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
     }
 
     #endregion
@@ -75,20 +75,20 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     /// A feature's copy of the secrets, which its preview reads.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/features/:feature/secrets")]
-    public async ValueTask<SecretListingResponse> ListOfFeature(string privateKey, string feature)
-        => Describe(await secrets.ListAsync(privateKey, feature));
+    public SecretListingResponse ListOfFeature(string privateKey, string feature)
+        => Describe(secrets.List(privateKey, feature));
 
     /// <summary>
     /// Stores a value in a feature's copy, for trying the feature with - a
     /// key for a sandbox, say. The lambda's own is not touched.
     /// </summary>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/features/:feature/secrets/:name")]
-    public async ValueTask<SecretResponse> PutOfFeature(string privateKey, string feature, string name, SecretRequest request)
+    public SecretResponse PutOfFeature(string privateKey, string feature, string name, SecretRequest request)
     {
-        var secret = await secrets.SetAsync(privateKey, name, request.Value, feature);
+        var secret = secrets.Set(privateKey, name, request.Value, feature);
 
         logger.LogInformation("Set the secret {Name} of feature '{Feature}' of lambda {Lambda}", secret.Name,
-                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
+                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
 
         return Describe(secret);
     }
@@ -97,12 +97,12 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     /// Removes a secret from a feature's copy.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/features/:feature/secrets/:name")]
-    public async ValueTask DeleteOfFeature(string privateKey, string feature, string name)
+    public void DeleteOfFeature(string privateKey, string feature, string name)
     {
-        await secrets.DeleteAsync(privateKey, name, feature);
+        secrets.Delete(privateKey, name, feature);
 
         logger.LogInformation("Deleted the secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(),
-                              await features.NameOfAsync(privateKey, feature), await meta.PublicKeyOfAsync(privateKey));
+                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
     }
 
     #endregion

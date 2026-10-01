@@ -27,9 +27,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
     /// licenses it can be published under.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/source")]
-    public async ValueTask<OwnSourceResponse> Get(string privateKey)
+    public OwnSourceResponse Get(string privateKey)
     {
-        var source = await sources.GetAsync(privateKey);
+        var source = sources.Get(privateKey);
 
         return new OwnSourceResponse(source == null ? null : SourceSettingsResponse.Of(source),
                                      [.. SourceLicenses.All.Select(LicenseResponse.Of)], SourceLicenses.Default, SourceLicenses.MaxAuthor);
@@ -46,9 +46,9 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
     /// the license then names "the authors of" the lambda.
     /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/source")]
-    public async ValueTask<SourceSettingsResponse> Put(string privateKey, SourceRequest request)
+    public SourceSettingsResponse Put(string privateKey, SourceRequest request)
     {
-        var source = await sources.PublishAsync(privateKey, new SourceDraft(request.License, request.Author));
+        var source = sources.Publish(privateKey, new SourceDraft(request.License, request.Author));
 
         logger.LogInformation("Published the source of lambda {Lambda} under {License}", source.PublicKey, source.License);
 
@@ -61,11 +61,11 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
     /// under the license it came with.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/source")]
-    public async ValueTask Delete(string privateKey)
+    public void Delete(string privateKey)
     {
-        var source = await sources.WithdrawAsync(privateKey);
+        var source = sources.Withdraw(privateKey);
 
-        logger.LogInformation("Took the source of lambda {Lambda} down", source?.PublicKey ?? await meta.PublicKeyOfAsync(privateKey));
+        logger.LogInformation("Took the source of lambda {Lambda} down", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
     }
 
 }

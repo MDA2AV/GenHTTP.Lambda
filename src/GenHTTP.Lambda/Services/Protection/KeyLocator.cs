@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Protection;
 public sealed class KeyLocator(IMetaService meta, SpaResources spa) : ILambdaLocator
 {
 
-    public async ValueTask<ResolvedLambda?> LocateAsync(IRequest request)
+    public ResolvedLambda? Locate(IRequest request)
     {
         var target = request.Header.Target;
 
@@ -29,7 +29,7 @@ public sealed class KeyLocator(IMetaService meta, SpaResources spa) : ILambdaLoc
             return null;
         }
 
-        var lambda = await meta.ResolveAsync(key);
+        var lambda = meta.Resolve(key);
 
         if (lambda != null)
         {
@@ -40,11 +40,11 @@ public sealed class KeyLocator(IMetaService meta, SpaResources spa) : ILambdaLoc
         return lambda;
     }
 
-    public async ValueTask<IResponse> UnavailableAsync(IRequest request)
+    public IResponse Unavailable(IRequest request)
     {
         if (spa.PrefersMarkup(request))
         {
-            return await spa.RenderAsync(request, ResponseStatus.NotFound);
+            return spa.Render(request, ResponseStatus.NotFound);
         }
 
         var key = request.Header.Target.Current?.Decode();
