@@ -241,10 +241,11 @@ public sealed class DatabaseTests
                 }
             }
 
+            // verbatim, so the backslashes of a path on Windows stay backslashes
             return Inline.Create()
-                         .Get("attach", () => Run("ATTACH DATABASE '{{fixture.Options.DatabaseFile}}' AS platform"))
-                         .Get("into", () => Run("VACUUM INTO '{{target}}'"))
-                         .Get("elsewhere", () => Run("PRAGMA temp_store_directory = '{{fixture.Options.DataDirectory}}'"))
+                         .Get("attach", () => Run(@"ATTACH DATABASE '{{fixture.Options.DatabaseFile}}' AS platform"))
+                         .Get("into", () => Run(@"VACUUM INTO '{{target}}'"))
+                         .Get("elsewhere", () => Run(@"PRAGMA temp_store_directory = '{{fixture.Options.DataDirectory}}'"))
                          .Get("grow", () => Run("PRAGMA max_page_count = 999999999"))
                          .Get("vacuum", () => Run("VACUUM"));
             """);
