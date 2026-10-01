@@ -76,8 +76,7 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
             _ => SourceOrder.Stars
         };
 
-        // query values arrive as they were sent, see VersionResource.Decode
-        var page = await sources.ListAsync(VersionResource.Decode(search), ordered, from, take ?? PageSize);
+        var page = await sources.ListAsync(search, ordered, from, take ?? PageSize);
 
         var next = from + page.Entries.Count;
 
@@ -141,8 +140,6 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     [ResourceMethod(":publicKey/versions/:version/files/:path")]
     public async ValueTask<SourceFileContentResponse> File(string publicKey, int version, string path)
     {
-        path = Uri.UnescapeDataString(path);
-
         var archive = await RequireAsync(publicKey, version);
 
         using var zip = ZipFile.OpenRead(archive.File);
@@ -177,9 +174,6 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     [ResourceMethod(":publicKey/versions/:version/raw/:path")]
     public async ValueTask<IResponse> Raw(string publicKey, int version, string path, string? download, IRequest request)
     {
-        // a path segment arrives with its slashes still encoded, as the workspace's do
-        path = Uri.UnescapeDataString(path);
-
         var archive = await RequireAsync(publicKey, version);
 
         string type;

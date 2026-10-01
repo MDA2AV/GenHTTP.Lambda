@@ -76,7 +76,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var found = await features.GetAsync(privateKey, feature);
 
-        return new FeatureContentResponse(Describe(found.Feature), VersionResource.Below(LambdaSource.Parse(found.Code), VersionResource.Decode(folder)));
+        return new FeatureContentResponse(Describe(found.Feature), VersionResource.Below(LambdaSource.Parse(found.Code), folder));
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var files = await LambdaArchive.UnpackAsync(body, options.MaxCodeLengthOf(tier) * 4L + options.MaxAssetBytesOf(tier));
 
-        return await SaveAsync(privateKey, feature, files, deploy, VersionResource.Decode(specification), VersionResource.Decode(change));
+        return await SaveAsync(privateKey, feature, files, deploy, specification, change);
     }
 
     #endregion

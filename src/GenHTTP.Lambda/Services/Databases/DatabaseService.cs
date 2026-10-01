@@ -72,7 +72,7 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
             throw LambdaException.Conflict(DataKinds.DatabaseOff);
         }
 
-        var name = Uri.UnescapeDataString(table ?? string.Empty);
+        var name = table ?? string.Empty;
 
         return await Task.Run(() =>
         {
