@@ -247,7 +247,8 @@ How to work:
    it in their editor. .lambda/docs/decisions.md - how you built it and why,
    for whoever changes it next. .lambda/tests/README.md - how to check that
    it works: the requests to make and the answers to expect. Short and
-   specific, in the language of the request; platform_guide says more under
+   specific, in proportion to the app - a few lines each for a small one -
+   and in the language of the request; platform_guide says more under
    documentationAndTests. They are never compiled or served.
 5. Call check_code and fix whatever it complains about, before saving
    anything: every write_code saves a version, and the owner reads every one
