@@ -154,7 +154,7 @@ export const editor: EditorMessages = {
     back: 'Uygulamanıza dönün',
     title: 'Uygulamanız',
     online: 'Uygulamanız yayında',
-    onlineFor: (span) => <>{span} süredir yayında. Adresi bilen herkes açabilir.</>,
+    onlineFor: (span) => <>{span} süredir yayında.</>,
     onlineNow: 'Adresi bilen herkes açabilir.',
     offline: 'Uygulamanız yayında değil',
     offlineText: 'Şu anda kimse açamıyor. Dilediğiniz zaman yeniden yayına alabilirsiniz.',
@@ -183,6 +183,16 @@ export const editor: EditorMessages = {
     latest: 'Son değişiklik',
     allChanges: 'Tüm değişiklikler',
     askCta: 'Değişiklik iste',
+
+    premiumHeading: 'Uygulamanız tutunca',
+    premiumChip: 'Premium',
+    premiumTitle: 'Profesyonel olarak barındırın',
+    premiumText:
+      'Uygulamanız kendi adresinizde, örneğin uygulamaniz.com - az ziyaret edildiğinde bile yayında ve kaydettiği her şey için daha fazla alanla.',
+    premiumAsk: 'Bize yazın',
+    premiumSubject: 'Uygulamam için Premium barındırma',
+    premiumBody: (address) => `Merhaba,\n\nuygulamamı profesyonel olarak barındırmak istiyorum: ${address}\n\n`,
+
     historyHint: 'Uygulamanızdaki tüm değişiklikler, en yenisi başta. Dilediğiniz zaman önceki bir duruma dönebilirsiniz - uygulamanızın kaydettiği veriler olduğu gibi kalır.',
     noNote: 'Açıklaması olmayan bir değişiklik',
     created: 'Uygulamanız oluşturuldu',

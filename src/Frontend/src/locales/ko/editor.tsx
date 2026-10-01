@@ -161,7 +161,7 @@ export const editor: EditorMessages = {
     back: '앱으로 돌아가기',
     title: '내 앱',
     online: '앱이 온라인 상태예요',
-    onlineFor: (span) => <>{span} 전부터 온라인이에요. 주소를 아는 사람은 누구나 열 수 있어요.</>,
+    onlineFor: (span) => <>{span} 전부터 온라인이에요.</>,
     onlineNow: '주소를 아는 사람은 누구나 열 수 있어요.',
     offline: '앱이 오프라인 상태예요',
     offlineText: '지금은 아무도 열 수 없어요. 언제든 다시 온라인으로 전환할 수 있어요.',
@@ -190,6 +190,16 @@ export const editor: EditorMessages = {
     latest: '최근 수정',
     allChanges: '모든 수정 내역',
     askCta: '수정 요청하기',
+
+    premiumHeading: '반응이 좋다면',
+    premiumChip: '프리미엄',
+    premiumTitle: '전문적으로 호스팅하기',
+    premiumText:
+      'yourapp.com 같은 나만의 주소로, 방문이 적을 때도 계속 온라인으로 두고, 저장 공간도 더 넉넉하게 쓸 수 있어요.',
+    premiumAsk: '문의하기',
+    premiumSubject: '내 앱의 프리미엄 호스팅 문의',
+    premiumBody: (address) => `안녕하세요.\n\n제 앱을 전문적으로 호스팅하고 싶습니다: ${address}\n\n`,
+
     historyHint: '앱에 적용된 모든 수정 사항이에요(최신순). 언제든 이전 상태로 돌아갈 수 있고, 앱에 저장된 데이터는 그대로 유지돼요.',
     noNote: '설명 없는 수정',
     created: '앱이 만들어졌어요',

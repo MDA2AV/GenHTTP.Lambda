@@ -122,7 +122,7 @@ export const editor = {
 
     title: 'Your app',
     online: 'Your app is online',
-    onlineFor: (span: Node) => <>Online for {span}. Anyone with the address can open it.</>,
+    onlineFor: (span: Node) => <>Online for {span}.</>,
     onlineNow: 'Anyone with the address can open it.',
     offline: 'Your app is offline',
     offlineText: 'Nobody can open it right now. Put it back online whenever you like.',
@@ -156,6 +156,16 @@ export const editor = {
     latest: 'Latest change',
     allChanges: 'All changes',
     askCta: 'Ask for a change',
+
+    /** The tile that offers hosting it professionally, while the app is not premium. */
+    premiumHeading: 'When it catches on',
+    premiumChip: 'Premium',
+    premiumTitle: 'Host it professionally',
+    premiumText:
+      'Your app at an address of your own, like yourapp.com - kept online however quiet it gets, with more room for everything it stores.',
+    premiumAsk: 'Write to us',
+    premiumSubject: 'Premium hosting for my app',
+    premiumBody: (address: string) => `Hello,\n\nI would like to host my app professionally: ${address}\n\n`,
 
     historyHint: 'Every change your app went through, newest first. Go back to an earlier one whenever you like - what your app has stored stays as it is.',
     noNote: 'A change without a description',

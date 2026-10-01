@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
 import { isActive, isDemo } from '../api';
-import { IconAlert, IconCheck, IconCopy, IconExternal, IconKey, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconCopy, IconExternal, IconKey, IconMail, IconPlay, IconSpark, IconSpinner } from '../components/Icons';
+import { CONTACT_MAIL } from '../contact';
 import { useEditorT } from '../i18n';
 import type { Control } from './context';
 import { count, span } from './format';
@@ -14,8 +15,9 @@ import { AgentMark, Ago, Figure, Section, Sparkline } from './ui';
  * The overview of the simple view, for somebody who had the app built and
  * wants it to do something else - not to look after a server.
  *
- * Only what tells them how things stand: is it there and where, is anything
- * wrong, what changed last and is anybody using it. Asking for a change, the
+ * Only what tells them how things stand: is it there and where, is anybody
+ * using it, is anything wrong and what changed last - and, while it is not
+ * premium, how to have it hosted properly once it matters. Asking for a change, the
  * drafts and the history have sections of their own, as they do in the full
  * view; the button at the top is the way to the one they come for. Nothing
  * here says version, deployment, file or log: those are the full view's words
@@ -25,6 +27,7 @@ export function SimpleOverview({ control }: { control: Control }) {
   const said = useEditorT().simple;
   const { lambda, agent } = control;
   const demo = isDemo(lambda.tier);
+  const teaser = !demo && lambda.tier !== 'Premium';
   const problems = (control.summary?.recentProblems.length ?? 0) > 0;
 
   // the frame says so above every section while a change is under way
@@ -43,15 +46,18 @@ export function SimpleOverview({ control }: { control: Control }) {
       <div className="max-w-4xl space-y-8">
         <About control={control} />
 
-        <Status control={control} />
+        <div className="grid gap-8 lg:grid-cols-2">
+          <Status control={control} />
+          <Today control={control} />
+        </div>
 
         {!demo && <NeedsKey control={control} />}
 
         {problems && !demo && <Problems control={control} />}
 
         <div className="grid gap-8 lg:grid-cols-2">
-          <Latest control={control} />
-          <Today control={control} />
+          <Latest control={control} wide={!teaser} />
+          {teaser && <Premium control={control} />}
         </div>
       </div>
     </Section>
@@ -103,50 +109,52 @@ function Status({ control }: { control: Control }) {
   const since = summary?.activation ? span(summary.activation.seconds, t.shared) : null;
 
   return (
-    <section className="surface">
-      <div className="p-5">
-        <div className="flex items-center gap-3">
-          <Beacon live={live} />
-          <h2 className="text-[17px] font-semibold tracking-tight">{live ? said.online : said.offline}</h2>
+    <section className="surface flex flex-col">
+      <div className="flex-1 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <Beacon live={live} />
+              <h2 className="text-[17px] font-semibold tracking-tight">{live ? said.online : said.offline}</h2>
+            </div>
+
+            <p className="mt-1 pl-6 text-sm text-slate-600 dark:text-slate-400">
+              {live
+                ? since
+                  ? said.onlineFor(<strong className="font-medium text-ink-900 dark:text-slate-100">{since}</strong>)
+                  : said.onlineNow
+                : said.offlineText}
+            </p>
+          </div>
+
+          {live ? (
+            <a href={address} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
+              <IconExternal className="h-3.5 w-3.5" />
+              {said.openApp}
+            </a>
+          ) : (
+            !isDemo(lambda.tier) && (
+              <button type="button" onClick={() => control.deploy()} disabled={busy !== null} className="btn-primary !px-4 !py-1.5 text-[13px]">
+                {busy === 'deploy' ? <IconSpinner className="h-3.5 w-3.5" /> : <IconPlay className="h-3.5 w-3.5" />}
+                {said.putOnline}
+              </button>
+            )
+          )}
         </div>
 
-        <p className="mt-1.5 pl-6 text-sm text-slate-600 dark:text-slate-400">
-          {live
-            ? since
-              ? said.onlineFor(<strong className="font-medium text-ink-900 dark:text-slate-100">{since}</strong>)
-              : said.onlineNow
-            : said.offlineText}
-        </p>
-
-        <div className="mt-5 flex flex-wrap items-center gap-2 pl-6">
+        <div className="mt-4 flex min-w-0 items-center gap-2 pl-6">
           <a
             href={live ? address : undefined}
             target="_blank"
             rel="noreferrer"
             title={address}
-            className={`min-w-0 max-w-full truncate text-[15px] ${
+            className={`min-w-0 truncate text-[15px] ${
               live ? 'font-medium text-accent-600 hover:underline dark:text-accent-400' : 'text-slate-400'
             }`}
           >
             {shown}
           </a>
           <Copy value={address} />
-
-          <span className="ml-auto flex flex-wrap gap-2">
-            {live ? (
-              <a href={address} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
-                <IconExternal className="h-3.5 w-3.5" />
-                {said.openApp}
-              </a>
-            ) : (
-              !isDemo(lambda.tier) && (
-                <button type="button" onClick={() => control.deploy()} disabled={busy !== null} className="btn-primary !px-4 !py-1.5 text-[13px]">
-                  {busy === 'deploy' ? <IconSpinner className="h-3.5 w-3.5" /> : <IconPlay className="h-3.5 w-3.5" />}
-                  {said.putOnline}
-                </button>
-              )
-            )}
-          </span>
         </div>
       </div>
 
@@ -264,8 +272,11 @@ function Problems({ control }: { control: Control }) {
 
 /* ------------------------------------------------------------ what changed */
 
-/** The last change, in its own words, with the way to all the others. */
-function Latest({ control }: { control: Control }) {
+/**
+ * The last change, in its own words, with the way to all the others. Wide
+ * where nothing stands beside it.
+ */
+function Latest({ control, wide }: { control: Control; wide: boolean }) {
   const t = useEditorT();
   const said = t.simple;
   const latest = control.versions[0];
@@ -275,7 +286,7 @@ function Latest({ control }: { control: Control }) {
   }
 
   return (
-    <section className="flex flex-col">
+    <section className={`flex flex-col ${wide ? 'lg:col-span-2' : ''}`}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium">{said.latest}</h2>
         <Link to={`/editor/${control.privateKey}/history`} className="text-[13px] text-accent-500 hover:underline">{said.allChanges}</Link>
@@ -309,6 +320,10 @@ export function OnlineMark() {
 
 /* ------------------------------------------------------------ is it used */
 
+/**
+ * How many came today and when the last one did, beside whether the app is
+ * there at all - the two things somebody looks at first.
+ */
 function Today({ control }: { control: Control }) {
   const t = useEditorT();
   const said = t.simple;
@@ -319,14 +334,50 @@ function Today({ control }: { control: Control }) {
   }
 
   return (
+    <section className="surface grid grid-cols-2 gap-6 p-5" aria-label={said.activity}>
+      <div className="flex flex-col justify-between gap-3">
+        <Figure value={count(traffic.dayRequests)} label={said.hits} title={said.hitsTitle} />
+        <Sparkline values={traffic.hourly} label={t.summary.hourly} />
+      </div>
+      <Figure value={traffic.lastSeen ? <Ago at={traffic.lastSeen} /> : said.noVisit} label={said.lastVisit} />
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------ what is next */
+
+/**
+ * The way to having the app hosted properly - a domain of its own, kept
+ * online however quiet it gets - for a lambda that is not premium yet.
+ *
+ * The tier is the operator's to assign, so the tile asks the owner to write
+ * rather than offering a switch. The mail names the app by its public
+ * address, never by the editor link: the address is all it takes to find
+ * the app, and the editor link is the owner's alone.
+ */
+function Premium({ control }: { control: Control }) {
+  const said = useEditorT().simple;
+  const address = absoluteAddress(control.lambda.address);
+
+  const mail = `mailto:${CONTACT_MAIL}?subject=${encodeURIComponent(said.premiumSubject)}&body=${encodeURIComponent(said.premiumBody(address))}`;
+
+  return (
     <section className="flex flex-col">
-      <h2 className="text-sm font-medium">{said.activity}</h2>
-      <div className="surface mt-3 grid flex-1 grid-cols-2 gap-6 p-5">
-        <div>
-          <Figure value={count(traffic.dayRequests)} label={said.hits} title={said.hitsTitle} />
-          <div className="mt-2"><Sparkline values={traffic.hourly} label={t.summary.hourly} /></div>
-        </div>
-        <Figure value={traffic.lastSeen ? <Ago at={traffic.lastSeen} /> : said.noVisit} label={said.lastVisit} />
+      <h2 className="text-sm font-medium">{said.premiumHeading}</h2>
+
+      <div className="mt-3 flex flex-1 flex-col border border-logo-500/40 bg-logo-500/[0.03] p-5 dark:border-logo-400/30 dark:bg-logo-400/[0.04]">
+        <span className="chip self-start rounded-full bg-logo-500/10 text-logo-700 dark:bg-logo-400/10 dark:text-logo-400">
+          {said.premiumChip}
+        </span>
+        <h3 className="mt-3 text-[17px] font-semibold tracking-tight">{said.premiumTitle}</h3>
+        <p className="mt-1.5 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{said.premiumText}</p>
+        <a
+          href={mail}
+          className="btn mt-4 self-start border border-logo-500/50 !px-4 !py-1.5 text-[13px] text-logo-700 hover:bg-logo-500/10 dark:border-logo-400/40 dark:text-logo-400 dark:hover:bg-logo-400/10"
+        >
+          <IconMail className="h-3.5 w-3.5" />
+          {said.premiumAsk}
+        </a>
       </div>
     </section>
   );

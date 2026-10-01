@@ -357,7 +357,10 @@ chosen by the owner.
 
 - **Free** is for trying: taken offline when unused, removed when abandoned.
 - **Premium** is for running something in production, for example a website on a
-  custom domain: kept online, larger limits.
+  custom domain: kept online, larger limits. The simple view's overview offers
+  it to every lambda that is not premium (or a demo), in a tile beside the
+  latest change; its only action is a mail to us naming the app by its public
+  address, never the editor key - the tier stays the operator's to assign.
 - **Enterprise** - a customer running their own instance, on-prem or in the
   cloud - is planned but **do not anticipate enterprise features unless asked**.
   It is not decided that the enterprise code base will be the same as the cloud
