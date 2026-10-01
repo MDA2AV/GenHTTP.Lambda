@@ -1,14 +1,14 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Eine Plattform für Agentic Coding',
+  eyebrow: 'KI-App-Builder, Hosting inklusive',
   headline: 'Beschreiben Sie eine App.',
   headlineAccent: 'Ihr Agent stellt sie online.',
   intro:
-    'Umfragen, Gästebücher, Bestenlisten, kleine Shops. Sagen Sie unserem Agenten oder Ihrem eigenen, was Sie brauchen – und Sie bekommen eine fertige App mit Link zum Teilen. Sie können sie jederzeit weiter verbessern, auch lange nach der ersten Version.',
+    'Umfragen, Gästebücher, Bestenlisten, Multiplayer-Spiele. Sagen Sie unserem KI-Agenten oder Ihrem eigenen, was Sie brauchen – und Sie bekommen eine fertige App, von uns gehostet, mit Link zum Teilen. Sie können sie jederzeit weiter verbessern, auch lange nach der ersten Version.',
   build: 'App bauen',
   ownAgent: 'Eigenen Agenten nutzen',
-  free: 'Kostenlos. Kein Konto, keine Installation.',
+  free: 'Kostenlos. Ohne Anmeldung, ohne Kreditkarte, ohne Installation.',
   seeIt: 'In Aktion ansehen',
 
   videoTitle: 'Vom Satz zur laufenden App',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
   videoNote: 'Das Bauen läuft im Zeitraffer, alles andere in Echtzeit.',
   tryIt: 'Selbst ausprobieren',
 
-  oneShotTitle: 'Mehr als ein erster Wurf',
+  oneShotTitle: 'Mehr als ein App-Generator',
   oneShotText:
     'Die meisten Generatoren liefern ein Ergebnis und lassen Sie damit allein. Bei uns läuft die App gleich dort, wo sie entstanden ist. Sie und Ihr Agent können jederzeit daran weiterarbeiten.',
   steps: [
@@ -28,7 +28,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'App und Link bekommen',
-      body: 'Die App wird gebaut und online gestellt. Sie bekommen eine öffentliche Adresse zum Teilen. Die App speichert ihre Daten – Stimmen, Punkte, Nachrichten –, damit alle denselben Stand sehen.',
+      body: 'Die App wird gebaut und gehostet. Sie bekommen eine öffentliche Adresse zum Teilen. Server, Hosting-Tarif, Domain oder Datenbank brauchen Sie nicht, darum kümmern wir uns. Die App speichert ihre Daten – Stimmen, Punkte, Nachrichten –, damit alle denselben Stand sehen.',
       alt: 'Die fertige Mittagsumfrage im Browser',
     },
     {
@@ -43,10 +43,13 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Erledigt. Version 4 ist unter derselben Adresse live. Version 3 lässt sich jederzeit zurückholen.',
 
-  agentsTitle: 'Bringen Sie Ihren Lieblingsagenten mit',
+  agentsTitle: 'Bringen Sie Ihren Agenten mit: Claude, Codex, Cursor',
   agentsText:
-    'Sie arbeiten schon mit Claude oder einem anderen Assistenten? Verbinden Sie ihn mit dieser Adresse. Dann baut er hier Apps, stellt sie online und ändert sie – direkt aus dem Chat, den Sie ohnehin offen haben.',
+    'Sie nutzen für Vibe Coding schon Claude Code, Codex, Cursor oder einen anderen Assistenten? Verbinden Sie ihn mit dieser Adresse – einem Remote-MCP-Server, ohne Key. Dann baut er hier Apps, stellt sie online und ändert sie, direkt aus dem Chat, den Sie ohnehin offen haben.',
   thenAsk: (em) => <>Danach genügt ein Satz: {em('Bau eine Anmeldeliste für unser Team-Event und stell sie online')}.</>,
+  hostIt: (link) => (
+    <>Sie haben etwas gebaut, das nur auf localhost läuft? {link('Hosten Sie Ihre Vibe-Coding-App hier')}.</>
+  ),
 
   contactTitle: 'Sprechen Sie mit uns',
   contactText:

@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const shell: Messages['shell'] = {
   main: 'Navigasi utama',
   build: 'Buat website',
-  ship: 'Publikasikan',
+  ship: 'Deploy',
   showcase: 'Showcase',
   enterprise: 'Enterprise',
   docs: 'Panduan',

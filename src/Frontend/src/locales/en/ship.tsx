@@ -1,23 +1,24 @@
 import type { ReactNode } from 'react';
 
 export const ship = {
-  title: 'From your laptop to everyone’s screen.',
+  eyebrow: 'Free hosting for vibe-coded apps',
+  title: 'From localhost to everyone’s screen.',
   intro:
-    'You built something with your coding agent and it only runs on your machine. Ask the agent to publish it here. A few minutes later it has a public link anyone can open, and it can remember things, so people can play, chat and post in it together.',
-  facts: ['Free', 'No account', 'Nothing to install'],
+    'You built an app with Claude Code, Codex or Cursor, and it only runs on your machine. Ask your agent to publish it here. A few minutes later it has a public link for anyone, its own database and a live line to everyone who has it open, so people can play, chat and post in it together.',
+  facts: ['Free', 'No sign-up', 'No credit card', 'Nothing to install'],
   connect: 'Connect your agent',
   seeOthers: 'See what others shipped',
 
-  stepsTitle: 'Three moves, and one of them is a sentence',
+  stepsTitle: 'Three steps from localhost to a public link',
   step: (n: number) => `Step ${n}`,
   steps: [
     {
       title: 'Connect once',
-      body: 'Add one address to Claude, Cursor or whichever agent you work with. It takes under a minute and you only ever do it once.',
+      body: 'Add one address, a remote MCP server, to Claude Code, Codex, Cursor or whichever agent you work with. It takes under a minute and you only ever do it once.',
     },
     {
       title: 'Ask it to publish',
-      body: 'Tell it to put the app online here. It packs up your app, publishes it and checks that it answers.',
+      body: 'Tell it to put the app online here. It packs up your app, deploys it and checks that it answers - no GitHub repo, no deploy pipeline, no Docker.',
     },
     {
       title: 'Share the link',
@@ -25,24 +26,24 @@ export const ship = {
     },
   ],
 
-  togetherTitle: 'Not just a page. A place people meet.',
+  togetherTitle: 'Not just hosting. A database and multiplayer, built in.',
   together:
-    'Most hosts hand out a copy of your app to each visitor, and everybody plays alone. Here every app has its own memory and a live line to everyone who has it open. A move one person makes shows up for all the others straight away, and what they post is still there tomorrow.',
+    'Most hosts hand out a copy of your app to each visitor, and everybody plays alone: what one browser keeps in localStorage, the next one never sees. Here every app has its own database and a live line to everyone who has it open. A move one person makes shows up for all the others straight away, and what they post is still there tomorrow.',
   together2:
-    'No database to sign up for, no second service to wire in. Ask for it the way you would describe it to a friend.',
+    'No Supabase or Firebase to sign up for, no backend to wire in, no server to rent. Ask for it the way you would describe it to a friend.',
   /** What people build together, and how they would ask for it. */
   kinds: [
     { name: 'Multiplayer games', ask: 'Let up to eight friends join the same round and see each other’s moves live.' },
     { name: 'Chat rooms', ask: 'Add a room where everyone with the link can talk, and keep the last hundred messages.' },
     { name: 'Shared lists', ask: 'Turn the packing list into one the whole team edits at once.' },
-    { name: 'Scores and records', ask: 'Keep a leaderboard with everyone’s best time and show the top ten on the start screen.' },
+    { name: 'Leaderboards', ask: 'Keep a leaderboard with everyone’s best time and show the top ten on the start screen.' },
     { name: 'Little social networks', ask: 'Let wedding guests post photos to one wall and like each other’s.' },
   ],
   quote: (text: string) => `“${text}”`,
 
-  connectTitle: 'Connect your agent once',
+  connectTitle: 'Connect Claude Code, Codex or Cursor once',
   connectText:
-    'Give your agent this address. From then on it knows how to publish here, no key and no sign-in needed.',
+    'Give your agent the address of our MCP server. From then on it knows how to publish here, no key and no sign-in needed.',
   sayLike: 'Then, in your project, say something like',
   asks: [
     'Publish this app on GenHTTP Lambda and send me the link.',
@@ -50,13 +51,13 @@ export const ship = {
   ],
 
   domainChip: 'When it catches on',
-  domainTitle: 'Give it a name of its own',
+  domainTitle: 'Give it a domain of its own',
   domainText:
     'The same app, the same editor link, but served at an address you own. Easier to say out loud, easier to remember, and it looks the part when people start sharing it.',
   domainSubject: 'A domain for my app',
   domainAsk: 'Ask about your domain',
 
-  questionsTitle: 'Before you ask',
+  questionsTitle: 'Before you publish',
   questions: (
     offline: number,
     removed: number,
@@ -66,9 +67,25 @@ export const ship = {
     [
       'Is it really free?',
       <>
-        Yes. No card, no trial and no account. Your app stays online for as long as people use it. After {offline} days
-        without a single visit or change it is taken offline, and after {removed} it is removed.
+        Yes. No sign-up, no credit card and no trial. Your app stays online for as long as people use it. After{' '}
+        {offline} days without a single visit or change it is taken offline, and after {removed} it is removed.
       </>,
+    ],
+    [
+      'Can Claude Code, Codex or Cursor deploy my app here?',
+      'Yes, and any other agent that can add a remote MCP server. Connect it once with the address above, then ask it to publish: it deploys the app, checks that it answers and sends you the link.',
+    ],
+    [
+      'Why can’t my friends open my localhost link?',
+      'Because localhost is your own computer: the address only works there, and only while the app is running. A tunnel lends it a public address for as long as your laptop stays on. Published here, the app runs on our servers with a link that keeps working when your laptop is closed.',
+    ],
+    [
+      'Do I need a server, a backend or Supabase?',
+      'No. Every app gets its own database, file storage and a live line to everyone who has it open. There is no server to rent and no second service to set up - and nothing to keep running on your side either.',
+    ],
+    [
+      'Can I make my game multiplayer without running a server?',
+      'Yes. What one browser keeps in localStorage the next one never sees, so the shared part has to live on a server - here it is ours. Ask your agent to make the game multiplayer, and every move reaches everyone who has it open.',
     ],
     [
       'Does my app have to be built a certain way?',
@@ -77,6 +94,14 @@ export const ship = {
     [
       'How do I change it later?',
       'With the editor link you got when it was published. Hand it to your agent with the next change, or open it in your browser. Every change becomes a new version at the same address, and you can go back to an older one at any time.',
+    ],
+    [
+      'Where do my API keys go?',
+      'Not into the code. Your agent asks for a key by name, and you type the value into the editor. Nobody reads it back - not the editor, not the agent.',
+    ],
+    [
+      'Can I take my code with me?',
+      'Yes, it is yours. Download it from the editor whenever you like, as a project that runs on its own, database included.',
     ],
     [
       'Who can see my app?',
@@ -91,7 +116,7 @@ export const ship = {
   closeTitle: 'It works on your machine.',
   closeAccent: 'Let it work on theirs.',
   noAgent: 'No agent? Build it here',
-  closeFacts: 'Free. No account. Nothing to install.',
+  closeFacts: 'Free. No sign-up. Nothing to install.',
 
   /** The scene at the top: a request, the address going public, people arriving. */
   scene: {
@@ -113,7 +138,7 @@ export const ship = {
   rows: [
     'Start without an account',
     'Publish from the agent you already use',
-    'Live shared data: chat, multiplayer, records',
+    'Database and live data: chat, multiplayer, records',
     'Cost to get your first link',
   ],
   us: ['Yes', 'Connect once, then just ask', 'Built into every app', 'Free'],

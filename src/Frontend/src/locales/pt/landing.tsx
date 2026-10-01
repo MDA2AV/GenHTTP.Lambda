@@ -1,14 +1,14 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Programação com agentes de IA',
+  eyebrow: 'Apps com IA e hospedagem grátis',
   headline: 'Descreva um app.',
   headlineAccent: 'Seu agente coloca no ar.',
   intro:
-    'Enquetes, livros de visitas, rankings, lojinhas. Descreva o que você precisa para o nosso agente ou para o que você já usa, e receba um app funcionando, com link para compartilhar. E o app continua editável: dá para seguir melhorando muito depois da primeira versão.',
+    'Enquetes, livros de visitas, rankings, jogos multiplayer. Descreva o que você precisa para o nosso agente de IA ou para o que você já usa, e receba um app funcionando, hospedado por nós, com link para compartilhar. E ele continua editável: dá para seguir melhorando muito depois da primeira versão.',
   build: 'Criar um app',
   ownAgent: 'Usar seu agente',
-  free: 'Grátis. Sem conta, sem instalar nada.',
+  free: 'Grátis. Sem cadastro, sem cartão de crédito, sem instalar nada.',
   seeIt: 'Veja na prática',
 
   videoTitle: 'De uma frase a um app no ar',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
   videoNote: 'A criação aparece acelerada. O resto é em tempo real.',
   tryIt: 'Experimente você também',
 
-  oneShotTitle: 'Não para na primeira versão',
+  oneShotTitle: 'Um gerador de apps que não para na primeira versão',
   oneShotText:
     'A maioria dos geradores entrega um resultado e deixa você se virar com ele. Aqui, o app continua rodando onde foi criado, então você e seu agente podem seguir trabalhando nele.',
   steps: [
@@ -28,7 +28,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Receba um app pronto e um link',
-      body: 'O app é criado, vai para o ar e você recebe um endereço público para compartilhar. Ele guarda os dados (votos, pontuações, mensagens), então todo mundo que abre vê a mesma coisa.',
+      body: 'O app é criado, hospedado e você recebe um endereço público para compartilhar. Sem servidor, plano de hospedagem, domínio ou banco de dados para configurar: essa parte é com a gente. Ele guarda os dados (votos, pontuações, mensagens), então todo mundo que abre vê a mesma coisa.',
       alt: 'A enquete do almoço pronta, aberta no navegador',
     },
     {
@@ -43,11 +43,14 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Pronto! A versão 4 já está no ar, no mesmo endereço. A versão 3 continua disponível, caso você queira voltar.',
 
-  agentsTitle: 'Traga seu agente favorito',
+  agentsTitle: 'Traga seu próprio agente: Claude, Codex, Cursor',
   agentsText:
-    'Já usa o Claude ou outro assistente? É só conectar a este endereço. Aí ele cria, coloca no ar e atualiza apps aqui, direto da conversa que você já tem aberta.',
+    'Já faz vibe coding com o Claude Code, o Codex, o Cursor ou outro assistente? É só conectar a este endereço, um servidor MCP remoto, sem chave. Aí ele cria, coloca no ar e atualiza apps aqui, direto da conversa que você já tem aberta.',
   thenAsk: (em) => (
     <>Depois é só pedir: {em('cria uma lista de inscrições para o evento da equipe e coloca no ar')}.</>
+  ),
+  hostIt: (link) => (
+    <>Criou algo que só roda no localhost? {link('Publique aqui seu app feito com vibe coding')}.</>
   ),
 
   contactTitle: 'Fale com a gente',

@@ -1,14 +1,14 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Yapay zekâ ajanlarıyla kodlama',
+  eyebrow: 'Uygulama yapan yapay zekâ, hosting dahil',
   headline: 'Uygulamanızı anlatın.',
   headlineAccent: 'Ajanınız yayına alsın.',
   intro:
-    'Anketler, ziyaretçi defterleri, skor tabloları, küçük mağazalar. Ne istediğinizi bizim ajanımıza ya da kendi ajanınıza anlatın. Çalışan bir uygulama ve paylaşabileceğiniz bir link alın. Uygulama hep düzenlenebilir kalır, yani ilk sürümden çok sonra da geliştirmeye devam edebilirsiniz.',
+    'Anketler, ziyaretçi defterleri, skor tabloları, çok oyunculu oyunlar. Ne istediğinizi bizim yapay zekâ ajanımıza ya da kendi ajanınıza anlatın. Çalışan bir uygulama ve paylaşabileceğiniz bir link alın; hosting’i biz üstleniriz. Uygulama hep düzenlenebilir kalır, yani ilk sürümden çok sonra da geliştirmeye devam edebilirsiniz.',
   build: 'Uygulama oluşturun',
   ownAgent: 'Kendi ajanınızı kullanın',
-  free: 'Ücretsiz. Hesap yok, kurulum yok.',
+  free: 'Ücretsiz. Üyelik yok, kredi kartı yok, kurulum yok.',
   seeIt: 'Nasıl çalıştığını görün',
 
   videoTitle: 'Tek cümleden çalışan uygulamaya',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
   videoNote: 'Oluşturma kısmı hızlandırıldı, gerisi gerçek zamanlı.',
   tryIt: 'Kendiniz deneyin',
 
-  oneShotTitle: 'Tek seferlik değil',
+  oneShotTitle: 'Tek seferlik bir uygulama üreticisi değil',
   oneShotText:
     'Çoğu araç bir sonuç üretir ve sizi onunla baş başa bırakır. Burada uygulama, yapıldığı yerde çalışmaya devam eder. Siz de ajanınızla onu geliştirmeyi sürdürürsünüz.',
   steps: [
@@ -28,7 +28,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Çalışan bir uygulama ve link alın',
-      body: 'Uygulama yapılır, yayına alınır ve size paylaşabileceğiniz herkese açık bir adres verilir. Oylar, skorlar, mesajlar saklanır, böylece açan herkes aynı şeyi görür.',
+      body: 'Uygulama yapılır, barındırılır ve size paylaşabileceğiniz herkese açık bir adres verilir. Sunucu, hosting paketi, alan adı ya da veritabanı kurmanız gerekmez; o kısım bizde. Oylar, skorlar, mesajlar saklanır, böylece açan herkes aynı şeyi görür.',
       alt: 'Bitmiş öğle yemeği anketi, tarayıcıda açık',
     },
     {
@@ -43,11 +43,14 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Hallettim. Sürüm 4 aynı adreste yayında. Geri dönmek isterseniz sürüm 3 hâlâ duruyor.',
 
-  agentsTitle: 'Sevdiğiniz ajanla çalışın',
+  agentsTitle: 'Kendi ajanınızla çalışın: Claude, Codex, Cursor',
   agentsText:
-    'Zaten Claude ya da başka bir asistanla mı çalışıyorsunuz? Onu bu adrese bağlayın. Artık burada uygulama oluşturabilir, yayına alabilir ve güncelleyebilir. Hem de açık olan sohbetten hiç çıkmadan.',
+    'Claude Code, Codex, Cursor ya da başka bir asistanla zaten vibe coding mi yapıyorsunuz? Onu bu adrese bağlayın; bu bir uzak MCP sunucusu, anahtar gerekmez. Artık burada uygulama oluşturabilir, yayına alabilir ve güncelleyebilir. Hem de açık olan sohbetten hiç çıkmadan.',
   thenAsk: (em) => (
     <>Sonra şunu istemeniz yeterli: {em('ekip etkinliğimiz için bir kayıt listesi yap ve yayına al')}.</>
+  ),
+  hostIt: (link) => (
+    <>Yalnızca localhost’ta çalışan bir şey mi yaptınız? {link('Vibe coding projenizi burada yayınlayın')}.</>
   ),
 
   contactTitle: 'Konuşalım',

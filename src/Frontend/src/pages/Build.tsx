@@ -336,6 +336,27 @@ export function Build() {
         </section>
       )}
 
+      {/* folded away, so the box stays the page - but there for whoever wants to know first */}
+      {state === 'idle' && (
+        <section className="mt-16" aria-labelledby="questions">
+          <h2 id="questions" className="text-xl font-light tracking-tight">
+            {said.questionsTitle}
+          </h2>
+
+          <div className="mt-4 divide-y divide-slate-200 border-t border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+            {said.questions(offlineDays, retentionDays).map(([question, answer]) => (
+              <details key={question} className="group">
+                <summary className="flex min-h-[3rem] cursor-pointer list-none items-center justify-between gap-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+                  {question}
+                  <span aria-hidden="true" className="text-lg leading-none text-slate-400 transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="pb-4 pr-8 text-sm leading-relaxed text-slate-500">{answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
+
       {(state === 'idle' || (state === 'done' && result?.ok)) && (
         <section className="mt-16 border-t border-slate-200 pt-10 dark:border-slate-800">
           <h2 className="text-xl font-light tracking-tight">

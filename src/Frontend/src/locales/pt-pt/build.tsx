@@ -1,9 +1,9 @@
 import type { Messages } from '../en';
 
 export const build: Messages['build'] = {
-  title: 'Da ideia ao site.',
+  title: 'Cria um site com IA.',
   intro:
-    'Descreve o site ou a app que tens em mente. A IA cria-o por ti, nós alojamo-lo nos nossos servidores e fica online de imediato, com um link para enviares a quem quiseres. Sem programar, sem configurar alojamento, sem conta.',
+    'Descreve por palavras tuas o site ou a app que tens em mente. A IA cria-o por ti, nós alojamo-lo e fica online em minutos, com um link para enviares a quem quiseres. Grátis, sem programar, sem registo.',
   placeholder: 'Quero um site que…',
   working: 'a trabalhar…',
   shortcut: 'Ctrl + Enter',
@@ -17,10 +17,11 @@ export const build: Messages['build'] = {
     'Aqui crias sites novos. Para alterar um que já tens, abre o link de edição e descreve em “Alterar” o que deve ser diferente.',
   ideas: [
     'um site para o nosso clube onde os sócios se inscrevem em eventos',
+    'uma lista para o nosso jantar partilhado, para ninguém levar o mesmo prato',
     'um livro de visitas para o nosso casamento',
     'uma sondagem em que as pessoas votam e veem os resultados',
-    'um quadro de pontuações para a nossa noite de quiz semanal',
-    'uma contagem decrescente para a nossa inauguração que todos podem ver',
+    'uma tabela de classificação para a nossa noite de quiz semanal',
+    'uma página de aniversário onde os amigos deixam mensagens de parabéns',
   ],
   ahead: (waiting) =>
     waiting === 1 ? 'Há um site à frente do teu. Depois és tu.' : `Há ${waiting} sites à frente do teu.`,
@@ -28,17 +29,45 @@ export const build: Messages['build'] = {
 
   points: [
     {
-      title: 'Descrito, não programado',
-      text: 'Diz por palavras tuas o que o teu site deve fazer. Não precisas de programar nem de conhecimentos técnicos.',
+      title: 'Sem saber programar',
+      text: 'Diz por palavras tuas o que o teu site deve fazer, como explicarias a um amigo. A IA cria-o por ti, sem precisares de conhecimentos técnicos.',
     },
     {
-      title: 'Alojamento incluído',
-      text: 'O teu site corre nos nossos servidores. Alojamento, segurança e atualizações ficam a nosso cargo: não tens nada para configurar nem manter.',
+      title: 'Alojamento grátis incluído',
+      text: 'O teu site corre nos nossos servidores. Sem plano de alojamento, sem servidor nem domínio para comprar, nada para instalar. Segurança e atualizações ficam a nosso cargo.',
     },
     {
       title: 'Online em minutos',
-      text: 'Recebes logo um link para partilhar. O site também pode guardar dados (inscrições, votos, pontuações), para que todos vejam o mesmo.',
+      text: 'Recebes logo um link para partilhar. O site guarda o que as pessoas escrevem (inscrições, votos, mensagens, pontuações), para que todos vejam o mesmo.',
     },
+  ],
+
+  questionsTitle: 'Antes de começares',
+  questions: (offline, removed) => [
+    [
+      'A IA cria mesmo um site grátis para mim?',
+      `Sim. Descreve-o por palavras tuas e a IA cria-o, põe-no online e dá-te o link. Sem registo, sem cartão de crédito, sem período experimental. Fica online enquanto houver quem o use: após ${offline} dias sem visitas nem alterações fica offline, e após ${removed} dias é removido.`,
+    ],
+    [
+      'Preciso de alojamento, de um servidor ou de um domínio?',
+      'Não. O teu site corre nos nossos servidores, com alojamento, segurança e atualizações incluídos. Recebes logo um link, por isso também não tens de comprar um domínio.',
+    ],
+    [
+      'Posso criar uma app sem saber programar?',
+      'Sim. Nunca vês código nenhum. Diz o que deve fazer, como explicarias a um amigo, e a IA trata do resto: um site, uma pequena app ou um jogo.',
+    ],
+    [
+      'As pessoas podem deixar inscrições, votos e mensagens?',
+      'Sim. O teu site guarda o que as pessoas escrevem, por isso quem abre o link vê as mesmas inscrições, votos e pontuações.',
+    ],
+    [
+      'Como é que as outras pessoas o abrem?',
+      'Com o link, em qualquer browser, no telemóvel ou no computador. Não há nada para instalar nem loja de apps pelo meio.',
+    ],
+    [
+      'Como é que o altero mais tarde?',
+      'Abre o link de edição que recebes com o teu site e descreve o que deve ser diferente, tal como aqui. Se não gostares de uma alteração, podes voltar ao que estava antes.',
+    ],
   ],
 
   yourApp: 'O teu site',

@@ -1,23 +1,24 @@
 import type { Messages } from '../en';
 
 export const ship: Messages['ship'] = {
-  title: 'Do teu portátil para o ecrã de toda a gente.',
+  eyebrow: 'Alojamento grátis de vibe coding',
+  title: 'Do localhost para o ecrã de toda a gente.',
   intro:
-    'Criaste algo com o teu agente de programação, mas só funciona na tua máquina. Pede ao agente que o publique aqui. Minutos depois, tens um link público que qualquer pessoa pode abrir. E a app guarda dados, por isso as pessoas podem jogar, conversar e publicar lá, todas juntas.',
-  facts: ['Grátis', 'Sem conta', 'Nada para instalar'],
+    'Criaste uma app com o Claude Code, o Codex ou o Cursor, mas só funciona na tua máquina. Pede ao teu agente que a publique aqui. Minutos depois, tem um link público para qualquer pessoa, uma base de dados própria e uma ligação em tempo real a toda a gente que a tem aberta, por isso as pessoas podem jogar, conversar e publicar lá, todas juntas.',
+  facts: ['Grátis', 'Sem registo', 'Sem cartão de crédito', 'Nada para instalar'],
   connect: 'Ligar o teu agente',
   seeOthers: 'Ver o que os outros publicaram',
 
-  stepsTitle: 'Três passos, e um deles é uma frase',
+  stepsTitle: 'Do localhost a um link público em três passos',
   step: (n) => `Passo ${n}`,
   steps: [
     {
       title: 'Liga uma vez',
-      body: 'Adiciona um endereço ao Claude, ao Cursor ou ao agente com que trabalhas. Demora menos de um minuto e só tens de o fazer uma vez.',
+      body: 'Adiciona um endereço, um servidor MCP remoto, ao Claude Code, ao Codex, ao Cursor ou ao agente com que trabalhas. Demora menos de um minuto e só tens de o fazer uma vez.',
     },
     {
       title: 'Pede-lhe que publique',
-      body: 'Diz-lhe para pôr a app online aqui. Ele empacota a app, publica-a e confirma que responde.',
+      body: 'Diz-lhe para pôr a app online aqui. Ele empacota a app, faz o deploy e confirma que responde. Sem repositório no GitHub, sem pipeline de deploy, sem Docker.',
     },
     {
       title: 'Partilha o link',
@@ -25,22 +26,23 @@ export const ship: Messages['ship'] = {
     },
   ],
 
-  togetherTitle: 'Não é só uma página. É um ponto de encontro.',
+  togetherTitle: 'Mais do que alojamento: base de dados e multijogador incluídos.',
   together:
-    'A maioria dos serviços de alojamento dá uma cópia da app a cada visitante, e cada um joga sozinho. Aqui, cada app tem memória própria e uma ligação em tempo real a toda a gente que a tem aberta. O que uma pessoa faz aparece logo aos outros, e o que publicam continua lá amanhã.',
+    'A maioria dos serviços de alojamento dá uma cópia da app a cada visitante, e cada um joga sozinho: o que um browser guarda no localStorage, o seguinte nunca vê. Aqui, cada app tem uma base de dados própria e uma ligação em tempo real a toda a gente que a tem aberta. O que uma pessoa faz aparece logo aos outros, e o que publicam continua lá amanhã.',
   together2:
-    'Não tens de te registar numa base de dados nem de ligar um segundo serviço. Pede como explicarias a um amigo.',
+    'Sem registo no Supabase ou no Firebase, sem backend para ligar, sem servidor para alugar. Pede como explicarias a um amigo.',
   kinds: [
     { name: 'Jogos multijogador', ask: 'Deixa até oito amigos entrarem na mesma partida e verem as jogadas uns dos outros em tempo real.' },
     { name: 'Salas de chat', ask: 'Adiciona uma sala onde toda a gente com o link pode conversar, e guarda as últimas cem mensagens.' },
     { name: 'Listas partilhadas', ask: 'Transforma a lista do que levar numa lista que a equipa toda edita ao mesmo tempo.' },
-    { name: 'Pontuações e recordes', ask: 'Guarda uma tabela com o melhor tempo de cada um e mostra o top 10 no ecrã inicial.' },
+    { name: 'Rankings', ask: 'Guarda uma tabela com o melhor tempo de cada um e mostra o top 10 no ecrã inicial.' },
     { name: 'Pequenas redes sociais', ask: 'Deixa os convidados do casamento publicarem fotos num mural e porem gosto nas fotos dos outros.' },
   ],
   quote: (text) => `«${text}»`,
 
-  connectTitle: 'Liga o teu agente uma vez',
-  connectText: 'Dá este endereço ao teu agente. A partir daí, ele sabe publicar aqui, sem chave e sem iniciar sessão.',
+  connectTitle: 'Liga o Claude Code, o Codex ou o Cursor uma vez',
+  connectText:
+    'Dá ao teu agente o endereço do nosso servidor MCP. A partir daí, ele sabe publicar aqui, sem chave e sem iniciar sessão.',
   sayLike: 'Depois, no teu projeto, diz algo como',
   asks: [
     'Publica esta app no GenHTTP Lambda e envia-me o link.',
@@ -48,20 +50,37 @@ export const ship: Messages['ship'] = {
   ],
 
   domainChip: 'Quando fizer sucesso',
-  domainTitle: 'Dá-lhe um nome só dela',
+  domainTitle: 'Dá-lhe um domínio só dela',
   domainText:
     'A mesma app, o mesmo link de edição, mas num endereço que é teu. Mais fácil de dizer, mais fácil de lembrar, e com ar profissional quando as pessoas a começarem a partilhar.',
   domainSubject: 'Um domínio para a minha app',
   domainAsk: 'Perguntar por um domínio',
 
-  questionsTitle: 'Antes que perguntes',
+  questionsTitle: 'Antes de publicares',
   questions: (offline, removed, showcase, terms) => [
     [
       'É mesmo grátis?',
       <>
-        Sim. Sem cartão, sem período experimental e sem conta. A tua app fica online enquanto houver quem a use. Ao fim
-        de {offline} dias sem uma única visita ou alteração, fica offline, e ao fim de {removed} dias é removida.
+        Sim. Sem registo, sem cartão de crédito e sem período experimental. A tua app fica online enquanto houver quem a
+        use. Ao fim de {offline} dias sem uma única visita ou alteração, fica offline, e ao fim de {removed} dias é
+        removida.
       </>,
+    ],
+    [
+      'O Claude Code, o Codex ou o Cursor podem publicar a minha app aqui?',
+      'Sim, e qualquer outro agente que consiga adicionar um servidor MCP remoto. Liga-o uma vez com o endereço acima e pede-lhe que publique: ele faz o deploy, confirma que a app responde e envia-te o link.',
+    ],
+    [
+      'Porque é que os meus amigos não conseguem abrir o meu link de localhost?',
+      'Porque localhost é o teu próprio computador: o endereço só funciona aí, e só enquanto a app está a correr. Um túnel empresta-lhe um endereço público enquanto o portátil estiver ligado. Publicada aqui, a app corre nos nossos servidores, com um link que continua a funcionar com o portátil fechado.',
+    ],
+    [
+      'Preciso de um servidor, de um backend ou do Supabase?',
+      'Não. Cada app tem a sua base de dados, armazenamento de ficheiros e uma ligação em tempo real a toda a gente que a tem aberta. Não há servidor para alugar nem segundo serviço para configurar, nem nada para manteres a correr do teu lado.',
+    ],
+    [
+      'Posso tornar o meu jogo multijogador sem ter um servidor?',
+      'Sim. O que um browser guarda no localStorage, o seguinte nunca vê, por isso a parte partilhada tem de estar num servidor, e aqui o servidor é nosso. Pede ao teu agente que torne o jogo multijogador, e cada jogada chega a toda a gente que o tem aberto.',
     ],
     [
       'A minha app tem de ser feita de uma forma específica?',
@@ -70,6 +89,14 @@ export const ship: Messages['ship'] = {
     [
       'Como é que a altero mais tarde?',
       'Com o link de edição que recebeste quando a publicaste. Dá-o ao teu agente com a próxima alteração, ou abre-o no browser. Cada alteração passa a ser uma nova versão no mesmo endereço, e podes voltar a uma versão anterior quando quiseres.',
+    ],
+    [
+      'Onde ficam as minhas chaves de API?',
+      'Fora do código. O teu agente pede uma chave pelo nome, e tu escreves o valor no editor. Ninguém a consegue ler depois, nem o editor, nem o agente.',
+    ],
+    [
+      'Posso levar o meu código?',
+      'Sim, é teu. Descarrega-o no editor quando quiseres, como um projeto que corre sozinho, com a base de dados incluída.',
     ],
     [
       'Quem pode ver a minha app?',
@@ -86,7 +113,7 @@ export const ship: Messages['ship'] = {
   closeTitle: 'Funciona na tua máquina.',
   closeAccent: 'Agora, na de toda a gente.',
   noAgent: 'Sem agente? Cria aqui',
-  closeFacts: 'Grátis. Sem conta. Nada para instalar.',
+  closeFacts: 'Grátis. Sem registo. Nada para instalar.',
 
   scene: {
     label: 'Um agente recebe o pedido de publicar uma app. O endereço muda de localhost para um link público, e as pessoas começam a entrar.',
@@ -106,7 +133,7 @@ export const ship: Messages['ship'] = {
   rows: [
     'Começar sem conta',
     'Publicar a partir do agente que já usas',
-    'Dados partilhados em tempo real: chat, multijogador, recordes',
+    'Base de dados e dados em tempo real: chat, multijogador, recordes',
     'Custo até ao primeiro link',
   ],
   us: ['Sim', 'Liga uma vez e é só pedir', 'Incluído em todas as apps', 'Grátis'],

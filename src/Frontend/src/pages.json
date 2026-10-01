@@ -3,67 +3,67 @@
     "image": "/social/default.png",
     "text": {
       "id": {
-        "title": "Platform Agentic Coding",
-        "description": "Ceritakan aplikasi Anda ke agen AI. Aplikasinya langsung online, lengkap dengan link. Pakai agen kami, Claude, atau klien MCP lain. Gratis, tanpa akun.",
+        "title": "Buat Aplikasi dengan AI, Hosting Gratis",
+        "description": "Ceritakan aplikasi Anda: AI membuat dan meng-hosting-nya, lengkap dengan link. Pakai agen kami atau Claude Code, Codex, Cursor. Gratis, tanpa daftar.",
         "image": "/social/id/default.jpg"
       },
       "de": {
-        "title": "Agentic-Coding-Plattform",
-        "description": "Beschreiben Sie einem KI-Agenten eine App – er stellt sie online, Sie teilen den Link. Mit unserem Agenten oder Ihrem eigenen. Kostenlos, ohne Konto.",
+        "title": "KI-App-Builder mit kostenlosem Hosting",
+        "description": "Apps mit KI erstellen: Die KI baut und hostet die App, Sie teilen den Link. Mit unserem Agenten oder Claude Code, Codex, Cursor. Kostenlos, ohne Anmeldung.",
         "image": "/social/de/default.jpg"
       },
       "en": {
-        "title": "Agentic Coding Platform",
-        "description": "Describe an app to an AI agent and get it online with a link to share. Use our agent or your own - Claude, Claude Code or any MCP client. Free, no account."
+        "title": "AI App Builder with Free Hosting",
+        "description": "Describe an app and AI builds it, hosts it and gives you a link to share. Use our agent or your own: Claude Code, Codex, Cursor. Free, no sign-up."
       },
       "es": {
-        "title": "Plataforma de programación con IA",
-        "description": "Describe una app a un agente de IA y recibe un enlace para compartirla. Usa nuestro agente o el tuyo: Claude o cualquier cliente MCP. Gratis y sin cuenta.",
+        "title": "Crear una app con IA gratis",
+        "description": "Describe una app: la IA la crea, la aloja y te da un enlace para compartir. Con nuestro agente o el tuyo: Claude Code, Codex, Cursor. Gratis, sin registro.",
         "image": "/social/es/default.jpg"
       },
       "fr": {
-        "title": "Plateforme de codage agentique",
-        "description": "Décrivez une app à un agent IA : il la met en ligne et vous donne un lien à partager. Notre agent ou le vôtre (Claude, Cursor…). Gratuit, sans compte.",
+        "title": "Créer une app avec l’IA gratuitement",
+        "description": "Décrivez une app : l’IA la crée, l’héberge et vous donne un lien. Notre agent ou le vôtre : Claude Code, Codex, Cursor. Gratuit, sans inscription.",
         "image": "/social/fr/default.jpg"
       },
       "it": {
-        "title": "Piattaforma di coding agentico",
-        "description": "Descrivi un’app a un agente AI e ricevi un link da condividere. Usa il nostro agente o il tuo: Claude, Claude Code o un client MCP. Gratis, senza account.",
+        "title": "Creare un’app con l’AI gratis",
+        "description": "Descrivi un’app: l’AI la crea, la ospita e ti dà un link. Con il nostro agente o il tuo: Claude Code, Codex, Cursor. Gratis, senza registrazione.",
         "image": "/social/it/default.jpg"
       },
       "nl": {
-        "title": "Platform voor agentic coding",
-        "description": "Beschrijf een app aan een AI-agent en hij zet hem online, met een link om te delen. Met onze agent of je eigen, zoals Claude. Gratis, geen account.",
+        "title": "App maken met AI, inclusief gratis hosting",
+        "description": "Beschrijf een app en AI bouwt hem, host hem en geeft je een link om te delen. Met onze agent of je eigen: Claude Code, Codex, Cursor. Gratis, geen account.",
         "image": "/social/nl/default.jpg"
       },
       "pl": {
-        "title": "Platforma do kodowania z agentami AI",
-        "description": "Opisz aplikację agentowi AI, a on wrzuci ją do sieci i da ci link. Nasz agent albo twój: Claude, Claude Code, dowolny klient MCP. Za darmo, bez konta.",
+        "title": "Kreator aplikacji AI z darmowym hostingiem",
+        "description": "Stwórz aplikację z AI: opisz ją, a AI ją zbuduje, zahostuje i da ci link. Nasz agent albo twój: Claude Code, Codex, Cursor. Za darmo, bez rejestracji.",
         "image": "/social/pl/default.jpg"
       },
       "pt": {
-        "title": "Crie e publique apps com IA",
-        "description": "Descreva um app para um agente de IA e coloque no ar com um link para compartilhar. Use o nosso agente ou o seu, como o Claude. Grátis e sem conta.",
+        "title": "Criar apps com IA, com hospedagem grátis",
+        "description": "Descreva um app e a IA cria, hospeda e entrega um link para compartilhar. Use o nosso agente ou o seu: Claude Code, Codex, Cursor. Grátis, sem cadastro.",
         "image": "/social/pt/default.jpg"
       },
       "pt-pt": {
-        "title": "Criar e publicar apps com IA",
-        "description": "Descreve uma app a um agente de IA: ele põe-na online e dá-te um link para partilhar. Usa o nosso agente ou o teu, como o Claude. Grátis e sem conta.",
+        "title": "Criar apps com IA, com alojamento grátis",
+        "description": "Descreve uma app e a IA cria-a, aloja-a e dá-te um link para partilhar. Usa o nosso agente ou o teu: Claude Code, Codex, Cursor. Grátis, sem registo.",
         "image": "/social/pt-pt/default.jpg"
       },
       "tr": {
-        "title": "Yapay zekâ ajanlarıyla kodlama platformu",
-        "description": "Uygulamanızı bir yapay zekâ ajanına anlatın; yayına alsın, linkini versin. Bizim ajanımızı ya da Claude gibi kendi ajanınızı kullanın. Ücretsiz, üyeliksiz.",
+        "title": "Yapay Zekâ ile Uygulama Yapın ve Yayınlayın",
+        "description": "Uygulamanızı anlatın; yapay zekâ yapsın, barındırsın, linkini versin. Ya da kendi ajanınızı kullanın: Claude Code, Codex, Cursor. Ücretsiz, üyeliksiz.",
         "image": "/social/tr/default.jpg"
       },
       "ja": {
-        "title": "AIエージェントでアプリを作って公開",
-        "description": "作りたいアプリをAIエージェントに伝えるだけ。公開されて、共有リンクが届きます。このサイトのエージェントでも、Claude、Claude CodeなどのMCPクライアントでも。無料・アカウント不要。",
+        "title": "AIでアプリ作成から公開まで｜無料",
+        "description": "作りたいアプリを伝えるだけで、AIが作成してホスティングし、共有リンクが届きます。このサイトのエージェントでも、Claude Code・Codex・Cursorでも。無料・登録不要。",
         "image": "/social/ja/default.jpg"
       },
       "ko": {
-        "title": "AI 에이전트로 앱 만들고 배포하기",
-        "description": "만들고 싶은 앱을 AI 에이전트에게 말하면, 공유 링크와 함께 바로 온라인에 올려 줘요. 저희 에이전트도, Claude나 다른 MCP 클라이언트도 좋아요. 무료, 가입 없이.",
+        "title": "AI로 앱 만들고 무료로 배포하기",
+        "description": "만들고 싶은 앱을 말하면 AI가 만들고 호스팅까지 해서 공유 링크를 줘요. 저희 에이전트도, Claude Code·Codex·Cursor 같은 내 에이전트도 좋아요. 무료, 가입 없이.",
         "image": "/social/ko/default.jpg"
       }
     }
@@ -72,67 +72,67 @@
     "image": "/social/build.png",
     "text": {
       "id": {
-        "title": "Buat Website dengan AI",
-        "description": "Ceritakan ide Anda, AI membuat websitenya. Kami yang meng-hosting: online dalam hitungan menit, dengan link untuk dibagikan. Tanpa coding, tanpa akun, gratis.",
+        "title": "Buat Website dengan AI Gratis, Tanpa Coding",
+        "description": "Ceritakan ide Anda, AI membuat website atau aplikasinya. Kami yang meng-hosting, jadi langsung online dengan link. Gratis, tanpa daftar, tanpa coding.",
         "image": "/social/id/build.jpg"
       },
       "de": {
-        "title": "Website mit KI erstellen",
-        "description": "Beschreiben Sie Ihre Idee, eine KI erstellt die Website. Wir hosten sie – in Minuten online, mit Link zum Teilen. Ohne Programmieren, ohne Konto, kostenlos.",
+        "title": "Website mit KI erstellen – kostenlos",
+        "description": "Beschreiben Sie Ihre Idee, die KI erstellt Website oder App. Wir hosten sie – in Minuten online, mit Link zum Teilen. Ohne Anmeldung, ohne Programmieren.",
         "image": "/social/de/build.jpg"
       },
       "en": {
-        "title": "Create a Website with AI",
-        "description": "Describe your idea and AI creates the website for you. We host it, so it is online in minutes with a link to share. No coding, no account, free."
+        "title": "Create a Website with AI: Free, No Sign-Up",
+        "description": "Describe your idea and AI builds the website or app for you. We host it, so it is online in minutes with a link to share. Free, no sign-up, no coding."
       },
       "es": {
-        "title": "Crear una página web con IA",
-        "description": "Describa su idea: la IA crea la web y nosotros la alojamos. En línea en minutos, con un enlace para compartir. Sin programar, sin cuenta, gratis.",
+        "title": "Crear una página web con IA gratis",
+        "description": "Describa su idea: la IA crea la página web y nosotros la alojamos. En línea en minutos, con un enlace para compartir. Gratis, sin registro, sin programar.",
         "image": "/social/es/build.jpg"
       },
       "fr": {
-        "title": "Créer un site web avec l’IA",
-        "description": "Décrivez votre idée : l’IA crée le site, nous l’hébergeons. En ligne en quelques minutes, avec un lien à partager. Sans code, sans compte, gratuit.",
+        "title": "Créer un site web gratuit avec l’IA",
+        "description": "Décrivez votre idée : l’IA crée le site, nous l’hébergeons. En ligne en quelques minutes, avec un lien à partager. Gratuit, sans inscription, sans coder.",
         "image": "/social/fr/build.jpg"
       },
       "it": {
-        "title": "Creare un sito web con l’AI",
-        "description": "Descriva la Sua idea: l’AI crea il sito, noi lo ospitiamo. Online in pochi minuti, con un link da condividere. Senza codice, senza account, gratis.",
+        "title": "Creare un sito web con l’AI, gratis",
+        "description": "Descriva la Sua idea: l’AI crea il sito web, noi lo ospitiamo. Online in pochi minuti, con un link da condividere. Gratis, senza registrazione né codice.",
         "image": "/social/it/build.jpg"
       },
       "nl": {
-        "title": "Website maken met AI",
-        "description": "Beschrijf je idee en AI maakt de website. Wij hosten hem: binnen minuten online, met een link om te delen. Zonder programmeren, zonder account, gratis.",
+        "title": "Gratis website maken met AI, zonder account",
+        "description": "Beschrijf je idee en AI maakt de website of app voor je. Wij hosten hem: binnen minuten online, met een link om te delen. Gratis, zonder programmeren.",
         "image": "/social/nl/build.jpg"
       },
       "pl": {
-        "title": "Stwórz stronę internetową z AI",
-        "description": "Opisz pomysł, a AI stworzy stronę. My ją hostujemy – online w kilka minut, z linkiem do udostępnienia. Bez programowania, bez konta, za darmo.",
+        "title": "Stwórz stronę internetową z AI za darmo",
+        "description": "Opisz pomysł, a AI stworzy stronę internetową lub aplikację. Hostujemy ją – online w kilka minut, z linkiem. Za darmo, bez rejestracji, bez programowania.",
         "image": "/social/pl/build.jpg"
       },
       "pt": {
-        "title": "Crie um site com IA",
-        "description": "Descreva sua ideia e a IA cria o site. Nós hospedamos: no ar em minutos, com um link para compartilhar. Sem programar, sem conta, grátis.",
+        "title": "Criar site com IA grátis e sem cadastro",
+        "description": "Descreva sua ideia e a IA cria o site ou app para você. Nós hospedamos: no ar em minutos, com link para compartilhar. Grátis, sem cadastro, sem programar.",
         "image": "/social/pt/build.jpg"
       },
       "pt-pt": {
-        "title": "Criar um site com IA",
-        "description": "Descreve a tua ideia e a IA cria o site. Nós alojamo-lo: online em minutos, com um link para partilhar. Sem programar, sem conta, grátis.",
+        "title": "Criar site com IA grátis e sem registo",
+        "description": "Descreve a tua ideia e a IA cria o site ou a app por ti. Nós alojamo-lo: online em minutos, com um link para partilhar. Grátis, sem registo, sem programar.",
         "image": "/social/pt-pt/build.jpg"
       },
       "tr": {
-        "title": "Yapay Zekâ ile Web Sitesi Oluşturun",
-        "description": "Fikrinizi anlatın, yapay zekâ web sitesini oluştursun. Barındırma bizden: dakikalar içinde yayında, paylaşılabilir linkle. Kodlama yok, hesap yok, ücretsiz.",
+        "title": "Yapay Zekâ ile Ücretsiz Web Sitesi Yapın",
+        "description": "Fikrinizi anlatın, yapay zekâ web sitenizi ya da uygulamanızı yapsın. Hosting bizden, dakikalar içinde linkiyle yayında. Ücretsiz, üyeliksiz, kod bilmeden.",
         "image": "/social/tr/build.jpg"
       },
       "ja": {
-        "title": "AIでウェブサイトを作成",
-        "description": "アイデアを伝えるだけで、AIがウェブサイトを作成。ホスティングは私たちにお任せください。数分で公開、共有リンク付き。プログラミング不要、登録不要、無料。",
+        "title": "AIでホームページ作成｜無料・登録不要",
+        "description": "アイデアを伝えるだけで、AIがホームページやアプリを作成。サーバーもドメインも不要で、数分で公開、共有リンク付き。プログラミング不要・登録不要・無料。",
         "image": "/social/ja/build.jpg"
       },
       "ko": {
-        "title": "AI로 웹사이트 만들기",
-        "description": "아이디어만 말하면 AI가 웹사이트를 만들어요. 호스팅은 저희가 해요. 몇 분 만에 온라인, 공유 링크까지. 코딩도 가입도 필요 없고 무료예요.",
+        "title": "AI로 홈페이지 만들기: 무료, 가입 없이",
+        "description": "아이디어만 말하면 AI가 홈페이지나 앱을 만들어 줘요. 호스팅은 저희가 해서 몇 분 만에 온라인, 공유 링크까지. 코딩도, 서버도, 도메인도 필요 없고 무료예요.",
         "image": "/social/ko/build.jpg"
       }
     }
@@ -141,67 +141,67 @@
     "image": "/social/ship.png",
     "text": {
       "id": {
-        "title": "Publikasikan Aplikasi Buatan AI",
-        "description": "Aplikasi buatan agen AI Anda baru jalan di laptop? Publikasikan di sini dan dapat link publik dalam hitungan menit, plus data live. Gratis, tanpa akun.",
+        "title": "Deploy Gratis Aplikasi Buatan AI + Database",
+        "description": "Masih di localhost? Minta Claude Code, Codex, atau Cursor men-deploy aplikasi Anda di sini: link publik, database, dan multiplayer. Gratis, tanpa daftar.",
         "image": "/social/id/ship.jpg"
       },
       "de": {
-        "title": "App kostenlos hosten",
-        "description": "Mit Ihrem KI-Agenten gebaut? Lassen Sie ihn die App hier veröffentlichen: öffentlicher Link in Minuten, mit geteilten Live-Daten. Kostenlos, ohne Konto.",
+        "title": "App kostenlos hosten und online stellen",
+        "description": "Ihre App läuft nur auf localhost? Claude Code, Codex oder Cursor stellt sie hier online: öffentlicher Link in Minuten, Datenbank inklusive. Ohne Anmeldung.",
         "image": "/social/de/ship.jpg"
       },
       "en": {
-        "title": "Ship Your App",
-        "description": "Built something with your AI agent? Ask it to publish here and get a public link in minutes, with live shared data for games and chat. Free, no account."
+        "title": "Host Your Vibe-Coded App for Free",
+        "description": "App stuck on localhost? Ask Claude Code, Codex or Cursor to publish it here: a public link in minutes, database and multiplayer built in. Free, no sign-up."
       },
       "es": {
-        "title": "Publica tu app gratis",
-        "description": "¿Creaste algo con tu agente de IA? Publícalo aquí y consigue un enlace público en minutos, con datos en vivo para juegos y chats. Gratis y sin cuenta.",
+        "title": "Publica tu app web gratis",
+        "description": "¿Tu app solo funciona en localhost? Pide a Claude Code, Codex o Cursor que la suba a internet, con base de datos y multijugador. Gratis y sin registro.",
         "image": "/social/es/ship.jpg"
       },
       "fr": {
-        "title": "Mettre votre app en ligne gratuitement",
-        "description": "Votre agent IA vous a créé une app ? Demandez-lui de la publier ici : lien public en quelques minutes, données partagées en direct. Gratuit, sans compte.",
+        "title": "Mettre en ligne votre app web gratuitement",
+        "description": "App en localhost ? Claude Code, Codex ou Cursor la met en ligne ici en quelques minutes, base de données et multijoueur inclus. Gratuit, sans inscription.",
         "image": "/social/fr/ship.jpg"
       },
       "it": {
-        "title": "Pubblicare un’app online",
-        "description": "Hai creato un’app con il tuo agente AI? Chiedigli di pubblicarla qui: link pubblico in pochi minuti, dati live per giochi e chat. Gratis, senza account.",
+        "title": "Pubblica la tua web app online gratis",
+        "description": "La tua app gira solo su localhost? Claude Code, Codex o Cursor la mettono online in pochi minuti, con database e multiplayer. Gratis, senza registrazione.",
         "image": "/social/it/ship.jpg"
       },
       "nl": {
-        "title": "Je app online zetten",
-        "description": "Iets gebouwd met je AI-agent? Laat hem je app hier publiceren. Binnen minuten heb je een openbare link, met live gedeelde data. Gratis, geen account.",
+        "title": "Je app of website gratis online zetten",
+        "description": "Draait je app alleen op localhost? Laat Claude Code, Codex of Cursor hem online zetten: in minuten een openbare link, met database. Gratis, geen account.",
         "image": "/social/nl/ship.jpg"
       },
       "pl": {
-        "title": "Opublikuj aplikację w sieci za darmo",
-        "description": "Masz aplikację zrobioną z agentem AI? Poproś go o publikację, a w kilka minut dostaniesz publiczny link i wspólne dane na żywo. Za darmo, bez konta.",
+        "title": "Darmowy hosting aplikacji webowych",
+        "description": "Aplikacja działa tylko na localhost? Claude Code, Codex albo Cursor opublikuje ją tutaj: link w kilka minut, z bazą danych. Za darmo, bez rejestracji.",
         "image": "/social/pl/ship.jpg"
       },
       "pt": {
-        "title": "Publique seu app de graça",
-        "description": "Criou algo com seu agente de IA? Peça para ele publicar aqui e ganhe um link público em minutos, com dados ao vivo para jogos e chat. Grátis e sem conta.",
+        "title": "Publique seu app feito com IA de graça",
+        "description": "App preso no localhost? Peça ao Claude Code, Codex ou Cursor para publicar: link público em minutos, banco de dados e multiplayer. Grátis, sem cadastro.",
         "image": "/social/pt/ship.jpg"
       },
       "pt-pt": {
-        "title": "Publicar a tua app online, grátis",
-        "description": "Criaste algo com o teu agente de IA? Pede-lhe que o publique aqui: um link público em minutos, dados em tempo real para jogos e chat. Grátis, sem conta.",
+        "title": "Publicar a tua app feita com IA, grátis",
+        "description": "App presa em localhost? Pede ao Claude Code, Codex ou Cursor que a publique online: link em minutos, base de dados e multijogador. Grátis, sem registo.",
         "image": "/social/pt-pt/ship.jpg"
       },
       "tr": {
-        "title": "Uygulamanızı ücretsiz yayınlayın",
-        "description": "Yapay zekâ ajanınızla bir uygulama mı yaptınız? Burada yayınlatın, dakikalar içinde linkinizi alın. Canlı ortak veri dahil. Ücretsiz, üyeliksiz.",
+        "title": "Vibe Coding Projenizi Ücretsiz Yayınlayın",
+        "description": "Uygulamanız localhost’ta mı kaldı? Claude Code, Codex ya da Cursor burada yayınlasın; veritabanı ve çok oyunculu mod dahil. Ücretsiz, üyeliksiz.",
         "image": "/social/tr/ship.jpg"
       },
       "ja": {
-        "title": "AIで作ったアプリを公開",
-        "description": "AIエージェントと作ったアプリを、ここで公開しませんか。頼むだけで、数分後には公開リンクが届きます。ゲームやチャットに使える共有データ付き。無料・アカウント不要。",
+        "title": "AIで作ったWebアプリを無料で公開",
+        "description": "localhostでしか動かないアプリを、Claude Code・Codex・Cursorに頼んでここで公開。数分で公開リンクが届き、データベースとマルチプレイも標準搭載。無料・登録不要。",
         "image": "/social/ja/ship.jpg"
       },
       "ko": {
-        "title": "AI로 만든 앱 배포하기",
-        "description": "AI 에이전트로 만든 앱, 여기에 배포해 달라고 하세요. 몇 분이면 공개 링크가 생기고, 게임·채팅용 실시간 데이터 공유도 기본이에요. 무료, 가입 없이.",
+        "title": "바이브 코딩으로 만든 앱, 무료로 배포하기",
+        "description": "localhost에서만 돌아가는 앱, Claude Code·Codex·Cursor에게 여기에 배포해 달라고 하세요. 몇 분이면 공개 링크가 생기고 DB와 멀티플레이도 기본이에요. 무료, 가입 없이.",
         "image": "/social/ko/ship.jpg"
       }
     }

@@ -1,14 +1,14 @@
 import type { Messages } from '../en';
 
 export const landing: Messages['landing'] = {
-  eyebrow: 'Piattaforma di coding agentico',
+  eyebrow: 'L’AI app builder con hosting incluso',
   headline: 'Descrivi la tua app.',
   headlineAccent: 'Il tuo agente la mette online.',
   intro:
-    'Sondaggi, guestbook, classifiche, piccoli negozi online. Spiega cosa ti serve al nostro agente o a quello che usi già. Ricevi un’app funzionante, con un link da condividere. E puoi continuare a migliorarla anche molto dopo la prima versione.',
+    'Sondaggi, guestbook, classifiche, giochi multiplayer. Spiega cosa ti serve al nostro agente AI o a quello che usi già. Ricevi un’app funzionante, già online sul nostro hosting, con un link da condividere. E puoi continuare a migliorarla anche molto dopo la prima versione.',
   build: 'Crea qualcosa',
   ownAgent: 'Usa il tuo agente',
-  free: 'Gratis. Niente account, niente da installare.',
+  free: 'Gratis. Senza registrazione, senza carta di credito, niente da installare.',
   seeIt: 'Guarda come funziona',
 
   videoTitle: 'Da una frase a un’app online',
@@ -17,7 +17,7 @@ export const landing: Messages['landing'] = {
   videoNote: 'Nel video la creazione è accelerata. Tutto il resto è in tempo reale.',
   tryIt: 'Prova anche tu',
 
-  oneShotTitle: 'Non è usa e getta',
+  oneShotTitle: 'Non è un generatore di app usa e getta',
   oneShotText:
     'Quasi tutti i generatori ti danno un risultato e finisce lì. Qui l’app resta online dove è nata, così tu e il tuo agente potete continuare a lavorarci.',
   steps: [
@@ -28,7 +28,7 @@ export const landing: Messages['landing'] = {
     },
     {
       title: 'Ricevi un’app e un link',
-      body: 'L’app viene creata e messa online, con un indirizzo pubblico da condividere. Ricorda i suoi dati (voti, punteggi, messaggi), così chiunque la apra vede la stessa cosa.',
+      body: 'L’app viene creata e ospitata da noi, con un indirizzo pubblico da condividere. Server, hosting, dominio, database: non devi configurare niente, ci pensiamo noi. Ricorda i suoi dati (voti, punteggi, messaggi), così chiunque la apra vede la stessa cosa.',
       alt: 'Il sondaggio per il pranzo, finito e aperto nel browser',
     },
     {
@@ -43,11 +43,14 @@ export const landing: Messages['landing'] = {
   weekAnswer:
     'Fatto. La versione 4 è online allo stesso indirizzo, e la 3 è ancora lì se vuoi tornare indietro.',
 
-  agentsTitle: 'Collega il tuo agente preferito',
+  agentsTitle: 'Collega il tuo agente: Claude, Codex, Cursor',
   agentsText:
-    'Lavori già con Claude o con un altro assistente? Collegalo a questo indirizzo: potrà creare, pubblicare e aggiornare app qui, direttamente dalla chat che hai già aperta.',
+    'Fai già vibe coding con Claude Code, Codex, Cursor o un altro assistente? Collegalo a questo indirizzo (un server MCP remoto, senza chiavi): potrà creare, pubblicare e aggiornare app qui, direttamente dalla chat che hai già aperta.',
   thenAsk: (em) => (
     <>Poi basta chiedere: {em('crea un modulo di iscrizione per l’evento del nostro team e mettilo online')}.</>
+  ),
+  hostIt: (link) => (
+    <>La tua app gira solo su localhost? {link('Pubblica qui la tua web app')}.</>
   ),
 
   contactTitle: 'Parliamone',

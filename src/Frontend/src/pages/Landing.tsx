@@ -76,7 +76,7 @@ export function Landing() {
       */}
       <section className="snap-stop relative z-10 -mt-[3.75rem] flex min-h-screen flex-col justify-center px-5 pb-24 pt-[3.75rem]">
         <div className="relative mx-auto w-full max-w-4xl text-center">
-          <p className="rise text-xs font-medium uppercase tracking-[0.2em] text-accent-600 dark:text-accent-400">
+          <p className="rise text-balance text-xs font-medium uppercase tracking-[0.2em] text-accent-600 dark:text-accent-400">
             {said.eyebrow}
           </p>
 
@@ -247,6 +247,13 @@ export function Landing() {
         <Reveal delay={300}>
           <p className="mt-6 text-center text-sm text-grey-700 dark:text-grey-300">
             {said.thenAsk((text) => <em>{text}</em>)}
+          </p>
+          <p className="mt-2 text-center text-sm text-grey-700 dark:text-grey-300">
+            {said.hostIt((text) => (
+              <Link to="/ship" className="text-accent-600 hover:underline dark:text-accent-400">
+                {text}
+              </Link>
+            ))}
           </p>
         </Reveal>
       </div>

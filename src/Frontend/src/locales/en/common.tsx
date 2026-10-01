@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 export const shell = {
   main: 'Main',
   build: 'Create a website',
-  ship: 'Ship',
+  ship: 'Publish',
   showcase: 'Showcase',
   enterprise: 'Enterprise',
   docs: 'Docs',
