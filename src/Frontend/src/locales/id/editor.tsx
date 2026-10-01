@@ -158,7 +158,7 @@ export const editor: EditorMessages = {
     back: 'Kembali ke aplikasi Anda',
     title: 'Aplikasi Anda',
     online: 'Aplikasi Anda online',
-    onlineFor: (span) => <>Online selama {span}. Siapa pun yang tahu alamatnya dapat membukanya.</>,
+    onlineFor: (span) => <>Online selama {span}.</>,
     onlineNow: 'Siapa pun yang tahu alamatnya dapat membukanya.',
     offline: 'Aplikasi Anda offline',
     offlineText: 'Saat ini tidak ada yang dapat membukanya. Anda dapat menjadikannya online kembali kapan saja.',
@@ -187,6 +187,16 @@ export const editor: EditorMessages = {
     latest: 'Perubahan terakhir',
     allChanges: 'Semua perubahan',
     askCta: 'Minta perubahan',
+
+    premiumHeading: 'Saat mulai populer',
+    premiumChip: 'Premium',
+    premiumTitle: 'Hosting secara profesional',
+    premiumText:
+      'Aplikasi Anda di alamat sendiri, seperti aplikasianda.com, tetap online meski sepi pengunjung, dan dengan ruang lebih besar untuk semua yang disimpannya.',
+    premiumAsk: 'Hubungi kami',
+    premiumSubject: 'Hosting Premium untuk aplikasi saya',
+    premiumBody: (address) => `Halo,\n\nsaya ingin meng-hosting aplikasi saya secara profesional: ${address}\n\n`,
+
     historyHint: 'Semua perubahan aplikasi Anda, yang terbaru di atas. Anda dapat kembali ke keadaan sebelumnya kapan saja - data yang disimpan aplikasi Anda tetap seperti semula.',
     noNote: 'Perubahan tanpa keterangan',
     created: 'Aplikasi Anda dibuat',

@@ -160,7 +160,7 @@ export const editor: EditorMessages = {
     back: 'アプリに戻る',
     title: 'あなたのアプリ',
     online: 'アプリは公開中です',
-    onlineFor: (span) => <>{span}前から公開中です。アドレスを知っている人なら誰でも開けます。</>,
+    onlineFor: (span) => <>{span}前から公開中です。</>,
     onlineNow: 'アドレスを知っている人なら誰でも開けます。',
     offline: 'アプリは公開されていません',
     offlineText: '現在は誰も開けません。いつでも再び公開できます。',
@@ -189,6 +189,16 @@ export const editor: EditorMessages = {
     latest: '最新の変更',
     allChanges: 'すべての変更',
     askCta: '変更を依頼',
+
+    premiumHeading: '人気が出てきたら',
+    premiumChip: 'プレミアム',
+    premiumTitle: '本格的に運用する',
+    premiumText:
+      'yourapp.com のような独自のアドレスで公開でき、アクセスが少ない時期もオンラインのままです。保存できる容量も増えます。',
+    premiumAsk: 'お問い合わせ',
+    premiumSubject: 'アプリのプレミアムホスティングについて',
+    premiumBody: (address) => `こんにちは。\n\nアプリを本格的に運用したいと考えています: ${address}\n\n`,
+
     historyHint: 'アプリに加えられたすべての変更です（新しい順）。いつでも以前の状態に戻せます。アプリに保存されたデータはそのまま残ります。',
     noNote: '説明のない変更',
     created: 'アプリが作成されました',

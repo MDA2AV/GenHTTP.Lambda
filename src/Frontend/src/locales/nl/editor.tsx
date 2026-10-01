@@ -157,7 +157,7 @@ export const editor: EditorMessages = {
     back: 'Terug naar uw app',
     title: 'Uw app',
     online: 'Uw app is online',
-    onlineFor: (span) => <>Online sinds {span}. Iedereen met het adres kan hem openen.</>,
+    onlineFor: (span) => <>Online sinds {span}.</>,
     onlineNow: 'Iedereen met het adres kan hem openen.',
     offline: 'Uw app is offline',
     offlineText: 'Op dit moment kan niemand hem openen. U kunt hem op elk moment weer online zetten.',
@@ -186,6 +186,16 @@ export const editor: EditorMessages = {
     latest: 'Laatste wijziging',
     allChanges: 'Alle wijzigingen',
     askCta: 'Wijziging vragen',
+
+    premiumHeading: 'Als het aanslaat',
+    premiumChip: 'Premium',
+    premiumTitle: 'Professioneel hosten',
+    premiumText:
+      'Uw app op een eigen adres, zoals uwapp.nl, altijd online, ook als het rustig is, en met meer ruimte voor alles wat hij bewaart.',
+    premiumAsk: 'Mail ons',
+    premiumSubject: 'Premium-hosting voor mijn app',
+    premiumBody: (address) => `Hallo,\n\nik wil mijn app professioneel laten hosten: ${address}\n\n`,
+
     historyHint: 'Alle wijzigingen aan uw app, de nieuwste eerst. U kunt op elk moment terug naar een eerdere stand - wat uw app heeft opgeslagen, blijft zoals het is.',
     noNote: 'Een wijziging zonder beschrijving',
     created: 'Uw app is aangemaakt',

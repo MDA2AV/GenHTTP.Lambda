@@ -154,7 +154,7 @@ export const editor: EditorMessages = {
     back: 'Volver a su app',
     title: 'Su app',
     online: 'Su app está en línea',
-    onlineFor: (span) => <>En línea desde hace {span}. Cualquier persona con la dirección puede abrirla.</>,
+    onlineFor: (span) => <>En línea desde hace {span}.</>,
     onlineNow: 'Cualquier persona con la dirección puede abrirla.',
     offline: 'Su app está fuera de línea',
     offlineText: 'Ahora mismo nadie puede abrirla. Puede volver a ponerla en línea cuando lo desee.',
@@ -183,6 +183,16 @@ export const editor: EditorMessages = {
     latest: 'Último cambio',
     allChanges: 'Todos los cambios',
     askCta: 'Pedir un cambio',
+
+    premiumHeading: 'Cuando despegue',
+    premiumChip: 'Premium',
+    premiumTitle: 'Alójela de forma profesional',
+    premiumText:
+      'Su app en una dirección propia, como suapp.es, siempre en línea aunque tenga pocas visitas y con más espacio para todo lo que guarda.',
+    premiumAsk: 'Escríbanos',
+    premiumSubject: 'Alojamiento Premium para mi app',
+    premiumBody: (address) => `Hola:\n\nme gustaría alojar mi app de forma profesional: ${address}\n\n`,
+
     historyHint: 'Todos los cambios de su app, del más reciente al más antiguo. Puede volver a un estado anterior cuando lo desee - los datos que guarda su app no cambian.',
     noNote: 'Un cambio sin descripción',
     created: 'Se creó su app',

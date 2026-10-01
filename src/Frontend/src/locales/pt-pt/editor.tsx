@@ -154,7 +154,7 @@ export const editor: EditorMessages = {
     back: 'Voltar à sua aplicação',
     title: 'A sua aplicação',
     online: 'A sua aplicação está online',
-    onlineFor: (span) => <>Online há {span}. Qualquer pessoa com o endereço a pode abrir.</>,
+    onlineFor: (span) => <>Online há {span}.</>,
     onlineNow: 'Qualquer pessoa com o endereço a pode abrir.',
     offline: 'A sua aplicação está offline',
     offlineText: 'De momento, ninguém a consegue abrir. Pode voltar a pô-la online quando quiser.',
@@ -183,6 +183,16 @@ export const editor: EditorMessages = {
     latest: 'Última alteração',
     allChanges: 'Todas as alterações',
     askCta: 'Pedir uma alteração',
+
+    premiumHeading: 'Quando fizer sucesso',
+    premiumChip: 'Premium',
+    premiumTitle: 'Alojá-la de forma profissional',
+    premiumText:
+      'A sua aplicação num endereço próprio, como a-sua-app.pt, sempre online mesmo com pouco movimento, e com mais espaço para tudo o que guarda.',
+    premiumAsk: 'Escreva-nos',
+    premiumSubject: 'Alojamento Premium para a minha aplicação',
+    premiumBody: (address) => `Olá,\n\ngostaria de alojar a minha aplicação de forma profissional: ${address}\n\n`,
+
     historyHint: 'Todas as alterações da sua aplicação, da mais recente para a mais antiga. Pode voltar a um estado anterior quando quiser - os dados guardados pela aplicação mantêm-se.',
     noNote: 'Uma alteração sem descrição',
     created: 'A sua aplicação foi criada',

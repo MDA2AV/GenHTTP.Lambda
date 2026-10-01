@@ -155,7 +155,7 @@ export const editor: EditorMessages = {
     back: 'Wróć do aplikacji',
     title: 'Twoja aplikacja',
     online: 'Aplikacja jest online',
-    onlineFor: (span) => <>Online od {span}. Każdy, kto zna adres, może ją otworzyć.</>,
+    onlineFor: (span) => <>Online od {span}.</>,
     onlineNow: 'Każdy, kto zna adres, może ją otworzyć.',
     offline: 'Aplikacja jest offline',
     offlineText: 'Obecnie nikt nie może jej otworzyć. W każdej chwili można ją ponownie udostępnić.',
@@ -184,6 +184,16 @@ export const editor: EditorMessages = {
     latest: 'Ostatnia zmiana',
     allChanges: 'Wszystkie zmiany',
     askCta: 'Poproś o zmianę',
+
+    premiumHeading: 'Kiedy się przyjmie',
+    premiumChip: 'Premium',
+    premiumTitle: 'Profesjonalny hosting',
+    premiumText:
+      'Twoja aplikacja pod własnym adresem, np. twojaaplikacja.pl, online nawet przy małym ruchu i z większą ilością miejsca na wszystko, co zapisuje.',
+    premiumAsk: 'Napisz do nas',
+    premiumSubject: 'Hosting Premium dla mojej aplikacji',
+    premiumBody: (address) => `Dzień dobry,\n\nchcę profesjonalnie hostować moją aplikację: ${address}\n\n`,
+
     historyHint: 'Wszystkie zmiany aplikacji, od najnowszej. W każdej chwili można wrócić do wcześniejszego stanu – dane zapisane przez aplikację pozostają bez zmian.',
     noNote: 'Zmiana bez opisu',
     created: 'Aplikacja została utworzona',
