@@ -101,7 +101,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("write_code", "Save all files", Effect.Save,
-             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are what is written about the program - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data - kept with the version, never compiled or served; any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime is data, never files here: records and accounts in the database (Database.GetConnection(), its schema as Evolve migrations shipped here in migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
+             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are what is written about the program - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data - kept with the version, never compiled or served; any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations shipped here in migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -1057,7 +1057,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             next = store.Kind switch
             {
                 DataKinds.SecretsId => "Secrets are on, and empty. Store a value the user gave you with set_secret, or tell the user to set it under Data > Secrets in the editor. The code reads it with Secret.Read(\"NAME\").",
-                DataKinds.DatabaseId => "The database is on, and empty. Ship its schema as SQL migrations in migrations/ (V1__Create_items.sql) and apply them with Evolve at the top of lambda.cs - see platform_guide under database, or demo-crud. The code connects with Database.GetConnection(); read_database shows what it holds.",
+                DataKinds.DatabaseId => "The database is on, and empty. Ship its schema as SQL migrations in migrations/ (V1__Create_items.sql) and apply them with Evolve at the top of lambda.cs - see platform_guide under database, or demo-crud. The code keeps its records with a DbContext of Entity Framework Core on the connection Database.GetConnection() opens, synchronously; read_database shows what it holds.",
                 _ => "On from the lambda's next request, without a deploy."
             }
         });
@@ -2076,12 +2076,23 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             switchedOn = "Off until switched on: enable_data with kind 'database', which makes it, empty. Switched on or off, the lambda starts again on its next request. While it is off, Database.GetConnection() throws.",
             surface = new[]
             {
-                "Database.GetConnection() - an open Microsoft.Data.Sqlite SqliteConnection to the lambda's database; dispose of it when done",
-                "connection.CreateCommand(), command.Parameters.AddWithValue(\"$name\", value), ExecuteNonQuery() / ExecuteScalar() / ExecuteReader()",
-                "connection.BeginTransaction() - for statements that belong together",
+                "Database.GetConnection() - an open Microsoft.Data.Sqlite SqliteConnection to the lambda's database; dispose of it when done, or hand it to a context that does",
+                "class Records(SqliteConnection connection) : DbContext { ... OnConfiguring(DbContextOptionsBuilder options) => options.UseSqlite(connection, contextOwnsConnection: true); } - a context of Entity Framework Core of your own, mapping the tables",
+                "using var db = new Records(Database.GetConnection()); then db.Things.Where(...).ToList(), db.Things.Find(id), db.Things.Add(thing) and db.SaveChanges(), ExecuteUpdate(...) and ExecuteDelete(), db.Database.BeginTransaction() - all synchronous",
+                "connection.CreateCommand(), command.Parameters.AddWithValue(\"$name\", value), ExecuteNonQuery() / ExecuteScalar() / ExecuteReader() - plain SQL, where a statement is easier written than LINQ",
                 "new Evolve(connection) { Locations = [Assets.Root + \"migrations\"], IsEraseDisabled = true }.Migrate() - applies the migrations"
             },
-            imported = "Microsoft.Data.Sqlite and EvolveDb are imported in every file: SqliteConnection, SqliteCommand, SqliteException and Evolve need no using.",
+            imported = "Microsoft.Data.Sqlite, Microsoft.EntityFrameworkCore and EvolveDb are imported in every file: SqliteConnection, SqliteException, DbContext, DbSet, ModelBuilder, EF and Evolve need no using. Of Entity Framework's namespaces below that, Microsoft.EntityFrameworkCore.Metadata.Builders, .ChangeTracking and .Storage.ValueConversion may be imported; the others - Infrastructure, Storage, Internal, Migrations and the rest - are refused.",
+            entityFramework = new
+            {
+                context = "Write a DbContext that maps the tables the migrations make: ToTable(\"tasks\"), HasKey where the key is not called Id, HasColumnName where a column is named otherwise than its property beyond case - SQLite ignores case, so Title is the column title. The context makes nothing; the schema is Evolve's.",
+                connection = "The context runs on the connection Database.GetConnection() opens, handed in from outside - inside a DbContext, Database is the context's own (the lambda's is LambdaEnvironment.Database there). UseSqlite with a connection string is refused: it would open a database of its own.",
+                perRequest = "A context per request or per call, disposed of with using; contextOwnsConnection: true disposes of the connection with it. Never keep a context in a field shared between requests.",
+                synchronous = "Synchronously, always: ToList, FirstOrDefault, Find, Count, Any, SaveChanges, ExecuteUpdate, ExecuteDelete. Never ToListAsync, FirstOrDefaultAsync, SaveChangesAsync or any other Async form of Entity Framework - SQLite answers synchronously whatever the method is called, so the Async ones only add cost to every request.",
+                schema = "Never EnsureCreated, EnsureDeleted, Migrate or Entity Framework's migrations - they are refused. A new property is a migration adding its column first, then the mapping.",
+                reading = "AsNoTracking() for what is only read; an entity loaded tracked, changed and saved for an edit; ExecuteUpdate and ExecuteDelete for a change to many rows, or to a count, in one statement without reading the rows first.",
+                conflicts = "A key or unique column that is taken fails SaveChanges with a DbUpdateException whose InnerException is a SqliteException with SqliteErrorCode 19 - catch that to answer 409."
+            },
             reach = "Database can be used from every file, like Workspace. A type of your own called Database hides it; the platform's is LambdaEnvironment.Database.",
             migrations = new
             {
@@ -2093,23 +2104,23 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             },
             usage = new
             {
-                connectionPerCall = "Open a connection where it is used and dispose of it: using var db = Database.GetConnection(); inside a route, a method or a store class. Connections are pooled, so that costs nothing, and one connection is never shared between requests.",
-                synchronous = "Use it synchronously - ExecuteReader, ExecuteNonQuery, not their Async forms. The database is a file on the same machine, and the server has an asynchronous model of its own that a blocking call here does not disturb.",
-                parameters = "Put values in as parameters ($title), never into the SQL text: what somebody typed must not change what a statement does.",
-                concurrency = "SQLite takes one write at a time and lets readers read meanwhile, so an UPDATE ... SET votes = votes + 1 or an INSERT ... ON CONFLICT DO UPDATE counts every request - no locks of your own.",
-                times = "Store times as ISO 8601 text in UTC (value.ToString(\"O\")) and read them back with DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind): they sort as text and read well.",
+                connectionPerCall = "Open a connection - or a context on one - where it is used and dispose of it: using var db = new Records(Database.GetConnection()); inside a route, a method or a store class. Connections are pooled, so that costs nothing, and one is never shared between requests.",
+                synchronous = "Use it synchronously - ToList and SaveChanges with Entity Framework, ExecuteReader and ExecuteNonQuery with plain SQL, never their Async forms. The database is a file on the same machine, and the server has an asynchronous model of its own that a blocking call here does not disturb.",
+                parameters = "LINQ puts values in as parameters. Plain SQL does the same with $title, never by pasting a value into the text: what somebody typed must not change what a statement does.",
+                concurrency = "SQLite takes one write at a time and lets readers read meanwhile, so a count raised in one statement - ExecuteUpdate(s => s.SetProperty(v => v.Votes, v => v.Votes + 1)) - counts every request, with no locks of your own. Where the row may not exist yet, look and add it inside db.Database.BeginTransaction(), which takes the one writer's place before it reads.",
+                times = "SQLite has no type for times, and Entity Framework's format for them drops the zone: keep them as ISO 8601 text in UTC with a converter - Property(t => t.Created).HasConversion(v => v.ToUniversalTime().ToString(\"O\", CultureInfo.InvariantCulture), v => DateTime.Parse(v, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)), or for every DateTime in ConfigureConventions. They sort as text, compare in queries and read well.",
                 topLevel = "At the top level of lambda.cs, write using (var connection = Database.GetConnection()) { ... } - a using declaration (using var) is not allowed there. Inside methods and routes, using var is fine."
             },
-            notAllowed = "Entity Framework Core is not available, and a lambda does not open connections of its own - new SqliteConnection(...), a connection string, ATTACH and VACUUM INTO are refused. The database is the one file Database.GetConnection() opens.",
+            notAllowed = "A lambda does not open connections of its own - new SqliteConnection(...), a connection string (UseSqlite(\"Data Source=...\") included), ATTACH and VACUUM INTO are refused - and Entity Framework does not make its schema: EnsureCreated, EnsureDeleted, Migrate and its migrations are refused. The database is the one file Database.GetConnection() opens, and its schema is Evolve's.",
             fromOutside = "read_database lists the tables and reads their rows - with feature, a feature's copy. The owner sees the same in the editor under Data. Nothing writes to it but the lambda.",
-            exported = "The export carries the database as database/database.db, and Database.GetConnection() opens it there with plain Microsoft.Data.Sqlite.",
+            exported = "The export carries the database as database/database.db; Database.GetConnection() opens it there with plain Microsoft.Data.Sqlite, and a project whose code has a DbContext references Entity Framework Core.",
             limits = new
             {
                 bytes = options.DatabaseOf(LambdaTier.Free),
                 premiumBytes = options.DatabaseOf(LambdaTier.Premium),
                 full = "Past its room, a write fails with SQLite's 'database or disk is full'. read_database says how full it is."
             },
-            demo = "Every demo keeps its records like this - read_lambda demo-crud: lambda.cs migrates, Store.cs reads and writes, migrations/ holds the schema."
+            demo = "Every demo keeps its records like this - read_lambda demo-crud: lambda.cs migrates, Store.cs maps the table with a DbContext and reads and writes it, migrations/ holds the schema."
         },
         secrets = new
         {
@@ -2185,7 +2196,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         },
         refused = new
         {
-            what = "Reflection, processes, the environment, the file system, and anything else that reaches the host.",
+            what = "Reflection, dynamic, processes, the environment, the file system, and anything else that reaches the host.",
             why = "All lambdas share one process."
         },
         waiting = new
@@ -2193,14 +2204,17 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             rule = "Never wait for a task: .Result, .Wait(), .GetAwaiter().GetResult(), Task.WaitAll, Task.WaitAny and SemaphoreSlim.Wait() are refused.",
             why = "Requests run on one thread per core, and a task finishes on the thread that would be waiting for it - so it never would, and every request on that thread would wait with it.",
             instead = "Await it: handlers and routes may be async and return Task<T> or ValueTask<T> - Inline.Create().Get(async () => await ...). Take a semaphore with await semaphore.WaitAsync(), or use a lock statement for a short section without any await in it.",
-            synchronous = "Where there is a synchronous method, call it - the database is used synchronously. What is short and local (SQL against the lambda's database, a small file in the workspace) costs less done in place than awaited."
+            synchronous = "Where there is a synchronous method, call it - the database is used synchronously, Entity Framework included (ToList and SaveChanges, not ToListAsync and SaveChangesAsync). What is short and local (a query against the lambda's database, a small file in the workspace) costs less done in place than awaited."
         },
         thingsThatCatchPeopleOut = new[]
         {
             "A new version for every attempt at changing a lambda that is online. Work in a feature, try it at its preview address, and merge it once.",
             "An API key or password in the code, where every version, export and reader of the history keeps it. Read it with Secret.Read(\"NAME\") and have the user set it under Data > Secrets.",
             "A change that leaves .lambda/docs/ as it was. The next agent reads the documentation first and works from what it says - so out of date, it is worse than none.",
-            "Records in a JSON file in the workspace, rewritten whole on every change. Keep them in the database: enable_data with kind 'database', a migration, Database.GetConnection().",
+            "Records in a JSON file in the workspace, rewritten whole on every change. Keep them in the database: enable_data with kind 'database', a migration, a DbContext on Database.GetConnection().",
+            "Entity Framework's Async methods - ToListAsync, FirstOrDefaultAsync, SaveChangesAsync. Call ToList, FirstOrDefault and SaveChanges: SQLite answers synchronously whatever the method is called.",
+            "Database.GetConnection() inside a DbContext does not compile: there, Database is the context's own. Hand the connection in - new Records(Database.GetConnection()) - and configure it with options.UseSqlite(connection, contextOwnsConnection: true).",
+            "A table made by Entity Framework - EnsureCreated, Migrate, its migrations. They are refused: the schema is SQL migrations applied by Evolve, and the context only maps it.",
             "using var connection = Database.GetConnection(); at the top level of lambda.cs does not compile there. Write using (var connection = ...) { ... }, or open it inside the method that needs it.",
             "Editing a migration that was applied. Evolve refuses to start on the changed checksum; add the next file instead.",
             "Request bodies bind by type: a bare string parameter is null. Take a record.",

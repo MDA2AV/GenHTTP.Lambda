@@ -295,7 +295,8 @@ export const guide: Messages['guide'] = {
     <>
       記録（投稿、アカウント、注文、投票など）は{k.b('データベース')}
       に置きます。lambda専用のSQLiteデータベースで、{k.b('データ')}でオンにします。コードは
-      {k.code('Database.GetConnection()')}で接続を開き、SQLでやり取りします：
+      {k.code('Database.GetConnection()')}で接続を開き、テーブルを対応付ける独自のコンテキストを使って
+      {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}で読み書きします：
     </>
   ),
   database2: (k) => (
@@ -316,10 +317,10 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      接続は必要な場所で開いて破棄し、同期的に使ってください（{k.code('ExecuteReaderAsync')}ではなく
-      {k.code('ExecuteReader')}
-      ）。値はSQLに埋め込まず、パラメーターとして渡します。{k.link('/editor/demo-crud', 'demo-crud')}
-      のデモが、これをすべて実践しています。
+      コンテキストは必要な場所で作って破棄し、同期的に使ってください（{k.code('ToListAsync')}と
+      {k.code('SaveChangesAsync')}ではなく{k.code('ToList')}と{k.code('SaveChanges')}
+      ）。テーブルを作るのはマイグレーションで、Entity Frameworkではありません。
+      {k.link('/editor/demo-crud', 'demo-crud')}のデモが、これをすべて実践しています。
     </>
   ),
 

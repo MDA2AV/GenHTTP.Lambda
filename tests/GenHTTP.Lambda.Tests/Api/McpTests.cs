@@ -1299,13 +1299,18 @@ public sealed class McpTests
 
         Assert.Contains("Database.GetConnection()", instructions);
         Assert.Contains("Evolve", instructions);
+        Assert.Contains("Entity Framework Core", instructions, "records are read and written through it");
+        Assert.Contains("never their Async forms", instructions, "and synchronously");
 
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
 
         Assert.Contains("database", guide["lifecycle"]!["whereThingsGo"]!["theRecords"]!.GetValue<string>());
         Assert.Contains("Evolve", guide["database"]!["migrations"]!["example"]!.GetValue<string>());
         Assert.Contains("synchronously", guide["database"]!["usage"]!["synchronous"]!.GetValue<string>());
-        Assert.Contains("Entity Framework", guide["database"]!["notAllowed"]!.GetValue<string>());
+        Assert.Contains("UseSqlite(connection, contextOwnsConnection: true)", guide["database"]!["entityFramework"]!["connection"]!.GetValue<string>()
+                                                                             + string.Join(" ", guide["database"]!["surface"]!.AsArray().Select(s => s!.GetValue<string>())));
+        Assert.Contains("SaveChangesAsync", guide["database"]!["entityFramework"]!["synchronous"]!.GetValue<string>(), "named, as what not to call");
+        Assert.Contains("EnsureCreated", guide["database"]!["notAllowed"]!.GetValue<string>(), "the schema is Evolve's");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
 

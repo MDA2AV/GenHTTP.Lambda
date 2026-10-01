@@ -667,13 +667,14 @@ export const editor: EditorMessages = {
       empty: 'テーブルはまだありません',
       emptyText: 'テーブルはコードが作ります。migrations/に置いたマイグレーションを、lambdaの起動時にEvolveが適用します。そのあとlambdaが保存したものが、ここに表示されます。',
       offTitle: 'データベースはオフです',
-      offText: 'オンにすると、コードがSQLで読み書きするレコード（投稿、アカウント、注文など）を保存できます。',
+      offText: 'オンにすると、コードがEntity Framework CoreまたはSQLで読み書きするレコード（投稿、アカウント、注文など）を保存できます。',
       offWanted: 'コードはデータベースに接続しますが、データベースはオフです。オンにするまで、接続する部分は失敗します。',
       switchOn: 'オンにする',
       howTo: 'コードでは',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')}でデータベースへの接続を開きます。テーブルは{code('migrations/')}
+          {code('Database.GetConnection()')}でデータベースへの接続を開きます。Entity Framework Coreの
+          {code('DbContext')}にも、SQLにも使えます。テーブルは{code('migrations/')}
           のマイグレーションが作り、Evolveがそれを適用します。ダウンロードしたプロジェクトでは、ただのSQLiteファイル
           {code('database/database.db')}になります。
         </>

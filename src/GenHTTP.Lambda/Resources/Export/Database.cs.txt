@@ -19,7 +19,7 @@ public sealed class SqliteFile
         _connection = new SqliteConnectionStringBuilder { DataSource = path, ForeignKeys = true, DefaultTimeout = 10 }.ToString();
     }
 
-    /// <summary>An open connection to the database. Dispose of it when done - connections are pooled.</summary>
+    /// <summary>An open connection to the database, for plain SQL or a DbContext. Dispose of it when done - connections are pooled.</summary>
     public SqliteConnection GetConnection()
     {
         var connection = new SqliteConnection(_connection);

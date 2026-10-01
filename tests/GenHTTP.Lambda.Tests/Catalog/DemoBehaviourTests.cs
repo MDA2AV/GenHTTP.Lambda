@@ -36,17 +36,21 @@ public sealed class DemoBehaviourTests
 
         var id = task["id"]!.GetValue<string>();
 
+        StringAssert.EndsWith(task["created"]!.GetValue<string>(), "Z", "a time comes back as the UTC it was written as");
+
         using var changed = await fixture.SendAsync(HttpMethod.Put, $"/lambda/demo-crud/tasks/{id}",
                                                     new { title = "Buy oat milk", notes = "", done = true }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.OK, changed.StatusCode);
         Assert.IsTrue((await Json(changed))["done"]!.GetValue<bool>());
 
-        using var found = await fixture.GetAsync("/lambda/demo-crud/tasks/?search=oat", "application/json");
+        using var found = await fixture.GetAsync("/lambda/demo-crud/tasks/?search=OAT", "application/json");
 
         var matches = JsonNode.Parse(await found.Content.ReadAsStringAsync())!.AsArray();
 
-        Assert.HasCount(1, matches, "search narrows the list down");
+        Assert.HasCount(1, matches, "search narrows the list down, whatever the case");
+
+        Assert.AreEqual("Buy oat milk", matches[0]!["title"]!.GetValue<string>());
 
         using var invalid = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-crud/tasks/", new { title = " " }, "application/json");
 
@@ -63,6 +67,29 @@ public sealed class DemoBehaviourTests
         using var specification = await fixture.GetAsync("/lambda/demo-crud/openapi.json");
 
         Assert.AreEqual(HttpStatusCode.OK, specification.StatusCode, "the API describes itself");
+    }
+
+    [TestMethod]
+    public async Task TheTaskListKeepsTheNewestTwoHundred()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedDemosAsync();
+
+        // the three it starts with, and two hundred more
+        for (var i = 0; i < 200; i++)
+        {
+            using var created = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-crud/tasks/", new { title = $"Task {i}", notes = "", done = false }, "application/json");
+
+            Assert.AreEqual(HttpStatusCode.Created, created.StatusCode);
+        }
+
+        using var listed = await fixture.GetAsync("/lambda/demo-crud/tasks/", "application/json");
+
+        var tasks = JsonNode.Parse(await listed.Content.ReadAsStringAsync())!.AsArray();
+
+        Assert.HasCount(200, tasks);
+        Assert.IsFalse(tasks.Any(t => t!["id"]!.GetValue<string>().StartsWith("welcome", StringComparison.Ordinal)), "the oldest went first");
     }
 
     [TestMethod]

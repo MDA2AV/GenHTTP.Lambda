@@ -294,9 +294,10 @@ are a rule apart in the row of sections.
 ### Databases
 
 Records - entries, accounts, orders, votes - go in the database: a SQLite file
-of the lambda's own, which its code opens a connection to and talks to in SQL.
-Its schema is migrations shipped with the version and applied by
-[Evolve][evolve] as the lambda starts:
+of the lambda's own, which its code opens a connection to and reads and writes
+through [Entity Framework Core][efcore] - or in plain SQL, where that is
+simpler. Its schema is migrations shipped with the version and applied by
+[Evolve][evolve] as the lambda starts, never Entity Framework's own:
 
 ```csharp
 // migrations/V1__Create_notes.sql: CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL);
@@ -307,23 +308,43 @@ using (var connection = Database.GetConnection())
 
 return Inline.Create().Get("count", () =>
 {
-    using var db = Database.GetConnection();
-    using var command = db.CreateCommand();
+    using var db = new Notes(Database.GetConnection());
 
-    command.CommandText = "SELECT count(*) FROM notes";
-
-    return (long)command.ExecuteScalar();
+    return db.Entries.Count();
 });
+
+public class Note
+{
+    public long Id { get; set; }
+
+    public string Text { get; set; }
+}
+
+// maps the table the migration made, on the connection it is handed
+public class Notes(SqliteConnection connection) : DbContext
+{
+    public DbSet<Note> Entries => Set<Note>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    protected override void OnModelCreating(ModelBuilder model) => model.Entity<Note>().ToTable("notes");
+}
 ```
 
 `Database.GetConnection()` hands out an open `SqliteConnection` of
-Microsoft.Data.Sqlite, taken from a pool, which the caller disposes of - one
-per request, never one shared between requests. `Microsoft.Data.Sqlite` and
-`EvolveDb` are imported in every file, like the GenHTTP modules. Agents are
-told to use it synchronously: the database is a file on the same machine, and
-the engine has an asynchronous model of its own that a blocking call here does
-not disturb. The demos all keep their records like this, `demo-crud` the
-plainest of them.
+Microsoft.Data.Sqlite, taken from a pool, which the caller disposes of - or a
+context it is handed, with `contextOwnsConnection: true` - one per request,
+never one shared between requests. The connection comes into the context
+from outside, because inside a `DbContext`, `Database` is the context's own
+(the compiler's message says so, and names `LambdaEnvironment.Database`).
+`Microsoft.Data.Sqlite`, `Microsoft.EntityFrameworkCore` and `EvolveDb` are
+imported in every file, like the GenHTTP modules. Agents are told to use it
+synchronously - `ToList` and `SaveChanges`, never `ToListAsync` or
+`SaveChangesAsync` - because SQLite answers synchronously whatever the method
+is called, and the engine has an asynchronous model of its own that a blocking
+call here does not disturb; this is said, not enforced. The demos all keep
+their records like this, `demo-crud` the plainest of them.
 
 - **Off until switched on.** Switching it on (the editor, `PUT …/data/database`,
   `enable_data`) makes it: an empty file, in write-ahead logging, so readers
@@ -333,11 +354,19 @@ plainest of them.
   against what is there now. A lambda created as a copy of a demo that keeps
   one starts with its own, switched on.
 - **The one file it opens.** A lambda does not make connections of its own.
-  The code guard refuses Entity Framework, `new SqliteConnection(...)` - also as
-  a target-typed `new(...)`, through an alias or a class derived from it, which
-  is asked of the compiler rather than read off the text - and the names that
-  would point a connection elsewhere or load native code into it
-  (`ConnectionString`, `LoadExtension`, `DbProviderFactories`, …). The
+  The code guard refuses `new SqliteConnection(...)` - also as a target-typed
+  `new(...)`, through an alias or a class derived from it, which is asked of
+  the compiler rather than read off the text - and the names that would point
+  a connection elsewhere or load native code into it (`ConnectionString`,
+  `SetConnectionString`, `LoadExtension`, `DbProviderFactories`, …). Of Entity
+  Framework, a lambda reaches the namespace a context is written in and the
+  three describing a model takes (`Metadata.Builders`, `ChangeTracking`,
+  `Storage.ValueConversion`), not its `Infrastructure`, `Storage`, `Internal`
+  or the rest, where a context's services and options are. `UseSqlite` is
+  refused with anything but a connection, and so are `EnsureCreated`,
+  `EnsureDeleted` and Entity Framework's `Migrate` - the schema is Evolve's -
+  all asked of the compiler. `dynamic` is refused too: it binds members at
+  runtime, which is everything the guard reads the code for, skipped. The
   connection it is handed carries an authorizer SQLite asks about every
   statement: `ATTACH` and `VACUUM INTO`, which reach other files, are refused,
   as are the pragmas that would point it at other directories or lift its
@@ -542,7 +571,9 @@ without this platform (`Services/Deployment/ProjectPacker.cs`):
 
 It references `GenHTTP.Full` - the internal engine, which runs wherever .NET
 does - at the version this server runs, so it behaves as the lambda did, and
-`Microsoft.Data.Sqlite` and `Evolve` only where the code uses them. Of the data,
+`Microsoft.Data.Sqlite`, `Microsoft.EntityFrameworkCore.Sqlite` and `Evolve`
+only where the code uses them - Entity Framework where it has a `DbContext`,
+at the release of the SQLite library for .NET 10. Of the data,
 the database comes along - copied with SQLite's backup, so it is whole even
 while the lambda writes to it, and any SQLite tool reads it - while the
 workspace starts empty and the values of the secrets stay here. `database/` is
@@ -1060,8 +1091,8 @@ in a feature, and the front end goes in the version, records in the database
 and uploaded files in the workspace, never the other way round - and an API key
 in the secrets, never in the code. Agents are steered to the database for
 anything they would otherwise keep in a JSON file: switched on with
-`enable_data`, its schema as Evolve migrations in `migrations/`, SQL with
-parameters on a connection per request, synchronously - and `read_database`
+`enable_data`, its schema as Evolve migrations in `migrations/`, a `DbContext`
+of Entity Framework Core on a connection per request, synchronously - and `read_database`
 to see that it worked. `read_lambda` also lists the open features, says which
 data the lambda has switched on, and names the secrets it keeps and the ones
 its code reads that are missing. An agent is steered to leave the value to the owner,
@@ -1322,3 +1353,4 @@ existing ones are never edited.
 
 [genhttp]: https://genhttp.org/
 [evolve]: https://evolve-db.netlify.app/
+[efcore]: https://learn.microsoft.com/ef/core/

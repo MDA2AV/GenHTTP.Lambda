@@ -647,14 +647,15 @@ export const editor = {
       empty: 'No tables yet',
       emptyText: 'The code makes them, with a migration in migrations/ that Evolve applies as the lambda starts. What it then keeps shows up here.',
       offTitle: 'The database is off',
-      offText: 'Switch it on to keep records the code reads and writes with SQL - entries, accounts, orders.',
+      offText: 'Switch it on to keep records the code reads and writes with Entity Framework Core or SQL - entries, accounts, orders.',
       offWanted: 'The code connects to the database, but it is switched off: whatever connects fails until it is on.',
       switchOn: 'Switch on',
       howTo: 'In the code',
       howToText: (code: (text: string) => Node) => (
         <>
-          {code('Database.GetConnection()')} opens a connection to it, and the migrations in {code('migrations/')} make its tables,
-          applied by Evolve. In a downloaded project it is the plain SQLite file {code('database/database.db')}.
+          {code('Database.GetConnection()')} opens a connection to it - for a {code('DbContext')} of Entity Framework Core, or for
+          SQL - and the migrations in {code('migrations/')} make its tables, applied by Evolve. In a downloaded project it is the
+          plain SQLite file {code('database/database.db')}.
         </>
       ),
       copy: 'Copy',

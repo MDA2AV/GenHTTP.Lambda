@@ -664,15 +664,15 @@ export const editor: EditorMessages = {
       empty: 'Noch keine Tabellen',
       emptyText: 'Der Code legt sie an – mit einer Migration in migrations/, die Evolve beim Start des Lambdas anwendet. Was es danach aufbewahrt, erscheint hier.',
       offTitle: 'Die Datenbank ist ausgeschaltet',
-      offText: 'Schalten Sie sie ein, um Datensätze aufzubewahren, die der Code mit SQL liest und schreibt – Einträge, Konten, Bestellungen.',
+      offText: 'Schalten Sie sie ein, um Datensätze aufzubewahren, die der Code mit Entity Framework Core oder SQL liest und schreibt – Einträge, Konten, Bestellungen.',
       offWanted: 'Der Code verbindet sich mit der Datenbank, aber sie ist ausgeschaltet: Alles, was sich verbindet, schlägt fehl, bis sie eingeschaltet ist.',
       switchOn: 'Einschalten',
       howTo: 'Im Code',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')} öffnet eine Verbindung zu ihr, und die Migrationen in {code('migrations/')} legen
-          ihre Tabellen an, angewendet von Evolve. In einem heruntergeladenen Projekt ist sie die einfache SQLite-Datei{' '}
-          {code('database/database.db')}.
+          {code('Database.GetConnection()')} öffnet eine Verbindung zu ihr – für einen {code('DbContext')} von Entity
+          Framework Core oder für SQL –, und die Migrationen in {code('migrations/')} legen ihre Tabellen an, angewendet von
+          Evolve. In einem heruntergeladenen Projekt ist sie die einfache SQLite-Datei {code('database/database.db')}.
         </>
       ),
       copy: 'Kopieren',

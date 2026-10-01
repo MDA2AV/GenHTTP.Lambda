@@ -6,19 +6,21 @@
 
 ## The tasks are a table in the database
 
-`tasks`, read and written by `TaskStore` in `Store.cs` with plain SQL. The database belongs to the lambda, not to a version, so a new version never loses the list. Every request asks the database rather than a copy in memory, so there is nothing to keep in step and nothing to load when the lambda starts.
+`tasks`, read and written by `TaskStore` in `Store.cs` through Entity Framework Core. The database belongs to the lambda, not to a version, so a new version never loses the list. Every request asks the database rather than a copy in memory, so there is nothing to keep in step and nothing to load when the lambda starts.
 
-- **A connection per call.** Every method opens one with `Database.GetConnection()` and disposes of it when it is done. Connections are pooled, so that costs nothing, and no connection is shared between two requests.
-- **Synchronous calls** - `ExecuteReader`, not `ExecuteReaderAsync`. The database is a file on the same machine, and the server has an asynchronous model of its own that a short blocking call does not disturb.
-- **Values are parameters** (`$title`), never pasted into the SQL, so what somebody types cannot change what a statement does. A search escapes `%` and `_`, so looking for "50%" finds "50%".
+- **A context maps the table, and makes nothing.** `TaskContext` says how the rows of `tasks` become `TaskItem`s. The table is the migration's (below), never Entity Framework's: it has no migrations of its own here and is never asked to create anything.
+- **A context per call, on a connection of its own.** Every method makes one with `new TaskContext(Database.GetConnection())` and disposes of it when it is done, which disposes of the connection as well (`contextOwnsConnection: true`). Connections are pooled, so that costs nothing, and no context is shared between two requests. The connection comes in from outside because inside a `DbContext`, `Database` is the context's own.
+- **Synchronous calls** - `ToList`, `Find`, `SaveChanges`, not their `Async` forms. The database is a file on the same machine, and the server has an asynchronous model of its own that a short blocking call does not disturb.
+- **Queries are LINQ**, so what somebody types goes in as a parameter and cannot change what a statement does. A search is `EF.Functions.Like` rather than `Contains`, so it ignores case as before, and escapes `%` and `_`, so looking for "50%" finds "50%".
+- **Reads do not track** (`AsNoTracking`); a change loads the task tracked, sets what changed and saves; removing is one `ExecuteDelete`, without reading the task first.
 - **At most 200 tasks**, the oldest going first, because anybody can write to the list. Adding a task and making room are one transaction: the task is not added if making room fails.
-- **Times are ISO 8601 text in UTC.** They sort as they should and read well in the editor's view of the database.
+- **Times are ISO 8601 text in UTC**, through a converter on the two time properties. They sort as they should, read well in the editor's view of the database, and come back as UTC - Entity Framework's own format for SQLite would drop the zone.
 
 ## The table is made by a migration, applied by Evolve
 
 `migrations/V1__Create_tasks.sql` makes the table. `lambda.cs` hands the folder to Evolve before it serves anything; Evolve applies the files this database has not had yet, in order and once each, and remembers which in a table of its own. It runs on every start and only ever changes what is new, and a feature tries a new migration on its copy of the data before it is put online.
 
-A migration that was applied is never edited - Evolve refuses to start when one changed - so a change to the table is the next file, `V2__...`. The data outlives every version, and a version put back online runs against a table a newer one migrated. So a change adds rather than alters: a new column gets a default, nothing an older version reads is dropped or renamed, and the queries name their columns rather than asking for `*`.
+A migration that was applied is never edited - Evolve refuses to start when one changed - so a change to the table is the next file, `V2__...`. The data outlives every version, and a version put back online runs against a table a newer one migrated. So a change adds rather than alters: a new column gets a default, and nothing an older version reads is dropped or renamed. An older version's context reads the columns it maps and no others, so a column it does not know is no trouble to it - and a new property on `TaskItem` is a migration adding its column first, since Entity Framework makes none.
 
 ## Problems are status codes with a message
 

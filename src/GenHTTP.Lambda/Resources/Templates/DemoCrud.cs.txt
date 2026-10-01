@@ -14,7 +14,7 @@
 //
 //   lambda.cs     this one: the wiring, and bringing the database up to date
 //   Tasks.cs      the API - a class whose methods are the routes
-//   Store.cs      the tasks in the database, in plain SQL
+//   Store.cs      the tasks in the database, through Entity Framework Core
 //   migrations/   the SQL that makes the table, applied once by Evolve
 //   web/          the front end, shipped with the code and served as it is
 // [demo]

@@ -34,35 +34,33 @@ using (var connection = Database.GetConnection())
 }
 
 // the lobby calls this whenever a game ends; the counts outlive a restart. One
-// row per outcome, counted up where it is: the database takes one write at a
-// time, so two games ending at once both count
+// row per outcome, counted up where it is
 void Record(string winner)
 {
-    using var db = Database.GetConnection();
-    using var command = db.CreateCommand();
+    var outcome = winner is "X" or "O" ? winner : "draw";
 
-    command.CommandText = "INSERT INTO outcomes (winner, games) VALUES ($winner, 1) ON CONFLICT (winner) DO UPDATE SET games = games + 1";
-    command.Parameters.AddWithValue("$winner", winner is "X" or "O" ? winner : "draw");
+    using var db = new GameContext(Database.GetConnection());
 
-    command.ExecuteNonQuery();
+    // the transaction takes the database's one writer's place before it reads,
+    // so two games ending at once cannot both find no row and both add one
+    using var transaction = db.Database.BeginTransaction();
+
+    // one UPDATE ... SET games = games + 1, without reading the row first
+    if (db.Outcomes.Where(o => o.Winner == outcome).ExecuteUpdate(s => s.SetProperty(o => o.Games, o => o.Games + 1)) == 0)
+    {
+        db.Outcomes.Add(new Outcome { Winner = outcome, Games = 1 });
+        db.SaveChanges();
+    }
+
+    transaction.Commit();
 }
 
 // how the games so far have ended, added up from the outcomes
 Stats Count()
 {
-    using var db = Database.GetConnection();
-    using var command = db.CreateCommand();
+    using var db = new GameContext(Database.GetConnection());
 
-    command.CommandText = "SELECT winner, games FROM outcomes";
-
-    using var reader = command.ExecuteReader();
-
-    var counts = new Dictionary<string, int>();
-
-    while (reader.Read())
-    {
-        counts[reader.GetString(0)] = reader.GetInt32(1);
-    }
+    var counts = db.Outcomes.ToDictionary(o => o.Winner, o => o.Games);
 
     return new Stats(counts.Values.Sum(), counts.GetValueOrDefault("X"), counts.GetValueOrDefault("O"), counts.GetValueOrDefault("draw"));
 }
@@ -76,3 +74,24 @@ return Layout.Create()
              .Add("play", Websocket.Reactive().Handler(lobby))
              .Add("api", api)
              .Add(Assets.App("web"));
+
+/// <summary>How many games ended one way: X, O or draw.</summary>
+public sealed class Outcome
+{
+    public string Winner { get; set; }
+
+    public int Games { get; set; }
+}
+
+/// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
+public sealed class GameContext(SqliteConnection connection) : DbContext
+{
+    public DbSet<Outcome> Outcomes => Set<Outcome>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    // the table is the migration's; this says how to read it
+    protected override void OnModelCreating(ModelBuilder model)
+        => model.Entity<Outcome>().ToTable("outcomes").HasKey(o => o.Winner);
+}

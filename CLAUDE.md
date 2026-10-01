@@ -154,16 +154,29 @@ the README.
   deletes it and the features' copies. Either switch restarts the lambda on its
   next request, so its startup migrations run against what is there.
 - **Schema by Evolve migrations** shipped as assets in `migrations/`, applied as
-  the lambda starts. A migration that was applied is never edited. Agents are
-  steered to the database for records, and to use it **synchronously** - the
-  Ioxide engine has its own async model; this is a hint, not enforced.
-- **Entity Framework Core is not allowed, and neither is any connection of the
-  lambda's own** (another file, the workspace, a connection string). The code
-  guard refuses them - making a `SqliteConnection` is checked on the
-  compilation, so a target-typed `new()` or a derived class is caught - and the
-  connection handed out carries an authorizer (`ConnectionGuard`) that refuses
-  `ATTACH`, `VACUUM INTO`, the directory pragmas and lifting `max_page_count`,
-  which is the quota. Keep both when touching either.
+  the lambda starts - never Entity Framework's migrations, `EnsureCreated` or
+  `Migrate`, which the code guard refuses. A migration that was applied is
+  never edited.
+- **Records through Entity Framework Core - decided.** A lambda writes a
+  `DbContext` of its own that maps the tables the migrations make, on the
+  connection it is handed: `new Records(Database.GetConnection())`, configured
+  with `UseSqlite(connection, contextOwnsConnection: true)`, one per request.
+  Plain SQL on the connection stays possible. The demos use EF Core, and agents
+  are steered to it. They are steered to use it **synchronously** - `ToList`,
+  `SaveChanges`, never the `Async` forms: SQLite answers synchronously anyway
+  and the Ioxide engine has its own async model. This is a hint, not enforced.
+- **No connection of the lambda's own** (another file, the workspace, a
+  connection string - EF's `UseSqlite(string)` included). The code guard
+  refuses them - making a `SqliteConnection` is checked on the compilation, so a
+  target-typed `new()` or a derived class is caught, and so is `UseSqlite`
+  without a connection - and the connection handed out carries an authorizer
+  (`ConnectionGuard`) that refuses `ATTACH`, `VACUUM INTO`, the directory
+  pragmas and lifting `max_page_count`, which is the quota. Of EF, only the
+  root namespace and `Metadata.Builders`, `ChangeTracking` and
+  `Storage.ValueConversion` are reachable - its `Infrastructure`, `Storage` and
+  `Internal` hold a context's services and options, and with them another
+  connection. `dynamic` is refused for the same reason: it binds members the
+  guard never sees. Keep all of this when touching any of it.
 - **Not encrypted - decided.** SQLite cannot encrypt; it takes replacing the
   SQLite of the whole process with a build that can (SQLite3 Multiple Ciphers
   was tried: well kept, but one maintainer and a small .NET package, while
@@ -241,8 +254,8 @@ New functionality is developed in a **feature** (a *draft* in the editor):
   runs, the default hosting snippet (`Defaults()`, no port, `RunAsync()`, no
   console output of our own), the snippet in a static `Project` class returned
   by `Project.Create()`, the other files named the .NET way, everything that
-  stands in for the platform in `Platform/`, and a `Dockerfile`. SQLite and
-  Evolve are referenced only where the code uses them, and the database comes
+  stands in for the platform in `Platform/`, and a `Dockerfile`. SQLite, EF Core
+  and Evolve are referenced only where the code uses them, and the database comes
   along in `database/`. `Program.cs`
   opens with a short note that it was a lambda on genhttp.dev, its metadata,
   and a link to the GenHTTP documentation. A test builds the export of every
@@ -300,7 +313,8 @@ how to write apps and to give them a good starting point.
   it makes sense**, so agents learn it by reading them. Every demo has the three
   pages of its documentation and tests and a script its tests run
   (`EveryDemoSaysWhatItIsWhyAndHowItIsTested`); a new demo gets them too. They
-  keep their records in the database, migrated with Evolve, and files
+  keep their records in the database, migrated with Evolve and read and
+  written through Entity Framework Core, and files
   (`demo-files`' uploads) in the workspace; the seeder switches the database on
   (`LambdaDemo.Database`), and a copy starts with one of its own. A demo that
   reads a secret is given a random value by the seeder (`LambdaDemo.Secrets`)

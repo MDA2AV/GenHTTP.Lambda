@@ -304,8 +304,9 @@ export const guide: Messages['guide'] = {
   database: (k) => (
     <>
       Le voci (messaggi, account, ordini, voti) vanno nel {k.b('database')}: un database SQLite tutto della lambda, da
-      attivare in {k.b('Dati')}. Il codice apre una connessione con {k.code('Database.GetConnection()')} e gli parla in
-      SQL:
+      attivare in {k.b('Dati')}. Il codice apre una connessione con {k.code('Database.GetConnection()')} e legge e
+      scrive i dati tramite {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, con un contesto
+      tutto suo che mappa le tabelle:
     </>
   ),
   database2: (k) => (
@@ -325,9 +326,9 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Apri una connessione dove ti serve e poi rilasciala, e usala in modo sincrono: {k.code('ExecuteReader')}, non{' '}
-      {k.code('ExecuteReaderAsync')}. I valori entrano come parametri, mai dentro l’SQL. La demo{' '}
-      {k.link('/editor/demo-crud', 'demo-crud')} fa tutto questo.
+      Crea un contesto dove ti serve e poi rilascialo, e usalo in modo sincrono: {k.code('ToList')} e{' '}
+      {k.code('SaveChanges')}, non {k.code('ToListAsync')} e {k.code('SaveChangesAsync')}. Le tabelle le creano le
+      migrazioni, mai Entity Framework. La demo {k.link('/editor/demo-crud', 'demo-crud')} fa tutto questo.
     </>
   ),
 

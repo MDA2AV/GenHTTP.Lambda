@@ -48,9 +48,10 @@ Left out: hashing such an account again, with the pepper, when it next signs in 
 
 ## Accounts and sessions are two tables in the database
 
-`accounts` and `sessions`, made by `migrations/V1__Create_accounts.sql` - which `lambda.cs` applies with Evolve before it serves anything, as `demo-crud` explains - and read and written by `Accounts` with plain SQL. The database belongs to the lambda, not to a version, so a new version neither loses an account nor signs anybody out. Every request asks it: a connection per call, used synchronously, the values as parameters.
+`accounts` and `sessions`, made by `migrations/V1__Create_accounts.sql` - which `lambda.cs` applies with Evolve before it serves anything, as `demo-crud` explains - and read and written by `Accounts` through Entity Framework Core. The database belongs to the lambda, not to a version, so a new version neither loses an account nor signs anybody out. Every request asks it: a context on a connection per call, used synchronously - as in `demo-crud`.
 
-- **The table decides who gets a name.** The account is the key, and a registration is an `INSERT ... ON CONFLICT DO NOTHING`: of two registrations of one name at the same moment exactly one gets it, without a lock of the app's own.
+- **The context maps, the migration makes.** `MemberContext` maps the two tables onto `Account` and `StoredSession`, with the session's account as a navigation (`Owner`), so finding who a token signs in is a query that follows it rather than a join written by hand. Every `DateTime` is kept as ISO 8601 text in UTC, by one converter for all of them (`ConfigureConventions`).
+- **The table decides who gets a name.** The account is the key, and a registration that finds it taken fails to save - SQLite's constraint, which `Register` answers with 409: of two registrations of one name at the same moment exactly one gets it, without a lock of the app's own.
 - **A session belongs to its account** (`REFERENCES accounts ON DELETE CASCADE`), so an account that is forgotten takes its sessions along, and a session is only good while its account is there.
 - **At most 300 accounts**, the oldest forgotten first, because anybody can register on a demo. A lambda of your own would rather refuse than forget somebody.
 - **Only `lambda.cs` touches `Secret`.** `Accounts` is handed a function that reads the pepper, so it does not care where the pepper comes from.

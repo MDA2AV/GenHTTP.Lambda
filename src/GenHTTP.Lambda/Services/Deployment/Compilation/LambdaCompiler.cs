@@ -131,8 +131,10 @@ internal static class LambdaCompiler
         );
 
         // what needs the compiler to tell: a connection made without naming
-        // its type, and a task waited for rather than awaited
-        List<CompilationDiagnostic> constructed = [.. CodeGuard.InspectConstruction(compilation), .. CodeGuard.InspectWaiting(compilation)];
+        // its type, a task waited for rather than awaited, and a context of
+        // Entity Framework that is not on the lambda's connection
+        List<CompilationDiagnostic> constructed = [.. CodeGuard.InspectConstruction(compilation), .. CodeGuard.InspectWaiting(compilation),
+                                                   .. CodeGuard.InspectEntityFramework(compilation)];
 
         if (constructed.Count > 0)
         {
@@ -311,6 +313,10 @@ internal static class LambdaCompiler
         // module declares under that name, and the raw message says nothing about why
         "CS0117" when MeantTheLambdaAssets(diagnostic) => diagnostic.GetMessage()
             + ". Outside the top-level code of lambda.cs, Assets is the Files module's type; what the lambda shipped is LambdaEnvironment.Assets.",
+        // inside a DbContext, Database is the context's own, and the raw
+        // message says nothing about the lambda's of the same name
+        "CS1061" or "CS0120" when MeantTheLambdaDatabase(diagnostic) => diagnostic.GetMessage()
+            + ". Inside a DbContext, Database is the context's own: open the connection where the context is made and hand it in - new Records(Database.GetConnection()) - or write LambdaEnvironment.Database.GetConnection().",
         _ => diagnostic.GetMessage()
     };
 
@@ -342,6 +348,18 @@ internal static class LambdaCompiler
 
         return message.StartsWith("'Assets' does not contain a definition for '", StringComparison.Ordinal)
             && AssetMembers.Any(member => message.EndsWith($"'{member}'", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Whether a diagnostic is about reaching the lambda's database through
+    /// the property of a context that shares its name.
+    /// </summary>
+    private static bool MeantTheLambdaDatabase(Diagnostic diagnostic)
+    {
+        var message = diagnostic.GetMessage();
+
+        return message.StartsWith("'DatabaseFacade' does not contain a definition for 'GetConnection'", StringComparison.Ordinal)
+            || message.Contains("'DbContext.Database'", StringComparison.Ordinal);
     }
 
     private sealed record LoadedLambda(Assembly Assembly, string Scope);

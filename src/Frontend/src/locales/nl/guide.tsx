@@ -307,7 +307,9 @@ export const guide: Messages['guide'] = {
     <>
       Records – berichten, accounts, bestellingen, stemmen – horen in de {k.b('database')}: een eigen
       SQLite-database van de lambda, die je aanzet onder {k.b('Data')}. De code opent een verbinding met{' '}
-      {k.code('Database.GetConnection()')} en praat er in SQL mee:
+      {k.code('Database.GetConnection()')} en leest en schrijft erin via{' '}
+      {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, met een eigen context die de tabellen
+      mapt:
     </>
   ),
   database2: (k) => (
@@ -327,9 +329,10 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Open een verbinding waar je hem nodig hebt en sluit hem daarna weer, en gebruik hem synchroon:{' '}
-      {k.code('ExecuteReader')}, niet {k.code('ExecuteReaderAsync')}. Waarden gaan erin als parameters, nooit in de SQL
-      zelf. De demo {k.link('/editor/demo-crud', 'demo-crud')} doet het allemaal voor.
+      Maak een context waar je hem nodig hebt en ruim hem daarna weer op, en gebruik hem synchroon:{' '}
+      {k.code('ToList')} en {k.code('SaveChanges')}, niet {k.code('ToListAsync')} en {k.code('SaveChangesAsync')}. De
+      tabellen worden gemaakt door de migraties, nooit door Entity Framework. De demo{' '}
+      {k.link('/editor/demo-crud', 'demo-crud')} doet het allemaal voor.
     </>
   ),
 

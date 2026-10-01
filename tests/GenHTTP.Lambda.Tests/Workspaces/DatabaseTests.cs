@@ -66,6 +66,49 @@ public sealed class DatabaseTests
 
     private const string Migration = "CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL);";
 
+    /// <summary>
+    /// The same notes, read and written through a context of Entity Framework
+    /// Core that maps the table the migration makes.
+    /// </summary>
+    private const string ContextNotes = """
+        using (var connection = Database.GetConnection())
+        {
+            new Evolve(connection) { Locations = [Assets.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+        }
+
+        return Inline.Create()
+                     .Get("notes", () =>
+                     {
+                         using var db = new Notes(Database.GetConnection());
+
+                         return string.Join(",", db.Entries.AsNoTracking().OrderBy(n => n.Id).Select(n => n.Text).ToList());
+                     })
+                     .Get("add", (string text) =>
+                     {
+                         using var db = new Notes(Database.GetConnection());
+
+                         db.Entries.Add(new Note { Text = text });
+
+                         return db.SaveChanges().ToString();
+                     });
+
+        public class Note
+        {
+            public long Id { get; set; }
+
+            public string Text { get; set; }
+        }
+
+        public class Notes(SqliteConnection connection) : DbContext
+        {
+            public DbSet<Note> Entries => Set<Note>();
+
+            protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseSqlite(connection, contextOwnsConnection: true);
+
+            protected override void OnModelCreating(ModelBuilder model) => model.Entity<Note>().ToTable("notes");
+        }
+        """;
+
     [TestMethod]
     public async Task TheDatabaseIsOffUntilSomebodySwitchesItOn()
     {
@@ -197,8 +240,20 @@ public sealed class DatabaseTests
             "var c = Database.GetConnection();\nc.Close();\nc.ConnectionString = \"Data Source=other.db\";\nreturn Inline.Create();",
             "var c = Database.GetConnection();\nc.LoadExtension(\"evil\");\nreturn Inline.Create();",
             "var f = System.Data.Common.DbProviderFactories.GetFactory(Database.GetConnection());\nreturn Inline.Create();",
-            "using Microsoft.EntityFrameworkCore;\nreturn Inline.Create();",
-            "var e = System.Linq.Expressions.Expression.Constant(1);\nreturn Inline.Create();"
+            "var e = System.Linq.Expressions.Expression.Constant(1);\nreturn Inline.Create();",
+            // Entity Framework, on anything but the connection it is handed
+            "var o = new DbContextOptionsBuilder().UseSqlite(\"Data Source=other.db\");\nreturn Inline.Create();",
+            "var o = new DbContextOptionsBuilder().UseSqlite();\nreturn Inline.Create();",
+            "using var db = new DbContext(new DbContextOptionsBuilder().UseSqlite(Database.GetConnection(), true).Options);\ndb.Database.SetConnectionString(\"Data Source=other.db\");\nreturn Inline.Create();",
+            "return Inline.Create();\n\nclass Records : DbContext { protected override void OnConfiguring(DbContextOptionsBuilder o) => o.UseSqlite(\"Data Source=other.db\"); }",
+            // and its internals, where a context's services and options are
+            "using Microsoft.EntityFrameworkCore.Infrastructure;\nreturn Inline.Create();",
+            "using Internals = Microsoft.EntityFrameworkCore.Infrastructure;\nreturn Inline.Create();",
+            "using Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal;\nreturn Inline.Create();",
+            "var s = Microsoft.EntityFrameworkCore.Infrastructure.AccessorExtensions.GetService<object>(null);\nreturn Inline.Create();",
+            "global::Microsoft.EntityFrameworkCore.Storage.IRelationalConnection c = null;\nreturn Inline.Create();",
+            // and what binds at runtime, around all of the above
+            "dynamic o = new DbContextOptionsBuilder();\nreturn Inline.Create();"
         ];
 
         foreach (var attempt in attempts)
@@ -209,6 +264,126 @@ public sealed class DatabaseTests
 
             Assert.IsFalse(outcome.Success, attempt);
         }
+    }
+
+    [TestMethod]
+    public async Task ALambdaKeepsItsRecordsWithEntityFramework()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("notes-in-context");
+
+        await EnableAsync(fixture, lambda.PrivateKey);
+
+        await SaveAsync(fixture, lambda.PrivateKey, ContextNotes, ("migrations/V1__Notes.sql", Migration));
+
+        Assert.AreEqual("1", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=milk"));
+        Assert.AreEqual("1", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=eggs"));
+
+        Assert.AreEqual("milk,eggs", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/notes"));
+
+        var store = await StoreAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual(2, store.Items, "the table the migration made, and Evolve's history - nothing Entity Framework made of its own");
+
+        // it leaves with its code, and the project references what it uses
+        using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/export");
+
+        using var archive = new ZipArchive(await response.Content.ReadAsStreamAsync());
+
+        string Read(string name)
+        {
+            using var reader = new StreamReader(archive.GetEntry($"notes-in-context/{name}")!.Open());
+
+            return reader.ReadToEnd();
+        }
+
+        Assert.Contains("<PackageReference Include=\"Microsoft.EntityFrameworkCore.Sqlite\"", Read("notes-in-context.csproj"));
+        Assert.Contains("global using Microsoft.EntityFrameworkCore;", Read("Platform/Usings.cs"));
+    }
+
+    [TestMethod]
+    public async Task WhatDescribingAModelTakesIsThere()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var outcome = await fixture.Deployments.ValidateAsync("""
+            using Microsoft.EntityFrameworkCore.ChangeTracking;
+            using Microsoft.EntityFrameworkCore.Metadata.Builders;
+            using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
+            return Inline.Create().Get(() =>
+            {
+                using var db = new Records(Database.GetConnection());
+
+                EntityEntry<Note> entry = db.Entry(new Note());
+
+                return Microsoft.EntityFrameworkCore.EF.IsDesignTime ? "design" : entry.State.ToString();
+            });
+
+            public class Note
+            {
+                public long Id { get; set; }
+
+                public DateTime Written { get; set; }
+            }
+
+            public class NoteMapping : IEntityTypeConfiguration<Note>
+            {
+                public void Configure(EntityTypeBuilder<Note> note) => note.ToTable("notes").Property(n => n.Written).HasConversion(new DateTimeToStringConverter());
+            }
+
+            public class Records(SqliteConnection connection) : DbContext
+            {
+                protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseSqlite(connection, contextOwnsConnection: true);
+
+                protected override void OnModelCreating(ModelBuilder model) => model.ApplyConfiguration(new NoteMapping());
+            }
+            """);
+
+        Assert.IsTrue(outcome.Success, string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
+    }
+
+    [TestMethod]
+    public async Task EntityFrameworkLeavesTheSchemaToEvolve()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        string[] attempts = ["EnsureCreated()", "EnsureDeleted()", "Migrate()"];
+
+        foreach (var attempt in attempts)
+        {
+            var outcome = await fixture.Deployments.ValidateAsync($$"""
+                using (var db = new DbContext(new DbContextOptionsBuilder().UseSqlite(Database.GetConnection(), true).Options))
+                {
+                    db.Database.{{attempt}};
+                }
+
+                return Inline.Create();
+                """);
+
+            Assert.IsFalse(outcome.Success, attempt);
+            Assert.IsTrue(outcome.Diagnostics.Any(d => d.Message.Contains("Evolve", StringComparison.Ordinal)), $"{attempt}: refused, pointing at Evolve");
+        }
+    }
+
+    [TestMethod]
+    public async Task InsideAContextTheLambdasDatabaseIsNamedForWhatItIs()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        // inside a DbContext, Database is the context's own - the message says so
+        var outcome = await fixture.Deployments.ValidateAsync("""
+            return Inline.Create();
+
+            class Records : DbContext
+            {
+                protected override void OnConfiguring(DbContextOptionsBuilder options) => options.UseSqlite(Database.GetConnection(), true);
+            }
+            """);
+
+        Assert.IsFalse(outcome.Success);
+        Assert.IsTrue(outcome.Diagnostics.Any(d => d.Message.Contains("Inside a DbContext", StringComparison.Ordinal)), string.Join("; ", outcome.Diagnostics.Select(d => d.Message)));
     }
 
     [TestMethod]
@@ -508,6 +683,8 @@ public sealed class DatabaseTests
 
         Assert.Contains("<PackageReference Include=\"Microsoft.Data.Sqlite\"", Read("notes-to-go.csproj"));
         Assert.Contains("<PackageReference Include=\"Evolve\"", Read("notes-to-go.csproj"), "it migrates with Evolve");
+        Assert.DoesNotContain("EntityFrameworkCore", Read("notes-to-go.csproj"), "plain SQL needs no Entity Framework");
+        Assert.DoesNotContain("EntityFrameworkCore", Read("Platform/Usings.cs"), "nor its import, which would not compile without it");
         Assert.Contains("public SqliteConnection GetConnection()", Read("Platform/Database.cs"));
         Assert.Contains("global using EvolveDb;", Read("Platform/Usings.cs"));
         Assert.Contains("database/", Read(".gitignore"), "what the app keeps is nobody's source");

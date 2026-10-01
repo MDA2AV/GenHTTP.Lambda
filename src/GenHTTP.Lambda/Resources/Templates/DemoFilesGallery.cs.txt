@@ -8,8 +8,9 @@
 //
 // The files go into the workspace, through the few things this class is handed
 // to do with it; the list of them - names, types, who may remove which - is a
-// table in the database. Every call opens a connection of its own, uses it
-// synchronously and lets it go.
+// table in the database, read and written through Entity Framework Core. Every
+// call makes a context on a connection of its own, uses it synchronously and
+// lets it go.
 
 using System.Globalization;
 using System.Security.Cryptography;
@@ -23,6 +24,48 @@ public record Upload(string Id, string Name, long Size, string Type, DateTime Up
 
 /// <summary>What the uploader gets back: the entry, and the key to remove it with.</summary>
 public record Uploaded(Upload Upload, string Key);
+
+/// <summary>An upload as the table holds it: what everybody sees, and the hash of its key.</summary>
+public sealed class UploadEntry
+{
+    public string Id { get; set; }
+
+    public string Name { get; set; }
+
+    public long Size { get; set; }
+
+    public string Type { get; set; }
+
+    public DateTime Uploaded { get; set; }
+
+    public string Url { get; set; }
+
+    public string KeyHash { get; set; }
+
+    /// <summary>What everybody may see of it - never the hash.</summary>
+    public Upload Public() => new(Id, Name, Size, Type, Uploaded, Url);
+}
+
+/// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
+public sealed class GalleryContext(SqliteConnection connection) : DbContext
+{
+    public DbSet<UploadEntry> Uploads => Set<UploadEntry>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    protected override void OnModelCreating(ModelBuilder model)
+    {
+        // the table and its columns are the migration's; this only maps them
+        var upload = model.Entity<UploadEntry>().ToTable("uploads");
+
+        upload.Property(u => u.KeyHash).HasColumnName("key_hash");
+
+        // ISO 8601 text in UTC, which sorts as it should and reads well
+        upload.Property(u => u.Uploaded).HasConversion(u => u.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+                                                       u => DateTime.Parse(u, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind));
+    }
+}
 
 public sealed class Gallery(Storage storage)
 {
@@ -46,22 +89,12 @@ public sealed class Gallery(Storage storage)
 
     public List<Upload> List()
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new GalleryContext(Database.GetConnection());
 
-        command.CommandText = "SELECT id, name, size, type, uploaded, url FROM uploads ORDER BY uploaded DESC";
-
-        using var reader = command.ExecuteReader();
-
-        var uploads = new List<Upload>();
-
-        while (reader.Read())
-        {
-            uploads.Add(new Upload(reader.GetString(0), reader.GetString(1), reader.GetInt64(2), reader.GetString(3),
-                                   DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind), reader.GetString(5)));
-        }
-
-        return uploads;
+        // a projection reads the columns it names - the hash stays in the table
+        return db.Uploads.OrderByDescending(u => u.Uploaded)
+                         .Select(u => new Upload(u.Id, u.Name, u.Size, u.Type, u.Uploaded, u.Url))
+                         .ToList();
     }
 
     public async Task<Uploaded> UploadAsync(string name, Stream body)
@@ -79,6 +112,7 @@ public sealed class Gallery(Storage storage)
                 $"Only {string.Join(", ", Types.Keys)} files can be uploaded here.");
         }
 
+        // the body is awaited: it comes over the network, which the database does not
         var content = await ReadAsync(body);
 
         if (content.Length == 0)
@@ -93,63 +127,51 @@ public sealed class Gallery(Storage storage)
         // the stored name is ours; the uploader's name is only ever shown as text
         var stored = id + (extension == ".jpeg" ? ".jpg" : extension);
 
-        var upload = new Upload(id, name.Length > 80 ? name[..80] : name, content.Length, type, DateTime.UtcNow, $"files/{stored}");
+        var entry = new UploadEntry
+        {
+            Id = id,
+            Name = name.Length > 80 ? name[..80] : name,
+            Size = content.Length,
+            Type = type,
+            Uploaded = DateTime.UtcNow,
+            Url = $"files/{stored}",
+            KeyHash = Hash(key)
+        };
 
         // the file first: an entry without its file would be a broken picture
         storage.WriteBytes($"uploads/{stored}", content);
 
-        using var db = Database.GetConnection();
+        using var db = new GalleryContext(Database.GetConnection());
 
-        using (var insert = db.CreateCommand())
-        {
-            insert.CommandText = "INSERT INTO uploads (id, name, size, type, uploaded, url, key_hash) VALUES ($id, $name, $size, $type, $uploaded, $url, $key)";
-            insert.Parameters.AddWithValue("$id", upload.Id);
-            insert.Parameters.AddWithValue("$name", upload.Name);
-            insert.Parameters.AddWithValue("$size", upload.Size);
-            insert.Parameters.AddWithValue("$type", upload.Type);
-            insert.Parameters.AddWithValue("$uploaded", upload.Uploaded.ToString("O", CultureInfo.InvariantCulture));
-            insert.Parameters.AddWithValue("$url", upload.Url);
-            insert.Parameters.AddWithValue("$key", Hash(key));
-
-            insert.ExecuteNonQuery();
-        }
+        db.Uploads.Add(entry);
 
         // the oldest go, file and entry, once there are too many
-        foreach (var old in Oldest(db))
+        foreach (var old in db.Uploads.OrderByDescending(u => u.Uploaded).Skip(MaxUploads - 1).ToList())
         {
-            Drop(db, old.Id, old.Url);
+            Drop(db, old);
         }
 
-        return new Uploaded(upload, key);
+        // the new entry and the old ones going are one SaveChanges, and so one transaction
+        db.SaveChanges();
+
+        return new Uploaded(entry.Public(), key);
     }
 
     public void Remove(string id, string key)
     {
-        using var db = Database.GetConnection();
+        using var db = new GalleryContext(Database.GetConnection());
 
-        string url, keyHash;
+        var entry = db.Uploads.Find(id ?? "")
+                 ?? throw new ProviderException(ResponseStatus.NotFound, "There is no such upload.");
 
-        using (var find = db.CreateCommand())
-        {
-            find.CommandText = "SELECT url, key_hash FROM uploads WHERE id = $id";
-            find.Parameters.AddWithValue("$id", id ?? "");
-
-            using var reader = find.ExecuteReader();
-
-            if (!reader.Read())
-            {
-                throw new ProviderException(ResponseStatus.NotFound, "There is no such upload.");
-            }
-
-            (url, keyHash) = (reader.GetString(0), reader.GetString(1));
-        }
-
-        if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(keyHash), Encoding.UTF8.GetBytes(Hash(key ?? ""))))
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(entry.KeyHash), Encoding.UTF8.GetBytes(Hash(key ?? ""))))
         {
             throw new ProviderException(ResponseStatus.Forbidden, "Only whoever uploaded this can remove it.");
         }
 
-        Drop(db, id, url);
+        Drop(db, entry);
+
+        db.SaveChanges();
     }
 
     /// <summary>
@@ -178,36 +200,14 @@ public sealed class Gallery(Storage storage)
         return buffer.ToArray();
     }
 
-    /// <summary>The uploads beyond the newest ones kept.</summary>
-    private static List<(string Id, string Url)> Oldest(SqliteConnection db)
+    /// <summary>
+    /// Removes an entry with the next SaveChanges, and its file straight away.
+    /// </summary>
+    private void Drop(GalleryContext db, UploadEntry entry)
     {
-        using var command = db.CreateCommand();
+        db.Uploads.Remove(entry);
 
-        command.CommandText = "SELECT id, url FROM uploads ORDER BY uploaded DESC LIMIT -1 OFFSET $keep";
-        command.Parameters.AddWithValue("$keep", MaxUploads);
-
-        using var reader = command.ExecuteReader();
-
-        var oldest = new List<(string, string)>();
-
-        while (reader.Read())
-        {
-            oldest.Add((reader.GetString(0), reader.GetString(1)));
-        }
-
-        return oldest;
-    }
-
-    private void Drop(SqliteConnection db, string id, string url)
-    {
-        using var command = db.CreateCommand();
-
-        command.CommandText = "DELETE FROM uploads WHERE id = $id";
-        command.Parameters.AddWithValue("$id", id);
-
-        command.ExecuteNonQuery();
-
-        storage.Delete(url.Replace("files/", "uploads/"));
+        storage.Delete(entry.Url.Replace("files/", "uploads/"));
     }
 
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));

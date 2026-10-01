@@ -290,34 +290,39 @@ using (var connection = Database.GetConnection())
 return Inline.Create()
              .Get("notes", () =>
              {
-                 using var db = Database.GetConnection();
-                 using var command = db.CreateCommand();
+                 using var db = new Notes(Database.GetConnection());
 
-                 command.CommandText = "SELECT text FROM notes ORDER BY id";
-
-                 using var reader = command.ExecuteReader();
-
-                 var notes = new List<string>();
-
-                 while (reader.Read())
-                 {
-                     notes.Add(reader.GetString(0));
-                 }
-
-                 return notes;
+                 return db.Entries.OrderBy(n => n.Id).Select(n => n.Text).ToList();
              })
-             .Post("notes", (Note note) =>
+             .Post("notes", (NoteInput input) =>
              {
-                 using var db = Database.GetConnection();
-                 using var command = db.CreateCommand();
+                 using var db = new Notes(Database.GetConnection());
 
-                 command.CommandText = "INSERT INTO notes (text) VALUES ($text)";
-                 command.Parameters.AddWithValue("$text", note.Text);
+                 db.Entries.Add(new Note { Text = input.Text });
 
-                 return command.ExecuteNonQuery();
+                 return db.SaveChanges();
              });
 
-record Note(string Text);`} />
+record NoteInput(string Text);
+
+class Note
+{
+    public long Id { get; set; }
+
+    public string Text { get; set; }
+}
+
+// maps the table the migration made, on the connection it is handed
+class Notes(SqliteConnection connection) : DbContext
+{
+    public DbSet<Note> Entries => Set<Note>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    protected override void OnModelCreating(ModelBuilder model)
+        => model.Entity<Note>().ToTable("notes");
+}`} />
 
             <p>{said.database2(k)}</p>
             <p>{said.database3(k)}</p>

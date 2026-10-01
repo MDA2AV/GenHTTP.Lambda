@@ -669,15 +669,15 @@ export const editor: EditorMessages = {
       empty: 'Nog geen tabellen',
       emptyText: 'De code maakt ze aan, met een migratie in migrations/ die Evolve toepast als de lambda start. Wat hij daarna bewaart, verschijnt hier.',
       offTitle: 'De database staat uit',
-      offText: 'Zet hem aan om records te bewaren die de code met SQL leest en schrijft: inzendingen, accounts, bestellingen.',
+      offText: 'Zet hem aan om records te bewaren die de code met Entity Framework Core of SQL leest en schrijft: inzendingen, accounts, bestellingen.',
       offWanted: 'De code maakt verbinding met de database, maar die staat uit: alles wat verbinding maakt, mislukt tot je hem aanzet.',
       switchOn: 'Aanzetten',
       howTo: 'In de code',
       howToText: (code) => (
         <>
-          {code('Database.GetConnection()')} opent er een verbinding mee, en de migraties in {code('migrations/')} maken de
-          tabellen aan, toegepast door Evolve. In een gedownload project is het gewoon het SQLite-bestand{' '}
-          {code('database/database.db')}.
+          {code('Database.GetConnection()')} opent er een verbinding mee – voor een {code('DbContext')} van Entity
+          Framework Core, of voor SQL – en de migraties in {code('migrations/')} maken de tabellen aan, toegepast door
+          Evolve. In een gedownload project is het gewoon het SQLite-bestand {code('database/database.db')}.
         </>
       ),
       copy: 'Kopiëren',

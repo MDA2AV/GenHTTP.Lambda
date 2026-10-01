@@ -38,8 +38,9 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// on the platform.
 ///
 /// A lambda with a database takes it along: what the app kept is written into
-/// database/, and the project references SQLite - and Evolve, where the code
-/// migrates with it. One without a database references neither.
+/// database/, and the project references SQLite - Entity Framework Core where
+/// the code keeps its records with it, and Evolve where the code migrates
+/// with it. One without a database references none of them.
 ///
 /// The same project is what a lambda whose owner published its source is read
 /// as on /source, and downloaded as from there - without the database, which
@@ -84,6 +85,12 @@ public static class ProjectPacker
     private const string SqlitePackage = "Microsoft.Data.Sqlite";
 
     private const string SqliteVersion = "10.0.12";
+
+    /// <summary>
+    /// What the project keeps its records with, where the code uses it: Entity
+    /// Framework Core on SQLite, from the same release as the library above.
+    /// </summary>
+    private const string EntityFrameworkPackage = "Microsoft.EntityFrameworkCore.Sqlite";
 
     /// <summary>
     /// What migrates the database, at the version the platform runs.
@@ -164,9 +171,12 @@ public static class ProjectPacker
 
         var evolve = data && code.Any(f => f.Code.Contains("Evolve", StringComparison.Ordinal));
 
+        // a context of its own is how code uses Entity Framework
+        var entities = data && code.Any(f => f.Code.Contains("DbContext", StringComparison.Ordinal));
+
         using (var archive = new ZipArchive(target, ZipArchiveMode.Create, true))
         {
-            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders, data, evolve));
+            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders, data, entities, evolve));
             Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits, folders, data ? database != null : null));
             Write(archive, $"{name}/Project.cs", Project(snippet, awaits));
 
@@ -186,7 +196,7 @@ public static class ProjectPacker
                 Write(archive, $"{name}/{Outside(file.Name)}", file.Bytes);
             }
 
-            Write(archive, $"{name}/Platform/Usings.cs", Usings(data, evolve));
+            Write(archive, $"{name}/Platform/Usings.cs", Usings(data, entities, evolve));
             Write(archive, $"{name}/Platform/LambdaEnvironment.cs", Resource("LambdaEnvironment.cs"));
             Write(archive, $"{name}/Platform/Folder.cs", Resource("Folder.cs"));
             Write(archive, $"{name}/Platform/Secrets.cs", Resource("Secrets.cs"));
@@ -239,8 +249,9 @@ public static class ProjectPacker
     /// </remarks>
     /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
     /// <param name="data">Whether the code uses a database, which takes SQLite</param>
+    /// <param name="entities">Whether it keeps its records with Entity Framework Core</param>
     /// <param name="evolve">Whether it migrates it with Evolve</param>
-    private static string Csproj(bool assets, IReadOnlyList<string> context, bool data, bool evolve)
+    private static string Csproj(bool assets, IReadOnlyList<string> context, bool data, bool entities, bool evolve)
     {
         var copy = assets ? "\n\n    <ItemGroup>\n        <None Update=\"assets/**\" CopyToOutputDirectory=\"PreserveNewest\" />\n    </ItemGroup>" : string.Empty;
 
@@ -250,6 +261,8 @@ public static class ProjectPacker
         }
 
         var sqlite = data ? $"\n        <PackageReference Include=\"{SqlitePackage}\" Version=\"{SqliteVersion}\" />" : string.Empty;
+
+        var records = entities ? $"\n        <PackageReference Include=\"{EntityFrameworkPackage}\" Version=\"{SqliteVersion}\" />" : string.Empty;
 
         var migrations = evolve ? $"\n        <PackageReference Include=\"{EvolvePackage}\" Version=\"{EvolveVersion}\" />" : string.Empty;
 
@@ -262,7 +275,7 @@ public static class ProjectPacker
                 </PropertyGroup>
 
                 <ItemGroup>
-                    <PackageReference Include="{Package}" Version="{FrameworkVersion}" />{sqlite}{migrations}
+                    <PackageReference Include="{Package}" Version="{FrameworkVersion}" />{sqlite}{records}{migrations}
                 </ItemGroup>{copy}
 
             </Project>
@@ -451,11 +464,11 @@ public static class ProjectPacker
     /// here, so they compile as they are.
     /// </remarks>
     /// <remarks>
-    /// SQLite and Evolve only where the project references them, which is
-    /// where the code uses them - an import of a package that is not there
-    /// does not compile.
+    /// SQLite, Entity Framework Core and Evolve only where the project
+    /// references them, which is where the code uses them - an import of a
+    /// package that is not there does not compile.
     /// </remarks>
-    private static string Usings(bool data, bool evolve)
+    private static string Usings(bool data, bool entities, bool evolve)
     {
         var builder = new StringBuilder();
 
@@ -464,7 +477,14 @@ public static class ProjectPacker
 
         foreach (var import in ModuleCatalog.Imports)
         {
-            if (ModuleCatalog.IsData(import) && !(import == "EvolveDb" ? evolve : data))
+            var referenced = import switch
+            {
+                ModuleCatalog.EvolveImport => evolve,
+                ModuleCatalog.EntityFrameworkImport => entities,
+                _ => data
+            };
+
+            if (ModuleCatalog.IsData(import) && !referenced)
             {
                 continue;
             }

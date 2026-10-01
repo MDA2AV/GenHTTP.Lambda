@@ -307,8 +307,9 @@ export const guide: Messages['guide'] = {
   database: (k) => (
     <>
       Catatan – entri, akun, pesanan, hasil voting – tempatnya di {k.b('database')}: database SQLite milik lambda itu
-      sendiri, yang diaktifkan di {k.b('Data')}. Kode membuka koneksi dengan {k.code('Database.GetConnection()')} dan
-      berkomunikasi dengannya dalam SQL:
+      sendiri, yang diaktifkan di {k.b('Data')}. Kode membuka koneksi dengan {k.code('Database.GetConnection()')} lalu
+      membaca dan menulis datanya melalui {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, dengan
+      konteks miliknya sendiri yang memetakan tabel-tabelnya:
     </>
   ),
   database2: (k) => (
@@ -328,9 +329,10 @@ export const guide: Messages['guide'] = {
   ),
   databaseAside: (k) => (
     <>
-      Buka koneksi di tempat Anda membutuhkannya, lalu dispose setelah selesai, dan pakai secara sinkron –{' '}
-      {k.code('ExecuteReader')}, bukan {k.code('ExecuteReaderAsync')}. Nilai dimasukkan sebagai parameter, tidak pernah
-      langsung ke dalam SQL. Demo {k.link('/editor/demo-crud', 'demo-crud')} melakukan semua ini.
+      Buat konteks di tempat Anda membutuhkannya, lalu dispose setelah selesai, dan pakai secara sinkron –{' '}
+      {k.code('ToList')} dan {k.code('SaveChanges')}, bukan {k.code('ToListAsync')} dan {k.code('SaveChangesAsync')}.
+      Tabel dibuat oleh migrasi, tidak pernah oleh Entity Framework. Demo {k.link('/editor/demo-crud', 'demo-crud')}{' '}
+      melakukan semua ini.
     </>
   ),
 

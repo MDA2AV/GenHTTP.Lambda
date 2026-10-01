@@ -12,13 +12,16 @@
 // it was peppered, so accounts made before there was a pepper still sign in -
 // data outlives the version that wrote it.
 //
-// Both live in the lambda's database, in the tables migrations/ makes. Every
-// call opens a connection of its own, uses it synchronously and lets it go.
+// Both live in the lambda's database, in the tables migrations/ makes, read
+// and written through Entity Framework Core. Every call makes a context on a
+// connection of its own, uses it synchronously and lets it go.
 
 using System.Globalization;
 using System.Security.Cryptography;
 
 using GenHTTP.Api.Content.Authentication;
+
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 /// <summary>What is sent to register or to sign in.</summary>
 public record Credentials(string Name, string Password);
@@ -64,12 +67,83 @@ public record Member(string Name) : IUser
     public string DisplayName => Name;
 }
 
+#region Records
+
+/// <summary>An account, as the table holds it.</summary>
+public sealed class Account
+{
+    /// <summary>The name in capitals, which is what makes an account - the key of the table.</summary>
+    public string Folded { get; set; }
+
+    /// <summary>The name as it was first registered, which is how it is shown.</summary>
+    public string Name { get; set; }
+
+    public string Salt { get; set; }
+
+    public string Hash { get; set; }
+
+    public DateTime Joined { get; set; }
+
+    public bool Peppered { get; set; }
+}
+
+/// <summary>A session, as the table holds it: the hash of its token, never the token.</summary>
+public sealed class StoredSession
+{
+    public string TokenHash { get; set; }
+
+    /// <summary>The account it signs in, by its key.</summary>
+    public string Account { get; set; }
+
+    /// <summary>The account itself, which a query follows rather than joins by hand.</summary>
+    public Account Owner { get; set; }
+
+    public DateTime Expires { get; set; }
+}
+
+/// <summary>The lambda's database, as Entity Framework Core sees it.</summary>
+public sealed class MemberContext(SqliteConnection connection) : DbContext
+{
+    public DbSet<Account> Accounts => Set<Account>();
+
+    public DbSet<StoredSession> Sessions => Set<StoredSession>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder options)
+        => options.UseSqlite(connection, contextOwnsConnection: true);
+
+    // every time as ISO 8601 text in UTC, which sorts and compares as it should
+    protected override void ConfigureConventions(ModelConfigurationBuilder configuration)
+        => configuration.Properties<DateTime>().HaveConversion<UtcText>();
+
+    // the tables and their columns are the migration's; this only maps them
+    protected override void OnModelCreating(ModelBuilder model)
+    {
+        model.Entity<Account>().ToTable("accounts").HasKey(a => a.Folded);
+
+        var session = model.Entity<StoredSession>().ToTable("sessions");
+
+        session.HasKey(s => s.TokenHash);
+        session.Property(s => s.TokenHash).HasColumnName("token_hash");
+        session.HasOne(s => s.Owner).WithMany().HasForeignKey(s => s.Account);
+    }
+}
+
+/// <summary>A time as the tables keep it: ISO 8601 text in UTC.</summary>
+public sealed class UtcText() : ValueConverter<DateTime, string>(
+    value => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
+    text => DateTime.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind));
+
+#endregion
+
 /// <param name="readPepper">Reads the pepper, or null where there is none - asked each time, so a new one counts at once</param>
 public sealed class Accounts(Func<string> readPepper)
 {
     // anybody can register on a demo, so it keeps the newest accounts only;
     // your own lambda would rather refuse than forget somebody
     private const int MaxAccounts = 300;
+
+    // what SQLite answers when a key is taken
+    private const int ConstraintFailed = 19;
 
     #region Routes
 
@@ -92,25 +166,28 @@ public sealed class Accounts(Func<string> readPepper)
 
         var pepper = readPepper();
 
-        using var db = Database.GetConnection();
+        using var db = new MemberContext(Database.GetConnection());
 
-        using (var insert = db.CreateCommand())
+        db.Accounts.Add(new Account
+        {
+            Folded = Fold(name),
+            Name = name,
+            Salt = Convert.ToBase64String(salt),
+            Hash = Hash(password, salt, pepper),
+            Joined = DateTime.UtcNow,
+            Peppered = pepper != null
+        });
+
+        try
+        {
+            db.SaveChanges();
+        }
+        catch (DbUpdateException e) when (e.InnerException is SqliteException { SqliteErrorCode: ConstraintFailed })
         {
             // the account is the name in capitals, the key of the table - so
-            // two people registering the same name at once cannot both win
-            insert.CommandText = "INSERT INTO accounts (folded, name, salt, hash, joined, peppered) VALUES ($folded, $name, $salt, $hash, $joined, $peppered) ON CONFLICT DO NOTHING";
-            insert.Parameters.AddWithValue("$folded", Fold(name));
-            insert.Parameters.AddWithValue("$name", name);
-            insert.Parameters.AddWithValue("$salt", Convert.ToBase64String(salt));
-            insert.Parameters.AddWithValue("$hash", Hash(password, salt, pepper));
-            insert.Parameters.AddWithValue("$joined", Time(DateTime.UtcNow));
-            insert.Parameters.AddWithValue("$peppered", pepper != null);
-
-            if (insert.ExecuteNonQuery() == 0)
-            {
-                // 409: the request was fine, it just clashes with what is there
-                throw new ProviderException(ResponseStatus.Conflict, "That name is taken.");
-            }
+            // two people registering the same name at once cannot both win.
+            // 409: the request was fine, it just clashes with what is there
+            throw new ProviderException(ResponseStatus.Conflict, "That name is taken.");
         }
 
         Forget(db);
@@ -122,75 +199,52 @@ public sealed class Accounts(Func<string> readPepper)
     {
         var name = (credentials?.Name ?? "").Trim();
 
-        using var db = Database.GetConnection();
+        var folded = Fold(name);
 
-        using var find = db.CreateCommand();
+        using var db = new MemberContext(Database.GetConnection());
 
-        find.CommandText = "SELECT name, salt, hash, peppered FROM accounts WHERE folded = $folded";
-        find.Parameters.AddWithValue("$folded", Fold(name));
+        var account = db.Accounts.AsNoTracking().FirstOrDefault(a => a.Folded == folded);
 
-        using (var reader = find.ExecuteReader())
+        // an unknown name and a wrong password get the same answer, so
+        // this cannot be used to find out who has an account
+        if (account == null || !Matches(credentials?.Password ?? "", account.Salt, account.Hash, account.Peppered))
         {
-            // an unknown name and a wrong password get the same answer, so
-            // this cannot be used to find out who has an account
-            if (!reader.Read() || !Matches(credentials?.Password ?? "", reader.GetString(1), reader.GetString(2), reader.GetBoolean(3)))
-            {
-                throw new ProviderException(ResponseStatus.Unauthorized, "That name and password do not go together.");
-            }
-
-            name = reader.GetString(0);
+            throw new ProviderException(ResponseStatus.Unauthorized, "That name and password do not go together.");
         }
 
-        return Open(db, name);
+        return Open(db, account.Name);
     }
 
     public Profile Describe(Member member)
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        var folded = Fold(member.Name);
 
-        command.CommandText = "SELECT name, joined, (SELECT count(*) FROM accounts) FROM accounts WHERE folded = $folded";
-        command.Parameters.AddWithValue("$folded", Fold(member.Name));
+        using var db = new MemberContext(Database.GetConnection());
 
-        using var reader = command.ExecuteReader();
+        var account = db.Accounts.AsNoTracking().FirstOrDefault(a => a.Folded == folded)
+                   ?? throw new ProviderException(ResponseStatus.NotFound, "That account is gone.");
 
-        if (!reader.Read())
-        {
-            throw new ProviderException(ResponseStatus.NotFound, "That account is gone.");
-        }
-
-        return new Profile(reader.GetString(0), Time(reader.GetString(1)), reader.GetInt32(2));
+        return new Profile(account.Name, account.Joined, db.Accounts.Count());
     }
 
     public List<Newcomer> Newest()
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new MemberContext(Database.GetConnection());
 
-        command.CommandText = "SELECT name, joined FROM accounts ORDER BY joined DESC LIMIT 10";
-
-        using var reader = command.ExecuteReader();
-
-        var newest = new List<Newcomer>();
-
-        while (reader.Read())
-        {
-            newest.Add(new Newcomer(reader.GetString(0), Time(reader.GetString(1))));
-        }
-
-        return newest;
+        return db.Accounts.OrderByDescending(a => a.Joined)
+                          .Take(10)
+                          .Select(a => new Newcomer(a.Name, a.Joined))
+                          .ToList();
     }
 
     /// <summary>Ends the session of the token presented, if it is one.</summary>
     public void Logout(string token)
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        var hash = HashToken(token);
 
-        command.CommandText = "DELETE FROM sessions WHERE token_hash = $hash";
-        command.Parameters.AddWithValue("$hash", HashToken(token));
+        using var db = new MemberContext(Database.GetConnection());
 
-        command.ExecuteNonQuery();
+        db.Sessions.Where(s => s.TokenHash == hash).ExecuteDelete();
     }
 
     #endregion
@@ -203,45 +257,39 @@ public sealed class Accounts(Func<string> readPepper)
     /// </summary>
     public Member Authenticate(string token)
     {
-        using var db = Database.GetConnection();
-        using var command = db.CreateCommand();
+        using var db = new MemberContext(Database.GetConnection());
 
-        // a session of an account that is gone is no session
-        command.CommandText = "SELECT a.name FROM sessions s JOIN accounts a ON a.folded = s.account WHERE s.token_hash = $hash AND s.expires > $now";
-        command.Parameters.AddWithValue("$hash", HashToken(token));
-        command.Parameters.AddWithValue("$now", Time(DateTime.UtcNow));
+        var hash = HashToken(token);
 
-        return command.ExecuteScalar() is string name ? new Member(name) : null;
+        var now = DateTime.UtcNow;
+
+        // following Owner joins the account in; a session of an account that is gone is no session
+        var name = db.Sessions.Where(s => s.TokenHash == hash && s.Expires > now)
+                              .Select(s => s.Owner.Name)
+                              .FirstOrDefault();
+
+        return name != null ? new Member(name) : null;
     }
 
-    private (SignedIn Member, string Token) Open(SqliteConnection db, string name)
+    private (SignedIn Member, string Token) Open(MemberContext db, string name)
     {
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
-        using var command = db.CreateCommand();
+        var now = DateTime.UtcNow;
 
         // the expired ones go whenever a new one comes
-        command.CommandText = "DELETE FROM sessions WHERE expires <= $now; INSERT INTO sessions (token_hash, account, expires) VALUES ($hash, $account, $expires)";
-        command.Parameters.AddWithValue("$now", Time(DateTime.UtcNow));
-        command.Parameters.AddWithValue("$hash", HashToken(token));
-        command.Parameters.AddWithValue("$account", Fold(name));
-        command.Parameters.AddWithValue("$expires", Time(DateTime.UtcNow + Session.Lifetime));
+        db.Sessions.Where(s => s.Expires <= now).ExecuteDelete();
 
-        command.ExecuteNonQuery();
+        db.Sessions.Add(new StoredSession { TokenHash = HashToken(token), Account = Fold(name), Expires = now + Session.Lifetime });
+
+        db.SaveChanges();
 
         return (new SignedIn(name), token);
     }
 
     /// <summary>Drops the oldest accounts once there are too many - a demo's housekeeping. Their sessions go with them.</summary>
-    private static void Forget(SqliteConnection db)
-    {
-        using var command = db.CreateCommand();
-
-        command.CommandText = "DELETE FROM accounts WHERE folded NOT IN (SELECT folded FROM accounts ORDER BY joined DESC LIMIT $max)";
-        command.Parameters.AddWithValue("$max", MaxAccounts);
-
-        command.ExecuteNonQuery();
-    }
+    private static void Forget(MemberContext db)
+        => db.Accounts.OrderByDescending(a => a.Joined).Skip(MaxAccounts).ExecuteDelete();
 
     #endregion
 
@@ -283,10 +331,5 @@ public sealed class Accounts(Func<string> readPepper)
     // what makes an account of a name: the same for "Jürgen" and "JÜRGEN", as
     // string.Equals with OrdinalIgnoreCase would say
     private static string Fold(string name) => name.ToUpperInvariant();
-
-    // times as ISO 8601 text in UTC, which sorts and compares as it should
-    private static string Time(DateTime value) => value.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
-
-    private static DateTime Time(string value) => DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 
 }

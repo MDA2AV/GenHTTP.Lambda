@@ -307,7 +307,8 @@ export const guide = {
     <>
       Records - entries, accounts, orders, votes - belong in the {k.b('database')}: a SQLite database of the lambda's
       own, switched on under {k.b('Data')}. The code opens a connection with {k.code('Database.GetConnection()')} and
-      talks to it in SQL:
+      reads and writes it through {k.link('https://learn.microsoft.com/ef/core/', 'Entity Framework Core')}, with a
+      context of its own that maps the tables:
     </>
   )) as Text,
   database2: ((k) => (
@@ -327,9 +328,10 @@ export const guide = {
   )) as Text,
   databaseAside: ((k) => (
     <>
-      Open a connection where you need it and dispose of it, and use it synchronously - {k.code('ExecuteReader')}, not{' '}
-      {k.code('ExecuteReaderAsync')}. Values go in as parameters, never into the SQL. The{' '}
-      {k.link('/editor/demo-crud', 'demo-crud')} demo does all of it.
+      Make a context where you need it and dispose of it, and use it synchronously - {k.code('ToList')} and{' '}
+      {k.code('SaveChanges')}, not {k.code('ToListAsync')} and {k.code('SaveChangesAsync')}. The tables are the
+      migrations' to make, never Entity Framework's. The {k.link('/editor/demo-crud', 'demo-crud')} demo does all of
+      it.
     </>
   )) as Text,
 
