@@ -1122,6 +1122,19 @@ Every version keeps its documentation and tests in `.lambda/` (see
 ones who write them: `read_lambda` hands them over first, and every save that
 leaves a page out says which.
 
+A page meant to be found or shared - a website, a shop, a landing page - is
+given a title, a description, its language, an icon and a social preview,
+and says what it is in the HTML it is served with rather than only in what a
+script renders, since crawlers and agents mostly run none. The instructions say
+so in a line, `platform_guide` says how under `beingFound`, and the build
+agent's brief says the same; a tool for a few people needs a title and nothing
+more. `og:image` takes a full address - social networks do not resolve a
+relative one - so the warning a feature's deploy gives for a link to
+`/lambda/{publicKey}/` leaves meta tags and the canonical link out: they name
+the page, and the page never follows them. A lambda with a domain of its own
+names the domain as canonical, so search engines list it rather than
+`/lambda/{publicKey}/`.
+
 `open_source` publishes a lambda's code, changes its license or takes it down;
 with only the editor key it says how things are and changes nothing. It is not
 part of building, and its description says so: only when the user asks, and

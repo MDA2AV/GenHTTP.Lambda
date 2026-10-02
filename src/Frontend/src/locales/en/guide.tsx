@@ -444,7 +444,8 @@ export const guide = {
       what it deployed: {k.code('read_logs')} answers with the lambda's recent requests, what it printed and the
       stack trace of anything it threw, which is how an agent finds out its code works rather than assuming it. You
       watch the same thing in the control center. It writes the documentation and the tests as it goes, reads them
-      before it changes anything, and runs the tests against a draft's address before it puts the draft online.
+      before it changes anything, and runs the tests against a draft's address before it puts the draft online. A
+      page meant to be found gets a title, a description and an icon, and a preview for when its link is shared.
     </>
   )) as Text,
   more: 'More about that →',

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
@@ -918,12 +919,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     /// <remarks>
     /// The program only: documentation that names the lambda's address is
-    /// saying where it is, not linking there from a page.
+    /// saying where it is, not linking there from a page. The same goes for
+    /// meta tags and a canonical link - og:image needs the full address, since
+    /// social networks do not resolve a relative one, and the page itself
+    /// never follows it.
     /// </remarks>
     private static string? Leaks(IReadOnlyList<LambdaFile> files, string publicKey)
-        => files.Any(f => !f.IsContext && (f.Code.Contains($"/lambda/{publicKey}/", StringComparison.Ordinal) || f.Code.Contains($"/lambda/{publicKey}\"", StringComparison.Ordinal)))
+        => files.Any(f => !f.IsContext && LinksTo(f.Code, publicKey) && LinksTo(Named.Replace(f.Code, string.Empty), publicKey))
             ? $"The code links to /lambda/{publicKey}/ by its full path. From the preview that is the live lambda, with its real data - not the feature's copy. Use relative paths (\"api/items\", not \"/lambda/{publicKey}/api/items\")."
             : null;
+
+    private static bool LinksTo(string code, string publicKey)
+        => code.Contains($"/lambda/{publicKey}/", StringComparison.Ordinal) || code.Contains($"/lambda/{publicKey}\"", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Where a page names an address rather than linking to it: its meta tags
+    /// and its canonical link.
+    /// </summary>
+    private static readonly Regex Named = new(@"<meta\b[^>]*>|<link\b[^>]*\brel\s*=\s*[""']?canonical\b[^>]*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     /// <summary>
     /// What is said when a version or a feature lacks the pages of its
@@ -2011,7 +2024,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             why = "The same lambda answers at /lambda/{publicKey}/ on this platform, at the root of a domain of its own in the premium tier, and - as a feature - at /features/{feature}/. A path starting with / leaves the lambda: a hard-coded /lambda/{publicKey}/ does not exist on the domain, and from a preview it reaches the live lambda - so a feature's page would read and write the real data instead of its copy.",
             pages = "A page at the root of the lambda resolves \"api/items\" against the lambda. A page one level deeper needs \"../api/items\" - or keep the pages at the root.",
             websockets = "Build the address from the page: new URL(\"play\", location.href) with the scheme swapped to ws: or wss:.",
-            inCSharp = "Redirect.To(\"other\") and Location headers take relative paths too. Never build an absolute URL from the request's host and /lambda/."
+            inCSharp = "Redirect.To(\"other\") and Location headers take relative paths too. Never build an absolute URL from the request's host and /lambda/.",
+            exception = "og:image, og:url and a canonical link are full addresses: they name the page for whoever reads it elsewhere, and the page never follows them - see beingFound."
         },
         theSnippet = new
         {
@@ -2150,6 +2164,19 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             notFromTheWorkspace = "Do not upload the app's own pages to the workspace with upload_file. They would not be versioned: a rollback would keep the new pages over the old API, and a feature would work on a copy of them that its merge throws away. The workspace is for data.",
             underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree()."
         },
+        beingFound = new
+        {
+            when = "For a page meant to be found or shared - a website, a landing page, a shop, a portfolio, an event: anything the user wants people to come across in a search engine, in an AI agent's answer, or as a link in a chat. A tool for a few people, a page behind a login or an admin page needs a title and nothing more.",
+            title = "<title>: what the page is, then whose - 'Menu and opening hours - Café Lindner' - in about 60 characters, one for each page. It is the line a search engine shows and the tab is named after.",
+            description = "<meta name=\"description\" content=\"...\">: one or two sentences, up to about 155 characters, saying what a visitor finds there in the words they would search for. Not a list of keywords. Both in the language of the page, with <html lang> set to it.",
+            icon = "A favicon as an asset, linked relatively: <link rel=\"icon\" href=\"icon.svg\" type=\"image/svg+xml\"> - an SVG is text, written with the code. Without the link a browser asks the root of the host, which below /lambda/{publicKey}/ is this platform's icon. It shows in the tab and in bookmarks, and in search results on a domain of its own - search engines show one icon per host.",
+            socialPreview = "What a chat or a social network shows for a shared link: og:title, og:description, og:type (website) and og:image as <meta property=\"...\" content=\"...\">, and <meta name=\"twitter:card\" content=\"summary_large_image\">. The picture is a PNG or JPEG of 1200 by 630 pixels, shipped as an asset - none of them shows an SVG. Without a picture, leave og:image out and make the card summary: the title and the description still make one.",
+            fullAddress = "og:image takes a full address - social networks do not resolve a relative one: the lambda's domainUrl if it has one, its publicUrl otherwise (read_lambda), followed by the asset's path. Change it when the address does. It, og:url and the canonical link are the only full addresses in a page, and a feature's deploy does not warn about them: the page never follows them.",
+            canonical = "A lambda with a domain of its own also answers at /lambda/{publicKey}/. Give each page <link rel=\"canonical\"> and og:url with its address on the domain, so search engines list the domain.",
+            withoutScripts = "Crawlers and AI agents mostly read the HTML as it is served and run no JavaScript. Put what the page is about - the title, the description, a heading and the opening text - in the HTML, not only in what a script renders later; a page whose content comes from an API still says in its HTML what it is.",
+            howMuch = "In proportion: the title, the description, the language and the icon are a few lines on every public page; the preview picture where the app is meant to be shared, the canonical link where it has a domain. Written for people, not for a search engine - no keyword lists, no hidden text.",
+            keptOut = "A feature's preview is kept out of search engines by the platform. A lambda whose owner wants it kept out says so with <meta name=\"robots\" content=\"noindex\">."
+        },
         generatedContent = new
         {
             tree = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory.",
@@ -2224,6 +2251,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             "A browser cannot set headers on a websocket handshake. Pass what the socket needs in the query (connection.Request.Header.Query) or, for secrets, as the first frame.",
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore - taken with await semaphore.WaitAsync(), never Wait().",
             "Waiting for a task with .Result, .Wait() or .GetAwaiter().GetResult() is refused: it would hang the thread the task has to finish on. Await it - see waiting.",
+            "A relative og:image: the shared link shows no picture. It takes the full address - see beingFound.",
             "REST routes serialize camel case; match that on sockets.",
             "Your own type called e.g. File is fine; only the refused framework type of that name is blocked.",
             "Ship stylesheets and scripts as assets, not string constants: a raw string literal ends at the first \"\"\", and assets cost no code budget."

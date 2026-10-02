@@ -434,7 +434,8 @@ export const guide: Messages['guide'] = {
       wdrożył: {k.code('read_logs')} zwraca ostatnie żądania lambdy, to, co wypisała, i stack trace każdego wyjątku. Tak
       agent dowiaduje się, że jego kod działa, zamiast to zakładać. Ty widzisz to samo w centrum sterowania. W trakcie
       pracy pisze dokumentację i testy, czyta je, zanim cokolwiek zmieni, i uruchamia testy pod adresem szkicu, zanim
-      wrzuci szkic online.
+      wrzuci szkic online. Strona, którą ludzie mają znaleźć, dostaje tytuł, opis, ikonę i podgląd, który widać, gdy
+      ktoś udostępnia link do niej.
     </>
   ),
   more: 'Więcej o tym →',

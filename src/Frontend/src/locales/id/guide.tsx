@@ -449,6 +449,8 @@ export const guide: Messages['guide'] = {
       stack trace dari setiap exception. Dari situ agen tahu kodenya benar-benar jalan, bukan sekadar menebak. Anda
       memantau hal yang sama di pusat kontrol. Agen menulis dokumentasi dan pengujian sambil bekerja, membacanya
       sebelum mengubah apa pun, dan menjalankan pengujian terhadap alamat draf sebelum menjadikan draf itu online.
+      Halaman yang dibuat untuk ditemukan orang diberi judul, deskripsi, ikon, dan pratinjau yang muncul saat link-nya
+      dibagikan.
     </>
   ),
   more: 'Selengkapnya →',
