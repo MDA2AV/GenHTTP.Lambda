@@ -453,6 +453,8 @@ export const guide: Messages['guide'] = {
       Stacktraces aller Exceptions. So weiß ein Agent, dass sein Code funktioniert, statt es nur anzunehmen.
       Dasselbe sehen Sie im Kontrollzentrum. Er schreibt dabei auch die Dokumentation und die Tests, liest sie, bevor
       er etwas ändert, und führt die Tests gegen die Adresse eines Entwurfs aus, bevor er den Entwurf online stellt.
+      Eine Seite, die gefunden werden soll, bekommt einen Titel, eine Beschreibung, ein Icon und eine Vorschau für den
+      Fall, dass jemand ihren Link teilt.
     </>
   ),
   more: 'Mehr dazu →',

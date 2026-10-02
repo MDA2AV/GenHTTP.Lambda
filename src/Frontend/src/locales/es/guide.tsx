@@ -440,7 +440,9 @@ export const guide: Messages['guide'] = {
       revisar lo que desplegó: {k.code('read_logs')} devuelve las peticiones recientes de la lambda, lo que imprimió y el
       stack trace de cualquier excepción. Así un agente comprueba que su código funciona en vez de suponerlo. Tú ves lo
       mismo en el centro de control. Escribe la documentación y las pruebas a medida que trabaja, las lee antes de
-      cambiar nada y ejecuta las pruebas contra la dirección de un borrador antes de ponerlo en línea.
+      cambiar nada y ejecuta las pruebas contra la dirección de un borrador antes de ponerlo en línea. A una página
+      pensada para que la encuentren le pone un título, una descripción, un icono y una vista previa para cuando
+      alguien comparte su enlace.
     </>
   ),
   more: 'Más sobre esto →',

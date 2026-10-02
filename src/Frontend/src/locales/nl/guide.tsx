@@ -445,7 +445,9 @@ export const guide: Messages['guide'] = {
       wat hij heeft gedeployd: {k.code('read_logs')} geeft de recente requests van de lambda, de output en de
       stacktrace van elke exception. Zo controleert een agent of zijn code werkt, in plaats van het aan te nemen.
       Jij ziet hetzelfde in het dashboard. Hij schrijft de documentatie en de tests terwijl hij werkt, leest ze voordat
-      hij iets verandert, en voert de tests uit op het adres van een concept voordat hij het concept online zet.
+      hij iets verandert, en voert de tests uit op het adres van een concept voordat hij het concept online zet. Een
+      pagina die gevonden moet worden, krijgt een titel, een beschrijving, een icoon en een preview voor als iemand de
+      link deelt.
     </>
   ),
   more: 'Meer daarover →',

@@ -254,6 +254,31 @@ scripts and test data.
   documentation **About** and shows the product page alone, to be corrected by
   telling the agent rather than by editing it.
 
+### Pages meant to be found
+
+Agents are steered to make a page that is meant to be found or shared - by a
+search engine, an AI agent, a link in a chat - findable, in proportion: a
+title, a meta description, the language, an icon, a social preview (Open
+Graph), what the page is about in the HTML as served rather than only in what
+a script renders, and the domain as canonical where the lambda has one. A tool
+for a few people gets a title and nothing more. This is said in the MCP
+instructions (one line), `platform_guide` (`beingFound`), the build agent's
+brief, the README and `/docs` - keep them the same. The platform writes none
+of it into a lambda's pages; the agent does.
+
+- `og:image` takes a full address - social networks do not resolve a relative
+  one - and is the exception to relative links, with `og:url` and the
+  canonical link. The warning a feature's deploy gives for a link to
+  `/lambda/{publicKey}/` (`McpTools.Leaks`) leaves meta tags and the canonical
+  link out: they name the page, and the page never follows them.
+- **No renderer - decided for now.** Rendering a lambda in a headless browser
+  on the server (for the agent to look at its page, a picture proposed in the
+  showcase tab, an `og:image`) was considered and left out: it runs strangers'
+  JavaScript in a browser beside the platform, and costs a container,
+  Chromium and fonts. Nor are tools added to the build agent's image - it has
+  no shell to run them, and must not get one, since its token is in its
+  environment. Do not bring either back without the owner asking.
+
 ### Features ("Drafts")
 
 New functionality is developed in a **feature** (a *draft* in the editor):
@@ -554,7 +579,8 @@ The same rule is worded the same way in all of them.
 The MCP instructions (`McpHandler`) are **short**: how to get from nothing to
 something online, how a lambda that exists is changed, and the rules an agent
 would otherwise break before it reads the guide (where data goes, the
-database, waiting for tasks, relative paths, secrets, documentation). The rest
+database, waiting for tasks, relative paths, secrets, documentation, pages
+meant to be found). The rest
 is in `platform_guide` and the tool descriptions; do not repeat it there.
 
 ## Working conventions

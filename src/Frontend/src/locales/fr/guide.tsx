@@ -452,7 +452,8 @@ export const guide: Messages['guide'] = {
       affiché, et la stack trace de chaque exception levée. C’est comme ça qu’un agent vérifie que son code marche, au
       lieu de le supposer. Vous voyez la même chose dans le tableau de bord. Il rédige aussi la documentation et les
       tests, les lit avant de modifier quoi que ce soit, et lance les tests sur l’adresse d’un brouillon avant de le
-      mettre en ligne.
+      mettre en ligne. Une page destinée à être trouvée reçoit un titre, une description, une icône et un aperçu qui
+      s’affiche quand on partage son lien.
     </>
   ),
   more: 'En savoir plus →',

@@ -703,6 +703,76 @@ public sealed class McpTests
     }
 
     [TestMethod]
+    public async Task APreviewPictureByItsFullAddressIsNotWarnedAbout()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var made = Structured(await CallToolAsync(fixture, "create_lambda", new JsonObject { ["acceptTerms"] = true, ["publicKey"] = "shared" }));
+
+        var privateKey = made["privateKey"]!.GetValue<string>();
+
+        var feature = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject { ["privateKey"] = privateKey, ["name"] = "Preview" }))
+                      ["feature"]!["feature"]!.GetValue<string>();
+
+        // social networks do not resolve a relative og:image, and the page
+        // never follows it - so the agent told to write it is not told off
+        var named = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(
+                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Layout.Create().Add(Assets.App(\"web\"));" },
+                new JsonObject
+                {
+                    ["name"] = "web/index.html",
+                    ["code"] = "<head><meta property=\"og:image\" content=\"https://example.com/lambda/shared/preview.png\">"
+                             + "<link rel=\"canonical\" href=\"https://example.com/lambda/shared/\"><link rel=\"icon\" href=\"icon.svg\"></head>"
+                })
+        }));
+
+        Assert.IsTrue(named["ok"]!.GetValue<bool>(), named.ToJsonString());
+        Assert.IsNull(named["warning"], "naming the address is not linking there");
+
+        var linked = Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = privateKey,
+            ["feature"] = feature,
+            ["deploy"] = true,
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "web/index.html", ["find"] = "href=\"icon.svg\"", ["replace"] = "href=\"/lambda/shared/icon.svg\"" })
+        }));
+
+        Assert.Contains("live lambda", linked["warning"]!.GetValue<string>(), "an icon the page loads is a link like any other");
+    }
+
+    [TestMethod]
+    public async Task AgentsAreToldToMakeAPublicPageFindable()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var initialized = await CallAsync(fixture, "initialize", new JsonObject());
+
+        var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
+
+        Assert.Contains("meant to be found", instructions, "said on connecting, before anything is built");
+        Assert.Contains("beingFound", instructions, "and where the guide says how");
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        var found = guide["beingFound"]!;
+
+        Assert.Contains("<title>", found["title"]!.GetValue<string>());
+        Assert.Contains("description", found["description"]!.GetValue<string>());
+        Assert.Contains("icon", found["icon"]!.GetValue<string>());
+        Assert.Contains("og:image", found["socialPreview"]!.GetValue<string>());
+        Assert.Contains("domainUrl", found["fullAddress"]!.GetValue<string>(), "a social network does not resolve a relative picture");
+        Assert.Contains("canonical", found["canonical"]!.GetValue<string>(), "a lambda on a domain is listed under the domain");
+        Assert.Contains("In proportion", found["howMuch"]!.GetValue<string>());
+
+        Assert.Contains("beingFound", guide["paths"]!["exception"]!.GetValue<string>(), "the rule about relative paths names its exception");
+    }
+
+    [TestMethod]
     public async Task AnAgentChangesALambdaInAFeatureWithoutTouchingIt()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

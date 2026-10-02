@@ -442,7 +442,8 @@ export const guide: Messages['guide'] = {
       ver o que colocou no ar: {k.code('read_logs')} responde com as requisições recentes da lambda, o que ela imprimiu
       e o stack trace de qualquer exceção. É assim que ele descobre que o código funciona, em vez de supor. Você
       acompanha tudo isso no painel de controle. Ele escreve a documentação e os testes enquanto trabalha, lê os dois
-      antes de mudar qualquer coisa e roda os testes no endereço de um rascunho antes de colocá-lo no ar.
+      antes de mudar qualquer coisa e roda os testes no endereço de um rascunho antes de colocá-lo no ar. Uma página
+      feita para ser encontrada ganha título, descrição, ícone e uma prévia para quando alguém compartilha o link.
     </>
   ),
   more: 'Saiba mais →',

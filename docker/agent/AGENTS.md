@@ -182,6 +182,21 @@ at nothing - and a feature answers at `/features/<key>/`, where
 `/lambda/<key>/` is the live lambda: a feature's page linking there would read
 and write the real data instead of the feature's copy. `platform_guide` says more under `paths`.
 
+## When it is meant to be found
+
+Much of what is built here is a website somebody wants people to find - in a
+search engine, in an AI agent's answer, or as a link sent around. Give every
+public page a `<title>` (what it is, then whose), a
+`<meta name="description">` of a sentence or two in the words a visitor would
+search for, `<html lang>` in the language of the page, and an icon: an SVG
+written with the code and linked relatively (`<link rel="icon"
+href="icon.svg">`). Add `og:title` and `og:description`, so that a shared
+link shows a card. Leave `og:image` out unless you have a picture to show -
+it takes a PNG or JPEG and the full address (`platform_guide`, `beingFound`).
+Put what the page is about in the HTML that is served, not only in what a
+script draws later: crawlers and agents mostly do not run scripts. A tool for
+a few people needs a title and nothing more.
+
 ## What not to build
 
 Your instructions say what you are for, and to decline everything else with a

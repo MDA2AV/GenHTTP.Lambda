@@ -446,7 +446,8 @@ export const guide: Messages['guide'] = {
       aldığı şeye bakabilir: {k.code('read_logs')} aracı lambdanın son isteklerini, yazdırdıklarını ve fırlattığı her
       hatanın stack trace’ini döndürür. Ajan, kodunun çalıştığını varsaymak yerine böyle öğrenir. Siz de aynı şeyi
       kontrol panelinde izlersiniz. Ajan çalışırken dokümantasyonu ve testleri de yazar, bir şeyi değiştirmeden önce
-      onları okur ve bir taslağı yayına almadan önce testleri taslağın adresi üzerinde çalıştırır.
+      onları okur ve bir taslağı yayına almadan önce testleri taslağın adresi üzerinde çalıştırır. Bulunması istenen
+      bir sayfaya başlık, açıklama, simge ve linki paylaşıldığında görünen bir önizleme ekler.
     </>
   ),
   more: 'Daha fazlası →',

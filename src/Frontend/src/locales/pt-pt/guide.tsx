@@ -441,7 +441,9 @@ export const guide: Messages['guide'] = {
       ver o que publicou: {k.code('read_logs')} responde com os pedidos recentes da lambda, o que ela escreveu na consola
       e o stack trace de tudo o que lançou. É assim que um agente descobre que o código funciona, em vez de o assumir. Tu
       vês o mesmo no painel de controlo. Escreve a documentação e os testes à medida que avança, lê-os antes de alterar
-      o que quer que seja, e corre os testes no endereço de um rascunho antes de o pôr online.
+      o que quer que seja, e corre os testes no endereço de um rascunho antes de o pôr online. Uma página feita para
+      ser encontrada recebe um título, uma descrição, um ícone e uma pré-visualização para quando alguém partilha o
+      link.
     </>
   ),
   more: 'Saber mais →',

@@ -441,7 +441,9 @@ export const guide: Messages['guide'] = {
       che ha pubblicato: {k.code('read_logs')} restituisce le richieste recenti della lambda, cosa ha stampato e lo stack
       trace di ogni eccezione. È così che un agente scopre che il suo codice funziona, invece di darlo per scontato. Tu
       vedi le stesse cose nel pannello di controllo. Man mano scrive la documentazione e i test, li legge prima di
-      cambiare qualcosa ed esegue i test sull’indirizzo di una bozza prima di metterla online.
+      cambiare qualcosa ed esegue i test sull’indirizzo di una bozza prima di metterla online. A una pagina pensata
+      per essere trovata dà un titolo, una descrizione, un’icona e un’anteprima per quando qualcuno ne condivide il
+      link.
     </>
   ),
   more: 'Scopri di più →',
