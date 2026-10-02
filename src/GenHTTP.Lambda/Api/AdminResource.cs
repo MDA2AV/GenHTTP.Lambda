@@ -25,8 +25,7 @@ namespace GenHTTP.Lambda.Api;
 /// belongs to other people and can take their lambdas down, so it asks for a
 /// token instead - and answers nothing at all until one is configured, because
 /// a panel that is off cannot be left open by accident. The token is checked
-/// by <see cref="AdminGateConcern"/> in front of this resource, before any
-/// request body is read.
+/// in front of this resource, see <see cref="AdminAuthentication"/>.
 ///
 /// Lambdas are addressed by their public key here, since that is what an
 /// operator is looking at. The editor key is resolved behind it, and each
@@ -44,10 +43,9 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     /// <param name="search">Only lambdas whose key or domain contains this</param>
     /// <param name="tier">Only lambdas of this tier</param>
     [ResourceMethod("lambdas")]
-    public AdminListingResponse GetLambdas(string? search, int? page, string? tier)
+    public AdminListingResponse GetLambdas(string? search, string? tier, int page = 1)
     {
-
-        var wanted = Math.Max(1, page ?? 1);
+        var wanted = Math.Max(1, page);
 
         var result = meta.List(search, (wanted - 1) * PageSize, PageSize, string.IsNullOrEmpty(tier) ? null : ParseTier(tier));
 

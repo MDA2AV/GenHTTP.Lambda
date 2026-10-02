@@ -68,13 +68,6 @@ public sealed record SourceEntryResponse(
 }
 
 /// <summary>
-/// One page of the published sources.
-/// </summary>
-/// <param name="Total">How many match altogether</param>
-/// <param name="Next">Where the next page starts, or nothing when this was the last</param>
-public sealed record SourceListingResponse(IReadOnlyList<SourceEntryResponse> Entries, int Total, int? Next);
-
-/// <summary>
 /// A published source with its history.
 /// </summary>
 /// <param name="Author">Who holds the copyright, if the owner named somebody</param>

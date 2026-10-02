@@ -219,7 +219,7 @@ public sealed class DomainTests
 
         using var listing = await fixture.GetAsync("/api/v1/showcases/");
 
-        var entry = (await listing.GetContentAsync<ShowcaseListingResponse>()).Entries.Single();
+        var entry = (await listing.GetContentAsync<Page<ShowcaseResponse>>()).Entries.Single();
 
         Assert.AreEqual($"https://{Domain}/", entry.Path);
     }

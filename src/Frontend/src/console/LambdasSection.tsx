@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { ApiError, TIERS, api, type AdminListing, type LambdaOverview } from '../api';
+import { refusedToken, TIERS, api, type AdminListing, type LambdaOverview } from '../api';
 import { Dialog } from '../components/Dialog';
 import { IconSpinner, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
@@ -33,8 +33,7 @@ export function LambdasSection({ access }: { access: Access }) {
     try {
       setListing(await api.admin.list(token, search, page, tier));
     } catch (error) {
-      // a wrong token and a missing panel answer the same way on purpose
-      if (error instanceof ApiError && error.status === 404) {
+      if (refusedToken(error)) {
         deny();
       } else {
         toast('The lambdas could not be read.', 'error');

@@ -40,8 +40,8 @@ public sealed class DatabaseResource(IDatabaseService databases)
     /// <param name="order">A column to sort by; left out, the order the rows were written in</param>
     /// <param name="descending">Whether that order is reversed, which it is unless this says otherwise</param>
     [ResourceMethod("lambdas/:privateKey/database/tables/:table")]
-    public async ValueTask<DatabaseRowsResponse> Rows(string privateKey, string table, int? offset, int? limit, string? order, bool? descending)
-        => Describe(await databases.ReadAsync(privateKey, table, offset ?? 0, limit ?? 50, order, descending ?? true));
+    public async ValueTask<DatabaseRowsResponse> Rows(string privateKey, string table, string? order, int offset = 0, int limit = 50, bool descending = true)
+        => Describe(await databases.ReadAsync(privateKey, table, offset, limit, order, descending));
 
     #endregion
 
@@ -58,9 +58,9 @@ public sealed class DatabaseResource(IDatabaseService databases)
     /// A page of the rows of one table of a feature's copy.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/features/:feature/database/tables/:table")]
-    public async ValueTask<DatabaseRowsResponse> RowsOfFeature(string privateKey, string feature, string table, int? offset, int? limit, string? order,
-                                                               bool? descending)
-        => Describe(await databases.ReadAsync(privateKey, table, offset ?? 0, limit ?? 50, order, descending ?? true, feature));
+    public async ValueTask<DatabaseRowsResponse> RowsOfFeature(string privateKey, string feature, string table, string? order, int offset = 0,
+                                                               int limit = 50, bool descending = true)
+        => Describe(await databases.ReadAsync(privateKey, table, offset, limit, order, descending, feature));
 
     #endregion
 

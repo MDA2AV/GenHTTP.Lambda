@@ -6,7 +6,6 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Telemetry;
 
@@ -19,11 +18,11 @@ namespace GenHTTP.Lambda.Api;
 /// rather than guessed at.
 /// </summary>
 /// <remarks>
-/// Everything here is an aggregate. No key, no code and no client address
-/// leaves through this resource, which is what makes it safe to serve without
-/// asking who is looking.
+/// For the operator only, behind the token (see <see cref="AdminAuthentication"/>):
+/// the owner of a lambda sees its own figures in the editor, and nobody sees
+/// everybody's.
 /// </remarks>
-public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemetry lambdas, ServerRegistry registry, IMetaService meta, EventReader events, LambdaOptions options)
+public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemetry lambdas, IMetaService meta, EventReader events, LambdaOptions options)
 {
 
     /// <summary>
@@ -32,16 +31,14 @@ public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemet
     /// <param name="minutes">How far back the readings should reach</param>
     /// <param name="days">How far back the business events should reach</param>
     [ResourceMethod]
-    public TelemetryResponse Get(int? minutes, int? days, IRequest request)
+    public TelemetryResponse Get(IRequest request, int minutes = 60, int days = 30)
     {
-        AdminGate.RequireForFigures(request, options);
-
-        var window = TimeSpan.FromMinutes(Math.Clamp(minutes ?? 60, 1, 60 * 24));
+        var window = TimeSpan.FromMinutes(Math.Clamp(minutes, 1, 60 * 24));
 
         // a different window from the readings on purpose: memory is watched
         // over an hour, and whether anybody is using the platform is a
         // question about weeks
-        var history = events.History(days ?? 30);
+        var history = events.History(days);
 
         var series = telemetry.Series(window);
 
@@ -49,12 +46,12 @@ public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemet
 
         var counts = meta.Count();
 
-        var server = registry.Instance;
+        var server = request.Server;
 
         return new TelemetryResponse(
             new ServerDescription(
-                server?.ServerEngine.ToString().ToLowerInvariant() ?? options.Engine.ToString().ToLowerInvariant(),
-                server?.Version ?? "unknown",
+                server.ServerEngine.ToString().ToLowerInvariant(),
+                server.Version,
                 RuntimeInformation.FrameworkDescription,
                 RuntimeInformation.RuntimeIdentifier,
                 GCSettings.IsServerGC,
@@ -80,21 +77,12 @@ public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemet
     /// What each lambda has been doing since the server came up.
     /// </summary>
     /// <remarks>
-    /// Public while the platform is small; set LAMBDA_PUBLIC_ACTIVITY=false and
-    /// it stops being served without anything stopping being counted. Only the
-    /// public key identifies a lambda here - the editor key, the code and the
-    /// visitors are not part of it.
+    /// Only the public key identifies a lambda here - the editor key, the code
+    /// and the visitors are not part of it.
     /// </remarks>
     [ResourceMethod("lambdas")]
-    public ActivityResponse GetLambdas(IRequest request)
+    public ActivityResponse GetLambdas()
     {
-        AdminGate.RequireForFigures(request, options);
-
-        if (!options.PublicActivity)
-        {
-            throw LambdaException.NotFound("The activity of the lambdas is not public on this installation.");
-        }
-
         var activity = lambdas.Describe();
 
         return new ActivityResponse(

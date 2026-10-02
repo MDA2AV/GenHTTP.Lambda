@@ -65,9 +65,9 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     /// <param name="skip">How many to leave out, from the start</param>
     /// <param name="take">How many to answer with, at most 48</param>
     [ResourceMethod]
-    public SourceListingResponse List(string? search, string? order, int? skip, int? take)
+    public Page<SourceEntryResponse> List(string? search, string? order, int skip = 0, int take = PageSize)
     {
-        var from = Math.Max(0, skip ?? 0);
+        var from = Math.Max(0, skip);
 
         var ordered = order?.ToLowerInvariant() switch
         {
@@ -76,11 +76,9 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
             _ => SourceOrder.Stars
         };
 
-        var page = sources.List(search, ordered, from, take ?? PageSize);
+        var page = sources.List(search, ordered, from, take);
 
-        var next = from + page.Entries.Count;
-
-        return new SourceListingResponse([.. page.Entries.Select(SourceEntryResponse.Of)], page.Total, next < page.Total ? next : null);
+        return Page<SourceEntryResponse>.Of([.. page.Entries.Select(SourceEntryResponse.Of)], from, page.Total);
     }
 
     /// <summary>
@@ -221,7 +219,7 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
         logger.LogInformation("Downloaded version {Version} of the published source of lambda {Lambda}", version, publicKey);
 
         return request.Respond()
-                      .Content(new FileContent(new FileInfo(archive.File), "application/zip"))
+                      .Content(Resource.FromFile(archive.File).Type(new ContentType("application/zip")).Build())
                       .Header("Content-Disposition", $"attachment; filename=\"{Safe(publicKey)}-v{version}.zip\"")
                       .Header("Cache-Control", "public, max-age=300")
                       .Build();

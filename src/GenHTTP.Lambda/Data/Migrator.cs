@@ -40,9 +40,11 @@ public static class Migrator
             MetadataTableName = "schema_versions"
         };
 
+        logger.LogInformation("Migrating database {Database}", options.DatabaseFile);
+
         evolve.Migrate();
 
-        logger.LogInformation("Database at '{Database}' is up to date", options.DatabaseFile);
+        logger.LogInformation("Migrated database {Database}", options.DatabaseFile);
     }
 
 }

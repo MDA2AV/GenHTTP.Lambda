@@ -298,7 +298,7 @@ public sealed class SourceTests
 
         await fixture.SeedDemosAsync();
 
-        var listing = await (await fixture.GetAsync("/api/v1/sources/?take=48")).GetContentAsync<SourceListingResponse>();
+        var listing = await (await fixture.GetAsync("/api/v1/sources/?take=48")).GetContentAsync<Page<SourceEntryResponse>>();
 
         CollectionAssert.IsSubsetOf(new[] { "demo-crud", "demo-registration", "demo-game", "demo-files", "demo-live" },
                                     listing.Entries.Select(e => e.PublicKey).ToList(), "the demos are there to be read and built on");
@@ -406,19 +406,19 @@ public sealed class SourceTests
 
         await StarAsync(fixture, "poll", true);
 
-        var all = await (await fixture.GetAsync("/api/v1/sources/")).GetContentAsync<SourceListingResponse>();
+        var all = await (await fixture.GetAsync("/api/v1/sources/")).GetContentAsync<Page<SourceEntryResponse>>();
 
         Assert.AreEqual(2, all.Total);
         Assert.AreEqual("poll", all.Entries[0].PublicKey, "the most starred first");
         Assert.AreEqual("/source/poll", all.Entries[0].Path);
         Assert.AreEqual("GPL-3.0-or-later", all.Entries[0].License.Id);
 
-        var found = await (await fixture.GetAsync("/api/v1/sources/?search=tuesday%20quiz")).GetContentAsync<SourceListingResponse>();
+        var found = await (await fixture.GetAsync("/api/v1/sources/?search=tuesday%20quiz")).GetContentAsync<Page<SourceEntryResponse>>();
 
         Assert.AreEqual(1, found.Total, "by what its documentation says, every word of it");
         Assert.AreEqual("quiz", found.Entries[0].PublicKey);
 
-        var none = await (await fixture.GetAsync("/api/v1/sources/?search=spreadsheet")).GetContentAsync<SourceListingResponse>();
+        var none = await (await fixture.GetAsync("/api/v1/sources/?search=spreadsheet")).GetContentAsync<Page<SourceEntryResponse>>();
 
         Assert.AreEqual(0, none.Total);
     }
@@ -490,7 +490,7 @@ public sealed class SourceTests
 
         Assert.AreEqual("https://shop.example.com/", after.Source.Address, "its own domain, once it has one");
 
-        var listed = await (await fixture.GetAsync("/api/v1/sources/")).GetContentAsync<SourceListingResponse>();
+        var listed = await (await fixture.GetAsync("/api/v1/sources/")).GetContentAsync<Page<SourceEntryResponse>>();
 
         Assert.AreEqual("https://shop.example.com/", listed.Entries.Single(e => e.PublicKey == "shop").Address);
     }

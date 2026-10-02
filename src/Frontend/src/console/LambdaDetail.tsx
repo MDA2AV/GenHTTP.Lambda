@@ -46,15 +46,15 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
       adopt(await api.admin.lambda(token, publicKey));
       setFailure(null);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
-        // a lambda that is not there and a token that is not accepted answer
-        // alike; the listing can tell which, so that is where this goes
-        setFailure(`There is no lambda at "${publicKey}", or the token is no longer accepted.`);
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        deny();
+      } else if (error instanceof ApiError && error.status === 404) {
+        setFailure(`There is no lambda at "${publicKey}".`);
       } else {
         setFailure('The lambda could not be read.');
       }
     }
-  }, [token, publicKey, adopt]);
+  }, [token, publicKey, adopt, deny]);
 
   useEffect(() => {
     load();
@@ -70,7 +70,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
     try {
       await action();
     } catch (error) {
-      if (error instanceof ApiError && error.status === 404) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
         deny();
       } else {
         toast(error instanceof ApiError ? error.message : failed, 'error');
@@ -139,7 +139,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
         adopt(await api.admin.domain(token, lambda.publicKey, value));
         toast(value ? `"${lambda.publicKey}" answers at ${value.trim()} now.` : 'The domain is removed.', 'success');
       } catch (error) {
-        if (error instanceof ApiError && error.status !== 404) {
+        if (error instanceof ApiError && error.status !== 401 && error.status !== 403) {
           setDomainProblem(error.message);
           return;
         }

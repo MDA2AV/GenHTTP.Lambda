@@ -11,6 +11,7 @@ using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 
+using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
@@ -151,7 +152,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
         logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} as a zip archive", found.Feature.Name, meta.PublicKeyOf(privateKey));
 
         return request.Respond()
-                      .Content(new BinaryContent(zip, "application/zip"))
+                      .Content(zip, new ContentType("application/zip"))
                       .Header("Content-Disposition", $"attachment; filename=\"feature-{found.Feature.Key[..8]}.zip\"")
                       .Build();
     }

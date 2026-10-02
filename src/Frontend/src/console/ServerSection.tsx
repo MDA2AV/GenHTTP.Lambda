@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { platformPath } from '../address';
-import { ApiError, api, type Activity, type Telemetry, type TelemetrySample } from '../api';
+import { refusedToken, api, type Activity, type Telemetry, type TelemetrySample } from '../api';
 import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
 import { LambdaLink } from '../components/LambdaLink';
@@ -83,13 +83,10 @@ export function ServerSection({ access }: { access: Access }) {
   const load = useCallback(async () => {
     try {
       setData(await api.telemetry(minutes, token));
-      // absent when the installation keeps the per lambda figures to itself
       setActivity(await api.activity(token).catch(() => null));
       setError(null);
     } catch (problem) {
-      // a wrong token and an installation with no administration answer the
-      // same way, so this page cannot tell them apart either
-      if (problem instanceof ApiError && problem.status === 404) {
+      if (refusedToken(problem)) {
         deny();
       } else {
         setError('The telemetry could not be read.');

@@ -1,3 +1,5 @@
+using System.Net;
+
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Tests.Infrastructure;
@@ -18,9 +20,9 @@ public sealed class TelemetryTests
     [TestMethod]
     public async Task TheServerDescribesItself()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
-        using var response = await fixture.GetAsync("/api/v1/telemetry");
+        using var response = await fixture.GetAsOperatorAsync("/api/v1/telemetry");
 
         var telemetry = await response.GetContentAsync<TelemetryResponse>();
 
@@ -28,6 +30,34 @@ public sealed class TelemetryTests
         Assert.IsNotEmpty(telemetry.Server.Runtime);
         Assert.IsGreaterThanOrEqualTo(1, telemetry.Server.Processors);
         Assert.IsGreaterThan(0, telemetry.Latest.ManagedBytes, "a running process holds a heap");
+    }
+
+    [TestMethod]
+    public async Task TheFiguresAreOnlyForTheOperator()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        using var anonymous = await fixture.GetAsync("/api/v1/telemetry");
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+
+        using var request = fixture.Host.GetRequest("/api/v1/telemetry/lambdas", HttpMethod.Get);
+
+        request.Headers.Add("X-Admin-Token", "not-the-token");
+
+        using var wrong = await fixture.Host.GetResponseAsync(request);
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, wrong.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task WithoutAPanelThereAreNoFigures()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        using var response = await fixture.GetAsync("/api/v1/telemetry");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "an installation without a token serves them to nobody");
     }
 
     [TestMethod]
@@ -78,10 +108,10 @@ public sealed class TelemetryTests
     [TestMethod]
     public async Task TheWindowIsBounded()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         // more than a day is clamped rather than refused
-        using var response = await fixture.GetAsync("/api/v1/telemetry?minutes=100000");
+        using var response = await fixture.GetAsOperatorAsync("/api/v1/telemetry?minutes=100000");
 
         var telemetry = await response.GetContentAsync<TelemetryResponse>();
 

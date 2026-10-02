@@ -817,8 +817,7 @@ public sealed class LogTests
 
         using var response = await Send(fixture, "/api/v1/logs", "not-the-token");
 
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode,
-                        "and it looks the same as having no panel at all");
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [TestMethod]

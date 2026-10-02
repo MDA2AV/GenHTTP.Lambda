@@ -1,3 +1,4 @@
+using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -11,6 +12,7 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Source;
 
+using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
@@ -188,8 +190,13 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         logger.LogInformation("Exported version {Version} of lambda {Lambda} as a project", content.Version, lambda.PublicKey);
 
+        // packed into a file rather than into memory, because a project carries
+        // the database along, which may be as large as the tier allows - and
+        // deleted once it has been sent
+        var stream = new FileStream(archive, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, BufferSize.Write, FileOptions.DeleteOnClose);
+
         return request.Respond()
-                      .Content(new ExportContent(archive))
+                      .Content(stream, new ContentType("application/zip"), (ulong)stream.Length)
                       .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}.zip\"")
                       .Build();
     }

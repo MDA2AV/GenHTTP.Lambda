@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 
+using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
 
@@ -72,7 +73,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
         logger.LogInformation("Downloaded version {Version} of lambda {Lambda} as a zip archive", version, lambda.PublicKey);
 
         return request.Respond()
-                      .Content(new BinaryContent(zip, "application/zip"))
+                      .Content(zip, new ContentType("application/zip"))
                       .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}-v{version}.zip\"")
                       .Build();
     }

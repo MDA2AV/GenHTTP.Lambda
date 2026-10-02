@@ -36,8 +36,7 @@ public sealed class AdminTests
 
         using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas", "not-the-token");
 
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode,
-                        "and it looks the same as having no panel at all");
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [TestMethod]
@@ -47,7 +46,23 @@ public sealed class AdminTests
 
         using var response = await fixture.SendAsync(HttpMethod.Get, "/api/v1/admin/lambdas");
 
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task TheOperatorIsAnsweredWhenTheApiIsCompiled()
+    {
+        // the tests run the API by reflection to save time, but an
+        // installation compiles it, and the code generated for a method can
+        // fail where reflection does not
+        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { CompileApi = true });
+
+        foreach (var path in new[] { "/api/v1/admin/lambdas?page=1", "/api/v1/telemetry?minutes=5", "/api/v1/telemetry/lambdas", "/api/v1/logs?level=info" })
+        {
+            using var response = await fixture.GetAsOperatorAsync(path);
+
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, path);
+        }
     }
 
     [TestMethod]
@@ -98,7 +113,7 @@ public sealed class AdminTests
 
         var body = await response.Content.ReadAsStringAsync();
 
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.DoesNotContain(lambda.PrivateKey, body, "which is the only thing keeping the listing from being a giveaway");
     }
 
@@ -245,7 +260,7 @@ public sealed class AdminTests
 
         using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas/hidden", "not-the-token");
 
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [TestMethod]
@@ -309,7 +324,7 @@ public sealed class AdminTests
 
         using var response = await Send(fixture, HttpMethod.Put, "/api/v1/admin/settings", "not-the-token", new SettingsModel(false));
 
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
 
         using var features = await fixture.GetAsync("/api/v1/system/features");
 
