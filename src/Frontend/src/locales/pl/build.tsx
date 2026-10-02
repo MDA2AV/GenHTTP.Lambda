@@ -26,6 +26,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Przed twoją jest jeszcze jedna strona – potem twoja kolej.' : `Stron przed twoją: ${waiting}.`,
   starting: 'Zaczynamy…',
+  steps: {
+    guide: 'Przygotowania',
+    examples: 'Przeglądanie przykładów',
+    create: 'Wybieranie adresu twojej strony',
+    write: 'Pisanie twojej strony',
+    improve: 'Ulepszanie twojej strony',
+    check: 'Szukanie błędów',
+    online: 'Publikowanie online',
+    trying: 'Wypróbowywanie',
+    looking: 'Przeglądanie twojej strony',
+    forRecords: 'Przygotowywanie miejsca na wpisy',
+    forKeys: 'Przygotowywanie miejsca na klucze i hasła',
+    forFiles: 'Przygotowywanie miejsca na to, co strona zapisze',
+    records: 'Przeglądanie wpisów',
+    keys: 'Sprawdzanie, jakich kluczy i haseł potrzebuje',
+    addFile: 'Dodawanie pliku',
+    removeFile: 'Usuwanie pliku',
+    files: 'Przeglądanie tego, co zostało zapisane',
+    isOnline: 'online',
+  },
 
   points: [
     {

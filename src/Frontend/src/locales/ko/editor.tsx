@@ -314,6 +314,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>{path} 저장</>,
       delete: (path) => <>{path} 삭제</>,
       list: '저장된 파일 살펴보기',
+      switchOn: { database: '데이터베이스 켜기', secrets: '시크릿 켜기', workspace: '워크스페이스 켜기' },
+      records: '데이터베이스 읽기',
+      secrets: '시크릿 살펴보기',
       other: (tool) => `${tool} 사용`,
     },
     marks: {

@@ -26,6 +26,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Eine Website ist vor Ihrer an der Reihe – danach sind Sie dran.' : `${waiting} Websites sind vor Ihrer an der Reihe.`,
   starting: 'Startet …',
+  steps: {
+    guide: 'Bereitet sich vor',
+    examples: 'Sieht sich Beispiele an',
+    create: 'Wählt eine Adresse für Ihre Website',
+    write: 'Schreibt Ihre Website',
+    improve: 'Verbessert Ihre Website',
+    check: 'Prüft sie auf Fehler',
+    online: 'Stellt sie online',
+    trying: 'Probiert sie aus',
+    looking: 'Sieht sich Ihre Website an',
+    forRecords: 'Schafft Platz für ihre Einträge',
+    forKeys: 'Schafft Platz für Schlüssel und Passwörter',
+    forFiles: 'Schafft Platz für das, was sie speichert',
+    records: 'Sieht sich ihre Einträge an',
+    keys: 'Prüft, welche Schlüssel und Passwörter sie braucht',
+    addFile: 'Fügt eine Datei hinzu',
+    removeFile: 'Entfernt eine Datei',
+    files: 'Sieht sich an, was sie gespeichert hat',
+    isOnline: 'online',
+  },
 
   points: [
     {

@@ -26,6 +26,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Sizinkinden önce bir web sitesi var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} web sitesi var.`,
   starting: 'Başlıyor…',
+  steps: {
+    guide: 'Hazırlanıyor',
+    examples: 'Örneklere bakılıyor',
+    create: 'Web siteniz için bir adres seçiliyor',
+    write: 'Web siteniz yazılıyor',
+    improve: 'Web siteniz iyileştiriliyor',
+    check: 'Hatalar kontrol ediliyor',
+    online: 'Yayına alınıyor',
+    trying: 'Deneniyor',
+    looking: 'Web sitenize bakılıyor',
+    forRecords: 'Kayıtlar için yer hazırlanıyor',
+    forKeys: 'Anahtarlar ve parolalar için yer hazırlanıyor',
+    forFiles: 'Kaydedecekleri için yer hazırlanıyor',
+    records: 'Kayıtlara bakılıyor',
+    keys: 'Hangi anahtar ve parolaların gerektiği kontrol ediliyor',
+    addFile: 'Dosya ekleniyor',
+    removeFile: 'Dosya kaldırılıyor',
+    files: 'Kaydedilenlere bakılıyor',
+    isOnline: 'yayında',
+  },
 
   points: [
     {

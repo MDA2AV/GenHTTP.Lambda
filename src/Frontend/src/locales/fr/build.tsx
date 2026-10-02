@@ -26,6 +26,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Un site passe avant le vôtre : vous êtes le suivant.' : `${waiting} sites passent avant le vôtre.`,
   starting: 'Démarrage…',
+  steps: {
+    guide: 'Préparation',
+    examples: 'Coup d’œil à des exemples',
+    create: 'Choix d’une adresse pour votre site',
+    write: 'Écriture de votre site',
+    improve: 'Amélioration de votre site',
+    check: 'Recherche d’erreurs',
+    online: 'Mise en ligne',
+    trying: 'Essai du site',
+    looking: 'Relecture de votre site',
+    forRecords: 'Préparation de l’espace pour ses entrées',
+    forKeys: 'Préparation de l’espace pour les clés et mots de passe',
+    forFiles: 'Préparation de l’espace pour ce qu’il enregistre',
+    records: 'Coup d’œil à ses entrées',
+    keys: 'Vérification des clés et mots de passe nécessaires',
+    addFile: 'Ajout d’un fichier',
+    removeFile: 'Suppression d’un fichier',
+    files: 'Coup d’œil à ce qu’il a enregistré',
+    isOnline: 'en ligne',
+  },
 
   points: [
     {

@@ -26,6 +26,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Há um site à frente do teu. Depois és tu.' : `Há ${waiting} sites à frente do teu.`,
   starting: 'A começar…',
+  steps: {
+    guide: 'A preparar tudo',
+    examples: 'A ver exemplos',
+    create: 'A escolher um endereço para o teu site',
+    write: 'A escrever o teu site',
+    improve: 'A melhorar o teu site',
+    check: 'A procurar erros',
+    online: 'A pô-lo online',
+    trying: 'A experimentá-lo',
+    looking: 'A rever o teu site',
+    forRecords: 'A preparar espaço para os registos',
+    forKeys: 'A preparar espaço para chaves e palavras-passe',
+    forFiles: 'A preparar espaço para o que ele guardar',
+    records: 'A ver os registos',
+    keys: 'A ver de que chaves e palavras-passe precisa',
+    addFile: 'A adicionar um ficheiro',
+    removeFile: 'A remover um ficheiro',
+    files: 'A ver o que ele guardou',
+    isOnline: 'online',
+  },
 
   points: [
     {

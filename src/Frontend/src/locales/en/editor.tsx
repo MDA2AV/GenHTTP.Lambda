@@ -280,6 +280,9 @@ export const editor = {
       upload: (path: Node) => <>Storing {path}</>,
       delete: (path: Node) => <>Removing {path}</>,
       list: 'Looking at the stored files',
+      switchOn: { database: 'Switching on the database', secrets: 'Switching on secrets', workspace: 'Switching on the workspace' },
+      records: 'Reading the database',
+      secrets: 'Looking at the secrets',
       other: (tool: string) => `Using ${tool}`,
     },
     marks: {

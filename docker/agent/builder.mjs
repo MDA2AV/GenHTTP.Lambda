@@ -498,7 +498,6 @@ function enqueue(order) {
     language: order.language,
     before: order.before,
     feature: order.feature,
-    events: [],
     steps: [],
     created: Date.now(),
     result: null
@@ -575,17 +574,15 @@ function cancel(job) {
   }
 }
 
-/** A line for the build page, which shows these as they are. */
-function say(job, text) {
-  job.events.push({ at: Date.now(), text });
-
-  if (job.events.length > 120) job.events.shift();
-}
-
 /**
- * A step for the control center, which draws these in the owner's language:
- * what kind of thing happened, the facts of it, and - once the tool has
- * answered - how it went.
+ * A step for the build page and the control center, which draw these in the
+ * visitor's or the owner's language: what kind of thing happened, the facts of
+ * it, and - once the tool has answered - how it went.
+ *
+ * There used to be an English line beside each step for the build page, which
+ * showed it as it was: untranslated, in the words of the tools ("Claiming an
+ * address", "Compiling it"), and with a line of its own at the start that the
+ * first tool call then said again.
  */
 function step(job, entry) {
   const at = Math.max(0, Math.round((Date.now() - (job.started ?? job.created)) / 1000));
@@ -605,8 +602,6 @@ function step(job, entry) {
 async function run(job) {
   job.state = 'running';
   job.started = Date.now();
-
-  say(job, job.kind === 'change' ? 'Reading what is already there' : 'Reading the platform guide');
 
   const brief = briefOf(job);
   const free = unbounded(job);
@@ -750,7 +745,6 @@ async function run(job) {
             const tool = String(part.name ?? '').replace('mcp__genhttp__', '');
 
             calls.set(part.id, { tool, step: step(job, begin(tool, part.input)) });
-            say(job, describe(part.name, part.input));
             closing = '';
           }
 
@@ -902,7 +896,6 @@ async function run(job) {
       publicKey: created?.publicKey,
       privateKey: created?.privateKey
     };
-    say(job, 'Declined');
     return;
   }
 
@@ -954,8 +947,6 @@ async function run(job) {
     editorUrl: `${ORIGIN}/editor/${created.privateKey}`,
     summary: clip(summary, 1200)
   };
-
-  say(job, deployed ? 'Deployed' : 'Built, but it never went online');
 }
 
 /**
@@ -984,7 +975,6 @@ function settle(job, { wrote, saved, online, compiles, feature, summary, stderr,
   if (job.cancelled) {
     job.state = 'cancelled';
     job.result = { ok: false, cancelled: true, ...facts };
-    say(job, 'Stopped');
     return;
   }
 
@@ -1019,7 +1009,6 @@ function settle(job, { wrote, saved, online, compiles, feature, summary, stderr,
       summary: summary ? clip(summary, 1200) : undefined,
       detail: summary ? undefined : clip(stderr, 400) || undefined
     };
-    say(job, refusal ? 'Declined' : 'Nothing was changed');
     return;
   }
 
@@ -1030,12 +1019,6 @@ function settle(job, { wrote, saved, online, compiles, feature, summary, stderr,
     reason: cut,
     summary: summary ? clip(summary, 1200) : undefined
   };
-
-  say(job, online != null
-    ? `Version ${online} is online`
-    : feature
-      ? `Ready to try in the feature ${feature.name ?? feature.key}`
-      : `Saved as version ${saved}`);
 }
 
 /**
@@ -1149,6 +1132,11 @@ function begin(tool, input) {
     case 'upload_file': return { kind: 'upload', path: String(input?.path ?? ''), ...preview };
     case 'delete_file': return { kind: 'delete', path: String(input?.path ?? ''), ...preview };
     case 'list_files': return { kind: 'list', ...preview };
+    // which kind of data it switched on is what the pages name: records, keys
+    // and passwords, or files
+    case 'enable_data': return { kind: 'data', ...(input?.kind ? { data: clip(String(input.kind), 20) } : {}) };
+    case 'read_database': return { kind: 'records', ...preview };
+    case 'list_secrets': return { kind: 'secrets', ...preview };
     default: return { kind: 'other', tool };
   }
 }
@@ -1205,44 +1193,6 @@ function finish(entry, tool, body) {
   }
 }
 
-const WORDS = {
-  platform_guide: 'Reading the platform guide',
-  list_demos: 'Looking at the demos',
-  create_lambda: 'Claiming an address',
-  write_code: 'Writing the code',
-  change_code: 'Changing the code',
-  create_feature: 'Starting a feature',
-  update_feature: 'Updating the feature',
-  merge_feature: 'Merging the feature',
-  delete_feature: 'Deleting a feature',
-  check_code: 'Compiling it',
-  deploy: 'Putting it online',
-  read_lambda: 'Checking what is there',
-  read_logs: 'Checking how it answers',
-  upload_file: 'Uploading a file',
-  list_files: 'Listing the files',
-  delete_file: 'Removing a file',
-  enable_data: 'Making room for what it keeps',
-  read_database: 'Checking what it saved',
-  list_secrets: 'Checking which keys it needs'
-};
-
-function describe(name, input) {
-  const short = String(name ?? '').replace('mcp__genhttp__', '');
-
-  if (short === 'write_code' && input?.files?.length) {
-    return `Writing ${input.files.length} file${input.files.length === 1 ? '' : 's'}`;
-  }
-
-  if (short === 'change_code') {
-    const count = (input?.files?.length ?? 0) + (input?.edits?.length ?? 0) + (input?.remove?.length ?? 0);
-
-    return count > 0 ? `Making ${count} change${count === 1 ? '' : 's'}` : WORDS.change_code;
-  }
-
-  return WORDS[short] ?? `Working (${short})`;
-}
-
 /** How a job is getting on, as both pages read it. */
 function progress(job) {
   const lane = laneOf(job);
@@ -1253,7 +1203,6 @@ function progress(job) {
     id: job.id,
     kind: job.kind,
     state: job.state,
-    events: job.events.map(e => e.text),
     steps: job.steps,
     result: job.result,
     waiting: lane.queue.indexOf(job.id) + 1,

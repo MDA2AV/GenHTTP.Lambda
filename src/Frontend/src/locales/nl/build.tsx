@@ -26,6 +26,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Er is nog één website voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} websites voor de jouwe.`,
   starting: 'Starten…',
+  steps: {
+    guide: 'Voorbereiden',
+    examples: 'Voorbeelden bekijken',
+    create: 'Een adres voor je website kiezen',
+    write: 'Je website schrijven',
+    improve: 'Je website verbeteren',
+    check: 'Controleren op fouten',
+    online: 'Online zetten',
+    trying: 'Uitproberen',
+    looking: 'Je website bekijken',
+    forRecords: 'Ruimte maken voor de items',
+    forKeys: 'Ruimte maken voor sleutels en wachtwoorden',
+    forFiles: 'Ruimte maken voor wat de website opslaat',
+    records: 'De items bekijken',
+    keys: 'Nagaan welke sleutels en wachtwoorden nodig zijn',
+    addFile: 'Een bestand toevoegen',
+    removeFile: 'Een bestand verwijderen',
+    files: 'Bekijken wat er is opgeslagen',
+    isOnline: 'online',
+  },
 
   points: [
     {

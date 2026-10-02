@@ -309,6 +309,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>Speichert {path}</>,
       delete: (path) => <>Löscht {path}</>,
       list: 'Sieht sich die gespeicherten Dateien an',
+      switchOn: { database: 'Schaltet die Datenbank ein', secrets: 'Schaltet Secrets ein', workspace: 'Schaltet den Workspace ein' },
+      records: 'Liest die Datenbank',
+      secrets: 'Sieht sich die Secrets an',
       other: (tool) => `Nutzt ${tool}`,
     },
     marks: {

@@ -24,6 +24,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'あなたの前に1件あります。次があなたの番です。' : `あなたの前に${waiting}件あります。`,
   starting: '準備中…',
+  steps: {
+    guide: '準備しています',
+    examples: '見本を見ています',
+    create: 'ホームページのアドレスを決めています',
+    write: 'ホームページを作っています',
+    improve: 'ホームページを改良しています',
+    check: 'まちがいがないか確認しています',
+    online: '公開しています',
+    trying: '試しています',
+    looking: 'ホームページを見直しています',
+    forRecords: '記録の保存場所を用意しています',
+    forKeys: 'キーとパスワードの保存場所を用意しています',
+    forFiles: '保存するものの置き場所を用意しています',
+    records: '記録を確認しています',
+    keys: '必要なキーとパスワードを確認しています',
+    addFile: 'ファイルを追加しています',
+    removeFile: 'ファイルを削除しています',
+    files: '保存したものを確認しています',
+    isOnline: '公開中',
+  },
 
   points: [
     {

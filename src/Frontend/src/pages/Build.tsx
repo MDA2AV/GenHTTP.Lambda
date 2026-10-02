@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { api, ApiError } from '../api';
+import { api, ApiError, type AgentStep } from '../api';
 import { ConnectAgent } from '../components/ConnectAgent';
 import { useT } from '../i18n';
 import { usePublicPage } from '../meta';
@@ -38,6 +38,90 @@ type Result = {
   deployed?: boolean;
 };
 
+type Words = ReturnType<typeof useT>['build']['steps'];
+
+/** A line of the progress list: what is happening, and whether it is done. */
+type Line = { text: string; done: boolean; online: boolean };
+
+/**
+ * What the agent is doing, in the words of this page rather than those of its
+ * tools.
+ *
+ * The agent hands over facts - it read the guide, made a lambda, wrote and
+ * compiled code - and they are said here the way somebody who wants a website
+ * would put them: getting ready, choosing an address, checking it for
+ * mistakes. What such a person has no use for is left out (what the agent
+ * says to itself, the errors it fixes, the tools it has no words for), and a
+ * thing done several times in a row - reading three examples, compiling twice
+ * - is one line.
+ */
+function linesOf(steps: AgentStep[], words: Words): Line[] {
+  const lines: Line[] = [];
+
+  steps.forEach((step, index) => {
+    const before = steps.slice(0, index);
+
+    const text = (() => {
+      switch (step.kind) {
+        case 'guide':
+          return words.guide;
+        case 'demos':
+          return words.examples;
+        case 'read':
+          // before it has an address of its own, what it reads is an example
+          return before.some((s) => s.kind === 'create') ? words.looking : words.examples;
+        case 'create':
+          return words.create;
+        case 'write':
+          return before.some((s) => s.kind === 'write') ? words.improve : words.write;
+        case 'check':
+          return words.check;
+        case 'deploy':
+          return words.online;
+        case 'logs':
+          return words.trying;
+        case 'data':
+          return step.data === 'database'
+            ? words.forRecords
+            : step.data === 'secrets'
+              ? words.forKeys
+              : step.data === 'workspace'
+                ? words.forFiles
+                : null;
+        case 'records':
+          return words.records;
+        case 'secrets':
+          return words.keys;
+        case 'upload':
+          return words.addFile;
+        case 'delete':
+          return words.removeFile;
+        case 'list':
+          return words.files;
+        default:
+          return null;
+      }
+    })();
+
+    if (text == null) {
+      return;
+    }
+
+    const online = step.kind === 'write' && step.done === true && step.online === true;
+    const last = lines[lines.length - 1];
+
+    if (last && last.text === text) {
+      last.done = step.done === true;
+      last.online = last.online || online;
+      return;
+    }
+
+    lines.push({ text, done: step.done === true, online });
+  });
+
+  return lines;
+}
+
 export function Build() {
   usePublicPage('/build');
 
@@ -48,7 +132,7 @@ export function Build() {
   const [prompt, setPrompt] = useState('');
   const { origin } = useOrigin();
   const [state, setState] = useState<'idle' | 'working' | 'done' | 'failed'>('idle');
-  const [events, setEvents] = useState<string[]>([]);
+  const [steps, setSteps] = useState<AgentStep[]>([]);
   const [waiting, setWaiting] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -58,6 +142,8 @@ export function Build() {
   const [copied, setCopied] = useState(false);
 
   const polling = useRef<number | null>(null);
+
+  const lines = linesOf(steps, said.steps);
 
   // offered until the server says otherwise, so the box is in the page as
   // it is prerendered for crawlers and does not pop in for everybody else
@@ -81,7 +167,7 @@ export function Build() {
     if (prompt.trim().length < 3 || state === 'working') return;
 
     setState('working');
-    setEvents([]);
+    setSteps([]);
     setWaiting(0);
     setResult(null);
 
@@ -105,7 +191,7 @@ export function Build() {
       try {
         const job = await api.builds.progress(id);
 
-        setEvents(job.events ?? []);
+        setSteps(job.steps ?? []);
         setWaiting(job.waiting ?? 0);
 
         // cancelled is never asked for from here, but the agent knows the
@@ -240,26 +326,31 @@ export function Build() {
 
       {state === 'working' && (
         <ol className="surface mt-6 divide-y divide-slate-200/60 text-sm dark:divide-slate-700/60">
-          {events.map((event, i) => (
+          {lines.map((line, i) => (
             <li key={i} className="flex items-center gap-3 px-5 py-2.5">
               <span
                 className={
-                  i === events.length - 1
-                    ? 'h-1.5 w-1.5 animate-pulse rounded-full bg-sky-500'
-                    : 'h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600'
+                  i === lines.length - 1
+                    ? 'h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-sky-500'
+                    : 'h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600'
                 }
               />
-              {event}
+              <span className="min-w-0 flex-1">{line.text}</span>
+              {line.online && (
+                <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-px text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+                  {said.steps.isOnline}
+                </span>
+              )}
             </li>
           ))}
-          {events.length === 0 && waiting > 0 && (
+          {lines.length === 0 && waiting > 0 && (
             <li className="flex items-center gap-3 px-5 py-2.5 text-slate-500">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
               {/* one build runs at a time, so everyone else waits their turn */}
               {said.ahead(waiting)}
             </li>
           )}
-          {events.length === 0 && waiting === 0 && (
+          {lines.length === 0 && waiting === 0 && (
             <li className="px-5 py-2.5 text-slate-500">{said.starting}</li>
           )}
         </ol>

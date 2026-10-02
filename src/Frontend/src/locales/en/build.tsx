@@ -30,6 +30,27 @@ export const build = {
   ahead: (waiting: number) =>
     waiting === 1 ? 'One website ahead of yours - you are next.' : `${waiting} websites ahead of yours.`,
   starting: 'Starting…',
+  /** What the agent is doing, in the words of this page rather than those of its tools. */
+  steps: {
+    guide: 'Getting ready',
+    examples: 'Looking at examples',
+    create: 'Choosing an address for your website',
+    write: 'Writing your website',
+    improve: 'Improving your website',
+    check: 'Checking it for mistakes',
+    online: 'Putting it online',
+    trying: 'Trying it out',
+    looking: 'Looking over your website',
+    forRecords: 'Making room for its records',
+    forKeys: 'Making room for keys and passwords',
+    forFiles: 'Making room for what it saves',
+    records: 'Looking at its records',
+    keys: 'Checking which keys and passwords it needs',
+    addFile: 'Adding a file',
+    removeFile: 'Removing a file',
+    files: 'Looking at what it saved',
+    isOnline: 'online',
+  },
 
   points: [
     {

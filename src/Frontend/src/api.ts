@@ -281,20 +281,23 @@ export interface BuildResult {
 }
 
 /**
- * One thing the agent did while changing a lambda. Facts rather than words,
- * so the control center says them in its own language; only what the agent
- * said itself (kind "say") is prose.
+ * One thing the agent did while building or changing a lambda. Facts rather
+ * than words, so /build and the control center say them in their own
+ * language; only what the agent said itself (kind "say") is prose.
  */
 export interface AgentStep {
   /** Seconds into the run. */
   at: number;
   /**
    * What it did. feature is starting one, update changing its notes or its
-   * base, merge making it a version, discard deleting it.
+   * base, merge making it a version, discard deleting it; data is switching a
+   * kind of data on, records reading the database, secrets listing them.
    */
   kind:
     | 'say' | 'guide' | 'demos' | 'read' | 'logs' | 'create' | 'write' | 'check' | 'deploy' | 'upload' | 'delete' | 'list'
-    | 'feature' | 'update' | 'merge' | 'discard' | 'other';
+    | 'feature' | 'update' | 'merge' | 'discard' | 'data' | 'records' | 'secrets' | 'other';
+  /** The kind of data switched on, for "data": database, secrets or workspace. */
+  data?: string | null;
   /** What the agent said, for "say". */
   text?: string | null;
   /** The tool, for "other". */
@@ -1074,7 +1077,7 @@ export const api = {
     start: (prompt: string, model?: string, password?: string) =>
       request<{ id: string; queued: number }>('/builds', send({ prompt, model, password })),
     progress: (id: string) =>
-      request<{ state: string; events: string[]; result: BuildResult | null; waiting: number }>(`/builds/${id}`),
+      request<{ state: string; steps: AgentStep[]; result: BuildResult | null; waiting: number }>(`/builds/${id}`),
   },
 
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),

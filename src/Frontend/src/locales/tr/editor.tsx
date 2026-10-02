@@ -310,6 +310,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>{path} kaydediliyor</>,
       delete: (path) => <>{path} siliniyor</>,
       list: 'Kayıtlı dosyalara bakılıyor',
+      switchOn: { database: 'Veritabanı açılıyor', secrets: 'Gizli değerler açılıyor', workspace: 'Çalışma alanı açılıyor' },
+      records: 'Veritabanı okunuyor',
+      secrets: 'Gizli değerlere bakılıyor',
       other: (tool) => `${tool} aracı kullanılıyor`,
     },
     marks: {

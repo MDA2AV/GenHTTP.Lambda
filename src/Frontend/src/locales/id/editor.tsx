@@ -316,6 +316,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>Menyimpan {path}</>,
       delete: (path) => <>Menghapus {path}</>,
       list: 'Melihat file yang tersimpan',
+      switchOn: { database: 'Mengaktifkan database', secrets: 'Mengaktifkan rahasia', workspace: 'Mengaktifkan workspace' },
+      records: 'Membaca database',
+      secrets: 'Melihat rahasia',
       other: (tool) => `Memakai ${tool}`,
     },
     marks: {

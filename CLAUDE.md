@@ -75,6 +75,13 @@ Give both a good experience. Concretely:
   way to describe a change. The database is **records** (a table of them, a
   row is a record), secrets are **keys and passwords**, the workspace is **what
   your app saved**.
+- What the agent is doing reaches the pages as **steps** - facts the runner
+  records per tool call (`begin` in `docker/agent/builder.mjs`) - never as
+  English sentences from the runner. `/build` says them in its own words and
+  language (getting ready, choosing an address for your website, checking it
+  for mistakes), leaves out what a visitor has no use for, and folds repeats
+  into one line. A new tool the agent may call gets a step kind and words on
+  both pages.
 - The simple view shows the **Data** section only once the app keeps something
   (a table, a saved file, a secret) or its code waits for a secret, and then
   only the kinds that hold something: no switches, no folders, no code, no

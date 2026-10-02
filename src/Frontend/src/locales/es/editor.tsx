@@ -301,6 +301,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>Guardando {path}</>,
       delete: (path) => <>Eliminando {path}</>,
       list: 'Mirando los archivos guardados',
+      switchOn: { database: 'Activando la base de datos', secrets: 'Activando los secretos', workspace: 'Activando el workspace' },
+      records: 'Leyendo la base de datos',
+      secrets: 'Mirando los secretos',
       other: (tool) => `Usando ${tool}`,
     },
     marks: {

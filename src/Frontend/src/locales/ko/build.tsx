@@ -24,6 +24,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? '앞에 홈페이지 하나가 있어요. 다음이 고객님 차례예요.' : `앞에 홈페이지 ${waiting}개가 있어요.`,
   starting: '시작하는 중…',
+  steps: {
+    guide: '준비하고 있어요',
+    examples: '예시를 살펴보고 있어요',
+    create: '홈페이지 주소를 정하고 있어요',
+    write: '홈페이지를 만들고 있어요',
+    improve: '홈페이지를 다듬고 있어요',
+    check: '잘못된 곳이 없는지 확인하고 있어요',
+    online: '온라인에 올리고 있어요',
+    trying: '직접 써 보고 있어요',
+    looking: '홈페이지를 살펴보고 있어요',
+    forRecords: '기록을 저장할 곳을 마련하고 있어요',
+    forKeys: '키와 비밀번호를 둘 곳을 마련하고 있어요',
+    forFiles: '앱이 저장할 곳을 마련하고 있어요',
+    records: '기록을 살펴보고 있어요',
+    keys: '필요한 키와 비밀번호를 확인하고 있어요',
+    addFile: '파일을 추가하고 있어요',
+    removeFile: '파일을 지우고 있어요',
+    files: '저장된 것을 살펴보고 있어요',
+    isOnline: '온라인',
+  },
 
   points: [
     {

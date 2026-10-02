@@ -315,6 +315,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>Slaat {path} op</>,
       delete: (path) => <>Verwijdert {path}</>,
       list: 'Bekijkt de opgeslagen bestanden',
+      switchOn: { database: 'Zet de database aan', secrets: 'Zet secrets aan', workspace: 'Zet de workspace aan' },
+      records: 'Leest de database',
+      secrets: 'Bekijkt de secrets',
       other: (tool) => `Gebruikt ${tool}`,
     },
     marks: {

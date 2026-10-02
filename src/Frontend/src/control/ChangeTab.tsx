@@ -10,6 +10,7 @@ import {
   IconBook,
   IconCheck,
   IconChevronDown,
+  IconDatabase,
   IconDots,
   IconDraft,
   IconExternal,
@@ -17,6 +18,7 @@ import {
   IconFolder,
   IconHistory,
   IconInfo,
+  IconKey,
   IconLayers,
   IconList,
   IconPencil,
@@ -25,6 +27,7 @@ import {
   IconSpark,
   IconSpinner,
   IconStop,
+  IconTable,
   IconTrash,
   IconUpload,
   IconWrench,
@@ -960,6 +963,9 @@ const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactN
   update: IconHistory,
   merge: IconPlay,
   discard: IconTrash,
+  data: IconDatabase,
+  records: IconTable,
+  secrets: IconKey,
   other: IconDots,
 };
 
@@ -1054,6 +1060,12 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
       return <>{words.delete(<File name={step.path ?? ''} />)}</>;
     case 'list':
       return <>{words.list}</>;
+    case 'data':
+      return <>{step.data === 'database' || step.data === 'secrets' || step.data === 'workspace' ? words.switchOn[step.data] : words.other('enable_data')}</>;
+    case 'records':
+      return <>{words.records}</>;
+    case 'secrets':
+      return <>{words.secrets}</>;
     default:
       return <>{words.other(step.tool ?? '')}</>;
   }

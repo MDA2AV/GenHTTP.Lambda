@@ -26,6 +26,26 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Ada satu website sebelum milik Anda. Setelah itu giliran Anda.' : `Ada ${waiting} website sebelum milik Anda.`,
   starting: 'Memulai…',
+  steps: {
+    guide: 'Bersiap-siap',
+    examples: 'Melihat contoh',
+    create: 'Memilih alamat untuk website Anda',
+    write: 'Menulis website Anda',
+    improve: 'Menyempurnakan website Anda',
+    check: 'Memeriksa kesalahan',
+    online: 'Menjadikannya online',
+    trying: 'Mencobanya',
+    looking: 'Memeriksa website Anda',
+    forRecords: 'Menyiapkan tempat untuk catatannya',
+    forKeys: 'Menyiapkan tempat untuk kunci dan kata sandi',
+    forFiles: 'Menyiapkan tempat untuk yang disimpannya',
+    records: 'Melihat catatannya',
+    keys: 'Memeriksa kunci dan kata sandi yang dibutuhkan',
+    addFile: 'Menambahkan file',
+    removeFile: 'Menghapus file',
+    files: 'Melihat yang sudah disimpannya',
+    isOnline: 'online',
+  },
 
   points: [
     {
