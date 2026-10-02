@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     'Aklınızdaki web sitesini veya uygulamayı kendi cümlelerinizle anlatın. Yapay zekâ sizin için yapar, biz barındırırız ve siteniz dakikalar içinde, herkese gönderebileceğiniz bir linkle yayında olur. Ücretsiz; kod bilmenize ya da üye olmanıza gerek yok.',
   placeholder: 'Şöyle bir web sitesi istiyorum…',
-  working: 'çalışıyor…',
   shortcut: 'ctrl + enter',
-  building: 'Oluşturuluyor',
   buildIt: 'Web sitemi oluştur',
   builtBy: 'Oluşturan',
   password: 'şifre',
@@ -26,6 +24,12 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Sizinkinden önce bir web sitesi var, sonra sıra sizde.' : `Sizinkinden önce ${waiting} web sitesi var.`,
   starting: 'Başlıyor…',
+  asked: 'İsteğiniz',
+  leaveOpen: 'Bu sayfayı açık bırakın: web sitenizi daha sonra değiştirmek için gereken link yalnızca burada, siteniz hazır olduğunda gösterilir.',
+  log: 'Yapay zekânın yaptıkları',
+  online: 'Web siteniz yayında',
+  notOnline: 'Web siteniz oluşturuldu, ancak yayına alınmadı.',
+  open: 'Web sitesini aç',
   steps: {
     guide: 'Hazırlanıyor',
     examples: 'Örneklere bakılıyor',
@@ -44,7 +48,6 @@ export const build: Messages['build'] = {
     addFile: 'Dosya ekleniyor',
     removeFile: 'Dosya kaldırılıyor',
     files: 'Kaydedilenlere bakılıyor',
-    isOnline: 'yayında',
   },
 
   points: [

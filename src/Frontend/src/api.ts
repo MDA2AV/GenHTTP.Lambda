@@ -1077,7 +1077,7 @@ export const api = {
     start: (prompt: string, model?: string, password?: string) =>
       request<{ id: string; queued: number }>('/builds', send({ prompt, model, password })),
     progress: (id: string) =>
-      request<{ state: string; steps: AgentStep[]; result: BuildResult | null; waiting: number }>(`/builds/${id}`),
+      request<{ state: string; steps: AgentStep[]; result: BuildResult | null; waiting: number; seconds: number; limit?: number | null }>(`/builds/${id}`),
   },
 
   activity: (token: string) => request<Activity>('/telemetry/lambdas', withToken(token)),

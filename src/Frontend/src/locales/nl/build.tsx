@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     'Beschrijf in je eigen woorden de website of app die je voor ogen hebt. AI bouwt hem voor je, wij hosten hem en binnen een paar minuten staat hij online, met een link die je naar iedereen kunt sturen. Gratis, zonder programmeren, zonder account.',
   placeholder: 'Ik wil een website die…',
-  working: 'bezig…',
   shortcut: 'ctrl + enter',
-  building: 'Bezig met maken',
   buildIt: 'Maak mijn website',
   builtBy: 'Gemaakt door',
   password: 'wachtwoord',
@@ -26,6 +24,12 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Er is nog één website voor de jouwe – daarna ben jij aan de beurt.' : `Er zijn nog ${waiting} websites voor de jouwe.`,
   starting: 'Starten…',
+  asked: 'Jouw vraag',
+  leaveOpen: 'Laat deze pagina open: de link om je website later aan te passen zie je alleen hier, zodra hij klaar is.',
+  log: 'Wat de AI deed',
+  online: 'Je website staat online',
+  notOnline: 'Je website is gemaakt, maar staat niet online.',
+  open: 'Je website openen',
   steps: {
     guide: 'Voorbereiden',
     examples: 'Voorbeelden bekijken',
@@ -44,7 +48,6 @@ export const build: Messages['build'] = {
     addFile: 'Een bestand toevoegen',
     removeFile: 'Een bestand verwijderen',
     files: 'Bekijken wat er is opgeslagen',
-    isOnline: 'online',
   },
 
   points: [

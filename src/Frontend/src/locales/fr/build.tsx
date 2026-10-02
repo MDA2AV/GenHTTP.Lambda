@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     'Décrivez avec vos propres mots le site web ou l’application que vous avez en tête. L’IA le crée pour vous, nous l’hébergeons, et il est en ligne en quelques minutes, avec un lien à envoyer à qui vous voulez. Gratuit, sans coder, sans inscription.',
   placeholder: 'Je voudrais un site web qui…',
-  working: 'en cours…',
   shortcut: 'Ctrl + Entrée',
-  building: 'Création',
   buildIt: 'Créer mon site',
   builtBy: 'Créé par',
   password: 'mot de passe',
@@ -26,6 +24,12 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Un site passe avant le vôtre : vous êtes le suivant.' : `${waiting} sites passent avant le vôtre.`,
   starting: 'Démarrage…',
+  asked: 'Votre demande',
+  leaveOpen: 'Gardez cette page ouverte. Le lien pour modifier votre site plus tard ne s’affiche qu’ici, une fois qu’il est prêt.',
+  log: 'Ce que l’IA a fait',
+  online: 'Votre site est en ligne',
+  notOnline: 'Votre site a été créé, mais il n’a pas été mis en ligne.',
+  open: 'Ouvrir votre site',
   steps: {
     guide: 'Préparation',
     examples: 'Coup d’œil à des exemples',
@@ -44,7 +48,6 @@ export const build: Messages['build'] = {
     addFile: 'Ajout d’un fichier',
     removeFile: 'Suppression d’un fichier',
     files: 'Coup d’œil à ce qu’il a enregistré',
-    isOnline: 'en ligne',
   },
 
   points: [

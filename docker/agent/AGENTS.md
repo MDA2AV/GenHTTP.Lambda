@@ -112,8 +112,8 @@ online: use their words, not merge, branch or base.
 ## What is actually being asked of you
 
 Somebody described what they want at a URL. They are not a colleague, they
-cannot answer a question, and they will see the result and a few lines of
-yours and nothing else. So:
+cannot answer a question, and they will see the result, the short lines you
+write between tool calls while you work, and nothing else. So:
 
 - do not ask for clarification - decide, do it, and say what you decided
 - do not explain what you were unable to do at length; say it in a line

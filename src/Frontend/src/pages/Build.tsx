@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { api, ApiError, type AgentStep } from '../api';
+import { api, ApiError, type AgentStep, type BuildResult } from '../api';
+import { RunHeader, RunLog, RunOutcome, RunProgress, type Run } from '../components/AgentRun';
 import { ConnectAgent } from '../components/ConnectAgent';
+import { IconExternal } from '../components/Icons';
 import { useT } from '../i18n';
 import { usePublicPage } from '../meta';
 import { useLifetimes, useOrigin } from '../site';
@@ -15,6 +17,12 @@ import { useLifetimes, useOrigin } from '../site';
  * field, one button, and afterwards two links: where it is, and the editor
  * link to take it further with.
  *
+ * While it is built, the box becomes what the Change section of the editor
+ * shows of a change (components/AgentRun): what was asked, where it has got
+ * to and for how long, what the agent says as it works, and how it ended.
+ * Somebody who builds a website here and changes it later in the editor
+ * watches the same thing twice.
+ *
  * Where the operator switched the box off, or there is no agent to run it,
  * the page is what it says about itself and how to get the same from an
  * AI assistant of one's own.
@@ -26,39 +34,22 @@ import { useLifetimes, useOrigin } from '../site';
  * do both, and it never did the second well.
  */
 
-type Result = {
-  ok: boolean;
-  url?: string;
-  editorUrl?: string;
-  publicKey?: string;
-  privateKey?: string;
-  summary?: string;
-  error?: string;
-  detail?: string;
-  deployed?: boolean;
-};
-
 type Words = ReturnType<typeof useT>['build']['steps'];
 
-/** A line of the progress list: what is happening, and whether it is done. */
-type Line = { text: string; done: boolean; online: boolean };
+/** A build as this page follows it: the run, and when its numbers arrived. */
+type Followed = Run & { steps: AgentStep[]; received: number };
+
+const WAITING: Followed = { state: 'queued', waiting: 0, seconds: 0, limit: null, steps: [], received: 0 };
 
 /**
  * What the agent is doing, in the words of this page rather than those of its
- * tools.
- *
- * The agent hands over facts - it read the guide, made a lambda, wrote and
- * compiled code - and they are said here the way somebody who wants a website
- * would put them: getting ready, choosing an address, checking it for
- * mistakes. What such a person has no use for is left out (what the agent
- * says to itself, the errors it fixes, the tools it has no words for), and a
- * thing done several times in a row - reading three examples, compiling twice
- * - is one line.
+ * tools: the newest thing it did that somebody who wants a website would put
+ * into words - getting ready, choosing an address, checking it for mistakes.
+ * Only the newest, since what it said about it is in the log underneath.
  */
-function linesOf(steps: AgentStep[], words: Words): Line[] {
-  const lines: Line[] = [];
-
-  steps.forEach((step, index) => {
+function doingOf(steps: AgentStep[], words: Words): string | null {
+  for (let index = steps.length - 1; index >= 0; index--) {
+    const step = steps[index];
     const before = steps.slice(0, index);
 
     const text = (() => {
@@ -103,23 +94,12 @@ function linesOf(steps: AgentStep[], words: Words): Line[] {
       }
     })();
 
-    if (text == null) {
-      return;
+    if (text != null) {
+      return text;
     }
+  }
 
-    const online = step.kind === 'write' && step.done === true && step.online === true;
-    const last = lines[lines.length - 1];
-
-    if (last && last.text === text) {
-      last.done = step.done === true;
-      last.online = last.online || online;
-      return;
-    }
-
-    lines.push({ text, done: step.done === true, online });
-  });
-
-  return lines;
+  return null;
 }
 
 export function Build() {
@@ -132,9 +112,8 @@ export function Build() {
   const [prompt, setPrompt] = useState('');
   const { origin } = useOrigin();
   const [state, setState] = useState<'idle' | 'working' | 'done' | 'failed'>('idle');
-  const [steps, setSteps] = useState<AgentStep[]>([]);
-  const [waiting, setWaiting] = useState(0);
-  const [result, setResult] = useState<Result | null>(null);
+  const [run, setRun] = useState<Followed>(WAITING);
+  const [result, setResult] = useState<BuildResult | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [secondModel, setSecondModel] = useState(false);
   const [model, setModel] = useState('opus');
@@ -143,7 +122,9 @@ export function Build() {
 
   const polling = useRef<number | null>(null);
 
-  const lines = linesOf(steps, said.steps);
+  // what the agent said as it worked; the tools it called are nothing to
+  // somebody who wants a website, and the line above the log names the step
+  const spoken = run.steps.filter((step) => step.kind === 'say');
 
   // offered until the server says otherwise, so the box is in the page as
   // it is prerendered for crawlers and does not pop in for everybody else
@@ -167,8 +148,7 @@ export function Build() {
     if (prompt.trim().length < 3 || state === 'working') return;
 
     setState('working');
-    setSteps([]);
-    setWaiting(0);
+    setRun(WAITING);
     setResult(null);
 
     let id: string;
@@ -191,8 +171,14 @@ export function Build() {
       try {
         const job = await api.builds.progress(id);
 
-        setSteps(job.steps ?? []);
-        setWaiting(job.waiting ?? 0);
+        setRun({
+          state: job.state,
+          waiting: job.waiting ?? 0,
+          seconds: job.seconds ?? 0,
+          limit: job.limit ?? null,
+          steps: job.steps ?? [],
+          received: Date.now(),
+        });
 
         // cancelled is never asked for from here, but the agent knows the
         // state, and a page that polled for ever on it would be worse
@@ -219,7 +205,7 @@ export function Build() {
 
       <p className="mx-auto mt-4 max-w-lg text-center text-slate-500">{said.intro}</p>
 
-      {offered && (
+      {offered && state === 'idle' && (
         <div className="surface mt-10 p-2">
           <textarea
             value={prompt}
@@ -229,27 +215,20 @@ export function Build() {
             }}
             rows={3}
             maxLength={2000}
-            disabled={state === 'working'}
             placeholder={said.placeholder}
-            className="w-full resize-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-slate-400 disabled:opacity-60"
+            className="w-full resize-none bg-transparent px-4 py-3 text-lg outline-none placeholder:text-slate-400"
           />
 
           <div className="flex items-center justify-between gap-3 px-2 pb-1">
-            <span className="text-xs text-slate-400">
-              {state === 'working' ? said.working : said.shortcut}
-            </span>
+            <span className="text-xs text-slate-400">{said.shortcut}</span>
 
             <button
               type="button"
               onClick={start}
-              disabled={
-                state === 'working' ||
-                prompt.trim().length < 3 ||
-                (model === 'fable' && password.length < 1)
-              }
+              disabled={prompt.trim().length < 3 || (model === 'fable' && password.length < 1)}
               className="btn btn-primary"
             >
-              {state === 'working' ? said.building : said.buildIt}
+              {said.buildIt}
             </button>
           </div>
         </div>
@@ -324,44 +303,53 @@ export function Build() {
         </ul>
       )}
 
-      {state === 'working' && (
-        <ol className="surface mt-6 divide-y divide-slate-200/60 text-sm dark:divide-slate-700/60">
-          {lines.map((line, i) => (
-            <li key={i} className="flex items-center gap-3 px-5 py-2.5">
-              <span
-                className={
-                  i === lines.length - 1
-                    ? 'h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-sky-500'
-                    : 'h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600'
-                }
-              />
-              <span className="min-w-0 flex-1">{line.text}</span>
-              {line.online && (
-                <span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-px text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                  {said.steps.isOnline}
-                </span>
+      {state !== 'idle' && (
+        <article className="surface mt-10 text-left" aria-busy={state === 'working'}>
+          <RunHeader label={said.asked} prompt={prompt.trim()} meta={model === 'fable' ? 'Fable 5.1' : undefined} />
+
+          {state === 'working' ? (
+            <RunProgress
+              run={run}
+              received={run.received}
+              doing={doingOf(run.steps, said.steps) ?? said.starting}
+              words={{ queued: said.ahead, starting: said.starting, leaveOpen: said.leaveOpen }}
+            />
+          ) : state === 'done' && result?.ok ? (
+            <RunOutcome
+              tone={result.deployed === false ? 'warn' : 'good'}
+              headline={result.deployed === false ? said.notOnline : said.online}
+              summary={result.summary}
+            >
+              {result.url && result.deployed !== false && (
+                <a href={result.url} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
+                  <IconExternal className="h-3.5 w-3.5" />
+                  {said.open}
+                </a>
               )}
-            </li>
-          ))}
-          {lines.length === 0 && waiting > 0 && (
-            <li className="flex items-center gap-3 px-5 py-2.5 text-slate-500">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
-              {/* one build runs at a time, so everyone else waits their turn */}
-              {said.ahead(waiting)}
-            </li>
+            </RunOutcome>
+          ) : (
+            // a refusal is the agent's sentence, in the language of the
+            // request; anything else is what went wrong
+            <RunOutcome
+              tone={result?.declined ? 'quiet' : 'bad'}
+              headline={result?.error ?? said.failed}
+              detail={result?.detail}
+              detailLabel={said.log}
+            >
+              <button type="button" className="btn-ghost !px-3 !py-1.5 text-[13px]" onClick={() => setState('idle')}>
+                {t.common.tryAgain}
+              </button>
+            </RunOutcome>
           )}
-          {lines.length === 0 && waiting === 0 && (
-            <li className="px-5 py-2.5 text-slate-500">{said.starting}</li>
+
+          {spoken.length > 0 && (
+            <RunLog steps={spoken} running={state === 'working'} label={said.log} count={spoken.length} describe={(step) => step.text} />
           )}
-        </ol>
+        </article>
       )}
 
       {state === 'done' && result?.ok && (
         <section className="mt-8 space-y-4">
-          {result.summary && (
-            <p className="text-slate-600 dark:text-slate-300">{result.summary.split('\n')[0]}</p>
-          )}
-
           <a
             href={result.url}
             target="_blank"
@@ -461,20 +449,6 @@ export function Build() {
           <p className="mt-5 text-sm text-slate-500">{said.thenAsk}</p>
 
           <p className="mt-2 text-sm text-slate-500">{said.howToChange}</p>
-        </section>
-      )}
-
-      {state === 'failed' && (
-        <section className="surface mt-8 px-5 py-4">
-          <p className="font-medium">{result?.error ?? said.failed}</p>
-          {result?.detail && <p className="mt-2 text-sm text-slate-500">{result.detail}</p>}
-          <button
-            type="button"
-            className="btn btn-ghost mt-4"
-            onClick={() => setState('idle')}
-          >
-            {t.common.tryAgain}
-          </button>
         </section>
       )}
     </main>

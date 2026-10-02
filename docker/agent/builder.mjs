@@ -225,10 +225,24 @@ function declined(text) {
   return found ? clip(found[1].trim(), 400) : null;
 }
 
+/*
+ * The brief for building something new.
+ *
+ * Whoever asked watches the build page while it runs, and the page shows what
+ * the agent writes between tools as it happens - as the control center does
+ * for a change. So it is told that somebody reads along, and asked for one
+ * short line at a time, in the language of the request, rather than notes to
+ * itself about the tools.
+ */
 const BRIEF = `You are building one small web application for somebody who asked for it in a
 sentence and is not a programmer. They cannot answer questions: there is no
 one to ask, so make reasonable choices and build something rather than
 stopping to clarify.
+
+They are watching while you work: every short line you write between tool
+calls is shown to them as it happens. Keep it to one short line each, about
+what you are doing for them rather than about the tools, in the language of
+the request.
 
 How to work:
 

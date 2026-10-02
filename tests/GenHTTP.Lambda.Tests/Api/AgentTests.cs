@@ -402,6 +402,30 @@ public sealed class AgentTests
     }
 
     [TestMethod]
+    public async Task ABuildSaysHowLongItHasRunAndMayRun()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        using var build = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A guest book for our wedding"));
+
+        var id = (await build.GetContentAsync<BuildStarted>()).Id;
+
+        agent.Step(id, new JsonObject { ["at"] = 3, ["kind"] = "say", ["text"] = "Ich lege das Gästebuch an." });
+        agent.Clock(id, seconds: 42, limit: 600);
+
+        using var read = await fixture.GetAsync($"/api/v1/builds/{id}");
+
+        var progress = await read.GetContentAsync<BuildProgress>();
+
+        // the page counts on from these, and fills the bar against the limit,
+        // the way the control center does for a change
+        Assert.AreEqual(42, progress.Seconds);
+        Assert.AreEqual(600, progress.Limit);
+        Assert.AreEqual("Ich lege das Gästebuch an.", progress.Steps.Single().Text, "and what the agent said, as it said it");
+    }
+
+    [TestMethod]
     public async Task AChangeTheAgentDeclinedChangesNothingAndSaysWhy()
     {
         await using var agent = FakeAgent.Start();

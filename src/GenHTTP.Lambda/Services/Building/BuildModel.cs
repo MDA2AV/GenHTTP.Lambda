@@ -17,7 +17,9 @@ public sealed record BuildStarted(string Id, int Queued);
 /// </param>
 /// <param name="Result">How it ended, once it has</param>
 /// <param name="Waiting">Its place in the queue, zero once it runs</param>
-public sealed record BuildProgress(string State, IReadOnlyList<AgentStep> Steps, BuildResult? Result, int Waiting);
+/// <param name="Seconds">How long it has been running, counted by the agent so a wrong clock in the browser does not matter</param>
+/// <param name="Limit">How long it may run, in seconds; nothing when there is no clock on it</param>
+public sealed record BuildProgress(string State, IReadOnlyList<AgentStep> Steps, BuildResult? Result, int Waiting, int Seconds = 0, int? Limit = null);
 
 /// <summary>
 /// How a build ended.

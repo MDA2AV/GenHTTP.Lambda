@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     'Opisz własnymi słowami stronę internetową lub aplikację, o której myślisz. AI zbuduje ją dla ciebie, my ją hostujemy, a po kilku minutach jest online – z linkiem, który możesz wysłać każdemu. Za darmo, bez programowania, bez rejestracji.',
   placeholder: 'Chcę stronę internetową, która…',
-  working: 'agent pracuje…',
   shortcut: 'Ctrl + Enter',
-  building: 'Tworzenie',
   buildIt: 'Stwórz moją stronę',
   builtBy: 'Tworzy',
   password: 'hasło',
@@ -26,6 +24,12 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Przed twoją jest jeszcze jedna strona – potem twoja kolej.' : `Stron przed twoją: ${waiting}.`,
   starting: 'Zaczynamy…',
+  asked: 'Twoja prośba',
+  leaveOpen: 'Nie zamykaj tej strony – link do późniejszej zmiany strony pojawi się tylko tutaj, gdy będzie gotowa.',
+  log: 'Co zrobiła AI',
+  online: 'Twoja strona jest online',
+  notOnline: 'Twoja strona powstała, ale nie trafiła do sieci.',
+  open: 'Otwórz swoją stronę',
   steps: {
     guide: 'Przygotowania',
     examples: 'Przeglądanie przykładów',
@@ -44,7 +48,6 @@ export const build: Messages['build'] = {
     addFile: 'Dodawanie pliku',
     removeFile: 'Usuwanie pliku',
     files: 'Przeglądanie tego, co zostało zapisane',
-    isOnline: 'online',
   },
 
   points: [

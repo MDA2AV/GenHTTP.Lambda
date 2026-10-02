@@ -74,6 +74,18 @@ public sealed class FakeAgent : IAsyncDisposable
         }
     }
 
+    /// <summary>Says how long a job has run and may run, the way the runner counts it.</summary>
+    public void Clock(string id, int seconds, int? limit)
+    {
+        var job = _jobs[id];
+
+        lock (job)
+        {
+            job["seconds"] = seconds;
+            job["limit"] = limit;
+        }
+    }
+
     /// <summary>Ends a job the way the runner would once the agent is done.</summary>
     public void Finish(string id, JsonObject result, string state = "done")
     {

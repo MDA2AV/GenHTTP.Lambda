@@ -499,14 +499,16 @@ the section, so the sidebar marks it and the lambda is read again when it
 ends wherever the owner is; and it is kept by the agent under the lambda, so a
 reload, a second tab or a redeploy of the server finds it where it got to.
 
-`/build` shows a build from the same steps (`GET /builds/:id` answers with
-them), said in the words of that page and its language rather than those of
-the tools: getting ready, looking at examples, choosing an address for the
-website, checking it for mistakes, putting it online. What a visitor has no
-use for - what the agent says to itself, the errors it fixes, a tool the page
-has no words for - is left out, and the same thing done several times in a row
-is one line. The simple view of the Change section shows what the agent said
-instead, and the full view every tool by name.
+`/build` shows a build the way the simple view of this section shows a change,
+drawn by the same parts (`components/AgentRun.tsx`): what was asked, the step
+it is on and the time it has used of its limit, what the agent says between
+its tools - the build agent too is told that somebody reads along, and asked
+for one short line at a time in the language of the request - and how it
+ended, with what it said at the end. `GET /builds/:id` answers with the steps,
+the seconds and the limit. The step it is on is said in the words of that
+page rather than those of the tools: getting ready, looking at examples,
+choosing an address for the website, checking it for mistakes, putting it
+online. The full view of this section shows every tool by name.
 
 It shares the queue and the daily allowance of `/build`, one change of a
 lambda runs at a time, and it can be stopped - whatever it saved stays, in its

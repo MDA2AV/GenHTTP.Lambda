@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     'Ceritakan website atau aplikasi yang Anda bayangkan dengan kata-kata Anda sendiri. AI membuatkannya untuk Anda, kami yang meng-hosting-nya, dan website online dalam hitungan menit, lengkap dengan link yang bisa Anda kirim ke siapa saja. Gratis, tanpa coding, tanpa daftar.',
   placeholder: 'Saya ingin website yang…',
-  working: 'sedang dikerjakan…',
   shortcut: 'ctrl + enter',
-  building: 'Sedang dibuat',
   buildIt: 'Buat website saya',
   builtBy: 'Dibuat oleh',
   password: 'kata sandi',
@@ -26,6 +24,12 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Ada satu website sebelum milik Anda. Setelah itu giliran Anda.' : `Ada ${waiting} website sebelum milik Anda.`,
   starting: 'Memulai…',
+  asked: 'Permintaan Anda',
+  leaveOpen: 'Biarkan halaman ini tetap terbuka. Link untuk mengubah website Anda nanti hanya ditampilkan di sini setelah selesai.',
+  log: 'Yang dikerjakan AI',
+  online: 'Website Anda sudah online',
+  notOnline: 'Website Anda sudah dibuat, tetapi belum online.',
+  open: 'Buka website Anda',
   steps: {
     guide: 'Bersiap-siap',
     examples: 'Melihat contoh',
@@ -44,7 +48,6 @@ export const build: Messages['build'] = {
     addFile: 'Menambahkan file',
     removeFile: 'Menghapus file',
     files: 'Melihat yang sudah disimpannya',
-    isOnline: 'online',
   },
 
   points: [

@@ -9,9 +9,7 @@ export const build = {
   intro:
     'Describe the website or app you have in mind, in your own words. AI builds it for you, we host it, and it is online in minutes - with a link you can send to anyone. Free, no coding, no sign-up.',
   placeholder: 'I would like a website that…',
-  working: 'working…',
   shortcut: 'ctrl + enter',
-  building: 'Creating',
   buildIt: 'Create my website',
   builtBy: 'Created by',
   password: 'password',
@@ -30,6 +28,12 @@ export const build = {
   ahead: (waiting: number) =>
     waiting === 1 ? 'One website ahead of yours - you are next.' : `${waiting} websites ahead of yours.`,
   starting: 'Starting…',
+  asked: 'You asked for',
+  leaveOpen: 'Keep this page open: the link to change your website later is shown here, once it is done.',
+  log: 'What it did',
+  online: 'Your website is online',
+  notOnline: 'Your website was created, but it did not go online.',
+  open: 'Open your website',
   /** What the agent is doing, in the words of this page rather than those of its tools. */
   steps: {
     guide: 'Getting ready',
@@ -49,7 +53,6 @@ export const build = {
     addFile: 'Adding a file',
     removeFile: 'Removing a file',
     files: 'Looking at what it saved',
-    isOnline: 'online',
   },
 
   points: [

@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     'Beschreiben Sie in eigenen Worten die Website oder App, die Sie sich vorstellen. Die KI erstellt sie für Sie, wir hosten sie, und in wenigen Minuten ist sie online – mit einem Link, den Sie an alle schicken können. Kostenlos, ohne Programmierkenntnisse, ohne Anmeldung.',
   placeholder: 'Ich möchte eine Website, die …',
-  working: 'Läuft …',
   shortcut: 'Strg + Enter',
-  building: 'Wird erstellt',
   buildIt: 'Website erstellen',
   builtBy: 'Erstellt von',
   password: 'Passwort',
@@ -26,6 +24,12 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Eine Website ist vor Ihrer an der Reihe – danach sind Sie dran.' : `${waiting} Websites sind vor Ihrer an der Reihe.`,
   starting: 'Startet …',
+  asked: 'Ihre Anfrage',
+  leaveOpen: 'Lassen Sie diese Seite geöffnet – den Link, mit dem Sie Ihre Website später ändern, sehen Sie nur hier, sobald sie fertig ist.',
+  log: 'Was die KI getan hat',
+  online: 'Ihre Website ist online',
+  notOnline: 'Ihre Website wurde erstellt, ist aber nicht online gegangen.',
+  open: 'Website öffnen',
   steps: {
     guide: 'Bereitet sich vor',
     examples: 'Sieht sich Beispiele an',
@@ -44,7 +48,6 @@ export const build: Messages['build'] = {
     addFile: 'Fügt eine Datei hinzu',
     removeFile: 'Entfernt eine Datei',
     files: 'Sieht sich an, was sie gespeichert hat',
-    isOnline: 'online',
   },
 
   points: [
