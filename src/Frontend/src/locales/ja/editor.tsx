@@ -315,6 +315,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>{path}の保存</>,
       delete: (path) => <>{path}の削除</>,
       list: '保存済みファイルの確認',
+      switchOn: { database: 'データベースをオンにする', secrets: 'シークレットをオンにする', workspace: 'ワークスペースをオンにする' },
+      records: 'データベースの確認',
+      secrets: 'シークレットの確認',
       other: (tool) => `${tool}の実行`,
     },
     marks: {

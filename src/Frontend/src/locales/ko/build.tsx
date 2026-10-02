@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     '생각하고 있는 홈페이지나 앱을 평소 쓰는 말로 설명해 주세요. AI가 만들어 드리고, 저희가 호스팅해서 몇 분 만에 온라인에 올려 드려요. 누구에게나 보낼 수 있는 링크도 함께요. 무료이고, 코딩도 가입도 필요 없어요.',
   placeholder: '이런 홈페이지를 원해요…',
-  working: '작업 중…',
   shortcut: 'Ctrl + Enter',
-  building: '만드는 중',
   buildIt: '홈페이지 만들기',
   builtBy: '만드는 AI',
   password: '비밀번호',
@@ -24,6 +22,31 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? '앞에 홈페이지 하나가 있어요. 다음이 고객님 차례예요.' : `앞에 홈페이지 ${waiting}개가 있어요.`,
   starting: '시작하는 중…',
+  asked: '요청 내용',
+  leaveOpen: '이 페이지를 열어 두세요. 나중에 홈페이지를 바꿀 수 있는 링크는 완성되면 여기에만 표시돼요.',
+  log: '작업 기록',
+  online: '홈페이지가 온라인에 올라갔어요',
+  notOnline: '홈페이지는 만들어졌지만 온라인에 올라가지 않았어요.',
+  open: '홈페이지 열기',
+  steps: {
+    guide: '준비하고 있어요',
+    examples: '예시를 살펴보고 있어요',
+    create: '홈페이지 주소를 정하고 있어요',
+    write: '홈페이지를 만들고 있어요',
+    improve: '홈페이지를 다듬고 있어요',
+    check: '잘못된 곳이 없는지 확인하고 있어요',
+    online: '온라인에 올리고 있어요',
+    trying: '직접 써 보고 있어요',
+    looking: '홈페이지를 살펴보고 있어요',
+    forRecords: '기록을 저장할 곳을 마련하고 있어요',
+    forKeys: '키와 비밀번호를 둘 곳을 마련하고 있어요',
+    forFiles: '앱이 저장할 곳을 마련하고 있어요',
+    records: '기록을 살펴보고 있어요',
+    keys: '필요한 키와 비밀번호를 확인하고 있어요',
+    addFile: '파일을 추가하고 있어요',
+    removeFile: '파일을 지우고 있어요',
+    files: '저장된 것을 살펴보고 있어요',
+  },
 
   points: [
     {

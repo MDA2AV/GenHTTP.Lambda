@@ -313,6 +313,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>Zapisywanie {path}</>,
       delete: (path) => <>Usuwanie {path}</>,
       list: 'Przeglądanie zapisanych plików',
+      switchOn: { database: 'Włączanie bazy danych', secrets: 'Włączanie sekretów', workspace: 'Włączanie obszaru roboczego' },
+      records: 'Czytanie bazy danych',
+      secrets: 'Przeglądanie sekretów',
       other: (tool) => `Korzystanie z narzędzia ${tool}`,
     },
     marks: {

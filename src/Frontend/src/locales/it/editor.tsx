@@ -314,6 +314,9 @@ export const editor: EditorMessages = {
       upload: (path) => <>Salvataggio di {path}</>,
       delete: (path) => <>Rimozione di {path}</>,
       list: 'Uno sguardo ai file salvati',
+      switchOn: { database: 'Attivazione del database', secrets: 'Attivazione dei secret', workspace: 'Attivazione del workspace' },
+      records: 'Lettura del database',
+      secrets: 'Uno sguardo ai secret',
       other: (tool) => `Uso di ${tool}`,
     },
     marks: {

@@ -11,10 +11,15 @@ public sealed record BuildStarted(string Id, int Queued);
 /// How a build is getting on.
 /// </summary>
 /// <param name="State">queued, running, done or failed</param>
-/// <param name="Events">What it has done so far, one line each</param>
+/// <param name="Steps">
+/// What it has done so far, as facts the build page says in the visitor's
+/// language - the same steps the control center shows of a change
+/// </param>
 /// <param name="Result">How it ended, once it has</param>
 /// <param name="Waiting">Its place in the queue, zero once it runs</param>
-public sealed record BuildProgress(string State, IReadOnlyList<string> Events, BuildResult? Result, int Waiting);
+/// <param name="Seconds">How long it has been running, counted by the agent so a wrong clock in the browser does not matter</param>
+/// <param name="Limit">How long it may run, in seconds; nothing when there is no clock on it</param>
+public sealed record BuildProgress(string State, IReadOnlyList<AgentStep> Steps, BuildResult? Result, int Waiting, int Seconds = 0, int? Limit = null);
 
 /// <summary>
 /// How a build ended.
@@ -41,21 +46,23 @@ public sealed record BuildResult(
 );
 
 /// <summary>
-/// One thing the agent did while changing a lambda, as the control center
-/// draws it.
+/// One thing the agent did while building or changing a lambda, as the build
+/// page and the control center draw it.
 /// </summary>
 /// <remarks>
-/// Facts rather than sentences, so the control center can say them in the
-/// owner's language: the kind of step, what it was about, and - once the tool
-/// has answered - how it went. The only prose is what the agent itself said
-/// between steps, which it was asked to write in the owner's language.
+/// Facts rather than sentences, so the pages can say them in the visitor's or
+/// the owner's language: the kind of step, what it was about, and - once the
+/// tool has answered - how it went. The only prose is what the agent itself
+/// said between steps, which it was asked to write in the owner's language.
 /// </remarks>
 /// <param name="At">Seconds into the run</param>
 /// <param name="Kind">
-/// say, guide, demos, read, logs, write, check, deploy, upload, delete, list,
-/// feature (started one), update (changed one's notes or base), merge, discard
-/// (deleted one) or other
+/// say, guide, demos, read, logs, create, write, check, deploy, upload, delete,
+/// list, feature (started one), update (changed one's notes or base), merge,
+/// discard (deleted one), data (switched a kind of data on), records (read the
+/// database), secrets (listed the secrets) or other
 /// </param>
+/// <param name="Data">The kind of data a step of kind data switched on: database, secrets or workspace</param>
 /// <param name="Text">What the agent said, for a step of kind say</param>
 /// <param name="Tool">The tool, for a step of a kind this list does not name</param>
 /// <param name="Files">The files written or read</param>
@@ -86,7 +93,8 @@ public sealed record AgentStep(
     int? Problems = null,
     string? Problem = null,
     string? Feature = null,
-    bool? Preview = null
+    bool? Preview = null,
+    string? Data = null
 );
 
 /// <summary>

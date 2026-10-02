@@ -75,6 +75,17 @@ Give both a good experience. Concretely:
   way to describe a change. The database is **records** (a table of them, a
   row is a record), secrets are **keys and passwords**, the workspace is **what
   your app saved**.
+- What the agent is doing reaches the pages as **steps** - facts the runner
+  records per tool call (`begin` in `docker/agent/builder.mjs`), and the
+  lines the agent writes between them - never as English sentences from the
+  runner. `/build` and the Change section draw a run with the **same parts**
+  (`components/AgentRun.tsx`): what was asked, the step it is on and the clock
+  against its limit, what the agent said, and how it ended. `/build` and the
+  simple view show the agent's own lines, which both briefs ask for short and
+  in the language of the request; `/build` names the step it is on in its own
+  words (getting ready, choosing an address for your website, checking it for
+  mistakes). A new tool the agent may call gets a step kind and words on both
+  pages.
 - The simple view shows the **Data** section only once the app keeps something
   (a table, a saved file, a secret) or its code waits for a secret, and then
   only the kinds that hold something: no switches, no folders, no code, no

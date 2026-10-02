@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     'Describa con sus propias palabras la página web o la app que tiene en mente. La IA la crea por usted, nosotros la alojamos y queda en línea en minutos, con un enlace que puede enviar a quien quiera. Gratis, sin programar y sin registrarse.',
   placeholder: 'Quiero una página web que…',
-  working: 'trabajando…',
   shortcut: 'ctrl + enter',
-  building: 'Creando',
   buildIt: 'Crear mi web',
   builtBy: 'Creado con',
   password: 'contraseña',
@@ -26,6 +24,31 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'Hay una web por delante de la suya: después le toca a usted.' : `Hay ${waiting} webs por delante de la suya.`,
   starting: 'Iniciando…',
+  asked: 'Lo que pidió',
+  leaveOpen: 'Mantenga esta página abierta: el enlace para cambiar su web más adelante solo aparece aquí, cuando esté lista.',
+  log: 'Lo que hizo la IA',
+  online: 'Su web está en línea',
+  notOnline: 'Su web se ha creado, pero no se ha puesto en línea.',
+  open: 'Abrir su web',
+  steps: {
+    guide: 'Preparándose',
+    examples: 'Mirando ejemplos',
+    create: 'Eligiendo una dirección para su web',
+    write: 'Creando su web',
+    improve: 'Mejorando su web',
+    check: 'Buscando errores',
+    online: 'Poniéndola en línea',
+    trying: 'Probándola',
+    looking: 'Revisando su web',
+    forRecords: 'Preparando espacio para sus registros',
+    forKeys: 'Preparando espacio para claves y contraseñas',
+    forFiles: 'Preparando espacio para lo que guarde',
+    records: 'Mirando sus registros',
+    keys: 'Comprobando qué claves y contraseñas necesita',
+    addFile: 'Añadiendo un archivo',
+    removeFile: 'Quitando un archivo',
+    files: 'Mirando lo que ha guardado',
+  },
 
   points: [
     {

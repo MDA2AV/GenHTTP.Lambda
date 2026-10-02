@@ -60,6 +60,32 @@ public sealed class FakeAgent : IAsyncDisposable
         return new FakeAgent(listener, url);
     }
 
+    /// <summary>Records a step of a job the way the runner does when the agent calls a tool.</summary>
+    public void Step(string id, JsonObject step)
+    {
+        var job = _jobs[id];
+
+        lock (job)
+        {
+            job["state"] = "running";
+            job["waiting"] = 0;
+
+            ((JsonArray)job["steps"]!).Add(step);
+        }
+    }
+
+    /// <summary>Says how long a job has run and may run, the way the runner counts it.</summary>
+    public void Clock(string id, int seconds, int? limit)
+    {
+        var job = _jobs[id];
+
+        lock (job)
+        {
+            job["seconds"] = seconds;
+            job["limit"] = limit;
+        }
+    }
+
     /// <summary>Ends a job the way the runner would once the agent is done.</summary>
     public void Finish(string id, JsonObject result, string state = "done")
     {
@@ -133,7 +159,6 @@ public sealed class FakeAgent : IAsyncDisposable
                 ["model"] = "opus",
                 ["before"] = body["before"]?.DeepClone(),
                 ["feature"] = body["feature"]?.DeepClone(),
-                ["events"] = new JsonArray(),
                 ["steps"] = new JsonArray(),
                 ["waiting"] = 1,
                 ["seconds"] = 0,

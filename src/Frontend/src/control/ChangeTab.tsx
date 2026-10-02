@@ -3,32 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { absoluteAddress } from '../address';
 import { isActive, type AgentState, type AgentStep, type ChangeJob, type Feature } from '../api';
+import { RunHeader, RunLog, RunOutcome, RunProgress, type Tone } from '../components/AgentRun';
 import { ConnectAgent } from '../components/ConnectAgent';
 import { Dialog } from '../components/Dialog';
-import {
-  IconAlert,
-  IconBook,
-  IconCheck,
-  IconChevronDown,
-  IconDots,
-  IconDraft,
-  IconExternal,
-  IconEye,
-  IconFolder,
-  IconHistory,
-  IconInfo,
-  IconLayers,
-  IconList,
-  IconPencil,
-  IconPlay,
-  IconPlus,
-  IconSpark,
-  IconSpinner,
-  IconStop,
-  IconTrash,
-  IconUpload,
-  IconWrench,
-} from '../components/Icons';
+import { IconAlert, IconDraft, IconEye, IconExternal, IconPlay, IconSpark, IconSpinner, IconStop } from '../components/Icons';
 import { tagOf, useEditorT, useLanguage } from '../i18n';
 import { useOrigin } from '../site';
 import type { Control } from './context';
@@ -518,25 +496,26 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
 
   return (
     <article className="surface" aria-busy={running}>
-      <header className="flex items-start gap-3 border-b border-slate-200 px-4 py-3 dark:border-ink-800">
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{said.asked}</div>
-          <p className="mt-1 whitespace-pre-line break-words text-[15px] leading-relaxed">{job.prompt}</p>
-          <p className="mt-1.5 text-xs text-slate-500">
+      <RunHeader
+        label={said.asked}
+        prompt={job.prompt}
+        meta={
+          <>
             {given && `${said.inFeature(given.name)} · `}
             {job.deploy ? said.goesOnline : said.review}
             {job.model === 'fable' && ' · Fable 5.1'}
             {!running && job.seconds > 0 && ` · ${said.took(span(job.seconds, shared))}`}
-          </p>
-        </div>
-
-        {running && (
-          <button type="button" onClick={() => setStopping(true)} disabled={halting} className="btn-danger !px-3 !py-1.5 text-[13px]">
-            {halting ? <IconSpinner className="h-3.5 w-3.5" /> : <IconStop className="h-3.5 w-3.5" />}
-            {halting ? said.stopping : said.stop}
-          </button>
-        )}
-      </header>
+          </>
+        }
+        action={
+          running && (
+            <button type="button" onClick={() => setStopping(true)} disabled={halting} className="btn-danger !px-3 !py-1.5 text-[13px]">
+              {halting ? <IconSpinner className="h-3.5 w-3.5" /> : <IconStop className="h-3.5 w-3.5" />}
+              {halting ? said.stopping : said.stop}
+            </button>
+          )
+        }
+      />
 
       {running ? <Progress control={control} job={job} /> : <Outcome control={control} job={job} onAgain={onAgain} />}
 
@@ -580,83 +559,17 @@ function JobCard({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   );
 }
 
-/** Seconds as a clock reads them: 1:42, or 1:02:03 past the hour. */
-function clock(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  const pad = (n: number) => String(n).padStart(2, '0');
-
-  return s >= 3600
-    ? `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`
-    : `${Math.floor(s / 60)}:${pad(s % 60)}`;
-}
-
-/** The time now, once a second while something is counting. */
-function useNow(counting: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (!counting) {
-      return;
-    }
-
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-
-    return () => window.clearInterval(timer);
-  }, [counting]);
-
-  return now;
-}
-
 /** Where a running change has got to: in the queue, or at work, and for how long. */
 function Progress({ control, job }: { control: Control; job: ChangeJob }) {
   const said = useEditorT().change;
-  const now = useNow(job.state === 'running');
-
-  // counted by the agent and carried on here, so a browser whose clock is
-  // wrong still counts the right seconds
-  const elapsed = job.state === 'running' ? job.seconds + Math.max(0, (now - control.agent.received) / 1000) : 0;
-  const share = job.limit ? Math.min(1, elapsed / job.limit) : 0;
 
   // the step it is on, when it is on one; what it said last is already on
   // the screen, underneath
   const pending = [...job.steps].reverse().find((step) => step.kind !== 'say');
   const doing = pending && !pending.done && !control.simple ? <StepText step={pending} said={said} /> : said.working;
 
-  return (
-    <div className="px-4 py-3">
-      <div className="flex items-center gap-2.5 text-sm">
-        <IconSpinner className={`h-4 w-4 shrink-0 ${job.state === 'queued' ? 'text-amber-500' : 'text-accent-500'}`} />
-        <span role="status" className="min-w-0 flex-1 truncate font-medium">
-          {job.state === 'queued' ? (job.waiting > 0 ? said.queued(job.waiting) : said.starting) : doing}
-        </span>
-        {job.state === 'running' && (
-          <span className="shrink-0 font-mono text-xs tabular-nums text-slate-500">
-            {clock(elapsed)}
-            {job.limit ? <span className="text-slate-400"> / {clock(job.limit)}</span> : null}
-          </span>
-        )}
-      </div>
-
-      {job.state === 'running' && job.limit ? (
-        <div className="mt-2.5 h-0.5 w-full bg-slate-200 dark:bg-ink-800" aria-hidden="true">
-          <div className="h-full bg-accent-500 transition-[width] duration-1000 ease-linear dark:bg-accent-400" style={{ width: `${share * 100}%` }} />
-        </div>
-      ) : null}
-
-      <p className="mt-2 text-xs text-slate-500">{said.leaveOpen}</p>
-    </div>
-  );
+  return <RunProgress run={job} received={control.agent.received} doing={doing} words={said} />;
 }
-
-type Tone = 'good' | 'ready' | 'warn' | 'bad' | 'quiet';
-
-const TONES: Record<Tone, { box: string; icon: string }> = {
-  good: { box: 'bg-emerald-500/5', icon: 'text-emerald-600 dark:text-emerald-400' },
-  ready: { box: 'bg-accent-500/5', icon: 'text-accent-500 dark:text-accent-400' },
-  warn: { box: 'bg-amber-500/5', icon: 'text-amber-600 dark:text-amber-400' },
-  bad: { box: 'bg-red-500/5', icon: 'text-red-500 dark:text-red-400' },
-  quiet: { box: '', icon: 'text-slate-400' },
-};
 
 /**
  * What a finished change comes to, in a line and a note.
@@ -761,7 +674,6 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   // nothing left to try, and what the verdict says about it is history
   const gone = result?.feature != null && !left && result.version == null && (result.ok || job.state === 'cancelled');
   const { tone, headline, notes } = gone ? { ...judged, tone: 'quiet' as Tone, notes: [t.features.missingText] } : judged;
-  const look = TONES[tone];
 
   const version = result?.version ?? undefined;
   const online = result?.online ?? undefined;
@@ -775,33 +687,8 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
   const undoable = live && before != null && before !== online;
   const retry = !result?.ok || (version == null && !left && !gone);
 
-  const Icon = tone === 'good' ? IconCheck : tone === 'ready' ? IconCheck : tone === 'quiet' ? IconInfo : IconAlert;
-
   return (
-    <div className={`flex gap-3 px-4 py-4 ${look.box}`}>
-      <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${look.icon}`} />
-
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-semibold">{headline}</p>
-
-        {notes.map((note) => (
-          <p key={note} className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {note}
-          </p>
-        ))}
-
-        {result?.summary && (
-          <p className="mt-3 whitespace-pre-line break-words text-[15px] leading-relaxed text-slate-800 dark:text-slate-200">{result.summary}</p>
-        )}
-
-        {result?.detail && !result.summary && (
-          <details className="mt-2 text-xs text-slate-500">
-            <summary className="cursor-pointer select-none">{said.log}</summary>
-            <pre className="mt-1 whitespace-pre-wrap break-words font-mono">{result.detail}</pre>
-          </details>
-        )}
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+    <RunOutcome tone={tone} headline={headline} notes={notes} summary={result?.summary} detail={result?.detail} detailLabel={said.log}>
           {/* left as a draft: try it, and put it online from here once it is right */}
           {left?.online && (
             <a href={absoluteAddress(left.previewPath)} target="_blank" rel="noreferrer" className="btn-primary !px-4 !py-1.5 text-[13px]">
@@ -861,129 +748,34 @@ function Outcome({ control, job, onAgain }: { control: Control; job: ChangeJob; 
               {said.again}
             </button>
           )}
-        </div>
-      </div>
-    </div>
+    </RunOutcome>
   );
 }
 
 /* ------------------------------------------------------------ the steps */
 
 /**
- * Everything the agent did, oldest first, in the order it did it. Open and
- * following along while it runs; folded away once it has ended, where the
- * outcome is what is read and this is there for anybody who wants the how.
- *
- * The simple view keeps what the agent said and leaves out the tools it
- * called: "Looking at how the scores are stored" means something to the
- * owner, "Changing lambda.cs" does not.
+ * Everything the agent did. The simple view keeps what the agent said and
+ * leaves out the tools it called: "Looking at how the scores are stored"
+ * means something to the owner, "Changing lambda.cs" does not.
  */
 function Timeline({ job, running, simple }: { job: ChangeJob; running: boolean; simple: boolean }) {
   const said = useEditorT().change;
   const steps = simple ? job.steps.filter((step) => step.kind === 'say') : job.steps;
-  const list = useRef<HTMLOListElement>(null);
-  const [open, setOpen] = useState(running);
-
-  // it was open while it ran; once it ends, the outcome takes over
-  useEffect(() => setOpen(running), [running]);
-
-  // new steps arrive at the bottom, so the list follows them - unless the
-  // owner has scrolled up to read something, which it then leaves alone
-  const following = useRef(true);
-
-  useLayoutEffect(() => {
-    const box = list.current;
-
-    if (box && following.current) {
-      box.scrollTop = box.scrollHeight;
-    }
-  }, [steps.length, open]);
-
-  // the last step that has not answered is the one being worked on
-  const current = running ? lastIndex(steps, (step) => step.kind !== 'say' && !step.done) : -1;
 
   return (
-    <div className="border-t border-slate-200 dark:border-ink-800">
-      <button
-        type="button"
-        onClick={() => setOpen((was) => !was)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-      >
-        <IconChevronDown className={`h-4 w-4 transition-transform ${open ? '' : '-rotate-90'}`} />
-        <span className="font-medium">{said.log}</span>
-        {!open && <span className="tabular-nums text-slate-400">{simple ? steps.length : steps.filter((step) => step.kind !== 'say').length}</span>}
-      </button>
-
-      {open && (
-        <ol
-          ref={list}
-          onScroll={(event) => {
-            const box = event.currentTarget;
-            following.current = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
-          }}
-          className="max-h-[26rem] overflow-y-auto px-4 pb-3"
-        >
-          {steps.map((step, index) => (
-            <Step key={index} step={step} said={said} working={index === current} />
-          ))}
-        </ol>
-      )}
-    </div>
-  );
-}
-
-function lastIndex<T>(items: T[], test: (item: T) => boolean): number {
-  for (let index = items.length - 1; index >= 0; index--) {
-    if (test(items[index])) {
-      return index;
-    }
-  }
-
-  return -1;
-}
-
-const ICONS: Record<AgentStep['kind'], (props: { className?: string }) => ReactNode> = {
-  say: IconSpark,
-  guide: IconBook,
-  demos: IconLayers,
-  read: IconEye,
-  logs: IconList,
-  create: IconPlus,
-  write: IconPencil,
-  check: IconWrench,
-  deploy: IconPlay,
-  upload: IconUpload,
-  delete: IconTrash,
-  list: IconFolder,
-  feature: IconDraft,
-  update: IconHistory,
-  merge: IconPlay,
-  discard: IconTrash,
-  other: IconDots,
-};
-
-function Step({ step, said, working }: { step: AgentStep; said: Words; working: boolean }) {
-  const Icon = ICONS[step.kind] ?? IconDots;
-  const say = step.kind === 'say';
-
-  return (
-    <li className={`flex gap-3 ${say ? 'py-2' : 'py-1'}`}>
-      <span className="w-9 shrink-0 pt-[3px] text-right font-mono text-[11px] tabular-nums text-slate-400">{clock(step.at)}</span>
-
-      <span className={`mt-0.5 shrink-0 ${say ? 'text-accent-500 dark:text-accent-400' : 'text-slate-400'}`}>
-        {working ? <IconSpinner className="h-4 w-4 text-accent-500" /> : <Icon className="h-4 w-4" />}
-      </span>
-
-      <div className="min-w-0 flex-1">
-        <p className={say ? 'break-words text-[14px] leading-relaxed text-slate-800 dark:text-slate-200' : 'break-words text-[13px] text-slate-600 dark:text-slate-400'}>
+    <RunLog
+      steps={steps}
+      running={running}
+      label={said.log}
+      count={simple ? steps.length : steps.filter((step) => step.kind !== 'say').length}
+      describe={(step) => (
+        <>
           <StepText step={step} said={said} />
           <Marks step={step} said={said} />
-        </p>
-
-        {step.problem && <p className="mt-0.5 break-words text-xs text-red-500 dark:text-red-400">{step.problem}</p>}
-      </div>
-    </li>
+        </>
+      )}
+    />
   );
 }
 
@@ -1054,6 +846,12 @@ function StepText({ step, said }: { step: AgentStep; said: Words }) {
       return <>{words.delete(<File name={step.path ?? ''} />)}</>;
     case 'list':
       return <>{words.list}</>;
+    case 'data':
+      return <>{step.data === 'database' || step.data === 'secrets' || step.data === 'workspace' ? words.switchOn[step.data] : words.other('enable_data')}</>;
+    case 'records':
+      return <>{words.records}</>;
+    case 'secrets':
+      return <>{words.secrets}</>;
     default:
       return <>{words.other(step.tool ?? '')}</>;
   }

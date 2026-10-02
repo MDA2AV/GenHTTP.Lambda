@@ -5,9 +5,7 @@ export const build: Messages['build'] = {
   intro:
     '作りたいホームページやアプリを、ふだんの言葉で説明してください。AIが作成し、私たちがホスティングするので、数分で公開されます。誰にでも送れるリンク付きです。無料で、プログラミングも登録も不要です。',
   placeholder: 'こんなホームページがほしい…',
-  working: '作業中…',
   shortcut: 'Ctrl + Enter',
-  building: '作成中',
   buildIt: 'ホームページを作成',
   builtBy: '作成するAI',
   password: 'パスワード',
@@ -24,6 +22,31 @@ export const build: Messages['build'] = {
   ahead: (waiting) =>
     waiting === 1 ? 'あなたの前に1件あります。次があなたの番です。' : `あなたの前に${waiting}件あります。`,
   starting: '準備中…',
+  asked: '依頼内容',
+  leaveOpen: 'このページは開いたままにしてください。あとでホームページを変更するための編集用リンクは、完成したときにここにだけ表示されます。',
+  log: '作業の記録',
+  online: 'ホームページが公開されました',
+  notOnline: 'ホームページは作成されましたが、公開されませんでした。',
+  open: 'ホームページを開く',
+  steps: {
+    guide: '準備しています',
+    examples: '見本を見ています',
+    create: 'ホームページのアドレスを決めています',
+    write: 'ホームページを作っています',
+    improve: 'ホームページを改良しています',
+    check: 'まちがいがないか確認しています',
+    online: '公開しています',
+    trying: '試しています',
+    looking: 'ホームページを見直しています',
+    forRecords: '記録の保存場所を用意しています',
+    forKeys: 'キーとパスワードの保存場所を用意しています',
+    forFiles: '保存するものの置き場所を用意しています',
+    records: '記録を確認しています',
+    keys: '必要なキーとパスワードを確認しています',
+    addFile: 'ファイルを追加しています',
+    removeFile: 'ファイルを削除しています',
+    files: '保存したものを確認しています',
+  },
 
   points: [
     {
