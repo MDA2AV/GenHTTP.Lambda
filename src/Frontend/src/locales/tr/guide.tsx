@@ -92,16 +92,16 @@ export const guide: Messages['guide'] = {
       'Değiştir',
       (k) => (
         <>
-          Neyin farklı olması gerektiğini yazın, gerisini bu sunucudaki ajan siz izlerken halleder. Bir taslakta çalışır,
-          değişikliği orada dener ve çalışınca birleştirip bir sonraki sürüm yapar. Taslağı önce kendiniz denemek
+          Neyin farklı olması gerektiğini yazın, gerisini bu sunucudaki ajan siz izlerken halleder. Değişikliği bir
+          taslakta dener - kendi adresi olan bir kopya - ve çalışınca yayına alır. Taslağı önce kendiniz denemek
           isterseniz {k.b('Bitince yayına al')} seçeneğini kapatın.
           Ajan yalnızca uygulamanız üzerinde çalışır: Uygulamayla ilgisi olmayan ya da zarar vermeye yönelik bir isteği reddeder ve nedenini söyler.
         </>
       ),
     ],
-    ['Taslaklar', () => <>Lambdanın yanında üzerinde çalışılan değişiklikler: her biri kendi adresinde denenir ve hazır olunca birleştirilip bir sonraki sürüm olur. Açıldığında bir taslağın kendi kodu, verileri ve logları vardır.</>],
+    ['Taslaklar', () => <>Yayına alınmadan önce denenen değişiklikler: her biri kendi adresinde ve kendi test verileriyle çalışır. Açıldığında bir taslağın kendi kodu, test verileri ve logları vardır. Bu bölüm, bir taslak olduğunda görünür.</>],
     ['Dosyalar', () => <>Bir sürümün dosyaları: kodu ve statik dosyaları, yani programın kendisi. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
-    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: veritabanı, çalışma alanı ve gizli değerler, her biri kendi sekmesinde. Tablolara ve dosyalara bakın, dosya yükleyin, gizli değer ayarlayın ya da bir türü açıp kapatın. Basit görünüm, uygulama bir şey sakladığı anda bu bölümü gösterir.</>],
+    ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: veritabanı, çalışma alanı ve anahtarlar ve parolalar, her biri kendi sekmesinde. Tablolara ve dosyalara bakın, dosya yükleyin, anahtar ve parola girin ya da bir türü açıp kapatın. Basit görünüm, uygulama bir şey sakladığı anda bu bölümü gösterir.</>],
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
     ['İstatistikler', () => <>Son bir saatin ya da günün istekleri, hataları, yanıt süreleri ve en çok istenen yolları.</>],
@@ -111,8 +111,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Elle yazmak için. {k.b('Kontrol et')} derler, {k.b('Kaydet')} bir sürüm oluşturur, {k.b('Yayına al')} yayına
-          alır. Bir taslakta ise {k.b('Kaydet')} onu taslakta tutar, {k.b('Önizlemeyi yayına al')} da taslağın adresinde
-          yayına alır. {k.code('Ctrl-S')} kaydeder, {k.code('F12')} bir tanıma gider.
+          alır. Bir taslakta ise {k.b('Kaydet')} onu taslakta tutar ve taslağın adresinde gösterir. {k.code('Ctrl-S')}{' '}
+          kaydeder, {k.code('F12')} bir tanıma gider.
         </>
       ),
     ],
@@ -188,7 +188,7 @@ export const guide: Messages['guide'] = {
     <>
       Bir sürüm, kaydedildikten sonra bir daha değişmez. Her birini saklamaya değer kılan da bu: herhangi biriyle
       karşılaştırma yapılabilir, herhangi biri tam olduğu gibi yeniden yayına alınabilir. İnsanların kullandığı bir
-      lambdayı değiştirmek için bunun yerine bir {k.b('taslak')} başlatın.
+      lambdayı değiştirmek için değişikliği önce bir {k.b('taslak')} içinde deneyin.
     </>
   ),
   featureSteps: [
@@ -200,25 +200,26 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Gerektiği kadar değiştirin: {k.b('Kod')} bölümünde ya da ajandan isteyerek. {k.b('Önizlemeyi yayına al')} onu
-        kendi adresinde, {k.code('/features/…/')} altında, verilerin kendine ait kopyasıyla yayına alır. Lambdanın
-        ziyaretçileri bunların hiçbirini görmez; taslağın yazdığı hiçbir şey lambdanın verilerine ulaşmaz.
+        Gerektiği kadar değiştirin: {k.b('Kod')} bölümünde ya da ajandan isteyerek. Taslağın önizlemesi kendi adresinde,
+        {k.code('/features/…/')} altında, kendine ait test verileriyle yanıt verir. Lambdanın ziyaretçileri bunların
+        hiçbirini görmez; taslağın yazdığı hiçbir şey lambdanın verilerine ulaşmaz.
       </>
     ),
     (k) => (
       <>
-        Hazır olunca {k.b('Birleştir')} düğmesine basın: notlarıyla birlikte bir sonraki sürüm olur ve isterseniz hemen
-        yayına girer. Taslak ise önizlemesi ve verilerin kopyasıyla birlikte kaldırılır.
+        Hazır olunca {k.b('Yayına al')} düğmesine basın: notlarıyla birlikte bir sonraki sürüm olur ve yayına girer.
+        Taslak ise önizlemesi ve test verileriyle birlikte kaldırılır.
       </>
     ),
   ],
   featureSample: 'Skor tablosu',
   featuresAside: () => (
     <>
-      Aynı anda birden fazla taslak üzerinde çalışılabilir. Yalnızca en yeni sürümü temel alan bir taslak
-      birleştirilebilir; böylece bir birleştirme, taslak başladıktan sonra kaydedilen bir sürümü asla geri almaz. Önce
-      başka bir taslak birleştirildiyse onun değişikliklerini taslağa taşıyın (ya da ajandan isteyin), sonra taslağın
-      temelini en yeni sürüm yapın. Hiçbir şey kendiliğinden birleşmez; bu bilinçli bir tercih.
+      Aynı anda birden fazla taslak üzerinde çalışılabilir. Yalnızca en yeni sürümle güncel olan bir taslak yayına
+      alınabilir; böylece taslak başladıktan sonra kaydedilen bir sürüm asla geri alınmaz. Önce başka bir taslak
+      yayına alındıysa onun değişikliklerini taslağa taşıyın (ya da ajandan isteyin), sonra taslağı güncel olarak
+      işaretleyin. Hiçbir şey kendiliğinden yayına girmez; bu bilinçli bir tercih. API bir taslağa feature, onu
+      yayına almaya merge der.
     </>
   ),
 

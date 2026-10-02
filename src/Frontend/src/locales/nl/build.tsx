@@ -10,7 +10,7 @@ export const build: Messages['build'] = {
   builtBy: 'Gemaakt door',
   password: 'wachtwoord',
   fable:
-    'Fable zit achter een wachtwoord zolang we het uitproberen. Het heeft geen tijdslimiet. Het werkt dus door tot je app af is, niet tot de tijd om is.',
+    'Fable zit achter een wachtwoord zolang we het uitproberen. Het heeft geen tijdslimiet. Het werkt dus door tot je website af is, niet tot de tijd om is.',
   onlyNew:
     'Hier maak je nieuwe websites. Wil je een bestaande aanpassen? Open de editorlink en beschrijf onder ‘Aanpassen’ wat er anders moet.',
   ideas: [

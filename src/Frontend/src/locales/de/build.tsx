@@ -10,7 +10,7 @@ export const build: Messages['build'] = {
   builtBy: 'Erstellt von',
   password: 'Passwort',
   fable:
-    'Fable ist in der Testphase und durch ein Passwort geschützt. Es hat kein Zeitlimit und arbeitet, bis die App fertig ist – nicht, bis die Zeit abläuft.',
+    'Fable ist in der Testphase und durch ein Passwort geschützt. Es hat kein Zeitlimit und arbeitet, bis Ihre Website fertig ist – nicht, bis die Zeit abläuft.',
   onlyNew:
     'Hier entstehen neue Websites. Um eine bestehende zu ändern, öffnen Sie ihren Editor-Link und beschreiben unter „Ändern“, was anders sein soll.',
   ideas: [

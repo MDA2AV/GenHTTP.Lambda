@@ -65,6 +65,7 @@ node_modules/
 # "npm run build" - the image and CI build it from source.
 src/GenHTTP.Lambda/wwwroot/
 src/Frontend/.prerender/
+src/Frontend/.translations/
 
 # Runtime data: the SQLite database, the stored code and the lambda workspaces
 data/

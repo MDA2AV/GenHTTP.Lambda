@@ -10,7 +10,7 @@ export const build: Messages['build'] = {
   builtBy: 'Dibuat oleh',
   password: 'kata sandi',
   fable:
-    'Fable masih dalam uji coba, jadi dilindungi kata sandi. Fable berjalan tanpa batas waktu. Ia terus bekerja sampai aplikasinya selesai, bukan sampai waktunya habis.',
+    'Fable masih dalam uji coba, jadi dilindungi kata sandi. Fable berjalan tanpa batas waktu. Ia terus bekerja sampai situs web Anda selesai, bukan sampai waktunya habis.',
   onlyNew:
     'Di sini Anda membuat website baru. Untuk mengubah website yang sudah ada, buka link editornya dan jelaskan di bagian “Ubah” apa yang perlu diganti.',
   ideas: [

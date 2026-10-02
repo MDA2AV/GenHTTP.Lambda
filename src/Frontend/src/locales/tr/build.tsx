@@ -10,7 +10,7 @@ export const build: Messages['build'] = {
   builtBy: 'Oluşturan',
   password: 'şifre',
   fable:
-    'Fable deneme sürecinde şifreyle korunuyor. Süre sınırı olmadan çalışır: süre dolunca değil, iş bitince durur.',
+    'Fable deneme sürecinde şifreyle korunuyor. Süre sınırı olmadan çalışır: süre dolunca değil, web siteniz bitince durur.',
   onlyNew:
     'Burada yeni web siteleri oluşturulur. Mevcut bir siteyi değiştirmek için editör linkini açın ve “Değiştir” bölümünde neyin farklı olması gerektiğini anlatın.',
   ideas: [

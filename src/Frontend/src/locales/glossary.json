@@ -1,0 +1,113 @@
+{
+  "about": "The words every language has fixed for the platform, and how each language sets its text. scripts/translations.mjs puts a language's part into each request for a translator, beside its register from the table in CLAUDE.md. A word that changes in a language changes here first, then in its catalogs.",
+  "languages": {
+    "id": { "name": "Indonesian", "style": "Quotes “…”." },
+    "de": { "name": "German", "style": "Quotes „…“. A dash is – with spaces." },
+    "es": { "name": "Spanish", "style": "Quotes «…»." },
+    "fr": {
+      "name": "French",
+      "style": "Quotes « … », apostrophe ’. Write an ordinary space before ? ! : ; » and after «: it becomes a non-breaking one by itself.",
+      "typography": { "nbspBefore": "?!:;»", "nbspAfter": "«" }
+    },
+    "it": { "name": "Italian", "style": "Quotes «…», apostrophe ’." },
+    "nl": { "name": "Dutch", "style": "Quotes ‘…’, apostrophe ’." },
+    "pl": { "name": "Polish", "style": "Quotes „…”." },
+    "pt": { "name": "Brazilian Portuguese", "style": "Quotes “…”." },
+    "pt-pt": { "name": "European Portuguese", "style": "Quotes «…». Portugal's spelling and words (ecrã, ficheiro, guardar), never Brazil's." },
+    "tr": { "name": "Turkish", "style": "Quotes “…”. A suffix on a name or code takes ’ (GenHTTP’nin)." },
+    "ja": { "name": "Japanese", "style": "Quotes 「…」. No space between Japanese and a number or a Latin word (バージョン3, lambdaを作成)." },
+    "ko": { "name": "Korean", "style": "Quotes ‘…’ or “…”." }
+  },
+  "terms": [
+    {
+      "en": "lambda",
+      "note": "what somebody built here; the word stays",
+      "id": "lambda", "de": "das Lambda", "es": "la lambda", "fr": "la lambda", "it": "la lambda", "nl": "de lambda", "pl": "lambda", "pt": "a lambda", "pt-pt": "a lambda", "tr": "lambda", "ja": "lambda", "ko": "람다"
+    },
+    {
+      "en": "draft",
+      "note": "a change being tried before it goes online; the API calls it a feature",
+      "id": "draf", "de": "Entwurf", "es": "borrador", "fr": "brouillon", "it": "bozza", "nl": "concept", "pl": "szkic", "pt": "rascunho", "pt-pt": "rascunho", "tr": "taslak", "ja": "下書き", "ko": "초안"
+    },
+    {
+      "en": "put online",
+      "note": "what happens to a finished draft, or to a version that goes back; never translated as merge or deploy",
+      "id": "jadikan online", "de": "online stellen", "es": "poner en línea", "fr": "mettre en ligne", "it": "mettere online", "nl": "online zetten", "pl": "udostępnić", "pt": "colocar no ar", "pt-pt": "pôr online", "tr": "yayına almak", "ja": "公開する", "ko": "온라인으로 전환"
+    },
+    {
+      "en": "take offline",
+      "id": "matikan", "de": "offline nehmen", "es": "desconectar", "fr": "mettre hors ligne", "it": "mettere offline", "nl": "offline halen", "pl": "wyłączyć", "pt": "tirar do ar", "pt-pt": "pôr offline", "tr": "yayından kaldırmak", "ja": "オフラインにする", "ko": "오프라인으로 전환"
+    },
+    {
+      "en": "out of date",
+      "note": "a draft begun before the newest change",
+      "id": "tertinggal", "de": "nicht aktuell", "es": "desactualizado", "fr": "pas à jour", "it": "non aggiornata", "nl": "verouderd", "pl": "nieaktualny", "pt": "desatualizado", "pt-pt": "desatualizado", "tr": "güncel değil", "ja": "古くなっている", "ko": "최신이 아님"
+    },
+    {
+      "en": "test data",
+      "note": "a draft's own copy of what the app keeps",
+      "id": "data uji", "de": "Testdaten", "es": "datos de prueba", "fr": "données de test", "it": "dati di prova", "nl": "testdata", "pl": "dane testowe", "pt": "dados de teste", "pt-pt": "dados de teste", "tr": "test verileri", "ja": "テスト用データ", "ko": "테스트 데이터"
+    },
+    {
+      "en": "change",
+      "note": "what a version is described by, in the owner's words",
+      "id": "perubahan", "de": "Änderung", "es": "cambio", "fr": "modification", "it": "modifica", "nl": "wijziging", "pl": "zmiana", "pt": "mudança", "pt-pt": "alteração", "tr": "değişiklik", "ja": "変更", "ko": "변경"
+    },
+    {
+      "en": "Change",
+      "note": "the editor's section where the owner tells the agent what to do",
+      "id": "Ubah", "de": "Ändern", "es": "Cambiar", "fr": "Modifier", "it": "Modifica", "nl": "Aanpassen", "pl": "Zmień", "pt": "Mudar", "pt-pt": "Alterar", "tr": "Değiştir", "ja": "変更依頼", "ko": "수정 요청"
+    },
+    {
+      "en": "version",
+      "id": "versi", "de": "Version", "es": "versión", "fr": "version", "it": "versione", "nl": "versie", "pl": "wersja", "pt": "versão", "pt-pt": "versão", "tr": "sürüm", "ja": "バージョン", "ko": "버전"
+    },
+    {
+      "en": "records",
+      "note": "what the app keeps in its database, table by table",
+      "id": "catatan", "de": "Einträge", "es": "registros", "fr": "entrées", "it": "voci", "nl": "items", "pl": "wpisy", "pt": "registros", "pt-pt": "registos", "tr": "kayıtlar", "ja": "記録", "ko": "기록"
+    },
+    {
+      "en": "keys and passwords",
+      "note": "the secrets",
+      "id": "kunci dan kata sandi", "de": "Schlüssel und Passwörter", "es": "claves y contraseñas", "fr": "clés et mots de passe", "it": "chiavi e password", "nl": "sleutels en wachtwoorden", "pl": "klucze i hasła", "pt": "chaves e senhas", "pt-pt": "chaves e palavras-passe", "tr": "anahtarlar ve parolalar", "ja": "キーとパスワード", "ko": "키와 비밀번호"
+    },
+    {
+      "en": "saved by your app",
+      "note": "the workspace, in the simple view",
+      "id": "disimpan aplikasi Anda", "de": "von Ihrer App gespeichert", "es": "guardado por tu app", "fr": "enregistré par votre application", "it": "salvato dalla tua app", "nl": "opgeslagen door je app", "pl": "zapisane przez twoją aplikację", "pt": "salvo pelo seu app", "pt-pt": "guardado pela tua app", "tr": "uygulamanızın kaydettikleri", "ja": "アプリが保存したもの", "ko": "앱이 저장한 것"
+    },
+    {
+      "en": "editor link",
+      "note": "the private link that is the only way back in",
+      "id": "link editor", "de": "Editor-Link", "es": "enlace de edición", "fr": "lien d’édition", "it": "link di modifica", "nl": "editorlink", "pl": "link do edytora", "pt": "link de edição", "pt-pt": "link de edição", "tr": "editör linki", "ja": "編集用リンク", "ko": "에디터 링크"
+    },
+    {
+      "en": "control center",
+      "note": "the editor",
+      "id": "pusat kontrol", "de": "Kontrollzentrum", "es": "centro de control", "fr": "tableau de bord", "it": "pannello di controllo", "nl": "dashboard", "pl": "centrum sterowania", "pt": "painel de controle", "pt-pt": "painel de controlo", "tr": "kontrol paneli", "ja": "管理画面", "ko": "관리 화면"
+    },
+    {
+      "en": "agent",
+      "id": "agen", "de": "Agent", "es": "agente", "fr": "agent", "it": "agente", "nl": "agent", "pl": "agent", "pt": "agente", "pt-pt": "agente", "tr": "ajan", "ja": "エージェント", "ko": "에이전트"
+    },
+    {
+      "en": "Showcase",
+      "id": "Showcase", "de": "Showcase", "es": "Galería", "fr": "Vitrine", "it": "Vetrina", "nl": "Showcase", "pl": "Galeria", "pt": "Vitrine", "pt-pt": "Montra", "tr": "Vitrin", "ja": "ショーケース", "ko": "쇼케이스"
+    },
+    {
+      "en": "open source",
+      "id": "open source", "de": "Open Source", "es": "código abierto", "fr": "open source", "it": "open source", "nl": "open source", "pl": "open source", "pt": "código aberto", "pt-pt": "código aberto", "tr": "açık kaynak", "ja": "オープンソース", "ko": "오픈 소스"
+    },
+    {
+      "en": "deploy",
+      "note": "the full view and the developer pages only; the simple view and /build say put online",
+      "id": "deploy", "de": "deployen", "es": "desplegar", "fr": "déployer", "it": "fare il deploy", "nl": "deployen", "pl": "wdrożyć", "pt": "fazer deploy", "pt-pt": "fazer deploy", "tr": "yayına almak", "ja": "デプロイ", "ko": "배포"
+    },
+    {
+      "en": "feature, merge",
+      "note": "the API's names for a draft and for putting it online; where a sentence names them as such they stay in English",
+      "keep": true
+    }
+  ]
+}

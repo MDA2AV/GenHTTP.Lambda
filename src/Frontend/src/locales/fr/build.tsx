@@ -10,7 +10,7 @@ export const build: Messages['build'] = {
   builtBy: 'Créé par',
   password: 'mot de passe',
   fable:
-    'Fable est protégé par un mot de passe pendant la phase de test. Il n’a pas de limite de temps : il continue jusqu’à ce que l’app soit finie, pas jusqu’à la fin du chrono.',
+    'Fable est protégé par un mot de passe pendant la phase de test. Il n’a pas de limite de temps : il continue jusqu’à ce que votre site web soit fini, pas jusqu’à la fin du chrono.',
   onlyNew:
     'Ici, vous créez de nouveaux sites. Pour modifier un site existant, ouvrez son lien d’édition et décrivez ce qui doit changer sous « Modifier ».',
   ideas: [

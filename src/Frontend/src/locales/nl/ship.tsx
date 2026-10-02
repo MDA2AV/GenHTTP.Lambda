@@ -116,7 +116,7 @@ export const ship: Messages['ship'] = {
   closeTitle: 'Het werkt op jouw computer.',
   closeAccent: 'Nu ook op die van hen.',
   noAgent: 'Geen agent? Bouw het hier',
-  closeFacts: 'Gratis. Geen account. Niets te installeren.',
+  closeFacts: 'Gratis. Geen aanmelding. Niets te installeren.',
 
   scene: {
     label: 'Een agent krijgt de vraag om een app te publiceren. Het adres verandert van localhost in een openbare link, en er komen mensen bij.',

@@ -90,14 +90,14 @@ export const guide: Messages['guide'] = {
       'Zmień',
       (k) => (
         <>
-          Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach. Pracuje w szkicu, tam sprawdza
-          zmianę, a gdy działa, scala szkic w kolejną wersję. Wyłącz {k.b('Wdróż po zakończeniu')}, jeśli chcesz
+          Napisz, co ma być inaczej, a agent na tym serwerze zrobi to na twoich oczach. Wypróbowuje zmianę w szkicu –
+          kopii z własnym adresem – i udostępnia ją, gdy działa. Wyłącz {k.b('Udostępnij po zakończeniu')}, jeśli chcesz
           najpierw samodzielnie wypróbować szkic.
           Zajmuje się tylko twoją aplikacją: prośbę, która jej nie dotyczy albo ma komuś zaszkodzić, odrzuca i mówi dlaczego.
         </>
       ),
     ],
-    ['Szkice', () => <>Zmiany przygotowywane obok lambdy: każdą wypróbowuje się pod osobnym adresem i scala w kolejną wersję, gdy jest gotowa. Otwarty szkic ma własny kod, dane i logi.</>],
+    ['Szkice', () => <>Zmiany wypróbowywane, zanim zostaną udostępnione, każda pod własnym adresem i na własnych danych testowych. Otwarty szkic ma własny kod, dane testowe i logi. Sekcja pojawia się, gdy istnieje szkic.</>],
     ['Pliki', () => <>Pliki danej wersji: jej kod i zasoby, czyli sam program. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
     ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: baza danych, obszar roboczy i sekrety, każde na własnej karcie. Przeglądaj tabele i pliki, przesyłaj pliki, ustawiaj sekrety albo włączaj i wyłączaj dany rodzaj. Widok uproszczony pokazuje tę sekcję, gdy tylko aplikacja coś przechowuje.</>],
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
@@ -109,7 +109,7 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Tu piszesz kod ręcznie. {k.b('Sprawdź')} kompiluje, {k.b('Zapisz')} tworzy wersję, {k.b('Wdróż')} wrzuca kod
-          online. W szkicu {k.b('Zapisz')} zostawia kod w szkicu, a {k.b('Wdróż podgląd')} wrzuca go online pod adresem
+          online. W szkicu {k.b('Zapisz')} zostawia kod w szkicu i pokazuje go pod adresem
           szkicu. {k.code('Ctrl-S')} zapisuje; {k.code('F12')} przechodzi do deklaracji.
         </>
       ),
@@ -183,37 +183,38 @@ export const guide: Messages['guide'] = {
   features: (k) => (
     <>
       Zapisana wersja nigdy się nie zmienia – i właśnie dlatego każdą warto zachować: każdą można porównać i przywrócić
-      online dokładnie taką, jaka była. Żeby zmienić lambdę, z której ludzie korzystają, utwórz zamiast tego{' '}
-      {k.b('szkic')}.
+      online dokładnie taką, jaka była. Żeby zmienić lambdę, z której ludzie korzystają, najpierw wypróbuj zmianę w{' '}
+      {k.b('szkicu')}.
     </>
   ),
   featureSteps: [
     (k) => (
       <>
-        Utwórz go w sekcji {k.b('Szkice')} albo na bazie dowolnej wersji. To kopia kodu, zasobów, dokumentacji i
-        testów tej wersji oraz danych lambdy.
+        Zacznij od dowolnej wersji w sekcji {k.b('Wersje')} albo poproś agenta, żeby utworzył szkic. To kopia kodu,
+        zasobów, dokumentacji i testów tej wersji oraz danych lambdy.
       </>
     ),
     (k) => (
       <>
-        Zmieniaj go tyle razy, ile trzeba – w sekcji {k.b('Kod')} albo prosząc agenta. {k.b('Wdróż podgląd')} wrzuca
-        go online pod osobnym adresem, {k.code('/features/…/')}, na jego własnej kopii danych. Odwiedzający lambdę nic
-        z tego nie widzą, a nic, co zapisze szkic, nie trafia do danych lambdy.
+        Zmieniaj go tyle razy, ile trzeba – w sekcji {k.b('Kod')} albo prosząc agenta. Jego podgląd odpowiada pod osobnym
+        adresem, {k.code('/features/…/')}, na własnych danych testowych. Odwiedzający lambdę nic z tego nie widzą, a nic,
+        co zapisze szkic, nie trafia do danych lambdy.
       </>
     ),
     (k) => (
       <>
-        {k.b('Scal')} go, gdy wszystko będzie gotowe: stanie się kolejną wersją razem ze swoimi notatkami i od razu
-        trafi online, jeśli zechcesz. Szkic znika – razem z podglądem i kopią danych.
+        {k.b('Udostępnij')} szkic, gdy będzie gotowy: stanie się kolejną wersją razem ze swoimi notatkami i trafi online.
+        Szkic znika razem z podglądem i danymi testowymi.
       </>
     ),
   ],
   featureSample: 'Ranking',
   featuresAside: () => (
     <>
-      Nad kilkoma szkicami można pracować jednocześnie. Scalić można tylko szkic oparty na najnowszej wersji, żeby
-      scalenie nigdy nie cofnęło wersji zapisanej po utworzeniu szkicu. Jeśli wcześniej scalono inny, przenieś jego
-      zmiany – albo poproś o to agenta – a potem oprzyj szkic na najnowszej wersji. Nic nie scala się samo; tak ma być.
+      Nad kilkoma szkicami można pracować jednocześnie. Online może trafić tylko szkic aktualny względem najnowszej
+      wersji, żeby nigdy nie cofnął wersji zapisanej po jego utworzeniu. Gdy wcześniej udostępniono inny, przenieś jego
+      zmiany – albo poproś o to agenta – i oznacz szkic jako aktualny. Nic nie trafia online samo; tak ma być. API
+      nazywa szkic „feature”, a udostępnienie go „merge”.
     </>
   ),
 

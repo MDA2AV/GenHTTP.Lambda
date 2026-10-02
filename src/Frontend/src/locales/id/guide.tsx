@@ -93,16 +93,16 @@ export const guide: Messages['guide'] = {
       'Ubah',
       (k) => (
         <>
-          Tulis apa yang perlu diubah, dan agen di server ini akan mengerjakannya sementara Anda melihat. Agen bekerja di
-          sebuah draf, mencobanya di sana, lalu menggabungkannya menjadi versi berikutnya begitu berhasil. Matikan{' '}
+          Tulis apa yang perlu diubah, dan agen di server ini akan mengerjakannya sementara Anda melihat. Agen mencoba
+          perubahan itu di sebuah draf - salinan dengan alamatnya sendiri - lalu menjadikannya online begitu berhasil. Matikan{' '}
           {k.b('Langsung online setelah selesai')} kalau Anda ingin mencoba drafnya sendiri dulu.
           Agen hanya mengerjakan aplikasi Anda: permintaan yang tidak berkaitan dengannya, atau yang bertujuan merugikan, akan ditolak beserta alasannya.
         </>
       ),
     ],
-    ['Draf', () => <>Perubahan yang dikerjakan di samping lambda: masing-masing dicoba di alamatnya sendiri dan digabungkan menjadi versi berikutnya setelah hasilnya pas. Saat dibuka, draf punya kode, data, dan log-nya sendiri.</>],
+    ['Draf', () => <>Perubahan yang dicoba sebelum dijadikan online, masing-masing di alamat sendiri dan dengan data uji sendiri. Saat dibuka, draf punya kode, data uji, dan log-nya sendiri. Bagian ini muncul setelah ada draf.</>],
     ['File', () => <>File dari sebuah versi: kode dan asetnya, yaitu programnya sendiri. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
-    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: database, workspace, dan rahasia, masing-masing di tab sendiri. Lihat tabel dan file, unggah file, atur rahasia, atau aktifkan dan nonaktifkan suatu jenis. Tampilan sederhana menampilkannya begitu aplikasi menyimpan sesuatu.</>],
+    ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: database, workspace, dan kunci dan kata sandi, masing-masing di tab sendiri. Lihat tabel dan file, unggah file, atur kunci dan kata sandi, atau aktifkan dan nonaktifkan suatu jenis. Tampilan sederhana menampilkannya begitu aplikasi menyimpan sesuatu.</>],
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
@@ -112,8 +112,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Menulis kode secara manual. {k.b('Periksa')} mengompilasi, {k.b('Simpan')} membuat versi, {k.b('Deploy')}{' '}
-          membuatnya online. Di draf, {k.b('Simpan')} menyimpannya di draf dan {k.b('Deploy pratinjau')} membuatnya
-          online di alamat draf itu. {k.code('Ctrl-S')} menyimpan; {k.code('F12')} membuka deklarasi.
+          menjadikannya online. Di draf, {k.b('Simpan')} menyimpannya di draf dan menampilkannya di alamat draf itu.
+          {k.code('Ctrl-S')} menyimpan; {k.code('F12')} membuka deklarasi.
         </>
       ),
     ],
@@ -191,7 +191,7 @@ export const guide: Messages['guide'] = {
     <>
       Versi tidak pernah berubah setelah disimpan, dan justru itulah yang membuat setiap versi layak disimpan: versi
       mana pun bisa dibandingkan, dan dijadikan online lagi persis seperti semula. Untuk mengubah lambda yang sedang
-      dipakai orang, mulai {k.b('draf')}.
+      dipakai orang, coba dulu perubahannya di {k.b('draf')}.
     </>
   ),
   featureSteps: [
@@ -203,25 +203,26 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Ubah sesering yang diperlukan, di {k.b('Kode')} atau dengan meminta agen. {k.b('Deploy pratinjau')} membuatnya
-        online di alamatnya sendiri, {k.code('/features/…/')}, dengan salinan datanya sendiri. Pengunjung lambda tidak
-        melihat apa pun, dan tidak ada yang ditulisnya yang sampai ke data lambda.
+        Ubah sesering yang diperlukan, di {k.b('Kode')} atau dengan meminta agen. Pratinjaunya menjawab di alamatnya
+        sendiri, {k.code('/features/…/')}, dengan data uji miliknya sendiri. Pengunjung lambda tidak melihat apa pun,
+        dan tidak ada yang ditulisnya yang sampai ke data lambda.
       </>
     ),
     (k) => (
       <>
-        {k.b('Gabungkan')} setelah hasilnya pas: draf menjadi versi berikutnya, lengkap dengan catatannya, dan bisa
-        langsung online kalau Anda mau. Drafnya ikut hilang, termasuk pratinjau dan salinan datanya.
+        {k.b('Jadikan online')} setelah hasilnya pas: draf menjadi versi berikutnya, lengkap dengan catatannya, dan
+        langsung online. Drafnya ikut hilang - termasuk pratinjau dan data ujinya.
       </>
     ),
   ],
   featureSample: 'Papan peringkat',
   featuresAside: () => (
     <>
-      Beberapa draf bisa dikerjakan sekaligus. Hanya draf yang berbasis versi terbaru yang bisa digabungkan, supaya
-      penggabungan tidak pernah membatalkan versi yang disimpan setelah draf itu dimulai. Kalau ada draf lain yang
-      digabungkan lebih dulu, masukkan perubahannya (atau minta agen melakukannya), lalu jadikan versi terbaru sebagai
-      dasar draf. Tidak ada yang tergabung dengan sendirinya; itu disengaja.
+      Beberapa draf bisa dikerjakan sekaligus. Hanya draf yang sudah terbaru dengan versi terbaru yang bisa dijadikan
+      online, supaya tidak pernah membatalkan versi yang disimpan setelah draf dimulai. Jika draf lain lebih dulu
+      online, masukkan perubahannya - atau minta agen melakukannya - lalu tandai draf sebagai sudah terbaru. Tidak ada
+      yang online dengan sendirinya; itu disengaja. API menyebut draf sebagai feature, dan menjadikannya online
+      sebagai merge.
     </>
   ),
 

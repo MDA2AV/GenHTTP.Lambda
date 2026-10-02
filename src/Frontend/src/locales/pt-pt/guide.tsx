@@ -92,16 +92,16 @@ export const guide: Messages['guide'] = {
       'Alterar',
       (k) => (
         <>
-          Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas. Trabalha num
-          rascunho, experimenta-o lá e integra-o na próxima versão quando funcionar. Desliga{' '}
+          Diz o que deve ficar diferente e o agente deste servidor trata disso enquanto acompanhas. Experimenta a
+          alteração num rascunho - uma cópia com um endereço próprio - e põe-na online quando funcionar. Desliga{' '}
           {k.b('Pôr online quando terminar')} para experimentares tu o rascunho primeiro.
           Só trabalha na tua app: um pedido que não tenha a ver com ela, ou que sirva para causar dano, é recusado, e ele diz porquê.
         </>
       ),
     ],
-    ['Rascunhos', () => <>Alterações feitas ao lado da lambda: cada uma é experimentada num endereço próprio e integrada na próxima versão quando estiver bem. Aberto, um rascunho tem o seu próprio código, dados e logs.</>],
+    ['Rascunhos', () => <>Alterações a ser experimentadas antes de irem online, cada uma num endereço próprio e com dados de teste próprios. Aberto, um rascunho tem o seu próprio código, dados de teste e logs. A secção existe assim que há um rascunho.</>],
     ['Ficheiros', () => <>Os ficheiros de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo indica se o público lhes consegue aceder.</>],
-    ['Dados', () => <>O que a lambda guarda enquanto corre, partilhado por todas as versões: a base de dados, o workspace e os segredos, cada um no seu separador. Vê as tabelas e os ficheiros, carrega ficheiros, define segredos ou liga e desliga um tipo. A vista simples mostra-o assim que a app guarda alguma coisa.</>],
+    ['Dados', () => <>O que a lambda guarda enquanto corre, partilhado por todas as versões: a base de dados, o workspace e as chaves e palavras-passe, cada um no seu separador. Vê as tabelas e os ficheiros, carrega ficheiros, define chaves e palavras-passe ou liga e desliga um tipo. A vista simples mostra-o assim que a app guarda alguma coisa.</>],
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faz deploy ou reverte a partir daqui, ou começa um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve online e quando, e o que o pôs offline.</>],
     ['Estatísticas', () => <>Pedidos, falhas, tempos de resposta e os caminhos mais pedidos, na última hora ou nas últimas 24 horas.</>],
@@ -111,8 +111,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Para o escrever à mão. {k.b('Verificar')} compila, {k.b('Guardar')} cria uma versão, {k.b('Fazer deploy')}{' '}
-          põe-na online. Num rascunho, {k.b('Guardar')} mantém-no no rascunho e {k.b('Fazer deploy da pré-visualização')}{' '}
-          põe-no online no endereço do rascunho. {k.code('Ctrl-S')} guarda; {k.code('F12')} vai para a declaração.
+          põe-na online. Num rascunho, {k.b('Guardar')} mantém-no no rascunho e mostra-o no endereço do rascunho.
+          {k.code('Ctrl-S')} guarda; {k.code('F12')} vai para a declaração.
         </>
       ),
     ],
@@ -199,28 +199,27 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Altera-o quantas vezes for preciso: em {k.b('Código')}, ou pedindo ao agente.{' '}
-        {k.b('Fazer deploy da pré-visualização')} põe-no online num endereço próprio, {k.code('/features/…/')}, com a
-        sua própria cópia dos dados. Os visitantes da lambda não veem nada disto, e nada do que ele escreve chega aos
-        dados da lambda.
+        Altera-o as vezes que for preciso: em {k.b('Código')}, ou pedindo ao agente. A pré-visualização responde num
+        endereço próprio, {k.code('/features/…/')}, com dados de teste próprios. Os visitantes da lambda não veem nada
+        disto, e nada do que ele escreve chega aos dados da lambda.
       </>
     ),
     (k) => (
       <>
-        Quando estiver bem, {k.b('Integrar')} faz dele a próxima versão, com as suas notas, e põe-no logo online se
-        quiseres. O rascunho desaparece com isso: a pré-visualização e a cópia dos dados.
+        {k.b('Pôr online')} quando estiver bem: passa a ser a próxima versão, com as suas notas, e fica online. O
+        rascunho desaparece com isso: a pré-visualização e os dados de teste.
       </>
     ),
   ],
   featureSample: 'Ranking',
-  featuresAside: () => (
+  featuresAside: (() => (
     <>
-      Podes trabalhar em vários rascunhos ao mesmo tempo. Só um que se baseie na versão mais recente pode ser
-      integrado, para que uma integração nunca desfaça uma versão guardada depois de o rascunho ter começado. Se outro
-      foi integrado primeiro, traz as alterações dele (ou pede ao agente que o faça) e depois baseia o rascunho na
-      versão mais recente. Nada se integra sozinho; é de propósito.
+      Podes trabalhar em vários rascunhos ao mesmo tempo. Só um que esteja atualizado com a versão mais recente pode
+      ficar online, para que nunca desfaça uma versão guardada depois de o rascunho ter começado. Se outro ficou
+      online primeiro, traz as alterações dele - ou pede ao agente que o faça - e marca o rascunho como atualizado.
+      Nada fica online sozinho; é de propósito. A API chama feature a um rascunho, e merge a pô-lo online.
     </>
-  ),
+  )),
 
   files: (k) => (
     <>

@@ -91,14 +91,14 @@ export const guide: Messages['guide'] = {
       'Modifier',
       (k) => (
         <>
-          Dites ce qui doit changer, et l’agent de ce serveur s’en charge sous vos yeux. Il travaille dans un
-          brouillon, y essaie la modification, et l’intègre à la prochaine version une fois que ça marche.
+          Dites ce qui doit changer, et l’agent de ce serveur s’en charge sous vos yeux. Il essaie la modification
+          dans un brouillon - une copie à sa propre adresse - et la met en ligne une fois qu’elle fonctionne.
           Désactivez {k.b('Mettre en ligne une fois terminé')} pour essayer vous-même le brouillon d’abord.
-          Il ne travaille que sur votre app : une demande qui ne la concerne pas, ou qui vise à nuire, est refusée, et il dit pourquoi.
+          Il ne travaille que sur votre app : une demande qui ne la concerne pas, ou qui vise à nuire, est refusée, et il dit pourquoi.
         </>
       ),
     ],
-    ['Brouillons', () => <>Des modifications préparées à côté de la lambda : chacune s’essaie à sa propre adresse et s’intègre à la prochaine version une fois au point. Une fois ouvert, un brouillon a son propre code, ses propres données et ses propres logs.</>],
+    ['Brouillons', () => <>Des modifications essayées avant d’être mises en ligne, chacune à sa propre adresse et sur ses propres données de test. Une fois ouvert, un brouillon a son propre code, ses propres données de test et ses propres logs. La section apparaît dès qu’il y a un brouillon.</>],
     ['Fichiers', () => <>Les fichiers d’une version : son code et ses assets, le programme lui-même. Un cadenas ou un globe indique si le public peut y accéder.</>],
     ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : la base de données, le workspace et les secrets, chacun dans son onglet. Consultez les tables et les fichiers, envoyez des fichiers, définissez des secrets, ou activez et désactivez un type. La vue simple l’affiche dès que l’application garde quelque chose.</>],
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
@@ -111,7 +111,7 @@ export const guide: Messages['guide'] = {
         <>
           Pour écrire le code à la main. {k.b('Vérifier')} compile, {k.b('Enregistrer')} crée une version,{' '}
           {k.b('Déployer')} met en ligne. Dans un brouillon, {k.b('Enregistrer')} garde le code dans le brouillon
-          et {k.b('Déployer l’aperçu')} le met en ligne à l’adresse du brouillon.{' '}
+          et l’affiche à l’adresse du brouillon.{' '}
           {k.code('Ctrl-S')} enregistre ; {k.code('F12')} va à une déclaration.
         </>
       ),
@@ -195,33 +195,32 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Démarrez-le dans {k.b('Brouillons')}, ou à partir de n’importe quelle version. C’est une copie du code, des
-        assets, de la documentation et des tests de cette version, et des données de la lambda.
+        Démarrez-le à partir de n’importe quelle version, dans {k.b('Versions')}, ou laissez l’agent en démarrer un. C’est
+        une copie du code, des assets, de la documentation et des tests de cette version, et des données de la lambda.
       </>
     ),
     (k) => (
       <>
-        Modifiez-le autant de fois qu’il le faut, dans {k.b('Code')} ou en le demandant à l’agent.{' '}
-        {k.b('Déployer l’aperçu')} le met en ligne à sa propre adresse, {k.code('/features/…/')}, avec sa propre copie
-        des données. Les visiteurs de la lambda n’en voient rien, et rien de ce qu’il écrit n’atteint les données de
-        la lambda.
+        Modifiez-le autant de fois qu’il le faut, dans {k.b('Code')} ou en le demandant à l’agent. Son aperçu répond à une
+        adresse qui lui est propre, {k.code('/features/…/')}, avec ses propres données de test. Les visiteurs de la lambda
+        n’en voient rien, et rien de ce qu’il écrit n’atteint les données de la lambda.
       </>
     ),
     (k) => (
       <>
-        Une fois au point, cliquez sur {k.b('Intégrer')} : il devient la prochaine version, avec ses notes, et passe
-        en ligne tout de suite si vous le voulez. Le brouillon disparaît alors, avec son aperçu et sa copie des
-        données.
+        Une fois au point, cliquez sur {k.b('Mettre en ligne')} : il devient la prochaine version, avec ses notes, et passe
+        en ligne. Le brouillon disparaît alors, avec son aperçu et ses données de test.
       </>
     ),
   ],
   featureSample: 'Classement',
   featuresAside: () => (
     <>
-      On peut travailler sur plusieurs brouillons à la fois. Seul un brouillon basé sur la version la plus récente
-      peut être intégré : ainsi, une intégration n’annule jamais une version enregistrée après le démarrage du
-      brouillon. Si un autre a été intégré avant, reportez ses changements (ou demandez-le à l’agent), puis basez le
-      brouillon sur la version la plus récente. Rien ne s’intègre tout seul, et c’est voulu.
+      On peut travailler sur plusieurs brouillons à la fois. Seul un brouillon à jour par rapport à la version la plus
+      récente peut être mis en ligne, afin de ne jamais annuler une version enregistrée après son début. Si un autre a
+      été mis en ligne avant, reportez ses modifications (ou demandez-le à l’agent), puis marquez le brouillon comme à
+      jour. Rien ne passe en ligne tout seul, et c’est voulu. L’API appelle un brouillon une feature, et sa mise en ligne
+      un merge.
     </>
   ),
 

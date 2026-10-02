@@ -91,14 +91,14 @@ export const guide: Messages['guide'] = {
       'Ändern',
       (k) => (
         <>
-          Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um, während Sie zusehen. Er arbeitet
-          in einem Entwurf, probiert die Änderung dort aus und übernimmt sie als nächste Version, sobald sie funktioniert.
+          Sagen Sie, was anders sein soll, und der Agent auf diesem Server setzt es um, während Sie zusehen. Er probiert die
+          Änderung in einem Entwurf aus – einer Kopie mit eigener Adresse – und stellt sie online, sobald sie funktioniert.
           Schalten Sie {k.b('Nach Abschluss online stellen')} aus, um den Entwurf zuerst selbst auszuprobieren.
           Er arbeitet nur an Ihrer App: Eine Bitte, die nichts mit ihr zu tun hat oder Schaden anrichten soll, lehnt er ab und sagt, warum.
         </>
       ),
     ],
-    ['Entwürfe', () => <>Änderungen, an denen neben dem Lambda gearbeitet wird: Jede wird unter einer eigenen Adresse ausprobiert und als nächste Version übernommen, sobald alles passt. Geöffnet hat ein Entwurf eigenen Code, eigene Daten und eigene Logs.</>],
+    ['Entwürfe', () => <>Änderungen, die ausprobiert werden, bevor sie online gehen, jede unter einer eigenen Adresse und mit eigenen Testdaten. Geöffnet hat ein Entwurf eigenen Code, eigene Testdaten und eigene Logs. Der Bereich erscheint, sobald es einen Entwurf gibt.</>],
     ['Dateien', () => <>Die Dateien einer Version: Code und Assets, das Programm selbst. Ein Schloss oder ein Globus zeigt, ob sie öffentlich erreichbar sind.</>],
     ['Daten', () => <>Was das Lambda zur Laufzeit aufbewahrt, für alle Versionen gemeinsam: die Datenbank, der Workspace und die Secrets, jeweils mit eigenem Reiter. In Tabellen und Dateien hineinsehen, Dateien hochladen, Secrets setzen oder eine Art ein- und ausschalten. Die einfache Ansicht zeigt den Bereich, sobald die App etwas aufbewahrt.</>],
     ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen – oder aus jeder von ihnen einen Entwurf beginnen.</>],
@@ -110,9 +110,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Selbst schreiben. {k.b('Prüfen')} kompiliert, {k.b('Speichern')} legt eine Version an, {k.b('Deployen')} stellt
-          sie online. In einem Entwurf behält {k.b('Speichern')} den Code im Entwurf, und {k.b('Vorschau deployen')}{' '}
-          stellt ihn unter der Adresse des Entwurfs online. {k.code('Strg+S')} speichert, {k.code('F12')} springt zur
-          Deklaration.
+          sie online. In einem Entwurf behält {k.b('Speichern')} den Code im Entwurf und zeigt ihn unter der Adresse des
+          Entwurfs. {k.code('Strg+S')} speichert, {k.code('F12')} springt zur Deklaration.
         </>
       ),
     ],
@@ -195,34 +194,32 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Beginnen Sie ihn unter {k.b('Entwürfe')} oder aus einer beliebigen Version. Er ist eine Kopie von Code,
-        Assets, Dokumentation und Tests dieser Version und der Daten des Lambdas.
+        Beginnen Sie ihn aus einer beliebigen Version unter {k.b('Versionen')}, oder lassen Sie den Agenten einen beginnen.
+        Er ist eine Kopie von Code, Assets, Dokumentation und Tests dieser Version und der Daten des Lambdas.
       </>
     ),
     (k) => (
       <>
-        Ändern Sie ihn so oft wie nötig – unter {k.b('Code')} oder indem Sie den Agenten darum bitten.{' '}
-        {k.b('Vorschau deployen')} stellt ihn unter einer eigenen Adresse online, {k.code('/features/…/')}, mit einer
-        eigenen Kopie der Daten. Besucher des Lambdas sehen nichts davon, und nichts, was er schreibt, erreicht die Daten
-        des Lambdas.
+        Ändern Sie ihn so oft wie nötig – unter {k.b('Code')} oder indem Sie den Agenten darum bitten. Seine Vorschau
+        antwortet unter einer eigenen Adresse, {k.code('/features/…/')}, mit eigenen Testdaten. Besucher des Lambdas
+        sehen nichts davon, und nichts, was er schreibt, erreicht die Daten des Lambdas.
       </>
     ),
     (k) => (
       <>
-        Klicken Sie auf {k.b('Übernehmen')}, sobald alles passt: Der Entwurf wird zur nächsten Version, mit seinen
-        Notizen, und geht auf Wunsch sofort online. Dabei verschwindet er – samt seiner Vorschau und seiner Kopie der
-        Daten.
+        Klicken Sie auf {k.b('Online stellen')}, sobald alles passt: Der Entwurf wird zur nächsten Version, mit seinen
+        Notizen, und geht online. Dabei verschwindet er – samt seiner Vorschau und seinen Testdaten.
       </>
     ),
   ],
   featureSample: 'Bestenliste',
   featuresAside: () => (
     <>
-      An mehreren Entwürfen kann gleichzeitig gearbeitet werden. Übernehmen lässt sich nur einer, der auf der neuesten
-      Version basiert – damit das Übernehmen nie eine Version rückgängig macht, die nach dem Beginn des Entwurfs
-      gespeichert wurde. Wurde zuerst ein anderer übernommen, holen Sie dessen Änderungen herein – oder bitten Sie
-      den Agenten darum – und geben Sie dann an, dass der Entwurf auf der neuesten Version basiert. Nichts wird von selbst
-      übernommen; das ist Absicht.
+      An mehreren Entwürfen kann gleichzeitig gearbeitet werden. Nur ein Entwurf, der auf dem neuesten Stand der
+      Version ist, kann online gehen – damit er nie eine Version rückgängig macht, die nach seinem Beginn gespeichert
+      wurde. Ging zuerst ein anderer online, holen Sie dessen Änderungen herein – oder bitten Sie den Agenten darum –
+      und markieren Sie den Entwurf als aktuell. Nichts geht von selbst online; das ist Absicht. Die API nennt einen
+      Entwurf „feature“ und das Online-Stellen „merge“.
     </>
   ),
 
