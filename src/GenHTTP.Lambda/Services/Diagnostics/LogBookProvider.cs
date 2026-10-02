@@ -80,13 +80,26 @@ public sealed class LogBookProvider(LogBook book, TextWriter? console = null, Lo
 
             try
             {
-                // the same shape the console logger wrote, so whatever reads
-                // these logs does not have to learn a new one
-                console.WriteLine($"{DateTime.Now:HH:mm:ss} {LogBook.NameOf(level)}: {source}[{id.Id}] {text}");
-
-                if (error != null)
+                /*
+                 * Console.Out first, then the writer. The console takes the
+                 * lock of Console.Out underneath every write to its stream,
+                 * and with the tee installed that is the tee's: a print holds
+                 * it and then wants the writer this one holds. Taking the
+                 * writer first left this waiting for the print and the print
+                 * for this, for good - seen on a server whose reactors said
+                 * they were listening while this said the same (see
+                 * ConsoleTee).
+                 */
+                lock (Console.Out)
                 {
-                    console.WriteLine(error.ToString());
+                    // the same shape the console logger wrote, so whatever reads
+                    // these logs does not have to learn a new one
+                    console.WriteLine($"{DateTime.Now:HH:mm:ss} {LogBook.NameOf(level)}: {source}[{id.Id}] {text}");
+
+                    if (error != null)
+                    {
+                        console.WriteLine(error.ToString());
+                    }
                 }
             }
             catch (Exception)

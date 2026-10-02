@@ -1077,6 +1077,29 @@ public sealed class McpTests
     }
 
     [TestMethod]
+    public async Task AnAgentIsToldWhenWhatItUploadsIsNotBase64()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        var refused = await CallToolAsync(fixture, "upload_file", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey,
+            ["path"] = "picture.png",
+            ["content"] = "not base64 at all",
+            ["encoding"] = "base64"
+        });
+
+        Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>(), "an answer to read and act on, not a fault");
+        Assert.Contains("base64", Structured(refused)["problem"]!.GetValue<string>());
+
+        var listed = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
+
+        Assert.IsEmpty((JsonArray)listed["files"]!, "and nothing was written from it");
+    }
+
+    [TestMethod]
     public async Task AFileUploadedByAnAgentIsServedAtOnce()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

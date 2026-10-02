@@ -433,6 +433,17 @@ rules that matter:
   showcase, open source, domain - second, as the owner decided; build; program
   and data; run). A new section joins the group it belongs to rather than the
   end of the list.
+- **Wired through the container**, not by hand and not in statics. A concern
+  that needs nothing but services is an `IDependentConcern`, registered as a
+  singleton and added with `Dependent.Concern<T>()`; only a concern built with
+  an argument of its own is built by hand (the lookup of a lambda, whose
+  locator differs per route). The scope they are resolved from is opened by
+  the outermost concern of the host (`AddDependencyInjection`, added last), so
+  nothing dependent goes outside it. What only a door needs - HTTP or MCP -
+  stays at the door (`WorkspaceFiles`, `OperationLog`); what is done with the
+  data (base64, a version's facts) is the service's. What is one per process,
+  the console, is installed by a service the application owns
+  (`ConsoleCapture`), so tests own it as well.
 
 ### Serving, and the threads it runs on
 
@@ -452,9 +463,9 @@ method is called - so the code is written the way it runs:
   body, the network. Do not add an async path beside a synchronous one.
 - **Enforced when it compiles.** `src/GenHTTP.Lambda/BannedSymbols.txt`
   (Microsoft.CodeAnalysis.BannedApiAnalyzers, RS0030) refuses EF Core's async
-  methods, waiting for a task and the `File.*Async` helpers, each with the
-  reason. It lists every overload by its id, generated from the assemblies; a
-  new overload in a new version of EF is added the same way.
+  methods, waiting for a task, the `File.*Async` helpers and `Task.Run`, each
+  with the reason. It lists every overload by its id, generated from the
+  assemblies; a new overload in a new version of EF is added the same way.
 - **Serving a lambda does not touch the database.** What answers to a key, an
   id or a preview key is held by `ResolutionCache`, and every write to the
   platform's database makes it stale (`DatabaseChanges`, an EF interceptor).
@@ -464,7 +475,11 @@ method is called - so the code is written the way it runs:
   binding with Roslyn, packing, copying a workspace or a database. Not in many
   small asynchronous steps (`File.ReadAllTextAsync` hops out and back per
   buffer), and not in place. A version's file is read and written in place:
-  it is bounded by its tier's allowance, and saving one is rare.
+  it is bounded by its tier's allowance, and saving one is rare. `Task.Run` is
+  refused, so every hop is marked in `Offload` and can be given a scheduler of
+  its own there; work started in the background rather than awaited (the
+  scheduler's jobs, seeding the demos) is not a hop and suppresses RS0030
+  where it starts, saying why.
 - **Locks are plain locks (`Lock`), never held across an await.** What compiles
   under a lambda's or a feature's turn compiles first and takes the turn to
   write down what it came to (`MetaService.DeployAsync`,
@@ -480,6 +495,12 @@ method is called - so the code is written the way it runs:
 - **No lock that every request takes may be held for more than a moment.** The
   log ring's is the one every request takes: an append happens under it, and a
   reader walks back from the newest line only as far as its cursor.
+- **The console's lock comes first.** The console takes the lock of
+  `Console.Out` - the tee's, once it is installed - underneath every write to
+  its stream, and a print through the tee holds it before it reaches the real
+  console's writer. So whatever writes to the real console directly takes
+  `Console.Out` first (`LogBookProvider`); the other order deadlocked the
+  server on startup.
 - What is read off a version is read once: a version never changes
   (`VersionFactsCache`).
 

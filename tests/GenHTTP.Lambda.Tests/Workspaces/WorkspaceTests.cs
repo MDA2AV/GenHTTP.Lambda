@@ -107,6 +107,22 @@ public sealed class WorkspaceTests
     }
 
     [TestMethod]
+    public async Task ContentThatIsNotBase64IsRefused()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var response = await fixture.SendAsync(HttpMethod.Put, $"/api/v1/lambdas/{lambda.PrivateKey}/files/note.txt",
+                                                     new FileRequest("plain text, not base64"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("base64", await response.Content.ReadAsStringAsync(), "and the caller is told what was expected");
+
+        Assert.IsEmpty((await ListAsync(fixture, lambda.PrivateKey)).Files, "nothing is written from it");
+    }
+
+    [TestMethod]
     public async Task OneFileMayTakeTheWholeQuota()
     {
         await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });

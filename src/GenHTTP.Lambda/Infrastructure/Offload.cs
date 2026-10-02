@@ -17,9 +17,18 @@ namespace GenHTTP.Lambda.Infrastructure;
 /// unpacking, reading or writing a file that may be large. What it is not
 /// for: a query against SQLite or a small file, which take less than the hop.
 /// On Kestrel it is a hop to the pool and nothing more.
+///
+/// The only way to the pool: <c>Task.Run</c> is refused when the server is
+/// compiled (BannedSymbols.txt), so every hop is marked as one here, and
+/// this is where they could be given a scheduler of their own - a bounded
+/// one for compiling, say - without looking for them. Work that is started in
+/// the background rather than awaited by a request is not a hop and says so
+/// where it starts.
 /// </remarks>
 public static class Offload
 {
+
+#pragma warning disable RS0030 // this is what everything else goes through
 
     public static Task<T> Run<T>(Func<T> work, CancellationToken cancellation = default) => Task.Run(work, cancellation);
 
@@ -28,6 +37,10 @@ public static class Offload
     public static Task<T> Run<T>(Func<ValueTask<T>> work, CancellationToken cancellation = default)
         => Task.Run(async () => await work(), cancellation);
 
+    public static Task Run(Func<Task> work, CancellationToken cancellation = default) => Task.Run(work, cancellation);
+
     public static Task Run(Action work, CancellationToken cancellation = default) => Task.Run(work, cancellation);
+
+#pragma warning restore RS0030
 
 }

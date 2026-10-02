@@ -3,7 +3,6 @@ using System.Text;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Deployment.Model;
-using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Tests.Infrastructure;
@@ -385,8 +384,6 @@ public sealed class FeatureTests
     [TestMethod]
     public async Task APreviewIsKeptOutOfTheLambdasFiguresAndLog()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync();

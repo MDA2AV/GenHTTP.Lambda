@@ -26,6 +26,15 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// wraps whatever it is given in a synchronizing writer, a whole
 /// <c>WriteLine</c> lands here under one lock rather than interleaved with
 /// another thread's.
+///
+/// That lock is the one of <c>Console.Out</c>, and the console takes it again
+/// underneath every write to its stream - from this tee's writer and from the
+/// logger's alike. So a print here holds it and then wants the real console's
+/// writer, and the logger must want them in the same order: it takes
+/// <c>Console.Out</c> before writing (see <see cref="LogBookProvider"/>).
+/// Holding the real console's writer first and getting to the stream's lock
+/// second, it waited for a print that was waiting for it, and the process
+/// stopped.
 /// </remarks>
 public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 {
@@ -68,14 +77,9 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
     {
         inner.Write(value);
 
-        var scope = LambdaOutput.Ambient ?? LambdaOutput.Process;
+        Span<char> one = [value];
 
-        if (scope != null)
-        {
-            Span<char> one = [value];
-
-            scope.Feed(one, error);
-        }
+        Feed(one);
     }
 
     public override void Write(string? value)
@@ -84,7 +88,7 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
 
         if (value != null)
         {
-            (LambdaOutput.Ambient ?? LambdaOutput.Process)?.Feed(value, error);
+            Feed(value);
         }
     }
 
@@ -92,14 +96,32 @@ public sealed class ConsoleTee(TextWriter inner, bool error) : TextWriter
     {
         inner.Write(buffer, index, count);
 
-        (LambdaOutput.Ambient ?? LambdaOutput.Process)?.Feed(buffer.AsSpan(index, count), error);
+        Feed(buffer.AsSpan(index, count));
     }
 
     public override void Write(ReadOnlySpan<char> buffer)
     {
         inner.Write(buffer);
 
-        (LambdaOutput.Ambient ?? LambdaOutput.Process)?.Feed(buffer, error);
+        Feed(buffer);
+    }
+
+    /// <summary>
+    /// Files what was written under the lambda being served, or else under
+    /// every application that keeps the process's output.
+    /// </summary>
+    private void Feed(ReadOnlySpan<char> text)
+    {
+        if (LambdaOutput.Ambient is { } lambda)
+        {
+            lambda.Feed(text, error);
+            return;
+        }
+
+        foreach (var scope in LambdaOutput.Process)
+        {
+            scope.Feed(text, error);
+        }
     }
 
     public override void Flush() => inner.Flush();

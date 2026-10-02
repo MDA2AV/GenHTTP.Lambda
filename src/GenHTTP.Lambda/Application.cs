@@ -73,6 +73,10 @@ public sealed class Application : IAsyncDisposable
 
         Services = BuildServices(options, loggers, book, runs);
 
+        // what is printed to the console goes into this application's book
+        // from here on, until it is disposed of with the services
+        Services.GetRequiredService<ConsoleCapture>();
+
         Registry = Services.GetRequiredService<ServerRegistry>();
 
         Scheduler = Services.GetRequiredService<BackgroundScheduler>();
@@ -102,6 +106,7 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton(book);
         services.AddSingleton(runs);
+        services.AddSingleton<ConsoleCapture>();
         services.AddSingleton<StringPool>();
         services.AddSingleton<GeoTable>();
         services.AddSingleton<GeoPlaces>();
@@ -150,6 +155,19 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<LambdaTelemetry>();
         services.AddSingleton<ITelemetryService, TelemetryService>();
+
+        /*
+         * The concerns that need nothing but services, resolved per request
+         * from the scope the outermost concern opens (see Configure).
+         * Singletons, because they keep nothing of a request's: without a
+         * registration the container would build one for every request.
+         */
+        services.AddSingleton<CallerConcern>();
+        services.AddSingleton<TelemetryConcern>();
+        services.AddSingleton<ThrottleConcern>();
+        services.AddSingleton<LambdaOutputConcern>();
+        services.AddSingleton<LambdaActivityConcern>();
+        services.AddSingleton<RateLimitConcern>();
 
         services.AddSingleton<IBackgroundJob, MaintenanceJob>();
         services.AddSingleton<IBackgroundJob, TelemetryJob>();
@@ -228,9 +246,8 @@ public sealed class Application : IAsyncDisposable
                 */
                .Logging(Services.GetRequiredService<ILoggerFactory>(), logRequests: false)
                .Development(Options.Development)
-               .AddDependencyInjection(Services)
                .Add(Registry.Capture())
-               .Add(new TelemetryConcernBuilder(Services.GetRequiredService<ITelemetryService>()))
+               .Add(Dependent.Concern<TelemetryConcern>())
                /*
                 * The upgrade to the secure endpoint covers a lambda's own
                 * domain as well: it redirects to the host that was asked for,
@@ -240,8 +257,8 @@ public sealed class Application : IAsyncDisposable
                 */
                .Defaults()
                /*
-                * Last, which puts it outside everything else, because a
-                * concern added later wraps the ones added before it.
+                * Outside everything but the scope below, because a concern
+                * added later wraps the ones added before it.
                 *
                 * It has to be outside the defaults specifically. Those carry
                 * the upgrade from plain HTTP to HTTPS, which answers the
@@ -256,12 +273,14 @@ public sealed class Application : IAsyncDisposable
                 * below can log under it, and that what is timed is the whole
                 * answer rather than the part after the throttle.
                 */
-               .Add(new CallerConcernBuilder(Services.GetRequiredService<LogBook>(),
-                                             Services.GetRequiredService<StringPool>(),
-                                             Services.GetRequiredService<GeoTable>(),
-                                             Services.GetRequiredService<GeoPlaces>(),
-                                             Services.GetRequiredService<DomainRegistry>(),
-                                             Options));
+               .Add(Dependent.Concern<CallerConcern>())
+               /*
+                * Last of all: the scope of the request, which every concern
+                * taken from the container is resolved from - this one and the
+                * telemetry above, and those in front of the lambdas. A concern
+                * outside it would find no scope to be resolved from.
+                */
+               .AddDependencyInjection(Services);
 
     /// <summary>
     /// Starts the maintenance jobs. Call once the server is up.
@@ -280,6 +299,9 @@ public sealed class Application : IAsyncDisposable
     {
         var seeder = Services.GetRequiredService<DemoSeeder>();
 
+        // started in the background at startup, not a hop a request waits
+        // for - the compiling in it goes through Offload where it happens
+#pragma warning disable RS0030
         _ = Task.Run(async () =>
         {
             try
@@ -291,6 +313,7 @@ public sealed class Application : IAsyncDisposable
                 Services.GetRequiredService<ILoggerFactory>().CreateLogger<Application>().LogWarning(e, "The demos could not be prepared");
             }
         });
+#pragma warning restore RS0030
     }
 
     public async ValueTask DisposeAsync()

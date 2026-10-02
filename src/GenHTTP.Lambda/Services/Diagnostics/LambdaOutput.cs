@@ -17,13 +17,18 @@ public static class LambdaOutput
 
     private static readonly AsyncLocal<OutputScope?> Current = new();
 
+    private static readonly Lock Gate = new();
+
+    private static OutputScope[] _process = [];
+
     /// <summary>
     /// The lambda being served here, or nothing.
     /// </summary>
     public static OutputScope? Ambient => Current.Value;
 
     /// <summary>
-    /// Where console output belongs when no lambda is being served.
+    /// Where console output belongs when no lambda is being served: the log
+    /// of every application running in this process.
     /// </summary>
     /// <remarks>
     /// The engine prints its own lines - which reactor is listening on what,
@@ -32,17 +37,36 @@ public static class LambdaOutput
     /// copied a write while a lambda was the one making it. Those lines are
     /// exactly what an operator opens a log to read, so they land here
     /// instead, under no lambda at all.
+    ///
+    /// Every application, not the last one to start: nothing on the console
+    /// says which of them a line is about. A server runs one; tests run many
+    /// side by side, and each keeps what it was running for.
+    ///
+    /// Read on every write to the console, so without a lock: a write sees
+    /// the scopes as they were before or after a change, never half of one.
     /// </remarks>
-    public static OutputScope? Process { get; private set; }
+    public static ReadOnlySpan<OutputScope> Process => Volatile.Read(ref _process);
 
     /// <summary>
-    /// Says where the process's own console output should go.
+    /// Files the process's own console output under the given scope as well,
+    /// until it is detached again (see <see cref="ConsoleCapture"/>).
     /// </summary>
-    public static void Adopt(LogBook book)
+    public static void Attach(OutputScope scope)
     {
-        // uncapped, unlike a request's: this is the server talking about
-        // itself, and the ring and the folding are what bound it
-        Process = new OutputScope(null, book, int.MaxValue);
+        lock (Gate)
+        {
+            Volatile.Write(ref _process, [.. _process, scope]);
+        }
+    }
+
+    public static void Detach(OutputScope scope)
+    {
+        lock (Gate)
+        {
+            Volatile.Write(ref _process, [.. _process.Where(s => s != scope)]);
+        }
+
+        scope.Settle();
     }
 
     /// <summary>

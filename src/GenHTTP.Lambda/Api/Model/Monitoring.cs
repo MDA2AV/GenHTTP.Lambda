@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Meta;
+
 namespace GenHTTP.Lambda.Api.Model;
 
 /// <summary>
@@ -26,18 +28,6 @@ public sealed record LambdaSummaryResponse(
     SummaryLimits Limits,
     DocumentationSummary Documentation
 );
-
-/// <summary>
-/// What a version says about itself: the context kept in <c>.lambda/</c>
-/// beside its program.
-/// </summary>
-/// <param name="About">The first paragraph of its product page, as plain text - what the app is, in a sentence or two</param>
-/// <param name="Product">Whether it has a product page: what the app is, for whom, and why</param>
-/// <param name="Decisions">Whether it says which technical decisions were made, and why</param>
-/// <param name="Tests">Whether it says how it is tested</param>
-/// <param name="Files">How many files its documentation and tests come to</param>
-/// <param name="Bytes">What those weigh, which counts towards what its assets may come to</param>
-public sealed record DocumentationSummary(string? About, bool Product, bool Decisions, bool Tests, int Files, long Bytes);
 
 /// <summary>
 /// How much a lambda is being used, and how well it is answering.

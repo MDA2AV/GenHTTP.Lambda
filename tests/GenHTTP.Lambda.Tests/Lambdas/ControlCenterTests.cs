@@ -4,7 +4,6 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
-using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Tests.Infrastructure;
@@ -309,8 +308,6 @@ public sealed class ControlCenterTests
     [TestMethod]
     public async Task TheOwnerReadsTheirOwnLog()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var mine = await fixture.CreateLambdaAsync("mine");
@@ -345,8 +342,6 @@ public sealed class ControlCenterTests
     [TestMethod]
     public async Task AKeyThatChangedHandsDoesNotBringItsLogAlong()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var first = await fixture.CreateLambdaAsync("reused");

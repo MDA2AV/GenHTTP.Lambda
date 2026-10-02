@@ -75,7 +75,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     /// <param name="path">The path of the file within the workspace</param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path")]
     public async ValueTask<WorkspaceEntry> Put(string privateKey, string path, FileRequest request)
-        => Written(privateKey, await WorkspaceFiles.WriteAsync(workspace, meta.RequireEditable(privateKey), null, path, request));
+        => Written(privateKey, await workspace.WriteEncodedAsync(meta.RequireEditable(privateKey), path, request.Content));
 
     /// <summary>
     /// Removes a file, or a folder and everything in it.

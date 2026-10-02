@@ -5,9 +5,18 @@ using GenHTTP.Api.Protocol;
 namespace GenHTTP.Lambda.Infrastructure;
 
 /// <summary>
-/// Hands the running server instance to the services that need it - mainly the
-/// deployment service, which has to prepare the handlers it compiles.
+/// Hands the running server to the deployment service, which prepares every
+/// handler it compiles against it.
 /// </summary>
+/// <remarks>
+/// For that alone. Whatever answers a request has the server already, as
+/// <c>IRequest.Server</c>, and takes it from there. A handler is compiled by
+/// the services, which are handed no request, and sometimes there is none to
+/// hand: the seeder compiles the demos once the server is up, and a merge or
+/// a deployment puts a version online from the service that was asked. So the
+/// server is captured here while the chain is prepared, before anything can
+/// be compiled.
+/// </remarks>
 public sealed class ServerRegistry
 {
 

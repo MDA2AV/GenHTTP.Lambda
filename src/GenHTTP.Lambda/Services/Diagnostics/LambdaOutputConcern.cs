@@ -1,8 +1,10 @@
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
+using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Protection;
+
+using GenHTTP.Modules.DependencyInjection;
 
 namespace GenHTTP.Lambda.Services.Diagnostics;
 
@@ -17,14 +19,10 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// than with the thread: work the lambda starts and awaits stays attributed to
 /// it however many thread pool hops it takes.
 /// </remarks>
-public sealed class LambdaOutputConcern(IHandler content, LogBook book, int most) : IConcern
+public sealed class LambdaOutputConcern(LogBook book, LambdaOptions options) : IDependentConcern
 {
 
-    public IHandler Content => content;
-
-    public ValueTask PrepareAsync(IServer server) => content.PrepareAsync(server);
-
-    public async ValueTask<IResponse?> HandleAsync(IRequest request)
+    public async ValueTask<IResponse?> HandleAsync(IHandler content, IRequest request)
     {
         var lambda = request.GetLambda();
 
@@ -33,15 +31,10 @@ public sealed class LambdaOutputConcern(IHandler content, LogBook book, int most
             return await content.HandleAsync(request);
         }
 
-        using (LambdaOutput.Enter(new OutputScope(lambda.PublicKey, book, most, lambda.Id, lambda.Feature?.Id)))
+        using (LambdaOutput.Enter(new OutputScope(lambda.PublicKey, book, options.MaxOutputLines, lambda.Id, lambda.Feature?.Id)))
         {
             return await content.HandleAsync(request);
         }
     }
 
-}
-
-public sealed class LambdaOutputConcernBuilder(LogBook book, int most) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new LambdaOutputConcern(content, book, most);
 }

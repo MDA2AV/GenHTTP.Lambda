@@ -81,7 +81,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
     {
         var (lambdaId, featureId) = features.Require(privateKey, feature, true);
 
-        return Written(privateKey, feature, await WorkspaceFiles.WriteAsync(workspace, lambdaId, featureId, path, request));
+        return Written(privateKey, feature, await workspace.WriteEncodedAsync(lambdaId, path, request.Content, featureId));
     }
 
     /// <summary>

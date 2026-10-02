@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.Telemetry;
 
+using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.ErrorHandling;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +28,10 @@ namespace GenHTTP.Lambda.Services.Execution;
 /// Building a chain more than once is safe because none of its layers keep
 /// anything of their own: what has to be shared between the chains - the
 /// concurrency slots, the per-client budgets, the counters, the log - lives in
-/// services and is only referenced from here.
+/// services. The layers that need nothing but those services are taken from
+/// the container as they are asked (<see cref="Dependent"/>), the same
+/// instance for every chain; the lookup is the one that is built here, since
+/// its locator is what tells the chains apart.
 ///
 /// Concerns are applied inside out, so the list below reads from the code of
 /// the user outwards to the client.
@@ -42,22 +46,22 @@ public static class LambdaRoute
         var execution = new LambdaExecutionHandler(services.GetRequiredService<IDeploymentService>(), options);
 
         return Concerns.Chain([
-            new ThrottleConcernBuilder(services.GetRequiredService<LambdaThrottle>(), options),
+            Dependent.Concern<ThrottleConcern>(),
             ErrorHandler.From(new LambdaErrorMapper(services.GetRequiredService<ILogger<LambdaErrorMapper>>())),
             // outside the error handler and the timeout, so a lambda that
             // printed and then failed keeps what it printed, and the warning
             // the error handler writes is filed under it as well
             .. options.CaptureLambdaOutput
-               ? new IConcernBuilder[] { new LambdaOutputConcernBuilder(services.GetRequiredService<LogBook>(), options.MaxOutputLines) }
+               ? new IConcernBuilder[] { Dependent.Concern<LambdaOutputConcern>() }
                : [],
             // outside the error handler and the throttle, inside the lookup: so
             // it records the answer the visitor actually got, and knows which
             // lambda to file it under. Inside the throttle it saw neither the
             // timeout nor the rejection - a lambda that timed out on every
             // request was recorded as succeeding, slowly.
-            new LambdaActivityConcernBuilder(services.GetRequiredService<LambdaTelemetry>()),
+            Dependent.Concern<LambdaActivityConcern>(),
             new LambdaResolutionConcernBuilder(locator),
-            new RateLimitConcernBuilder(services.GetRequiredService<LambdaRateLimiter>())
+            Dependent.Concern<RateLimitConcern>()
         ], execution);
     }
 

@@ -15,6 +15,18 @@ namespace GenHTTP.Lambda.Services.Workspace;
 public sealed class WorkspaceService(IStorageService storage, IMetaService meta, LambdaOptions options, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
 
+    /// <summary>
+    /// The largest file that travels as base64 in a JSON document.
+    /// </summary>
+    /// <remarks>
+    /// That way a file is in memory several times over while the request runs
+    /// - its bytes, the text they become, the characters of that text. The
+    /// workspace does not limit how large one file may be, only the room they
+    /// take together, so anything larger is sent as it is (see
+    /// <see cref="Find"/>), which streams the bytes.
+    /// </remarks>
+    private const long EncodedLimit = 32 * 1024 * 1024;
+
     #region Functionality
 
     public WorkspaceListing List(long lambdaId, long? featureId = null)
@@ -78,6 +90,29 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         }
 
         return new WorkspaceContent(Relative(root, resolved), await File.ReadAllBytesAsync(resolved, cancellation));
+    }
+
+    public async ValueTask<WorkspaceEncoded?> ReadEncodedAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default)
+    {
+        var root = Root(lambdaId, featureId);
+
+        var resolved = Resolve(root, path);
+
+        if (!File.Exists(resolved))
+        {
+            return null;
+        }
+
+        var length = Size(resolved);
+
+        if (length > EncodedLimit)
+        {
+            return new WorkspaceEncoded(Relative(root, resolved), length, null);
+        }
+
+        var content = await File.ReadAllBytesAsync(resolved, cancellation);
+
+        return new WorkspaceEncoded(Relative(root, resolved), content.Length, Convert.ToBase64String(content));
     }
 
     public async ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
@@ -157,6 +192,25 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         var info = new FileInfo(resolved);
 
         return new WorkspaceEntry(Relative(root, resolved), info.Length, info.LastWriteTimeUtc);
+    }
+
+    public async ValueTask<WorkspaceEntry> WriteEncodedAsync(long lambdaId, string path, string? content, long? featureId = null,
+                                                             CancellationToken cancellation = default)
+    {
+        byte[] bytes;
+
+        try
+        {
+            bytes = Convert.FromBase64String(content ?? string.Empty);
+        }
+        catch (FormatException)
+        {
+            throw LambdaException.Invalid("The content of a file has to be base64 encoded.");
+        }
+
+        using var stream = new MemoryStream(bytes);
+
+        return await WriteAsync(lambdaId, path, stream, featureId: featureId, cancellation: cancellation);
     }
 
     public void CreateFolder(long lambdaId, string path, long? featureId = null)
