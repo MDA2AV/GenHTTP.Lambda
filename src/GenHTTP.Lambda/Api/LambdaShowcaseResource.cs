@@ -60,7 +60,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
 
         var saved = showcases.Save(privateKey, new ShowcaseDraft(request.Title, request.Description, image));
 
-        logger.LogInformation("Put lambda {Lambda} into the showcase as '{Title}'", saved.PublicKey, saved.Title);
+        logger.LogInformation("Added lambda {Lambda} to showcase as '{Title}'", saved.PublicKey, saved.Title);
 
         return ShowcaseResponse.Of(saved);
     }
@@ -73,7 +73,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     {
         showcases.Remove(privateKey);
 
-        logger.LogInformation("Took lambda {Lambda} out of the showcase", meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
     }
 
     internal static ShowcaseLimitsResponse Limits(LambdaOptions options)

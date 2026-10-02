@@ -49,7 +49,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         var lambda = meta.Create(request.PublicKey, request.Template, EditorViews.Parse(request.View) ?? EditorView.Full);
 
-        logger.LogInformation("Created lambda {Lambda} from template {Template}, opening in the {View} view", lambda.PublicKey, request.Template ?? "(none)", lambda.View);
+        logger.LogInformation("Created lambda {Lambda} template {Template} view {View}", lambda.PublicKey, request.Template ?? "(none)", lambda.View);
 
         return new Result<LambdaResponse>(LambdaDescription.Of(lambda)).Status(ResponseStatus.Created);
     }
@@ -87,14 +87,14 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
             lambda = meta.ChangeKey(privateKey, publicKey);
 
-            logger.LogInformation("Moved lambda {Before} to the public key {Lambda}", before, lambda.PublicKey);
+            logger.LogInformation("Changed public key of lambda {Before} to {Lambda}", before, lambda.PublicKey);
         }
 
         if (view is { } wanted)
         {
             lambda = meta.ChangeView(privateKey, wanted);
 
-            logger.LogInformation("Set the editor of lambda {Lambda} to open in the {View} view", lambda.PublicKey, lambda.View);
+            logger.LogInformation("Set view of lambda {Lambda} to {View}", lambda.PublicKey, lambda.View);
         }
 
         return LambdaDescription.Of(lambda);
@@ -188,7 +188,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
             }
         });
 
-        logger.LogInformation("Exported version {Version} of lambda {Lambda} as a project", content.Version, lambda.PublicKey);
+        logger.LogInformation("Exported lambda {Lambda} version {Version}", lambda.PublicKey, content.Version);
 
         // packed into a file rather than into memory, because a project carries
         // the database along, which may be as large as the tier allows - and

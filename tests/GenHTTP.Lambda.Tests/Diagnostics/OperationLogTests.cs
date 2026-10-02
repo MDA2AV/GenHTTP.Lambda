@@ -40,12 +40,12 @@ public sealed class OperationLogTests
 
         var logged = Logged(fixture, "Resource");
 
-        Assert.Contains("Created lambda logged-lambda from template (none), opening in the Full view", logged);
-        Assert.Contains("Saved version 2 of lambda logged-lambda with 1 file(s)", logged);
-        Assert.Contains("Put version 2 of lambda logged-lambda online", logged);
-        Assert.Contains("Switched the secrets of lambda logged-lambda on", logged);
-        Assert.Contains("Set the secret SHOP_KEY of lambda logged-lambda", logged);
-        Assert.Contains("Published the source of lambda logged-lambda under MIT", logged);
+        Assert.Contains("Created lambda logged-lambda template (none) view Full", logged);
+        Assert.Contains("Saved lambda logged-lambda version 2 files 1", logged);
+        Assert.Contains("Deployed lambda logged-lambda version 2", logged);
+        Assert.Contains("Enabled secrets of lambda logged-lambda", logged);
+        Assert.Contains("Set secret SHOP_KEY of lambda logged-lambda", logged);
+        Assert.Contains("Published source of lambda logged-lambda license MIT", logged);
 
         AssertNothingSecret(fixture, lambda.PrivateKey, "a-value-nobody-reads");
     }
@@ -66,25 +66,35 @@ public sealed class OperationLogTests
             ["deploy"] = true
         });
 
-        await CallToolAsync(fixture, "create_feature", new JsonObject { ["privateKey"] = privateKey, ["name"] = "Dark mode" });
+        var created = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject { ["privateKey"] = privateKey, ["name"] = "Dark mode" }));
+
+        var feature = created["feature"]!["feature"]!.GetValue<string>();
 
         await CallToolAsync(fixture, "enable_data", new JsonObject { ["privateKey"] = privateKey, ["kind"] = "secrets" });
 
         await CallToolAsync(fixture, "set_secret", new JsonObject { ["privateKey"] = privateKey, ["name"] = "SHOP_KEY", ["value"] = "a-value-nobody-reads" });
 
+        await CallToolAsync(fixture, "set_secret", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature, ["name"] = "SANDBOX_KEY", ["value"] = "a-value-nobody-reads" });
+
         await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey });
+
+        await CallToolAsync(fixture, "delete_feature", new JsonObject { ["privateKey"] = privateKey, ["feature"] = feature });
 
         var logged = Logged(fixture, "McpTools");
 
-        Assert.Contains("Created lambda agent-made from template (none), opening in the Full view", logged);
-        Assert.Contains("Saved version 2 of lambda agent-made with 1 file(s)", logged);
-        Assert.Contains("Put version 2 of lambda agent-made online", logged);
-        Assert.Contains("Started feature 'Dark mode' of lambda agent-made from version 2", logged);
-        Assert.Contains("Switched the secrets of lambda agent-made on", logged);
-        Assert.Contains("Set the secret SHOP_KEY of lambda agent-made", logged);
-        Assert.Contains("Read version 2 of lambda agent-made", logged);
+        Assert.Contains("Created lambda agent-made template (none) view Full", logged);
+        Assert.Contains("Saved lambda agent-made version 2 files 1", logged);
+        Assert.Contains("Deployed lambda agent-made version 2", logged);
+        Assert.Contains("Created feature 'Dark mode' of lambda agent-made base 2", logged);
+        Assert.Contains("Enabled secrets of lambda agent-made", logged);
+        Assert.Contains("Set secret SHOP_KEY of lambda agent-made", logged);
+        Assert.Contains("Set secret SANDBOX_KEY of feature 'Dark mode' of lambda agent-made", logged);
+        Assert.Contains("Read lambda agent-made version 2", logged);
+        Assert.Contains("Deleted feature 'Dark mode' of lambda agent-made", logged);
 
         AssertNothingSecret(fixture, privateKey, "a-value-nobody-reads");
+
+        Assert.IsFalse(Said(fixture).Any(l => l.Contains(feature, StringComparison.Ordinal)), "a feature is named by its name, never by its key");
     }
 
     [TestMethod]
@@ -114,14 +124,19 @@ public sealed class OperationLogTests
 
     private static void AssertNothingSecret(LambdaFixture fixture, string privateKey, string value)
     {
-        // the request lines carry the path as it was requested, editor key and
-        // all; these are about the lines that say what was done
-        var everything = fixture.Book.Read(0, null, LogLevel.Trace, 50_000).Lines.Where(l => l.Source != "Requests")
-                                .Select(l => l.Text + " " + l.Detail).ToList();
+        var everything = Said(fixture);
 
         Assert.IsFalse(everything.Any(l => l.Contains(privateKey, StringComparison.Ordinal)), "the editor key is never logged");
         Assert.IsFalse(everything.Any(l => l.Contains(value, StringComparison.Ordinal)), "and neither is the value of a secret");
     }
+
+    /// <summary>
+    /// Everything the server said, apart from the request lines: they carry
+    /// the path as it was requested, editor key and all, and these tests are
+    /// about the lines that say what was done.
+    /// </summary>
+    private static List<string> Said(LambdaFixture fixture)
+        => [.. fixture.Book.Read(0, null, LogLevel.Trace, 50_000).Lines.Where(l => l.Source != "Requests").Select(l => l.Text + " " + l.Detail)];
 
     private static JsonObject Structured(JsonObject answer) => (JsonObject)answer["result"]!["structuredContent"]!;
 

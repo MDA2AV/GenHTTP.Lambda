@@ -487,12 +487,27 @@ method is called - so the code is written the way it runs:
 
 Every API call that changes something, and every MCP tool call, logs at
 information level **what it did** once it has done it - the operation and its
-arguments in words ("Published the source of lambda quiz under MIT"), not the
-request. A new endpoint or tool gets its line in the same change; the helpers
-are in `OperationLog`.
+arguments, not the request. A new endpoint or tool gets its line in the same
+change; the helpers are in `OperationLog`.
 
-- A lambda is named by its **public key** (`PublicKeyOfAsync`), a feature by
-  its **name** (`NameOfAsync`). Never the editor key, never a feature's key.
+- **Terse, in the style backends log in - decided.** Past-tense verb first,
+  then what it was done to and its key, then the arguments as pairs:
+  `Published source of lambda {Lambda} license {License}`,
+  `Deployed lambda {Lambda} version {Version}`,
+  `Failed to merge feature '{Feature}' of lambda {Lambda}`. A line says what is
+  known, not why or what it might mean. A name that may hold spaces - a
+  feature's, a title - is quoted. The services log in the same shape.
+- **The same property everywhere**: `{Lambda}` is a public key, `{Feature}` a
+  feature's name, then `{Version}`, `{Path}`, `{Name}` (a secret's). A
+  service that only has the id writes `lambda #{LambdaId}`. One template per
+  case, never a fragment built beforehand (`of {Owner}`), so a structured sink
+  can filter on each.
+- A lambda is named by its **public key** (`PublicKeyOf`), a feature by its
+  **name** (`NameOf`, or the name a service hands back). Never the editor key,
+  never a feature's key.
+- **Never a model as a whole.** A record's `ToString()` prints every property,
+  and `LambdaInfo` carries the editor key, others code and specifications.
+  Name the properties a line logs.
 - Arguments that are sensitive or long are left out: secret values (the name
   only), code, file contents, pictures, specifications, descriptions.
 - **The one exception: the prompts of the build agent** - on `/build` and in the

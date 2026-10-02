@@ -73,7 +73,7 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, 
                                              body?.Model, body?.Password, body?.Language, feature, request.Client.Address);
 
         // logged in full, as the prompts of the build page are
-        logger.LogInformation("Asked the agent to change lambda {Lambda} with the {Model} model: {Prompt}", current.PublicKey, body?.Model ?? "default", body?.Prompt?.Trim());
+        logger.LogInformation("Started change {Change} of lambda {Lambda} model {Model} prompt {Prompt}", state.Job?.Id, current.PublicKey, body?.Model ?? "default", body?.Prompt?.Trim());
 
         return new Result<AgentState>(state).Status(ResponseStatus.Accepted);
     }
@@ -89,7 +89,7 @@ public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, 
 
         var state = await builds.StopAsync(lambda, request.Client.Address);
 
-        logger.LogInformation("Stopped the agent changing lambda {Lambda}", meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Stopped change of lambda {Lambda}", meta.PublicKeyOf(privateKey));
 
         return state;
     }

@@ -52,7 +52,14 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
         var stored = vault.Store(lambdaId, featureId, name?.Trim() ?? "", value);
 
         // the name, never the value
-        logger.LogInformation("Lambda {LambdaId} stored the secret {Name}{Where}", lambdaId, stored.Name, featureId != null ? $" in feature {featureId}" : "");
+        if (featureId != null)
+        {
+            logger.LogInformation("Set secret {Name} of feature #{FeatureId} of lambda #{LambdaId}", stored.Name, featureId, lambdaId);
+        }
+        else
+        {
+            logger.LogInformation("Set secret {Name} of lambda #{LambdaId}", stored.Name, lambdaId);
+        }
 
         var (used, _) = Used(lambdaId, featureId);
 
@@ -68,7 +75,14 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
             throw LambdaException.NotFound($"There is no secret called '{name}'{(featureId != null ? " in this feature's copy" : "")}. Names are case sensitive.");
         }
 
-        logger.LogInformation("Lambda {LambdaId} deleted the secret {Name}{Where}", lambdaId, name, featureId != null ? $" in feature {featureId}" : "");
+        if (featureId != null)
+        {
+            logger.LogInformation("Deleted secret {Name} of feature #{FeatureId} of lambda #{LambdaId}", name, featureId, lambdaId);
+        }
+        else
+        {
+            logger.LogInformation("Deleted secret {Name} of lambda #{LambdaId}", name, lambdaId);
+        }
     }
 
     #endregion

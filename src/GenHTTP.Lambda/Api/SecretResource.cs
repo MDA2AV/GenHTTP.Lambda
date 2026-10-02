@@ -51,7 +51,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     {
         var secret = secrets.Set(privateKey, name, request.Value);
 
-        logger.LogInformation("Set the secret {Name} of lambda {Lambda}", secret.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Set secret {Name} of lambda {Lambda}", secret.Name, meta.PublicKeyOf(privateKey));
 
         return Describe(secret);
     }
@@ -64,7 +64,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     {
         secrets.Delete(privateKey, name);
 
-        logger.LogInformation("Deleted the secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
     }
 
     #endregion
@@ -87,7 +87,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     {
         var secret = secrets.Set(privateKey, name, request.Value, feature);
 
-        logger.LogInformation("Set the secret {Name} of feature '{Feature}' of lambda {Lambda}", secret.Name,
+        logger.LogInformation("Set secret {Name} of feature '{Feature}' of lambda {Lambda}", secret.Name,
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
 
         return Describe(secret);
@@ -101,7 +101,7 @@ public sealed class SecretResource(ISecretService secrets, IMetaService meta, IF
     {
         secrets.Delete(privateKey, name, feature);
 
-        logger.LogInformation("Deleted the secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(),
+        logger.LogInformation("Deleted secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(),
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
     }
 

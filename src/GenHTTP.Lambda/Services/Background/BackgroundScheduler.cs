@@ -49,7 +49,7 @@ public sealed class BackgroundScheduler(IEnumerable<IBackgroundJob> jobs, ILogge
             }
             catch (Exception e)
             {
-                logger.LogWarning(e, "Background job '{Job}' failed", job.Name);
+                logger.LogWarning(e, "Failed background job {Job}", job.Name);
             }
         }
         while (await SafeWaitAsync(timer, cancellation));

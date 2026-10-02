@@ -140,7 +140,7 @@ public sealed partial class BuildService : IDisposable
             var started = await ReadAsync<BuildStarted>(response)
                        ?? throw new ProviderException(ResponseStatus.BadGateway, "The build agent answered with nothing.");
 
-            _logger.LogInformation("Build {Id} started", started.Id);
+            _logger.LogInformation("Started build {Build}", started.Id);
 
             return started;
         }
@@ -148,7 +148,7 @@ public sealed partial class BuildService : IDisposable
         {
             Refund(caller);
 
-            _logger.LogWarning(e, "The build agent could not be reached");
+            _logger.LogWarning(e, "Failed to reach build agent");
 
             throw new ProviderException(ResponseStatus.ServiceUnavailable,
                                         "The build agent is not answering. Try again in a moment.");
@@ -282,7 +282,7 @@ public sealed partial class BuildService : IDisposable
 
             // the key is never logged: it is the only thing standing between
             // somebody reading this log and the ability to change the lambda
-            _logger.LogInformation("Change {Id} of lambda {Lambda} started", job.Id, lambda);
+            _logger.LogInformation("Started change {Change} of lambda #{LambdaId}", job.Id, lambda);
 
             return new AgentState(true, PerDay, Left(caller), HasSecondModel, job);
         }
@@ -290,7 +290,7 @@ public sealed partial class BuildService : IDisposable
         {
             Refund(caller);
 
-            _logger.LogWarning(e, "The build agent could not be reached");
+            _logger.LogWarning(e, "Failed to reach build agent");
 
             throw new ProviderException(ResponseStatus.ServiceUnavailable,
                                         "The agent is not answering. Try again in a moment.");

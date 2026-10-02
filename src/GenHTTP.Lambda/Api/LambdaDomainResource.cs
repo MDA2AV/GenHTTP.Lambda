@@ -51,7 +51,7 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     {
         var lambda = meta.ChangeDomain(privateKey, request.Domain);
 
-        logger.LogInformation("Set the domain of lambda {Lambda} to {Domain}", lambda.PublicKey, lambda.Domain ?? "(none)");
+        logger.LogInformation("Set domain of lambda {Lambda} to {Domain}", lambda.PublicKey, lambda.Domain ?? "(none)");
 
         return await DescribeAsync(lambda);
     }
@@ -64,7 +64,7 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     {
         var lambda = meta.ChangeDomain(privateKey, null);
 
-        logger.LogInformation("Removed the domain of lambda {Lambda}", lambda.PublicKey);
+        logger.LogInformation("Removed domain of lambda {Lambda}", lambda.PublicKey);
 
         return await DescribeAsync(lambda);
     }

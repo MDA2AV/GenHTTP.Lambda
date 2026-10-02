@@ -90,7 +90,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
         catch (Exception e)
         {
-            Logger.LogWarning(e, "Failed to check the code of lambda {LambdaId}", lambdaId);
+            Logger.LogWarning(e, "Failed to check code of lambda #{LambdaId}", lambdaId);
 
             return CompilationOutcome.Failed(e.Message);
         }
@@ -227,13 +227,13 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
             _deployed[slot] = new CompiledLambda(stamp, request.Limits, handler);
 
-            Logger.LogInformation("Deployed {Slot} as build {Stamp}", slot, stamp);
+            Logger.LogInformation("Deployed {Slot} build {Stamp}", slot, stamp);
 
             return outcome;
         }
         catch (Exception e)
         {
-            Logger.LogWarning(e, "Failed to deploy {Slot} as build {Stamp}", slot, stamp);
+            Logger.LogWarning(e, "Failed to deploy {Slot} build {Stamp}", slot, stamp);
 
             return CompilationOutcome.Failed(e.Message);
         }
@@ -271,7 +271,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
         catch (Exception e)
         {
-            Logger.LogWarning(e, "The assets of {Slot} could not be written back", slot);
+            Logger.LogWarning(e, "Failed to write back assets of {Slot}", slot);
         }
     }
 
@@ -348,7 +348,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
                 if (!path.StartsWith(root, StringComparison.Ordinal))
                 {
-                    Logger.LogWarning("The asset '{Name}' of {Slot} would land outside its directory and was skipped", file.Name, slot);
+                    Logger.LogWarning("Skipped asset {Name} of {Slot} outside its directory", file.Name, slot);
 
                     continue;
                 }
@@ -362,7 +362,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         {
             // a lambda that ships nothing is still a lambda; failing the whole
             // deployment because a file could not be written would be worse
-            Logger.LogWarning(e, "The assets of {Slot} could not be written", slot);
+            Logger.LogWarning(e, "Failed to write assets of {Slot}", slot);
         }
     }
 
@@ -382,7 +382,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         if (_deployed.TryRemove(slot, out _))
         {
-            Logger.LogInformation("Removed the running deployment of {Slot}", slot);
+            Logger.LogInformation("Undeployed {Slot}", slot);
         }
     }
 
@@ -404,7 +404,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// </summary>
     private readonly record struct Slot(long LambdaId, long? FeatureId)
     {
-        public override string ToString() => FeatureId is { } feature ? $"lambda {LambdaId}, feature {feature}" : $"lambda {LambdaId}";
+        public override string ToString() => FeatureId is { } feature ? $"feature #{feature} of lambda #{LambdaId}" : $"lambda #{LambdaId}";
     }
 
     /// <summary>

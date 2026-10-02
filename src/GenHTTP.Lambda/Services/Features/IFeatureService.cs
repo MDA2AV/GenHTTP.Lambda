@@ -81,7 +81,8 @@ public interface IFeatureService
     /// <summary>
     /// Removes a feature, its preview and its copy of the data.
     /// </summary>
-    void Delete(string privateKey, string feature);
+    /// <returns>The name it had, which is all there is left to say about it</returns>
+    string Delete(string privateKey, string feature);
 
     /// <summary>
     /// The identities a feature's files and data are kept under, for the
@@ -89,6 +90,12 @@ public interface IFeatureService
     /// </summary>
     /// <param name="editable">Whether it is about to be changed, which is refused for a demo</param>
     (long LambdaId, long FeatureId) Require(string privateKey, string feature, bool editable);
+
+    /// <summary>
+    /// The name of a feature, for naming it where its key must not appear - in
+    /// a log line.
+    /// </summary>
+    string? GetName(string privateKey, string feature);
 
     /// <summary>
     /// The preview a request to <c>/features/{key}/</c> is for, if it is online.

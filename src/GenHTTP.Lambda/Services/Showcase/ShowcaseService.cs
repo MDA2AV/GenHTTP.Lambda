@@ -99,7 +99,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
                 Updated = now
             });
 
-            logger.LogInformation("Lambda {LambdaId} was added to the showcase", lambda.Id);
+            logger.LogInformation("Added lambda #{LambdaId} to showcase", lambda.Id);
         }
         else
         {
@@ -129,7 +129,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         if (database.Showcases.Where(s => s.LambdaId == lambda.Id).ExecuteDelete() > 0)
         {
-            logger.LogInformation("Lambda {LambdaId} was taken out of the showcase", lambda.Id);
+            logger.LogInformation("Removed lambda #{LambdaId} from showcase", lambda.Id);
         }
     }
 

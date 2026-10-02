@@ -92,7 +92,7 @@ public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions optio
             {
                 // one registry being unreachable is four fifths of a table,
                 // which is better than none and not worth a failed job
-                logger.LogDebug(e, "Could not refresh {Source}", source);
+                logger.LogDebug(e, "Failed to refresh {Source}", source);
             }
         }
 
@@ -158,7 +158,7 @@ public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions optio
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
-                    logger.LogDebug(e, "Could not fetch {Source}", source);
+                    logger.LogDebug(e, "Failed to fetch {Source}", source);
                 }
             }
         }
@@ -186,7 +186,7 @@ public sealed class GeoJob(GeoTable table, GeoPlaces places, LambdaOptions optio
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "The country table could not be built");
+            logger.LogWarning(e, "Failed to build country table");
 
             return false;
         }

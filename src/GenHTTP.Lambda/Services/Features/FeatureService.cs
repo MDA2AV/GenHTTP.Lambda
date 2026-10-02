@@ -117,6 +117,18 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         return (lambdaId, entity.Id);
     }
 
+    public string? GetName(string privateKey, string feature)
+    {
+        var key = feature.Trim().ToLowerInvariant();
+
+        using var database = databases.CreateDbContext();
+
+        return database.Features.AsNoTracking()
+                       .Where(f => f.Key == key && f.Lambda!.PrivateKey == privateKey)
+                       .Select(f => f.Name)
+                       .FirstOrDefault();
+    }
+
     public ResolvedLambda? ResolvePreview(string key)
     {
         // anything that is not one of our keys is answered without asking
@@ -229,7 +241,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             throw;
         }
 
-        logger.LogInformation("Lambda {LambdaId} started feature {FeatureId} from version {Version}", lambdaId, entity.Id, from);
+        logger.LogInformation("Created feature #{FeatureId} of lambda #{LambdaId} base {Version}", entity.Id, lambdaId, from);
 
         return Describe(entity, newest);
     }
@@ -267,7 +279,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                 throw LambdaException.NotFound($"Version {moved} does not exist. The newest is version {newest}.");
             }
 
-            logger.LogInformation("Feature {FeatureId} of lambda {LambdaId} moved its base from version {From} to {To}",
+            logger.LogInformation("Moved base of feature #{FeatureId} of lambda #{LambdaId} from {From} to {To}",
                                   entity.Id, lambda.Id, entity.BaseVersion, moved);
 
             entity.BaseVersion = moved;
@@ -527,6 +539,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     {
         string code;
 
+        string name;
+
         int revision;
 
         {
@@ -551,6 +565,8 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                 throw LambdaException.Invalid($"The feature '{entity.Name}' holds exactly what version {entity.BaseVersion} holds, so there is nothing to merge. Change it first, or delete it.");
             }
 
+            name = entity.Name;
+
             revision = entity.Revision;
         }
 
@@ -560,7 +576,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         if (!check.Success)
         {
-            return new FeatureMerge(false, null, check.Diagnostics, null);
+            return new FeatureMerge(name, false, null, check.Diagnostics, null);
         }
 
         var (version, lambdaId, origin) = Merged(privateKey, feature, note, code, revision);
@@ -576,13 +592,13 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             catch (Exception e)
             {
                 // merged all the same, which is what the answer has to say
-                logger.LogWarning(e, "Version {Version} of lambda {LambdaId}, merged from a feature, could not be deployed", version.Version, lambdaId);
+                logger.LogWarning(e, "Failed to deploy lambda #{LambdaId} version {Version} after merge", lambdaId, version.Version);
 
                 deployment = new DeploymentResult(false, null, [CompilationDiagnostic.Error($"Merged as version {version.Version}, but it could not be put online: {e.Message}")]);
             }
         }
 
-        return new FeatureMerge(true, version, [], deployment);
+        return new FeatureMerge(name, true, version, [], deployment);
     }
 
     /// <summary>
@@ -615,12 +631,12 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // however the caller fares, or a feature would stay behind that was merged
         Remove(database, lambda.Id, entity);
 
-        logger.LogInformation("Feature {FeatureId} of lambda {LambdaId} was merged as version {Version}", entity.Id, lambda.Id, version.Version);
+        logger.LogInformation("Merged feature #{FeatureId} of lambda #{LambdaId} as version {Version}", entity.Id, lambda.Id, version.Version);
 
         return (version, lambda.Id, origin);
     }
 
-    public void Delete(string privateKey, string feature)
+    public string Delete(string privateKey, string feature)
     {
         var (database, lambda, entity, turn) = Locked(privateKey, feature);
 
@@ -630,7 +646,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         Remove(database, lambda.Id, entity);
 
-        logger.LogInformation("Feature {FeatureId} of lambda {LambdaId} was deleted", entity.Id, lambda.Id);
+        logger.LogInformation("Deleted feature #{FeatureId} of lambda #{LambdaId}", entity.Id, lambda.Id);
+
+        return entity.Name;
     }
 
     public int RunMaintenance(DateTime now)
@@ -668,7 +686,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             }
         }
 
-        logger.LogInformation("Maintenance took {Count} preview(s) of features offline", taken);
+        logger.LogInformation("Undeployed {Count} feature(s) by maintenance", taken);
 
         return taken;
     }
@@ -700,7 +718,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         if (swept > 0)
         {
-            logger.LogInformation("Maintenance removed the files of {Count} feature(s) that no longer exist", swept);
+            logger.LogInformation("Removed files of {Count} deleted feature(s) by maintenance", swept);
         }
 
         return swept;

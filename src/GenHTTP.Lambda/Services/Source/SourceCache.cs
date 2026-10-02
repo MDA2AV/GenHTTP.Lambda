@@ -132,7 +132,7 @@ public sealed class SourceCache
                 }
             }
 
-            Logger.LogInformation("Packed the source of version {Version} of lambda {LambdaId}", version, lambdaId);
+            Logger.LogInformation("Packed source of lambda #{LambdaId} version {Version}", lambdaId, version);
 
             Trim(file);
 

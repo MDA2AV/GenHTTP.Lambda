@@ -166,7 +166,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
 
         Invalidate(lambdaId);
 
-        logger.LogInformation("Lambda {LambdaId} has a database now", lambdaId);
+        logger.LogInformation("Created database of lambda #{LambdaId}", lambdaId);
     }
 
     /// <summary>
@@ -422,7 +422,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "Could not delete '{Path}'", path);
+            logger.LogWarning(e, "Failed to delete {Path}", path);
         }
     }
 

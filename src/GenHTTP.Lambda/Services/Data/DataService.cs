@@ -65,7 +65,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
             Switch(id, wanted, true);
 
-            logger.LogInformation("Lambda {LambdaId} switched its {Kind} on", id, wanted.Id);
+            logger.LogInformation("Enabled {Kind} of lambda #{LambdaId}", wanted.Id, id);
         }
 
         return Describe(id, wanted, (Read(id))[wanted.Id], null);
@@ -84,7 +84,7 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
             Clear(id, wanted);
 
-            logger.LogInformation("Lambda {LambdaId} switched its {Kind} off, and what it held was deleted", id, wanted.Id);
+            logger.LogInformation("Disabled and deleted {Kind} of lambda #{LambdaId}", wanted.Id, id);
         }
 
         return Describe(id, wanted, (Read(id))[wanted.Id], null);
