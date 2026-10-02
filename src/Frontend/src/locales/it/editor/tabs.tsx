@@ -1,0 +1,22 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const tabs: EditorMessages['tabs'] = {
+  codeName: 'Lettere, numeri, trattini e underscore, con estensione .cs',
+  slashes: 'Senza barra all’inizio o alla fine, e meno di 120 caratteri.',
+  deep: 'Al massimo sei livelli di cartelle.',
+  characters: 'Lettere, numeri, trattini, underscore e punti, separati da barre.',
+  extension: 'Serve un’estensione, così il file viene servito nel formato giusto.',
+  context: 'In .lambda/, solo docs/ e tests/: lettere, numeri, trattini, underscore e punti, separati da barre.',
+  contextFiles: 'Documentazione e test: parte della versione, mai compilati né serviti',
+  exists: 'Esiste già un file con questo nome.',
+  remove: (name) => `Rimuovere ${name}? Anche il suo contenuto andrà perso.`,
+  there: (name) => `${name} esiste già.`,
+  entry: 'Lo snippet: quello che restituisce è ciò che viene servito',
+  errors: 'contiene errori',
+  removeFile: (name) => `Rimuovi ${name}`,
+  removeTitle: 'Rimuovi questo file',
+  placeholder: 'Types.cs, site/index.html o .lambda/docs/api.md',
+  newFile: 'Nuovo file',
+  uploadTitle: 'Carica un file: un’immagine, un font, una pagina',
+  upload: 'Carica un file',
+};

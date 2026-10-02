@@ -1,0 +1,22 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const tabs: EditorMessages['tabs'] = {
+  codeName: 'Buchstaben, Ziffern, Binde- und Unterstriche, Endung .cs',
+  slashes: 'Kein Schrägstrich am Anfang oder Ende, unter 120 Zeichen.',
+  deep: 'Höchstens sechs Ordner tief.',
+  characters: 'Buchstaben, Ziffern, Binde- und Unterstriche und Punkte, getrennt durch Schrägstriche.',
+  extension: 'Die Datei braucht eine Endung, damit sie richtig ausgeliefert wird.',
+  context: 'In .lambda/ nur docs/ und tests/ – Buchstaben, Ziffern, Binde- und Unterstriche und Punkte, getrennt durch Schrägstriche.',
+  contextFiles: 'Dokumentation und Tests: Teil der Version, nie kompiliert oder ausgeliefert',
+  exists: 'Es gibt schon eine Datei mit diesem Namen.',
+  remove: (name) => `${name} entfernen? Der Inhalt wird mitgelöscht.`,
+  there: (name) => `${name} gibt es schon.`,
+  entry: 'Das Snippet: Was es zurückgibt, wird ausgeliefert',
+  errors: 'hat Fehler',
+  removeFile: (name) => `${name} entfernen`,
+  removeTitle: 'Diese Datei entfernen',
+  placeholder: 'Types.cs, site/index.html oder .lambda/docs/api.md',
+  newFile: 'Neue Datei',
+  uploadTitle: 'Datei hochladen – ein Bild, eine Schrift, eine Seite',
+  upload: 'Datei hochladen',
+};

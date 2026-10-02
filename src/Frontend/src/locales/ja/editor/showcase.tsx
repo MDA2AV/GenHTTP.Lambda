@@ -1,0 +1,56 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const showcase: EditorMessages['showcase'] = {
+  loadFailed: 'ショーケースの情報を読み込めませんでした。',
+  loading: '読み込み中…',
+  title: 'タイトル',
+  description: '説明',
+  picture: '画像',
+  updated: 'ショーケースの掲載内容を更新しました。',
+  listed: 'ショーケースに掲載されました。',
+  waiting: '保存しました。lambdaがオンラインになると、ショーケースに表示されます。',
+  saveFailed: 'ショーケースの掲載内容を保存できませんでした。',
+  removed: 'ショーケースから取り下げました。',
+  removeFailed: 'ショーケースから取り下げられませんでした。',
+  wrongType: 'PNG、JPEG、GIF、WebPのいずれの画像でもありません。',
+  tooLarge: (size, limit) => `このファイルは${size}あります。画像は${limit}までです。`,
+  unreadable: 'ファイルを読み込めませんでした。',
+  hint: (tool) => (
+    <>
+      ショーケースには、作った人が公開を選んだlambdaが、最近よく使われているものから並びます。掲載や取り下げができるのは編集用キーを持っている人だけで、掲載されるのはオンラインの間だけです。エージェントも
+      {tool}
+      ツールで同じことができます。
+    </>
+  ),
+  open: 'ショーケースを開く',
+  switch: 'このlambdaをショーケースに掲載する',
+  listedNow: '掲載中です。ショーケースを見た人は誰でも開けます。',
+  notListed: '保存済みですが、lambdaがオフラインのため掲載されていません。もう一度デプロイすると、また表示されます。',
+  off: 'オフです。これをオンにして保存するまで、このlambdaの情報はどこにも表示されません。',
+  offline: 'lambdaがオフラインなので、デプロイされるまで掲載は保留になります。掲載されるのは、応答するlambdaだけです。',
+  titleLabel: 'タイトル',
+  titlePlaceholder: 'クイズ大会のスコアボード',
+  descriptionLabel: '説明',
+  descriptionPlaceholder: '各チームがスマホで回答を入力し、司会者が採点すると、会場全員のスコアボードが更新されます。',
+  save: '変更を保存',
+  add: 'ショーケースに掲載',
+  takeOff: '取り下げる',
+  needs: (missing) => `${missing.join('、')}がまだありません。`,
+  tooLong: '長すぎる項目があります。',
+  allSaved: 'すべて保存済みです。',
+  preview: 'プレビュー',
+  card: (address) => <>訪問者に表示されるカードです。クリックすると{address}が開きます。</>,
+  confirm: 'ショーケースから取り下げますか？',
+  keep: '掲載を続ける',
+  confirmText: 'タイトル、説明、画像は削除されます。lambda自体はそのまま残ります。',
+  pictureLabel: '画像',
+  formats: (limit) => `PNG、JPEG、GIF、WebP（${limit}まで）`,
+  notSaved: '未保存',
+  replace: '新しい画像をここにドロップすると、置き換えられます。',
+  drop: 'ここに画像をドロップ',
+  advice: 'スクリーンショットか、使っている様子の短いGIFがおすすめです。比率は16:10がきれいに見えます。',
+  another: '別の画像を選ぶ',
+  choose: 'ファイルを選ぶ',
+  keepSaved: '保存済みの画像のままにする',
+  clear: 'クリア',
+};

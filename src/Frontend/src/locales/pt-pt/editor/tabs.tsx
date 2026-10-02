@@ -1,0 +1,22 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const tabs: EditorMessages['tabs'] = {
+  codeName: 'Letras, algarismos, hífenes e underscores, a terminar em .cs',
+  slashes: 'Sem barra no início nem no fim, e com menos de 120 caracteres.',
+  deep: 'No máximo seis pastas de profundidade.',
+  characters: 'Letras, algarismos, hífenes, underscores e pontos, separados por barras.',
+  extension: 'Precisa de uma extensão, para ser servido como deve ser.',
+  context: 'Em .lambda/, só docs/ e tests/: letras, algarismos, hífenes, underscores e pontos, separados por barras.',
+  contextFiles: 'Documentação e testes: fazem parte da versão, nunca são compilados nem servidos',
+  exists: 'Já existe um ficheiro com esse nome.',
+  remove: (name) => `Remover ${name}? O conteúdo vai com ele.`,
+  there: (name) => `${name} já existe.`,
+  entry: 'O snippet: o que devolve é o que é servido',
+  errors: 'tem erros',
+  removeFile: (name) => `Remover ${name}`,
+  removeTitle: 'Remover este ficheiro',
+  placeholder: 'Types.cs, site/index.html ou .lambda/docs/api.md',
+  newFile: 'Novo ficheiro',
+  uploadTitle: 'Carregar um ficheiro: uma imagem, um tipo de letra, uma página',
+  upload: 'Carregar um ficheiro',
+};

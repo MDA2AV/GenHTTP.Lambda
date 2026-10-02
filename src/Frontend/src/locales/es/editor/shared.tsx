@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: 's', min: 'min', h: 'h', d: 'd' },
+  amount: (value, unit) => `${value} ${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: 'nunca',
+  justNow: 'ahora mismo',
+  ago: (span) => `hace ${span}`,
+  in: (span) => `en ${span}`,
+  origins: {
+    agent: 'agente',
+    template: 'plantilla',
+    admin: 'operador',
+    system: 'plataforma',
+    api: 'API / editor',
+    unknown: 'desconocido',
+  },
+  endings: {
+    replaced: 'reemplazado por un despliegue más nuevo',
+    stopped: 'desconectado',
+    expired: 'caducado por falta de uso',
+    admin: 'desconectado por el operador',
+    ended: 'finalizado',
+  },
+  whatThisIs: 'Qué es esto',
+  byAgent: 'por un agente',
+  writtenByAgent: 'Escrito por un agente',
+  more: 'Más',
+  of: (used, total) => `${used} de ${total}`,
+  online: (version) => `En línea · v${version}`,
+  onlineTitle: (version) => `En línea, sirviendo la versión ${version}`,
+  offline: 'Fuera de línea',
+  offlineTitle: 'Fuera de línea: no se sirve nada',
+  premium:
+    'Premium: puede responder en un dominio propio, tiene más espacio para código, recursos y datos, y sigue en línea aunque nadie la use',
+  demo: 'Demo: esta instalación la mantiene en línea y es de solo lectura',
+  tier: (tier) => `Plan ${tier}`,
+  entrances: {
+    title: 'Por dónde llegan',
+    note: 'Desde que arrancó el servidor, incluidas las conexiones websocket.',
+  },
+  chart: {
+    showChart: 'Ver gráfico',
+    showValues: 'Ver valores',
+    none: 'Todavía no hay mediciones.',
+    time: 'Hora',
+  },
+  diagnostics: {
+    compiles: 'El código compila.',
+    none: 'Todavía no hay mensajes. Comprueba o despliega tu código para compilarlo.',
+    line: (line) => `línea ${line}`,
+  },
+};

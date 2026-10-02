@@ -551,6 +551,13 @@ with `LAMBDA_ENGINE=Kestrel`, and point `LAMBDA_WEB_ROOT` at
   catalog is typed as it, so a missing string fails the frontend build. A new
   language is added in both places, in every catalog, in `pages.json` and in the
   social images.
+- The editor's words are a folder per language, `locales/<language>/editor/`:
+  a file for each section of the editor, named after its key, and an
+  `index.ts` that puts them together - so a change to one section touches one
+  file per language. A language's grammar helpers for the editor live beside
+  them in `language.ts`. A new section gets its file in English, its line in
+  every `index.ts`, and its translations from `apply`, which creates the
+  other languages' files.
 - **Use the register that is normal for a product in that country**, and stay in
   it. Professional, never chummy or slangy; do not carry English idioms over
   literally. The form each language uses today:

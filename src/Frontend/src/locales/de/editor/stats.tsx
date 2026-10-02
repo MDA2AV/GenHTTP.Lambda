@@ -1,0 +1,33 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const stats: EditorMessages['stats'] = {
+  readFailed: 'Die Zahlen konnten nicht gelesen werden.',
+  range: 'Zeitraum',
+  lastHour: 'Letzte Stunde',
+  lastDay: 'Letzte 24 Stunden',
+  hint: (since) =>
+    `Seit dem letzten Serverstart (${since}) im Arbeitsspeicher gezählt. Nach einem Neustart beginnen die Zahlen von vorn.`,
+  reading: 'Zahlen werden gelesen …',
+  requests: 'Requests',
+  websockets: (count) => `und ${count} Websocket-Verbindungen`,
+  failed: 'fehlgeschlagen',
+  serverErrors: (count) => `${count} Serverfehler`,
+  rejected: 'nicht gefunden oder abgelehnt',
+  average: 'Antwortzeit im Schnitt',
+  sent: (amount) => `${amount} gesendet`,
+  nobody: (hour) => (hour ? 'In der letzten Stunde hat es niemand aufgerufen.' : 'In den letzten 24 Stunden hat es niemand aufgerufen.'),
+  requestsTitle: 'Requests',
+  per: (hour) => (hour ? 'Pro Minute.' : 'Pro 15 Minuten.'),
+  answered: 'Beantwortet',
+  rejectedSeries: 'Nicht gefunden oder abgelehnt',
+  failedSeries: 'Fehlgeschlagen',
+  timeTitle: 'Antwortzeit',
+  averagePer: (hour) => (hour ? 'Durchschnitt pro Minute.' : 'Durchschnitt pro 15 Minuten.'),
+  averageSeries: 'Durchschnitt',
+  mostAsked: 'Am häufigsten aufgerufen',
+  path: 'Pfad',
+  requestsColumn: 'Requests',
+  failedColumn: 'Fehler',
+  averageColumn: 'Schnitt',
+  since: 'Seit dem Serverstart.',
+};

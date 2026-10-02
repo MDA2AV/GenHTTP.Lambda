@@ -1,0 +1,22 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const tabs: EditorMessages['tabs'] = {
+  codeName: '英数字、ハイフン、アンダースコアを使い、末尾は.cs',
+  slashes: '先頭と末尾にはスラッシュを使えません。120文字未満にしてください。',
+  deep: 'フォルダーは6階層までです。',
+  characters: '英数字、ハイフン、アンダースコア、ドットを使い、スラッシュで区切ります。',
+  extension: '正しい形式で配信できるよう、拡張子が必要です。',
+  context: '.lambda/の中では、docs/とtests/だけが使えます。英数字、ハイフン、アンダースコア、ドットを使い、スラッシュで区切ります。',
+  contextFiles: 'ドキュメントとテスト：バージョンの一部ですが、コンパイルも配信もされません',
+  exists: '同じ名前のファイルがすでにあります。',
+  remove: (name) => `${name}を削除しますか？　中身も削除されます。`,
+  there: (name) => `${name}はすでにあります。`,
+  entry: 'スニペット：これが返すものが配信されます',
+  errors: 'エラーあり',
+  removeFile: (name) => `${name}を削除`,
+  removeTitle: 'このファイルを削除',
+  placeholder: '例：Types.cs、site/index.html、.lambda/docs/api.md',
+  newFile: '新しいファイル',
+  uploadTitle: 'ファイルをアップロード（画像、フォント、ページなど）',
+  upload: 'ファイルをアップロード',
+};

@@ -1,0 +1,33 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const stats: EditorMessages['stats'] = {
+  readFailed: 'İstatistikler yüklenemedi.',
+  range: 'Zaman aralığı',
+  lastHour: 'Son bir saat',
+  lastDay: 'Son 24 saat',
+  hint: (since) =>
+    `Sunucu son başladığından beri (${since}) bellekte sayılır. Sunucu yeniden başlarsa sayım sıfırlanır.`,
+  reading: 'İstatistikler yükleniyor…',
+  requests: 'istek',
+  websockets: (count) => `ve ${count} websocket bağlantısı`,
+  failed: 'başarısız',
+  serverErrors: (count) => `${count} sunucu hatası`,
+  rejected: 'bulunamadı ya da reddedildi',
+  average: 'ortalama yanıt süresi',
+  sent: (amount) => `Gönderilen: ${amount}`,
+  nobody: (hour) => (hour ? 'Son bir saatte hiç istek gelmedi.' : 'Son 24 saatte hiç istek gelmedi.'),
+  requestsTitle: 'İstekler',
+  per: (hour) => (hour ? 'Dakika başına.' : '15 dakika başına.'),
+  answered: 'Yanıtlanan',
+  rejectedSeries: 'Bulunamayan ya da reddedilen',
+  failedSeries: 'Başarısız',
+  timeTitle: 'Yanıt süresi',
+  averagePer: (hour) => (hour ? 'Dakika başına ortalama.' : '15 dakika başına ortalama.'),
+  averageSeries: 'Ortalama',
+  mostAsked: 'En çok istenenler',
+  path: 'Yol',
+  requestsColumn: 'İstek',
+  failedColumn: 'Başarısız',
+  averageColumn: 'Ortalama',
+  since: 'Sunucu başladığından beri.',
+};

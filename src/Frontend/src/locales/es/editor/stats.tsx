@@ -1,0 +1,33 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const stats: EditorMessages['stats'] = {
+  readFailed: 'No se pudieron leer las cifras.',
+  range: 'Periodo',
+  lastHour: 'Última hora',
+  lastDay: 'Último día',
+  hint: (since) =>
+    `Se cuentan en memoria desde el último arranque del servidor (${since}). Si se reinicia, estas cifras empiezan de cero.`,
+  reading: 'Leyendo las cifras…',
+  requests: 'peticiones',
+  websockets: (count) => (count === 1 ? 'y 1 conexión websocket' : `y ${count} conexiones websocket`),
+  failed: 'fallidas',
+  serverErrors: (count) => (count === 1 ? '1 error del servidor' : `${count} errores del servidor`),
+  rejected: 'no encontradas o rechazadas',
+  average: 'tiempo medio de respuesta',
+  sent: (amount) => `${amount} enviados`,
+  nobody: (hour) => (hour ? 'Ninguna petición en la última hora.' : 'Ninguna petición en el último día.'),
+  requestsTitle: 'Peticiones',
+  per: (hour) => (hour ? 'Por minuto.' : 'Cada 15 minutos.'),
+  answered: 'Respondidas',
+  rejectedSeries: 'No encontradas o rechazadas',
+  failedSeries: 'Fallidas',
+  timeTitle: 'Tiempo de respuesta',
+  averagePer: (hour) => (hour ? 'Media por minuto.' : 'Media cada 15 minutos.'),
+  averageSeries: 'Media',
+  mostAsked: 'Rutas más pedidas',
+  path: 'Ruta',
+  requestsColumn: 'Peticiones',
+  failedColumn: 'Fallidas',
+  averageColumn: 'Media',
+  since: 'Desde que arrancó el servidor.',
+};

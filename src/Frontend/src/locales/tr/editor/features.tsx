@@ -1,0 +1,120 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const features: EditorMessages['features'] = {
+  hint:
+    'Taslak, bir değişikliği kimse görmeden denemeniz için uygulamanızın bir kopyasıdır; kendi adresi ve test verileri vardır. Hazır olunca yayına alın; o zamana kadar ziyaretçileriniz şu anda yayında olanı görmeye devam eder.',
+  newFeature: 'Yeni taslak',
+  full: (limit) => `Zaten ${limit} taslak var, olabilecek en fazla sayı bu. Önce birini yayına alın ya da silin.`,
+  emptyTitle: 'Taslak yok',
+  emptyText:
+    'Taslak, bir değişiklik yayına girmeden önce denemeniz için uygulamanızın bir kopyasıdır. Ajan denemeniz için bir değişiklik bıraktığında onu burada bulursunuz.',
+  start: 'Yeni taslak',
+  askAgentNew: 'Ajandan bir değişiklik iste',
+  noChange: 'Neyi değiştirdiği henüz yazılmadı',
+  behindTitle: 'Taslak başladıktan sonra uygulamanız değişti',
+  behind: () => 'güncel değil',
+  previewOnline: 'önizleme çalışıyor',
+  previewOutdated: 'önizleme daha eski bir kaydı gösteriyor',
+  previewOffline: 'önizleme çalışmıyor',
+  changed: 'son değişiklik',
+  openPreview: 'Dene',
+  openPreviewTitle: 'Önizlemeyi yeni sekmede aç',
+  count: (open, limit) => `Açık taslak: ${open} / ${limit}`,
+  loading: 'Taslak yükleniyor…',
+  readFailed: 'Taslak okunamadı.',
+
+  newTitle: 'Yeni taslak',
+  newText:
+    'Uygulamanızın ve verilerinin, kendi adresi olan bir kopyası. Onu orada değiştirin ve deneyin; siz yayına alana kadar ziyaretçileriniz bunun hiçbirini görmez.',
+  newTextFiles:
+    'Yazdıklarınız sürüm olmak yerine taslağa girer; böylece yayına girmeden önce kendi adresinde deneyebilirsiniz.',
+  name: 'Ad',
+  namePlaceholder: 'Skor tablosu',
+  wanted: 'Ne yapmalı?',
+  wantedPlaceholder: 'İsteğe bağlı. En iyi on skoru tutsun ve her oyundan sonra göstersin.',
+  olderBase: (newest) =>
+    `Bu, eski bir sürümden başlıyor, bu yüzden baştan güncel değil: yayına alınabilmesi için ${newest}. sürüme kadar yapılan değişikliklerin içine alınması gerekir.`,
+  create: 'Taslağı başlat',
+  createFailed: 'Taslak başlatılamadı.',
+  retry: 'Tekrar dene',
+  madeNotSaved: (name) =>
+    `“${name}” taslağı başlatıldı, ancak yazdıklarınız henüz ona eklenemedi. Tekrar deneyin ya da bunu kapatıp taslağı Taslaklar altında bulun.`,
+  created: (name) => `“${name}” taslağı başlatıldı.`,
+  cancel: 'İptal',
+
+  featureHint:
+    'Bu değişikliği denemek için uygulamanızın bir kopyası. Önizlemesinin kendi adresi ve test verileri vardır, bu yüzden siz yayına alana kadar ziyaretçileriniz bunların hiçbirini görmez.',
+  askAgent: 'Ajandan iste',
+  askCatchUp: 'Ajandan güncellemesini iste',
+  catchUp: 'Bu taslağı uygulamanın en yeni sürümüne göre güncelle ve taslaktaki değişiklikleri koru.',
+  editCode: 'Kodu düzenle',
+  deployPreview: 'Önizlemeyi başlat',
+  updatePreview: 'Önizlemeyi güncelle',
+  previewDeployed: 'Önizleme çalışıyor.',
+  previewFailed: 'Önizleme başlatılamadı.',
+  previewStopped: 'Önizleme durduruldu.',
+  previewRejected: 'Önizleme değişmedi',
+  previewNotCompiling: 'Kod derlenmiyor, bu yüzden önizleme hâlâ derlenen son sürümü gösteriyor.',
+  started: 'Başlatıldı',
+  changes: () => 'Değişen dosyalar',
+  noChanges: () => 'Henüz hiçbir şey değişmedi.',
+  editNotes: 'Ad ve notlar',
+  what: 'Neyi değiştiriyor?',
+  whatPlaceholder: 'En iyi on skoru tutan bir skor tablosu ekler',
+  missed: () => 'Uygulamanız başladığından beri neler değişti',
+  missedNothing: 'Dosyalarda bir şey değişmedi.',
+
+  behindText: (_base, newest) =>
+    `Uygulamanızın ${newest}. sürümü bu taslak başladıktan sonra kaydedildi. Taslağı şimdi yayına almak o sürümün değiştirdiklerini geri alır; bu yüzden önce güncellenmesi gerekir - ajan bunu sizin için yapabilir.`,
+  moveBase: 'Güncel olarak işaretle',
+  close: 'Kapat',
+  mergeTitle: (name) => `“${name}” taslağını yayına al`,
+  mergeTitleShort: 'Uygulamanızın yeni sürümü yap ve yayına al',
+  leaks: (path, files) =>
+    `${files} içinde ${path} adresine bağlantı var; bu adres canlı uygulamanızdır. Önizlemeden bu bağlantılar test verileri yerine uygulamanın gerçek verilerini okur ve değiştirir. Ajandan bu kısım olmadan bağlantı vermesini isteyin (“api/items”).`,
+  mergeButton: 'Yayına al',
+  saveFirst: 'Önce değişikliklerinizi kaydedin: önizleme ve yayına alma kaydedilmiş olanı kullanır.',
+  mergeAndDeploy: () => 'Yayına al',
+  mergeText: (version) =>
+    `Uygulamanızın ${version}. sürümü olur ve yayına girer. Uygulamanızın verileri olduğu gibi kalır.`,
+  deployTooNote: (active) => `Sürüm ${active}, sürümlerde bir tık uzakta kalır.`,
+  deployTooOffline: 'Lambda şu an yayında değil, bu onu yayına alır.',
+  notCompiling: 'Kod derlenmiyor, bu yüzden yayına alınmadı. Önce taslakta düzeltin.',
+  mergeFailed: 'Taslak yayına alınamadı.',
+  merged: (version) => `${version}. sürüm olarak kaydedildi.`,
+  mergedOnline: (version) => `Sürüm ${version} yayında.`,
+
+  notesTitle: 'Ad ve notlar',
+  save: 'Kaydet',
+  saveFailed: 'Kaydedilemedi.',
+
+  baseTitle: 'Güncel olarak işaretlensin mi?',
+  baseText: () =>
+    'Yalnızca en yeni sürümün değiştirdiklerini içeren bir taslak, onları geri almadan yayına alınabilir. Bu değişiklikler artık bu taslaktaysa - siz ya da ajan getirdiyseniz - güncel olarak işaretleyin.',
+  moveTo: () => 'Güncel olarak işaretle',
+  baseWarning: 'Bunu hiçbir şey kontrol etmez. Değişiklikler taslakta değilse, yayına almak onları geri alır.',
+
+  deleteTitle: (name) => `“${name}” silinsin mi?`,
+  deleteText: 'Kodu, önizlemesi ve test verileri kalıcı olarak silinir. Uygulamanıza ve sürümlerine dokunulmaz.',
+  keep: 'Kalsın',
+  deleteForGood: 'Kalıcı olarak sil',
+  deleteFailed: 'Taslak silinemedi.',
+  deleted: (name) => `“${name}” taslağı silindi.`,
+
+  all: 'Tüm taslaklar',
+  actions: 'Bu taslak için diğer işlemler',
+  download: 'Zip olarak indir',
+  stopPreview: 'Önizlemeyi durdur',
+  delete: 'Bu taslağı sil',
+  viewsLabel: 'Taslak',
+  views: {
+    overview: 'Taslak',
+    docs: 'Dokümantasyon',
+    code: 'Kod',
+    tests: 'Testler',
+    data: 'Test verileri',
+    logs: 'Loglar',
+  },
+  missingTitle: 'Bu taslak artık yok',
+  missingText: 'Yayına alındı ya da silindi. Ona ne olduğunu sürümlerde görebilirsiniz.',
+};

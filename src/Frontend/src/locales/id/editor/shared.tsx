@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: 'dtk', min: 'mnt', h: 'jam', d: 'hari' },
+  amount: (value, unit) => `${value} ${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: 'tidak pernah',
+  justNow: 'baru saja',
+  ago: (span) => `${span} lalu`,
+  in: (span) => `${span} lagi`,
+  origins: {
+    agent: 'agen',
+    template: 'template',
+    admin: 'operator',
+    system: 'platform',
+    api: 'API / editor',
+    unknown: 'tidak diketahui',
+  },
+  endings: {
+    replaced: 'diganti deployment yang lebih baru',
+    stopped: 'dimatikan',
+    expired: 'kedaluwarsa karena tidak dipakai',
+    admin: 'dimatikan oleh operator',
+    ended: 'berakhir',
+  },
+  whatThisIs: 'Apa ini',
+  byAgent: 'oleh agen',
+  writtenByAgent: 'Ditulis oleh agen',
+  more: 'Lainnya',
+  of: (used, total) => `${used} dari ${total}`,
+  online: (version) => `Online · v${version}`,
+  onlineTitle: (version) => `Online, menyajikan versi ${version}`,
+  offline: 'Offline',
+  offlineTitle: 'Offline: tidak ada yang disajikan',
+  premium:
+    'Premium: bisa diakses di domain sendiri, punya ruang lebih besar untuk kode, aset, dan data, serta tetap online sesepi apa pun',
+  demo: 'Demo: dijaga tetap online oleh instalasi ini dan hanya bisa dibaca',
+  tier: (tier) => `Paket ${tier}`,
+  entrances: {
+    title: 'Diakses lewat',
+    note: 'Sejak server dimulai, termasuk koneksi websocket.',
+  },
+  chart: {
+    showChart: 'Tampilkan grafik',
+    showValues: 'Tampilkan nilai',
+    none: 'Belum ada data.',
+    time: 'Waktu',
+  },
+  diagnostics: {
+    compiles: 'Kode berhasil dikompilasi.',
+    none: 'Belum ada pesan. Periksa atau deploy untuk mengompilasi kode Anda.',
+    line: (line) => `baris ${line}`,
+  },
+};

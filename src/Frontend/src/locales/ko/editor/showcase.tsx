@@ -1,0 +1,56 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const showcase: EditorMessages['showcase'] = {
+  loadFailed: '쇼케이스를 불러오지 못했어요.',
+  loading: '불러오는 중…',
+  title: '제목',
+  description: '설명',
+  picture: '이미지',
+  updated: '쇼케이스 항목을 업데이트했어요.',
+  listed: '이제 쇼케이스 페이지에 올라가 있어요.',
+  waiting: '저장했어요. 람다가 온라인이 되면 쇼케이스 페이지에 나타나요.',
+  saveFailed: '쇼케이스 항목을 저장하지 못했어요.',
+  removed: '쇼케이스 페이지에서 내렸어요.',
+  removeFailed: '쇼케이스 항목을 삭제하지 못했어요.',
+  wrongType: 'PNG, JPEG, GIF, WebP 이미지가 아니에요.',
+  tooLarge: (size, limit) => `파일 크기: ${size}. 이미지는 최대 ${limit}까지 올릴 수 있어요.`,
+  unreadable: '파일을 읽지 못했어요.',
+  hint: (tool) => (
+    <>
+      쇼케이스 페이지에는 만든 사람이 공개하기로 한 람다가 최근에 쓰인 순서로 나와요. 에디터 키를 가진 사람만 람다를
+      올리거나 내릴 수 있고, 람다가 온라인일 때만 목록에 나와요. 에이전트도 {tool} 도구로 똑같이 할 수 있어요.
+    </>
+  ),
+  open: '쇼케이스 열기',
+  switch: '이 람다를 쇼케이스 페이지에 보여 주기',
+  listedNow: '지금 목록에 올라가 있어요. 쇼케이스를 둘러보는 누구나 열 수 있어요.',
+  notListed: '저장했지만 람다가 오프라인이라 목록에는 없어요. 다시 배포하면 다시 나타나요.',
+  off: '꺼져 있어요. 이 기능을 켜고 저장하기 전까지 이 람다는 어디에도 보이지 않아요.',
+  offline: '람다가 오프라인이라, 배포될 때까지 항목이 대기해요. 응답하는 람다만 목록에 올라요.',
+  titleLabel: '제목',
+  titlePlaceholder: '펍 퀴즈 점수판',
+  descriptionLabel: '설명',
+  descriptionPlaceholder:
+    '팀마다 휴대폰으로 답을 내면 진행자가 채점하고, 그 자리의 모두가 보는 점수판이 바로 바뀌어요.',
+  save: '변경 사항 저장',
+  add: '쇼케이스에 추가',
+  takeOff: '내리기',
+  needs: (missing) => `아직 필요한 항목: ${missing.join(', ')}`,
+  tooLong: '너무 긴 항목이 있어요.',
+  allSaved: '모두 저장됐어요.',
+  preview: '미리 보기',
+  card: (address) => <>방문자에게 보이는 카드예요. 누르면 {address} 주소가 열려요.</>,
+  confirm: '쇼케이스에서 내릴까요?',
+  keep: '그대로 두기',
+  confirmText: '제목, 설명, 이미지가 삭제돼요. 람다 자체는 그대로예요.',
+  pictureLabel: '이미지',
+  formats: (limit) => `PNG, JPEG, GIF, WebP, 최대 ${limit}`,
+  notSaved: '아직 저장 안 됨',
+  replace: '바꾸려면 새 이미지를 여기에 끌어다 놓으세요.',
+  drop: '이미지를 여기에 끌어다 놓으세요.',
+  advice: '스크린샷이나 사용하는 모습을 담은 짧은 GIF가 좋아요. 16:10 비율이 가장 잘 맞아요.',
+  another: '다른 이미지 선택',
+  choose: '파일 선택',
+  keepSaved: '저장된 이미지 유지',
+  clear: '지우기',
+};

@@ -1,0 +1,33 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const stats: EditorMessages['stats'] = {
+  readFailed: '数値を読み込めませんでした。',
+  range: '期間',
+  lastHour: '直近1時間',
+  lastDay: '直近24時間',
+  hint: (since) =>
+    `サーバーの前回起動時（${since}）から、メモリ上で集計しています。再起動すると、ゼロから数え直します。`,
+  reading: '数値を読み込み中…',
+  requests: 'リクエスト',
+  websockets: (count) => `ほかにWebSocket接続${count}件`,
+  failed: '失敗',
+  serverErrors: (count) => `サーバーエラー${count}件`,
+  rejected: '見つからないか拒否',
+  average: '平均応答時間',
+  sent: (amount) => `送信量${amount}`,
+  nobody: (hour) => (hour ? '直近1時間はアクセスがありません。' : '直近24時間はアクセスがありません。'),
+  requestsTitle: 'リクエスト',
+  per: (hour) => (hour ? '1分ごと。' : '15分ごと。'),
+  answered: '応答済み',
+  rejectedSeries: '見つからないか拒否',
+  failedSeries: '失敗',
+  timeTitle: '応答時間',
+  averagePer: (hour) => (hour ? '1分ごとの平均。' : '15分ごとの平均。'),
+  averageSeries: '平均',
+  mostAsked: 'よくアクセスされるパス',
+  path: 'パス',
+  requestsColumn: 'リクエスト',
+  failedColumn: '失敗',
+  averageColumn: '平均',
+  since: 'サーバーの起動以降。',
+};

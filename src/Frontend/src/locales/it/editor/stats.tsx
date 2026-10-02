@@ -1,0 +1,33 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const stats: EditorMessages['stats'] = {
+  readFailed: 'Impossibile leggere le statistiche.',
+  range: 'Periodo',
+  lastHour: 'Ultima ora',
+  lastDay: 'Ultime 24 ore',
+  hint: (since) =>
+    `Contate in memoria dall’ultimo avvio del server (${since}). Un riavvio le azzera.`,
+  reading: 'Lettura delle statistiche…',
+  requests: 'richieste',
+  websockets: (count) => `e ${count} connessioni websocket`,
+  failed: 'fallite',
+  serverErrors: (count) => `${count} errori del server`,
+  rejected: 'non trovate o rifiutate',
+  average: 'tempo medio di risposta',
+  sent: (amount) => `${amount} inviati`,
+  nobody: (hour) => (hour ? 'Nessuna richiesta nell’ultima ora.' : 'Nessuna richiesta nelle ultime 24 ore.'),
+  requestsTitle: 'Richieste',
+  per: (hour) => (hour ? 'Al minuto.' : 'Ogni 15 minuti.'),
+  answered: 'Riuscite',
+  rejectedSeries: 'Non trovate o rifiutate',
+  failedSeries: 'Fallite',
+  timeTitle: 'Tempo di risposta',
+  averagePer: (hour) => (hour ? 'Media al minuto.' : 'Media ogni 15 minuti.'),
+  averageSeries: 'Media',
+  mostAsked: 'Percorsi più richiesti',
+  path: 'Percorso',
+  requestsColumn: 'Richieste',
+  failedColumn: 'Fallite',
+  averageColumn: 'Media',
+  since: 'Dall’avvio del server.',
+};
