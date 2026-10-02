@@ -227,12 +227,12 @@ public sealed class ShowcaseTests
             await PutAsync(fixture, lambda.PrivateKey, new ShowcaseRequest($"Entry {i}", "Description.", Convert.ToBase64String(Png)));
         }
 
-        var first = await (await fixture.GetAsync("/api/v1/showcases/?take=2")).GetContentAsync<ShowcaseListingResponse>();
+        var first = await (await fixture.GetAsync("/api/v1/showcases/?take=2")).GetContentAsync<Page<ShowcaseResponse>>();
 
         Assert.HasCount(2, first.Entries);
         Assert.AreEqual(2, first.Next);
 
-        var second = await (await fixture.GetAsync($"/api/v1/showcases/?skip={first.Next}&take=2")).GetContentAsync<ShowcaseListingResponse>();
+        var second = await (await fixture.GetAsync($"/api/v1/showcases/?skip={first.Next}&take=2")).GetContentAsync<Page<ShowcaseResponse>>();
 
         Assert.HasCount(1, second.Entries);
         Assert.IsNull(second.Next);
@@ -280,13 +280,13 @@ public sealed class ShowcaseTests
         return await response.GetContentAsync<ShowcaseResponse>();
     }
 
-    private static async Task<ShowcaseListingResponse> ListAsync(LambdaFixture fixture)
+    private static async Task<Page<ShowcaseResponse>> ListAsync(LambdaFixture fixture)
     {
         using var response = await fixture.GetAsync("/api/v1/showcases/");
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
-        return await response.GetContentAsync<ShowcaseListingResponse>();
+        return await response.GetContentAsync<Page<ShowcaseResponse>>();
     }
 
     private static async Task<JsonObject> ToolAsync(LambdaFixture fixture, JsonObject arguments)

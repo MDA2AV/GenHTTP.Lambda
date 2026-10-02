@@ -131,7 +131,7 @@ public sealed partial class SitePrerender
     /// in other words than several - the words are the build's, and only the
     /// number is written in here.
     /// </remarks>
-    private static string? RenderShowcase(Prerendered prerendered, string language, ShowcaseListingResponse listing, SiteFacts facts)
+    private static string? RenderShowcase(Prerendered prerendered, string language, Page<ShowcaseResponse> listing, SiteFacts facts)
     {
         var shape = listing.Entries.Count == 0 ? "empty"
                   : listing.Next != null ? "partial"
@@ -188,11 +188,11 @@ public sealed partial class SitePrerender
     private static string Shown(string address)
         => address.StartsWith('/') ? address : Regex.Replace(address, "^https?://", string.Empty).TrimEnd('/');
 
-    private ShowcaseListingResponse? ListShowcase()
+    private Page<ShowcaseResponse>? ListShowcase()
     {
         try
         {
-            return new ShowcaseResource(Showcases).List(0, null);
+            return new ShowcaseResource(Showcases).List();
         }
         catch (Exception e)
         {
@@ -251,4 +251,4 @@ public sealed record Prerendered(
 /// <summary>
 /// What the server knows and the build could not, as <c>SiteFacts</c> in <c>site.ts</c>.
 /// </summary>
-public sealed record SiteFacts(string Origin, string Host, int LifetimeHours, int OfflineDays, int RetentionDays, ShowcaseListingResponse? Showcase = null);
+public sealed record SiteFacts(string Origin, string Host, int LifetimeHours, int OfflineDays, int RetentionDays, Page<ShowcaseResponse>? Showcase = null);

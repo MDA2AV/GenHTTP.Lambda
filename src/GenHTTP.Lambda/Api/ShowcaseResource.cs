@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Showcase;
 
+using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Webservices;
 
 namespace GenHTTP.Lambda.Api;
@@ -29,15 +30,13 @@ public sealed class ShowcaseResource(IShowcaseService showcases)
     /// <param name="skip">How many to leave out, from the start</param>
     /// <param name="take">How many to answer with, at most 48</param>
     [ResourceMethod]
-    public ShowcaseListingResponse List(int? skip, int? take)
+    public Page<ShowcaseResponse> List(int skip = 0, int take = PageSize)
     {
-        var from = Math.Max(0, skip ?? 0);
+        var from = Math.Max(0, skip);
 
-        var page = showcases.List(from, take ?? PageSize);
+        var page = showcases.List(from, take);
 
-        var next = from + page.Entries.Count;
-
-        return new ShowcaseListingResponse([.. page.Entries.Select(ShowcaseResponse.Of)], page.Total, next < page.Total ? next : null);
+        return Page<ShowcaseResponse>.Of([.. page.Entries.Select(ShowcaseResponse.Of)], from, page.Total);
     }
 
     /// <summary>
@@ -54,7 +53,7 @@ public sealed class ShowcaseResource(IShowcaseService showcases)
                  ?? throw LambdaException.NotFound($"There is no showcase for '{publicKey}'.");
 
         return request.Respond()
-                      .Content(new BinaryContent(image.Content, image.Type))
+                      .Content(image.Content, new ContentType(image.Type))
                       .Header("Cache-Control", "public, max-age=31536000, immutable")
                       .Header("X-Content-Type-Options", "nosniff")
                       .Build();

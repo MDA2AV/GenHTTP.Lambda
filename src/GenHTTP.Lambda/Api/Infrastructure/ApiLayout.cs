@@ -30,12 +30,6 @@ public static class ApiLayout
                             .Add("sources", Resource<SourceResource>(mode))
                             .Add("builds", Resource<BuildResource>(mode))
                             .Add("system", Resource<SystemResource>(mode))
-                            .Add("telemetry", Resource<TelemetryResource>(mode))
-                            .Add("logs", Resource<LogResource>(mode))
-                            // the token is checked in front of the resource, see AdminGateConcern
-                            .Add("admin", Layout.Create()
-                                                .Add(Resource<AdminResource>(mode))
-                                                .Add(new AdminGateConcernBuilder(options)))
                             .Add(Resource<LambdaResource>(mode))
                             .Add(Resource<VersionResource>(mode))
                             .Add(Resource<DeploymentResource>(mode))
@@ -54,6 +48,17 @@ public static class ApiLayout
                             .AddScalar(title: "GenHTTP Lambda API")
                             .AddOpenApi()
                             .Add(ErrorHandler.From(new ApiErrorMapper()));
+
+        // what only the operator may see, behind the token - and not there at
+        // all on an installation that has none, see AdminAuthentication
+        if (options.Administrable)
+        {
+            // on the resource itself rather than a layout around it, which
+            // would redirect /telemetry to /telemetry/ before asking it
+            version.Add("admin", Resource<AdminResource>(mode).Add(AdminAuthentication.Create(options)))
+                   .Add("telemetry", Resource<TelemetryResource>(mode).Add(AdminAuthentication.Create(options)))
+                   .Add("logs", Resource<LogResource>(mode).Add(AdminAuthentication.Create(options)));
+        }
 
         return Layout.Create().Add("v1", version);
     }

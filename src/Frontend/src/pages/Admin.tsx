@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { useAdminToken } from '../admin';
-import { ApiError, api } from '../api';
+import { ApiError, api, refusedToken } from '../api';
 import { IconLock, IconSpinner } from '../components/Icons';
 import type { Access } from '../console/context';
 import { LambdaDetail } from '../console/LambdaDetail';
@@ -159,11 +159,12 @@ function Unlock({ refused, onUnlocked }: { refused: boolean; onUnlocked: (token:
       await api.admin.list(token, '', 1);
       onUnlocked(token);
     } catch (error) {
-      // a wrong token and a missing panel answer the same way on purpose
       setProblem(
         error instanceof ApiError && error.status === 404
-          ? 'That token was not accepted, or this installation has no administration.'
-          : 'The server could not be asked. Try again in a moment.',
+          ? 'This installation has no administration: it was started without an admin token.'
+          : refusedToken(error)
+            ? 'That token was not accepted.'
+            : 'The server could not be asked. Try again in a moment.',
       );
     } finally {
       setWorking(false);

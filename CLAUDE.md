@@ -135,7 +135,12 @@ the path as requested, so `/api/v1/lambdas/{privateKey}/…` carries the key, an
 that is fine - the log is behind the admin token. There are no accounts.
 
 The one place that authenticates differently is `/admin`: `X-Admin-Token`, see
-the README.
+the README. It is GenHTTP's API key authentication (`AdminAuthentication`): 401
+without the header, 403 with the wrong token, and the routes are not there at
+all (404) on an installation without a token. Behind it are the panel, the
+server's telemetry and the log. **Only owners and the operator see telemetry**
+- the owner a lambda's own in the editor, the operator everybody's; nothing is
+public.
 
 ### Versions, data, and how they differ
 
@@ -509,7 +514,7 @@ are in `OperationLog`.
 - Known and already dealt with: GenHTTP releases the request headers once a body
   is bound, so declare path and query parameters *before* the body parameter, and
   check headers in a concern in front of the resource, not inside a
-  body-taking method (see `AdminGateConcern`). A new instance of the same kind of
+  body-taking method (see `AdminAuthentication`). A new instance of the same kind of
   problem is a bug to flag, not to work around again.
 
 ## Testing

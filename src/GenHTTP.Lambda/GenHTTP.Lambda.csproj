@@ -30,6 +30,11 @@
 
         <PackageReference Include="GenHTTP.Full.Ioxide" />
 
+        <!-- LAMBDA_ENGINE=Kestrel, for Windows where io_uring does not run;
+             referenced in its own right rather than relied on through
+             GenHTTP.Full.Ioxide, which only carries it by way of GenHTTP.Testing -->
+        <PackageReference Include="GenHTTP.Engine.Kestrel" />
+
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
 
         <PackageReference Include="Microsoft.EntityFrameworkCore" />

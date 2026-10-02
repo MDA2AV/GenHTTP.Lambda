@@ -181,6 +181,29 @@ internal sealed class LambdaFixture : IAsyncDisposable
         => SendAsync(HttpMethod.Get, path, accept: accept, host: host);
 
     /// <summary>
+    /// The administration token of an installation made with <see cref="WithPanel"/>.
+    /// </summary>
+    public const string OperatorToken = "a-token-nobody-would-guess";
+
+    /// <summary>
+    /// Configures an installation with an administration panel, which is what
+    /// the server's own figures and log are served to.
+    /// </summary>
+    public static LambdaOptions WithPanel(LambdaOptions options) => options with { AdminToken = OperatorToken };
+
+    /// <summary>
+    /// Reads what only the operator may read, with the token of <see cref="WithPanel"/>.
+    /// </summary>
+    public async Task<HttpResponseMessage> GetAsOperatorAsync(string path)
+    {
+        using var request = Host.GetRequest(path, HttpMethod.Get);
+
+        request.Headers.Add("X-Admin-Token", OperatorToken);
+
+        return await Host.GetResponseAsync(request);
+    }
+
+    /// <summary>
     /// Moves a lambda to a tier, which only an administrator can do.
     /// </summary>
     public void ChangeTier(string privateKey, LambdaTier tier) => Meta.ChangeTier(privateKey, tier);

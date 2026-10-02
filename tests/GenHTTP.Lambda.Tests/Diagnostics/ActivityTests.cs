@@ -20,7 +20,7 @@ public sealed class ActivityTests
     [TestMethod]
     public async Task RequestsAreCountedAgainstTheLambdaThatServedThem()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         var busy = await fixture.CreateLambdaAsync("busy");
         var quiet = await fixture.CreateLambdaAsync("quiet");
@@ -42,7 +42,7 @@ public sealed class ActivityTests
     [TestMethod]
     public async Task TheBusiestComesFirst()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         foreach (var key in new[] { "one", "two" })
         {
@@ -65,7 +65,7 @@ public sealed class ActivityTests
     [TestMethod]
     public async Task AFailingLambdaIsCountedAsFailing()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         var lambda = await fixture.CreateLambdaAsync("broken");
 
@@ -84,7 +84,7 @@ public sealed class ActivityTests
     [TestMethod]
     public async Task TimingAndVolumeAreRecorded()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         var lambda = await fixture.CreateLambdaAsync("measured");
 
@@ -103,7 +103,7 @@ public sealed class ActivityTests
     [TestMethod]
     public async Task DeletingALambdaForgetsIt()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         var lambda = await fixture.CreateLambdaAsync("temporary");
 
@@ -119,15 +119,15 @@ public sealed class ActivityTests
     }
 
     [TestMethod]
-    public async Task TheOverviewCanBeKeptPrivate()
+    public async Task TheOverviewIsOnlyForTheOperator()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicActivity = false });
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
         using var response = await fixture.GetAsync("/api/v1/telemetry/lambdas");
 
-        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
 
-        // and it is only the serving that stops, not the counting
+        // and it is only the serving that is kept back, not the counting
         var lambda = await fixture.CreateLambdaAsync("counted");
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => \"hi\");");
@@ -143,7 +143,7 @@ public sealed class ActivityTests
     public async Task ALambdaThatTimesOutIsRecordedAsFailing()
     {
         // a second to answer in, and a lambda that takes longer
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { ExecutionTimeout = TimeSpan.FromSeconds(1) });
+        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { ExecutionTimeout = TimeSpan.FromSeconds(1) });
 
         var lambda = await fixture.CreateLambdaAsync("dawdler");
 
@@ -165,7 +165,7 @@ public sealed class ActivityTests
 
     private static async Task<ActivityResponse> DescribeAsync(LambdaFixture fixture)
     {
-        using var response = await fixture.GetAsync("/api/v1/telemetry/lambdas");
+        using var response = await fixture.GetAsOperatorAsync("/api/v1/telemetry/lambdas");
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 

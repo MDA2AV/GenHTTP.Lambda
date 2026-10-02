@@ -316,7 +316,7 @@ public sealed class ProjectPackerTests
 
         await fixture.SeedDemosAsync();
 
-        var listing = await (await fixture.GetAsync("/api/v1/sources/?take=48")).GetContentAsync<SourceListingResponse>();
+        var listing = await (await fixture.GetAsync("/api/v1/sources/?take=48")).GetContentAsync<Page<SourceEntryResponse>>();
 
         var builds = new List<Task<(string Demo, int Exit, string Output)>>();
 

@@ -1,5 +1,3 @@
-using GenHTTP.Api.Protocol;
-
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
@@ -15,10 +13,8 @@ namespace GenHTTP.Lambda.Api;
 /// What the server and the lambdas on it have been saying.
 /// </summary>
 /// <remarks>
-/// Behind the token without exception, unlike the figures next door. Those are
-/// aggregates and name nobody; these are whatever a stranger's code decided to
-/// print, which can be anything it saw - so this answers an operator or it
-/// answers nothing.
+/// Behind the token, see <see cref="AdminAuthentication"/>: this is whatever a
+/// stranger's code decided to print, which can be anything it saw.
 /// </remarks>
 public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options)
 {
@@ -37,10 +33,8 @@ public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options
     /// <param name="level">The lowest level worth returning</param>
     /// <param name="limit">At most this many lines</param>
     [ResourceMethod]
-    public LogResponse Get(long? since, string? lambda, string? level, string? client, int? limit, IRequest request)
+    public LogResponse Get(long? since, string? lambda, string? level, string? client, int? limit)
     {
-        AdminGate.Require(request, options);
-
         // a reader carrying a cursor wants what is new, which is little; one
         // arriving without one wants a screenful of history, and how much of a
         // screenful is its own business
@@ -73,11 +67,9 @@ public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options
     /// the whole ring and the tail is asked for every second and a half.
     /// </remarks>
     [ResourceMethod("callers")]
-    public IReadOnlyList<LogCaller> GetCallers(int? limit, IRequest request)
+    public IReadOnlyList<LogCaller> GetCallers(int limit = 500)
     {
-        AdminGate.Require(request, options);
-
-        return book.Callers(limit ?? 500)
+        return book.Callers(limit)
                    .Select(c => new LogCaller(c.Client, c.Place, c.Country, c.Agent, c.Lines, c.Failed, c.First, c.Last))
                    .ToList();
     }

@@ -1022,6 +1022,12 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Whether the operator's token was not accepted: missing (401), wrong (403),
+ * or there is no panel on this installation at all (404).
+ */
+export const refusedToken = (error: unknown) => error instanceof ApiError && [401, 403, 404].includes(error.status);
+
 const base = '/api/v1';
 
 async function request<T>(path: string, init?: RequestInit, allow: number[] = []): Promise<T> {

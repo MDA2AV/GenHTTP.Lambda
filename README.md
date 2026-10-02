@@ -811,7 +811,6 @@ Everything is read from the environment on startup, see
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
-| `LAMBDA_PUBLIC_ACTIVITY`            | `true`           | serve the per lambda activity to anyone     |
 | `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel, and closes the figures   |
 | `LAMBDA_LOG_HISTORY`                | `4000`           | log lines the panel can read back, to 10^6  |
 | `LAMBDA_LOG_MEMORY_MB`              | derived          | what their text may cost; whichever runs out first |
@@ -907,11 +906,11 @@ starts the graph over.
 
 It also lists what each lambda has served, busiest first. Only the public key
 identifies one there - the editor key, the code and the visitors are not part
-of it - and `LAMBDA_PUBLIC_ACTIVITY=false` stops that list being served without
-stopping anything being counted.
+of it.
 
-The page is otherwise aggregates only: no key, no code and no client address
-leaves through it, which is what makes it safe to serve to anyone. What it is for is
+Both are for the operator only, behind the administration token (see
+[Administration](#administration)); the owner of a lambda sees its own figures
+in the editor, and nobody sees everybody's. What it is for is
 the shape of the memory curve. A managed heap that climbs across gen 2
 collections is a leak; committed bytes climbing while the managed heap stays
 flat is the heap keeping pages it could return, which is not.
@@ -1208,16 +1207,14 @@ it is kept in session storage, so closing the tab locks it again.
 This is the one part that authenticates. Everywhere else the editor link is
 the credential and it only ever reaches one lambda; this reads code that belongs
 to other people and can take their work away, so it asks for `LAMBDA_ADMIN_TOKEN`
-in an `X-Admin-Token` header. Until that variable is set there is no panel at
-all, and a wrong token is answered exactly like a missing one - an installation
-that has no panel and one that is guarding it look the same from outside.
+in an `X-Admin-Token` header (GenHTTP's API key authentication). A request
+without the header is answered with 401, one with the wrong token with 403.
+Until that variable is set there is no panel at all: `/admin`, `/telemetry`
+and `/logs` are not there, and answer 404.
 
-The server figures follow the same token, on the rule that an installation with
-an administrator keeps them to them. Where no token is configured there is
-nothing to check a request against, so requiring one would only mean nobody
-could ever read them - there they stay public, as they were before there was a
-panel to put them behind, and `LAMBDA_PUBLIC_ACTIVITY` still decides the per
-lambda figures.
+The server figures and the log follow the same token. Only owners and the
+operator see telemetry: the owner of a lambda its own, in the editor, and the
+operator everybody's.
 
 `/logs` is the tail of this run, live. It holds everything the server logged
 and everything a lambda printed while it was serving a request - the two are

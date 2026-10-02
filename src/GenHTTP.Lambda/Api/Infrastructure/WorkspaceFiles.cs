@@ -53,7 +53,9 @@ internal static class WorkspaceFiles
         var plain = new string(found.Name.Select(c => c is >= ' ' and < (char)127 and not '"' and not '\\' ? c : '_').ToArray());
 
         return request.Respond()
-                      .Content(new FileContent(found))
+                      // bytes to download whatever the name says: the API shares its
+                      // origin with the editor, and a page somebody uploaded must not run there
+                      .Content(Resource.FromFile(found).Type(ContentType.ApplicationOctetStream).Build())
                       .Header("Content-Disposition", $"attachment; filename=\"{plain}\"; filename*=UTF-8''{Uri.EscapeDataString(found.Name)}")
                       .Header("X-Content-Type-Options", "nosniff")
                       .Build();

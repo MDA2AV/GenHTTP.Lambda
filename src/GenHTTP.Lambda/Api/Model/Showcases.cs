@@ -38,13 +38,6 @@ public sealed record ShowcaseResponse(
 }
 
 /// <summary>
-/// One page of the showcase, the most active first.
-/// </summary>
-/// <param name="Total">How many are listed altogether</param>
-/// <param name="Next">Where the next page starts, or nothing when this was the last</param>
-public sealed record ShowcaseListingResponse(IReadOnlyList<ShowcaseResponse> Entries, int Total, int? Next);
-
-/// <summary>
 /// The entry of a lambda as its owner sees it, with what may go into one.
 /// </summary>
 /// <param name="Showcase">The entry, or nothing while the lambda is not in the showcase</param>

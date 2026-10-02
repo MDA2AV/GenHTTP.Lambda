@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import { ApiError, api, type AdminSettings } from '../api';
+import { ApiError, refusedToken, api, type AdminSettings } from '../api';
 import { IconExternal, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { Section, Switch } from '../control/ui';
@@ -19,7 +19,7 @@ export function SettingsSection({ access }: { access: Access }) {
   const [error, setError] = useState<string | null>(null);
 
   const fail = useCallback((problem: unknown, fallback: string) => {
-    if (problem instanceof ApiError && problem.status === 404) {
+    if (refusedToken(problem)) {
       deny();
     } else {
       setError(fallback);
@@ -46,7 +46,7 @@ export function SettingsSection({ access }: { access: Access }) {
 
       toast(said(saved[key]), 'success');
     } catch (problem) {
-      if (problem instanceof ApiError && problem.status === 404) {
+      if (refusedToken(problem)) {
         deny();
       } else {
         toast(problem instanceof ApiError ? problem.message : 'The settings could not be saved.', 'error');

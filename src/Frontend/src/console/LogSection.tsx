@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { ApiError, api, type LogCaller, type LogEntry, type PreviousRun } from '../api';
+import { refusedToken, api, type LogCaller, type LogEntry, type PreviousRun } from '../api';
 import { IconPlay, IconStop, IconDownload, IconTrash, IconSpinner, IconLayers, IconGlobe } from '../components/Icons';
 import { Pills, Section } from '../control/ui';
 import type { Access } from './context';
@@ -211,7 +211,7 @@ export function LogSection({ access }: { access: Access }) {
         });
       }
     } catch (problem) {
-      if (problem instanceof ApiError && problem.status === 404) {
+      if (refusedToken(problem)) {
         deny();
       } else {
         setError('The log could not be read.');
