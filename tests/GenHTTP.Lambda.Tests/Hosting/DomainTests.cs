@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 
 using GenHTTP.Lambda.Api.Model;
@@ -352,19 +353,36 @@ public sealed class DomainTests
 
         await ServeAsync(fixture, "shop");
 
-        using (var first = await fixture.GetAsync("/lambda/shop/"))
+        // the budget is counted per second, so the three requests only say
+        // something when they arrived within one. On a machine busy compiling
+        // the lambdas of the other tests they did not always, and the third
+        // was let in on a fresh allowance; such a round is waited out, so the
+        // next one starts a window of its own, and tried again
+        for (var round = 0; round < 5; round++)
         {
-            Assert.AreEqual(HttpStatusCode.OK, first.StatusCode);
+            var clock = Stopwatch.StartNew();
+
+            using var first = await fixture.GetAsync("/lambda/shop/");
+            using var second = await fixture.GetAsync("/", host: Domain);
+            using var third = await fixture.GetAsync("/", host: Domain);
+
+            if (clock.Elapsed < TimeSpan.FromSeconds(1))
+            {
+                // what the server saw - when, from which address, answered how -
+                // for the case this fails within a second all the same
+                var seen = string.Join(" | ", RequestLines(fixture).TakeLast(4).Select(l => $"{l.At:HH:mm:ss.fff} {l.Client} {l.Text}"));
+
+                Assert.AreEqual(HttpStatusCode.OK, first.StatusCode, seen);
+                Assert.AreEqual("home", await second.GetContentAsync(), $"answered by the lambda, not by a page of the platform: {seen}");
+                Assert.AreEqual(HttpStatusCode.TooManyRequests, third.StatusCode, $"one allowance, whichever door it is spent at: {seen}");
+
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1.2));
         }
 
-        using (var second = await fixture.GetAsync("/", host: Domain))
-        {
-            Assert.AreEqual(HttpStatusCode.OK, second.StatusCode);
-        }
-
-        using var third = await fixture.GetAsync("/", host: Domain);
-
-        Assert.AreEqual(HttpStatusCode.TooManyRequests, third.StatusCode, "one allowance, whichever door it is spent at");
+        Assert.Fail("Three requests to a lambda never took less than a second.");
     }
 
     [TestMethod]
