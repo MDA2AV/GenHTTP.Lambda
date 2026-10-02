@@ -1,0 +1,33 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const stats: EditorMessages['stats'] = {
+  readFailed: '수치를 읽지 못했어요.',
+  range: '기간',
+  lastHour: '최근 1시간',
+  lastDay: '최근 하루',
+  hint: (since) =>
+    `서버가 마지막으로 시작된 뒤(${since})부터 메모리에서 집계해요. 서버를 재시작하면 수치가 초기화돼요.`,
+  reading: '수치를 읽는 중…',
+  requests: '요청',
+  websockets: (count) => `그 외 웹소켓 연결 ${count}건`,
+  failed: '실패',
+  serverErrors: (count) => `서버 오류 ${count}건`,
+  rejected: '찾을 수 없음 또는 거부',
+  average: '평균 응답 시간',
+  sent: (amount) => `${amount} 전송`,
+  nobody: (hour) => (hour ? '최근 1시간 동안 호출이 없었어요.' : '최근 하루 동안 호출이 없었어요.'),
+  requestsTitle: '요청',
+  per: (hour) => (hour ? '1분 단위.' : '15분 단위.'),
+  answered: '정상 응답',
+  rejectedSeries: '찾을 수 없음 또는 거부',
+  failedSeries: '실패',
+  timeTitle: '응답 시간',
+  averagePer: (hour) => (hour ? '1분 단위 평균.' : '15분 단위 평균.'),
+  averageSeries: '평균',
+  mostAsked: '가장 많이 요청된 경로',
+  path: '경로',
+  requestsColumn: '요청',
+  failedColumn: '실패',
+  averageColumn: '평균',
+  since: '서버 시작 이후.',
+};

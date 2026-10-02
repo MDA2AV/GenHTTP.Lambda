@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: 's', min: 'min', h: 'h', d: 'g' },
+  amount: (value, unit) => `${value} ${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: 'mai',
+  justNow: 'adesso',
+  ago: (span) => `${span} fa`,
+  in: (span) => `tra ${span}`,
+  origins: {
+    agent: 'agente',
+    template: 'modello',
+    admin: 'operatore',
+    system: 'piattaforma',
+    api: 'API / editor',
+    unknown: 'sconosciuto',
+  },
+  endings: {
+    replaced: 'sostituito da un deployment più recente',
+    stopped: 'messo offline',
+    expired: 'scaduto perché inutilizzato',
+    admin: 'messo offline dall’operatore',
+    ended: 'terminato',
+  },
+  whatThisIs: 'Cos’è',
+  byAgent: 'da un agente',
+  writtenByAgent: 'Scritto da un agente',
+  more: 'Altro',
+  of: (used, total) => `${used} di ${total}`,
+  online: (version) => `Online · v${version}`,
+  onlineTitle: (version) => `Online, con la versione ${version}`,
+  offline: 'Offline',
+  offlineTitle: 'Offline: non viene servito niente',
+  premium:
+    'Premium: può rispondere su un dominio tutto suo, ha più spazio per codice, asset e dati, e resta online anche quando nessuno la usa',
+  demo: 'Demo: tenuta online da questa installazione, in sola lettura',
+  tier: (tier) => `Piano ${tier}`,
+  entrances: {
+    title: 'Raggiunta tramite',
+    note: 'Dall’avvio del server, connessioni websocket comprese.',
+  },
+  chart: {
+    showChart: 'Mostra grafico',
+    showValues: 'Mostra valori',
+    none: 'Ancora nessuna misurazione.',
+    time: 'Ora',
+  },
+  diagnostics: {
+    compiles: 'Il codice compila.',
+    none: 'Ancora nessun messaggio. Premi Verifica o Deploy per compilare il codice.',
+    line: (line) => `riga ${line}`,
+  },
+};

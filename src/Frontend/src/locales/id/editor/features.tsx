@@ -1,0 +1,120 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const features: EditorMessages['features'] = {
+  hint:
+    'Draf adalah salinan aplikasi Anda untuk mencoba perubahan sebelum dilihat siapa pun, dengan alamat dan data uji sendiri. Jadikan online setelah hasilnya pas; sampai saat itu, pengunjung tetap mendapat yang sedang online sekarang.',
+  newFeature: 'Draf baru',
+  full: (limit) => `Sudah ada ${limit} draf, dan itu batas maksimalnya. Jadikan satu draf online atau buang dulu.`,
+  emptyTitle: 'Belum ada draf',
+  emptyText:
+    'Draf adalah salinan aplikasi Anda untuk mencoba perubahan sebelum online. Kalau agen meninggalkan perubahan untuk Anda coba, Anda menemukannya di sini.',
+  start: 'Draf baru',
+  askAgentNew: 'Minta perubahan ke agen',
+  noChange: 'Belum ada keterangan tentang apa yang diubah',
+  behindTitle: 'Aplikasi Anda berubah sejak draf ini dimulai',
+  behind: () => 'tertinggal',
+  previewOnline: 'pratinjau berjalan',
+  previewOutdated: 'pratinjau menampilkan simpanan lama',
+  previewOffline: 'pratinjau tidak berjalan',
+  changed: 'diubah',
+  openPreview: 'Coba',
+  openPreviewTitle: 'Buka pratinjau di tab baru',
+  count: (open, limit) => `${open} dari ${limit} draf`,
+  loading: 'Memuat draf…',
+  readFailed: 'Draf gagal dibaca.',
+
+  newTitle: 'Draf baru',
+  newText:
+    'Salinan aplikasi Anda beserta datanya, dengan alamat sendiri. Ubah dan coba di sana - pengunjung tidak melihat apa pun sampai Anda menjadikannya online.',
+  newTextFiles:
+    'Apa yang Anda ketik masuk ke draf, bukan menjadi versi, jadi Anda bisa mencobanya di alamatnya sendiri sebelum online.',
+  name: 'Nama',
+  namePlaceholder: 'Papan peringkat',
+  wanted: 'Apa yang harus dilakukannya?',
+  wantedPlaceholder: 'Opsional. Simpan 10 skor terbaik dan tampilkan setelah setiap permainan.',
+  olderBase: (newest) =>
+    `Draf ini dimulai dari versi yang lebih lama, jadi sejak awal sudah tertinggal: sebelum bisa online, perubahan sampai versi ${newest} harus dimasukkan dulu.`,
+  create: 'Mulai draf',
+  createFailed: 'Draf gagal dimulai.',
+  retry: 'Coba lagi',
+  madeNotSaved: (name) =>
+    `Draf “${name}” sudah dimulai, tetapi apa yang Anda ketik belum bisa disimpan ke dalamnya. Coba lagi, atau tutup ini dan temukan drafnya di Draf.`,
+  created: (name) => `Draf “${name}” sudah dimulai.`,
+  cancel: 'Batal',
+
+  featureHint:
+    'Salinan aplikasi Anda untuk mencoba perubahan ini. Pratinjaunya punya alamat dan data uji sendiri, jadi pengunjung tidak melihat apa pun sampai Anda menjadikannya online.',
+  askAgent: 'Minta ke agen',
+  askCatchUp: 'Minta agen memperbaruinya',
+  catchUp: 'Perbarui draf ini dengan versi aplikasi yang terbaru, dan pertahankan apa yang diubahnya.',
+  editCode: 'Edit kode',
+  deployPreview: 'Mulai pratinjau',
+  updatePreview: 'Perbarui pratinjau',
+  previewDeployed: 'Pratinjau sedang berjalan.',
+  previewFailed: 'Pratinjau tidak bisa dimulai.',
+  previewStopped: 'Pratinjau dihentikan.',
+  previewRejected: 'Pratinjau tidak berubah',
+  previewNotCompiling: 'Kode tidak bisa dikompilasi, jadi pratinjau masih menampilkan versi terakhir yang bisa.',
+  started: 'Dimulai',
+  changes: () => 'File yang diubah',
+  noChanges: () => 'Belum ada yang diubah.',
+  editNotes: 'Nama dan catatan',
+  what: 'Apa yang diubahnya?',
+  whatPlaceholder: 'Menambahkan papan peringkat yang menyimpan 10 skor terbaik',
+  missed: () => 'Yang berubah di aplikasi Anda sejak draf ini dimulai',
+  missedNothing: 'Tidak ada di file.',
+
+  behindText: (_base, newest) =>
+    `Versi ${newest} aplikasi Anda disimpan setelah draf ini dimulai. Jika draf dijadikan online sekarang, perubahan di versi itu akan hilang, jadi draf harus diperbarui dulu - agen bisa melakukannya untuk Anda.`,
+  moveBase: 'Tandai sudah terbaru',
+  close: 'Tutup',
+  mergeTitle: (name) => `Jadikan “${name}” online`,
+  mergeTitleShort: 'Jadikan versi baru aplikasi Anda, lalu jadikan online',
+  leaks: (path, files) =>
+    `${files} berisi tautan ke ${path}, yaitu aplikasi Anda yang sedang online. Dari pratinjau, tautan itu membaca dan mengubah data aslinya, bukan data uji. Minta agen membuat tautan tanpa bagian itu (“api/items”).`,
+  mergeButton: 'Jadikan online',
+  saveFirst: 'Simpan perubahan Anda dulu: pratinjau dan proses menjadikan online memakai yang tersimpan.',
+  mergeAndDeploy: () => 'Jadikan online',
+  mergeText: (version) =>
+    `Draf ini menjadi versi ${version} aplikasi Anda dan langsung online. Data aplikasi Anda tetap apa adanya.`,
+  deployTooNote: (active) => `Versi ${active} tetap bisa dikembalikan dengan satu klik di bagian versi.`,
+  deployTooOffline: 'Aplikasi Anda sedang offline; ini akan membuatnya online.',
+  notCompiling: 'Kode tidak bisa dikompilasi, jadi tidak dijadikan online. Perbaiki dulu di drafnya.',
+  mergeFailed: 'Draf tidak bisa dijadikan online.',
+  merged: (version) => `Disimpan sebagai versi ${version}.`,
+  mergedOnline: (version) => `Versi ${version} sudah online.`,
+
+  notesTitle: 'Nama dan catatan',
+  save: 'Simpan',
+  saveFailed: 'Gagal disimpan.',
+
+  baseTitle: 'Tandai sudah terbaru?',
+  baseText: () =>
+    'Hanya draf yang memuat perubahan versi terbaru yang bisa dijadikan online tanpa membatalkannya. Jika perubahan itu sudah ada di draf ini - dimasukkan oleh Anda atau agen - tandai sebagai sudah terbaru.',
+  moveTo: () => 'Tandai sudah terbaru',
+  baseWarning: 'Tidak ada yang memeriksa ini. Jika perubahan itu belum ada di draf, menjadikannya online akan membatalkannya.',
+
+  deleteTitle: (name) => `Hapus “${name}”?`,
+  deleteText: 'Kode, pratinjau, dan data ujinya dihapus permanen. Aplikasi Anda dan versinya tidak disentuh.',
+  keep: 'Jangan hapus',
+  deleteForGood: 'Hapus permanen',
+  deleteFailed: 'Draf gagal dihapus.',
+  deleted: (name) => `Draf “${name}” sudah dihapus.`,
+
+  all: 'Semua draf',
+  actions: 'Aksi lain untuk draf ini',
+  download: 'Unduh sebagai zip',
+  stopPreview: 'Matikan pratinjau',
+  delete: 'Hapus draf ini',
+  viewsLabel: 'Draf',
+  views: {
+    overview: 'Draf',
+    docs: 'Dokumentasi',
+    code: 'Kode',
+    tests: 'Pengujian',
+    data: 'Data uji',
+    logs: 'Log',
+  },
+  missingTitle: 'Draf ini sudah tidak ada',
+  missingText: 'Draf ini sudah digabungkan ke sebuah versi, atau dihapus. Bagian versi menunjukkan apa yang terjadi dengannya.',
+};

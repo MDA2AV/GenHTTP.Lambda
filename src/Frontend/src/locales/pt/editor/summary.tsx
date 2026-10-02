@@ -1,0 +1,70 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const summary: EditorMessages['summary'] = {
+  reading: 'Vendo como ela está…',
+  readDocs: 'Ler a documentação',
+  written: 'Documentação e testes',
+  writtenWhy: 'Nunca compilados e nunca servidos. Guardados com cada versão e contados junto com os assets.',
+  writtenMissing: 'Ainda não foram escritos',
+  hint: (since, kept, retention, tier) =>
+    `O tráfego é contado desde o último reinício do servidor (${since}). ` +
+    (kept
+      ? `Uma lambda fica no ar enquanto está em uso, e é removida após ${retention} dias sem visitas nem mudanças.`
+      : `Esta lambda está no plano ${tier}, que a mantém no ar e guardada mesmo sem movimento.`),
+  onlineFor: (duration, version) => (
+    <>
+      No ar há {duration('algum tempo')}, servindo a versão {version}.
+    </>
+  ),
+  offline: 'Fora do ar. Nada é servido até você fazer deploy de uma versão.',
+  nothing: 'Nada foi escrito ainda.',
+  requestsToday: 'requisições hoje',
+  lastHour: (count) => `${count} na última hora`,
+  hourly: 'Requisições por hora nas últimas 24 horas',
+  failed: 'com falha',
+  failedTitle: (failed, rejected) =>
+    `${failed} erros de servidor, ${rejected} não encontradas ou recusadas, nas últimas 24 horas`,
+  average: 'tempo médio de resposta',
+  noneYet: 'nenhuma ainda',
+  lastVisit: 'última visita',
+  problems: 'Algo deu errado recentemente',
+  openLog: 'Abrir o log',
+  latest: 'Última mudança',
+  allVersions: 'Todas as versões',
+  noDescription: 'Sem descrição',
+  version: (version) => `Versão ${version}`,
+  notOnline: 'ainda não está no ar',
+  wanted: 'O que foi pedido',
+  noVersions: 'Nenhuma versão ainda.',
+  inProgress: 'Em andamento',
+  allFeatures: 'Todos os rascunhos',
+  previewOnline: 'A prévia está no ar',
+  previewOffline: 'A prévia está fora do ar',
+  behind: 'desatualizado',
+  storage: 'Armazenamento',
+  inVersion: (version) => `Na versão ${version}`,
+  noVersion: 'Na versão',
+  inData: 'Nos dados',
+  sharedByAll: 'Compartilhados por todas as versões',
+  browse: 'Explorar',
+  code: 'Código',
+  codeWhy: 'O C# é compilado, nunca servido.',
+  characters: 'caracteres',
+  assets: 'Assets',
+  assetsPublic: 'Públicos: o código serve esses arquivos.',
+  assetsPrivate: 'Não são servidos pelo código.',
+  data: 'Dados',
+  workspace: 'Workspace',
+  workspaceOff: 'desligado',
+  dataPublic: 'Públicos: o código serve o workspace.',
+  dataPrivate: 'Privados: só a lambda acessa.',
+  secrets: 'Segredos',
+  secretsOff: 'desligados',
+  secretsCount: (count) => (count === 1 ? '1 segredo' : `${count} segredos`),
+  secretsMissing: (count) => `${count} faltando`,
+  secretsMissingTitle: 'O código lê segredos que não estão definidos, e falha onde faz isso.',
+  database: 'Banco de dados',
+  databaseOff: 'desligado',
+  databaseTables: (count) => (count === 1 ? '1 tabela' : `${count} tabelas`),
+  databaseOffUsed: 'O código se conecta ao banco de dados, que está desligado.',
+};

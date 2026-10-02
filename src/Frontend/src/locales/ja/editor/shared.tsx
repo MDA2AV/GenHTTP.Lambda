@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: '秒', min: '分', h: '時間', d: '日' },
+  amount: (value, unit) => `${value}${unit}`,
+  pair: (larger, smaller) => `${larger}${smaller}`,
+  never: 'なし',
+  justNow: 'たった今',
+  ago: (span) => `${span}前`,
+  in: (span) => `${span}後`,
+  origins: {
+    agent: 'エージェント',
+    template: 'テンプレート',
+    admin: '運営者',
+    system: 'プラットフォーム',
+    api: 'API／エディター',
+    unknown: '不明',
+  },
+  endings: {
+    replaced: '新しいデプロイで置き換え',
+    stopped: 'オフラインに変更',
+    expired: '使われないため期限切れ',
+    admin: '運営者がオフラインに変更',
+    ended: '終了',
+  },
+  whatThisIs: '説明',
+  byAgent: 'エージェントが作成',
+  writtenByAgent: 'エージェントが書いたもの',
+  more: 'その他',
+  of: (used, total) => `${used}／${total}`,
+  online: (version) => `オンライン · v${version}`,
+  onlineTitle: (version) => `オンライン：バージョン${version}を配信中`,
+  offline: 'オフライン',
+  offlineTitle: 'オフライン：何も配信していません',
+  premium:
+    'プレミアム：独自ドメインで応答でき、コード・アセット・データの容量が大きく、アクセスが少なくてもオンラインのまま保持されます',
+  demo: 'デモ：この環境がオンラインに保っている、読み取り専用のlambda',
+  tier: (tier) => `${tier}プラン`,
+  entrances: {
+    title: 'アクセス経路',
+    note: 'サーバーの起動以降。WebSocket接続を含みます。',
+  },
+  chart: {
+    showChart: 'グラフを表示',
+    showValues: '数値を表示',
+    none: 'まだデータがありません。',
+    time: '時刻',
+  },
+  diagnostics: {
+    compiles: 'コードはコンパイルできます。',
+    none: 'まだメッセージはありません。「チェック」か「デプロイ」を押すと、コードをコンパイルします。',
+    line: (line) => `${line}行目`,
+  },
+};

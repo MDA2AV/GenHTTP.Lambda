@@ -1,0 +1,22 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const tabs: EditorMessages['tabs'] = {
+  codeName: '영문자, 숫자, 하이픈, 밑줄만 쓸 수 있고 .cs로 끝나야 해요',
+  slashes: '앞뒤에 슬래시를 쓸 수 없고, 120자 미만이어야 해요.',
+  deep: '폴더는 최대 6단계까지 만들 수 있어요.',
+  characters: '영문자, 숫자, 하이픈, 밑줄, 점을 쓸 수 있고, 슬래시로 구분해요.',
+  extension: '알맞은 형식으로 제공하려면 확장자가 필요해요.',
+  context: '.lambda/ 안에는 docs/와 tests/만 둘 수 있어요. 영문자, 숫자, 하이픈, 밑줄, 점을 쓸 수 있고, 슬래시로 구분해요.',
+  contextFiles: '문서와 테스트: 버전의 일부이지만, 컴파일되지도 제공되지도 않아요',
+  exists: '같은 이름의 파일이 이미 있어요.',
+  remove: (name) => `${name} 파일을 삭제할까요? 내용도 함께 사라져요.`,
+  there: (name) => `${name} 파일이 이미 있어요.`,
+  entry: '스니펫: 반환하는 것이 그대로 제공돼요',
+  errors: '오류 있음',
+  removeFile: (name) => `${name} 삭제`,
+  removeTitle: '이 파일 삭제',
+  placeholder: 'Types.cs, site/index.html 또는 .lambda/docs/api.md',
+  newFile: '새 파일',
+  uploadTitle: '파일 업로드 (이미지, 폰트, 페이지)',
+  upload: '파일 업로드',
+};

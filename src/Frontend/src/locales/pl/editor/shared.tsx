@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: 's', min: 'min', h: 'godz.', d: 'd' },
+  amount: (value, unit) => `${value} ${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: 'nigdy',
+  justNow: 'przed chwilą',
+  ago: (span) => `${span} temu`,
+  in: (span) => `za ${span}`,
+  origins: {
+    agent: 'agent',
+    template: 'szablon',
+    admin: 'administrator',
+    system: 'platforma',
+    api: 'API / edytor',
+    unknown: 'nieznane',
+  },
+  endings: {
+    replaced: 'zastąpione nowszym wdrożeniem',
+    stopped: 'wyłączone',
+    expired: 'wygasłe z braku ruchu',
+    admin: 'wyłączone przez administratora',
+    ended: 'zakończone',
+  },
+  whatThisIs: 'Co to jest',
+  byAgent: 'przez agenta',
+  writtenByAgent: 'Napisane przez agenta',
+  more: 'Więcej',
+  of: (used, total) => `${used} z ${total}`,
+  online: (version) => `Online · v${version}`,
+  onlineTitle: (version) => `Online, serwuje wersję ${version}`,
+  offline: 'Offline',
+  offlineTitle: 'Offline: nic nie jest serwowane',
+  premium:
+    'Premium: może działać pod własną domeną, ma więcej miejsca na kod, zasoby i dane, i zostaje online bez względu na ruch',
+  demo: 'Demo: utrzymywane online przez tę instalację, tylko do odczytu',
+  tier: (tier) => `Plan ${tier}`,
+  entrances: {
+    title: 'Ruch według adresu',
+    note: 'Od startu serwera, łącznie z połączeniami websocket.',
+  },
+  chart: {
+    showChart: 'Pokaż wykres',
+    showValues: 'Pokaż wartości',
+    none: 'Brak pomiarów.',
+    time: 'Czas',
+  },
+  diagnostics: {
+    compiles: 'Kod się kompiluje.',
+    none: 'Brak komunikatów. Sprawdź albo wdróż kod, żeby go skompilować.',
+    line: (line) => `linia ${line}`,
+  },
+};

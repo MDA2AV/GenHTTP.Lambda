@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: 's', min: 'min', h: 'u', d: 'd' },
+  amount: (value, unit) => `${value} ${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: 'nooit',
+  justNow: 'zojuist',
+  ago: (span) => `${span} geleden`,
+  in: (span) => `over ${span}`,
+  origins: {
+    agent: 'agent',
+    template: 'sjabloon',
+    admin: 'beheerder',
+    system: 'platform',
+    api: 'API / editor',
+    unknown: 'onbekend',
+  },
+  endings: {
+    replaced: 'vervangen door een nieuwere deployment',
+    stopped: 'offline gehaald',
+    expired: 'verlopen door inactiviteit',
+    admin: 'offline gehaald door de beheerder',
+    ended: 'beëindigd',
+  },
+  whatThisIs: 'Wat is dit?',
+  byAgent: 'door een agent',
+  writtenByAgent: 'Geschreven door een agent',
+  more: 'Meer',
+  of: (used, total) => `${used} van ${total}`,
+  online: (version) => `Online · v${version}`,
+  onlineTitle: (version) => `Online, versie ${version} draait`,
+  offline: 'Offline',
+  offlineTitle: 'Offline: er wordt niets geserveerd',
+  premium:
+    'Premium: kan op een eigen domein draaien, heeft meer ruimte voor code, assets en data, en blijft online hoe stil het ook is',
+  demo: 'Demo: door deze installatie online gehouden, alleen-lezen',
+  tier: (tier) => `Pakket: ${tier}`,
+  entrances: {
+    title: 'Bereikt via',
+    note: 'Sinds de start van de server, websocketverbindingen meegeteld.',
+  },
+  chart: {
+    showChart: 'Grafiek tonen',
+    showValues: 'Waarden tonen',
+    none: 'Nog geen metingen.',
+    time: 'Tijd',
+  },
+  diagnostics: {
+    compiles: 'De code compileert.',
+    none: 'Nog geen meldingen. Klik op Controleren of Deployen om je code te compileren.',
+    line: (line) => `regel ${line}`,
+  },
+};

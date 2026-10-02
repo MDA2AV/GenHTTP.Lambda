@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: '초', min: '분', h: '시간', d: '일' },
+  amount: (value, unit) => `${value}${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: '없음',
+  justNow: '방금',
+  ago: (span) => `${span} 전`,
+  in: (span) => `${span} 후`,
+  origins: {
+    agent: '에이전트',
+    template: '템플릿',
+    admin: '운영자',
+    system: '플랫폼',
+    api: 'API / 에디터',
+    unknown: '알 수 없음',
+  },
+  endings: {
+    replaced: '새 배포로 교체됨',
+    stopped: '오프라인으로 전환됨',
+    expired: '사용되지 않아 만료됨',
+    admin: '운영자가 오프라인으로 전환함',
+    ended: '종료됨',
+  },
+  whatThisIs: '설명 보기',
+  byAgent: '에이전트 작성',
+  writtenByAgent: '에이전트가 작성함',
+  more: '더 보기',
+  of: (used, total) => `${used} / ${total}`,
+  online: (version) => `온라인 · v${version}`,
+  onlineTitle: (version) => `온라인, 버전 ${version} 실행 중`,
+  offline: '오프라인',
+  offlineTitle: '오프라인: 제공 중인 것이 없어요',
+  premium:
+    '프리미엄: 전용 도메인을 쓸 수 있고, 코드·에셋·데이터 공간이 더 넉넉하고, 방문이 뜸해도 계속 온라인이에요',
+  demo: '데모: 이 서버가 온라인으로 유지하는 읽기 전용 람다',
+  tier: (tier) => `${tier} 플랜`,
+  entrances: {
+    title: '접속 경로',
+    note: '서버 시작 이후 집계, 웹소켓 연결 포함.',
+  },
+  chart: {
+    showChart: '차트 보기',
+    showValues: '값 보기',
+    none: '아직 측정값이 없어요.',
+    time: '시간',
+  },
+  diagnostics: {
+    compiles: '코드가 컴파일돼요.',
+    none: '아직 메시지가 없어요. 검사하거나 배포하면 코드를 컴파일해요.',
+    line: (line) => `줄 ${line}`,
+  },
+};

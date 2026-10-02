@@ -1,0 +1,22 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const tabs: EditorMessages['tabs'] = {
+  codeName: 'Harf, rakam, tire ve alt çizgi; sonu .cs olmalı',
+  slashes: 'Başında ya da sonunda eğik çizgi olmamalı, 120 karakterden kısa olmalı.',
+  deep: 'En fazla altı klasör derinliğinde olabilir.',
+  characters: 'Eğik çizgiyle ayrılmış harf, rakam, tire, alt çizgi ve nokta.',
+  extension: 'Doğru türde sunulabilmesi için bir uzantısı olmalı.',
+  context: '.lambda/ içinde yalnızca docs/ ve tests/ olabilir: eğik çizgiyle ayrılmış harf, rakam, tire, alt çizgi ve nokta.',
+  contextFiles: 'Dokümantasyon ve testler: sürümün parçasıdır, asla derlenmez ve sunulmaz',
+  exists: 'Bu adda bir dosya zaten var.',
+  remove: (name) => `${name} kaldırılsın mı? İçeriği de silinir.`,
+  there: (name) => `${name} zaten var.`,
+  entry: 'Kod parçası: döndürdüğü şey sunulur',
+  errors: 'hata içeriyor',
+  removeFile: (name) => `Kaldır: ${name}`,
+  removeTitle: 'Bu dosyayı kaldır',
+  placeholder: 'Types.cs, site/index.html ya da .lambda/docs/api.md',
+  newFile: 'Yeni dosya',
+  uploadTitle: 'Dosya yükle: görsel, font, sayfa',
+  upload: 'Dosya yükle',
+};

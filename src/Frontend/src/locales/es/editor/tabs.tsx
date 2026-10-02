@@ -1,0 +1,22 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const tabs: EditorMessages['tabs'] = {
+  codeName: 'Letras, números, guiones y guiones bajos, y al final .cs',
+  slashes: 'Sin barra al principio ni al final, y con menos de 120 caracteres.',
+  deep: 'Como máximo seis carpetas de profundidad.',
+  characters: 'Letras, números, guiones, guiones bajos y puntos, separados por barras.',
+  extension: 'Necesita una extensión para servirse como lo que es.',
+  context: 'En .lambda/, solo docs/ y tests/: letras, números, guiones, guiones bajos y puntos, separados por barras.',
+  contextFiles: 'Documentación y pruebas: parte de la versión, nunca se compilan ni se sirven',
+  exists: 'Ya hay un archivo con ese nombre.',
+  remove: (name) => `¿Quitar ${name}? Se borrará su contenido.`,
+  there: (name) => `${name} ya existe.`,
+  entry: 'El fragmento principal: lo que devuelve es lo que se sirve',
+  errors: 'tiene errores',
+  removeFile: (name) => `Quitar ${name}`,
+  removeTitle: 'Quitar este archivo',
+  placeholder: 'Types.cs, site/index.html o .lambda/docs/api.md',
+  newFile: 'Archivo nuevo',
+  uploadTitle: 'Sube un archivo: una imagen, una fuente, una página',
+  upload: 'Subir un archivo',
+};

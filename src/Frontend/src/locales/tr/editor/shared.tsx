@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: 'sn', min: 'dk', h: 'sa', d: 'gün' },
+  amount: (value, unit) => `${value} ${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: 'hiçbir zaman',
+  justNow: 'az önce',
+  ago: (span) => `${span} önce`,
+  in: (span) => `${span} sonra`,
+  origins: {
+    agent: 'ajan',
+    template: 'şablon',
+    admin: 'operatör',
+    system: 'platform',
+    api: 'API / editör',
+    unknown: 'bilinmiyor',
+  },
+  endings: {
+    replaced: 'daha yeni bir sürüm yayına alındı',
+    stopped: 'yayından kaldırıldı',
+    expired: 'kullanılmadığı için süresi doldu',
+    admin: 'operatör yayından kaldırdı',
+    ended: 'sona erdi',
+  },
+  whatThisIs: 'Bu nedir?',
+  byAgent: 'bir ajan tarafından',
+  writtenByAgent: 'Bir ajan yazdı',
+  more: 'Daha fazla',
+  of: (used, total) => `${used} / ${total}`,
+  online: (version) => `Yayında · v${version}`,
+  onlineTitle: (version) => `Yayında, sürüm ${version} sunuluyor`,
+  offline: 'Yayında değil',
+  offlineTitle: 'Yayında değil: hiçbir şey sunulmuyor',
+  premium:
+    'Premium: kendi alan adında yanıt verebilir, kod, statik dosyalar ve veriler için daha fazla yeri vardır ve ne kadar az kullanılırsa kullanılsın yayında kalır',
+  demo: 'Demo: bu kurulum tarafından yayında tutulur ve salt okunurdur',
+  tier: (tier) => `Plan: ${tier}`,
+  entrances: {
+    title: 'Erişim yolu',
+    note: 'Sunucu başladığından beri, websocket bağlantıları dahil.',
+  },
+  chart: {
+    showChart: 'Grafiği göster',
+    showValues: 'Değerleri göster',
+    none: 'Henüz ölçüm yok.',
+    time: 'Zaman',
+  },
+  diagnostics: {
+    compiles: 'Kod sorunsuz derleniyor.',
+    none: 'Henüz mesaj yok. Kodunuzu derlemek için kontrol edin ya da yayına alın.',
+    line: (line) => `satır ${line}`,
+  },
+};

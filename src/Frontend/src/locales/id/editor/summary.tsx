@@ -1,0 +1,70 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const summary: EditorMessages['summary'] = {
+  reading: 'Membaca kondisinya…',
+  readDocs: 'Baca dokumentasi',
+  written: 'Dokumentasi dan pengujian',
+  writtenWhy: 'Tidak pernah dikompilasi dan tidak pernah disajikan. Disimpan bersama setiap versi, dan dihitung bersama aset.',
+  writtenMissing: 'Belum ditulis',
+  hint: (since, kept, retention, tier) =>
+    `Trafik dihitung sejak server terakhir dimulai (${since}). ` +
+    (kept
+      ? `Lambda tetap online selama dipakai, dan dihapus setelah ${retention} hari tanpa kunjungan dan tanpa perubahan.`
+      : `Lambda ini ada di paket ${tier}, yang membuatnya tetap online dan tersimpan sesepi apa pun.`),
+  onlineFor: (duration, version) => (
+    <>
+      Online selama {duration('beberapa waktu')}, menyajikan versi {version}.
+    </>
+  ),
+  offline: 'Offline. Tidak ada yang disajikan sampai sebuah versi di-deploy.',
+  nothing: 'Belum ada kode yang ditulis.',
+  requestsToday: 'request hari ini',
+  lastHour: (count) => `${count} dalam satu jam terakhir`,
+  hourly: 'Request per jam selama sehari terakhir',
+  failed: 'gagal',
+  failedTitle: (failed, rejected) =>
+    `${failed} error server, ${rejected} tidak ditemukan atau ditolak, selama sehari terakhir`,
+  average: 'rata-rata waktu respons',
+  noneYet: 'belum ada',
+  lastVisit: 'kunjungan terakhir',
+  problems: 'Ada masalah baru-baru ini',
+  openLog: 'Buka log',
+  latest: 'Perubahan terakhir',
+  allVersions: 'Semua versi',
+  noDescription: 'Tanpa deskripsi',
+  version: (version) => `Versi ${version}`,
+  notOnline: 'belum online',
+  wanted: 'Yang diminta',
+  noVersions: 'Belum ada versi.',
+  inProgress: 'Sedang dikerjakan',
+  allFeatures: 'Semua draf',
+  previewOnline: 'Pratinjaunya online',
+  previewOffline: 'Pratinjaunya offline',
+  behind: 'tertinggal',
+  storage: 'Penyimpanan',
+  inVersion: (version) => `Di versi ${version}`,
+  noVersion: 'Di versi',
+  inData: 'Di data',
+  sharedByAll: 'Dipakai bersama oleh semua versi',
+  browse: 'Lihat',
+  code: 'Kode',
+  codeWhy: 'C# dikompilasi, tidak pernah disajikan.',
+  characters: 'karakter',
+  assets: 'Aset',
+  assetsPublic: 'Publik: disajikan oleh kode.',
+  assetsPrivate: 'Tidak disajikan oleh kode.',
+  data: 'Data',
+  workspace: 'Workspace',
+  workspaceOff: 'nonaktif',
+  dataPublic: 'Publik: kode menyajikan workspace.',
+  dataPrivate: 'Privat, hanya untuk lambda ini.',
+  secrets: 'Rahasia',
+  secretsOff: 'nonaktif',
+  secretsCount: (count) => `${count} rahasia`,
+  secretsMissing: (count) => `${count} belum diatur`,
+  secretsMissingTitle: 'Kode membaca rahasia yang belum diatur, dan gagal di bagian itu.',
+  database: 'Database',
+  databaseOff: 'nonaktif',
+  databaseTables: (count) => `${count} tabel`,
+  databaseOffUsed: 'Kode terhubung ke database, tetapi database nonaktif.',
+};

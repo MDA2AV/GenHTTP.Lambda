@@ -858,17 +858,17 @@ const PAGE_OF_FILE = {
 
 function pageOf(file, name)
 {
-  if (/^editor\.(data\.)?simple\b/.test(name))
+  if (file === 'editor/simple.tsx' || (file === 'editor/data.tsx' && /^data\.simple\b/.test(name)))
   {
     return 'the simple view of the editor, for owners who do not write code - no developer words';
   }
 
-  if (name.startsWith('editor.change'))
+  if (file === 'editor/change.tsx')
   {
     return 'the editor\'s Change section, where an owner who may not write code tells the agent what to change - no developer words';
   }
 
-  if (file.startsWith('editor'))
+  if (file.startsWith('editor/'))
   {
     return 'the editor, where an owner controls a lambda';
   }
@@ -1702,27 +1702,38 @@ function insertion(parent, englishParent, key, value, text, source)
   return [brace + 1, unwrap(parent.expression).end - 1, `\n${indentation}${written(indentation)},\n${indentation.slice(2)}`];
 }
 
-/** A catalog file a language does not have yet: typed the way the other files of the language are. */
+/**
+ * A catalog file a language does not have yet, typed the way the other files
+ * of the language are: by the type its English exports, by the type of the
+ * folder it is a part of (a section of the editor is EditorMessages['frame']),
+ * or as a part of the site's Messages.
+ */
 function skeleton(file, items)
 {
-  const englishText = onDisk(path.join(LOCALES, SOURCE, file));
-  const typeName = /export type (\w+) = typeof (\w+);/.exec(englishText);
-  const relative = path.posix.join(path.posix.relative(path.posix.dirname(file), '.') || '.', '..', SOURCE);
+  const english = (relative) => onDisk(path.join(LOCALES, SOURCE, relative)) ?? '';
+  const folder = path.posix.dirname(file);
+  const up = folder === '.' ? '..' : path.posix.join(...folder.split('/').map(() => '..'), '..');
+  const own = /export type (\w+) = typeof (\w+);/.exec(english(file));
+  const whole = folder === '.' ? null : /export type (\w+) = typeof (\w+);/.exec(english(path.posix.join(folder, 'index.ts')));
   const roots = items.filter((item) => item.path.length === 1).map((item) => item.path[0]);
   const lines = [];
 
-  if (typeName)
+  if (own)
   {
-    lines.push(`import type { ${typeName[1]} } from '${relative}/${file.replace(/\.tsx?$/, '')}';`, '');
+    lines.push(`import type { ${own[1]} } from '${up}/${SOURCE}/${file.replace(/\.tsx?$/, '')}';`, '');
+  }
+  else if (whole)
+  {
+    lines.push(`import type { ${whole[1]} } from '${up}/${SOURCE}/${folder}';`, '');
   }
   else
   {
-    lines.push(`import type { Messages } from '${relative}';`, '');
+    lines.push(`import type { Messages } from '${up}/${SOURCE}';`, '');
   }
 
   for (const root of roots)
   {
-    const type = typeName && typeName[2] === root ? typeName[1] : `Messages['${root}']`;
+    const type = own?.[2] === root ? own[1] : whole ? `${whole[1]}['${root}']` : `Messages['${root}']`;
     lines.push(`export const ${root}: ${type} = {};`, '');
   }
 

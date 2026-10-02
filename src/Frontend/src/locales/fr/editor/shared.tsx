@@ -1,0 +1,54 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const shared: EditorMessages['shared'] = {
+  units: { s: 's', min: 'min', h: 'h', d: 'j' },
+  amount: (value, unit) => `${value} ${unit}`,
+  pair: (larger, smaller) => `${larger} ${smaller}`,
+  never: 'jamais',
+  justNow: 'à l’instant',
+  ago: (span) => `il y a ${span}`,
+  in: (span) => `dans ${span}`,
+  origins: {
+    agent: 'agent',
+    template: 'modèle',
+    admin: 'opérateur',
+    system: 'plateforme',
+    api: 'API / éditeur',
+    unknown: 'inconnu',
+  },
+  endings: {
+    replaced: 'remplacé par un déploiement plus récent',
+    stopped: 'mis hors ligne',
+    expired: 'expiré faute de visites',
+    admin: 'mis hors ligne par l’opérateur',
+    ended: 'terminé',
+  },
+  whatThisIs: 'Explications',
+  byAgent: 'par un agent',
+  writtenByAgent: 'Écrit par un agent',
+  more: 'Plus',
+  of: (used, total) => `${used} sur ${total}`,
+  online: (version) => `En ligne · v${version}`,
+  onlineTitle: (version) => `En ligne, sert la version ${version}`,
+  offline: 'Hors ligne',
+  offlineTitle: 'Hors ligne : rien n’est servi',
+  premium:
+    'Premium : peut répondre sur son propre domaine, a plus de place pour le code, les assets et les données, et reste en ligne même sans aucune activité',
+  demo: 'Démo : gardée en ligne par cette installation, en lecture seule',
+  tier: (tier) => `Offre ${tier}`,
+  entrances: {
+    title: 'Accès via',
+    note: 'Depuis le démarrage du serveur, connexions WebSocket comprises.',
+  },
+  chart: {
+    showChart: 'Voir le graphique',
+    showValues: 'Voir les valeurs',
+    none: 'Aucune mesure pour l’instant.',
+    time: 'Heure',
+  },
+  diagnostics: {
+    compiles: 'Le code compile.',
+    none: 'Aucun message pour l’instant. Vérifiez ou déployez pour compiler votre code.',
+    line: (line) => `ligne ${line}`,
+  },
+};
