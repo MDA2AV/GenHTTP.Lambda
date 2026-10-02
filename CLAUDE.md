@@ -572,10 +572,50 @@ with `LAMBDA_ENGINE=Kestrel`, and point `LAMBDA_WEB_ROOT` at
 
   The informal choices for it, es, nl, pl and pt-pt are deliberate. If you change
   a language's form, change this table in the same commit; if you add a language,
-  add its row.
-- The forms above describe the copy as written today; when translating new text,
-  look at the neighbouring strings of the same file rather than at this table
-  alone.
+  add its row. The translation script reads this table into every request, so
+  keep its shape: one row per language, code | form | notes.
+- The forms above describe the copy as written today. A request shows the
+  sentences beside a new one, so a translator matches them rather than this
+  table alone.
+
+### How a change is translated
+
+Nobody reads a whole catalog to translate a sentence. A script hands each
+translator only what changed, and puts the answers back:
+
+1. Write the English - the catalogs in `src/Frontend/src/locales/en` and the
+   English titles and descriptions in `pages.json`. A new sentence whose place
+   is not plain from its key gets a doc comment saying where it appears: the
+   translator sees the comment, never the page.
+2. `npm run translations -- extract` (in `src/Frontend`) compares the English
+   with the base of the branch and writes requests into `.translations/`: per
+   language its register from the table above, its fixed words from
+   `src/locales/glossary.json`, and each new or changed sentence with what the
+   English said before and what the language says now. A large round is split
+   into parts.
+3. One `translator` agent (`.claude/agents/translator.md`) per request, all at
+   once, each told only the path of its request. It reads that file and writes
+   its answer beside it - nothing else.
+4. `npm run translations -- apply` puts the answers into the catalogs, refuses
+   one that lost a parameter, an interpolation, a call of the kit or a link,
+   removes what English no longer has, and gives French its non-breaking spaces.
+   Then `npm run build`, and read the diff of the languages you know.
+
+- **The translator runs on Sonnet - decided by the owner.** The model is pinned
+  in the agent's definition; do not override it with the Agent tool's `model`.
+  A prepared request is a small job, and Sonnet does it well at a fraction of
+  the cost.
+- **The fixed words of each language are in `glossary.json`.** A term that
+  changes in a language changes there first, then in its catalogs; a new term of
+  the platform gets a row in every language.
+- What a branch has already translated counts as done. To ask again after
+  changing English once more, commit and extract with `--base HEAD`.
+  `--stale` also asks for every sentence whose English changed in a later
+  commit than its translation, and `--redo <path>` for a sentence or a section
+  to be checked against the English. `check` compares every language with
+  English - CI fails on a sentence that lost a parameter or a link, and prints
+  the rest for a person to look at - and `show <file> <path>` prints one
+  sentence in every language.
 
 ## Documentation
 

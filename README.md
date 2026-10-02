@@ -40,6 +40,19 @@ root, which is what `npm run build` does:
 cd src/Frontend && npm run build   # writes src/GenHTTP.Lambda/wwwroot
 ```
 
+English is the source of every page; the other languages are translated by
+script and agent, so that only what changed is read and written:
+
+```bash
+cd src/Frontend
+npm run translations -- extract   # a request per language in .translations/
+# one `translator` agent per request (.claude/agents/translator.md, on Sonnet)
+npm run translations -- apply     # the answers into the catalogs, checked
+npm run translations -- check     # every language against English
+```
+
+CLAUDE.md ("How a change is translated") has the rules.
+
 Build and test everything the way CI does:
 
 ```bash

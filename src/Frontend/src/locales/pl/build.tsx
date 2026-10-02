@@ -10,7 +10,7 @@ export const build: Messages['build'] = {
   builtBy: 'Tworzy',
   password: 'hasło',
   fable:
-    'Fable jest na razie za hasłem, bo go testujemy. Nie ma limitu czasu, więc pracuje, aż skończy – a nie aż skończy się czas.',
+    'Fable jest na razie za hasłem, bo go testujemy. Nie ma limitu czasu, więc pracuje, aż twoja strona będzie gotowa – a nie aż skończy się czas.',
   onlyNew:
     'Tutaj powstają nowe strony. Aby zmienić istniejącą, otwórz jej link do edytora i opisz w sekcji „Zmień”, co ma być inaczej.',
   ideas: [

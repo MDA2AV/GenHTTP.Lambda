@@ -92,16 +92,16 @@ export const guide: Messages['guide'] = {
       'Modifica',
       (k) => (
         <>
-          Scrivi cosa deve cambiare e l’agente di questo server lo fa sotto i tuoi occhi. Lavora su una bozza,
-          prova lì la modifica e la integra nella prossima versione quando funziona. Disattiva{' '}
+          Scrivi cosa deve cambiare e l’agente di questo server lo fa sotto i tuoi occhi. Prova la modifica su una
+          bozza, una copia con un indirizzo tutto suo, e la mette online quando funziona. Disattiva{' '}
           {k.b('Metti online a lavoro finito')} per provare prima tu la bozza.
           Lavora solo sulla tua app: una richiesta che non la riguarda, o che serve a fare danni, viene rifiutata, e ti dice perché.
         </>
       ),
     ],
-    ['Bozze', () => <>Modifiche preparate accanto alla lambda: ognuna si prova a un indirizzo tutto suo e si integra nella prossima versione quando è a posto. Una volta aperta, una bozza ha il suo codice, i suoi dati e i suoi log.</>],
+    ['Bozze', () => <>Modifiche provate prima di andare online, ognuna a un indirizzo tutto suo e su dati di prova tutti suoi. Una volta aperta, una bozza ha il suo codice, i suoi dati di prova e i suoi log. La sezione compare appena c’è una bozza.</>],
     ['File', () => <>I file di una versione: il codice e gli asset, cioè il programma vero e proprio. Un lucchetto o un globo indica se sono pubblici.</>],
-    ['Dati', () => <>Quello che la lambda conserva mentre gira, condiviso da tutte le versioni: il database, il workspace e i secret, ognuno con la sua scheda. Guarda le tabelle e i file, carica file, imposta secret o attiva e disattiva un tipo. La vista semplice lo mostra appena l’app conserva qualcosa.</>],
+    ['Dati', () => <>Quello che la lambda conserva mentre gira, condiviso da tutte le versioni: il database, il workspace e le chiavi e password, ognuno con la sua scheda. Guarda le tabelle e i file, carica file, imposta chiavi e password o attiva e disattiva un tipo. La vista semplice lo mostra appena l’app conserva qualcosa.</>],
     ['Versioni', () => <>Cosa ha cambiato ogni versione, cosa era stato chiesto e le differenze rispetto alla precedente. Da qui fai il deploy o torni indietro, oppure avvii una bozza da una qualsiasi di esse.</>],
     ['Deployment', () => <>Cosa è stato online e quando, e cosa l’ha fermato.</>],
     ['Statistiche', () => <>Richieste, errori, tempi di risposta e i percorsi più richiesti, nell’ultima ora o nelle ultime 24 ore.</>],
@@ -111,9 +111,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Per scriverlo a mano. {k.b('Verifica')} compila, {k.b('Salva')} crea una versione, {k.b('Deploy')} la mette
-          online. In una bozza, {k.b('Salva')} lo tiene nella bozza e {k.b('Deploy dell’anteprima')} lo
-          mette online all’indirizzo della bozza. {k.code('Ctrl-S')} salva; {k.code('F12')} va alla
-          dichiarazione.
+          online. In una bozza, {k.b('Salva')} lo tiene nella bozza e lo mostra all’indirizzo della bozza.{' '}
+          {k.code('Ctrl-S')} salva; {k.code('F12')} va alla dichiarazione.
         </>
       ),
     ],
@@ -187,38 +186,38 @@ export const guide: Messages['guide'] = {
   features: (k) => (
     <>
       Una versione, una volta salvata, non cambia più, ed è per questo che vale la pena conservarle tutte: ognuna si può
-      confrontare e rimettere online esattamente com’era. Per cambiare una lambda che la gente usa, avvia invece una{' '}
-      {k.b('bozza')}.
+      confrontare e rimettere online esattamente com’era. Per cambiare una lambda che la gente usa, prova prima la
+      modifica in una {k.b('bozza')}.
     </>
   ),
   featureSteps: [
     (k) => (
       <>
-        Avviala in {k.b('Bozze')}, o da una versione qualsiasi. È una copia del codice, degli asset, della
-        documentazione e dei test di quella versione, e dei dati della lambda.
+        Avviala da una versione qualsiasi in {k.b('Versioni')}, oppure lascia che lo faccia l’agente. È una copia del
+        codice, degli asset, della documentazione e dei test di quella versione, e dei dati della lambda.
       </>
     ),
     (k) => (
       <>
-        Modificala tutte le volte che serve, in {k.b('Codice')} o chiedendolo all’agente. {k.b('Deploy dell’anteprima')}{' '}
-        la mette online a un indirizzo tutto suo, {k.code('/features/…/')}, con la sua copia dei dati. I visitatori della
-        lambda non ne vedono niente, e niente di quello che scrive arriva ai dati della lambda.
+        Modificala tutte le volte che serve, in {k.b('Codice')} o chiedendolo all’agente. La sua anteprima risponde a un
+        indirizzo tutto suo, {k.code('/features/…/')}, con dati di prova tutti suoi. I visitatori della lambda non ne
+        vedono niente, e niente di quello che scrive arriva ai dati della lambda.
       </>
     ),
     (k) => (
       <>
-        Quando è a posto, premi {k.b('Integra')}: diventa la prossima versione, con le sue note, e se vuoi va subito
-        online. La bozza sparisce, insieme alla sua anteprima e alla sua copia dei dati.
+        Quando è a posto, premi {k.b('Metti online')}: diventa la prossima versione, con le sue note, e va online. La
+        bozza sparisce insieme a lei, con la sua anteprima e i suoi dati di prova.
       </>
     ),
   ],
   featureSample: 'Classifica',
   featuresAside: () => (
     <>
-      Si può lavorare a più bozze insieme. Si può integrare solo una bozza basata sulla versione più
-      recente, così un’integrazione non annulla mai una versione salvata dopo l’avvio della bozza. Se prima ne è
-      stata integrata un’altra, porta dentro le sue modifiche (o chiedilo all’agente), poi basa la bozza sulla
-      versione più recente. Niente viene integrato da solo, ed è voluto.
+      Si può lavorare a più bozze insieme. Solo una bozza aggiornata alla versione più recente può andare online, così
+      non annulla mai una versione salvata dopo il suo avvio. Se prima ne è andata online un’altra, porta dentro le sue
+      modifiche (o chiedilo all’agente) e segna la bozza come aggiornata. Niente va online da solo, ed è voluto. L’API
+      chiama una bozza feature, e metterla online merge.
     </>
   ),
 

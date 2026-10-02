@@ -50,7 +50,7 @@ export const ship: Messages['ship'] = {
   ],
 
   domainChip: 'Kalau mulai populer',
-  domainTitle: 'Pakai nama domain sendiri',
+  domainTitle: 'Pakai domain sendiri',
   domainText:
     'Aplikasi yang sama, link editor yang sama, tapi di alamat milik Anda. Lebih gampang diucapkan, lebih mudah diingat, dan terlihat meyakinkan saat orang mulai membagikannya.',
   domainSubject: 'Domain untuk aplikasi saya',

@@ -92,14 +92,14 @@ export const guide: Messages['guide'] = {
       'Mudar',
       (k) => (
         <>
-          Diga o que deve ficar diferente e o agente deste servidor faz isso enquanto você acompanha. Ele trabalha num
-          rascunho, testa lá e mescla na próxima versão quando funciona. Desligue{' '}
+          Diga o que deve ficar diferente e o agente deste servidor faz isso enquanto você acompanha. Ele testa a mudança
+          num rascunho - uma cópia com um endereço próprio - e a coloca no ar quando funciona. Desligue{' '}
           {k.b('Colocar no ar quando terminar')} para testar o rascunho você mesmo antes.
           Ele só trabalha no seu app: um pedido que não tem a ver com ele, ou que serve para causar dano, é recusado, e ele diz por quê.
         </>
       ),
     ],
-    ['Rascunhos', () => <>Mudanças feitas ao lado da lambda: cada uma é testada num endereço próprio e mesclada na próxima versão quando estiver tudo certo. Aberto, um rascunho tem código, dados e log próprios.</>],
+    ['Rascunhos', () => <>Mudanças testadas antes de irem ao ar, cada uma num endereço próprio e com dados de teste próprios. Aberto, um rascunho tem código, dados de teste e logs próprios. A seção aparece quando há um rascunho.</>],
     ['Arquivos', () => <>Os arquivos de uma versão: o código e os assets, o próprio programa. Um cadeado ou um globo mostra se o público consegue acessar.</>],
     ['Dados', () => <>O que a lambda guarda enquanto roda, compartilhado por todas as versões: o banco de dados, o workspace e os segredos, cada um na sua aba. Veja as tabelas e os arquivos, envie arquivos, defina segredos ou ligue e desligue um tipo. A visão simples mostra a seção assim que o app guarda alguma coisa.</>],
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faça deploy ou volte uma versão por aqui, ou comece um rascunho a partir de qualquer uma delas.</>],
@@ -111,8 +111,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Para escrever à mão. {k.b('Verificar')} compila, {k.b('Salvar')} cria uma versão, {k.b('Fazer deploy')} coloca
-          no ar. Num rascunho, {k.b('Salvar')} mantém a mudança no rascunho e {k.b('Fazer deploy da prévia')} coloca no
-          ar no endereço do rascunho. {k.code('Ctrl-S')} salva; {k.code('F12')} vai para uma declaração.
+          no ar. Num rascunho, {k.b('Salvar')} mantém a mudança no rascunho e a mostra no endereço do rascunho.{' '}
+          {k.code('Ctrl-S')} salva; {k.code('F12')} vai para uma declaração.
         </>
       ),
     ],
@@ -200,25 +200,25 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Mude quantas vezes precisar, em {k.b('Código')} ou pedindo ao agente. {k.b('Fazer deploy da prévia')} coloca no
-        ar num endereço próprio, {k.code('/features/…/')}, com a própria cópia dos dados. Os visitantes da lambda não
-        veem nada disso, e nada do que ele grava chega aos dados da lambda.
+        Mude quantas vezes precisar, em {k.b('Código')} ou pedindo ao agente. A prévia responde num endereço próprio,{' '}
+        {k.code('/features/…/')}, com dados de teste próprios. Os visitantes da lambda não veem nada disso, e nada do
+        que ela grava chega aos dados da lambda.
       </>
     ),
     (k) => (
       <>
-        Quando estiver tudo certo, {k.b('Mesclar')} faz dele a próxima versão, com as notas dele, e coloca no ar na
-        hora, se você quiser. O rascunho some junto, com a prévia e a cópia dos dados.
+        Quando estiver tudo certo, {k.b('Colocar no ar')}: ele vira a próxima versão, com as notas dele, e vai ao ar. O
+        rascunho some junto, com a prévia e os dados de teste.
       </>
     ),
   ],
   featureSample: 'Ranking',
   featuresAside: () => (
     <>
-      Dá para trabalhar em vários rascunhos ao mesmo tempo. Só um baseado na versão mais recente pode ser mesclado, para
-      que uma mesclagem nunca desfaça uma versão salva depois que o rascunho começou. Se outro foi mesclado antes,
-      traga as mudanças dele (ou peça ao agente) e depois baseie o rascunho na versão mais recente. Nada é mesclado
-      sozinho; isso é de propósito.
+      Dá para trabalhar em vários rascunhos ao mesmo tempo. Só um que esteja atualizado em relação à versão mais
+      recente pode ir ao ar, para que nunca desfaça uma versão salva depois que o rascunho começou. Se outro foi ao ar
+      primeiro, traga as mudanças dele (ou peça ao agente) e marque o rascunho como atualizado. Nada vai ao ar
+      sozinho; isso é de propósito. A API chama um rascunho de feature, e colocá-lo no ar de merge.
     </>
   ),
 

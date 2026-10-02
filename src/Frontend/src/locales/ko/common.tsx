@@ -3,7 +3,7 @@ import type { Messages } from '../en';
 export const shell: Messages['shell'] = {
   main: '주 메뉴',
   build: '홈페이지 만들기',
-  ship: '배포하기',
+  ship: '게시하기',
   showcase: '쇼케이스',
   enterprise: '엔터프라이즈',
   docs: '문서',

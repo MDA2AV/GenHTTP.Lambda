@@ -92,16 +92,16 @@ export const guide: Messages['guide'] = {
       'Aanpassen',
       (k) => (
         <>
-          Zeg wat er anders moet, en de agent op deze server doet het terwijl jij meekijkt. Hij werkt in een concept,
-          probeert het daar uit en voegt het samen tot de volgende versie zodra het werkt. Zet{' '}
+          Zeg wat er anders moet, en de agent op deze server doet het terwijl jij meekijkt. Hij probeert de wijziging uit
+          in een concept – een kopie met een eigen adres – en zet het online zodra het werkt. Zet{' '}
           {k.b('Online zetten als het klaar is')} uit als je het concept eerst zelf wilt uitproberen.
           Hij werkt alleen aan je app: een verzoek dat er niets mee te maken heeft, of dat schade moet aanrichten, wijst hij af, en hij zegt waarom.
         </>
       ),
     ],
-    ['Concepten', () => <>Wijzigingen waaraan naast de lambda wordt gewerkt: elk concept probeer je uit op een eigen adres, en het wordt samengevoegd tot de volgende versie zodra het goed is. Open je een concept, dan heeft het zijn eigen code, data en logs.</>],
+    ['Concepten', () => <>Wijzigingen die worden uitgeprobeerd voordat ze online gaan, elk op een eigen adres en met eigen testdata. Open je een concept, dan heeft het zijn eigen code, testdata en logs. Het onderdeel verschijnt zodra er een concept is.</>],
     ['Bestanden', () => <>De bestanden van een versie: de code en assets, het programma zelf. Een slotje of een wereldbol laat zien of ze openbaar bereikbaar zijn.</>],
-    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de database, de workspace en de secrets, elk met een eigen tabblad. Bekijk de tabellen en bestanden, upload bestanden, stel secrets in of zet een soort aan of uit. De eenvoudige weergave toont het zodra de app iets bewaart.</>],
+    ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de database, de workspace en de sleutels en wachtwoorden, elk met een eigen tabblad. Bekijk de tabellen en bestanden, upload bestanden, stel sleutels en wachtwoorden in of zet een soort aan of uit. De eenvoudige weergave toont het zodra de app iets bewaart.</>],
     ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug, en vanuit elke versie kun je een concept starten.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
     ['Statistieken', () => <>Requests, fouten, responstijden en de meest opgevraagde paden, over het afgelopen uur of de afgelopen dag.</>],
@@ -111,9 +111,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Zelf schrijven. {k.b('Controleren')} compileert, {k.b('Opslaan')} maakt een versie, {k.b('Deployen')} zet hem
-          online. In een concept bewaart {k.b('Opslaan')} de code in het concept, en zet {k.b('Voorvertoning deployen')}{' '}
-          hem online op het adres van het concept. {k.code('Ctrl-S')} slaat op; {k.code('F12')} springt naar een
-          declaratie.
+          online. In een concept bewaart {k.b('Opslaan')} de code in het concept en toont die op het adres van het
+          concept. {k.code('Ctrl-S')} slaat op; {k.code('F12')} springt naar een declaratie.
         </>
       ),
     ],
@@ -188,39 +187,39 @@ export const guide: Messages['guide'] = {
   features: (k) => (
     <>
       Een versie verandert nooit meer als hij eenmaal is opgeslagen, en juist daardoor is elke versie het bewaren
-      waard: je kunt ze allemaal vergelijken en precies zoals ze waren weer online zetten. Wil je een lambda aanpassen
-      die mensen gebruiken, start dan in plaats daarvan een {k.b('concept')}.
+      waard: je kunt ze allemaal vergelijken en precies zoals ze waren weer online zetten. Wil je een lambda
+      aanpassen die mensen gebruiken, probeer de wijziging dan eerst uit in een {k.b('concept')}.
     </>
   ),
   featureSteps: [
     (k) => (
       <>
-        Start het onder {k.b('Concepten')}, of vanuit een willekeurige versie. Het is een kopie van de code, assets,
-        documentatie en tests van die versie, en van de data van de lambda.
+        Start het vanuit een willekeurige versie onder {k.b('Versies')}, of laat de agent er een starten. Het is een
+        kopie van de code, assets, documentatie en tests van die versie, en van de data van de lambda.
       </>
     ),
     (k) => (
       <>
-        Pas het zo vaak aan als nodig, in {k.b('Code')} of door het aan de agent te vragen.{' '}
-        {k.b('Voorvertoning deployen')} zet het online op een eigen adres, {k.code('/features/…/')}, met een eigen
-        kopie van de data. Bezoekers van de lambda zien er niets van, en niets wat het wegschrijft, komt in de data van
-        de lambda terecht.
+        Pas het zo vaak aan als nodig, in {k.b('Code')} of door het aan de agent te vragen. De voorvertoning draait op
+        een eigen adres, {k.code('/features/…/')}, met eigen testdata. Bezoekers van de lambda zien er niets van, en
+        niets wat het wegschrijft, komt in de data van de lambda terecht.
       </>
     ),
     (k) => (
       <>
-        Klik op {k.b('Samenvoegen')} zodra het goed is: het wordt de volgende versie, met zijn notities, en gaat meteen
-        online als je dat wilt. Het concept verdwijnt dan, met zijn voorvertoning en zijn kopie van de data.
+        Klik op {k.b('Online zetten')} zodra het goed is: het wordt de volgende versie, met zijn notities, en gaat
+        online. Het concept verdwijnt dan, met zijn voorvertoning en zijn testdata.
       </>
     ),
   ],
   featureSample: 'Ranglijst',
   featuresAside: () => (
     <>
-      Je kunt aan meerdere concepten tegelijk werken. Alleen een concept dat op de nieuwste versie is gebaseerd, kan
-      worden samengevoegd. Zo maakt samenvoegen nooit een versie ongedaan die is opgeslagen nadat het concept begon.
-      Is er eerst een ander samengevoegd, haal dan de wijzigingen daarvan binnen (of vraag de agent dat te doen) en
-      baseer het concept daarna op de nieuwste versie. Niets wordt vanzelf samengevoegd; dat is met opzet.
+      Je kunt aan meerdere concepten tegelijk werken. Alleen een concept dat up-to-date is met de nieuwste versie
+      kan online gaan, zodat het nooit een versie ongedaan maakt die is opgeslagen nadat het concept begon. Is er
+      eerst een ander online gezet, haal dan de wijzigingen daarvan binnen - of vraag de agent dat te doen - en
+      markeer het concept als bijgewerkt. Niets gaat vanzelf online; dat is met opzet. De API noemt een concept een
+      feature, en het online zetten een merge.
     </>
   ),
 

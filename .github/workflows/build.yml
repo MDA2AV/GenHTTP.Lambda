@@ -38,6 +38,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      # the types catch a missing sentence; this catches one that lost a parameter or a link
+      - name: Check translations
+        run: npm run translations -- check
+
       # the server serves this directory, so a broken build here is a broken app
       - name: Upload web root
         uses: actions/upload-artifact@v4

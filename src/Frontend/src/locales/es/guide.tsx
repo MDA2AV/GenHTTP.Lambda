@@ -92,14 +92,14 @@ export const guide: Messages['guide'] = {
       'Cambiar',
       (k) => (
         <>
-          Di qué debería ser distinto y el agente de este servidor lo hace mientras miras. Trabaja en un borrador, lo
-          prueba ahí y lo fusiona en la siguiente versión cuando funciona. Desactiva{' '}
+          Di qué debería ser distinto y el agente de este servidor lo hace mientras miras. Prueba el cambio en un
+          borrador (una copia con una dirección propia) y lo pone en línea cuando funciona. Desactiva{' '}
           {k.b('Ponerlo en línea al terminar')} para probar tú el borrador antes.
           Solo trabaja en tu app: si lo que pides no tiene que ver con ella o busca hacer daño, lo rechaza y te dice por qué.
         </>
       ),
     ],
-    ['Borradores', () => <>Cambios en los que se trabaja al lado de la lambda: cada uno se prueba en su propia dirección y se fusiona en la siguiente versión cuando está bien. Al abrirlo, un borrador tiene su propio código, sus datos y sus logs.</>],
+    ['Borradores', () => <>Cambios que se prueban antes de ponerlos en línea, cada uno en su propia dirección y con sus propios datos de prueba. Al abrirlo, un borrador tiene su propio código, datos de prueba y logs. La sección aparece en cuanto hay un borrador.</>],
     ['Archivos', () => <>Los archivos de una versión: su código y sus recursos, el programa en sí. Un candado o un globo indica si el público puede acceder a ellos.</>],
     ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: la base de datos, el workspace y los secretos, cada uno en su pestaña. Mira las tablas y los archivos, sube archivos, define secretos o activa y desactiva un tipo. La vista simple lo muestra en cuanto la app guarda algo.</>],
     ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. Desde aquí despliegas o vuelves atrás, o empiezas un borrador a partir de cualquiera de ellas.</>],
@@ -111,8 +111,8 @@ export const guide: Messages['guide'] = {
       (k) => (
         <>
           Para escribirlo a mano. {k.b('Comprobar')} compila, {k.b('Guardar')} crea una versión y {k.b('Desplegar')} la
-          pone en línea. En un borrador, {k.b('Guardar')} lo guarda en el borrador y {k.b('Desplegar la vista previa')}{' '}
-          lo pone en línea en la dirección del borrador. {k.code('Ctrl-S')} guarda; {k.code('F12')} va a una declaración.
+          pone en línea. En un borrador, {k.b('Guardar')} lo guarda en el borrador y lo muestra en la dirección del
+          borrador. {k.code('Ctrl-S')} guarda; {k.code('F12')} va a una declaración.
         </>
       ),
     ],
@@ -187,38 +187,37 @@ export const guide: Messages['guide'] = {
     <>
       Una versión nunca cambia una vez guardada, y eso es lo que hace que valga la pena conservarlas todas: cualquiera de
       ellas se puede comparar y volver a poner en línea exactamente como estaba. Para cambiar una lambda que la gente
-      usa, empieza un {k.b('borrador')}.
+      usa, prueba antes el cambio en un {k.b('borrador')}.
     </>
   ),
   featureSteps: [
     (k) => (
       <>
-        Empiézalo en {k.b('Borradores')} o desde cualquier versión. Es una copia del código, los recursos, la
-        documentación y las pruebas de esa versión, y de los datos de la lambda.
+        Empiézalo desde cualquier versión en {k.b('Versiones')}, o deja que lo empiece el agente. Es una copia del código,
+        los recursos, la documentación y las pruebas de esa versión, y de los datos de la lambda.
       </>
     ),
     (k) => (
       <>
-        Cámbialo tantas veces como haga falta, en {k.b('Código')} o pidiéndoselo al agente.{' '}
-        {k.b('Desplegar la vista previa')} lo pone en línea en su propia dirección, {k.code('/features/…/')}, con su
-        propia copia de los datos. Los visitantes de la lambda no ven nada de esto, y nada de lo que escribe llega a los
-        datos de la lambda.
+        Cámbialo tantas veces como haga falta, en {k.b('Código')} o pidiéndoselo al agente. Su vista previa responde en una
+        dirección propia, {k.code('/features/…/')}, con datos de prueba propios. Los visitantes de la lambda no ven nada de
+        esto, y nada de lo que escribe llega a los datos de la lambda.
       </>
     ),
     (k) => (
       <>
-        Cuando esté bien, {k.b('Fusionar')} lo convierte en la siguiente versión, con sus notas, y lo pone en línea
-        enseguida si quieres. El borrador desaparece con ello, junto con su vista previa y su copia de los datos.
+        {k.b('Poner en línea')} cuando esté bien: se convierte en la siguiente versión, con sus notas, y queda en línea. El
+        borrador desaparece con ello, junto con su vista previa y sus datos de prueba.
       </>
     ),
   ],
   featureSample: 'Ranking',
   featuresAside: () => (
     <>
-      Se puede trabajar en varios borradores a la vez. Solo se puede fusionar uno basado en la versión más nueva, para
-      que una fusión nunca deshaga una versión guardada después de que empezara el borrador. Si antes se fusionó otro,
-      lleva sus cambios a este (o pídeselo al agente) y después basa el borrador en la versión más nueva. Nada se
-      fusiona solo; es a propósito.
+      Se puede trabajar en varios borradores a la vez. Solo uno que esté al día con la versión más nueva puede ponerse en
+      línea, para que nunca deshaga una versión guardada después de que empezara el borrador. Si antes se puso otro en
+      línea, lleva sus cambios a este (o pídeselo al agente) y marca el borrador como al día. Nada se pone en línea solo;
+      es a propósito. La API llama feature a un borrador y merge a ponerlo en línea.
     </>
   ),
 
