@@ -811,6 +811,7 @@ public sealed class McpTests
 
         Assert.Contains("<a href=\"https://genhttp.dev/\">Made with GenHTTP Lambda</a>", backlink["how"]!.GetValue<string>(),
                         "to the address the site is meant to be found at, not the one the agent called");
+        Assert.Contains("plain text", backlink["onADomain"]!.GetValue<string>(), "a lambda on a domain of its own names the platform without linking to it");
         Assert.Contains("not a rule", backlink["ask"]!.GetValue<string>());
         Assert.Contains("decisions.md", backlink["theUserDecides"]!.GetValue<string>(), "a link the user took out stays out");
     }

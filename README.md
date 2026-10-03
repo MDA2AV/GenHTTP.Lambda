@@ -1169,7 +1169,10 @@ shares. The instructions say so in a line, `platform_guide` under
 Agents are asked - not required - to put a small "Made with GenHTTP Lambda"
 line at the foot of the pages they build, linking to `LAMBDA_PUBLIC_URL` (or
 the address the agent called, where it is not set). The link's words are the
-name and nothing else. It is the user's to refuse: the agent says that it added
+name and nothing else. On a lambda with a domain of its own the line is plain
+text: there the link would come from another site, and the same link in the
+footers of many sites is what search engines count as link spam - below
+`/lambda/` it is a link within the site. It is the user's to refuse: the agent says that it added
 it, leaves it out or takes it out when asked, and notes in `decisions.md` that
 it was not wanted, so the next agent does not put it back. A change does not
 add one to a lambda that has none. The instructions say so in a line,
