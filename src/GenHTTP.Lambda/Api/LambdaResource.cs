@@ -33,7 +33,7 @@ namespace GenHTTP.Lambda.Api;
 /// What is done here is logged by the lambda's public key, never by the key in
 /// the path - so are the other resources below it.
 /// </remarks>
-public sealed class LambdaResource(IMetaService meta, ISecretService secrets, ISourceService sources, DatabaseVault databases, LambdaOptions options,
+public sealed class LambdaResource(IMetaService meta, ISecretService secrets, ISourceService sources, IDatabaseService databases, LambdaOptions options,
                                    ILogger<LambdaResource> logger)
 {
 

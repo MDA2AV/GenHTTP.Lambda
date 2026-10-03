@@ -31,7 +31,7 @@ namespace GenHTTP.Lambda.Services.Settings;
 /// over a lowered limit. A lambda's workspace quota is compiled into it, so a
 /// changed one compiles each lambda again on its next request.
 /// </remarks>
-public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options)
+public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options) : ILimitsService
 {
     private const string Prefix = "limits.";
 

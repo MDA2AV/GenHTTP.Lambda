@@ -47,7 +47,7 @@ internal static class VersionInput
     /// what the premium tier allows, so whoever reads it knows there is more.
     /// A feature is held to the same, since what it holds becomes a version.
     /// </remarks>
-    public static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, LimitsService limits)
+    public static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, ILimitsService limits)
     {
         // the limit counts what was written rather than what it is stored as,
         // so splitting a lambda into files does not spend any of it on the

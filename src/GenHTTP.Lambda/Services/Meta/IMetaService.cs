@@ -91,6 +91,22 @@ public interface IMetaService
     IReadOnlyList<LambdaActivation> GetActivations(string privateKey);
 
     /// <summary>
+    /// What a version of the lambda filed under the given identity is made
+    /// of - its size, what its code reaches for, what its documentation says -
+    /// or nothing at all for no version.
+    /// </summary>
+    /// <remarks>
+    /// Read off the version once and kept, since a version never changes.
+    /// </remarks>
+    VersionFacts GetFacts(long lambdaId, int? version);
+
+    /// <summary>
+    /// What has been happening on the installation, counted by day, oldest first.
+    /// </summary>
+    /// <param name="days">How far back to go</param>
+    EventHistory GetEvents(int days);
+
+    /// <summary>
     /// Moves the lambda to another public key.
     /// </summary>
     LambdaInfo ChangeKey(string privateKey, string? publicKey);

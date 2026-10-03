@@ -23,7 +23,7 @@ namespace GenHTTP.Lambda.Services.Hosting;
 /// premium lambdas with a domain are, and that is decided in the one query
 /// below.
 /// </remarks>
-public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases, ILogger<DomainRegistry> logger)
+public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases, ILogger<DomainRegistry> logger) : IDomainRegistry
 {
     private volatile FrozenDictionary<string, long> _domains = FrozenDictionary<string, long>.Empty;
 

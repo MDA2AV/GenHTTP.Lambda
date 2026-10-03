@@ -105,7 +105,7 @@ public static class LambdaOutput
 /// one. The collecting is per request rather than per process because two
 /// lambdas printing at once would otherwise splice into each other.
 /// </remarks>
-public sealed class OutputScope(string? publicKey, LogBook book, int most, long? lambdaId = null, long? featureId = null)
+public sealed class OutputScope(string? publicKey, ILogBook book, int most, long? lambdaId = null, long? featureId = null)
 {
 
     #region Get-/Setters

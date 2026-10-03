@@ -60,4 +60,20 @@ public interface ITelemetryService
     /// </summary>
     IReadOnlyList<TelemetrySample> Series(TimeSpan window);
 
+    /// <summary>
+    /// What every lambda seen since the server came up has been doing, busiest first.
+    /// </summary>
+    IReadOnlyList<LambdaActivity> DescribeLambdas();
+
+    /// <summary>
+    /// What one lambda has been doing - described with empty rings where
+    /// nobody has called it yet, so a page draws the same shape either way.
+    /// </summary>
+    LambdaTraffic DescribeLambda(long id);
+
+    /// <summary>
+    /// Forgets what was counted of a lambda, called when one is deleted.
+    /// </summary>
+    void ForgetLambda(long id);
+
 }

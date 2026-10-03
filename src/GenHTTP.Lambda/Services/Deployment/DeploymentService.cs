@@ -47,9 +47,9 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     private ServerRegistry Servers { get; }
 
-    private SecretVault Secrets { get; }
+    private ISecretVault Secrets { get; }
 
-    private DatabaseVault Databases { get; }
+    private IDatabaseVault Databases { get; }
 
     private ILogger Logger { get; }
 
@@ -57,7 +57,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     #region Initialization
 
-    public DeploymentService(IStorageService storage, ServerRegistry servers, SecretVault secrets, DatabaseVault databases, ILogger<DeploymentService> logger)
+    public DeploymentService(IStorageService storage, ServerRegistry servers, ISecretVault secrets, IDatabaseVault databases, ILogger<DeploymentService> logger)
     {
         Storage = storage;
         Servers = servers;

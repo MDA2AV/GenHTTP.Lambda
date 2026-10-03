@@ -27,7 +27,7 @@ namespace GenHTTP.Lambda.Api;
 /// A process rather than a thing, so it is read at <c>agent</c> and driven
 /// with verbs, the way a deployment is.
 /// </remarks>
-public sealed class LambdaAgentResource(BuildService builds, IMetaService meta, IFeatureService features, ILogger<LambdaAgentResource> logger)
+public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta, IFeatureService features, ILogger<LambdaAgentResource> logger)
 {
 
     /// <summary>

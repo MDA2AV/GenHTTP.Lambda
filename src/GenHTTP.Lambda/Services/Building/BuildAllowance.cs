@@ -17,7 +17,7 @@ namespace GenHTTP.Lambda.Services.Building;
 /// An address that is not known - a caller the server cannot name - is not
 /// counted. The count is kept in memory, so a restart forgives everybody.
 /// </remarks>
-public sealed class BuildAllowance(LimitsService limits)
+public sealed class BuildAllowance(ILimitsService limits)
 {
 
     /// <summary>

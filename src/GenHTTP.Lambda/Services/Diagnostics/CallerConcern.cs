@@ -26,7 +26,7 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// and so the duration covers the whole answer rather than the part after the
 /// throttle let it through.
 /// </remarks>
-public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, DomainRegistry domains,
+public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, IDomainRegistry domains,
                                   LambdaOptions options) : IDependentConcern
 {
 

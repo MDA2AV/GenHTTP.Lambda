@@ -101,6 +101,8 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
     #region Reading
 
+    public string? Export(long lambdaId) => vault.Export(lambdaId);
+
     /// <summary>
     /// The tables and views, with their columns and how many rows each holds.
     /// </summary>

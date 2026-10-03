@@ -27,7 +27,7 @@ namespace GenHTTP.Lambda.Services.Features;
 /// service beside the lambdas themselves.
 /// </summary>
 public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IStorageService storage,
-                                   IDeploymentService deployments, SecretVault secrets, DatabaseVault stores, LambdaOptions options, LimitsService limits, LogBook book,
+                                   IDeploymentService deployments, ISecretVault secrets, IDatabaseVault stores, LambdaOptions options, ILimitsService limits, ILogBook book,
                                    DatabaseChanges changes, ILogger<FeatureService> logger)
     : IFeatureService
 {

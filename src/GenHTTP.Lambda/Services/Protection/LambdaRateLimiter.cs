@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Protection;
 /// at a domain of its own as well as at its path is served by two chains, and
 /// buckets per chain would give a client its allowance twice.
 /// </remarks>
-public sealed class LambdaRateLimiter(LimitsService limits)
+public sealed class LambdaRateLimiter(ILimitsService limits)
 {
     private static readonly TimeSpan Window = TimeSpan.FromSeconds(1);
 

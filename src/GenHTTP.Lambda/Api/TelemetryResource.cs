@@ -22,7 +22,7 @@ namespace GenHTTP.Lambda.Api;
 /// the owner of a lambda sees its own figures in the editor, and nobody sees
 /// everybody's.
 /// </remarks>
-public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemetry lambdas, IMetaService meta, EventReader events, LambdaOptions options)
+public sealed class TelemetryResource(ITelemetryService telemetry, IMetaService meta, LambdaOptions options)
 {
 
     /// <summary>
@@ -38,7 +38,7 @@ public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemet
         // a different window from the readings on purpose: memory is watched
         // over an hour, and whether anybody is using the platform is a
         // question about weeks
-        var history = events.History(days);
+        var history = meta.GetEvents(days);
 
         var series = telemetry.Series(window);
 
@@ -83,7 +83,7 @@ public sealed class TelemetryResource(ITelemetryService telemetry, LambdaTelemet
     [ResourceMethod("lambdas")]
     public ActivityResponse GetLambdas()
     {
-        var activity = lambdas.Describe();
+        var activity = telemetry.DescribeLambdas();
 
         return new ActivityResponse(
             activity,

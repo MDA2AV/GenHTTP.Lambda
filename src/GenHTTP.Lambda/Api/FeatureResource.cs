@@ -38,7 +38,7 @@ namespace GenHTTP.Lambda.Api;
 /// the feature is left to whoever works on it; once they are in, moving the
 /// feature's base to that version with a patch allows the merge.
 /// </remarks>
-public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, LogBook book, LambdaOptions options, LimitsService limits,
+public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, ILogBook book, LambdaOptions options, ILimitsService limits,
                                      ILogger<FeatureResource> logger)
 {
 

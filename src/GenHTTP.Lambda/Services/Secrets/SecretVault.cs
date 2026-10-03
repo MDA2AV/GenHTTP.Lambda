@@ -28,7 +28,7 @@ namespace GenHTTP.Lambda.Services.Secrets;
 /// values, so a secret changed in the editor is what the next request reads,
 /// without the lambda being built again.
 /// </remarks>
-public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> databases, SecretCipher cipher, ILogger<SecretVault> logger)
+public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> databases, SecretCipher cipher, ILogger<SecretVault> logger) : ISecretVault
 {
 
     /// <summary>

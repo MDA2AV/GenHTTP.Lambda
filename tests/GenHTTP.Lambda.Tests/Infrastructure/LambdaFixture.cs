@@ -66,7 +66,7 @@ internal sealed class LambdaFixture : IAsyncDisposable
     /// <summary>
     /// What a lambda may have in its tier, as the operator set it.
     /// </summary>
-    public LimitsService Limits => Application.Services.GetRequiredService<LimitsService>();
+    public ILimitsService Limits => Application.Services.GetRequiredService<ILimitsService>();
 
     /// <summary>
     /// Brings the demos into existence, which the application does in the

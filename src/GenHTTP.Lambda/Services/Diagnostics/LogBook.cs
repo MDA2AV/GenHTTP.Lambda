@@ -14,7 +14,7 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// a print loop costs a bounded amount of memory and evicts history rather
 /// than growing.
 /// </remarks>
-public sealed class LogBook
+public sealed class LogBook : ILogBook
 {
 
     #region Get-/Setters

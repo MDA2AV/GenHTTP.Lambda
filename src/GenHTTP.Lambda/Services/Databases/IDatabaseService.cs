@@ -29,4 +29,11 @@ public interface IDatabaseService
     ValueTask<DatabaseRows> ReadAsync(string privateKey, string table, int offset = 0, int limit = 50, string? order = null, bool descending = true,
                                       string? feature = null, CancellationToken cancellation = default);
 
+    /// <summary>
+    /// Writes the database of the lambda filed under the given identity into
+    /// a file of its own, whole - what an export carries.
+    /// </summary>
+    /// <returns>Where the copy was written, for the caller to delete, or nothing where there is no database</returns>
+    string? Export(long lambdaId);
+
 }

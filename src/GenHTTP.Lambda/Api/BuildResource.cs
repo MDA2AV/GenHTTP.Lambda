@@ -24,7 +24,7 @@ namespace GenHTTP.Lambda.Api;
 /// What is on this side is the counting: a few builds per address per day,
 /// because each one spends somebody's subscription.
 /// </remarks>
-public sealed class BuildResource(BuildService builds, ILogger<BuildResource> logger)
+public sealed class BuildResource(IBuildService builds, ILogger<BuildResource> logger)
 {
 
     /// <summary>

@@ -12,7 +12,7 @@ namespace GenHTTP.Lambda.Services.Settings;
 /// Read on every page view by the header, so the values are held in memory
 /// once they were read and only written through to the database.
 /// </remarks>
-public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases)
+public sealed class SettingsService(IDbContextFactory<LambdaDbContext> databases) : ISettingsService
 {
     private const string EnterprisePageKey = "enterprise-page";
 

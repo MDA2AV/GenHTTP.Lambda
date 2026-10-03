@@ -16,7 +16,7 @@ namespace GenHTTP.Lambda.Services.Data;
 /// Keeps which kinds of data each lambda has, and measures what they hold.
 /// </summary>
 public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IWorkspaceService workspace,
-                                IFeatureService features, SecretVault secrets, DatabaseVault stores, IDeploymentService deployments,
+                                IFeatureService features, ISecretVault secrets, IDatabaseVault stores, IDeploymentService deployments,
                                 ILogger<DataService> logger) : IDataService
 {
 

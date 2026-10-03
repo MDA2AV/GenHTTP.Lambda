@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace GenHTTP.Lambda.Services.Source;
 
 /// <summary>
@@ -61,18 +63,23 @@ public interface ISourceService
     ValueTask<SourceArchive?> GetArchiveAsync(string publicKey, int version, CancellationToken cancellation = default);
 
     /// <summary>
-    /// Stars a published source, or takes a star back. Nothing where there is
-    /// no such source.
+    /// A ticket to star the source at a public key with, as the page that
+    /// reads it is handed.
     /// </summary>
-    /// <returns>How many stars it has now</returns>
-    int? Star(string publicKey, bool starred);
+    string IssueTicket(string publicKey);
 
     /// <summary>
-    /// How many stars a published source has, and the identity it is filed
-    /// under for the guard that counts each visitor's star once. Nothing where
-    /// there is no such source.
+    /// Stars a published source for a visitor, or takes their star back.
+    /// Nothing where there is no such source.
     /// </summary>
-    SourceStars? GetStars(string publicKey);
+    /// <remarks>
+    /// Refused where the ticket is too fresh or too old, and where the visitor
+    /// changed a lot of stars lately. Each visitor stars a source once, so
+    /// starring again changes nothing (see <see cref="StarGuard"/>).
+    /// </remarks>
+    /// <param name="ticket">The ticket the page was handed when it read the source</param>
+    /// <param name="client">Who is starring</param>
+    StarOutcome? Star(string publicKey, string? ticket, IPAddress? client, bool starred);
 
     /// <summary>
     /// Every published source, for the sitemap.

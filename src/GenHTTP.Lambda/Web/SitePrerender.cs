@@ -50,7 +50,7 @@ public sealed partial class SitePrerender
 
     private LambdaOptions Options { get; }
 
-    private LimitsService Limits { get; }
+    private ILimitsService Limits { get; }
 
     private IShowcaseService Showcases { get; }
 
@@ -62,7 +62,7 @@ public sealed partial class SitePrerender
 
     #region Initialization
 
-    public SitePrerender(LambdaOptions options, LimitsService limits, IShowcaseService showcases, ILogger<SitePrerender> logger)
+    public SitePrerender(LambdaOptions options, ILimitsService limits, IShowcaseService showcases, ILogger<SitePrerender> logger)
     {
         File = Path.Combine(options.WebRoot, "prerender.json");
         Options = options;

@@ -62,11 +62,11 @@ public sealed class MetaService : IMetaService
 
     private LambdaOptions Options { get; }
 
-    private LimitsService Limits { get; }
+    private ILimitsService Limits { get; }
 
-    private LogBook Book { get; }
+    private ILogBook Book { get; }
 
-    private DatabaseVault DatabaseVault { get; }
+    private IDatabaseVault DatabaseVault { get; }
 
     private LambdaHosting Hosting { get; }
 
@@ -77,6 +77,10 @@ public sealed class MetaService : IMetaService
     private LambdaRemoval Removal { get; }
 
     private LambdaDescriber Describer { get; }
+
+    private VersionFactsCache Facts { get; }
+
+    private EventReader Events { get; }
 
     private ILogger Logger { get; }
 
@@ -95,8 +99,9 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaOptions options, LimitsService limits, LogBook book, DatabaseVault databaseVault, LambdaHosting hosting, LambdaHistory history,
-        LambdaLifetime lifetime, LambdaRemoval removal, LambdaDescriber describer, DatabaseChanges changes, ILogger<MetaService> logger)
+        LambdaOptions options, ILimitsService limits, ILogBook book, IDatabaseVault databaseVault, LambdaHosting hosting, LambdaHistory history,
+        LambdaLifetime lifetime, LambdaRemoval removal, LambdaDescriber describer, VersionFactsCache facts, EventReader events,
+        DatabaseChanges changes, ILogger<MetaService> logger)
     {
         ByKey = new ResolutionCache<string>(changes);
         ById = new ResolutionCache<long>(changes);
@@ -113,6 +118,8 @@ public sealed class MetaService : IMetaService
         Lifetime = lifetime;
         Removal = removal;
         Describer = describer;
+        Facts = facts;
+        Events = events;
         Logger = logger;
     }
 
@@ -355,6 +362,10 @@ public sealed class MetaService : IMetaService
                        .Select(a => new LambdaActivation(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy))
                        .ToList();
     }
+
+    public VersionFacts GetFacts(long lambdaId, int? version) => Facts.Of(lambdaId, version);
+
+    public EventHistory GetEvents(int days) => Events.History(days);
 
     public LambdaPage List(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null)
     {

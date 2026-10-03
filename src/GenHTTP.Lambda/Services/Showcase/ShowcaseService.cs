@@ -12,8 +12,8 @@ namespace GenHTTP.Lambda.Services.Showcase;
 /// <summary>
 /// Keeps the showcase entries and decides the order they are shown in.
 /// </summary>
-public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases, LambdaTelemetry telemetry,
-                                    LimitsService limits, ILogger<ShowcaseService> logger) : IShowcaseService
+public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases, ITelemetryService telemetry,
+                                    ILimitsService limits, ILogger<ShowcaseService> logger) : IShowcaseService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -187,7 +187,7 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
     /// </remarks>
     private double Score(Entry entry, DateTime now)
     {
-        var traffic = telemetry.Describe(entry.Id);
+        var traffic = telemetry.DescribeLambda(entry.Id);
 
         var requests = traffic.Quarters.Sum(q => q.Requests + q.Upgrades);
 

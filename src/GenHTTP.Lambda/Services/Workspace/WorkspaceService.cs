@@ -12,7 +12,7 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// Reads and writes the private directory of a lambda on behalf of its owner -
 /// or a feature's copy of it, which is held to the same quota.
 /// </summary>
-public sealed class WorkspaceService(IStorageService storage, IMetaService meta, LimitsService tiers, ILogger<WorkspaceService> logger) : IWorkspaceService
+public sealed class WorkspaceService(IStorageService storage, IMetaService meta, ILimitsService tiers, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
 
     /// <summary>

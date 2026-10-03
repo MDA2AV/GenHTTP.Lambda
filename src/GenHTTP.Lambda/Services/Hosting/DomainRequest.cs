@@ -25,7 +25,7 @@ public static class DomainRequest
     /// The custom domain the request was addressed to, or nothing when it is
     /// addressed to the platform.
     /// </summary>
-    public static CustomDomain? ResolveDomain(this IRequest request, DomainRegistry registry)
+    public static CustomDomain? ResolveDomain(this IRequest request, IDomainRegistry registry)
     {
         if (request.Properties.TryGet<Decision>(Key, out var decided))
         {

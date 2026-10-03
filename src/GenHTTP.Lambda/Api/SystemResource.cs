@@ -12,7 +12,7 @@ namespace GenHTTP.Lambda.Api;
 /// What the editor needs to know about the platform: the terms, the example it
 /// starts from, the vocabulary it can suggest and whether it can build things.
 /// </summary>
-public sealed class SystemResource(LimitsService limits, BuildService builds, SettingsService settings)
+public sealed class SystemResource(ILimitsService limits, IBuildService builds, ISettingsService settings)
 {
 
     internal const string Terms = """
