@@ -441,7 +441,9 @@ chosen by the owner.
   decided.** Code, assets, workspace, database, versions and features per
   tier, the free tier's lifetime, and the per-caller limits (showcase picture,
   requests per second, builds per day) are set in the panel's **Limits**
-  (`LimitsService`, rows in `settings`), one form with a Free/Premium switch.
+  (`LimitsService`, rows in `settings`): one form, the tier limits as a table
+  with a column per tier and the per-caller ones in a block of their own, so
+  which is which is plain without a switch hiding half of it.
   A change applies to what is checked next and takes nothing away. Ports,
   directories, keys, buffers, `LAMBDA_MAX_CONCURRENCY` and the execution
   timeout stay environment variables: they protect the process. The old

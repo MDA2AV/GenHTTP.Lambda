@@ -1275,8 +1275,9 @@ operator everybody's.
 
 What a lambda may have in its tier is set in the panel's **Limits** section
 (`GET / PUT /admin/limits`), not by environment variables: these are the
-product's promises, and changing one should not take a restart. One form, the
-same fields for both tiers and a switch between them:
+product's promises, and changing one should not take a restart. One form: the
+limits of the tiers as a table with a column per tier, and the limits that have
+no tier in a block of their own below it.
 
 | Limit             | Free     | Premium  | What it bounds                                   |
 |-------------------|----------|----------|--------------------------------------------------|

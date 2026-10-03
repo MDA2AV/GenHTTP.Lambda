@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { ApiError, refusedToken, api, type AdminLimits, type TierLimits } from '../api';
 import { IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
-import { Pills, Section } from '../control/ui';
+import { Section } from '../control/ui';
 import type { Access } from './context';
 
 type Tier = 'free' | 'premium';
@@ -19,9 +19,9 @@ interface Limit {
   bytes?: boolean;
 }
 
-/** What each tier has, the same for both: the switch at the top picks whose. */
+/** What each tier has, the same for both: a column each. */
 const TIER: (Limit & { key: keyof TierLimits })[] = [
-  { key: 'codeCharacters', title: 'Code', unit: 'characters',
+  { key: 'codeCharacters', title: 'Code', unit: 'chars',
     note: 'C# across every file of a lambda. It guards the time and memory the compiler spends, which the whole server shares.' },
   { key: 'assetBytes', title: 'Assets', unit: 'MB', bytes: true,
     note: 'What a version ships beside its code: the front end, the documentation and the tests. Kept in every version.' },
@@ -29,9 +29,9 @@ const TIER: (Limit & { key: keyof TierLimits })[] = [
     note: 'The files a lambda saves while it runs. Compiled into the lambda, so a change compiles each one again on its next request.' },
   { key: 'databaseBytes', title: 'Database', unit: 'MB', bytes: true,
     note: 'How large its records may grow. Holds from the next connection; nothing already stored is removed.' },
-  { key: 'versions', title: 'Versions kept', unit: 'versions',
+  { key: 'versions', title: 'Versions kept', unit: '',
     note: 'Older ones are removed when a new one is saved, never the one online.' },
-  { key: 'features', title: 'Features open', unit: 'at once',
+  { key: 'features', title: 'Features open at once', unit: '',
     note: 'Each holds a copy of the files, the workspace and the database.' },
 ];
 
@@ -47,9 +47,9 @@ const LIFETIME: Limit[] = [
 const EVERYBODY: Limit[] = [
   { key: 'showcaseImageBytes', title: 'Showcase picture', unit: 'MB', bytes: true,
     note: 'Every visitor of the showcase downloads it.' },
-  { key: 'requestsPerSecond', title: 'Requests', unit: 'per second',
+  { key: 'requestsPerSecond', title: 'Requests per second', unit: '',
     note: 'Per client, across every lambda it calls.' },
-  { key: 'buildsPerDay', title: 'Builds', unit: 'per day',
+  { key: 'buildsPerDay', title: 'Builds per day', unit: '',
     note: 'Builds and changes the agent of this installation makes for one address. Counted in memory.' },
 ];
 
@@ -116,8 +116,8 @@ function fromDraft(draft: Draft): AdminLimits | null {
 }
 
 /**
- * What a lambda may have in its tier: one form, the same fields for both
- * tiers, and a switch at the top between them.
+ * What a lambda may have: the limits of the tiers as a table with a column per
+ * tier, and the limits that have no tier apart from it, in one column.
  */
 export function LimitsSection({ access }: { access: Access }) {
   const { token, deny } = access;
@@ -126,7 +126,6 @@ export function LimitsSection({ access }: { access: Access }) {
 
   const [saved, setSaved] = useState<AdminLimits | null>(null);
   const [draft, setDraft] = useState<Draft>({});
-  const [tier, setTier] = useState<Tier>('free');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,7 +150,6 @@ export function LimitsSection({ access }: { access: Access }) {
 
   const changed = (key: string) => saved !== null && draft[key] !== original[key];
   const dirty = Object.keys(draft).some(changed);
-  const tierChanged = (name: Tier) => TIER.some((limit) => changed(`${name}.${limit.key}`));
 
   const parsed = fromDraft(draft);
 
@@ -178,11 +176,12 @@ export function LimitsSection({ access }: { access: Access }) {
     }
   }
 
-  const field = (limit: Limit, key: string) => (
-    <Field
-      key={key}
+  const input = (limit: Limit, key: string, column?: string) => (
+    <Input
       id={`limit-${key.replace('.', '-')}`}
-      limit={limit}
+      label={column ? `${limit.title}, ${column}` : limit.title}
+      column={column}
+      unit={limit.unit}
       value={draft[key] ?? ''}
       changed={changed(key)}
       valid={parse(draft[key] ?? '', limit.bytes) !== null}
@@ -193,23 +192,7 @@ export function LimitsSection({ access }: { access: Access }) {
   return (
     <Section
       title="Limits"
-      hint="What a lambda may have in its tier. A change applies to what is checked next - a save, an upload, a deploy, a connection to a database - and takes nothing away that a lambda already has. No restart needed."
-      pills={saved !== null && (
-        <Pills
-          label="Tier"
-          value={tier}
-          onChange={setTier}
-          options={(['free', 'premium'] as const).map((name) => ({
-            value: name,
-            label: (
-              <>
-                {name === 'free' ? 'Free' : 'Premium'}
-                {tierChanged(name) && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label="changed" />}
-              </>
-            ),
-          }))}
-        />
-      )}
+      hint="What a lambda may have. A change applies to what is checked next - a save, an upload, a deploy, a connection to a database - and takes nothing away that a lambda already has. No restart needed."
     >
       {saved === null ? (
         error !== null ? (
@@ -225,44 +208,51 @@ export function LimitsSection({ access }: { access: Access }) {
             event.preventDefault();
             void save();
           }}
-          className="space-y-8"
+          className="space-y-10"
         >
           <section>
-            <h2 className="text-sm font-medium">{tier === 'free' ? 'A free lambda' : 'A premium lambda'}</h2>
+            <h2 className="text-sm font-medium">Per tier</h2>
             <p className="mt-1 text-[13px] text-slate-500">
-              {tier === 'free'
-                ? 'Every lambda unless it was made premium here, and the demos.'
-                : 'Never less than a free lambda may have; saving refuses that.'}
+              What one lambda may have. A demo is held to the free tier; premium never to less than free.
             </p>
 
-            <div className="surface mt-3 divide-y divide-grey-300 dark:divide-ink-800">
-              {TIER.map((limit) => field(limit, `${tier}.${limit.key}`))}
+            <div className="surface mt-3">
+              <div className="hidden border-b border-grey-300 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-ink-800 sm:grid sm:grid-cols-[1fr_10rem_10rem] sm:gap-4">
+                <span>Limit</span>
+                <span>Free</span>
+                <span>Premium</span>
+              </div>
+
+              <div className="divide-y divide-grey-300 dark:divide-ink-800">
+                {TIER.map((limit) => (
+                  <Row key={limit.key} limit={limit}>
+                    {input(limit, `free.${limit.key}`, 'Free')}
+                    {input(limit, `premium.${limit.key}`, 'Premium')}
+                  </Row>
+                ))}
+
+                {LIFETIME.map((limit) => (
+                  <Row key={limit.key} limit={limit}>
+                    {input(limit, limit.key, 'Free')}
+                    <Kept />
+                  </Row>
+                ))}
+              </div>
             </div>
           </section>
 
           <section>
-            <h2 className="text-sm font-medium">Lifetime</h2>
-
-            {tier === 'free' ? (
-              <>
-                <p className="mt-1 text-[13px] text-slate-500">When a free lambda that nobody uses goes away.</p>
-                <div className="surface mt-3 divide-y divide-grey-300 dark:divide-ink-800">
-                  {LIFETIME.map((limit) => field(limit, limit.key))}
-                </div>
-              </>
-            ) : (
-              <p className="surface mt-3 p-4 text-[13px] text-slate-500">
-                A premium lambda stays online and is kept, however long nobody visits or edits it.
-              </p>
-            )}
-          </section>
-
-          <section>
-            <h2 className="text-sm font-medium">Everybody</h2>
-            <p className="mt-1 text-[13px] text-slate-500">Counted per visitor rather than per lambda, so the same in both tiers.</p>
+            <h2 className="text-sm font-medium">For everybody</h2>
+            <p className="mt-1 text-[13px] text-slate-500">
+              Counted per visitor rather than per lambda, so there is no tier to them.
+            </p>
 
             <div className="surface mt-3 divide-y divide-grey-300 dark:divide-ink-800">
-              {EVERYBODY.map((limit) => field(limit, limit.key))}
+              {EVERYBODY.map((limit) => (
+                <Row key={limit.key} limit={limit} single>
+                  {input(limit, limit.key)}
+                </Row>
+              ))}
             </div>
           </section>
 
@@ -292,43 +282,71 @@ export function LimitsSection({ access }: { access: Access }) {
   );
 }
 
-function Field({ id, limit, value, changed, valid, onChange }: {
+/**
+ * One limit: what it is on the left, and on the right a value per tier, or a
+ * single one in the second column for a limit that has no tier.
+ */
+function Row({ limit, single = false, children }: { limit: Limit; single?: boolean; children: ReactNode }) {
+  return (
+    <div className="grid gap-3 p-4 sm:grid-cols-[1fr_10rem_10rem] sm:items-center sm:gap-4">
+      <div className="min-w-0">
+        <p className="text-[15px] font-medium">{limit.title}</p>
+        <p className="mt-1 text-[13px] text-slate-500">{limit.note}</p>
+      </div>
+
+      <div className={`grid gap-3 sm:contents ${single ? 'grid-cols-1' : 'grid-cols-2'}`}>{children}</div>
+    </div>
+  );
+}
+
+/** Where a premium lambda has no limit: it stays online and is kept. */
+function Kept() {
+  return (
+    <div>
+      <span className="mb-1 block text-xs text-slate-500 sm:hidden">Premium</span>
+      <p className="py-1.5 text-[13px] text-slate-500">never - kept online</p>
+    </div>
+  );
+}
+
+function Input({ id, label, column, unit, value, changed, valid, onChange }: {
   id: string;
-  limit: Limit;
+  label: string;
+  /** The tier the column is for, said above the field where the columns have no header - on a phone. */
+  column?: string;
+  unit: string;
   value: string;
   changed: boolean;
   valid: boolean;
   onChange: (value: string) => void;
 }) {
-  const hours = limit.unit === 'hours' ? Number(value) : NaN;
+  const hours = unit === 'hours' ? Number(value) : NaN;
 
   return (
-    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <label htmlFor={id} className="flex items-center gap-2 text-[15px] font-medium">
-          {limit.title}
-          {changed && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Changed, not saved yet" />}
-        </label>
-        <p className="mt-1 text-[13px] text-slate-500">{limit.note}</p>
-      </div>
+    <div className="min-w-0">
+      {column && <label htmlFor={id} className="mb-1 block text-xs text-slate-500 sm:hidden">{column}</label>}
 
-      <div className="flex shrink-0 items-center gap-2 sm:w-64">
+      <div className="relative">
         <input
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          inputMode={limit.bytes ? 'decimal' : 'numeric'}
+          inputMode={unit === 'MB' ? 'decimal' : 'numeric'}
           autoComplete="off"
+          aria-label={label}
           aria-invalid={!valid}
+          style={{ paddingRight: `${(unit === '' ? 0.75 : unit.length * 0.5 + 1.4) + (changed ? 0.75 : 0)}rem` }}
           className={`field py-1.5 text-right font-mono text-sm ${valid ? '' : '!border-red-500 !ring-red-500'}`}
         />
-        <span className="w-24 shrink-0 text-[13px] text-slate-500">
-          {limit.unit}
-          {Number.isFinite(hours) && hours >= 48 && (
-            <span className="block text-xs text-slate-400">{Math.round((hours / 24) * 10) / 10} days</span>
-          )}
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center gap-1.5 text-xs text-slate-400">
+          {changed && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Changed, not saved yet" />}
+          {unit}
         </span>
       </div>
+
+      {Number.isFinite(hours) && hours >= 48 && (
+        <span className="mt-1 block text-right text-xs text-slate-400">{Math.round((hours / 24) * 10) / 10} days</span>
+      )}
     </div>
   );
 }
