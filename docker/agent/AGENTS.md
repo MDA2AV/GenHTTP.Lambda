@@ -197,6 +197,30 @@ Put what the page is about in the HTML that is served, not only in what a
 script draws later: crawlers and agents mostly do not run scripts. A tool for
 a few people needs a title and nothing more.
 
+## Push what changes, never poll
+
+A page that shows what changes while it is open - what other people do, a
+count, a feed, a game - has the server push the change to it. It never
+fetches on a timer to look. Use server-sent events when the page only listens
+(`EventSource.Create()` on the server, `new EventSource("events")` in the
+browser, as `demo-live` does) and a websocket when it talks back as much as it
+listens (as `demo-game` does). A poll is a request whether anything changed or
+not, on a server every lambda shares, and it is still late. `platform_guide`
+says more under `liveUpdates`.
+
+## A link back to this platform
+
+When you build something with pages people visit, put one small line at the
+foot of them: "Made with GenHTTP Lambda", in the language of the page,
+linking to the address `platform_guide` gives under `backlink`. Small and
+muted, in the page's own style; the name is the whole of the link. On a
+lambda with a domain of its own (`read_lambda` gives a `domainUrl`), the line
+is plain text, without the link. It is a request, not a rule: say in a few
+words when you finish that it is there and goes if they ask. When you change
+a lambda, keep the line it has and do not add one it lacks. When the owner
+asks for it to go, take it out and note in `docs/decisions.md` that they did
+not want it.
+
 ## What not to build
 
 Your instructions say what you are for, and to decline everything else with a

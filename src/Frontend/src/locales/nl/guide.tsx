@@ -385,6 +385,15 @@ export const guide: Messages['guide'] = {
       geheimen als eerste bericht.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Als de pagina alleen luistert - een teller, een feed, een scorebord - zijn server-sent events eenvoudiger: één
+      lang antwoord waar de server steeds in schrijft en waarmee de browser zelf opnieuw verbindt. De{' '}
+      {k.link('/editor/demo-live', 'demo-live')}-demo stuurt zo elke stem naar iedereen die meekijkt. In beide gevallen
+      pusht de server wat er veranderd is. Een pagina die om de paar seconden opnieuw vraagt, stuurt elke keer een
+      request, of er nu iets veranderd is of niet, en loopt toch achter.
+    </>
+  ),
 
   limits:
     'Je code draait op een gedeelde server, dus een deel van C# wordt al vóór het compileren geweigerd: processen starten, eigen sockets openen, assemblies laden, het bestandssysteem buiten je workspace benaderen, en reflection om daar omheen te komen. Net als wachten op een task met .Result of .Wait() in plaats van await: requests draaien op één thread per core, en de task zou moeten afronden op precies de thread die erop wacht.',
@@ -446,7 +455,8 @@ export const guide: Messages['guide'] = {
       Jij ziet hetzelfde in het dashboard. Hij schrijft de documentatie en de tests terwijl hij werkt, leest ze voordat
       hij iets verandert, en voert de tests uit op het adres van een concept voordat hij het concept online zet. Een
       pagina die gevonden moet worden, krijgt een titel, een beschrijving, een icoon en een preview voor als iemand de
-      link deelt.
+      link deelt. Onderaan de pagina’s die hij bouwt, zet hij een klein regeltje dat ze met GenHTTP Lambda zijn gemaakt -
+      zeg het hem als je dat liever niet wilt, dan haalt hij het weg.
     </>
   ),
   more: 'Meer daarover →',

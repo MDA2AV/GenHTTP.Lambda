@@ -380,6 +380,15 @@ export const guide: Messages['guide'] = {
       envía los secretos en el primer mensaje.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Cuando la página solo escucha (un contador, un feed, un marcador), los server-sent events son más sencillos: una
+      única respuesta larga en la que el servidor sigue escribiendo y que el navegador reconecta por sí solo. La demo{' '}
+      {k.link('/editor/demo-live', 'demo-live')} envía así cada voto a todos los que la están viendo. De un modo u otro,
+      el servidor envía lo que cambió. Una página que vuelve a preguntar cada pocos segundos envía una petición cada vez,
+      haya cambiado algo o no, y aun así llega tarde.
+    </>
+  ),
 
   limits:
     'Tu código se ejecuta en un servidor compartido, así que parte de C# se rechaza antes de compilar: iniciar procesos, abrir tus propios sockets, cargar ensamblados, acceder al sistema de archivos fuera de tu workspace y usar reflexión para saltarte cualquiera de esas reglas. Lo mismo ocurre con esperar una tarea con .Result o .Wait() en lugar de usar await: las peticiones se ejecutan en un hilo por núcleo, y la tarea tendría que terminar en el mismo hilo que la está esperando.',
@@ -441,7 +450,8 @@ export const guide: Messages['guide'] = {
       mismo en el centro de control. Escribe la documentación y las pruebas a medida que trabaja, las lee antes de
       cambiar nada y ejecuta las pruebas contra la dirección de un borrador antes de ponerlo en línea. A una página
       pensada para que la encuentren le pone un título, una descripción, un icono y una vista previa para cuando
-      alguien comparte su enlace.
+      alguien comparte su enlace. Al pie de las páginas que construye añade una línea pequeña que dice que se hicieron
+      con GenHTTP Lambda; dile que prefieres no tenerla y la quita.
     </>
   ),
   more: 'Más sobre esto →',

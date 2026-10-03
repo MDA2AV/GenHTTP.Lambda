@@ -389,6 +389,16 @@ export const guide: Messages['guide'] = {
       envoyez les secrets dans le premier message.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Quand la page se contente d’écouter (un compteur, un fil d’actualité, un tableau des scores), les événements
+      envoyés par le serveur sont plus simples : une seule longue réponse dans laquelle le serveur continue d’écrire, et
+      que le navigateur rouvre tout seul en cas de coupure. La démo{' '}
+      {k.link('/editor/demo-live', 'demo-live')} envoie ainsi chaque vote à tous ceux qui regardent. Dans les deux cas,
+      c’est le serveur qui pousse ce qui a changé. Une page qui redemande toutes les quelques secondes envoie une
+      requête à chaque fois, que quelque chose ait changé ou non, et reste malgré tout en retard.
+    </>
+  ),
 
   limits:
     'Votre code tourne sur un serveur partagé. Une partie de C# est donc refusée avant même la compilation : lancer des processus, ouvrir vos propres sockets, charger des assemblies, accéder au système de fichiers en dehors de votre workspace, et la réflexion utilisée pour contourner tout ça. De même pour l’attente d’une tâche avec .Result ou .Wait() au lieu de await : les requêtes s’exécutent sur un thread par cœur, et la tâche devrait se terminer sur le thread même qui l’attend.',
@@ -452,7 +462,8 @@ export const guide: Messages['guide'] = {
       lieu de le supposer. Vous voyez la même chose dans le tableau de bord. Il rédige aussi la documentation et les
       tests, les lit avant de modifier quoi que ce soit, et lance les tests sur l’adresse d’un brouillon avant de le
       mettre en ligne. Une page destinée à être trouvée reçoit un titre, une description, une icône et un aperçu qui
-      s’affiche quand on partage son lien.
+      s’affiche quand on partage son lien. Au pied des pages qu’il construit, il ajoute une petite ligne indiquant
+      qu’elles ont été réalisées avec GenHTTP Lambda : dites-lui si vous préférez ne pas l’avoir, et il la retire.
     </>
   ),
   more: 'En savoir plus →',

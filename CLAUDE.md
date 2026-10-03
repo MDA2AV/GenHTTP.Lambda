@@ -295,6 +295,41 @@ of it into a lambda's pages; the agent does.
   no shell to run them, and must not get one, since its token is in its
   environment. Do not bring either back without the owner asking.
 
+### Pushing, not polling
+
+Agents are told never to poll: a page does not fetch on a timer to see
+whether something changed. What changes while a page is open is pushed by the
+server - server-sent events where the page only listens (`demo-live`), a
+websocket where it talks back (`demo-game`). A poll is a request whether
+anything changed or not, on a server every lambda shares. This is said in the
+MCP instructions (one line), `platform_guide` (`liveUpdates`), the build
+agent's brief, the README and `/docs` - keep them the same.
+
+### The link back
+
+**Decided by the owner:** agents are asked - not required - to put a small
+"Made with GenHTTP Lambda" line at the foot of the pages they build.
+
+- **A link without a domain, plain text with one.** Below `/lambda/` the line
+  links to the installation's public address (`LAMBDA_PUBLIC_URL`, else the
+  address the agent called) - a link within the same site, which no
+  link-spam policy is about. On a lambda with a domain of its own it is plain
+  text: there it would be a link from another site, and the same link in the
+  footers of many sites is what search engines count as link spam. A lambda
+  whose line links and that gets a domain has it made plain text with its next
+  change.
+
+- **The user may refuse.** The agent says that it added the link, leaves it
+  out or takes it out when asked, and notes in `decisions.md` that it was not
+  wanted, so the next agent does not put it back. A change does not add one to
+  a lambda that has none.
+- **The name and nothing else** as the link's words: no keywords, no badge, no
+  script, nothing hidden.
+- The platform never writes it into a lambda, and nothing checks for it.
+- This is said in the MCP instructions (one line), `platform_guide`
+  (`backlink`), the build agent's brief, the README and `/docs` - keep them
+  the same.
+
 ### Features ("Drafts")
 
 New functionality is developed in a **feature** (a *draft* in the editor):
