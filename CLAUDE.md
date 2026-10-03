@@ -452,6 +452,13 @@ rules that matter:
   talk to the interfaces. `Meta` is the only component that speaks to the
   database, and its public surface is hand-mapped DTOs. Code lives on the file
   system (`Storage`), never in the database.
+- **A service orchestrates, and the concerns it would mix are units of their
+  own - decided in the architecture review.** A protocol, a count, a check:
+  each goes into a class beside the service, in its folder, and the service
+  keeps deciding what is done and in which order. Not a class per method - a
+  unit is a concern somebody can review on its own. The resources still talk
+  to the service. `Services/Building` is the template: `BuildService` over
+  `AgentClient`, `BuildAllowance`, `ModelGate` and `AgentInput`.
 - Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
   misbehaving; **it is not a sandbox.** Do not describe it as one.
 - Database: SQLite, EF Core, migrated by Evolve from `Data/Migrations/V<n>__*.sql`.

@@ -735,6 +735,14 @@ services that the API resources talk to through interfaces:
   `/data/sources/{lambda}`, and `StarGuard` hands out the tickets a star is
   given with and remembers who starred what. Kept apart from Meta like the
   showcase: nothing about building a lambda reads or changes it.
+- **Building** (`Services/Building`) - the jobs of the build agent: builds
+  asked for on `/build` and changes asked for in the editor's Change section.
+  `BuildService` decides what may be asked for and in which order that is
+  checked, and leaves the rest to units of their own: `AgentClient` is the
+  only thing that talks to the agent's runner and holds the shared secret,
+  `BuildAllowance` counts the jobs of each address per day, `ModelGate` says
+  who may have the second model, and `AgentInput` checks the prompt and the
+  language a page sends.
 - **Deployment** (`Services/Deployment`) - wraps a snippet in a method body,
   compiles it with Roslyn, loads the assembly and calls `PrepareAsync()` on
   the resulting handler. Compiled once, then cached - one handler for what a

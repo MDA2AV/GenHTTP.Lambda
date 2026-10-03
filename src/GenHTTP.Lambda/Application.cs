@@ -145,6 +145,9 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<SettingsService>();
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<McpTools>();
+        services.AddSingleton<AgentClient>();
+        services.AddSingleton<BuildAllowance>();
+        services.AddSingleton<ModelGate>();
         services.AddSingleton<BuildService>();
         services.AddSingleton<EventReader>();
         services.AddSingleton<VersionFactsCache>();
