@@ -455,16 +455,64 @@ public sealed class AgentTests
                         "the owner reads why, in the language they asked in");
     }
 
+    [TestMethod]
+    public async Task TheSecondModelIsForWhoeverKnowsItsPassword()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent, fablePassword: "open sesame");
+
+        Assert.IsTrue(await SecondModelOfferedAsync(fixture));
+
+        using var wrong = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", "fable", "open says me"));
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, wrong.StatusCode);
+        Assert.IsEmpty(agent.Received, "refused before the agent is asked");
+
+        using var right = await fixture.SendAsync(HttpMethod.Post, "/api/v1/builds", new BuildRequest("A pub quiz", " Fable ", "open sesame"));
+
+        Assert.AreEqual(HttpStatusCode.Accepted, right.StatusCode);
+        Assert.AreEqual("fable", agent.Received.Single()["model"]!.GetValue<string>());
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        Assert.AreEqual(fixture.Options.AgentBuildsPerDay - 1, (await StateAsync(fixture, lambda.PrivateKey)).Left,
+                        "a wrong password costs nothing");
+    }
+
+    [TestMethod]
+    public async Task WithoutAPasswordThereIsNoSecondModel()
+    {
+        await using var agent = FakeAgent.Start();
+        await using var fixture = await WithAgentAsync(agent);
+
+        Assert.IsFalse(await SecondModelOfferedAsync(fixture));
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        using var guessed = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
+                                                    new ChangeRequest("Add a dark mode", Model: "fable"));
+
+        Assert.AreEqual(HttpStatusCode.Forbidden, guessed.StatusCode, "no password is not an empty one");
+
+        using var unknown = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/agent/start",
+                                                    new ChangeRequest("Add a dark mode", Model: "gpt"));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, unknown.StatusCode);
+
+        Assert.IsEmpty(agent.Received);
+    }
+
     #region Helpers
 
     private const string AdminToken = "the-admin-token";
 
-    private static Task<LambdaFixture> WithAgentAsync(FakeAgent agent, int perDay = 10)
+    private static Task<LambdaFixture> WithAgentAsync(FakeAgent agent, int perDay = 10, string? fablePassword = null)
         => LambdaFixture.CreateAsync(o => o with
         {
             AgentUrl = agent.Url,
             AgentToken = "a secret",
             AgentBuildsPerDay = perDay,
+            AgentFablePassword = fablePassword,
             AdminToken = AdminToken
         });
 
@@ -485,6 +533,15 @@ public sealed class AgentTests
         var platform = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
 
         return platform["build"]!["available"]!.GetValue<bool>();
+    }
+
+    private static async Task<bool> SecondModelOfferedAsync(LambdaFixture fixture)
+    {
+        using var response = await fixture.GetAsync("/api/v1/system");
+
+        var platform = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+
+        return platform["build"]!["secondModel"]!.GetValue<bool>();
     }
 
     private static async Task<AgentState> StateAsync(LambdaFixture fixture, string privateKey)
