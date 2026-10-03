@@ -1291,7 +1291,7 @@ no tier in a block of their own below it.
 A free lambda also goes offline after 720 hours without visits or edits and is
 removed after 2160; a premium one stays online and is kept. Three limits are
 counted per caller rather than per lambda and have no tier: the size of a
-showcase picture (3 MB), requests per second and client to the lambdas (5000),
+showcase picture (3 MB), requests per second and client to the lambdas (250),
 and builds and changes per address and day from the build agent (10).
 
 They are kept in the `settings` table beside the panel's switches, a row each,

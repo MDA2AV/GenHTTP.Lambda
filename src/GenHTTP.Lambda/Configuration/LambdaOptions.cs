@@ -271,7 +271,12 @@ public sealed record LambdaOptions
     /// <summary>
     /// Requests per second a single client may send to the lambda routes.
     /// </summary>
-    public int RateLimit { get; init; } = 5000;
+    /// <remarks>
+    /// Room for a page that loads a few dozen assets at once and a client that
+    /// polls, and well short of one visitor occupying the server. It was five
+    /// thousand, which no person comes near and which stopped nothing.
+    /// </remarks>
+    public int RateLimit { get; init; } = 250;
 
     /// <summary>
     /// How many lambda requests may be executed at the same time.
