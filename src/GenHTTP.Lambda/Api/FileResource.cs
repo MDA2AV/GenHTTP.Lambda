@@ -86,7 +86,7 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     {
         workspace.Delete(meta.RequireEditable(privateKey), path);
 
-        logger.LogInformation("Deleted {Path} from the workspace of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
     }
 
     /// <summary>
@@ -99,14 +99,14 @@ public sealed class FileResource(IMetaService meta, IWorkspaceService workspace,
     {
         var listing = WorkspaceFiles.CreateFolder(workspace, meta.RequireEditable(privateKey), null, path);
 
-        logger.LogInformation("Created the folder {Path} in the workspace of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Created workspace folder {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
 
         return listing;
     }
 
     private WorkspaceEntry Written(string privateKey, WorkspaceEntry written)
     {
-        logger.LogInformation("Wrote {Path} ({Size:N0} bytes) to the workspace of lambda {Lambda}", written.Path, written.Size, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Wrote workspace file {Path} of lambda {Lambda} size {Size}", written.Path, meta.PublicKeyOf(privateKey), written.Size);
 
         return written;
     }

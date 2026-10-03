@@ -97,7 +97,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         database.SaveChanges();
 
-        logger.LogInformation("The source of lambda {LambdaId} is published under {License}", lambda.Id, source.License);
+        logger.LogInformation("Published source of lambda #{LambdaId} license {License}", lambda.Id, source.License);
 
         return Settings(lambda.PublicKey, source);
     }
@@ -117,7 +117,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
             database.SaveChanges();
 
-            logger.LogInformation("The source of lambda {LambdaId} was taken down", lambda.Id);
+            logger.LogInformation("Unpublished source of lambda #{LambdaId}", lambda.Id);
         }
 
         // nobody may read it any more, so there is nothing to keep it packed for
@@ -396,7 +396,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         }
         catch (IOException e)
         {
-            logger.LogWarning(e, "The documentation of version {Version} of lambda {LambdaId} could not be read", version, row.Id);
+            logger.LogWarning(e, "Failed to read documentation of lambda #{LambdaId} version {Version}", row.Id, version);
             return row.About;
         }
 

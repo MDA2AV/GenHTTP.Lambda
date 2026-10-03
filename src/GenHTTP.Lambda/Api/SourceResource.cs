@@ -216,7 +216,7 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     {
         var archive = await RequireAsync(publicKey, version);
 
-        logger.LogInformation("Downloaded version {Version} of the published source of lambda {Lambda}", version, publicKey);
+        logger.LogInformation("Downloaded source of lambda {Lambda} version {Version}", publicKey, version);
 
         return request.Respond()
                       .Content(Resource.FromFile(archive.File).Type(new ContentType("application/zip")).Build())
@@ -266,11 +266,11 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
 
         if (starred)
         {
-            logger.LogInformation("Starred the source of lambda {Lambda}, which has {Stars} star(s) now", publicKey, count);
+            logger.LogInformation("Starred source of lambda {Lambda} stars {Stars}", publicKey, count);
         }
         else
         {
-            logger.LogInformation("Took back a star of the source of lambda {Lambda}, which has {Stars} star(s) now", publicKey, count);
+            logger.LogInformation("Unstarred source of lambda {Lambda} stars {Stars}", publicKey, count);
         }
 
         return new StarResponse(count, starred, true);

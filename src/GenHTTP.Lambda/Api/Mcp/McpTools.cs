@@ -545,7 +545,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var lambda = meta.Create(Text(arguments, "publicKey"), Text(arguments, "template"), view);
 
-        logger.LogInformation("Created lambda {Lambda} from template {Template}, opening in the {View} view", lambda.PublicKey,
+        logger.LogInformation("Created lambda {Lambda} template {Template} view {View}", lambda.PublicKey,
                               Text(arguments, "template") ?? "(none)", lambda.View);
 
         return McpProtocol.Say(new
@@ -569,7 +569,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var lambda = meta.ChangeView(privateKey, view);
 
-        logger.LogInformation("Set the editor of lambda {Lambda} to open in the {View} view", lambda.PublicKey, lambda.View);
+        logger.LogInformation("Set view of lambda {Lambda} to {View}", lambda.PublicKey, lambda.View);
 
         return McpProtocol.Say(new
         {
@@ -662,7 +662,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var version = meta.Save(privateKey, code, note);
 
-        logger.LogInformation("Saved version {Version} of lambda {Lambda} with {Files} file(s)", version.Version, meta.PublicKeyOf(privateKey), files.Count);
+        logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", meta.PublicKeyOf(privateKey), version.Version, files.Count);
 
         // said only when it is missing, and as a request rather than a
         // refusal: the code matters more than the note about it
@@ -716,7 +716,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         var saved = features.Save(privateKey, feature, code, note, read);
 
-        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} with {Files} file(s)", saved.Name, meta.PublicKeyOf(privateKey), files);
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, meta.PublicKeyOf(privateKey), files);
 
         if (Flag(arguments, "deploy") == true)
         {
@@ -762,7 +762,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var outcome = await meta.CheckAsync(privateKey, LambdaSource.Serialize(files));
 
-        logger.LogInformation("Checked {Files} file(s) for lambda {Lambda}, which compile: {Compiles}", files.Count, meta.PublicKeyOf(privateKey), outcome.Success);
+        logger.LogInformation("Checked code of lambda {Lambda} files {Files} compiles {Compiles}", meta.PublicKeyOf(privateKey), files.Count, outcome.Success);
 
         return McpProtocol.Say(new
         {
@@ -783,7 +783,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var created = await features.CreateAsync(privateKey, new FeatureDraft(Text(arguments, "name"), Text(arguments, "specification"),
                                                                               Number(arguments, "base"), VersionOrigins.Agent));
 
-        logger.LogInformation("Started feature '{Feature}' of lambda {Lambda} from version {Version}", created.Name, meta.PublicKeyOf(privateKey), created.Base);
+        logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, meta.PublicKeyOf(privateKey), created.Base);
 
         return McpProtocol.Say(new
         {
@@ -801,7 +801,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                                                  new FeatureUpdate(Text(arguments, "name"), Text(arguments, "specification"), Text(arguments, "change"),
                                                                    Number(arguments, "base")));
 
-        logger.LogInformation("Changed feature '{Feature}' of lambda {Lambda}, based on version {Version}", updated.Name, meta.PublicKeyOf(privateKey), updated.Base);
+        logger.LogInformation("Updated feature '{Feature}' of lambda {Lambda} base {Version}", updated.Name, meta.PublicKeyOf(privateKey), updated.Base);
 
         return McpProtocol.Say(new
         {
@@ -819,19 +819,17 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
 
-        var name = features.NameOf(privateKey, Required(arguments, "feature"));
-
         var merged = await features.MergeAsync(privateKey, Required(arguments, "feature"), note, Flag(arguments, "deploy") == true);
 
         var publicKey = meta.PublicKeyOf(privateKey);
 
         if (merged.Merged)
         {
-            logger.LogInformation("Merged feature '{Feature}' of lambda {Lambda} as version {Version}", name, publicKey, merged.Version?.Version);
+            logger.LogInformation("Merged feature '{Feature}' of lambda {Lambda} as version {Version}", merged.Name, publicKey, merged.Version?.Version);
         }
         else
         {
-            logger.LogInformation("Feature '{Feature}' of lambda {Lambda} was not merged: its code does not compile", name, publicKey);
+            logger.LogInformation("Failed to merge feature '{Feature}' of lambda {Lambda}", merged.Name, publicKey);
         }
 
         if (merged.Deployment is { } online)
@@ -898,9 +896,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var privateKey = Required(arguments, "privateKey");
 
-        var name = features.NameOf(privateKey, feature);
-
-        features.Delete(privateKey, feature);
+        var name = features.Delete(privateKey, feature);
 
         logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, meta.PublicKeyOf(privateKey));
 
@@ -1018,7 +1014,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var written = await workspace.WriteAsync(id, path, stream, featureId: feature);
 
-        logger.LogInformation("Wrote {Path} ({Size:N0} bytes) to the workspace of {Owner}", written.Path, written.Size, OwnerOf(privateKey, Text(arguments, "feature")));
+        if (Text(arguments, "feature") is { } named)
+        {
+            logger.LogInformation("Wrote workspace file {Path} of feature '{Feature}' of lambda {Lambda} size {Size}", written.Path,
+                                  features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey), written.Size);
+        }
+        else
+        {
+            logger.LogInformation("Wrote workspace file {Path} of lambda {Lambda} size {Size}", written.Path, meta.PublicKeyOf(privateKey), written.Size);
+        }
 
         return McpProtocol.Say(new
         {
@@ -1039,7 +1043,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var listing = workspace.List(id, feature);
 
-        logger.LogInformation("Listed the workspace of {Owner}", OwnerOf(privateKey, Text(arguments, "feature")));
+        if (Text(arguments, "feature") is { } named)
+        {
+            logger.LogInformation("Listed workspace of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
+        }
+        else
+        {
+            logger.LogInformation("Listed workspace of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+        }
 
         return McpProtocol.Say(new
         {
@@ -1060,7 +1071,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var store = data.Enable(privateKey, Required(arguments, "kind"));
 
-        logger.LogInformation("Switched the {Kind} of lambda {Lambda} on", store.Kind, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
 
         return McpProtocol.Say(new
         {
@@ -1092,7 +1103,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var stored = secrets.Set(privateKey, Required(arguments, "name"), Required(arguments, "value"), feature);
 
         // the name only - the value is not repeated anywhere, here least of all
-        logger.LogInformation("Set the secret {Name} of {Owner}", stored.Name, OwnerOf(privateKey, feature));
+        if (feature != null)
+        {
+            logger.LogInformation("Set secret {Name} of feature '{Feature}' of lambda {Lambda}", stored.Name, features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+        }
+        else
+        {
+            logger.LogInformation("Set secret {Name} of lambda {Lambda}", stored.Name, meta.PublicKeyOf(privateKey));
+        }
 
         return McpProtocol.Say(new
         {
@@ -1113,7 +1131,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var listing = secrets.List(privateKey, Text(arguments, "feature"));
 
-        logger.LogInformation("Listed the secrets of {Owner}", OwnerOf(privateKey, Text(arguments, "feature")));
+        if (Text(arguments, "feature") is { } named)
+        {
+            logger.LogInformation("Listed secrets of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
+        }
+        else
+        {
+            logger.LogInformation("Listed secrets of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+        }
 
         return McpProtocol.Say(new
         {
@@ -1145,7 +1170,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var table = Text(arguments, "table");
 
-        logger.LogInformation("Read the database of {Owner}, table {Table}", OwnerOf(privateKey, feature), table ?? "(all)");
+        if (feature != null)
+        {
+            logger.LogInformation("Read database of feature '{Feature}' of lambda {Lambda} table {Table}", features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey),
+                                  table ?? "(all)");
+        }
+        else
+        {
+            logger.LogInformation("Read database of lambda {Lambda} table {Table}", meta.PublicKeyOf(privateKey), table ?? "(all)");
+        }
 
         if (table == null)
         {
@@ -1201,7 +1234,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         secrets.Delete(privateKey, name, feature);
 
-        logger.LogInformation("Deleted the secret {Name} of {Owner}", name.Trim(), OwnerOf(privateKey, feature));
+        if (feature != null)
+        {
+            logger.LogInformation("Deleted secret {Name} of feature '{Feature}' of lambda {Lambda}", name.Trim(), features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+        }
+        else
+        {
+            logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
+        }
 
         return McpProtocol.Say(new { ok = true, deleted = name.Trim() });
     }
@@ -1216,19 +1256,17 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         workspace.Delete(id, path, feature);
 
-        logger.LogInformation("Deleted {Path} from the workspace of {Owner}", path, OwnerOf(privateKey, Text(arguments, "feature")));
+        if (Text(arguments, "feature") is { } named)
+        {
+            logger.LogInformation("Deleted workspace path {Path} of feature '{Feature}' of lambda {Lambda}", path, features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
+        }
+        else
+        {
+            logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
+        }
 
         return McpProtocol.Say(new { ok = true, path });
     }
-
-    /// <summary>
-    /// Whose data a call is about, to name it in a log line: the lambda, or a
-    /// feature of it.
-    /// </summary>
-    private string OwnerOf(string privateKey, string? feature)
-        => feature == null
-         ? $"lambda {meta.PublicKeyOf(privateKey)}"
-         : $"feature '{features.NameOf(privateKey, feature)}' of lambda {meta.PublicKeyOf(privateKey)}";
 
     /// <summary>
     /// The workspace a call is about: the lambda's own, or a feature's copy.
@@ -1374,7 +1412,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var lambda = meta.Get(privateKey);
 
-        logger.LogInformation("Read the logs of {Owner}", OwnerOf(privateKey, feature));
+        if (feature != null)
+        {
+            logger.LogInformation("Read logs of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+        }
+        else
+        {
+            logger.LogInformation("Read logs of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+        }
 
         var since = arguments.TryGetPropertyValue("since", out var cursor) && cursor is JsonValue value && value.TryGetValue<long>(out var from)
                   ? from
@@ -1486,7 +1531,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         }
         else
         {
-            logger.LogInformation("Read version {Version} of lambda {Lambda}", version?.ToString() ?? "(none)", lambda.PublicKey);
+            logger.LogInformation("Read lambda {Lambda} version {Version}", lambda.PublicKey, version?.ToString() ?? "(none)");
         }
 
         // whose code is public, which changes what may be written into it
@@ -1764,7 +1809,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             showcases.Remove(privateKey);
 
-            logger.LogInformation("Took lambda {Lambda} out of the showcase", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
 
             return McpProtocol.Say(new { ok = true, showcased = false });
         }
@@ -1779,7 +1824,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             entry = showcases.Get(privateKey);
 
-            logger.LogInformation("Read the showcase entry of lambda {Lambda}", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read showcase entry of lambda {Lambda}", meta.PublicKeyOf(privateKey));
         }
         else
         {
@@ -1802,7 +1847,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
             entry = showcases.Save(privateKey, new ShowcaseDraft(title ?? current?.Title, description ?? current?.Description, image));
 
-            logger.LogInformation("Put lambda {Lambda} into the showcase as '{Title}'", entry.PublicKey, entry.Title);
+            logger.LogInformation("Added lambda {Lambda} to showcase as '{Title}'", entry.PublicKey, entry.Title);
         }
 
         if (entry == null)
@@ -1844,7 +1889,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             source = sources.Withdraw(privateKey);
 
-            logger.LogInformation("Took the source of lambda {Lambda} down", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
 
             return McpProtocol.Say(new
             {
@@ -1862,13 +1907,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             source = sources.Get(privateKey);
 
-            logger.LogInformation("Read whether the source of lambda {Lambda} is published", meta.PublicKeyOf(privateKey));
+            logger.LogInformation("Read source status of lambda {Lambda}", meta.PublicKeyOf(privateKey));
         }
         else
         {
             source = sources.Publish(privateKey, new SourceDraft(license, author));
 
-            logger.LogInformation("Published the source of lambda {Lambda} under {License}", source.PublicKey, source.License);
+            logger.LogInformation("Published source of lambda {Lambda} license {License}", source.PublicKey, source.License);
         }
 
         if (source is not { Published: true })
@@ -1901,7 +1946,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private JsonObject ListDemos(string origin)
     {
-        logger.LogInformation("Listed the demos");
+        logger.LogInformation("Listed demos");
 
         return Demos(origin);
     }
@@ -1941,7 +1986,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     private JsonObject ReadGuide()
     {
-        logger.LogInformation("Read the platform guide");
+        logger.LogInformation("Read platform guide");
 
         return Guide();
     }

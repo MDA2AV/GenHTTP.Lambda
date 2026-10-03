@@ -70,7 +70,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
 
         var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code));
 
-        logger.LogInformation("Downloaded version {Version} of lambda {Lambda} as a zip archive", version, lambda.PublicKey);
+        logger.LogInformation("Downloaded lambda {Lambda} version {Version}", lambda.PublicKey, version);
 
         return request.Respond()
                       .Content(zip, new ContentType("application/zip"))
@@ -143,7 +143,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
 
         var publicKey = meta.PublicKeyOf(privateKey);
 
-        logger.LogInformation("Saved version {Version} of lambda {Lambda} with {Files} file(s)", version.Version, publicKey, files!.Count);
+        logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", publicKey, version.Version, files!.Count);
 
         DeploymentOutcomeResponse? deployment = null;
 

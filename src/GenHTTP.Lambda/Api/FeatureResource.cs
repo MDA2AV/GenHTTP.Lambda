@@ -63,7 +63,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var created = await features.CreateAsync(privateKey, new FeatureDraft(request.Name, request.Specification, request.Base, VersionOrigins.Api));
 
-        logger.LogInformation("Started feature '{Feature}' of lambda {Lambda} from version {Version}", created.Name, meta.PublicKeyOf(privateKey), created.Base);
+        logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, meta.PublicKeyOf(privateKey), created.Base);
 
         return new Result<FeatureResponse>(Describe(created)).Status(ResponseStatus.Created);
     }
@@ -93,7 +93,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var updated = features.Update(privateKey, feature, new FeatureUpdate(request.Name, request.Specification, request.Change, request.Base));
 
-        logger.LogInformation("Changed feature '{Feature}' of lambda {Lambda}, based on version {Version}", updated.Name, meta.PublicKeyOf(privateKey), updated.Base);
+        logger.LogInformation("Updated feature '{Feature}' of lambda {Lambda} base {Version}", updated.Name, meta.PublicKeyOf(privateKey), updated.Base);
 
         return Describe(updated);
     }
@@ -104,9 +104,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/features/:feature")]
     public void Delete(string privateKey, string feature)
     {
-        var name = features.NameOf(privateKey, feature);
-
-        features.Delete(privateKey, feature);
+        var name = features.Delete(privateKey, feature);
 
         logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, meta.PublicKeyOf(privateKey));
     }
@@ -149,7 +147,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var zip = LambdaArchive.Pack(LambdaSource.Parse(found.Code));
 
-        logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} as a zip archive", found.Feature.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda}", found.Feature.Name, meta.PublicKeyOf(privateKey));
 
         return request.Respond()
                       .Content(zip, new ContentType("application/zip"))
@@ -211,7 +209,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var stopped = features.Undeploy(privateKey, feature);
 
-        logger.LogInformation("Took the preview of feature '{Feature}' of lambda {Lambda} offline", stopped.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Undeployed feature '{Feature}' of lambda {Lambda}", stopped.Name, meta.PublicKeyOf(privateKey));
 
         return Describe(stopped);
     }
@@ -261,7 +259,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var refreshed = await features.RefreshDataAsync(privateKey, feature);
 
-        logger.LogInformation("Gave feature '{Feature}' of lambda {Lambda} a fresh copy of the data", refreshed.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Refreshed data of feature '{Feature}' of lambda {Lambda}", refreshed.Name, meta.PublicKeyOf(privateKey));
 
         return Describe(refreshed);
     }
@@ -286,19 +284,17 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var note = new VersionNote(request?.Specification, request?.Change, VersionOrigins.Api);
 
-        var name = features.NameOf(privateKey, feature);
-
         var merged = await features.MergeAsync(privateKey, feature, note, request?.Deploy == true);
 
         var publicKey = meta.PublicKeyOf(privateKey);
 
         if (merged.Merged)
         {
-            logger.LogInformation("Merged feature '{Feature}' of lambda {Lambda} as version {Version}", name, publicKey, merged.Version?.Version);
+            logger.LogInformation("Merged feature '{Feature}' of lambda {Lambda} as version {Version}", merged.Name, publicKey, merged.Version?.Version);
         }
         else
         {
-            logger.LogInformation("Feature '{Feature}' of lambda {Lambda} was not merged: its code does not compile", name, publicKey);
+            logger.LogInformation("Failed to merge feature '{Feature}' of lambda {Lambda}", merged.Name, publicKey);
         }
 
         if (merged.Deployment is { } online)
@@ -327,7 +323,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var publicKey = meta.PublicKeyOf(privateKey);
 
-        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} with {Files} file(s)", saved.Name, publicKey, files!.Count);
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, publicKey, files!.Count);
 
         FeaturePreviewResponse? preview = null;
 

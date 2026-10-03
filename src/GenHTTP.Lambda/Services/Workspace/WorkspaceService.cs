@@ -145,7 +145,14 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
             throw;
         }
 
-        logger.LogInformation("Workspace of lambda {LambdaId} (feature {FeatureId}) received '{Path}'", lambdaId, featureId, path);
+        if (featureId != null)
+        {
+            logger.LogInformation("Wrote workspace file {Path} of feature #{FeatureId} of lambda #{LambdaId}", path, featureId, lambdaId);
+        }
+        else
+        {
+            logger.LogInformation("Wrote workspace file {Path} of lambda #{LambdaId}", path, lambdaId);
+        }
 
         var info = new FileInfo(resolved);
 
@@ -179,7 +186,14 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
         Directory.CreateDirectory(resolved);
 
-        logger.LogInformation("Workspace of lambda {LambdaId} gained folder '{Path}'", lambdaId, path);
+        if (featureId != null)
+        {
+            logger.LogInformation("Created workspace folder {Path} of feature #{FeatureId} of lambda #{LambdaId}", path, featureId, lambdaId);
+        }
+        else
+        {
+            logger.LogInformation("Created workspace folder {Path} of lambda #{LambdaId}", path, lambdaId);
+        }
     }
 
     public void Delete(long lambdaId, string path, long? featureId = null)
@@ -198,7 +212,14 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
             Delete(entry);
         }
 
-        logger.LogInformation("Workspace of lambda {LambdaId} (feature {FeatureId}) was emptied", lambdaId, featureId);
+        if (featureId != null)
+        {
+            logger.LogInformation("Cleared workspace of feature #{FeatureId} of lambda #{LambdaId}", featureId, lambdaId);
+        }
+        else
+        {
+            logger.LogInformation("Cleared workspace of lambda #{LambdaId}", lambdaId);
+        }
     }
 
     /// <summary>

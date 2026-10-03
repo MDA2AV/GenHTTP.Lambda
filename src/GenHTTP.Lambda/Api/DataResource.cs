@@ -61,7 +61,7 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     {
         var store = data.Enable(privateKey, kind);
 
-        logger.LogInformation("Switched the {Kind} of lambda {Lambda} on", store.Kind, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
 
         return Describe(store);
     }
@@ -79,7 +79,7 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
     {
         var store = data.Disable(privateKey, kind);
 
-        logger.LogInformation("Switched the {Kind} of lambda {Lambda} off, deleting what it held", store.Kind, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Disabled and deleted {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
 
         return Describe(store);
     }

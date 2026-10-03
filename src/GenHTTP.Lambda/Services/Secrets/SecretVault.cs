@@ -397,7 +397,7 @@ public sealed partial class SecretVault(IDbContextFactory<LambdaDbContext> datab
         catch (Exception e)
         {
             // the check is a courtesy; reading the secrets says the same thing later
-            logger.LogWarning(e, "Could not check which key the secrets were sealed with");
+            logger.LogWarning(e, "Failed to check which key the secrets were sealed with");
         }
     }
 

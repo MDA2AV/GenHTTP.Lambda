@@ -115,7 +115,7 @@ public sealed class FileSystemStorageService : IStorageService
         // removing one here would break the compilation of every handler that
         // follows. The next start of the server wipes the directory instead.
 
-        Logger.LogInformation("Removed stored content of lambda {LambdaId}", lambdaId);
+        Logger.LogInformation("Removed storage of lambda #{LambdaId}", lambdaId);
     }
 
     public string GetWorkspace(long lambdaId, long? featureId = null)

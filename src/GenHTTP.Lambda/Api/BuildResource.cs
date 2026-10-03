@@ -42,7 +42,7 @@ public sealed class BuildResource(BuildService builds, ILogger<BuildResource> lo
 
         // the one argument logged in full however long it is: what people ask
         // to have built is what the operator most needs to know
-        logger.LogInformation("Started build {Build} with the {Model} model: {Prompt}", started.Id, body?.Model ?? "default", body?.Prompt?.Trim());
+        logger.LogInformation("Started build {Build} model {Model} prompt {Prompt}", started.Id, body?.Model ?? "default", body?.Prompt?.Trim());
 
         return new Result<BuildStarted>(started).Status(ResponseStatus.Accepted);
     }

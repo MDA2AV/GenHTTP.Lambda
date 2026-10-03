@@ -126,7 +126,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var changed = meta.ChangeTier(privateKey, ParseTier(body.Tier));
 
-        logger.LogInformation("The operator moved lambda {Lambda} to the {Tier} tier", changed.PublicKey, changed.Tier);
+        logger.LogInformation("Set tier of lambda {Lambda} to {Tier} by operator", changed.PublicKey, changed.Tier);
 
         return Detail(privateKey);
     }
@@ -142,7 +142,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var changed = meta.ChangeDomain(privateKey, body.Domain);
 
-        logger.LogInformation("The operator set the domain of lambda {Lambda} to {Domain}", changed.PublicKey, changed.Domain ?? "(none)");
+        logger.LogInformation("Set domain of lambda {Lambda} to {Domain} by operator", changed.PublicKey, changed.Domain ?? "(none)");
 
         return Detail(privateKey);
     }
@@ -176,7 +176,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         var lambda = meta.Undeploy(meta.RequirePrivateKey(publicKey), ActivationEndings.Admin);
 
-        logger.LogInformation("The operator took lambda {Lambda} offline", lambda.PublicKey);
+        logger.LogInformation("Undeployed lambda {Lambda} by operator", lambda.PublicKey);
 
         return Summarize(lambda);
     }
@@ -190,7 +190,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         meta.Delete(meta.RequirePrivateKey(publicKey));
 
-        logger.LogInformation("The operator deleted lambda {Lambda}", publicKey);
+        logger.LogInformation("Deleted lambda {Lambda} by operator", publicKey);
     }
 
     #endregion
@@ -216,7 +216,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
     {
         var saved = settings.Save(new SiteSettings(body.EnterprisePage, body.BuildBox, body.ChangeBox));
 
-        logger.LogInformation("The operator changed the settings: enterprise page {EnterprisePage}, build box {BuildBox}, change box {ChangeBox}",
+        logger.LogInformation("Updated settings enterprisePage {EnterprisePage} buildBox {BuildBox} changeBox {ChangeBox} by operator",
                               saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
 
         return new SettingsModel(saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);

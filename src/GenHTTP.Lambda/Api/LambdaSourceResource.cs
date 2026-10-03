@@ -50,7 +50,7 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
     {
         var source = sources.Publish(privateKey, new SourceDraft(request.License, request.Author));
 
-        logger.LogInformation("Published the source of lambda {Lambda} under {License}", source.PublicKey, source.License);
+        logger.LogInformation("Published source of lambda {Lambda} license {License}", source.PublicKey, source.License);
 
         return SourceSettingsResponse.Of(source);
     }
@@ -65,7 +65,7 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
     {
         var source = sources.Withdraw(privateKey);
 
-        logger.LogInformation("Took the source of lambda {Lambda} down", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
     }
 
 }

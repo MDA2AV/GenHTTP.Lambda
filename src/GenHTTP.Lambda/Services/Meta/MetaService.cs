@@ -168,7 +168,7 @@ public sealed class MetaService : IMetaService
 
         database.SaveChanges();
 
-        Logger.LogInformation("Lambda {LambdaId} moved from '{Previous}' to '{Current}'", lambda.Id, previous, normalized);
+        Logger.LogInformation("Changed public key of lambda #{LambdaId} from {Previous} to {Lambda}", lambda.Id, previous, normalized);
 
         return Describe(database, lambda);
     }
@@ -190,8 +190,8 @@ public sealed class MetaService : IMetaService
 
             database.SaveChanges();
 
-            Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' now opens in the {Current} view rather than the {Previous} one",
-                                  lambda.Id, lambda.PublicKey, view, previous);
+            Logger.LogInformation("Changed view of lambda {Lambda} #{LambdaId} from {Previous} to {View}",
+                                  lambda.PublicKey, lambda.Id, previous, view);
         }
 
         return Describe(database, lambda);
@@ -232,8 +232,8 @@ public sealed class MetaService : IMetaService
             // take one on or off the air without the domain itself changing
             Domains.Reload();
 
-            Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' moved from the {Previous} to the {Current} tier",
-                                  lambda.Id, lambda.PublicKey, previous, tier);
+            Logger.LogInformation("Changed tier of lambda {Lambda} #{LambdaId} from {Previous} to {Tier}",
+                                  lambda.PublicKey, lambda.Id, previous, tier);
         }
 
         return Describe(database, lambda);
@@ -289,8 +289,8 @@ public sealed class MetaService : IMetaService
 
         Domains.Reload();
 
-        Logger.LogInformation("Lambda {LambdaId} at '{PublicKey}' changed its domain from '{Previous}' to '{Current}'",
-                              lambda.Id, lambda.PublicKey, previous ?? "-", normalized ?? "-");
+        Logger.LogInformation("Changed domain of lambda {Lambda} #{LambdaId} from {Previous} to {Domain}",
+                              lambda.PublicKey, lambda.Id, previous ?? "(none)", normalized ?? "(none)");
 
         return Describe(database, lambda);
     }
@@ -407,7 +407,7 @@ public sealed class MetaService : IMetaService
                 DatabaseVault.Create(entity.Id);
             }
 
-            Logger.LogInformation("Created lambda {LambdaId} at '{PublicKey}'", entity.Id, entity.PublicKey);
+            Logger.LogInformation("Created lambda {Lambda} #{LambdaId}", entity.PublicKey, entity.Id);
 
             return Describe(database, entity);
         }
@@ -425,7 +425,7 @@ public sealed class MetaService : IMetaService
 
         Remove(database, lambda);
 
-        Logger.LogInformation("Deleted lambda {LambdaId} at '{PublicKey}'", lambda.Id, lambda.PublicKey);
+        Logger.LogInformation("Deleted lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
     }
 
     #endregion
@@ -549,7 +549,7 @@ public sealed class MetaService : IMetaService
 
         var version = Append(database, lambda, code, DateTime.UtcNow, note);
 
-        Logger.LogInformation("Saved version {Version} of lambda {LambdaId}", version.Version, lambda.Id);
+        Logger.LogInformation("Saved lambda #{LambdaId} version {Version}", lambda.Id, version.Version);
 
         return version;
     }
@@ -643,7 +643,7 @@ public sealed class MetaService : IMetaService
 
         if (!outcome.Success)
         {
-            Logger.LogInformation("Deployment of lambda {LambdaId} was rejected with {Count} error(s)", lambda.Id, outcome.Diagnostics.Count);
+            Logger.LogInformation("Rejected deployment of lambda #{LambdaId} errors {Count}", lambda.Id, outcome.Diagnostics.Count);
 
             return new DeploymentResult(false, Describe(database, lambda), outcome.Diagnostics);
         }
@@ -702,7 +702,7 @@ public sealed class MetaService : IMetaService
 
             Deployments.Evict(lambda.Id);
 
-            Logger.LogInformation("Undeployed lambda {LambdaId} at '{PublicKey}'", lambda.Id, lambda.PublicKey);
+            Logger.LogInformation("Undeployed lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
         }
 
         return Describe(database, lambda);
@@ -844,7 +844,7 @@ public sealed class MetaService : IMetaService
 
         if (undeployed > 0 || expired.Count > 0)
         {
-            Logger.LogInformation("Maintenance undeployed {Undeployed} and deleted {Deleted} lambda(s)", undeployed, expired.Count);
+            Logger.LogInformation("Undeployed {Undeployed} and deleted {Deleted} lambda(s) by maintenance", undeployed, expired.Count);
         }
 
         return new MaintenanceReport(undeployed, expired.Count);

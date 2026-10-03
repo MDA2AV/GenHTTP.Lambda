@@ -95,7 +95,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
 
         workspace.Delete(lambdaId, path, featureId);
 
-        logger.LogInformation("Deleted {Path} from the workspace of feature '{Feature}' of lambda {Lambda}", path,
+        logger.LogInformation("Deleted workspace path {Path} of feature '{Feature}' of lambda {Lambda}", path,
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
     }
 
@@ -111,7 +111,7 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
 
         var listing = WorkspaceFiles.CreateFolder(workspace, lambdaId, featureId, path);
 
-        logger.LogInformation("Created the folder {Path} in the workspace of feature '{Feature}' of lambda {Lambda}", path,
+        logger.LogInformation("Created workspace folder {Path} of feature '{Feature}' of lambda {Lambda}", path,
                               features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
 
         return listing;
@@ -119,8 +119,8 @@ public sealed class FeatureWorkspaceResource(IFeatureService features, IWorkspac
 
     private WorkspaceEntry Written(string privateKey, string feature, WorkspaceEntry written)
     {
-        logger.LogInformation("Wrote {Path} ({Size:N0} bytes) to the workspace of feature '{Feature}' of lambda {Lambda}", written.Path, written.Size,
-                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Wrote workspace file {Path} of feature '{Feature}' of lambda {Lambda} size {Size}", written.Path,
+                              features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey), written.Size);
 
         return written;
     }

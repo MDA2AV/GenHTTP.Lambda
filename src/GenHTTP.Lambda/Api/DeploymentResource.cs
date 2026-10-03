@@ -62,7 +62,7 @@ public sealed class DeploymentResource(IMetaService meta, ILogger<DeploymentReso
     {
         var lambda = meta.Undeploy(privateKey, ActivationEndings.Stopped);
 
-        logger.LogInformation("Took lambda {Lambda} offline", lambda.PublicKey);
+        logger.LogInformation("Undeployed lambda {Lambda}", lambda.PublicKey);
 
         return LambdaDescription.Of(lambda);
     }

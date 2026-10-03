@@ -53,7 +53,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
             {
                 // one demo that will not compile is not a reason for the
                 // installation to be without the others
-                logger.LogWarning(e, "The demo '{Demo}' could not be prepared", demo.Id);
+                logger.LogWarning(e, "Failed to prepare demo {Demo}", demo.Id);
             }
         }
 
@@ -94,11 +94,11 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
                 meta.Delete(lambda.PrivateKey);
 
-                logger.LogInformation("Retired the demo at '{Key}', which is no longer one", lambda.PublicKey);
+                logger.LogInformation("Retired demo {Lambda}", lambda.PublicKey);
             }
             catch (Exception e)
             {
-                logger.LogWarning(e, "The retired demo at '{Key}' could not be removed", lambda.PublicKey);
+                logger.LogWarning(e, "Failed to remove retired demo {Lambda}", lambda.PublicKey);
             }
         }
     }
@@ -138,7 +138,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
             if (current != null)
             {
-                logger.LogInformation("The demo '{Demo}' was behind its template and has been updated", demo.Id);
+                logger.LogInformation("Updated demo {Demo} from its template", demo.Id);
             }
         }
 
@@ -182,14 +182,14 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
             database.SaveChanges();
 
-            logger.LogInformation("Created the demo '{Demo}'", demo.Id);
+            logger.LogInformation("Created demo {Demo}", demo.Id);
 
             return true;
         }
 
         if (entity.Tier != LambdaTier.Demo)
         {
-            logger.LogWarning("The key of the demo '{Demo}' belongs to another lambda, so the demo is not set up", demo.Id);
+            logger.LogWarning("Skipped demo {Demo}, its key belongs to another lambda", demo.Id);
 
             return false;
         }
@@ -246,7 +246,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
         {
             secrets.Store(id, null, name, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
 
-            logger.LogInformation("Gave the demo '{Demo}' the secret {Name}", demo.Id, name);
+            logger.LogInformation("Set secret {Name} of demo {Demo}", name, demo.Id);
         }
     }
 
@@ -292,7 +292,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         stores.Invalidate(id);
 
-        logger.LogInformation("Gave the demo '{Demo}' a database", demo.Id);
+        logger.LogInformation("Created database of demo {Demo}", demo.Id);
     }
 
     /// <summary>
@@ -322,7 +322,7 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         database.SaveChanges();
 
-        logger.LogInformation("Published the source of the demo '{Demo}' under {License}", demo.Id, demo.License);
+        logger.LogInformation("Published source of demo {Demo} license {License}", demo.Id, demo.License);
     }
 
     /// <summary>
