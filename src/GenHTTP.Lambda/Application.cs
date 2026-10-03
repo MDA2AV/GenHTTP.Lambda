@@ -104,8 +104,16 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton(options);
 
+        /*
+         * A shared class that its own folder takes as itself is registered
+         * twice, as itself and as the interface every other folder takes it
+         * by, both answered with the one instance. Taking the class itself
+         * from another folder is refused by ServiceBoundaryTests.
+         */
         services.AddSingleton(book);
+        services.AddSingleton<ILogBook>(book);
         services.AddSingleton(runs);
+        services.AddSingleton<IRunLog>(runs);
         services.AddSingleton<ConsoleCapture>();
         services.AddSingleton<StringPool>();
         services.AddSingleton<GeoTable>();
@@ -124,12 +132,15 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<ServerRegistry>();
 
         services.AddSingleton<DomainRegistry>();
+        services.AddSingleton<IDomainRegistry>(provider => provider.GetRequiredService<DomainRegistry>());
         services.AddSingleton<LambdaThrottle>();
         services.AddSingleton<LambdaRateLimiter>();
 
         services.AddSingleton<SecretCipher>();
         services.AddSingleton<SecretVault>();
+        services.AddSingleton<ISecretVault>(provider => provider.GetRequiredService<SecretVault>());
         services.AddSingleton<DatabaseVault>();
+        services.AddSingleton<IDatabaseVault>(provider => provider.GetRequiredService<DatabaseVault>());
         services.AddSingleton<IStorageService, FileSystemStorageService>();
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<LambdaHistory>();
@@ -147,14 +158,14 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<SourceCache>();
         services.AddSingleton<StarGuard>();
         services.AddSingleton<ISourceService, SourceService>();
-        services.AddSingleton<SettingsService>();
-        services.AddSingleton<LimitsService>();
+        services.AddSingleton<ISettingsService, SettingsService>();
+        services.AddSingleton<ILimitsService, LimitsService>();
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<McpTools>();
         services.AddSingleton<AgentClient>();
         services.AddSingleton<BuildAllowance>();
         services.AddSingleton<ModelGate>();
-        services.AddSingleton<BuildService>();
+        services.AddSingleton<IBuildService, BuildService>();
         services.AddSingleton<EventReader>();
         services.AddSingleton<VersionFactsCache>();
 

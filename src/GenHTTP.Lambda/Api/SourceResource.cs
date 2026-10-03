@@ -29,7 +29,7 @@ namespace GenHTTP.Lambda.Api;
 /// data: the files come out of the zip it was packed into once, never out of
 /// the lambda's database, workspace or secrets.
 /// </remarks>
-public sealed class SourceResource(ISourceService sources, StarGuard stars, ILogger<SourceResource> logger)
+public sealed class SourceResource(ISourceService sources, ILogger<SourceResource> logger)
 {
 
     public const int PageSize = 24;
@@ -101,7 +101,7 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
                                                                               ZipPath(publicKey, v.Version)));
 
         return new SourceProjectResponse(entry, project.Author, SourceLicenses.Holder(project.Author, publicKey), project.ActiveVersion,
-                                         project.Created, [.. versions], stars.Issue(publicKey, DateTime.UtcNow));
+                                         project.Created, [.. versions], sources.IssueTicket(publicKey));
     }
 
     #endregion
@@ -240,40 +240,22 @@ public sealed class SourceResource(ISourceService sources, StarGuard stars, ILog
     [ResourceMethod(Method.Post, ":publicKey/star")]
     public StarResponse Star(string publicKey, IRequest request, StarRequest body)
     {
-        var client = request.Client.Address;
+        var outcome = sources.Star(publicKey, body?.Ticket, request.Client.Address, body?.Starred ?? true)
+                   ?? throw NotPublished(publicKey);
 
-        var now = DateTime.UtcNow;
-
-        var current = sources.GetStars(publicKey) ?? throw NotPublished(publicKey);
-
-        if (!stars.Accepts(publicKey, body?.Ticket, now))
+        if (outcome.Changed)
         {
-            throw LambdaException.Invalid("This page is too fresh or too old to star from - read the source again and star it then.");
+            if (outcome.Starred)
+            {
+                logger.LogInformation("Starred source of lambda {Lambda} stars {Stars}", publicKey, outcome.Stars);
+            }
+            else
+            {
+                logger.LogInformation("Unstarred source of lambda {Lambda} stars {Stars}", publicKey, outcome.Stars);
+            }
         }
 
-        var starred = body?.Starred ?? true;
-
-        switch (stars.Decide(client, current.Id, starred, now))
-        {
-            case StarVerdict.TooMany:
-                throw LambdaException.TooMany("That was a lot of stars in a short while. Try again in a few minutes.");
-
-            case StarVerdict.Unchanged:
-                return new StarResponse(current.Stars, starred, false);
-        }
-
-        var count = sources.Star(publicKey, starred) ?? throw NotPublished(publicKey);
-
-        if (starred)
-        {
-            logger.LogInformation("Starred source of lambda {Lambda} stars {Stars}", publicKey, count);
-        }
-        else
-        {
-            logger.LogInformation("Unstarred source of lambda {Lambda} stars {Stars}", publicKey, count);
-        }
-
-        return new StarResponse(count, starred, true);
+        return new StarResponse(outcome.Stars, outcome.Starred, outcome.Changed);
     }
 
     #endregion

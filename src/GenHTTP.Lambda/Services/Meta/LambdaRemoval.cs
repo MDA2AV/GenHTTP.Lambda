@@ -19,8 +19,8 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// One place for it, because a lambda goes away two ways - its owner deletes
 /// it, or the sweep finds it abandoned - and both have to leave nothing behind.
 /// </remarks>
-public sealed class LambdaRemoval(IDeploymentService deployments, LambdaTelemetry activity, LambdaHistory history, SecretVault secrets,
-                                  DatabaseVault databaseVault, DomainRegistry domains, IStorageService storage)
+public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryService telemetry, LambdaHistory history, ISecretVault secrets,
+                                  IDatabaseVault databaseVault, IDomainRegistry domains, IStorageService storage)
 {
 
     public void Remove(LambdaDbContext database, LambdaEntity lambda)
@@ -30,7 +30,7 @@ public sealed class LambdaRemoval(IDeploymentService deployments, LambdaTelemetr
 
         // a deleted lambda takes its numbers with it rather than leaving a row
         // in the activity list that nothing can be looked up from any more
-        activity.Evict(lambda.Id);
+        telemetry.ForgetLambda(lambda.Id);
 
         history.Record(database, lambda, LambdaEvents.Deleted);
 

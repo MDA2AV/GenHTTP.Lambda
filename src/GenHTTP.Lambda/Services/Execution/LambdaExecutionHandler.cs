@@ -19,7 +19,7 @@ namespace GenHTTP.Lambda.Services.Execution;
 /// engine is asked to leave alone: its address is handed around to try a
 /// change, not to be found.
 /// </remarks>
-public sealed class LambdaExecutionHandler(IDeploymentService deployments, LimitsService limits) : IHandler
+public sealed class LambdaExecutionHandler(IDeploymentService deployments, ILimitsService limits) : IHandler
 {
 
     public ValueTask PrepareAsync(IServer server) => ValueTask.CompletedTask;

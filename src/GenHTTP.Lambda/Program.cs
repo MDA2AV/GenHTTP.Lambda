@@ -151,7 +151,7 @@ static IServerHost CreateHost(LambdaOptions options) => options.Engine switch
 // must be awaited rather than returned: the registrations have to stay alive
 // (and rooted) until the signal actually arrives, and disposing them while the
 // process keeps running both loses the signal and races the runtime's handler
-static async Task WaitForShutdownAsync(RunLog runs)
+static async Task WaitForShutdownAsync(IRunLog runs)
 {
     var shutdown = new TaskCompletionSource();
 

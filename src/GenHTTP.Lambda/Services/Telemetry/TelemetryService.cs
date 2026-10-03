@@ -19,6 +19,8 @@ public sealed class TelemetryService : ITelemetryService
 {
     private readonly LambdaOptions _options;
 
+    private readonly LambdaTelemetry _lambdas;
+
     private readonly Process _process = Process.GetCurrentProcess();
 
     private readonly Lock _lock = new();
@@ -42,9 +44,10 @@ public sealed class TelemetryService : ITelemetryService
 
     #region Initialization
 
-    public TelemetryService(LambdaOptions options)
+    public TelemetryService(LambdaOptions options, LambdaTelemetry lambdas)
     {
         _options = options;
+        _lambdas = lambdas;
 
         _lastCpu = _process.TotalProcessorTime;
         _lastTaken = DateTime.UtcNow;
@@ -208,6 +211,16 @@ public sealed class TelemetryService : ITelemetryService
             }
         }
     }
+
+    #endregion
+
+    #region Lambdas
+
+    public IReadOnlyList<LambdaActivity> DescribeLambdas() => _lambdas.Describe();
+
+    public LambdaTraffic DescribeLambda(long id) => _lambdas.Describe(id);
+
+    public void ForgetLambda(long id) => _lambdas.Evict(id);
 
     #endregion
 

@@ -35,8 +35,8 @@ namespace GenHTTP.Lambda.Services.Databases;
 /// connection it gets is watched by <see cref="ConnectionGuard"/>, which is
 /// what keeps the SQL sent over it inside that one file.
 /// </remarks>
-public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, LimitsService limits,
-                                  ILogger<DatabaseVault> logger)
+public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, ILimitsService limits,
+                                  ILogger<DatabaseVault> logger) : IDatabaseVault
 {
 
     /// <summary>

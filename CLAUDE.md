@@ -448,7 +448,7 @@ chosen by the owner.
   directories, keys, buffers, `LAMBDA_MAX_CONCURRENCY` and the execution
   timeout stay environment variables: they protect the process. The old
   limit variables give the defaults for one release, with a startup warning,
-  and are then removed. Callers ask `LimitsService`, never `LambdaOptions`,
+  and are then removed. Callers ask `ILimitsService`, never `LambdaOptions`,
   for a limit.
 - **Enterprise** - a customer running their own instance, on-prem or in the
   cloud - is planned but **do not anticipate enterprise features unless asked**.
@@ -477,6 +477,17 @@ rules that matter:
   units of their own. A rule another service needs too - what a version may
   hold, who may change a lambda - goes into a unit both call, not a static of
   the service they reach into.
+- **Outside its folder, a service is taken only by its interfaces - decided by
+  the owner, enforced by `ServiceBoundaryTests`.** That holds for the API, MCP
+  and every other service alike; the units of a service have no interface and
+  stay in its folder (`Services/<Name>`). A folder has an interface per
+  audience: the service the API and MCP call (`IDatabaseService`,
+  `ISecretService`), and where other services work through a lower layer, that
+  layer's own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`,
+  `ILogBook`). What another folder needs of a unit is added to the service's
+  interface (`IMetaService.GetFacts`, `ISourceService.Star`), not taken from
+  the unit. An exception is an entry in the test with its reason; today only
+  the composition root (`Application`) has one.
 - Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
   misbehaving; **it is not a sandbox.** Do not describe it as one.
 - Database: SQLite, EF Core, migrated by Evolve from `Data/Migrations/V<n>__*.sql`.

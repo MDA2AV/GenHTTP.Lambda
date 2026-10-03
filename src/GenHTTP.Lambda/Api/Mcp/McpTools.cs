@@ -63,8 +63,8 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// <see cref="OperationLog"/> for what is left out.
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
-                              IDatabaseService databases, IShowcaseService showcases, ISourceService sources, LambdaTelemetry telemetry, LogBook book,
-                              LambdaOptions options, LimitsService tiers, ILogger<McpTools> logger)
+                              IDatabaseService databases, IShowcaseService showcases, ISourceService sources, ITelemetryService telemetry, ILogBook book,
+                              LambdaOptions options, ILimitsService tiers, ILogger<McpTools> logger)
 {
 
     #region Catalogue
@@ -1443,7 +1443,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             });
         }
 
-        var traffic = telemetry.Describe(id);
+        var traffic = telemetry.DescribeLambda(id);
 
         return McpProtocol.Say(new
         {

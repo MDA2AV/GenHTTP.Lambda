@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Api;
 /// the versions and the deployment on purpose: presenting a lambda is
 /// something done once it works, not a step of making it work.
 /// </remarks>
-public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, LimitsService limits, ILogger<LambdaShowcaseResource> logger)
+public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, ILimitsService limits, ILogger<LambdaShowcaseResource> logger)
 {
 
     /// <summary>
@@ -76,7 +76,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
         logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
     }
 
-    internal static ShowcaseLimitsResponse Limits(LimitsService limits)
+    internal static ShowcaseLimitsResponse Limits(ILimitsService limits)
         => new(ShowcaseLimits.MaxTitle, ShowcaseLimits.MaxDescription, limits.Get().ShowcaseImageBytes,
                ["image/png", "image/jpeg", "image/gif", "image/webp"], ShowcaseLimits.Tone);
 

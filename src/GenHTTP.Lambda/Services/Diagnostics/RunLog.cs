@@ -19,7 +19,7 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// One small file, replaced atomically, so a kill halfway through a write
 /// leaves the previous note rather than half of this one.
 /// </remarks>
-public sealed class RunLog
+public sealed class RunLog : IRunLog
 {
 
     #region Get-/Setters

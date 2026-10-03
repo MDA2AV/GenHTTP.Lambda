@@ -24,8 +24,8 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// The deadlines the editor shows and the sweep that acts on them are kept
 /// together, so that what an owner is told is what happens.
 /// </remarks>
-public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases, LambdaTelemetry activity, IDeploymentService deployments,
-                                   LambdaHistory history, LambdaRemoval removal, LimitsService limits, ILogger<LambdaLifetime> logger)
+public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases, ITelemetryService telemetry, IDeploymentService deployments,
+                                   LambdaHistory history, LambdaRemoval removal, ILimitsService limits, ILogger<LambdaLifetime> logger)
 {
 
     #region Deadlines
@@ -166,7 +166,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
     /// </remarks>
     private void RecordUse(LambdaDbContext database)
     {
-        var seen = activity.Describe()
+        var seen = telemetry.DescribeLambdas()
                            .Where(a => a.LastSeen != null)
                            .ToDictionary(a => a.PublicKey, a => a.LastSeen!.Value, StringComparer.Ordinal);
 

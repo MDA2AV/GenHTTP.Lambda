@@ -16,7 +16,7 @@ namespace GenHTTP.Lambda.Api;
 /// Behind the token, see <see cref="AdminAuthentication"/>: this is whatever a
 /// stranger's code decided to print, which can be anything it saw.
 /// </remarks>
-public sealed class LogResource(LogBook book, RunLog runs, LambdaOptions options)
+public sealed class LogResource(ILogBook book, IRunLog runs, LambdaOptions options)
 {
 
     #region Functionality

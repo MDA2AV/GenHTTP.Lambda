@@ -8,7 +8,7 @@ namespace GenHTTP.Lambda.Services.Telemetry;
 /// Takes a reading on an interval, which is the only way a leak shows itself:
 /// one number says nothing, a hundred of them describe a slope.
 /// </summary>
-public sealed class TelemetryJob(ITelemetryService telemetry, RunLog runs, LambdaOptions options) : IBackgroundJob
+public sealed class TelemetryJob(ITelemetryService telemetry, IRunLog runs, LambdaOptions options) : IBackgroundJob
 {
 
     public string Name => "Telemetry";

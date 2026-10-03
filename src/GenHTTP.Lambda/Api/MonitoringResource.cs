@@ -28,7 +28,7 @@ namespace GenHTTP.Lambda.Api;
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
 public sealed class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
-                                               LambdaTelemetry telemetry, LogBook book, LambdaOptions options, LimitsService limits, VersionFactsCache facts)
+                                               ITelemetryService telemetry, ILogBook book, LambdaOptions options, ILimitsService limits)
 {
 
     #region Functionality
@@ -56,7 +56,7 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
 
         var latest = versions.Count > 0 ? versions[0] : null;
 
-        var traffic = telemetry.Describe(id);
+        var traffic = telemetry.DescribeLambda(id);
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
@@ -81,7 +81,7 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
         var measured = live?.Version ?? latest?.Version;
 
         // read off the version once, since it never changes
-        var known = facts.Of(id, measured);
+        var known = meta.GetFacts(id, measured);
 
         return new LambdaSummaryResponse(
             LambdaDescription.Of(lambda),
@@ -119,7 +119,7 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
     /// </remarks>
     [ResourceMethod("lambdas/:privateKey/traffic")]
     public LambdaTraffic Traffic(string privateKey)
-        => telemetry.Describe(meta.RequireId(privateKey));
+        => telemetry.DescribeLambda(meta.RequireId(privateKey));
 
     /// <summary>
     /// What the lambda and the server about it have said, oldest first.

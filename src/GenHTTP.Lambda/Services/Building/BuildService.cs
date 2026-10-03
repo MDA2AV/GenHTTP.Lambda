@@ -40,8 +40,8 @@ namespace GenHTTP.Lambda.Services.Building;
 /// panel - builds and changes each have a switch of their own - and the page
 /// is then left with how to connect an agent of one's own.
 /// </remarks>
-public sealed class BuildService(AgentClient agent, BuildAllowance allowance, ModelGate models, SettingsService settings,
-                                 ILogger<BuildService> logger)
+public sealed class BuildService(AgentClient agent, BuildAllowance allowance, ModelGate models, ISettingsService settings,
+                                 ILogger<BuildService> logger) : IBuildService
 {
 
     /// <summary>Whether this installation has an agent to build with.</summary>

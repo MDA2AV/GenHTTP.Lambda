@@ -32,7 +32,7 @@ namespace GenHTTP.Lambda.Api;
 /// action is then the same one the owner would take - so a deployment started
 /// here is the same deployment, recorded as the operator's.
 /// </remarks>
-public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, SettingsService settings, LimitsService limits,
+public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
                                    ILogger<AdminResource> logger)
 {
 
@@ -52,7 +52,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         // the counters are held per lambda in memory, so this is a lookup
         // rather than a join - and a lambda nobody has called is simply absent
-        var activity = telemetry.Describe().ToDictionary(a => a.PublicKey, StringComparer.Ordinal);
+        var activity = telemetry.DescribeLambdas().ToDictionary(a => a.PublicKey, StringComparer.Ordinal);
 
         var lambdas = result.Lambdas.Select(l =>
         {
@@ -303,7 +303,7 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         return new AdminLambdaDetail(
             LambdaDescription.Of(lambda),
-            telemetry.Describe(id),
+            telemetry.DescribeLambda(id),
             [.. versions.Select(VersionResource.Describe)],
             [.. activations.Select(a => new ActivationResponse(a.Version, a.Started, a.Origin, a.Ended, a.EndedBy,
                                                                 (long)((a.Ended ?? now) - a.Started).TotalSeconds))],

@@ -18,7 +18,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// Each kind is kept to a bound, oldest first, so a lambda an agent saves and
 /// deploys all day long does not grow without end.
 /// </remarks>
-public sealed class LambdaHistory(IStorageService storage, LimitsService limits)
+public sealed class LambdaHistory(IStorageService storage, ILimitsService limits)
 {
 
     /// <summary>

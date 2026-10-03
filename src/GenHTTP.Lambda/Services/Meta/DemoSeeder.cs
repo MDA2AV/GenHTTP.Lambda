@@ -29,7 +29,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// because a demo is the one kind of lambda whose editor key is chosen - it
 /// is its public key, announced - and whose tier nobody else may set.
 /// </remarks>
-public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbContext> databases, SecretVault secrets, DatabaseVault stores,
+public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbContext> databases, ISecretVault secrets, IDatabaseVault stores,
                                ILogger<DemoSeeder> logger)
 {
 

@@ -696,7 +696,14 @@ source section.
 
 A single .NET 11 project hosted by `GenHTTP.Full.Ioxide`, wired up in
 [`Application.cs`](src/GenHTTP.Lambda/Application.cs) and divided into
-services that the API resources talk to through interfaces:
+services, a folder each below `Services/`. From outside its folder a service
+is taken only by its interfaces - by the API resources, the MCP tools and the
+other services alike - and the classes a service is made of stay in its
+folder; `ServiceBoundaryTests` fails on a constructor or method elsewhere that
+takes one of them. Where other services work through a lower layer of a
+folder rather than the service the API calls, that layer has an interface of
+its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
+`IRunLog`).
 
 - **Meta** (`Services/Meta`) - lambdas and their versions, the only component
   that speaks to the database. Its public surface is DTOs, mapped by hand.
@@ -725,12 +732,14 @@ services that the API resources talk to through interfaces:
   lambda, so moving it to another tier builds it again on its next request.
 - **Secrets** (`Services/Secrets`) - the secrets of the lambdas, sealed in the
   database. `SecretCipher` holds the installation's key and seals and opens
-  values, `SecretVault` stores them and is what a running lambda reads through,
-  and `SecretService` is what the API and MCP call - by name, never by value.
+  values, `SecretVault` stores them and is what a running lambda reads through
+  and the other services keep in step with a lambda (`ISecretVault`), and
+  `SecretService` is what the API and MCP call - by name, never by value.
 - **Databases** (`Services/Databases`) - the database of each lambda, a SQLite
   file below `/data/databases/{lambda}`, and a copy per feature beside its
   files. `DatabaseVault` makes, copies, exports and deletes them and is what a
-  running lambda connects through, `ConnectionGuard` is the authorizer and the
+  running lambda connects through (`IDatabaseVault` for the other services),
+  `ConnectionGuard` is the authorizer and the
   limits every connection it hands out carries, and `DatabaseService` is what
   the API and MCP read tables and rows with.
 - **Features** (`Services/Features`) - changes worked on beside a lambda. A

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -19,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Source;
 /// Keeps whether a lambda's source is published, and serves it packed.
 /// </summary>
 public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, SourceCache cache,
-                                  LambdaOptions options, ILogger<SourceService> logger) : ISourceService
+                                  StarGuard stars, LambdaOptions options, ILogger<SourceService> logger) : ISourceService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -262,7 +263,41 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         return new SourceArchive(publicKey, version, file, ProjectPacker.Folder(publicKey));
     }
 
-    public int? Star(string publicKey, bool starred)
+    public string IssueTicket(string publicKey) => stars.Issue(publicKey, DateTime.UtcNow);
+
+    public StarOutcome? Star(string publicKey, string? ticket, IPAddress? client, bool starred)
+    {
+        var now = DateTime.UtcNow;
+
+        var current = GetStars(publicKey);
+
+        if (current == null)
+        {
+            return null;
+        }
+
+        if (!stars.Accepts(publicKey, ticket, now))
+        {
+            throw LambdaException.Invalid("This page is too fresh or too old to star from - read the source again and star it then.");
+        }
+
+        switch (stars.Decide(client, current.Id, starred, now))
+        {
+            case StarVerdict.TooMany:
+                throw LambdaException.TooMany("That was a lot of stars in a short while. Try again in a few minutes.");
+
+            case StarVerdict.Unchanged:
+                return new StarOutcome(current.Stars, starred, false);
+        }
+
+        return Count(publicKey, starred) is { } count ? new StarOutcome(count, starred, true) : null;
+    }
+
+    /// <summary>
+    /// Gives a published source a star or takes one back, and says how many
+    /// it has now - or nothing where there is no such source.
+    /// </summary>
+    private int? Count(string publicKey, bool starred)
     {
         using var database = databases.CreateDbContext();
 
@@ -291,7 +326,11 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         return sources.Select(s => s.Stars).First();
     }
 
-    public SourceStars? GetStars(string publicKey)
+    /// <summary>
+    /// How many stars a published source has, and the identity the guard
+    /// counts each visitor's star under.
+    /// </summary>
+    private SourceStars? GetStars(string publicKey)
     {
         using var database = databases.CreateDbContext();
 

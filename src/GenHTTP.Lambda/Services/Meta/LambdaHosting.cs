@@ -20,8 +20,8 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// What each change does reach is what serves the lambda - the domains
 /// answered, and the limits its database is opened with.
 /// </remarks>
-public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, LambdaDescriber describer, DatabaseVault databaseVault,
-                                  DomainRegistry domains, LambdaOptions options, ILogger<LambdaHosting> logger)
+public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, LambdaDescriber describer, IDatabaseVault databaseVault,
+                                  IDomainRegistry domains, LambdaOptions options, ILogger<LambdaHosting> logger)
 {
 
     #region Keys

@@ -27,7 +27,7 @@ namespace GenHTTP.Lambda.Api;
 /// Every way of storing one takes an optional specification and change: what
 /// the user wanted and what was done about it, which the code alone cannot say.
 /// </remarks>
-public sealed class VersionResource(IMetaService meta, LimitsService limits, ILogger<VersionResource> logger)
+public sealed class VersionResource(IMetaService meta, ILimitsService limits, ILogger<VersionResource> logger)
 {
 
     /// <summary>
