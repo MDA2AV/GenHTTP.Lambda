@@ -700,6 +700,15 @@ services that the API resources talk to through interfaces:
 
 - **Meta** (`Services/Meta`) - lambdas and their versions, the only component
   that speaks to the database. Its public surface is DTOs, mapped by hand.
+  `MetaService` is what the API, MCP and the other services call. It finds
+  the lambda, checks it may be changed, takes the lambda's turn for a change,
+  and leaves the rest to units: `LambdaHosting` changes the key, the domain
+  and the tier, `LambdaHistory` writes the versions, the stretches online and
+  the events and keeps each to its bound, `LambdaLifetime` says when a lambda
+  goes offline and away and runs the sweep that does it, `LambdaRemoval`
+  removes a lambda with everything that hangs on it, and `LambdaDescriber`
+  maps the DTOs. `LambdaGuard` (who may change a lambda - not a demo) and
+  `VersionInput` (what a version may hold) are rules other services apply too.
 - **Storage** (`Services/Storage`) - the code itself, on the file system, one
   file per version. Never in the database.
 - **Data** (`Services/Data`) - which kinds of data a lambda keeps, switched on

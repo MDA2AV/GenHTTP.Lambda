@@ -408,7 +408,7 @@ The demos (`DemoCatalog`, files in `Resources/Templates`) exist to show agents
 how to write apps and to give them a good starting point.
 
 - They are **read-only by definition** (tier `Demo`, enforced in
-  `MetaService.EnsureEditable`, whichever door the request comes in). Their
+  `LambdaGuard.EnsureEditable`, whichever door the request comes in). Their
   editor key is public. Anyone starts an editable copy with `create_lambda` and
   a demo as template.
 - They follow the **best practices of the GenHTTP framework**
@@ -471,7 +471,12 @@ rules that matter:
   keeps deciding what is done and in which order. Not a class per method - a
   unit is a concern somebody can review on its own. The resources still talk
   to the service. `Services/Building` is the template: `BuildService` over
-  `AgentClient`, `BuildAllowance`, `ModelGate` and `AgentInput`.
+  `AgentClient`, `BuildAllowance`, `ModelGate` and `AgentInput`. In
+  `Services/Meta`, `MetaService` keeps the face (`IMetaService`) and the
+  lambda's turn, and hands hosting, history, lifetime, removal and the DTOs to
+  units of their own. A rule another service needs too - what a version may
+  hold, who may change a lambda - goes into a unit both call, not a static of
+  the service they reach into.
 - Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
   misbehaving; **it is not a sandbox.** Do not describe it as one.
 - Database: SQLite, EF Core, migrated by Evolve from `Data/Migrations/V<n>__*.sql`.

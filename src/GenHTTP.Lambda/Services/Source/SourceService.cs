@@ -454,7 +454,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         var lambda = Require(database, privateKey);
 
         return lambda.Tier == LambdaTier.Demo
-             ? throw LambdaException.Forbidden(MetaService.ReadOnly(lambda.PublicKey))
+             ? throw LambdaException.Forbidden(LambdaGuard.ReadOnly(lambda.PublicKey))
              : lambda;
     }
 
