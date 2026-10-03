@@ -773,6 +773,49 @@ public sealed class McpTests
     }
 
     [TestMethod]
+    public async Task AgentsAreToldToPushChangesRatherThanPoll()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var initialized = await CallAsync(fixture, "initialize", new JsonObject());
+
+        var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
+
+        Assert.Contains("Never poll", instructions, "said on connecting, before anything is built");
+        Assert.Contains("liveUpdates", instructions, "and where the guide says how");
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        var live = guide["liveUpdates"]!;
+
+        Assert.Contains("Never poll", live["rule"]!.GetValue<string>());
+        Assert.Contains("demo-live", live["serverSentEvents"]!.GetValue<string>(), "a page that only listens is shown server-sent events");
+        Assert.Contains("demo-game", live["websockets"]!.GetValue<string>(), "and one that talks back a websocket");
+    }
+
+    [TestMethod]
+    public async Task AgentsAreAskedForALinkBackThatTheUserMayRefuse()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = "https://genhttp.dev" });
+
+        var initialized = await CallAsync(fixture, "initialize", new JsonObject());
+
+        var instructions = initialized["result"]!["instructions"]!.GetValue<string>();
+
+        Assert.Contains("Made with GenHTTP Lambda", instructions, "asked on connecting, before anything is built");
+        Assert.Contains("does not want it", instructions, "as a request the user may turn down");
+
+        var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
+
+        var backlink = guide["backlink"]!;
+
+        Assert.Contains("<a href=\"https://genhttp.dev/\">Made with GenHTTP Lambda</a>", backlink["how"]!.GetValue<string>(),
+                        "to the address the site is meant to be found at, not the one the agent called");
+        Assert.Contains("not a rule", backlink["ask"]!.GetValue<string>());
+        Assert.Contains("decisions.md", backlink["theUserDecides"]!.GetValue<string>(), "a link the user took out stays out");
+    }
+
+    [TestMethod]
     public async Task AnAgentChangesALambdaInAFeatureWithoutTouchingIt()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

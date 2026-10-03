@@ -385,6 +385,16 @@ export const guide = {
       message.
     </>
   )) as Text,
+  /** A paragraph below the websocket sample: pushing what changed rather than asking for it again and again. */
+  sockets2: ((k) => (
+    <>
+      When the page only listens - a count, a feed, a scoreboard - server-sent events are simpler: one long response
+      the server keeps writing to, which the browser reconnects by itself. The{' '}
+      {k.link('/editor/demo-live', 'demo-live')} demo sends every vote to everybody watching that way. Either way the
+      server pushes what changed. A page that asks again every few seconds sends a request each time, whether anything
+      changed or not, and is still late.
+    </>
+  )) as Text,
 
   limits:
     'Your code runs on a shared server, so some of C# is refused before it compiles: starting processes, opening sockets of your own, loading assemblies, reaching the file system outside your workspace, and reflection used to get around any of that. So is waiting for a task with .Result or .Wait() instead of awaiting it: requests run on one thread per core, and the task would have to finish on the very thread that is waiting for it.',
@@ -445,7 +455,9 @@ export const guide = {
       stack trace of anything it threw, which is how an agent finds out its code works rather than assuming it. You
       watch the same thing in the control center. It writes the documentation and the tests as it goes, reads them
       before it changes anything, and runs the tests against a draft's address before it puts the draft online. A
-      page meant to be found gets a title, a description and an icon, and a preview for when its link is shared.
+      page meant to be found gets a title, a description and an icon, and a preview for when its link is shared. At
+      the foot of the pages it builds, it adds a small line saying they were made with GenHTTP Lambda - tell it if you
+      would rather not have it, and it takes it out.
     </>
   )) as Text,
   more: 'More about that →',

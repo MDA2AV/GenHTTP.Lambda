@@ -376,6 +376,15 @@ export const guide: Messages['guide'] = {
       {k.code('connection.Request.Header.Query')}, albo wyślij sekrety w pierwszej wiadomości.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Gdy strona tylko nasłuchuje – licznik, kanał wiadomości, tablica wyników – prostsze są zdarzenia wysyłane przez
+      serwer (server-sent events): jedna długa odpowiedź, do której serwer stale dopisuje, a przeglądarka łączy się
+      ponownie sama. Demo {k.link('/editor/demo-live', 'demo-live')} wysyła w ten sposób każdy głos wszystkim, którzy
+      je oglądają. Tak czy inaczej to serwer przesyła to, co się zmieniło. Strona, która co kilka sekund pyta od nowa,
+      wysyła żądanie za każdym razem, niezależnie od tego, czy coś się zmieniło, i i tak jest spóźniona.
+    </>
+  ),
 
   limits:
     'Twój kod działa na wspólnym serwerze, więc część C# jest odrzucana jeszcze przed kompilacją: uruchamianie procesów, otwieranie własnych socketów, ładowanie assembly, sięganie do systemu plików poza obszarem roboczym i refleksja użyta, żeby to wszystko obejść. Tak samo czekanie na zadanie przez .Result lub .Wait() zamiast await: żądania działają na jednym wątku na rdzeń, a zadanie musiałoby się zakończyć na tym samym wątku, który na nie czeka.',
@@ -436,7 +445,8 @@ export const guide: Messages['guide'] = {
       agent dowiaduje się, że jego kod działa, zamiast to zakładać. Ty widzisz to samo w centrum sterowania. W trakcie
       pracy pisze dokumentację i testy, czyta je, zanim cokolwiek zmieni, i uruchamia testy pod adresem szkicu, zanim
       wrzuci szkic online. Strona, którą ludzie mają znaleźć, dostaje tytuł, opis, ikonę i podgląd, który widać, gdy
-      ktoś udostępnia link do niej.
+      ktoś udostępnia link do niej. Na dole stron, które buduje, dodaje małą linijkę z informacją, że powstały w GenHTTP
+      Lambda – powiedz mu, jeśli wolisz jej nie mieć, a ją usunie.
     </>
   ),
   more: 'Więcej o tym →',

@@ -383,6 +383,8 @@ var socket = Websocket.Functional()
 
 return Layout.Create().Add("chat", socket);`} />
 
+            <p>{said.sockets2(k)}</p>
+
             <Aside>{said.socketsAside(k)}</Aside>
           </Section>
 

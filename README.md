@@ -1158,6 +1158,23 @@ the page, and the page never follows them. A lambda with a domain of its own
 names the domain as canonical, so search engines list it rather than
 `/lambda/{publicKey}/`.
 
+A page that shows what changes while it is open - what others do, a count, a
+feed, a game - is pushed the change by the server, with server-sent events when
+it only listens (`demo-live`) or a websocket when it talks back (`demo-game`).
+Agents are told never to poll, fetching on a timer to see whether anything
+changed: a poll is a request whether it did or not, on a server every lambda
+shares. The instructions say so in a line, `platform_guide` under
+`liveUpdates`, and the build agent's brief the same.
+
+Agents are asked - not required - to put a small "Made with GenHTTP Lambda"
+line at the foot of the pages they build, linking to `LAMBDA_PUBLIC_URL` (or
+the address the agent called, where it is not set). The link's words are the
+name and nothing else. It is the user's to refuse: the agent says that it added
+it, leaves it out or takes it out when asked, and notes in `decisions.md` that
+it was not wanted, so the next agent does not put it back. A change does not
+add one to a lambda that has none. The instructions say so in a line,
+`platform_guide` under `backlink`, and the build agent's brief the same.
+
 `open_source` publishes a lambda's code, changes its license or takes it down;
 with only the editor key it says how things are and changes nothing. It is not
 part of building, and its description says so: only when the user asks, and

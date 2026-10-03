@@ -387,6 +387,15 @@ export const guide: Messages['guide'] = {
       rahasia sebagai pesan pertama.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Jika halaman hanya mendengarkan (jumlah, umpan, papan skor), server-sent events lebih sederhana: satu respons
+      panjang yang terus ditulis oleh server dan tersambung kembali dengan sendirinya oleh browser. Demo{' '}
+      {k.link('/editor/demo-live', 'demo-live')} mengirim setiap suara kepada semua orang yang menonton dengan cara
+      ini. Dengan cara mana pun, server mendorong apa yang berubah. Halaman yang bertanya lagi setiap beberapa detik
+      mengirim request setiap kali, entah ada yang berubah atau tidak, dan tetap terlambat.
+    </>
+  ),
 
   limits:
     'Kode Anda berjalan di server bersama, jadi sebagian C# ditolak sebelum dikompilasi: menjalankan proses, membuka socket sendiri, memuat assembly, mengakses file system di luar workspace Anda, dan reflection yang dipakai untuk mengakali semua itu. Begitu pula menunggu task dengan .Result atau .Wait() alih-alih await: request berjalan di satu thread per core, dan task tersebut harus selesai justru di thread yang sedang menunggunya.',
@@ -451,7 +460,8 @@ export const guide: Messages['guide'] = {
       memantau hal yang sama di pusat kontrol. Agen menulis dokumentasi dan pengujian sambil bekerja, membacanya
       sebelum mengubah apa pun, dan menjalankan pengujian terhadap alamat draf sebelum menjadikan draf itu online.
       Halaman yang dibuat untuk ditemukan orang diberi judul, deskripsi, ikon, dan pratinjau yang muncul saat link-nya
-      dibagikan.
+      dibagikan. Di bagian bawah halaman yang dibuatnya, agen menambahkan satu baris kecil yang menyatakan halaman itu
+      dibuat dengan GenHTTP Lambda. Katakan kepadanya jika Anda tidak menginginkannya, lalu agen akan menghapusnya.
     </>
   ),
   more: 'Selengkapnya →',

@@ -382,6 +382,15 @@ export const guide: Messages['guide'] = {
       mensagem.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Quando a página só escuta - uma contagem, um feed, um placar - os server-sent events são mais simples: uma única
+      resposta longa na qual o servidor continua escrevendo e que o navegador reconecta sozinho. O demo{' '}
+      {k.link('/editor/demo-live', 'demo-live')} envia cada voto a todos que estão assistindo dessa forma. De qualquer
+      maneira, é o servidor que envia o que mudou. Uma página que pergunta de novo a cada poucos segundos faz uma
+      requisição a cada vez, tenha algo mudado ou não, e ainda chega atrasada.
+    </>
+  ),
 
   limits:
     'Seu código roda em um servidor compartilhado, então parte do C# é recusada antes de compilar: iniciar processos, abrir seus próprios sockets, carregar assemblies, acessar o sistema de arquivos fora do seu workspace e usar reflection para contornar qualquer uma dessas regras. O mesmo vale para esperar uma task com .Result ou .Wait() em vez de usar await: as requisições rodam em uma thread por núcleo, e a task teria que terminar justamente na thread que está esperando por ela.',
@@ -443,7 +452,9 @@ export const guide: Messages['guide'] = {
       e o stack trace de qualquer exceção. É assim que ele descobre que o código funciona, em vez de supor. Você
       acompanha tudo isso no painel de controle. Ele escreve a documentação e os testes enquanto trabalha, lê os dois
       antes de mudar qualquer coisa e roda os testes no endereço de um rascunho antes de colocá-lo no ar. Uma página
-      feita para ser encontrada ganha título, descrição, ícone e uma prévia para quando alguém compartilha o link.
+      feita para ser encontrada ganha título, descrição, ícone e uma prévia para quando alguém compartilha o link. No
+      rodapé das páginas que constrói, ele acrescenta uma pequena linha dizendo que foram feitas com GenHTTP Lambda;
+      avise se preferir que não apareça, e ele a remove.
     </>
   ),
   more: 'Saiba mais →',

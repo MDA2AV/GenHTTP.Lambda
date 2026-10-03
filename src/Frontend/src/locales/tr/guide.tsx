@@ -386,6 +386,15 @@ export const guide: Messages['guide'] = {
       üzerinden okur. Ya da gizli bilgileri ilk mesaj olarak gönderin.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Sayfa yalnızca dinliyorsa (bir sayaç, bir akış, bir skor tablosu) sunucu tarafından gönderilen olaylar daha
+      basittir: sunucunun yazmaya devam ettiği ve tarayıcının kendiliğinden yeniden bağlandığı tek bir uzun yanıt.{' '}
+      {k.link('/editor/demo-live', 'demo-live')} demosu her oyu bu yolla o sırada izleyen herkese gönderir. Hangisini
+      seçerseniz seçin, değişeni sunucu iletir. Birkaç saniyede bir yeniden soran bir sayfa, bir şey değişmiş olsun
+      olmasın her seferinde bir istek gönderir ve yine de geç kalır.
+    </>
+  ),
 
   limits:
     'Kodunuz ortak bir sunucuda çalışır. Bu yüzden C# dilinin bazı kısımları derlenmeden önce reddedilir: süreç başlatmak, kendi soketlerinizi açmak, assembly yüklemek, çalışma alanınızın dışında dosya sistemine erişmek ve bunları aşmak için reflection kullanmak. Bir task’ı await yerine .Result veya .Wait() ile beklemek de reddedilir: istekler çekirdek başına tek bir thread üzerinde çalışır ve task, onu bekleyen thread’in ta kendisinde tamamlanmak zorunda kalırdı.',
@@ -448,7 +457,9 @@ export const guide: Messages['guide'] = {
       hatanın stack trace’ini döndürür. Ajan, kodunun çalıştığını varsaymak yerine böyle öğrenir. Siz de aynı şeyi
       kontrol panelinde izlersiniz. Ajan çalışırken dokümantasyonu ve testleri de yazar, bir şeyi değiştirmeden önce
       onları okur ve bir taslağı yayına almadan önce testleri taslağın adresi üzerinde çalıştırır. Bulunması istenen
-      bir sayfaya başlık, açıklama, simge ve linki paylaşıldığında görünen bir önizleme ekler.
+      bir sayfaya başlık, açıklama, simge ve linki paylaşıldığında görünen bir önizleme ekler. Oluşturduğu sayfaların
+      altına, GenHTTP Lambda ile yapıldıklarını belirten küçük bir satır ekler; istemezseniz ajana söyleyin, satırı
+      kaldırır.
     </>
   ),
   more: 'Daha fazlası →',

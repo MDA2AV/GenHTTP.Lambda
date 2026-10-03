@@ -380,6 +380,15 @@ export const guide: Messages['guide'] = {
       manda i dati segreti come primo messaggio.
     </>
   ),
+  sockets2: (k) => (
+    <>
+      Quando la pagina deve solo ascoltare (un contatore, un feed, una classifica), gli eventi inviati dal server sono
+      più semplici: una sola risposta lunga su cui il server continua a scrivere e che il browser riapre da solo. La
+      demo {k.link('/editor/demo-live', 'demo-live')} invia così ogni voto a tutti quelli che stanno guardando. In
+      entrambi i casi è il server a inviare ciò che è cambiato. Una pagina che chiede di nuovo ogni pochi secondi
+      manda una richiesta ogni volta, che sia cambiato qualcosa o no, ed è comunque in ritardo.
+    </>
+  ),
 
   limits:
     'Il tuo codice gira su un server condiviso, quindi una parte di C# viene rifiutata prima ancora della compilazione: avviare processi, aprire socket propri, caricare assembly, accedere al file system fuori dal workspace e usare la reflection per aggirare uno di questi limiti. Lo stesso vale per attendere un task con .Result o .Wait() invece di usare await: le richieste girano su un thread per core, e il task dovrebbe terminare proprio sul thread che lo sta aspettando.',
@@ -442,7 +451,8 @@ export const guide: Messages['guide'] = {
       vedi le stesse cose nel pannello di controllo. Man mano scrive la documentazione e i test, li legge prima di
       cambiare qualcosa ed esegue i test sull’indirizzo di una bozza prima di metterla online. A una pagina pensata
       per essere trovata dà un titolo, una descrizione, un’icona e un’anteprima per quando qualcuno ne condivide il
-      link.
+      link. In fondo alle pagine che costruisce aggiunge una piccola riga che dice che sono state fatte con GenHTTP
+      Lambda: diglielo se preferisci non averla, e la toglie.
     </>
   ),
   more: 'Scopri di più →',

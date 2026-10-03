@@ -516,7 +516,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "showcase" => Showcase(arguments, origin),
                 "open_source" => OpenSource(arguments, origin),
                 "list_demos" => ListDemos(origin),
-                "platform_guide" => ReadGuide(),
+                "platform_guide" => ReadGuide(origin),
                 _ => McpProtocol.Refuse($"There is no tool called '{name}'.")
             };
         }
@@ -1984,14 +1984,24 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     #region Guide
 
-    private JsonObject ReadGuide()
+    private JsonObject ReadGuide(string origin)
     {
         logger.LogInformation("Read platform guide");
 
-        return Guide();
+        return Guide(origin);
     }
 
-    private JsonObject Guide() => McpProtocol.Say(new
+    /// <summary>
+    /// What the link back to this platform points at.
+    /// </summary>
+    /// <remarks>
+    /// The address the site is meant to be found at where the installation
+    /// names one: the build agent reaches this endpoint by whatever address
+    /// its container was given, which is not one to send visitors to.
+    /// </remarks>
+    private string Home(string origin) => $"{options.PublicUrl ?? origin}/";
+
+    private JsonObject Guide(string origin) => McpProtocol.Say(new
     {
         ok = true,
         preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version; a feature is downloaded from and put back to /api/v1/lambdas/{privateKey}/features/{feature}/zip (GET, PUT) - so edit locally and push as often as it takes. POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip as a new version. The zip holds the documentation and tests in .lambda/, a hidden folder: zip the contents with it ('zip -r ../feature.zip .', not '*'), or the version you save has none. Every endpoint that saves takes ?deploy=true. Many environments cannot reach it; then use these tools.",
@@ -2209,6 +2219,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             notFromTheWorkspace = "Do not upload the app's own pages to the workspace with upload_file. They would not be versioned: a rollback would keep the new pages over the old API, and a feature would work on a copy of them that its merge throws away. The workspace is for data.",
             underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree()."
         },
+        liveUpdates = new
+        {
+            rule = "Never poll: a page does not fetch on a timer - setInterval, or a loop with a delay - to see whether something changed. When it shows what changes while it is open - what others do, a count, a feed, a game, a status - the server pushes the change to it.",
+            serverSentEvents = "When the page only listens: EventSource.Create().Generator(...) on the server, at a relative path such as events, and new EventSource(\"events\") in the browser, which reconnects on its own. What the page has to say besides is an ordinary POST. demo-live shows it.",
+            websockets = "When the browser talks back as much as it listens - a game, a chat, a shared board: Websocket.Reactive() or Websocket.Functional(), its address built from the page (see paths). demo-game shows it.",
+            why = "A poll is a request whether anything changed or not, and every lambda shares one server: a page asking every second, open in a hundred browsers, is a hundred requests a second for nothing - and still a second late. A push is one write when something changes, and arrives at once.",
+            notPolling = "Loading once when the page opens, and again when the user acts - presses a button, sends a form, comes back to the tab - is not polling."
+        },
         beingFound = new
         {
             when = "For a page meant to be found or shared - a website, a landing page, a shop, a portfolio, an event: anything the user wants people to come across in a search engine, in an AI agent's answer, or as a link in a chat. A tool for a few people, a page behind a login or an admin page needs a title and nothing more.",
@@ -2221,6 +2239,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             withoutScripts = "Crawlers and AI agents mostly read the HTML as it is served and run no JavaScript. Put what the page is about - the title, the description, a heading and the opening text - in the HTML, not only in what a script renders later; a page whose content comes from an API still says in its HTML what it is.",
             howMuch = "In proportion: the title, the description, the language and the icon are a few lines on every public page; the preview picture where the app is meant to be shared, the canonical link where it has a domain. Written for people, not for a search engine - no keyword lists, no hidden text.",
             keptOut = "A feature's preview is kept out of search engines by the platform. A lambda whose owner wants it kept out says so with <meta name=\"robots\" content=\"noindex\">."
+        },
+        backlink = new
+        {
+            ask = $"We ask you to put a small link back to this platform at the foot of the pages a lambda shows its visitors: \"Made with GenHTTP Lambda\", in the language of the page, linking to {Home(origin)}. It is how the people who use an app find where it was made. It is a request, not a rule.",
+            how = $"One line in the footer, in small, muted type that fits the design: <a href=\"{Home(origin)}\">Made with GenHTTP Lambda</a>. The name is the whole of the link - no keywords, no badge, no script, nothing hidden. It is a full address, since it leaves the lambda.",
+            when = "With a new lambda that has pages people visit. Not on a lambda that only answers as an API, nor where a link has no place - a widget embedded in another site, a page shown full screen. Changing a lambda, keep the link it has, and do not add one it lacks unless the user asks.",
+            theUserDecides = "Say in a line that you added it, so the user can say no. Leave it out when they do not want it, and take it out when they ask - then note in .lambda/docs/decisions.md that they did not want it, so the next agent does not put it back."
         },
         generatedContent = new
         {
@@ -2294,6 +2319,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             "Once a route has read the body, the request's headers are gone. Check a header (a token, say) in a concern in front of the route - the Authentication module does exactly that, see demo-registration - or in a route that takes no body.",
             "In other .cs files, Assets is the Files module's type of that name: use LambdaEnvironment.Assets there. Workspace works in every file.",
             "A browser cannot set headers on a websocket handshake. Pass what the socket needs in the query (connection.Request.Header.Query) or, for secrets, as the first frame.",
+            "A page that fetches on a timer to stay up to date. Push the change instead - server-sent events, or a websocket - see liveUpdates.",
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore - taken with await semaphore.WaitAsync(), never Wait().",
             "Waiting for a task with .Result, .Wait() or .GetAwaiter().GetResult() is refused: it would hang the thread the task has to finish on. Await it - see waiting.",
             "A relative og:image: the shared link shows no picture. It takes the full address - see beingFound.",
