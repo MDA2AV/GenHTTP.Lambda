@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Api;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Showcase;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.Extensions.Logging;
 
@@ -49,6 +50,8 @@ public sealed partial class SitePrerender
 
     private LambdaOptions Options { get; }
 
+    private LimitsService Limits { get; }
+
     private IShowcaseService Showcases { get; }
 
     private ILogger<SitePrerender> Logger { get; }
@@ -59,10 +62,11 @@ public sealed partial class SitePrerender
 
     #region Initialization
 
-    public SitePrerender(LambdaOptions options, IShowcaseService showcases, ILogger<SitePrerender> logger)
+    public SitePrerender(LambdaOptions options, LimitsService limits, IShowcaseService showcases, ILogger<SitePrerender> logger)
     {
         File = Path.Combine(options.WebRoot, "prerender.json");
         Options = options;
+        Limits = limits;
         Showcases = showcases;
         Logger = logger;
     }
@@ -88,14 +92,16 @@ public sealed partial class SitePrerender
 
         var host = Uri.TryCreate(origin, UriKind.Absolute, out var parsed) ? parsed.Authority : origin;
 
-        var lifetimeHours = (int)Options.DeploymentLifetime.TotalHours;
+        var limits = Limits.Get();
+
+        var lifetimeHours = (int)limits.OfflineAfter.TotalHours;
 
         var facts = new SiteFacts(
             origin,
             host,
             lifetimeHours,
             (int)Math.Round(lifetimeHours / 24.0, MidpointRounding.AwayFromZero),
-            (int)Options.Retention.TotalDays
+            (int)limits.RemovedAfter.TotalDays
         );
 
         string content;

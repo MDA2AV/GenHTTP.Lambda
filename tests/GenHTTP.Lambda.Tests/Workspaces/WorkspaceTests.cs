@@ -30,7 +30,7 @@ public sealed class WorkspaceTests
 
         Assert.IsEmpty(listing.Files);
         Assert.AreEqual(0, listing.UsedBytes);
-        Assert.AreEqual(fixture.Options.WorkspaceOf(Data.Entities.LambdaTier.Free).Quota, listing.QuotaBytes);
+        Assert.AreEqual(fixture.Limits.WorkspaceOf(Data.Entities.LambdaTier.Free).Quota, listing.QuotaBytes);
     }
 
     [TestMethod]

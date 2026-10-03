@@ -33,10 +33,12 @@ services:
       # where the server sends a prompt, and the shared secret it sends with
       # it. Empty LAMBDA_AGENT_URL leaves the whole feature off: no /build and
       # no Change section in the editor. The allowance per day is shared
-      # between building and changing.
+      # between building and changing, and set in the administration panel
+      # (Limits); the variable is deprecated and only passed through for one
+      # more release.
       LAMBDA_AGENT_URL: http://agent:8401
       LAMBDA_AGENT_TOKEN: ${LAMBDA_AGENT_TOKEN:-}
-      LAMBDA_AGENT_BUILDS_PER_DAY: ${LAMBDA_AGENT_BUILDS_PER_DAY:-10}
+      LAMBDA_AGENT_BUILDS_PER_DAY: ${LAMBDA_AGENT_BUILDS_PER_DAY:-}
       # unset, the second model is not offered at all - there is no default
       # password, because a password in a tracked file is not one
       LAMBDA_AGENT_FABLE_PASSWORD: ${LAMBDA_AGENT_FABLE_PASSWORD:-}

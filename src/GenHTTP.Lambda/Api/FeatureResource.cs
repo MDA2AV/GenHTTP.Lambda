@@ -10,6 +10,7 @@ using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Settings;
 
 using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
@@ -37,7 +38,7 @@ namespace GenHTTP.Lambda.Api;
 /// the feature is left to whoever works on it; once they are in, moving the
 /// feature's base to that version with a patch allows the merge.
 /// </remarks>
-public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, LogBook book, LambdaOptions options,
+public sealed class FeatureResource(IFeatureService features, IMetaService meta, IDataService data, LogBook book, LambdaOptions options, LimitsService limits,
                                      ILogger<FeatureResource> logger)
 {
 
@@ -172,7 +173,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var files = await LambdaArchive.UnpackAsync(body, options.MaxCodeLengthOf(tier) * 4L + options.MaxAssetBytesOf(tier));
+        var files = await LambdaArchive.UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier));
 
         return await SaveAsync(privateKey, feature, files, deploy, specification, change);
     }

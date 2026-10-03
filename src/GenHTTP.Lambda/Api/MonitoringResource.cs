@@ -8,6 +8,7 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
+using GenHTTP.Lambda.Services.Settings;
 
 using GenHTTP.Modules.Webservices;
 
@@ -27,7 +28,7 @@ namespace GenHTTP.Lambda.Api;
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
 public sealed class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
-                                               LambdaTelemetry telemetry, LogBook book, LambdaOptions options, VersionFactsCache facts)
+                                               LambdaTelemetry telemetry, LogBook book, LambdaOptions options, LimitsService limits, VersionFactsCache facts)
 {
 
     #region Functionality
@@ -59,7 +60,9 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var allowance = options.WorkspaceOf(tier);
+        var allowance = limits.WorkspaceOf(tier);
+
+        var product = limits.Get();
 
         /*
          * A request answered with a client error is written as a warning, and
@@ -93,14 +96,14 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
             [.. problems.Select(Describe)],
             Measure(privateKey, id, measured, known),
             new SummaryLimits(
-                options.MaxCodeLengthOf(tier),
-                options.MaxAssetBytesOf(tier),
+                limits.MaxCodeLengthOf(tier),
+                limits.MaxAssetBytesOf(tier),
                 allowance.Quota,
-                options.MaxVersions,
-                (int)options.DeploymentLifetime.TotalHours,
-                (int)options.Retention.TotalDays,
-                options.MaxFeatures,
-                options.DatabaseOf(tier)
+                limits.Of(tier).Versions,
+                (int)product.OfflineAfter.TotalHours,
+                (int)product.RemovedAfter.TotalDays,
+                limits.Of(tier).Features,
+                limits.DatabaseOf(tier)
             ),
             known.Documentation
         );

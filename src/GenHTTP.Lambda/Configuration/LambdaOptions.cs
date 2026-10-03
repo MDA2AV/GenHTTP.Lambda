@@ -1,6 +1,5 @@
 using GenHTTP.Api.Infrastructure;
 
-using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Workspace;
 
 namespace GenHTTP.Lambda.Configuration;
@@ -8,6 +7,13 @@ namespace GenHTTP.Lambda.Configuration;
 /// <summary>
 /// All knobs of the system, read once from the environment on startup.
 /// </summary>
+/// <remarks>
+/// The limits of the tiers are here only as the defaults of what the operator
+/// sets in the administration panel (see <see cref="GenHTTP.Lambda.Services.Settings.LimitsService"/>):
+/// they are the product's promises, not the server's configuration. Their
+/// environment variables still set those defaults for one release, with a
+/// warning on startup (<see cref="MovedToPanel"/>), and are removed after.
+/// </remarks>
 public sealed record LambdaOptions
 {
 
@@ -540,33 +546,27 @@ public sealed record LambdaOptions
     /// </summary>
     public bool Administrable => !string.IsNullOrWhiteSpace(AdminToken);
 
-    /// <summary>
-    /// How many characters of C# a lambda in the given tier may have.
-    /// </summary>
-    public int MaxCodeLengthOf(LambdaTier tier)
-        => tier == LambdaTier.Premium ? Math.Max(PremiumMaxCodeLength, MaxCodeLength) : MaxCodeLength;
-
-    /// <summary>
-    /// How many bytes of assets a lambda in the given tier may ship.
-    /// </summary>
-    public int MaxAssetBytesOf(LambdaTier tier)
-        => tier == LambdaTier.Premium ? Math.Max(PremiumMaxAssetBytes, MaxAssetBytes) : MaxAssetBytes;
-
-    /// <summary>
-    /// What a lambda in the given tier may keep in its workspace.
-    /// </summary>
-    /// <param name="enabled">Whether its owner left the workspace switched on</param>
-    public WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true)
-        => new(tier == LambdaTier.Premium ? PremiumWorkspaceBytes : WorkspaceBytes, enabled);
-
-    /// <summary>
-    /// How large the database of a lambda in the given tier may grow.
-    /// </summary>
-    public long DatabaseOf(LambdaTier tier) => tier == LambdaTier.Premium ? Math.Max(PremiumDatabaseBytes, DatabaseBytes) : DatabaseBytes;
-
     #endregion
 
     #region Functionality
+
+    /// <summary>
+    /// The environment variables that set a limit of the tiers, which the
+    /// administration panel sets now.
+    /// </summary>
+    public static IReadOnlyList<string> LimitVariables { get; } =
+    [
+        "LAMBDA_MAX_CODE_LENGTH", "LAMBDA_PREMIUM_MAX_CODE_LENGTH", "LAMBDA_MAX_ASSET_BYTES", "LAMBDA_PREMIUM_MAX_ASSET_BYTES",
+        "LAMBDA_WORKSPACE_BYTES", "LAMBDA_PREMIUM_WORKSPACE_BYTES", "LAMBDA_DATABASE_BYTES", "LAMBDA_PREMIUM_DATABASE_BYTES",
+        "LAMBDA_DEPLOYMENT_LIFETIME_HOURS", "LAMBDA_RETENTION_HOURS", "LAMBDA_MAX_VERSIONS", "LAMBDA_MAX_FEATURES",
+        "LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", "LAMBDA_RATE_LIMIT", "LAMBDA_AGENT_BUILDS_PER_DAY"
+    ];
+
+    /// <summary>
+    /// Which of <see cref="LimitVariables"/> are set in this environment.
+    /// </summary>
+    public static IReadOnlyList<string> MovedToPanel()
+        => [.. LimitVariables.Where(v => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(v)))];
 
     /// <summary>
     /// Reads the configuration from the environment, falling back to the defaults.

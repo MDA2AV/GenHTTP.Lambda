@@ -2,11 +2,11 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Settings;
 
 using GenHTTP.Modules.IO;
 using GenHTTP.Modules.Reflection;
@@ -27,7 +27,7 @@ namespace GenHTTP.Lambda.Api;
 /// Every way of storing one takes an optional specification and change: what
 /// the user wanted and what was done about it, which the code alone cannot say.
 /// </remarks>
-public sealed class VersionResource(IMetaService meta, LambdaOptions options, ILogger<VersionResource> logger)
+public sealed class VersionResource(IMetaService meta, LimitsService limits, ILogger<VersionResource> logger)
 {
 
     /// <summary>
@@ -98,7 +98,7 @@ public sealed class VersionResource(IMetaService meta, LambdaOptions options, IL
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var files = await LambdaArchive.UnpackAsync(body, options.MaxCodeLengthOf(tier) * 4L + options.MaxAssetBytesOf(tier));
+        var files = await LambdaArchive.UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier));
 
         return await SaveAsync(privateKey, files, deploy, specification, change);
     }

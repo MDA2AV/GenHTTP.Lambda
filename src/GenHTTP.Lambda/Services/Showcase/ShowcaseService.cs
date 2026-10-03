@@ -1,8 +1,8 @@
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -13,7 +13,7 @@ namespace GenHTTP.Lambda.Services.Showcase;
 /// Keeps the showcase entries and decides the order they are shown in.
 /// </summary>
 public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases, LambdaTelemetry telemetry,
-                                    LambdaOptions options, ILogger<ShowcaseService> logger) : IShowcaseService
+                                    LimitsService limits, ILogger<ShowcaseService> logger) : IShowcaseService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -64,9 +64,11 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
 
         if (draft.Image != null)
         {
-            if (draft.Image.Length > options.MaxShowcaseImageBytes)
+            var allowed = limits.Get().ShowcaseImageBytes;
+
+            if (draft.Image.Length > allowed)
             {
-                throw LambdaException.Invalid($"The picture must not be larger than {options.MaxShowcaseImageBytes / 1024 / 1024} MB.");
+                throw LambdaException.Invalid($"The picture must not be larger than {allowed / 1024 / 1024} MB.");
             }
 
             type = Sniff(draft.Image)

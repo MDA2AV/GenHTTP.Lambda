@@ -143,6 +143,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<StarGuard>();
         services.AddSingleton<ISourceService, SourceService>();
         services.AddSingleton<SettingsService>();
+        services.AddSingleton<LimitsService>();
         services.AddSingleton<DemoSeeder>();
         services.AddSingleton<McpTools>();
         services.AddSingleton<AgentClient>();

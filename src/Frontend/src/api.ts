@@ -1016,6 +1016,36 @@ export interface AdminSettings {
   changeBox: boolean;
 }
 
+/** What a lambda of one tier may have, as the operator set it. */
+export interface TierLimits {
+  /** Characters of C# across all its files. */
+  codeCharacters: number;
+  /** Bytes of assets, documentation and tests in a version. */
+  assetBytes: number;
+  workspaceBytes: number;
+  databaseBytes: number;
+  /** How many of its versions are kept. */
+  versions: number;
+  /** How many features it may have open at once. */
+  features: number;
+}
+
+/** Every limit of the product, which the panel edits. */
+export interface AdminLimits {
+  free: TierLimits;
+  /** Never less than the free tier's; the server refuses that. */
+  premium: TierLimits;
+  /** A free lambda nobody visits or edits for this long is taken offline. */
+  offlineAfterHours: number;
+  /** And removed after this long. */
+  removedAfterHours: number;
+  showcaseImageBytes: number;
+  /** Per client, across every lambda. */
+  requestsPerSecond: number;
+  /** Builds and changes per address and day. */
+  buildsPerDay: number;
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -1125,6 +1155,11 @@ export const api = {
 
     saveSettings: (token: string, settings: AdminSettings) =>
       request<AdminSettings>('/admin/settings', withToken(token, { method: 'PUT', body: JSON.stringify(settings) })),
+
+    limits: (token: string) => request<AdminLimits>('/admin/limits', withToken(token)),
+
+    saveLimits: (token: string, limits: AdminLimits) =>
+      request<AdminLimits>('/admin/limits', withToken(token, { method: 'PUT', body: JSON.stringify(limits) })),
   },
 
   /**

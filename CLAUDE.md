@@ -437,6 +437,17 @@ chosen by the owner.
   it to every lambda that is not premium (or a demo), in a tile beside the
   latest change; its only action is a mail to us naming the app by its public
   address, never the editor key - the tier stays the operator's to assign.
+- **The limits of a tier are product settings, not server configuration -
+  decided.** Code, assets, workspace, database, versions and features per
+  tier, the free tier's lifetime, and the per-caller limits (showcase picture,
+  requests per second, builds per day) are set in the panel's **Limits**
+  (`LimitsService`, rows in `settings`), one form with a Free/Premium switch.
+  A change applies to what is checked next and takes nothing away. Ports,
+  directories, keys, buffers, `LAMBDA_MAX_CONCURRENCY` and the execution
+  timeout stay environment variables: they protect the process. The old
+  limit variables give the defaults for one release, with a startup warning,
+  and are then removed. Callers ask `LimitsService`, never `LambdaOptions`,
+  for a limit.
 - **Enterprise** - a customer running their own instance, on-prem or in the
   cloud - is planned but **do not anticipate enterprise features unless asked**.
   It is not decided that the enterprise code base will be the same as the cloud

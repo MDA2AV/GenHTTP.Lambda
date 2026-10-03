@@ -159,14 +159,14 @@ public sealed class TierAllowanceTests
     }
 
     [TestMethod]
-    public void ThePremiumTierNeverShipsLessThanTheOthers()
+    public async Task ThePremiumTierNeverShipsLessThanTheOthers()
     {
-        var options = new LambdaOptions { MaxAssetBytes = 1024 * 1024 * 1024, MaxCodeLength = 20 * 1024 * 1024 };
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { MaxAssetBytes = 1024 * 1024 * 1024, MaxCodeLength = 20 * 1024 * 1024 });
 
-        Assert.AreEqual(1024 * 1024 * 1024, options.MaxAssetBytesOf(LambdaTier.Premium),
+        Assert.AreEqual(1024 * 1024 * 1024, fixture.Limits.MaxAssetBytesOf(LambdaTier.Premium),
                         "raising what everybody may ship must not leave premium lambdas below it");
 
-        Assert.AreEqual(20 * 1024 * 1024, options.MaxCodeLengthOf(LambdaTier.Premium), "nor what everybody may write");
+        Assert.AreEqual(20 * 1024 * 1024, fixture.Limits.MaxCodeLengthOf(LambdaTier.Premium), "nor what everybody may write");
     }
 
     [TestMethod]

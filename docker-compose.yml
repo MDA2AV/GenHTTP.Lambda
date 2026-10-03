@@ -15,20 +15,6 @@ services:
       # switch LambdaOptions names for falling back without a release -
       # Http1AndHttp2 turns it back on once the engine is fixed.
       LAMBDA_HTTP_PROTOCOLS: ${LAMBDA_HTTP_PROTOCOLS:-Http1}
-      # How long a free tier lambda may go unused before it is taken offline,
-      # and how long before it is removed, both in hours.
-      #
-      # Unused, not undeployed. This was the age of the deployment and it took
-      # working lambdas down overnight however many people were visiting them.
-      # What it measures now is the later of the last edit and the last
-      # request, so something finished and popular stays up.
-      LAMBDA_DEPLOYMENT_LIFETIME_HOURS: 720
-      #
-      # Further out than the lifetime above, deliberately: the sweep removes
-      # before it retires, so equal values would delete a lambda at the moment
-      # it would have gone offline and there would be no offline step at all.
-      # The gap is grace - down, but still there to be deployed again.
-      LAMBDA_RETENTION_HOURS: 2160
       # TLS, terminated by the server itself - the certificate is published
       # into this directory by the certbot deploy hook
       # the administration panel, off unless the host supplies a token - the
@@ -49,13 +35,11 @@ services:
       LAMBDA_MCP_ORIGINS: genhttp.dev,www.genhttp.dev
       # the address pages name as canonical and the sitemap lists them under
       LAMBDA_PUBLIC_URL: https://genhttp.dev
-      # What a lambda may hold, by tier. Left empty, each is the platform's
-      # own default (see LambdaOptions): 1 MB of code, 32 MB of assets and a
-      # 256 MB workspace, and 10 MB, 128 MB and 2 GB for a premium lambda.
-      #
-      # Set any of them lower in .env where this machine cannot carry it. A
-      # version is read and written whole, in memory, so a premium save with
-      # hundreds of megabytes of assets needs several gigabytes to go through.
+      # Deprecated: the limits of the tiers are set in the administration
+      # panel (Limits) now. Passed through for one more release, so a value
+      # still in .env remains the default until the panel saves one - the
+      # server warns on startup for each that is set. Take them out of .env
+      # once the panel holds what they said.
       LAMBDA_MAX_CODE_LENGTH: ${LAMBDA_MAX_CODE_LENGTH:-}
       LAMBDA_PREMIUM_MAX_CODE_LENGTH: ${LAMBDA_PREMIUM_MAX_CODE_LENGTH:-}
       LAMBDA_MAX_ASSET_BYTES: ${LAMBDA_MAX_ASSET_BYTES:-}

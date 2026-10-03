@@ -37,7 +37,7 @@ public sealed class DataTests
         Assert.IsTrue(workspace.Enabled);
         Assert.IsTrue(workspace.Default);
         Assert.IsNull(workspace.Changed, "nobody chose anything yet");
-        Assert.AreEqual(fixture.Options.WorkspaceOf(Data.Entities.LambdaTier.Free).Quota, workspace.QuotaBytes);
+        Assert.AreEqual(fixture.Limits.WorkspaceOf(Data.Entities.LambdaTier.Free).Quota, workspace.QuotaBytes);
     }
 
     [TestMethod]

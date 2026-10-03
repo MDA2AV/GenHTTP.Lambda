@@ -1384,17 +1384,17 @@ public sealed class McpTests
 
         var free = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 
-        Assert.AreEqual(fixture.Options.MaxCodeLengthOf(LambdaTier.Free), free["codeCharacters"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Options.MaxAssetBytesOf(LambdaTier.Free), free["assetBytes"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Free).Quota, free["workspaceBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.MaxCodeLengthOf(LambdaTier.Free), free["codeCharacters"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Limits.MaxAssetBytesOf(LambdaTier.Free), free["assetBytes"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Limits.WorkspaceOf(LambdaTier.Free).Quota, free["workspaceBytes"]!.GetValue<long>());
 
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         var premium = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 
-        Assert.AreEqual(fixture.Options.MaxCodeLengthOf(LambdaTier.Premium), premium["codeCharacters"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Options.MaxAssetBytesOf(LambdaTier.Premium), premium["assetBytes"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Options.WorkspaceOf(LambdaTier.Premium).Quota, premium["workspaceBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.MaxCodeLengthOf(LambdaTier.Premium), premium["codeCharacters"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Limits.MaxAssetBytesOf(LambdaTier.Premium), premium["assetBytes"]!.GetValue<int>());
+        Assert.AreEqual(fixture.Limits.WorkspaceOf(LambdaTier.Premium).Quota, premium["workspaceBytes"]!.GetValue<long>());
     }
 
     [TestMethod]

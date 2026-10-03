@@ -1,8 +1,8 @@
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Storage;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +12,7 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// Reads and writes the private directory of a lambda on behalf of its owner -
 /// or a feature's copy of it, which is held to the same quota.
 /// </summary>
-public sealed class WorkspaceService(IStorageService storage, IMetaService meta, LambdaOptions options, ILogger<WorkspaceService> logger) : IWorkspaceService
+public sealed class WorkspaceService(IStorageService storage, IMetaService meta, LimitsService tiers, ILogger<WorkspaceService> logger) : IWorkspaceService
 {
 
     /// <summary>
@@ -371,7 +371,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
     /// ones its own code will be compiled with on its next request.
     /// </remarks>
     private WorkspaceLimits Limits(long lambdaId)
-        => meta.GetWorkspaceLimits(lambdaId) ?? options.WorkspaceOf(LambdaTier.Free);
+        => meta.GetWorkspaceLimits(lambdaId) ?? tiers.WorkspaceOf(LambdaTier.Free);
 
     /// <summary>
     /// The limits of a workspace that is switched on, or a refusal saying how
