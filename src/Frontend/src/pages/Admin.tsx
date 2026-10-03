@@ -7,19 +7,21 @@ import { IconLock, IconSpinner } from '../components/Icons';
 import type { Access } from '../console/context';
 import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
+import { LimitsSection } from '../console/LimitsSection';
 import { LogSection } from '../console/LogSection';
 import { ServerSection } from '../console/ServerSection';
 import { SettingsSection } from '../console/SettingsSection';
 import { usePageMeta } from '../meta';
 import type { Theme } from '../theme';
 
-type SectionId = 'server' | 'lambdas' | 'log' | 'settings';
+type SectionId = 'server' | 'lambdas' | 'log' | 'settings' | 'limits';
 
 const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'server', title: 'Server', note: 'Memory, connections and what the engine is doing' },
   { id: 'lambdas', title: 'Lambdas', note: 'Every lambda on the installation' },
   { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
   { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
+  { id: 'limits', title: 'Limits', note: 'What a lambda may have in its tier' },
 ];
 
 /**
@@ -117,6 +119,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <LogSection access={access} />
           ) : section === 'settings' ? (
             <SettingsSection access={access} />
+          ) : section === 'limits' ? (
+            <LimitsSection access={access} />
           ) : (
             <ServerSection access={access} />
           )}

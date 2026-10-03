@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 
-using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Settings;
 
 namespace GenHTTP.Lambda.Services.Protection;
 
@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Protection;
 /// at a domain of its own as well as at its path is served by two chains, and
 /// buckets per chain would give a client its allowance twice.
 /// </remarks>
-public sealed class LambdaRateLimiter(LambdaOptions options)
+public sealed class LambdaRateLimiter(LimitsService limits)
 {
     private static readonly TimeSpan Window = TimeSpan.FromSeconds(1);
 
@@ -43,7 +43,7 @@ public sealed class LambdaRateLimiter(LambdaOptions options)
     /// <summary>
     /// How many requests a client may send per second.
     /// </summary>
-    public int Limit => options.RateLimit;
+    public int Limit => limits.Get().RequestsPerSecond;
 
     #endregion
 
@@ -68,7 +68,7 @@ public sealed class LambdaRateLimiter(LambdaOptions options)
                 bucket.Count = 0;
             }
 
-            return ++bucket.Count <= options.RateLimit;
+            return ++bucket.Count <= Limit;
         }
     }
 

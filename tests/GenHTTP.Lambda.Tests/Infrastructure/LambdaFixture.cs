@@ -14,6 +14,7 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Testing;
 
 using GenHTTP.Lambda.Services.Diagnostics;
+using GenHTTP.Lambda.Services.Settings;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -61,6 +62,11 @@ internal sealed class LambdaFixture : IAsyncDisposable
     public IMetaService Meta => Application.Services.GetRequiredService<IMetaService>();
 
     public IDeploymentService Deployments => Application.Services.GetRequiredService<IDeploymentService>();
+
+    /// <summary>
+    /// What a lambda may have in its tier, as the operator set it.
+    /// </summary>
+    public LimitsService Limits => Application.Services.GetRequiredService<LimitsService>();
 
     /// <summary>
     /// Brings the demos into existence, which the application does in the

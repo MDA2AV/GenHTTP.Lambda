@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
 
 using Microsoft.Data.Sqlite;
@@ -35,7 +35,7 @@ namespace GenHTTP.Lambda.Services.Databases;
 /// connection it gets is watched by <see cref="ConnectionGuard"/>, which is
 /// what keeps the SQL sent over it inside that one file.
 /// </remarks>
-public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, LambdaOptions options,
+public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, LimitsService limits,
                                   ILogger<DatabaseVault> logger)
 {
 
@@ -83,7 +83,9 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
 
         var connection = new SqliteConnection(ConnectionString(storage.GetDatabase(scope.LambdaId, scope.FeatureId), false));
 
-        ConnectionGuard.Watch(connection, snapshot.Quota / PageSize);
+        // asked on every connection rather than kept in the snapshot, so a
+        // limit the operator lowers holds from the next connection on
+        ConnectionGuard.Watch(connection, limits.DatabaseOf(snapshot.Tier) / PageSize);
 
         try
         {
@@ -135,7 +137,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
                            .Select(l => (LambdaTier?)l.Tier)
                            .FirstOrDefault();
 
-        return new Snapshot(generation, enabled && tier != null, options.DatabaseOf(tier ?? LambdaTier.Free));
+        return new Snapshot(generation, enabled && tier != null, tier ?? LambdaTier.Free);
     }
 
     #endregion
@@ -300,7 +302,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     /// <summary>
     /// How large the database of the lambda may grow, in its tier.
     /// </summary>
-    public long QuotaOf(LambdaTier tier) => options.DatabaseOf(tier);
+    public long QuotaOf(LambdaTier tier) => limits.DatabaseOf(tier);
 
     /// <summary>
     /// Writes the database of a lambda into a file of its own, whole - what
@@ -442,7 +444,7 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
 
     private readonly record struct Scope(long LambdaId, long? FeatureId);
 
-    /// <param name="Quota">How large it may grow, which its tier decides</param>
-    private sealed record Snapshot(long Generation, bool Enabled, long Quota);
+    /// <param name="Tier">The tier of its lambda, which decides how large it may grow</param>
+    private sealed record Snapshot(long Generation, bool Enabled, LambdaTier Tier);
 
 }

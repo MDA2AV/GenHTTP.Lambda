@@ -62,6 +62,13 @@ var logger = loggers.CreateLogger("GenHTTP.Lambda");
 
 runs.Report(logger);
 
+// the limits of the tiers moved to the administration panel; the variables
+// still give their defaults for this release, and are ignored after it
+foreach (var variable in LambdaOptions.MovedToPanel())
+{
+    logger.LogWarning("Read {Variable} from the environment, which is deprecated: the limits of the tiers are set in the administration panel, and a value saved there wins", variable);
+}
+
 /*
  * An unhandled exception on a thread the runtime does not own ends the
  * process, and the only trace of it is whatever reached stderr on the way

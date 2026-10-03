@@ -10,7 +10,8 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// reachable - and a constant is also something the code of the lambda cannot
 /// change. Which number is baked in depends on the tier of the lambda, so it
 /// is chosen when it is compiled, and a lambda whose tier moves is compiled
-/// again with the new one (see <see cref="GenHTTP.Lambda.Configuration.LambdaOptions.WorkspaceOf"/>).
+/// again with the new one, and so is every lambda once the operator changes
+/// the quota of its tier (see <see cref="GenHTTP.Lambda.Services.Settings.LimitsService.WorkspaceOf"/>).
 ///
 /// Room is counted the way the disk counts it, in blocks: every file takes a
 /// whole number of them and at least one, and so does every folder. Counted in

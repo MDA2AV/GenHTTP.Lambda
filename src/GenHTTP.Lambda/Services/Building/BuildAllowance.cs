@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 
-using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Settings;
 
 namespace GenHTTP.Lambda.Services.Building;
 
@@ -17,7 +17,7 @@ namespace GenHTTP.Lambda.Services.Building;
 /// An address that is not known - a caller the server cannot name - is not
 /// counted. The count is kept in memory, so a restart forgives everybody.
 /// </remarks>
-public sealed class BuildAllowance(LambdaOptions options)
+public sealed class BuildAllowance(LimitsService limits)
 {
 
     /// <summary>
@@ -28,8 +28,8 @@ public sealed class BuildAllowance(LambdaOptions options)
 
     private readonly ConcurrentDictionary<IPAddress, Tally> _asked = [];
 
-    /// <summary>How many jobs one address is allowed in a day.</summary>
-    public int PerDay => options.AgentBuildsPerDay;
+    /// <summary>How many jobs one address is allowed in a day, as the operator set it.</summary>
+    public int PerDay => limits.Get().BuildsPerDay;
 
     /// <summary>
     /// Counts one job against an address, and says whether it was allowed.

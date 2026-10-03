@@ -1,5 +1,4 @@
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
 using GenHTTP.Lambda.Services.Meta;
@@ -13,7 +12,7 @@ namespace GenHTTP.Lambda.Api;
 /// What the editor needs to know about the platform: the terms, the example it
 /// starts from, the vocabulary it can suggest and whether it can build things.
 /// </summary>
-public sealed class SystemResource(LambdaOptions options, BuildService builds, SettingsService settings)
+public sealed class SystemResource(LimitsService limits, BuildService builds, SettingsService settings)
 {
 
     internal const string Terms = """
@@ -31,16 +30,21 @@ public sealed class SystemResource(LambdaOptions options, BuildService builds, S
     /// The terms, limits and editor vocabulary of this installation.
     /// </summary>
     [ResourceMethod]
-    public PlatformResponse Get() => new(
-        Terms,
-        Describe(),
-        options.MaxCodeLength,
-        (int)options.DeploymentLifetime.TotalHours,
-        (int)options.Retention.TotalDays,
-        ModuleCatalog.Imports,
-        CompletionCatalog.Items,
-        new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel)
-    );
+    public PlatformResponse Get()
+    {
+        var current = limits.Get();
+
+        return new(
+            Terms,
+            Describe(),
+            current.Free.CodeCharacters,
+            (int)current.OfflineAfter.TotalHours,
+            (int)current.RemovedAfter.TotalDays,
+            ModuleCatalog.Imports,
+            CompletionCatalog.Items,
+            new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel)
+        );
+    }
 
     /// <summary>
     /// Which pages the site links to, as the operator switched them.

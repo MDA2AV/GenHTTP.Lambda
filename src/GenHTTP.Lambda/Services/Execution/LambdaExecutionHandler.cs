@@ -2,9 +2,9 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Protection;
+using GenHTTP.Lambda.Services.Settings;
 
 namespace GenHTTP.Lambda.Services.Execution;
 
@@ -19,7 +19,7 @@ namespace GenHTTP.Lambda.Services.Execution;
 /// engine is asked to leave alone: its address is handed around to try a
 /// change, not to be found.
 /// </remarks>
-public sealed class LambdaExecutionHandler(IDeploymentService deployments, LambdaOptions options) : IHandler
+public sealed class LambdaExecutionHandler(IDeploymentService deployments, LimitsService limits) : IHandler
 {
 
     public ValueTask PrepareAsync(IServer server) => ValueTask.CompletedTask;
@@ -28,16 +28,16 @@ public sealed class LambdaExecutionHandler(IDeploymentService deployments, Lambd
     {
         var lambda = request.RequireLambda();
 
-        var limits = options.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled);
+        var workspace = limits.WorkspaceOf(lambda.Tier, lambda.WorkspaceEnabled);
 
         if (lambda.Feature is not { } feature)
         {
-            var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, limits);
+            var handler = await deployments.ResolveAsync(lambda.Id, lambda.ActiveVersion, workspace);
 
             return await handler.HandleAsync(request);
         }
 
-        var preview = await deployments.ResolvePreviewAsync(lambda.Id, feature.Id, feature.Preview, limits);
+        var preview = await deployments.ResolvePreviewAsync(lambda.Id, feature.Id, feature.Preview, workspace);
 
         var response = await preview.HandleAsync(request);
 

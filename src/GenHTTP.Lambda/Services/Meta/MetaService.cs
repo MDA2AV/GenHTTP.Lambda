@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
@@ -58,6 +59,8 @@ public sealed class MetaService : IMetaService
 
     private LambdaOptions Options { get; }
 
+    private LimitsService Limits { get; }
+
     private LogBook Book { get; }
 
     private DomainRegistry Domains { get; }
@@ -83,7 +86,7 @@ public sealed class MetaService : IMetaService
     #region Initialization
 
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
-        LambdaTelemetry activity, LambdaOptions options, LogBook book, DomainRegistry domains, SecretVault secrets, DatabaseVault databaseVault,
+        LambdaTelemetry activity, LambdaOptions options, LimitsService limits, LogBook book, DomainRegistry domains, SecretVault secrets, DatabaseVault databaseVault,
         DatabaseChanges changes, ILogger<MetaService> logger)
     {
         ByKey = new ResolutionCache<string>(changes);
@@ -97,6 +100,7 @@ public sealed class MetaService : IMetaService
         Deployments = deployments;
         Activity = activity;
         Options = options;
+        Limits = limits;
         Book = book;
         Logger = logger;
     }
@@ -545,7 +549,7 @@ public sealed class MetaService : IMetaService
             }
         }
 
-        ValidateAllowance(files, lambda.Tier, Options);
+        ValidateAllowance(files, lambda.Tier, Limits);
 
         var version = Append(database, lambda, code, DateTime.UtcNow, note);
 
@@ -566,7 +570,7 @@ public sealed class MetaService : IMetaService
         {
             var lambda = Require(database, privateKey);
 
-            ValidateAllowance(files, lambda.Tier, Options);
+            ValidateAllowance(files, lambda.Tier, Limits);
 
             (id, limits) = (lambda.Id, WorkspaceOf(database, lambda));
         }
@@ -778,7 +782,7 @@ public sealed class MetaService : IMetaService
          */
         RecordUse(database);
 
-        var abandoned = now - Options.Retention;
+        var abandoned = now - Limits.Get().RemovedAfter;
 
         // demos are the installation's own, and being untouched is their
         // normal state rather than a sign that nobody wants them; premium
@@ -793,7 +797,7 @@ public sealed class MetaService : IMetaService
             Remove(database, lambda);
         }
 
-        var quiet = now - Options.DeploymentLifetime;
+        var quiet = now - Limits.Get().OfflineAfter;
 
         var running = database.Lambdas.Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.ActiveVersion != null)
                               .ToList();
@@ -885,21 +889,21 @@ public sealed class MetaService : IMetaService
     /// what the premium tier allows, so whoever reads it knows there is more.
     /// A feature is held to the same, since what it holds becomes a version.
     /// </remarks>
-    internal static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, LambdaOptions options)
+    internal static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, LimitsService limits)
     {
         // the limit counts what was written rather than what it is stored as,
         // so splitting a lambda into files does not spend any of it on the
         // envelope those files are kept in
-        var code = options.MaxCodeLengthOf(tier);
+        var code = limits.MaxCodeLengthOf(tier);
 
         if (LambdaSource.Length(files) > code)
         {
-            throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, options.MaxCodeLengthOf(LambdaTier.Premium), $"{options.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
+            throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, limits.MaxCodeLengthOf(LambdaTier.Premium), $"{limits.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
         }
 
         // the documentation and the tests are carried the same way as the
         // assets - a copy in every version - so they share the allowance
-        var assets = options.MaxAssetBytesOf(tier);
+        var assets = limits.MaxAssetBytesOf(tier);
 
         var context = LambdaSource.ContextBytes(files);
 
@@ -907,7 +911,7 @@ public sealed class MetaService : IMetaService
         {
             var what = context > 0 ? "The assets, the documentation and the tests" : "The assets";
 
-            throw LambdaException.Invalid($"{what} must not exceed {Readable(assets)} in total.{Beyond(tier, assets, options.MaxAssetBytesOf(LambdaTier.Premium), Readable(options.MaxAssetBytesOf(LambdaTier.Premium)))} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
+            throw LambdaException.Invalid($"{what} must not exceed {Readable(assets)} in total.{Beyond(tier, assets, limits.MaxAssetBytesOf(LambdaTier.Premium), Readable(limits.MaxAssetBytesOf(LambdaTier.Premium)))} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
         }
     }
 
@@ -964,14 +968,14 @@ public sealed class MetaService : IMetaService
             return null;
         }
 
-        return Options.WorkspaceOf(tier.Value, DataSwitches.IsEnabled(database, lambdaId, DataKinds.Workspace));
+        return Limits.WorkspaceOf(tier.Value, DataSwitches.IsEnabled(database, lambdaId, DataKinds.Workspace));
     }
 
     /// <summary>
     /// What the lambda may keep in its workspace, which is compiled into it.
     /// </summary>
     private WorkspaceLimits WorkspaceOf(LambdaDbContext database, LambdaEntity lambda)
-        => Options.WorkspaceOf(lambda.Tier, DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace));
+        => Limits.WorkspaceOf(lambda.Tier, DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace));
 
     public LambdaPage List(string? search = null, int skip = 0, int take = int.MaxValue, LambdaTier? tier = null)
     {
@@ -1230,7 +1234,7 @@ public sealed class MetaService : IMetaService
 
         var obsolete = database.Deployments.Where(d => d.LambdaId == lambda.Id && d.Version != lambda.ActiveVersion && !bases.Contains(d.Version))
                                .OrderByDescending(d => d.Version)
-                               .Skip(Options.MaxVersions)
+                               .Skip(Limits.Of(lambda.Tier).Versions)
                                .ToList();
 
         if (obsolete.Count == 0)
@@ -1331,13 +1335,13 @@ public sealed class MetaService : IMetaService
     /// When the sweep takes the lambda offline unless it is used before then.
     /// </summary>
     private DateTime? DeployedUntil(LambdaEntity lambda)
-        => lambda.ActiveVersion != null && !Kept(lambda) ? Quiet(lambda) + Options.DeploymentLifetime : null;
+        => lambda.ActiveVersion != null && !Kept(lambda) ? Quiet(lambda) + Limits.Get().OfflineAfter : null;
 
     /// <summary>
     /// When the sweep removes the lambda unless it is used before then.
     /// </summary>
     private DateTime? KeptUntil(LambdaEntity lambda)
-        => !Kept(lambda) ? Quiet(lambda) + Options.Retention : null;
+        => !Kept(lambda) ? Quiet(lambda) + Limits.Get().RemovedAfter : null;
 
     private static IReadOnlyList<LambdaVersionInfo> ListVersions(LambdaDbContext database, long lambdaId)
         => database.Deployments.AsNoTracking()

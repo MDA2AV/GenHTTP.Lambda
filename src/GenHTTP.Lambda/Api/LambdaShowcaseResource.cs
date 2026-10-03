@@ -1,8 +1,8 @@
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Api.Infrastructure;
+using GenHTTP.Lambda.Services.Settings;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Api;
 /// the versions and the deployment on purpose: presenting a lambda is
 /// something done once it works, not a step of making it work.
 /// </remarks>
-public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, LambdaOptions options, ILogger<LambdaShowcaseResource> logger)
+public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, LimitsService limits, ILogger<LambdaShowcaseResource> logger)
 {
 
     /// <summary>
@@ -31,7 +31,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     {
         var showcase = showcases.Get(privateKey);
 
-        return new OwnShowcaseResponse(showcase == null ? null : ShowcaseResponse.Of(showcase), Limits(options));
+        return new OwnShowcaseResponse(showcase == null ? null : ShowcaseResponse.Of(showcase), Limits(limits));
     }
 
     /// <summary>
@@ -76,8 +76,8 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
         logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
     }
 
-    internal static ShowcaseLimitsResponse Limits(LambdaOptions options)
-        => new(ShowcaseLimits.MaxTitle, ShowcaseLimits.MaxDescription, options.MaxShowcaseImageBytes,
+    internal static ShowcaseLimitsResponse Limits(LimitsService limits)
+        => new(ShowcaseLimits.MaxTitle, ShowcaseLimits.MaxDescription, limits.Get().ShowcaseImageBytes,
                ["image/png", "image/jpeg", "image/gif", "image/webp"], ShowcaseLimits.Tone);
 
 }

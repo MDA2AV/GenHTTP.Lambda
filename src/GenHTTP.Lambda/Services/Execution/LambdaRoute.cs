@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Protection;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
 
 using GenHTTP.Modules.DependencyInjection;
@@ -43,7 +44,7 @@ public static class LambdaRoute
     {
         var options = services.GetRequiredService<LambdaOptions>();
 
-        var execution = new LambdaExecutionHandler(services.GetRequiredService<IDeploymentService>(), options);
+        var execution = new LambdaExecutionHandler(services.GetRequiredService<IDeploymentService>(), services.GetRequiredService<LimitsService>());
 
         return Concerns.Chain([
             Dependent.Concern<ThrottleConcern>(),

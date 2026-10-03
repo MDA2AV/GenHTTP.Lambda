@@ -81,3 +81,34 @@ public sealed record LambdaOverviewResponse(string PublicKey, int? ActiveVersion
 /// <param name="BuildBox">Whether /build offers its text box, where there is an agent</param>
 /// <param name="ChangeBox">Whether the Change section of the editor offers its text box, where there is an agent</param>
 public sealed record SettingsModel(bool EnterprisePage, bool BuildBox = true, bool ChangeBox = true);
+
+/// <summary>
+/// What a lambda may have and do, as the operator set it.
+/// </summary>
+/// <param name="Free">What a free lambda, or a demo, may have</param>
+/// <param name="Premium">What a premium lambda may have; never less than a free one</param>
+/// <param name="OfflineAfterHours">How long a free lambda may go without visits or edits before it is taken offline</param>
+/// <param name="RemovedAfterHours">How long a free lambda may go without visits or edits before it is removed</param>
+/// <param name="ShowcaseImageBytes">How large the picture of a showcase entry may be</param>
+/// <param name="RequestsPerSecond">How many requests one client may send to the lambdas in a second</param>
+/// <param name="BuildsPerDay">How many builds and changes one address may ask the build agent for in a day</param>
+public sealed record LimitsModel(
+    TierLimitsModel Free,
+    TierLimitsModel Premium,
+    int OfflineAfterHours,
+    int RemovedAfterHours,
+    int ShowcaseImageBytes,
+    int RequestsPerSecond,
+    int BuildsPerDay
+);
+
+/// <summary>
+/// What a lambda of one tier may have.
+/// </summary>
+/// <param name="CodeCharacters">Characters of C# across all its files</param>
+/// <param name="AssetBytes">Bytes of assets, documentation and tests in a version</param>
+/// <param name="WorkspaceBytes">Room its workspace may take</param>
+/// <param name="DatabaseBytes">How large its database may grow</param>
+/// <param name="Versions">How many of its versions are kept</param>
+/// <param name="Features">How many features it may have open at once</param>
+public sealed record TierLimitsModel(int CodeCharacters, int AssetBytes, long WorkspaceBytes, long DatabaseBytes, int Versions, int Features);

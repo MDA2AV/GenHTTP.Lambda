@@ -32,7 +32,8 @@ namespace GenHTTP.Lambda.Api;
 /// action is then the same one the owner would take - so a deployment started
 /// here is the same deployment, recorded as the operator's.
 /// </remarks>
-public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, SettingsService settings, ILogger<AdminResource> logger)
+public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, SettingsService settings, LimitsService limits,
+                                   ILogger<AdminResource> logger)
 {
 
     #region Listing
@@ -221,6 +222,63 @@ public sealed class AdminResource(IMetaService meta, LambdaTelemetry telemetry, 
 
         return new SettingsModel(saved.EnterprisePage, saved.BuildBox, saved.ChangeBox);
     }
+
+    #endregion
+
+    #region Limits
+
+    /// <summary>
+    /// What a lambda may have and do, per tier.
+    /// </summary>
+    /// <remarks>
+    /// Where the operator has not saved them yet, these are the defaults - the
+    /// built in ones, or what the environment variables that used to set them
+    /// say.
+    /// </remarks>
+    [ResourceMethod("limits")]
+    public LimitsModel GetLimits() => Describe(limits.Get());
+
+    /// <summary>
+    /// Replaces the limits, all of them.
+    /// </summary>
+    /// <remarks>
+    /// They apply to what is checked next - a save, an upload, a deploy, a
+    /// connection to a database - and take nothing away that a lambda already
+    /// has. Every value must be greater than zero, and the premium tier must
+    /// not allow less than the free one.
+    /// </remarks>
+    [ResourceMethod(Method.Put, "limits")]
+    public LimitsModel ChangeLimits(LimitsModel body)
+    {
+        var (saved, previous) = limits.Save(new ProductLimits(
+            Tier(body.Free),
+            Tier(body.Premium),
+            TimeSpan.FromHours(body.OfflineAfterHours),
+            TimeSpan.FromHours(body.RemovedAfterHours),
+            body.ShowcaseImageBytes,
+            body.RequestsPerSecond,
+            body.BuildsPerDay
+        ));
+
+        var before = LimitsService.Flatten(previous).ToDictionary(l => l.Key, l => l.Value);
+
+        foreach (var (key, value) in LimitsService.Flatten(saved).Where(l => before[l.Key] != l.Value))
+        {
+            logger.LogInformation("Changed limit {Limit} from {Previous} to {Value} by operator", key, before[key], value);
+        }
+
+        return Describe(saved);
+    }
+
+    private static TierLimits Tier(TierLimitsModel model)
+        => new(model.CodeCharacters, model.AssetBytes, model.WorkspaceBytes, model.DatabaseBytes, model.Versions, model.Features);
+
+    private static TierLimitsModel Describe(TierLimits limits)
+        => new(limits.CodeCharacters, limits.AssetBytes, limits.WorkspaceBytes, limits.DatabaseBytes, limits.Versions, limits.Features);
+
+    private static LimitsModel Describe(ProductLimits limits)
+        => new(Describe(limits.Free), Describe(limits.Premium), (int)limits.OfflineAfter.TotalHours, (int)limits.RemovedAfter.TotalHours,
+               limits.ShowcaseImageBytes, limits.RequestsPerSecond, limits.BuildsPerDay);
 
     #endregion
 

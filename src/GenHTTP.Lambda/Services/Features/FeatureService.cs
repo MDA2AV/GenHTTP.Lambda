@@ -12,6 +12,7 @@ using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -26,7 +27,7 @@ namespace GenHTTP.Lambda.Services.Features;
 /// service beside the lambdas themselves.
 /// </summary>
 public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases, IMetaService meta, IStorageService storage,
-                                   IDeploymentService deployments, SecretVault secrets, DatabaseVault stores, LambdaOptions options, LogBook book,
+                                   IDeploymentService deployments, SecretVault secrets, DatabaseVault stores, LambdaOptions options, LimitsService limits, LogBook book,
                                    DatabaseChanges changes, ILogger<FeatureService> logger)
     : IFeatureService
 {
@@ -181,9 +182,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         var lambda = database.Lambdas.First(l => l.Id == lambdaId);
 
-        if (database.Features.Count(f => f.LambdaId == lambdaId) >= options.MaxFeatures)
+        var allowed = limits.Of(lambda.Tier).Features;
+
+        if (database.Features.Count(f => f.LambdaId == lambdaId) >= allowed)
         {
-            throw LambdaException.Conflict($"A lambda may have {options.MaxFeatures} features open at once. Merge or delete one first.");
+            throw LambdaException.Conflict($"A lambda may have {allowed} features open at once. Merge or delete one first.");
         }
 
         var newest = Newest(database, lambdaId)
@@ -312,7 +315,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         // what a feature holds becomes a version, so it is held to what a
         // version may hold from the start rather than refused when merged
-        MetaService.ValidateAllowance(files, lambda.Tier, options);
+        MetaService.ValidateAllowance(files, lambda.Tier, limits);
 
         storage.WriteFeature(lambda.Id, entity.Id, code);
 
@@ -345,7 +348,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         int stamp, revision;
 
-        WorkspaceLimits limits;
+        WorkspaceLimits workspace;
 
         {
             var (database, lambda, entity, turn) = Locked(privateKey, feature);
@@ -357,7 +360,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             code = storage.ReadFeature(lambda.Id, entity.Id)
                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
-            limits = options.WorkspaceOf(lambda.Tier, WorkspaceEnabled(database, lambda.Id));
+            workspace = limits.WorkspaceOf(lambda.Tier, WorkspaceEnabled(database, lambda.Id));
 
             // handed out here, so one started meanwhile is given the next
             stamp = _stamps.AddOrUpdate(entity.Id, entity.Preview + 1, (_, last) => Math.Max(last, entity.Preview) + 1);
@@ -374,7 +377,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                ? LambdaOutput.Enter(new OutputScope(publicKey, book, options.MaxOutputLines, lambdaId, featureId))
                : null)
         {
-            outcome = await deployments.PreviewAsync(lambdaId, featureId, stamp, code, limits, cancellation);
+            outcome = await deployments.PreviewAsync(lambdaId, featureId, stamp, code, workspace, cancellation);
         }
 
         try
@@ -655,7 +658,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     {
         using var database = databases.CreateDbContext();
 
-        var quiet = now - options.DeploymentLifetime;
+        var quiet = now - limits.Get().OfflineAfter;
 
         // the same rule the lambda's own deployment lives by: online while
         // somebody works on it, offline once nobody has for the whole window

@@ -199,7 +199,7 @@ merging or rebasing machinery: whoever works on the feature brings a newer
 version's changes in and then says so by moving its `base` (`PATCH`, or
 `update_feature`), and the merge takes the lambda's lock and checks the base
 once more, so two merges cannot both win. A lambda may have ten features open
-(`LAMBDA_MAX_FEATURES`); a demo has none. Each holds a full copy of the
+(a limit of its tier, set in the panel); a demo has none. Each holds a full copy of the
 workspace and of the database, taken on a thread of its own and swapped in
 whole, so ten features of a premium lambda with a full workspace take ten times
 its room on disk.
@@ -386,10 +386,11 @@ their records like this, `demo-crud` the plainest of them.
   as are the pragmas that would point it at other directories or lift its
   quota, and SQLite's defensive mode is on. The handle underneath is a type
   the code cannot name.
-- **Its room.** `LAMBDA_DATABASE_BYTES` (256 MB) and
-  `LAMBDA_PREMIUM_DATABASE_BYTES` (2 GB), enforced by SQLite with
-  `max_page_count` on every connection: past it a write fails with *database or
-  disk is full*.
+- **Its room.** 256 MB, and 2 GB for a premium lambda, by default - a
+  [limit](#limits) of its tier - enforced by SQLite with `max_page_count` on
+  every connection: past it a write fails with *database or disk is full*. A
+  limit the operator lowers holds from the next connection; nothing stored is
+  removed.
 - **Features get a copy.** Taken with SQLite's backup, which reads the database
   in one transaction while the lambda goes on writing, so it is the database
   as it was at one moment. A preview migrates its copy as it starts, which is
@@ -827,7 +828,10 @@ and the seccomp profile is left alone.
 ## Configuration
 
 Everything is read from the environment on startup, see
-[`LambdaOptions`](src/GenHTTP.Lambda/Configuration/LambdaOptions.cs).
+[`LambdaOptions`](src/GenHTTP.Lambda/Configuration/LambdaOptions.cs) - apart
+from the limits of the tiers, which are the product's promises rather than the
+server's configuration and are set in the administration panel while it runs
+(see [Limits](#limits)).
 
 | Variable                            | Default          | Meaning                                     |
 |-------------------------------------|------------------|---------------------------------------------|
@@ -837,21 +841,8 @@ Everything is read from the environment on startup, see
 | `LAMBDA_DATA_DIRECTORY`             | `./data`         | database, code and workspaces               |
 | `LAMBDA_WEB_ROOT`                   | `./wwwroot`      | the built frontend                          |
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
-| `LAMBDA_DEPLOYMENT_LIFETIME_HOURS`  | `720`            | unused for this long and it goes offline       |
-| `LAMBDA_RETENTION_HOURS`            | `2160`           | unused for this long and it is removed        |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
-| `LAMBDA_MAX_CODE_LENGTH`            | `1048576`        | characters of C# a lambda may have, in all  |
-| `LAMBDA_PREMIUM_MAX_CODE_LENGTH`    | `10485760`       | the same for a premium lambda, never less   |
-| `LAMBDA_MAX_ASSET_BYTES`            | `33554432`       | what the shipped assets may come to         |
-| `LAMBDA_PREMIUM_MAX_ASSET_BYTES`    | `134217728`      | the same for a premium lambda, never less   |
-| `LAMBDA_WORKSPACE_BYTES`            | `268435456`      | the room a workspace may take in all        |
-| `LAMBDA_PREMIUM_WORKSPACE_BYTES`    | `2147483648`     | the same for a premium lambda               |
-| `LAMBDA_DATABASE_BYTES`             | `268435456`      | how large the database of a lambda may grow |
-| `LAMBDA_PREMIUM_DATABASE_BYTES`     | `2147483648`     | the same for a premium lambda, never less   |
-| `LAMBDA_MAX_VERSIONS`               | `50`             | versions kept per lambda                    |
-| `LAMBDA_MAX_FEATURES`               | `10`             | features open per lambda - each holds a copy of the workspace and the database, so this bounds the disk they take |
 | `LAMBDA_SOURCE_CACHE_BYTES`         | `2147483648`     | what the published sources may take on disk, packed; the least recently read go first |
-| `LAMBDA_RATE_LIMIT`                 | `5000`           | lambda requests per second and client       |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
@@ -1009,24 +1000,23 @@ since the assets of a build do not change while it is served. The workspace
 is written while the lambda runs, so `Workspace.Files()` stays a tree.
 
 The directory is rewritten from the version being deployed, so an asset dropped
-from a version stops being served rather than lingering. `LAMBDA_MAX_ASSET_BYTES`
-is what they may come to in total, and `LAMBDA_PREMIUM_MAX_ASSET_BYTES` the same
-for a lambda in the premium tier. How many there are is not limited, and
-neither is the number of C# files - only what the code comes to, by
-`LAMBDA_MAX_CODE_LENGTH` and `LAMBDA_PREMIUM_MAX_CODE_LENGTH`.
+from a version stops being served rather than lingering. What they may come to
+in total is a [limit](#limits) of the lambda's tier. How many there are is not
+limited, and neither is the number of C# files - only what the code comes to,
+another limit of the tier.
 
 Budget the disk for the premium tier. Assets are kept inside every version, as
 base64 in JSON, so each version saved at the limit takes nearly half as much
-again on disk - 184 MB for 128 MB of assets - and `LAMBDA_MAX_VERSIONS` of them
-are kept: at the defaults, a premium lambda that is saved over and over with
+again on disk - 184 MB for 128 MB of assets - and fifty of them are kept by
+default: at the defaults, a premium lambda that is saved over and over with
 all 128 MB of its assets can come to around 9 GB of history.
 
 Budget the memory too. A version is read and written whole: with the 128 MB
 of assets the premium tier allows, saving one took the server to 2.3 GB and
 deploying it to 2.8 GB. Even the 32 MB of a free lambda took a server idling
-at 350 MB to 950 MB to save, and anybody can create a free lambda. Set `LAMBDA_MAX_ASSET_BYTES` and
-`LAMBDA_PREMIUM_MAX_ASSET_BYTES` to what the machine can carry until assets are
-stored apart from the versions.
+at 350 MB to 950 MB to save, and anybody can create a free lambda. Set the
+assets of both tiers in the panel's **Limits** to what the machine can carry
+until assets are stored apart from the versions.
 
 ### More than one hostname
 
@@ -1280,6 +1270,52 @@ and `/logs` are not there, and answer 404.
 The server figures and the log follow the same token. Only owners and the
 operator see telemetry: the owner of a lambda its own, in the editor, and the
 operator everybody's.
+
+### Limits
+
+What a lambda may have in its tier is set in the panel's **Limits** section
+(`GET / PUT /admin/limits`), not by environment variables: these are the
+product's promises, and changing one should not take a restart. One form: the
+limits of the tiers as a table with a column per tier, and the limits that have
+no tier in a block of their own below it.
+
+| Limit             | Free     | Premium  | What it bounds                                   |
+|-------------------|----------|----------|--------------------------------------------------|
+| Code              | 1,048,576 | 10,485,760 | characters of C# across every file          |
+| Assets            | 32 MB    | 128 MB   | assets, documentation and tests in a version     |
+| Workspace         | 256 MB   | 2 GB     | the room the files a lambda saves may take       |
+| Database          | 256 MB   | 2 GB     | how large its database may grow                  |
+| Versions kept     | 50       | 50       | older ones are removed, never the one online     |
+| Features open     | 10       | 10       | each holds a copy of the workspace and database  |
+
+A free lambda also goes offline after 720 hours without visits or edits and is
+removed after 2160; a premium one stays online and is kept. Three limits are
+counted per caller rather than per lambda and have no tier: the size of a
+showcase picture (3 MB), requests per second and client to the lambdas (250),
+and builds and changes per address and day from the build agent (10).
+
+They are kept in the `settings` table beside the panel's switches, a row each,
+and held in memory. A missing row is the default - the table above, or what
+the environment variable that used to set it says. Saving writes every value,
+refuses one that is not greater than zero and a premium tier that allows less
+than the free one, and logs a line per limit that changed
+(`Changed limit limits.free.code-characters from 1048576 to 500000 by operator`).
+
+A change applies to what is checked next - a save, an upload, a deploy, a new
+feature, a connection to a database - and takes nothing away: a lambda already
+over a lowered limit keeps what it has and cannot save a version until it fits;
+a database over its new size keeps its records and grows no further. The
+workspace quota is compiled into a lambda, so changing it compiles every lambda
+of that tier again on its next request.
+
+The variables that used to set them - `LAMBDA_MAX_CODE_LENGTH`,
+`LAMBDA_MAX_ASSET_BYTES`, `LAMBDA_WORKSPACE_BYTES`, `LAMBDA_DATABASE_BYTES` and
+their `LAMBDA_PREMIUM_` twins, `LAMBDA_DEPLOYMENT_LIFETIME_HOURS`,
+`LAMBDA_RETENTION_HOURS`, `LAMBDA_MAX_VERSIONS`, `LAMBDA_MAX_FEATURES`,
+`LAMBDA_MAX_SHOWCASE_IMAGE_BYTES`, `LAMBDA_RATE_LIMIT` and
+`LAMBDA_AGENT_BUILDS_PER_DAY` - still give the defaults for this release, and
+the server warns on startup for each that is set. A value saved in the panel
+wins. They are removed in the next release.
 
 `/logs` is the tail of this run, live. It holds everything the server logged
 and everything a lambda printed while it was serving a request - the two are

@@ -13,6 +13,7 @@ using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
+using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Telemetry;
@@ -63,7 +64,7 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
                               IDatabaseService databases, IShowcaseService showcases, ISourceService sources, LambdaTelemetry telemetry, LogBook book,
-                              LambdaOptions options, ILogger<McpTools> logger)
+                              LambdaOptions options, LimitsService tiers, ILogger<McpTools> logger)
 {
 
     #region Catalogue
@@ -449,7 +450,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                      ["privateKey"] = Field("string", "The editor key."),
                      ["title"] = Field("string", $"What it is, in a few words - 'Pub quiz scoreboard', not 'The ultimate quiz experience'. Up to {ShowcaseLimits.MaxTitle} characters."),
                      ["description"] = Field("string", $"One to three plain sentences on what a visitor can do with it. Up to {ShowcaseLimits.MaxDescription} characters."),
-                     ["image"] = Field("string", $"The picture, base64: PNG, JPEG, GIF or WebP, up to {options.MaxShowcaseImageBytes / 1024 / 1024} MB. Needed for a new entry; left out, the current one is kept."),
+                     ["image"] = Field("string", $"The picture, base64: PNG, JPEG, GIF or WebP, up to {tiers.Get().ShowcaseImageBytes / 1024 / 1024} MB. Needed for a new entry; left out, the current one is kept."),
                      ["remove"] = Field("boolean", "Take the lambda off the showcase instead.")
                  },
                  ["required"] = new JsonArray("privateKey")
@@ -1768,15 +1769,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     private object Limits(LambdaTier tier)
     {
-        var workspace = options.WorkspaceOf(tier);
+        var workspace = tiers.WorkspaceOf(tier);
 
         return new
         {
-            codeCharacters = options.MaxCodeLengthOf(tier),
-            assetBytes = options.MaxAssetBytesOf(tier),
+            codeCharacters = tiers.MaxCodeLengthOf(tier),
+            assetBytes = tiers.MaxAssetBytesOf(tier),
             workspaceBytes = workspace.Quota,
-            databaseBytes = options.DatabaseOf(tier),
-            features = options.MaxFeatures
+            databaseBytes = tiers.DatabaseOf(tier),
+            versions = tiers.Of(tier).Versions,
+            features = tiers.Of(tier).Features
         };
     }
 
@@ -2004,7 +2006,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 what = "A version is the program: every .cs file and every asset - index.html, scripts, styles, icons, the whole front end - and, beside it in .lambda/, what is written about it: its documentation and its tests (see documentationAndTests). They are saved, deployed and rolled back together, and nothing else is in a version.",
                 immutable = "A version never changes once it is saved. Deploying puts one online at the lambda's address, deploying an older one rolls back, and every version can be read back and put online again exactly as it was.",
-                kept = $"The newest {options.MaxVersions} versions are kept; older ones are removed, never the one online. Fewer, meaningful versions keep more of the history that matters - one per thing the user asked for, not one per attempt."
+                kept = $"The newest {tiers.Of(LambdaTier.Free).Versions} versions of a free lambda are kept, {tiers.Of(LambdaTier.Premium).Versions} of a premium one; older ones are removed, never the one online. Fewer, meaningful versions keep more of the history that matters - one per thing the user asked for, not one per attempt."
             },
             features = new
             {
@@ -2014,7 +2016,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 data = "A feature works on its own copy of the lambda's data, taken when it was created. Its preview can write, break and delete anything there without the lambda noticing. Merging discards the copy: the lambda keeps its own data, so code that changes how data is stored has to keep reading what is already there.",
                 merging = "Merging makes the feature's files the next version. Only a feature based on the newest version is merged, so it cannot undo a version saved after it branched off - by the user, by another agent, or by merging another feature.",
                 rebasing = "When a feature is behind - read_lambda with feature lists the newerVersions - bring what they changed into the feature yourself: read those versions, compare them with the feature's base, and apply the same changes with change_code and feature. Then move the base with update_feature (base: the newest) and merge. Nothing merges or rebases for you, and nothing checks that the changes really are in.",
-                several = $"A lambda may have up to {options.MaxFeatures} features open. Continue one that fits rather than starting another; read_lambda lists them."
+                several = $"A lambda may have up to {tiers.Of(LambdaTier.Free).Features} features open, a premium one {tiers.Of(LambdaTier.Premium).Features}. Continue one that fits rather than starting another; read_lambda lists them."
             },
             data = new
             {
@@ -2038,7 +2040,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             },
             theLambda = new
             {
-                lifetime = $"A free lambda goes offline after {(int)options.DeploymentLifetime.TotalDays} days without visits or edits, and is removed - versions, features, data and all - about {(int)options.Retention.TotalDays} days after the last of either. A premium lambda stays online and is kept.",
+                lifetime = $"A free lambda goes offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits, and is removed - versions, features, data and all - about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. A premium lambda stays online and is kept.",
                 deleting = "Deleting a lambda deletes its versions, its features and its data together. Nothing else deletes versions one by one."
             }
         },
@@ -2098,8 +2100,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             size = "Every version keeps its own copy of its assets and is read whole to be saved and deployed, so a large file that is data rather than program - a model, a dataset, video, a library of pictures - belongs in the workspace, where it is kept once.",
             limits = new
             {
-                bytes = options.MaxAssetBytesOf(LambdaTier.Free),
-                premiumBytes = options.MaxAssetBytesOf(LambdaTier.Premium),
+                bytes = tiers.MaxAssetBytesOf(LambdaTier.Free),
+                premiumBytes = tiers.MaxAssetBytesOf(LambdaTier.Premium),
                 count = "Any number: only what they come to is counted.",
                 names = "Letters, digits, dashes, underscores, dots and slashes. No leading slash, no .."
             }
@@ -2124,8 +2126,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             off = "If the owner switched the workspace off, every Workspace member throws an exception saying so. list_files says whether it is on.",
             limits = new
             {
-                bytes = options.WorkspaceOf(LambdaTier.Free).Quota,
-                premiumBytes = options.WorkspaceOf(LambdaTier.Premium).Quota,
+                bytes = tiers.WorkspaceOf(LambdaTier.Free).Quota,
+                premiumBytes = tiers.WorkspaceOf(LambdaTier.Premium).Quota,
                 counted = $"Only the room all files take together: any number of files, each as large as the room allows. Every file takes whole blocks of {WorkspaceLimits.Block} bytes, at least one, and so does every folder.",
                 exact = "list_files answers with the quota of the lambda at hand."
             },
@@ -2177,8 +2179,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             exported = "The export carries the database as database/database.db; Database.GetConnection() opens it there with plain Microsoft.Data.Sqlite, and a project whose code has a DbContext references Entity Framework Core.",
             limits = new
             {
-                bytes = options.DatabaseOf(LambdaTier.Free),
-                premiumBytes = options.DatabaseOf(LambdaTier.Premium),
+                bytes = tiers.DatabaseOf(LambdaTier.Free),
+                premiumBytes = tiers.DatabaseOf(LambdaTier.Premium),
                 full = "Past its room, a write fails with SQLite's 'database or disk is full'. read_database says how full it is."
             },
             demo = "Every demo keeps its records like this - read_lambda demo-crud: lambda.cs migrates, Store.cs maps the table with a DbContext and reads and writes it, migrations/ holds the schema."
@@ -2324,11 +2326,11 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             tiers = "What a lambda may use depends on its tier. Every lambda is free unless whoever runs this installation made it premium - its owner cannot choose. read_lambda says which tier a lambda is in and what it may use there; a refusal for size says what the premium tier allows.",
             free = Allowance(LambdaTier.Free),
             premium = Allowance(LambdaTier.Premium),
-            code = $"{options.MaxCodeLengthOf(LambdaTier.Free):N0} characters across all .cs files; {options.MaxCodeLengthOf(LambdaTier.Premium):N0} for a premium lambda",
-            versions = $"The newest {options.MaxVersions} versions are kept, and the one online.",
-            features = $"Up to {options.MaxFeatures} features open at once; each holds a copy of the files, the workspace and the database, within the same limits.",
-            deployment = $"A free lambda is online while used, and offline after {(int)options.DeploymentLifetime.TotalDays} days without visits or edits. A premium one stays online. A feature's preview of a free lambda goes offline after as long without being worked on.",
-            retention = $"A free lambda is removed about {(int)options.Retention.TotalDays} days after the last of either. A premium one is kept."
+            code = $"{tiers.MaxCodeLengthOf(LambdaTier.Free):N0} characters across all .cs files; {tiers.MaxCodeLengthOf(LambdaTier.Premium):N0} for a premium lambda",
+            versions = $"The newest {tiers.Of(LambdaTier.Free).Versions} versions are kept ({tiers.Of(LambdaTier.Premium).Versions} for a premium lambda), and the one online.",
+            features = $"Up to {tiers.Of(LambdaTier.Free).Features} features open at once ({tiers.Of(LambdaTier.Premium).Features} for a premium lambda); each holds a copy of the files, the workspace and the database, within the same limits.",
+            deployment = $"A free lambda is online while used, and offline after {(int)tiers.Get().OfflineAfter.TotalDays} days without visits or edits. A premium one stays online. A feature's preview of a free lambda goes offline after as long without being worked on.",
+            retention = $"A free lambda is removed about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. A premium one is kept."
         },
         terms = SystemResource.Terms
     });
@@ -2338,12 +2340,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     private string Allowance(LambdaTier tier)
     {
-        var workspace = options.WorkspaceOf(tier);
+        var workspace = tiers.WorkspaceOf(tier);
 
-        return $"Code: {options.MaxCodeLengthOf(tier):N0} characters, in any number of .cs files. "
-             + $"Assets: {Size(options.MaxAssetBytesOf(tier))} in all, any number of them. "
+        return $"Code: {tiers.MaxCodeLengthOf(tier):N0} characters, in any number of .cs files. "
+             + $"Assets: {Size(tiers.MaxAssetBytesOf(tier))} in all, any number of them. "
              + $"Workspace: {Size(workspace.Quota)} in all, in any number of files. "
-             + $"Database: {Size(options.DatabaseOf(tier))}.";
+             + $"Database: {Size(tiers.DatabaseOf(tier))}.";
     }
 
     private static string Size(long bytes) => bytes switch
