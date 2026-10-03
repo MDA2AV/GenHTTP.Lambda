@@ -1,11 +1,12 @@
 using System.Diagnostics;
 
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
+
+using GenHTTP.Modules.DependencyInjection;
 
 namespace GenHTTP.Lambda.Services.Telemetry;
 
@@ -18,14 +19,10 @@ namespace GenHTTP.Lambda.Services.Telemetry;
 /// success the lambda eventually got round to - and what it times is the whole
 /// wait rather than only the part spent running.
 /// </remarks>
-public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry telemetry) : IConcern
+public sealed class LambdaActivityConcern(LambdaTelemetry telemetry) : IDependentConcern
 {
 
-    public IHandler Content => content;
-
-    public ValueTask PrepareAsync(IServer server) => content.PrepareAsync(server);
-
-    public async ValueTask<IResponse?> HandleAsync(IRequest request)
+    public async ValueTask<IResponse?> HandleAsync(IHandler content, IRequest request)
     {
         var lambda = request.GetLambda();
 
@@ -78,9 +75,4 @@ public sealed class LambdaActivityConcern(IHandler content, LambdaTelemetry tele
         return path.Length <= 100 ? path : string.Concat(path.AsSpan(0, 99), "…");
     }
 
-}
-
-public sealed class LambdaActivityConcernBuilder(LambdaTelemetry telemetry) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new LambdaActivityConcern(content, telemetry);
 }

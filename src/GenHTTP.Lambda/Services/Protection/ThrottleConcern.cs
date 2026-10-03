@@ -1,7 +1,8 @@
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Configuration;
+
+using GenHTTP.Modules.DependencyInjection;
 
 namespace GenHTTP.Lambda.Services.Protection;
 
@@ -17,20 +18,12 @@ namespace GenHTTP.Lambda.Services.Protection;
 /// spins forever still occupies its slot. Containing that needs process
 /// isolation, which is where the deployment service is headed.
 /// </remarks>
-public sealed class ThrottleConcern(IHandler content, LambdaThrottle throttle, LambdaOptions options) : IConcern
+public sealed class ThrottleConcern(LambdaThrottle throttle, LambdaOptions options) : IDependentConcern
 {
-
-    #region Get-/Setters
-
-    public IHandler Content => content;
-
-    #endregion
 
     #region Functionality
 
-    public ValueTask PrepareAsync(IServer server) => content.PrepareAsync(server);
-
-    public async ValueTask<IResponse?> HandleAsync(IRequest request)
+    public async ValueTask<IResponse?> HandleAsync(IHandler content, IRequest request)
     {
         if (!await throttle.EnterAsync())
         {
@@ -75,9 +68,4 @@ public sealed class ThrottleConcern(IHandler content, LambdaThrottle throttle, L
 
     #endregion
 
-}
-
-public sealed class ThrottleConcernBuilder(LambdaThrottle throttle, LambdaOptions options) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new ThrottleConcern(content, throttle, options);
 }

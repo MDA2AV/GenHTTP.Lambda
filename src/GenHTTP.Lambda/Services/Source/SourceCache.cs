@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Infrastructure;
 
 using Microsoft.Extensions.Logging;
 
@@ -103,7 +104,7 @@ public sealed class SourceCache
                 {
                     // off the thread the request came in on: compressing a
                     // hundred megabytes is not something to do in passing
-                    await Task.Run(async () =>
+                    await Offload.Run(async () =>
                     {
                         await using var stream = new FileStream(partial, FileMode.CreateNew, FileAccess.Write, FileShare.None);
 

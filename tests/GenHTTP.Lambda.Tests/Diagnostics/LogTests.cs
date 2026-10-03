@@ -220,8 +220,6 @@ public sealed class LogTests
     [TestMethod]
     public async Task WhatALambdaPrintsIsFiledUnderIt()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
         var lambda = await fixture.CreateLambdaAsync("talkative");
@@ -250,8 +248,6 @@ public sealed class LogTests
     [TestMethod]
     public async Task WhatALambdaPrintsIsNotFiledUnderAnother()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
         var loud = await fixture.CreateLambdaAsync("loud");
@@ -279,8 +275,6 @@ public sealed class LogTests
     [TestMethod]
     public async Task WhatALambdaPrintsWhileStartingUpIsFiledUnderItToo()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
         var lambda = await fixture.CreateLambdaAsync("starting");
@@ -327,8 +321,6 @@ public sealed class LogTests
     [TestMethod]
     public async Task NothingIsGatheredWhenCapturingIsOff()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync(o => WithPanel(o) with { CaptureLambdaOutput = false });
 
         var lambda = await fixture.CreateLambdaAsync("unwatched");
@@ -361,8 +353,9 @@ public sealed class LogTests
     {
         var book = new LogBook(1000);
 
-        LambdaOutput.Adopt(book);
-        ConsoleTee.Install();
+        // the test's own, so a test beside it capturing as well cannot take
+        // these lines away from it
+        using var capture = new ConsoleCapture(book);
 
         // the shape the ioxide engine writes: straight to the console, no
         // logger, no lambda being served
@@ -384,8 +377,7 @@ public sealed class LogTests
     {
         var book = new LogBook(1000);
 
-        LambdaOutput.Adopt(book);
-        ConsoleTee.Install();
+        using var capture = new ConsoleCapture(book);
 
         // the console the provider writes to is taken before the tee, so its
         // line goes to the console and not back through the tee
@@ -754,8 +746,6 @@ public sealed class LogTests
     [TestMethod]
     public async Task WhatALambdaPrintsNamesTheVisitorItWasPrintedFor()
     {
-        ConsoleTee.Install();
-
         await using var fixture = await LambdaFixture.CreateAsync(WithPanel);
 
         var lambda = await fixture.CreateLambdaAsync("traced");

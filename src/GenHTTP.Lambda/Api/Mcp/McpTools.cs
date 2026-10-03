@@ -992,27 +992,18 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var (id, feature) = WorkspaceOf(privateKey, Text(arguments, "feature"), true);
 
-        byte[] bytes;
+        WorkspaceEntry written;
 
         if (Text(arguments, "encoding") == "base64")
         {
-            try
-            {
-                bytes = Convert.FromBase64String(content);
-            }
-            catch (FormatException)
-            {
-                return McpProtocol.Refuse("The content is not valid base64.");
-            }
+            written = await workspace.WriteEncodedAsync(id, path, content, feature);
         }
         else
         {
-            bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content));
+
+            written = await workspace.WriteAsync(id, path, stream, featureId: feature);
         }
-
-        using var stream = new MemoryStream(bytes);
-
-        var written = await workspace.WriteAsync(id, path, stream, featureId: feature);
 
         if (Text(arguments, "feature") is { } named)
         {

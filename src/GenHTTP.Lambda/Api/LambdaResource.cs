@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
@@ -159,7 +160,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         var id = meta.RequireId(privateKey);
 
-        var archive = await Task.Run(() =>
+        var archive = await Offload.Run(() =>
         {
             // a copy of what the lambda keeps, packed along and then let go
             var database = databases.Export(id);

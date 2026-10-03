@@ -33,10 +33,11 @@ var runs = new RunLog(options.DataDirectory);
  * The real console, taken before anything is put in front of it.
  *
  * Records are written here by the provider below. Everything else that reaches
- * Console.Out afterwards - which is the engine saying what its reactors are
- * doing, and whatever a lambda prints - goes through the tee and into the book
- * instead. Keeping the two apart by which writer they hold, rather than by a
- * check at the point of writing, is what stops a record being kept twice.
+ * Console.Out once the application has put its tee there (ConsoleCapture) -
+ * which is the engine saying what its reactors are doing, and whatever a
+ * lambda prints - goes through the tee and into the book instead. Keeping the
+ * two apart by which writer they hold, rather than by a check at the point of
+ * writing, is what stops a record being kept twice.
  */
 var console = Console.Out;
 
@@ -58,24 +59,6 @@ using var loggers = LoggerFactory.Create(builder =>
 });
 
 var logger = loggers.CreateLogger("GenHTTP.Lambda");
-
-/*
- * Lambdas and the engine both print to this console, so the console is where
- * they are told apart: a write while a lambda is being served is filed under
- * that lambda, and everything else under the process.
- *
- * Not conditional. LAMBDA_LOG_LAMBDA_OUTPUT decides whether a stranger's
- * print is gathered, which is a question about holding somebody else's output
- * in memory; what the engine says about its own reactors is the server
- * talking about itself and is the first thing wanted when connections start
- * misbehaving. The switch is applied where a lambda is marked, not here.
- *
- * After the logger factory, deliberately. The provider above holds the writer
- * it was given; this replaces the one everything else will find.
- */
-LambdaOutput.Adopt(book);
-
-ConsoleTee.Install();
 
 runs.Report(logger);
 

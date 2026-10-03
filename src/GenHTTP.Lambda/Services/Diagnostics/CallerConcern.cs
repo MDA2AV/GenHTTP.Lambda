@@ -1,12 +1,13 @@
 using System.Diagnostics;
 
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
+
+using GenHTTP.Modules.DependencyInjection;
 
 namespace GenHTTP.Lambda.Services.Diagnostics;
 
@@ -25,15 +26,11 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// and so the duration covers the whole answer rather than the part after the
 /// throttle let it through.
 /// </remarks>
-public sealed class CallerConcern(IHandler content, LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, DomainRegistry domains,
-                                  LambdaOptions options) : IConcern
+public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, DomainRegistry domains,
+                                  LambdaOptions options) : IDependentConcern
 {
 
-    public IHandler Content => content;
-
-    public ValueTask PrepareAsync(IServer server) => content.PrepareAsync(server);
-
-    public async ValueTask<IResponse?> HandleAsync(IRequest request)
+    public async ValueTask<IResponse?> HandleAsync(IHandler content, IRequest request)
     {
         // decided here, before anything below can read a body and take the
         // headers with it, and remembered on the request for the router
@@ -118,10 +115,4 @@ public sealed class CallerConcern(IHandler content, LogBook book, StringPool poo
                     lambda?.Id, caller.Domain, lambda?.Feature?.Id);
     }
 
-}
-
-public sealed class CallerConcernBuilder(LogBook book, StringPool pool, GeoTable geo, GeoPlaces places, DomainRegistry domains,
-                                         LambdaOptions options) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new CallerConcern(content, book, pool, geo, places, domains, options);
 }

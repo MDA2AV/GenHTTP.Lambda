@@ -31,6 +31,12 @@ public interface IWorkspaceService
     ValueTask<WorkspaceContent?> ReadAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default);
 
     /// <summary>
+    /// Reads a single file as base64, or null if there is none by that name.
+    /// A file larger than travels that way comes back without its content.
+    /// </summary>
+    ValueTask<WorkspaceEncoded?> ReadEncodedAsync(long lambdaId, string path, long? featureId = null, CancellationToken cancellation = default);
+
+    /// <summary>
     /// Finds a single file to stream as it is, or null if there is none by
     /// that name.
     /// </summary>
@@ -42,6 +48,12 @@ public interface IWorkspaceService
     /// <param name="expected">How many bytes the sender said it would send. An upload that ends short of it broke off, and is not kept</param>
     ValueTask<WorkspaceEntry> WriteAsync(long lambdaId, string path, Stream content, long? expected = null, long? featureId = null,
                                          CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Writes a file given as base64, replacing it if it exists.
+    /// </summary>
+    ValueTask<WorkspaceEntry> WriteEncodedAsync(long lambdaId, string path, string? content, long? featureId = null,
+                                                CancellationToken cancellation = default);
 
     /// <summary>
     /// Removes a file, if it is there.

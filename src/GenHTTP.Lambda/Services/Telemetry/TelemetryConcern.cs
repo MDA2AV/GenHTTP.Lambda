@@ -1,8 +1,9 @@
 using System.Diagnostics;
 
 using GenHTTP.Api.Content;
-using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
+
+using GenHTTP.Modules.DependencyInjection;
 
 namespace GenHTTP.Lambda.Services.Telemetry;
 
@@ -15,14 +16,10 @@ namespace GenHTTP.Lambda.Services.Telemetry;
 /// leaves the handler in milliseconds and then lives for as long as the socket
 /// does, so averaging it in with the others would say nothing about either.
 /// </remarks>
-public sealed class TelemetryConcern(IHandler content, ITelemetryService telemetry) : IConcern
+public sealed class TelemetryConcern(ITelemetryService telemetry) : IDependentConcern
 {
 
-    public IHandler Content => content;
-
-    public ValueTask PrepareAsync(IServer server) => content.PrepareAsync(server);
-
-    public async ValueTask<IResponse?> HandleAsync(IRequest request)
+    public async ValueTask<IResponse?> HandleAsync(IHandler content, IRequest request)
     {
         using var tracked = telemetry.Track();
 
@@ -54,9 +51,4 @@ public sealed class TelemetryConcern(IHandler content, ITelemetryService telemet
         }
     }
 
-}
-
-public sealed class TelemetryConcernBuilder(ITelemetryService telemetry) : IConcernBuilder
-{
-    public IConcern Build(IHandler content) => new TelemetryConcern(content, telemetry);
 }

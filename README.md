@@ -751,6 +751,28 @@ services that the API resources talk to through interfaces:
   resolved from memory (`Services/Meta/ResolutionCache.cs`), which every write
   to the database makes stale (`Data/DatabaseChanges.cs`), so serving a lambda
   does not query the database.
+
+A concern that needs nothing but services is a dependent concern of GenHTTP
+(`IDependentConcern`, added with `Dependent.Concern<T>()`): a singleton in the
+container, resolved per request from the scope that the outermost concern of
+the host opens. That is the line each request is logged with, the server's
+telemetry, and in front of every lambda the throttle, the mark on what it
+prints, its activity and the rate limit. The lookup of the lambda is built by
+hand, once per route, because its locator is what tells the routes apart.
+`Infrastructure/ServerRegistry.cs` holds the running server for the one thing
+that prepares handlers outside a request: the deployment service, compiling
+what the demo seeder, a deployment or a merge asks for. Whatever answers a
+request reads `IRequest.Server`.
+
+What is printed to the console - what a lambda prints, and what the engine
+says about its reactors - is kept by `Services/Diagnostics/ConsoleCapture.cs`,
+which the application owns: it puts a tee over the console, once per process,
+and files what is printed outside any lambda into the book of every
+application running, until that application is disposed of. The logger
+writes its lines to the console it was given before the tee existed, and takes
+the lock of `Console.Out` first - the console takes that lock itself under
+every write, and in the other order a print and a log line waited for each
+other for good.
 - **Background** (`Services/Background`) - a small scheduler that undeploys
   free tier lambdas a day after their last deployment and removes them after
   30 days without a save.
@@ -785,8 +807,10 @@ plain locks. What takes long - compiling and binding with Roslyn, packing,
 copying a workspace or a database - is handed to the thread pool in one hop
 (`Infrastructure/Offload.cs`) and the request resumes on its reactor
 afterwards. `src/GenHTTP.Lambda/BannedSymbols.txt` refuses the asynchronous EF
-calls and waiting for a task when the server is compiled. CLAUDE.md has the
-rules.
+calls, waiting for a task and `Task.Run` when the server is compiled, so every
+hop to the pool goes through `Offload`; the two pieces of work started in the
+background rather than awaited - the scheduler's jobs and seeding the demos -
+say so where they start. CLAUDE.md has the rules.
 
 Compiled lambdas run in the server process. The guard raises the cost of
 misbehaving; it is not a sandbox, which is why the container runs unprivileged

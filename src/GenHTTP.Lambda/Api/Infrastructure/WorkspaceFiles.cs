@@ -12,35 +12,26 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 /// Reading and writing the files of a workspace over HTTP - the lambda's own,
 /// or a feature's copy of it, which are answered exactly alike.
 /// </summary>
+/// <remarks>
+/// What is left here is what HTTP adds: the body as a stream, the download as
+/// a response, and which route to take instead. Encoding a file as base64,
+/// and how large one may be for it, is the workspace service's.
+/// </remarks>
 internal static class WorkspaceFiles
 {
 
-    /// <summary>
-    /// The largest file that travels as base64 in a JSON document.
-    /// </summary>
-    /// <remarks>
-    /// That way a file is in memory several times over while the request runs
-    /// - its bytes, the text they become, the characters of that text. The
-    /// workspace does not limit how large one file may be, only the room they
-    /// take together, so anything larger goes through <c>…/content</c>, which
-    /// streams the bytes as they are.
-    /// </remarks>
-    private const long EncodedLimit = 32 * 1024 * 1024;
-
     public static async ValueTask<FileResponse> ReadAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path, string where)
     {
-        var found = workspace.Find(lambdaId, path, featureId)
-                 ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
-
-        if (found.Length > EncodedLimit)
-        {
-            throw LambdaException.Invalid($"'{path}' is {found.Length:N0} bytes, more than is sent as base64. GET {where}/{{path}}/content sends it as it is.");
-        }
-
-        var file = await workspace.ReadAsync(lambdaId, path, featureId)
+        var file = await workspace.ReadEncodedAsync(lambdaId, path, featureId)
                 ?? throw LambdaException.NotFound($"There is no file called '{path}'.");
 
-        return new FileResponse(file.Path, Convert.ToBase64String(file.Content), file.Content.Length);
+        if (file.Content == null)
+        {
+            throw LambdaException.Invalid($"'{path}' is {file.Length:N0} bytes, more than is sent as base64. GET {where}/{{path}}/content sends it as it is.");
+        }
+
+        // what travels as base64 is far below what an int holds
+        return new FileResponse(file.Path, file.Content, (int)file.Length);
     }
 
     public static IResponse Send(IWorkspaceService workspace, long lambdaId, long? featureId, string path, IRequest request)
@@ -73,24 +64,6 @@ internal static class WorkspaceFiles
         var body = request.GetBody(HeaderAccess.Release)?.AsStream() ?? Stream.Null;
 
         return await workspace.WriteAsync(lambdaId, path, body, expected, featureId);
-    }
-
-    public static async ValueTask<WorkspaceEntry> WriteAsync(IWorkspaceService workspace, long lambdaId, long? featureId, string path, FileRequest request)
-    {
-        byte[] content;
-
-        try
-        {
-            content = Convert.FromBase64String(request.Content ?? string.Empty);
-        }
-        catch (FormatException)
-        {
-            throw LambdaException.Invalid("The content of a file has to be base64 encoded.");
-        }
-
-        using var stream = new MemoryStream(content);
-
-        return await workspace.WriteAsync(lambdaId, path, stream, featureId: featureId);
     }
 
     public static WorkspaceListing CreateFolder(IWorkspaceService workspace, long lambdaId, long? featureId, string path)

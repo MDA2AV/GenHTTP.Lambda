@@ -24,7 +24,12 @@ public sealed class BackgroundScheduler(IEnumerable<IBackgroundJob> jobs, ILogge
     {
         foreach (var job in jobs)
         {
+            // a loop for the life of the application rather than a hop a
+            // request waits for, so not through Offload: whatever bounds the
+            // hops one day must not have these in its slots
+#pragma warning disable RS0030
             _running.Add(Task.Run(() => RunAsync(job, _shutdown.Token)));
+#pragma warning restore RS0030
         }
 
         if (_running.Count > 0)

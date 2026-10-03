@@ -1,12 +1,8 @@
-using System.Text.RegularExpressions;
-
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
-using GenHTTP.Lambda.Services.Databases;
-using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
@@ -30,7 +26,7 @@ namespace GenHTTP.Lambda.Api;
 /// than by the public key, because a public key can be given up and claimed
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
-public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
+public sealed class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
                                                LambdaTelemetry telemetry, LogBook book, LambdaOptions options, VersionFactsCache facts)
 {
 
@@ -41,7 +37,7 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     /// failing, and how much of its allowance it spends.
     /// </summary>
     [ResourceMethod("lambdas/:privateKey/summary")]
-    public async ValueTask<LambdaSummaryResponse> Summary(string privateKey)
+    public LambdaSummaryResponse Summary(string privateKey)
     {
         var lambda = meta.Require(privateKey);
 
@@ -81,7 +77,8 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
 
         var measured = live?.Version ?? latest?.Version;
 
-        var known = await FactsOfAsync(privateKey, id, measured);
+        // read off the version once, since it never changes
+        var known = facts.Of(id, measured);
 
         return new LambdaSummaryResponse(
             LambdaDescription.Of(lambda),
@@ -185,67 +182,6 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
     }
 
     /// <summary>
-    /// What the version the summary is about is made of - read off it once,
-    /// since it never changes (see <see cref="VersionFactsCache"/>).
-    /// </summary>
-    private async ValueTask<VersionFacts> FactsOfAsync(string privateKey, long id, int? version)
-    {
-        if (version is not { } wanted)
-        {
-            return VersionFactsCache.Empty;
-        }
-
-        return await facts.GetAsync(id, wanted, async () =>
-        {
-            try
-            {
-                return Read(LambdaSource.Parse((meta.GetVersion(privateKey, wanted)).Code));
-            }
-            catch (LambdaException)
-            {
-                // a version whose code has gone missing is reported as empty
-                // rather than making the whole summary unavailable
-                return null;
-            }
-        });
-    }
-
-    private static VersionFacts Read(IReadOnlyList<LambdaFile> files)
-    {
-        var code = files.Where(f => f.IsCode).ToList();
-
-        return new VersionFacts(
-            code.Count,
-            LambdaSource.Length(files),
-            files.Count(f => f.IsAsset),
-            LambdaSource.AssetBytes(files),
-            code.Any(f => ServingAssets().IsMatch(f.Code)),
-            code.Any(f => ServingWorkspace().IsMatch(f.Code)),
-            code.Any(f => UsingWorkspace().IsMatch(f.Code)),
-            code.Any(f => DatabaseService.Uses(f.Code)),
-            Document(files)
-        );
-    }
-
-    /// <summary>
-    /// What the documentation of that version says the app is, and which of
-    /// its pages there are.
-    /// </summary>
-    private static DocumentationSummary Document(IReadOnlyList<LambdaFile> files)
-    {
-        var product = ContextPages.Read(files, LambdaSource.ProductDoc);
-
-        return new DocumentationSummary(
-            ContextPages.FirstParagraph(product),
-            !string.IsNullOrWhiteSpace(product),
-            !string.IsNullOrWhiteSpace(ContextPages.Read(files, LambdaSource.DecisionsDoc)),
-            !string.IsNullOrWhiteSpace(ContextPages.Read(files, LambdaSource.TestingDoc)),
-            files.Count(f => f.IsContext),
-            LambdaSource.ContextBytes(files)
-        );
-    }
-
-    /// <summary>
     /// What the lambda keeps: the files of a version, and its data beside it.
     /// </summary>
     private StorageSummary Measure(string privateKey, long id, int? version, VersionFacts known)
@@ -277,24 +213,6 @@ public sealed partial class MonitoringResource(IMetaService meta, IWorkspaceServ
             known.UsesDatabase
         );
     }
-
-    /// <summary>
-    /// The calls that turn a directory into something served. Read from the
-    /// code, so it says what the code asks for rather than what a request
-    /// would find - which is the right thing to warn about.
-    /// </summary>
-    [GeneratedRegex(@"\bAssets\s*\.\s*(App|Files|Tree)\s*\(")]
-    private static partial Regex ServingAssets();
-
-    [GeneratedRegex(@"\bWorkspace\s*\.\s*(App|Files|Tree)\s*\(")]
-    private static partial Regex ServingWorkspace();
-
-    /// <summary>
-    /// Any use of the workspace at all, to warn whoever is about to switch it
-    /// off that the code online would then fail where it reaches for it.
-    /// </summary>
-    [GeneratedRegex(@"\bWorkspace\s*\.\s*[A-Z]\w*")]
-    private static partial Regex UsingWorkspace();
 
     internal static LogLevel Minimum(string? level) => level?.Trim().ToLowerInvariant() switch
     {
