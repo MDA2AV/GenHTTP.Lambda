@@ -734,6 +734,19 @@ export interface AdminLambdaDetail {
   versions: VersionInfo[];
   activations: Activation[];
   tiers: string[];
+  sitemap: AdminSitemap;
+}
+
+/** Whether the sitemap of the installation names a lambda, which only the operator decides. */
+export interface AdminSitemap {
+  /** Whether the operator listed it; no lambda is until they do. */
+  listed: boolean;
+  /**
+   * What the sitemap names it by while it is online - the root of its address
+   * below /lambda/ - or nothing on an installation without a public address,
+   * which has no sitemap.
+   */
+  address: string | null;
 }
 
 /** One line of what the server, or a lambda on it, has said. */
@@ -1127,6 +1140,10 @@ export const api = {
 
     lambda: (token: string, publicKey: string) =>
       request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}`, withToken(token)),
+
+    sitemap: (token: string, publicKey: string, listed: boolean) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/sitemap`,
+        withToken(token, { method: 'PUT', body: JSON.stringify({ listed }) })),
 
     tier: (token: string, publicKey: string, tier: string) =>
       request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/tier`,

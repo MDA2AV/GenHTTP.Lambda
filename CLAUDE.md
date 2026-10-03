@@ -138,7 +138,10 @@ The one place that authenticates differently is `/admin`: `X-Admin-Token`, see
 the README. It is GenHTTP's API key authentication (`AdminAuthentication`): 401
 without the header, 403 with the wrong token, and the routes are not there at
 all (404) on an installation without a token. Behind it are the panel, the
-server's telemetry and the log. **Only owners and the operator see telemetry**
+server's telemetry and the log - and the editor's **Admin** section, which a
+browser holding the token shows in the editor of every lambda, in both views,
+and which nobody else sees; its calls carry the token like the panel's.
+**Only owners and the operator see telemetry**
 - the owner a lambda's own in the editor, the operator everybody's; nothing is
 public.
 
@@ -294,6 +297,14 @@ of it into a lambda's pages; the agent does.
   Chromium and fonts. Nor are tools added to the build agent's image - it has
   no shell to run them, and must not get one, since its token is in its
   environment. Do not bring either back without the owner asking.
+- **The sitemap names a lambda only where the operator listed it - decided by
+  the owner.** Off for every lambda; the switch is in the editor's Admin
+  section (`in_sitemap`, `PUT /admin/lambdas/{publicKey}/sitemap`), and
+  neither owners nor agents can set it. It names the root of the lambda's
+  address below `/lambda/` - what was asked for, and the only one a sitemap of
+  this host may name, so never its own domain - while it is online, since an
+  offline lambda answers that address with a 404. No `lastmod`: what a lambda
+  serves changes with its data, which the platform cannot date.
 
 ### Pushing, not polling
 
@@ -503,7 +514,9 @@ rules that matter:
 - The full view's sidebar is **grouped** (overview and documentation; sharing -
   showcase, open source, domain - second, as the owner decided; build; program
   and data; run). A new section joins the group it belongs to rather than the
-  end of the list.
+  end of the list. The operator's **Admin** section is no group of the
+  owner's: it comes last in both views, behind a rule, for a browser holding
+  the admin token only (`ADMIN_SECTIONS`).
 - **Wired through the container**, not by hand and not in statics. A concern
   that needs nothing but services is an `IDependentConcern`, registered as a
   singleton and added with `Dependent.Concern<T>()`; only a concern built with
@@ -649,8 +662,10 @@ with `LAMBDA_ENGINE=Kestrel`, and point `LAMBDA_WEB_ROOT` at
 ## Translations
 
 - **Everything a visitor or owner sees is translated into all supported
-  languages, except the admin panel** (`/admin`, `src/Frontend/src/console`),
-  which is English only. That includes the landing, `/build`, `/ship`, `/docs`,
+  languages, except the admin panel** (`/admin`, `src/Frontend/src/console`)
+  and the editor's Admin section that belongs to it (`control/AdminTab.tsx`),
+  which are English only; the section is named in the sidebar by the header's
+  word for the panel (`shell.admin`), which every language has. That includes the landing, `/build`, `/ship`, `/docs`,
   `/showcase`, `/enterprise`, the legal pages, the create page, the editor, and
   the page metadata in `pages.json`.
 - Languages: `id de en es fr it nl pl pt pt-pt tr ja ko` (`src/Frontend/src/i18n/languages.ts`,

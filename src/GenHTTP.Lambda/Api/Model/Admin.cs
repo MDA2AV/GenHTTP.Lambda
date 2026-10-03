@@ -51,18 +51,36 @@ public sealed record AdminLambda(
 /// <param name="Versions">Its stored versions, newest first</param>
 /// <param name="Activations">Every stretch of time it was online, newest first</param>
 /// <param name="Tiers">The tiers there are, for the panel to offer</param>
+/// <param name="Sitemap">Whether the operator listed it in the sitemap, and as what</param>
 public sealed record AdminLambdaDetail(
     LambdaResponse Lambda,
     LambdaTraffic Traffic,
     IReadOnlyList<VersionResponse> Versions,
     IReadOnlyList<ActivationResponse> Activations,
-    IReadOnlyList<string> Tiers
+    IReadOnlyList<string> Tiers,
+    SitemapResponse Sitemap
 );
 
 /// <summary>
 /// Moves a lambda to a tier.
 /// </summary>
 public sealed record TierRequest(string Tier);
+
+/// <summary>
+/// Whether the sitemap of the installation names a lambda, which only the
+/// operator decides.
+/// </summary>
+/// <param name="Listed">Whether the operator listed it; no lambda is until they do</param>
+/// <param name="Address">
+/// What the sitemap names it by while it is online - the root of its address below /lambda/ - or nothing on an
+/// installation without a public address, which has no sitemap
+/// </param>
+public sealed record SitemapResponse(bool Listed, string? Address);
+
+/// <summary>
+/// Lists a lambda in the sitemap, or takes it out.
+/// </summary>
+public sealed record SitemapRequest(bool Listed);
 
 /// <summary>
 /// Sets the domain of a lambda. Nothing, or an empty one, removes it.

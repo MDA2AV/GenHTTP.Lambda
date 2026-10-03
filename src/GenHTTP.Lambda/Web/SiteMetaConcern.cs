@@ -6,6 +6,7 @@ using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Source;
 
 using GenHTTP.Modules.IO;
@@ -39,16 +40,22 @@ public sealed class SiteMetaConcern : IConcern
 
     private ISourceService Sources { get; }
 
+    /// <summary>
+    /// The lambdas, for the ones the operator listed in the sitemap.
+    /// </summary>
+    private IMetaService Lambdas { get; }
+
     #endregion
 
     #region Initialization
 
-    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<string> index)
+    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, ISourceService sources, IMetaService lambdas, Func<string> index)
     {
         Content = content;
         Meta = meta;
         Prerender = prerender;
         Sources = sources;
+        Lambdas = lambdas;
         Index = index;
     }
 
@@ -71,7 +78,7 @@ public sealed class SiteMetaConcern : IConcern
                 return Answer(request, Meta.Robots(), "text/plain; charset=utf-8");
 
             case "/sitemap.xml":
-                var sitemap = Meta.Sitemap(Sources.ListAddresses());
+                var sitemap = Meta.Sitemap(Sources.ListAddresses(), Lambdas.ListSitemap());
 
                 // without a public address there is nothing to list pages
                 // under, and the index page is not a sitemap either
@@ -287,9 +294,10 @@ public sealed class SiteMetaConcern : IConcern
 /// <summary>
 /// Builds a <see cref="SiteMetaConcern" /> for a handler.
 /// </summary>
-public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, ISourceService sources, Func<string> index) : IConcernBuilder
+public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, ISourceService sources, IMetaService lambdas, Func<string> index)
+    : IConcernBuilder
 {
 
-    public IConcern Build(IHandler content) => new SiteMetaConcern(content, meta, prerender, sources, index);
+    public IConcern Build(IHandler content) => new SiteMetaConcern(content, meta, prerender, sources, lambdas, index);
 
 }

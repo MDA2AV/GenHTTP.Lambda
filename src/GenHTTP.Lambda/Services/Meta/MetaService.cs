@@ -135,6 +135,10 @@ public sealed class MetaService : IMetaService
 
     public LambdaInfo ChangeTier(string privateKey, LambdaTier tier) => Hosting.ChangeTier(privateKey, tier);
 
+    public LambdaInfo ChangeSitemap(string privateKey, bool listed) => Hosting.ChangeSitemap(privateKey, listed);
+
+    public IReadOnlyList<string> ListSitemap() => Hosting.ListSitemap();
+
     public LambdaInfo ChangeView(string privateKey, EditorView view)
     {
         using var database = Databases.CreateDbContext();

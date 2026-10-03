@@ -276,11 +276,12 @@ public sealed class SiteMeta
 
     /// <summary>
     /// Every public page in every language, under the public address, each
-    /// with the addresses of its translations - or nothing, when there is no
-    /// public address to list them under.
+    /// with the addresses of its translations, and the lambdas the operator
+    /// listed - or nothing, when there is no public address to list them under.
     /// </summary>
     /// <param name="sources">The published sources, each a page in every language the page of one is written in</param>
-    public string? Sitemap(IReadOnlyList<SourceAddress>? sources = null)
+    /// <param name="lambdas">The public keys of the lambdas the operator listed that are online</param>
+    public string? Sitemap(IReadOnlyList<SourceAddress>? sources = null, IReadOnlyList<string>? lambdas = null)
     {
         if (PublicUrl == null)
         {
@@ -323,13 +324,31 @@ public sealed class SiteMeta
                 Alternate("x-default", path));
         }));
 
+        // the lambdas the operator listed, at the root of each: in none of the
+        // site's languages, and without a date - what a lambda serves changes
+        // with its data as well as its versions, and a date that is sometimes
+        // wrong teaches a search engine to ignore the others
+        var listed = (lambdas ?? []).Select(key => new XElement(ns + "url", new XElement(ns + "loc", LambdaAddress(key))));
+
         var sitemap = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
-            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls, published)
+            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls, published, listed)
         );
 
         return sitemap.Declaration + "\n" + sitemap;
     }
+
+    /// <summary>
+    /// What the sitemap names a lambda by: the root of its address below
+    /// <c>/lambda/</c>, under the public address - or nothing, when there is
+    /// no public address and so no sitemap.
+    /// </summary>
+    /// <remarks>
+    /// Never a domain of its own, even while the lambda answers at one: a
+    /// sitemap names pages of the host it is served from.
+    /// </remarks>
+    public string? LambdaAddress(string publicKey)
+        => PublicUrl == null ? null : $"{PublicUrl}/lambda/{Uri.EscapeDataString(publicKey)}/";
 
     /// <summary>
     /// The site as a language model reads it (<c>llms.txt</c>): what it is,

@@ -26,7 +26,7 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime)
 
         return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, lifetime.DeployedUntil(lambda), lifetime.KeptUntil(lambda),
-                              lambda.Domain, lambda.View.ToString());
+                              lambda.Domain, lambda.View.ToString(), lambda.InSitemap);
     }
 
     /// <summary>
