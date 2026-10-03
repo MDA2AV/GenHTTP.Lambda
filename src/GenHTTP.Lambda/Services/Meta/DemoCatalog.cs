@@ -10,7 +10,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// A demo is an ordinary lambda in the demo tier. Its editor key is its public
 /// key and is announced, so it is read with the same tools as any other lambda
 /// - its code with its history, its workspace, its logs - and the tier makes
-/// all of that read only (see <c>MetaService.EnsureEditable</c>).
+/// all of that read only (see <c>LambdaGuard.EnsureEditable</c>).
 ///
 /// Each is backed by a hidden template of the same name, so that starting a
 /// lambda of one's own from a demo is the ordinary creation flow with that

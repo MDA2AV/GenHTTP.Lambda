@@ -132,6 +132,11 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<DatabaseVault>();
         services.AddSingleton<IStorageService, FileSystemStorageService>();
         services.AddSingleton<IDeploymentService, DeploymentService>();
+        services.AddSingleton<LambdaHistory>();
+        services.AddSingleton<LambdaRemoval>();
+        services.AddSingleton<LambdaLifetime>();
+        services.AddSingleton<LambdaDescriber>();
+        services.AddSingleton<LambdaHosting>();
         services.AddSingleton<IMetaService, MetaService>();
         services.AddSingleton<IWorkspaceService, WorkspaceService>();
         services.AddSingleton<IDataService, DataService>();

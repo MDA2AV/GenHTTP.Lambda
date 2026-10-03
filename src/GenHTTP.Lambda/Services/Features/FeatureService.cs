@@ -208,7 +208,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             LambdaId = lambdaId,
             Key = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)),
             Name = name,
-            Specification = MetaService.Tidy(draft.Specification, VersionNote.MaxSpecification),
+            Specification = VersionInput.Tidy(draft.Specification, VersionNote.MaxSpecification),
             BaseVersion = from,
             Origin = draft.Origin,
             Created = now,
@@ -265,12 +265,12 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // left out, a note stays; sent empty, it is cleared
         if (update.Specification != null)
         {
-            entity.Specification = MetaService.Tidy(update.Specification, VersionNote.MaxSpecification);
+            entity.Specification = VersionInput.Tidy(update.Specification, VersionNote.MaxSpecification);
         }
 
         if (update.Change != null)
         {
-            entity.Change = MetaService.Tidy(update.Change, VersionNote.MaxChange);
+            entity.Change = VersionInput.Tidy(update.Change, VersionNote.MaxChange);
         }
 
         var newest = Newest(database, lambda.Id);
@@ -297,7 +297,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
     public FeatureInfo Save(string privateKey, string feature, string code, VersionNote? note = null, int? after = null)
     {
-        var files = MetaService.Validate(code);
+        var files = VersionInput.Validate(code);
 
         var (database, lambda, entity, turn) = Locked(privateKey, feature);
 
@@ -315,12 +315,12 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         // what a feature holds becomes a version, so it is held to what a
         // version may hold from the start rather than refused when merged
-        MetaService.ValidateAllowance(files, lambda.Tier, limits);
+        VersionInput.ValidateAllowance(files, lambda.Tier, limits);
 
         storage.WriteFeature(lambda.Id, entity.Id, code);
 
-        entity.Specification = MetaService.Tidy(note?.Specification, VersionNote.MaxSpecification) ?? entity.Specification;
-        entity.Change = MetaService.Tidy(note?.Change, VersionNote.MaxChange) ?? entity.Change;
+        entity.Specification = VersionInput.Tidy(note?.Specification, VersionNote.MaxSpecification) ?? entity.Specification;
+        entity.Change = VersionInput.Tidy(note?.Change, VersionNote.MaxChange) ?? entity.Change;
 
         var now = DateTime.UtcNow;
 
