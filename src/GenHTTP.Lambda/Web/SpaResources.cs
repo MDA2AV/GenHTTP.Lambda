@@ -2,6 +2,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Source;
 
 using GenHTTP.Modules.Files;
@@ -45,15 +46,19 @@ public sealed class SpaResources
 
     private ISourceService Sources { get; }
 
+    private IMetaService Lambdas { get; }
+
     #endregion
 
     #region Initialization
 
-    public SpaResources(LambdaOptions options, SiteMeta meta, SitePrerender prerender, ISourceService sources, ILogger<SpaResources> logger)
+    public SpaResources(LambdaOptions options, SiteMeta meta, SitePrerender prerender, ISourceService sources, IMetaService lambdas,
+                        ILogger<SpaResources> logger)
     {
         Meta = meta;
         Prerender = prerender;
         Sources = sources;
+        Lambdas = lambdas;
 
         Root = options.WebRoot;
         IndexFile = Path.Combine(Root, "index.html");
@@ -88,7 +93,7 @@ public sealed class SpaResources
         // one from a server that answers a range with the whole file
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .Add(RangeSupport.Create())
-                                    .Add(new SiteMetaConcernBuilder(Meta, Prerender, Sources, ReadIndex))
+                                    .Add(new SiteMetaConcernBuilder(Meta, Prerender, Sources, Lambdas, ReadIndex))
                                     .Add(CacheControl.NoCache());
     }
 

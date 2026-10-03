@@ -72,7 +72,7 @@ export function Admin({ theme }: { theme: Theme }) {
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <span className="text-[15px] font-semibold">Administration</span>
-                <p className="mt-1 text-[13px] text-slate-500">Unlocked for this tab</p>
+                <p className="mt-1 text-[13px] text-slate-500">Unlocked in this browser</p>
               </div>
 
               <button
@@ -186,7 +186,8 @@ function Unlock({ refused, onUnlocked }: { refused: boolean; onUnlocked: (token:
 
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           The server figures, the log and the lambdas of other people are behind this. It is the token the host
-          was started with, and it is kept until this tab is closed.
+          was started with, and this browser keeps it - the editor of every lambda shows its Admin section with
+          it - until it is locked again.
         </p>
 
         <input

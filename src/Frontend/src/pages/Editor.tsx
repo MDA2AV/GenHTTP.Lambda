@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { useAdminToken } from '../admin';
 import { absoluteAddress, isDomain, platformPath } from '../address';
 import {
   ApiError,
@@ -20,8 +21,11 @@ import {
 import { CopyField } from '../components/CopyField';
 import { Diagnostics } from '../components/Diagnostics';
 import { Dialog } from '../components/Dialog';
-import { IconAlert, IconCheck, IconCode, IconCopy, IconExternal, IconPlay, IconSpark, IconSpinner, IconViewFull, IconViewSimple } from '../components/Icons';
+import {
+  IconAlert, IconCheck, IconCode, IconCopy, IconExternal, IconLock, IconPlay, IconSpark, IconSpinner, IconViewFull, IconViewSimple,
+} from '../components/Icons';
 import { useToast } from '../components/Toast';
+import { AdminTab } from '../control/AdminTab';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
 import type { Busy, Control, FeatureControl, FeatureView, Rejection } from '../control/context';
@@ -45,7 +49,7 @@ import { Workbench } from '../control/Workbench';
 import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui';
 import { useView, type View } from '../control/view';
 import { SharedWordsContext } from '../control/words';
-import { useEditorT } from '../i18n';
+import { useEditorT, useT } from '../i18n';
 import { Link as SiteLink } from '../i18n/links';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
@@ -57,7 +61,7 @@ interface Props {
 
 type SectionId =
   | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'files' | 'data' | 'versions' | 'deployments' | 'stats' | 'logs'
-  | 'showcase' | 'source' | 'domain' | 'history';
+  | 'showcase' | 'source' | 'domain' | 'history' | 'admin';
 
 type GroupId = 'build' | 'program' | 'run' | 'sharing';
 
@@ -124,6 +128,14 @@ const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
 
+/*
+ * What only the operator decides about a lambda - whether the sitemap names
+ * it - in both views, set apart after every section of the owner's. There
+ * only for a browser holding the admin token the panel asked for, so the
+ * owner never sees it; the server asks for the token again.
+ */
+const ADMIN_SECTIONS: SectionId[] = ['admin'];
+
 /**
  * The control center of one lambda.
  *
@@ -146,6 +158,11 @@ const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
 export function Editor({ theme }: Props) {
   const t = useEditorT();
   const said = t.frame;
+  const site = useT();
+
+  // whoever unlocked the panel in this browser
+  const [adminToken] = useAdminToken();
+  const operator = adminToken !== '';
 
   usePageMeta({ title: said.title, index: false });
 
@@ -161,7 +178,9 @@ export function Editor({ theme }: Props) {
   const featureKey = segment === 'features' && parts[1] ? parts[1] : null;
   const featureView: FeatureView = FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview';
 
-  const section: SectionId = segment === 'edit' ? 'code' : ([...SECTIONS, ...SIMPLE_SECTIONS].find((id) => id === segment) ?? 'overview');
+  const section: SectionId = segment === 'edit'
+    ? 'code'
+    : ([...SECTIONS, ...SIMPLE_SECTIONS, ...ADMIN_SECTIONS].find((id) => id === segment) ?? 'overview');
 
   // the kind of data open: /data/secrets, or /features/{key}/data/secrets
   const dataKind = featureKey ? (featureView === 'data' ? parts[3] : undefined) : section === 'data' ? parts[1] : undefined;
@@ -485,13 +504,17 @@ export function Editor({ theme }: Props) {
     || (id === 'data' && simple && section !== 'data' && !keeps)
     // the full view has the versions for it - known once the lambda is,
     // which says which view it opens in
-    || (id === 'history' && lambda != null && !simple);
+    || (id === 'history' && lambda != null && !simple)
+    // the operator's, for nobody without the admin token
+    || (ADMIN_SECTIONS.includes(id) && !operator);
 
   const away = absent(section);
 
   // whether the simple view has what is open; when it does not - come to by
   // a link, say - the page says so rather than pretending it is not there
-  const kept = featureKey ? SIMPLE_FEATURE_VIEWS.includes(featureView) : SIMPLE_SECTIONS.includes(section);
+  const kept = featureKey
+    ? SIMPLE_FEATURE_VIEWS.includes(featureView)
+    : SIMPLE_SECTIONS.includes(section) || ADMIN_SECTIONS.includes(section);
   const outside = simple && !kept;
 
   /**
@@ -529,6 +552,18 @@ export function Editor({ theme }: Props) {
       navigate(base, { replace: true });
     }
   }, [away, base, navigate]);
+
+  /** What scrolls: the page beside the sidebar, unless the code fills it. */
+  const scroller = useRef<HTMLDivElement>(null);
+
+  /*
+   * A section opened is a page opened, so it starts at the top. Otherwise one
+   * opened from the foot of a sidebar taller than the window - the operator's
+   * is last - shows the space below it, and a short one looks empty.
+   */
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [section, featureKey, featureView]);
 
   if (failure) {
     return (
@@ -686,7 +721,9 @@ export function Editor({ theme }: Props) {
             : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
         }`}
       >
-        {simple && id === 'docs' ? t.simple.about : said.sections[id]}
+        {id === 'admin' && <IconLock className="h-3.5 w-3.5 text-slate-400" />}
+        {/* the header's word for the panel, which this belongs to */}
+        {id === 'admin' ? site.shell.admin : simple && id === 'docs' ? t.simple.about : said.sections[id]}
         {id === 'versions' && versions.length > 0 && (
           <span className="ml-auto text-xs tabular-nums text-slate-400">{versions.length}</span>
         )}
@@ -722,7 +759,7 @@ export function Editor({ theme }: Props) {
    */
   return (
     <SharedWordsContext.Provider value={t.shared}>
-    <div className={code ? 'flex min-h-0 flex-1 flex-col' : 'min-h-0 flex-1 overflow-y-auto'}>
+    <div ref={scroller} className={code ? 'flex min-h-0 flex-1 flex-col' : 'min-h-0 flex-1 overflow-y-auto'}>
     <div className={`mx-auto flex w-full max-w-[max(80rem,90%)] flex-col md:flex-row md:gap-6 md:px-6 ${code ? 'min-h-0 flex-1' : ''}`}>
       <aside className="shrink-0 border-b border-slate-200 dark:border-ink-800 md:sticky md:top-0 md:flex md:w-56 md:flex-col md:self-start md:border-b-0">
         <div className="px-4 pb-3 pt-4 md:px-3 md:pt-6">
@@ -901,6 +938,14 @@ export function Editor({ theme }: Props) {
                   </Fragment>
                 );
               })}
+          {/* the operator's, after everything that is the owner's and apart from it */}
+          {ADMIN_SECTIONS.some((id) => !absent(id)) && (
+            <>
+              <span aria-hidden="true" className="my-2 w-px shrink-0 self-stretch bg-slate-200 dark:bg-ink-800 md:hidden" />
+              <span aria-hidden="true" className="mx-3 mb-2 mt-5 hidden h-px bg-slate-200 dark:bg-ink-800 md:block" />
+              {ADMIN_SECTIONS.filter((id) => !absent(id)).map(entry)}
+            </>
+          )}
         </nav>
         )}
 
@@ -1016,6 +1061,8 @@ export function Editor({ theme }: Props) {
           <SourceTab control={control} onChanged={() => refresh().catch(() => undefined)} />
         ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />
+        ) : section === 'admin' && operator ? (
+          <AdminTab control={control} />
         ) : simple ? (
           <SimpleOverview control={control} />
         ) : (

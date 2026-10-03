@@ -11,14 +11,16 @@ using Microsoft.Extensions.Logging;
 namespace GenHTTP.Lambda.Services.Meta;
 
 /// <summary>
-/// Where a lambda answers and on what terms: its public key, its domain, and
-/// the tier that decides what it may have.
+/// Where a lambda answers and on what terms: its public key, its domain, the
+/// tier that decides what it may have, and whether the sitemap of the
+/// installation names it.
 /// </summary>
 /// <remarks>
 /// None of it touches the program: a lambda keeps its versions and its data
 /// whatever it is called, wherever it answers and whichever tier it is in.
 /// What each change does reach is what serves the lambda - the domains
-/// answered, and the limits its database is opened with.
+/// answered, and the limits its database is opened with - or what search
+/// engines are told about it.
 /// </remarks>
 public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, LambdaDescriber describer, IDatabaseVault databaseVault,
                                   IDomainRegistry domains, LambdaOptions options, ILogger<LambdaHosting> logger)
@@ -207,6 +209,57 @@ public sealed class LambdaHosting(IDbContextFactory<LambdaDbContext> databases, 
         }
 
         return describer.Describe(database, lambda);
+    }
+
+    #endregion
+
+    #region Sitemap
+
+    /// <summary>
+    /// Lists the lambda in the sitemap of the installation, or takes it out.
+    /// Only ever done by an administrator.
+    /// </summary>
+    /// <remarks>
+    /// A demo may be listed like any other lambda: what changes is what the
+    /// installation tells search engines, not the program, which stays read
+    /// only.
+    /// </remarks>
+    public LambdaInfo ChangeSitemap(string privateKey, bool listed)
+    {
+        using var database = databases.CreateDbContext();
+
+        var lambda = LambdaGuard.Require(database, privateKey);
+
+        if (lambda.InSitemap != listed)
+        {
+            lambda.InSitemap = listed;
+            lambda.Modified = DateTime.UtcNow;
+
+            database.SaveChanges();
+
+            logger.LogInformation("Changed sitemap of lambda {Lambda} #{LambdaId} to {Listed}", lambda.PublicKey, lambda.Id, listed);
+        }
+
+        return describer.Describe(database, lambda);
+    }
+
+    /// <summary>
+    /// The public keys of the lambdas the operator listed in the sitemap that
+    /// are online, in order.
+    /// </summary>
+    /// <remarks>
+    /// One that is offline is left out until it is back: its address answers
+    /// with an error, which is no use to a search engine.
+    /// </remarks>
+    public IReadOnlyList<string> ListSitemap()
+    {
+        using var database = databases.CreateDbContext();
+
+        return database.Lambdas.AsNoTracking()
+                       .Where(l => l.InSitemap && l.ActiveVersion != null)
+                       .OrderBy(l => l.PublicKey)
+                       .Select(l => l.PublicKey)
+                       .ToList();
     }
 
     #endregion

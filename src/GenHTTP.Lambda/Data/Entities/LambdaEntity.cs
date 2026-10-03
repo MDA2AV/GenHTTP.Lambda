@@ -37,6 +37,15 @@ public sealed class LambdaEntity
     public EditorView View { get; set; }
 
     /// <summary>
+    /// Whether the operator listed the lambda in the sitemap of the installation.
+    /// </summary>
+    /// <remarks>
+    /// Only ever the operator's to decide, and off until they do. The sitemap
+    /// names its address below <c>/lambda/</c> while it is online.
+    /// </remarks>
+    public bool InSitemap { get; set; }
+
+    /// <summary>
     /// The version that is currently deployed, if any.
     /// </summary>
     public int? ActiveVersion { get; set; }

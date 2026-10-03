@@ -123,6 +123,18 @@ public interface IMetaService
     LambdaInfo ChangeTier(string privateKey, LambdaTier tier);
 
     /// <summary>
+    /// Lists the lambda in the sitemap of the installation, or takes it out.
+    /// Only ever done by an administrator.
+    /// </summary>
+    LambdaInfo ChangeSitemap(string privateKey, bool listed);
+
+    /// <summary>
+    /// The public keys of the lambdas the operator listed in the sitemap that
+    /// are online, for the sitemap.
+    /// </summary>
+    IReadOnlyList<string> ListSitemap();
+
+    /// <summary>
     /// Sets the domain the lambda answers at, or removes it when nothing is given.
     /// </summary>
     /// <remarks>

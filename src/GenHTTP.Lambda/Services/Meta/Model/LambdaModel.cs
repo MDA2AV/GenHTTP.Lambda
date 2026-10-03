@@ -10,6 +10,7 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="KeptUntil">When it is removed unless used, or nothing when its tier keeps it</param>
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
 /// <param name="View">How its editor opens for somebody who has not chosen a view of their own</param>
+/// <param name="InSitemap">Whether the operator listed it in the sitemap - for the operator, never told its owner</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
@@ -22,7 +23,8 @@ public sealed record LambdaInfo(
     DateTime? DeployedUntil,
     DateTime? KeptUntil,
     string? Domain,
-    string View
+    string View,
+    bool InSitemap
 );
 
 /// <summary>

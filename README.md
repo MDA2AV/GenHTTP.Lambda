@@ -567,7 +567,9 @@ that hold something, in its own words: its records, table by table, to read
 and never to edit; what the app saved, as a plain list to download from; and
 its keys and passwords, which the owner can enter and replace - the ones the
 app is waiting for first, and the overview asks for them too. Entering one there switches secrets on if the agent left them off.
-The **full** view is every section, as before.
+The **full** view is every section, as before. In both, a browser that holds
+the admin token has one more section after all the others, **Admin**, which
+nobody else sees (see Administration).
 
 Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
 when it is created (`POST /lambdas`, `create_lambda`) and changed later
@@ -1275,7 +1277,9 @@ somebody's browser at this endpoint.
 what its code says - and takes them offline or removes them. `/stats` is what
 the process is holding and what the engine is carrying. Both are reached
 through the **Admin** menu in the header, which is where the token is entered:
-it is kept in session storage, so closing the tab locks it again.
+it is kept in the browser's local storage, so every tab of that browser is
+unlocked - the editor's **Admin** section included, see below - until **Lock
+again** is used or the server turns the token away.
 
 This is the one part that authenticates. Everywhere else the editor link is
 the credential and it only ever reaches one lambda; this reads code that belongs
@@ -1495,6 +1499,23 @@ administrator who has to decide whether something is abusive needs to read it,
 and reading it in the editor is also how it gets emptied or corrected rather
 than only deleted. It is one more reason the token belongs to a person and not
 in a browser somebody else uses.
+
+Whoever holds the token also decides which lambdas the sitemap names. In a
+browser that holds it, the editor of every lambda has one more section,
+**Admin**, after all of the owner's in both views; nobody else sees it, and the
+server asks for the token again behind it (`PUT /api/v1/admin/lambdas/:publicKey/sitemap`
+with `{ "listed": true }`, and `sitemap` in what `GET /api/v1/admin/lambdas/:publicKey`
+answers). Its switch, off for every lambda until the operator turns it on, has
+`/sitemap.xml` name the root of the lambda's address - `https://genhttp.dev/lambda/quiz/` -
+for as long as the lambda is online. An offline lambda answers its address
+with a 404, which is no use to a crawler, so it is left out until it is back.
+Never its own domain, even where it answers at one, since a sitemap names
+pages of its own host; and without a `lastmod`, since what a lambda serves
+changes with its data as well as its versions, and a date that is sometimes
+wrong teaches a search engine to ignore the others. Neither an owner nor an
+agent can list a lambda. The section is in English, like the panel, and a
+token the server turns away is forgotten there as the panel forgets it, which
+takes the section with it.
 
 ## Database
 
