@@ -138,8 +138,8 @@ public static class SourceKinds
     /// <summary>How it is tested.</summary>
     public const string Tests = "tests";
 
-    /// <summary>What its assets or code are built from: its development space.</summary>
-    public const string Development = "dev";
+    /// <summary>What its assets or code are built from: its build folder.</summary>
+    public const string Build = "build";
 
     /// <summary>What stands in for the platform.</summary>
     public const string Platform = "platform";
@@ -168,9 +168,9 @@ public static class SourceKinds
             return Tests;
         }
 
-        if (path.StartsWith(ProjectPaths.Development, StringComparison.Ordinal))
+        if (path.StartsWith(ProjectPaths.Build, StringComparison.Ordinal))
         {
-            return Development;
+            return Build;
         }
 
         if (path.StartsWith("Platform/", StringComparison.Ordinal))

@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import type { LambdaFile } from '../api';
 import { encodeBytes, readable } from '../bytes';
 import { pill } from '../control/ui';
-import { BESIDE, DEV, DOCS, TESTS, isCode, isContext, isDevelopment } from '../control/written';
+import { BESIDE, BUILD, DOCS, TESTS, isCode, isContext, isBuild } from '../control/written';
 import { useEditorT } from '../i18n';
 import type { EditorMessages } from '../locales/en/editor';
 import { IconPackage, IconPlus, IconTrash, IconUpload } from './Icons';
@@ -159,8 +159,8 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
 
     const wanted = typed.includes('.') ? typed : `${typed}.cs`;
 
-    // the development space is changed where it is built, which is not here
-    const wrong = isDevelopment(wanted)
+    // the build folder is changed where it is built, which is not here
+    const wrong = isBuild(wanted)
       ? said.build
       : wanted.toLowerCase().startsWith('.lambda')
         ? checkContext(wanted, said)
@@ -212,7 +212,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
       return;
     }
 
-    const folder = !isCode(active) && !isDevelopment(active) && active.includes('/') ? active.slice(0, active.lastIndexOf('/') + 1) : '';
+    const folder = !isCode(active) && !isBuild(active) && active.includes('/') ? active.slice(0, active.lastIndexOf('/') + 1) : '';
 
     const added: LambdaFile[] = [];
 
@@ -244,9 +244,9 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
   // the program first; what is written about it after a rule, and quieter;
   // what it is built from as one pill, since that may be any number of files
   // - kept as it is, and read where its section is, the file open here aside
-  const program = files.filter((file) => !isContext(file.name) && !isDevelopment(file.name));
+  const program = files.filter((file) => !isContext(file.name) && !isBuild(file.name));
   const context = files.filter((file) => isContext(file.name));
-  const development = files.filter((file) => isDevelopment(file.name));
+  const build = files.filter((file) => isBuild(file.name));
 
   const tab = (file: LambdaFile) => {
     const open = file.name === active;
@@ -259,10 +259,10 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
           className="py-0.5 font-mono text-[12.5px]"
           title={file.name === ENTRY ? said.entry : file.name}
         >
-          {isContext(file.name) || isDevelopment(file.name) ? (
+          {isContext(file.name) || isBuild(file.name) ? (
             <>
-              <span className="text-slate-400">{isDevelopment(file.name) ? DEV : BESIDE}</span>
-              {file.name.slice(isDevelopment(file.name) ? DEV.length : BESIDE.length)}
+              <span className="text-slate-400">{isBuild(file.name) ? BUILD : BESIDE}</span>
+              {file.name.slice(isBuild(file.name) ? BUILD.length : BESIDE.length)}
             </>
           ) : file.name}
           {faulty?.has(file.name) && <span className="ml-1.5 text-red-500" aria-label={said.errors}>•</span>}
@@ -270,7 +270,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
 
         {/* the same room on every pill, shown or not, so opening a file
             does not widen its pill and push the others along */}
-        {file.name !== ENTRY && editable && !isDevelopment(file.name) ? (
+        {file.name !== ENTRY && editable && !isBuild(file.name) ? (
           <button
             type="button"
             onClick={() => remove(file.name)}
@@ -299,7 +299,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
         </span>
       )}
 
-      {development.length > 0 && (
+      {build.length > 0 && (
         <span role="group" aria-label={said.buildTitle} className="contents">
           <span aria-hidden="true" className="mx-1 h-5 w-px bg-slate-300 dark:bg-ink-700" />
           <button
@@ -310,9 +310,9 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
             className={`${pill(false)} !py-0.5 text-[12.5px]`}
           >
             <IconPackage className="h-3.5 w-3.5 text-slate-400" />
-            {said.buildFiles(development.length)}
+            {said.buildFiles(build.length)}
           </button>
-          {development.filter((file) => file.name === active).map(tab)}
+          {build.filter((file) => file.name === active).map(tab)}
         </span>
       )}
 

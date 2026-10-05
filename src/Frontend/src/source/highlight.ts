@@ -34,7 +34,7 @@ hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('dockerfile', dockerfile);
 hljs.registerLanguage('yaml', yaml);
-// what the project of a development space holds beside its sources
+// what a build folder holds beside its sources
 hljs.registerLanguage('scss', scss);
 hljs.registerLanguage('ini', ini);
 

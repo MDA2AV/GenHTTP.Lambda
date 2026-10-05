@@ -8,7 +8,7 @@ export const tabs = {
   extension: 'It needs an extension, so it can be served as the right thing.',
   context: 'In .lambda/, only docs/ and tests/ - letters, digits, dashes, underscores and dots, separated by slashes.',
   contextFiles: 'Documentation and tests: part of the version, never compiled or served',
-  /** Said when a file is added below .lambda/dev/ here: what a version is built from is changed where it is built. */
+  /** Said when a file is added below .lambda/build/ here: what a version is built from is changed where it is built. */
   build: 'What it is built from is changed where it is built - in a clone, or by your agent - and read under Build.',
   /** The one pill that stands for every file the version is built from. */
   buildFiles: (count: number) => (count === 1 ? 'Build · 1 file' : `Build · ${count} files`),

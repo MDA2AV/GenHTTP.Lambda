@@ -72,7 +72,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// <summary>
     /// Reads a feature with its files.
     /// </summary>
-    /// <param name="folder">Only the files below this folder - <c>.lambda/docs/</c> for its documentation, <c>.lambda/dev/</c> for its development space - rather than every one</param>
+    /// <param name="folder">Only the files below this folder - <c>.lambda/docs/</c> for its documentation, <c>.lambda/build/</c> for its build folder - rather than every one</param>
     [ResourceMethod("lambdas/:privateKey/features/:feature")]
     public FeatureContentResponse Get(string privateKey, string feature, string? folder)
     {
@@ -139,20 +139,24 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     }
 
     /// <summary>
-    /// Downloads the files of a feature as a zip archive.
+    /// Downloads the files of a feature as a zip archive - laid out as a
+    /// clone with <c>?layout=project</c>, as for a version.
     /// </summary>
+    /// <param name="layout"><c>lambda</c> (the default) or <c>project</c></param>
     [ResourceMethod("lambdas/:privateKey/features/:feature/zip")]
-    public IResponse GetArchive(string privateKey, string feature, IRequest request)
+    public IResponse GetArchive(string privateKey, string feature, string? layout, IRequest request)
     {
+        var laid = VersionResource.LayoutOf(layout);
+
         var found = features.Get(privateKey, feature);
 
-        var zip = LambdaArchive.Pack(LambdaSource.Parse(found.Code));
+        var zip = LambdaArchive.Pack(LambdaSource.Parse(found.Code), laid);
 
-        logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda}", found.Feature.Name, meta.PublicKeyOf(privateKey));
+        logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} layout {Layout}", found.Feature.Name, meta.PublicKeyOf(privateKey), laid);
 
         return request.Respond()
                       .Content(zip, new ContentType("application/zip"))
-                      .Header("Content-Disposition", $"attachment; filename=\"feature-{found.Feature.Key[..8]}.zip\"")
+                      .Header("Content-Disposition", $"attachment; filename=\"feature-{found.Feature.Key[..8]}{(laid == ArchiveLayout.Project ? "-project" : string.Empty)}.zip\"")
                       .Build();
     }
 
@@ -163,17 +167,21 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// <param name="deploy">Whether to put its preview online as well</param>
     /// <param name="specification">What the user wants from it and why; left out, the one it has is kept</param>
     /// <param name="change">What it changes, in a line; left out, the one it has is kept</param>
+    /// <param name="layout"><c>lambda</c> (the default) or <c>project</c></param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/features/:feature/zip")]
     public async ValueTask<FeatureSavedResponse> PutArchive(string privateKey, string feature, bool? deploy, string? specification, string? change,
-                                                            Stream body)
+                                                            string? layout, Stream body)
     {
+        var laid = VersionResource.LayoutOf(layout);
+
         // looked up before the body is read, because how much of it may be
         // read depends on the tier - and a key that names nothing needs none
         var lambda = meta.Require(privateKey);
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var files = await LambdaArchive.UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier));
+        var files = await VersionResource.UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier), laid,
+                                                      () => LambdaSource.Parse(features.Get(privateKey, feature).Code));
 
         return await SaveAsync(privateKey, feature, files, deploy, specification, change);
     }

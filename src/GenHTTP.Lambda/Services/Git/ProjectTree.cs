@@ -117,9 +117,7 @@ public static class ProjectTree
 
             if (ProjectPaths.Classify(file.Path).Kind == ProjectPathKind.Foreign)
             {
-                return ReadTree.Refused($"'{file.Path}' has no place in a lambda. Its code is Project.cs and the other .cs files beside it, what it ships "
-                                      + "is in assets/, its documentation in docs/, its tests in tests/ and what its assets are built from in dev/; "
-                                      + "the rest is the platform's. Keep other files out of commits (.git/info/exclude).");
+                return ReadTree.Refused($"'{file.Path}' has no place in a lambda. {ProjectPaths.Layout} Keep other files out of commits (.git/info/exclude).");
             }
         }
 

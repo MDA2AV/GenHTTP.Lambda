@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
-/// What the <c>.gitignore</c> files of a development space leave out of it.
+/// What the <c>.gitignore</c> files of a build folder leave out of it.
 /// </summary>
 /// <remarks>
 /// What a build installs, caches and writes for itself - node_modules, target

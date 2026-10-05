@@ -13,7 +13,7 @@ import { languageFor } from '../monaco';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Section } from './ui';
-import { BESIDE, isCode, isDevelopment } from './written';
+import { BESIDE, isCode, isBuild } from './written';
 
 type Busy = 'save' | 'check' | 'deploy' | null;
 
@@ -195,7 +195,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
 
     try {
       // what the assets are built from is no part of what is compiled
-      const result = await api.check(privateKey, files.filter((file) => !isDevelopment(file.name)));
+      const result = await api.check(privateKey, files.filter((file) => !isBuild(file.name)));
 
       setDiagnostics(result.diagnostics);
       setBuilt(result.success ? 'clean' : 'idle');
@@ -402,9 +402,9 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           theme={control.theme}
           diagnostics={diagnostics.filter((d) => (d.file ?? ENTRY) === active)}
           reveal={reveal}
-          onChange={current?.encoding === 'base64' || demo || isDevelopment(active) ? undefined : setCode}
+          onChange={current?.encoding === 'base64' || demo || isBuild(active) ? undefined : setCode}
           onSave={save}
-          readOnly={demo || isDevelopment(active)}
+          readOnly={demo || isBuild(active)}
           onDefinition={goToDefinition}
         />
 

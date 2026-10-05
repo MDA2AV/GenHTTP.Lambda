@@ -61,29 +61,29 @@ internal static class VersionInput
             throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, limits.MaxCodeLengthOf(LambdaTier.Premium), $"{limits.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
         }
 
-        // the documentation, the tests and the development space are carried
+        // the documentation, the tests and the build folder are carried
         // the same way as the assets - a copy in every version - so they
         // share the allowance
         var assets = limits.MaxAssetBytesOf(tier);
 
         var context = LambdaSource.ContextBytes(files);
 
-        var development = LambdaSource.DevelopmentBytes(files);
+        var build = LambdaSource.BuildBytes(files);
 
-        if (LambdaSource.AssetBytes(files) + context + development > assets)
+        if (LambdaSource.AssetBytes(files) + context + build > assets)
         {
-            var what = (context > 0, development > 0) switch
+            var what = (context > 0, build > 0) switch
             {
-                (true, true) => "The assets, the documentation, the tests and the development space",
+                (true, true) => "The assets, the documentation, the tests and the build folder",
                 (true, false) => "The assets, the documentation and the tests",
-                (false, true) => "The assets and the development space",
+                (false, true) => "The assets and the build folder",
                 _ => "The assets"
             };
 
             // what a build installed or made is the likeliest reason a
-            // development space is large, and its .gitignore what keeps it out
-            var built = development > 0
-                ? $" The development space comes to {Readable(development)}: what a build installs, caches or makes is no part of it - list it in its .gitignore, which a clone and a zip follow."
+            // build folder is large, and its .gitignore what keeps it out
+            var built = build > 0
+                ? $" The build folder comes to {Readable(build)}: what a build installs, caches or makes is no part of it - list it in its .gitignore, which a clone and a zip follow."
                 : string.Empty;
 
             throw LambdaException.Invalid($"{what} must not exceed {Readable(assets)} in total.{Beyond(tier, assets, limits.MaxAssetBytesOf(LambdaTier.Premium), Readable(limits.MaxAssetBytesOf(LambdaTier.Premium)))}{built} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");

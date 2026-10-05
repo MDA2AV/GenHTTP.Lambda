@@ -64,7 +64,7 @@ export function FeatureTab({ control, onNotes, onRebase }: {
   // from the preview, a full path to the lambda is the live lambda - and its real data
   const own = `/lambda/${control.lambda.publicKey}/`;
   // the program only: documentation naming the address says where it is, and links nowhere -
-  // and what the development space says is said again in what it builds, if anywhere
+  // and what the build folder says is said again in what it builds, if anywhere
   const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && (isCode(file.name) || isAsset(file.name)) && file.code.includes(own)).map((file) => file.name);
 
   return (

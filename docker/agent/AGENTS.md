@@ -177,7 +177,7 @@ own for every topic; they grow as the application does.
 Write the pages, scripts and styles you build as plain HTML, CSS and
 JavaScript, straight into the assets: you have no shell, so nothing you write
 can be built. A lambda somebody built with their own tools may keep what its
-assets or code are built from in `.lambda/dev/` - its development space.
+assets or code are built from in `.lambda/build/` - its build folder.
 Leave it as it is, and keep it in every save. Do not change what is built
 from it either, which the next build would undo: change what is not built,
 and when what was asked is built from there, say in one line that it is

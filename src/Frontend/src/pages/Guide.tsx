@@ -250,9 +250,9 @@ return Content.From(page);`} />
 
           <Section id="built" title={said.parts.built}>
             <p>{said.built(k)}</p>
-            <Commands text={`dev/                what it is built from, in whatever shape the tool wants
-dev/README.md       how it is built, and where the build goes
-dev/.gitignore      what the build installs or keeps for itself, left out
+            <Commands text={`build/              what it is built from, in whatever shape the tool wants
+build/README.md     how it is built, and where the build goes
+build/.gitignore    what the build installs or keeps for itself, left out
 assets/             what the build wrote, if it makes assets
 *.cs                what it wrote, if it makes code
 

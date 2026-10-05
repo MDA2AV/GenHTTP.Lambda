@@ -17,7 +17,7 @@ it is the same in every commit until the platform changes it.
 | `assets/` | what it ships and serves - the front end, its migrations, pictures |
 | `docs/` | its documentation: `product.md`, `decisions.md` and more pages |
 | `tests/` | how it is tested: `README.md`, the scripts and their data |
-| `dev/` | its development space: what its assets or code are built from with a build tool - see "What is built" |
+| `build/` | its build folder: what its assets or code are built from with a build tool - see "What it is built from" |
 | `Program.cs`, `{project}.csproj`, `Platform/`, `Dockerfile`, `.gitignore`, `.dockerignore`, `AGENTS.md`, `CLAUDE.md`, `LICENSE` | the platform's: they make the lambda a project that runs here, and are no part of it |
 
 Change the lambda's files only. A push that changes, adds or removes one of
@@ -40,10 +40,10 @@ and work in the body of `BuildAsync()`; a helper goes into a type of its own.
 None of it is the lambda's data on the platform, which is never in the
 repository (see "Data").
 
-## What is built: dev/
+## What it is built from: build/
 
 What the lambda's assets - or its code - are built from with a build tool
-goes in `dev/`, the development space: whatever the tool works from, in
+goes in `build/`, the build folder: whatever the tool works from, in
 whatever layout it wants. It is part of every version, like `docs/`, and
 never compiled into the lambda or served. What is written as it is served or
 compiled - plain HTML, CSS and JavaScript, C# - needs none.
@@ -63,19 +63,20 @@ and commit it together with what the build wrote:
   usual way this goes wrong.
 - What the build installs, caches or writes for itself is no part of a
   version - `node_modules/`, `target/`, `.venv/`, for example: keep it out
-  with a `.gitignore` of its own in `dev/` (the one at the root is the
+  with a `.gitignore` of its own in `build/` (the one at the root is the
   platform's).
-- `dev/README.md` says how it is built and where the build goes, in a few
+- `build/README.md` says how it is built and where the build goes, in a few
   lines: the owner reads it in the editor, the next agent builds from it.
-- A change in `dev/` that is not built changes nothing, and a change made in
+- A change in `build/` that is not built changes nothing, and a change made in
   what the build wrote is undone by the next build.
 - Nothing secret in it, `.env` files included: every clone has it, and so
   does everybody once the source is published.
 - Plain files, like the rest of the repository: run a script through its
   interpreter rather than as an executable, which a push refuses.
-- In a zip of a version (the API's way without git) the same files are
-  `.lambda/dev/` and the assets are at its root, so a build that writes to a
-  relative path set up here writes to the wrong place there. Work here.
+- Without git, the API hands out a version or a feature as a zip laid out
+  as this repository is, and takes it back the same way
+  (`?layout=project`), so a build set up here writes to the same place
+  there. Its plain zip names files as the lambda does instead.
 
 ## Versions: main
 
@@ -260,5 +261,5 @@ files, commits and logs.
 A clone of `{home}/source/{lambda}.git` is the published source, and read
 only. To build on it, create a lambda of your own ({home}/ship), clone that,
 copy the lambda's files - `Project.cs`, the other `*.cs`, `assets/`, `docs/`,
-`tests/`, `dev/` - over its own and push; the platform's files stay as your clone has
+`tests/`, `build/` - over its own and push; the platform's files stay as your clone has
 them. Keep to the terms of `LICENSE`.

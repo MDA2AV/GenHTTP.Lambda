@@ -289,7 +289,7 @@ export const guide = {
     <>
       Some of a lambda may be made by a build tool rather than written as it is served or compiled: compiled, bundled or
       generated. The version holds what the tool makes - as its assets, or as its code - and beside it the files it
-      makes them from, its {k.b('development space')}: {k.code('.lambda/dev/')} in the version, {k.code('dev/')} in a
+      makes them from, its {k.b('build folder')}: {k.code('.lambda/build/')} in the version, {k.code('build/')} in a
       clone, holding whatever the tool works from. Your agent changes those files, runs the build where it works and
       saves both in the same version. This platform builds nothing.
     </>
@@ -304,7 +304,7 @@ export const guide = {
     </>
   )) as Text,
   builtAside:
-    'What is written as it is served or compiled needs none. What a build installs or keeps for itself - node_modules, for example - is never part of a version: a .gitignore in the development space keeps it out.',
+    'What is written as it is served or compiled needs none. What a build installs or keeps for itself - node_modules, for example - is never part of a version: a .gitignore in the build folder keeps it out.',
 
   storage: ((k) => (
     <>
@@ -440,8 +440,8 @@ export const guide = {
       the program, with the same methods, kept apart in a {k.code('Platform')} folder - so nothing in your code has to
       change.
       {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here. The
-      documentation and the tests come along in {k.code('docs')} and {k.code('tests')}, and the development space in{' '}
-      {k.code('dev')}.
+      documentation and the tests come along in {k.code('docs')} and {k.code('tests')}, and the build folder in{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} opens {k.code('database/database.db')}, which the download carries with the records
       your app kept.
     </>
@@ -482,7 +482,7 @@ export const guide = {
   )) as Text,
   open2: (() => (
     <>
-      Every version is published, the earlier ones too, with its documentation, its tests, its development space and
+      Every version is published, the earlier ones too, with its documentation, its tests, its build folder and
       the change each one made. What the app keeps is never published - its records, the files it saved, the values of its keys and
       passwords - and neither is what you asked for in your own words, or who uses the app. Switch it off and the page
       is gone; its stars are kept for when you publish it again.

@@ -16,12 +16,12 @@ export const KIND_DOT: Record<SourceKind, string> = {
   asset: 'bg-emerald-500 dark:bg-emerald-400',
   docs: 'bg-logo-500 dark:bg-logo-400',
   tests: 'bg-amber-500 dark:bg-amber-400',
-  dev: 'bg-pink-500 dark:bg-pink-400',
+  build: 'bg-pink-500 dark:bg-pink-400',
   platform: 'bg-slate-400 dark:bg-ink-600',
   project: 'bg-slate-300 dark:bg-ink-700',
 };
 
-const KINDS: SourceKind[] = ['code', 'asset', 'docs', 'tests', 'dev', 'platform', 'project'];
+const KINDS: SourceKind[] = ['code', 'asset', 'docs', 'tests', 'build', 'platform', 'project'];
 
 /**
  * The code of a version: its files down the side, the one open beside them.
@@ -101,7 +101,7 @@ interface Folder {
  * and what stands in for the platform last, being the part nobody came here
  * to read.
  */
-const FOLDERS = ['assets', 'docs', 'tests', 'dev'];
+const FOLDERS = ['assets', 'docs', 'tests', 'build'];
 
 const rankFolder = (name: string) => (FOLDERS.includes(name) ? FOLDERS.indexOf(name) : name === 'Platform' ? FOLDERS.length + 1 : FOLDERS.length);
 

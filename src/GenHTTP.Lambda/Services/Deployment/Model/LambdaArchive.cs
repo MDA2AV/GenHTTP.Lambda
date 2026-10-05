@@ -6,6 +6,23 @@ using GenHTTP.Lambda.Services.Meta;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
+/// How the files of a lambda are laid out in an archive.
+/// </summary>
+public enum ArchiveLayout
+{
+
+    /// <summary>Named as the lambda names them: lambda.cs, the assets at the root, .lambda/.</summary>
+    Lambda,
+
+    /// <summary>
+    /// Where a clone of the lambda has them: Project.cs, the other .cs files,
+    /// assets/, docs/, tests/ and build/.
+    /// </summary>
+    Project
+
+}
+
+/// <summary>
 /// The files of a version as a zip archive, one entry per file.
 /// </summary>
 /// <remarks>
@@ -13,6 +30,14 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 /// single request instead of shipping file by file. Unlike the export, the
 /// archive holds the files exactly as they are named in the lambda, so it
 /// can be uploaded again as it is.
+///
+/// Or, asked for, where a clone of the lambda has them. A build in the build
+/// folder writes into the assets, or beside the code, by a path relative to
+/// itself - and that path is the same in a clone and in the archive only if
+/// both lay the files out alike. So whoever builds without git gets and sends
+/// back the clone's layout, with the lambda's files only: the platform's -
+/// the host, the project file, what stands in for the platform - are the
+/// clone's to have, and left out going both ways.
 /// </remarks>
 public static class LambdaArchive
 {
@@ -20,10 +45,12 @@ public static class LambdaArchive
 
     private static readonly DateTimeOffset Timestamp = new(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+    #region Packing
+
     /// <summary>
     /// Packs the given files into a zip archive.
     /// </summary>
-    public static byte[] Pack(IReadOnlyList<LambdaFile> files)
+    public static byte[] Pack(IReadOnlyList<LambdaFile> files, ArchiveLayout layout = ArchiveLayout.Lambda)
     {
         using var buffer = new MemoryStream();
 
@@ -31,14 +58,16 @@ public static class LambdaArchive
         {
             foreach (var file in files)
             {
-                var entry = zip.CreateEntry(file.Name, CompressionLevel.Optimal);
+                var (name, content) = layout == ArchiveLayout.Lambda ? (file.Name, file.Bytes) : InProject(file);
+
+                var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
 
                 // fixed, so the same version always packs to the same bytes
                 entry.LastWriteTime = Timestamp;
 
                 using var target = entry.Open();
 
-                target.Write(file.Bytes);
+                target.Write(content);
             }
         }
 
@@ -46,17 +75,30 @@ public static class LambdaArchive
     }
 
     /// <summary>
+    /// A file of the lambda where a clone has it: the snippet in the class
+    /// it is the body of, the rest where <see cref="ProjectPaths"/> puts it.
+    /// </summary>
+    private static (string Path, byte[] Content) InProject(LambdaFile file)
+        => file.Name == LambdaSource.EntryName
+            ? (ProjectPaths.Snippet, Encoding.UTF8.GetBytes(ProjectSnippet.ForRepository(file.Code)))
+            : (ProjectPaths.Of(file.Name), file.Bytes);
+
+    #endregion
+
+    #region Unpacking
+
+    /// <summary>
     /// Reads the files from an uploaded zip archive.
     /// </summary>
     /// <remarks>
     /// Folders, hidden files and the metadata left by operating systems are
     /// skipped - except <c>.lambda/</c> at the root, which is the version's
-    /// documentation, tests and development space rather than something an
+    /// documentation, tests and build folder rather than something an
     /// editor or a tool left behind. If everything sits in a single top level
     /// folder (as when a folder is zipped rather than its contents), that
     /// folder is removed. Text stays text, anything else is carried as base64.
     ///
-    /// The development space holds the files of a build tool, whose dot files
+    /// The build folder holds the files of a build tool, whose dot files
     /// - a .gitignore among them - are part of it, so they stay. It has
     /// usually been built in, too, so what its .gitignore files leave out is
     /// left out here as well - what the build installed, cached and wrote for
@@ -66,6 +108,131 @@ public static class LambdaArchive
     /// <param name="content">The archive</param>
     /// <param name="maxBytes">How many uncompressed bytes the archive may hold in total</param>
     public static async ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream content, long maxBytes)
+    {
+        var read = await ReadAsync(content, maxBytes, Lambda);
+
+        return Ordered(read.Select(r => ToFile(r.Path, r.Bytes)).ToList(), []);
+    }
+
+    /// <summary>
+    /// Reads the files from an uploaded zip archive laid out as a clone of
+    /// the lambda, back into the lambda's.
+    /// </summary>
+    /// <remarks>
+    /// What a commit of the clone would hold is what is read: hidden files
+    /// are skipped but in build/, and what the .gitignore files of build/
+    /// and the platform's at the root leave out is left out - a build's
+    /// installs, and what dotnet run wrote into bin/ and obj/. The
+    /// platform's own files are skipped rather than read, being the clone's
+    /// and no part of the lambda; anything else that has no place in a
+    /// lambda is refused, saying where things go.
+    ///
+    /// The files are named as the lambda they came from names them - a
+    /// Store.cs that was store.cs stays store.cs - and Project.cs that is
+    /// what that lambda's snippet becomes is that snippet, to the byte.
+    /// </remarks>
+    /// <param name="basis">The files the archive was made from: the newest version's, or the feature's</param>
+    public static async ValueTask<IReadOnlyList<LambdaFile>> UnpackProjectAsync(Stream content, long maxBytes, IReadOnlyList<LambdaFile> basis)
+    {
+        var read = await ReadAsync(content, maxBytes, Project);
+
+        var names = basis.ToDictionary(f => ProjectPaths.Of(f.Name), f => f.Name, StringComparer.Ordinal);
+
+        var files = new List<LambdaFile>(read.Count);
+
+        string? project = null;
+
+        foreach (var (path, bytes) in read)
+        {
+            var kind = ProjectPaths.Classify(path);
+
+            if (kind.Kind == ProjectPathKind.Generated)
+            {
+                continue;
+            }
+
+            if (kind.Kind == ProjectPathKind.Foreign)
+            {
+                throw LambdaException.Invalid($"'{path}' has no place in a lambda. {ProjectPaths.Layout} Leave other files out of the archive.");
+            }
+
+            if (kind.Name == LambdaSource.EntryName)
+            {
+                project = TryText(bytes, out var text) ? text : throw LambdaException.Invalid($"{ProjectPaths.Snippet} is not UTF-8 text.");
+                continue;
+            }
+
+            files.Add(ToFile(names.GetValueOrDefault(path, kind.Name!), bytes));
+        }
+
+        if (project == null)
+        {
+            throw LambdaException.Invalid($"The archive has no {ProjectPaths.Snippet}, which holds the code of the lambda.");
+        }
+
+        files.Insert(0, new LambdaFile(LambdaSource.EntryName, Snippet(project, basis)));
+
+        return Ordered(files, basis);
+    }
+
+    /// <summary>
+    /// The snippet a Project.cs holds: the one of the files it was made from,
+    /// where it is what that one becomes, and taken out of the class otherwise.
+    /// </summary>
+    private static string Snippet(string project, IReadOnlyList<LambdaFile> basis)
+    {
+        if (basis.FirstOrDefault(f => f.Name == LambdaSource.EntryName) is { } before
+            && ProjectSnippet.ForRepository(before.Code).ReplaceLineEndings("\n") == project.ReplaceLineEndings("\n"))
+        {
+            return before.Code;
+        }
+
+        var unwrapped = ProjectSnippet.Unwrap(project);
+
+        return unwrapped.Snippet ?? throw LambdaException.Invalid(unwrapped.Complaint!);
+    }
+
+    /// <summary>
+    /// The snippet first, then the files in the order the lambda they came
+    /// from had them, then the new ones by kind and name.
+    /// </summary>
+    private static List<LambdaFile> Ordered(List<LambdaFile> files, IReadOnlyList<LambdaFile> basis)
+    {
+        var known = basis.Select((f, i) => (f.Name, i)).ToDictionary(x => x.Name, x => x.i, StringComparer.Ordinal);
+
+        return files.OrderBy(f => f.Name == LambdaSource.EntryName ? 0 : 1)
+                    .ThenBy(f => known.GetValueOrDefault(f.Name, int.MaxValue))
+                    .ThenBy(f => f.IsCode ? 0 : f.IsAsset ? 1 : f.IsContext ? 2 : 3)
+                    .ThenBy(f => f.Name, StringComparer.Ordinal)
+                    .ToList();
+    }
+
+    #endregion
+
+    #region Layouts
+
+    /// <summary>
+    /// What tells the two layouts apart where an archive is read.
+    /// </summary>
+    /// <param name="Root">The file at the root of the layout, which says that no folder wraps it</param>
+    /// <param name="Build">Where the build folder is</param>
+    /// <param name="Rules">Where what .gitignore files say applies, the paths they name being relative to it</param>
+    /// <param name="Fixed">What is left out besides what the build folder's .gitignore files say, relative to <paramref name="Rules"/></param>
+    private sealed record Layout(string Root, string Build, string Rules, string? Fixed);
+
+    private static readonly Layout Lambda = new(LambdaSource.EntryName, LambdaSource.BuildFolder, LambdaSource.BuildFolder, null);
+
+    private static readonly Layout Project = new(ProjectPaths.Snippet, ProjectPaths.Build, string.Empty, ProjectPacker.RepositoryIgnored);
+
+    #endregion
+
+    #region Reading
+
+    /// <summary>
+    /// The files of an archive that are kept in the given layout, by their
+    /// paths in it.
+    /// </summary>
+    private static async ValueTask<List<(string Path, byte[] Bytes)>> ReadAsync(Stream content, long maxBytes, Layout layout)
     {
         // reading needs a seekable stream, and copying the body ourselves
         // keeps what is buffered bounded
@@ -104,7 +271,7 @@ public static class LambdaArchive
 
         // the wrapping folder is found among what is plainly the lambda's,
         // so a hidden file beside it does not hide that it is there
-        var prefix = CommonFolder(entries.Select(e => e.Name).Where(n => !IsHidden(n)).ToList());
+        var prefix = CommonFolder(entries.Select(e => e.Name).Where(n => !IsHidden(n, layout)).ToList(), layout.Root);
 
         var kept = new List<(string Name, ZipArchiveEntry Entry)>(entries.Count);
 
@@ -112,27 +279,31 @@ public static class LambdaArchive
         {
             var name = full.StartsWith(prefix, StringComparison.Ordinal) ? full[prefix.Length..] : full;
 
-            if (!IsHidden(name))
+            if (!IsHidden(name, layout))
             {
                 kept.Add((name, entry));
             }
         }
 
-        var files = new List<LambdaFile>(kept.Count);
+        var result = new List<(string Path, byte[] Bytes)>(kept.Count);
 
         long total = 0;
 
-        // what the development space says it does not keep, read before
-        // anything it leaves out would be - the files above first, so one in
-        // a folder they leave out is never read, as git never reads it
+        // what the build folder says it does not keep, read before anything
+        // it leaves out would be - the files above first, so one in a folder
+        // they leave out is never read, as git never reads it
         var rules = new Dictionary<string, byte[]>(StringComparer.Ordinal);
 
-        var ignored = IgnoredPaths.None;
+        var given = layout.Fixed != null ? [(".gitignore", layout.Fixed)] : Array.Empty<(string, string)>();
 
-        foreach (var (name, entry) in kept.Where(k => LambdaSource.IsDevelopment(k.Name) && Path.GetFileName(k.Name) == ".gitignore")
+        var ignored = IgnoredPaths.Of(given);
+
+        bool Ignores(string name) => name.StartsWith(layout.Rules, StringComparison.Ordinal) && ignored.Ignores(name[layout.Rules.Length..]);
+
+        foreach (var (name, entry) in kept.Where(k => k.Name.StartsWith(layout.Build, StringComparison.Ordinal) && Path.GetFileName(k.Name) == ".gitignore")
                                           .OrderBy(k => k.Name.Count(c => c == '/')))
         {
-            if (ignored.Ignores(name[LambdaSource.DevelopmentFolder.Length..]))
+            if (Ignores(name))
             {
                 continue;
             }
@@ -143,12 +314,12 @@ public static class LambdaArchive
 
             rules[name] = bytes;
 
-            ignored = IgnoredPaths.Of(rules.Select(r => (r.Key[LambdaSource.DevelopmentFolder.Length..], Encoding.UTF8.GetString(r.Value))));
+            ignored = IgnoredPaths.Of(given.Concat(rules.Select(r => (r.Key[layout.Rules.Length..], Encoding.UTF8.GetString(r.Value)))));
         }
 
         foreach (var (name, entry) in kept)
         {
-            if (LambdaSource.IsDevelopment(name) && ignored.Ignores(name[LambdaSource.DevelopmentFolder.Length..]))
+            if (Ignores(name))
             {
                 continue;
             }
@@ -160,12 +331,10 @@ public static class LambdaArchive
                 total += bytes.Length;
             }
 
-            files.Add(ToFile(name, bytes));
+            result.Add((name, bytes));
         }
 
-        return files.OrderBy(f => f.Name == LambdaSource.EntryName ? 0 : f.IsCode ? 1 : f.IsAsset ? 2 : f.IsContext ? 3 : 4)
-                    .ThenBy(f => f.Name, StringComparer.Ordinal)
-                    .ToList();
+        return result;
     }
 
     private static LambdaFile ToFile(string name, byte[] bytes)
@@ -250,19 +419,20 @@ public static class LambdaArchive
 
     /// <summary>
     /// Whether a file is hidden - a repository, an editor's settings - rather
-    /// than part of the lambda. What is kept beside the program at the root
-    /// is not, and in the development space only a repository is.
+    /// than part of the lambda. In the lambda's layout, what is kept beside
+    /// the program at the root is not; in the build folder of either layout
+    /// only a repository is.
     /// </summary>
-    private static bool IsHidden(string name)
+    private static bool IsHidden(string name, Layout layout)
     {
         var segments = name.Split('/');
 
-        if (LambdaSource.IsDevelopment(name))
+        if (name.StartsWith(layout.Build, StringComparison.Ordinal))
         {
             return segments.Contains(".git");
         }
 
-        var start = LambdaSource.IsBeside(name) ? 1 : 0;
+        var start = layout == Lambda && LambdaSource.IsBeside(name) ? 1 : 0;
 
         for (var i = start; i < segments.Length; i++)
         {
@@ -275,9 +445,9 @@ public static class LambdaArchive
         return false;
     }
 
-    private static string CommonFolder(List<string> names)
+    private static string CommonFolder(List<string> names, string root)
     {
-        if (names.Count == 0 || names.Contains(LambdaSource.EntryName))
+        if (names.Count == 0 || names.Contains(root))
         {
             return string.Empty;
         }
@@ -293,5 +463,7 @@ public static class LambdaArchive
 
         return names.All(n => n.StartsWith(prefix, StringComparison.Ordinal)) ? prefix : string.Empty;
     }
+
+    #endregion
 
 }

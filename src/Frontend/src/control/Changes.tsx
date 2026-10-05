@@ -5,7 +5,7 @@ import { useEditorT } from '../i18n';
 import { languageFor, monaco } from '../monaco';
 import type { Theme } from '../theme';
 import { compare, type DiffLine, type FileDiff } from './diff';
-import { isCode, isContext, isDevelopment } from './written';
+import { isCode, isContext, isBuild } from './written';
 
 /**
  * What a changed file is to the version, in the order a change is read: the
@@ -16,7 +16,7 @@ const GROUPS = ['code', 'build', 'assets', 'context'] as const;
 
 type Kind = (typeof GROUPS)[number];
 
-const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isDevelopment(name) ? 'build' : isContext(name) ? 'context' : 'assets');
+const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isBuild(name) ? 'build' : isContext(name) ? 'context' : 'assets');
 
 /**
  * What changed between two sets of files: one row per file that differs,

@@ -3,7 +3,7 @@ import type { LambdaFile } from '../api';
 /**
  * What a version keeps beside its program, under .lambda/: what is written
  * about it - its documentation and its tests - and what its assets or code
- * are built from, its development space.
+ * are built from, its build folder.
  *
  * The same rule the server applies (LambdaSource): a file under .lambda/ is
  * never code and never an asset, whatever it is called - a test written in
@@ -29,22 +29,22 @@ export const DECISIONS = '.lambda/docs/decisions.md';
 export const TESTING = '.lambda/tests/README.md';
 
 /**
- * The development space: the files the assets or the code are built from
- * with a build tool, whatever that tool works from - built by whoever
- * changes them, never by the platform. The editor calls it Build.
+ * The build folder: the files the assets or the code are built from with a
+ * build tool, whatever that tool works from - built by whoever changes
+ * them, never by the platform.
  */
-export const DEV = '.lambda/dev/';
+export const BUILD = '.lambda/build/';
 
-/** How the development space is built, and where the build goes. */
-export const DEV_README = '.lambda/dev/README.md';
+/** How the build folder is built, and where the build goes. */
+export const BUILD_README = '.lambda/build/README.md';
 
 /** Whether a file is kept beside the program rather than being part of it. */
 export const isBeside = (name: string) => name.startsWith(BESIDE);
 
-export const isDevelopment = (name: string) => name.startsWith(DEV);
+export const isBuild = (name: string) => name.startsWith(BUILD);
 
 /** Whether a file is documentation or a test. */
-export const isContext = (name: string) => isBeside(name) && !isDevelopment(name);
+export const isContext = (name: string) => isBeside(name) && !isBuild(name);
 
 export const isCode = (name: string) => name.toLowerCase().endsWith('.cs') && !isBeside(name);
 

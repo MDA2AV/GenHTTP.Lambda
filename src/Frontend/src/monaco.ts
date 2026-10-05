@@ -14,7 +14,7 @@ import 'monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution'
 // and what the documentation and the tests of a version are written in
 import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution';
 import 'monaco-editor/esm/vs/basic-languages/shell/shell.contribution';
-// and what the project of a development space holds beside its sources
+// and what a build folder holds beside its sources
 import 'monaco-editor/esm/vs/basic-languages/scss/scss.contribution';
 import 'monaco-editor/esm/vs/basic-languages/less/less.contribution';
 import 'monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution';

@@ -9,7 +9,7 @@ import { GroupList, Tree, Viewer, sizeOf, type Selection } from './FileBrowser';
 import { bytes, servesAssets } from './format';
 import { Exposure } from './SummaryTab';
 import { Section, pill } from './ui';
-import { isAsset, isCode, isContext, isDevelopment } from './written';
+import { isAsset, isCode, isContext, isBuild } from './written';
 
 /**
  * The files of one version - the program - and which of them anybody on the
@@ -22,7 +22,7 @@ import { isAsset, isCode, isContext, isDevelopment } from './written';
  * What is written about the version - its documentation and its tests - is
  * shown too, as the third thing it holds, never compiled and never served:
  * this is where all of a version's files are, and its own sections are where
- * it is read. So is what it is built from, its development space, as the
+ * it is read. So is what it is built from, its build folder, as the
  * fourth - there even where a version keeps none, as the one place that
  * says where such files go.
  */
@@ -74,7 +74,7 @@ export function FilesTab({ control }: { control: Control }) {
   const code = files.filter((f) => isCode(f.name));
   const assets = files.filter((f) => isAsset(f.name));
   const context = files.filter((f) => isContext(f.name));
-  const development = files.filter((f) => isDevelopment(f.name));
+  const build = files.filter((f) => isBuild(f.name));
 
   const source = code.map((f) => f.code).join('\n');
   const limits = summary?.limits;
@@ -186,17 +186,17 @@ export function FilesTab({ control }: { control: Control }) {
               <GroupList
                 title={said.build}
                 exposure={<Exposure open={false} why={said.buildWhy} />}
-                usage={development.length > 0 && said.contextUsage(said.count(development.length), bytes(development.reduce((total, f) => total + sizeOf(f), 0)))}
-                action={development.length > 0 && (
+                usage={build.length > 0 && said.contextUsage(said.count(build.length), bytes(build.reduce((total, f) => total + sizeOf(f), 0)))}
+                action={build.length > 0 && (
                   <button type="button" onClick={() => control.openBuild(wanted)} className="text-[12px] text-accent-500 hover:underline">
                     {t.frame.sections.build}
                   </button>
                 )}
               >
                 <Tree
-                  entries={development.map((f) => ({ path: f.name, size: sizeOf(f) }))}
-                  selected={selected?.group === 'development' ? selected.path : null}
-                  onSelect={(path) => setSelected({ group: 'development', path })}
+                  entries={build.map((f) => ({ path: f.name, size: sizeOf(f) }))}
+                  selected={selected?.group === 'build' ? selected.path : null}
+                  onSelect={(path) => setSelected({ group: 'build', path })}
                   empty={said.noBuild}
                 />
               </GroupList>

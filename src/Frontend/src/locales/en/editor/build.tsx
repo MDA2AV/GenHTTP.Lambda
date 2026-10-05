@@ -5,7 +5,7 @@ type Node = ReactNode;
 /**
  * What a version is built from, in the full view: the files whoever changes
  * the app runs a build tool on to make its assets or its code - its
- * development space - read here, and changed where it is built.
+ * build folder - read here, and changed where it is built.
  */
 export const build = {
   title: 'Build',
@@ -24,7 +24,7 @@ export const build = {
   emptyText: (code: (text: string) => Node) => (
     <>
       Where the assets or the code of a version are made by a build tool - compiled, bundled or generated - the files
-      they are made from are kept here, with every version: the folder {code('dev/')} in a clone. Whoever changes the
+      they are made from are kept here, with every version: the folder {code('build/')} in a clone. Whoever changes the
       app runs the build where they work and saves both together; this platform builds nothing. What is written as it is
       served or compiled needs none.
     </>

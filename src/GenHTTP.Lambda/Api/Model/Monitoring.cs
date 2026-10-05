@@ -16,8 +16,8 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <param name="Versions">How many versions are kept</param>
 /// <param name="RecentProblems">The last few warnings and errors, newest first</param>
 /// <param name="Documentation">What the documentation of the version the storage is about says, and which of its pages it has</param>
-/// <param name="Development">
-/// The development space of the newest version - which may be ahead of the one the storage is about - and of that one
+/// <param name="Build">
+/// The build folder of the newest version - which may be ahead of the one the storage is about - and of that one
 /// </param>
 public sealed record LambdaSummaryResponse(
     LambdaResponse Lambda,
@@ -30,12 +30,12 @@ public sealed record LambdaSummaryResponse(
     StorageSummary Storage,
     SummaryLimits Limits,
     DocumentationSummary Documentation,
-    DevelopmentFacts Development
+    BuildFacts Build
 );
 
 /// <summary>
-/// What a lambda keeps of what its assets are built from: the development
-/// space of a version, which only whoever builds it changes.
+/// What a lambda keeps of what its assets or code are built from: the build
+/// folder of a version, which only whoever builds it changes.
 /// </summary>
 /// <remarks>
 /// Of two versions, because the editor asks two things of it: whether the
@@ -43,10 +43,10 @@ public sealed record LambdaSummaryResponse(
 /// anybody put it online - and what the version the rest of the figures are
 /// about holds.
 /// </remarks>
-/// <param name="Files">How many files the development space of the version the storage is about holds</param>
+/// <param name="Files">How many files the build folder of the version the storage is about holds</param>
 /// <param name="Bytes">What those weigh, towards what the assets of a version may come to</param>
 /// <param name="NewestFiles">How many files that of the newest version holds</param>
-public sealed record DevelopmentFacts(int Files, long Bytes, int NewestFiles);
+public sealed record BuildFacts(int Files, long Bytes, int NewestFiles);
 
 /// <summary>
 /// How much a lambda is being used, and how well it is answering.

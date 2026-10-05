@@ -10,11 +10,11 @@ import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Tree, Viewer, sizeOf } from './FileBrowser';
 import { Section, pill } from './ui';
-import { DEV, DEV_README, isAsset, isCode, isDevelopment } from './written';
+import { BUILD, BUILD_README, isAsset, isCode, isBuild } from './written';
 
 /**
  * What a version is built from - or, opened on a draft, what the draft is:
- * the files of its development space, which whoever changes it runs a build
+ * the files of its build folder, which whoever changes it runs a build
  * tool on to make its assets or its code.
  *
  * Nothing here assumes what those files are or which tool reads them: they
@@ -88,8 +88,8 @@ export function BuildTab({ control }: { control: Control }) {
   }, [feature?.revision]);
 
   const all = useMemo(() => files ?? [], [files]);
-  const space = useMemo(() => all.filter((file) => isDevelopment(file.name)), [all]);
-  const readme = space.find((file) => file.name === DEV_README && file.encoding !== 'base64') ?? null;
+  const space = useMemo(() => all.filter((file) => isBuild(file.name)), [all]);
+  const readme = space.find((file) => file.name === BUILD_README && file.encoding !== 'base64') ?? null;
 
   /** What it changed here, against what it changed in the program - which is what says whether it was built. */
   const changes = useMemo(() => {
@@ -98,7 +98,7 @@ export function BuildTab({ control }: { control: Control }) {
     }
 
     const program = (file: LambdaFile) => isCode(file.name) || isAsset(file.name);
-    const had = before.filter((file) => isDevelopment(file.name));
+    const had = before.filter((file) => isBuild(file.name));
 
     return {
       had,
@@ -110,7 +110,7 @@ export function BuildTab({ control }: { control: Control }) {
 
   const chosen = params.get('file');
   const browsing = space.length > 0 && (params.get('view') === 'files' || chosen != null);
-  const selected = browsing ? (space.find((file) => file.name === `${DEV}${chosen}`) ?? readme ?? space[0]) : null;
+  const selected = browsing ? (space.find((file) => file.name === `${BUILD}${chosen}`) ?? readme ?? space[0]) : null;
 
   /** Somewhere else within the section, keeping the version. */
   function go(next: Record<string, string>) {
@@ -186,8 +186,8 @@ export function BuildTab({ control }: { control: Control }) {
         <div className="grid gap-5 lg:grid-cols-[17rem,1fr]">
           <nav aria-label={said.files} className="lg:max-h-[40rem] lg:overflow-y-auto">
             <Tree
-              entries={space.map((file) => ({ path: file.name.slice(DEV.length), size: sizeOf(file) }))}
-              selected={selected ? selected.name.slice(DEV.length) : null}
+              entries={space.map((file) => ({ path: file.name.slice(BUILD.length), size: sizeOf(file) }))}
+              selected={selected ? selected.name.slice(BUILD.length) : null}
               onSelect={(path) => go({ file: path })}
               empty={said.noFiles}
             />
@@ -196,7 +196,7 @@ export function BuildTab({ control }: { control: Control }) {
               {said.readOnly}
             </p>
           </nav>
-          <Viewer control={control} selection={selected ? { group: 'development', path: selected.name } : null} files={all} listing={null} />
+          <Viewer control={control} selection={selected ? { group: 'build', path: selected.name } : null} files={all} listing={null} />
         </div>
       ) : (
         <div className="max-w-5xl">
@@ -222,13 +222,13 @@ export function BuildTab({ control }: { control: Control }) {
             {readme ? (
               <>
                 <h2 className="flex items-center gap-2 border-b border-slate-200 pb-2 text-[13px] text-slate-500 dark:border-ink-800">
-                  <span className="font-mono">{readme.name.slice(DEV.length)}</span>
+                  <span className="font-mono">{readme.name.slice(BUILD.length)}</span>
                   <span aria-hidden="true">·</span>
                   <span>{said.readme}</span>
                 </h2>
                 <article className="mt-5">
                   <Markdown source={readme.code} name={readme.name} files={space} theme={control.theme}
-                            onOpen={(name) => name.startsWith(DEV) && go({ file: name.slice(DEV.length) })} />
+                            onOpen={(name) => name.startsWith(BUILD) && go({ file: name.slice(BUILD.length) })} />
                 </article>
               </>
             ) : (

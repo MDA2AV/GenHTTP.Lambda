@@ -273,10 +273,10 @@ scripts and test data.
   documentation **About** and shows the product page alone, to be corrected by
   telling the agent rather than by editing it.
 
-### The development space
+### The build folder
 
 A version may keep what its assets or code are built from with a build tool
-in its **development space**: `.lambda/dev/` in the version, `dev/` in a
+in its **build folder**: `.lambda/build/` in the version, `build/` in a
 clone, an export and a published source. The editor calls it **Build**.
 
 - **Nothing about its contents is assumed - decided by the owner.** It is
@@ -285,17 +285,17 @@ clone, an export and a published source. The editor calls it **Build**.
   packages, lock files or output folders, in the editor or anywhere else.
   Pitfalls may be named as examples (`node_modules`, an absolute base).
 - **The platform builds nothing - decided by the owner.** No build on a push,
-  no tool run, no check that the program is what the space builds to. The
+  no tool run, no check that the program is what the folder builds to. The
   agent changes the files, builds where it works and saves them with what
   was built, in one version or feature. Do not add build machinery.
-- **A kind of its own** (`LambdaSource.IsDevelopment`), not context: files
+- **A kind of its own** (`LambdaSource.IsBuild`), not context: files
   for a tool rather than pages. Like the context it is a file of the version
   - saved, diffed, rolled back, copied into a feature, merged, cloned,
   exported, published - never compiled or served, left out of what identifies
   a build, and counted towards the asset allowance. Its names allow dot files
   and `[]()+@$~{}`; no spaces, no `.git`.
 - **What a build installs, caches or keeps for itself is kept out by the
-  space's own `.gitignore` files - decided with the owner, so it works for
+  folder's own `.gitignore` files - decided with the owner, so it works for
   any technology.** Nothing is refused by name: git follows them in a clone,
   a zip put back follows them (`IgnoredPaths`, git's rules), and a save that
   names a file keeps it, as `git add -f` would. The root `.gitignore` of a
@@ -308,15 +308,24 @@ clone, an export and a published source. The editor calls it **Build**.
   the files, and whether a version changed them without changing the code or
   the assets. Files shows it as a group, the code as one pill, a diff kind by
   kind. Nothing of it in the simple view or on `/build`.
-- The folder is `dev/`, not `build/`: most tools and agents read `build/` as
-  output to ignore or delete, which is the opposite of what it holds.
+- **Called build everywhere - decided by the owner**: the folder, the
+  section, the API and MCP fields, the guide. Many read a folder called
+  `build/` as output to ignore or delete, so a clone's `AGENTS.md` says what
+  it is, and the repository's `.gitignore` takes it back in (`!/build/`),
+  overriding a global ignore.
+- **One layout to build in, with git or without.** A build writes by paths
+  relative to itself, so it has to find the same layout wherever it runs: a
+  clone, or the zip of a version or a feature with `?layout=project`, which
+  lays the lambda's files out as a clone does and reads them back as a commit
+  of the clone would be read (the platform's files skipped, what the
+  repository ignores left out). The plain zip names files as the lambda does.
 - Agents are told the flow in a line of the MCP instructions, `platform_guide`
-  (`development`), the tool descriptions, a clone's `AGENTS.md` ("What is
-  built: dev/") and the README - keep them the same. `read_lambda` sends its
+  (`build`), the tool descriptions, a clone's `AGENTS.md` ("What it is built
+  from: build/") and the README - keep them the same. `read_lambda` sends its
   README and its names, not its contents; `write_code` says when it drops
   one. The build agent has no shell: it writes plain front ends and leaves a
-  development space alone.
-- The repository's project keeps `dev/` out of the build
+  build folder alone.
+- The repository's project keeps `build/` out of the build
   (`DefaultItemExcludes`, so whatever a build installed in there is never
   walked) and out of the image (`.dockerignore`), whether there is one or not.
 - **The demos have none**: they teach with front ends of plain files a reader

@@ -9,9 +9,9 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// <remarks>
 /// The snippet is <c>Project.cs</c>, the other code files keep their names the
 /// way .NET writes them (<c>store.cs</c> is <c>Store.cs</c>), the assets go
-/// into <c>assets/</c>, and the documentation, the tests and the development
-/// space leave <c>.lambda/</c> for <c>docs/</c>, <c>tests/</c> and
-/// <c>dev/</c>, where a project keeps them. A code file that would be called
+/// into <c>assets/</c>, and the documentation, the tests and the build
+/// folder leave <c>.lambda/</c> for <c>docs/</c>, <c>tests/</c> and
+/// <c>build/</c>, where a project keeps them. A code file that would be called
 /// what the project calls its own - <c>program.cs</c> - is put beside it
 /// under a name of its own.
 ///
@@ -45,9 +45,9 @@ public static class ProjectPaths
     public const string Platform = "Platform/";
 
     /// <summary>
-    /// Where the development space goes: what the assets are built from.
+    /// Where the build folder goes: what the assets are built from.
     /// </summary>
-    public const string Development = "dev/";
+    public const string Build = "build/";
 
     /// <summary>
     /// The files at the root of a project that are the platform's, besides
@@ -57,6 +57,13 @@ public static class ProjectPaths
     {
         "Dockerfile", ".gitignore", ".dockerignore", "LICENSE", "AGENTS.md", "CLAUDE.md"
     };
+
+    /// <summary>
+    /// Where the files of a lambda are in its project, in a sentence - said
+    /// to whoever put a file somewhere it has no place.
+    /// </summary>
+    public const string Layout = "Its code is Project.cs and the other .cs files beside it, what it ships is in assets/, its documentation in docs/, "
+                               + "its tests in tests/ and what its assets or code are built from in build/; the rest is the platform's.";
 
     /// <summary>
     /// The names a code file of the lambda cannot have in the project, since
@@ -107,7 +114,7 @@ public static class ProjectPaths
             return new ProjectPath(ProjectPathKind.Lambda, path[Assets.Length..]);
         }
 
-        if (path.StartsWith("docs/", StringComparison.Ordinal) || path.StartsWith("tests/", StringComparison.Ordinal) || path.StartsWith(Development, StringComparison.Ordinal))
+        if (path.StartsWith("docs/", StringComparison.Ordinal) || path.StartsWith("tests/", StringComparison.Ordinal) || path.StartsWith(Build, StringComparison.Ordinal))
         {
             return new ProjectPath(ProjectPathKind.Lambda, LambdaSource.LambdaFolder + path);
         }
@@ -151,7 +158,7 @@ public sealed record ProjectPath(ProjectPathKind Kind, string? Name);
 public enum ProjectPathKind
 {
 
-    /// <summary>A file of the lambda: its code, an asset, its documentation, a test or a file of its development space.</summary>
+    /// <summary>A file of the lambda: its code, an asset, its documentation, a test or a file of its build folder.</summary>
     Lambda,
 
     /// <summary>What the platform puts around a lambda to make it a project.</summary>

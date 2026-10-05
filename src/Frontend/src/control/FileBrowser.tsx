@@ -56,8 +56,8 @@ export function workspaceOf(control: Control): WorkspaceAccess {
   };
 }
 
-/** Where a selected file lives: in the version, as code, an asset, its documentation and tests or its development space, or in the data. */
-export type Group = 'code' | 'assets' | 'context' | 'development' | 'data';
+/** Where a selected file lives: in the version, as code, an asset, its documentation and tests or its build folder, or in the data. */
+export type Group = 'code' | 'assets' | 'context' | 'build' | 'data';
 
 export interface Entry {
   path: string;

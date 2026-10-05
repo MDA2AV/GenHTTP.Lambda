@@ -493,7 +493,7 @@ export function Editor({ theme }: Props) {
 
   // what the newest version, or the one online, is built from - which most
   // lambdas keep nothing of, nothing of them being built
-  const builds = summary != null && (summary.development.newestFiles > 0 || summary.development.files > 0);
+  const builds = summary != null && (summary.build.newestFiles > 0 || summary.build.files > 0);
 
   // the code connects to a database that is switched off - the agent's to
   // switch on, so the simple view is not asked about it

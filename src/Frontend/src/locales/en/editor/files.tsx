@@ -38,7 +38,7 @@ export const files = {
   contextWhy: 'Never compiled and never served: what is written about this version, for whoever reads or changes it.',
   contextUsage: (files: string, size: string) => `${files}, ${size} - counted with the assets`,
   noContext: 'Nothing written about this version yet.',
-  /** What the version is built from - its development space - as a group of its files. */
+  /** What the version is built from - its build folder - as a group of its files. */
   build: 'Build',
   buildWhy: 'Never compiled and never served: what the code or the assets are built from, by whoever changes them.',
   noBuild: 'Nothing - where a build tool makes the code or the assets, what it makes them from is kept here.',
