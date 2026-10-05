@@ -89,12 +89,16 @@ export const ship: Messages['ship'] = {
       'Linkiem do edytora, który dostajesz przy publikacji. Daj go agentowi razem z kolejną zmianą albo otwórz go w przeglądarce. Każda zmiana to nowa wersja pod tym samym adresem, a do starszej możesz wrócić w każdej chwili.',
     ],
     [
+      'Czy mogę wypychać zmiany przez git?',
+      'Tak. Każda aplikacja jest też repozytorium git: sklonuj ją z adresu pod przyciskiem Sklonuj w edytorze, zmieniaj własnymi narzędziami lub agentem i wypychaj. Każdy commit wypchnięty na main staje się kolejną wersją, a wypchnięta gałąź staje się szkicem z własnym podglądem.',
+    ],
+    [
       'Gdzie trzymać klucze API?',
       'Nie w kodzie. Agent prosi o klucz po nazwie, a ty wpisujesz jego wartość w edytorze. Nikt jej potem nie odczyta – ani edytor, ani agent.',
     ],
     [
       'Czy mogę zabrać swój kod?',
-      'Tak, jest twój. Pobierz go z edytora, kiedy chcesz, jako projekt, który działa samodzielnie, razem z bazą danych.',
+      'Tak, jest twój. Pobierz go z edytora, kiedy chcesz, jako projekt, który działa samodzielnie, razem z bazą danych - albo sklonuj go przez git, razem z każdą wersją.',
     ],
     [
       'Kto zobaczy moją aplikację?',

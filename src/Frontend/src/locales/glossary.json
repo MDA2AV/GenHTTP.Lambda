@@ -108,6 +108,26 @@
       "en": "feature, merge",
       "note": "the API's names for a draft and for putting it online; where a sentence names them as such they stay in English",
       "keep": true
+    },
+    {
+      "en": "clone",
+      "note": "git: copying a repository with git clone, and the button that offers it; a command stays as it is",
+      "id": "kloning", "de": "klonen", "es": "clonar", "fr": "cloner", "it": "clonare", "nl": "klonen", "pl": "sklonować", "pt": "clonar", "pt-pt": "clonar", "tr": "klonlamak", "ja": "クローン", "ko": "클론"
+    },
+    {
+      "en": "commit",
+      "note": "git: one saved change in a repository",
+      "id": "commit", "de": "Commit", "es": "commit", "fr": "commit", "it": "commit", "nl": "commit", "pl": "commit", "pt": "commit", "pt-pt": "commit", "tr": "commit", "ja": "コミット", "ko": "커밋"
+    },
+    {
+      "en": "branch",
+      "note": "git: a line of commits beside main; main and the name of a branch stay as they are",
+      "id": "branch", "de": "Branch", "es": "rama", "fr": "branche", "it": "branch", "nl": "branch", "pl": "gałąź", "pt": "branch", "pt-pt": "ramo", "tr": "dal", "ja": "ブランチ", "ko": "브랜치"
+    },
+    {
+      "en": "push",
+      "note": "git: sending commits to the platform; git push and its options stay as they are",
+      "id": "push", "de": "pushen", "es": "hacer push", "fr": "pousser", "it": "fare push", "nl": "pushen", "pl": "wypchnąć", "pt": "fazer push", "pt-pt": "fazer push", "tr": "push etmek", "ja": "プッシュ", "ko": "푸시"
     }
   ]
 }

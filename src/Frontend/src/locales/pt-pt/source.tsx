@@ -97,9 +97,18 @@ export const source: SourceMessages = {
     count: (count) => (count === 1 ? '1 estrela' : `${count} estrelas`),
     failed: 'Não foi possível guardar a estrela.',
   },
+  clone: {
+    button: 'Código',
+    title: 'Clonar com git',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `A sua versão é o commit de main, com a etiqueta v${newest}.`
+        : `Cada versão vem como um commit de main, com as etiquetas v${oldest} a v${newest} - main é a mais recente.`,
+    readOnly:
+      'Só de leitura. Para construir a partir dela, começa uma lambda tua e leva estes ficheiros para lá - o AGENTS.md no clone explica como, e a licença o que podes fazer.',
+  },
 
   download: {
-    button: 'Transferir',
     title: (version) => `Versão ${version} como projeto`,
     what:
       'Um projeto .NET 10 com um Dockerfile, a documentação, os testes e a licença. O que a app guarda (os registos, os ficheiros que guardou, as chaves) não faz parte dele.',

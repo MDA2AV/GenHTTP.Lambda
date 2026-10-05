@@ -109,6 +109,8 @@ public sealed class FileSystemStorageService : IStorageService
         Remove(Path.Combine(Options.FeatureDirectory, lambdaId.ToString()));
         // what its published source was packed into, if it was published
         Remove(Path.Combine(Options.SourceDirectory, lambdaId.ToString()));
+        // and the commits it was read as with git, if anybody did
+        Remove(Path.Combine(Options.GitDirectory, lambdaId.ToString()));
 
         // the generated assembly stays: it cannot be unloaded and GenHTTP builds
         // its invocation code from the files behind the loaded assemblies, so

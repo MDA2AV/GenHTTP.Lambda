@@ -31,6 +31,10 @@ public sealed record UpdateLambdaRequest(string? PublicKey, string? View = null)
 /// <param name="DomainServed">Whether it actually answers at that domain - it has one, and its tier includes it</param>
 /// <param name="Address">Where to link to it: its domain while that is served, its path otherwise</param>
 /// <param name="View">How its editor opens for somebody who has not chosen a view of their own: Full or Simple</param>
+/// <param name="GitPath">
+/// Where it is cloned with git, and pushed to: its versions are the commits of main, its features the other
+/// branches. Holds the editor key, like the editor's path
+/// </param>
 public sealed record LambdaResponse(
     string PublicKey,
     string PrivateKey,
@@ -47,7 +51,8 @@ public sealed record LambdaResponse(
     string? Domain,
     bool DomainServed,
     string Address,
-    string View
+    string View,
+    string GitPath
 );
 
 /// <summary>
@@ -76,8 +81,15 @@ public static class LambdaDescription
         lambda.Domain,
         Serves(lambda.Tier, lambda.Domain),
         Address(lambda.PublicKey, lambda.Tier, lambda.Domain),
-        lambda.View
+        lambda.View,
+        GitPath(lambda.PrivateKey, lambda.PublicKey)
     );
+
+    /// <summary>
+    /// Where whoever holds the editor key clones the lambda: the editor's
+    /// path, with a name for the folder a clone makes.
+    /// </summary>
+    public static string GitPath(string privateKey, string publicKey) => $"/editor/{privateKey}/{publicKey}.git";
 
     /// <summary>
     /// Whether a lambda of this tier may answer at a domain of its own.

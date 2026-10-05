@@ -48,6 +48,7 @@ public sealed record MergeFeatureRequest(bool? Deploy = null, string? Specificat
 /// A feature: a change being worked on beside the lambda.
 /// </summary>
 /// <param name="Key">What it is addressed by in this API, and where its preview answers</param>
+/// <param name="Branch">The branch it is in the lambda's git repository - given when it starts, and kept when it is renamed</param>
 /// <param name="Base">The version it is based on</param>
 /// <param name="Newest">The newest version of the lambda</param>
 /// <param name="Mergeable">Whether it can be merged: it is based on the newest version</param>
@@ -59,6 +60,7 @@ public sealed record MergeFeatureRequest(bool? Deploy = null, string? Specificat
 public sealed record FeatureResponse(
     string Key,
     string Name,
+    string Branch,
     string? Specification,
     string? Change,
     int Base,

@@ -91,12 +91,16 @@ export const ship: Messages['ship'] = {
       'Com o link de edição que recebeste quando a publicaste. Dá-o ao teu agente com a próxima alteração, ou abre-o no browser. Cada alteração passa a ser uma nova versão no mesmo endereço, e podes voltar a uma versão anterior quando quiseres.',
     ],
     [
+      'Posso fazer push para ela com git?',
+      'Sim. Cada app é também um repositório git: clona-a a partir do endereço em Clonar, no editor, altera-a com as tuas ferramentas ou o teu agente e faz push. Cada commit enviado para main passa a ser a versão seguinte, e um ramo que envies passa a ser um rascunho com uma pré-visualização própria.',
+    ],
+    [
       'Onde ficam as minhas chaves de API?',
       'Fora do código. O teu agente pede uma chave pelo nome, e tu escreves o valor no editor. Ninguém a consegue ler depois, nem o editor, nem o agente.',
     ],
     [
       'Posso levar o meu código?',
-      'Sim, é teu. Descarrega-o no editor quando quiseres, como um projeto que corre sozinho, com a base de dados incluída.',
+      'Sim, é teu. Descarrega-o no editor quando quiseres, como um projeto que corre sozinho, com a base de dados incluída - ou clona-o com git, com todas as versões.',
     ],
     [
       'Quem pode ver a minha app?',

@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websocket',
     limits: 'Yang tidak diizinkan',
     away: 'Membawa kode Anda keluar',
+    git: 'Mengerjakannya dengan git',
     open: 'Memublikasikan kode',
     agents: 'Menyerahkannya ke agen',
   },
@@ -423,14 +424,37 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Penting diketahui sebelum Anda membangun apa pun di sini: yang Anda tulis adalah milik Anda, dan bisa dibawa keluar utuh. Menjalankannya di server ini tidak membuatnya terkunci di server ini.',
+  git: (k) => (
+    <>
+      Setiap lambda juga merupakan repositori git. {k.b('Kloning')}, di ringkasan pusat kontrol dan di samping kodenya,
+      memuat alamatnya - alamat editor Anda diikuti nama aplikasi - dan {k.code('git clone')} memberi Anda proyek yang
+      sama dengan yang diberikan {k.b('Unduh')}, dengan setiap versi sebagai commit di {k.code('main')}, diberi tag{' '}
+      {k.code('v1')}, {k.code('v2')}, dan seterusnya, dan setiap draf sebagai branch. Buka di editor Anda sendiri,
+      serahkan ke agen coding Anda, jalankan dengan {k.code('dotnet run')}.
+    </>
+  ),
+  git2: (k) => (
+    <>
+      Push, dan langsung ada di sini. Setiap commit yang di-push ke {k.code('main')} menjadi versi berikutnya, baris
+      pertamanya sebagai perubahan yang dibuatnya - dikompilasi dulu, dan ditolak jika tidak bisa dikompilasi - dan{' '}
+      {k.code('git push -o deploy')} menjadikannya online. Branch yang Anda push menjadi draf, dengan pratinjau online di
+      alamatnya sendiri; push ke {k.code('main')}, atau tambahkan {k.code('-o merge')} pada push terakhirnya, dan ia
+      menjadi versi berikutnya. Apa yang ditambahkan platform di sekitar kode Anda agar menjadi proyek -{' '}
+      {k.code('Program.cs')}, file proyek, {k.code('Platform')} - bukan bagian dari aplikasi Anda, jadi push yang
+      mengubahnya ditolak disertai alasannya. {k.code('AGENTS.md')} di dalam repositori memberi tahu agen coding
+      sisanya.
+    </>
+  ),
+  gitAside:
+    'Alamat ini memuat kunci editor Anda, seperti alamat editor: siapa pun yang memilikinya bisa melakukan push. Apa yang disimpan aplikasi Anda - catatan, file, kunci dan kata sandinya - tidak pernah ada di repositori.',
 
   open: (k) => (
     <>
       Kalau yang Anda buat bisa berguna bagi orang lain, publikasikan kodenya: buka {k.b('Open Source')} di pusat
       kontrol, pilih lisensi - MIT, kecuali Anda menginginkan yang lain - lalu aktifkan. Kodenya mendapat halaman
       sendiri di antara {k.link('/source', 'aplikasi Open Source')}, tempat siapa pun bisa membacanya, memberinya
-      bintang, dan mengunduh versi mana pun sebagai proyek yang sama dengan yang Anda dapat dari{' '}
-      {k.b('Unduh sebagai proyek .NET')}, lengkap dengan lisensinya.
+      bintang, mengunduh versi mana pun sebagai proyek yang sama dengan yang Anda dapat dari {k.b('Unduh')}, lengkap
+      dengan lisensinya, atau mengkloning setiap versinya dengan git.
     </>
   ),
   open2: () => (

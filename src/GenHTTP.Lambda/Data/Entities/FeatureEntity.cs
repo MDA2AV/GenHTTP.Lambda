@@ -29,6 +29,16 @@ public sealed class FeatureEntity
     public required string Name { get; set; }
 
     /// <summary>
+    /// The branch it is in the lambda's git repository, unique per lambda.
+    /// </summary>
+    /// <remarks>
+    /// Given once, when it starts - the branch that was pushed, or its name
+    /// as git allows it - and kept when it is renamed, since a clone knows
+    /// the branch by this.
+    /// </remarks>
+    public required string Branch { get; set; }
+
+    /// <summary>
     /// What the user wants from it and why, which the version it is merged
     /// into keeps.
     /// </summary>

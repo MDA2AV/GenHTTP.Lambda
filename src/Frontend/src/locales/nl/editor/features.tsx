@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Nog niet beschreven wat het verandert',
   behindTitle: 'Je app is veranderd sinds dit concept begon',
   behind: () => 'verouderd',
+  branchTitle: 'De branch waarin dit concept staat in de git-repository van de app',
   previewOnline: 'voorvertoning draait',
   previewOutdated: 'voorvertoning toont een eerdere opslag',
   previewOffline: 'voorvertoning draait niet',

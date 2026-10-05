@@ -90,12 +90,16 @@ export const ship: Messages['ship'] = {
       'Yayınlandığında aldığınız editör linkiyle. Bir sonraki değişiklikle birlikte ajanınıza verin ya da tarayıcınızda açın. Her değişiklik aynı adreste yeni bir sürüm olur. İstediğiniz zaman eski bir sürüme dönebilirsiniz.',
     ],
     [
+      'git ile push edebilir miyim?',
+      'Evet. Her uygulama aynı zamanda bir git deposudur: editördeki Klonla altındaki adresten klonlayın, kendi araçlarınız ya da ajanınızla değiştirin ve push edin. main’e push edilen her commit sonraki sürüm olur, push ettiğiniz bir dal ise kendi önizlemesi olan bir taslak olur.',
+    ],
+    [
       'API anahtarlarım nereye gider?',
       'Koda değil. Ajanınız anahtarı adıyla ister, değerini siz editöre yazarsınız. Kimse onu geri okuyamaz; ne editör ne de ajan.',
     ],
     [
       'Kodumu alıp götürebilir miyim?',
-      'Evet, kod sizin. İstediğiniz zaman editörden, kendi başına çalışan bir proje olarak indirin; veritabanı da dahil.',
+      'Evet, kod sizin. İstediğiniz zaman editörden, kendi başına çalışan bir proje olarak indirin; veritabanı da dahil. Ya da git ile klonlayın; her sürüm de dahil.',
     ],
     [
       'Uygulamamı kimler görebilir?',

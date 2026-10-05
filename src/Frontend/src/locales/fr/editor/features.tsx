@@ -15,6 +15,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Rien n’indique encore ce qu’il change',
   behindTitle: 'Votre app a changé depuis le début de ce brouillon',
   behind: () => 'pas à jour',
+  branchTitle: 'La branche de ce brouillon dans le dépôt git de l’app',
   previewOnline: 'aperçu actif',
   previewOutdated: 'l’aperçu montre un enregistrement antérieur',
   previewOffline: 'aperçu inactif',

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { ApiError, api } from '../api';
-import { IconCheck, IconChevronDown, IconCopy, IconDownload, IconSpinner } from '../components/Icons';
+import { CloneAddress, Command, Popover } from '../components/Clone';
+import { IconBranch, IconCode, IconDownload, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useSourceT } from '../i18n';
 import { useFormat } from './format';
@@ -67,121 +68,74 @@ export function DownloadLink({ publicKey, version }: { publicKey: string; versio
 }
 
 /**
- * Taking the code away: the version being read as a project, what is in it
- * and what is not, and how to run it - the way out every lambda has, offered
- * to everybody once its owner published it.
+ * Taking the code away, the way a repository page offers it: cloned with
+ * git - every version, as the commits of main - or the version being read
+ * as a project, with how to run it. The way out every lambda has, offered to
+ * everybody once its owner published it.
  */
-export function DownloadMenu({ publicKey, version, root, bytes }: {
+export function CodeMenu({ publicKey, version, root, bytes, gitUrl, oldest, newest }: {
   publicKey: string;
   version: number;
   /** The folder the project unpacks into, once the version is known. */
   root: string | null;
   /** How large the zip is, once it is known. */
   bytes: number | null;
+  /** Where it is cloned from. */
+  gitUrl: string;
+  /** The oldest version kept, and the newest - what a clone has as tags. */
+  oldest: number;
+  newest: number;
 }) {
-  const said = useSourceT().download;
+  const t = useSourceT();
+  const said = t.download;
+  const cloning = t.clone;
   const format = useFormat();
   const { state, start } = useDownload(publicKey, version);
-
-  const [open, setOpen] = useState(false);
-  const host = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
-
-    const onPointer = (event: PointerEvent) => {
-      if (!host.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('pointerdown', onPointer);
-
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('pointerdown', onPointer);
-    };
-  }, [open]);
 
   const folder = root ?? publicKey;
   const tag = folder.toLowerCase();
 
-  return (
-    <div ref={host} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((was) => !was)}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-300 px-3.5 text-sm font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-ink-700 dark:text-slate-200 dark:hover:bg-ink-850"
-      >
-        <IconDownload className="h-4 w-4" />
-        {said.button}
-        <IconChevronDown className="h-3.5 w-3.5 text-slate-400" />
-      </button>
-
-      {open && (
-        <div role="dialog" aria-label={said.title(version)} className="surface absolute right-0 top-full z-40 mt-2 w-[min(23rem,calc(100vw-2.5rem))] p-4 shadow-lg">
-          <p className="text-sm font-semibold">{said.title(version)}</p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">{said.what}</p>
-
-          <button type="button" onClick={start} disabled={state !== 'idle'} className="btn-primary mt-4 w-full">
-            {state === 'idle' ? <IconDownload className="h-4 w-4" /> : <IconSpinner />}
-            {state === 'idle' ? said.zip : said.preparing}
-            {state === 'idle' && bytes != null && <span className="font-normal opacity-80">· {format.size(bytes)}</span>}
-          </button>
-
-          {state === 'slow' && <p className="mt-2 text-xs text-slate-500">{said.slow}</p>}
-
-          <div className="mt-5 border-t border-slate-200 pt-4 dark:border-ink-800">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{said.run}</p>
-
-            <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-400">{said.local}</p>
-            <Command text={`cd ${folder}\ndotnet run`} />
-
-            <p className="mt-3 text-[13px] text-slate-600 dark:text-slate-400">{said.container}</p>
-            <Command text={`docker build -t ${tag} .\ndocker run -p 8080:8080 ${tag}`} />
-
-            <p className="mt-3 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">{said.agent}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** A command to type, with a way to copy it. */
-function Command({ text }: { text: string }) {
-  const said = useSourceT().download;
-  const [copied, setCopied] = useState(false);
+  const words = { copy: said.copy, copied: said.copied };
 
   return (
-    <div className="group relative mt-1.5">
-      <pre className="overflow-x-auto border border-slate-200 bg-slate-50 px-3 py-2 pr-10 font-mono text-[12px] leading-5 dark:border-ink-800 dark:bg-ink-950">
-        {text}
-      </pre>
-      <button
-        type="button"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(text);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
-          } catch {
-            // a clipboard that refuses is not worth an error
-          }
-        }}
-        className="absolute right-1.5 top-1.5 p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-        aria-label={copied ? said.copied : said.copy}
-        title={copied ? said.copied : said.copy}
-      >
-        {copied ? <IconCheck className="h-3.5 w-3.5 text-emerald-500" /> : <IconCopy className="h-3.5 w-3.5" />}
-      </button>
-    </div>
+    <Popover
+      label={<><IconCode className="h-4 w-4" />{cloning.button}</>}
+      title={cloning.title}
+      button="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-300 px-3.5 text-sm font-medium text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-ink-700 dark:text-slate-200 dark:hover:bg-ink-850"
+    >
+      <p className="flex items-center gap-2 text-sm font-semibold"><IconBranch className="h-4 w-4 text-slate-400" />{cloning.title}</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">{cloning.what(oldest, newest)}</p>
+
+      <div className="mt-3"><CloneAddress url={gitUrl} words={words} /></div>
+
+      <Command text={`git clone ${gitUrl}\ncd ${publicKey}\ndotnet run`} words={words} />
+
+      <p className="mt-2 text-[12px] leading-relaxed text-slate-500">{cloning.readOnly}</p>
+
+      <div className="mt-5 border-t border-slate-200 pt-4 dark:border-ink-800">
+        <p className="text-sm font-semibold">{said.title(version)}</p>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">{said.what}</p>
+
+        <button type="button" onClick={start} disabled={state !== 'idle'} className="btn-primary mt-4 w-full">
+          {state === 'idle' ? <IconDownload className="h-4 w-4" /> : <IconSpinner />}
+          {state === 'idle' ? said.zip : said.preparing}
+          {state === 'idle' && bytes != null && <span className="font-normal opacity-80">· {format.size(bytes)}</span>}
+        </button>
+
+        {state === 'slow' && <p className="mt-2 text-xs text-slate-500">{said.slow}</p>}
+      </div>
+
+      <div className="mt-5 border-t border-slate-200 pt-4 dark:border-ink-800">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{said.run}</p>
+
+        <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-400">{said.local}</p>
+        <Command text={`cd ${folder}\ndotnet run`} words={words} />
+
+        <p className="mt-3 text-[13px] text-slate-600 dark:text-slate-400">{said.container}</p>
+        <Command text={`docker build -t ${tag} .\ndocker run -p 8080:8080 ${tag}`} words={words} />
+
+        <p className="mt-3 text-[13px] leading-relaxed text-slate-600 dark:text-slate-400">{said.agent}</p>
+      </div>
+    </Popover>
   );
 }

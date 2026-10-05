@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { isDemo } from '../api';
 import { IconAlert, IconCheck, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
+import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { ago, bytes, count, local, millis, percent, span } from './format';
 import { AgentMark, Ago, Figure, LiveDot, Meter, Quote, Section, Sparkline } from './ui';
@@ -44,6 +45,7 @@ export function SummaryTab({ control }: { control: Control }) {
     <Section
       title={title}
       hint={said.hint(ago(traffic.since, t.shared), !!lambda.keptUntil, limits.retentionDays, lambda.tier)}
+      actions={<CloneMenu lambda={lambda} />}
     >
       {documentation.about && (
         <p className="mb-5 max-w-3xl text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
@@ -112,7 +114,7 @@ export function SummaryTab({ control }: { control: Control }) {
               </p>
               <p className="flex flex-wrap items-center gap-2 text-[13px] text-slate-500">
                 <span>{said.version(latest.version)}</span>
-                <AgentMark origin={latest.origin} />
+                <AgentMark origin={latest.origin} git />
                 <Ago at={latest.created} />
                 {latest.version !== lambda.activeVersion && <span className="text-amber-600 dark:text-amber-400">{said.notOnline}</span>}
               </p>

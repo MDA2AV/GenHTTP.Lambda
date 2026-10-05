@@ -14,6 +14,7 @@ export const shared: EditorMessages['shared'] = {
     admin: 'opérateur',
     system: 'plateforme',
     api: 'API / éditeur',
+    git: 'git push',
     unknown: 'inconnu',
   },
   endings: {
@@ -26,6 +27,8 @@ export const shared: EditorMessages['shared'] = {
   whatThisIs: 'Explications',
   byAgent: 'par un agent',
   writtenByAgent: 'Écrit par un agent',
+  byGit: 'avec git',
+  pushedWithGit: 'Poussé avec git',
   more: 'Plus',
   of: (used, total) => `${used} sur ${total}`,
   online: (version) => `En ligne · v${version}`,

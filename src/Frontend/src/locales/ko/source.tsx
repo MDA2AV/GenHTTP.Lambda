@@ -97,9 +97,18 @@ export const source: SourceMessages = {
     count: (count) => `별표 ${count}개`,
     failed: '별표를 저장하지 못했어요.',
   },
+  clone: {
+    button: '코드',
+    title: 'git으로 클론하기',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `이 버전은 main의 커밋이고, v${newest} 태그가 붙어 있어요.`
+        : `모든 버전이 main의 커밋으로 들어 있고, v${oldest}부터 v${newest}까지 태그가 붙어 있어요. main이 가장 최신이에요.`,
+    readOnly:
+      '읽기 전용이에요. 이를 바탕으로 만들려면 나만의 람다를 시작해서 이 파일들을 옮기세요. 방법은 클론 안의 AGENTS.md에, 할 수 있는 일은 라이선스에 적혀 있어요.',
+  },
 
   download: {
-    button: '다운로드',
     title: (version) => `버전 ${version} 프로젝트`,
     what:
       'Dockerfile, 문서, 테스트, 라이선스가 들어 있는 .NET 10 프로젝트예요. 앱이 보관하는 것(기록, 저장한 파일, 키)은 들어 있지 않아요.',

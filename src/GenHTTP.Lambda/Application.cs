@@ -1,6 +1,7 @@
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 
+using GenHTTP.Lambda.Api.Git;
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Mcp;
 using GenHTTP.Lambda.Configuration;
@@ -11,6 +12,7 @@ using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Execution;
 using GenHTTP.Lambda.Services.Features;
+using GenHTTP.Lambda.Services.Git;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
@@ -158,6 +160,10 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<SourceCache>();
         services.AddSingleton<StarGuard>();
         services.AddSingleton<ISourceService, SourceService>();
+        services.AddSingleton<GitStore>();
+        services.AddSingleton<GitHistory>();
+        services.AddSingleton<GitPushes>();
+        services.AddSingleton<IGitService, GitService>();
         services.AddSingleton<ISettingsService, SettingsService>();
         services.AddSingleton<ILimitsService, LimitsService>();
         services.AddSingleton<DemoSeeder>();
@@ -235,7 +241,11 @@ public sealed class Application : IAsyncDisposable
                            // one path, for agents rather than for browsers
                            .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
                            .Add("lambda", lambdas)
-                           .Add("features", previews);
+                           .Add("features", previews)
+                           // the repositories below the editor and the published sources, asked
+                           // before the pages that answer every other path there
+                           .Add(new GitRoutesBuilder(services.GetRequiredService<IGitService>(), services.GetRequiredService<IMetaService>(), options,
+                                                     services.GetRequiredService<ILogger<GitRoutes>>()));
 
         // Ahead of the application, so a miss here is a 404 rather than the
         // index page: a named route answers for itself and never falls through

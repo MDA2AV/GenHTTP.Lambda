@@ -27,6 +27,8 @@ export interface Lambda {
   address: string;
   /** How its editor opens for somebody who has not chosen a view of their own: Full or Simple. See control/view.ts. */
   view: string;
+  /** Where it is cloned with git and pushed to - holding the editor key, like editorPath. */
+  gitPath: string;
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */
@@ -51,7 +53,7 @@ export interface DomainState {
 }
 
 /** Which door something came through. */
-export type Origin = 'template' | 'api' | 'agent' | 'admin' | 'system';
+export type Origin = 'template' | 'api' | 'agent' | 'git' | 'admin' | 'system';
 
 export interface VersionInfo {
   version: number;
@@ -637,6 +639,8 @@ export interface Feature {
   /** What it is addressed by, and where its preview answers. */
   key: string;
   name: string;
+  /** The branch it is in the lambda's git repository, kept when it is renamed. */
+  branch: string;
   /** What the user wants from it and why. */
   specification?: string | null;
   /** What it changes, in a line - what the version it becomes will say. */
@@ -952,6 +956,8 @@ export interface SourceProject {
   versions: SourceVersion[];
   /** Sent with a star, good for a day from a second on. */
   starTicket: string;
+  /** Where it is cloned with git: every version, read only. */
+  gitPath: string;
 }
 
 /** What a file of a packed project is to somebody reading it. */

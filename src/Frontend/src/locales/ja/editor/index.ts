@@ -1,5 +1,6 @@
 import type { EditorMessages } from '../../en/editor';
 import { change } from './change';
+import { clone } from './clone';
 import { code } from './code';
 import { context } from './context';
 import { data } from './data';
@@ -43,5 +44,6 @@ export const editor: EditorMessages = {
   openSource,
   domain,
   code,
+  clone,
   tabs,
 };

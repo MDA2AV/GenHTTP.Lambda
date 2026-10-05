@@ -97,9 +97,18 @@ export const source: SourceMessages = {
     count: (count) => (count === 1 ? '1 Stern' : `${count} Sterne`),
     failed: 'Der Stern konnte nicht gespeichert werden.',
   },
+  clone: {
+    button: 'Code',
+    title: 'Mit git klonen',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `Die Version ist der Commit auf main, getaggt als v${newest}.`
+        : `Jede Version kommt als Commit auf main mit, getaggt von v${oldest} bis v${newest} – main ist die neueste.`,
+    readOnly:
+      'Nur lesbar. Um darauf aufzubauen, starten Sie ein eigenes Lambda und übernehmen Sie diese Dateien – AGENTS.md im Klon sagt, wie, und die Lizenz, was Sie damit dürfen.',
+  },
 
   download: {
-    button: 'Herunterladen',
     title: (version) => `Version ${version} als Projekt`,
     what:
       'Ein .NET-10-Projekt mit Dockerfile, seiner Dokumentation, seinen Tests und seiner Lizenz. Was die App aufbewahrt – ihre Datensätze, die Dateien, die sie gespeichert hat, ihre Schlüssel –, gehört nicht dazu.',

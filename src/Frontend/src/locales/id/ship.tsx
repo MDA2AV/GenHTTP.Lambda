@@ -91,12 +91,16 @@ export const ship: Messages['ship'] = {
       'Dengan link editor yang Anda dapat saat aplikasinya dipublikasikan. Berikan ke agen Anda bersama perubahan berikutnya, atau buka di browser. Setiap perubahan jadi versi baru di alamat yang sama, dan Anda bisa kembali ke versi lama kapan saja.',
     ],
     [
+      'Bisakah saya melakukan push ke sini dengan git?',
+      'Bisa. Setiap aplikasi juga merupakan repositori git: kloning dari alamat di bawah Kloning di editor, ubah dengan alat atau agen Anda sendiri, lalu push. Setiap commit yang di-push ke main menjadi versi berikutnya, dan branch yang Anda push menjadi draf dengan pratinjau sendiri.',
+    ],
+    [
       'Di mana API key saya disimpan?',
       'Tidak di dalam kode. Agen Anda meminta key berdasarkan namanya, lalu Anda mengetik nilainya di editor. Tidak ada yang bisa membacanya lagi, baik editor maupun agen.',
     ],
     [
       'Bisakah saya membawa kode saya?',
-      'Bisa, kodenya milik Anda. Unduh dari editor kapan saja, sebagai proyek yang bisa berjalan sendiri, lengkap dengan database-nya.',
+      'Bisa, kodenya milik Anda. Unduh dari editor kapan saja, sebagai proyek yang bisa berjalan sendiri, lengkap dengan database-nya - atau kloning dengan git, lengkap dengan setiap versinya.',
     ],
     [
       'Siapa yang bisa melihat aplikasi saya?',

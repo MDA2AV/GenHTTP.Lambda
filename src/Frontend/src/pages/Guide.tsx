@@ -31,6 +31,7 @@ const PARTS = [
   'sockets',
   'limits',
   'away',
+  'git',
   'open',
   'agents',
 ] as const;
@@ -399,6 +400,13 @@ return Layout.Create().Add("chat", socket);`} />
             <Aside>{said.awayAside}</Aside>
           </Section>
 
+          <Section id="git" title={said.parts.git}>
+            <p>{said.git(k)}</p>
+            <Commands text={'git clone https://genhttp.dev/editor/<editor key>/my-app.git\ncd my-app\n# change, commit\ngit push -o deploy'} />
+            <p>{said.git2(k)}</p>
+            <Aside>{said.gitAside}</Aside>
+          </Section>
+
           <Section id="open" title={said.parts.open}>
             <p>{said.open(k)}</p>
             <p>{said.open2(k)}</p>
@@ -445,6 +453,11 @@ function Sample({ code }: { code: string }) {
       <CSharp code={code} />
     </pre>
   );
+}
+
+/** Commands to type, as they are typed - no colours. */
+function Commands({ text }: { text: string }) {
+  return <pre className="surface overflow-x-auto p-3 font-mono text-[13px] leading-relaxed">{text}</pre>;
 }
 
 function Code({ children }: { children: React.ReactNode }) {

@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websockety',
     limits: 'Czego nie da się zrobić',
     away: 'Zabierz kod ze sobą',
+    git: 'Praca z git',
     open: 'Publikowanie kodu',
     agents: 'Niech zrobi to agent',
   },
@@ -412,13 +413,36 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Warto to wiedzieć, zanim cokolwiek tu zbudujesz: to, co piszesz, należy do ciebie i możesz to zabrać w całości. To, że kod działa na tej maszynie, w niczym go do niej nie przywiązuje.',
+  git: (k) => (
+    <>
+      Każda lambda jest też repozytorium git. {k.b('Sklonuj')}, na przeglądzie centrum sterowania i obok kodu, podaje
+      jej adres - adres twojego edytora z nazwą aplikacji na końcu - a {k.code('git clone')} daje ci projekt, który
+      daje {k.b('Pobierz')}, z każdą wersją jako commitem na {k.code('main')}, oznaczonym {k.code('v1')},{' '}
+      {k.code('v2')} i tak dalej, i z każdym szkicem jako gałęzią. Otwórz go we własnym edytorze, daj go swojemu
+      agentowi, uruchom przez {k.code('dotnet run')}.
+    </>
+  ),
+  git2: (k) => (
+    <>
+      Wypchnij i jest tutaj. Każdy commit wypchnięty na {k.code('main')} staje się kolejną wersją, a jego pierwszy
+      wiersz opisem zmiany - najpierw jest kompilowany i odrzucany, jeśli się nie kompiluje - a{' '}
+      {k.code('git push -o deploy')} udostępnia go od razu. Wypchnięta gałąź staje się szkicem z podglądem online pod
+      własnym adresem; wypchnij ją na {k.code('main')} albo dodaj {k.code('-o merge')} do ostatniego wypchnięcia, a
+      stanie się kolejną wersją. To, co platforma dokłada do twojego kodu, żeby był projektem - {k.code('Program.cs')},
+      plik projektu, {k.code('Platform')} - nie jest częścią twojej aplikacji, więc wypchnięcie, które to zmienia,
+      zostaje odrzucone z wyjaśnieniem. {k.code('AGENTS.md')} w repozytorium podpowiada agentowi resztę.
+    </>
+  ),
+  gitAside:
+    'Adres zawiera twój link do edytora, tak jak adres edytora: kto go ma, może wypychać zmiany. To, co aplikacja zapisuje - jej wpisy, pliki, klucze i hasła - nigdy nie trafia do repozytorium.',
 
   open: (k) => (
     <>
       Jeśli to, co zbudujesz, może pomóc komuś innemu, opublikuj kod: otwórz sekcję {k.b('Open source')} w centrum
       sterowania, wybierz licencję – MIT, chyba że wolisz inną – i włącz publikację. Kod dostanie własną stronę wśród{' '}
-      {k.link('/source', 'aplikacji open source')}, gdzie każdy może go przeczytać, dać mu gwiazdkę i pobrać dowolną
-      wersję jako ten sam projekt, który daje {k.b('Pobierz jako projekt .NET')}, razem z licencją.
+      {k.link('/source', 'aplikacji open source')}, gdzie każdy może go przeczytać, dać mu gwiazdkę, pobrać dowolną
+      wersję jako ten sam projekt, który daje {k.b('Pobierz')}, razem z licencją, albo sklonować każdą jego wersję
+      przez git.
     </>
   ),
   open2: () => (

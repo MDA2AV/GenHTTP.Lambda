@@ -1,0 +1,226 @@
+# {lambda}
+
+This repository is a lambda on GenHTTP Lambda ({home}/): a C# web service
+that answers at {address}. It is also an ordinary .NET project - `dotnet run`
+serves it at http://localhost:8080/ - and every commit of `main` is one of
+the lambda's versions.
+
+This file is for the coding agent working on it. The platform writes it, and
+it is the same in every commit until the platform changes it.
+
+## What is what
+
+| Here | On the platform |
+|---|---|
+| `Project.cs` | `lambda.cs`: the body of `BuildAsync()` is the code that returns the app's handler, the types below the class are its own |
+| the other `*.cs` here | its other code files: types, no statements |
+| `assets/` | what it ships and serves - the front end, its migrations, pictures |
+| `docs/` | its documentation: `product.md`, `decisions.md` and more pages |
+| `tests/` | how it is tested: `README.md`, the scripts and their data |
+| `Program.cs`, `{project}.csproj`, `Platform/`, `Dockerfile`, `.gitignore`, `.dockerignore`, `AGENTS.md`, `CLAUDE.md`, `LICENSE` | the platform's: they make the lambda a project that runs here, and are no part of it |
+
+Change the lambda's files only. A push that changes, adds or removes one of
+the platform's is refused, since it would change nothing of the lambda, and
+so is a file anywhere else - a README at the root, an editor's settings: keep
+those out of commits (`.git/info/exclude`). Leave `class Project` as it is
+and work in the body of `BuildAsync()`; a helper goes into a type of its own.
+
+## Running it here
+
+    dotnet run            # then open http://localhost:8080/
+
+`Platform/` stands in for what the platform provides:
+
+- `Workspace` is the folder `workspace/`
+- `Assets` is `assets/`, copied beside the program when it is built
+- `Secret.Read("NAME")` reads the environment variable `NAME`
+- `Database.GetConnection()` opens `database/database.db`, made empty on first use
+
+None of it is the lambda's data on the platform, which is never in the
+repository (see "Data").
+
+## Versions: main
+
+Every commit pushed to `main` becomes the next version of the lambda, in the
+order they were made, and is tagged `v1`, `v2`, ... by the platform. A
+version never changes once it is saved, so:
+
+- `main` moves forward one commit after another: no `--force`, no merge
+  commits. When the platform saved a version meanwhile - the owner in the
+  editor, another agent - the push is refused; `git pull --rebase` and push
+  again.
+- One commit per thing the user asked for, not one per attempt: squash
+  before you push. Each commit is a version the owner reads in the history,
+  and the oldest are removed once a lambda has many.
+- The first line of the message is what the version changes, in a line, for
+  the owner: "Adds a leaderboard that keeps the ten best scores", not
+  "Update Project.cs". The rest of the message, if any, is kept as what the
+  user wanted and why, in their words where you can.
+- A push to `main` is compiled first, and refused when it does not compile:
+  the errors come back as `remote:` lines, with the file and line.
+- A version is not online until it is deployed: `git push -o deploy` puts the
+  newest online with the push. Without it, the owner or you deploy it later,
+  in the editor or through the API.
+
+A lambda nobody uses yet is written on `main`. A lambda that is online, or in
+use, is changed in a feature.
+
+## Features: branches
+
+Every branch other than `main` is a feature - a "draft" in the editor: a
+change worked on beside the lambda, with an address and a copy of the
+lambda's data of its own, while visitors keep getting what is online.
+
+    git switch -c leaderboard
+    # change, commit
+    git push -u origin leaderboard    # starts the feature, its preview online
+
+- A new branch starts a feature from the newest version among its commits,
+  with a copy of the lambda's data as it is then. Pushing the branch again
+  replaces the feature's files; force pushes are fine here.
+- Every push of a branch puts the feature's preview online, at the address
+  the push answers with (`/features/.../`), against its copy of the data. Try
+  it there and run the tests against it - never against the live lambda.
+- `git push origin leaderboard:main` merges it: each of its commits becomes a
+  version, and the feature is gone with its preview and its copy of the data
+  (the lambda keeps its own). Add `-o deploy` to put the newest online. Or
+  push its last commit with `-o merge` - it becomes one version - and
+  `-o deploy` with it. Then `git switch main`, `git pull` and
+  `git fetch --prune`.
+- Only a feature that holds the newest version is merged, so it cannot undo
+  a version saved since it began. When `main` moved on, bring it in -
+  `git rebase origin/main`, or merge `main` into the branch and merge with
+  `-o merge`, since `main` takes no merge commits - push, and merge then.
+  Nothing merges or rebases for you.
+- `git push origin --delete leaderboard` throws the feature away.
+- A feature started in the editor, or by another agent, is a branch here as
+  well: `git fetch` shows it.
+- Options travel with a push that changes something: git sends nothing when
+  everything is up to date. To put a version online that is already pushed,
+  deploy it in the editor or through the API (see "Beyond git").
+
+## What the platform answers
+
+Every push is answered with `remote:` lines: the versions or the feature it
+became, whether it compiles, what went online and where. Read them - and
+when a push is refused, the line says why.
+
+## A lambda
+
+- `Project.cs`'s `BuildAsync()` returns an `IHandler` or a builder of one:
+  `Inline.Create()`, `Layout.Create()`, `Content.From(...)`,
+  `Websocket.Functional()`. Routes cannot return anonymous types: declare a
+  record. The GenHTTP modules are imported in every file already
+  (`Platform/Usings.cs`), as on the platform.
+- In other files, `Assets` is the Files module's type of that name: use
+  `LambdaEnvironment.Assets` there. `Workspace`, `Secret` and `Database` work
+  in every file.
+- Links are relative: `"api/items"`, `"app.css"`, `"./"` - no leading slash,
+  never `/lambda/{lambda}/` or a full address. The same lambda answers at
+  `/lambda/{lambda}/`, at the root of a domain of its own, and as a feature at
+  `/features/.../`; a path starting with `/` leaves it, and from a preview
+  reaches the live lambda and its data. A page a level deeper needs
+  `"../api/items"`. `Redirect.To(...)` takes relative paths too. The only
+  full addresses in a page are `og:image`, `og:url` and the canonical link,
+  which name it for whoever reads it elsewhere.
+- Never wait for a task: `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`,
+  `Task.WaitAll`, `Task.WaitAny` and `SemaphoreSlim.Wait()` are refused - a
+  request runs on one thread per core, and a task finishes on the thread that
+  would be waiting for it. Await it, or call the synchronous method.
+- Refused as well: reflection, `dynamic`, processes, the environment, the
+  file system outside `Workspace`, and anything else that reaches the host.
+  All lambdas share one process. Code that compiles here can still be refused
+  there - the push says so.
+- Never poll: a page does not fetch on a timer to see whether something
+  changed. Push the change from the server - server-sent events
+  (`EventSource.Create()`, `new EventSource("events")` in the browser) when
+  the page only listens, a websocket when it talks back.
+
+## Data
+
+A version is the program - the code and the assets, the front end included.
+Data is what the program keeps: the database, the workspace and the secrets.
+It belongs to the lambda, is shared by every version, and no deploy, rollback
+or merge touches it. A feature works on a copy. It is never in the
+repository.
+
+- Records - entries, accounts, orders, votes - go in the database: a SQLite
+  file of the lambda's own, switched on once (see "Beyond git"). Its schema
+  is SQL migrations in `assets/migrations/` (`V1__Create_items.sql`), applied
+  by Evolve as the lambda starts:
+
+      using (var connection = Database.GetConnection())
+      {
+          new Evolve(connection) { Locations = [Assets.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+      }
+
+  Never edit a migration that was applied - add the next one - and never
+  `EnsureCreated`, `Migrate` or Entity Framework's migrations, which are
+  refused. Keep the records with a `DbContext` of Entity Framework Core on the
+  connection it is handed - `new Records(Database.GetConnection())`, configured
+  with `options.UseSqlite(connection, contextOwnsConnection: true)` - one per
+  request, synchronously: `ToList`, `SaveChanges`, never their `Async` forms.
+  Every version reads the same database, and a rollback runs an older version
+  against a newer schema: change it additively where that costs little.
+- Files users upload, and large data that is no program, go in the workspace
+  (`Workspace.WriteBytes(...)`), never in `assets/`: assets are read only and
+  replaced with every version.
+- API keys and passwords are secrets, never code, assets or commits - a key
+  in a commit stays in every clone for good. Read one with
+  `Secret.Read("NAME")`, have secrets switched on, and let the owner enter the
+  value in the editor; here, set the environment variable.
+
+## Documentation and tests
+
+`docs/product.md` says what the app is - in a sentence or two first, which the
+editor shows - who it is for and what they do with it, in the user's terms.
+`docs/decisions.md` holds the technical decisions and why. `tests/README.md`
+says how the app is tested: what has to keep working and how each is checked,
+with the scripts beside it (`node tests/smoke.mjs <address>`). Read them
+before changing the lambda, and update what a change affects in the same
+commit. In proportion: a small lambda gets a short paragraph a page and one
+quick check, not a test suite; they grow with the app. Run the tests against
+a feature's preview before merging it. Write them in the user's language.
+
+## Pages meant to be found
+
+A page meant to be found or shared - a website, a shop, a landing page - gets
+a `<title>`, a meta description, `<html lang>`, a favicon as an asset linked
+relatively, and a social preview (`og:title`, `og:description`, `og:image`
+with a full address), with what it is about in the HTML as served rather than
+only in what a script renders. A tool for a few people gets a title and
+nothing more.
+
+## The link back
+
+We ask for a small "Made with GenHTTP Lambda" line at the foot of the pages
+visitors see: a link to {home}/ on a lambda without a domain of its own,
+plain text on one with a domain. The name is the whole of the link. Say that
+you added it; leave it out or take it out when the user does not want it, and
+note that in `docs/decisions.md`. Do not add one to a lambda that has none
+unless the user asks.
+
+## Beyond git
+
+The repository holds the program. The rest - the data, the secrets, the logs,
+what is online, the features' previews - is reached through the platform's
+API (`{home}/api/v1/scalar/`) or its MCP tools (`{home}/mcp`, `platform_guide`
+first), with the lambda's editor key: the segment after `/editor/` in the
+address you cloned from (`git remote get-url origin`).
+
+- `GET {home}/api/v1/lambdas/<key>/logs` - what it has been doing, its
+  errors included; `.../features/<feature>/logs` for a preview
+- `PUT {home}/api/v1/lambdas/<key>/data/database` - switches the database on;
+  `.../data/secrets` the secrets
+- `GET {home}/api/v1/lambdas/<key>/secrets` - which secrets the code reads and
+  which have no value yet
+- `POST {home}/api/v1/lambdas/<key>/deployment/start` - puts a version online
+
+Whoever has the editor key can change and delete the lambda: keep it out of
+files, commits and logs.
+
+A clone of `{home}/source/{lambda}.git` is the published source, and read
+only. To build on it, create a lambda of your own ({home}/ship), clone that,
+copy the lambda's files - `Project.cs`, the other `*.cs`, `assets/`, `docs/`,
+`tests/` - over its own and push; the platform's files stay as your clone has
+them. Keep to the terms of `LICENSE`.

@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Todavía no dice qué cambia',
   behindTitle: 'Tu app cambió desde que empezó este borrador',
   behind: () => 'desactualizado',
+  branchTitle: 'La rama de este borrador en el repositorio git de la app',
   previewOnline: 'vista previa en marcha',
   previewOutdated: 'la vista previa muestra un guardado anterior',
   previewOffline: 'vista previa detenida',

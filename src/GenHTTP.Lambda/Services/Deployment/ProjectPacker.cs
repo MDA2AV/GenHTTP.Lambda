@@ -3,11 +3,6 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Text;
 
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-
 using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Services.Databases;
@@ -154,15 +149,15 @@ public static class ProjectPacker
     {
         var name = Identifier(lambda.PublicKey);
 
-        var snippet = SourceBuilder.ParseSnippet(files.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty);
+        var snippet = files.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty;
 
-        var awaits = Awaits(snippet);
+        var awaits = ProjectSnippet.Awaits(snippet);
 
         var assets = files.Where(f => f.IsAsset).ToList();
 
         var context = files.Where(f => f.IsContext).ToList();
 
-        var folders = context.Select(f => Outside(f.Name).Split('/')[0]).Distinct().Order(StringComparer.Ordinal).ToList();
+        var folders = context.Select(f => ProjectPaths.Of(f.Name).Split('/')[0]).Distinct().Order(StringComparer.Ordinal).ToList();
 
         var code = files.Where(f => f.IsCode).ToList();
 
@@ -178,22 +173,22 @@ public static class ProjectPacker
         {
             Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders, data, entities, evolve));
             Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits, folders, data ? database != null : null));
-            Write(archive, $"{name}/Project.cs", Project(snippet, awaits));
+            Write(archive, $"{name}/{ProjectPaths.Snippet}", ProjectSnippet.ForExport(snippet));
 
             foreach (var file in files.Where(f => f.IsCode && f.Name != LambdaSource.EntryName))
             {
-                Write(archive, $"{name}/{Capitalize(file.Name)}", file.Code);
+                Write(archive, $"{name}/{ProjectPaths.Of(file.Name)}", file.Code);
             }
 
             // assets keep their folders, because the code that serves them names those folders
             foreach (var file in assets)
             {
-                Write(archive, $"{name}/assets/{file.Name}", file.Bytes);
+                Write(archive, $"{name}/{ProjectPaths.Of(file.Name)}", file.Bytes);
             }
 
             foreach (var file in context)
             {
-                Write(archive, $"{name}/{Outside(file.Name)}", file.Bytes);
+                Write(archive, $"{name}/{ProjectPaths.Of(file.Name)}", file.Bytes);
             }
 
             Write(archive, $"{name}/Platform/Usings.cs", Usings(data, entities, evolve));
@@ -232,6 +227,72 @@ public static class ProjectPacker
         }
     }
 
+    /// <summary>
+    /// The files of the project a lambda's git repository holds: the lambda's
+    /// own where <see cref="ProjectPaths"/> puts them, and the platform's around them.
+    /// </summary>
+    /// <remarks>
+    /// The export as a repository needs it. What the platform puts around the
+    /// lambda is the same for every commit, whatever the lambda does - only
+    /// a newer platform, a new address or a published source change it - so a
+    /// push that leaves it alone is right however much it changed, and
+    /// somebody who changes it has changed nothing of the lambda. That is why
+    /// the project references SQLite, Entity Framework and Evolve whether
+    /// the code uses them or not, keeps the documentation and the tests out
+    /// of the build whether there are any or not, and makes the snippet
+    /// asynchronous whether it awaits anything or not: the commit that starts
+    /// to is somebody's push, and must not need a project of its own.
+    ///
+    /// There is no data in it, as in a published source, and nothing that
+    /// only the owner may know - the same commits are read by anybody once
+    /// the source is published. AGENTS.md tells an agent how to work in it,
+    /// and CLAUDE.md points the agent that reads that file instead to it.
+    /// </remarks>
+    public static IReadOnlyList<ProjectFile> Repository(RepositoryProject project, IReadOnlyList<LambdaFile> files)
+    {
+        var name = Identifier(project.PublicKey);
+
+        var result = new List<ProjectFile>
+        {
+            Text($"{name}.csproj", Csproj(true, ["docs", "tests"], true, true, true, awaitsAlways: true)),
+            Text(ProjectPaths.Program, RepositoryProgram(project)),
+            Text(ProjectPaths.Snippet, ProjectSnippet.ForRepository(files.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty), LambdaSource.EntryName)
+        };
+
+        foreach (var file in files.Where(f => f.Name != LambdaSource.EntryName))
+        {
+            result.Add(new ProjectFile(ProjectPaths.Of(file.Name), file.Bytes, file.Name));
+        }
+
+        result.Add(Text($"{ProjectPaths.Platform}Usings.cs", Usings(true, true, true)));
+        result.Add(Text($"{ProjectPaths.Platform}LambdaEnvironment.cs", Resource("LambdaEnvironment.cs")));
+        result.Add(Text($"{ProjectPaths.Platform}Folder.cs", Resource("Folder.cs")));
+        result.Add(Text($"{ProjectPaths.Platform}Secrets.cs", Resource("Secrets.cs")));
+        result.Add(Text($"{ProjectPaths.Platform}Handlers.cs", Resource("Handlers.cs")));
+        result.Add(Text($"{ProjectPaths.Platform}Database.cs", Resource("Database.cs")));
+
+        if (project.License is { } license)
+        {
+            result.Add(Text("LICENSE", SourceLicenses.Text(license.License, license.Year, license.Holder)));
+        }
+
+        result.Add(Text("Dockerfile", Resource("Dockerfile").Replace("{assembly}", name)));
+
+        const string ignored = "bin/\nobj/\nworkspace/\ndatabase/\n";
+
+        result.Add(Text(".gitignore", ignored));
+        result.Add(Text(".dockerignore", $"{ignored}docs/\ntests/\n.git/\nAGENTS.md\nCLAUDE.md\n"));
+
+        result.Add(Text("AGENTS.md", Resource("Agents.md").Replace("{lambda}", project.PublicKey)
+                                                           .Replace("{project}", name)
+                                                           .Replace("{address}", project.Address)
+                                                           .Replace("{home}", project.Home)));
+
+        result.Add(Text("CLAUDE.md", Resource("Claude.md")));
+
+        return result;
+    }
+
     #endregion
 
     #region Parts
@@ -251,7 +312,11 @@ public static class ProjectPacker
     /// <param name="data">Whether the code uses a database, which takes SQLite</param>
     /// <param name="entities">Whether it keeps its records with Entity Framework Core</param>
     /// <param name="evolve">Whether it migrates it with Evolve</param>
-    private static string Csproj(bool assets, IReadOnlyList<string> context, bool data, bool entities, bool evolve)
+    /// <param name="awaitsAlways">
+    /// Whether the snippet is made asynchronous whether it waits for anything or not, as the project of a
+    /// repository has it - which the compiler only warns about, and need not
+    /// </param>
+    private static string Csproj(bool assets, IReadOnlyList<string> context, bool data, bool entities, bool evolve, bool awaitsAlways = false)
     {
         var copy = assets ? "\n\n    <ItemGroup>\n        <None Update=\"assets/**\" CopyToOutputDirectory=\"PreserveNewest\" />\n    </ItemGroup>" : string.Empty;
 
@@ -266,12 +331,15 @@ public static class ProjectPacker
 
         var migrations = evolve ? $"\n        <PackageReference Include=\"{EvolvePackage}\" Version=\"{EvolveVersion}\" />" : string.Empty;
 
+        // CS1998: an async method that awaits nothing
+        var quiet = awaitsAlways ? "\n        <NoWarn>$(NoWarn);CS1998</NoWarn>" : string.Empty;
+
         return $"""
             <Project Sdk="Microsoft.NET.Sdk">
 
                 <PropertyGroup>
                     <OutputType>Exe</OutputType>
-                    <TargetFramework>{Framework}</TargetFramework>
+                    <TargetFramework>{Framework}</TargetFramework>{quiet}
                 </PropertyGroup>
 
                 <ItemGroup>
@@ -390,69 +458,55 @@ public static class ProjectPacker
     }
 
     /// <summary>
-    /// The snippet, as the body of the method that builds the app.
+    /// The host of a lambda's repository, and a word about where it is.
     /// </summary>
     /// <remarks>
-    /// The same split the platform makes. A snippet ends in a return, which at
-    /// the top of a file would end the program rather than produce a handler,
-    /// and it may end with a record or two, which cannot be declared inside a
-    /// method - so statements become the body and types sit beside the class.
-    /// Leading comments travel with what they stand in front of.
+    /// Without anything that changes from one version to the next - the
+    /// number, the change, the secrets the code reads - since it is the same
+    /// in every commit, including those a push makes.
     /// </remarks>
-    private static string Project(SyntaxTree snippet, bool awaits)
+    private static string RepositoryProgram(RepositoryProject project)
     {
-        var root = (CompilationUnitSyntax)snippet.GetRoot();
+        var name = Identifier(project.PublicKey);
 
-        var text = snippet.GetText();
+        var tag = name.ToLowerInvariant();
 
-        var builder = new StringBuilder();
+        return $"""
+            // This app is a lambda on GenHTTP Lambda ({project.Home}), where you describe
+            // an app - or let your coding agent write it - and it is online at an address
+            // of its own a moment later, with every version kept and a way back to each.
+            //
+            //   Lambda   {project.PublicKey} ({project.Address})
+            //   GenHTTP  {FrameworkVersion}
+            //
+            // This repository is the lambda: every commit of main is one of its versions,
+            // every other branch a feature being worked on. AGENTS.md says how to work on it.
+            //
+            // It is served by GenHTTP, an embeddable web server for .NET. What it can do,
+            // and how: https://genhttp.org/documentation/
+            //
+            //   dotnet run                    then open http://localhost:8080/
+            //
+            //   docker build -t {tag} .
+            //   docker run -p 8080:8080 -v {tag}-data:/app/workspace {tag}
+            //
+            // Project.cs holds the code of the lambda and the other .cs files here are its
+            // own. Platform/ stands in for what the platform provides: the Workspace the
+            // app writes to (workspace/), the Assets it ships with (assets/), the Secret it
+            // reads, from environment variables of the same name, and the Database it keeps
+            // its records in (database/database.db, made empty the first time it connects).
+            // docs/ says what the app is for and why it is built the way it is, and tests/
+            // how it is tested.
 
-        foreach (var import in root.Usings)
-        {
-            builder.Append(import.NormalizeWhitespace().ToFullString()).Append('\n');
-        }
+            using GenHTTP.Engine.Internal;
+            using GenHTTP.Modules.Practices;
 
-        if (root.Usings.Count > 0)
-        {
-            builder.Append('\n');
-        }
+            await Host.Create()
+                      .Handler(await Project.CreateAsync())
+                      .Defaults()
+                      .RunAsync();
 
-        builder.Append("public static class Project").Append('\n');
-        builder.Append("{").Append('\n');
-        builder.Append("    // Workspace comes from Platform/LambdaEnvironment.cs, for every file").Append('\n');
-        builder.Append("    private static Platform.AssetFolder Assets => Platform.LambdaEnvironment.Assets;").Append('\n');
-        builder.Append('\n');
-
-        if (awaits)
-        {
-            builder.Append("    public static async Task<IHandler> CreateAsync() => Platform.Handlers.From(await BuildAsync());").Append('\n');
-            builder.Append('\n');
-            builder.Append("    private static async Task<object> BuildAsync()").Append('\n');
-        }
-        else
-        {
-            builder.Append("    public static IHandler Create() => Platform.Handlers.From(Build());").Append('\n');
-            builder.Append('\n');
-            builder.Append("    private static object Build()").Append('\n');
-        }
-
-        builder.Append("    {").Append('\n');
-
-        foreach (var line in Body(root, text))
-        {
-            builder.Append(line).Append('\n');
-        }
-
-        builder.Append("    }").Append('\n');
-        builder.Append("}").Append('\n');
-
-        foreach (var member in root.Members.Where(IsType))
-        {
-            builder.Append('\n');
-            builder.Append(Public(member, text).Trim('\r', '\n')).Append('\n');
-        }
-
-        return builder.ToString();
+            """;
     }
 
     /// <summary>
@@ -501,133 +555,6 @@ public static class ProjectPacker
 
     #endregion
 
-    #region Snippet
-
-    private static bool IsType(MemberDeclarationSyntax member) => member is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax;
-
-    /// <summary>
-    /// Whether the statements of the snippet wait for something, which
-    /// decides whether the method they become has to be asynchronous.
-    /// </summary>
-    /// <remarks>
-    /// Most snippets do not, and a synchronous Project.Create() is the
-    /// simpler thing to read. Waiting inside a lambda or a local function
-    /// does not count, because that one is asynchronous on its own.
-    /// </remarks>
-    private static bool Awaits(SyntaxTree snippet)
-    {
-        var root = (CompilationUnitSyntax)snippet.GetRoot();
-
-        return root.Members.OfType<GlobalStatementSyntax>()
-                   .SelectMany(s => s.DescendantNodesAndSelf(n => n is not (AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax)))
-                   .Any(n => n switch
-                   {
-                       AwaitExpressionSyntax => true,
-                       CommonForEachStatementSyntax loop => loop.AwaitKeyword.IsKind(SyntaxKind.AwaitKeyword),
-                       UsingStatementSyntax block => block.AwaitKeyword.IsKind(SyntaxKind.AwaitKeyword),
-                       LocalDeclarationStatementSyntax declaration => declaration.AwaitKeyword.IsKind(SyntaxKind.AwaitKeyword),
-                       _ => false
-                   });
-    }
-
-    /// <summary>
-    /// The lines of the statements, moved eight spaces in to sit in the method.
-    /// </summary>
-    /// <remarks>
-    /// A line that starts inside a token - a verbatim or raw string spanning
-    /// lines - is left as it is, because its whitespace is part of the string.
-    /// </remarks>
-    private static List<string> Body(CompilationUnitSyntax root, SourceText text)
-    {
-        var numbers = new SortedSet<int>();
-
-        foreach (var member in root.Members.Where(m => !IsType(m)))
-        {
-            var first = text.Lines.GetLineFromPosition(member.FullSpan.Start).LineNumber;
-            var last = text.Lines.GetLineFromPosition(Math.Max(member.FullSpan.Start, member.FullSpan.End - 1)).LineNumber;
-
-            for (var number = first; number <= last; number++)
-            {
-                numbers.Add(number);
-            }
-        }
-
-        var lines = new List<string>();
-
-        foreach (var number in numbers)
-        {
-            var line = text.Lines[number];
-
-            var content = line.ToString();
-
-            var token = root.FindToken(line.Start);
-
-            var inside = line.Start > token.SpanStart && line.Start < token.Span.End;
-
-            lines.Add(inside ? content : content.Trim().Length == 0 ? string.Empty : "        " + content);
-        }
-
-        // the blank lines that stood between the usings, the statements and the types
-        while (lines.Count > 0 && lines[0].Length == 0)
-        {
-            lines.RemoveAt(0);
-        }
-
-        while (lines.Count > 0 && lines[^1].Length == 0)
-        {
-            lines.RemoveAt(lines.Count - 1);
-        }
-
-        return lines;
-    }
-
-    /// <summary>
-    /// A type declared in the snippet, made public on the way.
-    /// </summary>
-    /// <remarks>
-    /// As the platform does: GenHTTP generates the code that invokes a handler
-    /// into an assembly of its own, so every type in the signature of a
-    /// handler has to be visible from outside this one.
-    /// </remarks>
-    private static string Public(MemberDeclarationSyntax member, SourceText text)
-    {
-        var original = text.ToString(member.FullSpan);
-
-        var modifiers = member.Modifiers.Where(IsAccessibility).ToList();
-
-        if (modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword)))
-        {
-            return original;
-        }
-
-        var start = member.FullSpan.Start;
-
-        var at = member.AttributeLists.Count > 0
-               ? member.AttributeLists.Last().GetLastToken().GetNextToken().SpanStart
-               : member.GetFirstToken().SpanStart;
-
-        // from the back, so every position stays where it was; at the same
-        // position the modifier goes before "public" comes in
-        var edits = modifiers.Select(m => (Start: m.SpanStart, Length: m.FullSpan.End - m.SpanStart, Text: string.Empty))
-                             .Append((Start: at, Length: 0, Text: "public "))
-                             .OrderByDescending(e => e.Start)
-                             .ThenByDescending(e => e.Length);
-
-        var builder = new StringBuilder(original);
-
-        foreach (var (position, length, insert) in edits)
-        {
-            builder.Remove(position - start, length).Insert(position - start, insert);
-        }
-
-        return builder.ToString();
-    }
-
-    private static bool IsAccessibility(SyntaxToken token) => token.Kind() is SyntaxKind.PublicKeyword
-        or SyntaxKind.InternalKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.ProtectedKeyword or SyntaxKind.FileKeyword;
-
-    #endregion
-
     #region Plumbing
 
     /// <summary>
@@ -653,22 +580,6 @@ public static class ProjectPacker
         return name.Length == 0 || !char.IsAsciiLetter(name[0]) ? $"lambda-{name}".TrimEnd('-') : name;
     }
 
-    /// <summary>
-    /// A code file named the way .NET names them: "store.cs" becomes
-    /// "Store.cs", and the folders it is in stay as they are.
-    /// </summary>
-    private static string Capitalize(string path)
-    {
-        var slash = path.LastIndexOf('/') + 1;
-
-        return slash < path.Length ? path[..slash] + char.ToUpperInvariant(path[slash]) + path[(slash + 1)..] : path;
-    }
-
-    /// <summary>
-    /// Where a file of the context goes in the project: .lambda/docs/x.md to docs/x.md.
-    /// </summary>
-    private static string Outside(string name) => name[LambdaSource.ContextFolder.Length..];
-
     private static string Day(DateTime value) => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static string OneLine(string value) => string.Join(' ', value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
@@ -689,6 +600,8 @@ public static class ProjectPacker
 
         return reader.ReadToEnd().ReplaceLineEndings("\n");
     }
+
+    private static ProjectFile Text(string path, string content, string? name = null) => new(path, Encoding.UTF8.GetBytes(content), name);
 
     private static void Write(ZipArchive archive, string path, string content)
         => Write(archive, path, Encoding.UTF8.GetBytes(content));
@@ -737,3 +650,27 @@ public sealed record ExportedLambda(string PublicKey, int Version, DateTime Save
 /// <param name="Holder">Who holds the copyright, as the license names them</param>
 /// <param name="Page">Where the source is published, if the installation knows its own address</param>
 public sealed record ExportedLicense(SourceLicense License, string Holder, string? Page);
+
+/// <summary>
+/// One file of the project a lambda's repository holds.
+/// </summary>
+/// <param name="Path">Where it is in the project</param>
+/// <param name="Content">What it holds</param>
+/// <param name="Name">The file of the lambda it is made from, or nothing for one the platform puts around it</param>
+public sealed record ProjectFile(string Path, byte[] Content, string? Name);
+
+/// <summary>
+/// What the project of a lambda's repository says about the lambda.
+/// </summary>
+/// <param name="PublicKey">The name of the lambda, which names the project</param>
+/// <param name="Address">Where it runs</param>
+/// <param name="Home">Where the installation is, which its files link to</param>
+/// <param name="License">The license its source is published under, while it is</param>
+public sealed record RepositoryProject(string PublicKey, string Address, string Home, RepositoryLicense? License);
+
+/// <summary>
+/// The license the project of a repository is under, written into its LICENSE.
+/// </summary>
+/// <param name="Year">The year the license names, which is the year the commit was made in</param>
+/// <param name="Holder">Who holds the copyright, as the license names them</param>
+public sealed record RepositoryLicense(SourceLicense License, int Year, string Holder);

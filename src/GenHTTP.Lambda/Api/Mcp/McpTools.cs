@@ -556,6 +556,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             privateKey = lambda.PrivateKey,
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             editorUrl = $"{origin}/editor/{lambda.PrivateKey}",
+            gitUrl = $"{origin}{LambdaDescription.GitPath(lambda.PrivateKey, lambda.PublicKey)}",
             view = lambda.View,
             next = "write_code with deploy: true, and fix what needs fixing with change_code and deploy: true - a new lambda needs no feature. Send .lambda/docs/product.md, .lambda/docs/decisions.md and .lambda/tests/README.md with the code - short for a small app (platform_guide, documentationAndTests). Once people use it, make further changes in a feature (create_feature).",
             warning = "The editor key cannot be recovered. Give it to the user."
@@ -961,6 +962,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         feature = feature.Key,
         feature.Name,
+        feature.Branch,
         @base = feature.Base,
         newest = feature.Newest,
         mergeable = feature.Mergeable,
@@ -1607,6 +1609,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             lambda.PublicKey,
             publicUrl = $"{origin}/lambda/{lambda.PublicKey}/",
             domainUrl = DomainUrl(lambda),
+            // where it is cloned with git, if git is at hand: AGENTS.md in it says how to work there
+            gitUrl = $"{origin}{LambdaDescription.GitPath(lambda.PrivateKey, lambda.PublicKey)}",
             lambda.Tier,
             lambda.View,
             limits = Limits(Enum.Parse<LambdaTier>(lambda.Tier)),
@@ -1617,7 +1621,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             lambda.KeptUntil,
             // the work under way beside the lambda, which a change should
             // continue rather than start over where one fits
-            features = open.Select(f => new { feature = f.Key, f.Name, @base = f.Base, mergeable = f.Mergeable, previewOnline = f.Online, f.Modified }),
+            features = open.Select(f => new { feature = f.Key, f.Name, f.Branch, @base = f.Base, mergeable = f.Mergeable, previewOnline = f.Online, f.Modified }),
             workIn = lambda.ActiveVersion != null && feature == null
                 ? "The lambda is online: make changes in a feature - create_feature, or continue one listed under features."
                 : null,
@@ -1998,6 +2002,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     {
         ok = true,
         preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version; a feature is downloaded from and put back to /api/v1/lambdas/{privateKey}/features/{feature}/zip (GET, PUT) - so edit locally and push as often as it takes. POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip as a new version. The zip holds the documentation and tests in .lambda/, a hidden folder: zip the contents with it ('zip -r ../feature.zip .', not '*'), or the version you save has none. Every endpoint that saves takes ?deploy=true. Many environments cannot reach it; then use these tools.",
+        git = new
+        {
+            what = "Every lambda is a git repository as well: read_lambda gives its gitUrl, /editor/{privateKey}/{publicKey}.git - the editor key is in it, so keep it to yourself and to the user. It holds the project the lambda is exported as: Project.cs is lambda.cs (the body of BuildAsync()), the other .cs files are its own, assets/ what it ships, docs/ and tests/ its .lambda/docs/ and .lambda/tests/ - and around them the platform's files, which make it run with dotnet run and are no part of the lambda. AGENTS.md in it says how to work there.",
+            when = "If you can run git, clone the lambda and work in the clone: it builds and runs with dotnet, and a push costs no tokens for the files it sends.",
+            versions = "Every commit pushed to main becomes the next version, tagged v1, v2 and so on: main moves forward one commit after another - never rewritten, no merge commits (git pull --rebase). The first line of a commit's message is the version's change, the rest its specification. A push to main is compiled first and refused when it does not compile; git push -o deploy puts the newest version online with it.",
+            features = "Every other branch is a feature: pushing one starts it - from the newest version among its commits, with a copy of the lambda's data - or replaces its files, and puts its preview online at the address the push answers with. git push origin <branch>:main merges it as a version per commit, -o merge with its last push merges it as one (-o deploy puts that online), and deleting the branch deletes the feature. A feature started anywhere else is a branch there too.",
+            refused = "A push that changes one of the platform's files (Program.cs, the .csproj, Platform/, AGENTS.md and the rest) or adds a file that has no place in a lambda is refused, and so is anything a save would refuse - the remote: lines of the push say why.",
+            published = "A published source is cloned read only from /source/{publicKey}.git: the same versions, without the features.",
+            data = "The data - the database, the workspace, the secrets - is never in the repository. Reach it with these tools or the REST API."
+        },
         whatALambdaIs = "C# that returns a GenHTTP handler, served at /lambda/{publicKey}/. No Main and no project: the snippet is the program.",
         lifecycle = new
         {
@@ -2246,7 +2260,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             tree = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory.",
             singlePage = "Content.From(Resource.FromString(html).Type(new ContentType(\"text/html; charset=utf-8\")))"
         },
-        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the newest version as a standalone zipped .NET 10 project with a Dockerfile: Program.cs hosts it, Project.cs is lambda.cs, the other files keep their code, the documentation and tests go to docs/ and tests/, and Platform/ stands in for Workspace, Assets, Secret, Database and the implicit imports. The database comes along as a SQLite file. It needs nothing from this platform. Worth telling the user.",
+        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the newest version as a standalone zipped .NET 10 project with a Dockerfile: Program.cs hosts it, Project.cs is lambda.cs, the other files keep their code, the documentation and tests go to docs/ and tests/, and Platform/ stands in for Workspace, Assets, Secret, Database and the implicit imports. The database comes along as a SQLite file. It needs nothing from this platform. A clone of its gitUrl is the same project with every version, without the data. Worth telling the user.",
         importedForYou = ModuleCatalog.Imports,
         network = "A lambda can make outbound calls with HttpClient and sockets. System.Net.Http and System.Net.Sockets are not imported by default, so write the full type name or add a using. It runs in the shared server process, so give requests a timeout.",
         sayWhy = new
@@ -2273,7 +2287,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             neverPublished = "The data - the database, the workspace and the values of the secrets - what the owner asked for in their words (the specification), and anything about who uses it: traffic, logs, visitors.",
             thenPublic = "Once published, every version is public, the ones saved before included. Keys, passwords and personal data never go into files anyway; for a published lambda it matters at once.",
             licenses = SourceLicenses.All.Select(l => new { l.Id, l.Name, kind = l.Kind.ToString() }),
-            startingFromOne = "A published source downloads as a .NET project, not as a lambda. To make a lambda of it: Project.cs holds the snippet as the body of Build() with the types after the class - put the body back into lambda.cs with those types below it; the other .cs files stay as they are; assets/ is what goes at the root of the version; docs/ and tests/ go into .lambda/docs/ and .lambda/tests/; Platform/, Program.cs, the .csproj and the Dockerfile are the platform's and stay behind. Keep to the terms of its LICENSE."
+            startingFromOne = "A published source downloads as a .NET project, not as a lambda - or is cloned with git from /source/{publicKey}.git. To make a lambda of it with git: create_lambda, clone its gitUrl, copy Project.cs, the other .cs files, assets/, docs/ and tests/ over its own, commit and push. Without git: Project.cs holds the snippet as the body of Build() or BuildAsync() with the types after the class - put the body back into lambda.cs with those types below it; the other .cs files stay as they are; assets/ is what goes at the root of the version; docs/ and tests/ go into .lambda/docs/ and .lambda/tests/; Platform/, Program.cs, the .csproj and the Dockerfile are the platform's and stay behind. Keep to the terms of its LICENSE."
         },
         afterDeploying = new
         {

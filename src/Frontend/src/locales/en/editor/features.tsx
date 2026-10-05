@@ -17,6 +17,8 @@ export const features = {
   noChange: 'Nothing said about what it changes yet',
   behindTitle: 'Your app changed since this draft began',
   behind: (_newest: number) => 'out of date',
+  /** Beside the branch a draft is in the lambda's git repository, in the full view. */
+  branchTitle: 'The branch this draft is in the git repository of the app',
   previewOnline: 'preview running',
   previewOutdated: 'preview shows an earlier save',
   previewOffline: 'preview not running',

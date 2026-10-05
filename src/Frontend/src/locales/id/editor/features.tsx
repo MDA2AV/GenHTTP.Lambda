@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Belum ada keterangan tentang apa yang diubah',
   behindTitle: 'Aplikasi Anda berubah sejak draf ini dimulai',
   behind: () => 'tertinggal',
+  branchTitle: 'Branch tempat draf ini berada di repositori git aplikasi',
   previewOnline: 'pratinjau berjalan',
   previewOutdated: 'pratinjau menampilkan simpanan lama',
   previewOffline: 'pratinjau tidak berjalan',

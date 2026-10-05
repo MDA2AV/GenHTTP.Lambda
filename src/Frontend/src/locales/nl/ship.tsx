@@ -90,12 +90,16 @@ export const ship: Messages['ship'] = {
       'Met de editorlink die je bij het publiceren kreeg. Geef die aan je agent met je volgende wijziging, of open hem in je browser. Elke wijziging wordt een nieuwe versie op hetzelfde adres, en je kunt altijd terug naar een oudere versie.',
     ],
     [
+      'Kan ik er met git naartoe pushen?',
+      'Ja. Elke app is ook een git-repository: kloon hem vanaf het adres onder Klonen in de editor, pas hem aan met je eigen tools of agent en push. Elke commit die je naar main pusht wordt de volgende versie, en een branch die je pusht wordt een concept met een eigen voorvertoning.',
+    ],
+    [
       'Waar laat ik mijn API-sleutels?',
       'Niet in de code. Je agent vraagt om een sleutel bij naam, en jij vult de waarde in de editor in. Niemand leest hem terug, de editor niet en de agent ook niet.',
     ],
     [
       'Kan ik mijn code meenemen?',
-      'Ja, hij is van jou. Download hem wanneer je wilt in de editor, als een project dat op zichzelf draait, inclusief database.',
+      'Ja, hij is van jou. Download hem wanneer je wilt in de editor, als een project dat op zichzelf draait, inclusief database - of kloon hem met git, met alle versies erbij.',
     ],
     [
       'Wie kan mijn app zien?',

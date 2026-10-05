@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Non è ancora detto cosa cambia',
   behindTitle: 'La tua app è cambiata da quando è iniziata questa bozza',
   behind: () => 'non aggiornata',
+  branchTitle: 'Il branch di questa bozza nel repository git dell’app',
   previewOnline: 'anteprima online',
   previewOutdated: 'l’anteprima mostra un salvataggio precedente',
   previewOffline: 'anteprima offline',

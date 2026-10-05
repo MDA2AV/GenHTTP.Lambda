@@ -103,9 +103,18 @@ export const source: SourceMessages = {
     count: (value) => count(value, 'étoile', 'étoiles'),
     failed: 'Impossible d’enregistrer l’étoile.',
   },
+  clone: {
+    button: 'Code',
+    title: 'Cloner avec git',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `Sa version est le commit de main, étiqueté v${newest}.`
+        : `Chaque version arrive sous forme de commit de main, étiqueté de v${oldest} à v${newest} – main est la plus récente.`,
+    readOnly:
+      'Lecture seule. Pour construire dessus, créez une lambda à vous et reprenez ces fichiers – AGENTS.md dans le clone explique comment, et la licence ce que vous avez le droit de faire.',
+  },
 
   download: {
-    button: 'Télécharger',
     title: (version) => `Version ${version} sous forme de projet`,
     what:
       'Un projet .NET 10 avec un Dockerfile, sa documentation, ses tests et sa licence. Ce que garde l’application – ses enregistrements, les fichiers qu’elle a enregistrés, ses clés – n’en fait pas partie.',

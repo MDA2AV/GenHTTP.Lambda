@@ -1,0 +1,3 @@
+This repository is a lambda on GenHTTP Lambda. How to work on it:
+
+@AGENTS.md

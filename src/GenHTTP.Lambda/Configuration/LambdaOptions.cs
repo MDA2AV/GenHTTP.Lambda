@@ -269,6 +269,19 @@ public sealed record LambdaOptions
     public long SourceCacheBytes { get; init; } = 2048L * 1024 * 1024;
 
     /// <summary>
+    /// How large a single <c>git push</c> to a lambda may be.
+    /// </summary>
+    /// <remarks>
+    /// A push is read into memory and unpacked there before anything is
+    /// decided about it, which is the git module's way and what makes it
+    /// atomic - so this protects the process, like a buffer, rather than
+    /// being a promise of a tier: what a version may hold is checked after
+    /// it was unpacked, against the tier of the lambda. Room for the first
+    /// push of a premium lambda that ships all the assets it may.
+    /// </remarks>
+    public long GitMaxPushBytes { get; init; } = 256L * 1024 * 1024;
+
+    /// <summary>
     /// Requests per second a single client may send to the lambda routes.
     /// </summary>
     /// <remarks>
@@ -536,6 +549,13 @@ public sealed record LambdaOptions
     public string SourceDirectory => Path.Combine(DataDirectory, "sources");
 
     /// <summary>
+    /// Where the commits a lambda is read as with git are kept, one folder per
+    /// lambda: the commits, the files they hold, and which of them is which
+    /// version and feature.
+    /// </summary>
+    public string GitDirectory => Path.Combine(DataDirectory, "git");
+
+    /// <summary>
     /// Where the key the secrets are sealed with is kept, when
     /// <see cref="SecretsKey"/> does not give one.
     /// </summary>
@@ -608,6 +628,7 @@ public sealed record LambdaOptions
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             MaxFeatures = ReadInt("LAMBDA_MAX_FEATURES", defaults.MaxFeatures),
             SourceCacheBytes = ReadLong("LAMBDA_SOURCE_CACHE_BYTES", defaults.SourceCacheBytes),
+            GitMaxPushBytes = ReadLong("LAMBDA_GIT_MAX_PUSH_BYTES", defaults.GitMaxPushBytes),
             RateLimit = ReadInt("LAMBDA_RATE_LIMIT", defaults.RateLimit),
             MaxConcurrency = ReadInt("LAMBDA_MAX_CONCURRENCY", defaults.MaxConcurrency),
             ExecutionTimeout = TimeSpan.FromSeconds(ReadInt("LAMBDA_EXECUTION_TIMEOUT_SECONDS", (int)defaults.ExecutionTimeout.TotalSeconds)),

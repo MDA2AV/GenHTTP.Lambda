@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websocket’ler',
     limits: 'İzin verilmeyenler',
     away: 'Kodunuzu alıp gitmek',
+    git: 'git ile üzerinde çalışmak',
     open: 'Kodu yayımlamak',
     agents: 'İşi bir ajana bırakmak',
   },
@@ -422,14 +423,36 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Burada bir şey yapmadan önce bilmekte fayda var: yazdığınız kod sizindir ve eksiksiz olarak sizinle gelir. Onu bu makinede çalıştırmak, onu bu makineye bağlamaz.',
+  git: (k) => (
+    <>
+      Her lambda aynı zamanda bir git deposudur. Kontrol panelinin genel bakışındaki ve kodunun yanındaki {k.b('Klonla')}{' '}
+      düğmesi onun adresini verir - editörünüzün adresi ve ardından uygulamanın adı. {k.code('git clone')}, size{' '}
+      {k.b('İndir')} ile aldığınız projeyi verir; her sürüm {k.code('main')}’in bir commit’idir, {k.code('v1')},{' '}
+      {k.code('v2')} gibi etiketlenir ve her taslak bir daldır. Kendi editörünüzde açın, kodlama ajanınıza verin,{' '}
+      {k.code('dotnet run')} ile çalıştırın.
+    </>
+  ),
+  git2: (k) => (
+    <>
+      Push edin, burada olsun. {k.code('main')}’e push edilen her commit sonraki sürüm olur; ilk satırı yaptığı
+      değişikliktir - önce derlenir, derlenmezse reddedilir - ve {k.code('git push -o deploy')} onu yayına alır. Push
+      ettiğiniz bir dal taslak olur ve önizlemesi kendi adresinde yayındadır; onu {k.code('main')}’e push edin ya da
+      son push’una {k.code('-o merge')} ekleyin, sonraki sürüm olsun. Platformun kodunuzu bir proje yapmak için etrafına
+      koyduğu şeyler - {k.code('Program.cs')}, proje dosyası, {k.code('Platform')} - uygulamanızın parçası değildir;
+      bu yüzden onları değiştiren bir push reddedilir ve nedenini söyler. Depodaki {k.code('AGENTS.md')}, bir kodlama
+      ajanına gerisini anlatır.
+    </>
+  ),
+  gitAside:
+    'Adres, editörün adresi gibi editör anahtarınızı içerir: ona sahip olan push edebilir. Uygulamanızın tuttukları - kayıtları, dosyaları, anahtarları ve parolaları - asla depoda bulunmaz.',
 
   open: (k) => (
     <>
       Yaptığınız şey başka birinin işine yarayabilecekse kodunu yayımlayın: kontrol panelinde {k.b('Açık kaynak')}{' '}
       bölümünü açın, bir lisans seçin (başka bir lisans istemiyorsanız MIT) ve düğmeyi açın. Kodu,{' '}
       {k.link('/source', 'açık kaynak uygulamalar')} arasında kendi sayfasını alır. Orada herkes onu okuyabilir, ona
-      yıldız verebilir ve herhangi bir sürümünü, {k.b('.NET projesi olarak indir')} ile aldığınız projenin aynısı
-      olarak, yanında lisansıyla birlikte indirebilir.
+      yıldız verebilir, herhangi bir sürümünü {k.b('İndir')} ile aldığınız projenin aynısı olarak, yanında lisansıyla
+      birlikte indirebilir ya da her sürümünü git ile klonlayabilir.
     </>
   ),
   open2: () => (
