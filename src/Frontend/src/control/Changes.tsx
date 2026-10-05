@@ -1,16 +1,34 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import type { LambdaFile } from '../api';
 import { useEditorT } from '../i18n';
 import { languageFor, monaco } from '../monaco';
 import type { Theme } from '../theme';
 import { compare, type DiffLine, type FileDiff } from './diff';
+import { isCode, isContext, isDevelopment } from './written';
+
+/**
+ * What a changed file is to the version, in the order a change is read: the
+ * code, then what the front end is built from, then the assets - which hold
+ * what such a build wrote, minified and least worth reading first - and what
+ * is written about it last.
+ */
+const GROUPS = ['code', 'development', 'assets', 'context'] as const;
+
+type Kind = (typeof GROUPS)[number];
+
+const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isDevelopment(name) ? 'development' : isContext(name) ? 'context' : 'assets');
 
 /**
  * What changed between two sets of files: one row per file that differs,
  * with its lines added and removed, and the first of them opened - which is
  * usually the one to read. The versions show the difference to the version
  * before; a feature shows the difference to the version it is based on.
+ *
+ * Where the files that changed are of more than one kind, they are listed
+ * kind by kind under a heading each: a change that touched the sources of a
+ * front end and the assets they build to reads as both, rather than as one
+ * list in which the sources are found among the minified files.
  */
 export function ChangeList({ before, after, theme, empty, folded = false }: {
   before: LambdaFile[];
@@ -23,7 +41,14 @@ export function ChangeList({ before, after, theme, empty, folded = false }: {
 }) {
   const said = useEditorT().versions;
 
-  const changed = useMemo(() => compare(before, after).filter((d) => d.status !== 'same'), [before, after]);
+  const changed = useMemo(
+    () => compare(before, after)
+      .filter((d) => d.status !== 'same')
+      .sort((a, b) => GROUPS.indexOf(kindOf(a.name)) - GROUPS.indexOf(kindOf(b.name))),
+    [before, after],
+  );
+
+  const grouped = new Set(changed.map((d) => kindOf(d.name))).size > 1;
 
   const first = folded ? null : changed[0]?.name ?? null;
   const [shown, setShown] = useState<string | null>(first);
@@ -40,35 +65,43 @@ export function ChangeList({ before, after, theme, empty, folded = false }: {
   return (
     <div className="surface overflow-hidden">
       <ul className="divide-y divide-slate-200 dark:divide-ink-800">
-        {changed.map((diff) => (
-          <li key={diff.name}>
-            <button
-              type="button"
-              onClick={() => setShown((was) => (was === diff.name ? null : diff.name))}
-              className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-ink-850"
-              aria-expanded={shown === diff.name}
-            >
-              <span className="min-w-0 flex-1 truncate font-mono text-[13px]">
-                {diff.name}
-                {diff.status !== 'changed' && <span className="ml-2 font-sans text-xs text-slate-500">{said.status[diff.status]}</span>}
-              </span>
-              {!diff.binary && (
-                <span className="shrink-0 font-mono text-xs">
-                  <span className="text-emerald-600 dark:text-emerald-400">+{diff.added}</span>{' '}
-                  <span className="text-red-500 dark:text-red-400">−{diff.removed}</span>
-                </span>
-              )}
-            </button>
-
-            {shown === diff.name && (
-              <Patch
-                diff={diff}
-                before={before.find((f) => f.name === diff.name)?.code ?? ''}
-                after={after.find((f) => f.name === diff.name)?.code ?? ''}
-                theme={theme}
-              />
+        {changed.map((diff, index) => (
+          <Fragment key={diff.name}>
+            {grouped && (index === 0 || kindOf(changed[index - 1].name) !== kindOf(diff.name)) && (
+              <li className="flex items-center justify-between bg-slate-50 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:bg-ink-850">
+                {said.groups[kindOf(diff.name)]}
+                <span className="tabular-nums">{changed.filter((d) => kindOf(d.name) === kindOf(diff.name)).length}</span>
+              </li>
             )}
-          </li>
+            <li>
+              <button
+                type="button"
+                onClick={() => setShown((was) => (was === diff.name ? null : diff.name))}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-ink-850"
+                aria-expanded={shown === diff.name}
+              >
+                <span className="min-w-0 flex-1 truncate font-mono text-[13px]">
+                  {diff.name}
+                  {diff.status !== 'changed' && <span className="ml-2 font-sans text-xs text-slate-500">{said.status[diff.status]}</span>}
+                </span>
+                {!diff.binary && (
+                  <span className="shrink-0 font-mono text-xs">
+                    <span className="text-emerald-600 dark:text-emerald-400">+{diff.added}</span>{' '}
+                    <span className="text-red-500 dark:text-red-400">−{diff.removed}</span>
+                  </span>
+                )}
+              </button>
+
+              {shown === diff.name && (
+                <Patch
+                  diff={diff}
+                  before={before.find((f) => f.name === diff.name)?.code ?? ''}
+                  after={after.find((f) => f.name === diff.name)?.code ?? ''}
+                  theme={theme}
+                />
+              )}
+            </li>
+          </Fragment>
         ))}
       </ul>
     </div>

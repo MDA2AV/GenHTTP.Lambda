@@ -9,10 +9,11 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// <remarks>
 /// The snippet is <c>Project.cs</c>, the other code files keep their names the
 /// way .NET writes them (<c>store.cs</c> is <c>Store.cs</c>), the assets go
-/// into <c>assets/</c>, and the documentation and the tests leave
-/// <c>.lambda/</c> for <c>docs/</c> and <c>tests/</c>, where a .NET project
-/// keeps them. A code file that would be called what the project calls its
-/// own - <c>program.cs</c> - is put beside it under a name of its own.
+/// into <c>assets/</c>, and the documentation, the tests and the development
+/// space leave <c>.lambda/</c> for <c>docs/</c>, <c>tests/</c> and
+/// <c>dev/</c>, where a project keeps them. A code file that would be called
+/// what the project calls its own - <c>program.cs</c> - is put beside it
+/// under a name of its own.
 ///
 /// What else the project holds is the platform's: the program that hosts the
 /// lambda, its project file, what stands in for the platform in
@@ -44,6 +45,11 @@ public static class ProjectPaths
     public const string Platform = "Platform/";
 
     /// <summary>
+    /// Where the development space goes: what the assets are built from.
+    /// </summary>
+    public const string Development = "dev/";
+
+    /// <summary>
     /// The files at the root of a project that are the platform's, besides
     /// <see cref="Program"/> and the project file.
     /// </summary>
@@ -70,9 +76,9 @@ public static class ProjectPaths
             return Snippet;
         }
 
-        if (LambdaSource.IsContext(name))
+        if (LambdaSource.IsBeside(name))
         {
-            return name[LambdaSource.ContextFolder.Length..];
+            return name[LambdaSource.LambdaFolder.Length..];
         }
 
         if (LambdaSource.IsCode(name))
@@ -101,9 +107,9 @@ public static class ProjectPaths
             return new ProjectPath(ProjectPathKind.Lambda, path[Assets.Length..]);
         }
 
-        if (path.StartsWith("docs/", StringComparison.Ordinal) || path.StartsWith("tests/", StringComparison.Ordinal))
+        if (path.StartsWith("docs/", StringComparison.Ordinal) || path.StartsWith("tests/", StringComparison.Ordinal) || path.StartsWith(Development, StringComparison.Ordinal))
         {
-            return new ProjectPath(ProjectPathKind.Lambda, LambdaSource.ContextFolder + path);
+            return new ProjectPath(ProjectPathKind.Lambda, LambdaSource.LambdaFolder + path);
         }
 
         if (path == Program || path.StartsWith(Platform, StringComparison.Ordinal) || Around.Contains(path) || IsProjectFile(path))
@@ -145,7 +151,7 @@ public sealed record ProjectPath(ProjectPathKind Kind, string? Name);
 public enum ProjectPathKind
 {
 
-    /// <summary>A file of the lambda: its code, an asset, its documentation or a test.</summary>
+    /// <summary>A file of the lambda: its code, an asset, its documentation, a test or a file of its development space.</summary>
     Lambda,
 
     /// <summary>What the platform puts around a lambda to make it a project.</summary>

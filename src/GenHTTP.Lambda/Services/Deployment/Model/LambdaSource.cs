@@ -5,8 +5,9 @@ using System.Text.Json.Serialization;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
-/// One file of a lambda: C# to compile, an asset to serve, or part of what is
-/// written about it - its documentation and its tests.
+/// One file of a lambda: C# to compile, an asset to serve, part of what is
+/// written about it - its documentation and its tests - or part of what its
+/// assets are built from, its development space.
 /// </summary>
 /// <param name="Name">What it is called, which is also what diagnostics name</param>
 /// <param name="Code">Its contents, base64 when <paramref name="Encoding" /> says so</param>
@@ -30,7 +31,11 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
     [JsonIgnore]
     public bool IsContext => LambdaSource.IsContext(Name);
 
-    /// <summary>Whether this is shipped to be served: neither code nor context.</summary>
+    /// <summary>Whether this is part of what the assets are built from rather than part of the program.</summary>
+    [JsonIgnore]
+    public bool IsDevelopment => LambdaSource.IsDevelopment(Name);
+
+    /// <summary>Whether this is shipped to be served: neither code nor kept beside the program.</summary>
     [JsonIgnore]
     public bool IsAsset => LambdaSource.IsAsset(Name);
 
@@ -65,6 +70,15 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
 /// are served from, where a leading dot is the convention for "not served" -
 /// and because no asset has ever been allowed a name starting with one, so no
 /// version saved before this can have meant anything else by it.
+///
+/// The same folder holds the development space in <c>dev/</c>: what the
+/// assets are built from where a toolchain builds them - the project of a
+/// front end, its sources, its configuration and its lock file. Whoever
+/// builds it - an agent, where it works - keeps the project and what it
+/// built in the same version; the platform never builds anything. Kept like
+/// the context and never compiled or served either, but a kind of its own:
+/// a project rather than pages, with the names a project has - dot files
+/// included - and read rather than written by the editor.
 /// </remarks>
 public static class LambdaSource
 {
@@ -74,12 +88,13 @@ public static class LambdaSource
     /// </summary>
     public const string EntryName = "lambda.cs";
 
-    #region Context
+    #region Beside the program
 
     /// <summary>
-    /// Where a version keeps what is written about it, rather than the program.
+    /// Where a version keeps what is not its program: what is written about
+    /// it, and what its assets are built from.
     /// </summary>
-    public const string ContextFolder = ".lambda/";
+    public const string LambdaFolder = ".lambda/";
 
     /// <summary>
     /// The documentation of a version: what it is and why, and how it is built and why.
@@ -114,16 +129,39 @@ public static class LambdaSource
     /// </summary>
     public static readonly IReadOnlyList<string> ExpectedContext = [ProductDoc, DecisionsDoc, TestingDoc];
 
+    /// <summary>
+    /// The development space of a version: what its assets are built from -
+    /// the project of a front end with its sources and its lock file, or of
+    /// whatever else a toolchain turns into them.
+    /// </summary>
+    public const string DevelopmentFolder = ".lambda/dev/";
+
+    /// <summary>
+    /// How the development space is built and where the build goes, in a few
+    /// lines - the page the editor opens it on, and the one an agent is handed.
+    /// </summary>
+    public const string DevelopmentReadme = ".lambda/dev/README.md";
+
     #endregion
 
-    /// <summary>Whether a name is C# to compile, rather than something to serve or part of the context.</summary>
-    public static bool IsCode(string? name) => name?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) == true && !IsContext(name);
+    /// <summary>Whether a name is C# to compile, rather than something to serve or kept beside the program.</summary>
+    public static bool IsCode(string? name) => name?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) == true && !IsBeside(name);
 
     /// <summary>Whether a name belongs to the context of a version: its documentation or its tests.</summary>
-    public static bool IsContext(string? name) => name?.StartsWith(ContextFolder, StringComparison.Ordinal) == true;
+    public static bool IsContext(string? name) => IsBeside(name) && !IsDevelopment(name);
+
+    /// <summary>Whether a name belongs to the development space of a version: what its assets are built from.</summary>
+    public static bool IsDevelopment(string? name) => name?.StartsWith(DevelopmentFolder, StringComparison.Ordinal) == true;
 
     /// <summary>Whether a name is an asset: shipped with the program and served when the code asks.</summary>
-    public static bool IsAsset(string? name) => name != null && !IsCode(name) && !IsContext(name);
+    public static bool IsAsset(string? name) => name != null && !IsCode(name) && !IsBeside(name);
+
+    /// <summary>
+    /// Whether a name is kept beside the program rather than being part of it:
+    /// the context or the development space, never compiled, never served and
+    /// left out of what identifies a build.
+    /// </summary>
+    public static bool IsBeside(string? name) => name?.StartsWith(LambdaFolder, StringComparison.Ordinal) == true;
 
     private static readonly JsonSerializerOptions Format = new()
     {
@@ -260,6 +298,29 @@ public static class LambdaSource
         return total;
     }
 
+    /// <summary>
+    /// How many bytes the development space of a version comes to.
+    /// </summary>
+    /// <remarks>
+    /// Held to the allowance of the assets as well, for the same reason: a
+    /// copy in every version. What a project is - its sources and its lock
+    /// file - is small beside what it installs, which is never kept.
+    /// </remarks>
+    public static long DevelopmentBytes(IReadOnlyList<LambdaFile> files)
+    {
+        long total = 0;
+
+        foreach (var file in files)
+        {
+            if (file.IsDevelopment)
+            {
+                total += Bytes(file);
+            }
+        }
+
+        return total;
+    }
+
     private static long Bytes(LambdaFile file)
     {
         if (file.Encoding == "base64")
@@ -295,16 +356,24 @@ public static class LambdaSource
             if (file.Name.StartsWith(".lambda", StringComparison.OrdinalIgnoreCase))
             {
                 // said apart from code and assets, because somebody writing
-                // here meant the context and should be told where in it
-                // things go - a C# file included, which is a test here
-                if (!IsValidContextName(file.Name))
+                // here meant what is kept beside the program and should be
+                // told where in it things go - a C# file included, which is a
+                // test or a part of a project here
+                if (IsDevelopment(file.Name))
                 {
-                    return $"'{file.Name}' is not a usable name. {ContextFolder} holds the documentation in {DocsFolder} and the tests in {TestsFolder}; below those, use letters, digits, dashes, underscores, dots and slashes, and no names starting with a dot.";
+                    if (DevelopmentComplaint(file.Name) is { } complaint)
+                    {
+                        return complaint;
+                    }
+                }
+                else if (!IsValidContextName(file.Name))
+                {
+                    return $"'{file.Name}' is not a usable name. {LambdaFolder} holds the documentation in {DocsFolder}, the tests in {TestsFolder} and the development space in {DevelopmentFolder}; below the first two, use letters, digits, dashes, underscores, dots and slashes, and no names starting with a dot.";
                 }
 
                 if (file.Encoding == "base64" && file.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
                 {
-                    return $"'{file.Name}' is a page of the documentation and has to be text (UTF-8), not base64.";
+                    return $"'{file.Name}' is a page to be read and has to be text (UTF-8), not base64.";
                 }
             }
             else if (file.IsCode)
@@ -451,6 +520,60 @@ public static class LambdaSource
 
         return true;
     }
+
+    /// <summary>
+    /// Whether a name is one a file of the development space may have.
+    /// </summary>
+    public static bool IsValidDevelopmentName(string? name) => name != null && IsDevelopment(name) && DevelopmentComplaint(name) == null;
+
+    /// <summary>
+    /// What is wrong with a name in the development space, if anything.
+    /// </summary>
+    /// <remarks>
+    /// Wider than the names of the context, because these are the names a
+    /// project has, which nobody here chose: dot files - a .gitignore, an
+    /// .npmrc - and the brackets, parentheses and plus signs routers read
+    /// off the names of files ([id].tsx, (auth)/, +page.svelte). Still names
+    /// that become real files anywhere - in a zip, a clone, an exported
+    /// project on Windows - so no spaces and nothing a shell or a file
+    /// system reads as something else.
+    ///
+    /// What a toolchain installs, caches or builds is not refused by name
+    /// here, since every toolchain names it differently: the space says so
+    /// itself, in its .gitignore files, which a clone and a zip put back
+    /// follow (see <see cref="IgnoredPaths"/>). What is named in a save is
+    /// kept, as git keeps a file that was added on purpose.
+    /// </remarks>
+    private static string? DevelopmentComplaint(string name)
+    {
+        var rest = name[DevelopmentFolder.Length..];
+
+        var segments = rest.Split('/');
+
+        if (segments.Contains(".git"))
+        {
+            return $"'{name}' is part of a git repository, which is no file of the development space.";
+        }
+
+        var usable = rest.Length > 0 && !rest.EndsWith('/') && name.Length <= 240 && segments.Length <= 16;
+
+        foreach (var segment in segments)
+        {
+            if (!usable)
+            {
+                break;
+            }
+
+            usable = segment.Length is > 0 and <= 100 && segment is not ("." or "..") && segment.All(IsDevelopmentCharacter);
+        }
+
+        return usable
+            ? null
+            : $"'{name}' is not a usable name in the development space. Below {DevelopmentFolder}, use letters, digits and - _ . + @ ( ) [ ] {{ }} $ ~, no spaces, at most 16 folders deep and 240 characters in all.";
+    }
+
+    private static bool IsDevelopmentCharacter(char character)
+        => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.' or '+' or '@' or '(' or ')' or '[' or ']' or '{' or '}' or '$' or '~';
 
     /// <summary>
     /// Whether a name is one a C# file may have.

@@ -24,6 +24,7 @@ const PARTS = [
   'files',
   'page',
   'spa',
+  'built',
   'storage',
   'database',
   'keeping',
@@ -245,6 +246,20 @@ return Content.From(page);`} />
                 </>
               ))}
             />
+          </Section>
+
+          <Section id="built" title={said.parts.built}>
+            <p>{said.built(k)}</p>
+            <Commands text={`assets/web/              what the build wrote, served with Assets.App("web")
+dev/web/package.json     the project: what it installs, how it is built
+dev/web/src/             its sources
+dev/web/.gitignore       what the build installs and makes, left out
+dev/README.md            how it is built, and where the build goes
+
+cd dev/web && npm ci && npm run build      # writes ../../assets/web/
+git add -A && git commit -m "…" && git push -o deploy`} />
+            <p>{said.built2(k)}</p>
+            <Aside>{said.builtAside}</Aside>
           </Section>
 
           <Section id="storage" title={said.parts.storage}>

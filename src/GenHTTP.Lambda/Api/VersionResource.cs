@@ -45,11 +45,13 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     /// Reads the files of a single version.
     /// </summary>
     /// <remarks>
-    /// Every file unless a folder is named. Its documentation and its tests
-    /// are <c>?folder=.lambda/</c>, which is how they are read without every
+    /// Every file unless a folder is named. Its documentation is
+    /// <c>?folder=.lambda/docs/</c>, its tests <c>?folder=.lambda/tests/</c>
+    /// and its development space - what its assets are built from -
+    /// <c>?folder=.lambda/dev/</c>, which is how they are read without every
     /// asset of the version coming along.
     /// </remarks>
-    /// <param name="folder">Only the files below this folder, such as <c>.lambda/</c></param>
+    /// <param name="folder">Only the files below this folder, such as <c>.lambda/docs/</c></param>
     [ResourceMethod("lambdas/:privateKey/versions/:version")]
     public VersionContentResponse Get(string privateKey, int version, string? folder)
         => Describe(meta.GetVersion(privateKey, version), folder);
@@ -84,7 +86,9 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     /// <remarks>
     /// The archive replaces the whole set of files, so it has to hold all of
     /// them - a file left out is gone from the new version. Hidden files and
-    /// folders are skipped, and a single top level folder is removed.
+    /// folders are skipped, and a single top level folder is removed. The
+    /// development space in <c>.lambda/dev/</c> keeps its dot files and
+    /// leaves out what its own <c>.gitignore</c> files ignore, as git does.
     /// </remarks>
     /// <param name="deploy">Whether to put the new version online as well</param>
     /// <param name="specification">What the user wants from this version and why</param>

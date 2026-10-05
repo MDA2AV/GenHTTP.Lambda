@@ -7,6 +7,7 @@ import { useEditorT } from '../i18n';
 import { ChangeList } from './Changes';
 import type { Control } from './context';
 import { AgentMark, Ago, Empty, Quote, Section } from './ui';
+import { isDevelopment } from './written';
 
 /**
  * Every version, newest first: what it changed in a line, and - opened - what
@@ -170,6 +171,12 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
         <button type="button" onClick={() => control.openContext('docs', version.version)} className="text-accent-500 hover:underline">
           {said.docs}
         </button>
+        {/* where it has one: what its assets are built from */}
+        {sides?.after.some((file) => isDevelopment(file.name)) && (
+          <button type="button" onClick={() => control.openDevelopment(version.version)} className="text-accent-500 hover:underline">
+            {said.development}
+          </button>
+        )}
         <button type="button" onClick={() => control.edit(version.version)} className="text-accent-500 hover:underline">
           {said.edit}
         </button>

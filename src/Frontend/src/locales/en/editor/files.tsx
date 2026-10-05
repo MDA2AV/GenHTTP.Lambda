@@ -38,6 +38,10 @@ export const files = {
   contextWhy: 'Never compiled and never served: what is written about this version, for whoever reads or changes it.',
   contextUsage: (files: string, size: string) => `${files}, ${size} - counted with the assets`,
   noContext: 'Nothing written about this version yet.',
+  /** The development space, as a group of the files of a version. */
+  development: 'Development space',
+  developmentWhy: 'Never compiled and never served: what the assets are built from, built by whoever changes it.',
+  noDevelopment: 'None - a front end built with a toolchain keeps its project here.',
   data: 'Data',
   dataPublic: 'Public: the code online serves it with Workspace.',
   dataPrivate: 'Private to the lambda. Not part of any version.',

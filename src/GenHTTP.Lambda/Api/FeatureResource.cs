@@ -72,7 +72,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// <summary>
     /// Reads a feature with its files.
     /// </summary>
-    /// <param name="folder">Only the files below this folder - <c>.lambda/</c> for its documentation and tests - rather than every one</param>
+    /// <param name="folder">Only the files below this folder - <c>.lambda/docs/</c> for its documentation, <c>.lambda/dev/</c> for its development space - rather than every one</param>
     [ResourceMethod("lambdas/:privateKey/features/:feature")]
     public FeatureContentResponse Get(string privateKey, string feature, string? folder)
     {

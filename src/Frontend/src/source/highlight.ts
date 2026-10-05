@@ -2,10 +2,12 @@ import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
 import csharp from 'highlight.js/lib/languages/csharp';
 import css from 'highlight.js/lib/languages/css';
+import ini from 'highlight.js/lib/languages/ini';
 import dockerfile from 'highlight.js/lib/languages/dockerfile';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import markdown from 'highlight.js/lib/languages/markdown';
+import scss from 'highlight.js/lib/languages/scss';
 import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
@@ -32,6 +34,9 @@ hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('dockerfile', dockerfile);
 hljs.registerLanguage('yaml', yaml);
+// what the project of a development space holds beside its sources
+hljs.registerLanguage('scss', scss);
+hljs.registerLanguage('ini', ini);
 
 /** The grammar of a file, by its extension. */
 const EXTENSIONS: Record<string, string> = {
@@ -45,8 +50,19 @@ const EXTENSIONS: Record<string, string> = {
   js: 'javascript',
   mjs: 'javascript',
   cjs: 'javascript',
+  jsx: 'javascript',
   ts: 'typescript',
+  mts: 'typescript',
+  cts: 'typescript',
+  tsx: 'typescript',
+  vue: 'xml',
+  svelte: 'xml',
+  astro: 'xml',
+  scss: 'scss',
+  toml: 'ini',
+  ini: 'ini',
   json: 'json',
+  jsonc: 'json',
   webmanifest: 'json',
   md: 'markdown',
   sql: 'sql',

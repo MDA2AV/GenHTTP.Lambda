@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiError, api, isDemo, type Diagnostic, type LambdaFile } from '../api';
@@ -13,7 +13,8 @@ import { languageFor } from '../monaco';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Section } from './ui';
-import { CONTEXT, isCode } from './written';
+import { projectsOf } from './projects';
+import { BESIDE, isCode, isDevelopment } from './written';
 
 type Busy = 'save' | 'check' | 'deploy' | null;
 
@@ -65,6 +66,11 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   const [held, setHeld] = useState<number | null>(null);
 
   const current = files.find((file) => file.name === active) ?? files[0];
+
+  // the folders a build of the development space writes, where its configuration says so
+  const outputs = useMemo(() => projectsOf(files).map((project) => project.into).filter((folder): folder is string => folder != null),
+                          [files]);
+  const writtenBy = outputs.find((folder) => active.startsWith(folder));
   const code = current?.code ?? '';
   const dirty = saved !== '' && JSON.stringify(files) !== saved;
 
@@ -194,7 +200,8 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     setBusy('check');
 
     try {
-      const result = await api.check(privateKey, files);
+      // what the assets are built from is no part of what is compiled
+      const result = await api.check(privateKey, files.filter((file) => !isDevelopment(file.name)));
 
       setDiagnostics(result.diagnostics);
       setBuilt(result.success ? 'clean' : 'idle');
@@ -332,7 +339,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       hint={
         <>
           {feature ? said.editFeature : demo ? said.demo : said.edit}
-          {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>, <code className="font-mono">{CONTEXT}</code>)}
+          {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>, <code className="font-mono">{BESIDE}</code>)}
           {newer && said.newer(lambda.latestVersion!)}
         </>
       }
@@ -375,6 +382,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           onSelect={setActive}
           onChange={demo ? undefined : setFiles}
           faulty={new Set(diagnostics.filter((d) => d.file).map((d) => d.file!))}
+          onDevelopment={() => control.openDevelopment(feature ? undefined : loaded ?? undefined)}
         />
       }
     >
@@ -390,6 +398,13 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
         </p>
       )}
 
+      {writtenBy && (
+        <p className="mx-4 mb-3 flex items-start gap-2 text-[13px] text-amber-700 dark:text-amber-400 md:mx-0">
+          <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{said.built(writtenBy)}</span>
+        </p>
+      )}
+
       <div className="relative mx-4 min-h-[18rem] flex-1 border border-slate-200 dark:border-ink-800 md:mx-0">
         {/* one editor for every file, so switching swaps what it shows
             rather than building it again - which is what made it jump */}
@@ -400,9 +415,9 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           theme={control.theme}
           diagnostics={diagnostics.filter((d) => (d.file ?? ENTRY) === active)}
           reveal={reveal}
-          onChange={current?.encoding === 'base64' || demo ? undefined : setCode}
+          onChange={current?.encoding === 'base64' || demo || isDevelopment(active) ? undefined : setCode}
           onSave={save}
-          readOnly={demo}
+          readOnly={demo || isDevelopment(active)}
           onDefinition={goToDefinition}
         />
 

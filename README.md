@@ -99,7 +99,7 @@ path.
 | `GET / PATCH / DELETE /lambdas/:privateKey`           | reads, changes (its key, its `view`), removes it |
 | `GET /lambdas/:privateKey/export`                     | the newest version as a runnable .NET 10 project with a Dockerfile (zip), with its database, see below |
 | `GET / POST /lambdas/:privateKey/versions`            | lists versions, saves a new one (optionally with `specification` and `change`) |
-| `GET /lambdas/:privateKey/versions/:version`          | reads one version (`?folder=.lambda/` for its documentation and tests alone) |
+| `GET /lambdas/:privateKey/versions/:version`          | reads one version (`?folder=.lambda/docs/` for its documentation alone, `.lambda/dev/` for its development space) |
 | `GET /lambdas/:privateKey/versions/:version/zip`      | one version's files as a zip              |
 | `POST /lambdas/:privateKey/versions/zip`              | saves a zip of all files as a new version |
 | `POST /lambdas/:privateKey/versions/changes`          | changes some files of the newest version, as a new one |
@@ -177,8 +177,9 @@ opens an explanation of how each one is extended.
 A lambda keeps three kinds of things, and they live differently.
 
 A **version** is the program: every C# file and every asset, the front end
-included - and, beside it in `.lambda/`, its documentation and its tests (see
-below). A version never changes once it is saved, which is what makes every
+included - and, beside it in `.lambda/`, its documentation and its tests, and
+where a toolchain builds the assets, the project they are built from: its
+development space (see below). A version never changes once it is saved, which is what makes every
 one worth keeping - any of them can be compared with, and put back online
 exactly as it was. Saving files (`POST …/versions`, `write_code`) makes a new
 one.
@@ -299,13 +300,87 @@ to have the agent correct it rather than to edit it. The overview of either
 view opens with the product page's first paragraph, and the full one says which
 of the three pages the version has.
 
-With fifteen sections, the full view's sidebar is in groups: the overview and
-the documentation on their own, then how people find it and what they get to
-see of it (showcase, open source, domain) - what the lambda is to everybody
-else, right under what it is - then where a change is made (Change, the
-drafts, the code, the tests), the program and what it keeps (files, data,
-versions), and how it runs (deployments, stats, logs). On a phone the groups
-are a rule apart in the row of sections.
+With fifteen sections and more, the full view's sidebar is in groups: the
+overview and the documentation on their own, then how people find it and what
+they get to see of it (showcase, open source, domain) - what the lambda is to
+everybody else, right under what it is - then where a change is made (Change,
+the drafts, the code, the development space where there is one, the tests),
+the program and what it keeps (files, data, versions), and how it runs
+(deployments, stats, logs). On a phone the groups are a rule apart in the row
+of sections.
+
+### The development space
+
+Many front ends are built: written with React, Vue or Svelte, TypeScript or
+Tailwind, and put together by Vite or another bundler. What the build makes
+is the front end the lambda serves, so it is assets like any other. What it
+is made from - the project, its `package.json`, its sources, its
+configuration and its lock file - is kept beside them, in the version's
+**development space**: `.lambda/dev/`, and `dev/` in a clone, an export and a
+published source.
+
+```
+assets/web/              what the build wrote, served with Assets.App("web")
+dev/web/package.json     the project: what it installs, how it is built
+dev/web/src/             its sources
+dev/web/.gitignore       what the build installs and makes, left out
+dev/README.md            how it is built, and where the build goes
+```
+
+**The platform builds nothing.** It never runs a package manager or a
+bundler, on a push or anywhere else, and never checks that the assets are
+what the sources build to. Whoever changes the front end - an agent with a
+shell, in a clone most of the time - changes the sources, builds them where
+it works, and saves the sources and what they built together, in one version
+or one feature. A change of the sources that is not built changes nothing a
+visitor gets; a change made in what the build wrote is undone by the next
+build. This keeps the platform what it is - a server that hosts what it is
+given - and the toolchain the agent's, whichever it is.
+
+Otherwise it is kept like the documentation and the tests: a file of the
+version, saved, compared in the history, rolled back, copied into a feature
+and merged with it, in the zip of a version, the clone, the export and a
+published source - never compiled, never served, left out of what identifies
+a build, and counted towards the allowance of the assets. It is a kind of its
+own (`LambdaSource.IsDevelopment`) rather than more context, because it is a
+project rather than pages: its names are the names a project has - dot files
+such as `.gitignore` and `.npmrc`, and the brackets, parentheses and plus
+signs routers read off file names (`[id].tsx`, `(auth)/`, `+page.svelte`) -
+with no spaces and no `.git` folder, up to sixteen folders deep.
+
+What a toolchain installs, caches and builds - `node_modules`, `dist`,
+`target`, `.venv` - is no part of a version, and every toolchain names it
+differently, so the project says what it is, in its own `.gitignore` files,
+which most templates come with. A clone follows them because git does; a zip
+put back through the API follows them too, the way `git add` would
+(`IgnoredPaths`, git's rules: patterns at any depth or anchored, folders
+only, `!`, `**`, the deeper file having the last word, nothing coming back
+from a folder left out). A save that names a file keeps it, as git keeps a
+file added on purpose; one that runs over the allowance says how large the
+development space is, and that its `.gitignore` keeps out what a build made.
+
+In the editor it is read, never edited - the asymmetric interface: the agent
+builds it, the owner reviews it. The full view has a **Development** section,
+in the group where a change is made, once the newest version (or the one
+online) has a development space: the projects in it and what each is built
+with (React, Vite, TypeScript, Tailwind CSS - read off its `package.json`),
+the command it is built with, where its build goes among the assets, the
+packages it installs, a warning where a project has no lock file or no
+`.gitignore`, how it is built (its `README.md`, rendered), its files, and what
+the version changed in it against the version before - with a warning where
+the sources changed and the assets did not, or where what a build writes
+changed and the sources did not. A draft has it as a view of its own. **Files**
+shows it as a fourth group beside the code, the assets and the documentation;
+the code shows it as one pill, and keeps it as it is when it saves; the
+difference between two versions lists the files kind by kind, the code first
+and what a build wrote after the sources it was built from. The simple view
+has none of it, nor does `/build`: the build agent has no shell, writes its
+front ends as plain HTML, CSS and JavaScript, and leaves a development space
+it finds alone.
+
+The demos have none: they teach how a lambda is put together, and a front end
+of plain files they serve as written is what a reader can follow without a
+toolchain.
 
 ### Databases
 
@@ -596,6 +671,7 @@ without this platform (`Services/Deployment/ProjectPacker.cs`):
 | `Platform/` | what the platform provided: `Workspace` and `Assets` as folders, `Secret` reading environment variables of the same name (the values are never exported), `Database` opening `database/database.db` where the code uses one, the switch that turns what `Project` returns into a handler, and the imports every lambda gets as global usings |
 | `assets/` | the files the version ships, copied beside the program on build |
 | `docs/`, `tests/` | its documentation and its tests, from `.lambda/`; neither compiled nor copied into the container |
+| `dev/` | its development space, from `.lambda/dev/`; the build does not look into it (`DefaultItemExcludes`), nor is it copied into the container |
 | `database/database.db` | the lambda's database, an ordinary SQLite file - its records go with it |
 | `Dockerfile` | builds and runs it; the workspace is `/app/workspace`, the database folder is mounted at `/app/database` |
 
@@ -627,7 +703,7 @@ authors of" the lambda, since there are no accounts to take a name from.
 
 What is published is the program and what is written about it: **every
 version**, as the export packs it - `Project.cs`, the other files, `assets/`,
-`docs/`, `tests/`, `Platform/`, the project file, the `Dockerfile` - with the
+`docs/`, `tests/`, `dev/`, `Platform/`, the project file, the `Dockerfile` - with the
 license in `LICENSE` and named in the header of `Program.cs`. The history says
 what each version changed, in the line it was saved with. What is never
 published:
@@ -726,7 +802,8 @@ in the **Code** menu beside the star, where the zip is too.
 repository: `Project.cs` is the snippet as the body of `BuildAsync()` - the
 method the platform runs it in - with its types beside the class, the other
 `.cs` files keep their code and are named the .NET way, `assets/` is what it
-ships, and `docs/` and `tests/` are its `.lambda/docs/` and `.lambda/tests/`.
+ships, `docs/` and `tests/` are its `.lambda/docs/` and `.lambda/tests/`, and
+`dev/` its development space.
 Around them are the platform's files: `Program.cs`, the project file,
 `Platform/`, the `Dockerfile`, `.gitignore`, `.dockerignore`, `AGENTS.md` -
 how an agent works in the repository, with the rules of the platform in git's
@@ -734,8 +811,11 @@ terms - `CLAUDE.md`, which points Claude Code to it, and `LICENSE` while the
 source is published. Those are the same in every commit until the platform
 changes them - nothing in them depends on the version, which is why the
 project references SQLite, Entity Framework and Evolve whether the code uses
-them or not, and makes the snippet asynchronous whether it awaits or not - so
-a push that leaves them alone is always right. The data is never in it: no
+them or not, keeps `dev/` out of the build whether there is one or not, and
+makes the snippet asynchronous whether it awaits or not - so a push that
+leaves them alone is always right. The `.gitignore` at the root is the
+platform's; what a project in `dev/` installs and builds is kept out by its
+own. The data is never in it: no
 database, no workspace, no secret. Nor is what only the owner may know - no
 specification, no editor key - so the commits the owner reads are the commits
 a published source shows.
@@ -1110,8 +1190,9 @@ files change, so a renewal is picked up without a restart.
 ### Shipping assets
 
 A lambda is not only C#. Any file whose name does not end in `.cs` is an asset,
-unless it is in `.lambda/`, which holds the documentation and the tests: it is
-served as it is, never compiled, and costs none of the code budget.
+unless it is in `.lambda/`, which holds the documentation, the tests and the
+development space: it is served as it is, never compiled, and costs none of
+the code budget.
 
 ```
 lambda.cs      the snippet
@@ -1348,6 +1429,17 @@ asking which license when they did not say. Once a lambda is published,
 then on is public, the versions before included - so an agent keeps keys,
 passwords and personal data out of the files, where they never belong anyway.
 
+A front end built with a toolchain keeps its project in the development
+space (see [The development space](#the-development-space)), and the agents
+are told so in a line of the instructions, under `development` in the guide -
+the flow, the layout of a clone against that of a zip, `base: './'` and a
+hash router for relative addresses, a `.gitignore`, a README that says how it
+is built, nothing secret in it - in `AGENTS.md` of a clone, and in the tool
+descriptions. `read_lambda` hands over its README and names its files with
+their lengths, without their contents; `file` reads one. `write_code`, which
+replaces every file, says so when what it replaced had a development space
+and the save has none - `change_code` keeps every file it is not told about.
+
 An agent that can run git works in a clone instead (see
 [Working with git](#working-with-git)): `create_lambda` and `read_lambda`
 answer with the `gitUrl`, features name their `branch`, the instructions say
@@ -1433,7 +1525,7 @@ no tier in a block of their own below it.
 | Limit             | Free     | Premium  | What it bounds                                   |
 |-------------------|----------|----------|--------------------------------------------------|
 | Code              | 1,048,576 | 10,485,760 | characters of C# across every file          |
-| Assets            | 32 MB    | 128 MB   | assets, documentation and tests in a version     |
+| Assets            | 32 MB    | 128 MB   | assets, documentation, tests and the development space in a version |
 | Workspace         | 256 MB   | 2 GB     | the room the files a lambda saves may take       |
 | Database          | 256 MB   | 2 GB     | how large its database may grow                  |
 | Versions kept     | 50       | 50       | older ones are removed, never the one online     |

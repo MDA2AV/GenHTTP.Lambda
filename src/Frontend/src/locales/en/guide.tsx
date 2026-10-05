@@ -20,6 +20,7 @@ export const guide = {
     files: 'More than one file',
     page: 'Serving a page',
     spa: 'A front end, step by step',
+    built: 'A front end built with tools',
     storage: 'The two places files live',
     database: 'Keeping records',
     keeping: 'Keeping files',
@@ -122,6 +123,7 @@ export const guide = {
       ),
     ],
     ['Tests', () => <>How the app is tested automatically, with the scripts and test data for it. In the full view only.</>],
+    ['Development', () => <>What the assets are built from where a toolchain builds them - the project of a front end - kept with each version, to read rather than to edit. In the full view, once a version has one.</>],
   ] as [string, Text][],
   sections: ((k) => (
     <>
@@ -282,6 +284,28 @@ export const guide = {
     () => <>Add an API beside it and the page has something to talk to:</>,
   ] as Text[],
 
+  /** A front end whose assets are built by a toolchain, and the project they are built from, kept beside them. */
+  built: ((k) => (
+    <>
+      Many front ends are built: written with React, Vue or Svelte, TypeScript or Tailwind, and put together by Vite or
+      another tool. The version holds what the build makes, as its assets - and beside them the project it was built
+      from, its {k.b('development space')}: {k.code('.lambda/dev/')} in the version, {k.code('dev/')} in a clone. Your
+      agent changes the sources, builds them where it works and saves both in the same version. This platform builds
+      nothing.
+    </>
+  )) as Text,
+  built2: ((k) => (
+    <>
+      Like the documentation, it belongs to its version: compared in the history, rolled back, copied into a draft,
+      cloned, downloaded and published with the code - and never compiled or served. In the control center,{' '}
+      {k.b('Development')} shows it once there is one: its projects and what each is built with, the packages they
+      install, how it is built, and whether a version changed the sources without building them. It is read there,
+      not edited - a change to it is made where it is built.
+    </>
+  )) as Text,
+  builtAside:
+    'A front end of plain HTML, CSS and JavaScript needs none: it is its own source, in the assets. What a build installs, such as node_modules, is never part of a version - the project\'s .gitignore keeps it out.',
+
   storage: ((k) => (
     <>
       A lambda keeps files in two places, and the editor shows them apart: {k.b('Files')} holds the files of a
@@ -293,7 +317,7 @@ export const guide = {
   savedWithCode: 'In a version',
   workspaceColumn: 'In the data',
   table: [
-    ['what it holds', 'the code and assets: the program, front end included - and its documentation and tests', 'whatever the lambda writes, or somebody uploads'],
+    ['what it holds', 'the code and assets: the program, front end included - and its documentation, its tests and what its front end is built from', 'whatever the lambda writes, or somebody uploads'],
     ['when it changes', 'never - a change is a new version', 'the moment something is written to it'],
     ['a deploy', 'puts exactly these files online', 'never touches it'],
     ['rolling back', 'brings the old files back', 'no effect: every version shares it'],
@@ -416,7 +440,8 @@ export const guide = {
       the program, with the same methods, kept apart in a {k.code('Platform')} folder - so nothing in your code has to
       change.
       {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here. The
-      documentation and the tests come along in {k.code('docs')} and {k.code('tests')}.
+      documentation and the tests come along in {k.code('docs')} and {k.code('tests')}, and the development space in{' '}
+      {k.code('dev')}.
       {' '}{k.code('Database')} opens {k.code('database/database.db')}, which the download carries with the records
       your app kept.
     </>
@@ -457,8 +482,8 @@ export const guide = {
   )) as Text,
   open2: (() => (
     <>
-      Every version is published, the earlier ones too, with its documentation, its tests and the change each one
-      made. What the app keeps is never published - its records, the files it saved, the values of its keys and
+      Every version is published, the earlier ones too, with its documentation, its tests, its development space and
+      the change each one made. What the app keeps is never published - its records, the files it saved, the values of its keys and
       passwords - and neither is what you asked for in your own words, or who uses the app. Switch it off and the page
       is gone; its stars are kept for when you publish it again.
     </>

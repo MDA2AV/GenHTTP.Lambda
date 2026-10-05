@@ -94,6 +94,13 @@ export default {
           500: '#f9ab00',
           600: '#e37400',
         },
+        // Google pink, for what is neither the program nor written about it -
+        // the development space a front end is built from - so it is told
+        // apart from the four kinds the brand colours already mark
+        pink: {
+          400: '#ff8bcb',
+          500: '#e52592',
+        },
       },
       fontFamily: {
         /*

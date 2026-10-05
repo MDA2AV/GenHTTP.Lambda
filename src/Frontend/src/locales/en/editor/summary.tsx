@@ -8,6 +8,9 @@ export const summary = {
   written: 'Documentation and tests',
   writtenWhy: 'Never compiled and never served. Kept with each version, and counted with the assets.',
   writtenMissing: 'Not written yet',
+  development: 'Development space',
+  developmentWhy: 'Never compiled or served: what the assets are built from. Counted with the assets.',
+  developmentFiles: (files: number, size: string) => (files === 1 ? `1 file, ${size}` : `${files} files, ${size}`),
   hint: (since: string, kept: boolean, retention: number, tier: string) =>
     `Traffic is counted since the server last started (${since}). ` +
     (kept

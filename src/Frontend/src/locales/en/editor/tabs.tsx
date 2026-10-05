@@ -8,6 +8,11 @@ export const tabs = {
   extension: 'It needs an extension, so it can be served as the right thing.',
   context: 'In .lambda/, only docs/ and tests/ - letters, digits, dashes, underscores and dots, separated by slashes.',
   contextFiles: 'Documentation and tests: part of the version, never compiled or served',
+  /** Said when a file is added to the development space here, which is changed where it is built. */
+  development: 'The development space is changed where it is built - in a clone, or by your agent - and read under Development.',
+  /** The one pill that stands for every file of the development space. */
+  developmentFiles: (count: number) => (count === 1 ? 'Development space · 1 file' : `Development space · ${count} files`),
+  developmentTitle: 'What the assets are built from. Read it under Development; it is kept as it is when you save.',
   exists: 'There is already a file with that name.',
   remove: (name: string) => `Remove ${name}? Its contents go with it.`,
   there: (name: string) => `${name} is already there.`,

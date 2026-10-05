@@ -1,8 +1,9 @@
 import type { LambdaFile } from '../api';
 
 /**
- * What a version keeps about itself beside its program: its documentation
- * and its tests, under .lambda/.
+ * What a version keeps beside its program, under .lambda/: what is written
+ * about it - its documentation and its tests - and what its assets are
+ * built from, its development space.
  *
  * The same rule the server applies (LambdaSource): a file under .lambda/ is
  * never code and never an asset, whatever it is called - a test written in
@@ -11,7 +12,8 @@ import type { LambdaFile } from '../api';
  * and merged with the program it describes.
  */
 
-export const CONTEXT = '.lambda/';
+/** The folder of everything kept beside the program. */
+export const BESIDE = '.lambda/';
 
 export const DOCS = '.lambda/docs/';
 
@@ -26,11 +28,27 @@ export const DECISIONS = '.lambda/docs/decisions.md';
 /** How the app is tested automatically. */
 export const TESTING = '.lambda/tests/README.md';
 
-export const isContext = (name: string) => name.startsWith(CONTEXT);
+/**
+ * The development space: what the assets are built from where a toolchain
+ * builds them - a project with its sources and its lock file, built by
+ * whoever changes it, never by the platform.
+ */
+export const DEV = '.lambda/dev/';
 
-export const isCode = (name: string) => name.toLowerCase().endsWith('.cs') && !isContext(name);
+/** How the development space is built, and where the build goes. */
+export const DEV_README = '.lambda/dev/README.md';
 
-export const isAsset = (name: string) => !isCode(name) && !isContext(name);
+/** Whether a file is kept beside the program rather than being part of it. */
+export const isBeside = (name: string) => name.startsWith(BESIDE);
+
+export const isDevelopment = (name: string) => name.startsWith(DEV);
+
+/** Whether a file is documentation or a test. */
+export const isContext = (name: string) => isBeside(name) && !isDevelopment(name);
+
+export const isCode = (name: string) => name.toLowerCase().endsWith('.cs') && !isBeside(name);
+
+export const isAsset = (name: string) => !isCode(name) && !isBeside(name);
 
 /** The two parts of the context, each a section of the editor. */
 export type Area = 'docs' | 'tests';

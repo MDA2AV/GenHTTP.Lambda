@@ -12,7 +12,7 @@ import { ChangeList } from './Changes';
 import type { Control } from './context';
 import { Tree, Viewer, sizeOf } from './FileBrowser';
 import { Section, pill } from './ui';
-import { AREAS, CONTEXT, DECISIONS, PRODUCT, TESTING, othersOf, pagesOf, titleOf, within, type Area } from './written';
+import { AREAS, DECISIONS, PRODUCT, TESTING, othersOf, pagesOf, titleOf, within, type Area } from './written';
 
 /** A page being written: which file, what it was when writing began, and what it is now. */
 interface Writing {
@@ -86,14 +86,15 @@ export function ContextTab({ control, area, onDirty }: {
 
   const load = useCallback(async () => {
     try {
+      // its own folder only: the development space beside it can be a project of hundreds of files
       const [mine, theirs] = await Promise.all([
         feature
-          ? api.feature.get(control.privateKey, feature.key, CONTEXT).then((content) => content.files)
+          ? api.feature.get(control.privateKey, feature.key, folder).then((content) => content.files)
           : wanted != null
-            ? api.version(control.privateKey, wanted, CONTEXT).then((content) => content.files)
+            ? api.version(control.privateKey, wanted, folder).then((content) => content.files)
             : Promise.resolve([] as LambdaFile[]),
         previous != null
-          ? api.version(control.privateKey, previous, CONTEXT).then((content) => content.files).catch(() => null)
+          ? api.version(control.privateKey, previous, folder).then((content) => content.files).catch(() => null)
           : Promise.resolve(null),
       ]);
 
@@ -103,7 +104,7 @@ export function ContextTab({ control, area, onDirty }: {
     } catch (error) {
       setFailure(error instanceof ApiError ? error.message : said.readFailed);
     }
-  }, [control.privateKey, feature?.key, feature?.revision, wanted, previous, said]);
+  }, [control.privateKey, feature?.key, feature?.revision, wanted, previous, folder, said]);
 
   useEffect(() => {
     setFiles(null);
@@ -231,7 +232,7 @@ export function ContextTab({ control, area, onDirty }: {
 
     if (lambda.latestVersion != null && wanted != null && lambda.latestVersion !== wanted) {
       try {
-        const latest = await api.version(control.privateKey, lambda.latestVersion, CONTEXT);
+        const latest = await api.version(control.privateKey, lambda.latestVersion, folder);
         const theirs = latest.files.find((f) => f.name === writing.name)?.code ?? '';
 
         if (theirs !== writing.original) {

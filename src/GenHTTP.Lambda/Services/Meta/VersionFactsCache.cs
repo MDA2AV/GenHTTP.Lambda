@@ -12,11 +12,11 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// is, what its code reaches for and what its documentation says.
 /// </summary>
 public sealed record VersionFacts(int CodeFiles, int CodeLength, int AssetFiles, long AssetBytes, bool ServesAssets, bool ServesWorkspace,
-                                  bool UsesWorkspace, bool UsesDatabase, DocumentationSummary Documentation);
+                                  bool UsesWorkspace, bool UsesDatabase, DocumentationSummary Documentation, DevelopmentSummary Development);
 
 /// <summary>
-/// What a version says about itself: the context kept in <c>.lambda/</c>
-/// beside its program.
+/// What a version says about itself: the context kept in <c>.lambda/docs/</c>
+/// and <c>.lambda/tests/</c> beside its program.
 /// </summary>
 /// <param name="About">The first paragraph of its product page, as plain text - what the app is, in a sentence or two</param>
 /// <param name="Product">Whether it has a product page: what the app is, for whom, and why</param>
@@ -25,6 +25,14 @@ public sealed record VersionFacts(int CodeFiles, int CodeLength, int AssetFiles,
 /// <param name="Files">How many files its documentation and tests come to</param>
 /// <param name="Bytes">What those weigh, which counts towards what its assets may come to</param>
 public sealed record DocumentationSummary(string? About, bool Product, bool Decisions, bool Tests, int Files, long Bytes);
+
+/// <summary>
+/// What a version keeps of what its assets are built from: its development
+/// space in <c>.lambda/dev/</c>.
+/// </summary>
+/// <param name="Files">How many files it holds - none for a version whose assets are their own source</param>
+/// <param name="Bytes">What those weigh, which counts towards what its assets may come to</param>
+public sealed record DevelopmentSummary(int Files, long Bytes);
 
 /// <summary>
 /// The facts of the versions whose overview was asked for lately, read off
@@ -78,7 +86,8 @@ public sealed partial class VersionFactsCache(IStorageService storage)
         return _facts[(lambdaId, wanted)] = Read(LambdaSource.Parse(code));
     }
 
-    public static VersionFacts Empty { get; } = new(0, 0, 0, 0, false, false, false, false, new DocumentationSummary(null, false, false, false, 0, 0));
+    public static VersionFacts Empty { get; } = new(0, 0, 0, 0, false, false, false, false, new DocumentationSummary(null, false, false, false, 0, 0),
+                                                    new DevelopmentSummary(0, 0));
 
     #endregion
 
@@ -97,7 +106,8 @@ public sealed partial class VersionFactsCache(IStorageService storage)
             code.Any(f => ServingWorkspace().IsMatch(f.Code)),
             code.Any(f => UsingWorkspace().IsMatch(f.Code)),
             code.Any(f => DatabaseService.Uses(f.Code)),
-            Document(files)
+            Document(files),
+            new DevelopmentSummary(files.Count(f => f.IsDevelopment), LambdaSource.DevelopmentBytes(files))
         );
     }
 

@@ -22,6 +22,8 @@ export const frame = {
     stats: 'Stats',
     logs: 'Logs',
     code: 'Code',
+    /** What the assets are built from, where a toolchain builds them - the full view only. */
+    development: 'Development',
   },
   sectionsLabel: 'Sections',
   /** The groups the sections of the full view are gathered in, under the overview and the documentation. */

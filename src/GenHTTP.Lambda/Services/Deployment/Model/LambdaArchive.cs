@@ -51,10 +51,16 @@ public static class LambdaArchive
     /// <remarks>
     /// Folders, hidden files and the metadata left by operating systems are
     /// skipped - except <c>.lambda/</c> at the root, which is the version's
-    /// documentation and tests rather than something an editor or a tool left
-    /// behind. If everything sits in a single top level folder (as when a
-    /// folder is zipped rather than its contents), that folder is removed.
-    /// Text stays text, anything else is carried as base64.
+    /// documentation, tests and development space rather than something an
+    /// editor or a tool left behind. If everything sits in a single top level
+    /// folder (as when a folder is zipped rather than its contents), that
+    /// folder is removed. Text stays text, anything else is carried as base64.
+    ///
+    /// The development space is a project, whose dot files - its .gitignore,
+    /// its .npmrc - are part of it, so they stay. It has usually been built
+    /// in, too, so what its .gitignore files leave out is left out here as
+    /// well - what the build installed, cached and made - the way git add
+    /// leaves it out of a commit, whatever the toolchain calls it.
     /// </remarks>
     /// <param name="content">The archive</param>
     /// <param name="maxBytes">How many uncompressed bytes the archive may hold in total</param>
@@ -99,15 +105,33 @@ public static class LambdaArchive
         // so a hidden file beside it does not hide that it is there
         var prefix = CommonFolder(entries.Select(e => e.Name).Where(n => !IsHidden(n)).ToList());
 
-        var files = new List<LambdaFile>(entries.Count);
-
-        long total = 0;
+        var kept = new List<(string Name, ZipArchiveEntry Entry)>(entries.Count);
 
         foreach (var (full, entry) in entries)
         {
             var name = full.StartsWith(prefix, StringComparison.Ordinal) ? full[prefix.Length..] : full;
 
-            if (IsHidden(name))
+            if (!IsHidden(name))
+            {
+                kept.Add((name, entry));
+            }
+        }
+
+        var files = new List<LambdaFile>(kept.Count);
+
+        long total = 0;
+
+        // what the development space says it does not keep, read before
+        // anything it leaves out would be - the files above first, so one in
+        // a folder they leave out is never read, as git never reads it
+        var rules = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+
+        var ignored = IgnoredPaths.None;
+
+        foreach (var (name, entry) in kept.Where(k => LambdaSource.IsDevelopment(k.Name) && Path.GetFileName(k.Name) == ".gitignore")
+                                          .OrderBy(k => k.Name.Count(c => c == '/')))
+        {
+            if (ignored.Ignores(name[LambdaSource.DevelopmentFolder.Length..]))
             {
                 continue;
             }
@@ -116,10 +140,29 @@ public static class LambdaArchive
 
             total += bytes.Length;
 
+            rules[name] = bytes;
+
+            ignored = IgnoredPaths.Of(rules.Select(r => (r.Key[LambdaSource.DevelopmentFolder.Length..], Encoding.UTF8.GetString(r.Value))));
+        }
+
+        foreach (var (name, entry) in kept)
+        {
+            if (LambdaSource.IsDevelopment(name) && ignored.Ignores(name[LambdaSource.DevelopmentFolder.Length..]))
+            {
+                continue;
+            }
+
+            if (!rules.TryGetValue(name, out var bytes))
+            {
+                bytes = await ReadAsync(entry, maxBytes - total);
+
+                total += bytes.Length;
+            }
+
             files.Add(ToFile(name, bytes));
         }
 
-        return files.OrderBy(f => f.Name == LambdaSource.EntryName ? 0 : f.IsCode ? 1 : f.IsAsset ? 2 : 3)
+        return files.OrderBy(f => f.Name == LambdaSource.EntryName ? 0 : f.IsCode ? 1 : f.IsAsset ? 2 : f.IsContext ? 3 : 4)
                     .ThenBy(f => f.Name, StringComparer.Ordinal)
                     .ToList();
     }
@@ -201,18 +244,24 @@ public static class LambdaArchive
     {
         var segments = name.Split('/');
 
-        return segments.Contains("__MACOSX") || segments[^1] is "Thumbs.db" or "desktop.ini";
+        return segments.Contains("__MACOSX") || segments[^1] is "Thumbs.db" or "desktop.ini" or ".DS_Store";
     }
 
     /// <summary>
     /// Whether a file is hidden - a repository, an editor's settings - rather
-    /// than part of the lambda. The context at the root is not.
+    /// than part of the lambda. What is kept beside the program at the root
+    /// is not, and in the development space only a repository is.
     /// </summary>
     private static bool IsHidden(string name)
     {
         var segments = name.Split('/');
 
-        var start = LambdaSource.IsContext(name) ? 1 : 0;
+        if (LambdaSource.IsDevelopment(name))
+        {
+            return segments.Contains(".git");
+        }
+
+        var start = LambdaSource.IsBeside(name) ? 1 : 0;
 
         for (var i = start; i < segments.Length; i++)
         {

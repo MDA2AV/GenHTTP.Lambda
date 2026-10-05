@@ -172,6 +172,18 @@ Keep them in proportion to the application. A small one needs a short
 paragraph per page and one quick check, not a test suite or pages of their
 own for every topic; they grow as the application does.
 
+## A front end you cannot build
+
+Write the pages, scripts and styles you build as plain HTML, CSS and
+JavaScript, straight into the assets: you have no shell, so nothing you write
+can be built. A lambda somebody built with their own tools may keep the
+project its front end is built from in `.lambda/dev/` - its development
+space. Leave it as it is, and keep it in every save. Its front end is what
+that project builds: do not change the built files, which the next build
+would undo. Change what is not built - the C#, the API, a migration - and
+when what was asked is in that front end, say in one line that it is built
+with the developer's own tools and has to be changed there.
+
 ## Link with relative paths
 
 Every link, script, stylesheet, image, `fetch`, form action and websocket

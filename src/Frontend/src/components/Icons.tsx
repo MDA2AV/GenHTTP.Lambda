@@ -240,6 +240,11 @@ export const IconBook = (p: IconProps) => (
   <Svg {...p}><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Z" /><path d="M12 6.5v13" /></Svg>
 );
 
+/** A package, for the development space: what the assets are built from. */
+export const IconPackage = (p: IconProps) => (
+  <Svg {...p}><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z" /><path d="m4 7.5 8 4.5 8-4.5" /><path d="M12 12v9" /><path d="m8 5.25 8 4.5" /></Svg>
+);
+
 /** A flask, for the tests of a lambda. */
 export const IconBeaker = (p: IconProps) => (
   <Svg {...p}><path d="M9 3.5h6" /><path d="M10 3.5v6L4.8 18.3A1.5 1.5 0 0 0 6.1 20.5h11.8a1.5 1.5 0 0 0 1.3-2.2L14 9.5v-6" /><path d="M7.5 14.5h9" /></Svg>

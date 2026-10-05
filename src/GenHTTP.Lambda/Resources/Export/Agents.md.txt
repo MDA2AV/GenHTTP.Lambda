@@ -17,6 +17,7 @@ it is the same in every commit until the platform changes it.
 | `assets/` | what it ships and serves - the front end, its migrations, pictures |
 | `docs/` | its documentation: `product.md`, `decisions.md` and more pages |
 | `tests/` | how it is tested: `README.md`, the scripts and their data |
+| `dev/` | its development space: what `assets/` is built from, where a toolchain builds it - see "Building the front end" |
 | `Program.cs`, `{project}.csproj`, `Platform/`, `Dockerfile`, `.gitignore`, `.dockerignore`, `AGENTS.md`, `CLAUDE.md`, `LICENSE` | the platform's: they make the lambda a project that runs here, and are no part of it |
 
 Change the lambda's files only. A push that changes, adds or removes one of
@@ -38,6 +39,45 @@ and work in the body of `BuildAsync()`; a helper goes into a type of its own.
 
 None of it is the lambda's data on the platform, which is never in the
 repository (see "Data").
+
+## Building the front end: dev/
+
+A front end written with a toolchain - React, Vue or Svelte with Vite,
+TypeScript, Tailwind - keeps its project in `dev/`, the development space:
+its `package.json`, sources, configuration and lock file. It is part of every
+version, like `docs/`, and never compiled into the lambda or served. A front
+end of plain HTML, CSS and JavaScript needs none: it goes straight into
+`assets/`.
+
+The platform builds nothing - not on a push, not ever. You build it here,
+and commit the sources and what they built together:
+
+    cd dev/web && npm ci && npm run build    # writes ../../assets/web/
+    git add -A && git commit -m "Adds a dark mode"
+
+- The build writes into a folder of `assets/` of its own, emptied on every
+  build so nothing of an older one lingers - Vite: `build.outDir:
+  '../../assets/web'` with `emptyOutDir: true` - and the lambda serves it:
+  `Assets.App("web")`.
+- What it writes refers to its files relatively - Vite: `base: './'` - and a
+  client-side router uses the hash (`#/items/42`): the lambda answers at
+  `/lambda/{lambda}/`, at the root of a domain and at `/features/.../`.
+- Give the project a `.gitignore` of its own, in `dev/` or its folder, for
+  what its toolchain installs, caches and builds - `node_modules/`, `dist/`,
+  `target/`, `.venv/`; most templates come with one, and the one at the root
+  is the platform's. None of it belongs in a commit: the lock file says what
+  to install again.
+- `dev/README.md` says how it is built and where the build goes, in a few
+  lines: the owner reads it in the editor, the next agent builds from it.
+- A change of the sources that is not built changes nothing visitors get,
+  and a change made in what the build wrote is undone by the next build.
+- Nothing secret in it, `.env` files included: every clone has it, and so
+  does everybody once the source is published.
+- Plain files, like the rest of the repository: run a script with `sh` or
+  `node` rather than as an executable, which a push refuses.
+- In a zip of a version (the API's way without git) the same files are
+  `.lambda/dev/` and the assets are at its root, so a build set up here
+  writes to the wrong place there. Work here.
 
 ## Versions: main
 
@@ -222,5 +262,5 @@ files, commits and logs.
 A clone of `{home}/source/{lambda}.git` is the published source, and read
 only. To build on it, create a lambda of your own ({home}/ship), clone that,
 copy the lambda's files - `Project.cs`, the other `*.cs`, `assets/`, `docs/`,
-`tests/` - over its own and push; the platform's files stay as your clone has
+`tests/`, `dev/` - over its own and push; the platform's files stay as your clone has
 them. Keep to the terms of `LICENSE`.

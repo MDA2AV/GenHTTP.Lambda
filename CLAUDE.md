@@ -273,6 +273,51 @@ scripts and test data.
   documentation **About** and shows the product page alone, to be corrected by
   telling the agent rather than by editing it.
 
+### The development space
+
+A version may keep the project its assets are built from - a front end with
+its `package.json`, sources, configuration and lock file - in its
+**development space**: `.lambda/dev/` in the version, `dev/` in a clone, an
+export and a published source.
+
+- **The platform builds nothing - decided by the owner.** No build on a push,
+  no package manager, no check that the assets are what the sources build to.
+  The agent changes the sources, builds them where it works and saves the
+  sources and what they built together, in one version or feature. Do not add
+  build machinery.
+- **A kind of its own** (`LambdaSource.IsDevelopment`), not context: a project
+  rather than pages. Like the context it is a file of the version - saved,
+  diffed, rolled back, copied into a feature, merged, cloned, exported,
+  published - never compiled or served, left out of what identifies a build,
+  and counted towards the asset allowance. Its names are a project's: dot
+  files, `[id]`, `(auth)`, `+page`; no spaces, no `.git`.
+- **What a toolchain installs, caches and builds is kept out by the space's
+  own `.gitignore` files - decided with the owner, so it works for any
+  technology.** Nothing is refused by name (no `node_modules` rule): git
+  follows them in a clone, a zip put back follows them (`IgnoredPaths`, git's
+  rules), and a save that names a file keeps it, as `git add -f` would. The
+  root `.gitignore` of a repository stays the platform's, generic one.
+- **Read, never edited, in the editor** - the asymmetric interface: the agent
+  builds it, the owner reviews it. The **Development** section is in the full
+  view only, in the build group, shown once the newest or the online version
+  has one (a draft has it as a view); it says what a reviewer asks - the
+  projects and their stack, packages, lock file and `.gitignore`, where the
+  build goes, the README, and whether a version changed the sources without
+  the assets or the reverse. Files shows it as a group, the code as one pill,
+  a diff kind by kind. Nothing of it in the simple view or on `/build`.
+- Agents are told the flow in a line of the MCP instructions, `platform_guide`
+  (`development`), the tool descriptions, a clone's `AGENTS.md` ("Building
+  the front end: dev/") and the README - keep them the same. `read_lambda`
+  sends its README and its names, not its contents; `write_code` says when it
+  drops one. The build agent has no shell: it writes plain front ends and
+  leaves a development space alone.
+- The repository's project keeps `dev/` out of the build
+  (`DefaultItemExcludes`, so a project built in there is never walked) and
+  out of the image (`.dockerignore`), whether there is one or not.
+- **The demos have none**: they teach with front ends of plain files a reader
+  follows without a toolchain, and a built bundle in a template is something
+  only a toolchain could keep true.
+
 ### Pages meant to be found
 
 Agents are steered to make a page that is meant to be found or shared - by a
