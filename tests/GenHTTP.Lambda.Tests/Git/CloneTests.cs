@@ -163,6 +163,40 @@ public sealed class CloneTests
         Assert.AreEqual("assets/web/index.html", await git.ReadAsync("pictures", "diff", "--name-only", "v2", "v3"));
     }
 
+    [TestMethod]
+    public async Task VersionsNoLongerKeptLeaveAShallowHistory()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        using var git = new GitClient();
+
+        var limits = fixture.Limits.Get();
+
+        fixture.Limits.Save(limits with { Free = limits.Free with { Versions = 2 } });
+
+        var lambda = await fixture.CreateLambdaAsync("pruned");
+
+        await git.CloneAsync(fixture.EditorUrl(lambda), "early");
+
+        foreach (var word in (string[])["one", "two", "three"])
+        {
+            await fixture.SaveAsync(lambda, $"Says {word}", new LambdaFile(LambdaSource.EntryName, Repository.Says(word)));
+        }
+
+        await git.CloneAsync(fixture.EditorUrl(lambda), "late");
+
+        Assert.AreEqual("true", await git.ReadAsync("late", "rev-parse", "--is-shallow-repository"), "the history starts where the versions kept do");
+        Assert.AreEqual("Says three\nSays two", await git.ReadAsync("late", "log", "--format=%s"));
+        Assert.AreEqual("v3\nv4", await git.ReadAsync("late", "tag", "--list", "--sort=version:refname"));
+
+        // a clone made before keeps what it has, and fetches the rest
+        await git.RunAsync("early", "pull", "--ff-only");
+
+        Assert.AreEqual(await git.ReadAsync("late", "rev-parse", "main"), await git.ReadAsync("early", "rev-parse", "main"));
+
+        await git.RunAsync("early", "fsck", "--strict");
+    }
+
     #endregion
 
     #region Features

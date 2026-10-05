@@ -370,21 +370,35 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         var (change, _) = Message(commits.Find(update.NewId)!);
 
+        var started = feature == null;
+
         if (feature == null)
         {
             feature = await features.CreateAsync(lambda.PrivateKey, new FeatureDraft(Name(branch), Base: based, Origin: VersionOrigins.Git, Branch: branch));
-
-            logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} by push base {Version}", feature.Name, lambda.PublicKey, based);
-
-            await said.LineAsync($"Started the feature '{feature.Name}' from version {based}, with a copy of the lambda's data to try it on.");
         }
         else if (feature.Base != based)
         {
             feature = features.Update(lambda.PrivateKey, feature.Key, new FeatureUpdate(Base: based));
         }
 
-        feature = features.Save(lambda.PrivateKey, feature.Key, code, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
-                                after: feature.Revision);
+        try
+        {
+            feature = features.Save(lambda.PrivateKey, feature.Key, code, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
+                                    after: feature.Revision);
+        }
+        catch (LambdaException) when (started)
+        {
+            // refused, so the branch is not there: neither is the feature started for it
+            features.Delete(lambda.PrivateKey, feature.Key);
+            throw;
+        }
+
+        if (started)
+        {
+            logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} by push base {Version}", feature.Name, lambda.PublicKey, based);
+
+            await said.LineAsync($"Started the feature '{feature.Name}' from version {based}, with a copy of the lambda's data to try it on.");
+        }
 
         foreach (var (commit, tree, mine) in kept)
         {

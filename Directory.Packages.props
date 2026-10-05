@@ -11,7 +11,7 @@
         <PackageVersion Include="GenHTTP.Engine.Kestrel" Version="11.0.5" />
 
         <!-- serves every lambda as a git repository, see Services/Git -->
-        <PackageVersion Include="GenHTTP.Modules.Git" Version="0.1.0" />
+        <PackageVersion Include="GenHTTP.Modules.Git" Version="0.1.1" />
 
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
 

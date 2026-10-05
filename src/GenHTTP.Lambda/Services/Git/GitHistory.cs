@@ -59,21 +59,25 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         var existing = versions.Select(v => v.Version).ToHashSet();
 
+        // the commits of versions pruned since, which the next commit still follows
+        var before = new SortedDictionary<int, string>(index.Versions);
+
         foreach (var gone in index.Versions.Keys.Where(v => !existing.Contains(v)).ToList())
         {
             index.Versions.Remove(gone);
             dropped = true;
         }
 
-        string? parent = null;
-
         foreach (var version in versions)
         {
-            if (index.Versions.TryGetValue(version.Version, out var known))
+            if (index.Versions.ContainsKey(version.Version))
             {
-                parent = known;
                 continue;
             }
+
+            // the commit of the version before it - or, where that was pruned
+            // before anybody read it, of the newest before it that was read
+            var parent = before.Where(v => v.Key < version.Version).Select(v => v.Value).LastOrDefault();
 
             string code;
 
@@ -89,10 +93,11 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
             var previous = parent != null ? store.ReadCommit(lambda.Id, GitObjectId.Parse(parent)) : null;
 
-            parent = await CommitAsync(lambda, LambdaSource.Parse(code), parent != null ? [parent] : [], previous,
-                                       OneLine(version.Change) ?? $"Version {version.Version}", version.Created, version.Version);
+            var made = await CommitAsync(lambda, LambdaSource.Parse(code), parent != null ? [parent] : [], previous,
+                                         OneLine(version.Change) ?? $"Version {version.Version}", version.Created, version.Version);
 
-            index.Versions[version.Version] = parent;
+            index.Versions[version.Version] = made;
+            before[version.Version] = made;
 
             changed = true;
         }

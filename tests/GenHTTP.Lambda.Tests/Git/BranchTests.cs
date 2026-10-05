@@ -170,6 +170,33 @@ public sealed class BranchTests
     }
 
     [TestMethod]
+    public async Task ABranchRefusedLeavesNoFeatureBehind()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        using var git = new GitClient();
+
+        var limits = fixture.Limits.Get();
+
+        fixture.Limits.Save(limits with { Free = limits.Free with { AssetBytes = 1024 } });
+
+        var lambda = await fixture.CreateLambdaAsync("toolarge");
+
+        await git.CloneAsync(fixture.EditorUrl(lambda), "toolarge");
+
+        await git.RunAsync("toolarge", "switch", "-c", "pictures");
+        git.Write("toolarge", "assets/large.txt", new string('x', 4096));
+        await git.CommitAsync("toolarge", "Adds something large");
+
+        var pushed = await git.TryAsync("toolarge", "push", "-u", "origin", "pictures");
+
+        Assert.AreNotEqual(0, pushed.ExitCode);
+        Assert.Contains("must not exceed", pushed.Said, "the tier's refusal, in its words");
+
+        Assert.IsEmpty(await fixture.FeaturesAsync(lambda), "the feature started for the branch went with the refusal");
+    }
+
+    [TestMethod]
     public async Task AFeatureChangedElsewhereIsNotOverwrittenByAPush()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
