@@ -303,7 +303,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                      ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
                      ["version"] = Field("integer", "Defaults to the newest."),
                      ["feature"] = Field("string", "Read this feature - its files, its base, and which newer versions it would have to take in before it can be merged - instead of a version."),
-                     ["file"] = Field("string", $"Return only this file, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the zip has it. Any file of the version, '.lambda/tests/smoke.mjs' and '.lambda/dev/app/package.json' included.")
+                     ["file"] = Field("string", $"Return only this file, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the zip has it. Any file of the version, '.lambda/tests/smoke.mjs' and '.lambda/dev/web/package.json' included.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -594,7 +594,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var privateKey = Required(arguments, "privateKey");
 
-        // read before the save replaces it - a version's off what is kept of it
+        // what it held before the save replaces it - a version's read off its facts, which are kept
         var had = Text(arguments, "feature") is { } feature
             ? LambdaSource.Parse(features.Get(privateKey, feature).Code).Count(f => f.IsDevelopment)
             : meta.GetFacts(meta.RequireId(privateKey), meta.Require(privateKey).LatestVersion).Development.Files;
@@ -942,10 +942,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// <remarks>
     /// The program only: documentation that names the lambda's address is
     /// saying where it is, not linking there from a page - and what the
-    /// development space says is said again in what it builds, if anywhere. The same goes for
-    /// meta tags and a canonical link - og:image needs the full address, since
-    /// social networks do not resolve a relative one, and the page itself
-    /// never follows it.
+    /// development space says is said again in what it builds, if anywhere.
+    /// The same goes for meta tags and a canonical link - og:image needs the
+    /// full address, since social networks do not resolve a relative one, and
+    /// the page itself never follows it.
     /// </remarks>
     private static string? Leaks(IReadOnlyList<LambdaFile> files, string publicKey)
         => files.Any(f => (f.IsCode || f.IsAsset) && LinksTo(f.Code, publicKey) && LinksTo(Named.Replace(f.Code, string.Empty), publicKey))

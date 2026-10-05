@@ -246,9 +246,9 @@ public static class ProjectPacker
     /// the project references SQLite, Entity Framework and Evolve whether
     /// the code uses them or not, keeps the documentation, the tests and the
     /// development space out of the build whether there are any or not, and
-    /// makes the snippet
-    /// asynchronous whether it awaits anything or not: the commit that starts
-    /// to is somebody's push, and must not need a project of its own.
+    /// makes the snippet asynchronous whether it awaits anything or not: the
+    /// commit that starts to is somebody's push, and must not need a project
+    /// of its own.
     ///
     /// There is no data in it, as in a published source, and nothing that
     /// only the owner may know - the same commits are read by anybody once
