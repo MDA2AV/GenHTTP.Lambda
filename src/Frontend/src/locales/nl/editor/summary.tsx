@@ -7,6 +7,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Documentatie en tests',
   writtenWhy: 'Nooit gecompileerd en nooit geserveerd. Bewaard bij elke versie, en meegeteld bij de assets.',
   writtenMissing: 'Nog niet geschreven',
+  build: 'Build',
+  buildWhy: 'Nooit gecompileerd of geserveerd: waaruit de code of de assets worden gebouwd. Meegeteld met de assets.',
+  buildFiles: (files, size) => (files === 1 ? `1 bestand, ${size}` : `${files} bestanden, ${size}`),
   hint: (since, kept, retention, tier) =>
     `Het verkeer wordt geteld sinds de laatste start van de server (${since}). ` +
     (kept

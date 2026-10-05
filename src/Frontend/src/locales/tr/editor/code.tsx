@@ -28,8 +28,8 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} sunulacak şeyi döndürür, diğer {cs} dosyaları türleri barındırır, geri kalan her dosya olduğu gibi
-      sunulur - {context} içindekiler hariç: onlar dokümantasyon ve testlerdir, asla derlenmez ve sunulmaz. Ctrl-S
-      kaydeder, F12 bir tanıma gider.
+      sunulur - {context} içindekiler hariç: onlar dokümantasyon, testler ve neyden derlendiğidir, asla derlenmez ve
+      sunulmaz. Ctrl-S kaydeder, F12 bir tanıma gider.
     </>
   ),
   newer: (version) => ` Sürüm ${version}, burada açık olandan daha yeni.`,

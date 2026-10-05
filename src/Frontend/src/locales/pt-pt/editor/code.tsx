@@ -28,8 +28,8 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} devolve o que é servido, os outros ficheiros {cs} têm tipos, e qualquer outro ficheiro é servido tal como
-      está, exceto o que está em {context}: a documentação e os testes, que nunca são compilados nem servidos. Ctrl-S
-      guarda, F12 vai para a declaração.
+      está, exceto o que está em {context}: a documentação, os testes e aquilo a partir do qual é compilado, que nunca
+      são compilados nem servidos. Ctrl-S guarda, F12 vai para a declaração.
     </>
   ),
   newer: (version) => ` A versão ${version} é mais recente do que a que está aberta aqui.`,

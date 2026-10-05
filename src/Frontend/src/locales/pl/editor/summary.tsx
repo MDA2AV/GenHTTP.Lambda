@@ -7,6 +7,12 @@ export const summary: EditorMessages['summary'] = {
   written: 'Dokumentacja i testy',
   writtenWhy: 'Nigdy nie są kompilowane ani serwowane. Zachowywane z każdą wersją i wliczane do zasobów.',
   writtenMissing: 'Jeszcze nie napisano',
+  build: 'Budowanie',
+  buildWhy: 'Nigdy nie kompilowane ani serwowane: to, z czego budowany jest kod lub zasoby. Liczone razem z zasobami.',
+  buildFiles: (files, size) =>
+    files === 1
+      ? `1 plik, ${size}`
+      : `${files} ${files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 12 || files % 100 > 14) ? 'pliki' : 'plików'}, ${size}`,
   hint: (since, kept, retention, tier) =>
     `Ruch jest liczony od ostatniego startu serwera (${since}). ` +
     (kept

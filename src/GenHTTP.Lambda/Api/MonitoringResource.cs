@@ -105,7 +105,9 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
                 limits.Of(tier).Features,
                 limits.DatabaseOf(tier)
             ),
-            known.Documentation
+            known.Documentation,
+            new BuildFacts(known.Build.Files, known.Build.Bytes,
+                                 latest == null || latest.Version == measured ? known.Build.Files : meta.GetFacts(id, latest.Version).Build.Files)
         );
     }
 

@@ -29,8 +29,8 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} renvoie ce qui est servi, les autres fichiers {cs} contiennent des types, et tout autre fichier est servi
-      tel quel, sauf ce qui se trouve dans {context} : la documentation et les tests, jamais compilés ni servis. Ctrl-S
-      enregistre, F12 va à une déclaration.
+      tel quel, sauf ce qui se trouve dans {context} : la documentation, les tests et ce à partir de quoi il est
+      construit, jamais compilés ni servis. Ctrl-S enregistre, F12 va à une déclaration.
     </>
   ),
   newer: (version) => ` La version ${version} est plus récente que celle ouverte ici.`,

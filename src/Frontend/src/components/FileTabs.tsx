@@ -3,10 +3,10 @@ import { useRef, useState } from 'react';
 import type { LambdaFile } from '../api';
 import { encodeBytes, readable } from '../bytes';
 import { pill } from '../control/ui';
-import { CONTEXT, DOCS, TESTS, isCode, isContext } from '../control/written';
+import { BESIDE, BUILD, DOCS, TESTS, isBuild, isCode, isContext } from '../control/written';
 import { useEditorT } from '../i18n';
 import type { EditorMessages } from '../locales/en/editor';
-import { IconPlus, IconTrash, IconUpload } from './Icons';
+import { IconPackage, IconPlus, IconTrash, IconUpload } from './Icons';
 
 type Said = EditorMessages['tabs'];
 
@@ -24,6 +24,8 @@ interface Props {
   onChange?: (files: LambdaFile[]) => void;
   /** Files a diagnostic points at, so a mistake is visible before it is opened. */
   faulty?: Set<string>;
+  /** Opens what the version is built from where it is read, from the one pill that stands for it. */
+  onBuild?: () => void;
 }
 
 /**
@@ -134,7 +136,7 @@ function starterFor(name: string): string {
   return '';
 }
 
-export function FileTabs({ files, active, onSelect, onChange: change, faulty }: Props) {
+export function FileTabs({ files, active, onSelect, onChange: change, faulty, onBuild }: Props) {
   const said = useEditorT().tabs;
   const editable = change !== undefined;
   const onChange = (next: LambdaFile[]) => change?.(next);
@@ -157,9 +159,12 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
 
     const wanted = typed.includes('.') ? typed : `${typed}.cs`;
 
-    const wrong = wanted.toLowerCase().startsWith('.lambda')
-      ? checkContext(wanted, said)
-      : wanted.endsWith('.cs') ? checkCode(wanted, said) : checkAsset(wanted, said);
+    // the build folder is changed where it is built, which is not here
+    const wrong = isBuild(wanted)
+      ? said.build
+      : wanted.toLowerCase().startsWith('.lambda')
+        ? checkContext(wanted, said)
+        : wanted.endsWith('.cs') ? checkCode(wanted, said) : checkAsset(wanted, said);
 
     if (wrong) {
       setProblem(wrong);
@@ -207,7 +212,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
       return;
     }
 
-    const folder = !isCode(active) && active.includes('/') ? active.slice(0, active.lastIndexOf('/') + 1) : '';
+    const folder = !isCode(active) && !isBuild(active) && active.includes('/') ? active.slice(0, active.lastIndexOf('/') + 1) : '';
 
     const added: LambdaFile[] = [];
 
@@ -236,9 +241,12 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
     }
   }
 
-  // the program first; what is written about it after a rule, and quieter
-  const program = files.filter((file) => !isContext(file.name));
+  // the program first; what is written about it after a rule, and quieter;
+  // what it is built from as one pill, since that may be any number of files
+  // - kept as it is, and read where its section is, the file open here aside
+  const program = files.filter((file) => !isContext(file.name) && !isBuild(file.name));
   const context = files.filter((file) => isContext(file.name));
+  const build = files.filter((file) => isBuild(file.name));
 
   const tab = (file: LambdaFile) => {
     const open = file.name === active;
@@ -251,10 +259,10 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
           className="py-0.5 font-mono text-[12.5px]"
           title={file.name === ENTRY ? said.entry : file.name}
         >
-          {isContext(file.name) ? (
+          {isContext(file.name) || isBuild(file.name) ? (
             <>
-              <span className="text-slate-400">{CONTEXT}</span>
-              {file.name.slice(CONTEXT.length)}
+              <span className="text-slate-400">{isBuild(file.name) ? BUILD : BESIDE}</span>
+              {file.name.slice(isBuild(file.name) ? BUILD.length : BESIDE.length)}
             </>
           ) : file.name}
           {faulty?.has(file.name) && <span className="ml-1.5 text-red-500" aria-label={said.errors}>•</span>}
@@ -262,7 +270,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
 
         {/* the same room on every pill, shown or not, so opening a file
             does not widen its pill and push the others along */}
-        {file.name !== ENTRY && editable ? (
+        {file.name !== ENTRY && editable && !isBuild(file.name) ? (
           <button
             type="button"
             onClick={() => remove(file.name)}
@@ -288,6 +296,23 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty }: 
         <span role="group" aria-label={said.contextFiles} title={said.contextFiles} className="contents">
           <span aria-hidden="true" className="mx-1 h-5 w-px bg-slate-300 dark:bg-ink-700" />
           {context.map(tab)}
+        </span>
+      )}
+
+      {build.length > 0 && (
+        <span role="group" aria-label={said.buildTitle} className="contents">
+          <span aria-hidden="true" className="mx-1 h-5 w-px bg-slate-300 dark:bg-ink-700" />
+          <button
+            type="button"
+            onClick={onBuild}
+            disabled={!onBuild}
+            title={said.buildTitle}
+            className={`${pill(false)} !py-0.5 text-[12.5px]`}
+          >
+            <IconPackage className="h-3.5 w-3.5 text-slate-400" />
+            {said.buildFiles(build.length)}
+          </button>
+          {build.filter((file) => file.name === active).map(tab)}
         </span>
       )}
 

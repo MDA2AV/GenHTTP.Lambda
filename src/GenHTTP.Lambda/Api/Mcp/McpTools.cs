@@ -103,7 +103,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("write_code", "Save all files", Effect.Save,
-             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are what is written about the program - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data - kept with the version, never compiled or served; any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations shipped here in migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
+             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are kept with the version and never compiled or served - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and .lambda/build/ is its build folder, the files you build its assets or code from with a build tool (platform_guide, build); any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations shipped here in migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -122,7 +122,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                              ["type"] = "object",
                              ["properties"] = new JsonObject
                              {
-                                 ["name"] = Field("string", ".cs files are compiled; .lambda/docs/... and .lambda/tests/... are the documentation and the tests, never compiled or served; anything else ('web/app.js', 'logo.png') is an asset."),
+                                 ["name"] = Field("string", ".cs files are compiled; .lambda/docs/... and .lambda/tests/... are the documentation and the tests, .lambda/build/... the build folder - never compiled or served; anything else ('web/app.js', 'logo.png') is an asset."),
                                  ["code"] = Field("string", "Contents, base64 if encoding says so."),
                                  ["encoding"] = Field("string", "'base64' for binary assets; omit otherwise.")
                              },
@@ -155,7 +155,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                              ["type"] = "object",
                              ["properties"] = new JsonObject
                              {
-                                 ["name"] = Field("string", ".cs files are compiled; .lambda/docs/... and .lambda/tests/... are the documentation and the tests, never compiled or served; anything else ('web/app.js', 'logo.png') is an asset."),
+                                 ["name"] = Field("string", ".cs files are compiled; .lambda/docs/... and .lambda/tests/... are the documentation and the tests, .lambda/build/... the build folder - never compiled or served; anything else ('web/app.js', 'logo.png') is an asset."),
                                  ["code"] = Field("string", "Contents, base64 if encoding says so."),
                                  ["encoding"] = Field("string", "'base64' for binary assets; omit otherwise.")
                              },
@@ -268,7 +268,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                              ["type"] = "object",
                              ["properties"] = new JsonObject
                              {
-                                 ["name"] = Field("string", ".cs files are compiled; files under .lambda/ are documentation and tests and never compiled; anything else is an asset."),
+                                 ["name"] = Field("string", ".cs files are compiled; files under .lambda/ - documentation, tests, the build folder - are never compiled; anything else is an asset."),
                                  ["code"] = Field("string", "Contents, base64 if encoding says so."),
                                  ["encoding"] = Field("string", "'base64' for binary assets; omit otherwise.")
                              },
@@ -294,7 +294,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("read_lambda", "Read a lambda", Effect.Read,
-             $"A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the database, the workspace and the secrets: whether each is on, what it holds, and which secrets the code reads that have no value yet), and one version - or, with feature, that feature: its documentation (what the app is and why, the technical decisions), how it is tested, and its files. The documentation comes first and in full up to {ContextBudget:N0} characters; the files come in full when they add up to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one - a test script or its data too. Read the documentation and the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
+             $"A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the database, the workspace and the secrets: whether each is on, what it holds, and which secrets the code reads that have no value yet), and one version - or, with feature, that feature: its documentation (what the app is and why, the technical decisions), how it is tested, its build folder by name with its README, and its files. The documentation comes first and in full up to {ContextBudget:N0} characters; the files come in full when they add up to at most {ReadBudget:N0} characters, otherwise by name and length, with file to read one - a test script or its data too. Read the documentation and the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -303,7 +303,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                      ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
                      ["version"] = Field("integer", "Defaults to the newest."),
                      ["feature"] = Field("string", "Read this feature - its files, its base, and which newer versions it would have to take in before it can be merged - instead of a version."),
-                     ["file"] = Field("string", $"Return only this file, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the zip has it. Any file of the version, '.lambda/tests/smoke.mjs' included.")
+                     ["file"] = Field("string", $"Return only this file, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the zip has it. Any file of the version, '.lambda/tests/smoke.mjs' and '.lambda/build/README.md' included.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -592,7 +592,31 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             return McpProtocol.Refuse(complaint!);
         }
 
-        return await SaveAsync(arguments, files, origin);
+        var privateKey = Required(arguments, "privateKey");
+
+        // what it held before the save replaces it - a version's read off its facts, which are kept
+        var had = Text(arguments, "feature") is { } feature
+            ? LambdaSource.Parse(features.Get(privateKey, feature).Code).Count(f => f.IsBuild)
+            : meta.GetFacts(meta.RequireId(privateKey), meta.Require(privateKey).LatestVersion).Build.Files;
+
+        return McpProtocol.Adding(await SaveAsync(arguments, files, origin), "build", Dropped(had, files));
+    }
+
+    /// <summary>
+    /// Said when a save of every file leaves out the build folder the
+    /// files before it had - which an agent that did not know there was one
+    /// does without noticing, and which no page asks for the way a missing
+    /// page of the documentation is asked for.
+    /// </summary>
+    private static string? Dropped(int had, IReadOnlyList<LambdaFile> after)
+    {
+        if (had == 0 || after.Any(f => f.IsBuild))
+        {
+            return null;
+        }
+
+        return $"What this replaced had a build folder - {had} files in {LambdaSource.BuildFolder}, what its assets or code are built from - and this save has none, since write_code replaces every file. "
+             + "If that was not meant, save them again, or make changes with change_code, which keeps every file it is not told about.";
     }
 
     private async ValueTask<JsonObject> ChangeAsync(JsonObject arguments, string origin)
@@ -917,13 +941,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     /// <remarks>
     /// The program only: documentation that names the lambda's address is
-    /// saying where it is, not linking there from a page. The same goes for
-    /// meta tags and a canonical link - og:image needs the full address, since
-    /// social networks do not resolve a relative one, and the page itself
-    /// never follows it.
+    /// saying where it is, not linking there from a page - and what the
+    /// build folder says is said again in what it builds, if anywhere.
+    /// The same goes for meta tags and a canonical link - og:image needs the
+    /// full address, since social networks do not resolve a relative one, and
+    /// the page itself never follows it.
     /// </remarks>
     private static string? Leaks(IReadOnlyList<LambdaFile> files, string publicKey)
-        => files.Any(f => !f.IsContext && LinksTo(f.Code, publicKey) && LinksTo(Named.Replace(f.Code, string.Empty), publicKey))
+        => files.Any(f => (f.IsCode || f.IsAsset) && LinksTo(f.Code, publicKey) && LinksTo(Named.Replace(f.Code, string.Empty), publicKey))
             ? $"The code links to /lambda/{publicKey}/ by its full path. From the preview that is the live lambda, with its real data - not the feature's copy. Use relative paths (\"api/items\", not \"/lambda/{publicKey}/api/items\")."
             : null;
 
@@ -1537,8 +1562,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var only = Text(arguments, "file");
 
-        // the program; what is written about it is handed over apart, and first
-        var program = files.Where(f => !f.IsContext).ToList();
+        // the program; what is written about it is handed over apart, and first,
+        // and what its assets are built from by name only
+        var program = files.Where(f => f.IsCode || f.IsAsset).ToList();
 
         IEnumerable<object> listing;
 
@@ -1546,8 +1572,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (only != null)
         {
+            // the build folder's files are named by the listing of it, which is bounded
             var one = files.FirstOrDefault(f => f.Name == only)
-                   ?? throw LambdaException.NotFound($"There is no file '{only}' here. There are: {string.Join(", ", files.Select(f => f.Name))}.");
+                   ?? throw LambdaException.NotFound($"There is no file '{only}' here. There are: {string.Join(", ", files.Where(f => !f.IsBuild).Select(f => f.Name))}{(files.Any(f => f.IsBuild) ? $", and the files of {LambdaSource.BuildFolder}, which read_lambda without file lists" : string.Empty)}.");
 
             if (one.Code.Length <= ReadFileLimit)
             {
@@ -1573,6 +1600,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         // asked for one file, the answer is about that file
         var (documentation, tests) = only == null ? Context(files) : (null, null);
+
+        var build = only == null ? BuildFiles(files) : null;
 
         var unwritten = only == null ? Unwritten(files) : null;
 
@@ -1666,6 +1695,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             documentation,
             tests,
             documentationNote = unwritten,
+            // what the assets are built from, for whoever builds them: how, and what is there
+            build,
             // the why of the recent past, so a change made on top of somebody
             // else's work can follow what they were trying to do - the one line
             // each, since a specification can be a page and this is read every time
@@ -1734,6 +1765,57 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         return (Part(LambdaSource.DocsFolder, LambdaSource.ProductDoc, LambdaSource.DecisionsDoc),
                 Part(LambdaSource.TestsFolder, LambdaSource.TestingDoc));
     }
+
+    /// <summary>
+    /// The build folder of a version, as read_lambda hands it over: how
+    /// it is built, in full, and what is in it by name and length.
+    /// </summary>
+    /// <remarks>
+    /// By name, because it is a project rather than pages - sources, a lock
+    /// file of hundreds of kilobytes - read by whoever builds it, in a clone or
+    /// the zip, more than in an answer. Its README is what the next agent
+    /// needs before anything else of it: the commands, and where the build
+    /// goes. Nothing at all for a version without one, so the answers of the
+    /// lambdas that have none are as they were.
+    /// </remarks>
+    private static object? BuildFiles(IReadOnlyList<LambdaFile> files)
+    {
+        var space = files.Where(f => f.IsBuild).ToList();
+
+        if (space.Count == 0)
+        {
+            return null;
+        }
+
+        var readme = space.FirstOrDefault(f => f.Name == LambdaSource.BuildReadme && f.Encoding != "base64");
+
+        return new
+        {
+            what = "What the assets or the code of this version are built from. The platform builds nothing: whoever changes it builds it where they work and saves it with what was built - platform_guide, build.",
+            readme = readme == null
+                ? null
+                : readme.Code.Length <= BuildReadmeBudget
+                    ? (object)new { readme.Name, content = readme.Code }
+                    : new { readme.Name, length = readme.Code.Length, read = "Longer than this answer carries beside the rest: pass it as file." },
+            readmeMissing = readme == null
+                ? $"Nothing says how it is built: add {LambdaSource.BuildReadme} with the commands and where the build goes, a few lines."
+                : null,
+            files = space.Take(BuildListed).Select(f => new { f.Name, length = f.Code.Length }),
+            more = space.Count > BuildListed ? space.Count - BuildListed : (int?)null,
+            read = "Pass file to read one; a clone (gitUrl) or the zip of the version with ?layout=project has all of it, laid out to build in."
+        };
+    }
+
+    /// <summary>
+    /// How long the README of a build folder may be to be sent whole.
+    /// </summary>
+    private const int BuildReadmeBudget = 4_000;
+
+    /// <summary>
+    /// How many files of a build folder read_lambda names, before it
+    /// only counts the rest - a project's sources can run to hundreds.
+    /// </summary>
+    private const int BuildListed = 200;
 
     /// <summary>
     /// How much of the documentation and the tests read_lambda sends in one
@@ -2001,10 +2083,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     private JsonObject Guide(string origin) => McpProtocol.Say(new
     {
         ok = true,
-        preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version; a feature is downloaded from and put back to /api/v1/lambdas/{privateKey}/features/{feature}/zip (GET, PUT) - so edit locally and push as often as it takes. POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip as a new version. The zip holds the documentation and tests in .lambda/, a hidden folder: zip the contents with it ('zip -r ../feature.zip .', not '*'), or the version you save has none. Every endpoint that saves takes ?deploy=true. Many environments cannot reach it; then use these tools.",
+        preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version; a feature is downloaded from and put back to /api/v1/lambdas/{privateKey}/features/{feature}/zip (GET, PUT) - so edit locally and push as often as it takes. POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip as a new version. The zip holds the documentation and tests in .lambda/, a hidden folder - and the build folder, where there is one, in .lambda/build/, with its dot files: zip the contents with it ('zip -r ../feature.zip .', not '*'), or the version you save has none. A zip put back leaves out what the build folder's .gitignore files ignore, as git add does. With ?layout=project, a zip is laid out as a clone is - Project.cs, assets/, docs/, tests/, build/ - both ways; build from that, so a build writes to the same place there as in a clone. Every endpoint that saves takes ?deploy=true. Many environments cannot reach it; then use these tools.",
         git = new
         {
-            what = "Every lambda is a git repository as well: read_lambda gives its gitUrl, /editor/{privateKey}/{publicKey}.git - the editor key is in it, so keep it to yourself and to the user. It holds the project the lambda is exported as: Project.cs is lambda.cs (the body of BuildAsync()), the other .cs files are its own, assets/ what it ships, docs/ and tests/ its .lambda/docs/ and .lambda/tests/ - and around them the platform's files, which make it run with dotnet run and are no part of the lambda. AGENTS.md in it says how to work there.",
+            what = "Every lambda is a git repository as well: read_lambda gives its gitUrl, /editor/{privateKey}/{publicKey}.git - the editor key is in it, so keep it to yourself and to the user. It holds the project the lambda is exported as: Project.cs is lambda.cs (the body of BuildAsync()), the other .cs files are its own, assets/ what it ships, docs/ and tests/ its .lambda/docs/ and .lambda/tests/, build/ its build folder (see build) - and around them the platform's files, which make it run with dotnet run and are no part of the lambda. AGENTS.md in it says how to work there.",
             when = "If you can run git, clone the lambda and work in the clone: it builds and runs with dotnet, and a push costs no tokens for the files it sends.",
             versions = "Every commit pushed to main becomes the next version, tagged v1, v2 and so on: main moves forward one commit after another - never rewritten, no merge commits (git pull --rebase). The first line of a commit's message is the version's change, the rest its specification. A push to main is compiled first and refused when it does not compile; git push -o deploy puts the newest version online with it.",
             features = "Every other branch is a feature: pushing one starts it - from the newest version among its commits, with a copy of the lambda's data - or replaces its files, and puts its preview online at the address the push answers with. git push origin <branch>:main merges it as a version per commit, -o merge with its last push merges it as one (-o deploy puts that online), and deleting the branch deletes the feature. A feature started anywhere else is a branch there too.",
@@ -2018,7 +2100,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             threeThings = "A lambda holds versions, features and data, and they live differently. Versions are the program as it was saved. Features are changes being worked on beside it. Data is what the program keeps. Getting this right is most of getting a lambda right.",
             versions = new
             {
-                what = "A version is the program: every .cs file and every asset - index.html, scripts, styles, icons, the whole front end - and, beside it in .lambda/, what is written about it: its documentation and its tests (see documentationAndTests). They are saved, deployed and rolled back together, and nothing else is in a version.",
+                what = "A version is the program: every .cs file and every asset - index.html, scripts, styles, icons, the whole front end - and, beside it in .lambda/, what is written about it: its documentation and its tests (see documentationAndTests) - and, where its assets or code are built with a tool, what they are built from: its build folder (see build). They are saved, deployed and rolled back together, and nothing else is in a version.",
                 immutable = "A version never changes once it is saved. Deploying puts one online at the lambda's address, deploying an older one rolls back, and every version can be read back and put online again exactly as it was.",
                 kept = $"The newest {tiers.Of(LambdaTier.Free).Versions} versions of a free lambda are kept, {tiers.Of(LambdaTier.Premium).Versions} of a premium one; older ones are removed, never the one online. Fewer, meaningful versions keep more of the history that matters - one per thing the user asked for, not one per attempt."
             },
@@ -2224,7 +2306,36 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             how = "write_code with the files under a folder (web/index.html, web/app.js, web/app.css), return Layout.Create().Add(\"api\", api).Add(Assets.App(\"web\")), deploy. Change it like any other file.",
             example = "Every demo serves its front end like this, from web/ - read_lambda demo-crud.",
             notFromTheWorkspace = "Do not upload the app's own pages to the workspace with upload_file. They would not be versioned: a rollback would keep the new pages over the old API, and a feature would work on a copy of them that its merge throws away. The workspace is for data.",
-            underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree()."
+            underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree().",
+            builtWithATool = "A front end built with a tool where you work ships what the tool made as assets like any other file; what it was made from is kept beside them in the build folder - see build."
+        },
+        build = new
+        {
+            what = "A version may keep a build folder in .lambda/build/ - build/ in a clone: the files its assets, or its code, are built from with a build tool - sources, scripts, configuration, whatever the tool works from. Kept with the version like its documentation - saved, compared in the history, rolled back, copied into a feature and merged with it, in the zip, the clone, the export and a published source - and never compiled, never served. Nothing about its contents is assumed: it holds what the build needs.",
+            when = "Only when something of the version is built from other files by a tool you run, and only where you can run it: a shell with the tool, where you work. What is written as it is served or compiled - plain HTML, CSS and JavaScript, C# - is its own source and needs none.",
+            flow = new[]
+            {
+                "Change the files in the build folder.",
+                "Run the build where you work.",
+                "Have it write what it makes into the program - into the assets, or code beside lambda.cs - replacing what an earlier build wrote, so nothing of it lingers.",
+                "Save the files and what was built from them together, in one version or one feature: a clone commits both, a zip carries both, write_code and change_code take both.",
+                "Deploy it, and try it - a feature at its preview address."
+            },
+            nothingIsBuiltHere = "The platform never builds anything, never runs a tool or installs what a build needs, and never checks that the program is what the build folder builds to. A change in the build folder that is not built changes nothing; built and not saved, it is not there either.",
+            layout = "Build where the files are laid out as in a clone - build/ beside assets/ and the code - so a build that writes by a path relative to itself writes to the same place every time: a clone, or the zip of a version or a feature with ?layout=project, which takes the same layout back. The zip without it names the files as the lambda does - .lambda/build/, the assets at its root - where such a path leads elsewhere.",
+            gitignore = "What a build installs, caches or writes for itself is no part of a version - for example node_modules/, target/, .venv/, a cache folder. Keep it out with a .gitignore in the build folder: a clone leaves it out of commits by it, and a zip put back leaves out what it ignores - but what the lambda already has stays, as git keeps what it tracks. A zip is counted as it is sent, before any .gitignore leaves something out, so it holds what a commit would - never what a build installed.",
+            readme = $"Write {LambdaSource.BuildReadme}: how it is built and where the build goes - the commands, in a few lines. The next agent builds from it, the owner reads it in the editor, and read_lambda hands it over. Note the decision itself in .lambda/docs/decisions.md like any other.",
+            pitfalls = new[]
+            {
+                "What a build writes into the assets is served below /lambda/{publicKey}/, at the root of a domain of its own and at /features/{feature}/: it refers to its files relatively, as every page does (see paths) - a bundler set to an absolute base such as '/' is the usual way this goes wrong.",
+                "Changing what a build wrote instead of what it is built from: the next build undoes it.",
+                "Leaving out of a save what the build wrote anew - files named after their content, say: the version then refers to files it does not have."
+            },
+            reading = "read_lambda names its files and hands over its README; file reads one. A clone or the zip of the version (?layout=project) has all of it.",
+            notSecret = "It is part of the version: every clone, every export and - once published - everybody reads it. No key or password in it, .env files included.",
+            names = "Letters, digits and - _ . + @ ( ) [ ] { } $ ~, dot files included, no spaces. Plain files only: a script is run through its interpreter, never as an executable, which a push refuses.",
+            size = "It counts towards what the assets of a version may come to.",
+            changingALambdaThatHasOne = "What is built from the build folder is changed there and built again, never in what the build wrote. Without a shell to build with, leave both alone and say why."
         },
         liveUpdates = new
         {
@@ -2260,7 +2371,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             tree = "VirtualTree.Create().Add(\"app.css\", Resource.FromString(css).Type(new ContentType(\"text/css\"))) builds a tree in memory.",
             singlePage = "Content.From(Resource.FromString(html).Type(new ContentType(\"text/html; charset=utf-8\")))"
         },
-        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the newest version as a standalone zipped .NET 10 project with a Dockerfile: Program.cs hosts it, Project.cs is lambda.cs, the other files keep their code, the documentation and tests go to docs/ and tests/, and Platform/ stands in for Workspace, Assets, Secret, Database and the implicit imports. The database comes along as a SQLite file. It needs nothing from this platform. A clone of its gitUrl is the same project with every version, without the data. Worth telling the user.",
+        takingItAway = "GET /api/v1/lambdas/{privateKey}/export returns the newest version as a standalone zipped .NET 10 project with a Dockerfile: Program.cs hosts it, Project.cs is lambda.cs, the other files keep their code, the documentation and tests go to docs/ and tests/, the build folder to build/, and Platform/ stands in for Workspace, Assets, Secret, Database and the implicit imports. The database comes along as a SQLite file. It needs nothing from this platform. A clone of its gitUrl is the same project with every version, without the data. Worth telling the user.",
         importedForYou = ModuleCatalog.Imports,
         network = "A lambda can make outbound calls with HttpClient and sockets. System.Net.Http and System.Net.Sockets are not imported by default, so write the full type name or add a using. It runs in the shared server process, so give requests a timeout.",
         sayWhy = new
@@ -2282,12 +2393,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         },
         openSource = new
         {
-            what = "The owner can publish a lambda's source code at /source/{publicKey} under a license: anybody reads every version's code, front end, documentation and tests there, sees what each version changed, stars it, and downloads any version as the .NET project the export makes - with a LICENSE, and without the data. The open_source tool does it.",
+            what = "The owner can publish a lambda's source code at /source/{publicKey} under a license: anybody reads every version's code, front end, documentation, tests and build folder there, sees what each version changed, stars it, and downloads any version as the .NET project the export makes - with a LICENSE, and without the data. The open_source tool does it.",
             when = "Only when the user asks. Ask which license if they did not say: MIT unless they want another.",
             neverPublished = "The data - the database, the workspace and the values of the secrets - what the owner asked for in their words (the specification), and anything about who uses it: traffic, logs, visitors.",
             thenPublic = "Once published, every version is public, the ones saved before included. Keys, passwords and personal data never go into files anyway; for a published lambda it matters at once.",
             licenses = SourceLicenses.All.Select(l => new { l.Id, l.Name, kind = l.Kind.ToString() }),
-            startingFromOne = "A published source downloads as a .NET project, not as a lambda - or is cloned with git from /source/{publicKey}.git. To make a lambda of it with git: create_lambda, clone its gitUrl, copy Project.cs, the other .cs files, assets/, docs/ and tests/ over its own, commit and push. Without git: Project.cs holds the snippet as the body of Build() or BuildAsync() with the types after the class - put the body back into lambda.cs with those types below it; the other .cs files stay as they are; assets/ is what goes at the root of the version; docs/ and tests/ go into .lambda/docs/ and .lambda/tests/; Platform/, Program.cs, the .csproj and the Dockerfile are the platform's and stay behind. Keep to the terms of its LICENSE."
+            startingFromOne = "A published source downloads as a .NET project, not as a lambda - or is cloned with git from /source/{publicKey}.git. To make a lambda of it with git: create_lambda, clone its gitUrl, copy Project.cs, the other .cs files, assets/, docs/, tests/ and build/ over its own, commit and push. Without git: Project.cs holds the snippet as the body of Build() or BuildAsync() with the types after the class - put the body back into lambda.cs with those types below it; the other .cs files stay as they are; assets/ is what goes at the root of the version; docs/, tests/ and build/ go into .lambda/docs/, .lambda/tests/ and .lambda/build/; Platform/, Program.cs, the .csproj and the Dockerfile are the platform's and stay behind. Keep to the terms of its LICENSE."
         },
         afterDeploying = new
         {
@@ -2331,6 +2442,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore - taken with await semaphore.WaitAsync(), never Wait().",
             "Waiting for a task with .Result, .Wait() or .GetAwaiter().GetResult() is refused: it would hang the thread the task has to finish on. Await it - see waiting.",
             "A relative og:image: the shared link shows no picture. It takes the full address - see beingFound.",
+            "Files in .lambda/build/ changed and not built, or a change made in what a build wrote, which the next build undoes. Build, and save both together - see build.",
             "REST routes serialize camel case; match that on sockets.",
             "Your own type called e.g. File is fine; only the refused framework type of that name is blocked.",
             "Ship stylesheets and scripts as assets, not string constants: a raw string literal ends at the first \"\"\", and assets cost no code budget."
@@ -2357,7 +2469,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var workspace = tiers.WorkspaceOf(tier);
 
         return $"Code: {tiers.MaxCodeLengthOf(tier):N0} characters, in any number of .cs files. "
-             + $"Assets: {Size(tiers.MaxAssetBytesOf(tier))} in all, any number of them. "
+             + $"Assets: {Size(tiers.MaxAssetBytesOf(tier))} in all, any number of them - the documentation, the tests and the build folder included. "
              + $"Workspace: {Size(workspace.Quota)} in all, in any number of files. "
              + $"Database: {Size(tiers.DatabaseOf(tier))}.";
     }

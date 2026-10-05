@@ -22,11 +22,13 @@ export const frame = {
     stats: 'Stats',
     logs: 'Logs',
     code: 'Code',
+    /** What the assets or the code are built from by a build tool - the full view only. */
+    build: 'Build',
   },
   sectionsLabel: 'Sections',
   /** The groups the sections of the full view are gathered in, under the overview and the documentation. */
   groups: {
-    build: 'Build',
+    develop: 'Develop',
     program: 'Program and data',
     run: 'Run',
     sharing: 'Sharing',

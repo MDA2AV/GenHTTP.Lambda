@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Deployment;
 
 namespace GenHTTP.Lambda.Services.Source;
 
@@ -137,6 +138,9 @@ public static class SourceKinds
     /// <summary>How it is tested.</summary>
     public const string Tests = "tests";
 
+    /// <summary>What its assets or code are built from: its build folder.</summary>
+    public const string Build = "build";
+
     /// <summary>What stands in for the platform.</summary>
     public const string Platform = "platform";
 
@@ -162,6 +166,11 @@ public static class SourceKinds
         if (path.StartsWith("tests/", StringComparison.Ordinal))
         {
             return Tests;
+        }
+
+        if (path.StartsWith(ProjectPaths.Build, StringComparison.Ordinal))
+        {
+            return Build;
         }
 
         if (path.StartsWith("Platform/", StringComparison.Ordinal))

@@ -30,7 +30,9 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// What was written about it comes along where a .NET project keeps such
 /// things: the documentation in docs/ and the tests in tests/. Neither is
 /// compiled into the program or copied into its container, as neither was
-/// on the platform.
+/// on the platform. Nor is its build folder, in build/ - what its assets
+/// or code are built from - which the project does not even look into: once
+/// built, it may hold whatever its build tool installed.
 ///
 /// A lambda with a database takes it along: what the app kept is written into
 /// database/, and the project references SQLite - Entity Framework Core where
@@ -97,6 +99,24 @@ public static class ProjectPacker
         : "3.2.0";
 
     /// <summary>
+    /// What a repository of a lambda leaves out of its commits: what dotnet
+    /// run writes, and the data, which a clone keeps where it runs - and the
+    /// build folder taken back in.
+    /// </summary>
+    /// <remarks>
+    /// Anchored to the root, so a folder of the same name elsewhere - in the
+    /// assets, in the build folder - is kept.
+    ///
+    /// A folder called build is what many keep out of every repository of
+    /// theirs, in a global ignore, taking it for a build's output. Here it is
+    /// what a build is made from, and a .gitignore of the repository overrides
+    /// a global one, so it says so.
+    /// </remarks>
+    internal const string RepositoryIgnored = "/bin/\n/obj/\n/workspace/\n/database/\n" + Reincluded;
+
+    private const string Reincluded = "!/build/\n";
+
+    /// <summary>
     /// Where the project keeps its database, relative to where it runs.
     /// </summary>
     internal const string DatabaseFile = "database/database.db";
@@ -159,6 +179,8 @@ public static class ProjectPacker
 
         var folders = context.Select(f => ProjectPaths.Of(f.Name).Split('/')[0]).Distinct().Order(StringComparer.Ordinal).ToList();
 
+        var build = files.Where(f => f.IsBuild).ToList();
+
         var code = files.Where(f => f.IsCode).ToList();
 
         // what the code talks to its database with, and whether it migrates it
@@ -171,8 +193,8 @@ public static class ProjectPacker
 
         using (var archive = new ZipArchive(target, ZipArchiveMode.Create, true))
         {
-            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders, data, entities, evolve));
-            Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits, folders, data ? database != null : null));
+            Write(archive, $"{name}/{name}.csproj", Csproj(assets.Count > 0, folders, build.Count > 0, data, entities, evolve));
+            Write(archive, $"{name}/Program.cs", Program(lambda, name, awaits, folders, build.Count > 0, data ? database != null : null));
             Write(archive, $"{name}/{ProjectPaths.Snippet}", ProjectSnippet.ForExport(snippet));
 
             foreach (var file in files.Where(f => f.IsCode && f.Name != LambdaSource.EntryName))
@@ -186,7 +208,7 @@ public static class ProjectPacker
                 Write(archive, $"{name}/{ProjectPaths.Of(file.Name)}", file.Bytes);
             }
 
-            foreach (var file in context)
+            foreach (var file in context.Concat(build))
             {
                 Write(archive, $"{name}/{ProjectPaths.Of(file.Name)}", file.Bytes);
             }
@@ -221,9 +243,18 @@ public static class ProjectPacker
             // repository: the image mounts it, and data is nobody's source
             var ignored = data ? "bin/\nobj/\nworkspace/\ndatabase/\n" : "bin/\nobj/\nworkspace/\n";
 
-            // the documentation and the tests are kept out of the image as well
-            Write(archive, $"{name}/.dockerignore", $"{ignored}{string.Concat(folders.Select(f => $"{f}/\n"))}");
-            Write(archive, $"{name}/.gitignore", ignored);
+            // anchored, so a folder of the same name in the assets or the build
+            // folder is kept; and the build folder is the lambda's, whatever a
+            // global ignore says of a folder called build
+            var anchored = string.Concat(ignored.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => $"/{line}\n"));
+
+            var tracked = build.Count > 0 ? $"{anchored}{Reincluded}" : anchored;
+
+            // the documentation, the tests and the build folder are kept out of the image as well
+            var beside = build.Count > 0 ? [.. folders, ProjectPaths.Build.TrimEnd('/')] : folders;
+
+            Write(archive, $"{name}/.dockerignore", $"{ignored}{string.Concat(beside.Select(f => $"{f}/\n"))}");
+            Write(archive, $"{name}/.gitignore", tracked);
         }
     }
 
@@ -238,10 +269,11 @@ public static class ProjectPacker
     /// push that leaves it alone is right however much it changed, and
     /// somebody who changes it has changed nothing of the lambda. That is why
     /// the project references SQLite, Entity Framework and Evolve whether
-    /// the code uses them or not, keeps the documentation and the tests out
-    /// of the build whether there are any or not, and makes the snippet
-    /// asynchronous whether it awaits anything or not: the commit that starts
-    /// to is somebody's push, and must not need a project of its own.
+    /// the code uses them or not, keeps the documentation, the tests and the
+    /// build folder out of the build whether there are any or not, and
+    /// makes the snippet asynchronous whether it awaits anything or not: the
+    /// commit that starts to is somebody's push, and must not need a project
+    /// of its own.
     ///
     /// There is no data in it, as in a published source, and nothing that
     /// only the owner may know - the same commits are read by anybody once
@@ -254,7 +286,7 @@ public static class ProjectPacker
 
         var result = new List<ProjectFile>
         {
-            Text($"{name}.csproj", Csproj(true, ["docs", "tests"], true, true, true, awaitsAlways: true)),
+            Text($"{name}.csproj", Csproj(true, ["docs", "tests"], true, true, true, true, awaitsAlways: true)),
             Text(ProjectPaths.Program, RepositoryProgram(project)),
             Text(ProjectPaths.Snippet, ProjectSnippet.ForRepository(files.FirstOrDefault(f => f.Name == LambdaSource.EntryName)?.Code ?? string.Empty), LambdaSource.EntryName)
         };
@@ -280,8 +312,8 @@ public static class ProjectPacker
 
         const string ignored = "bin/\nobj/\nworkspace/\ndatabase/\n";
 
-        result.Add(Text(".gitignore", ignored));
-        result.Add(Text(".dockerignore", $"{ignored}docs/\ntests/\n.git/\nAGENTS.md\nCLAUDE.md\n"));
+        result.Add(Text(".gitignore", RepositoryIgnored));
+        result.Add(Text(".dockerignore", $"{ignored}docs/\ntests/\nbuild/\n.git/\nAGENTS.md\nCLAUDE.md\n"));
 
         result.Add(Text("AGENTS.md", Resource("Agents.md").Replace("{lambda}", project.PublicKey)
                                                            .Replace("{project}", name)
@@ -306,9 +338,14 @@ public static class ProjectPacker
     /// lambda was written without either, and Platform/Usings.cs brings in
     /// exactly what it had. The documentation and the tests are kept out of
     /// the build, because a test script ending in .cs would otherwise be
-    /// compiled into the program the way nothing in them ever was.
+    /// compiled into the program the way nothing in them ever was. The
+    /// build folder is kept out of every item the build gathers, not
+    /// only out of what it compiles: once built, it may hold whatever its
+    /// build tool installed - tens of thousands of files every build would
+    /// otherwise walk - and files of its own the build would trip over.
     /// </remarks>
     /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
+    /// <param name="build">Whether there is a build folder</param>
     /// <param name="data">Whether the code uses a database, which takes SQLite</param>
     /// <param name="entities">Whether it keeps its records with Entity Framework Core</param>
     /// <param name="evolve">Whether it migrates it with Evolve</param>
@@ -316,7 +353,7 @@ public static class ProjectPacker
     /// Whether the snippet is made asynchronous whether it waits for anything or not, as the project of a
     /// repository has it - which the compiler only warns about, and need not
     /// </param>
-    private static string Csproj(bool assets, IReadOnlyList<string> context, bool data, bool entities, bool evolve, bool awaitsAlways = false)
+    private static string Csproj(bool assets, IReadOnlyList<string> context, bool build, bool data, bool entities, bool evolve, bool awaitsAlways = false)
     {
         var copy = assets ? "\n\n    <ItemGroup>\n        <None Update=\"assets/**\" CopyToOutputDirectory=\"PreserveNewest\" />\n    </ItemGroup>" : string.Empty;
 
@@ -333,6 +370,11 @@ public static class ProjectPacker
 
         // CS1998: an async method that awaits nothing
         var quiet = awaitsAlways ? "\n        <NoWarn>$(NoWarn);CS1998</NoWarn>" : string.Empty;
+
+        if (build)
+        {
+            quiet += $"\n        <DefaultItemExcludes>$(DefaultItemExcludes);{ProjectPaths.Build}**</DefaultItemExcludes>";
+        }
 
         return $"""
             <Project Sdk="Microsoft.NET.Sdk">
@@ -355,8 +397,9 @@ public static class ProjectPacker
     /// The host, and a word about where the app came from.
     /// </summary>
     /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
+    /// <param name="build">Whether it has a build folder</param>
     /// <param name="database">Whether the project carries the app's database; nothing where it has none</param>
-    private static string Program(ExportedLambda lambda, string name, bool awaits, IReadOnlyList<string> context, bool? database)
+    private static string Program(ExportedLambda lambda, string name, bool awaits, IReadOnlyList<string> context, bool build, bool? database)
     {
         var facts = new List<(string Key, string Value)>
         {
@@ -413,6 +456,11 @@ public static class ProjectPacker
             (false, true) => "\n//\n// tests/ says how it is tested, as it was written beside it on the platform.",
             _ => string.Empty
         };
+
+        if (build)
+        {
+            written += "\n//\n// build/ is what its assets or code are built from, as it was kept beside it on\n// the platform - built by whoever changed it, never by the platform.";
+        }
 
         var mounted = database != null ? " -v \"$PWD/database:/app/database\"" : string.Empty;
 
@@ -496,7 +544,8 @@ public static class ProjectPacker
             // reads, from environment variables of the same name, and the Database it keeps
             // its records in (database/database.db, made empty the first time it connects).
             // docs/ says what the app is for and why it is built the way it is, and tests/
-            // how it is tested.
+            // how it is tested. build/, where there is one, is what the assets or code are
+            // built from - built by whoever changes it, never by the platform.
 
             using GenHTTP.Engine.Internal;
             using GenHTTP.Modules.Practices;

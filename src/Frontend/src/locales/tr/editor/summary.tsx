@@ -6,6 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Dokümantasyon ve testler',
   writtenWhy: 'Asla derlenmez ve asla sunulmaz. Her sürümle birlikte saklanır ve statik dosyalarla birlikte sayılır.',
   writtenMissing: 'Henüz yazılmadı',
+  build: 'Derleme',
+  buildWhy: 'Asla derlenmez ya da sunulmaz: kodun veya statik dosyaların neyden derlendiği. Statik dosyalarla birlikte sayılır.',
+  buildFiles: (files, size) => (files === 1 ? `1 dosya, ${size}` : `${files} dosya, ${size}`),
   hint: (since, kept, retention, tier) =>
     `Trafik, sunucu son başladığından beri sayılıyor (${since}). ` +
     (kept

@@ -29,8 +29,8 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} restituisce ciò che viene servito, gli altri file {cs} contengono i tipi e ogni altro file viene servito
-      così com’è, tranne quello che si trova in {context}: la documentazione e i test, mai compilati né serviti. Ctrl-S
-      salva, F12 va alla dichiarazione.
+      così com’è, tranne quello che si trova in {context}: la documentazione, i test e ciò da cui è costruito, mai
+      compilati né serviti. Ctrl-S salva, F12 va alla dichiarazione.
     </>
   ),
   newer: (version) => ` La versione ${version} è più recente di quella aperta qui.`,

@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Więcej niż jeden plik',
     page: 'Serwowanie strony',
     spa: 'Frontend krok po kroku',
+    built: 'Z czego jest zbudowane',
     storage: 'Dwa miejsca na pliki',
     database: 'Przechowywanie rekordów',
     keeping: 'Przechowywanie plików',
@@ -116,6 +117,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Testy', () => <>Jak aplikacja jest testowana automatycznie, razem ze skryptami i danymi testowymi. Tylko w widoku pełnym.</>],
+    ['Budowanie', () => <>To, z czego zbudowany jest kod lub zasoby tam, gdzie powstają w narzędziu do budowania, przechowywane z każdą wersją, do czytania, nie do edycji. W widoku pełnym, gdy wersja to przechowuje.</>],
   ],
   sections: (k) => (
     <>
@@ -274,6 +276,27 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Dodaj obok API, a strona będzie miała z czym rozmawiać:</>,
   ],
+  built: (k) => (
+    <>
+      Część lambdy może powstawać w narzędziu do budowania, zamiast być pisana tak, jak jest serwowana lub kompilowana:
+      kompilowana, pakowana lub generowana. Wersja zawiera to, co narzędzie wytwarza – jako swoje zasoby albo jako swój
+      kod – a obok tego pliki, z których to powstaje, czyli swój {k.b('folder build')}:{' '}
+      {k.code('.lambda/build/')} w wersji, {k.code('build/')} w sklonowanym repozytorium, z tym, na czym pracuje narzędzie.
+      Twój agent zmienia te pliki, uruchamia build u siebie i zapisuje jedno i drugie w tej samej wersji. Ta platforma
+      niczego nie buduje.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Tak jak dokumentacja należy do swojej wersji: jest porównywana w historii, przywracana, kopiowana do szkicu,
+      klonowana, pobierana i publikowana razem z kodem – i nigdy nie jest kompilowana ani serwowana. W centrum
+      sterowania {k.b('Budowanie')} pokazuje ją, gdy wersja ją przechowuje: jak jest budowana, według jej README, jej
+      pliki i to, czy wersja zmieniła je bez zmiany czegokolwiek, co z nich zbudowano. Jest tam do czytania, nie do
+      edycji – zmienia się ją tam, gdzie jest budowana.
+    </>
+  ),
+  builtAside:
+    'To, co jest pisane tak, jak jest serwowane lub kompilowane, żadnego takiego folderu nie potrzebuje. To, co build instaluje lub zachowuje dla siebie – na przykład node_modules – nigdy nie jest częścią wersji: pilnuje tego .gitignore w folderze build.',
 
   storage: (k) => (
     <>
@@ -286,7 +309,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'W wersji',
   workspaceColumn: 'W danych',
   table: [
-    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem – oraz jego dokumentacja i testy', 'wszystko, co zapisze lambda albo ktoś prześle'],
+    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem – oraz jego dokumentacja, testy i to, z czego jest zbudowany', 'wszystko, co zapisze lambda albo ktoś prześle'],
     ['kiedy się zmienia', 'nigdy – zmiana to nowa wersja', 'w chwili, gdy coś zostanie zapisane'],
     ['wdrożenie', 'wrzuca online dokładnie te pliki', 'nigdy ich nie rusza'],
     ['powrót do starszej wersji', 'przywraca stare pliki', 'bez wpływu: wszystkie wersje je współdzielą'],
@@ -406,7 +429,8 @@ export const guide: Messages['guide'] = {
       dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze {k.code('Platform')}, więc w kodzie nie
       trzeba nic zmieniać.
       {' '}{k.code('Secret')} odczytuje tam zmienne środowiskowe o tej samej nazwie; wartości zostają tutaj.
-      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}.
+      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}, a folder build do{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} otwiera {k.code('database/database.db')} – pobrany projekt zawiera ten plik razem z
       rekordami, które zapisała twoja aplikacja.
     </>
@@ -447,7 +471,8 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami i zmianą, którą wprowadziła.
+      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami, folderem build i
+      zmianą, którą wprowadziła.
       To, co aplikacja przechowuje – jej rekordy, zapisane pliki, wartości kluczy i haseł – nigdy nie jest publikowane,
       podobnie jak twoje prośby, sformułowane twoimi słowami, i to, kto korzysta z aplikacji. Po wyłączeniu strona
       znika; gwiazdki zostają zachowane na wypadek ponownej publikacji.

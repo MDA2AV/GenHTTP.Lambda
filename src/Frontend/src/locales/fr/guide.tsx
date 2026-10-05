@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Plusieurs fichiers',
     page: 'Servir une page',
     spa: 'Un front-end, étape par étape',
+    built: 'Ce à partir de quoi il est construit',
     storage: 'Les deux endroits où vivent les fichiers',
     database: 'Garder des enregistrements',
     keeping: 'Garder des fichiers',
@@ -101,10 +102,10 @@ export const guide: Messages['guide'] = {
     ],
     ['Brouillons', () => <>Des modifications essayées avant d’être mises en ligne, chacune à sa propre adresse et sur ses propres données de test. Une fois ouvert, un brouillon a son propre code, ses propres données de test et ses propres logs. La section apparaît dès qu’il y a un brouillon.</>],
     ['Fichiers', () => <>Les fichiers d’une version : son code et ses assets, le programme lui-même. Un cadenas ou un globe indique si le public peut y accéder.</>],
-    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : la base de données, le workspace et les secrets, chacun dans son onglet. Consultez les tables et les fichiers, envoyez des fichiers, définissez des secrets, ou activez et désactivez un type. La vue simple l’affiche dès que l’application garde quelque chose.</>],
+    ['Données', () => <>Ce que la lambda garde pendant qu’elle tourne, partagé par toutes les versions : la base de données, le workspace et les secrets, chacun dans son onglet. Consultez les tables et les fichiers, envoyez des fichiers, définissez des secrets, ou activez et désactivez un type. La vue simple l’affiche dès que l’application garde quelque chose.</>],
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],
-    ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
+    ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
     ['Logs', () => <>Ses requêtes, ce qu’elle affiche, et la stack trace de tout ce qui plante, en direct.</>],
     [
       'Code',
@@ -118,6 +119,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Tests', () => <>Comment l’application est testée automatiquement, avec les scripts et les données de test prévus pour cela. Uniquement dans la vue complète.</>],
+    ['Build', () => <>Ce à partir de quoi le code ou les assets sont construits là où un outil de build les produit, conservé avec chaque version, à lire plutôt qu’à modifier. Dans la vue complète, dès qu’une version le conserve.</>],
   ],
   sections: (k) => (
     <>
@@ -281,6 +283,27 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Ajoutez une API à côté, pour que la page ait à qui parler :</>,
   ],
+  built: (k) => (
+    <>
+      Une partie d’une lambda peut être produite par un outil de build plutôt qu’écrite telle qu’elle est servie ou
+      compilée : compilée, assemblée ou générée. La version contient ce que l’outil produit - comme assets, ou comme
+      code - et à côté les fichiers à partir desquels il le produit, son {k.b('dossier de build')} :{' '}
+      {k.code('.lambda/build/')} dans la version, {k.code('build/')} dans un clone, qui contient tout ce dont l’outil part.
+      Votre agent modifie ces fichiers, lance le build là où il travaille et enregistre les deux dans la même version.
+      Cette plateforme ne construit rien.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Comme la documentation, il appartient à sa version : comparé dans l’historique, restauré, copié dans un
+      brouillon, cloné, téléchargé et publié avec le code - et jamais compilé ni servi. Dans le tableau de bord,{' '}
+      {k.b('Build')} l’affiche dès qu’une version en conserve un : comment il est construit, selon son README, ses
+      fichiers, et si une version les a modifiés sans rien changer de ce qui en est construit. Il se lit là, sans s’y
+      modifier - une modification se fait là où il est construit.
+    </>
+  ),
+  builtAside:
+    'Ce qui est écrit tel qu’il est servi ou compilé n’en a pas besoin. Ce qu’un build installe ou conserve pour lui-même - node_modules, par exemple - ne fait jamais partie d’une version : un .gitignore dans le dossier de build l’en exclut.',
 
   storage: (k) => (
     <>
@@ -293,7 +316,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Dans une version',
   workspaceColumn: 'Dans les données',
   table: [
-    ['ce qu’il contient', 'le code et les assets : le programme, front-end compris, ainsi que sa documentation et ses tests','tout ce que la lambda écrit, ou que quelqu’un importe'],
+    ['ce qu’il contient', 'le code et les assets : le programme, front-end compris, ainsi que sa documentation, ses tests et ce à partir de quoi il est construit','tout ce que la lambda écrit, ou que quelqu’un importe'],
     ['quand il change', 'jamais : une modification donne une nouvelle version', 'dès que quelque chose y est écrit'],
     ['un déploiement', 'met exactement ces fichiers en ligne', 'n’y touche jamais'],
     ['revenir en arrière', 'restaure les anciens fichiers', 'aucun effet : toutes les versions les partagent'],
@@ -418,8 +441,9 @@ export const guide: Messages['guide'] = {
       Votre snippet devient {k.code('Project.cs')}, et {k.code('Program.cs')} sert ce qu’il renvoie. Vos autres
       fichiers sont repris exactement tels quels. {k.code('Workspace')} et {k.code('Assets')} deviennent deux dossiers à
       côté du programme, avec les mêmes méthodes, à part dans un dossier {k.code('Platform')} : rien à changer dans votre code.
-      {' '}{k.code('Secret')} y lit les variables d’environnement du même nom ; les valeurs restent ici. La
-      documentation et les tests suivent dans {k.code('docs')} et {k.code('tests')}.
+      {' '}{k.code('Secret')} y lit les variables d’environnement du même nom ; les valeurs restent ici. La
+      documentation et les tests suivent dans {k.code('docs')} et {k.code('tests')}, et le dossier de build dans{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} ouvre {k.code('database/database.db')}, que le téléchargement contient avec les
       enregistrements gardés par votre application.
     </>
@@ -461,11 +485,11 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Chaque version est publiée, les plus anciennes aussi, avec sa documentation, ses tests et la modification qu’elle
-      a apportée. Ce que garde l’application n’est jamais publié – ses enregistrements, les fichiers qu’elle a
-      enregistrés, les valeurs de ses clés et mots de passe –, pas plus que ce que vous avez demandé avec vos propres
-      mots, ni qui utilise l’application. Désactivez la publication et la page disparaît ; ses étoiles sont conservées
-      pour le jour où vous publierez à nouveau le code.
+      Chaque version est publiée, les plus anciennes aussi, avec sa documentation, ses tests, son dossier de build et
+      la modification qu’elle a apportée. Ce que garde l’application n’est jamais publié – ses
+      enregistrements, les fichiers qu’elle a enregistrés, les valeurs de ses clés et mots de passe –, pas plus que ce
+      que vous avez demandé avec vos propres mots, ni qui utilise l’application. Désactivez la publication et la page
+      disparaît ; ses étoiles sont conservées pour le jour où vous publierez à nouveau le code.
     </>
   ),
   openAside:

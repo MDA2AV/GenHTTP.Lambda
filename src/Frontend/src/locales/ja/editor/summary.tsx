@@ -6,6 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'ドキュメントとテスト',
   writtenWhy: 'コンパイルも配信もされません。バージョンごとに保存され、アセットの容量に含まれます。',
   writtenMissing: 'まだ書かれていません',
+  build: 'ビルド',
+  buildWhy: 'コンパイルも配信もされません。コードやアセットの作成元で、アセットの容量に含まれます。',
+  buildFiles: (files, size) => `${files}件のファイル、${size}`,
   hint: (since, kept, retention, tier) =>
     `アクセス数は、サーバーの前回起動時（${since}）から集計しています。` +
     (kept

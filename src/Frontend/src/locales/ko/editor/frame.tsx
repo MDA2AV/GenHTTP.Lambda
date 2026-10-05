@@ -19,10 +19,11 @@ export const frame: EditorMessages['frame'] = {
     stats: '통계',
     logs: '로그',
     code: '코드',
+    build: '빌드',
   },
   sectionsLabel: '섹션',
   groups: {
-    build: '개발',
+    develop: '개발',
     program: '프로그램과 데이터',
     run: '운영',
     sharing: '공유',

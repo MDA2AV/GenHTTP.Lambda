@@ -45,11 +45,13 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     /// Reads the files of a single version.
     /// </summary>
     /// <remarks>
-    /// Every file unless a folder is named. Its documentation and its tests
-    /// are <c>?folder=.lambda/</c>, which is how they are read without every
+    /// Every file unless a folder is named. Its documentation is
+    /// <c>?folder=.lambda/docs/</c>, its tests <c>?folder=.lambda/tests/</c>
+    /// and its build folder - what its assets are built from -
+    /// <c>?folder=.lambda/build/</c>, which is how they are read without every
     /// asset of the version coming along.
     /// </remarks>
-    /// <param name="folder">Only the files below this folder, such as <c>.lambda/</c></param>
+    /// <param name="folder">Only the files below this folder, such as <c>.lambda/docs/</c></param>
     [ResourceMethod("lambdas/:privateKey/versions/:version")]
     public VersionContentResponse Get(string privateKey, int version, string? folder)
         => Describe(meta.GetVersion(privateKey, version), folder);
@@ -59,22 +61,28 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     /// </summary>
     /// <remarks>
     /// The archive holds the files as they are named in the lambda, so it can
-    /// be changed locally and uploaded again as a new version.
+    /// be changed locally and uploaded again as a new version. With
+    /// <c>?layout=project</c> it holds them where a clone has them instead -
+    /// <c>Project.cs</c>, <c>assets/</c>, <c>docs/</c>, <c>tests/</c>,
+    /// <c>build/</c> - so a build set up in a clone writes to the same place.
     /// </remarks>
+    /// <param name="layout"><c>lambda</c> (the default) or <c>project</c></param>
     [ResourceMethod("lambdas/:privateKey/versions/:version/zip")]
-    public IResponse GetArchive(string privateKey, int version, IRequest request)
+    public IResponse GetArchive(string privateKey, int version, string? layout, IRequest request)
     {
+        var laid = LayoutOf(layout);
+
         var lambda = meta.Require(privateKey);
 
         var content = meta.GetVersion(privateKey, version);
 
-        var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code));
+        var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code), laid);
 
-        logger.LogInformation("Downloaded lambda {Lambda} version {Version}", lambda.PublicKey, version);
+        logger.LogInformation("Downloaded lambda {Lambda} version {Version} layout {Layout}", lambda.PublicKey, version, laid);
 
         return request.Respond()
                       .Content(zip, new ContentType("application/zip"))
-                      .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}-v{version}.zip\"")
+                      .Header("Content-Disposition", $"attachment; filename=\"{lambda.PublicKey}-v{version}{(laid == ArchiveLayout.Project ? "-project" : string.Empty)}.zip\"")
                       .Build();
     }
 
@@ -84,21 +92,32 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     /// <remarks>
     /// The archive replaces the whole set of files, so it has to hold all of
     /// them - a file left out is gone from the new version. Hidden files and
-    /// folders are skipped, and a single top level folder is removed.
+    /// folders are skipped, and a single top level folder is removed. The
+    /// build folder in <c>.lambda/build/</c> keeps its dot files and
+    /// leaves out what its own <c>.gitignore</c> files ignore, as git does.
+    /// With <c>?layout=project</c>, the archive is laid out as a clone and read
+    /// as a commit of it would be: the platform's files are left out, and so
+    /// is what the repository ignores, <c>bin/</c> and <c>obj/</c> among it.
+    /// The archive is counted as it is sent, before anything is left out, so
+    /// it holds what a commit would - never what a build installed.
     /// </remarks>
     /// <param name="deploy">Whether to put the new version online as well</param>
     /// <param name="specification">What the user wants from this version and why</param>
     /// <param name="change">What this version changes, in a line</param>
+    /// <param name="layout"><c>lambda</c> (the default) or <c>project</c></param>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/zip")]
-    public async ValueTask<Result<SavedVersionResponse>> CreateFromArchive(string privateKey, bool? deploy, string? specification, string? change, Stream body)
+    public async ValueTask<Result<SavedVersionResponse>> CreateFromArchive(string privateKey, bool? deploy, string? specification, string? change, string? layout,
+                                                                           Stream body)
     {
+        var laid = LayoutOf(layout);
+
         // looked up before the body is read, because how much of it may be
         // read depends on the tier - and a key that names nothing needs none
         var lambda = meta.Require(privateKey);
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var files = await LambdaArchive.UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier));
+        var files = await UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier), laid, Latest(meta, privateKey));
 
         return await SaveAsync(privateKey, files, deploy, specification, change);
     }
@@ -160,6 +179,23 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
 
         return new Result<SavedVersionResponse>(saved).Status(ResponseStatus.Created);
     }
+
+    /// <summary>
+    /// The layout an archive is asked for in.
+    /// </summary>
+    internal static ArchiveLayout LayoutOf(string? layout) => layout?.Trim().ToLowerInvariant() switch
+    {
+        null or "" or "lambda" => ArchiveLayout.Lambda,
+        "project" => ArchiveLayout.Project,
+        _ => throw LambdaException.Invalid($"There is no layout '{layout}': 'lambda', the default, names the files as the lambda does, 'project' lays them out as a clone does.")
+    };
+
+    /// <summary>
+    /// The files of an uploaded archive in the given layout.
+    /// </summary>
+    /// <param name="basis">The files it was made from: what it already has is kept whatever a .gitignore says, and a project's names are read against them</param>
+    internal static ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream body, long maxBytes, ArchiveLayout layout, IReadOnlyList<LambdaFile> basis)
+        => layout == ArchiveLayout.Project ? LambdaArchive.UnpackProjectAsync(body, maxBytes, basis) : LambdaArchive.UnpackAsync(body, maxBytes, basis);
 
     /// <summary>
     /// The files of the newest version of a lambda.

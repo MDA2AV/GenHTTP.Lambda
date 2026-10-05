@@ -35,6 +35,8 @@ export const files: EditorMessages['files'] = {
   contextWhy: '컴파일되지도, 제공되지도 않아요. 이 버전에 대해 적어 둔 것으로, 이 버전을 읽거나 고칠 사람을 위한 거예요.',
   contextUsage: (files, size) => `${files}, ${size} (에셋 용량에 포함)`,
   noContext: '이 버전에 대해 아직 작성된 게 없어요.',
+  build: '빌드',
+  buildWhy: '컴파일되지도 제공되지도 않아요. 코드나 에셋을 수정하는 쪽이 그것을 만들 때 쓰는 원본이에요.',
   data: '데이터',
   dataPublic: '공개: 온라인 코드가 Workspace로 제공해요.',
   dataPrivate: '람다만 볼 수 있어요. 어떤 버전에도 속하지 않아요.',

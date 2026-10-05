@@ -37,6 +37,8 @@ export const files: EditorMessages['files'] = {
   contextWhy: 'Nooit gecompileerd en nooit geserveerd: wat er over deze versie geschreven is, voor wie hem leest of aanpast.',
   contextUsage: (files, size) => `${files}, ${size} – meegeteld bij de assets`,
   noContext: 'Er is nog niets over deze versie geschreven.',
+  build: 'Build',
+  buildWhy: 'Nooit gecompileerd en nooit geserveerd: waaruit de code of de assets worden gebouwd, door wie ze wijzigt.',
   data: 'Data',
   dataPublic: 'Openbaar: de code die online staat, serveert de data met Workspace.',
   dataPrivate: 'Alleen voor de lambda zelf. Hoort bij geen enkele versie.',

@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Mais do que um ficheiro',
     page: 'Servir uma página',
     spa: 'Um front-end, passo a passo',
+    built: 'Aquilo a partir do qual é compilado',
     storage: 'Os dois sítios onde vivem os ficheiros',
     database: 'Guardar registos',
     keeping: 'Guardar ficheiros',
@@ -118,6 +119,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Testes', () => <>Como a app é testada automaticamente, com os scripts e os dados de teste para isso. Só na vista completa.</>],
+    ['Compilação', () => <>Aquilo a partir do qual o código ou os assets são compilados, onde uma ferramenta de compilação os faz, guardado com cada versão, para ler e não para editar. Na vista completa, assim que uma versão o guarda.</>],
   ],
   sections: (k) => (
     <>
@@ -277,6 +279,27 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Junta-lhe uma API e a página já tem com quem falar:</>,
   ],
+  built: (k) => (
+    <>
+      Parte de uma lambda pode ser feita por uma ferramenta de compilação em vez de escrita tal como é servida ou
+      compilada: compilada, empacotada ou gerada. A versão guarda o que a ferramenta faz - como assets ou como código - e,
+      a seu lado, os ficheiros a partir dos quais o faz, a sua {k.b('pasta de compilação')}:{' '}
+      {k.code('.lambda/build/')} na versão, {k.code('build/')} num clone, com tudo aquilo com que a ferramenta trabalha.
+      O teu agente altera esses ficheiros, executa a compilação onde trabalha e guarda ambos na mesma versão. Esta
+      plataforma não compila nada.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Tal como a documentação, pertence à sua versão: é comparado no histórico, revertido, copiado para um rascunho,
+      clonado, transferido e publicado com o código - e nunca é compilado nem servido. No painel de controlo,{' '}
+      {k.b('Compilação')} mostra-o assim que uma versão o guarda: como é compilado, segundo o seu README, os seus
+      ficheiros, e se uma versão os alterou sem alterar nada do que é compilado a partir deles. Lê-se aí, não se edita -
+      uma alteração faz-se onde é compilado.
+    </>
+  ),
+  builtAside:
+    'O que é escrito tal como é servido ou compilado não precisa de nada disto. O que uma compilação instala ou guarda para si - o node_modules, por exemplo - nunca faz parte de uma versão: um .gitignore na pasta de compilação mantém-no de fora.',
 
   storage: (k) => (
     <>
@@ -289,7 +312,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Numa versão',
   workspaceColumn: 'Nos dados',
   table: [
-    ['o que guarda', 'o código e os assets: o programa, incluindo o front-end, e também a sua documentação e os seus testes', 'tudo o que a lambda escreve, ou que alguém carrega'],
+    ['o que guarda', 'o código e os assets: o programa, incluindo o front-end, e também a sua documentação, os seus testes e aquilo a partir do qual é compilado', 'tudo o que a lambda escreve, ou que alguém carrega'],
     ['quando muda', 'nunca: uma alteração é uma nova versão', 'no momento em que algo é escrito'],
     ['um deploy', 'põe online exatamente estes ficheiros', 'nunca lhes toca'],
     ['reverter', 'traz de volta os ficheiros antigos', 'não tem efeito: são os mesmos para todas as versões'],
@@ -410,7 +433,7 @@ export const guide: Messages['guide'] = {
       pastas ao lado do programa, com os mesmos métodos, à parte numa pasta {k.code('Platform')}, por isso não tens de
       mudar nada no teu código.
       {' '}{k.code('Secret')} lê aí as variáveis de ambiente com o mesmo nome; os valores ficam cá. A documentação e os
-      testes vêm também, em {k.code('docs')} e {k.code('tests')}.
+      testes vêm também, em {k.code('docs')} e {k.code('tests')}, e a pasta de compilação em {k.code('build')}.
       {' '}{k.code('Database')} abre {k.code('database/database.db')}, que a transferência traz com os registos que a
       tua app guardou.
     </>
@@ -451,10 +474,11 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Todas as versões são publicadas, incluindo as anteriores, com a documentação, os testes e a alteração que cada
-      uma fez. O que a app guarda nunca é publicado (os registos, os ficheiros que guardou, os valores das chaves e
-      palavras-passe), nem o que pediste pelas tuas próprias palavras, nem quem usa a app. Desliga a publicação e a
-      página desaparece; as estrelas ficam guardadas para quando a voltares a ligar.
+      Todas as versões são publicadas, incluindo as anteriores, com a documentação, os testes, a pasta de compilação e
+      a alteração que cada uma fez. O que a app guarda nunca é publicado (os registos, os ficheiros
+      que guardou, os valores das chaves e palavras-passe), nem o que pediste pelas tuas próprias palavras, nem quem
+      usa a app. Desliga a publicação e a página desaparece; as estrelas ficam guardadas para quando a voltares a
+      ligar.
     </>
   ),
   openAside:

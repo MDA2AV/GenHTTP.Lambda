@@ -28,8 +28,8 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} mengembalikan apa yang disajikan, file {cs} lainnya berisi tipe, dan file lain disajikan apa adanya -
-      kecuali yang ada di {context}: dokumentasi dan pengujian, yang tidak pernah dikompilasi atau disajikan. Ctrl-S
-      untuk menyimpan, F12 untuk membuka deklarasi.
+      kecuali yang ada di {context}: dokumentasi, pengujian, dan bahan pembuatnya, yang tidak pernah dikompilasi atau
+      disajikan. Ctrl-S untuk menyimpan, F12 untuk membuka deklarasi.
     </>
   ),
   newer: (version) => ` Versi ${version} lebih baru dari yang terbuka di sini.`,

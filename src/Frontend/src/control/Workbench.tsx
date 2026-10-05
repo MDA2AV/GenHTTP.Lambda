@@ -13,7 +13,7 @@ import { languageFor } from '../monaco';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Section } from './ui';
-import { CONTEXT, isCode } from './written';
+import { BESIDE, isBuild, isCode } from './written';
 
 type Busy = 'save' | 'check' | 'deploy' | null;
 
@@ -194,7 +194,8 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     setBusy('check');
 
     try {
-      const result = await api.check(privateKey, files);
+      // what the build folder holds is no part of what is compiled
+      const result = await api.check(privateKey, files.filter((file) => !isBuild(file.name)));
 
       setDiagnostics(result.diagnostics);
       setBuilt(result.success ? 'clean' : 'idle');
@@ -332,7 +333,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       hint={
         <>
           {feature ? said.editFeature : demo ? said.demo : said.edit}
-          {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>, <code className="font-mono">{CONTEXT}</code>)}
+          {said.files(<code className="font-mono">lambda.cs</code>, <code className="font-mono">.cs</code>, <code className="font-mono">{BESIDE}</code>)}
           {newer && said.newer(lambda.latestVersion!)}
         </>
       }
@@ -375,6 +376,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           onSelect={setActive}
           onChange={demo ? undefined : setFiles}
           faulty={new Set(diagnostics.filter((d) => d.file).map((d) => d.file!))}
+          onBuild={() => control.openBuild(feature ? undefined : loaded ?? undefined)}
         />
       }
     >
@@ -400,9 +402,9 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           theme={control.theme}
           diagnostics={diagnostics.filter((d) => (d.file ?? ENTRY) === active)}
           reveal={reveal}
-          onChange={current?.encoding === 'base64' || demo ? undefined : setCode}
+          onChange={current?.encoding === 'base64' || demo || isBuild(active) ? undefined : setCode}
           onSave={save}
-          readOnly={demo}
+          readOnly={demo || isBuild(active)}
           onDefinition={goToDefinition}
         />
 

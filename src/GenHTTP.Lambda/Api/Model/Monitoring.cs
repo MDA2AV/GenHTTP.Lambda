@@ -16,6 +16,9 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <param name="Versions">How many versions are kept</param>
 /// <param name="RecentProblems">The last few warnings and errors, newest first</param>
 /// <param name="Documentation">What the documentation of the version the storage is about says, and which of its pages it has</param>
+/// <param name="Build">
+/// The build folder of the newest version - which may be ahead of the one the storage is about - and of that one
+/// </param>
 public sealed record LambdaSummaryResponse(
     LambdaResponse Lambda,
     VersionResponse? Live,
@@ -26,8 +29,24 @@ public sealed record LambdaSummaryResponse(
     IReadOnlyList<OwnerLogEntry> RecentProblems,
     StorageSummary Storage,
     SummaryLimits Limits,
-    DocumentationSummary Documentation
+    DocumentationSummary Documentation,
+    BuildFacts Build
 );
+
+/// <summary>
+/// What a lambda keeps of what its assets or code are built from: the build
+/// folder of a version, which only whoever builds it changes.
+/// </summary>
+/// <remarks>
+/// Of two versions, because the editor asks two things of it: whether the
+/// lambda has one at all - which the newest says, saved by an agent before
+/// anybody put it online - and what the version the rest of the figures are
+/// about holds.
+/// </remarks>
+/// <param name="Files">How many files the build folder of the version the storage is about holds</param>
+/// <param name="Bytes">What those weigh, towards what the assets of a version may come to</param>
+/// <param name="NewestFiles">How many files that of the newest version holds</param>
+public sealed record BuildFacts(int Files, long Bytes, int NewestFiles);
 
 /// <summary>
 /// How much a lambda is being used, and how well it is answering.

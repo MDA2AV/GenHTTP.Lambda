@@ -14,8 +14,17 @@ export const versions = {
   unchanged: 'Nothing changed from the version before.',
   first: 'The first version.',
   status: { added: 'added', removed: 'removed', changed: 'changed', same: 'same' } as Record<string, string>,
+  /** What the changed files are to the version, as headings over a list of them that holds more than one kind. */
+  groups: {
+    code: 'Code',
+    assets: 'Assets',
+    build: 'Build',
+    context: 'Documentation and tests',
+  },
   browse: 'Browse its files',
   docs: 'Read its documentation',
+  /** Opens what a version is built from, where it keeps that. */
+  build: 'See what it is built from',
   edit: 'Edit from here',
   feature: 'Start a draft from here',
   featureTitle: 'Try a change on a copy of this version, without touching what is online',

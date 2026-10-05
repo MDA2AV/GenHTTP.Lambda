@@ -36,6 +36,8 @@ export const files: EditorMessages['files'] = {
   contextWhy: 'Nie kompiliert und nie ausgeliefert: was über diese Version geschrieben ist, für alle, die sie lesen oder ändern.',
   contextUsage: (files, size) => `${files}, ${size} – zu den Assets gezählt`,
   noContext: 'Über diese Version ist noch nichts geschrieben.',
+  build: 'Build',
+  buildWhy: 'Nie kompiliert und nie ausgeliefert: das, woraus der Code oder die Assets gebaut werden, von wem sie ändert.',
   data: 'Daten',
   dataPublic: 'Öffentlich: Der Code, der online ist, liefert sie mit Workspace aus.',
   dataPrivate: 'Privat, nur für das Lambda. Gehört zu keiner Version.',

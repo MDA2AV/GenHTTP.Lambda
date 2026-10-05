@@ -112,6 +112,33 @@ public static class McpProtocol
     /// </summary>
     public static JsonObject Refuse(string message) => Say(new { ok = false, problem = message }, failed: true);
 
+    /// <summary>
+    /// The same answer with one more thing said, in the text and in the data.
+    /// </summary>
+    /// <remarks>
+    /// For what is worth saying however the call went on - a save that left
+    /// something out - so the several answers it may end in need not each
+    /// carry it.
+    /// </remarks>
+    /// <param name="said">An answer of <see cref="Say" /></param>
+    /// <param name="note">Nothing to leave the answer as it is</param>
+    public static JsonObject Adding(JsonObject said, string name, string? note)
+    {
+        if (note == null || said["structuredContent"] is not JsonObject data)
+        {
+            return said;
+        }
+
+        data[name] = note;
+
+        if (said["content"] is JsonArray { Count: > 0 } content && content[0] is JsonObject text)
+        {
+            text["text"] = data.ToJsonString(Format);
+        }
+
+        return said;
+    }
+
     #endregion
 
 }

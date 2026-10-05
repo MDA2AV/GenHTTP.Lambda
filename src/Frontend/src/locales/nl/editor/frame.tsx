@@ -19,10 +19,11 @@ export const frame: EditorMessages['frame'] = {
     stats: 'Statistieken',
     logs: 'Logs',
     code: 'Code',
+    build: 'Build',
   },
   sectionsLabel: 'Onderdelen',
   groups: {
-    build: 'Bouwen',
+    develop: 'Ontwikkelen',
     program: 'Programma en data',
     run: 'Draaien',
     sharing: 'Delen',

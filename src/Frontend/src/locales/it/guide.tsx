@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Più di un file',
     page: 'Servire una pagina',
     spa: 'Un front-end, passo per passo',
+    built: 'Ciò da cui è costruita',
     storage: 'I due posti dove stanno i file',
     database: 'Salvare le voci',
     keeping: 'Salvare i file',
@@ -118,6 +119,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Test', () => <>Come viene testata automaticamente l’app, con gli script e i dati di test che servono. Solo nella vista completa.</>],
+    ['Build', () => <>Ciò da cui sono costruiti il codice o gli asset dove li produce uno strumento di build, conservato con ogni versione, da leggere e non da modificare. Nella vista completa, appena una versione lo conserva.</>],
   ],
   sections: (k) => (
     <>
@@ -278,6 +280,27 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Aggiungi un’API accanto e la pagina avrà qualcosa con cui parlare:</>,
   ],
+  built: (k) => (
+    <>
+      Una parte di una lambda può essere prodotta da uno strumento di build invece di essere scritta così com’è servita o
+      compilata: compilata, assemblata o generata. La versione contiene ciò che lo strumento produce, come asset o come
+      codice, e accanto a questo i file da cui lo produce, la sua {k.b('cartella build')}:{' '}
+      {k.code('.lambda/build/')} nella versione, {k.code('build/')} in un clone, che contiene tutto ciò da cui lo
+      strumento parte. Il tuo agente modifica quei file, esegue la build dove lavora e salva entrambi nella stessa
+      versione. Questa piattaforma non costruisce niente.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Come la documentazione, appartiene alla sua versione: viene confrontato nella cronologia, ripristinato, copiato in
+      una bozza, clonato, scaricato e pubblicato con il codice, e non viene mai compilato né servito. Nel pannello di
+      controllo, {k.b('Build')} lo mostra appena una versione ne conserva uno: come viene costruito, secondo il suo
+      README, i suoi file e se una versione li ha cambiati senza cambiare nulla di ciò che ne è costruito. Lì si legge,
+      non si modifica: una modifica si fa dove viene costruito.
+    </>
+  ),
+  builtAside:
+    'Ciò che è scritto così com’è servito o compilato non ne ha bisogno. Ciò che una build installa o tiene per sé, come node_modules, non fa mai parte di una versione: un .gitignore nella cartella build lo tiene fuori.',
 
   storage: (k) => (
     <>
@@ -290,7 +313,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'In una versione',
   workspaceColumn: 'Nei dati',
   table: [
-    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso, con la sua documentazione e i suoi test', 'quello che scrive la lambda o che carica qualcuno'],
+    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso, con la sua documentazione, i suoi test e ciò da cui è costruito', 'quello che scrive la lambda o che carica qualcuno'],
     ['quando cambia', 'mai: una modifica è una nuova versione', 'appena ci viene scritto qualcosa'],
     ['un deploy', 'mette online esattamente questi file', 'non li tocca mai'],
     ['tornare indietro', 'riporta i vecchi file', 'nessun effetto: tutte le versioni li condividono'],
@@ -410,7 +433,8 @@ export const guide: Messages['guide'] = {
       accanto al programma, con gli stessi metodi, a parte in una cartella {k.code('Platform')}, quindi nel tuo codice non
       devi cambiare niente.
       {' '}{k.code('Secret')} lì legge le variabili d’ambiente con lo stesso nome; i valori restano qui. Anche la
-      documentazione e i test vengono con te, in {k.code('docs')} e {k.code('tests')}.
+      documentazione e i test vengono con te, in {k.code('docs')} e {k.code('tests')}, e la cartella build in{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} apre {k.code('database/database.db')}, che il download porta con sé insieme alle voci
       che la tua app ha conservato.
     </>
@@ -452,10 +476,10 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Viene pubblicata ogni versione, anche quelle precedenti, con la sua documentazione, i suoi test e la modifica che
-      ha fatto. Quello che l’app conserva non viene mai pubblicato (le sue voci, i file che ha salvato, i valori delle
-      sue chiavi e password), e nemmeno quello che hai chiesto con le tue parole o chi usa l’app. Se disattivi
-      l’opzione, la pagina sparisce; le sue stelle restano, per quando pubblicherai di nuovo il codice.
+      Viene pubblicata ogni versione, anche quelle precedenti, con la sua documentazione, i suoi test, la sua cartella
+      build e la modifica che ha fatto. Quello che l’app conserva non viene mai pubblicato (le sue voci, i file che ha
+      salvato, i valori delle sue chiavi e password), e nemmeno quello che hai chiesto con le tue parole o chi usa l’app.
+      Se disattivi l’opzione, la pagina sparisce; le sue stelle restano, per quando pubblicherai di nuovo il codice.
     </>
   ),
   openAside:

@@ -7,7 +7,7 @@ import { ChangeList } from './Changes';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { AgentMark, Ago, Quote, Section } from './ui';
-import { isContext } from './written';
+import { isAsset, isCode } from './written';
 
 /**
  * One feature - a draft, to the owner: what it changes, what was asked for,
@@ -63,8 +63,9 @@ export function FeatureTab({ control, onNotes, onRebase }: {
 
   // from the preview, a full path to the lambda is the live lambda - and its real data
   const own = `/lambda/${control.lambda.publicKey}/`;
-  // the program only: documentation naming the address says where it is, and links nowhere
-  const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && !isContext(file.name) && file.code.includes(own)).map((file) => file.name);
+  // the program only: documentation naming the address says where it is, and links nowhere -
+  // and what the build folder says is said again in what it builds, if anywhere
+  const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && (isCode(file.name) || isAsset(file.name)) && file.code.includes(own)).map((file) => file.name);
 
   return (
     <Section

@@ -9,7 +9,7 @@ import { GroupList, Tree, Viewer, sizeOf, type Selection } from './FileBrowser';
 import { bytes, servesAssets } from './format';
 import { Exposure } from './SummaryTab';
 import { Section, pill } from './ui';
-import { isAsset, isCode, isContext } from './written';
+import { isAsset, isBuild, isCode, isContext } from './written';
 
 /**
  * The files of one version - the program - and which of them anybody on the
@@ -22,7 +22,8 @@ import { isAsset, isCode, isContext } from './written';
  * What is written about the version - its documentation and its tests - is
  * shown too, as the third thing it holds, never compiled and never served:
  * this is where all of a version's files are, and its own sections are where
- * it is read.
+ * it is read. So is what it is built from, its build folder, as the fourth
+ * - where a version keeps one, as its section is there only then.
  */
 export function FilesTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -72,6 +73,7 @@ export function FilesTab({ control }: { control: Control }) {
   const code = files.filter((f) => isCode(f.name));
   const assets = files.filter((f) => isAsset(f.name));
   const context = files.filter((f) => isContext(f.name));
+  const build = files.filter((f) => isBuild(f.name));
 
   const source = code.map((f) => f.code).join('\n');
   const limits = summary?.limits;
@@ -179,6 +181,26 @@ export function FilesTab({ control }: { control: Control }) {
                   empty={said.noContext}
                 />
               </GroupList>
+
+              {build.length > 0 && (
+                <GroupList
+                  title={said.build}
+                  exposure={<Exposure open={false} why={said.buildWhy} />}
+                  usage={said.contextUsage(said.count(build.length), bytes(build.reduce((total, f) => total + sizeOf(f), 0)))}
+                  action={
+                    <button type="button" onClick={() => control.openBuild(wanted)} className="text-[12px] text-accent-500 hover:underline">
+                      {t.frame.sections.build}
+                    </button>
+                  }
+                >
+                  <Tree
+                    entries={build.map((f) => ({ path: f.name, size: sizeOf(f) }))}
+                    selected={selected?.group === 'build' ? selected.path : null}
+                    onSelect={(path) => setSelected({ group: 'build', path })}
+                    empty={said.count(0)}
+                  />
+                </GroupList>
+              )}
             </nav>
 
             <Viewer control={control} selection={selected} files={files} listing={null} />

@@ -28,7 +28,8 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} 파일이 반환하는 것이 제공되고, 다른 {cs} 파일에는 타입을 두고, 그 밖의 파일은 그대로 제공돼요. 단,{' '}
-      {context} 안에 있는 문서와 테스트는 컴파일되지도 제공되지도 않아요. Ctrl-S로 저장하고, F12로 선언으로 이동해요.
+      {context} 안에 있는 문서, 테스트, 빌드 원본은 컴파일되지도 제공되지도 않아요. Ctrl-S로 저장하고, F12로 선언으로
+      이동해요.
     </>
   ),
   newer: (version) => ` 여기 열린 것보다 새로운 버전이 있어요 (버전 ${version}).`,

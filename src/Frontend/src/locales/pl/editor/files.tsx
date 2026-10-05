@@ -36,6 +36,8 @@ export const files: EditorMessages['files'] = {
   contextWhy: 'Nigdy nie są kompilowane ani serwowane: to, co napisano o tej wersji, dla każdego, kto ją czyta lub zmienia.',
   contextUsage: (files, size) => `${files}, ${size} – wliczane do zasobów`,
   noContext: 'O tej wersji nic jeszcze nie napisano.',
+  build: 'Budowanie',
+  buildWhy: 'Nigdy nie kompilowane i nigdy nie serwowane: to, z czego kod lub zasoby są budowane przez tego, kto je zmienia.',
   data: 'Dane',
   dataPublic: 'Publiczne: kod, który jest online, serwuje je przez Workspace.',
   dataPrivate: 'Dostępne tylko dla lambdy. Nie należą do żadnej wersji.',

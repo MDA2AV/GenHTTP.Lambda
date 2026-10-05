@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Mehrere Dateien',
     page: 'Eine Seite ausliefern',
     spa: 'Ein Frontend, Schritt für Schritt',
+    built: 'Woraus es gebaut wird',
     storage: 'Zwei Orte für Dateien',
     database: 'Datensätze speichern',
     keeping: 'Dateien speichern',
@@ -117,6 +118,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Tests', () => <>Wie die App automatisch getestet wird, mit den Scripts und Testdaten dafür. Nur in der vollständigen Ansicht.</>],
+    ['Build', () => <>Woraus der Code oder die Assets gebaut werden, wo ein Build-Werkzeug sie erzeugt, mit jeder Version gespeichert, zum Lesen und nicht zum Bearbeiten. In der vollständigen Ansicht, sobald eine Version es speichert.</>],
   ],
   sections: (k) => (
     <>
@@ -280,6 +282,27 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Mit einer API daneben hat die Seite auch einen Gesprächspartner:</>,
   ],
+  built: (k) => (
+    <>
+      Manches an einem Lambda kann von einem Build-Werkzeug erzeugt werden, statt so geschrieben zu sein, wie es
+      ausgeliefert oder kompiliert wird: kompiliert, gebündelt oder generiert. Die Version enthält, was das Werkzeug
+      erzeugt – als ihre Assets oder als ihren Code – und daneben die Dateien, aus denen es entsteht, ihren{' '}
+      {k.b('Build-Ordner')}: {k.code('.lambda/build/')} in der Version, {k.code('build/')} in einem Klon, mit
+      allem, womit das Werkzeug arbeitet. Ihr Agent ändert diese Dateien, führt den Build dort aus, wo er arbeitet, und
+      speichert beides in derselben Version. Diese Plattform baut nichts.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Wie die Dokumentation gehört er zu seiner Version: im Verlauf verglichen, zurückgerollt, in einen Entwurf kopiert,
+      geklont, heruntergeladen und mit dem Code veröffentlicht – und nie kompiliert oder ausgeliefert. Im Kontrollzentrum
+      zeigt {k.b('Build')} ihn, sobald eine Version einen speichert: wie gebaut wird, so wie es seine README sagt, seine
+      Dateien und ob eine Version sie geändert hat, ohne etwas zu ändern, das daraus gebaut wird. Er wird dort gelesen,
+      nicht bearbeitet – eine Änderung daran geschieht dort, wo er gebaut wird.
+    </>
+  ),
+  builtAside:
+    'Was so geschrieben ist, wie es ausgeliefert oder kompiliert wird, braucht keinen. Was ein Build installiert oder für sich behält – etwa node_modules – ist nie Teil einer Version: Eine .gitignore im Build-Ordner hält es heraus.',
 
   storage: (k) => (
     <>
@@ -292,7 +315,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'In einer Version',
   workspaceColumn: 'In den Daten',
   table: [
-    ['Inhalt', 'Code und Assets: das Programm, samt Frontend – und seine Dokumentation und Tests', 'alles, was das Lambda schreibt oder jemand hochlädt'],
+    ['Inhalt', 'Code und Assets: das Programm, samt Frontend – und seine Dokumentation, seine Tests und das, woraus es gebaut wird', 'alles, was das Lambda schreibt oder jemand hochlädt'],
     ['Ändert sich', 'nie – eine Änderung ist eine neue Version', 'sobald etwas hineingeschrieben wird'],
     ['Ein Deployment', 'stellt genau diese Dateien online', 'lässt sie unberührt'],
     ['Zurückrollen', 'bringt die alten Dateien zurück', 'keine Wirkung: Alle Versionen teilen sie'],
@@ -417,7 +440,8 @@ export const guide: Messages['guide'] = {
       werden zu zwei Ordnern neben dem Programm, mit denselben Methoden, getrennt in einem Ordner{' '}
       {k.code('Platform')} – an Ihrem Code ändert sich nichts.
       {' '}{k.code('Secret')} liest dort gleichnamige Umgebungsvariablen; die Werte bleiben hier. Die Dokumentation und
-      die Tests kommen in {k.code('docs')} und {k.code('tests')} mit.
+      die Tests kommen in {k.code('docs')} und {k.code('tests')} mit, der Build-Ordner in{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} öffnet {k.code('database/database.db')}, die der Download samt den Datensätzen enthält,
       die Ihre App aufbewahrt hat.
     </>
@@ -460,11 +484,11 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Veröffentlicht wird jede Version, auch die früheren, mit ihrer Dokumentation, ihren Tests und der Änderung, die
-      sie gemacht hat. Was die App aufbewahrt, wird nie veröffentlicht – ihre Datensätze, die Dateien, die sie
-      gespeichert hat, die Werte ihrer Schlüssel und Passwörter –, ebenso wenig wie das, worum Sie in Ihren eigenen
-      Worten gebeten haben, oder wer die App nutzt. Schalten Sie die Veröffentlichung aus, ist die Seite weg; ihre
-      Sterne bleiben erhalten, falls Sie den Code wieder veröffentlichen.
+      Veröffentlicht wird jede Version, auch die früheren, mit ihrer Dokumentation, ihren Tests, ihrem
+      Build-Ordner und der Änderung, die sie gemacht hat. Was die App aufbewahrt, wird nie veröffentlicht – ihre
+      Datensätze, die Dateien, die sie gespeichert hat, die Werte ihrer Schlüssel und Passwörter –, ebenso wenig wie
+      das, worum Sie in Ihren eigenen Worten gebeten haben, oder wer die App nutzt. Schalten Sie die Veröffentlichung
+      aus, ist die Seite weg; ihre Sterne bleiben erhalten, falls Sie den Code wieder veröffentlichen.
     </>
   ),
   openAside:

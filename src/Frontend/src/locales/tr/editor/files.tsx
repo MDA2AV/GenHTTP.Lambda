@@ -36,6 +36,8 @@ export const files: EditorMessages['files'] = {
   contextWhy: 'Asla derlenmez ve asla sunulmaz: bu sürüm hakkında, onu okuyan ya da değiştiren herkes için yazılanlar.',
   contextUsage: (files, size) => `${files}, ${size} - statik dosyalarla birlikte sayılır`,
   noContext: 'Bu sürüm hakkında henüz bir şey yazılmadı.',
+  build: 'Derleme',
+  buildWhy: 'Asla derlenmez ve asla sunulmaz: kodun veya statik dosyaların, onları değiştiren kişi tarafından neyden derlendiği.',
   data: 'Veriler',
   dataPublic: 'Herkese açık: yayındaki kod onları Workspace ile sunuyor.',
   dataPrivate: 'Yalnızca lambdaya özel. Hiçbir sürümün parçası değil.',

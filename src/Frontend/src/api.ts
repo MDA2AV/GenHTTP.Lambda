@@ -181,6 +181,8 @@ export interface LambdaSummary {
   };
   /** What the documentation of the version the storage is about says, and which of its pages it has. */
   documentation: DocumentationSummary;
+  /** What the lambda keeps of what its assets are built from: the build folder. */
+  build: BuildFacts;
   /** What this lambda may use in its tier. Nothing counts its C# files or assets, only what they come to. */
   limits: {
     codeCharacters: number;
@@ -207,6 +209,20 @@ export interface DocumentationSummary {
   files: number;
   /** What those weigh, which counts towards what the assets may come to. */
   bytes: number;
+}
+
+/**
+ * The build folder of a version: what its assets or code are built from, in
+ * .lambda/build/ beside its program - of the version the storage is about, and
+ * whether the newest has one, which may not be online yet.
+ */
+export interface BuildFacts {
+  /** How many files that of the version the storage is about holds. */
+  files: number;
+  /** What those weigh, which counts towards what the assets may come to. */
+  bytes: number;
+  /** How many files that of the newest version holds. */
+  newestFiles: number;
 }
 
 /** Changes to some files: files added or replaced, names removed, passages replaced within a file. */
@@ -961,7 +977,7 @@ export interface SourceProject {
 }
 
 /** What a file of a packed project is to somebody reading it. */
-export type SourceKind = 'code' | 'asset' | 'docs' | 'tests' | 'platform' | 'project';
+export type SourceKind = 'code' | 'asset' | 'docs' | 'tests' | 'build' | 'platform' | 'project';
 
 export interface SourceFile {
   /** Its path below the project's folder. */

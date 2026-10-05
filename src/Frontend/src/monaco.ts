@@ -14,6 +14,12 @@ import 'monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution'
 // and what the documentation and the tests of a version are written in
 import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution';
 import 'monaco-editor/esm/vs/basic-languages/shell/shell.contribution';
+// and what a build folder holds beside its sources
+import 'monaco-editor/esm/vs/basic-languages/scss/scss.contribution';
+import 'monaco-editor/esm/vs/basic-languages/less/less.contribution';
+import 'monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution';
+import 'monaco-editor/esm/vs/basic-languages/ini/ini.contribution';
+import 'monaco-editor/esm/vs/basic-languages/xml/xml.contribution';
 import { language as csharp } from 'monaco-editor/esm/vs/basic-languages/csharp/csharp';
 
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
@@ -33,8 +39,25 @@ const GRAMMARS: Record<string, string> = {
   css: 'css',
   js: 'javascript',
   mjs: 'javascript',
+  cjs: 'javascript',
+  jsx: 'javascript',
   ts: 'typescript',
+  mts: 'typescript',
+  cts: 'typescript',
+  tsx: 'typescript',
   json: 'json',
+  jsonc: 'json',
+  vue: 'html',
+  svelte: 'html',
+  astro: 'html',
+  scss: 'scss',
+  less: 'less',
+  yml: 'yaml',
+  yaml: 'yaml',
+  toml: 'ini',
+  ini: 'ini',
+  xml: 'xml',
+  csproj: 'xml',
   svg: 'html',
   txt: 'plaintext',
   md: 'markdown',

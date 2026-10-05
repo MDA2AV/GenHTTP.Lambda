@@ -30,8 +30,8 @@ export const code = {
   files: (entry: Node, cs: Node, context: Node) => (
     <>
       {entry} returns what gets served, other {cs} files hold types, and any other file is served as it is - except
-      what is in {context}: the documentation and the tests, never compiled or served. Ctrl-S saves, F12 goes to a
-      declaration.
+      what is in {context}: the documentation, the tests and what it is built from, never compiled or served. Ctrl-S
+      saves, F12 goes to a declaration.
     </>
   ),
   newer: (version: number) => ` Version ${version} is newer than the one open here.`,

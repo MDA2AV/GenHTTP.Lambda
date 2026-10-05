@@ -35,6 +35,11 @@ export interface Control {
    * or, in a feature, the feature's: the newest version when none is named.
    */
   openContext: (area: Area, version?: number) => void;
+  /**
+   * Opens what a version is built from - or, in a feature, what the feature
+   * is: the newest version when none is named.
+   */
+  openBuild: (version?: number) => void;
   /** The agent changing this lambda, followed wherever the owner is. */
   agent: AgentControl;
   /**
@@ -68,9 +73,10 @@ export interface Control {
 
 /**
  * The views of a feature: what it is and changes, its documentation, its
- * code, its tests, its copy of the data, what its preview said.
+ * code, what it is built from, its tests, its copy of the data, what its
+ * preview said.
  */
-export type FeatureView = 'overview' | 'docs' | 'code' | 'tests' | 'data' | 'logs';
+export type FeatureView = 'overview' | 'docs' | 'code' | 'build' | 'tests' | 'data' | 'logs';
 
 /**
  * A feature the control center is opened on. The frame holds it, so the

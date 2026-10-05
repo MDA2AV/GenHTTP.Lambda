@@ -36,6 +36,8 @@ export const files: EditorMessages['files'] = {
   contextWhy: 'Tidak pernah dikompilasi dan tidak pernah disajikan: apa yang ditulis tentang versi ini, untuk siapa pun yang membaca atau mengubahnya.',
   contextUsage: (files, size) => `${files}, ${size} - dihitung bersama aset`,
   noContext: 'Belum ada yang ditulis tentang versi ini.',
+  build: 'Build',
+  buildWhy: 'Tidak pernah dikompilasi dan tidak pernah disajikan: bahan pembuat kode atau aset, bagi siapa pun yang mengubahnya.',
   data: 'Data',
   dataPublic: 'Publik: kode yang online menyajikannya lewat Workspace.',
   dataPrivate: 'Privat, hanya untuk lambda ini. Bukan bagian dari versi mana pun.',

@@ -37,6 +37,8 @@ export const files: EditorMessages['files'] = {
   contextWhy: 'コンパイルも配信もされません。このバージョンについて書かれたもので、読む人や変更する人のためのものです。',
   contextUsage: (files, size) => `${files}、${size}（アセットの容量に含む）`,
   noContext: 'このバージョンについては、まだ何も書かれていません。',
+  build: 'ビルド',
+  buildWhy: 'コンパイルも配信もされません。コードやアセットの作成元で、変更する人が扱います。',
   data: 'データ',
   dataPublic: '公開：オンラインのコードがWorkspaceで配信しています。',
   dataPrivate: 'lambdaだけが使える非公開のデータです。どのバージョンにも含まれません。',

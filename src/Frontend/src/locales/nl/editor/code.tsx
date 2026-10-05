@@ -28,8 +28,8 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} geeft terug wat er geserveerd wordt, andere {cs}-bestanden bevatten types, en elk ander bestand wordt
-      geserveerd zoals het is – behalve wat in de map {context} staat: de documentatie en de tests, die nooit
-      gecompileerd of geserveerd worden. Ctrl-S slaat op, F12 springt naar een declaratie.
+      geserveerd zoals het is – behalve wat in de map {context} staat: de documentatie, de tests en waaruit het is
+      gebouwd, die nooit gecompileerd of geserveerd worden. Ctrl-S slaat op, F12 springt naar een declaratie.
     </>
   ),
   newer: (version) => ` Versie ${version} is nieuwer dan de versie die hier openstaat.`,

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import { isDemo } from '../api';
-import { IconAlert, IconCheck, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconDraft, IconGlobe, IconLock, IconPackage, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
@@ -36,7 +36,7 @@ export function SummaryTab({ control }: { control: Control }) {
     );
   }
 
-  const { traffic, storage, limits, activation, latest, documentation } = summary;
+  const { traffic, storage, limits, activation, latest, documentation, build } = summary;
 
   const live = lambda.activeVersion != null;
   const errorTone = traffic.dayFailed === 0 ? (traffic.dayRequests > 0 ? 'good' : 'default') : traffic.dayFailed / traffic.dayRequests > 0.05 ? 'bad' : 'warn';
@@ -208,6 +208,23 @@ export function SummaryTab({ control }: { control: Control }) {
                       <Written to={`${base}/tests`} done={documentation.tests} label={t.frame.sections.tests} missing={said.writtenMissing} />
                     </span>
                   </div>
+                )}
+
+                {/* only where it keeps some: what it is built from, which most lambdas keep nothing of */}
+                {storage.version != null && build.files > 0 && (
+                  <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[13px]">
+                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                      {said.build}
+                      <Exposure open={false} why={said.buildWhy} />
+                    </span>
+                    <Link
+                      to={`${base}/build?version=${storage.version}`}
+                      className="inline-flex items-center gap-1.5 text-slate-600 hover:underline dark:text-slate-400"
+                    >
+                      <IconPackage className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="tabular-nums">{said.buildFiles(build.files, bytes(build.bytes))}</span>
+                    </Link>
+                  </p>
                 )}
               </div>
             </div>
