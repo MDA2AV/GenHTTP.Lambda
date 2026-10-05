@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Lebih dari satu file',
     page: 'Menyajikan halaman',
     spa: 'Front end, langkah demi langkah',
+    built: 'Front end yang dibangun dengan alat',
     storage: 'Dua tempat file disimpan',
     database: 'Menyimpan catatan',
     keeping: 'Menyimpan file',
@@ -119,6 +120,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Pengujian', () => <>Bagaimana aplikasi diuji secara otomatis, dengan script dan data uji untuk itu. Hanya di tampilan lengkap.</>],
+    ['Pengembangan', () => <>Bahan pembuat aset di tempat toolchain membangunnya - proyek sebuah front end - disimpan bersama setiap versi, untuk dibaca dan bukan diedit. Di tampilan lengkap, begitu sebuah versi memilikinya.</>],
   ],
   sections: (k) => (
     <>
@@ -283,6 +285,26 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Tambahkan API di sampingnya, dan halaman itu punya lawan bicara:</>,
   ],
+  built: (k) => (
+    <>
+      Banyak front end dibangun: ditulis dengan React, Vue, atau Svelte, TypeScript, atau Tailwind, dan disatukan oleh
+      Vite atau alat lain. Versi menyimpan hasil build sebagai asetnya - dan di sampingnya proyek tempat ia dibangun,
+      yaitu {k.b('ruang pengembangan')}-nya: {k.code('.lambda/dev/')} di versi, {k.code('dev/')} di sebuah kloning. Agen
+      Anda mengubah sumbernya, membangunnya di tempatnya bekerja, dan menyimpan keduanya di versi yang sama. Platform
+      ini tidak membangun apa pun.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Seperti dokumentasi, ia milik versinya: dibandingkan di riwayat, dikembalikan, disalin ke draf, dikloning,
+      diunduh, dan dipublikasikan bersama kode - dan tidak pernah dikompilasi atau disajikan. Di pusat kontrol,{' '}
+      {k.b('Pengembangan')} menampilkannya begitu ada: proyek-proyeknya dan alat pembangunnya, paket yang dipasang,
+      cara membangunnya, dan apakah sebuah versi mengubah sumber tanpa membangunnya. Di sana ia dibaca, bukan diedit -
+      perubahannya dilakukan di tempat ia dibangun.
+    </>
+  ),
+  builtAside:
+    'Front end berupa HTML, CSS, dan JavaScript biasa tidak membutuhkannya: ia adalah sumbernya sendiri, di aset. Apa yang dipasang sebuah build, seperti node_modules, tidak pernah menjadi bagian dari versi - .gitignore proyek menjauhkannya.',
 
   storage: (k) => (
     <>
@@ -295,7 +317,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Di sebuah versi',
   workspaceColumn: 'Di data',
   table: [
-    ['isinya', 'kode dan aset: programnya, termasuk front end - beserta dokumentasi dan pengujiannya', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
+    ['isinya', 'kode dan aset: programnya, termasuk front end - beserta dokumentasi, pengujian, dan bahan pembuat front end-nya', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
     ['kapan berubah', 'tidak pernah: perubahan menjadi versi baru', 'begitu ada yang ditulis ke dalamnya'],
     ['saat deploy', 'file inilah yang persis dibuat online', 'tidak pernah disentuh'],
     ['rollback', 'file lama kembali', 'tidak berpengaruh: semua versi memakainya bersama'],
@@ -417,7 +439,8 @@ export const guide: Messages['guide'] = {
       di samping program, dengan method yang sama, terpisah di folder {k.code('Platform')}, jadi tidak ada yang perlu
       diubah di kode Anda.
       {' '}{k.code('Secret')} di sana membaca variabel lingkungan dengan nama yang sama; nilainya tetap di sini.
-      Dokumentasi dan pengujian ikut serta di {k.code('docs')} dan {k.code('tests')}.
+      Dokumentasi dan pengujian ikut serta di {k.code('docs')} dan {k.code('tests')}, dan ruang pengembangan di{' '}
+      {k.code('dev')}.
       {' '}{k.code('Database')} membuka {k.code('database/database.db')}, yang ikut terunduh bersama catatan yang
       disimpan aplikasi Anda.
     </>
@@ -459,11 +482,11 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Setiap versi dipublikasikan, termasuk yang lebih lama, beserta dokumentasi, pengujian, dan perubahan yang dibuat
-      masing-masing. Apa yang disimpan aplikasi tidak pernah dipublikasikan - catatannya, file yang disimpannya, nilai
-      kunci dan kata sandinya - begitu pula apa yang Anda minta dengan kata-kata Anda sendiri, atau siapa yang memakai
-      aplikasinya. Nonaktifkan, dan halamannya hilang; bintangnya tetap disimpan untuk saat Anda memublikasikannya
-      lagi.
+      Setiap versi dipublikasikan, termasuk yang lebih lama, beserta dokumentasi, pengujian, ruang pengembangan, dan
+      perubahan yang dibuat masing-masing. Apa yang disimpan aplikasi tidak pernah dipublikasikan - catatannya, file yang
+      disimpannya, nilai kunci dan kata sandinya - begitu pula apa yang Anda minta dengan kata-kata Anda sendiri, atau
+      siapa yang memakai aplikasinya. Nonaktifkan, dan halamannya hilang; bintangnya tetap disimpan untuk saat Anda
+      memublikasikannya lagi.
     </>
   ),
   openAside:

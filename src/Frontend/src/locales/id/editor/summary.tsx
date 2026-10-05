@@ -6,6 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Dokumentasi dan pengujian',
   writtenWhy: 'Tidak pernah dikompilasi dan tidak pernah disajikan. Disimpan bersama setiap versi, dan dihitung bersama aset.',
   writtenMissing: 'Belum ditulis',
+  development: 'Ruang pengembangan',
+  developmentWhy: 'Tidak pernah dikompilasi atau disajikan: bahan pembuat aset. Dihitung bersama aset.',
+  developmentFiles: (files, size) => `${files} file, ${size}`,
   hint: (since, kept, retention, tier) =>
     `Trafik dihitung sejak server terakhir dimulai (${since}). ` +
     (kept

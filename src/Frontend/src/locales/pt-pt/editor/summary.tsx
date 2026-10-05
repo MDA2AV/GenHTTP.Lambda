@@ -6,6 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Documentação e testes',
   writtenWhy: 'Nunca compilados nem servidos. Guardados com cada versão, e contados com os assets.',
   writtenMissing: 'Ainda por escrever',
+  development: 'Espaço de desenvolvimento',
+  developmentWhy: 'Nunca compilado nem servido: aquilo a partir do qual os assets são compilados. Conta juntamente com os assets.',
+  developmentFiles: (files, size) => (files === 1 ? `1 ficheiro, ${size}` : `${files} ficheiros, ${size}`),
   hint: (since, kept, retention, tier) =>
     `O tráfego é contado desde o último arranque do servidor (${since}). ` +
     (kept

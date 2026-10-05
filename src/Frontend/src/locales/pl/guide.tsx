@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Więcej niż jeden plik',
     page: 'Serwowanie strony',
     spa: 'Frontend krok po kroku',
+    built: 'Frontend budowany narzędziami',
     storage: 'Dwa miejsca na pliki',
     database: 'Przechowywanie rekordów',
     keeping: 'Przechowywanie plików',
@@ -116,6 +117,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Testy', () => <>Jak aplikacja jest testowana automatycznie, razem ze skryptami i danymi testowymi. Tylko w widoku pełnym.</>],
+    ['Rozwój', () => <>To, z czego zbudowane są zasoby tam, gdzie robi to toolchain – projekt frontendu – przechowywane z każdą wersją, do czytania, nie do edycji. W widoku pełnym, gdy wersja ją ma.</>],
   ],
   sections: (k) => (
     <>
@@ -274,6 +276,26 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Dodaj obok API, a strona będzie miała z czym rozmawiać:</>,
   ],
+  built: (k) => (
+    <>
+      Wiele frontendów jest budowanych: pisanych w React, Vue lub Svelte, TypeScripcie czy Tailwindzie i składanych
+      przez Vite lub inne narzędzie. Wersja zawiera to, co powstaje w buildzie, jako swoje zasoby – a obok nich projekt,
+      z którego zbudowano: swoją {k.b('przestrzeń deweloperską')}: {k.code('.lambda/dev/')} w wersji, {k.code('dev/')} w
+      sklonowanym repozytorium. Twój agent zmienia źródła, buduje je u siebie i zapisuje jedno i drugie w tej samej
+      wersji. Ta platforma niczego nie buduje.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Tak jak dokumentacja należy do swojej wersji: jest porównywana w historii, przywracana, kopiowana do szkicu,
+      klonowana, pobierana i publikowana razem z kodem – i nigdy nie jest kompilowana ani serwowana. W centrum
+      sterowania {k.b('Rozwój')} pokazuje ją, gdy istnieje: jej projekty i to, czym każdy jest budowany, pakiety, które
+      instalują, jak jest budowana, i czy wersja zmieniła źródła bez ich zbudowania. Jest tam do czytania, nie do
+      edycji – zmienia się ją tam, gdzie jest budowana.
+    </>
+  ),
+  builtAside:
+    'Frontend z samego HTML, CSS i JavaScriptu nie potrzebuje żadnej: sam jest swoim źródłem, w zasobach. To, co instaluje build, na przykład node_modules, nigdy nie jest częścią wersji – pilnuje tego .gitignore projektu.',
 
   storage: (k) => (
     <>
@@ -286,7 +308,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'W wersji',
   workspaceColumn: 'W danych',
   table: [
-    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem – oraz jego dokumentacja i testy', 'wszystko, co zapisze lambda albo ktoś prześle'],
+    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem – oraz jego dokumentacja, testy i to, z czego zbudowany jest jego frontend', 'wszystko, co zapisze lambda albo ktoś prześle'],
     ['kiedy się zmienia', 'nigdy – zmiana to nowa wersja', 'w chwili, gdy coś zostanie zapisane'],
     ['wdrożenie', 'wrzuca online dokładnie te pliki', 'nigdy ich nie rusza'],
     ['powrót do starszej wersji', 'przywraca stare pliki', 'bez wpływu: wszystkie wersje je współdzielą'],
@@ -406,7 +428,8 @@ export const guide: Messages['guide'] = {
       dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze {k.code('Platform')}, więc w kodzie nie
       trzeba nic zmieniać.
       {' '}{k.code('Secret')} odczytuje tam zmienne środowiskowe o tej samej nazwie; wartości zostają tutaj.
-      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}.
+      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}, a przestrzeń deweloperska do{' '}
+      {k.code('dev')}.
       {' '}{k.code('Database')} otwiera {k.code('database/database.db')} – pobrany projekt zawiera ten plik razem z
       rekordami, które zapisała twoja aplikacja.
     </>
@@ -447,7 +470,8 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami i zmianą, którą wprowadziła.
+      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami, przestrzenią deweloperską i
+      zmianą, którą wprowadziła.
       To, co aplikacja przechowuje – jej rekordy, zapisane pliki, wartości kluczy i haseł – nigdy nie jest publikowane,
       podobnie jak twoje prośby, sformułowane twoimi słowami, i to, kto korzysta z aplikacji. Po wyłączeniu strona
       znika; gwiazdki zostają zachowane na wypadek ponownej publikacji.

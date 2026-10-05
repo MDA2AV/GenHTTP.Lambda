@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Più di un file',
     page: 'Servire una pagina',
     spa: 'Un front-end, passo per passo',
+    built: 'Un front-end costruito con degli strumenti',
     storage: 'I due posti dove stanno i file',
     database: 'Salvare le voci',
     keeping: 'Salvare i file',
@@ -118,6 +119,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Test', () => <>Come viene testata automaticamente l’app, con gli script e i dati di test che servono. Solo nella vista completa.</>],
+    ['Sviluppo', () => <>Ciò da cui sono costruiti gli asset dove una toolchain li costruisce, cioè il progetto di un front-end, conservato con ogni versione, da leggere e non da modificare. Nella vista completa, appena una versione ne ha uno.</>],
   ],
   sections: (k) => (
     <>
@@ -278,6 +280,26 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Aggiungi un’API accanto e la pagina avrà qualcosa con cui parlare:</>,
   ],
+  built: (k) => (
+    <>
+      Molti front-end vengono costruiti: scritti con React, Vue o Svelte, TypeScript o Tailwind, e assemblati da Vite o
+      da un altro strumento. La versione contiene ciò che la build produce, come asset, e accanto a questi il progetto da
+      cui è stata costruita, il suo {k.b('spazio di sviluppo')}: {k.code('.lambda/dev/')} nella versione,{' '}
+      {k.code('dev/')} in un clone. Il tuo agente modifica i sorgenti, li costruisce dove lavora e salva entrambi nella
+      stessa versione. Questa piattaforma non costruisce niente.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Come la documentazione, appartiene alla sua versione: viene confrontato nella cronologia, ripristinato, copiato in
+      una bozza, clonato, scaricato e pubblicato con il codice, e non viene mai compilato né servito. Nel pannello di
+      controllo, {k.b('Sviluppo')} lo mostra appena ce n’è uno: i suoi progetti e con cosa è costruito ciascuno, i
+      pacchetti che installano, come viene costruito e se una versione ha cambiato i sorgenti senza costruirli. Lì si
+      legge, non si modifica: una modifica si fa dove viene costruito.
+    </>
+  ),
+  builtAside:
+    'Un front-end in semplice HTML, CSS e JavaScript non ne ha bisogno: è il sorgente di se stesso, negli asset. Ciò che una build installa, come node_modules, non fa mai parte di una versione: il .gitignore del progetto lo tiene fuori.',
 
   storage: (k) => (
     <>
@@ -290,7 +312,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'In una versione',
   workspaceColumn: 'Nei dati',
   table: [
-    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso, con la sua documentazione e i suoi test', 'quello che scrive la lambda o che carica qualcuno'],
+    ['cosa contiene', 'il codice e gli asset: il programma, front-end compreso, con la sua documentazione, i suoi test e ciò da cui è costruito il suo front-end', 'quello che scrive la lambda o che carica qualcuno'],
     ['quando cambia', 'mai: una modifica è una nuova versione', 'appena ci viene scritto qualcosa'],
     ['un deploy', 'mette online esattamente questi file', 'non li tocca mai'],
     ['tornare indietro', 'riporta i vecchi file', 'nessun effetto: tutte le versioni li condividono'],
@@ -410,7 +432,8 @@ export const guide: Messages['guide'] = {
       accanto al programma, con gli stessi metodi, a parte in una cartella {k.code('Platform')}, quindi nel tuo codice non
       devi cambiare niente.
       {' '}{k.code('Secret')} lì legge le variabili d’ambiente con lo stesso nome; i valori restano qui. Anche la
-      documentazione e i test vengono con te, in {k.code('docs')} e {k.code('tests')}.
+      documentazione e i test vengono con te, in {k.code('docs')} e {k.code('tests')}, e lo spazio di sviluppo in{' '}
+      {k.code('dev')}.
       {' '}{k.code('Database')} apre {k.code('database/database.db')}, che il download porta con sé insieme alle voci
       che la tua app ha conservato.
     </>
@@ -452,10 +475,10 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Viene pubblicata ogni versione, anche quelle precedenti, con la sua documentazione, i suoi test e la modifica che
-      ha fatto. Quello che l’app conserva non viene mai pubblicato (le sue voci, i file che ha salvato, i valori delle
-      sue chiavi e password), e nemmeno quello che hai chiesto con le tue parole o chi usa l’app. Se disattivi
-      l’opzione, la pagina sparisce; le sue stelle restano, per quando pubblicherai di nuovo il codice.
+      Viene pubblicata ogni versione, anche quelle precedenti, con la sua documentazione, i suoi test, il suo spazio di
+      sviluppo e la modifica che ha fatto. Quello che l’app conserva non viene mai pubblicato (le sue voci, i file che ha
+      salvato, i valori delle sue chiavi e password), e nemmeno quello che hai chiesto con le tue parole o chi usa l’app.
+      Se disattivi l’opzione, la pagina sparisce; le sue stelle restano, per quando pubblicherai di nuovo il codice.
     </>
   ),
   openAside:

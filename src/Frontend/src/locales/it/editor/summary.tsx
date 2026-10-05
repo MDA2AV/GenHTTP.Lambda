@@ -6,6 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Documentazione e test',
   writtenWhy: 'Mai compilati e mai serviti. Conservati con ogni versione e contati insieme agli asset.',
   writtenMissing: 'Ancora da scrivere',
+  development: 'Spazio di sviluppo',
+  developmentWhy: 'Mai compilato né servito: ciò da cui sono costruiti gli asset. Conteggiato con gli asset.',
+  developmentFiles: (files, size) => (files === 1 ? `1 file, ${size}` : `${files} file, ${size}`),
   hint: (since, kept, retention, tier) =>
     `Il traffico è contato dall’ultimo avvio del server (${since}). ` +
     (kept

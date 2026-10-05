@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Mais de um arquivo',
     page: 'Servindo uma página',
     spa: 'Um front-end, passo a passo',
+    built: 'Um front-end construído com ferramentas',
     storage: 'Os dois lugares onde ficam os arquivos',
     database: 'Guardando registros',
     keeping: 'Guardando arquivos',
@@ -118,6 +119,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Testes', () => <>Como o app é testado automaticamente, com os scripts e os dados de teste para isso. Só na visualização completa.</>],
+    ['Desenvolvimento', () => <>Aquilo a partir do qual os assets são gerados, onde uma toolchain os constrói (o projeto de um front-end), guardado com cada versão, para ler e não para editar. Na visualização completa, quando uma versão tem um.</>],
   ],
   sections: (k) => (
     <>
@@ -278,6 +280,26 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Adicione uma API ao lado, e a página ganha com quem conversar:</>,
   ],
+  built: (k) => (
+    <>
+      Muitos front-ends são construídos: escritos com React, Vue ou Svelte, TypeScript ou Tailwind, e montados pelo Vite
+      ou por outra ferramenta. A versão guarda o que o build gera, como seus assets, e ao lado deles o projeto a partir
+      do qual foi construído, o seu {k.b('espaço de desenvolvimento')}: {k.code('.lambda/dev/')} na versão,{' '}
+      {k.code('dev/')} num clone. O seu agente altera os códigos-fonte, faz o build onde trabalha e salva os dois na
+      mesma versão. Esta plataforma não constrói nada.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Como a documentação, ele pertence à sua versão: é comparado no histórico, revertido, copiado para um rascunho,
+      clonado, baixado e publicado com o código, e nunca é compilado nem servido. No painel de controle,{' '}
+      {k.b('Desenvolvimento')} o mostra quando há um: seus projetos e com o que cada um é construído, os pacotes que
+      instalam, como é construído e se uma versão alterou os códigos-fonte sem fazer o build. Ele é lido ali, não
+      editado: uma mudança nele é feita onde é construído.
+    </>
+  ),
+  builtAside:
+    'Um front-end de HTML, CSS e JavaScript simples não precisa de nenhum: ele é o seu próprio código-fonte, nos assets. O que um build instala, como o node_modules, nunca faz parte de uma versão: o .gitignore do projeto o deixa de fora.',
 
   storage: (k) => (
     <>
@@ -290,7 +312,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Numa versão',
   workspaceColumn: 'Nos dados',
   table: [
-    ['o que guarda', 'o código e os assets: o programa, inclusive o front-end, e também a documentação e os testes dele', 'tudo o que a lambda grava ou alguém envia'],
+    ['o que guarda', 'o código e os assets: o programa, inclusive o front-end, e também a documentação, os testes e aquilo a partir do qual o front-end é construído', 'tudo o que a lambda grava ou alguém envia'],
     ['quando muda', 'nunca: uma mudança é uma nova versão', 'no momento em que algo é gravado'],
     ['um deploy', 'coloca exatamente esses arquivos no ar', 'nunca mexe neles'],
     ['voltar uma versão', 'traz os arquivos antigos de volta', 'nenhum efeito: são os mesmos para todas as versões'],
@@ -412,7 +434,8 @@ export const guide: Messages['guide'] = {
       do programa, com os mesmos métodos, separadas numa pasta {k.code('Platform')}, então nada no seu código precisa
       mudar.
       {' '}{k.code('Secret')} lê lá as variáveis de ambiente de mesmo nome; os valores ficam aqui. A documentação e os
-      testes vão junto, em {k.code('docs')} e {k.code('tests')}.
+      testes vão junto, em {k.code('docs')} e {k.code('tests')}, e o espaço de desenvolvimento em{' '}
+      {k.code('dev')}.
       {' '}{k.code('Database')} abre {k.code('database/database.db')}, que o download traz com os registros que o seu
       app guardou.
     </>
@@ -453,10 +476,10 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Todas as versões são publicadas, inclusive as anteriores, com a documentação, os testes e a mudança que cada uma
-      fez. O que o app guarda nunca é publicado (os registros, os arquivos que ele salvou, os valores das chaves e
-      senhas), nem o que você pediu com as suas próprias palavras, nem quem usa o app. Desligue a publicação e a página
-      some; as estrelas ficam guardadas para quando você publicar de novo.
+      Todas as versões são publicadas, inclusive as anteriores, com a documentação, os testes, o espaço de
+      desenvolvimento e a mudança que cada uma fez. O que o app guarda nunca é publicado (os registros, os arquivos que
+      ele salvou, os valores das chaves e senhas), nem o que você pediu com as suas próprias palavras, nem quem usa o
+      app. Desligue a publicação e a página some; as estrelas ficam guardadas para quando você publicar de novo.
     </>
   ),
   openAside:

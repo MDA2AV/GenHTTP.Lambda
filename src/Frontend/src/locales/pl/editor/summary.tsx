@@ -7,6 +7,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Dokumentacja i testy',
   writtenWhy: 'Nigdy nie są kompilowane ani serwowane. Zachowywane z każdą wersją i wliczane do zasobów.',
   writtenMissing: 'Jeszcze nie napisano',
+  development: 'Przestrzeń deweloperska',
+  developmentWhy: 'Nigdy nie jest kompilowana ani serwowana: to, z czego zbudowane są zasoby. Wlicza się do zasobów.',
+  developmentFiles: (files, size) => (files === 1 ? `1 plik, ${size}` : `${files} ${files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 10 || files % 100 >= 20) ? 'pliki' : 'plików'}, ${size}`),
   hint: (since, kept, retention, tier) =>
     `Ruch jest liczony od ostatniego startu serwera (${since}). ` +
     (kept

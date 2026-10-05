@@ -29,11 +29,13 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} renvoie ce qui est servi, les autres fichiers {cs} contiennent des types, et tout autre fichier est servi
-      tel quel, sauf ce qui se trouve dans {context} : la documentation et les tests, jamais compilés ni servis. Ctrl-S
-      enregistre, F12 va à une déclaration.
+      tel quel, sauf ce qui se trouve dans {context} : la documentation, les tests et l’espace de développement, jamais
+      compilés ni servis. Ctrl-S enregistre, F12 va à une déclaration.
     </>
   ),
   newer: (version) => ` La version ${version} est plus récente que celle ouverte ici.`,
+  built: (folder) =>
+    `Le build de l’espace de développement écrit ${folder} : le prochain build remplace ce qui est modifié ici. Modifiez plutôt les sources à partir desquelles il est construit.`,
   check: 'Vérifier',
   save: 'Enregistrer',
   deploy: 'Déployer',

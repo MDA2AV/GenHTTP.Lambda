@@ -28,11 +28,13 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} devuelve lo que se sirve, los demás archivos {cs} contienen tipos y cualquier otro archivo se sirve tal
-      cual, salvo lo que hay en {context}: la documentación y las pruebas, que nunca se compilan ni se sirven. Ctrl-S
-      guarda; F12 va a una declaración.
+      cual, salvo lo que hay en {context}: la documentación, las pruebas y el espacio de desarrollo, que nunca se
+      compilan ni se sirven. Ctrl-S guarda; F12 va a una declaración.
     </>
   ),
   newer: (version) => ` La versión ${version} es más nueva que la que tienes abierta aquí.`,
+  built: (folder) =>
+    `La compilación del espacio de desarrollo escribe ${folder}: la próxima compilación reemplaza lo que cambies aquí. Cambia mejor las fuentes a partir de las que se compila.`,
   check: 'Comprobar',
   save: 'Guardar',
   deploy: 'Desplegar',

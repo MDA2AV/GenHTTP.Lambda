@@ -19,6 +19,7 @@ export const frame: EditorMessages['frame'] = {
     stats: 'Statistik',
     logs: 'Log',
     code: 'Kode',
+    development: 'Pengembangan',
   },
   sectionsLabel: 'Bagian',
   groups: {

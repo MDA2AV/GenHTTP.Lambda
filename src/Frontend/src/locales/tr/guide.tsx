@@ -16,6 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Birden fazla dosya',
     page: 'Sayfa sunmak',
     spa: 'Adım adım bir frontend',
+    built: 'Araçlarla derlenen bir frontend',
     storage: 'Dosyaların durduğu iki yer',
     database: 'Kayıt tutmak',
     keeping: 'Dosya saklamak',
@@ -118,6 +119,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Testler', () => <>Uygulamanın otomatik olarak nasıl test edildiği, bunun için gereken scriptler ve test verileriyle birlikte. Yalnızca tam görünümde.</>],
+    ['Geliştirme', () => <>Statik dosyaların, bir araç zincirinin onları derlediği yerde neyden derlendiği - bir frontend’in projesi - her sürümle birlikte saklanır, düzenlemek için değil okumak için. Tam görünümde, bir sürümde bu olduğunda.</>],
   ],
   sections: (k) => (
     <>
@@ -281,6 +283,26 @@ export const guide: Messages['guide'] = {
     ),
     () => <>Yanına bir API ekleyin, sayfanın konuşacağı bir şey olsun:</>,
   ],
+  built: (k) => (
+    <>
+      Birçok frontend derlenir: React, Vue ya da Svelte, TypeScript ya da Tailwind ile yazılır ve Vite ya da başka bir
+      araçla bir araya getirilir. Sürüm, derlemenin ürettiği şeyi statik dosyaları olarak tutar - ve yanında, derlendiği
+      projeyi, yani {k.b('geliştirme alanını')}: sürümde {k.code('.lambda/dev/')}, bir klonda {k.code('dev/')}.
+      Ajanınız kaynakları değiştirir, çalıştığı yerde derler ve ikisini de aynı sürümde kaydeder. Bu platform hiçbir
+      şey derlemez.
+    </>
+  ),
+  built2: (k) => (
+    <>
+      Dokümantasyon gibi o da sürümüne aittir: geçmişte karşılaştırılır, geri alınır, bir taslağa kopyalanır,
+      klonlanır, indirilir ve kodla birlikte yayımlanır - ve asla derlenmez ya da sunulmaz. Kontrol panelinde{' '}
+      {k.b('Geliştirme')}, bir tane olduğunda onu gösterir: projelerini ve her birinin neyle derlendiğini, kurdukları
+      paketleri, nasıl derlendiğini ve bir sürümün kaynakları derlemeden değiştirip değiştirmediğini. Orada
+      okunur, düzenlenmez - onda yapılacak bir değişiklik derlendiği yerde yapılır.
+    </>
+  ),
+  builtAside:
+    'Düz HTML, CSS ve JavaScript’ten oluşan bir frontend’e gerek yoktur: statik dosyalarda kendi kaynağıdır. Bir derlemenin kurduğu şeyler, örneğin node_modules, asla bir sürümün parçası olmaz - projenin .gitignore dosyası onları dışarıda tutar.',
 
   storage: (k) => (
     <>
@@ -293,7 +315,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Bir sürümde',
   workspaceColumn: 'Verilerde',
   table: [
-    ['ne tutar', 'kod ve statik dosyalar: frontend dahil programın kendisi, bir de dokümantasyonu ve testleri', 'lambdanın yazdığı ya da birinin yüklediği her şey'],
+    ['ne tutar', 'kod ve statik dosyalar: frontend dahil programın kendisi, bir de dokümantasyonu, testleri ve frontend’inin neyden derlendiği', 'lambdanın yazdığı ya da birinin yüklediği her şey'],
     ['ne zaman değişir', 'hiçbir zaman: her değişiklik yeni bir sürümdür', 'içine bir şey yazıldığı anda'],
     ['yayına alma', 'tam olarak bu dosyaları yayına alır', 'ona hiç dokunmaz'],
     ['eski bir sürüme dönmek', 'eski dosyaları geri getirir', 'etkisi yok: her sürüm onu paylaşır'],
@@ -416,7 +438,8 @@ export const guide: Messages['guide'] = {
       {k.code('Platform')} klasöründe iki klasör olur ve aynı metotlarla çalışır. Yani kodunuzda hiçbir şeyi
       değiştirmeniz gerekmez.
       {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır. Dokümantasyon ve testler
-      de {k.code('docs')} ve {k.code('tests')} klasörlerinde gelir.
+      de {k.code('docs')} ve {k.code('tests')} klasörlerinde, geliştirme alanı ise{' '}
+      {k.code('dev')} klasöründe gelir.
       {' '}{k.code('Database')} ise {k.code('database/database.db')} dosyasını açar; indirilen proje bu dosyayı
       uygulamanızın tuttuğu kayıtlarla birlikte getirir.
     </>
@@ -457,9 +480,9 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Her sürüm yayımlanır, öncekiler de; her biri dokümantasyonu, testleri ve yaptığı değişiklikle birlikte.
-      Uygulamanın sakladıkları (kayıtları, kaydettiği dosyalar, anahtarlarının ve parolalarının değerleri) asla
-      yayımlanmaz; kendi sözlerinizle ne istediğiniz ve uygulamayı kimlerin kullandığı da. Kapattığınızda sayfa
+      Her sürüm yayımlanır, öncekiler de; her biri dokümantasyonu, testleri, geliştirme alanı ve yaptığı değişiklikle
+      birlikte. Uygulamanın sakladıkları (kayıtları, kaydettiği dosyalar, anahtarlarının ve parolalarının değerleri)
+      asla yayımlanmaz; kendi sözlerinizle ne istediğiniz ve uygulamayı kimlerin kullandığı da. Kapattığınızda sayfa
       kaldırılır; yıldızları ise yeniden yayımladığınızda geri gelmek üzere saklanır.
     </>
   ),

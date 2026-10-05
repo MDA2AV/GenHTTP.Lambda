@@ -15,8 +15,15 @@ export const versions: EditorMessages['versions'] = {
   unchanged: 'Niets veranderd ten opzichte van de vorige versie.',
   first: 'De eerste versie.',
   status: { added: 'toegevoegd', removed: 'verwijderd', changed: 'gewijzigd', same: 'gelijk' },
+  groups: {
+    code: 'Code',
+    assets: 'Assets',
+    development: 'Ontwikkelruimte',
+    context: 'Documentatie en tests',
+  },
   browse: 'Bestanden bekijken',
   docs: 'Documentatie lezen',
+  development: 'Bekijken waaruit het is gebouwd',
   edit: 'Vanaf hier bewerken',
   feature: 'Vanaf hier een concept starten',
   featureTitle:
