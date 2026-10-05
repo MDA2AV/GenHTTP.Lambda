@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -22,20 +23,23 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 /// nothing below a folder that is left out comes back in, since git never
 /// looks into one. Matched without backtracking, since the patterns are
 /// whatever somebody wrote.
+///
+/// The rules are kept by the folder of their file, so a path is held only
+/// against the files of the folders it is in, however many others there are.
 /// </remarks>
 public sealed class IgnoredPaths
 {
-    private readonly IReadOnlyList<(string Folder, IReadOnlyList<Rule> Rules)> _files;
+    private readonly ImmutableDictionary<string, ImmutableList<Rule>> _folders;
 
-    private IgnoredPaths(IReadOnlyList<(string Folder, IReadOnlyList<Rule> Rules)> files)
+    private IgnoredPaths(ImmutableDictionary<string, ImmutableList<Rule>> folders)
     {
-        _files = files;
+        _folders = folders;
     }
 
     /// <summary>
     /// Nothing left out.
     /// </summary>
-    public static IgnoredPaths None { get; } = new([]);
+    public static IgnoredPaths None { get; } = new(ImmutableDictionary.Create<string, ImmutableList<Rule>>(StringComparer.Ordinal));
 
     #region Functionality
 
@@ -44,27 +48,31 @@ public sealed class IgnoredPaths
     /// </summary>
     /// <param name="files">Each file by its path - "web/.gitignore" for one in web/ - and what it says</param>
     public static IgnoredPaths Of(IEnumerable<(string Path, string Content)> files)
+        => files.Aggregate(None, (ignored, file) => ignored.With(file.Path, file.Content));
+
+    /// <summary>
+    /// These rules and those of one more .gitignore file, which is read once
+    /// and not again for the files that come after it.
+    /// </summary>
+    /// <param name="path">Where the file is - "web/.gitignore" for one in web/</param>
+    /// <param name="content">What it says</param>
+    public IgnoredPaths With(string path, string content)
     {
-        var read = new List<(string Folder, IReadOnlyList<Rule> Rules)>();
+        var rules = Parse(content);
 
-        foreach (var (path, content) in files)
+        if (rules.Count == 0)
         {
-            var slash = path.LastIndexOf('/');
-
-            var folder = slash < 0 ? string.Empty : path[..(slash + 1)];
-
-            var rules = Parse(content);
-
-            if (rules.Count > 0)
-            {
-                read.Add((folder, rules));
-            }
+            return this;
         }
 
-        // the files above first, so a deeper one has the last word
-        read.Sort((x, y) => x.Folder.Count(c => c == '/').CompareTo(y.Folder.Count(c => c == '/')));
+        var slash = path.LastIndexOf('/');
 
-        return new IgnoredPaths(read);
+        var folder = slash < 0 ? string.Empty : path[..(slash + 1)];
+
+        // of two files for the same folder, the one given later has the last word
+        var before = _folders.GetValueOrDefault(folder, ImmutableList<Rule>.Empty);
+
+        return new IgnoredPaths(_folders.SetItem(folder, before.AddRange(rules)));
     }
 
     /// <summary>
@@ -73,7 +81,7 @@ public sealed class IgnoredPaths
     /// <param name="path">Its path, relative to where the paths of the .gitignore files are</param>
     public bool Ignores(string path)
     {
-        if (_files.Count == 0)
+        if (_folders.IsEmpty)
         {
             return false;
         }
@@ -100,37 +108,35 @@ public sealed class IgnoredPaths
     {
         bool? ignored = null;
 
-        foreach (var (where, rules) in _files)
+        var name = path[(path.LastIndexOf('/') + 1)..];
+
+        // the folders it is in from the top, so a deeper file has the last word
+        var at = 0;
+
+        while (true)
         {
-            if (!path.StartsWith(where, StringComparison.Ordinal))
+            if (_folders.TryGetValue(path[..at], out var rules))
             {
-                continue;
-            }
+                var relative = path[at..];
 
-            var relative = path[where.Length..];
-
-            if (relative.Length == 0)
-            {
-                continue;
-            }
-
-            var name = relative[(relative.LastIndexOf('/') + 1)..];
-
-            foreach (var rule in rules)
-            {
-                if (rule.FoldersOnly && !folder)
+                foreach (var rule in rules)
                 {
-                    continue;
-                }
-
-                if (rule.Pattern.IsMatch(rule.Anchored ? relative : name))
-                {
-                    ignored = !rule.Negated;
+                    if ((!rule.FoldersOnly || folder) && rule.Pattern.IsMatch(rule.Anchored ? relative : name))
+                    {
+                        ignored = !rule.Negated;
+                    }
                 }
             }
+
+            var next = path.IndexOf('/', at);
+
+            if (next < 0)
+            {
+                return ignored == true;
+            }
+
+            at = next + 1;
         }
-
-        return ignored == true;
     }
 
     #endregion
@@ -256,12 +262,14 @@ public sealed class IgnoredPaths
                     break;
 
                 case '[':
-                    var close = pattern.IndexOf(']', i + 2);
+                    // a set holds one character at least, so its end is two
+                    // further at the earliest - and one that is never closed
+                    // matches nothing in git
+                    var close = i + 2 < pattern.Length ? pattern.IndexOf(']', i + 2) : -1;
 
                     if (close < 0)
                     {
-                        builder.Append("\\[");
-                        break;
+                        return null;
                     }
 
                     var inside = pattern[(i + 1)..close];

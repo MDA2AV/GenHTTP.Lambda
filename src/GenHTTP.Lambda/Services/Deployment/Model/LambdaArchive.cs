@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 
+using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Meta;
 
 namespace GenHTTP.Lambda.Services.Deployment.Model;
@@ -103,13 +104,22 @@ public static class LambdaArchive
     /// usually been built in, too, so what its .gitignore files leave out is
     /// left out here as well - what the build installed, cached and wrote for
     /// itself - the way git add leaves it out of a commit, whatever the tool
-    /// calls it.
+    /// calls it. A file the lambda already has is kept all the same, as git
+    /// keeps a file it tracks.
     /// </remarks>
     /// <param name="content">The archive</param>
     /// <param name="maxBytes">How many uncompressed bytes the archive may hold in total</param>
-    public static async ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream content, long maxBytes)
+    /// <param name="basis">The files the archive was made from: the newest version's, or the feature's</param>
+    public static async ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream content, long maxBytes, IReadOnlyList<LambdaFile> basis)
     {
-        var read = await ReadAsync(content, maxBytes, Lambda);
+        using var body = await BufferAsync(content, maxBytes);
+
+        return await Offload.Run(() => UnpackAsync(body, maxBytes, basis));
+    }
+
+    private static async Task<IReadOnlyList<LambdaFile>> UnpackAsync(MemoryStream body, long maxBytes, IReadOnlyList<LambdaFile> basis)
+    {
+        var read = await ReadAsync(body, maxBytes, Lambda, basis.Select(f => f.Name));
 
         return Ordered(read.Select(r => ToFile(r.Path, r.Bytes)).ToList(), []);
     }
@@ -129,14 +139,24 @@ public static class LambdaArchive
     ///
     /// The files are named as the lambda they came from names them - a
     /// Store.cs that was store.cs stays store.cs - and Project.cs that is
-    /// what that lambda's snippet becomes is that snippet, to the byte.
+    /// what that lambda's snippet becomes is that snippet, to the byte. A
+    /// file the lambda already has is kept whatever a .gitignore says, as
+    /// git keeps a file it tracks.
     /// </remarks>
     /// <param name="basis">The files the archive was made from: the newest version's, or the feature's</param>
     public static async ValueTask<IReadOnlyList<LambdaFile>> UnpackProjectAsync(Stream content, long maxBytes, IReadOnlyList<LambdaFile> basis)
     {
-        var read = await ReadAsync(content, maxBytes, Project);
+        using var body = await BufferAsync(content, maxBytes);
 
+        // a snippet taken out of its class is parsed, so all of it is work
+        return await Offload.Run(() => UnpackProjectAsync(body, maxBytes, basis));
+    }
+
+    private static async Task<IReadOnlyList<LambdaFile>> UnpackProjectAsync(MemoryStream body, long maxBytes, IReadOnlyList<LambdaFile> basis)
+    {
         var names = basis.ToDictionary(f => ProjectPaths.Of(f.Name), f => f.Name, StringComparer.Ordinal);
+
+        var read = await ReadAsync(body, maxBytes, Project, names.Keys);
 
         var files = new List<LambdaFile>(read.Count);
 
@@ -229,19 +249,32 @@ public static class LambdaArchive
     #region Reading
 
     /// <summary>
-    /// The files of an archive that are kept in the given layout, by their
-    /// paths in it.
+    /// The body of the request, which reading needs to be able to seek in.
     /// </summary>
-    private static async ValueTask<List<(string Path, byte[] Bytes)>> ReadAsync(Stream content, long maxBytes, Layout layout)
+    /// <remarks>
+    /// Read where the request is, and only then is the rest - unpacking, and
+    /// holding every path against the .gitignore files - taken away from the
+    /// reactor in one hop.
+    /// </remarks>
+    private static async ValueTask<MemoryStream> BufferAsync(Stream content, long maxBytes)
     {
-        // reading needs a seekable stream, and copying the body ourselves
-        // keeps what is buffered bounded
-        using var body = new MemoryStream();
+        // copying the body ourselves keeps what is buffered bounded
+        var body = new MemoryStream();
 
         await CopyAsync(content, body, maxBytes, "The archive is larger than a lambda may be.");
 
         body.Position = 0;
 
+        return body;
+    }
+
+    /// <summary>
+    /// The files of an archive that are kept in the given layout, by their
+    /// paths in it.
+    /// </summary>
+    /// <param name="tracked">Paths kept whatever a .gitignore says, as they are in the lambda already</param>
+    private static async ValueTask<List<(string Path, byte[] Bytes)>> ReadAsync(MemoryStream body, long maxBytes, Layout layout, IEnumerable<string> tracked)
+    {
         ZipArchive zip;
 
         try
@@ -294,11 +327,11 @@ public static class LambdaArchive
         // they leave out is never read, as git never reads it
         var rules = new Dictionary<string, byte[]>(StringComparer.Ordinal);
 
-        var given = layout.Fixed != null ? [(".gitignore", layout.Fixed)] : Array.Empty<(string, string)>();
-
-        var ignored = IgnoredPaths.Of(given);
+        var ignored = layout.Fixed != null ? IgnoredPaths.None.With(".gitignore", layout.Fixed) : IgnoredPaths.None;
 
         bool Ignores(string name) => name.StartsWith(layout.Rules, StringComparison.Ordinal) && ignored.Ignores(name[layout.Rules.Length..]);
+
+        var known = tracked.ToHashSet(StringComparer.Ordinal);
 
         foreach (var (name, entry) in kept.Where(k => k.Name.StartsWith(layout.Build, StringComparison.Ordinal) && Path.GetFileName(k.Name) == ".gitignore")
                                           .OrderBy(k => k.Name.Count(c => c == '/')))
@@ -314,12 +347,12 @@ public static class LambdaArchive
 
             rules[name] = bytes;
 
-            ignored = IgnoredPaths.Of(given.Concat(rules.Select(r => (r.Key[layout.Rules.Length..], Encoding.UTF8.GetString(r.Value)))));
+            ignored = ignored.With(name[layout.Rules.Length..], Encoding.UTF8.GetString(bytes));
         }
 
         foreach (var (name, entry) in kept)
         {
-            if (Ignores(name))
+            if (!known.Contains(name) && Ignores(name))
             {
                 continue;
             }

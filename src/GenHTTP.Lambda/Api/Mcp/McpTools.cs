@@ -1572,8 +1572,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (only != null)
         {
+            // the build folder's files are named by the listing of it, which is bounded
             var one = files.FirstOrDefault(f => f.Name == only)
-                   ?? throw LambdaException.NotFound($"There is no file '{only}' here. There are: {string.Join(", ", files.Select(f => f.Name))}.");
+                   ?? throw LambdaException.NotFound($"There is no file '{only}' here. There are: {string.Join(", ", files.Where(f => !f.IsBuild).Select(f => f.Name))}{(files.Any(f => f.IsBuild) ? $", and the files of {LambdaSource.BuildFolder}, which read_lambda without file lists" : string.Empty)}.");
 
             if (one.Code.Length <= ReadFileLimit)
             {
@@ -2322,7 +2323,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             },
             nothingIsBuiltHere = "The platform never builds anything, never runs a tool or installs what a build needs, and never checks that the program is what the build folder builds to. A change in the build folder that is not built changes nothing; built and not saved, it is not there either.",
             layout = "Build where the files are laid out as in a clone - build/ beside assets/ and the code - so a build that writes by a path relative to itself writes to the same place every time: a clone, or the zip of a version or a feature with ?layout=project, which takes the same layout back. The zip without it names the files as the lambda does - .lambda/build/, the assets at its root - where such a path leads elsewhere.",
-            gitignore = "What a build installs, caches or writes for itself is no part of a version - for example node_modules/, target/, .venv/, a cache folder. Keep it out with a .gitignore in the build folder: a clone leaves it out of commits by it, and a zip put back leaves out what it ignores.",
+            gitignore = "What a build installs, caches or writes for itself is no part of a version - for example node_modules/, target/, .venv/, a cache folder. Keep it out with a .gitignore in the build folder: a clone leaves it out of commits by it, and a zip put back leaves out what it ignores - but what the lambda already has stays, as git keeps what it tracks.",
             readme = $"Write {LambdaSource.BuildReadme}: how it is built and where the build goes - the commands, in a few lines. The next agent builds from it, the owner reads it in the editor, and read_lambda hands it over. Note the decision itself in .lambda/docs/decisions.md like any other.",
             pitfalls = new[]
             {

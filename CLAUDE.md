@@ -293,13 +293,15 @@ clone, an export and a published source. The editor calls it **Build**.
   - saved, diffed, rolled back, copied into a feature, merged, cloned,
   exported, published - never compiled or served, left out of what identifies
   a build, and counted towards the asset allowance. Its names allow dot files
-  and `[]()+@$~{}`; no spaces, no `.git`.
+  and `[]()+@$~{}`; no spaces, no `.git` in any case, nothing Windows
+  reserves.
 - **What a build installs, caches or keeps for itself is kept out by the
   folder's own `.gitignore` files - decided with the owner, so it works for
   any technology.** Nothing is refused by name: git follows them in a clone,
-  a zip put back follows them (`IgnoredPaths`, git's rules), and a save that
-  names a file keeps it, as `git add -f` would. The root `.gitignore` of a
-  repository stays the platform's, generic one.
+  a zip put back follows them (`IgnoredPaths`, git's rules) but keeps what
+  the lambda already has, as git keeps what it tracks, and a save that names
+  a file keeps it, as `git add -f` would. The root `.gitignore` of a
+  repository stays the platform's, generic one, anchored to the root.
 - **Read, never edited, in the editor** - the asymmetric interface: the agent
   builds it, the owner reviews it. **Build** is a section of the full view
   only, in the **Develop** group (named so that the section is not called

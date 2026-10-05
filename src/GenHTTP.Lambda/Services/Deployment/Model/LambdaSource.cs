@@ -533,8 +533,10 @@ public static class LambdaSource
     /// tool's files have, which nobody here chose: dot files, and brackets,
     /// parentheses and plus signs, which some tools read meaning off. Still
     /// names that become real files anywhere - in a zip, a clone, an
-    /// exported project on Windows - so no spaces and nothing a shell or a
-    /// file system reads as something else.
+    /// exported project on Windows - so no spaces, no name Windows reserves
+    /// or ends with a dot, and nothing a shell or a file system reads as
+    /// something else. A clone refuses a .git folder in any case, and by its
+    /// short name on Windows, so this does too.
     ///
     /// What a build installs, caches or writes for itself is not refused by
     /// name here, since every tool names it differently: the space says so
@@ -548,7 +550,7 @@ public static class LambdaSource
 
         var segments = rest.Split('/');
 
-        if (segments.Contains(".git"))
+        if (segments.Any(s => s.Equals(".git", StringComparison.OrdinalIgnoreCase) || s.Equals("git~1", StringComparison.OrdinalIgnoreCase)))
         {
             return $"'{name}' is part of a git repository, which is no file of the build folder.";
         }
@@ -562,12 +564,23 @@ public static class LambdaSource
                 break;
             }
 
-            usable = segment.Length is > 0 and <= 100 && segment is not ("." or "..") && segment.All(IsBuildCharacter);
+            usable = segment.Length is > 0 and <= 100 && !segment.EndsWith('.') && !IsReservedOnWindows(segment) && segment.All(IsBuildCharacter);
         }
 
         return usable
             ? null
-            : $"'{name}' is not a usable name in the build folder. Below {BuildFolder}, use letters, digits and - _ . + @ ( ) [ ] {{ }} $ ~, no spaces, at most 16 folders deep and 240 characters in all.";
+            : $"'{name}' is not a usable name in the build folder. Below {BuildFolder}, use letters, digits and - _ . + @ ( ) [ ] {{ }} $ ~, no spaces, no name ending in a dot or one Windows reserves (CON, PRN, AUX, NUL, COM1, LPT1 and the like, with an extension too), at most 16 folders deep and 240 characters in all.";
+    }
+
+    /// <summary>
+    /// Whether Windows refuses a file of this name, with an extension or without.
+    /// </summary>
+    private static bool IsReservedOnWindows(string segment)
+    {
+        var stem = segment.Split('.')[0].ToUpperInvariant();
+
+        return stem is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$"
+            || (stem.Length == 4 && stem[..3] is "COM" or "LPT" && stem[3] is >= '1' and <= '9');
     }
 
     private static bool IsBuildCharacter(char character)

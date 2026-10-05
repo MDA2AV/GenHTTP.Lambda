@@ -104,12 +104,15 @@ public static class ProjectPacker
     /// build folder taken back in.
     /// </summary>
     /// <remarks>
+    /// Anchored to the root, so a folder of the same name elsewhere - in the
+    /// assets, in the build folder - is kept.
+    ///
     /// A folder called build is what many keep out of every repository of
     /// theirs, in a global ignore, taking it for a build's output. Here it is
     /// what a build is made from, and a .gitignore of the repository overrides
     /// a global one, so it says so.
     /// </remarks>
-    internal const string RepositoryIgnored = "bin/\nobj/\nworkspace/\ndatabase/\n" + Reincluded;
+    internal const string RepositoryIgnored = "/bin/\n/obj/\n/workspace/\n/database/\n" + Reincluded;
 
     private const string Reincluded = "!/build/\n";
 
@@ -240,8 +243,12 @@ public static class ProjectPacker
             // repository: the image mounts it, and data is nobody's source
             var ignored = data ? "bin/\nobj/\nworkspace/\ndatabase/\n" : "bin/\nobj/\nworkspace/\n";
 
-            // the build folder is the lambda's, whatever a global ignore says of a folder called build
-            var tracked = build.Count > 0 ? $"{ignored}{Reincluded}" : ignored;
+            // anchored, so a folder of the same name in the assets or the build
+            // folder is kept; and the build folder is the lambda's, whatever a
+            // global ignore says of a folder called build
+            var anchored = string.Concat(ignored.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => $"/{line}\n"));
+
+            var tracked = build.Count > 0 ? $"{anchored}{Reincluded}" : anchored;
 
             // the documentation, the tests and the build folder are kept out of the image as well
             var beside = build.Count > 0 ? [.. folders, ProjectPaths.Build.TrimEnd('/')] : folders;

@@ -152,6 +152,7 @@ public sealed class BuildFolderTests
             new LambdaFile(".lambda/build/web/src/routes/[id]/+page.svelte", "<h1>{id}</h1>"),
             new LambdaFile(".lambda/build/web/src/(auth)/login.tsx", "export {}"),
             new LambdaFile(".lambda/build/web/src/routes/$slug.{lang}.tsx", "export {}"),
+            new LambdaFile(".lambda/build/web/src/console.ts", "export {}"),
             new LambdaFile(".lambda/build/web/.npmrc", "engine-strict=true"),
             new LambdaFile(".lambda/build/.editorconfig", "root = true"),
             new LambdaFile(".lambda/build/web/public/logo.png", Convert.ToBase64String([137, 80, 78, 71]), "base64"));
@@ -159,6 +160,12 @@ public sealed class BuildFolderTests
         foreach (var name in (string[])
                  [
                      ".lambda/build/web/.git/config",
+                     ".lambda/build/web/.GIT/config",     // what a clone refuses in any case
+                     ".lambda/build/git~1/config",        // and by its short name on Windows
+                     ".lambda/build/aux.js",              // what Windows reserves, with an extension too
+                     ".lambda/build/src/con.ts",
+                     ".lambda/build/COM1",
+                     ".lambda/build/notes.",
                      ".lambda/build/my notes.txt",
                      ".lambda/build/",
                      ".lambda/build/web/../../secret.txt",
@@ -260,7 +267,9 @@ public sealed class BuildFolderTests
         var ignored = IgnoredPaths.Of(
         [
             (".gitignore", "# a comment\n\n*.log\nbuild/\n/top.txt\ndocs/**/draft.md\n**/cache\n[ab].tmp\nout/\n!out/keep.js\n\\#hash\ntrailing.txt   \n"),
-            ("web/.gitignore", "!error.log\n")
+            ("web/.gitignore", "!error.log\n"),
+            // a set that is never closed, which git matches nothing with
+            ("odd/.gitignore", "[\nbroken[\n")
         ]);
 
         foreach (var (path, expected) in (List<(string, bool)>)
@@ -284,6 +293,7 @@ public sealed class BuildFolderTests
                      ("#hash", true),
                      ("trailing.txt", true),
                      ("src/app.ts", false),
+                     ("odd/broken[", false),
                  ])
         {
             Assert.AreEqual(expected, ignored.Ignores(path), path);
@@ -398,6 +408,44 @@ public sealed class BuildFolderTests
         Assert.AreEqual("<p>darker</p>", files.Single(f => f.Name == ".lambda/build/web/index.html").Code);
     }
 
+    [TestMethod]
+    public async Task AZipPutBackKeepsWhatTheLambdaHasWhateverAGitignoreSays()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("kept");
+
+        // a file saved on purpose where the .gitignore would leave it out, and
+        // folders named as what dotnet run writes, below the root
+        await fixture.SaveAsync(lambda, "Keeps a vendored library",
+            new LambdaFile(LambdaSource.EntryName, Snippet),
+            new LambdaFile("bin/app.js", "an asset"),
+            new LambdaFile(".lambda/build/.gitignore", "vendor/\n"),
+            new LambdaFile(".lambda/build/vendor/lib.js", "vendored on purpose"),
+            new LambdaFile(".lambda/build/src/bin/main.rs", "fn main() {}"));
+
+        var expected = new[] { LambdaSource.EntryName, "bin/app.js", ".lambda/build/.gitignore", ".lambda/build/vendor/lib.js", ".lambda/build/src/bin/main.rs" };
+
+        foreach (var (layout, version) in (List<(string, int)>) [("project", 3), ("lambda", 4)])
+        {
+            using var downloaded = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/{version - 1}/zip?layout={layout}");
+
+            var entries = Entries(await downloaded.Content.ReadAsByteArrayAsync());
+
+            var vendor = layout == "project" ? "build/vendor/" : ".lambda/build/vendor/";
+
+            // put back as it came, with a file of the build's own beside the vendored one
+            var saved = await UploadAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip?layout={layout}", HttpMethod.Post,
+                                          Zip([.. entries.Select(e => (e.Key, e.Value)), ($"{vendor}installed.js", "what a build installed")]));
+
+            Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode, await saved.Content.ReadAsStringAsync());
+
+            var names = (await fixture.VersionAsync(lambda, version)).Files.Select(f => f.Name).ToList();
+
+            CollectionAssert.AreEquivalent(expected, names, $"laid out as {layout}: what it had stays, as git keeps what it tracks, and only that");
+        }
+    }
+
     #endregion
 
     #region Agents
@@ -429,6 +477,11 @@ public sealed class BuildFolderTests
         var one = await ToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["file"] = ".lambda/build/web/package.json" });
 
         Assert.AreEqual(Package, one["files"]![0]!["code"]!.GetValue<string>(), "one file is read by its name");
+
+        var missing = (await ToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["file"] = "nope.txt" }))["problem"]!.GetValue<string>();
+
+        StringAssert.Contains(missing, "index.html", "a name that is not there is answered with those that are");
+        Assert.IsFalse(missing.Contains("package.json", StringComparison.Ordinal), "but the build folder by where it is, which may hold any number of files");
 
         var guide = await ToolAsync(fixture, "platform_guide", new JsonObject());
 
@@ -520,6 +573,7 @@ public sealed class BuildFolderTests
         Assert.Contains("build/", git.Read("cloned", ".dockerignore"));
         Assert.Contains("## What it is built from: build/", git.Read("cloned", "AGENTS.md"), "the agent working here is told how");
         Assert.Contains("!/build/", git.Read("cloned", ".gitignore"), "taken back in, whatever a global ignore says of a folder called build");
+        Assert.StartsWith("/bin/\n/obj/\n", git.Read("cloned", ".gitignore"), "what dotnet run writes, at the root only");
 
         // what a build installed stays out, by the project's own .gitignore
         git.Write("cloned", "build/web/node_modules/vite/package.json", "{}");

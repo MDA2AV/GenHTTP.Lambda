@@ -181,7 +181,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
         var files = await VersionResource.UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier), laid,
-                                                      () => LambdaSource.Parse(features.Get(privateKey, feature).Code));
+                                                      LambdaSource.Parse(features.Get(privateKey, feature).Code));
 
         return await SaveAsync(privateKey, feature, files, deploy, specification, change);
     }

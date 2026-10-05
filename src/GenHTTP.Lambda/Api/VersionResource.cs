@@ -115,7 +115,7 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var files = await UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier), laid, () => Latest(meta, privateKey));
+        var files = await UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier), laid, Latest(meta, privateKey));
 
         return await SaveAsync(privateKey, files, deploy, specification, change);
     }
@@ -179,9 +179,6 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     }
 
     /// <summary>
-    /// The files of the newest version of a lambda.
-    /// </summary>
-    /// <summary>
     /// The layout an archive is asked for in.
     /// </summary>
     internal static ArchiveLayout LayoutOf(string? layout) => layout?.Trim().ToLowerInvariant() switch
@@ -194,10 +191,13 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     /// <summary>
     /// The files of an uploaded archive in the given layout.
     /// </summary>
-    /// <param name="basis">The files it was made from, which a project's names are read against - only read where it is one</param>
-    internal static ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream body, long maxBytes, ArchiveLayout layout, Func<IReadOnlyList<LambdaFile>> basis)
-        => layout == ArchiveLayout.Project ? LambdaArchive.UnpackProjectAsync(body, maxBytes, basis()) : LambdaArchive.UnpackAsync(body, maxBytes);
+    /// <param name="basis">The files it was made from: what it already has is kept whatever a .gitignore says, and a project's names are read against them</param>
+    internal static ValueTask<IReadOnlyList<LambdaFile>> UnpackAsync(Stream body, long maxBytes, ArchiveLayout layout, IReadOnlyList<LambdaFile> basis)
+        => layout == ArchiveLayout.Project ? LambdaArchive.UnpackProjectAsync(body, maxBytes, basis) : LambdaArchive.UnpackAsync(body, maxBytes, basis);
 
+    /// <summary>
+    /// The files of the newest version of a lambda.
+    /// </summary>
     internal static IReadOnlyList<LambdaFile> Latest(IMetaService meta, string privateKey)
     {
         var lambda = meta.Require(privateKey);

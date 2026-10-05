@@ -47,6 +47,7 @@ import { SourceTab } from '../control/SourceTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
 import { Workbench } from '../control/Workbench';
+import { BUILD } from '../control/written';
 import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui';
 import { useView, type View } from '../control/view';
 import { SharedWordsContext } from '../control/words';
@@ -546,6 +547,28 @@ export function Editor({ theme }: Props) {
   // the feature the page is opened on, as last read; undefined until the list arrives
   const open = featureKey && features ? (features.find((f) => f.key === featureKey) ?? null) : undefined;
 
+  // a draft may be the first to keep a build folder, which the versions
+  // say nothing of - so it is asked for its own, where they keep none
+  const [draftBuilds, setDraftBuilds] = useState(false);
+
+  useEffect(() => {
+    setDraftBuilds(false);
+
+    if (simple || !open || builds) {
+      return;
+    }
+
+    let current = true;
+
+    api.feature.get(privateKey, open.key, BUILD)
+      .then((content) => current && setDraftBuilds(content.files.length > 0))
+      .catch(() => undefined);
+
+    return () => {
+      current = false;
+    };
+  }, [privateKey, open?.key, open?.revision, simple, builds]);
+
   // merged or deleted elsewhere while its code was open: nothing is left to save
   const gone = featureKey != null && open === null;
 
@@ -893,7 +916,7 @@ export function Editor({ theme }: Props) {
           // one view is no choice, so the simple view has no row for it
           !simple && (
           <nav aria-label={t.features.viewsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-            {FEATURE_VIEWS.filter((view) => view !== 'build' || builds || featureView === view).map((view) => {
+            {FEATURE_VIEWS.filter((view) => view !== 'build' || builds || draftBuilds || featureView === view).map((view) => {
               const to = featurePath(featureKey, view);
               const current = featureView === view;
 
