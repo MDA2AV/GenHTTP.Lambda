@@ -6,9 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: '문서와 테스트',
   writtenWhy: '컴파일되지도, 제공되지도 않아요. 버전마다 함께 보관되고, 에셋 용량에 포함돼요.',
   writtenMissing: '아직 작성되지 않음',
-  development: '개발 공간',
-  developmentWhy: '컴파일되거나 제공되지 않아요. 에셋을 만드는 원본이에요. 에셋과 함께 계산돼요.',
-  developmentFiles: (files, size) => (files === 1 ? `파일 1개, ${size}` : `파일 ${files}개, ${size}`),
+  build: '빌드',
+  buildWhy: '컴파일되지도 제공되지도 않아요. 코드나 에셋을 만드는 원본이며, 에셋과 함께 계산돼요.',
+  buildFiles: (files, size) => `파일 ${files}개, ${size}`,
   hint: (since, kept, retention, tier) =>
     `트래픽은 서버가 마지막으로 시작된 뒤부터 집계해요(${since}). ` +
     (kept

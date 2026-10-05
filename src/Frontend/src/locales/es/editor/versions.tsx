@@ -18,12 +18,12 @@ export const versions: EditorMessages['versions'] = {
   groups: {
     code: 'Código',
     assets: 'Recursos',
-    development: 'Espacio de desarrollo',
+    build: 'Compilación',
     context: 'Documentación y pruebas',
   },
   browse: 'Ver sus archivos',
   docs: 'Leer su documentación',
-  development: 'Ver a partir de qué se compila',
+  build: 'Ver a partir de qué se compila',
   edit: 'Editar desde aquí',
   feature: 'Empezar un borrador desde aquí',
   featureTitle:

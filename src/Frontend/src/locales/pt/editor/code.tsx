@@ -28,13 +28,11 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} retorna o que é servido, outros arquivos {cs} guardam tipos, e qualquer outro arquivo é servido como
-      está, exceto o que fica em {context}: a documentação, os testes e o espaço de desenvolvimento, que nunca são
-      compilados nem servidos. Ctrl-S salva, F12 vai para uma declaração.
+      está, exceto o que fica em {context}: a documentação, os testes e aquilo a partir do qual é construído, que nunca
+      são compilados nem servidos. Ctrl-S salva, F12 vai para uma declaração.
     </>
   ),
   newer: (version) => ` A versão ${version} é mais nova do que a que está aberta aqui.`,
-  built: (folder) =>
-    `O build do espaço de desenvolvimento escreve ${folder}: o próximo build substitui o que for alterado aqui. Altere os códigos-fonte a partir dos quais ele é gerado.`,
   check: 'Verificar',
   save: 'Salvar',
   deploy: 'Fazer deploy',

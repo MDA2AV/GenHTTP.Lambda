@@ -28,13 +28,11 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} zwraca to, co jest serwowane, pozostałe pliki {cs} zawierają typy, a każdy inny plik jest serwowany bez
-      zmian – poza tym, co jest w folderze {context}: dokumentacją, testami i przestrzenią deweloperską, które nigdy nie
+      zmian – poza tym, co jest w folderze {context}: dokumentacją, testami i tym, z czego jest zbudowane, które nigdy nie
       są kompilowane ani serwowane. Ctrl+S zapisuje, F12 przechodzi do deklaracji.
     </>
   ),
   newer: (version) => ` Wersja ${version} jest nowsza niż ta otwarta tutaj.`,
-  built: (folder) =>
-    `Build przestrzeni deweloperskiej zapisuje ${folder}: następny build zastąpi to, co zmienisz tutaj. Zmień raczej źródła, z których jest budowany.`,
   check: 'Sprawdź',
   save: 'Zapisz',
   deploy: 'Wdróż',

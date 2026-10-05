@@ -28,13 +28,11 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} gibt zurück, was ausgeliefert wird. Weitere {cs}-Dateien enthalten Typen, alle anderen Dateien werden
-      ausgeliefert, wie sie sind – außer denen in {context}: Das sind die Dokumentation, die Tests und der
-      Entwicklungsbereich, die nie kompiliert oder ausgeliefert werden. Strg+S speichert, F12 springt zur Deklaration.
+      ausgeliefert, wie sie sind – außer denen in {context}: Das sind die Dokumentation, die Tests und das, woraus es
+      gebaut wird, die nie kompiliert oder ausgeliefert werden. Strg+S speichert, F12 springt zur Deklaration.
     </>
   ),
   newer: (version) => ` Version ${version} ist neuer als die hier geöffnete.`,
-  built: (folder) =>
-    `Der Build des Entwicklungsbereichs schreibt ${folder}: Der nächste Build ersetzt, was hier geändert wird. Ändern Sie stattdessen die Quellen, aus denen er gebaut wird.`,
   check: 'Prüfen',
   save: 'Speichern',
   deploy: 'Deployen',

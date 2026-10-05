@@ -6,9 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Dokumentation und Tests',
   writtenWhy: 'Nie kompiliert und nie ausgeliefert. Mit jeder Version gespeichert und zu den Assets gezählt.',
   writtenMissing: 'Noch nicht geschrieben',
-  development: 'Entwicklungsbereich',
-  developmentWhy: 'Nie kompiliert oder ausgeliefert: das, woraus die Assets gebaut werden. Zu den Assets gezählt.',
-  developmentFiles: (files, size) => (files === 1 ? `1 Datei, ${size}` : `${files} Dateien, ${size}`),
+  build: 'Build',
+  buildWhy: 'Nie kompiliert oder ausgeliefert: das, woraus der Code oder die Assets gebaut werden. Zählt zu den Assets.',
+  buildFiles: (files, size) => (files === 1 ? `1 Datei, ${size}` : `${files} Dateien, ${size}`),
   hint: (since, kept, retention, tier) =>
     `Der Traffic wird seit dem letzten Serverstart gezählt (${since}). ` +
     (kept

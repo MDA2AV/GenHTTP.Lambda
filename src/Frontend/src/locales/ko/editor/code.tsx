@@ -28,13 +28,11 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} 파일이 반환하는 것이 제공되고, 다른 {cs} 파일에는 타입을 두고, 그 밖의 파일은 그대로 제공돼요. 단,{' '}
-      {context} 안에 있는 문서, 테스트, 개발 공간은 컴파일되지도 제공되지도 않아요. Ctrl-S로 저장하고, F12로 선언으로
+      {context} 안에 있는 문서, 테스트, 빌드 원본은 컴파일되지도 제공되지도 않아요. Ctrl-S로 저장하고, F12로 선언으로
       이동해요.
     </>
   ),
   newer: (version) => ` 여기 열린 것보다 새로운 버전이 있어요 (버전 ${version}).`,
-  built: (folder) =>
-    `개발 공간의 빌드가 ${folder}에 파일을 써요. 다음 빌드가 여기서 바꾼 내용을 대체해요. 대신 그것을 만드는 원본을 수정하세요.`,
   check: '검사',
   save: '저장',
   deploy: '배포',

@@ -16,7 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Mais do que um ficheiro',
     page: 'Servir uma página',
     spa: 'Um front-end, passo a passo',
-    built: 'Um front-end compilado com ferramentas',
+    built: 'Aquilo a partir do qual é compilado',
     storage: 'Os dois sítios onde vivem os ficheiros',
     database: 'Guardar registos',
     keeping: 'Guardar ficheiros',
@@ -119,7 +119,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Testes', () => <>Como a app é testada automaticamente, com os scripts e os dados de teste para isso. Só na vista completa.</>],
-    ['Desenvolvimento', () => <>Aquilo a partir do qual os assets são compilados, onde uma toolchain os compila - o projeto de um front-end - guardado com cada versão, para ler e não para editar. Na vista completa, assim que uma versão tem um.</>],
+    ['Compilação', () => <>Aquilo a partir do qual o código ou os assets são compilados, onde uma ferramenta de compilação os faz, guardado com cada versão, para ler e não para editar. Na vista completa, assim que uma versão o guarda.</>],
   ],
   sections: (k) => (
     <>
@@ -281,24 +281,25 @@ export const guide: Messages['guide'] = {
   ],
   built: (k) => (
     <>
-      Muitos front-ends são compilados: escritos com React, Vue ou Svelte, TypeScript ou Tailwind, e reunidos pelo Vite
-      ou por outra ferramenta. A versão guarda o que a compilação gera, como assets - e, a seu lado, o projeto a partir
-      do qual foi compilada, o seu {k.b('espaço de desenvolvimento')}: {k.code('.lambda/dev/')} na versão,{' '}
-      {k.code('dev/')} num clone. O teu agente altera as fontes, compila-as onde trabalha e guarda ambos na mesma
-      versão. Esta plataforma não compila nada.
+      Parte de uma lambda pode ser feita por uma ferramenta de compilação em vez de escrita tal como é servida ou
+      compilada: compilada, empacotada ou gerada. A versão guarda o que a ferramenta faz - como assets ou como código - e,
+      a seu lado, os ficheiros a partir dos quais o faz, o seu {k.b('espaço de desenvolvimento')}:{' '}
+      {k.code('.lambda/dev/')} na versão, {k.code('dev/')} num clone, com tudo aquilo com que a ferramenta trabalha. O
+      teu agente altera esses ficheiros, executa a compilação onde trabalha e guarda ambos na mesma versão. Esta
+      plataforma não compila nada.
     </>
   ),
   built2: (k) => (
     <>
       Tal como a documentação, pertence à sua versão: é comparado no histórico, revertido, copiado para um rascunho,
       clonado, transferido e publicado com o código - e nunca é compilado nem servido. No painel de controlo,{' '}
-      {k.b('Desenvolvimento')} mostra-o assim que existir: os seus projetos e com o que cada um é compilado, os pacotes
-      que instalam, como é compilado, e se uma versão alterou as fontes sem as compilar. Lê-se aí, não se edita - uma
-      alteração faz-se onde é compilado.
+      {k.b('Compilação')} mostra-o assim que uma versão o guarda: como é compilado, segundo o seu README, os seus
+      ficheiros, e se uma versão os alterou sem alterar nada do que é compilado a partir deles. Lê-se aí, não se edita -
+      uma alteração faz-se onde é compilado.
     </>
   ),
   builtAside:
-    'Um front-end de HTML, CSS e JavaScript simples não precisa de nenhum: é a sua própria fonte, nos assets. O que uma compilação instala, como o node_modules, nunca faz parte de uma versão - o .gitignore do projeto mantém-no de fora.',
+    'O que é escrito tal como é servido ou compilado não precisa de nada disto. O que uma compilação instala ou guarda para si - o node_modules, por exemplo - nunca faz parte de uma versão: um .gitignore no espaço de desenvolvimento mantém-no de fora.',
 
   storage: (k) => (
     <>
@@ -311,7 +312,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Numa versão',
   workspaceColumn: 'Nos dados',
   table: [
-    ['o que guarda', 'o código e os assets: o programa, incluindo o front-end, e também a sua documentação, os seus testes e aquilo a partir do qual o seu front-end é compilado', 'tudo o que a lambda escreve, ou que alguém carrega'],
+    ['o que guarda', 'o código e os assets: o programa, incluindo o front-end, e também a sua documentação, os seus testes e aquilo a partir do qual é compilado', 'tudo o que a lambda escreve, ou que alguém carrega'],
     ['quando muda', 'nunca: uma alteração é uma nova versão', 'no momento em que algo é escrito'],
     ['um deploy', 'põe online exatamente estes ficheiros', 'nunca lhes toca'],
     ['reverter', 'traz de volta os ficheiros antigos', 'não tem efeito: são os mesmos para todas as versões'],

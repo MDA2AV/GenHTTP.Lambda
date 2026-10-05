@@ -116,7 +116,7 @@ export const features: EditorMessages['features'] = {
     overview: 'Brouillon',
     docs: 'Documentation',
     code: 'Code',
-    development: 'Développement',
+    build: 'Build',
     tests: 'Tests',
     data: 'Données de test',
     logs: 'Logs',

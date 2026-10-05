@@ -8,9 +8,12 @@ export const tabs: EditorMessages['tabs'] = {
   extension: 'Nazwa musi mieć rozszerzenie, żeby plik był serwowany jako właściwy typ.',
   context: 'W .lambda/ tylko docs/ i tests/ – litery, cyfry, myślniki, podkreślenia i kropki, rozdzielone ukośnikami.',
   contextFiles: 'Dokumentacja i testy: część wersji, nigdy nie są kompilowane ani serwowane',
-  development: 'Przestrzeń deweloperska jest zmieniana tam, gdzie jest budowana – w sklonowanym repozytorium albo przez twojego agenta – a czytana w sekcji Rozwój.',
-  developmentFiles: (count) => (count === 1 ? 'Przestrzeń deweloperska · 1 plik' : `Przestrzeń deweloperska · ${count} ${count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'pliki' : 'plików'}`),
-  developmentTitle: 'To, z czego zbudowane są zasoby. Czytasz to w sekcji Rozwój; przy zapisie zostaje bez zmian.',
+  build: 'To, z czego jest zbudowane, zmienia się tam, gdzie jest budowane – w sklonowanym repozytorium lub przez twojego agenta – a czyta w sekcji Budowanie.',
+  buildFiles: (count) =>
+    count === 1
+      ? 'Budowanie · 1 plik'
+      : `Budowanie · ${count} ${count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'pliki' : 'plików'}`,
+  buildTitle: 'To, z czego budowany jest kod lub zasoby. Czytasz to w sekcji Budowanie; przy zapisie zostaje bez zmian.',
   exists: 'Plik o tej nazwie już istnieje.',
   remove: (name) => `Usunąć plik ${name}? Jego zawartość też zniknie.`,
   there: (name) => `Plik ${name} już istnieje.`,

@@ -112,7 +112,7 @@ export const features: EditorMessages['features'] = {
     overview: 'Taslak',
     docs: 'Dokümantasyon',
     code: 'Kod',
-    development: 'Geliştirme',
+    build: 'Derleme',
     tests: 'Testler',
     data: 'Test verileri',
     logs: 'Loglar',

@@ -16,7 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Lebih dari satu file',
     page: 'Menyajikan halaman',
     spa: 'Front end, langkah demi langkah',
-    built: 'Front end yang dibangun dengan alat',
+    built: 'Bahan pembuatnya',
     storage: 'Dua tempat file disimpan',
     database: 'Menyimpan catatan',
     keeping: 'Menyimpan file',
@@ -120,7 +120,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Pengujian', () => <>Bagaimana aplikasi diuji secara otomatis, dengan script dan data uji untuk itu. Hanya di tampilan lengkap.</>],
-    ['Pengembangan', () => <>Bahan pembuat aset di tempat toolchain membangunnya - proyek sebuah front end - disimpan bersama setiap versi, untuk dibaca dan bukan diedit. Di tampilan lengkap, begitu sebuah versi memilikinya.</>],
+    ['Build', () => <>Bahan pembuat kode atau aset di tempat alat build membuatnya, disimpan bersama setiap versi, untuk dibaca dan bukan diedit. Di tampilan lengkap, begitu sebuah versi menyimpannya.</>],
   ],
   sections: (k) => (
     <>
@@ -287,24 +287,25 @@ export const guide: Messages['guide'] = {
   ],
   built: (k) => (
     <>
-      Banyak front end dibangun: ditulis dengan React, Vue, atau Svelte, TypeScript, atau Tailwind, dan disatukan oleh
-      Vite atau alat lain. Versi menyimpan hasil build sebagai asetnya - dan di sampingnya proyek tempat ia dibangun,
-      yaitu {k.b('ruang pengembangan')}-nya: {k.code('.lambda/dev/')} di versi, {k.code('dev/')} di sebuah kloning. Agen
-      Anda mengubah sumbernya, membangunnya di tempatnya bekerja, dan menyimpan keduanya di versi yang sama. Platform
-      ini tidak membangun apa pun.
+      Sebagian lambda mungkin dibuat oleh alat build, bukan ditulis apa adanya untuk disajikan atau dikompilasi:
+      dikompilasi, digabungkan, atau dihasilkan. Versi menyimpan hasil buatan alat itu - sebagai asetnya, atau sebagai
+      kodenya - dan di sampingnya file bahan pembuatnya, yaitu {k.b('ruang pengembangan')}-nya:{' '}
+      {k.code('.lambda/dev/')} di versi, {k.code('dev/')} di sebuah kloning, berisi apa pun yang menjadi bahan kerja
+      alat itu. Agen Anda mengubah file-file tersebut, menjalankan build di tempatnya bekerja, dan menyimpan keduanya di
+      versi yang sama. Platform ini tidak membangun apa pun.
     </>
   ),
   built2: (k) => (
     <>
       Seperti dokumentasi, ia milik versinya: dibandingkan di riwayat, dikembalikan, disalin ke draf, dikloning,
       diunduh, dan dipublikasikan bersama kode - dan tidak pernah dikompilasi atau disajikan. Di pusat kontrol,{' '}
-      {k.b('Pengembangan')} menampilkannya begitu ada: proyek-proyeknya dan alat pembangunnya, paket yang dipasang,
-      cara membangunnya, dan apakah sebuah versi mengubah sumber tanpa membangunnya. Di sana ia dibaca, bukan diedit -
-      perubahannya dilakukan di tempat ia dibangun.
+      {k.b('Build')} menampilkannya begitu sebuah versi menyimpannya: cara membangunnya, seperti yang dijelaskan
+      README-nya, file-filenya, dan apakah sebuah versi mengubahnya tanpa mengubah apa pun yang dibangun darinya. Di sana
+      ia dibaca, bukan diedit - perubahannya dilakukan di tempat ia dibangun.
     </>
   ),
   builtAside:
-    'Front end berupa HTML, CSS, dan JavaScript biasa tidak membutuhkannya: ia adalah sumbernya sendiri, di aset. Apa yang dipasang sebuah build, seperti node_modules, tidak pernah menjadi bagian dari versi - .gitignore proyek menjauhkannya.',
+    'Yang ditulis apa adanya untuk disajikan atau dikompilasi tidak membutuhkannya. Apa yang dipasang atau disimpan sebuah build untuk dirinya sendiri - node_modules, misalnya - tidak pernah menjadi bagian dari versi: sebuah .gitignore di ruang pengembangan menjauhkannya.',
 
   storage: (k) => (
     <>
@@ -317,7 +318,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'Di sebuah versi',
   workspaceColumn: 'Di data',
   table: [
-    ['isinya', 'kode dan aset: programnya, termasuk front end - beserta dokumentasi, pengujian, dan bahan pembuat front end-nya', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
+    ['isinya', 'kode dan aset: programnya, termasuk front end - beserta dokumentasi, pengujian, dan bahan pembuatnya', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
     ['kapan berubah', 'tidak pernah: perubahan menjadi versi baru', 'begitu ada yang ditulis ke dalamnya'],
     ['saat deploy', 'file inilah yang persis dibuat online', 'tidak pernah disentuh'],
     ['rollback', 'file lama kembali', 'tidak berpengaruh: semua versi memakainya bersama'],

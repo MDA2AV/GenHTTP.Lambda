@@ -16,7 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Więcej niż jeden plik',
     page: 'Serwowanie strony',
     spa: 'Frontend krok po kroku',
-    built: 'Frontend budowany narzędziami',
+    built: 'Z czego jest zbudowane',
     storage: 'Dwa miejsca na pliki',
     database: 'Przechowywanie rekordów',
     keeping: 'Przechowywanie plików',
@@ -117,7 +117,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Testy', () => <>Jak aplikacja jest testowana automatycznie, razem ze skryptami i danymi testowymi. Tylko w widoku pełnym.</>],
-    ['Rozwój', () => <>To, z czego zbudowane są zasoby tam, gdzie robi to toolchain – projekt frontendu – przechowywane z każdą wersją, do czytania, nie do edycji. W widoku pełnym, gdy wersja ją ma.</>],
+    ['Budowanie', () => <>To, z czego zbudowany jest kod lub zasoby tam, gdzie powstają w narzędziu do budowania, przechowywane z każdą wersją, do czytania, nie do edycji. W widoku pełnym, gdy wersja to przechowuje.</>],
   ],
   sections: (k) => (
     <>
@@ -278,24 +278,25 @@ export const guide: Messages['guide'] = {
   ],
   built: (k) => (
     <>
-      Wiele frontendów jest budowanych: pisanych w React, Vue lub Svelte, TypeScripcie czy Tailwindzie i składanych
-      przez Vite lub inne narzędzie. Wersja zawiera to, co powstaje w buildzie, jako swoje zasoby – a obok nich projekt,
-      z którego zbudowano: swoją {k.b('przestrzeń deweloperską')}: {k.code('.lambda/dev/')} w wersji, {k.code('dev/')} w
-      sklonowanym repozytorium. Twój agent zmienia źródła, buduje je u siebie i zapisuje jedno i drugie w tej samej
-      wersji. Ta platforma niczego nie buduje.
+      Część lambdy może powstawać w narzędziu do budowania, zamiast być pisana tak, jak jest serwowana lub kompilowana:
+      kompilowana, pakowana lub generowana. Wersja zawiera to, co narzędzie wytwarza – jako swoje zasoby albo jako swój
+      kod – a obok tego pliki, z których to powstaje, czyli swoją {k.b('przestrzeń deweloperską')}:{' '}
+      {k.code('.lambda/dev/')} w wersji, {k.code('dev/')} w sklonowanym repozytorium, z tym, na czym pracuje narzędzie.
+      Twój agent zmienia te pliki, uruchamia build u siebie i zapisuje jedno i drugie w tej samej wersji. Ta platforma
+      niczego nie buduje.
     </>
   ),
   built2: (k) => (
     <>
       Tak jak dokumentacja należy do swojej wersji: jest porównywana w historii, przywracana, kopiowana do szkicu,
       klonowana, pobierana i publikowana razem z kodem – i nigdy nie jest kompilowana ani serwowana. W centrum
-      sterowania {k.b('Rozwój')} pokazuje ją, gdy istnieje: jej projekty i to, czym każdy jest budowany, pakiety, które
-      instalują, jak jest budowana, i czy wersja zmieniła źródła bez ich zbudowania. Jest tam do czytania, nie do
+      sterowania {k.b('Budowanie')} pokazuje ją, gdy wersja ją przechowuje: jak jest budowana, według jej README, jej
+      pliki i to, czy wersja zmieniła je bez zmiany czegokolwiek, co z nich zbudowano. Jest tam do czytania, nie do
       edycji – zmienia się ją tam, gdzie jest budowana.
     </>
   ),
   builtAside:
-    'Frontend z samego HTML, CSS i JavaScriptu nie potrzebuje żadnej: sam jest swoim źródłem, w zasobach. To, co instaluje build, na przykład node_modules, nigdy nie jest częścią wersji – pilnuje tego .gitignore projektu.',
+    'To, co jest pisane tak, jak jest serwowane lub kompilowane, żadnej takiej przestrzeni nie potrzebuje. To, co build instaluje lub zachowuje dla siebie – na przykład node_modules – nigdy nie jest częścią wersji: pilnuje tego .gitignore w przestrzeni deweloperskiej.',
 
   storage: (k) => (
     <>
@@ -308,7 +309,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'W wersji',
   workspaceColumn: 'W danych',
   table: [
-    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem – oraz jego dokumentacja, testy i to, z czego zbudowany jest jego frontend', 'wszystko, co zapisze lambda albo ktoś prześle'],
+    ['co zawiera', 'kod i zasoby: program, łącznie z frontendem – oraz jego dokumentacja, testy i to, z czego jest zbudowany', 'wszystko, co zapisze lambda albo ktoś prześle'],
     ['kiedy się zmienia', 'nigdy – zmiana to nowa wersja', 'w chwili, gdy coś zostanie zapisane'],
     ['wdrożenie', 'wrzuca online dokładnie te pliki', 'nigdy ich nie rusza'],
     ['powrót do starszej wersji', 'przywraca stare pliki', 'bez wpływu: wszystkie wersje je współdzielą'],

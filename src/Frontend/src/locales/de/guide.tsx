@@ -16,7 +16,7 @@ export const guide: Messages['guide'] = {
     files: 'Mehrere Dateien',
     page: 'Eine Seite ausliefern',
     spa: 'Ein Frontend, Schritt für Schritt',
-    built: 'Ein Frontend, das mit Werkzeugen gebaut wird',
+    built: 'Woraus es gebaut wird',
     storage: 'Zwei Orte für Dateien',
     database: 'Datensätze speichern',
     keeping: 'Dateien speichern',
@@ -118,7 +118,7 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Tests', () => <>Wie die App automatisch getestet wird, mit den Scripts und Testdaten dafür. Nur in der vollständigen Ansicht.</>],
-    ['Entwicklung', () => <>Woraus die Assets gebaut werden, wo eine Toolchain sie baut – das Projekt eines Frontends –, mit jeder Version gespeichert, zum Lesen und nicht zum Bearbeiten. In der vollständigen Ansicht, sobald eine Version eines hat.</>],
+    ['Build', () => <>Woraus der Code oder die Assets gebaut werden, wo ein Build-Werkzeug sie erzeugt, mit jeder Version gespeichert, zum Lesen und nicht zum Bearbeiten. In der vollständigen Ansicht, sobald eine Version es speichert.</>],
   ],
   sections: (k) => (
     <>
@@ -284,24 +284,25 @@ export const guide: Messages['guide'] = {
   ],
   built: (k) => (
     <>
-      Viele Frontends werden gebaut: geschrieben mit React, Vue oder Svelte, TypeScript oder Tailwind und von Vite oder
-      einem anderen Werkzeug zusammengesetzt. Die Version enthält, was der Build erzeugt, als ihre Assets – und daneben
-      das Projekt, aus dem sie gebaut wurden, ihren {k.b('Entwicklungsbereich')}: {k.code('.lambda/dev/')} in der
-      Version, {k.code('dev/')} in einem Klon. Ihr Agent ändert die Quellen, baut sie dort, wo er arbeitet, und speichert
-      beides in derselben Version. Diese Plattform baut nichts.
+      Manches an einem Lambda kann von einem Build-Werkzeug erzeugt werden, statt so geschrieben zu sein, wie es
+      ausgeliefert oder kompiliert wird: kompiliert, gebündelt oder generiert. Die Version enthält, was das Werkzeug
+      erzeugt – als ihre Assets oder als ihren Code – und daneben die Dateien, aus denen es entsteht, ihren{' '}
+      {k.b('Entwicklungsbereich')}: {k.code('.lambda/dev/')} in der Version, {k.code('dev/')} in einem Klon, mit
+      allem, womit das Werkzeug arbeitet. Ihr Agent ändert diese Dateien, führt den Build dort aus, wo er arbeitet, und
+      speichert beides in derselben Version. Diese Plattform baut nichts.
     </>
   ),
   built2: (k) => (
     <>
       Wie die Dokumentation gehört er zu seiner Version: im Verlauf verglichen, zurückgerollt, in einen Entwurf kopiert,
       geklont, heruntergeladen und mit dem Code veröffentlicht – und nie kompiliert oder ausgeliefert. Im Kontrollzentrum
-      zeigt {k.b('Entwicklung')} ihn, sobald es einen gibt: seine Projekte und womit jedes gebaut wird, die Pakete, die
-      sie installieren, wie er gebaut wird und ob eine Version die Quellen geändert hat, ohne sie zu bauen. Er wird dort
-      gelesen, nicht bearbeitet – eine Änderung daran geschieht dort, wo er gebaut wird.
+      zeigt {k.b('Build')} ihn, sobald eine Version einen speichert: wie gebaut wird, so wie es seine README sagt, seine
+      Dateien und ob eine Version sie geändert hat, ohne etwas zu ändern, das daraus gebaut wird. Er wird dort gelesen,
+      nicht bearbeitet – eine Änderung daran geschieht dort, wo er gebaut wird.
     </>
   ),
   builtAside:
-    'Ein Frontend aus reinem HTML, CSS und JavaScript braucht keinen: Es ist seine eigene Quelle, in den Assets. Was ein Build installiert, etwa node_modules, ist nie Teil einer Version – die .gitignore des Projekts hält es heraus.',
+    'Was so geschrieben ist, wie es ausgeliefert oder kompiliert wird, braucht keinen. Was ein Build installiert oder für sich behält – etwa node_modules – ist nie Teil einer Version: Eine .gitignore im Entwicklungsbereich hält es heraus.',
 
   storage: (k) => (
     <>
@@ -314,7 +315,7 @@ export const guide: Messages['guide'] = {
   savedWithCode: 'In einer Version',
   workspaceColumn: 'In den Daten',
   table: [
-    ['Inhalt', 'Code und Assets: das Programm, samt Frontend – und seine Dokumentation, seine Tests und das, woraus sein Frontend gebaut wird', 'alles, was das Lambda schreibt oder jemand hochlädt'],
+    ['Inhalt', 'Code und Assets: das Programm, samt Frontend – und seine Dokumentation, seine Tests und das, woraus es gebaut wird', 'alles, was das Lambda schreibt oder jemand hochlädt'],
     ['Ändert sich', 'nie – eine Änderung ist eine neue Version', 'sobald etwas hineingeschrieben wird'],
     ['Ein Deployment', 'stellt genau diese Dateien online', 'lässt sie unberührt'],
     ['Zurückrollen', 'bringt die alten Dateien zurück', 'keine Wirkung: Alle Versionen teilen sie'],

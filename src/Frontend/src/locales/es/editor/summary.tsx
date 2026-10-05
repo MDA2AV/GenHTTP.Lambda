@@ -6,9 +6,9 @@ export const summary: EditorMessages['summary'] = {
   written: 'Documentación y pruebas',
   writtenWhy: 'Nunca se compilan ni se sirven. Se guardan con cada versión y cuentan junto con los recursos.',
   writtenMissing: 'Todavía sin escribir',
-  development: 'Espacio de desarrollo',
-  developmentWhy: 'Nunca se compila ni se sirve: aquello a partir de lo que se compilan los recursos. Cuenta junto con los recursos.',
-  developmentFiles: (files, size) => (files === 1 ? `1 archivo, ${size}` : `${files} archivos, ${size}`),
+  build: 'Compilación',
+  buildWhy: 'Nunca se compila ni se sirve: aquello a partir de lo que se compila el código o los recursos. Cuenta como parte de los recursos.',
+  buildFiles: (files, size) => (files === 1 ? `1 archivo, ${size}` : `${files} archivos, ${size}`),
   hint: (since, kept, retention, tier) =>
     `El tráfico se cuenta desde el último arranque del servidor (${since}). ` +
     (kept

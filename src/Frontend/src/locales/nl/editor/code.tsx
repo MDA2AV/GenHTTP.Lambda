@@ -28,13 +28,11 @@ export const code: EditorMessages['code'] = {
   files: (entry, cs, context) => (
     <>
       {entry} geeft terug wat er geserveerd wordt, andere {cs}-bestanden bevatten types, en elk ander bestand wordt
-      geserveerd zoals het is – behalve wat in de map {context} staat: de documentatie, de tests en de ontwikkelruimte,
-      die nooit gecompileerd of geserveerd worden. Ctrl-S slaat op, F12 springt naar een declaratie.
+      geserveerd zoals het is – behalve wat in de map {context} staat: de documentatie, de tests en waaruit het is
+      gebouwd, die nooit gecompileerd of geserveerd worden. Ctrl-S slaat op, F12 springt naar een declaratie.
     </>
   ),
   newer: (version) => ` Versie ${version} is nieuwer dan de versie die hier openstaat.`,
-  built: (folder) =>
-    `De build van de ontwikkelruimte schrijft ${folder}: de volgende build vervangt wat hier is gewijzigd. Pas liever de bronnen aan waaruit hij wordt gebouwd.`,
   check: 'Controleren',
   save: 'Opslaan',
   deploy: 'Deployen',
