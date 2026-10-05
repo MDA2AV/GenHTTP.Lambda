@@ -413,7 +413,10 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         logger.LogInformation("Pushed feature '{Feature}' of lambda {Lambda} base {Version}", feature.Name, lambda.PublicKey, based);
 
-        await said.LineAsync($"Saved the feature '{feature.Name}', based on version {based}{(feature.Mergeable ? string.Empty : $" - the newest is {feature.Newest}")}.");
+        if (!started)
+        {
+            await said.LineAsync($"Saved the feature '{feature.Name}', based on version {based}{(feature.Mergeable ? string.Empty : $" - the newest is {feature.Newest}")}.");
+        }
 
         if (merge)
         {
