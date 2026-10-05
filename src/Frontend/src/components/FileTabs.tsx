@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import type { LambdaFile } from '../api';
 import { encodeBytes, readable } from '../bytes';
 import { pill } from '../control/ui';
-import { BESIDE, BUILD, DOCS, TESTS, isCode, isContext, isBuild } from '../control/written';
+import { BESIDE, BUILD, DOCS, TESTS, isBuild, isCode, isContext } from '../control/written';
 import { useEditorT } from '../i18n';
 import type { EditorMessages } from '../locales/en/editor';
 import { IconPackage, IconPlus, IconTrash, IconUpload } from './Icons';

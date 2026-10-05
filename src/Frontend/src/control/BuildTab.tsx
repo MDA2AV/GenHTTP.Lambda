@@ -10,7 +10,7 @@ import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Tree, Viewer, sizeOf } from './FileBrowser';
 import { Section, pill } from './ui';
-import { BUILD, BUILD_README, isAsset, isCode, isBuild } from './written';
+import { BUILD, BUILD_README, isAsset, isBuild, isCode } from './written';
 
 /**
  * What a version is built from - or, opened on a draft, what the draft is:

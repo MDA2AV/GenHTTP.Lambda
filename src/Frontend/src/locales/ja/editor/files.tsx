@@ -39,7 +39,6 @@ export const files: EditorMessages['files'] = {
   noContext: 'このバージョンについては、まだ何も書かれていません。',
   build: 'ビルド',
   buildWhy: 'コンパイルも配信もされません。コードやアセットの作成元で、変更する人が扱います。',
-  noBuild: 'なし - ビルドツールでコードやアセットを作る場合、その元になるファイルがここに保存されます。',
   data: 'データ',
   dataPublic: '公開：オンラインのコードがWorkspaceで配信しています。',
   dataPrivate: 'lambdaだけが使える非公開のデータです。どのバージョンにも含まれません。',

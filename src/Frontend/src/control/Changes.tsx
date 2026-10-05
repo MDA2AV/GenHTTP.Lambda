@@ -5,7 +5,7 @@ import { useEditorT } from '../i18n';
 import { languageFor, monaco } from '../monaco';
 import type { Theme } from '../theme';
 import { compare, type DiffLine, type FileDiff } from './diff';
-import { isCode, isContext, isBuild } from './written';
+import { isBuild, isCode, isContext } from './written';
 
 /**
  * What a changed file is to the version, in the order a change is read: the
@@ -24,10 +24,11 @@ const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isBuild(name) ? 
  * usually the one to read. The versions show the difference to the version
  * before; a feature shows the difference to the version it is based on.
  *
- * Where the files that changed are of more than one kind, they are listed
- * kind by kind under a heading each: a change that touched what something is
- * built from and what was built reads as both, rather than as one list in
- * which the one is found among the other.
+ * Where what changed includes the build folder, the files are listed kind by
+ * kind under a heading each: a change that touched what something is built
+ * from and what was built reads as both, rather than as one list in which
+ * the one is found among the other. Otherwise they stay in the order the
+ * version has them.
  */
 export function ChangeList({ before, after, theme, empty, folded = false }: {
   before: LambdaFile[];
@@ -40,14 +41,15 @@ export function ChangeList({ before, after, theme, empty, folded = false }: {
 }) {
   const said = useEditorT().versions;
 
-  const changed = useMemo(
-    () => compare(before, after)
-      .filter((d) => d.status !== 'same')
-      .sort((a, b) => GROUPS.indexOf(kindOf(a.name)) - GROUPS.indexOf(kindOf(b.name))),
-    [before, after],
-  );
+  const changed = useMemo(() => {
+    const differ = compare(before, after).filter((d) => d.status !== 'same');
 
-  const grouped = new Set(changed.map((d) => kindOf(d.name))).size > 1;
+    return differ.some((d) => isBuild(d.name))
+      ? differ.sort((a, b) => GROUPS.indexOf(kindOf(a.name)) - GROUPS.indexOf(kindOf(b.name)))
+      : differ;
+  }, [before, after]);
+
+  const grouped = changed.some((d) => isBuild(d.name)) && new Set(changed.map((d) => kindOf(d.name))).size > 1;
 
   const first = folded ? null : changed[0]?.name ?? null;
   const [shown, setShown] = useState<string | null>(first);

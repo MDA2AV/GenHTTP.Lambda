@@ -1,5 +1,3 @@
-using System.Globalization;
-
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
@@ -116,6 +114,6 @@ internal static class VersionInput
         => tier != LambdaTier.Premium && premium > allowed ? $" A lambda in the premium tier may have {readable}." : string.Empty;
 
     private static string Readable(long bytes)
-        => bytes % (1024 * 1024) == 0 ? $"{bytes / 1024 / 1024} MB" : bytes >= 1024 * 1024 ? $"{(bytes / (1024.0 * 1024)).ToString("0.#", CultureInfo.InvariantCulture)} MB" : $"{Math.Max(1, bytes / 1024)} KB";
+        => bytes % (1024 * 1024) == 0 ? $"{bytes / 1024 / 1024} MB" : $"{bytes / 1024} KB";
 
 }

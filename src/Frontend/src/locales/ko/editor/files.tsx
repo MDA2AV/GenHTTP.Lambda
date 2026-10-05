@@ -37,7 +37,6 @@ export const files: EditorMessages['files'] = {
   noContext: '이 버전에 대해 아직 작성된 게 없어요.',
   build: '빌드',
   buildWhy: '컴파일되지도 제공되지도 않아요. 코드나 에셋을 수정하는 쪽이 그것을 만들 때 쓰는 원본이에요.',
-  noBuild: '없음 - 빌드 도구가 코드나 에셋을 만드는 경우, 그 원본이 여기에 보관돼요.',
   data: '데이터',
   dataPublic: '공개: 온라인 코드가 Workspace로 제공해요.',
   dataPrivate: '람다만 볼 수 있어요. 어떤 버전에도 속하지 않아요.',

@@ -13,7 +13,7 @@ import { languageFor } from '../monaco';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Section } from './ui';
-import { BESIDE, isCode, isBuild } from './written';
+import { BESIDE, isBuild, isCode } from './written';
 
 type Busy = 'save' | 'check' | 'deploy' | null;
 
@@ -194,7 +194,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
     setBusy('check');
 
     try {
-      // what the assets are built from is no part of what is compiled
+      // what the build folder holds is no part of what is compiled
       const result = await api.check(privateKey, files.filter((file) => !isBuild(file.name)));
 
       setDiagnostics(result.diagnostics);

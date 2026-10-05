@@ -41,7 +41,6 @@ export const files = {
   /** What the version is built from - its build folder - as a group of its files. */
   build: 'Build',
   buildWhy: 'Never compiled and never served: what the code or the assets are built from, by whoever changes them.',
-  noBuild: 'Nothing - where a build tool makes the code or the assets, what it makes them from is kept here.',
   data: 'Data',
   dataPublic: 'Public: the code online serves it with Workspace.',
   dataPrivate: 'Private to the lambda. Not part of any version.',

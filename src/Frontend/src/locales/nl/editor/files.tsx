@@ -39,7 +39,6 @@ export const files: EditorMessages['files'] = {
   noContext: 'Er is nog niets over deze versie geschreven.',
   build: 'Build',
   buildWhy: 'Nooit gecompileerd en nooit geserveerd: waaruit de code of de assets worden gebouwd, door wie ze wijzigt.',
-  noBuild: 'Niets – waar een buildtool de code of de assets maakt, wordt hier bewaard waaruit ze worden gemaakt.',
   data: 'Data',
   dataPublic: 'Openbaar: de code die online staat, serveert de data met Workspace.',
   dataPrivate: 'Alleen voor de lambda zelf. Hoort bij geen enkele versie.',

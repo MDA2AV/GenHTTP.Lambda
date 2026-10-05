@@ -38,7 +38,6 @@ export const files: EditorMessages['files'] = {
   noContext: 'Bu sürüm hakkında henüz bir şey yazılmadı.',
   build: 'Derleme',
   buildWhy: 'Asla derlenmez ve asla sunulmaz: kodun veya statik dosyaların, onları değiştiren kişi tarafından neyden derlendiği.',
-  noBuild: 'Hiçbir şey - kodu veya statik dosyaları bir derleme aracı üretiyorsa, onları neyden ürettiği burada saklanır.',
   data: 'Veriler',
   dataPublic: 'Herkese açık: yayındaki kod onları Workspace ile sunuyor.',
   dataPrivate: 'Yalnızca lambdaya özel. Hiçbir sürümün parçası değil.',

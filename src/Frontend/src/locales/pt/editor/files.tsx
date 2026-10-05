@@ -37,7 +37,6 @@ export const files: EditorMessages['files'] = {
   noContext: 'Ainda não há nada escrito sobre esta versão.',
   build: 'Build',
   buildWhy: 'Nunca compilado nem servido: aquilo a partir do qual o código ou os assets são construídos, por quem os altera.',
-  noBuild: 'Nada: onde uma ferramenta de build faz o código ou os assets, aquilo a partir do qual ela os faz fica guardado aqui.',
   data: 'Dados',
   dataPublic: 'Públicos: o código no ar serve os dados com Workspace.',
   dataPrivate: 'Privados: só a lambda acessa. Não fazem parte de nenhuma versão.',
