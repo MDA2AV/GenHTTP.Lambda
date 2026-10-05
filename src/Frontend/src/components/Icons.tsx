@@ -290,6 +290,11 @@ export const IconCode = (p: IconProps) => (
   <Svg {...p}><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14" /></Svg>
 );
 
+/** A branch leaving a line and coming back, for git: cloning, branches. */
+export const IconBranch = (p: IconProps) => (
+  <Svg {...p}><circle cx="6.5" cy="5.5" r="2" /><circle cx="6.5" cy="18.5" r="2" /><circle cx="17.5" cy="7.5" r="2" /><path d="M6.5 7.5v9" /><path d="M17.5 9.5c0 4-11 3-11 7" /></Svg>
+);
+
 /** A magnifying glass, for searching. */
 export const IconSearch = (p: IconProps) => (
   <Svg {...p}><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.4-4.4" /></Svg>

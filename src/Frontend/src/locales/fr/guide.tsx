@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'WebSockets',
     limits: 'Ce que vous ne pouvez pas faire',
     away: 'Repartir avec votre code',
+    git: 'Travailler avec git',
     open: 'Publier le code',
     agents: 'Laisser faire un agent',
   },
@@ -425,14 +426,37 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Bon à savoir avant de construire quoi que ce soit ici : ce que vous écrivez vous appartient, et repart avec vous en entier. Le faire tourner sur cette machine ne vous enferme pas sur cette machine.',
+  git: (k) => (
+    <>
+      Chaque lambda est aussi un dépôt git. {k.b('Cloner')}, sur la vue d’ensemble du tableau de bord et à côté de son
+      code, donne son adresse – celle de votre éditeur suivie du nom de l’app – et {k.code('git clone')} vous donne le
+      projet que {k.b('Télécharger')} vous donne, chaque version étant un commit de {k.code('main')}, étiqueté{' '}
+      {k.code('v1')}, {k.code('v2')} et ainsi de suite, et chaque brouillon une branche. Ouvrez-le dans votre propre
+      éditeur, confiez-le à votre agent de code, lancez-le avec {k.code('dotnet run')}.
+    </>
+  ),
+  git2: (k) => (
+    <>
+      Poussez, et c’est en place. Chaque commit poussé sur {k.code('main')} devient la prochaine version, sa première
+      ligne étant la modification qu’il apporte – compilé d’abord, et refusé s’il ne compile pas – et{' '}
+      {k.code('git push -o deploy')} la met en ligne. Une branche que vous poussez devient un brouillon, avec son aperçu
+      en ligne à sa propre adresse ; poussez-la sur {k.code('main')}, ou ajoutez {k.code('-o merge')} à son dernier
+      push, et elle devient la prochaine version. Ce que la plateforme place autour de votre code pour en faire un
+      projet – {k.code('Program.cs')}, le fichier de projet, {k.code('Platform')} – ne fait pas partie de votre app :
+      un push qui le modifie est refusé, avec l’explication. {k.code('AGENTS.md')} dans le dépôt explique le reste à un
+      agent de code.
+    </>
+  ),
+  gitAside:
+    'L’adresse contient votre lien d’édition, comme celle de l’éditeur : qui la possède peut pousser. Ce que garde votre app – ses entrées, ses fichiers, ses clés et mots de passe – n’est jamais dans le dépôt.',
 
   open: (k) => (
     <>
       Si ce que vous avez construit peut servir à d’autres, publiez son code : ouvrez {k.b('Open source')} dans le
       tableau de bord, choisissez une licence – MIT, sauf si vous en voulez une autre – et activez la publication. Le
       code obtient sa propre page parmi les {k.link('/source', 'apps open source')}, où n’importe qui peut le lire, lui
-      donner une étoile et télécharger n’importe quelle version sous la forme du même projet que{' '}
-      {k.b('Télécharger en projet .NET')}, licence comprise.
+      donner une étoile, télécharger n’importe quelle version sous la forme du même projet que {k.b('Télécharger')}{' '}
+      vous donne, licence comprise, ou en cloner chaque version avec git.
     </>
   ),
   open2: () => (

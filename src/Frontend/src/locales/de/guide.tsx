@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websockets',
     limits: 'Was nicht erlaubt ist',
     away: 'Alles mitnehmen',
+    git: 'Mit git arbeiten',
     open: 'Den Code veröffentlichen',
     agents: 'Mit einem Agenten arbeiten',
   },
@@ -423,14 +424,38 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Gut zu wissen, bevor Sie hier etwas bauen: Was Sie schreiben, gehört Ihnen, und Sie können es komplett mitnehmen. Dass es auf unserem Server läuft, bindet es nicht an unseren Server.',
+  git: (k) => (
+    <>
+      Jedes Lambda ist zugleich ein git-Repository. {k.b('Klonen')} im Kontrollzentrum, in der Übersicht und neben dem
+      Code, zeigt seine Adresse – die Adresse Ihres Editors mit dem Namen der App dahinter –, und{' '}
+      {k.code('git clone')} liefert Ihnen das Projekt, das auch {k.b('Herunterladen')} liefert, jede Version als Commit
+      auf {k.code('main')}, getaggt als {k.code('v1')}, {k.code('v2')} und so weiter, und jeden Entwurf als Branch.
+      Öffnen Sie es in Ihrem eigenen Editor, geben Sie es Ihrem Coding-Agent, starten Sie es mit {k.code('dotnet run')}.
+    </>
+  ),
+  git2: (k) => (
+    <>
+      Pushen, und es ist hier. Jeder Commit, den Sie auf {k.code('main')} pushen, wird die nächste Version, seine erste
+      Zeile die Änderung, die er vornimmt – zuerst kompiliert und abgelehnt, wenn er sich nicht kompilieren lässt –, und{' '}
+      {k.code('git push -o deploy')} stellt sie online. Ein gepushter Branch wird ein Entwurf, dessen Vorschau unter
+      einer eigenen Adresse online ist; pushen Sie ihn auf {k.code('main')} oder fügen Sie seinem letzten Push{' '}
+      {k.code('-o merge')} hinzu, dann ist er die nächste Version. Was die Plattform um Ihren Code legt, damit daraus ein
+      Projekt wird – {k.code('Program.cs')}, die Projektdatei, {k.code('Platform')} –, gehört nicht zu Ihrer App;
+      ein Push, der es ändert, wird deshalb abgelehnt, mit Begründung. {k.code('AGENTS.md')} im Repository sagt einem
+      Coding-Agent den Rest.
+    </>
+  ),
+  gitAside:
+    'Die Adresse enthält Ihren Editor-Schlüssel, wie die Adresse des Editors: Wer sie hat, kann pushen. Was Ihre App speichert – ihre Einträge, ihre Dateien, ihre Schlüssel und Passwörter – liegt nie im Repository.',
 
   open: (k) => (
     <>
       Wenn das, was Sie gebaut haben, anderen helfen könnte, veröffentlichen Sie den Code: Öffnen Sie im
       Kontrollzentrum {k.b('Open Source')}, wählen Sie eine Lizenz – MIT, sofern Sie keine andere möchten – und schalten
       Sie die Veröffentlichung ein. Der Code bekommt eine eigene Seite unter den{' '}
-      {k.link('/source', 'Open-Source-Apps')}. Dort kann ihn jeder lesen, mit einem Stern versehen und jede Version als
-      dasselbe Projekt herunterladen, das Ihnen {k.b('Als .NET-Projekt herunterladen')} liefert – mit der Lizenz daneben.
+      {k.link('/source', 'Open-Source-Apps')}. Dort kann ihn jeder lesen, mit einem Stern versehen, jede Version als
+      dasselbe Projekt herunterladen, das Ihnen {k.b('Herunterladen')} liefert, mit der Lizenz daneben – oder jede
+      Version davon mit git klonen.
     </>
   ),
   open2: () => (

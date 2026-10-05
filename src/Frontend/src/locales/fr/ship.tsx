@@ -62,7 +62,7 @@ export const ship: Messages['ship'] = {
       'C’est vraiment gratuit ?',
       <>
         Oui. Sans inscription, sans carte bancaire, sans période d’essai. Votre app reste en ligne tant qu’on l’utilise.
-        Après {offline} jours sans la moindre visite ni modification, elle est mise hors ligne, et après {removed} jours,
+        Après {offline} jours sans la moindre visite ni modification, elle est mise hors ligne, et après {removed} jours,
         elle est supprimée.
       </>,
     ],
@@ -91,12 +91,16 @@ export const ship: Messages['ship'] = {
       'Avec le lien d’édition reçu à la publication. Donnez-le à votre agent avec la prochaine modification, ou ouvrez-le dans votre navigateur. Chaque modification crée une nouvelle version à la même adresse, et vous pouvez revenir à une ancienne à tout moment.',
     ],
     [
+      'Puis-je pousser dessus avec git ?',
+      'Oui. Chaque app est aussi un dépôt git : clonez-la depuis l’adresse sous Cloner dans l’éditeur, modifiez-la avec vos propres outils ou votre agent, puis poussez. Chaque commit poussé sur main devient la prochaine version, et une branche poussée devient un brouillon avec son propre aperçu.',
+    ],
+    [
       'Où vont mes clés d’API ?',
       'Pas dans le code. Votre agent demande une clé par son nom, et vous saisissez la valeur dans l’éditeur. Personne ne peut la relire, ni l’éditeur, ni l’agent.',
     ],
     [
       'Puis-je emporter mon code ?',
-      'Oui, il vous appartient. Téléchargez-le depuis l’éditeur quand vous voulez, sous forme de projet autonome, base de données comprise.',
+      'Oui, il vous appartient. Téléchargez-le depuis l’éditeur quand vous voulez, sous forme de projet autonome, base de données comprise – ou clonez-le avec git, chaque version comprise.',
     ],
     [
       'Qui peut voir mon app ?',

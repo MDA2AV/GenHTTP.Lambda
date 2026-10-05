@@ -24,7 +24,7 @@ public interface IStorageService
 
     /// <summary>
     /// Removes everything stored for the given lambda, including its workspace,
-    /// its database and its features.
+    /// its database, its features and the commits it was read as with git.
     /// </summary>
     void Delete(long lambdaId);
 

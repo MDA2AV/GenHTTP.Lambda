@@ -90,12 +90,16 @@ export const ship: Messages['ship'] = {
       'Mit dem Editor-Link, den Sie beim Veröffentlichen bekommen haben. Geben Sie ihn mit dem nächsten Wunsch an Ihren Agenten oder öffnen Sie ihn im Browser. Jede Änderung wird eine neue Version unter derselben Adresse. Ältere Versionen können Sie jederzeit zurückholen.',
     ],
     [
+      'Kann ich per git pushen?',
+      'Ja. Jede App ist zugleich ein git-Repository: Klonen Sie es über die Adresse unter „Klonen“ im Editor, ändern Sie es mit Ihren eigenen Werkzeugen oder Ihrem Agenten und pushen Sie. Jeder Commit auf main wird die nächste Version, und ein gepushter Branch wird ein Entwurf mit eigener Vorschau.',
+    ],
+    [
       'Wohin gehören meine API-Keys?',
       'Nicht in den Code. Ihr Agent nennt nur den Namen des Keys, den Wert tragen Sie selbst im Editor ein. Niemand liest ihn wieder aus – weder der Editor noch der Agent.',
     ],
     [
       'Kann ich meinen Code mitnehmen?',
-      'Ja, er gehört Ihnen. Laden Sie ihn jederzeit im Editor herunter – als Projekt, das eigenständig läuft, samt Datenbank.',
+      'Ja, er gehört Ihnen. Laden Sie ihn jederzeit im Editor herunter – als Projekt, das eigenständig läuft, samt Datenbank – oder klonen Sie ihn mit git, jede Version inklusive.',
     ],
     [
       'Wer kann meine App sehen?',

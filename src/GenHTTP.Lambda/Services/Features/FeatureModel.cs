@@ -8,6 +8,7 @@ namespace GenHTTP.Lambda.Services.Features;
 /// </summary>
 /// <param name="Key">What it is addressed by, and where its preview answers: <c>/features/{Key}/</c></param>
 /// <param name="Name">What it is, in a few words</param>
+/// <param name="Branch">The branch it is in the lambda's git repository</param>
 /// <param name="Specification">What the user wants from it and why; the version it is merged into keeps it</param>
 /// <param name="Change">What it changes, in a line; the version it is merged into keeps it</param>
 /// <param name="Base">The version it is based on: the one it branched off, or a later one whose changes were brought in</param>
@@ -21,6 +22,7 @@ namespace GenHTTP.Lambda.Services.Features;
 public sealed record FeatureInfo(
     string Key,
     string Name,
+    string Branch,
     string? Specification,
     string? Change,
     int Base,
@@ -61,7 +63,8 @@ public sealed record FeatureContent(FeatureInfo Feature, string Code);
 /// <param name="Specification">What the user wants from it and why</param>
 /// <param name="Base">The version to branch off; the newest when left out</param>
 /// <param name="Origin">Which door it came through</param>
-public sealed record FeatureDraft(string? Name, string? Specification = null, int? Base = null, string? Origin = null);
+/// <param name="Branch">The branch it is to be in the lambda's git repository; left out, one named after it</param>
+public sealed record FeatureDraft(string? Name, string? Specification = null, int? Base = null, string? Origin = null, string? Branch = null);
 
 /// <summary>
 /// What to change about a feature. What is left out stays as it is.

@@ -112,8 +112,20 @@ export const source = {
     failed: 'The star could not be saved.',
   },
 
+  /** The menu beside the star, as a repository page has it: cloning with git first, then downloading. */
+  clone: {
+    button: 'Code',
+    title: 'Clone with git',
+    /** Says which versions a clone holds, as tags, and which is main. */
+    what: (oldest: number, newest: number) =>
+      oldest === newest
+        ? `Its version is the commit of main, tagged v${newest}.`
+        : `Every version comes along as a commit of main, tagged v${oldest} to v${newest} - main is the newest.`,
+    readOnly:
+      'Read only. To build on it, start a lambda of your own and bring these files over - AGENTS.md in the clone says how, and its license what you may do.',
+  },
+
   download: {
-    button: 'Download',
     title: (version: number) => `Version ${version} as a project`,
     what:
       'A .NET 10 project with a Dockerfile, its documentation, its tests and its license. What the app keeps - its records, the files it saved, its keys - is not part of it.',

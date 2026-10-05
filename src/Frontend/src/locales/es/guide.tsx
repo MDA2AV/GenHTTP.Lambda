@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'WebSockets',
     limits: 'Lo que no te deja hacer',
     away: 'Llévate tu código',
+    git: 'Trabajar con git',
     open: 'Publicar el código',
     agents: 'Que lo haga un agente',
   },
@@ -416,13 +417,37 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Conviene saberlo antes de crear nada aquí: lo que escribes es tuyo y te lo llevas entero. Ejecutarlo en esta máquina no te ata a esta máquina.',
+  git: (k) => (
+    <>
+      Cada lambda es también un repositorio git. {k.b('Clonar')}, en el resumen del centro de control y junto a su
+      código, tiene su dirección (la dirección de tu editor con el nombre de la app detrás), y{' '}
+      {k.code('git clone')} te da el proyecto que te da {k.b('Descargar')}, con cada versión como un commit de{' '}
+      {k.code('main')}, etiquetado {k.code('v1')}, {k.code('v2')} y así sucesivamente, y cada borrador como una rama.
+      Ábrelo en tu propio editor, pásaselo a tu agente de programación, ejecútalo con {k.code('dotnet run')}.
+    </>
+  ),
+  git2: (k) => (
+    <>
+      Haz push y ya está aquí. Cada commit enviado a {k.code('main')} se convierte en la siguiente versión, con su
+      primera línea como el cambio que hizo (se compila antes y se rechaza si no compila), y{' '}
+      {k.code('git push -o deploy')} la pone en línea. Una rama que envíes se convierte en un borrador, con su vista
+      previa en línea en una dirección propia; envíala a {k.code('main')}, o añade {k.code('-o merge')} a su último
+      push, y será la siguiente versión. Lo que la plataforma añade alrededor de tu código para convertirlo en un
+      proyecto ({k.code('Program.cs')}, el archivo de proyecto, {k.code('Platform')}) no forma parte de tu app, así que
+      un push que lo cambie se rechaza y explica por qué. {k.code('AGENTS.md')} en el repositorio le cuenta el resto a
+      un agente de programación.
+    </>
+  ),
+  gitAside:
+    'La dirección contiene tu clave de edición, igual que la dirección del editor: quien la tenga puede hacer push. Lo que guarda tu app (sus registros, sus archivos, sus claves y contraseñas) nunca está en el repositorio.',
 
   open: (k) => (
     <>
       Si lo que creaste puede ayudar a otras personas, publica su código: abre {k.b('Código abierto')} en el centro de
       control, elige una licencia (MIT, salvo que quieras otra) y actívalo. Su código tendrá su propia página entre las{' '}
-      {k.link('/source', 'apps de código abierto')}, donde cualquiera puede leerlo, darle una estrella y descargar
-      cualquier versión como el mismo proyecto que te da {k.b('Descargar como proyecto .NET')}, con la licencia al lado.
+      {k.link('/source', 'apps de código abierto')}, donde cualquiera puede leerlo, darle una estrella, descargar
+      cualquier versión como el mismo proyecto que te da {k.b('Descargar')}, con la licencia al lado, o clonar cada
+      versión con git.
     </>
   ),
   open2: () => (

@@ -97,9 +97,18 @@ export const source: SourceMessages = {
     count: (count) => `${count} bintang`,
     failed: 'Bintang gagal disimpan.',
   },
+  clone: {
+    button: 'Kode',
+    title: 'Kloning dengan git',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `Versinya adalah commit di main, diberi tag v${newest}.`
+        : `Setiap versi ikut sebagai commit di main, diberi tag v${oldest} sampai v${newest} - main adalah yang terbaru.`,
+    readOnly:
+      'Hanya bisa dibaca. Untuk membangun di atasnya, mulai lambda Anda sendiri dan pindahkan file-file ini - AGENTS.md di dalam kloning menjelaskan caranya, dan lisensinya apa yang boleh Anda lakukan.',
+  },
 
   download: {
-    button: 'Unduh',
     title: (version) => `Versi ${version} sebagai proyek`,
     what:
       'Proyek .NET 10 dengan Dockerfile, dokumentasi, pengujian, dan lisensinya. Apa yang disimpan aplikasi - catatannya, file yang disimpannya, kuncinya - tidak ikut di dalamnya.',

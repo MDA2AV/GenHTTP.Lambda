@@ -35,6 +35,8 @@
              GenHTTP.Full.Ioxide, which only carries it by way of GenHTTP.Testing -->
         <PackageReference Include="GenHTTP.Engine.Kestrel" />
 
+        <PackageReference Include="GenHTTP.Modules.Git" />
+
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
 
         <PackageReference Include="Microsoft.EntityFrameworkCore" />

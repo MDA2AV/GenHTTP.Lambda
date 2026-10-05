@@ -96,9 +96,18 @@ export const source: SourceMessages = {
     count: (count) => (count === 1 ? '1 ster' : `${count} sterren`),
     failed: 'De ster kon niet worden opgeslagen.',
   },
+  clone: {
+    button: 'Code',
+    title: 'Klonen met git',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `De versie is de commit van main, getagd als v${newest}.`
+        : `Elke versie komt mee als commit van main, getagd als v${oldest} tot v${newest} - main is de nieuwste.`,
+    readOnly:
+      'Alleen-lezen. Om erop voort te bouwen begin je een eigen lambda en neem je deze bestanden mee - AGENTS.md in de kloon legt uit hoe, en de licentie wat je ermee mag.',
+  },
 
   download: {
-    button: 'Downloaden',
     title: (version) => `Versie ${version} als project`,
     what:
       'Een .NET 10-project met een Dockerfile, de documentatie, de tests en de licentie. Wat de app bewaart – de records, de bestanden die hij opsloeg, de sleutels – zit er niet in.',

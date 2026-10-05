@@ -26,6 +26,7 @@ export const SHARED = {
     admin: 'operator',
     system: 'platform',
     api: 'API / editor',
+    git: 'git push',
     unknown: 'unknown',
   } as Record<string, string>,
 
@@ -41,6 +42,8 @@ export const SHARED = {
   whatThisIs: 'What this is',
   byAgent: 'by an agent',
   writtenByAgent: 'Written by an agent',
+  byGit: 'with git',
+  pushedWithGit: 'Pushed with git',
   more: 'More',
   of: (used: string, total: string) => `${used} of ${total}`,
   online: (version: number) => `Online · v${version}`,

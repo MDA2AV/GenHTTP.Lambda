@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Noch keine Angabe, was er ändert',
   behindTitle: 'Ihre App hat sich geändert, seit dieser Entwurf begonnen wurde',
   behind: () => 'nicht aktuell',
+  branchTitle: 'Der Branch, in dem dieser Entwurf im git-Repository der App liegt',
   previewOnline: 'Vorschau läuft',
   previewOutdated: 'Vorschau zeigt einen älteren Stand',
   previewOffline: 'Vorschau läuft nicht',

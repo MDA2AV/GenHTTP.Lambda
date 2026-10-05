@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: '아직 무엇을 바꾸는지 적혀 있지 않아요',
   behindTitle: '이 초안을 만든 뒤에 앱이 바뀌었어요',
   behind: () => '최신이 아님',
+  branchTitle: '앱의 git 저장소에서 이 초안이 들어 있는 브랜치',
   previewOnline: '미리 보기 실행 중',
   previewOutdated: '미리 보기가 이전 저장본',
   previewOffline: '미리 보기 실행 중 아님',

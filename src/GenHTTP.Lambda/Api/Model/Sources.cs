@@ -76,6 +76,7 @@ public sealed record SourceEntryResponse(
 /// <param name="Created">When the lambda was made</param>
 /// <param name="Versions">Every version kept, newest first: what each changed, never what was asked for</param>
 /// <param name="StarTicket">What starring it has to be sent with, good for a day from a second on</param>
+/// <param name="GitPath">Where it is cloned with git - every version, read only</param>
 public sealed record SourceProjectResponse(
     SourceEntryResponse Source,
     string? Author,
@@ -83,11 +84,12 @@ public sealed record SourceProjectResponse(
     int? ActiveVersion,
     DateTime Created,
     IReadOnlyList<SourceVersionResponse> Versions,
-    string StarTicket
+    string StarTicket,
+    string GitPath
 );
 
 /// <param name="Change">What it changed, in a line</param>
-/// <param name="Origin">Which door it came through: template, api or agent</param>
+/// <param name="Origin">Which door it came through: template, api, agent or git</param>
 /// <param name="Online">Whether this is the version online</param>
 /// <param name="ZipPath">Where it is downloaded as a project</param>
 public sealed record SourceVersionResponse(int Version, DateTime Created, string? Change, string? Origin, bool Online, string ZipPath);

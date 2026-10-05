@@ -51,6 +51,9 @@ public static class VersionOrigins
     /// <summary>Through the MCP endpoint, by an agent.</summary>
     public const string Agent = "agent";
 
+    /// <summary>Pushed to the lambda's repository with git, a commit each.</summary>
+    public const string Git = "git";
+
     /// <summary>By the operator, through the administration panel.</summary>
     public const string Admin = "admin";
 

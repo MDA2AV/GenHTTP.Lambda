@@ -245,7 +245,10 @@ public sealed class McpHandler : IHandler
                 "",
                 "If you can make HTTP requests, the REST API (https://genhttp.dev/api/v1/openapi.json) does the same",
                 "with fewer tokens: download a feature as a zip, edit locally, put it back ('zip -r ../f.zip .', so",
-                ".lambda/ comes along)."
+                ".lambda/ comes along).",
+                "",
+                "If you can run git, clone the lambda instead (read_lambda's gitUrl) - AGENTS.md in it says how: a",
+                "commit pushed to main is a version, a branch pushed is a feature - platform_guide, git."
             ])
         };
     }

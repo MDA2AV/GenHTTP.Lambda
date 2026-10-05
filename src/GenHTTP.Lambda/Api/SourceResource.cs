@@ -101,7 +101,7 @@ public sealed class SourceResource(ISourceService sources, ILogger<SourceResourc
                                                                               ZipPath(publicKey, v.Version)));
 
         return new SourceProjectResponse(entry, project.Author, SourceLicenses.Holder(project.Author, publicKey), project.ActiveVersion,
-                                         project.Created, [.. versions], sources.IssueTicket(publicKey));
+                                         project.Created, [.. versions], sources.IssueTicket(publicKey), $"/source/{publicKey}.git");
     }
 
     #endregion

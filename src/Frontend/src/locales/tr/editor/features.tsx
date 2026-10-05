@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Neyi değiştirdiği henüz yazılmadı',
   behindTitle: 'Taslak başladıktan sonra uygulamanız değişti',
   behind: () => 'güncel değil',
+  branchTitle: 'Bu taslağın uygulamanın git deposunda bulunduğu dal',
   previewOnline: 'önizleme çalışıyor',
   previewOutdated: 'önizleme daha eski bir kaydı gösteriyor',
   previewOffline: 'önizleme çalışmıyor',

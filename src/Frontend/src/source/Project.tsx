@@ -8,7 +8,7 @@ import { useLanguage, useSourceT } from '../i18n';
 import { Link } from '../i18n/links';
 import { pageMeta, usePageMeta } from '../meta';
 import { CodeView } from './CodeView';
-import { DownloadMenu } from './Download';
+import { CodeMenu } from './Download';
 import { useFormat } from './format';
 import { ChangesView, OlderVersion, VersionPicker } from './History';
 import { LambdaNotice, LicenseChip, StarButton } from './parts';
@@ -244,7 +244,15 @@ function Header({ project, ticketAt, version, tree }: {
         <div className="flex flex-col gap-4 lg:items-end">
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             <StarButton publicKey={source.publicKey} stars={source.stars} ticket={project.starTicket} ticketAt={ticketAt} />
-            <DownloadMenu publicKey={source.publicKey} version={version} root={tree?.root ?? null} bytes={tree?.bytes ?? null} />
+            <CodeMenu
+              publicKey={source.publicKey}
+              version={version}
+              root={tree?.root ?? null}
+              bytes={tree?.bytes ?? null}
+              gitUrl={absoluteAddress(project.gitPath)}
+              oldest={project.versions[project.versions.length - 1]?.version ?? version}
+              newest={project.versions[0]?.version ?? version}
+            />
             {source.online && (
               <a href={address} target="_blank" rel="noreferrer" className="btn-primary h-9" title={said.project.opens(shown)}>
                 {said.project.openApp}

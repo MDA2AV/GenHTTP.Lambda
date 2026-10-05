@@ -23,6 +23,7 @@ export const guide: Messages['guide'] = {
     sockets: 'Websockets',
     limits: 'Wat niet mag',
     away: 'Alles meenemen',
+    git: 'Werken met git',
     open: 'De code publiceren',
     agents: 'Het aan een agent overlaten',
   },
@@ -421,13 +422,37 @@ export const guide: Messages['guide'] = {
   ),
   awayAside:
     'Goed om te weten voordat je hier iets bouwt: wat je schrijft is van jou, en je neemt het in zijn geheel mee. Dat je code hier draait, betekent niet dat hij hier vastzit.',
+  git: (k) => (
+    <>
+      Elke lambda is ook een git-repository. {k.b('Klonen')}, in het overzicht van het dashboard en naast de code, toont
+      het adres - het adres van je editor met de naam van de app erachter - en {k.code('git clone')} geeft je het
+      project dat {k.b('Downloaden')} je geeft, met van elke versie een commit van {k.code('main')}, getagd als{' '}
+      {k.code('v1')}, {k.code('v2')} enzovoort, en van elk concept een branch. Open het in je eigen editor, geef het aan
+      je coding agent, voer het uit met {k.code('dotnet run')}.
+    </>
+  ),
+  git2: (k) => (
+    <>
+      Push en het staat hier. Elke commit die je naar {k.code('main')} pusht wordt de volgende versie, met de eerste
+      regel als de wijziging die hij doorvoert - eerst gecompileerd, en geweigerd als dat niet lukt - en{' '}
+      {k.code('git push -o deploy')} zet hem online. Een branch die je pusht wordt een concept, met de voorvertoning
+      online op een eigen adres; push hem naar {k.code('main')}, of voeg {k.code('-o merge')} toe aan de laatste push,
+      en hij is de volgende versie. Wat het platform om je code heen zet om er een project van te maken -{' '}
+      {k.code('Program.cs')}, het projectbestand, {k.code('Platform')} - hoort niet bij je app, dus een push die dat
+      wijzigt wordt geweigerd, met uitleg waarom. {k.code('AGENTS.md')} in de repository vertelt een coding agent de
+      rest.
+    </>
+  ),
+  gitAside:
+    'Het adres bevat je editorsleutel, net als het adres van de editor: wie het heeft, kan pushen. Wat je app bewaart - de items, bestanden, sleutels en wachtwoorden - staat nooit in de repository.',
 
   open: (k) => (
     <>
       Kan wat je gebouwd hebt iemand anders helpen, publiceer dan de code: open {k.b('Open source')} in het
       dashboard, kies een licentie – MIT, tenzij je een andere wilt – en zet het aan. De code krijgt een eigen pagina
-      tussen de {k.link('/source', 'open-source-apps')}, waar iedereen hem kan lezen, een ster kan geven en elke versie
-      kan downloaden als hetzelfde project dat {k.b('Downloaden als .NET-project')} je geeft, met de licentie erbij.
+      tussen de {k.link('/source', 'open-source-apps')}, waar iedereen hem kan lezen, een ster kan geven, elke versie
+      kan downloaden als hetzelfde project dat {k.b('Downloaden')} je geeft, met de licentie erbij, of elke versie met
+      git kan klonen.
     </>
   ),
   open2: () => (

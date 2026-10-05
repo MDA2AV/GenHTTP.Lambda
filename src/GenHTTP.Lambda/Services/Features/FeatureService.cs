@@ -203,11 +203,14 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
 
         var now = DateTime.UtcNow;
 
+        var taken = database.Features.Where(f => f.LambdaId == lambdaId).Select(f => f.Branch).ToList();
+
         var entity = new FeatureEntity
         {
             LambdaId = lambdaId,
             Key = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)),
             Name = name,
+            Branch = Branch(draft.Branch, name, taken),
             Specification = VersionInput.Tidy(draft.Specification, VersionNote.MaxSpecification),
             BaseVersion = from,
             Origin = draft.Origin,
@@ -221,7 +224,21 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // is not left to expire while they do
         lambda.Modified = now;
 
-        database.SaveChanges();
+        try
+        {
+            database.SaveChanges();
+        }
+        catch (DbUpdateException) when (draft.Branch == null)
+        {
+            // another feature took the same branch in the meantime: the next free one
+            entity.Branch = FeatureBranches.For(name, [.. database.Features.AsNoTracking().Where(f => f.LambdaId == lambdaId).Select(f => f.Branch)]);
+
+            database.SaveChanges();
+        }
+        catch (DbUpdateException)
+        {
+            throw LambdaException.Conflict($"Another feature of this lambda is at the branch '{draft.Branch}'.");
+        }
 
         try
         {
@@ -743,7 +760,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
          + $"(update_feature with base: {newest}, or PATCH the feature with base) and merge again.";
 
     private static FeatureInfo Describe(FeatureEntity feature, int? newest)
-        => new(feature.Key, feature.Name, feature.Specification, feature.Change, feature.BaseVersion, newest, feature.Origin,
+        => new(feature.Key, feature.Name, feature.Branch, feature.Specification, feature.Change, feature.BaseVersion, newest, feature.Origin,
                feature.Created, feature.Modified, feature.Previewed != null, feature.Previewed != null && feature.PreviewOf == feature.Revision,
                feature.Previewed, feature.Revision);
 
@@ -753,6 +770,31 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     /// </summary>
     internal static bool IsKey(string? key)
         => key is { Length: 32 } && key.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f');
+
+    /// <summary>
+    /// The branch a new feature is in the lambda's repository: the one asked
+    /// for, which has to be free, or one named after it.
+    /// </summary>
+    /// <param name="taken">The branches of the lambda's other features</param>
+    private static string Branch(string? wanted, string name, IReadOnlyList<string> taken)
+    {
+        if (wanted == null)
+        {
+            return FeatureBranches.For(name, taken);
+        }
+
+        if (FeatureBranches.Check(wanted) is { } complaint)
+        {
+            throw LambdaException.Invalid(complaint);
+        }
+
+        if (FeatureBranches.Clashes(wanted, taken))
+        {
+            throw LambdaException.Conflict($"Another feature of this lambda is at the branch '{wanted}', or at one that cannot sit beside it.");
+        }
+
+        return wanted;
+    }
 
     private static string Name(string? name)
     {

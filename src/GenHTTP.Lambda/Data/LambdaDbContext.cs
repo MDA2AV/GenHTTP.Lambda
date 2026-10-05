@@ -208,6 +208,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         features.Property(f => f.LambdaId).HasColumnName("lambda_id");
         features.Property(f => f.Key).HasColumnName("key");
         features.Property(f => f.Name).HasColumnName("name");
+        features.Property(f => f.Branch).HasColumnName("branch");
         features.Property(f => f.Specification).HasColumnName("specification");
         features.Property(f => f.Change).HasColumnName("change");
         features.Property(f => f.BaseVersion).HasColumnName("base_version");
@@ -221,6 +222,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
         features.HasIndex(f => f.Key).IsUnique();
         features.HasIndex(f => f.LambdaId);
+        features.HasIndex(f => new { f.LambdaId, f.Branch }).IsUnique();
 
         features.HasOne(f => f.Lambda)
                 .WithMany()

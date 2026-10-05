@@ -74,9 +74,11 @@ port, each against its own temporary data directory.
 | `/showcase`          | the lambdas their owners chose to show                    |
 | `/source`            | the lambdas whose owners published their code             |
 | `/source/:publicKey` | the published code of one: its files, documentation, tests and changes, per version |
+| `/source/:publicKey.git` | the published code as a git repository, read only     |
 | `/enterprise`, `/terms`, `/privacy`, `/imprint` | the company pages              |
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
+| `/editor/:privateKey/:name.git` | the lambda as a git repository, to clone and push to (any name; the editor offers the public key) |
 | `/lambda/:publicKey` | the deployed handler                                      |
 | `/features/:feature` | the preview of a feature, while it is online              |
 | any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
@@ -694,6 +696,116 @@ The demos are published under MIT by the installation, being there to be read
 and built on; nobody else can change that, and their editor shows no Open
 source section.
 
+### Working with git
+
+Every lambda is a git repository as well, so whoever works on it with their
+own tools and agent clones it, changes it and pushes - and whoever reads a
+published source clones every version of it. Both are served by the
+[GenHTTP.Modules.Git][git-module] package from what the platform already
+keeps: there is no repository on disk, only the commits the versions and the
+features are.
+
+```bash
+git clone https://genhttp.dev/editor/<editor key>/my-app.git
+cd my-app && dotnet run                     # the app on http://localhost:8080/
+# change it, commit
+git push -o deploy                          # the next version, online
+```
+
+The owner's address is the editor's with a name added, which only names the
+folder a clone makes: any name answers, so a clone keeps working once the
+public key changes. It holds the editor key like the editor's address does -
+there are no accounts, and the key is what lets a push in. The published
+source is `/source/<public key>.git`, read only, while it is published. Both
+answer without the `.git`, and opened in a browser they lead to their page.
+The editor offers the address under **Clone** - in the full view only, on the
+overview and beside the code, and in a draft with its branch - and `/source`
+in the **Code** menu beside the star, where the zip is too.
+
+**What is in it.** The project the lambda is exported as, made for a
+repository: `Project.cs` is the snippet as the body of `BuildAsync()` - the
+method the platform runs it in - with its types beside the class, the other
+`.cs` files keep their code and are named the .NET way, `assets/` is what it
+ships, and `docs/` and `tests/` are its `.lambda/docs/` and `.lambda/tests/`.
+Around them are the platform's files: `Program.cs`, the project file,
+`Platform/`, the `Dockerfile`, `.gitignore`, `.dockerignore`, `AGENTS.md` -
+how an agent works in the repository, with the rules of the platform in git's
+terms - `CLAUDE.md`, which points Claude Code to it, and `LICENSE` while the
+source is published. Those are the same in every commit until the platform
+changes them - nothing in them depends on the version, which is why the
+project references SQLite, Entity Framework and Evolve whether the code uses
+them or not, and makes the snippet asynchronous whether it awaits or not - so
+a push that leaves them alone is always right. The data is never in it: no
+database, no workspace, no secret. Nor is what only the owner may know - no
+specification, no editor key - so the commits the owner reads are the commits
+a published source shows.
+
+**The history.** `main` is the newest version, each version a commit tagged
+`v1`, `v2` and so on, its message the change line; a version pruned is gone
+from the history too, which a clone is told is shallow from there. Each
+feature is a branch, named once when it starts - after the branch that was
+pushed, or after its name in the words git allows (`dark-mode`) - and kept
+when it is renamed (`features.branch`); a save of the feature is a commit on
+it, and moving its base past what it holds is a merge commit bringing that
+version in. The commits the platform makes are made when the repository is
+read, not when a version is saved, so saving stays what it was and a lambda
+nobody clones costs nothing; each is made once from what it stands for - the
+files, the time it was saved, its change - and kept below
+`/data/git/{lambda}` with the files it holds, by the id git gives them, so it
+is the same commit for everybody who reads it later, a newer platform
+included. A commit whose code did not change keeps the `Project.cs` of the
+one before it, so a class somebody pushed in a way of their own is not
+written over by a save in the editor. The published source is the same
+history without the features: their branches are not there, and their
+commits are not found by id either.
+
+**Pushing to main.** Every commit becomes the next version, in order, with
+the origin `git`, the first line of its message as the change and the rest
+as the specification. `main` only moves forward one commit after another - no
+force push, no merge commit, no deletion - and a version saved meanwhile in
+the editor or by an agent makes the push "fetch first". A push holding more
+commits than the tier keeps versions is refused, asking for them to be
+squashed. The newest is compiled first, the code guard included, and a push
+that does not compile is refused - its problems come back with the file and
+line in the repository, `Project.cs(14,9)`. `-o deploy` puts the newest
+online. A feature whose branch is now in `main` is merged and goes, as
+merging it would have done.
+
+**Pushing a branch.** A new branch starts a feature from the newest version
+among its commits, with a copy of the lambda's data; pushing it again
+replaces its files, a force push included, and a branch that holds none of
+the versions is refused. Every push puts its preview online - nothing a
+visitor sees - and answers with its address. `-o merge` with a push merges
+it as one version, `-o deploy` beside it puts that online, and deleting the
+branch deletes the feature. A feature changed in the editor since the client
+fetched refuses the push rather than losing that change.
+
+**What is refused.** A push that changes, adds or removes one of the
+platform's files, or adds a file that has no place in a lambda - a `README.md`
+at the root, an editor's settings - is refused and says which and how to undo
+it: changing them would change nothing of the lambda, and silently dropping
+the change would leave the commit saying something the lambda does not. So is
+an executable file or a link, a tag, `Project.cs` with something in `class
+Project` besides `BuildAsync()`, and anything the services refuse a save -
+names, sizes, a demo. Everything a push does goes through the services the
+editor and the agents use, under the same rules.
+
+**What it says.** A push is answered as it goes, in the lines git prints after
+`remote:`: the versions or the feature it became, problems the compiler
+found, what went online and where, and what to do next. They never hold the
+editor key - whoever pushed has it, and whoever reads their build log should
+not. Options travel only with a push that changes something, so a version
+already pushed is deployed in the editor or with
+`POST /api/v1/lambdas/:privateKey/deployment/start`, which the answer names.
+
+**Threads and limits.** Reading a lambda for the first time reads every
+version, so the commits are made on the pool, in the lambda's turn - a
+semaphore, one request at a time per lambda. The server packs what a clone
+asks for, and applies a push, while it writes its answer, so that answer is
+written on the pool into a pipe the reactor copies to the connection
+(`OffloadedContent`). A push is unpacked in memory, up to
+`LAMBDA_GIT_MAX_PUSH_BYTES`, and only two are applied at once.
+
 ## How it is put together
 
 A single .NET 11 project hosted by `GenHTTP.Full.Ioxide`, wired up in
@@ -756,6 +868,13 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   `/data/sources/{lambda}`, and `StarGuard` hands out the tickets a star is
   given with and remembers who starred what. Kept apart from Meta like the
   showcase: nothing about building a lambda reads or changes it.
+- **Git** (`Services/Git`) - every lambda as a git repository (see
+  [Working with git](#working-with-git)). `GitService` finds the lambda and
+  takes its turn, `GitHistory` makes the commits the versions and features
+  are, `GitPushes` makes versions and features of what is pushed, `GitStore`
+  keeps the commits and their files below `/data/git/{lambda}`, and
+  `ProjectTree` says what a lambda is as a tree and back. The door is
+  `Api/Git/GitRoutes.cs`, beside the pages below `/editor/` and `/source/`.
 - **Building** (`Services/Building`) - the jobs of the build agent: builds
   asked for on `/build` and changes asked for in the editor's Change section.
   `BuildService` decides what may be asked for and in which order that is
@@ -863,6 +982,7 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_DEVELOPMENT`                | `false`          | verbose error pages and debug logging       |
 | `LAMBDA_MAINTENANCE_INTERVAL_HOURS` | `0.25`           | how often expired lambdas are looked for    |
 | `LAMBDA_SOURCE_CACHE_BYTES`         | `2147483648`     | what the published sources may take on disk, packed; the least recently read go first |
+| `LAMBDA_GIT_MAX_PUSH_BYTES`         | `268435456`      | how large a `git push` may be; it is unpacked in memory |
 | `LAMBDA_MAX_CONCURRENCY`            | `64`             | lambda requests executed at once            |
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
@@ -1228,6 +1348,15 @@ asking which license when they did not say. Once a lambda is published,
 then on is public, the versions before included - so an agent keeps keys,
 passwords and personal data out of the files, where they never belong anyway.
 
+An agent that can run git works in a clone instead (see
+[Working with git](#working-with-git)): `create_lambda` and `read_lambda`
+answer with the `gitUrl`, features name their `branch`, the instructions say
+so in a line and `platform_guide` how under `git`. In the clone, `AGENTS.md` is
+its guide: what is what in the repository, how pushing to `main` and to a
+branch works and what is refused, and the rules of the platform said in git's
+terms - the same rules, worded the same way, as the instructions, the guide
+and the build agent's brief.
+
 `read_lambda` sends every file of the program while together they come to 30,000
 characters, and names them with their lengths beyond that; `file` then fetches
 one in full, up to a megabyte, and anything larger is left to the zip of the
@@ -1527,3 +1656,4 @@ existing ones are never edited.
 [genhttp]: https://genhttp.org/
 [evolve]: https://evolve-db.netlify.app/
 [efcore]: https://learn.microsoft.com/ef/core/
+[git-module]: https://github.com/Kaliumhexacyanoferrat/virtual-git-server

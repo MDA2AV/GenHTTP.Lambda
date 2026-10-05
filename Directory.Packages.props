@@ -10,6 +10,9 @@
         <PackageVersion Include="GenHTTP.Full.Ioxide" Version="11.0.5" />
         <PackageVersion Include="GenHTTP.Engine.Kestrel" Version="11.0.5" />
 
+        <!-- serves every lambda as a git repository, see Services/Git -->
+        <PackageVersion Include="GenHTTP.Modules.Git" Version="0.1.1" />
+
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
 
         <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="11.0.0-rc.1.26425.128" />

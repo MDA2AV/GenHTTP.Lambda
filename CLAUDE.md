@@ -266,8 +266,8 @@ scripts and test data.
   this is said wherever they are told to write them. The demos have more,
   because they teach. This is said the same way in the MCP
   instructions, the tool descriptions and answers, `platform_guide`
-  (`documentationAndTests`), the build agent's brief, the guide and the README -
-  keep them the same.
+  (`documentationAndTests`), the build agent's brief, a repository's
+  `AGENTS.md`, the guide and the README - keep them the same.
 - The editor: **Documentation** is the second section after the overview, in
   both views; **Tests** is in the full view only. The simple view calls the
   documentation **About** and shows the product page alone, to be corrected by
@@ -282,7 +282,8 @@ Graph), what the page is about in the HTML as served rather than only in what
 a script renders, and the domain as canonical where the lambda has one. A tool
 for a few people gets a title and nothing more. This is said in the MCP
 instructions (one line), `platform_guide` (`beingFound`), the build agent's
-brief, the README and `/docs` - keep them the same. The platform writes none
+brief, a repository's `AGENTS.md`, the README and `/docs` - keep them the same.
+The platform writes none
 of it into a lambda's pages; the agent does.
 
 - `og:image` takes a full address - social networks do not resolve a relative
@@ -314,7 +315,8 @@ server - server-sent events where the page only listens (`demo-live`), a
 websocket where it talks back (`demo-game`). A poll is a request whether
 anything changed or not, on a server every lambda shares. This is said in the
 MCP instructions (one line), `platform_guide` (`liveUpdates`), the build
-agent's brief, the README and `/docs` - keep them the same.
+agent's brief, a repository's `AGENTS.md`, the README and `/docs` - keep them
+the same.
 
 ### The link back
 
@@ -338,8 +340,8 @@ agent's brief, the README and `/docs` - keep them the same.
   script, nothing hidden.
 - The platform never writes it into a lambda, and nothing checks for it.
 - This is said in the MCP instructions (one line), `platform_guide`
-  (`backlink`), the build agent's brief, the README and `/docs` - keep them
-  the same.
+  (`backlink`), the build agent's brief, a repository's `AGENTS.md`, the README
+  and `/docs` - keep them the same.
 
 ### Features ("Drafts")
 
@@ -357,7 +359,8 @@ New functionality is developed in a **feature** (a *draft* in the editor):
   the lambda's lock.
 - A lambda that exists is changed in a feature; a new lambda is written as
   versions. This is said the same way in the MCP instructions, the tool
-  descriptions and answers, the guide, and the README - keep them the same.
+  descriptions and answers, the guide, a repository's `AGENTS.md`, and the
+  README - keep them the same.
 
 ### Showcase, export, ownership of the code
 
@@ -412,6 +415,60 @@ to read, star and download.
   taking the source down.
 - The demos are published under MIT by the installation, being there to be
   read and built on; nobody can change that.
+
+### Git
+
+Every lambda is a git repository as well: `/editor/{privateKey}/{name}.git`
+for its owner to clone and push to - the name only names the clone's folder,
+the editor offers the public key - and `/source/{publicKey}.git` for anybody
+to clone while its source is published. Served by GenHTTP.Modules.Git from
+what the platform keeps (`Services/Git`); there is no repository on disk.
+
+- **One history per lambda - decided.** `main` is the newest version, every
+  version a commit tagged `v{n}`, every feature a branch. The published
+  source is the same commits without the features' branches, whose commits
+  it does not serve either. So nothing only the owner may know goes into a
+  commit the platform makes: no specification, no editor key - the message is
+  the change line.
+- **A commit is made once and kept.** The platform makes the commits of
+  versions and of features' saves when the repository is read, not when they
+  are saved - saving stays as it was, and a lambda nobody clones costs
+  nothing - and keeps their bytes and their files below `/data/git/{lambda}`.
+  Never make one again from the version: a newer platform would make it
+  differently, and every clone would see its history rewritten. Pushed
+  commits are kept exactly as they came.
+- **The tree is the project, the export's shape made for a repository.** What
+  the platform puts around the lambda (`Program.cs`, the project file,
+  `Platform/`, `Dockerfile`, the ignore files, `AGENTS.md`, `CLAUDE.md`,
+  `LICENSE` while published) depends on nothing a version decides - so the
+  project references SQLite, EF Core and Evolve always and the snippet is
+  `async Task<object> BuildAsync()` always - and a push that leaves those files
+  alone is right whatever it changed. Keep it that way. A commit whose
+  lambda.cs did not change keeps the `Project.cs` before it.
+- **The platform's files are refused, not ignored - decided.** A push that
+  changes, adds or removes one, or adds a file with no place in a lambda, is
+  refused saying which and how to undo it; ignoring it would leave a commit
+  that says what the lambda does not.
+- **A commit pushed to main is a version, each one.** `main` only moves
+  forward, linear - no force, no merge commits, no deletion - and the newest
+  is compiled first and refused when it does not compile, as a merge is.
+  Pushes go through the services every other door uses (origin `git`), so
+  their rules hold. A feature whose tip reaches `main` is merged.
+- **A branch is a feature.** Pushed, it starts or replaces one - based on
+  the newest version among its commits - and puts its preview online, which
+  no visitor sees; `-o merge` merges it, `-o deploy` puts a version online.
+  A feature's branch is named once (`features.branch`) and kept when it is
+  renamed.
+- **The answers never hold the editor key.** Whoever pushed has it, and a
+  build log of theirs may be read by others.
+- **For whoever works with code.** The clone popover is in the full view only
+  - the overview's header, the code section, a draft - and on `/source` in the
+  **Code** menu. Nothing about git is in the simple view or on `/build`.
+- **`AGENTS.md` is a place the platform's rules are said** for an agent
+  working in a clone (`Resources/Export/Agents.md.txt`), in git's terms: keep
+  it saying what the MCP instructions and `platform_guide` say.
+- A test clones every demo and builds the clone with the .NET SDK, as one
+  builds every export; keep it passing.
 
 ### Demos
 
@@ -756,7 +813,8 @@ touches all that apply:
 2. `/docs` (`src/Frontend/src/locales/*/guide.tsx`) - for owners, in the
    vocabulary of the simple view, translated.
 3. `platform_guide`, the MCP instructions and the tool descriptions
-   (`Api/Mcp`) - for agents.
+   (`Api/Mcp`) - for agents; and `AGENTS.md` in every lambda's repository
+   (`Resources/Export/Agents.md.txt`) for an agent working in a clone.
 4. The API description (Scalar at `/api/v1/scalar/`, from the resources).
 
 The same rule is worded the same way in all of them.

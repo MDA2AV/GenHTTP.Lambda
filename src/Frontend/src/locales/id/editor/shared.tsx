@@ -14,6 +14,7 @@ export const shared: EditorMessages['shared'] = {
     admin: 'operator',
     system: 'platform',
     api: 'API / editor',
+    git: 'git push',
     unknown: 'tidak diketahui',
   },
   endings: {
@@ -26,6 +27,8 @@ export const shared: EditorMessages['shared'] = {
   whatThisIs: 'Apa ini',
   byAgent: 'oleh agen',
   writtenByAgent: 'Ditulis oleh agen',
+  byGit: 'dengan git',
+  pushedWithGit: 'Di-push dengan git',
   more: 'Lainnya',
   of: (used, total) => `${used} dari ${total}`,
   online: (version) => `Online · v${version}`,

@@ -15,6 +15,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'Jeszcze nie opisano, co zmienia',
   behindTitle: 'Twoja aplikacja zmieniła się od początku tego szkicu',
   behind: () => 'nieaktualny',
+  branchTitle: 'Gałąź, w której jest ten szkic w repozytorium git aplikacji',
   previewOnline: 'podgląd działa',
   previewOutdated: 'podgląd pokazuje wcześniejszy zapis',
   previewOffline: 'podgląd nie działa',

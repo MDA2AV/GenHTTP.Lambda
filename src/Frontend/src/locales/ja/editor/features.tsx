@@ -13,6 +13,7 @@ export const features: EditorMessages['features'] = {
   noChange: 'まだ変更内容の説明がありません',
   behindTitle: 'この下書きを作ったあとに、アプリが変更されました',
   behind: () => '古くなっている',
+  branchTitle: 'この下書きが、アプリのgitリポジトリで入っているブランチ',
   previewOnline: 'プレビューは動作中',
   previewOutdated: 'プレビューは前の保存内容',
   previewOffline: 'プレビューは停止中',

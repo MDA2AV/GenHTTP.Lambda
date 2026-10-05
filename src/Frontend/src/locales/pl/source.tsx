@@ -97,9 +97,18 @@ export const source: SourceMessages = {
     count: (count) => counted(count, 'gwiazdka', 'gwiazdki', 'gwiazdek'),
     failed: 'Nie udało się zapisać gwiazdki.',
   },
+  clone: {
+    button: 'Kod',
+    title: 'Sklonuj przez git',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `Jej wersja to commit na main, oznaczony v${newest}.`
+        : `Każda wersja trafia do klonu jako commit na main, oznaczony od v${oldest} do v${newest} - main jest najnowszy.`,
+    readOnly:
+      'Tylko do odczytu. Żeby na tym budować, zacznij własną lambdę i przenieś tam te pliki - AGENTS.md w klonie mówi jak, a licencja, co wolno.',
+  },
 
   download: {
-    button: 'Pobierz',
     title: (version) => `Wersja ${version} jako projekt`,
     what:
       'Projekt .NET 10 z plikiem Dockerfile, dokumentacją, testami i licencją. To, co aplikacja przechowuje – jej rekordy, zapisane pliki, klucze – nie wchodzi w jego skład.',

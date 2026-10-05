@@ -27,6 +27,7 @@ export const guide = {
     sockets: 'Websockets',
     limits: 'What it will not let you do',
     away: 'Taking it away',
+    git: 'Working on it with git',
     open: 'Publishing the code',
     agents: 'Letting an agent do it',
   },
@@ -423,12 +424,35 @@ export const guide = {
   awayAside:
     'Worth knowing before you build anything here: what you write is yours and it leaves whole. Nothing about running it on this machine locks it to this machine.',
 
+  git: ((k) => (
+    <>
+      Every lambda is a git repository as well. {k.b('Clone')}, on the overview of the control center and beside its
+      code, has its address - the address of your editor with the name of the app after it - and{' '}
+      {k.code('git clone')} gives you the project {k.b('Download')} gives you, with every version a commit of{' '}
+      {k.code('main')}, tagged {k.code('v1')}, {k.code('v2')} and so on, and every draft a branch. Open it in your own
+      editor, hand it to your coding agent, {k.code('dotnet run')} it.
+    </>
+  )) as Text,
+  git2: ((k) => (
+    <>
+      Push and it is here. Each commit pushed to {k.code('main')} becomes the next version, its first line the change
+      it made - compiled first, and refused if it does not compile - and {k.code('git push -o deploy')} puts it
+      online. A branch you push becomes a draft, with its preview online at its own address; push it to{' '}
+      {k.code('main')}, or add {k.code('-o merge')} to its last push, and it is the next version. What the platform
+      puts around your code to make it a project - {k.code('Program.cs')}, the project file, {k.code('Platform')} -
+      is no part of your app, so a push that changes it is refused and says why. {k.code('AGENTS.md')} in the
+      repository tells a coding agent the rest.
+    </>
+  )) as Text,
+  gitAside:
+    'The address holds your editor key, like the address of the editor: whoever has it can push. What your app keeps - its records, its files, its keys and passwords - is never in the repository.',
+
   open: ((k) => (
     <>
       If what you built could help somebody else, publish its code: open {k.b('Open source')} in the control center,
       pick a license - MIT, unless you want another - and switch it on. Its code gets a page of its own among the{' '}
-      {k.link('/source', 'open source apps')}, where anybody can read it, star it, and download any version as the
-      same project {k.b('Download')} gives you, with the license beside it.
+      {k.link('/source', 'open source apps')}, where anybody can read it, star it, download any version as the same
+      project {k.b('Download')} gives you, with the license beside it, or clone every version of it with git.
     </>
   )) as Text,
   open2: (() => (

@@ -96,12 +96,16 @@ export const ship = {
       'With the editor link you got when it was published. Hand it to your agent with the next change, or open it in your browser. Every change becomes a new version at the same address, and you can go back to an older one at any time.',
     ],
     [
+      'Can I push to it with git?',
+      'Yes. Every app is a git repository as well: clone it from the address under Clone in the editor, change it with your own tools or agent, and push. Each commit pushed to main becomes the next version, and a branch you push becomes a draft with a preview of its own.',
+    ],
+    [
       'Where do my API keys go?',
       'Not into the code. Your agent asks for a key by name, and you type the value into the editor. Nobody reads it back - not the editor, not the agent.',
     ],
     [
       'Can I take my code with me?',
-      'Yes, it is yours. Download it from the editor whenever you like, as a project that runs on its own, database included.',
+      'Yes, it is yours. Download it from the editor whenever you like, as a project that runs on its own, database included - or clone it with git, every version included.',
     ],
     [
       'Who can see my app?',

@@ -10,6 +10,7 @@ import { IconAlert, IconPlay, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { useEditorT } from '../i18n';
 import { languageFor } from '../monaco';
+import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Section } from './ui';
 import { CONTEXT, isCode } from './written';
@@ -337,6 +338,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
       }
       actions={
         <>
+          <CloneMenu lambda={lambda} feature={feature} />
           <button type="button" onClick={check} disabled={busy !== null} className="btn-ghost !px-3 !py-1.5 text-[13px]">
             {busy === 'check' && <IconSpinner />}
             {said.check}

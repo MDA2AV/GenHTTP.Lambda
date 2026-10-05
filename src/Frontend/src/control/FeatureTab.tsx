@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 
 import { ApiError, api, type LambdaFile } from '../api';
-import { IconAlert, IconChevronDown, IconPencil, IconSpark, IconSpinner } from '../components/Icons';
+import { IconAlert, IconBranch, IconChevronDown, IconPencil, IconSpark, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import { ChangeList } from './Changes';
+import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { AgentMark, Ago, Quote, Section } from './ui';
 import { isContext } from './written';
@@ -83,6 +84,7 @@ export function FeatureTab({ control, onNotes, onRebase }: {
               {said.editCode}
             </button>
           )}
+          {!simple && <CloneMenu lambda={control.lambda} feature={feature} />}
         </>
       }
     >
@@ -91,11 +93,21 @@ export function FeatureTab({ control, onNotes, onRebase }: {
           <span>
             {said.started} <Ago at={feature.created} />
           </span>
-          <AgentMark origin={feature.origin} />
+          <AgentMark origin={feature.origin} git={!simple} />
           <span aria-hidden="true">·</span>
           <span>
             {said.changed} <Ago at={feature.modified} />
           </span>
+          {/* where a clone has it, for whoever works on it with git */}
+          {!simple && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1" title={said.branchTitle}>
+                <IconBranch className="h-3.5 w-3.5" />
+                <code className="font-mono text-[12px]">{feature.branch}</code>
+              </span>
+            </>
+          )}
         </p>
 
         {behind && (

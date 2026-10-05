@@ -101,9 +101,18 @@ export const source: SourceMessages = {
     count: (count) => `スター${count}個`,
     failed: 'スターを保存できませんでした。',
   },
+  clone: {
+    button: 'コード',
+    title: 'gitでクローンする',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `バージョンはmainのコミットで、v${newest}のタグが付いています。`
+        : `すべてのバージョンがmainのコミットとして入っていて、v${oldest}からv${newest}までタグが付いています。mainが最新です。`,
+    readOnly:
+      '読み取り専用です。これをもとに作るには、自分のlambdaを作成し、ここにあるファイルを移してください。方法はクローン内のAGENTS.mdに、できることはライセンスに書いてあります。',
+  },
 
   download: {
-    button: 'ダウンロード',
     title: (version) => `バージョン${version}のプロジェクト`,
     what:
       'Dockerfile、ドキュメント、テスト、ライセンスの入った.NET 10のプロジェクトです。アプリが残しているもの（記録、保存したファイル、キー）は含まれません。',

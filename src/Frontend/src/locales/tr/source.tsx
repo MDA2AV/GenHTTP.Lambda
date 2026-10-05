@@ -100,9 +100,18 @@ export const source: SourceMessages = {
     count: (count) => `${count} yıldız`,
     failed: 'Yıldız kaydedilemedi.',
   },
+  clone: {
+    button: 'Kod',
+    title: 'git ile klonla',
+    what: (oldest, newest) =>
+      oldest === newest
+        ? `Sürümü, main’in v${newest} etiketli commit’idir.`
+        : `Her sürüm main’in bir commit’i olarak gelir, v${oldest} ile v${newest} arası etiketlenir - main en yenisidir.`,
+    readOnly:
+      'Salt okunur. Üzerine bir şey kurmak için kendi lambdanızı başlatın ve bu dosyaları oraya taşıyın - klondaki AGENTS.md nasıl yapılacağını, lisansı ise neler yapabileceğinizi söyler.',
+  },
 
   download: {
-    button: 'İndir',
     title: (version) => `${version}. sürüm, proje olarak`,
     what:
       'Dockerfile, dokümantasyonu, testleri ve lisansıyla birlikte bir .NET 10 projesi. Uygulamanın sakladıkları (kayıtları, kaydettiği dosyalar ve anahtarları) buna dahil değildir.',

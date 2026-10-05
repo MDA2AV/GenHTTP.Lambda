@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { isDemo } from '../api';
-import { IconDots, IconInfo, IconSpark } from '../components/Icons';
+import { IconBranch, IconDots, IconInfo, IconSpark } from '../components/Icons';
 import { ago } from './format';
 import { useShared } from './words';
 
@@ -217,11 +217,22 @@ export function Sparkline({ values, label }: { values: number[]; label: string }
 }
 
 /**
- * That an agent wrote something. The only origin worth marking: the rest -
- * the template, the owner, the platform - are what anybody would assume.
+ * That an agent wrote something, or - where the page is for somebody who
+ * works with code - that it was pushed with git. The only origins worth
+ * marking: the rest - the template, the owner, the platform - are what
+ * anybody would assume.
  */
-export function AgentMark({ origin }: { origin?: string | null }) {
+export function AgentMark({ origin, git = false }: { origin?: string | null; git?: boolean }) {
   const words = useShared();
+
+  if (origin === 'git' && git) {
+    return (
+      <span title={words.pushedWithGit} className="inline-flex text-slate-400">
+        <IconBranch className="h-3.5 w-3.5" />
+        <span className="sr-only">{words.byGit}</span>
+      </span>
+    );
+  }
 
   if (origin !== 'agent') {
     return null;
