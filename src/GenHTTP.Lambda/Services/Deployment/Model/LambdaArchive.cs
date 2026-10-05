@@ -261,7 +261,9 @@ public static class LambdaArchive
         // copying the body ourselves keeps what is buffered bounded
         var body = new MemoryStream();
 
-        await CopyAsync(content, body, maxBytes, "The archive is larger than a lambda may be.");
+        // what a build installed is the likeliest reason, and leaving it out
+        // here would mean taking it in first
+        await CopyAsync(content, body, maxBytes, "The archive is larger than a lambda may be. It is counted as it is sent, before any .gitignore leaves something out, so zip what a commit would hold - never what a build installed, node_modules for example.");
 
         body.Position = 0;
 

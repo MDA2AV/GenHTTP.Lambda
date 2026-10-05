@@ -98,6 +98,8 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     /// With <c>?layout=project</c>, the archive is laid out as a clone and read
     /// as a commit of it would be: the platform's files are left out, and so
     /// is what the repository ignores, <c>bin/</c> and <c>obj/</c> among it.
+    /// The archive is counted as it is sent, before anything is left out, so
+    /// it holds what a commit would - never what a build installed.
     /// </remarks>
     /// <param name="deploy">Whether to put the new version online as well</param>
     /// <param name="specification">What the user wants from this version and why</param>

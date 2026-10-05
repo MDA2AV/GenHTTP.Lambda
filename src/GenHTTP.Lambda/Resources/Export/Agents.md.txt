@@ -76,7 +76,9 @@ and commit it together with what the build wrote:
 - Without git, the API hands out a version or a feature as a zip laid out
   as this repository is, and takes it back the same way
   (`?layout=project`), so a build set up here writes to the same place
-  there. Its plain zip names files as the lambda does instead.
+  there. Its plain zip names files as the lambda does instead. A zip is
+  counted as it is sent, before any `.gitignore` leaves something out, so it
+  holds what a commit would - never what a build installed.
 
 ## Versions: main
 

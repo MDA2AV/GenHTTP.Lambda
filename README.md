@@ -355,7 +355,10 @@ files. A clone follows them because git does; a zip put back through the API
 follows them too, the way `git add` would (`IgnoredPaths`, git's rules:
 patterns at any depth or anchored, folders only, `!`, `**`, the deeper file
 having the last word, nothing coming back from a folder left out) - but
-keeps what the lambda already has, as git keeps what it tracks. A save
+keeps what the lambda already has, as git keeps what it tracks. A zip is
+counted as it is sent, before any `.gitignore` leaves something out, so it
+holds what a commit would - never what a build installed, which is no part
+of it and would only make the upload large. A save
 that names a file keeps it, as git keeps a file added on purpose; one that
 runs over the allowance says how large the build folder is, and that its
 `.gitignore` keeps out what a build installed.

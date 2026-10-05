@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 
@@ -444,6 +445,28 @@ public sealed class BuildFolderTests
 
             CollectionAssert.AreEquivalent(expected, names, $"laid out as {layout}: what it had stays, as git keeps what it tracks, and only that");
         }
+    }
+
+    [TestMethod]
+    public async Task AZipWithWhatABuildInstalledIsRefusedAsItIsSent()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { MaxCodeLength = 1000, MaxAssetBytes = 4096 });
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // what an install leaves behind does not compress away
+        var installed = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16 * 1024));
+
+        var archive = Zip(
+            ("lambda.cs", Snippet),
+            (".lambda/build/web/.gitignore", "node_modules/\n"),
+            (".lambda/build/web/node_modules/vite/dist/index.js", installed));
+
+        var refused = await UploadAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip", HttpMethod.Post, archive);
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "left out by its .gitignore or not, it was sent");
+
+        StringAssert.Contains(await refused.Content.ReadAsStringAsync(), "never what a build installed", "and it says what to leave out of the next one");
     }
 
     #endregion
