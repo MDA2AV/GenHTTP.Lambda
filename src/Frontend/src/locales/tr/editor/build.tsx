@@ -16,7 +16,7 @@ export const build: EditorMessages['build'] = {
   emptyText: (code) => (
     <>
       Bir sürümün statik dosyaları veya kodu bir derleme aracıyla - derlenerek, paketlenerek ya da üretilerek -
-      oluşturuluyorsa, onların oluşturulduğu dosyalar her sürümle birlikte burada saklanır: bir klonda {code('dev/')}
+      oluşturuluyorsa, onların oluşturulduğu dosyalar her sürümle birlikte burada saklanır: bir klonda {code('build/')}
       klasörü. Uygulamayı değiştiren kişi derlemeyi çalıştığı yerde yapar ve ikisini birlikte kaydeder; bu platform
       hiçbir şey derlemez. Sunulduğu ya da derlendiği şekliyle yazılan şeylerin buna ihtiyacı yoktur.
     </>

@@ -289,8 +289,8 @@ export const guide: Messages['guide'] = {
     <>
       Sebagian lambda mungkin dibuat oleh alat build, bukan ditulis apa adanya untuk disajikan atau dikompilasi:
       dikompilasi, digabungkan, atau dihasilkan. Versi menyimpan hasil buatan alat itu - sebagai asetnya, atau sebagai
-      kodenya - dan di sampingnya file bahan pembuatnya, yaitu {k.b('ruang pengembangan')}-nya:{' '}
-      {k.code('.lambda/dev/')} di versi, {k.code('dev/')} di sebuah kloning, berisi apa pun yang menjadi bahan kerja
+      kodenya - dan di sampingnya file bahan pembuatnya, yaitu {k.b('folder build')}-nya:{' '}
+      {k.code('.lambda/build/')} di versi, {k.code('build/')} di sebuah kloning, berisi apa pun yang menjadi bahan kerja
       alat itu. Agen Anda mengubah file-file tersebut, menjalankan build di tempatnya bekerja, dan menyimpan keduanya di
       versi yang sama. Platform ini tidak membangun apa pun.
     </>
@@ -305,7 +305,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'Yang ditulis apa adanya untuk disajikan atau dikompilasi tidak membutuhkannya. Apa yang dipasang atau disimpan sebuah build untuk dirinya sendiri - node_modules, misalnya - tidak pernah menjadi bagian dari versi: sebuah .gitignore di ruang pengembangan menjauhkannya.',
+    'Yang ditulis apa adanya untuk disajikan atau dikompilasi tidak membutuhkannya. Apa yang dipasang atau disimpan sebuah build untuk dirinya sendiri - node_modules, misalnya - tidak pernah menjadi bagian dari versi: sebuah .gitignore di folder build menjauhkannya.',
 
   storage: (k) => (
     <>
@@ -440,8 +440,8 @@ export const guide: Messages['guide'] = {
       di samping program, dengan method yang sama, terpisah di folder {k.code('Platform')}, jadi tidak ada yang perlu
       diubah di kode Anda.
       {' '}{k.code('Secret')} di sana membaca variabel lingkungan dengan nama yang sama; nilainya tetap di sini.
-      Dokumentasi dan pengujian ikut serta di {k.code('docs')} dan {k.code('tests')}, dan ruang pengembangan di{' '}
-      {k.code('dev')}.
+      Dokumentasi dan pengujian ikut serta di {k.code('docs')} dan {k.code('tests')}, dan folder build di{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} membuka {k.code('database/database.db')}, yang ikut terunduh bersama catatan yang
       disimpan aplikasi Anda.
     </>
@@ -483,7 +483,7 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Setiap versi dipublikasikan, termasuk yang lebih lama, beserta dokumentasi, pengujian, ruang pengembangan, dan
+      Setiap versi dipublikasikan, termasuk yang lebih lama, beserta dokumentasi, pengujian, folder build, dan
       perubahan yang dibuat masing-masing. Apa yang disimpan aplikasi tidak pernah dipublikasikan - catatannya, file yang
       disimpannya, nilai kunci dan kata sandinya - begitu pula apa yang Anda minta dengan kata-kata Anda sendiri, atau
       siapa yang memakai aplikasinya. Nonaktifkan, dan halamannya hilang; bintangnya tetap disimpan untuk saat Anda

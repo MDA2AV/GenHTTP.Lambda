@@ -280,8 +280,8 @@ export const guide: Messages['guide'] = {
     <>
       Część lambdy może powstawać w narzędziu do budowania, zamiast być pisana tak, jak jest serwowana lub kompilowana:
       kompilowana, pakowana lub generowana. Wersja zawiera to, co narzędzie wytwarza – jako swoje zasoby albo jako swój
-      kod – a obok tego pliki, z których to powstaje, czyli swoją {k.b('przestrzeń deweloperską')}:{' '}
-      {k.code('.lambda/dev/')} w wersji, {k.code('dev/')} w sklonowanym repozytorium, z tym, na czym pracuje narzędzie.
+      kod – a obok tego pliki, z których to powstaje, czyli swój {k.b('folder build')}:{' '}
+      {k.code('.lambda/build/')} w wersji, {k.code('build/')} w sklonowanym repozytorium, z tym, na czym pracuje narzędzie.
       Twój agent zmienia te pliki, uruchamia build u siebie i zapisuje jedno i drugie w tej samej wersji. Ta platforma
       niczego nie buduje.
     </>
@@ -296,7 +296,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'To, co jest pisane tak, jak jest serwowane lub kompilowane, żadnej takiej przestrzeni nie potrzebuje. To, co build instaluje lub zachowuje dla siebie – na przykład node_modules – nigdy nie jest częścią wersji: pilnuje tego .gitignore w przestrzeni deweloperskiej.',
+    'To, co jest pisane tak, jak jest serwowane lub kompilowane, żadnego takiego folderu nie potrzebuje. To, co build instaluje lub zachowuje dla siebie – na przykład node_modules – nigdy nie jest częścią wersji: pilnuje tego .gitignore w folderze build.',
 
   storage: (k) => (
     <>
@@ -429,8 +429,8 @@ export const guide: Messages['guide'] = {
       dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze {k.code('Platform')}, więc w kodzie nie
       trzeba nic zmieniać.
       {' '}{k.code('Secret')} odczytuje tam zmienne środowiskowe o tej samej nazwie; wartości zostają tutaj.
-      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}, a przestrzeń deweloperska do{' '}
-      {k.code('dev')}.
+      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}, a folder build do{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} otwiera {k.code('database/database.db')} – pobrany projekt zawiera ten plik razem z
       rekordami, które zapisała twoja aplikacja.
     </>
@@ -471,7 +471,7 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami, przestrzenią deweloperską i
+      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami, folderem build i
       zmianą, którą wprowadziła.
       To, co aplikacja przechowuje – jej rekordy, zapisane pliki, wartości kluczy i haseł – nigdy nie jest publikowane,
       podobnie jak twoje prośby, sformułowane twoimi słowami, i to, kto korzysta z aplikacji. Po wyłączeniu strona

@@ -17,7 +17,7 @@ export const build: EditorMessages['build'] = {
     <>
       Cuando los recursos o el código de una versión los genera una herramienta de compilación (compilados, empaquetados
       o generados), los archivos a partir de los que se generan se guardan aquí, con cada versión: la carpeta{' '}
-      {code('dev/')} en un clon. Quien cambia la app ejecuta la compilación donde trabaja y guarda ambas cosas juntas;
+      {code('build/')} en un clon. Quien cambia la app ejecuta la compilación donde trabaja y guarda ambas cosas juntas;
       esta plataforma no compila nada. Lo que se escribe tal como se sirve o se compila no necesita nada de esto.
     </>
   ),

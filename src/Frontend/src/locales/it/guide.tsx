@@ -284,10 +284,10 @@ export const guide: Messages['guide'] = {
     <>
       Una parte di una lambda può essere prodotta da uno strumento di build invece di essere scritta così com’è servita o
       compilata: compilata, assemblata o generata. La versione contiene ciò che lo strumento produce, come asset o come
-      codice, e accanto a questo i file da cui lo produce, il suo {k.b('spazio di sviluppo')}:{' '}
-      {k.code('.lambda/dev/')} nella versione, {k.code('dev/')} in un clone, che contiene tutto ciò da cui lo strumento
-      parte. Il tuo agente modifica quei file, esegue la build dove lavora e salva entrambi nella stessa versione.
-      Questa piattaforma non costruisce niente.
+      codice, e accanto a questo i file da cui lo produce, la sua {k.b('cartella build')}:{' '}
+      {k.code('.lambda/build/')} nella versione, {k.code('build/')} in un clone, che contiene tutto ciò da cui lo
+      strumento parte. Il tuo agente modifica quei file, esegue la build dove lavora e salva entrambi nella stessa
+      versione. Questa piattaforma non costruisce niente.
     </>
   ),
   built2: (k) => (
@@ -300,7 +300,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'Ciò che è scritto così com’è servito o compilato non ne ha bisogno. Ciò che una build installa o tiene per sé, come node_modules, non fa mai parte di una versione: un .gitignore nello spazio di sviluppo lo tiene fuori.',
+    'Ciò che è scritto così com’è servito o compilato non ne ha bisogno. Ciò che una build installa o tiene per sé, come node_modules, non fa mai parte di una versione: un .gitignore nella cartella build lo tiene fuori.',
 
   storage: (k) => (
     <>
@@ -433,8 +433,8 @@ export const guide: Messages['guide'] = {
       accanto al programma, con gli stessi metodi, a parte in una cartella {k.code('Platform')}, quindi nel tuo codice non
       devi cambiare niente.
       {' '}{k.code('Secret')} lì legge le variabili d’ambiente con lo stesso nome; i valori restano qui. Anche la
-      documentazione e i test vengono con te, in {k.code('docs')} e {k.code('tests')}, e lo spazio di sviluppo in{' '}
-      {k.code('dev')}.
+      documentazione e i test vengono con te, in {k.code('docs')} e {k.code('tests')}, e la cartella build in{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} apre {k.code('database/database.db')}, che il download porta con sé insieme alle voci
       che la tua app ha conservato.
     </>
@@ -476,8 +476,8 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Viene pubblicata ogni versione, anche quelle precedenti, con la sua documentazione, i suoi test, il suo spazio di
-      sviluppo e la modifica che ha fatto. Quello che l’app conserva non viene mai pubblicato (le sue voci, i file che ha
+      Viene pubblicata ogni versione, anche quelle precedenti, con la sua documentazione, i suoi test, la sua cartella
+      build e la modifica che ha fatto. Quello che l’app conserva non viene mai pubblicato (le sue voci, i file che ha
       salvato, i valori delle sue chiavi e password), e nemmeno quello che hai chiesto con le tue parole o chi usa l’app.
       Se disattivi l’opzione, la pagina sparisce; le sue stelle restano, per quando pubblicherai di nuovo il codice.
     </>

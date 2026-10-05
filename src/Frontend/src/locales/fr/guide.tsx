@@ -287,8 +287,8 @@ export const guide: Messages['guide'] = {
     <>
       Une partie d’une lambda peut être produite par un outil de build plutôt qu’écrite telle qu’elle est servie ou
       compilée : compilée, assemblée ou générée. La version contient ce que l’outil produit - comme assets, ou comme
-      code - et à côté les fichiers à partir desquels il le produit, son {k.b('espace de développement')} :{' '}
-      {k.code('.lambda/dev/')} dans la version, {k.code('dev/')} dans un clone, qui contient tout ce dont l’outil part.
+      code - et à côté les fichiers à partir desquels il le produit, son {k.b('dossier de build')} :{' '}
+      {k.code('.lambda/build/')} dans la version, {k.code('build/')} dans un clone, qui contient tout ce dont l’outil part.
       Votre agent modifie ces fichiers, lance le build là où il travaille et enregistre les deux dans la même version.
       Cette plateforme ne construit rien.
     </>
@@ -303,7 +303,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'Ce qui est écrit tel qu’il est servi ou compilé n’en a pas besoin. Ce qu’un build installe ou conserve pour lui-même - node_modules, par exemple - ne fait jamais partie d’une version : un .gitignore dans l’espace de développement l’en exclut.',
+    'Ce qui est écrit tel qu’il est servi ou compilé n’en a pas besoin. Ce qu’un build installe ou conserve pour lui-même - node_modules, par exemple - ne fait jamais partie d’une version : un .gitignore dans le dossier de build l’en exclut.',
 
   storage: (k) => (
     <>
@@ -442,8 +442,8 @@ export const guide: Messages['guide'] = {
       fichiers sont repris exactement tels quels. {k.code('Workspace')} et {k.code('Assets')} deviennent deux dossiers à
       côté du programme, avec les mêmes méthodes, à part dans un dossier {k.code('Platform')} : rien à changer dans votre code.
       {' '}{k.code('Secret')} y lit les variables d’environnement du même nom ; les valeurs restent ici. La
-      documentation et les tests suivent dans {k.code('docs')} et {k.code('tests')}, et l’espace de développement dans{' '}
-      {k.code('dev')}.
+      documentation et les tests suivent dans {k.code('docs')} et {k.code('tests')}, et le dossier de build dans{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} ouvre {k.code('database/database.db')}, que le téléchargement contient avec les
       enregistrements gardés par votre application.
     </>
@@ -485,8 +485,8 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Chaque version est publiée, les plus anciennes aussi, avec sa documentation, ses tests, son espace de
-      développement et la modification qu’elle a apportée. Ce que garde l’application n’est jamais publié – ses
+      Chaque version est publiée, les plus anciennes aussi, avec sa documentation, ses tests, son dossier de build et
+      la modification qu’elle a apportée. Ce que garde l’application n’est jamais publié – ses
       enregistrements, les fichiers qu’elle a enregistrés, les valeurs de ses clés et mots de passe –, pas plus que ce
       que vous avez demandé avec vos propres mots, ni qui utilise l’application. Désactivez la publication et la page
       disparaît ; ses étoiles sont conservées pour le jour où vous publierez à nouveau le code.

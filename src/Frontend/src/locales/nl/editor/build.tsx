@@ -16,7 +16,7 @@ export const build: EditorMessages['build'] = {
   emptyText: (code) => (
     <>
       Waar de assets of de code van een versie door een buildtool worden gemaakt – gecompileerd, gebundeld of
-      gegenereerd – worden de bestanden waaruit ze zijn gemaakt hier bewaard, bij elke versie: de map {code('dev/')} in
+      gegenereerd – worden de bestanden waaruit ze zijn gemaakt hier bewaard, bij elke versie: de map {code('build/')} in
       een kloon. Wie de app wijzigt, draait de build op de plek waar hij werkt en slaat beide samen op; dit platform
       bouwt niets. Wat wordt geschreven zoals het wordt geserveerd of gecompileerd, heeft dat niet nodig.
     </>

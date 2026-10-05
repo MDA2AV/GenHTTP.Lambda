@@ -17,7 +17,7 @@ export const build: EditorMessages['build'] = {
     <>
       Lorsque les assets ou le code d’une version sont produits par un outil de build - compilés, assemblés ou
       générés -, les fichiers à partir desquels ils sont produits sont conservés ici, avec chaque version : le dossier{' '}
-      {code('dev/')} dans un clone. Celui qui modifie l’application lance le build là où il travaille et enregistre les
+      {code('build/')} dans un clone. Celui qui modifie l’application lance le build là où il travaille et enregistre les
       deux ensemble ; cette plateforme ne construit rien. Ce qui est écrit tel qu’il est servi ou compilé n’en a pas
       besoin.
     </>

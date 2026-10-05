@@ -287,8 +287,8 @@ export const guide: Messages['guide'] = {
     <>
       Bir lambda’nın bir kısmı, sunulduğu ya da derlendiği şekliyle yazılmak yerine bir derleme aracıyla - derlenerek,
       paketlenerek ya da üretilerek - oluşturulabilir. Sürüm, aracın ürettiği şeyi - statik dosyaları ya da kodu olarak -
-      ve yanında onları neyden ürettiğini, yani {k.b('geliştirme alanını')} tutar: sürümde {k.code('.lambda/dev/')}, bir
-      klonda {k.code('dev/')}; araç neyle çalışıyorsa onu barındırır. Ajanınız bu dosyaları değiştirir, derlemeyi
+      ve yanında onları neyden ürettiğini, yani {k.b('derleme klasörünü')} tutar: sürümde {k.code('.lambda/build/')}, bir
+      klonda {k.code('build/')}; araç neyle çalışıyorsa onu barındırır. Ajanınız bu dosyaları değiştirir, derlemeyi
       çalıştığı yerde yapar ve ikisini de aynı sürümde kaydeder. Bu platform hiçbir şey derlemez.
     </>
   ),
@@ -302,7 +302,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'Sunulduğu ya da derlendiği şekliyle yazılan şeylerin buna ihtiyacı yoktur. Bir derlemenin kendisi için kurduğu ya da sakladığı şeyler - örneğin node_modules - asla bir sürümün parçası olmaz: geliştirme alanındaki bir .gitignore onları dışarıda tutar.',
+    'Sunulduğu ya da derlendiği şekliyle yazılan şeylerin buna ihtiyacı yoktur. Bir derlemenin kendisi için kurduğu ya da sakladığı şeyler - örneğin node_modules - asla bir sürümün parçası olmaz: derleme klasöründeki bir .gitignore onları dışarıda tutar.',
 
   storage: (k) => (
     <>
@@ -438,8 +438,8 @@ export const guide: Messages['guide'] = {
       {k.code('Platform')} klasöründe iki klasör olur ve aynı metotlarla çalışır. Yani kodunuzda hiçbir şeyi
       değiştirmeniz gerekmez.
       {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır. Dokümantasyon ve testler
-      de {k.code('docs')} ve {k.code('tests')} klasörlerinde, geliştirme alanı ise{' '}
-      {k.code('dev')} klasöründe gelir.
+      de {k.code('docs')} ve {k.code('tests')} klasörlerinde, derleme klasörü ise{' '}
+      {k.code('build')} klasöründe gelir.
       {' '}{k.code('Database')} ise {k.code('database/database.db')} dosyasını açar; indirilen proje bu dosyayı
       uygulamanızın tuttuğu kayıtlarla birlikte getirir.
     </>
@@ -480,7 +480,7 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Her sürüm yayımlanır, öncekiler de; her biri dokümantasyonu, testleri, geliştirme alanı ve yaptığı değişiklikle
+      Her sürüm yayımlanır, öncekiler de; her biri dokümantasyonu, testleri, derleme klasörü ve yaptığı değişiklikle
       birlikte. Uygulamanın sakladıkları (kayıtları, kaydettiği dosyalar, anahtarlarının ve parolalarının değerleri)
       asla yayımlanmaz; kendi sözlerinizle ne istediğiniz ve uygulamayı kimlerin kullandığı da. Kapattığınızda sayfa
       kaldırılır; yıldızları ise yeniden yayımladığınızda geri gelmek üzere saklanır.

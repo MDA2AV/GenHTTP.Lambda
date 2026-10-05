@@ -16,7 +16,7 @@ export const build: EditorMessages['build'] = {
   emptyText: (code) => (
     <>
       Wo die Assets oder der Code einer Version von einem Build-Werkzeug erzeugt werden – kompiliert, gebündelt oder
-      generiert –, werden die Dateien, aus denen sie entstehen, hier mit jeder Version gespeichert: der Ordner {code('dev/')}
+      generiert –, werden die Dateien, aus denen sie entstehen, hier mit jeder Version gespeichert: der Ordner {code('build/')}
       in einem Klon. Wer die App ändert, führt den Build dort aus, wo er arbeitet, und speichert beides zusammen; diese
       Plattform baut nichts. Was so geschrieben ist, wie es ausgeliefert oder kompiliert wird, braucht nichts davon.
     </>

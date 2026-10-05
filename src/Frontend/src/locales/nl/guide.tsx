@@ -286,9 +286,9 @@ export const guide: Messages['guide'] = {
     <>
       Een deel van een lambda kan door een buildtool worden gemaakt in plaats van te worden geschreven zoals het wordt
       geserveerd of gecompileerd: gecompileerd, gebundeld of gegenereerd. De versie bevat wat de tool maakt – als assets
-      of als code – en ernaast de bestanden waaruit de tool het maakt, de {k.b('ontwikkelruimte')}:{' '}
-      {k.code('.lambda/dev/')} in de versie, {k.code('dev/')} in een kloon, met alles waarmee de tool werkt. Jouw agent
-      wijzigt die bestanden, draait de build op de plek waar hij werkt en slaat beide op in dezelfde versie. Dit
+      of als code – en ernaast de bestanden waaruit de tool het maakt, de {k.b('buildmap')}:{' '}
+      {k.code('.lambda/build/')} in de versie, {k.code('build/')} in een kloon, met alles waarmee de tool werkt. Jouw
+      agent wijzigt die bestanden, draait de build op de plek waar hij werkt en slaat beide op in dezelfde versie. Dit
       platform bouwt niets.
     </>
   ),
@@ -302,7 +302,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'Wat wordt geschreven zoals het wordt geserveerd of gecompileerd, heeft dat niet nodig. Wat een build installeert of voor zichzelf bewaart – node_modules bijvoorbeeld – hoort nooit bij een versie: een .gitignore in de ontwikkelruimte houdt het erbuiten.',
+    'Wat wordt geschreven zoals het wordt geserveerd of gecompileerd, heeft dat niet nodig. Wat een build installeert of voor zichzelf bewaart – node_modules bijvoorbeeld – hoort nooit bij een versie: een .gitignore in de buildmap houdt het erbuiten.',
 
   storage: (k) => (
     <>
@@ -438,8 +438,8 @@ export const guide: Messages['guide'] = {
       naast het programma, met dezelfde methodes, apart in een map {k.code('Platform')} - dus er hoeft niets in je code
       te veranderen.
       {' '}{k.code('Secret')} leest daar omgevingsvariabelen met dezelfde naam; de waarden blijven hier. De
-      documentatie en de tests komen mee in {k.code('docs')} en {k.code('tests')}, en de ontwikkelruimte in{' '}
-      {k.code('dev')}.
+      documentatie en de tests komen mee in {k.code('docs')} en {k.code('tests')}, en de buildmap in{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} opent {k.code('database/database.db')}, dat de download meelevert met de records die
       je app bewaarde.
     </>
@@ -481,7 +481,7 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Elke versie wordt gepubliceerd, ook de eerdere, met de documentatie, de tests, de ontwikkelruimte en de
+      Elke versie wordt gepubliceerd, ook de eerdere, met de documentatie, de tests, de buildmap en de
       wijziging die elke versie maakte. Wat de app bewaart, wordt nooit gepubliceerd – de records, de bestanden die hij
       opsloeg, de waarden van zijn sleutels en wachtwoorden – en ook niet wat je in je eigen woorden vroeg, of wie de
       app gebruikt. Zet je het uit, dan is de pagina weg; de sterren blijven bewaard voor als je de code opnieuw

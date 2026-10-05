@@ -284,8 +284,8 @@ export const guide: Messages['guide'] = {
     <>
       Parte de uma lambda pode ser feita por uma ferramenta de build, em vez de escrita do jeito que é servida ou
       compilada: compilada, empacotada ou gerada. A versão guarda o que a ferramenta faz, como assets ou como código, e
-      ao lado disso os arquivos a partir dos quais ela o faz, o seu {k.b('espaço de desenvolvimento')}:{' '}
-      {k.code('.lambda/dev/')} na versão, {k.code('dev/')} num clone, com tudo o que a ferramenta usa. O seu agente
+      ao lado disso os arquivos a partir dos quais ela o faz, a sua {k.b('pasta de build')}:{' '}
+      {k.code('.lambda/build/')} na versão, {k.code('build/')} num clone, com tudo o que a ferramenta usa. O seu agente
       altera esses arquivos, executa o build onde trabalha e salva os dois na mesma versão. Esta plataforma não constrói
       nada.
     </>
@@ -300,7 +300,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'O que é escrito do jeito que é servido ou compilado não precisa de nada disso. O que um build instala ou guarda para si, como o node_modules, nunca faz parte de uma versão: um .gitignore no espaço de desenvolvimento o deixa de fora.',
+    'O que é escrito do jeito que é servido ou compilado não precisa de nada disso. O que um build instala ou guarda para si, como o node_modules, nunca faz parte de uma versão: um .gitignore na pasta de build o deixa de fora.',
 
   storage: (k) => (
     <>
@@ -435,8 +435,8 @@ export const guide: Messages['guide'] = {
       do programa, com os mesmos métodos, separadas numa pasta {k.code('Platform')}, então nada no seu código precisa
       mudar.
       {' '}{k.code('Secret')} lê lá as variáveis de ambiente de mesmo nome; os valores ficam aqui. A documentação e os
-      testes vão junto, em {k.code('docs')} e {k.code('tests')}, e o espaço de desenvolvimento em{' '}
-      {k.code('dev')}.
+      testes vão junto, em {k.code('docs')} e {k.code('tests')}, e a pasta de build em{' '}
+      {k.code('build')}.
       {' '}{k.code('Database')} abre {k.code('database/database.db')}, que o download traz com os registros que o seu
       app guardou.
     </>
@@ -477,8 +477,8 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Todas as versões são publicadas, inclusive as anteriores, com a documentação, os testes, o espaço de
-      desenvolvimento e a mudança que cada uma fez. O que o app guarda nunca é publicado (os registros, os arquivos que
+      Todas as versões são publicadas, inclusive as anteriores, com a documentação, os testes, a pasta de build e
+      a mudança que cada uma fez. O que o app guarda nunca é publicado (os registros, os arquivos que
       ele salvou, os valores das chaves e senhas), nem o que você pediu com as suas próprias palavras, nem quem usa o
       app. Desligue a publicação e a página some; as estrelas ficam guardadas para quando você publicar de novo.
     </>

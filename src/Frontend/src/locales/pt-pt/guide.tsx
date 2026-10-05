@@ -283,9 +283,9 @@ export const guide: Messages['guide'] = {
     <>
       Parte de uma lambda pode ser feita por uma ferramenta de compilação em vez de escrita tal como é servida ou
       compilada: compilada, empacotada ou gerada. A versão guarda o que a ferramenta faz - como assets ou como código - e,
-      a seu lado, os ficheiros a partir dos quais o faz, o seu {k.b('espaço de desenvolvimento')}:{' '}
-      {k.code('.lambda/dev/')} na versão, {k.code('dev/')} num clone, com tudo aquilo com que a ferramenta trabalha. O
-      teu agente altera esses ficheiros, executa a compilação onde trabalha e guarda ambos na mesma versão. Esta
+      a seu lado, os ficheiros a partir dos quais o faz, a sua {k.b('pasta de compilação')}:{' '}
+      {k.code('.lambda/build/')} na versão, {k.code('build/')} num clone, com tudo aquilo com que a ferramenta trabalha.
+      O teu agente altera esses ficheiros, executa a compilação onde trabalha e guarda ambos na mesma versão. Esta
       plataforma não compila nada.
     </>
   ),
@@ -299,7 +299,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   builtAside:
-    'O que é escrito tal como é servido ou compilado não precisa de nada disto. O que uma compilação instala ou guarda para si - o node_modules, por exemplo - nunca faz parte de uma versão: um .gitignore no espaço de desenvolvimento mantém-no de fora.',
+    'O que é escrito tal como é servido ou compilado não precisa de nada disto. O que uma compilação instala ou guarda para si - o node_modules, por exemplo - nunca faz parte de uma versão: um .gitignore na pasta de compilação mantém-no de fora.',
 
   storage: (k) => (
     <>
@@ -433,7 +433,7 @@ export const guide: Messages['guide'] = {
       pastas ao lado do programa, com os mesmos métodos, à parte numa pasta {k.code('Platform')}, por isso não tens de
       mudar nada no teu código.
       {' '}{k.code('Secret')} lê aí as variáveis de ambiente com o mesmo nome; os valores ficam cá. A documentação e os
-      testes vêm também, em {k.code('docs')} e {k.code('tests')}, e o espaço de desenvolvimento em {k.code('dev')}.
+      testes vêm também, em {k.code('docs')} e {k.code('tests')}, e a pasta de compilação em {k.code('build')}.
       {' '}{k.code('Database')} abre {k.code('database/database.db')}, que a transferência traz com os registos que a
       tua app guardou.
     </>
@@ -474,8 +474,8 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Todas as versões são publicadas, incluindo as anteriores, com a documentação, os testes, o espaço de
-      desenvolvimento e a alteração que cada uma fez. O que a app guarda nunca é publicado (os registos, os ficheiros
+      Todas as versões são publicadas, incluindo as anteriores, com a documentação, os testes, a pasta de compilação e
+      a alteração que cada uma fez. O que a app guarda nunca é publicado (os registos, os ficheiros
       que guardou, os valores das chaves e palavras-passe), nem o que pediste pelas tuas próprias palavras, nem quem
       usa a app. Desliga a publicação e a página desaparece; as estrelas ficam guardadas para quando a voltares a
       ligar.

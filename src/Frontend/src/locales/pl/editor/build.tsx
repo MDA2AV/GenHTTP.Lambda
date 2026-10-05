@@ -16,7 +16,7 @@ export const build: EditorMessages['build'] = {
   emptyText: (code) => (
     <>
       Jeśli zasoby lub kod wersji powstają w narzędziu do budowania – są kompilowane, pakowane lub generowane – pliki,
-      z których powstają, są przechowywane tutaj, z każdą wersją: to folder {code('dev/')} w sklonowanym repozytorium.
+      z których powstają, są przechowywane tutaj, z każdą wersją: to folder {code('build/')} w sklonowanym repozytorium.
       Kto zmienia aplikację, uruchamia build u siebie i zapisuje jedno i drugie razem; ta platforma niczego nie
       buduje. To, co jest pisane tak, jak jest serwowane lub kompilowane, żadnych takich plików nie potrzebuje.
     </>

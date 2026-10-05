@@ -16,7 +16,7 @@ export const build: EditorMessages['build'] = {
   emptyText: (code) => (
     <>
       Quando gli asset o il codice di una versione sono prodotti da uno strumento di build (compilati, assemblati o
-      generati), i file da cui sono prodotti si conservano qui, con ogni versione: la cartella {code('dev/')} in un
+      generati), i file da cui sono prodotti si conservano qui, con ogni versione: la cartella {code('build/')} in un
       clone. Chi modifica l’app esegue la build dove lavora e salva entrambi insieme; questa piattaforma non
       costruisce niente. Ciò che è scritto così com’è servito o compilato non ne ha bisogno.
     </>

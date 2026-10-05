@@ -16,7 +16,7 @@ export const build: EditorMessages['build'] = {
   emptyText: (code) => (
     <>
       Jika aset atau kode sebuah versi dibuat oleh alat build - dikompilasi, digabungkan, atau dihasilkan - file
-      bahan pembuatnya disimpan di sini, bersama setiap versi: folder {code('dev/')} di sebuah kloning. Siapa pun yang
+      bahan pembuatnya disimpan di sini, bersama setiap versi: folder {code('build/')} di sebuah kloning. Siapa pun yang
       mengubah aplikasi menjalankan build di tempatnya bekerja dan menyimpan keduanya sekaligus; platform ini tidak
       membangun apa pun. Yang ditulis apa adanya untuk disajikan atau dikompilasi tidak membutuhkannya.
     </>
