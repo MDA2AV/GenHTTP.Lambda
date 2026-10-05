@@ -26,13 +26,13 @@ import {
 } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { AdminTab } from '../control/AdminTab';
+import { BuildTab } from '../control/BuildTab';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
 import type { Busy, Control, FeatureControl, FeatureView, Rejection } from '../control/context';
 import { ContextTab } from '../control/ContextTab';
 import { DataTab } from '../control/DataTab';
 import { DeploymentsTab } from '../control/DeploymentsTab';
-import { DevelopmentTab } from '../control/DevelopmentTab';
 import { DomainTab } from '../control/DomainTab';
 import { BaseDialog, DeleteFeatureDialog, MergeDialog, NewFeatureDialog, NotesDialog } from '../control/FeatureDialogs';
 import { FeaturesTab } from '../control/FeaturesTab';
@@ -61,10 +61,10 @@ interface Props {
 }
 
 type SectionId =
-  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'development' | 'tests' | 'files' | 'data' | 'versions' | 'deployments' | 'stats'
+  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'build' | 'tests' | 'files' | 'data' | 'versions' | 'deployments' | 'stats'
   | 'logs' | 'showcase' | 'source' | 'domain' | 'history' | 'admin';
 
-type GroupId = 'build' | 'program' | 'run' | 'sharing';
+type GroupId = 'develop' | 'program' | 'run' | 'sharing';
 
 /*
  * The full view's sections, in groups, because fifteen of them in one list
@@ -79,8 +79,8 @@ type GroupId = 'build' | 'program' | 'run' | 'sharing';
  * reading a demo included. Then how people find it and what they get to see
  * of it: the showcase, its published source and its domain - right under
  * what the lambda is, since those are what it is to everybody else. Then
- * where a change is made: Change and the drafts, the code, what the front end
- * is built from where a toolchain builds it - there only where it is - and
+ * where a change is made: Change and the drafts, the code, what it is built
+ * from where a build tool makes some of it - there only where it does - and
  * the tests that say whether a change works. Then the program and what it keeps, side
  * by side - the files of a version and the data of the lambda are the two
  * halves of what a lambda holds, and somebody looking for one is best shown
@@ -90,7 +90,7 @@ type GroupId = 'build' | 'program' | 'run' | 'sharing';
 const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: null, sections: ['overview', 'docs'] },
   { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
-  { id: 'build', sections: ['change', 'features', 'code', 'development', 'tests'] },
+  { id: 'develop', sections: ['change', 'features', 'code', 'build', 'tests'] },
   { id: 'program', sections: ['files', 'data', 'versions'] },
   { id: 'run', sections: ['deployments', 'stats', 'logs'] },
 ];
@@ -99,13 +99,13 @@ const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
 
 /*
  * What a feature is worked on with: what it is, what is written about it,
- * its code, what its front end is built from, its tests, its copy of the
- * data and what its preview said.
+ * its code, what it is built from, its tests, its copy of the data and what
+ * its preview said.
  * The rest - the showcase, the domain, the figures, the deployments -
  * belongs to the lambda, which the feature leaves alone until it is put
  * online.
  */
-const FEATURE_VIEWS: FeatureView[] = ['overview', 'docs', 'code', 'development', 'tests', 'data', 'logs'];
+const FEATURE_VIEWS: FeatureView[] = ['overview', 'docs', 'code', 'build', 'tests', 'data', 'logs'];
 
 /** The views something can be written and left unsaved in. */
 const WRITABLE = ['code', 'docs', 'tests'];
@@ -491,9 +491,9 @@ export function Editor({ theme }: Props) {
   const keeps = holding != null
     && (holding.databaseTables > 0 || holding.workspaceFiles > 0 || holding.secrets > 0 || missingSecrets.length > 0);
 
-  // a development space in the newest version, or the one online: what the
-  // front end is built from, which most lambdas have none of
-  const develops = summary != null && (summary.development.newestFiles > 0 || summary.development.files > 0);
+  // what the newest version, or the one online, is built from - which most
+  // lambdas keep nothing of, nothing of them being built
+  const builds = summary != null && (summary.development.newestFiles > 0 || summary.development.files > 0);
 
   // the code connects to a database that is switched off - the agent's to
   // switch on, so the simple view is not asked about it
@@ -507,8 +507,8 @@ export function Editor({ theme }: Props) {
     (hidden && id === 'domain')
     || (demo && (id === 'showcase' || id === 'source' || id === 'change' || id === 'features'))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
-    // what the assets are built from, while there is something of it to read
-    || (id === 'development' && section !== 'development' && !develops)
+    // what it is built from, while there is something of it to read
+    || (id === 'build' && section !== 'build' && !builds)
     // the simple view has the data once the app keeps any, or waits for a key
     || (id === 'data' && simple && section !== 'data' && !keeps)
     // the full view has the versions for it - known once the lambda is,
@@ -633,8 +633,8 @@ export function Editor({ theme }: Props) {
     browse: (version) => go(`${base}/files${version != null ? `?version=${version}` : ''}`),
     openContext: (area, version) =>
       go(open && version == null ? featurePath(open.key, area) : `${base}/${area}${version != null ? `?version=${version}` : ''}`),
-    openDevelopment: (version) =>
-      go(open && version == null ? featurePath(open.key, 'development') : `${base}/development${version != null ? `?version=${version}` : ''}`),
+    openBuild: (version) =>
+      go(open && version == null ? featurePath(open.key, 'build') : `${base}/build${version != null ? `?version=${version}` : ''}`),
     agent,
     openData: (kind, set) => go(`${featureKey && open ? featurePath(featureKey, 'data') : `${base}/data`}${kind ? `/${kind}` : ''}${set ? `?set=${encodeURIComponent(set)}` : ''}`),
     startFeature: (from, files) => setCreating({ base: from, files }),
@@ -893,7 +893,7 @@ export function Editor({ theme }: Props) {
           // one view is no choice, so the simple view has no row for it
           !simple && (
           <nav aria-label={t.features.viewsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-            {FEATURE_VIEWS.filter((view) => view !== 'development' || develops || featureView === view).map((view) => {
+            {FEATURE_VIEWS.filter((view) => view !== 'build' || builds || featureView === view).map((view) => {
               const to = featurePath(featureKey, view);
               const current = featureView === view;
 
@@ -1037,8 +1037,8 @@ export function Editor({ theme }: Props) {
             <Workbench key={open.key} control={control} onDirty={onDirty} />
           ) : featureView === 'docs' || featureView === 'tests' ? (
             <ContextTab key={`${open.key}-${featureView}`} control={control} area={featureView} onDirty={onDirty} />
-          ) : featureView === 'development' ? (
-            <DevelopmentTab key={open.key} control={control} />
+          ) : featureView === 'build' ? (
+            <BuildTab key={open.key} control={control} />
           ) : featureView === 'data' ? (
             <DataTab key={open.key} control={control} kind={dataKind} onKind={(kind) => go(`${featurePath(open.key, 'data')}/${kind}`)} />
           ) : featureView === 'logs' ? (
@@ -1050,8 +1050,8 @@ export function Editor({ theme }: Props) {
           <Workbench control={control} onDirty={onDirty} />
         ) : section === 'docs' || section === 'tests' ? (
           <ContextTab key={section} control={control} area={section} onDirty={onDirty} />
-        ) : section === 'development' ? (
-          <DevelopmentTab control={control} />
+        ) : section === 'build' ? (
+          <BuildTab control={control} />
         ) : section === 'features' && !demo ? (
           <FeaturesTab control={control} />
         ) : section === 'change' && !demo ? (

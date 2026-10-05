@@ -31,8 +31,8 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// things: the documentation in docs/ and the tests in tests/. Neither is
 /// compiled into the program or copied into its container, as neither was
 /// on the platform. Nor is its development space, in dev/ - what its assets
-/// are built from - which the project does not even look into: a project
-/// in there, built once, holds what its toolchain installed.
+/// or code are built from - which the project does not even look into: once
+/// built, it may hold whatever its build tool installed.
 ///
 /// A lambda with a database takes it along: what the app kept is written into
 /// database/, and the project references SQLite - Entity Framework Core where
@@ -315,9 +315,9 @@ public static class ProjectPacker
     /// the build, because a test script ending in .cs would otherwise be
     /// compiled into the program the way nothing in them ever was. The
     /// development space is kept out of every item the build gathers, not
-    /// only out of what it compiles: whatever was built in there holds what
-    /// its toolchain installed - tens of thousands of files every build would
-    /// otherwise walk, and a project of its own the build would trip over.
+    /// only out of what it compiles: once built, it may hold whatever its
+    /// build tool installed - tens of thousands of files every build would
+    /// otherwise walk - and files of its own the build would trip over.
     /// </remarks>
     /// <param name="context">The folders the documentation and the tests are in, if there are any</param>
     /// <param name="development">Whether there is a development space</param>
@@ -434,7 +434,7 @@ public static class ProjectPacker
 
         if (development)
         {
-            written += "\n//\n// dev/ is what its assets are built from, as it was kept beside it on the\n// platform - built there by whoever changed it, never by the platform.";
+            written += "\n//\n// dev/ is what its assets or code are built from, as it was kept beside it on\n// the platform - built by whoever changed it, never by the platform.";
         }
 
         var mounted = database != null ? " -v \"$PWD/database:/app/database\"" : string.Empty;
@@ -519,8 +519,8 @@ public static class ProjectPacker
             // reads, from environment variables of the same name, and the Database it keeps
             // its records in (database/database.db, made empty the first time it connects).
             // docs/ says what the app is for and why it is built the way it is, and tests/
-            // how it is tested. dev/, where there is one, is what the assets are built
-            // from - built by whoever changes it, never by the platform.
+            // how it is tested. dev/, where there is one, is what the assets or code are
+            // built from - built by whoever changes it, never by the platform.
 
             using GenHTTP.Engine.Internal;
             using GenHTTP.Modules.Practices;

@@ -1,10 +1,10 @@
 import { change } from './change';
 import { clone } from './clone';
+import { build } from './build';
 import { code } from './code';
 import { context } from './context';
 import { data } from './data';
 import { deployments } from './deployments';
-import { development } from './development';
 import { domain } from './domain';
 import { features } from './features';
 import { files } from './files';
@@ -44,7 +44,7 @@ export const editor = {
   openSource,
   domain,
   code,
-  development,
+  build,
   clone,
   tabs,
 };

@@ -71,14 +71,14 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
 /// and because no asset has ever been allowed a name starting with one, so no
 /// version saved before this can have meant anything else by it.
 ///
-/// The same folder holds the development space in <c>dev/</c>: what the
-/// assets are built from where a toolchain builds them - the project of a
-/// front end, its sources, its configuration and its lock file. Whoever
-/// builds it - an agent, where it works - keeps the project and what it
+/// The same folder holds the development space in <c>dev/</c>: the files the
+/// assets, or the code, are built from with a build tool - whatever that
+/// tool works from, which nothing here assumes anything about. Whoever
+/// builds it - an agent, where it works - keeps those files and what it
 /// built in the same version; the platform never builds anything. Kept like
 /// the context and never compiled or served either, but a kind of its own:
-/// a project rather than pages, with the names a project has - dot files
-/// included - and read rather than written by the editor.
+/// files for a tool rather than pages, with the names such files have - dot
+/// files included - and read rather than written by the editor.
 /// </remarks>
 public static class LambdaSource
 {
@@ -130,9 +130,8 @@ public static class LambdaSource
     public static readonly IReadOnlyList<string> ExpectedContext = [ProductDoc, DecisionsDoc, TestingDoc];
 
     /// <summary>
-    /// The development space of a version: what its assets are built from -
-    /// the project of a front end with its sources and its lock file, or of
-    /// whatever else a toolchain turns into them.
+    /// The development space of a version: the files its assets, or its code,
+    /// are built from with a build tool.
     /// </summary>
     public const string DevelopmentFolder = ".lambda/dev/";
 
@@ -530,16 +529,15 @@ public static class LambdaSource
     /// What is wrong with a name in the development space, if anything.
     /// </summary>
     /// <remarks>
-    /// Wider than the names of the context, because these are the names a
-    /// project has, which nobody here chose: dot files - a .gitignore, an
-    /// .npmrc - and the brackets, parentheses and plus signs routers read
-    /// off the names of files ([id].tsx, (auth)/, +page.svelte). Still names
-    /// that become real files anywhere - in a zip, a clone, an exported
-    /// project on Windows - so no spaces and nothing a shell or a file
-    /// system reads as something else.
+    /// Wider than the names of the context, because these are names a build
+    /// tool's files have, which nobody here chose: dot files, and brackets,
+    /// parentheses and plus signs, which some tools read meaning off. Still
+    /// names that become real files anywhere - in a zip, a clone, an
+    /// exported project on Windows - so no spaces and nothing a shell or a
+    /// file system reads as something else.
     ///
-    /// What a toolchain installs, caches or builds is not refused by name
-    /// here, since every toolchain names it differently: the space says so
+    /// What a build installs, caches or writes for itself is not refused by
+    /// name here, since every tool names it differently: the space says so
     /// itself, in its .gitignore files, which a clone and a zip put back
     /// follow (see <see cref="IgnoredPaths"/>). What is named in a save is
     /// kept, as git keeps a file that was added on purpose.

@@ -118,7 +118,7 @@ export const features = {
     overview: 'Draft',
     docs: 'Documentation',
     code: 'Code',
-    development: 'Development',
+    build: 'Build',
     tests: 'Tests',
     data: 'Test data',
     logs: 'Logs',

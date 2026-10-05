@@ -86,7 +86,7 @@ export function ContextTab({ control, area, onDirty }: {
 
   const load = useCallback(async () => {
     try {
-      // its own folder only: the development space beside it can be a project of hundreds of files
+      // its own folder only: the development space beside it may hold any number of files
       const [mine, theirs] = await Promise.all([
         feature
           ? api.feature.get(control.privateKey, feature.key, folder).then((content) => content.files)

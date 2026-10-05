@@ -384,7 +384,7 @@ public sealed class DevelopmentSpaceTests
         Assert.AreEqual(Package, await File.ReadAllTextAsync(Path.Combine(project, "dev/web/package.json")), "it is where a project keeps it");
         Assert.AreEqual(Readme, await File.ReadAllTextAsync(Path.Combine(project, "dev/README.md")));
         Assert.Contains("dev/", await File.ReadAllTextAsync(Path.Combine(project, ".dockerignore")), "and stays out of the image");
-        Assert.Contains("dev/ is what its assets are built from", await File.ReadAllTextAsync(Path.Combine(project, "Program.cs")));
+        Assert.Contains("dev/ is what its assets or code are built from", await File.ReadAllTextAsync(Path.Combine(project, "Program.cs")));
 
         var (exit, output) = await BuildAsync(project);
 
@@ -410,7 +410,7 @@ public sealed class DevelopmentSpaceTests
 
         Assert.Contains("DefaultItemExcludes", git.Read("cloned", "cloned.csproj"), "the build does not look into it");
         Assert.Contains("dev/", git.Read("cloned", ".dockerignore"));
-        Assert.Contains("## Building the front end: dev/", git.Read("cloned", "AGENTS.md"), "the agent working here is told how");
+        Assert.Contains("## What is built: dev/", git.Read("cloned", "AGENTS.md"), "the agent working here is told how");
 
         // what a build installed stays out, by the project's own .gitignore
         git.Write("cloned", "dev/web/node_modules/vite/package.json", "{}");

@@ -18,13 +18,13 @@ export const versions = {
   groups: {
     code: 'Code',
     assets: 'Assets',
-    development: 'Development space',
+    build: 'Build',
     context: 'Documentation and tests',
   },
   browse: 'Browse its files',
   docs: 'Read its documentation',
-  /** Opens what a version's assets are built from, where it has a development space. */
-  development: 'See what it is built from',
+  /** Opens what a version is built from, where it keeps that. */
+  build: 'See what it is built from',
   edit: 'Edit from here',
   feature: 'Start a draft from here',
   featureTitle: 'Try a change on a copy of this version, without touching what is online',

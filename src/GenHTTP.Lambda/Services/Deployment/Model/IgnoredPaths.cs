@@ -7,13 +7,12 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 /// What the <c>.gitignore</c> files of a development space leave out of it.
 /// </summary>
 /// <remarks>
-/// What a toolchain installs, caches and builds - node_modules, target, a
-/// virtual environment, the build's own output - is named differently by
-/// every one of them, and the project already says which it is: in its
-/// .gitignore, which its template usually comes with. So the platform reads
-/// that rather than keeping a list of its own. A clone follows it because
-/// git does; this is what a zip put back follows, where the files were
-/// gathered from a folder somebody built in.
+/// What a build installs, caches and writes for itself - node_modules, target
+/// or a virtual environment, for example - is named differently by every
+/// tool, and the space says which it is: in its .gitignore files. So the
+/// platform reads those rather than keeping a list of its own. A clone
+/// follows them because git does; this is what a zip put back follows,
+/// where the files were gathered from a folder somebody built in.
 ///
 /// The rules are git's (<c>gitignore(5)</c>): a pattern without a slash
 /// matches a name at any depth, one with a slash is anchored to the folder

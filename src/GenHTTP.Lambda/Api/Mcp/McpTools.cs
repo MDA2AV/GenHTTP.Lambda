@@ -103,7 +103,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              }),
 
         Tool("write_code", "Save all files", Effect.Save,
-             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are kept with the version and never compiled or served - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and .lambda/dev/ is its development space, what the assets are built from where you build them with a toolchain (platform_guide, development); any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations shipped here in migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
+             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. .cs files are compiled - lambda.cs returns the handler, others hold types; files under .lambda/ are kept with the version and never compiled or served - docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and .lambda/dev/ is its development space, the files you build its assets or code from with a build tool (platform_guide, development); any other file is an asset, served as is and reachable as Assets: the whole front end (pages, scripts, styles, icons) goes here, as part of the program. What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations shipped here in migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
              new JsonObject
              {
                  ["type"] = "object",
@@ -303,7 +303,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                      ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
                      ["version"] = Field("integer", "Defaults to the newest."),
                      ["feature"] = Field("string", "Read this feature - its files, its base, and which newer versions it would have to take in before it can be merged - instead of a version."),
-                     ["file"] = Field("string", $"Return only this file, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the zip has it. Any file of the version, '.lambda/tests/smoke.mjs' and '.lambda/dev/web/package.json' included.")
+                     ["file"] = Field("string", $"Return only this file, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the zip has it. Any file of the version, '.lambda/tests/smoke.mjs' and '.lambda/dev/README.md' included.")
                  },
                  ["required"] = new JsonArray("privateKey")
              }),
@@ -615,7 +615,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             return null;
         }
 
-        return $"What this replaced had a development space - {had} files in {LambdaSource.DevelopmentFolder}, what its assets are built from - and this save has none, since write_code replaces every file. "
+        return $"What this replaced had a development space - {had} files in {LambdaSource.DevelopmentFolder}, what its assets or code are built from - and this save has none, since write_code replaces every file. "
              + "If that was not meant, save them again, or make changes with change_code, which keeps every file it is not told about.";
     }
 
@@ -1790,7 +1790,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         return new
         {
-            what = "What the assets of this version are built from. The platform builds nothing: whoever changes it builds it where they work and saves the sources and what they built together - platform_guide, development.",
+            what = "What the assets or the code of this version are built from. The platform builds nothing: whoever changes it builds it where they work and saves it with what was built - platform_guide, development.",
             readme = readme == null
                 ? null
                 : readme.Code.Length <= DevelopmentReadmeBudget
@@ -2099,7 +2099,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             threeThings = "A lambda holds versions, features and data, and they live differently. Versions are the program as it was saved. Features are changes being worked on beside it. Data is what the program keeps. Getting this right is most of getting a lambda right.",
             versions = new
             {
-                what = "A version is the program: every .cs file and every asset - index.html, scripts, styles, icons, the whole front end - and, beside it in .lambda/, what is written about it: its documentation and its tests (see documentationAndTests) - and, where the assets are built with a toolchain, what they are built from: its development space (see development). They are saved, deployed and rolled back together, and nothing else is in a version.",
+                what = "A version is the program: every .cs file and every asset - index.html, scripts, styles, icons, the whole front end - and, beside it in .lambda/, what is written about it: its documentation and its tests (see documentationAndTests) - and, where its assets or code are built with a tool, what they are built from: its development space (see development). They are saved, deployed and rolled back together, and nothing else is in a version.",
                 immutable = "A version never changes once it is saved. Deploying puts one online at the lambda's address, deploying an older one rolls back, and every version can be read back and put online again exactly as it was.",
                 kept = $"The newest {tiers.Of(LambdaTier.Free).Versions} versions of a free lambda are kept, {tiers.Of(LambdaTier.Premium).Versions} of a premium one; older ones are removed, never the one online. Fewer, meaningful versions keep more of the history that matters - one per thing the user asked for, not one per attempt."
             },
@@ -2306,30 +2306,35 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             example = "Every demo serves its front end like this, from web/ - read_lambda demo-crud.",
             notFromTheWorkspace = "Do not upload the app's own pages to the workspace with upload_file. They would not be versioned: a rollback would keep the new pages over the old API, and a feature would work on a copy of them that its merge throws away. The workspace is for data.",
             underTheHood = "App() is SinglePageApplication.From(tree).ServerSideRouting() over Assets.Tree().",
-            builtWithATool = "A front end written with a toolchain - React, Vue or Svelte with Vite, TypeScript, Tailwind - is built where you work, and what the build makes ships as assets like any other file; its project is kept beside them in the development space - see development."
+            builtWithATool = "A front end built with a tool where you work ships what the tool made as assets like any other file; what it was made from is kept beside them in the development space - see development."
         },
         development = new
         {
-            what = "A version may keep a development space in .lambda/dev/ - dev/ in a clone: what its assets are built from, where a toolchain builds them - the project of a front end with its package.json, its sources, its configuration and its lock file. Kept with the version like its documentation - saved, compared in the history, rolled back, copied into a feature and merged with it, in the zip, the clone, the export and a published source - and never compiled, never served.",
-            when = "Only when the assets are built - React, Vue, Svelte or Angular, TypeScript, Tailwind, a bundler - and only where you can build them: a shell with the toolchain, where you work. A front end of plain HTML, CSS and JavaScript is its own source and needs none: write it straight into the assets.",
+            what = "A version may keep a development space in .lambda/dev/ - dev/ in a clone: the files its assets, or its code, are built from with a build tool - sources, scripts, configuration, whatever the tool works from. Kept with the version like its documentation - saved, compared in the history, rolled back, copied into a feature and merged with it, in the zip, the clone, the export and a published source - and never compiled, never served. Nothing about its contents is assumed: it holds what the build needs.",
+            when = "Only when something of the version is built from other files by a tool you run, and only where you can run it: a shell with the tool, where you work. What is written as it is served or compiled - plain HTML, CSS and JavaScript, C# - is its own source and needs none.",
             flow = new[]
             {
-                "Change the sources in the development space.",
-                "Build them where you work - npm ci, then npm run build, or whatever the project uses.",
-                "The build writes into a folder of the assets of its own, emptied on every build so nothing of an older build lingers.",
-                "Save the sources and what they built together, in one version or one feature: a clone commits both, a zip carries both, write_code and change_code take both.",
+                "Change the files in the development space.",
+                "Run the build where you work.",
+                "Have it write what it makes into the program - into the assets, or code beside lambda.cs - replacing what an earlier build wrote, so nothing of it lingers.",
+                "Save the files and what was built from them together, in one version or one feature: a clone commits both, a zip carries both, write_code and change_code take both.",
                 "Deploy it, and try it - a feature at its preview address."
             },
-            nothingIsBuiltHere = "The platform never builds anything, never runs a package manager, and never checks that the assets are what the sources build to. A change of the sources that is not built changes nothing visitors get; built and not saved, it is not there either.",
-            layout = "In a clone: dev/web/ for the project and assets/web/ for what it builds, served with Assets.App(\"web\") - from dev/web, Vite's build.outDir is '../../assets/web', with emptyOutDir: true. In the zip of a version or a feature the same files are .lambda/dev/web/ and web/ at the root - from .lambda/dev/web that is '../../../web' - so a build set up for one layout writes to the wrong place in the other. Work in a clone where you can, and say in the README which layout the build is set up for.",
-            relative = "What the build writes is served below /lambda/{publicKey}/, at the root of a domain of its own and at /features/{feature}/, so it refers to its files relatively: Vite's base './', and the like in other tools (a homepage of '.', a relative base href). A client-side router uses the hash (#/items/42): from a deeper path the relative addresses would miss.",
-            gitignore = "Give the project a .gitignore for what its toolchain installs, caches and builds - node_modules/, dist/, .svelte-kit/, target/, .venv/ - which most templates come with. A clone leaves that out of commits by it, and a zip put back leaves out what it ignores. None of it is part of a version: the lock file says what to install again.",
-            readme = $"Write {LambdaSource.DevelopmentReadme}: how it is built and where the build goes - the commands, in a few lines. The next agent builds from it, the owner reads it in the editor, and read_lambda hands it over. Note the decision itself - that the front end is built, from what - in .lambda/docs/decisions.md like any other.",
+            nothingIsBuiltHere = "The platform never builds anything, never runs a tool or installs what a build needs, and never checks that the program is what the development space builds to. A change in the development space that is not built changes nothing; built and not saved, it is not there either.",
+            layout = "In a clone the development space is dev/ and the assets are assets/; in the zip of a version or a feature they are .lambda/dev/ and the root, so a build that writes to a relative path is set up for one of the two and writes to the wrong place in the other. Work in a clone where you can, and say in the README which layout the build is set up for.",
+            gitignore = "What a build installs, caches or writes for itself is no part of a version - for example node_modules/, target/, .venv/, a cache folder. Keep it out with a .gitignore in the development space: a clone leaves it out of commits by it, and a zip put back leaves out what it ignores.",
+            readme = $"Write {LambdaSource.DevelopmentReadme}: how it is built and where the build goes - the commands, in a few lines. The next agent builds from it, the owner reads it in the editor, and read_lambda hands it over. Note the decision itself in .lambda/docs/decisions.md like any other.",
+            pitfalls = new[]
+            {
+                "What a build writes into the assets is served below /lambda/{publicKey}/, at the root of a domain of its own and at /features/{feature}/: it refers to its files relatively, as every page does (see paths) - a bundler set to an absolute base such as '/' is the usual way this goes wrong.",
+                "Changing what a build wrote instead of what it is built from: the next build undoes it.",
+                "Leaving out of a save what the build wrote anew - files named after their content, say: the version then refers to files it does not have."
+            },
             reading = "read_lambda names its files and hands over its README; file reads one. A clone or the zip of the version has all of it.",
-            notSecret = "It is part of the version: every clone, every export and - once published - everybody reads it. No key or password in it, .env files included: what the browser is given is public anyway, and what it must not see is a secret the server reads.",
-            names = "The names a project has, dot files included: letters, digits and - _ . + @ ( ) [ ] { } $ ~, no spaces. Plain files only: a script is run with sh or node, never as an executable, which a push refuses.",
-            size = "It counts towards what the assets of a version may come to - its sources and its lock file, not what they install.",
-            changingALambdaThatHasOne = "Its front end is built from the development space: change the sources and build them, never what the build wrote - the next build would undo it. Without a shell to build with, leave the front end and the development space alone and say why."
+            notSecret = "It is part of the version: every clone, every export and - once published - everybody reads it. No key or password in it, .env files included.",
+            names = "Letters, digits and - _ . + @ ( ) [ ] { } $ ~, dot files included, no spaces. Plain files only: a script is run through its interpreter, never as an executable, which a push refuses.",
+            size = "It counts towards what the assets of a version may come to.",
+            changingALambdaThatHasOne = "What is built from the development space is changed there and built again, never in what the build wrote. Without a shell to build with, leave both alone and say why."
         },
         liveUpdates = new
         {
@@ -2436,8 +2441,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             "Concurrent writes to one socket corrupt it. Guard broadcasts with a semaphore - taken with await semaphore.WaitAsync(), never Wait().",
             "Waiting for a task with .Result, .Wait() or .GetAwaiter().GetResult() is refused: it would hang the thread the task has to finish on. Await it - see waiting.",
             "A relative og:image: the shared link shows no picture. It takes the full address - see beingFound.",
-            "A front end built with Vite and its default base '/': its scripts are asked for at the root of the host, which below /lambda/{publicKey}/ is not the lambda. Build with base './' - see development.",
-            "Sources in .lambda/dev/ changed and not built, or a change made in what the build wrote: visitors get the assets, and the next build undoes a change made there. Build, and save the sources and what they built together - see development.",
+            "Files in .lambda/dev/ changed and not built, or a change made in what a build wrote, which the next build undoes. Build, and save both together - see development.",
             "REST routes serialize camel case; match that on sockets.",
             "Your own type called e.g. File is fine; only the refused framework type of that name is blocked.",
             "Ship stylesheets and scripts as assets, not string constants: a raw string literal ends at the first \"\"\", and assets cost no code budget."

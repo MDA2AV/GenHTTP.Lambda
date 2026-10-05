@@ -22,9 +22,9 @@ import { isAsset, isCode, isContext, isDevelopment } from './written';
  * What is written about the version - its documentation and its tests - is
  * shown too, as the third thing it holds, never compiled and never served:
  * this is where all of a version's files are, and its own sections are where
- * it is read. So is what its assets are built from, the development space,
- * as the fourth - there even where a version has none, as the one place it
- * is said where such a project goes.
+ * it is read. So is what it is built from, its development space, as the
+ * fourth - there even where a version keeps none, as the one place that
+ * says where such files go.
  */
 export function FilesTab({ control }: { control: Control }) {
   const t = useEditorT();
@@ -184,12 +184,12 @@ export function FilesTab({ control }: { control: Control }) {
               </GroupList>
 
               <GroupList
-                title={said.development}
-                exposure={<Exposure open={false} why={said.developmentWhy} />}
+                title={said.build}
+                exposure={<Exposure open={false} why={said.buildWhy} />}
                 usage={development.length > 0 && said.contextUsage(said.count(development.length), bytes(development.reduce((total, f) => total + sizeOf(f), 0)))}
                 action={development.length > 0 && (
-                  <button type="button" onClick={() => control.openDevelopment(wanted)} className="text-[12px] text-accent-500 hover:underline">
-                    {t.frame.sections.development}
+                  <button type="button" onClick={() => control.openBuild(wanted)} className="text-[12px] text-accent-500 hover:underline">
+                    {t.frame.sections.build}
                   </button>
                 )}
               >
@@ -197,7 +197,7 @@ export function FilesTab({ control }: { control: Control }) {
                   entries={development.map((f) => ({ path: f.name, size: sizeOf(f) }))}
                   selected={selected?.group === 'development' ? selected.path : null}
                   onSelect={(path) => setSelected({ group: 'development', path })}
-                  empty={said.noDevelopment}
+                  empty={said.noBuild}
                 />
               </GroupList>
             </nav>

@@ -138,7 +138,7 @@ public static class SourceKinds
     /// <summary>How it is tested.</summary>
     public const string Tests = "tests";
 
-    /// <summary>What its assets are built from: its development space.</summary>
+    /// <summary>What its assets or code are built from: its development space.</summary>
     public const string Development = "dev";
 
     /// <summary>What stands in for the platform.</summary>

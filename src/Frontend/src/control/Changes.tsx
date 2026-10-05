@@ -9,15 +9,14 @@ import { isCode, isContext, isDevelopment } from './written';
 
 /**
  * What a changed file is to the version, in the order a change is read: the
- * code, then what the front end is built from, then the assets - which hold
- * what such a build wrote, minified and least worth reading first - and what
- * is written about it last.
+ * code, then what it is built from, then the assets - which may hold what a
+ * build wrote, least worth reading first - and what is written about it last.
  */
-const GROUPS = ['code', 'development', 'assets', 'context'] as const;
+const GROUPS = ['code', 'build', 'assets', 'context'] as const;
 
 type Kind = (typeof GROUPS)[number];
 
-const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isDevelopment(name) ? 'development' : isContext(name) ? 'context' : 'assets');
+const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isDevelopment(name) ? 'build' : isContext(name) ? 'context' : 'assets');
 
 /**
  * What changed between two sets of files: one row per file that differs,
@@ -26,9 +25,9 @@ const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isDevelopment(na
  * before; a feature shows the difference to the version it is based on.
  *
  * Where the files that changed are of more than one kind, they are listed
- * kind by kind under a heading each: a change that touched the sources of a
- * front end and the assets they build to reads as both, rather than as one
- * list in which the sources are found among the minified files.
+ * kind by kind under a heading each: a change that touched what something is
+ * built from and what was built reads as both, rather than as one list in
+ * which the one is found among the other.
  */
 export function ChangeList({ before, after, theme, empty, folded = false }: {
   before: LambdaFile[];

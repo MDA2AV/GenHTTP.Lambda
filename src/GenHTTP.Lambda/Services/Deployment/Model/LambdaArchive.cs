@@ -56,11 +56,12 @@ public static class LambdaArchive
     /// folder (as when a folder is zipped rather than its contents), that
     /// folder is removed. Text stays text, anything else is carried as base64.
     ///
-    /// The development space is a project, whose dot files - its .gitignore,
-    /// its .npmrc - are part of it, so they stay. It has usually been built
-    /// in, too, so what its .gitignore files leave out is left out here as
-    /// well - what the build installed, cached and made - the way git add
-    /// leaves it out of a commit, whatever the toolchain calls it.
+    /// The development space holds the files of a build tool, whose dot files
+    /// - a .gitignore among them - are part of it, so they stay. It has
+    /// usually been built in, too, so what its .gitignore files leave out is
+    /// left out here as well - what the build installed, cached and wrote for
+    /// itself - the way git add leaves it out of a commit, whatever the tool
+    /// calls it.
     /// </remarks>
     /// <param name="content">The archive</param>
     /// <param name="maxBytes">How many uncompressed bytes the archive may hold in total</param>

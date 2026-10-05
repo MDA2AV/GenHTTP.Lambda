@@ -30,14 +30,11 @@ export const code = {
   files: (entry: Node, cs: Node, context: Node) => (
     <>
       {entry} returns what gets served, other {cs} files hold types, and any other file is served as it is - except
-      what is in {context}: the documentation, the tests and the development space, never compiled or served. Ctrl-S
+      what is in {context}: the documentation, the tests and what it is built from, never compiled or served. Ctrl-S
       saves, F12 goes to a declaration.
     </>
   ),
   newer: (version: number) => ` Version ${version} is newer than the one open here.`,
-  /** Said above a file the build of the development space wrote, when it is open here. */
-  built: (folder: string) =>
-    `The build of the development space writes ${folder}: the next build replaces what is changed here. Change the sources it is built from instead.`,
   check: 'Check',
   save: 'Save',
   deploy: 'Deploy',

@@ -2,8 +2,8 @@ import type { LambdaFile } from '../api';
 
 /**
  * What a version keeps beside its program, under .lambda/: what is written
- * about it - its documentation and its tests - and what its assets are
- * built from, its development space.
+ * about it - its documentation and its tests - and what its assets or code
+ * are built from, its development space.
  *
  * The same rule the server applies (LambdaSource): a file under .lambda/ is
  * never code and never an asset, whatever it is called - a test written in
@@ -29,9 +29,9 @@ export const DECISIONS = '.lambda/docs/decisions.md';
 export const TESTING = '.lambda/tests/README.md';
 
 /**
- * The development space: what the assets are built from where a toolchain
- * builds them - a project with its sources and its lock file, built by
- * whoever changes it, never by the platform.
+ * The development space: the files the assets or the code are built from
+ * with a build tool, whatever that tool works from - built by whoever
+ * changes them, never by the platform. The editor calls it Build.
  */
 export const DEV = '.lambda/dev/';
 

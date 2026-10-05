@@ -24,8 +24,8 @@ interface Props {
   onChange?: (files: LambdaFile[]) => void;
   /** Files a diagnostic points at, so a mistake is visible before it is opened. */
   faulty?: Set<string>;
-  /** Opens the development space where it is read, from the one pill that stands for it. */
-  onDevelopment?: () => void;
+  /** Opens what the version is built from where it is read, from the one pill that stands for it. */
+  onBuild?: () => void;
 }
 
 /**
@@ -136,7 +136,7 @@ function starterFor(name: string): string {
   return '';
 }
 
-export function FileTabs({ files, active, onSelect, onChange: change, faulty, onDevelopment }: Props) {
+export function FileTabs({ files, active, onSelect, onChange: change, faulty, onBuild }: Props) {
   const said = useEditorT().tabs;
   const editable = change !== undefined;
   const onChange = (next: LambdaFile[]) => change?.(next);
@@ -161,7 +161,7 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
 
     // the development space is changed where it is built, which is not here
     const wrong = isDevelopment(wanted)
-      ? said.development
+      ? said.build
       : wanted.toLowerCase().startsWith('.lambda')
         ? checkContext(wanted, said)
         : wanted.endsWith('.cs') ? checkCode(wanted, said) : checkAsset(wanted, said);
@@ -242,8 +242,8 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
   }
 
   // the program first; what is written about it after a rule, and quieter;
-  // the development space as one pill, since it is a project of its own -
-  // and kept as it is, read where its section is, the file open here aside
+  // what it is built from as one pill, since that may be any number of files
+  // - kept as it is, and read where its section is, the file open here aside
   const program = files.filter((file) => !isContext(file.name) && !isDevelopment(file.name));
   const context = files.filter((file) => isContext(file.name));
   const development = files.filter((file) => isDevelopment(file.name));
@@ -300,17 +300,17 @@ export function FileTabs({ files, active, onSelect, onChange: change, faulty, on
       )}
 
       {development.length > 0 && (
-        <span role="group" aria-label={said.developmentTitle} className="contents">
+        <span role="group" aria-label={said.buildTitle} className="contents">
           <span aria-hidden="true" className="mx-1 h-5 w-px bg-slate-300 dark:bg-ink-700" />
           <button
             type="button"
-            onClick={onDevelopment}
-            disabled={!onDevelopment}
-            title={said.developmentTitle}
+            onClick={onBuild}
+            disabled={!onBuild}
+            title={said.buildTitle}
             className={`${pill(false)} !py-0.5 text-[12.5px]`}
           >
             <IconPackage className="h-3.5 w-3.5 text-slate-400" />
-            {said.developmentFiles(development.length)}
+            {said.buildFiles(development.length)}
           </button>
           {development.filter((file) => file.name === active).map(tab)}
         </span>

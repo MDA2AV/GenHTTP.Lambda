@@ -250,13 +250,13 @@ return Content.From(page);`} />
 
           <Section id="built" title={said.parts.built}>
             <p>{said.built(k)}</p>
-            <Commands text={`assets/web/              what the build wrote, served with Assets.App("web")
-dev/web/package.json     the project: what it installs, how it is built
-dev/web/src/             its sources
-dev/web/.gitignore       what the build installs and makes, left out
-dev/README.md            how it is built, and where the build goes
+            <Commands text={`dev/                what it is built from, in whatever shape the tool wants
+dev/README.md       how it is built, and where the build goes
+dev/.gitignore      what the build installs or keeps for itself, left out
+assets/             what the build wrote, if it makes assets
+*.cs                what it wrote, if it makes code
 
-cd dev/web && npm ci && npm run build      # writes ../../assets/web/
+# run the build where you work, then
 git add -A && git commit -m "…" && git push -o deploy`} />
             <p>{said.built2(k)}</p>
             <Aside>{said.builtAside}</Aside>

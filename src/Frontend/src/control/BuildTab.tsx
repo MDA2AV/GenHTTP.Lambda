@@ -2,38 +2,38 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiError, api, type LambdaFile } from '../api';
-import { IconAlert, IconChevronDown, IconFolder, IconLayers, IconLock, IconPackage, IconSpinner } from '../components/Icons';
+import { IconAlert, IconChevronDown, IconLayers, IconLock, IconPackage, IconSpinner } from '../components/Icons';
 import { Markdown } from '../components/Markdown';
 import { useEditorT } from '../i18n';
 import { ChangeList } from './Changes';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Tree, Viewer, sizeOf } from './FileBrowser';
-import { bytes } from './format';
-import { assetsIn, changedNames, projectsOf, type Project } from './projects';
 import { Section, pill } from './ui';
-import { DEV, DEV_README, isAsset, isDevelopment } from './written';
+import { DEV, DEV_README, isAsset, isCode, isDevelopment } from './written';
 
 /**
- * The development space of a version - or, opened on a draft, the draft's:
- * what its assets are built from, where a toolchain builds them.
+ * What a version is built from - or, opened on a draft, what the draft is:
+ * the files of its development space, which whoever changes it runs a build
+ * tool on to make its assets or its code.
+ *
+ * Nothing here assumes what those files are or which tool reads them: they
+ * are whatever the build needs, and only whoever builds it knows. So this
+ * shows what can be said of any of them - how it is built, as its README
+ * says; its files; and what the version changed here against what it
+ * changed in its code and assets, since files changed and nothing built from
+ * them is the mistake worth catching before it goes online.
  *
  * Written by an agent that builds it where it works, read here - the
- * asymmetric interface once more. Nothing here edits it: a change to its
- * sources is a change to nothing visitors get until it is built, and the
- * platform builds nothing, so a box to type into would promise what it does
- * not do. What is here is what somebody reviewing it asks: which projects
- * there are and what each is built with, what each installs and whether a
- * lock file pins it, where the build goes, how it is built - its README -
- * and what the version changed in it against what it changed in the assets,
- * since sources changed and nothing rebuilt, or a build changed by hand, is
- * the mistake worth catching before it goes online.
+ * asymmetric interface once more. Nothing here edits it: a change to these
+ * files changes nothing until it is built, and the platform builds nothing,
+ * so a box to type into would promise what it does not do.
  *
  * In the full view only, and in its sidebar only where there is one.
  */
-export function DevelopmentTab({ control }: { control: Control }) {
+export function BuildTab({ control }: { control: Control }) {
   const t = useEditorT();
-  const said = t.development;
+  const said = t.build;
   const [params, setParams] = useSearchParams();
 
   const { lambda, versions } = control;
@@ -52,7 +52,7 @@ export function DevelopmentTab({ control }: { control: Control }) {
 
   const load = useCallback(async () => {
     try {
-      // every file, not the space alone: where its build goes is among the assets
+      // every file, not the space alone: what changed is set against the program
       const [mine, theirs] = await Promise.all([
         feature
           ? api.feature.get(control.privateKey, feature.key).then((content) => content.files)
@@ -89,29 +89,24 @@ export function DevelopmentTab({ control }: { control: Control }) {
 
   const all = useMemo(() => files ?? [], [files]);
   const space = useMemo(() => all.filter((file) => isDevelopment(file.name)), [all]);
-  const projects = useMemo(() => projectsOf(all), [all]);
   const readme = space.find((file) => file.name === DEV_README && file.encoding !== 'base64') ?? null;
 
-  /** What it changed here, against what it changed in the assets - which is what says whether it was built. */
+  /** What it changed here, against what it changed in the program - which is what says whether it was built. */
   const changes = useMemo(() => {
     if (before == null) {
       return null;
     }
 
+    const program = (file: LambdaFile) => isCode(file.name) || isAsset(file.name);
     const had = before.filter((file) => isDevelopment(file.name));
-    const here = changedNames(had, space);
-    const assets = changedNames(before.filter((file) => isAsset(file.name)), all.filter((file) => isAsset(file.name)));
-
-    const built = projects.map((project) => project.into).filter((folder): folder is string => folder != null);
 
     return {
       had,
-      here,
-      assets,
+      here: changedNames(had, space),
+      program: changedNames(before.filter(program), all.filter(program)),
       first: had.length === 0,
-      rebuiltByHand: here.length === 0 ? built.find((folder) => assets.some((name) => name.startsWith(folder))) : undefined,
     };
-  }, [before, space, all, projects]);
+  }, [before, space, all]);
 
   const chosen = params.get('file');
   const browsing = space.length > 0 && (params.get('view') === 'files' || chosen != null);
@@ -222,17 +217,6 @@ export function DevelopmentTab({ control }: { control: Control }) {
             </Changed>
           )}
 
-          {projects.length > 0 && (
-            <section className="mt-8">
-              <h2 className="text-sm font-medium">{said.projects}</h2>
-              <div className="mt-3 grid gap-4 md:grid-cols-2">
-                {projects.map((project) => (
-                  <ProjectCard key={project.folder} project={project} files={all} onOpen={(path) => go({ file: path })} />
-                ))}
-              </div>
-            </section>
-          )}
-
           {/* named by its file where it is there, since it names itself in its own heading */}
           <section className="mt-10">
             {readme ? (
@@ -263,32 +247,28 @@ export function DevelopmentTab({ control }: { control: Control }) {
 }
 
 /**
- * What the version changed in the space against the assets, in a sentence -
+ * What the version changed here against its code and assets, in a sentence -
  * the one to read before putting it online - and the files on request.
  */
 function Changed({ title, against, changes, comparing, onCompare, children }: {
   title: string;
   against?: number;
-  changes: { here: string[]; assets: string[]; first: boolean; rebuiltByHand?: string };
+  changes: { here: string[]; program: string[]; first: boolean };
   comparing: boolean;
   onCompare: () => void;
   children: ReactNode;
 }) {
-  const said = useEditorT().development;
-
-  const folder = (name: string) => <code className="font-mono text-[12.5px]">{name}</code>;
+  const said = useEditorT().build;
 
   const [text, warn] = changes.first
     ? [said.first, false]
-    : changes.here.length > 0 && changes.assets.length > 0
-      ? [said.both(changes.here.length, changes.assets.length), false]
+    : changes.here.length > 0 && changes.program.length > 0
+      ? [said.both(changes.here.length, changes.program.length), false]
       : changes.here.length > 0
         ? [said.hereOnly(changes.here.length), true]
-        : changes.rebuiltByHand
-          ? [said.builtOnly(folder(changes.rebuiltByHand)), true]
-          : changes.assets.length > 0
-            ? [said.assetsOnly, false]
-            : [said.unchanged, false];
+        : changes.program.length > 0
+          ? [said.programOnly, false]
+          : [said.unchanged, false];
 
   return (
     <section className={`border-l-2 pl-4 ${warn ? 'border-amber-500' : 'border-slate-300 dark:border-ink-700'}`}>
@@ -312,124 +292,10 @@ function Changed({ title, against, changes, comparing, onCompare, children }: {
   );
 }
 
-/** One project of the space, as somebody reviewing it reads it. */
-function ProjectCard({ project, files, onOpen }: { project: Project; files: LambdaFile[]; onOpen: (path: string) => void }) {
-  const said = useEditorT().development;
-  const [shown, setShown] = useState(false);
+/** The names that differ between two sets of files - added, removed or changed - without comparing lines. */
+function changedNames(before: LambdaFile[], after: LambdaFile[]): string[] {
+  const old = new Map(before.map((file) => [file.name, file.code]));
+  const now = new Map(after.map((file) => [file.name, file.code]));
 
-  const into = project.into ? assetsIn(files, project.into, sizeOf) : null;
-  const marker = { npm: 'package.json', deno: 'deno.json', cargo: 'Cargo.toml', go: 'go.mod', python: 'pyproject.toml', dotnet: '', php: 'composer.json', ruby: 'Gemfile', maven: 'pom.xml', gradle: 'build.gradle', make: 'Makefile' }[project.kind];
-  const opened = marker && files.some((file) => file.name === `${DEV}${project.folder}${marker}`) ? `${project.folder}${marker}` : null;
-
-  const row = 'grid grid-cols-[6.5rem,minmax(0,1fr)] gap-x-3 gap-y-1 text-[13px]';
-  const term = 'text-slate-500';
-
-  return (
-    <article className="surface flex flex-col gap-3 p-4">
-      <header className="flex items-start gap-2">
-        <IconFolder className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-        <div className="min-w-0 flex-1">
-          {opened ? (
-            <button type="button" onClick={() => onOpen(opened)} className="truncate font-mono text-[13.5px] hover:text-accent-600 hover:underline dark:hover:text-accent-400">
-              {project.folder || said.atTheTop}
-            </button>
-          ) : (
-            <span className="truncate font-mono text-[13.5px]">{project.folder || said.atTheTop}</span>
-          )}
-          {project.name && <p className="truncate text-xs text-slate-500">{project.name}</p>}
-        </div>
-        <span className="shrink-0 rounded-full border border-slate-200 px-2 py-px text-[11px] text-slate-500 dark:border-ink-800">
-          {said.kinds[project.kind]}{project.manager && project.manager !== 'npm' ? ` · ${project.manager}` : ''}
-        </span>
-      </header>
-
-      <dl className="space-y-2">
-        {project.stack.length > 0 && (
-          <div className={row}>
-            <dt className={term}>{said.builtWith}</dt>
-            <dd className="flex flex-wrap gap-1">
-              {project.stack.map((part) => (
-                <span key={part} className="rounded-full bg-accent-500/10 px-2 py-px text-[12px] text-accent-700 dark:text-accent-400">{part}</span>
-              ))}
-            </dd>
-          </div>
-        )}
-
-        {project.kind === 'npm' && (
-          <div className={row}>
-            <dt className={term}>{said.build}</dt>
-            <dd className="min-w-0">
-              {project.command ? (
-                <>
-                  <code className="font-mono text-[12.5px]">{project.command}</code>
-                  {project.script && <span className="block truncate font-mono text-[12px] text-slate-500" title={project.script}>{project.script}</span>}
-                </>
-              ) : (
-                <span className="text-slate-500">{said.noBuild}</span>
-              )}
-            </dd>
-          </div>
-        )}
-
-        {project.into && into && (
-          <div className={row}>
-            <dt className={term}>{said.into}</dt>
-            <dd className="text-slate-700 dark:text-slate-300">
-              {into.files > 0
-                ? said.intoAssets(<code className="font-mono text-[12.5px]">{project.into}</code>, into.files, bytes(into.bytes))
-                : said.intoNothing(<code className="font-mono text-[12.5px]">{project.into}</code>)}
-            </dd>
-          </div>
-        )}
-
-        {project.dependencies.length + project.tooling.length > 0 && (
-          <div className={row}>
-            <dt className={term}>{said.packages}</dt>
-            <dd>
-              <span className="text-slate-700 dark:text-slate-300">{said.packagesCount(project.dependencies.length, project.tooling.length)}</span>{' '}
-              <button type="button" onClick={() => setShown((was) => !was)} aria-expanded={shown} className="text-accent-500 hover:underline">
-                {shown ? said.hidePackages : said.showPackages}
-              </button>
-            </dd>
-          </div>
-        )}
-      </dl>
-
-      {shown && (
-        <div className="grid gap-4 border-t border-slate-200 pt-3 text-[12.5px] sm:grid-cols-2 dark:border-ink-800">
-          {([[said.runtime, project.dependencies], [said.tooling, project.tooling]] as const).map(([title, list]) =>
-            list.length > 0 && (
-              <div key={title}>
-                <h3 className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{title}</h3>
-                <ul className="mt-1.5 space-y-0.5 font-mono">
-                  {list.map(([name, version]) => (
-                    <li key={name} className="flex justify-between gap-3">
-                      <span className="truncate">{name}</span>
-                      <span className="shrink-0 text-slate-500">{version}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {(project.locked === false || !project.ignored || project.missing.length > 0) && (
-        <ul className="space-y-1.5 text-[12.5px] text-amber-700 dark:text-amber-400">
-          {project.missing.length > 0 && project.into && (
-            <li className="flex gap-1.5">
-              <IconAlert className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span>{said.missing(<code className="font-mono">{`${project.into}index.html`}</code>, project.missing)}</span>
-            </li>
-          )}
-          {project.locked === false && (
-            <li className="flex gap-1.5"><IconAlert className="mt-px h-3.5 w-3.5 shrink-0" />{said.noLock}</li>
-          )}
-          {!project.ignored && (
-            <li className="flex gap-1.5"><IconAlert className="mt-px h-3.5 w-3.5 shrink-0" />{said.noIgnore}</li>
-          )}
-        </ul>
-      )}
-    </article>
-  );
+  return [...new Set([...old.keys(), ...now.keys()])].filter((name) => old.get(name) !== now.get(name));
 }

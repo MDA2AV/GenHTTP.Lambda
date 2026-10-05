@@ -171,10 +171,10 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
         <button type="button" onClick={() => control.openContext('docs', version.version)} className="text-accent-500 hover:underline">
           {said.docs}
         </button>
-        {/* where it has one: what its assets are built from */}
+        {/* where it keeps it: what it is built from */}
         {sides?.after.some((file) => isDevelopment(file.name)) && (
-          <button type="button" onClick={() => control.openDevelopment(version.version)} className="text-accent-500 hover:underline">
-            {said.development}
+          <button type="button" onClick={() => control.openBuild(version.version)} className="text-accent-500 hover:underline">
+            {said.build}
           </button>
         )}
         <button type="button" onClick={() => control.edit(version.version)} className="text-accent-500 hover:underline">

@@ -20,7 +20,7 @@ export const guide = {
     files: 'More than one file',
     page: 'Serving a page',
     spa: 'A front end, step by step',
-    built: 'A front end built with tools',
+    built: 'What it is built from',
     storage: 'The two places files live',
     database: 'Keeping records',
     keeping: 'Keeping files',
@@ -123,7 +123,7 @@ export const guide = {
       ),
     ],
     ['Tests', () => <>How the app is tested automatically, with the scripts and test data for it. In the full view only.</>],
-    ['Development', () => <>What the assets are built from where a toolchain builds them - the project of a front end - kept with each version, to read rather than to edit. In the full view, once a version has one.</>],
+    ['Build', () => <>What the code or the assets are built from where a build tool makes them, kept with each version, to read rather than to edit. In the full view, once a version keeps it.</>],
   ] as [string, Text][],
   sections: ((k) => (
     <>
@@ -284,27 +284,27 @@ export const guide = {
     () => <>Add an API beside it and the page has something to talk to:</>,
   ] as Text[],
 
-  /** A front end whose assets are built by a toolchain, and the project they are built from, kept beside them. */
+  /** Assets or code a build tool makes, and the files it makes them from, kept beside them. */
   built: ((k) => (
     <>
-      Many front ends are built: written with React, Vue or Svelte, TypeScript or Tailwind, and put together by Vite or
-      another tool. The version holds what the build makes, as its assets - and beside them the project it was built
-      from, its {k.b('development space')}: {k.code('.lambda/dev/')} in the version, {k.code('dev/')} in a clone. Your
-      agent changes the sources, builds them where it works and saves both in the same version. This platform builds
-      nothing.
+      Some of a lambda may be made by a build tool rather than written as it is served or compiled: compiled, bundled or
+      generated. The version holds what the tool makes - as its assets, or as its code - and beside it the files it
+      makes them from, its {k.b('development space')}: {k.code('.lambda/dev/')} in the version, {k.code('dev/')} in a
+      clone, holding whatever the tool works from. Your agent changes those files, runs the build where it works and
+      saves both in the same version. This platform builds nothing.
     </>
   )) as Text,
   built2: ((k) => (
     <>
       Like the documentation, it belongs to its version: compared in the history, rolled back, copied into a draft,
       cloned, downloaded and published with the code - and never compiled or served. In the control center,{' '}
-      {k.b('Development')} shows it once there is one: its projects and what each is built with, the packages they
-      install, how it is built, and whether a version changed the sources without building them. It is read there,
-      not edited - a change to it is made where it is built.
+      {k.b('Build')} shows it once a version keeps one: how it is built, as its README says, its files, and whether a
+      version changed them without changing anything built from them. It is read there, not edited - a change to it is
+      made where it is built.
     </>
   )) as Text,
   builtAside:
-    'A front end of plain HTML, CSS and JavaScript needs none: it is its own source, in the assets. What a build installs, such as node_modules, is never part of a version - the project\'s .gitignore keeps it out.',
+    'What is written as it is served or compiled needs none. What a build installs or keeps for itself - node_modules, for example - is never part of a version: a .gitignore in the development space keeps it out.',
 
   storage: ((k) => (
     <>
@@ -317,7 +317,7 @@ export const guide = {
   savedWithCode: 'In a version',
   workspaceColumn: 'In the data',
   table: [
-    ['what it holds', 'the code and assets: the program, front end included - and its documentation, its tests and what its front end is built from', 'whatever the lambda writes, or somebody uploads'],
+    ['what it holds', 'the code and assets: the program, front end included - and its documentation, its tests and what it is built from', 'whatever the lambda writes, or somebody uploads'],
     ['when it changes', 'never - a change is a new version', 'the moment something is written to it'],
     ['a deploy', 'puts exactly these files online', 'never touches it'],
     ['rolling back', 'brings the old files back', 'no effect: every version shares it'],

@@ -275,48 +275,52 @@ scripts and test data.
 
 ### The development space
 
-A version may keep the project its assets are built from - a front end with
-its `package.json`, sources, configuration and lock file - in its
-**development space**: `.lambda/dev/` in the version, `dev/` in a clone, an
-export and a published source.
+A version may keep what its assets or code are built from with a build tool
+in its **development space**: `.lambda/dev/` in the version, `dev/` in a
+clone, an export and a published source. The editor calls it **Build**.
 
+- **Nothing about its contents is assumed - decided by the owner.** It is
+  whatever a tool works from, for assets or for code; npm, a bundler or a
+  front end are examples, never assumptions. No detection of projects,
+  packages, lock files or output folders, in the editor or anywhere else.
+  Pitfalls may be named as examples (`node_modules`, an absolute base).
 - **The platform builds nothing - decided by the owner.** No build on a push,
-  no package manager, no check that the assets are what the sources build to.
-  The agent changes the sources, builds them where it works and saves the
-  sources and what they built together, in one version or feature. Do not add
-  build machinery.
-- **A kind of its own** (`LambdaSource.IsDevelopment`), not context: a project
-  rather than pages. Like the context it is a file of the version - saved,
-  diffed, rolled back, copied into a feature, merged, cloned, exported,
-  published - never compiled or served, left out of what identifies a build,
-  and counted towards the asset allowance. Its names are a project's: dot
-  files, `[id]`, `(auth)`, `+page`; no spaces, no `.git`.
-- **What a toolchain installs, caches and builds is kept out by the space's
-  own `.gitignore` files - decided with the owner, so it works for any
-  technology.** Nothing is refused by name (no `node_modules` rule): git
-  follows them in a clone, a zip put back follows them (`IgnoredPaths`, git's
-  rules), and a save that names a file keeps it, as `git add -f` would. The
-  root `.gitignore` of a repository stays the platform's, generic one.
+  no tool run, no check that the program is what the space builds to. The
+  agent changes the files, builds where it works and saves them with what
+  was built, in one version or feature. Do not add build machinery.
+- **A kind of its own** (`LambdaSource.IsDevelopment`), not context: files
+  for a tool rather than pages. Like the context it is a file of the version
+  - saved, diffed, rolled back, copied into a feature, merged, cloned,
+  exported, published - never compiled or served, left out of what identifies
+  a build, and counted towards the asset allowance. Its names allow dot files
+  and `[]()+@$~{}`; no spaces, no `.git`.
+- **What a build installs, caches or keeps for itself is kept out by the
+  space's own `.gitignore` files - decided with the owner, so it works for
+  any technology.** Nothing is refused by name: git follows them in a clone,
+  a zip put back follows them (`IgnoredPaths`, git's rules), and a save that
+  names a file keeps it, as `git add -f` would. The root `.gitignore` of a
+  repository stays the platform's, generic one.
 - **Read, never edited, in the editor** - the asymmetric interface: the agent
-  builds it, the owner reviews it. The **Development** section is in the full
-  view only, in the build group, shown once the newest or the online version
-  has one (a draft has it as a view); it says what a reviewer asks - the
-  projects and their stack, packages, lock file and `.gitignore`, where the
-  build goes, the README, and whether a version changed the sources without
-  the assets or the reverse. Files shows it as a group, the code as one pill,
-  a diff kind by kind. Nothing of it in the simple view or on `/build`.
+  builds it, the owner reviews it. **Build** is a section of the full view
+  only, in the **Develop** group (named so that the section is not called
+  what its group is), shown once the newest or the online version keeps one
+  (a draft has it as a view). It shows what holds for any tool: the README,
+  the files, and whether a version changed them without changing the code or
+  the assets. Files shows it as a group, the code as one pill, a diff kind by
+  kind. Nothing of it in the simple view or on `/build`.
+- The folder is `dev/`, not `build/`: most tools and agents read `build/` as
+  output to ignore or delete, which is the opposite of what it holds.
 - Agents are told the flow in a line of the MCP instructions, `platform_guide`
-  (`development`), the tool descriptions, a clone's `AGENTS.md` ("Building
-  the front end: dev/") and the README - keep them the same. `read_lambda`
-  sends its README and its names, not its contents; `write_code` says when it
-  drops one. The build agent has no shell: it writes plain front ends and
-  leaves a development space alone.
+  (`development`), the tool descriptions, a clone's `AGENTS.md` ("What is
+  built: dev/") and the README - keep them the same. `read_lambda` sends its
+  README and its names, not its contents; `write_code` says when it drops
+  one. The build agent has no shell: it writes plain front ends and leaves a
+  development space alone.
 - The repository's project keeps `dev/` out of the build
-  (`DefaultItemExcludes`, so a project built in there is never walked) and
-  out of the image (`.dockerignore`), whether there is one or not.
+  (`DefaultItemExcludes`, so whatever a build installed in there is never
+  walked) and out of the image (`.dockerignore`), whether there is one or not.
 - **The demos have none**: they teach with front ends of plain files a reader
-  follows without a toolchain, and a built bundle in a template is something
-  only a toolchain could keep true.
+  follows without a build tool.
 
 ### Pages meant to be found
 
@@ -614,9 +618,9 @@ rules that matter:
 - Links inside a lambda's front end are relative, never `/lambda/...`: a lambda
   also answers at a domain of its own, and a feature at `/features/{key}/`.
 - The full view's sidebar is **grouped** (overview and documentation; sharing -
-  showcase, open source, domain - second, as the owner decided; build; program
-  and data; run). A new section joins the group it belongs to rather than the
-  end of the list. The operator's **Admin** section is no group of the
+  showcase, open source, domain - second, as the owner decided; develop;
+  program and data; run). A new section joins the group it belongs to rather
+  than the end of the list. The operator's **Admin** section is no group of the
   owner's: it comes last in both views, behind a rule, for a browser holding
   the admin token only (`ADMIN_SECTIONS`).
 - **Wired through the container**, not by hand and not in statics. A concern

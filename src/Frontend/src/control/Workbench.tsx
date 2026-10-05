@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { ApiError, api, isDemo, type Diagnostic, type LambdaFile } from '../api';
@@ -13,7 +13,6 @@ import { languageFor } from '../monaco';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { Section } from './ui';
-import { projectsOf } from './projects';
 import { BESIDE, isCode, isDevelopment } from './written';
 
 type Busy = 'save' | 'check' | 'deploy' | null;
@@ -66,11 +65,6 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
   const [held, setHeld] = useState<number | null>(null);
 
   const current = files.find((file) => file.name === active) ?? files[0];
-
-  // the folders a build of the development space writes, where its configuration says so
-  const outputs = useMemo(() => projectsOf(files).map((project) => project.into).filter((folder): folder is string => folder != null),
-                          [files]);
-  const writtenBy = outputs.find((folder) => active.startsWith(folder));
   const code = current?.code ?? '';
   const dirty = saved !== '' && JSON.stringify(files) !== saved;
 
@@ -382,7 +376,7 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
           onSelect={setActive}
           onChange={demo ? undefined : setFiles}
           faulty={new Set(diagnostics.filter((d) => d.file).map((d) => d.file!))}
-          onDevelopment={() => control.openDevelopment(feature ? undefined : loaded ?? undefined)}
+          onBuild={() => control.openBuild(feature ? undefined : loaded ?? undefined)}
         />
       }
     >
@@ -395,13 +389,6 @@ export function Workbench({ control, onDirty }: { control: Control; onDirty: (di
               {said.readAgain}
             </button>
           </span>
-        </p>
-      )}
-
-      {writtenBy && (
-        <p className="mx-4 mb-3 flex items-start gap-2 text-[13px] text-amber-700 dark:text-amber-400 md:mx-0">
-          <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{said.built(writtenBy)}</span>
         </p>
       )}
 
