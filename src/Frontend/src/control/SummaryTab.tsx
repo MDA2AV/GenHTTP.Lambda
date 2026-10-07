@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { isDemo } from '../api';
-import { IconAlert, IconCheck, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
+import { IconAlert, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
@@ -165,114 +164,25 @@ export function SummaryTab({ control }: { control: Control }) {
           )}
         </section>
 
-        {/* the two halves of what a lambda keeps, apart: what belongs to a
-            version, and what belongs to the lambda whichever version runs -
-            each one allowance, which what is under it shares */}
+        {/* the two allowances a lambda has, and how much of each is spent:
+            what a version may come to, and what the lambda may keep - what
+            makes them up is in Code and in Data, one click away */}
         <section className="lg:col-span-2">
           <h2 className="text-sm font-medium">{said.storage}</h2>
 
-          <div className="mt-3 space-y-5">
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  {storage.version != null ? said.inVersion(storage.version) : said.noVersion}
-                </h3>
-                <Link to={`${base}/code`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
-              </div>
-
-              <div className="mt-2 space-y-2">
-                <Meter label={said.versionAllowance} used={storage.codeBytes + storage.resourceBytes} of={limits.buildBytes} format={bytes} />
-
-                <Part label={said.code} exposure={<Exposure open={false} why={said.codeWhy} />}>
-                  {said.files(storage.codeFiles, bytes(storage.codeBytes))}
-                </Part>
-                <Part
-                  label={said.resources}
-                  exposure={<Exposure open={storage.servesResources} why={storage.servesResources ? said.resourcesPublic : said.resourcesPrivate} />}
-                >
-                  {said.files(storage.resourceFiles, bytes(storage.resourceBytes))}
-                </Part>
-
-                {/* counted in pages rather than room: what matters is whether one is missing */}
-                {storage.version != null && (
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-[13px]">
-                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                      {said.written}
-                      <Exposure open={false} why={said.writtenWhy} />
-                    </span>
-                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <Written to={`${base}/docs`} done={documentation.product} label={t.context.docs.pages.product} missing={said.writtenMissing} />
-                      <Written to={`${base}/docs?page=decisions.md`} done={documentation.decisions} label={t.context.docs.pages.decisions} missing={said.writtenMissing} />
-                      <Written to={`${base}/tests`} done={documentation.tests} label={t.frame.sections.tests} missing={said.writtenMissing} />
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500" title={said.sharedByAll}>
-                  {said.inData}
-                </h3>
-                <Link to={`${base}/data`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
-              </div>
-
-              <div className="mt-2 space-y-2">
-                <Meter
-                  label={said.dataAllowance}
-                  used={(storage.databaseEnabled ? storage.databaseBytes : 0) + (storage.workspaceEnabled ? storage.workspaceBytes : 0)}
-                  of={limits.dataBytes}
-                  format={bytes}
-                />
-
-                {/* its records first: that is what most lambdas keep */}
-                <Part label={said.database} exposure={<Exposure open={false} why={said.dataPrivate} />}>
-                  {storage.databaseEnabled ? (
-                    said.databaseHolds(storage.databaseTables, bytes(storage.databaseBytes))
-                  ) : storage.usesDatabase ? (
-                    <Link
-                      to={`${base}/data/database`}
-                      className="inline-flex items-center gap-1 text-amber-600 hover:underline dark:text-amber-400"
-                      title={said.databaseOffUsed}
-                    >
-                      <IconAlert className="h-3.5 w-3.5" />
-                      {said.databaseOff}
-                    </Link>
-                  ) : (
-                    said.databaseOff
-                  )}
-                </Part>
-
-                <Part
-                  label={said.workspace}
-                  exposure={<Exposure open={storage.workspaceEnabled && storage.servesWorkspace} why={storage.servesWorkspace ? said.dataPublic : said.dataPrivate} />}
-                >
-                  {storage.workspaceEnabled ? said.files(storage.workspaceFiles, bytes(storage.workspaceBytes)) : said.workspaceOff}
-                </Part>
-
-                {/* counted in names rather than room: a secret is small, and what matters is whether one is missing */}
-                <p className="flex items-center justify-between gap-3 text-[13px]">
-                  <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                    {said.secrets}
-                    <Exposure open={false} why={said.dataPrivate} />
-                  </span>
-                  <span className="flex items-center gap-2 text-slate-500">
-                    {(storage.missingSecrets?.length ?? 0) > 0 && (
-                      <Link
-                        to={`${base}/data/secrets`}
-                        className="inline-flex items-center gap-1 text-amber-600 hover:underline dark:text-amber-400"
-                        title={said.secretsMissingTitle}
-                      >
-                        <IconAlert className="h-3.5 w-3.5" />
-                        {said.secretsMissing(storage.missingSecrets!.length)}
-                      </Link>
-                    )}
-                    <span className="tabular-nums">{storage.secretsEnabled ? said.secretsCount(storage.secrets) : said.secretsOff}</span>
-                  </span>
-                </p>
-              </div>
-            </div>
+          <div className="mt-4 space-y-5">
+            <Link to={`${base}/code`} className="block rounded-sm hover:opacity-80">
+              <Meter large label={said.versionAllowance} used={storage.codeBytes + storage.resourceBytes} of={limits.buildBytes} format={bytes} />
+            </Link>
+            <Link to={`${base}/data`} className="block rounded-sm hover:opacity-80">
+              <Meter
+                large
+                label={said.data}
+                used={(storage.databaseEnabled ? storage.databaseBytes : 0) + (storage.workspaceEnabled ? storage.workspaceBytes : 0)}
+                of={limits.dataBytes}
+                format={bytes}
+              />
+            </Link>
           </div>
         </section>
       </div>
@@ -299,38 +209,6 @@ function distinct<T extends { text: string }>(lines: T[]): T[] {
     seen.add(key);
     return true;
   });
-}
-
-/** One of the things an allowance is shared by, and what it holds. */
-function Part({ label, exposure, children }: { label: string; exposure: ReactNode; children: ReactNode }) {
-  return (
-    <p className="flex items-center justify-between gap-3 text-[13px]">
-      <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-        {label}
-        {exposure}
-      </span>
-      <span className="tabular-nums text-slate-500">{children}</span>
-    </p>
-  );
-}
-
-/** One page of the documentation or the tests, and whether the version has it. */
-function Written({ to, done, label, missing }: { to: string; done: boolean; label: string; missing: string }) {
-  return (
-    <Link
-      to={to}
-      title={done ? undefined : missing}
-      className={`inline-flex items-center gap-1 hover:underline ${done ? 'text-slate-600 dark:text-slate-400' : 'text-slate-400 dark:text-slate-500'}`}
-    >
-      {done ? (
-        <IconCheck className="h-3.5 w-3.5 text-emerald-500" />
-      ) : (
-        <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full border border-dashed border-slate-400" />
-      )}
-      {label}
-      {!done && <span className="sr-only">: {missing}</span>}
-    </Link>
-  );
 }
 
 /** Whether the public can reach it, as an icon, with the reason on hover. */

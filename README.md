@@ -422,8 +422,9 @@ edited, beside a preview of it; saved, it is the next version (a draft saves in
 place), put online with it when the newest version was online. The simple view
 calls the documentation **About** and shows the product page alone, with a way
 to have the agent correct it rather than to edit it. The overview of either
-view opens with the product page's first paragraph, and the full one says which
-of the three pages the version has.
+view opens with the product page's first paragraph. The full one ends with how
+much of its two allowances the lambda uses - its code and resources, and its
+data - each a meter that opens the section it counts.
 
 With fifteen sections and more, the full view's sidebar is in groups: the
 overview and the documentation on their own, then how people find it and what

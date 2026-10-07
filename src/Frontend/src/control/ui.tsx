@@ -161,13 +161,15 @@ export function Figure({ value, label, tone = 'default', title }: {
  * than abbreviated onto each number: "30.4k / 262k characters" says what it
  * counts, where "30.4k ch / 262k ch" leaves the reader guessing.
  */
-export function Meter({ label, used, of, format, unit, extra }: {
+export function Meter({ label, used, of, format, unit, extra, large = false }: {
   label: ReactNode;
   used: number;
   of: number;
   format: (n: number) => string;
   unit?: string;
   extra?: ReactNode;
+  /** Drawn larger, where the meter is all there is to read - the overview's storage. */
+  large?: boolean;
 }) {
   const words = useShared();
   const share = of > 0 ? Math.min(1, used / of) : 0;
@@ -176,7 +178,7 @@ export function Meter({ label, used, of, format, unit, extra }: {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-3 text-[13px]">
+      <div className={`flex items-center justify-between gap-3 ${large ? 'text-[15px]' : 'text-[13px]'}`}>
         <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
           {label}
           {extra}
@@ -185,7 +187,7 @@ export function Meter({ label, used, of, format, unit, extra }: {
           {format(used)} <span className="text-slate-400">/ {format(of)}{unit ? ` ${unit}` : ''}</span>
         </span>
       </div>
-      <div className="mt-1.5 h-1 w-full bg-slate-200 dark:bg-ink-800" role="meter" aria-valuemin={0} aria-valuemax={of} aria-valuenow={used}>
+      <div className={`w-full bg-slate-200 dark:bg-ink-800 ${large ? 'mt-2 h-2' : 'mt-1.5 h-1'}`} role="meter" aria-valuemin={0} aria-valuemax={of} aria-valuenow={used}>
         <div className={`h-full ${bar}`} style={{ width: `${Math.max(share > 0 ? 1 : 0, share * 100)}%` }} />
       </div>
     </div>
