@@ -152,13 +152,15 @@ export interface LambdaSummary {
   recentProblems: OwnerLogEntry[];
   storage: {
     version?: number | null;
+    /** Every file of its code: the C# it is compiled from and whatever else it is kept with. */
     codeFiles: number;
-    codeCharacters: number;
-    assets: number;
-    assetBytes: number;
+    codeBytes: number;
+    /** What it reads and serves while it runs. */
+    resourceFiles: number;
+    resourceBytes: number;
     workspaceFiles: number;
     workspaceBytes: number;
-    servesAssets: boolean;
+    servesResources: boolean;
     servesWorkspace: boolean;
     /** Whether the owner left the workspace switched on. */
     workspaceEnabled: boolean;
@@ -181,24 +183,21 @@ export interface LambdaSummary {
   };
   /** What the documentation of the version the storage is about says, and which of its pages it has. */
   documentation: DocumentationSummary;
-  /** What the lambda keeps of what its assets are built from: the build folder. */
-  build: BuildFacts;
-  /** What this lambda may use in its tier. Nothing counts its C# files or assets, only what they come to. */
+  /** What this lambda may use in its tier. Nothing counts files, only what they come to. */
   limits: {
-    codeCharacters: number;
-    assetBytes: number;
-    workspaceBytes: number;
+    /** How large a version may be: its code and its resources together. */
+    buildBytes: number;
+    /** The room its data may take: its database and its workspace together. */
+    dataBytes: number;
     versions: number;
     deploymentLifetimeHours: number;
     retentionDays: number;
     /** How many features it may have open at once. */
     features: number;
-    /** How large its database may grow. */
-    databaseBytes: number;
   };
 }
 
-/** What a version says about itself, in .lambda/ beside its program. */
+/** What a version says about itself, in docs/ and tests/ of its code. */
 export interface DocumentationSummary {
   /** The first paragraph of its product page, as plain text: what the app is, in a sentence or two. */
   about?: string | null;
@@ -207,22 +206,8 @@ export interface DocumentationSummary {
   tests: boolean;
   /** How many files the documentation and the tests come to. */
   files: number;
-  /** What those weigh, which counts towards what the assets may come to. */
+  /** What those weigh, which counts towards what a version may come to. */
   bytes: number;
-}
-
-/**
- * The build folder of a version: what its assets or code are built from, in
- * .lambda/build/ beside its program - of the version the storage is about, and
- * whether the newest has one, which may not be online yet.
- */
-export interface BuildFacts {
-  /** How many files that of the version the storage is about holds. */
-  files: number;
-  /** What those weigh, which counts towards what the assets may come to. */
-  bytes: number;
-  /** How many files that of the newest version holds. */
-  newestFiles: number;
 }
 
 /** Changes to some files: files added or replaced, names removed, passages replaced within a file. */
@@ -465,7 +450,8 @@ export interface Starter {
 export interface Platform {
   terms: string;
   starters: Starter[];
-  maxCodeLength: number;
+  /** How large a version of a free lambda may be, its code and its resources together. */
+  buildBytes: number;
   deploymentLifetimeHours: number;
   retentionDays: number;
   imports: string[];
@@ -568,6 +554,11 @@ export interface DataStore {
   items: number;
   /** The room that takes, for a kind counted in room. */
   usedBytes: number;
+  /**
+   * How far it may grow, for a kind counted in room: the room of the
+   * lambda's data, which the database and the workspace share, less what the
+   * other takes.
+   */
   quotaBytes: number;
   /** How many things it may hold, for a kind counted in things. */
   maxItems?: number | null;
@@ -977,7 +968,7 @@ export interface SourceProject {
 }
 
 /** What a file of a packed project is to somebody reading it. */
-export type SourceKind = 'code' | 'asset' | 'docs' | 'tests' | 'build' | 'platform' | 'project';
+export type SourceKind = 'code' | 'resource' | 'docs' | 'tests' | 'platform' | 'project';
 
 export interface SourceFile {
   /** Its path below the project's folder. */
@@ -1053,12 +1044,10 @@ export interface AdminSettings {
 
 /** What a lambda of one tier may have, as the operator set it. */
 export interface TierLimits {
-  /** Characters of C# across all its files. */
-  codeCharacters: number;
-  /** Bytes of assets, documentation and tests in a version. */
-  assetBytes: number;
-  workspaceBytes: number;
-  databaseBytes: number;
+  /** How large a version may be: its code and its resources together. */
+  buildBytes: number;
+  /** The room its data may take: its database and its workspace together. */
+  dataBytes: number;
   /** How many of its versions are kept. */
   versions: number;
   /** How many features it may have open at once. */
@@ -1315,7 +1304,7 @@ export const api = {
 
   versions: (privateKey: string) => request<VersionInfo[]>(`/lambdas/${privateKey}/versions`),
 
-  /** One version with its files - only those below a folder when one is named, such as '.lambda/' for what is written about it. */
+  /** One version with its files - only those below a folder when one is named, such as 'docs/' for its documentation. */
   version: (privateKey: string, version: number, folder?: string) =>
     request<VersionContent>(`/lambdas/${privateKey}/versions/${version}${folder ? `?folder=${encodeURIComponent(folder)}` : ''}`),
 

@@ -13,15 +13,14 @@ import { ENTRY, sourcePath } from './paths';
 /** The colour each kind of file is marked with, in the tree and the legend. */
 export const KIND_DOT: Record<SourceKind, string> = {
   code: 'bg-accent-500 dark:bg-accent-400',
-  asset: 'bg-emerald-500 dark:bg-emerald-400',
+  resource: 'bg-emerald-500 dark:bg-emerald-400',
   docs: 'bg-logo-500 dark:bg-logo-400',
   tests: 'bg-amber-500 dark:bg-amber-400',
-  build: 'bg-pink-500 dark:bg-pink-400',
   platform: 'bg-slate-400 dark:bg-ink-600',
   project: 'bg-slate-300 dark:bg-ink-700',
 };
 
-const KINDS: SourceKind[] = ['code', 'asset', 'docs', 'tests', 'build', 'platform', 'project'];
+const KINDS: SourceKind[] = ['code', 'resource', 'docs', 'tests', 'platform', 'project'];
 
 /**
  * The code of a version: its files down the side, the one open beside them.
@@ -97,11 +96,11 @@ interface Folder {
 /**
  * Where a folder or a file of the project's root is listed, before the rest
  * by name: what the lambda is - its code, what it serves, what is written
- * about it, what its assets are built from - before what makes it a project,
+ * about it - before what makes it a project,
  * and what stands in for the platform last, being the part nobody came here
  * to read.
  */
-const FOLDERS = ['assets', 'docs', 'tests', 'build'];
+const FOLDERS = ['resources', 'docs', 'tests'];
 
 const rankFolder = (name: string) => (FOLDERS.includes(name) ? FOLDERS.indexOf(name) : name === 'Platform' ? FOLDERS.length + 1 : FOLDERS.length);
 
@@ -219,7 +218,7 @@ function FolderItem({ publicKey, folder, version, open, depth }: {
   depth: number;
 }) {
   const inside = open.startsWith(`${folder.path}/`);
-  const worth = depth === 0 && (folder.name === 'docs' || folder.name === 'tests' || (folder.name === 'assets' && sizeOf(folder) <= 12));
+  const worth = depth === 0 && (folder.name === 'docs' || folder.name === 'tests' || (folder.name === 'resources' && sizeOf(folder) <= 12));
 
   const [expanded, setExpanded] = useState(inside || worth);
 

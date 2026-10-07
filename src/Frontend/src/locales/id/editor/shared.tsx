@@ -36,7 +36,7 @@ export const shared: EditorMessages['shared'] = {
   offline: 'Offline',
   offlineTitle: 'Offline: tidak ada yang disajikan',
   premium:
-    'Premium: bisa diakses di domain sendiri, punya ruang lebih besar untuk kode, aset, dan data, serta tetap online sesepi apa pun',
+    'Premium: bisa diakses di domain sendiri, punya ruang lebih besar untuk kode, sumber daya, dan data, serta tetap online sesepi apa pun',
   demo: 'Demo: dijaga tetap online oleh instalasi ini dan hanya bisa dibaca',
   tier: (tier) => `Paket ${tier}`,
   entrances: {

@@ -60,8 +60,6 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var allowance = limits.WorkspaceOf(tier);
-
         var product = limits.Get();
 
         /*
@@ -96,18 +94,14 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
             [.. problems.Select(Describe)],
             Measure(privateKey, id, measured, known),
             new SummaryLimits(
-                limits.MaxCodeLengthOf(tier),
-                limits.MaxAssetBytesOf(tier),
-                allowance.Quota,
+                limits.BuildOf(tier),
+                limits.DataOf(tier),
                 limits.Of(tier).Versions,
                 (int)product.OfflineAfter.TotalHours,
                 (int)product.RemovedAfter.TotalDays,
-                limits.Of(tier).Features,
-                limits.DatabaseOf(tier)
+                limits.Of(tier).Features
             ),
-            known.Documentation,
-            new BuildFacts(known.Build.Files, known.Build.Bytes,
-                                 latest == null || latest.Version == measured ? known.Build.Files : meta.GetFacts(id, latest.Version).Build.Files)
+            known.Documentation
         );
     }
 
@@ -200,12 +194,12 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
         return new StorageSummary(
             version,
             known.CodeFiles,
-            known.CodeLength,
-            known.AssetFiles,
-            known.AssetBytes,
+            known.CodeBytes,
+            known.ResourceFiles,
+            known.ResourceBytes,
             listing.Files.Count,
             listing.UsedBytes,
-            known.ServesAssets,
+            known.ServesResources,
             known.ServesWorkspace,
             listing.Enabled,
             known.UsesWorkspace,

@@ -29,14 +29,14 @@ public sealed class CloneTests
         var clone = await git.CloneAsync(fixture.EditorUrl(lambda), "shelf");
 
         foreach (var wanted in (string[])["Project.cs", "Program.cs", "shelf.csproj", "Store.cs", "Tasks.cs", "Platform/Usings.cs", "Platform/Database.cs",
-                                          "assets/web/index.html", "assets/migrations/V1__Create_tasks.sql", "docs/product.md", "tests/README.md",
+                                          "resources/web/index.html", "resources/migrations/V1__Create_tasks.sql", "docs/product.md", "tests/README.md",
                                           "AGENTS.md", "CLAUDE.md", "Dockerfile", ".gitignore"])
         {
             Assert.IsTrue(File.Exists(Path.Combine(clone, wanted)), $"{wanted} is in the clone");
         }
 
         Assert.IsFalse(File.Exists(Path.Combine(clone, "lambda.cs")), "the snippet is Project.cs");
-        Assert.IsFalse(Directory.Exists(Path.Combine(clone, ".lambda")), "the documentation and the tests are where a project keeps them");
+        Assert.IsFalse(Directory.Exists(Path.Combine(clone, ".lambda")), "the clone is laid out as the lambda is");
         Assert.IsFalse(Directory.Exists(Path.Combine(clone, "database")), "no data is in a repository");
 
         Assert.Contains("private static async Task<object> BuildAsync()", git.Read("shelf", "Project.cs"), "the snippet is the body of the method the platform runs");
@@ -153,14 +153,14 @@ public sealed class CloneTests
 
         var lambda = await fixture.CreateLambdaAsync("pictures");
 
-        var code = new LambdaFile(LambdaSource.EntryName, "return Assets.App(\"web\");\n");
+        var code = new LambdaFile(LambdaSource.EntryName, "return Resources.App(\"web\");\n");
 
-        await fixture.SaveAsync(lambda, "Has a page", code, new LambdaFile("web/index.html", "<h1>one</h1>"));
-        await fixture.SaveAsync(lambda, "Changes the page", code, new LambdaFile("web/index.html", "<h1>two</h1>"));
+        await fixture.SaveAsync(lambda, "Has a page", code, new LambdaFile("resources/web/index.html", "<h1>one</h1>"));
+        await fixture.SaveAsync(lambda, "Changes the page", code, new LambdaFile("resources/web/index.html", "<h1>two</h1>"));
 
         await git.CloneAsync(fixture.EditorUrl(lambda), "pictures");
 
-        Assert.AreEqual("assets/web/index.html", await git.ReadAsync("pictures", "diff", "--name-only", "v2", "v3"));
+        Assert.AreEqual("resources/web/index.html", await git.ReadAsync("pictures", "diff", "--name-only", "v2", "v3"));
     }
 
     [TestMethod]

@@ -4,15 +4,6 @@ import { counted } from '../plural';
 export const summary: EditorMessages['summary'] = {
   reading: 'Sprawdzanie stanu…',
   readDocs: 'Przeczytaj dokumentację',
-  written: 'Dokumentacja i testy',
-  writtenWhy: 'Nigdy nie są kompilowane ani serwowane. Zachowywane z każdą wersją i wliczane do zasobów.',
-  writtenMissing: 'Jeszcze nie napisano',
-  build: 'Budowanie',
-  buildWhy: 'Nigdy nie kompilowane ani serwowane: to, z czego budowany jest kod lub zasoby. Liczone razem z zasobami.',
-  buildFiles: (files, size) =>
-    files === 1
-      ? `1 plik, ${size}`
-      : `${files} ${files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 12 || files % 100 > 14) ? 'pliki' : 'plików'}, ${size}`,
   hint: (since, kept, retention, tier) =>
     `Ruch jest liczony od ostatniego startu serwera (${since}). ` +
     (kept
@@ -49,29 +40,6 @@ export const summary: EditorMessages['summary'] = {
   previewOffline: 'Podgląd jest offline',
   behind: 'nieaktualny',
   storage: 'Miejsce',
-  inVersion: (version) => `W wersji ${version}`,
-  noVersion: 'W wersji',
-  inData: 'W danych',
-  sharedByAll: 'Wspólne dla wszystkich wersji',
-  browse: 'Przeglądaj',
-  code: 'Kod',
-  codeWhy: 'C# jest kompilowany, nigdy serwowany.',
-  characters: 'znaków',
-  assets: 'Zasoby',
-  assetsPublic: 'Publiczne: kod je serwuje.',
-  assetsPrivate: 'Kod ich nie serwuje.',
+  versionAllowance: 'Kod i zasoby',
   data: 'Dane',
-  workspace: 'Obszar roboczy',
-  workspaceOff: 'wyłączony',
-  dataPublic: 'Publiczne: kod serwuje obszar roboczy.',
-  dataPrivate: 'Dostępne tylko dla lambdy.',
-  secrets: 'Sekrety',
-  secretsOff: 'wyłączone',
-  secretsCount: (count) => `${count} ${count === 1 ? 'sekret' : [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100) ? 'sekrety' : 'sekretów'}`,
-  secretsMissing: (count) => `brakuje: ${count}`,
-  secretsMissingTitle: 'Kod odczytuje sekrety, które nie są ustawione, i w tych miejscach nie działa.',
-  database: 'Baza danych',
-  databaseOff: 'wyłączona',
-  databaseTables: (count) => counted(count, 'tabela', 'tabele', 'tabel'),
-  databaseOffUsed: 'Kod łączy się z bazą danych, która jest wyłączona.',
 };

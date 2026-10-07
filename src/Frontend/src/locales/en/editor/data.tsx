@@ -5,7 +5,7 @@ type Node = ReactNode;
 /** The data of a lambda: what it keeps rather than what it is. */
 export const data = {
   hint:
-    'Data is what the lambda keeps while it runs. It belongs to the lambda, not to a version: every version reads and writes the same data, and nothing you do with versions changes it. It goes when the lambda is deleted, or when you switch that kind of data off.',
+    'Data is what the lambda keeps while it runs. It belongs to the lambda, not to a version: every version reads and writes the same data, and nothing you do with versions changes it. It goes when the lambda is deleted, or when you switch that kind of data off. The database and the workspace share one allowance of room, so each may grow as far as the other leaves it.',
   facts: [
     ['Shared by every version', 'Whichever version is online reads and writes the same data.'],
     ['Kept when you deploy', 'Deploying or rolling back never touches it.'],

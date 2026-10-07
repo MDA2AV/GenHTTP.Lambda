@@ -70,7 +70,7 @@ public sealed class BranchTests
 
         await git.RunAsync("squashed", "switch", "-c", "greeting");
 
-        git.Write("squashed", "assets/one.txt", "one");
+        git.Write("squashed", "resources/one.txt", "one");
         await git.CommitAsync("squashed", "Adds one");
         await git.RunAsync("squashed", "push", "-u", "origin", "greeting");
 
@@ -92,7 +92,7 @@ public sealed class BranchTests
         await git.RunAsync("squashed", "fetch", "--prune");
 
         Assert.AreEqual(string.Empty, await git.ReadAsync("squashed", "branch", "-r", "--list", "origin/greeting"));
-        Assert.Contains("one", git.Read("squashed", "assets/one.txt"));
+        Assert.Contains("one", git.Read("squashed", "resources/one.txt"));
     }
 
     [TestMethod]
@@ -108,10 +108,10 @@ public sealed class BranchTests
 
         await git.RunAsync("forwarded", "switch", "-c", "two-steps");
 
-        git.Write("forwarded", "assets/one.txt", "one");
+        git.Write("forwarded", "resources/one.txt", "one");
         await git.CommitAsync("forwarded", "Adds one");
 
-        git.Write("forwarded", "assets/two.txt", "two");
+        git.Write("forwarded", "resources/two.txt", "two");
         await git.CommitAsync("forwarded", "Adds two");
 
         await git.RunAsync("forwarded", "push", "-u", "origin", "two-steps");
@@ -178,14 +178,14 @@ public sealed class BranchTests
 
         var limits = fixture.Limits.Get();
 
-        fixture.Limits.Save(limits with { Free = limits.Free with { AssetBytes = 1024 } });
+        fixture.Limits.Save(limits with { Free = limits.Free with { BuildBytes = 1024 } });
 
         var lambda = await fixture.CreateLambdaAsync("toolarge");
 
         await git.CloneAsync(fixture.EditorUrl(lambda), "toolarge");
 
         await git.RunAsync("toolarge", "switch", "-c", "pictures");
-        git.Write("toolarge", "assets/large.txt", new string('x', 4096));
+        git.Write("toolarge", "resources/large.txt", new string('x', 4096));
         await git.CommitAsync("toolarge", "Adds something large");
 
         var pushed = await git.TryAsync("toolarge", "push", "-u", "origin", "pictures");
@@ -214,7 +214,7 @@ public sealed class BranchTests
         // the agent saves it meanwhile
         await fixture.PutFeatureAsync(lambda, feature.Key, "The agent's change", new LambdaFile(LambdaSource.EntryName, Repository.Says("agent")));
 
-        git.Write("raced", "assets/mine.txt", "mine");
+        git.Write("raced", "resources/mine.txt", "mine");
         await git.CommitAsync("raced", "Mine");
 
         var pushed = await git.TryAsync("raced", "push");

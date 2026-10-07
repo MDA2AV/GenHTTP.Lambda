@@ -5,12 +5,6 @@ type Node = ReactNode;
 export const summary = {
   reading: 'Reading how it is doing…',
   readDocs: 'Read the documentation',
-  written: 'Documentation and tests',
-  writtenWhy: 'Never compiled and never served. Kept with each version, and counted with the assets.',
-  writtenMissing: 'Not written yet',
-  build: 'Build',
-  buildWhy: 'Never compiled or served: what the code or the assets are built from. Counted with the assets.',
-  buildFiles: (files: number, size: string) => (files === 1 ? `1 file, ${size}` : `${files} files, ${size}`),
   hint: (since: string, kept: boolean, retention: number, tier: string) =>
     `Traffic is counted since the server last started (${since}). ` +
     (kept
@@ -47,29 +41,8 @@ export const summary = {
   previewOffline: 'Its preview is not running',
   behind: 'out of date',
   storage: 'Storage',
-  inVersion: (version: number) => `In version ${version}`,
-  noVersion: 'In the version',
-  inData: 'In the data',
-  sharedByAll: 'Shared by every version',
-  browse: 'Browse',
-  code: 'Code',
-  codeWhy: 'C# is compiled, never served.',
-  characters: 'characters',
-  assets: 'Assets',
-  assetsPublic: 'Public: the code serves them.',
-  assetsPrivate: 'Not served by the code.',
+  /** The meter of what a version may hold, which its code and its resources share. */
+  versionAllowance: 'Code and resources',
+  /** The meter of what the lambda may keep, which its database and its workspace share. */
   data: 'Data',
-  workspace: 'Workspace',
-  workspaceOff: 'switched off',
-  dataPublic: 'Public: the code serves the workspace.',
-  dataPrivate: 'Private to the lambda.',
-  secrets: 'Secrets',
-  secretsOff: 'switched off',
-  secretsCount: (count: number) => (count === 1 ? '1 secret' : `${count} secrets`),
-  secretsMissing: (count: number) => `${count} missing`,
-  secretsMissingTitle: 'The code reads secrets that are not set, and fails where it does.',
-  database: 'Database',
-  databaseOff: 'switched off',
-  databaseTables: (count: number) => (count === 1 ? '1 table' : `${count} tables`),
-  databaseOffUsed: 'The code connects to the database, which is switched off.',
 };

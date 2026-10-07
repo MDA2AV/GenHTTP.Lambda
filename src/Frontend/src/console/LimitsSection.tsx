@@ -21,14 +21,10 @@ interface Limit {
 
 /** What each tier has, the same for both: a column each. */
 const TIER: (Limit & { key: keyof TierLimits })[] = [
-  { key: 'codeCharacters', title: 'Code', unit: 'chars',
-    note: 'C# across every file of a lambda. It guards the time and memory the compiler spends, which the whole server shares.' },
-  { key: 'assetBytes', title: 'Assets', unit: 'MB', bytes: true,
-    note: 'What a version ships beside its code: the front end, the documentation and the tests. Kept in every version.' },
-  { key: 'workspaceBytes', title: 'Workspace', unit: 'MB', bytes: true,
-    note: 'The files a lambda saves while it runs. Compiled into the lambda, so a change compiles each one again on its next request.' },
-  { key: 'databaseBytes', title: 'Database', unit: 'MB', bytes: true,
-    note: 'How large its records may grow. Holds from the next connection; nothing already stored is removed.' },
+  { key: 'buildBytes', title: 'Build', unit: 'MB', bytes: true,
+    note: 'A version: its code - the C#, and the documentation, the tests and whatever else is kept with it - and its resources, together. Kept in every version. The C# is compiled, so this also bounds what the compiler spends, which the whole server shares.' },
+  { key: 'dataBytes', title: 'Data', unit: 'MB', bytes: true,
+    note: 'What a lambda keeps while it runs: its database and its workspace, together. Holds from the next write; nothing already stored is removed.' },
   { key: 'versions', title: 'Versions kept', unit: '',
     note: 'Older ones are removed when a new one is saved, never the one online.' },
   { key: 'features', title: 'Features open at once', unit: '',

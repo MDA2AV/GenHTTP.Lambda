@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const versions: EditorMessages['versions'] = {
   hint: (limit) =>
-    `Une version, c’est le programme (son code et ses assets), et elle ne change plus une fois enregistrée : on peut donc comparer n’importe laquelle et la remettre en ligne exactement telle qu’elle était. Chacune garde ce qui a été demandé et ce qu’elle a changé. Pour modifier la lambda, démarrez un brouillon : il devient la prochaine version une fois au point. Au-delà de ${limit} versions, les plus anciennes sont supprimées ; celle qui est en ligne, jamais.`,
+    `Une version, c’est le programme (son code et ses ressources), et elle ne change plus une fois enregistrée : on peut donc comparer n’importe laquelle et la remettre en ligne exactement telle qu’elle était. Chacune garde ce qui a été demandé et ce qu’elle a changé. Pour modifier la lambda, démarrez un brouillon : il devient la prochaine version une fois au point. Au-delà de ${limit} versions, les plus anciennes sont supprimées ; celle qui est en ligne, jamais.`,
   none: 'Aucune version pour l’instant.',
   noDescription: 'Sans description',
   online: 'en ligne',
@@ -17,14 +17,10 @@ export const versions: EditorMessages['versions'] = {
   status: { added: 'ajouté', removed: 'supprimé', changed: 'modifié', same: 'inchangé' },
   groups: {
     code: 'Code',
-    assets: 'Assets',
-    build: 'Build',
-    context: 'Documentation et tests',
+    resources: 'Ressources',
   },
-  browse: 'Parcourir ses fichiers',
+  files: 'Ouvrir ses fichiers',
   docs: 'Lire sa documentation',
-  build: 'Voir ce à partir de quoi il est construit',
-  edit: 'Modifier à partir d’ici',
   feature: 'Démarrer un brouillon à partir d’ici',
   featureTitle:
     'Préparer une modification de cette version à côté de la lambda, et l’intégrer à la prochaine version une fois au point',

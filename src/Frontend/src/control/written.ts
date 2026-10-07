@@ -1,56 +1,42 @@
 import type { LambdaFile } from '../api';
 
 /**
- * What a version keeps beside its program, under .lambda/: what is written
- * about it - its documentation and its tests - and what its assets or code
- * are built from, its build folder.
+ * How a version's files are laid out: its code - every file that is not a
+ * resource, in whatever folders, of which the .cs files are compiled - and
+ * its resources, below resources/, which it reads and serves while it runs.
  *
- * The same rule the server applies (LambdaSource): a file under .lambda/ is
- * never code and never an asset, whatever it is called - a test written in
- * C# is not compiled, and a page of documentation is not served. It belongs
- * to the version like any other file, so it is saved, compared, rolled back
- * and merged with the program it describes.
+ * The same rule the server applies (LambdaSource). What is written about a
+ * version - its documentation and its tests - is in docs/ and tests/ of its
+ * code: folders like any other, which this editor reads to show them as
+ * what they are.
  */
 
-/** The folder of everything kept beside the program. */
-export const BESIDE = '.lambda/';
+/** Where the resources of a version are: what it reads and serves. */
+export const RESOURCES = 'resources/';
 
-export const DOCS = '.lambda/docs/';
+export const DOCS = 'docs/';
 
-export const TESTS = '.lambda/tests/';
+export const TESTS = 'tests/';
 
 /** What the app is, who it is for and why - the one page the simple view shows. */
-export const PRODUCT = '.lambda/docs/product.md';
+export const PRODUCT = 'docs/product.md';
 
 /** The technical decisions, and why they were made. */
-export const DECISIONS = '.lambda/docs/decisions.md';
+export const DECISIONS = 'docs/decisions.md';
 
 /** How the app is tested automatically. */
-export const TESTING = '.lambda/tests/README.md';
+export const TESTING = 'tests/README.md';
 
-/**
- * The build folder: the files the assets or the code are built from with a
- * build tool, whatever that tool works from - built by whoever changes
- * them, never by the platform.
- */
-export const BUILD = '.lambda/build/';
+/** Whether a file is a resource, read and served while the lambda runs. */
+export const isResource = (name: string) => name.startsWith(RESOURCES);
 
-/** How the build folder is built, and where the build goes. */
-export const BUILD_README = '.lambda/build/README.md';
+/** Whether a file belongs to the code: everything that is not a resource. */
+export const isCode = (name: string) => !isResource(name);
 
-/** Whether a file is kept beside the program rather than being part of it. */
-export const isBeside = (name: string) => name.startsWith(BESIDE);
+/** Whether a file is C# the lambda is compiled from: a .cs file of the code, in whichever folder. */
+export const isCompiled = (name: string) => isCode(name) && name.toLowerCase().endsWith('.cs');
 
-export const isBuild = (name: string) => name.startsWith(BUILD);
-
-/** Whether a file is documentation or a test. */
-export const isContext = (name: string) => isBeside(name) && !isBuild(name);
-
-export const isCode = (name: string) => name.toLowerCase().endsWith('.cs') && !isBeside(name);
-
-export const isAsset = (name: string) => !isCode(name) && !isBeside(name);
-
-/** The two parts of the context, each a section of the editor. */
+/** The two folders of the code shown as what they are, each a section of the editor. */
 export type Area = 'docs' | 'tests';
 
 export const AREAS: Record<Area, { folder: string; pages: string[] }> = {
@@ -81,7 +67,7 @@ export function othersOf(files: LambdaFile[], area: Area): LambdaFile[] {
   return files.filter((file) => file.name.startsWith(folder) && !isPage(file)).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** A file's name within its area: '.lambda/tests/data/x.json' is 'data/x.json'. */
+/** A file's name within its area: 'tests/data/x.json' is 'data/x.json'. */
 export function within(name: string, area: Area): string {
   const { folder } = AREAS[area];
 

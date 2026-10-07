@@ -58,7 +58,7 @@ public static class DefinitionResolver
 
         foreach (var one in files)
         {
-            if (!one.IsCode)
+            if (!one.IsCompiled)
             {
                 continue;
             }

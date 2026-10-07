@@ -3,7 +3,7 @@ import { count } from './language';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Les données sont ce que la lambda garde pendant qu’elle tourne. Elles appartiennent à la lambda, pas à une version : toutes les versions lisent et écrivent les mêmes données, et rien de ce que vous faites avec les versions ne les change. Un brouillon s’essaie sur une copie de ces données. Elles disparaissent quand la lambda est supprimée, ou quand vous désactivez ce type de données.',
+    'Les données sont ce que la lambda garde pendant qu’elle tourne. Elles appartiennent à la lambda, pas à une version : toutes les versions lisent et écrivent les mêmes données, et rien de ce que vous faites avec les versions ne les change. Un brouillon s’essaie sur une copie de ces données. Elles disparaissent quand la lambda est supprimée, ou quand vous désactivez ce type de données. La base de données et le workspace se partagent une même réserve de place : chacun peut grandir jusqu’où l’autre le lui permet.',
   facts: [
     ['Partagées par toutes les versions', 'Quelle que soit la version en ligne, elle lit et écrit les mêmes données.'],
     ['Gardées quand vous déployez', 'Déployer, restaurer ou intégrer un brouillon n’y touche jamais.'],

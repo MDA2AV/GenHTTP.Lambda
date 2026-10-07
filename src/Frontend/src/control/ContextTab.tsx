@@ -24,8 +24,8 @@ interface Writing {
 /**
  * What a version says about itself, beside its program: its documentation,
  * or its tests - one component for both, because both are the same thing on
- * disk (a folder of .lambda/ with markdown pages and files beside them) and
- * should behave the same way on the screen.
+ * disk (a folder of its code, docs/ or tests/, with markdown pages and files
+ * beside them) and should behave the same way on the screen.
  *
  * Written by agents, read here: the pages are rendered to be read, each one
  * a pill under the title, with the files beside them - pictures, scripts,
@@ -86,7 +86,7 @@ export function ContextTab({ control, area, onDirty }: {
 
   const load = useCallback(async () => {
     try {
-      // its own folder only: the build folder beside it may hold any number of files
+      // its own folder only: the rest of the code may hold any number of files
       const [mine, theirs] = await Promise.all([
         feature
           ? api.feature.get(control.privateKey, feature.key, folder).then((content) => content.files)
@@ -414,7 +414,7 @@ export function ContextTab({ control, area, onDirty }: {
               </button>
             )}
           </nav>
-          <Viewer control={control} selection={selectedFile ? { group: 'context', path: selectedFile.name } : null} files={all} listing={null} />
+          <Viewer control={control} selection={selectedFile ? { group: 'code', path: selectedFile.name } : null} files={all} listing={null} />
         </div>
       ) : current?.file ? (
         <article>

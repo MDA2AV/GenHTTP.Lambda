@@ -4,7 +4,7 @@ type Node = ReactNode;
 
 /**
  * What a version says about itself beside its program: its documentation
- * and its tests, in .lambda/. The simple view has the documentation only,
+ * and its tests, in docs/ and tests/ of its code. The simple view has the documentation only,
  * and of it only what the app is for - called "About" there.
  */
 export const context = {
@@ -19,7 +19,7 @@ export const context = {
     emptyText: (code: (text: string) => Node) => (
       <>
         Agents write the documentation with their changes: what the app is, who it is for and why in{' '}
-        {code('.lambda/docs/product.md')}, and why it is built the way it is in {code('decisions.md')}. It is part of
+        {code('docs/product.md')}, and why it is built the way it is in {code('decisions.md')}. It is part of
         the version, beside the code.
       </>
     ),
@@ -48,7 +48,7 @@ export const context = {
     emptyText: (code: (text: string) => Node) => (
       <>
         How the app is tested - what has to keep working, how to check it, and how to run the scripts for it - is
-        written by agents in {code('.lambda/tests/README.md')}, with the scripts and the test data beside it.
+        written by agents in {code('tests/README.md')}, with the scripts and the test data beside it.
       </>
     ),
     ask: 'Ask the agent to write tests',

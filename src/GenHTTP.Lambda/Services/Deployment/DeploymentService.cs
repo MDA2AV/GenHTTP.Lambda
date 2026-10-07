@@ -23,7 +23,7 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// own containers, this is the service that would start and track them.
 ///
 /// A preview is built exactly like the lambda, from the feature's files, into
-/// a place of its own: its own assets, the feature's copy of the workspace
+/// a place of its own: its own resources, the feature's copy of the workspace
 /// compiled in as the workspace, and its copies of the secrets and the
 /// database to read and write - so trying a feature can do anything to the
 /// data without the lambda noticing.
@@ -51,18 +51,22 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     private IDatabaseVault Databases { get; }
 
+    private IWorkspaceVault Workspaces { get; }
+
     private ILogger Logger { get; }
 
     #endregion
 
     #region Initialization
 
-    public DeploymentService(IStorageService storage, ServerRegistry servers, ISecretVault secrets, IDatabaseVault databases, ILogger<DeploymentService> logger)
+    public DeploymentService(IStorageService storage, ServerRegistry servers, ISecretVault secrets, IDatabaseVault databases, IWorkspaceVault workspaces,
+                             ILogger<DeploymentService> logger)
     {
         Storage = storage;
         Servers = servers;
         Secrets = secrets;
         Databases = databases;
+        Workspaces = workspaces;
         Logger = logger;
 
         ModuleCatalog.LoadModules();
@@ -76,7 +80,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     {
         var id = lambdaId ?? 0;
 
-        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetAssetDirectory(id),
+        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetResourceDirectory(id),
                                             Storage.GetAssemblyDirectory(id), $"check_{id}", false, limits ?? WorkspaceLimits.Standard);
 
         await _compiling.WaitAsync(cancellation);
@@ -133,7 +137,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
          * compiled since the server started - or since its tier moved - all
          * arrive here together, and each of them used to read, unpack and
          * write out the whole version before queueing for the compiler; with
-         * a hundred megabytes of assets that is a hundred megabytes, several
+         * a hundred megabytes of resources that is a hundred megabytes, several
          * times over, per request. Now the first one does it and the others
          * find it done.
          */
@@ -179,17 +183,21 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         var files = LambdaSource.Parse(code);
 
         // what this version ships is written out before it is compiled, so the
-        // handler it returns is serving the assets of the version going online
-        // rather than whatever the last one left behind
+        // handler it returns is serving the resources of the version going
+        // online rather than whatever the last one left behind
         Materialize(slot, files);
 
         var name = slot.FeatureId is { } feature ? $"{slot.LambdaId}_f{feature}_{stamp}" : $"{slot.LambdaId}_{stamp}";
 
-        var request = new CompilationRequest(files, Storage.GetWorkspace(slot.LambdaId, slot.FeatureId),
-                                             Storage.GetAssetDirectory(slot.LambdaId, slot.FeatureId),
-                                             Storage.GetAssemblyDirectory(slot.LambdaId), name, true, limits,
-                                             Secrets.ReaderFor(slot.LambdaId, slot.FeatureId),
-                                             Databases.ConnectorFor(slot.LambdaId, slot.FeatureId));
+        var (lambdaId, featureId) = (slot.LambdaId, slot.FeatureId);
+
+        var request = new CompilationRequest(files, Storage.GetWorkspace(lambdaId, featureId),
+                                             Storage.GetResourceDirectory(lambdaId, featureId),
+                                             Storage.GetAssemblyDirectory(lambdaId), name, true, limits,
+                                             Secrets.ReaderFor(lambdaId, featureId),
+                                             Databases.ConnectorFor(lambdaId, featureId),
+                                             () => Databases.SizeOf(lambdaId, featureId),
+                                             () => Workspaces.Changed(lambdaId, featureId));
 
         var outcome = await CompileAsync(slot, stamp, request);
 
@@ -240,14 +248,14 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     }
 
     /// <summary>
-    /// Writes the assets of what is being served back, after what was meant
+    /// Writes the resources of what is being served back, after what was meant
     /// to replace it did not build.
     /// </summary>
     /// <remarks>
-    /// The assets are written out before the code is compiled, because the
+    /// The resources are written out before the code is compiled, because the
     /// code may read them while it builds its handler - so a deployment that
     /// fails has already replaced them, and the handler that is still online
-    /// would serve the assets of code that never went online. A preview is
+    /// would serve the resources of code that never went online. A preview is
     /// deployed again and again while a feature is worked on, which made this
     /// a matter of course rather than a rarity.
     /// </remarks>
@@ -271,7 +279,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
         catch (Exception e)
         {
-            Logger.LogWarning(e, "Failed to write back assets of {Slot}", slot);
+            Logger.LogWarning(e, "Failed to write back resources of {Slot}", slot);
         }
     }
 
@@ -313,17 +321,18 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         => _deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Limits == limits;
 
     /// <summary>
-    /// Writes what is being deployed into the directory it reads its assets from.
+    /// Writes the resources of what is being deployed into the directory it
+    /// reads them from - <c>resources/index.html</c> as <c>index.html</c>.
     /// </summary>
     /// <remarks>
-    /// Emptied first, so an asset dropped from a version stops being served
+    /// Emptied first, so a resource dropped from a version stops being served
     /// rather than lingering because nothing overwrote it. Names were checked
     /// before they got here, and the path is resolved against the root again
     /// anyway - a file that would land outside is skipped rather than trusted.
     /// </remarks>
     private void Materialize(Slot slot, IReadOnlyList<LambdaFile> files)
     {
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Storage.GetAssetDirectory(slot.LambdaId, slot.FeatureId)))
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Storage.GetResourceDirectory(slot.LambdaId, slot.FeatureId)))
                  + Path.DirectorySeparatorChar;
 
         try
@@ -337,18 +346,18 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
             foreach (var file in files)
             {
-                // the documentation and the tests are never served, so they
-                // never reach the directory anything is served from
-                if (!file.IsAsset)
+                // the code is never served, so it never reaches the
+                // directory anything is served from
+                if (!file.IsResource)
                 {
                     continue;
                 }
 
-                var path = Path.GetFullPath(Path.Combine(root, file.Name));
+                var path = Path.GetFullPath(Path.Combine(root, LambdaSource.WithinResources(file.Name)));
 
                 if (!path.StartsWith(root, StringComparison.Ordinal))
                 {
-                    Logger.LogWarning("Skipped asset {Name} of {Slot} outside its directory", file.Name, slot);
+                    Logger.LogWarning("Skipped resource {Name} of {Slot} outside its directory", file.Name, slot);
 
                     continue;
                 }
@@ -362,7 +371,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         {
             // a lambda that ships nothing is still a lambda; failing the whole
             // deployment because a file could not be written would be worse
-            Logger.LogWarning(e, "Failed to write assets of {Slot}", slot);
+            Logger.LogWarning(e, "Failed to write resources of {Slot}", slot);
         }
     }
 

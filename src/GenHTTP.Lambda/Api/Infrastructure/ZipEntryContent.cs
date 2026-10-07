@@ -8,7 +8,7 @@ namespace GenHTTP.Lambda.Api.Infrastructure;
 /// One file of a zip on the disk, sent as it is.
 /// </summary>
 /// <remarks>
-/// Read out of the zip while it is sent rather than beforehand, so an asset of
+/// Read out of the zip while it is sent rather than beforehand, so a file of
 /// a hundred megabytes costs a buffer rather than a hundred megabytes. The zip
 /// is opened again for the sending, which may be after the answer was decided
 /// on and the zip it was decided with let go of.

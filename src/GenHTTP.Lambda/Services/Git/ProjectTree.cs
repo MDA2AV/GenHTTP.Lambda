@@ -105,6 +105,14 @@ public static class ProjectTree
     /// <param name="read">Reads a kept file</param>
     public static async ValueTask<ReadTree> ReadAsync(IReadOnlyList<GitFile> tree, IReadOnlyList<StoredCommit> parents, Func<GitObjectId, byte[]> read)
     {
+        // laid out as the platform did once: what was in assets/ then would
+        // be read as code, and the lambda would serve nothing
+        if (parents.Any(p => !p.IsCurrent))
+        {
+            return ReadTree.Refused("This builds on a commit made before the platform laid the lambda's files out anew: what it reads and serves is in resources/, not assets/. "
+                                  + "Rebase onto origin/main (git pull --rebase, or git rebase origin/main) - git moves your changes along - and push again.");
+        }
+
         foreach (var file in tree)
         {
             if (file.Mode != GitFileMode.Regular)
@@ -113,11 +121,6 @@ public static class ProjectTree
 
                 return ReadTree.Refused($"'{file.Path}' is {what}, and a lambda holds plain files only. "
                                       + (file.Mode == GitFileMode.Symlink ? "Commit the file itself instead." : $"git update-index --chmod=-x {file.Path}, and commit again."));
-            }
-
-            if (ProjectPaths.Classify(file.Path).Kind == ProjectPathKind.Foreign)
-            {
-                return ReadTree.Refused($"'{file.Path}' has no place in a lambda. {ProjectPaths.Layout} Keep other files out of commits (.git/info/exclude).");
             }
         }
 
@@ -200,7 +203,7 @@ public static class ProjectTree
 
             var content = (await entry.ReadAsync()).ToArray();
 
-            if (LambdaSource.IsCode(name) || entry.Path.EndsWith(".md", StringComparison.OrdinalIgnoreCase) && LambdaSource.IsBeside(name))
+            if (LambdaSource.IsCompiled(name))
             {
                 if (!TryText(content, out var text))
                 {
@@ -231,6 +234,7 @@ public static class ProjectTree
 
         if (LambdaSource.Validate(ordered) is { } invalid)
         {
+            // named as the lambda names it, which is where the clone has it but for the names of its C#
             return ReadTree.Refused(invalid);
         }
 
@@ -295,7 +299,7 @@ public static class ProjectTree
 
         return files.OrderBy(f => f.Name == LambdaSource.EntryName ? 0 : known.ContainsKey(f.Name) ? 1 : 2)
                     .ThenBy(f => known.GetValueOrDefault(f.Name, int.MaxValue))
-                    .ThenBy(f => f.IsCode ? 0 : f.IsAsset ? 1 : 2)
+                    .ThenBy(f => f.IsCompiled ? 0 : f.IsCode ? 1 : 2)
                     .ThenBy(f => f.Name, StringComparer.Ordinal)
                     .ToList();
     }

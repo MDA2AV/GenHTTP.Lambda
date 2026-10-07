@@ -6,7 +6,7 @@
 //   GET  events         text/event-stream:
 //                         messages   the counts as JSON, when you connect and after every vote
 //                         watchers   an event of its own: how many are listening, when that changes
-//   anything else       the page in web/
+//   anything else       the page in resources/web/
 //
 // Server-sent events are the simple way to push: one long response the server
 // keeps writing to, and in the browser new EventSource('events'), which also
@@ -15,10 +15,11 @@
 //
 // The files:
 //
-//   lambda.cs     this one: the wiring, and bringing the database up to date
-//   Poll.cs       the question, the counts, and everybody who is listening
-//   migrations/   the SQL that makes the table of votes, applied once by Evolve
-//   web/          the page and its script
+//   lambda.cs               this one: the wiring, and bringing the database up to date
+//   Poll.cs                 the question, the counts, and everybody who is listening
+//   resources/migrations/   the SQL that makes the table of votes, applied once by Evolve
+//   resources/web/          the page and its script
+//   docs/, tests/           what it is for and why, and how it is tested
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
@@ -26,12 +27,12 @@
 // [/demo]
 
 // every version reads the same database, so each brings it up to the schema
-// it expects first; Evolve applies what is new in migrations/, once each
+// it expects first; Evolve applies what is new in resources/migrations/, once each
 using (var connection = Database.GetConnection())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
-        Locations = [Assets.Root + "migrations"],
+        Locations = [Resources.Root + "migrations"],
         IsEraseDisabled = true
     };
 
@@ -79,4 +80,4 @@ var events = EventSource.Create()
 return Layout.Create()
              .Add("api", api)
              .Add("events", events)
-             .Add(Assets.App("web"));
+             .Add(Resources.App("web"));

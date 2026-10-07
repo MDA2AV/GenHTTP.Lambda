@@ -92,7 +92,7 @@ public sealed class WorkspaceTests
     [TestMethod]
     public async Task AFileTooLargeIsRefused()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 4 * WorkspaceLimits.Block });
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -125,7 +125,7 @@ public sealed class WorkspaceTests
     [TestMethod]
     public async Task OneFileMayTakeTheWholeQuota()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 4 * WorkspaceLimits.Block });
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -138,7 +138,7 @@ public sealed class WorkspaceTests
     [TestMethod]
     public async Task EmptyFilesAndFoldersAreNotFree()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { WorkspaceBytes = 4 * WorkspaceLimits.Block });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 4 * WorkspaceLimits.Block });
 
         var lambda = await fixture.CreateLambdaAsync();
 

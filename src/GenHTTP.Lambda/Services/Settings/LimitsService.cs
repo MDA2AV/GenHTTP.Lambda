@@ -28,8 +28,8 @@ namespace GenHTTP.Lambda.Services.Settings;
 ///
 /// A change applies to what is checked next: a save, an upload, a deploy, a
 /// connection to a database. Nothing a lambda already has is removed for being
-/// over a lowered limit. A lambda's workspace quota is compiled into it, so a
-/// changed one compiles each lambda again on its next request.
+/// over a lowered limit. The room of a lambda's data is compiled into its
+/// workspace, so a changed one compiles each lambda again on its next request.
 /// </remarks>
 public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, LambdaOptions options) : ILimitsService
 {
@@ -69,52 +69,45 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     }
 
     /// <summary>
-    /// How many characters of C# a lambda in the given tier may have.
+    /// How large a version of a lambda in the given tier may be, its code and
+    /// its resources together.
     /// </summary>
     /// <remarks>
     /// Never less for a premium lambda than for any other, however the two
     /// were configured: the panel refuses that, the environment did not.
     /// </remarks>
-    public int MaxCodeLengthOf(LambdaTier tier)
+    public long BuildOf(LambdaTier tier)
     {
         var current = Get();
 
-        return tier == LambdaTier.Premium ? Math.Max(current.Premium.CodeCharacters, current.Free.CodeCharacters) : current.Free.CodeCharacters;
+        return tier == LambdaTier.Premium ? Math.Max(current.Premium.BuildBytes, current.Free.BuildBytes) : current.Free.BuildBytes;
     }
 
     /// <summary>
-    /// How many bytes of assets a lambda in the given tier may ship.
+    /// How much room the data of a lambda in the given tier may take, its
+    /// database and its workspace together.
     /// </summary>
-    public int MaxAssetBytesOf(LambdaTier tier)
+    public long DataOf(LambdaTier tier)
     {
         var current = Get();
 
-        return tier == LambdaTier.Premium ? Math.Max(current.Premium.AssetBytes, current.Free.AssetBytes) : current.Free.AssetBytes;
+        return tier == LambdaTier.Premium ? Math.Max(current.Premium.DataBytes, current.Free.DataBytes) : current.Free.DataBytes;
     }
 
     /// <summary>
-    /// What a lambda in the given tier may keep in its workspace.
+    /// What a lambda in the given tier may keep in its workspace: the room of
+    /// its data, which its database takes some of.
     /// </summary>
     /// <param name="enabled">Whether its owner left the workspace switched on</param>
-    public WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true) => new(Of(tier).WorkspaceBytes, enabled);
-
-    /// <summary>
-    /// How large the database of a lambda in the given tier may grow.
-    /// </summary>
-    public long DatabaseOf(LambdaTier tier)
-    {
-        var current = Get();
-
-        return tier == LambdaTier.Premium ? Math.Max(current.Premium.DatabaseBytes, current.Free.DatabaseBytes) : current.Free.DatabaseBytes;
-    }
+    public WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true) => new(DataOf(tier), enabled);
 
     /// <summary>
     /// What the limits are where the operator has not set them: what the
     /// options say, which is the environment or the built in defaults.
     /// </summary>
     public static ProductLimits DefaultsOf(LambdaOptions options) => new(
-        new TierLimits(options.MaxCodeLength, options.MaxAssetBytes, options.WorkspaceBytes, options.DatabaseBytes, options.MaxVersions, options.MaxFeatures),
-        new TierLimits(options.PremiumMaxCodeLength, options.PremiumMaxAssetBytes, options.PremiumWorkspaceBytes, options.PremiumDatabaseBytes, options.MaxVersions, options.MaxFeatures),
+        new TierLimits(options.BuildBytes, options.DataBytes, options.MaxVersions, options.MaxFeatures),
+        new TierLimits(options.PremiumBuildBytes, options.PremiumDataBytes, options.MaxVersions, options.MaxFeatures),
         options.DeploymentLifetime,
         options.Retention,
         options.MaxShowcaseImageBytes,
@@ -159,6 +152,16 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
                 }
             }
 
+            // what the four allowances that became two were saved as, which
+            // the two read until they were saved themselves
+            foreach (var key in Retired.SelectMany(r => new[] { $"{Prefix}free.{r}", $"{Prefix}premium.{r}" }))
+            {
+                if (database.Settings.Find(key) is { } retired)
+                {
+                    database.Settings.Remove(retired);
+                }
+            }
+
             database.SaveChanges();
 
             return (_current = limits, previous);
@@ -172,10 +175,8 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     {
         foreach (var (tier, values) in new[] { ("free", limits.Free), ("premium", limits.Premium) })
         {
-            yield return ($"{Prefix}{tier}.code-characters", Text(values.CodeCharacters));
-            yield return ($"{Prefix}{tier}.asset-bytes", Text(values.AssetBytes));
-            yield return ($"{Prefix}{tier}.workspace-bytes", Text(values.WorkspaceBytes));
-            yield return ($"{Prefix}{tier}.database-bytes", Text(values.DatabaseBytes));
+            yield return ($"{Prefix}{tier}.build-bytes", Text(values.BuildBytes));
+            yield return ($"{Prefix}{tier}.data-bytes", Text(values.DataBytes));
             yield return ($"{Prefix}{tier}.versions", Text(values.Versions));
             yield return ($"{Prefix}{tier}.features", Text(values.Features));
         }
@@ -201,9 +202,9 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
             }
         }
 
-        if (limits.Free.WorkspaceBytes < WorkspaceLimits.Block || limits.Premium.WorkspaceBytes < WorkspaceLimits.Block)
+        if (limits.Free.DataBytes < WorkspaceLimits.Block || limits.Premium.DataBytes < WorkspaceLimits.Block)
         {
-            throw LambdaException.Invalid($"A workspace needs room for at least one block of {WorkspaceLimits.Block} bytes.");
+            throw LambdaException.Invalid($"The data of a lambda needs room for at least one block of {WorkspaceLimits.Block} bytes.");
         }
 
         var free = limits.Free;
@@ -211,10 +212,8 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 
         var smaller = new (string Name, bool Smaller)[]
         {
-            ("code characters", premium.CodeCharacters < free.CodeCharacters),
-            ("asset bytes", premium.AssetBytes < free.AssetBytes),
-            ("workspace bytes", premium.WorkspaceBytes < free.WorkspaceBytes),
-            ("database bytes", premium.DatabaseBytes < free.DatabaseBytes),
+            ("build bytes", premium.BuildBytes < free.BuildBytes),
+            ("data bytes", premium.DataBytes < free.DataBytes),
             ("versions", premium.Versions < free.Versions),
             ("features", premium.Features < free.Features)
         }.Where(c => c.Smaller).Select(c => c.Name).ToList();
@@ -251,13 +250,45 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     }
 
     private static TierLimits ReadTier(Dictionary<string, string> stored, string tier, TierLimits defaults) => new(
-        (int)Number(stored, $"{tier}.code-characters", defaults.CodeCharacters),
-        (int)Number(stored, $"{tier}.asset-bytes", defaults.AssetBytes),
-        (long)Number(stored, $"{tier}.workspace-bytes", defaults.WorkspaceBytes),
-        (long)Number(stored, $"{tier}.database-bytes", defaults.DatabaseBytes),
+        (long)Number(stored, $"{tier}.build-bytes", Before(stored, tier, "code-characters", "asset-bytes", defaults.BuildBytes)),
+        (long)Number(stored, $"{tier}.data-bytes", Before(stored, tier, "workspace-bytes", "database-bytes", defaults.DataBytes)),
         (int)Number(stored, $"{tier}.versions", defaults.Versions),
         (int)Number(stored, $"{tier}.features", defaults.Features)
     );
+
+    /// <summary>
+    /// The limits a panel saved before there were two allowances where there
+    /// had been four, which the two are made of until they are saved.
+    /// </summary>
+    private static readonly string[] Retired = ["code-characters", "asset-bytes", "workspace-bytes", "database-bytes"];
+
+    /// <summary>
+    /// What an operator saved of the two allowances one of today's is made
+    /// of, as their sum - or the default, where neither was saved.
+    /// </summary>
+    /// <remarks>
+    /// The characters of code were held apart from the bytes of assets, and
+    /// the room of the database apart from the workspace's: a version may now
+    /// come to what both did together, and the data to what both kept. One
+    /// that was saved without the other is added to the other's default.
+    /// </remarks>
+    private static double Before(Dictionary<string, string> stored, string tier, string first, string second, double fallback)
+    {
+        var one = Stored(stored, $"{tier}.{first}");
+        var other = Stored(stored, $"{tier}.{second}");
+
+        if (one == null && other == null)
+        {
+            return fallback;
+        }
+
+        double Default(string key) => tier == "premium" ? LambdaOptions.RetiredDefaults[key].Premium : LambdaOptions.RetiredDefaults[key].Free;
+
+        return (one ?? Default(first)) + (other ?? Default(second));
+    }
+
+    private static double? Stored(Dictionary<string, string> stored, string key)
+        => stored.TryGetValue(Prefix + key, out var value) && double.TryParse(value, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
 
     private static double Number(Dictionary<string, string> stored, string key, double fallback)
         => stored.TryGetValue(Prefix + key, out var value) && double.TryParse(value, CultureInfo.InvariantCulture, out var parsed) ? parsed : fallback;
@@ -271,13 +302,11 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 /// <summary>
 /// What a lambda of one tier may have.
 /// </summary>
-/// <param name="CodeCharacters">Characters of C# across all its files</param>
-/// <param name="AssetBytes">Bytes of assets, documentation and tests in a version</param>
-/// <param name="WorkspaceBytes">Room its workspace may take</param>
-/// <param name="DatabaseBytes">How large its database may grow</param>
+/// <param name="BuildBytes">How large a version may be: its code and its resources together</param>
+/// <param name="DataBytes">The room its data may take: its database and its workspace together</param>
 /// <param name="Versions">How many of its versions are kept</param>
 /// <param name="Features">How many features it may have open at once</param>
-public sealed record TierLimits(int CodeCharacters, int AssetBytes, long WorkspaceBytes, long DatabaseBytes, int Versions, int Features);
+public sealed record TierLimits(long BuildBytes, long DataBytes, int Versions, int Features);
 
 /// <summary>
 /// Every limit of the product.

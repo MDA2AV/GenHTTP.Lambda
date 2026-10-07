@@ -26,9 +26,9 @@ import {
 } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { AdminTab } from '../control/AdminTab';
-import { BuildTab } from '../control/BuildTab';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
+import { CodeTab } from '../control/CodeTab';
 import type { Busy, Control, FeatureControl, FeatureView, Rejection } from '../control/context';
 import { ContextTab } from '../control/ContextTab';
 import { DataTab } from '../control/DataTab';
@@ -37,7 +37,6 @@ import { DomainTab } from '../control/DomainTab';
 import { BaseDialog, DeleteFeatureDialog, MergeDialog, NewFeatureDialog, NotesDialog } from '../control/FeatureDialogs';
 import { FeaturesTab } from '../control/FeaturesTab';
 import { FeatureTab } from '../control/FeatureTab';
-import { FilesTab } from '../control/FilesTab';
 import { HistoryTab } from '../control/HistoryTab';
 import { LogsTab } from '../control/LogsTab';
 import { StatsTab } from '../control/StatsTab';
@@ -46,8 +45,6 @@ import { SimpleOverview } from '../control/SimpleOverview';
 import { SourceTab } from '../control/SourceTab';
 import { SummaryTab } from '../control/SummaryTab';
 import { VersionsTab } from '../control/VersionsTab';
-import { Workbench } from '../control/Workbench';
-import { BUILD } from '../control/written';
 import { Menu, StatusBadge, TierBadge, menuItem, menuRule } from '../control/ui';
 import { useView, type View } from '../control/view';
 import { SharedWordsContext } from '../control/words';
@@ -62,8 +59,15 @@ interface Props {
 }
 
 type SectionId =
-  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'build' | 'tests' | 'files' | 'data' | 'versions' | 'deployments' | 'stats'
+  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'data' | 'versions' | 'deployments' | 'stats'
   | 'logs' | 'showcase' | 'source' | 'domain' | 'history' | 'admin';
+
+/*
+ * Where the sections that went into Code used to be - its files, what it was
+ * built from - and the old address of the code itself, so a link kept from
+ * before still opens what it showed.
+ */
+const MOVED: Record<string, SectionId> = { edit: 'code', files: 'code', build: 'code' };
 
 type GroupId = 'develop' | 'program' | 'run' | 'sharing';
 
@@ -80,19 +84,16 @@ type GroupId = 'develop' | 'program' | 'run' | 'sharing';
  * reading a demo included. Then how people find it and what they get to see
  * of it: the showcase, its published source and its domain - right under
  * what the lambda is, since those are what it is to everybody else. Then
- * where a change is made: Change and the drafts, the code, what it is built
- * from where a build tool makes some of it - there only where it does - and
- * the tests that say whether a change works. Then the program and what it keeps, side
- * by side - the files of a version and the data of the lambda are the two
- * halves of what a lambda holds, and somebody looking for one is best shown
- * the other right beside it - with the versions they belong to. Then how it
- * runs.
+ * where a change is made: Change and the drafts, the code - every file of a
+ * version, its resources included - and the tests that say whether a change
+ * works. Then the program and what it keeps, side by side - the data of the
+ * lambda, and the versions that all share it. Then how it runs.
  */
 const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: null, sections: ['overview', 'docs'] },
   { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
-  { id: 'develop', sections: ['change', 'features', 'code', 'build', 'tests'] },
-  { id: 'program', sections: ['files', 'data', 'versions'] },
+  { id: 'develop', sections: ['change', 'features', 'code', 'tests'] },
+  { id: 'program', sections: ['data', 'versions'] },
   { id: 'run', sections: ['deployments', 'stats', 'logs'] },
 ];
 
@@ -100,13 +101,12 @@ const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
 
 /*
  * What a feature is worked on with: what it is, what is written about it,
- * its code, what it is built from, its tests, its copy of the data and what
- * its preview said.
+ * its code, its tests, its copy of the data and what its preview said.
  * The rest - the showcase, the domain, the figures, the deployments -
  * belongs to the lambda, which the feature leaves alone until it is put
  * online.
  */
-const FEATURE_VIEWS: FeatureView[] = ['overview', 'docs', 'code', 'build', 'tests', 'data', 'logs'];
+const FEATURE_VIEWS: FeatureView[] = ['overview', 'docs', 'code', 'tests', 'data', 'logs'];
 
 /** The views something can be written and left unsaved in. */
 const WRITABLE = ['code', 'docs', 'tests'];
@@ -180,11 +180,10 @@ export function Editor({ theme }: Props) {
 
   // a feature, opened at one of its views
   const featureKey = segment === 'features' && parts[1] ? parts[1] : null;
-  const featureView: FeatureView = FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview';
+  const featureView: FeatureView = parts[2] === 'build' ? 'code' : (FEATURE_VIEWS.find((view) => view === parts[2]) ?? 'overview');
 
-  const section: SectionId = segment === 'edit'
-    ? 'code'
-    : ([...SECTIONS, ...SIMPLE_SECTIONS, ...ADMIN_SECTIONS].find((id) => id === segment) ?? 'overview');
+  const section: SectionId = MOVED[segment]
+    ?? ([...SECTIONS, ...SIMPLE_SECTIONS, ...ADMIN_SECTIONS].find((id) => id === segment) ?? 'overview');
 
   // the kind of data open: /data/secrets, or /features/{key}/data/secrets
   const dataKind = featureKey ? (featureView === 'data' ? parts[3] : undefined) : section === 'data' ? parts[1] : undefined;
@@ -492,10 +491,6 @@ export function Editor({ theme }: Props) {
   const keeps = holding != null
     && (holding.databaseTables > 0 || holding.workspaceFiles > 0 || holding.secrets > 0 || missingSecrets.length > 0);
 
-  // what the newest version, or the one online, is built from - which most
-  // lambdas keep nothing of, nothing of them being built
-  const builds = summary != null && (summary.build.newestFiles > 0 || summary.build.files > 0);
-
   // the code connects to a database that is switched off - the agent's to
   // switch on, so the simple view is not asked about it
   const databaseWanted = !simple && holding != null && holding.usesDatabase && !holding.databaseEnabled;
@@ -508,8 +503,6 @@ export function Editor({ theme }: Props) {
     (hidden && id === 'domain')
     || (demo && (id === 'showcase' || id === 'source' || id === 'change' || id === 'features'))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
-    // what it is built from, while there is something of it to read
-    || (id === 'build' && section !== 'build' && !builds)
     // the simple view has the data once the app keeps any, or waits for a key
     || (id === 'data' && simple && section !== 'data' && !keeps)
     // the full view has the versions for it - known once the lambda is,
@@ -546,28 +539,6 @@ export function Editor({ theme }: Props) {
 
   // the feature the page is opened on, as last read; undefined until the list arrives
   const open = featureKey && features ? (features.find((f) => f.key === featureKey) ?? null) : undefined;
-
-  // a draft may be the first to keep a build folder, which the versions
-  // say nothing of - so it is asked for its own, where they keep none
-  const [draftBuilds, setDraftBuilds] = useState(false);
-
-  useEffect(() => {
-    setDraftBuilds(false);
-
-    if (simple || !open || builds) {
-      return;
-    }
-
-    let current = true;
-
-    api.feature.get(privateKey, open.key, BUILD)
-      .then((content) => current && setDraftBuilds(content.files.length > 0))
-      .catch(() => undefined);
-
-    return () => {
-      current = false;
-    };
-  }, [privateKey, open?.key, open?.revision, simple, builds]);
 
   // merged or deleted elsewhere while its code was open: nothing is left to save
   const gone = featureKey != null && open === null;
@@ -653,11 +624,8 @@ export function Editor({ theme }: Props) {
 
       go(open && version == null ? `${featurePath(open.key, 'code')}${search}` : `${base}/code${search}`);
     },
-    browse: (version) => go(`${base}/files${version != null ? `?version=${version}` : ''}`),
     openContext: (area, version) =>
       go(open && version == null ? featurePath(open.key, area) : `${base}/${area}${version != null ? `?version=${version}` : ''}`),
-    openBuild: (version) =>
-      go(open && version == null ? featurePath(open.key, 'build') : `${base}/build${version != null ? `?version=${version}` : ''}`),
     agent,
     openData: (kind, set) => go(`${featureKey && open ? featurePath(featureKey, 'data') : `${base}/data`}${kind ? `/${kind}` : ''}${set ? `?set=${encodeURIComponent(set)}` : ''}`),
     startFeature: (from, files) => setCreating({ base: from, files }),
@@ -916,7 +884,7 @@ export function Editor({ theme }: Props) {
           // one view is no choice, so the simple view has no row for it
           !simple && (
           <nav aria-label={t.features.viewsLabel} className="flex gap-1 overflow-x-auto [scrollbar-width:none] px-3 pb-2 md:mt-2 md:flex-col md:gap-0.5 md:overflow-visible md:px-0">
-            {FEATURE_VIEWS.filter((view) => view !== 'build' || builds || draftBuilds || featureView === view).map((view) => {
+            {FEATURE_VIEWS.map((view) => {
               const to = featurePath(featureKey, view);
               const current = featureView === view;
 
@@ -1057,11 +1025,9 @@ export function Editor({ theme }: Props) {
           ) : open === null ? (
             <FeatureMissing onBack={() => go(`${base}/features`)} onVersions={() => go(`${base}/versions`)} />
           ) : featureView === 'code' ? (
-            <Workbench key={open.key} control={control} onDirty={onDirty} />
+            <CodeTab key={open.key} control={control} onDirty={onDirty} />
           ) : featureView === 'docs' || featureView === 'tests' ? (
             <ContextTab key={`${open.key}-${featureView}`} control={control} area={featureView} onDirty={onDirty} />
-          ) : featureView === 'build' ? (
-            <BuildTab key={open.key} control={control} />
           ) : featureView === 'data' ? (
             <DataTab key={open.key} control={control} kind={dataKind} onKind={(kind) => go(`${featurePath(open.key, 'data')}/${kind}`)} />
           ) : featureView === 'logs' ? (
@@ -1070,17 +1036,13 @@ export function Editor({ theme }: Props) {
             <FeatureTab control={control} onNotes={() => setFeatureDialog('notes')} onRebase={() => setFeatureDialog('base')} />
           )
         ) : section === 'code' ? (
-          <Workbench control={control} onDirty={onDirty} />
+          <CodeTab control={control} onDirty={onDirty} />
         ) : section === 'docs' || section === 'tests' ? (
           <ContextTab key={section} control={control} area={section} onDirty={onDirty} />
-        ) : section === 'build' ? (
-          <BuildTab control={control} />
         ) : section === 'features' && !demo ? (
           <FeaturesTab control={control} />
         ) : section === 'change' && !demo ? (
           <ChangeTab control={control} />
-        ) : section === 'files' ? (
-          <FilesTab control={control} />
         ) : section === 'data' ? (
           <DataTab control={control} kind={dataKind} onKind={(kind) => go(`${base}/data/${kind}`)} />
         ) : section === 'history' && simple ? (

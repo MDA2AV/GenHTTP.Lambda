@@ -159,9 +159,9 @@ public sealed class WebAssetTests
 
         var files = new object[]
         {
-            new { name = "lambda.cs", code = "return Layout.Create().Add(Assets.App(\"site\"));" },
-            new { name = "site/index.html", code = "<!doctype html><title>x</title><img src=\"dot.gif\">" },
-            new { name = "site/dot.gif", code = Convert.ToBase64String(gif), encoding = "base64" }
+            new { name = "lambda.cs", code = "return Layout.Create().Add(Resources.App(\"site\"));" },
+            new { name = "resources/site/index.html", code = "<!doctype html><title>x</title><img src=\"dot.gif\">" },
+            new { name = "resources/site/dot.gif", code = Convert.ToBase64String(gif), encoding = "base64" }
         };
 
         using var saved = await fixture.SendAsync(HttpMethod.Post,

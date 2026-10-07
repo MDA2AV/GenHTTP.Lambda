@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
-/// One file of a lambda: C# to compile, an asset to serve, part of what is
-/// written about it - its documentation and its tests - or part of what its
-/// assets are built from, its build folder.
+/// One file of a lambda: part of its code - C# to compile, or any other file
+/// kept with it - or one of its resources, which it reads and serves while it
+/// runs.
 /// </summary>
 /// <param name="Name">What it is called, which is also what diagnostics name</param>
 /// <param name="Code">Its contents, base64 when <paramref name="Encoding" /> says so</param>
@@ -15,7 +15,7 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(LongStringConverter))] string Code, string? Encoding = null)
 {
 
-    /// <summary>Whether this is C# rather than something to serve.</summary>
+    /// <summary>Whether this is C# the lambda is compiled from.</summary>
     /// <remarks>
     /// Not serialised, along with Bytes and the other kinds. This record is
     /// the API's shape as well as the storage one, and all of these are
@@ -25,21 +25,17 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
     /// from the name.
     /// </remarks>
     [JsonIgnore]
+    public bool IsCompiled => LambdaSource.IsCompiled(Name);
+
+    /// <summary>Whether this belongs to the code rather than to the resources, compiled or not.</summary>
+    [JsonIgnore]
     public bool IsCode => LambdaSource.IsCode(Name);
 
-    /// <summary>Whether this is documentation or a test rather than part of the program.</summary>
+    /// <summary>Whether this is a resource: shipped to be read and served while the lambda runs.</summary>
     [JsonIgnore]
-    public bool IsContext => LambdaSource.IsContext(Name);
+    public bool IsResource => LambdaSource.IsResource(Name);
 
-    /// <summary>Whether this is part of what the assets are built from rather than part of the program.</summary>
-    [JsonIgnore]
-    public bool IsBuild => LambdaSource.IsBuild(Name);
-
-    /// <summary>Whether this is shipped to be served: neither code nor kept beside the program.</summary>
-    [JsonIgnore]
-    public bool IsAsset => LambdaSource.IsAsset(Name);
-
-    /// <summary>The bytes of an asset, whatever it was sent as.</summary>
+    /// <summary>The bytes of a file, whatever it was sent as.</summary>
     [JsonIgnore]
     public byte[] Bytes => Encoding == "base64"
                          ? Convert.FromBase64String(Code)
@@ -48,37 +44,35 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
 }
 
 /// <summary>
-/// The source of a lambda: an entry file, and whatever else it was split into.
+/// The source of a lambda: its code and its resources.
 /// </summary>
 /// <remarks>
 /// A lambda is stored as one blob of text and always was, so the several files
 /// are kept in that one blob as a small envelope rather than in a new column
-/// and a new directory layout. Anything written before this existed is not an
-/// envelope, is read as a single entry file, and never has to be migrated.
+/// and a new directory layout. Anything written before there was more than one
+/// file is not an envelope, is read as a single entry file, and never has to
+/// be migrated.
 ///
-/// The first file is the snippet - the statements that return a handler. The
-/// rest are ordinary C#: types, and nothing that has to run.
+/// A version holds two things. Its code is every file that is not a
+/// resource, in whatever folders it is in: the snippet in <c>lambda.cs</c>,
+/// the other <c>.cs</c> files - all of them compiled, in whichever folder,
+/// as a C# project compiles its own - and anything else the lambda is kept
+/// with: what is written about it, what its front end is built from, a
+/// tool's configuration, never compiled or served. Its resources are what is
+/// below <c>resources/</c>: the front end, the migrations, pictures - written
+/// into a folder of their own when the version goes online, where the code
+/// reads and serves them.
 ///
-/// Beside the program, a version keeps what is written about it - its
-/// context - under <c>.lambda/</c>: its documentation in <c>docs/</c> and how
-/// it is tested in <c>tests/</c>. Those files are the version's like any
-/// other - saved, compared, rolled back, copied into a feature and merged with
-/// it - because they describe that version of the program. They are never
-/// compiled and never served, whatever they are called: a test script ending
-/// in <c>.cs</c> is not code, and a page of documentation is not an asset.
-/// A dot folder, because the root of a version is the root of what its assets
-/// are served from, where a leading dot is the convention for "not served" -
-/// and because no asset has ever been allowed a name starting with one, so no
-/// version saved before this can have meant anything else by it.
+/// The documentation and the tests are folders of the code like any other.
+/// The editor reads <c>docs/</c> and <c>tests/</c> to show them, and the
+/// agents are asked to keep them; the platform keeps them as it keeps every
+/// file of the code.
 ///
-/// The same folder holds the build folder in <c>build/</c>: the files the
-/// assets, or the code, are built from with a build tool - whatever that
-/// tool works from, which nothing here assumes anything about. Whoever
-/// builds it - an agent, where it works - keeps those files and what it
-/// built in the same version; the platform never builds anything. Kept like
-/// the context and never compiled or served either, but a kind of its own:
-/// files for a tool rather than pages, with the names such files have - dot
-/// files included - and read rather than written by the editor.
+/// The envelope says which layout it holds. The first one (version 1) kept
+/// the files to serve at the root and what was not the program below
+/// <c>.lambda/</c> - its documentation, its tests and its build folder. It is
+/// read in the layout of today, as it is read: nothing written in it is ever
+/// rewritten, so nothing can be half moved.
 /// </remarks>
 public static class LambdaSource
 {
@@ -88,79 +82,74 @@ public static class LambdaSource
     /// </summary>
     public const string EntryName = "lambda.cs";
 
-    #region Beside the program
-
     /// <summary>
-    /// Where a version keeps what is not its program: what is written about
-    /// it, and what its assets are built from.
+    /// Where the resources of a version are: what it reads and serves while it runs.
     /// </summary>
-    public const string LambdaFolder = ".lambda/";
+    public const string ResourceFolder = "resources/";
+
+    #region Conventions of the editor
 
     /// <summary>
     /// The documentation of a version: what it is and why, and how it is built and why.
     /// </summary>
-    public const string DocsFolder = ".lambda/docs/";
+    public const string DocsFolder = "docs/";
 
     /// <summary>
     /// How a version is tested, and the scripts and data the tests use.
     /// </summary>
-    public const string TestsFolder = ".lambda/tests/";
+    public const string TestsFolder = "tests/";
 
     /// <summary>
     /// What the app is, who it is for, why it exists and what people do with
     /// it - in the terms of the people who asked for it. The one page of the
-    /// context that the owner of an app they had built reads as well.
+    /// documentation that the owner of an app they had built reads as well.
     /// </summary>
-    public const string ProductDoc = ".lambda/docs/product.md";
+    public const string ProductDoc = "docs/product.md";
 
     /// <summary>
     /// The technical decisions behind the program, and why they were made.
     /// </summary>
-    public const string DecisionsDoc = ".lambda/docs/decisions.md";
+    public const string DecisionsDoc = "docs/decisions.md";
 
     /// <summary>
     /// How the app is tested automatically: what is checked, how, and how the
     /// scripts beside it are run.
     /// </summary>
-    public const string TestingDoc = ".lambda/tests/README.md";
+    public const string TestingDoc = "tests/README.md";
 
     /// <summary>
     /// The pages every version is meant to have, in the order they are read.
     /// </summary>
-    public static readonly IReadOnlyList<string> ExpectedContext = [ProductDoc, DecisionsDoc, TestingDoc];
-
-    /// <summary>
-    /// The build folder of a version: the files its assets, or its code,
-    /// are built from with a build tool.
-    /// </summary>
-    public const string BuildFolder = ".lambda/build/";
-
-    /// <summary>
-    /// How the build folder is built and where the build goes, in a few
-    /// lines - the page the editor opens it on, and the one an agent is handed.
-    /// </summary>
-    public const string BuildReadme = ".lambda/build/README.md";
+    public static readonly IReadOnlyList<string> ExpectedPages = [ProductDoc, DecisionsDoc, TestingDoc];
 
     #endregion
 
-    /// <summary>Whether a name is C# to compile, rather than something to serve or kept beside the program.</summary>
-    public static bool IsCode(string? name) => name?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) == true && !IsBeside(name);
+    #region Kinds
 
-    /// <summary>Whether a name belongs to the context of a version: its documentation or its tests.</summary>
-    public static bool IsContext(string? name) => IsBeside(name) && !IsBuild(name);
+    /// <summary>Whether a name is a resource, read and served while the lambda runs.</summary>
+    public static bool IsResource(string? name) => name?.StartsWith(ResourceFolder, StringComparison.Ordinal) == true;
 
-    /// <summary>Whether a name belongs to the build folder of a version: what its assets are built from.</summary>
-    public static bool IsBuild(string? name) => name?.StartsWith(BuildFolder, StringComparison.Ordinal) == true;
-
-    /// <summary>Whether a name is an asset: shipped with the program and served when the code asks.</summary>
-    public static bool IsAsset(string? name) => name != null && !IsCode(name) && !IsBeside(name);
+    /// <summary>Whether a name belongs to the code - everything that is not a resource.</summary>
+    public static bool IsCode(string? name) => name != null && !IsResource(name);
 
     /// <summary>
-    /// Whether a name is kept beside the program rather than being part of it:
-    /// the context or the build folder, never compiled, never served and
-    /// left out of what identifies a build.
+    /// Whether a name is C# the lambda is compiled from: a <c>.cs</c> file of
+    /// the code, in whichever folder.
     /// </summary>
-    public static bool IsBeside(string? name) => name?.StartsWith(LambdaFolder, StringComparison.Ordinal) == true;
+    /// <remarks>
+    /// As a C# project compiles every <c>.cs</c> file below it, so that its
+    /// types can be laid out in folders. A resource is never compiled, whatever
+    /// it is called: it is read and served.
+    /// </remarks>
+    public static bool IsCompiled(string? name)
+        => IsCode(name) && name!.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Where a resource is below the folder the resources are written to.
+    /// </summary>
+    public static string WithinResources(string name) => IsResource(name) ? name[ResourceFolder.Length..] : name;
+
+    #endregion
 
     private static readonly JsonSerializerOptions Format = new()
     {
@@ -169,24 +158,33 @@ public static class LambdaSource
     };
 
     /// <summary>
-    /// Marks the stored text as an envelope rather than a snippet.
+    /// Marks the stored text as an envelope in today's layout.
     /// </summary>
     /// <remarks>
     /// No C# begins this way, so a blob that starts with it was written by this
-    /// and one that does not is code from before there was more than one file.
+    /// and one that does not is code from before there was more than one file
+    /// - or an envelope of the first layout, which starts with its own marker.
     /// </remarks>
-    private const string Marker = "{\"version\":1,\"files\":";
+    private const string Marker = "{\"version\":2,\"files\":";
+
+    /// <summary>
+    /// Marks an envelope written in the first layout: the files to serve at
+    /// the root, and <c>.lambda/</c> for what was not the program.
+    /// </summary>
+    private const string FirstMarker = "{\"version\":1,\"files\":";
 
     #region Functionality
 
     /// <summary>
-    /// Reads stored text as the files it holds.
+    /// Reads stored text as the files it holds, in today's layout.
     /// </summary>
     public static IReadOnlyList<LambdaFile> Parse(string? stored)
     {
         var text = stored ?? string.Empty;
 
-        if (!text.StartsWith(Marker, StringComparison.Ordinal))
+        var current = text.StartsWith(Marker, StringComparison.Ordinal);
+
+        if (!current && !text.StartsWith(FirstMarker, StringComparison.Ordinal))
         {
             return [new LambdaFile(EntryName, text)];
         }
@@ -197,7 +195,7 @@ public static class LambdaSource
 
             if (envelope?.Files is { Count: > 0 } files)
             {
-                return files;
+                return current ? files : [.. files.Select(f => f with { Name = Moved(f.Name) })];
             }
         }
         catch (JsonException)
@@ -224,103 +222,93 @@ public static class LambdaSource
             return files[0].Code;
         }
 
-        return JsonSerializer.Serialize(new Envelope(1, files), Format);
+        return JsonSerializer.Serialize(new Envelope(2, files), Format);
     }
 
     /// <summary>
-    /// The combined length of the code, which is what the size limit counts.
+    /// Whether two stored blobs hold the same files, whichever layout either
+    /// was written in.
     /// </summary>
     /// <remarks>
-    /// Assets are left out on purpose. They are not compiled, and a page of
-    /// markup charged against the budget for the program that serves it makes
-    /// the budget wrong for both of them.
+    /// Compared as they are first, which is the answer nearly always: only a
+    /// blob of the first layout beside one written since is read to tell.
     /// </remarks>
-    public static int Length(IReadOnlyList<LambdaFile> files)
+    public static bool Same(string? stored, string? other)
     {
-        var total = 0;
-
-        foreach (var file in files)
+        if (string.Equals(stored, other, StringComparison.Ordinal))
         {
-            if (file.IsCode)
-            {
-                total += file.Code.Length;
-            }
+            return true;
         }
 
-        return total;
+        if (stored == null || other == null)
+        {
+            return false;
+        }
+
+        return Serialize(Parse(stored)) == Serialize(Parse(other));
     }
 
     /// <summary>
-    /// How many bytes of assets are shipped, decoded rather than as sent.
+    /// Where a file of the first layout is in today's: what was kept beside
+    /// the program below <c>.lambda/</c> is at the top of the code, and what
+    /// was served is a resource.
+    /// </summary>
+    /// <remarks>
+    /// The C# was at the top then, and kept its name. A name of
+    /// <c>.lambda/</c> was always one of its documentation, its tests or its
+    /// build folder, which keep their folders: <c>docs/</c>, <c>tests/</c>
+    /// and <c>build/</c>. Everything else was an asset.
+    ///
+    /// C# in <c>.lambda/</c> - a test, the sources of a tool - was never
+    /// compiled, and every <c>.cs</c> file of the code is now. Moved as it
+    /// is, it would be compiled into a program it was never part of, which
+    /// it may not compile with, and a lambda online would no longer come up.
+    /// So it keeps what it holds under a name that is not compiled:
+    /// <c>.lambda/tests/Smoke.cs</c> is <c>tests/Smoke.cs.txt</c>.
+    /// </remarks>
+    internal static string Moved(string name)
+    {
+        if (name.StartsWith(".lambda/", StringComparison.Ordinal))
+        {
+            var moved = name[".lambda/".Length..];
+
+            return moved.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? moved + ".txt" : moved;
+        }
+
+        if (!name.Contains('/') && name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+        {
+            return name;
+        }
+
+        return ResourceFolder + name;
+    }
+
+    /// <summary>
+    /// How many bytes a version comes to, its code and its resources together
+    /// - decoded rather than as sent - which is what the allowance of its
+    /// tier counts.
     /// </summary>
     /// <remarks>
     /// Measured without decoding anything: this is asked of every version on
     /// its way in, and a premium lambda may ship a hundred megabytes that
     /// would otherwise be decoded just to be counted and thrown away.
     /// </remarks>
-    public static long AssetBytes(IReadOnlyList<LambdaFile> files)
+    public static long Size(IEnumerable<LambdaFile> files)
     {
         long total = 0;
 
         foreach (var file in files)
         {
-            if (file.IsAsset)
-            {
-                total += Bytes(file);
-            }
+            total += Size(file);
         }
 
         return total;
     }
 
     /// <summary>
-    /// How many bytes the documentation and the tests of a version come to.
+    /// How many bytes one file comes to, decoded.
     /// </summary>
-    /// <remarks>
-    /// Held to the same allowance as the assets. The allowance is there
-    /// because every version carries its own copy of everything that is not
-    /// code and is read whole to be saved - which is as true of a test's data
-    /// as of a picture a page shows.
-    /// </remarks>
-    public static long ContextBytes(IReadOnlyList<LambdaFile> files)
-    {
-        long total = 0;
-
-        foreach (var file in files)
-        {
-            if (file.IsContext)
-            {
-                total += Bytes(file);
-            }
-        }
-
-        return total;
-    }
-
-    /// <summary>
-    /// How many bytes the build folder of a version comes to.
-    /// </summary>
-    /// <remarks>
-    /// Held to the allowance of the assets as well, for the same reason: a
-    /// copy in every version. What a project is - its sources and its lock
-    /// file - is small beside what it installs, which is never kept.
-    /// </remarks>
-    public static long BuildBytes(IReadOnlyList<LambdaFile> files)
-    {
-        long total = 0;
-
-        foreach (var file in files)
-        {
-            if (file.IsBuild)
-            {
-                total += Bytes(file);
-            }
-        }
-
-        return total;
-    }
-
-    private static long Bytes(LambdaFile file)
+    public static long Size(LambdaFile file)
     {
         if (file.Encoding == "base64")
         {
@@ -352,39 +340,9 @@ public static class LambdaSource
 
         foreach (var file in files)
         {
-            if (file.Name.StartsWith(".lambda", StringComparison.OrdinalIgnoreCase))
+            if (Complaint(file.Name) is { } complaint)
             {
-                // said apart from code and assets, because somebody writing
-                // here meant what is kept beside the program and should be
-                // told where in it things go - a C# file included, which is a
-                // test or a part of a project here
-                if (IsBuild(file.Name))
-                {
-                    if (BuildComplaint(file.Name) is { } complaint)
-                    {
-                        return complaint;
-                    }
-                }
-                else if (!IsValidContextName(file.Name))
-                {
-                    return $"'{file.Name}' is not a usable name. {LambdaFolder} holds the documentation in {DocsFolder}, the tests in {TestsFolder} and the build folder in {BuildFolder}; below the first two, use letters, digits, dashes, underscores, dots and slashes, and no names starting with a dot.";
-                }
-
-                if (file.Encoding == "base64" && file.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
-                {
-                    return $"'{file.Name}' is a page to be read and has to be text (UTF-8), not base64.";
-                }
-            }
-            else if (file.IsCode)
-            {
-                if (!IsValidName(file.Name))
-                {
-                    return $"'{file.Name}' is not a usable name for a C# file. Use letters, digits, dashes and underscores, ending in '.cs'.";
-                }
-            }
-            else if (!IsValidAssetName(file.Name))
-            {
-                return $"'{file.Name}' is not a usable name for an asset. Use letters, digits, dashes, underscores, dots and slashes, and no leading or doubled slashes.";
+                return complaint;
             }
 
             if (file.Encoding is not (null or "" or "text" or "base64"))
@@ -398,9 +356,26 @@ public static class LambdaSource
                 return $"'{file.Name}' says it is base64 and is not.";
             }
 
+            if (file.IsCompiled && file.Encoding == "base64")
+            {
+                return $"'{file.Name}' is C# to compile and has to be text (UTF-8), not base64.";
+            }
+
             if (!seen.Add(file.Name))
             {
-                return $"There is more than one file called '{file.Name}'.";
+                return $"There is more than one file called '{file.Name}' - names differ by more than their case, as they do on Windows and macOS.";
+            }
+        }
+
+        // a file and a folder of the same name cannot both be on a disk
+        foreach (var file in files)
+        {
+            for (var slash = file.Name.IndexOf('/'); slash > 0; slash = file.Name.IndexOf('/', slash + 1))
+            {
+                if (seen.Contains(file.Name[..slash]))
+                {
+                    return $"'{file.Name[..slash]}' is a file and a folder at once: '{file.Name}' is in it.";
+                }
             }
         }
 
@@ -408,22 +383,52 @@ public static class LambdaSource
     }
 
     /// <summary>
-    /// Whether a name is one an asset may have.
+    /// What is wrong with the name of a file, if anything.
+    /// </summary>
+    public static string? Complaint(string name)
+    {
+        if (IsResource(name))
+        {
+            return IsValidResourceName(name)
+                ? null
+                : $"'{name}' is not a usable name for a resource. Below {ResourceFolder}, use letters, digits, dashes, underscores, dots and slashes, no names starting with a dot, an extension to serve it by, at most six folders deep and 120 characters.";
+        }
+
+        if (CodeComplaint(name) is { } complaint)
+        {
+            return complaint;
+        }
+
+        return !IsCompiled(name) || IsValidName(name[(name.LastIndexOf('/') + 1)..])
+            ? null
+            : $"'{name}' is not a usable name for a C# file. Name it with letters, digits, dashes, underscores and dots, starting with a letter and ending in '.cs', 40 characters at most - in any folder.";
+    }
+
+    /// <summary>
+    /// Whether a name is one a resource may have.
     /// </summary>
     /// <remarks>
-    /// An asset becomes a real file in a real directory, so this is about
+    /// A resource becomes a real file in a real directory, so this is about
     /// where it can end up rather than about how it reads. Segments are
     /// checked one at a time and '..' is not one of them, because the whole
-    /// point of a relative path is that it can leave.
+    /// point of a relative path is that it can leave. No segment starts with
+    /// a dot, which is the convention for "not served".
     /// </remarks>
-    public static bool IsValidAssetName(string? name)
+    public static bool IsValidResourceName(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 120 || name.StartsWith('/') || name.EndsWith('/'))
+        if (name == null || !IsResource(name))
         {
             return false;
         }
 
-        var segments = name.Split('/');
+        var rest = name[ResourceFolder.Length..];
+
+        if (string.IsNullOrWhiteSpace(rest) || rest.Length > 120 || rest.StartsWith('/') || rest.EndsWith('/'))
+        {
+            return false;
+        }
+
+        var segments = rest.Split('/');
 
         if (segments.Length > 6)
         {
@@ -432,12 +437,7 @@ public static class LambdaSource
 
         foreach (var segment in segments)
         {
-            if (segment.Length is 0 or > 60 || segment is "." or "..")
-            {
-                return false;
-            }
-
-            if (segment.StartsWith('.'))
+            if (segment.Length is 0 or > 60 || segment is "." or ".." || segment.StartsWith('.'))
             {
                 return false;
             }
@@ -453,109 +453,91 @@ public static class LambdaSource
 
         // something to infer a content type from; a file with no extension
         // would be served as a download and surprise whoever shipped it
-        return Path.GetExtension(name).Length > 1;
+        return Path.GetExtension(rest).Length > 1;
     }
 
     /// <summary>
-    /// Whether a name is one a file of the context may have.
+    /// The names at the top of the code that the project of a lambda - its
+    /// export, a clone - has for its own, in any case.
     /// </summary>
     /// <remarks>
-    /// Below <c>.lambda/docs/</c> or <c>.lambda/tests/</c> and nowhere else in
-    /// it, so the folder keeps the shape every reader - the editor, an agent,
-    /// the export - expects. Below that, the rules of an asset, because these
-    /// end up as real files too - in a zip, in an exported project - with one
-    /// difference: no extension is needed, since nothing infers a content type
-    /// from one here and a test may well be a Makefile.
+    /// A lambda is exported and cloned as a .NET project, whose own files
+    /// are at the top beside the lambda's. A file of the lambda called what
+    /// one of them is called could not be in both. Compared in any case,
+    /// since a clone on Windows or macOS cannot hold two names that differ
+    /// only by it.
     /// </remarks>
-    public static bool IsValidContextName(string? name)
+    private static readonly HashSet<string> Platform = new(StringComparer.OrdinalIgnoreCase)
     {
-        if (name == null || name.Length > 160)
-        {
-            return false;
-        }
-
-        string rest;
-
-        if (name.StartsWith(DocsFolder, StringComparison.Ordinal))
-        {
-            rest = name[DocsFolder.Length..];
-        }
-        else if (name.StartsWith(TestsFolder, StringComparison.Ordinal))
-        {
-            rest = name[TestsFolder.Length..];
-        }
-        else
-        {
-            return false;
-        }
-
-        if (rest.Length == 0 || rest.EndsWith('/'))
-        {
-            return false;
-        }
-
-        var segments = rest.Split('/');
-
-        if (segments.Length > 6)
-        {
-            return false;
-        }
-
-        foreach (var segment in segments)
-        {
-            if (segment.Length is 0 or > 60 || segment.StartsWith('.'))
-            {
-                return false;
-            }
-
-            foreach (var character in segment)
-            {
-                if (!char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_' or '.'))
-                {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
+        "Dockerfile", ".gitignore", ".dockerignore", "LICENSE", "AGENTS.md", "CLAUDE.md"
+    };
 
     /// <summary>
-    /// Whether a name is one a file of the build folder may have.
+    /// The folders at the top that are the project's or the platform's:
+    /// what stands in for the platform, what dotnet builds into, what the
+    /// app keeps while it runs in a clone - and the resources, in lowercase.
     /// </summary>
-    public static bool IsValidBuildName(string? name) => name != null && IsBuild(name) && BuildComplaint(name) == null;
+    private static readonly HashSet<string> PlatformFolders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Platform", "bin", "obj", "workspace", "database", "resources"
+    };
 
     /// <summary>
-    /// What is wrong with a name in the build folder, if anything.
+    /// What is wrong with the name of a file of the code, if anything - and
+    /// with the folders of a C# file, whose own name is held to more.
     /// </summary>
     /// <remarks>
-    /// Wider than the names of the context, because these are names a build
-    /// tool's files have, which nobody here chose: dot files, and brackets,
-    /// parentheses and plus signs, which some tools read meaning off. Still
-    /// names that become real files anywhere - in a zip, a clone, an
-    /// exported project on Windows - so no spaces, no name Windows reserves
-    /// or ends with a dot, and nothing a shell or a file system reads as
-    /// something else. A clone refuses a .git folder in any case, and by its
-    /// short name on Windows, so this does too.
+    /// Wide, because these are names a tool's files have, which nobody here
+    /// chose: dot files, and brackets, parentheses and plus signs, which some
+    /// tools read meaning off. Still names that become real files anywhere -
+    /// in a zip, a clone, an exported project on Windows - so no spaces, no
+    /// name Windows reserves or ends with a dot, and nothing a shell or a file
+    /// system reads as something else. A clone refuses a .git folder in any
+    /// case, and by its short name on Windows, so this does too.
     ///
     /// What a build installs, caches or writes for itself is not refused by
-    /// name here, since every tool names it differently: the space says so
+    /// name here, since every tool names it differently: the folder says so
     /// itself, in its .gitignore files, which a clone and a zip put back
     /// follow (see <see cref="IgnoredPaths"/>). What is named in a save is
     /// kept, as git keeps a file that was added on purpose.
     /// </remarks>
-    private static string? BuildComplaint(string name)
+    private static string? CodeComplaint(string name)
     {
-        var rest = name[BuildFolder.Length..];
+        var segments = name.Split('/');
 
-        var segments = rest.Split('/');
+        if (segments[0].Equals(".lambda", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"'{name}' is in .lambda/, which a lambda has no more: the documentation is in docs/ and the tests are in tests/, at the top of the code, "
+                 + $"and what the lambda reads and serves - its front end, its migrations - is in {ResourceFolder}.";
+        }
 
         if (segments.Any(s => s.Equals(".git", StringComparison.OrdinalIgnoreCase) || s.Equals("git~1", StringComparison.OrdinalIgnoreCase)))
         {
-            return $"'{name}' is part of a git repository, which is no file of the build folder.";
+            return $"'{name}' is part of a git repository, which is no file of a lambda.";
         }
 
-        var usable = rest.Length > 0 && !rest.EndsWith('/') && name.Length <= 240 && segments.Length <= 16;
+        if (segments.Length == 1 && (Platform.Contains(name) || name.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)))
+        {
+            return $"'{name}' is what the project of a lambda - its export, a clone - has for its own at the top. Put it into a folder, or call it something else.";
+        }
+
+        if (segments.Length > 1 && PlatformFolders.Contains(segments[0]))
+        {
+            return segments[0].Equals("resources", StringComparison.OrdinalIgnoreCase)
+                ? $"'{name}': the resources are in {ResourceFolder}, in lowercase."
+                : $"'{name}' is in {segments[0]}/, which the project of a lambda - its export, a clone - has for its own. Use a folder of another name.";
+        }
+
+        // where a clone and an export had the files to serve, before they
+        // were called resources: a file there now is most likely one of them,
+        // brought from before, that would no longer be served
+        if (segments.Length > 1 && segments[0].Equals("assets", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"'{name}' is in assets/, where the files a lambda serves were kept before they were called resources: they are in {ResourceFolder} now. "
+                 + "Move it there to have it served, or into a folder of another name to keep it with the code.";
+        }
+
+        var usable = !name.EndsWith('/') && name.Length <= 240 && segments.Length <= 16;
 
         foreach (var segment in segments)
         {
@@ -564,12 +546,13 @@ public static class LambdaSource
                 break;
             }
 
-            usable = segment.Length is > 0 and <= 100 && !segment.EndsWith('.') && !IsReservedOnWindows(segment) && segment.All(IsBuildCharacter);
+            usable = segment.Length is > 0 and <= 100 && segment is not ("." or "..") && !segment.EndsWith('.') && !IsReservedOnWindows(segment)
+                  && segment.All(IsCodeCharacter);
         }
 
         return usable
             ? null
-            : $"'{name}' is not a usable name in the build folder. Below {BuildFolder}, use letters, digits and - _ . + @ ( ) [ ] {{ }} $ ~, no spaces, no name ending in a dot or one Windows reserves (CON, PRN, AUX, NUL, COM1, LPT1 and the like, with an extension too), at most 16 folders deep and 240 characters in all.";
+            : $"'{name}' is not a usable name. Use letters, digits and - _ . + @ ( ) [ ] {{ }} $ ~, no spaces, no name ending in a dot or one Windows reserves (CON, PRN, AUX, NUL, COM1, LPT1 and the like, with an extension too), at most 16 folders deep and 240 characters in all.";
     }
 
     /// <summary>
@@ -583,16 +566,18 @@ public static class LambdaSource
             || (stem.Length == 4 && stem[..3] is "COM" or "LPT" && stem[3] is >= '1' and <= '9');
     }
 
-    private static bool IsBuildCharacter(char character)
+    private static bool IsCodeCharacter(char character)
         => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.' or '+' or '@' or '(' or ')' or '[' or ']' or '{' or '}' or '$' or '~';
 
     /// <summary>
-    /// Whether a name is one a C# file may have.
+    /// Whether a name is one a C# file may have, without its folders.
     /// </summary>
     /// <remarks>
-    /// Deliberately narrow. The name reaches a <c>#line</c> directive and a
-    /// diagnostic, and a name with a quote or a path separator in it would
-    /// either break the generated file or point somewhere it should not.
+    /// Narrower than the rest of the code. The path reaches a <c>#line</c>
+    /// directive and a diagnostic, and a quote in it would break the
+    /// generated file; the folders are held to the rules of the code, which
+    /// have none. Dots are there for the names .NET gives the parts of a
+    /// class (<c>Store.Queries.cs</c>).
     /// </remarks>
     public static bool IsValidName(string? name)
     {
@@ -603,14 +588,14 @@ public static class LambdaSource
 
         var stem = name[..^3];
 
-        if (stem.Length == 0 || !char.IsAsciiLetter(stem[0]))
+        if (stem.Length == 0 || !char.IsAsciiLetter(stem[0]) || stem.EndsWith('.'))
         {
             return false;
         }
 
         foreach (var character in stem)
         {
-            if (!char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_'))
+            if (!char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_' or '.'))
             {
                 return false;
             }

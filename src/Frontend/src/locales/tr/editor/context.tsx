@@ -12,7 +12,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         Ajanlar dokümantasyonu değişiklikleriyle birlikte yazar: uygulamanın ne olduğunu, kimin için ve neden var
-        olduğunu {code('.lambda/docs/product.md')} dosyasına, neden bu şekilde yapıldığını da {code('decisions.md')}{' '}
+        olduğunu {code('docs/product.md')} dosyasına, neden bu şekilde yapıldığını da {code('decisions.md')}{' '}
         dosyasına. Dokümantasyon, kodun yanında sürümün bir parçasıdır.
       </>
     ),
@@ -41,7 +41,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         Uygulamanın nasıl test edildiğini (neyin çalışmaya devam etmesi gerektiğini, bunun nasıl kontrol edileceğini ve
-        scriptlerin nasıl çalıştırılacağını) ajanlar {code('.lambda/tests/README.md')} dosyasına yazar; scriptler ve
+        scriptlerin nasıl çalıştırılacağını) ajanlar {code('tests/README.md')} dosyasına yazar; scriptler ve
         test verileri de onun yanında durur.
       </>
     ),

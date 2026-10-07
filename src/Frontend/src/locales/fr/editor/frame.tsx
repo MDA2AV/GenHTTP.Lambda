@@ -11,7 +11,6 @@ export const frame: EditorMessages['frame'] = {
     showcase: 'Vitrine',
     source: 'Open source',
     domain: 'Domaine',
-    files: 'Fichiers',
     data: 'Données',
     versions: 'Versions',
     history: 'Historique',
@@ -19,7 +18,6 @@ export const frame: EditorMessages['frame'] = {
     stats: 'Stats',
     logs: 'Logs',
     code: 'Code',
-    build: 'Build',
   },
   sectionsLabel: 'Sections',
   groups: {

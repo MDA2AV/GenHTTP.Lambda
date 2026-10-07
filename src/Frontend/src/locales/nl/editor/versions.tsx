@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const versions: EditorMessages['versions'] = {
   hint: (limit) =>
-    `Een versie is het programma (de code en de assets) en verandert nooit meer als hij eenmaal is opgeslagen. Zo kun je elke versie vergelijken en precies zoals hij was weer online zetten. Elke versie bewaart wat er gevraagd werd en wat er veranderde. Wil je de lambda aanpassen, start dan een concept: dat wordt de volgende versie zodra het goed is. Bij meer dan ${limit} versies verdwijnen de oudste. De versie die online staat, verdwijnt nooit.`,
+    `Een versie is het programma (de code en de resources) en verandert nooit meer als hij eenmaal is opgeslagen. Zo kun je elke versie vergelijken en precies zoals hij was weer online zetten. Elke versie bewaart wat er gevraagd werd en wat er veranderde. Wil je de lambda aanpassen, start dan een concept: dat wordt de volgende versie zodra het goed is. Bij meer dan ${limit} versies verdwijnen de oudste. De versie die online staat, verdwijnt nooit.`,
   none: 'Nog geen versies.',
   noDescription: 'Geen beschrijving',
   online: 'online',
@@ -17,14 +17,10 @@ export const versions: EditorMessages['versions'] = {
   status: { added: 'toegevoegd', removed: 'verwijderd', changed: 'gewijzigd', same: 'gelijk' },
   groups: {
     code: 'Code',
-    assets: 'Assets',
-    build: 'Build',
-    context: 'Documentatie en tests',
+    resources: 'Resources',
   },
-  browse: 'Bestanden bekijken',
+  files: 'Bestanden openen',
   docs: 'Documentatie lezen',
-  build: 'Bekijken waaruit het is gebouwd',
-  edit: 'Vanaf hier bewerken',
   feature: 'Vanaf hier een concept starten',
   featureTitle:
     'Naast de lambda aan een wijziging van deze versie werken, en die samenvoegen tot de volgende versie zodra het goed is',

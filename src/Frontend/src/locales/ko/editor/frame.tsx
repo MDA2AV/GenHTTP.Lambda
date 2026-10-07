@@ -11,7 +11,6 @@ export const frame: EditorMessages['frame'] = {
     showcase: '쇼케이스',
     source: '오픈 소스',
     domain: '도메인',
-    files: '파일',
     data: '데이터',
     versions: '버전',
     history: '기록',
@@ -19,7 +18,6 @@ export const frame: EditorMessages['frame'] = {
     stats: '통계',
     logs: '로그',
     code: '코드',
-    build: '빌드',
   },
   sectionsLabel: '섹션',
   groups: {

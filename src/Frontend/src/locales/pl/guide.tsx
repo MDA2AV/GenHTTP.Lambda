@@ -13,11 +13,11 @@ export const guide: Messages['guide'] = {
     why: 'Opisz, dlaczego',
     written: 'Dokumentacja i testy',
     features: 'Bezpieczne zmiany',
-    files: 'Więcej niż jeden plik',
+    files: 'Kod i zasoby',
     page: 'Serwowanie strony',
     spa: 'Frontend krok po kroku',
     built: 'Z czego jest zbudowane',
-    storage: 'Dwa miejsca na pliki',
+    storage: 'Wersja i jej dane',
     database: 'Przechowywanie rekordów',
     keeping: 'Przechowywanie plików',
     secrets: 'Klucze i hasła',
@@ -100,7 +100,6 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Szkice', () => <>Zmiany wypróbowywane, zanim zostaną udostępnione, każda pod własnym adresem i na własnych danych testowych. Otwarty szkic ma własny kod, dane testowe i logi. Sekcja pojawia się, gdy istnieje szkic.</>],
-    ['Pliki', () => <>Pliki danej wersji: jej kod i zasoby, czyli sam program. Kłódka albo globus pokazuje, czy są publicznie dostępne.</>],
     ['Dane', () => <>To, co lambda przechowuje w trakcie działania, wspólne dla wszystkich wersji: baza danych, obszar roboczy i sekrety, każde na własnej karcie. Przeglądaj tabele i pliki, przesyłaj pliki, ustawiaj sekrety albo włączaj i wyłączaj dany rodzaj. Widok uproszczony pokazuje tę sekcję, gdy tylko aplikacja coś przechowuje.</>],
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
@@ -110,20 +109,20 @@ export const guide: Messages['guide'] = {
       'Kod',
       (k) => (
         <>
-          Tu piszesz kod ręcznie. {k.b('Sprawdź')} kompiluje, {k.b('Zapisz')} tworzy wersję, {k.b('Wdróż')} wrzuca kod
-          online. W szkicu {k.b('Zapisz')} zostawia kod w szkicu i pokazuje go pod adresem
-          szkicu. {k.code('Ctrl-S')} zapisuje; {k.code('F12')} przechodzi do deklaracji.
+          Każdy plik wersji, jej kod i zasoby, w drzewie obok edytora – razem z informacją, ile miejsca zajmują i czy
+          są publicznie dostępne. Wybierz starszą wersję nad nim, aby ją przeczytać. {k.b('Sprawdź')} kompiluje,{' '}
+          {k.b('Zapisz')} tworzy wersję, {k.b('Wdróż')} wrzuca kod online. W szkicu {k.b('Zapisz')} zostawia kod w
+          szkicu i pokazuje go pod adresem szkicu. {k.code('Ctrl-S')} zapisuje; {k.code('F12')} przechodzi do deklaracji.
         </>
       ),
     ],
     ['Testy', () => <>Jak aplikacja jest testowana automatycznie, razem ze skryptami i danymi testowymi. Tylko w widoku pełnym.</>],
-    ['Budowanie', () => <>To, z czego zbudowany jest kod lub zasoby tam, gdzie powstają w narzędziu do budowania, przechowywane z każdą wersją, do czytania, nie do edycji. W widoku pełnym, gdy wersja to przechowuje.</>],
   ],
   sections: (k) => (
     <>
       Każda sekcja działa tak samo: tytuł, {k.b('ⓘ')} z wyjaśnieniem, akcje po prawej i – jeśli sekcja ma kilka widoków
-      – rząd zakładek pod spodem. W sekcji {k.b('Kod')} zakładki to pliki. Widok pełny zbiera sekcje w grupy: jak
-      ludzie trafiają do lambdy, gdzie powstają zmiany, program i jego dane oraz jak lambda działa.
+      – rząd zakładek pod spodem. Widok pełny zbiera sekcje w grupy: jak ludzie trafiają do lambdy, gdzie powstają
+      zmiany, wersje i dane oraz jak lambda działa.
     </>
   ),
   editorAside:
@@ -159,17 +158,17 @@ export const guide: Messages['guide'] = {
     </>
   ),
   writtenFiles: [
-    ['.lambda/docs/product.md', 'czym jest aplikacja, dla kogo, co ludzie z nią robią i po co'],
-    ['.lambda/docs/decisions.md', 'decyzje techniczne i dlaczego je podjęto'],
-    ['.lambda/tests/README.md', 'jak aplikacja jest testowana automatycznie i jak uruchomić testy'],
-    ['.lambda/tests/…', 'skrypty i dane testowe, których używają testy'],
+    ['docs/product.md', 'czym jest aplikacja, dla kogo, co ludzie z nią robią i po co'],
+    ['docs/decisions.md', 'decyzje techniczne i dlaczego je podjęto'],
+    ['tests/README.md', 'jak aplikacja jest testowana automatycznie i jak uruchomić testy'],
+    ['tests/…', 'skrypty i dane testowe, których używają testy'],
   ],
   written2: (k) => (
     <>
-      To pliki wersji jak wszystkie inne, w folderze {k.code('.lambda')}: historia pokazuje, co wersja w nich
-      zmieniła, powrót do starszej wersji przywraca dokumentację, która była dla niej aktualna, a szkic ma własną
-      kopię, która trafia online razem z nim. Nigdy nie są kompilowane ani serwowane i wliczają się do limitu zasobów
-      wersji.
+      To pliki jego kodu jak wszystkie inne, w folderach {k.code('docs')} i {k.code('tests')}: historia pokazuje, co
+      wersja w nich zmieniła, powrót do starszej wersji przywraca dokumentację, która była dla niej aktualna, a szkic ma
+      własną kopię, która trafia online razem z nim. Nigdy nie są kompilowane ani serwowane i wliczają się do tego, ile
+      może zajmować wersja.
     </>
   ),
   written3: (k) => (
@@ -193,8 +192,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Zacznij od dowolnej wersji w sekcji {k.b('Wersje')} albo poproś agenta, żeby utworzył szkic. To kopia kodu,
-        zasobów, dokumentacji i testów tej wersji oraz danych lambdy.
+        Zacznij od dowolnej wersji w sekcji {k.b('Wersje')} albo poproś agenta, żeby utworzył szkic. To kopia kodu i
+        zasobów tej wersji, w tym jej dokumentacji i testów, oraz danych lambdy.
       </>
     ),
     (k) => (
@@ -223,25 +222,36 @@ export const guide: Messages['guide'] = {
 
   files: (k) => (
     <>
-      Typów nie trzeba dopisywać pod kodem, który ich używa. W sekcji {k.b('Kod')} kliknij {k.b('+')} obok plików, a nowy plik
-      zostanie skompilowany obok snippetu, w tej samej przestrzeni nazw – nic nie trzeba importować. Nazwa bez
-      rozszerzenia oznacza plik C#.
+      Wersja to dowolna liczba plików, w dwóch częściach. Jej {k.b('kod')} to każdy plik poza zasobami: jej pliki{' '}
+      {k.code('.cs')} są kompilowane, w dowolnym folderze, jak w każdym projekcie C#, a każdy inny plik jest
+      przechowywany z wersją i nigdy nie jest kompilowany ani serwowany: jej dokumentacja, testy, to, z czego budowany
+      jest frontend. Jej {k.b('zasoby')}, w {k.code('resources/')}, to to, co czyta i serwuje w trakcie działania –
+      strony, skrypty, style, obrazy, migracje bazy danych – dostępne z kodu jako {k.code('Resources')}.
     </>
   ),
+  files2: (k) => (
+    <>
+      Typów nie trzeba dopisywać pod kodem, który ich używa. W sekcji {k.b('Kod')} kliknij {k.b('+')} obok kodu i wpisz
+      nazwę: plik {k.code('.cs')} zostanie skompilowany obok snippetu, w tej samej przestrzeni nazw, w którym folderze
+      by się nie znajdował – nic nie trzeba importować. Nazwa bez rozszerzenia i bez folderu oznacza plik C#.
+    </>
+  ),
+  filesAside:
+    'To, jak ułożony jest kod, zależy od tego, kto go pisze – folder na typy, folder na źródła frontendu, folder na skrypty. Każdy plik .cs jest kompilowany do aplikacji, więc C#, który nie jest jej częścią – test, własne narzędzie – nie należy do kodu jako plik .cs. Kod i zasoby wersji dzielą jedną pulę miejsca, którą pokazuje przegląd.',
 
   page: 'Stronę można serwować na dwa sposoby, a do tego jest jeszcze trzeci – na to, co ludzie przesyłają obok niej.',
   inlineTitle: 'Jedna strona, wpisana w kod',
   inline: 'Wystarczy do czegoś małego. Strona jest częścią snippetu.',
   folderTitle: 'Folder z prawdziwymi plikami',
   folder:
-    'Najlepszy wybór, gdy masz arkusz stylów i skrypt. Pliki dodajesz tak samo jak plik C#, a serwowane są dokładnie tak, jak je napiszesz. Nic ich nie kompiluje.',
+    'Najlepszy wybór, gdy masz arkusz stylów i skrypt. Pliki są zasobami wersji i serwowane są dokładnie tak, jak je napiszesz. Nic ich nie kompiluje.',
   workspaceTitle: 'Przesłane pliki, z danych',
   workspace:
-    'Na to, co przesyłają ludzie albo tworzy lambda – zdjęcia, dokumenty – serwowane obok aplikacji. Nie na strony samej aplikacji: ich miejsce jest w folderze z plikami, gdzie trafiają do wersji razem z kodem, który ich potrzebuje.',
+    'Na to, co przesyłają ludzie albo tworzy lambda – zdjęcia, dokumenty – serwowane obok aplikacji. Nie na strony samej aplikacji: ich miejsce jest w zasobach, gdzie trafiają do wersji razem z kodem, który ich potrzebuje.',
 
   spa: (k) => (
     <>
-      Drugi sposób, krok po kroku. Każde demo serwuje swoją stronę właśnie tak, z folderu {k.code('web')} – otwórz{' '}
+      Drugi sposób, krok po kroku. Każde demo serwuje swoją stronę właśnie tak, z {k.code('resources/web')} – otwórz{' '}
       {k.link('/editor/demo-crud', 'demo-crud')}, żeby zobaczyć przykład. Dema są tylko do odczytu; ich klucz edytora to
       ich nazwa.
     </>
@@ -249,8 +259,9 @@ export const guide: Messages['guide'] = {
   spaSteps: [
     (k) => (
       <>
-        W sekcji {k.b('Kod')} kliknij {k.b('+')} obok plików i wpisz {k.code('site/index.html')}. Ukośnik w nazwie
-        umieszcza plik w folderze, a rozszerzenie mówi, jakim plikiem jest.
+        W sekcji {k.b('Kod')} kliknij {k.b('+')} obok zasobów i wpisz {k.code('site/index.html')}: powstanie{' '}
+        {k.code('resources/site/index.html')}. Ukośnik w nazwie umieszcza plik w folderze, a rozszerzenie mówi, jakim
+        plikiem jest.
       </>
     ),
     (k) => (
@@ -262,7 +273,7 @@ export const guide: Messages['guide'] = {
     (k) => (
       <>
         Pliki, które nie są tekstem, np. obrazek czy font, dodasz tak: otwórz dowolny plik w {k.code('site')} i kliknij
-        przycisk przesyłania obok plików – plik trafi do tego samego folderu. PNG nie da się wpisać w edytor tekstu, więc
+        przycisk przesyłania obok zasobów – plik trafi do tego samego folderu. PNG nie da się wpisać w edytor tekstu, więc
         to jedyna droga.
       </>
     ),
@@ -280,30 +291,28 @@ export const guide: Messages['guide'] = {
     <>
       Część lambdy może powstawać w narzędziu do budowania, zamiast być pisana tak, jak jest serwowana lub kompilowana:
       kompilowana, pakowana lub generowana. Wersja zawiera to, co narzędzie wytwarza – jako swoje zasoby albo jako swój
-      kod – a obok tego pliki, z których to powstaje, czyli swój {k.b('folder build')}:{' '}
-      {k.code('.lambda/build/')} w wersji, {k.code('build/')} w sklonowanym repozytorium, z tym, na czym pracuje narzędzie.
-      Twój agent zmienia te pliki, uruchamia build u siebie i zapisuje jedno i drugie w tej samej wersji. Ta platforma
-      niczego nie buduje.
+      kod – a pliki, z których to powstaje, są częścią jej kodu, w osobnym folderze: na przykład {k.code('frontend/')},
+      z README, które mówi, jak to się buduje. Twój agent zmienia te pliki, uruchamia build u siebie i zapisuje jedno i
+      drugie w tej samej wersji. Ta platforma niczego nie buduje.
     </>
   ),
   built2: (k) => (
     <>
-      Tak jak dokumentacja należy do swojej wersji: jest porównywana w historii, przywracana, kopiowana do szkicu,
-      klonowana, pobierana i publikowana razem z kodem – i nigdy nie jest kompilowana ani serwowana. W centrum
-      sterowania {k.b('Budowanie')} pokazuje ją, gdy wersja ją przechowuje: jak jest budowana, według jej README, jej
-      pliki i to, czy wersja zmieniła je bez zmiany czegokolwiek, co z nich zbudowano. Jest tam do czytania, nie do
-      edycji – zmienia się ją tam, gdzie jest budowana.
+      Tak jak dokumentacja należą do wersji: są porównywane w historii, przywracane, kopiowane do szkicu, klonowane,
+      pobierane i publikowane razem z resztą kodu – i nigdy nie są kompilowane ani serwowane. W centrum sterowania są w
+      sekcji {k.b('Kod')}, razem z każdym innym plikiem wersji.
     </>
   ),
   builtAside:
-    'To, co jest pisane tak, jak jest serwowane lub kompilowane, żadnego takiego folderu nie potrzebuje. To, co build instaluje lub zachowuje dla siebie – na przykład node_modules – nigdy nie jest częścią wersji: pilnuje tego .gitignore w folderze build.',
+    'To, co jest pisane tak, jak jest serwowane lub kompilowane, żadnego takiego folderu nie potrzebuje. To, co build instaluje lub zachowuje dla siebie – na przykład node_modules – nigdy nie jest częścią wersji: pilnuje tego .gitignore w jego folderze.',
 
   storage: (k) => (
     <>
-      Lambda trzyma pliki w dwóch miejscach, a edytor pokazuje je osobno: {k.b('Pliki')} to pliki wersji – program –
+      Lambda trzyma pliki w dwóch miejscach, a edytor pokazuje je osobno: {k.b('Kod')} to pliki wersji – program –
       a {k.b('Dane')} to obszar roboczy – to, co program przechowuje. Cała różnica polega na tym,{' '}
       {k.em('do kogo należą')}. Pliki wersji należą do tej wersji; dane należą do lambdy i wszystkie wersje je
-      współdzielą.
+      współdzielą. Każde z nich ma jedną pulę miejsca: kod i zasoby wersji dzielą jedną, a baza danych i obszar
+      roboczy lambdy – drugą.
     </>
   ),
   savedWithCode: 'W wersji',
@@ -330,7 +339,7 @@ export const guide: Messages['guide'] = {
   ),
   database2: (k) => (
     <>
-      Jej tabele tworzą {k.b('migracje')}: pliki SQL dostarczane z wersją w {k.code('migrations/')}, które{' '}
+      Jej tabele tworzą {k.b('migracje')}: pliki SQL dostarczane z wersją w {k.code('resources/migrations/')}, które{' '}
       {k.link('https://evolve-db.netlify.app/', 'Evolve')} stosuje po kolei przy starcie lambdy – każdą tylko raz, więc
       nowa wersja uruchamia zawsze tylko to, co nowe. Nigdy nie zmieniaj migracji, która została już zastosowana;
       zmiana tabeli to kolejny plik.
@@ -425,12 +434,11 @@ export const guide: Messages['guide'] = {
   away2: (k) => (
     <>
       Twój snippet staje się plikiem {k.code('Project.cs')}, a {k.code('Program.cs')} serwuje to, co snippet zwraca.
-      Pozostałe pliki trafiają do projektu bez zmian. {k.code('Workspace')} i {k.code('Assets')} stają się
-      dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze {k.code('Platform')}, więc w kodzie nie
-      trzeba nic zmieniać.
+      Pozostałe pliki trafiają do projektu dokładnie tak, jak je napisano, i tam, gdzie były – zasoby do{' '}
+      {k.code('resources')}, dokumentacja do {k.code('docs')}, testy do {k.code('tests')}. {k.code('Workspace')} i{' '}
+      {k.code('Resources')} stają się dwoma folderami obok programu, z tymi samymi metodami, osobno w folderze{' '}
+      {k.code('Platform')}, więc w kodzie nie trzeba nic zmieniać.
       {' '}{k.code('Secret')} odczytuje tam zmienne środowiskowe o tej samej nazwie; wartości zostają tutaj.
-      Dokumentacja i testy trafiają do folderów {k.code('docs')} i {k.code('tests')}, a folder build do{' '}
-      {k.code('build')}.
       {' '}{k.code('Database')} otwiera {k.code('database/database.db')} – pobrany projekt zawiera ten plik razem z
       rekordami, które zapisała twoja aplikacja.
     </>
@@ -471,7 +479,7 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Publikowana jest każda wersja, także wcześniejsze, razem z dokumentacją, testami, folderem build i
+      Publikowana jest każda wersja, także wcześniejsze, razem z całym jej kodem – w tym z dokumentacją i testami – oraz
       zmianą, którą wprowadziła.
       To, co aplikacja przechowuje – jej rekordy, zapisane pliki, wartości kluczy i haseł – nigdy nie jest publikowane,
       podobnie jak twoje prośby, sformułowane twoimi słowami, i to, kto korzysta z aplikacji. Po wyłączeniu strona

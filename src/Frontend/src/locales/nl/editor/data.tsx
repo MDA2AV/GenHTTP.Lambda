@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Data is wat de lambda bewaart terwijl hij draait. Het hoort bij de lambda, niet bij een versie: elke versie leest en schrijft dezelfde data, en niets wat je met versies doet, verandert eraan. Een concept wordt uitgeprobeerd op een kopie ervan. De data verdwijnt pas als de lambda wordt verwijderd, of als je dat soort data uitzet.',
+    'Data is wat de lambda bewaart terwijl hij draait. Het hoort bij de lambda, niet bij een versie: elke versie leest en schrijft dezelfde data, en niets wat je met versies doet, verandert eraan. Een concept wordt uitgeprobeerd op een kopie ervan. De data verdwijnt pas als de lambda wordt verwijderd, of als je dat soort data uitzet. De database en de workspace delen één hoeveelheid ruimte, dus elk van beide mag groeien tot waar de ander ruimte laat.',
   facts: [
     ['Gedeeld door elke versie', 'Welke versie er ook online staat, hij leest en schrijft dezelfde data.'],
     ['Blijft bij een deploy', 'Deployen, terugzetten of een concept samenvoegen raakt het nooit aan.'],

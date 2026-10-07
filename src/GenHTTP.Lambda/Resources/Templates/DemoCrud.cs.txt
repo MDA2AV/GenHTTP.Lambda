@@ -8,15 +8,16 @@
 //
 //   openapi.json            the generated description of the API
 //   scalar/                 a page to try the API in the browser
-//   anything else           the page in web/, which uses the API
+//   anything else           the page in resources/web/, which uses the API
 //
 // The files:
 //
-//   lambda.cs     this one: the wiring, and bringing the database up to date
-//   Tasks.cs      the API - a class whose methods are the routes
-//   Store.cs      the tasks in the database, through Entity Framework Core
-//   migrations/   the SQL that makes the table, applied once by Evolve
-//   web/          the front end, shipped with the code and served as it is
+//   lambda.cs               this one: the wiring, and bringing the database up to date
+//   Tasks.cs                the API - a class whose methods are the routes
+//   Store.cs                the tasks in the database, through Entity Framework Core
+//   resources/migrations/   the SQL that makes the table, applied once by Evolve
+//   resources/web/          the front end, shipped with the code and served as it is
+//   docs/, tests/           what it is for and why, and how it is tested
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
@@ -25,7 +26,7 @@
 
 // The database belongs to the lambda, not to a version: every version reads
 // the same one, so each brings it up to the schema it expects before it
-// serves anything. The migrations are SQL files shipped as assets, applied in
+// serves anything. The migrations are SQL files shipped as resources, applied in
 // order and once each - Evolve remembers which in a table of its own, so this
 // runs on every start and only ever changes what is new. A migration that was
 // applied is never edited: a change to the schema is the next file, V2__...
@@ -33,7 +34,7 @@ using (var connection = Database.GetConnection())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
-        Locations = [Assets.Root + "migrations"],
+        Locations = [Resources.Root + "migrations"],
         IsEraseDisabled = true
     };
 
@@ -52,4 +53,4 @@ return Layout.Create()
              .AddOpenApi()
              .AddScalar()
              // last, so that it only answers what nothing above did
-             .Add(Assets.App("web"));
+             .Add(Resources.App("web"));

@@ -51,8 +51,8 @@ public interface IStorageService
     string GetAssemblyDirectory(long lambdaId);
 
     /// <summary>
-    /// The directory the assets shipped with a lambda - or with the preview of
-    /// one of its features - are written to.
+    /// The directory the resources shipped with a lambda - or with the preview
+    /// of one of its features - are written to.
     /// </summary>
     /// <remarks>
     /// Rewritten from what is being deployed every time something goes online,
@@ -61,7 +61,7 @@ public interface IStorageService
     /// which outlives a deployment.
     /// </remarks>
     /// <param name="featureId">The feature whose preview is meant, or nothing for the lambda itself</param>
-    string GetAssetDirectory(long lambdaId, long? featureId = null);
+    string GetResourceDirectory(long lambdaId, long? featureId = null);
 
     #region Features
 

@@ -122,7 +122,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
             return;
         }
 
-        if (index.Newest is not { } newest || update.OldId != newest)
+        if (index.Main is not { } main || update.OldId != main)
         {
             Refuse(lambda, update, "A version was saved since you fetched - in the editor, or by an agent. git pull --rebase, and push again.");
             return;
@@ -187,7 +187,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
             steps.Add((id, commits.Find(id)!, tree, read));
 
-            parent = new StoredCommit(string.Empty, [.. tree.Select(f => new StoredEntry(f.Path, f.Id!.Value.ToString()))], read.Stored);
+            parent = new StoredCommit(string.Empty, [.. tree.Select(f => new StoredEntry(f.Path, f.Id!.Value.ToString()))], read.Stored, Layout: GitLayouts.Current);
         }
 
         // a version is only made of what compiles, as when a feature is merged
@@ -696,7 +696,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
         /// Remembers what the lambda makes of a commit this push brings, for the commits on top of it.
         /// </summary>
         public void Provide(GitObjectId id, IReadOnlyList<GitFile> tree, IReadOnlyList<StoredFile>? files)
-            => _provided[id] = new StoredCommit(string.Empty, [.. tree.Select(f => new StoredEntry(f.Path, f.Id!.Value.ToString()))], files);
+            => _provided[id] = new StoredCommit(string.Empty, [.. tree.Select(f => new StoredEntry(f.Path, f.Id!.Value.ToString()))], files, Layout: GitLayouts.Current);
     }
 
     #endregion

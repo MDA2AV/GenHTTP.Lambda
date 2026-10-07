@@ -17,14 +17,10 @@ export const versions: EditorMessages['versions'] = {
   status: { added: 'añadido', removed: 'eliminado', changed: 'modificado', same: 'igual' },
   groups: {
     code: 'Código',
-    assets: 'Recursos',
-    build: 'Compilación',
-    context: 'Documentación y pruebas',
+    resources: 'Recursos',
   },
-  browse: 'Ver sus archivos',
+  files: 'Abrir sus archivos',
   docs: 'Leer su documentación',
-  build: 'Ver a partir de qué se compila',
-  edit: 'Editar desde aquí',
   feature: 'Empezar un borrador desde aquí',
   featureTitle:
     'Trabajar en un cambio de esta versión al lado de la lambda, y fusionarlo en la siguiente versión cuando esté bien',

@@ -9,7 +9,7 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 /// <remarks>
 /// System.Text.Json refuses to write a single value of more than 166,666,666
 /// characters, which in base64 is a file of a little under 125 MB - and a
-/// premium lambda may keep files larger than that, as assets and in its
+/// premium lambda may keep files larger than that, as resources and in its
 /// workspace. Written in pieces there is no such limit. Reading never had one.
 /// </remarks>
 public sealed class LongStringConverter : JsonConverter<string>

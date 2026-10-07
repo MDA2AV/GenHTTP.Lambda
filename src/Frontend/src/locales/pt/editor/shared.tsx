@@ -36,7 +36,7 @@ export const shared: EditorMessages['shared'] = {
   offline: 'Fora do ar',
   offlineTitle: 'Fora do ar: nada está sendo servido',
   premium:
-    'Premium: pode responder em um domínio próprio, tem mais espaço para código, assets e dados, e fica no ar mesmo sem movimento',
+    'Premium: pode responder em um domínio próprio, tem mais espaço para código, recursos e dados, e fica no ar mesmo sem movimento',
   demo: 'Demo: mantida no ar por esta instalação, somente leitura',
   tier: (tier) => `Plano ${tier}`,
   entrances: {

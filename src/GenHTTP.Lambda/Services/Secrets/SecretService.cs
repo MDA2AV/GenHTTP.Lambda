@@ -183,7 +183,7 @@ public sealed class SecretService(IDbContextFactory<LambdaDbContext> databases, 
     }
 
     private static IReadOnlyList<(string Name, bool Checked)> Reads(string? source)
-        => source == null ? [] : [.. LambdaSource.Parse(source).Where(f => f.IsCode).SelectMany(f => SecretVault.ReadBy(f.Code))];
+        => source == null ? [] : [.. LambdaSource.Parse(source).Where(f => f.IsCompiled).SelectMany(f => SecretVault.ReadBy(f.Code))];
 
     #endregion
 

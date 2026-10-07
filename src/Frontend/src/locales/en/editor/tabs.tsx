@@ -1,27 +1,26 @@
-
-/** The strip of files above the code. */
+/** Adding, uploading and removing the files of the code view, and what their names may be. */
 export const tabs = {
-  codeName: 'Letters, digits, dashes and underscores, ending in .cs',
-  slashes: 'No leading or trailing slash, and under 120 characters.',
-  deep: 'At most six folders deep.',
-  characters: 'Letters, digits, dashes, underscores and dots, separated by slashes.',
-  extension: 'It needs an extension, so it can be served as the right thing.',
-  context: 'In .lambda/, only docs/ and tests/ - letters, digits, dashes, underscores and dots, separated by slashes.',
-  contextFiles: 'Documentation and tests: part of the version, never compiled or served',
-  /** Said when a file is added below .lambda/build/ here: what a version is built from is changed where it is built. */
-  build: 'What it is built from is changed where it is built - in a clone, or by your agent - and read under Build.',
-  /** The one pill that stands for every file the version is built from. */
-  buildFiles: (count: number) => (count === 1 ? 'Build · 1 file' : `Build · ${count} files`),
-  buildTitle: 'What the code or the assets are built from. Read it under Build; it is kept as it is when you save.',
+  /** Said of a name a C# file may not have, in whichever folder it is. */
+  codeName: 'A C# file is named with letters, digits, dashes, underscores and dots, starting with a letter and ending in .cs, 40 characters at most.',
+  /** Said of a name any other file of the code may not have. */
+  name: 'Letters, digits and - _ . + @ ( ) [ ] { } $ ~, folders separated by slashes, no spaces and no name ending in a dot.',
+  /** Said of a name at the top that an exported or cloned project has for its own. */
+  taken: 'An exported or cloned lambda has a file or folder of that name at the top. Put it into a folder, or call it something else.',
+  /** Said of a name below .lambda/, where the documentation and the tests were kept once. */
+  lambda: 'A lambda keeps no .lambda/ folder any more: its documentation goes in docs/, its tests in tests/.',
+  /** Said of a name below assets/, where the files it serves were kept once. */
+  assets: 'What a lambda serves is in its resources now - add it there.',
+  /** Said of a name a resource may not have. */
+  resourceName: 'Letters, digits, dashes, underscores and dots, separated by slashes, at most six folders deep - and an extension, so it is served as the right thing.',
   exists: 'There is already a file with that name.',
   remove: (name: string) => `Remove ${name}? Its contents go with it.`,
+  removeFolder: (name: string, files: number) => `Remove ${name} and the ${files === 1 ? '1 file' : `${files} files`} in it?`,
   there: (name: string) => `${name} is already there.`,
   entry: 'The snippet: what it returns is what gets served',
   errors: 'has errors',
   removeFile: (name: string) => `Remove ${name}`,
-  removeTitle: 'Remove this file',
-  placeholder: 'Types.cs, site/index.html or .lambda/docs/api.md',
-  newFile: 'New file',
-  uploadTitle: 'Upload a file - an image, a font, a page',
+  removeTitle: 'Remove',
+  codePlaceholder: 'Store.cs, models/Item.cs or docs/notes.md',
+  resourcePlaceholder: 'web/index.html',
   upload: 'Upload a file',
 };

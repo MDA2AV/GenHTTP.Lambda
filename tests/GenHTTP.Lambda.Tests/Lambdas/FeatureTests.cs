@@ -192,7 +192,7 @@ public sealed class FeatureTests
     [TestMethod]
     public async Task AFeatureIsHeldToWhatAVersionMayHold()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { MaxCodeLength = 100 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 100 });
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -290,8 +290,8 @@ public sealed class FeatureTests
         }
 
         await PutFilesAsync(fixture, lambda.PrivateKey, feature.Key, [
-            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(\"api\", Inline.Create().Get(() => \"from the api\")).Add(Assets.App(\"web\"));"),
-            new LambdaFile("web/index.html", "<!doctype html><p>the feature's page</p>")
+            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(\"api\", Inline.Create().Get(() => \"from the api\")).Add(Resources.App(\"web\"));"),
+            new LambdaFile("resources/web/index.html", "<!doctype html><p>the feature's page</p>")
         ]);
 
         var started = await StartAsync(fixture, lambda.PrivateKey, feature.Key);
@@ -360,15 +360,15 @@ public sealed class FeatureTests
         var feature = await CreateAsync(fixture, lambda.PrivateKey, "Page");
 
         await PutFilesAsync(fixture, lambda.PrivateKey, feature.Key, [
-            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Assets.App(\"web\"));"),
-            new LambdaFile("web/index.html", "<!doctype html><p>the page that is online</p>")
+            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Resources.App(\"web\"));"),
+            new LambdaFile("resources/web/index.html", "<!doctype html><p>the page that is online</p>")
         ]);
 
         await StartAsync(fixture, lambda.PrivateKey, feature.Key);
 
         await PutFilesAsync(fixture, lambda.PrivateKey, feature.Key, [
-            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Assets.App(\"web\")) this does not compile"),
-            new LambdaFile("web/index.html", "<!doctype html><p>a page that never went online</p>")
+            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Resources.App(\"web\")) this does not compile"),
+            new LambdaFile("resources/web/index.html", "<!doctype html><p>a page that never went online</p>")
         ]);
 
         using (var refused = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/preview/start"))
@@ -378,7 +378,7 @@ public sealed class FeatureTests
         }
 
         Assert.Contains("the page that is online", await ServedAsync(fixture, feature.PreviewPath),
-                        "the assets are written out before the code compiles, and are put back when it does not");
+                        "the resources are written out before the code compiles, and are put back when it does not");
     }
 
     [TestMethod]

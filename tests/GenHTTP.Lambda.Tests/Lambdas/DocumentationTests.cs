@@ -12,8 +12,9 @@ using GenHTTP.Testing;
 namespace GenHTTP.Lambda.Tests.Lambdas;
 
 /// <summary>
-/// What a version keeps about itself beside its program: its documentation
-/// and its tests, under .lambda/.
+/// What a version keeps about itself in its code: its documentation and its
+/// tests, in docs/ and tests/ - folders like any other, which the editor and
+/// the agents read for what they are.
 /// </summary>
 [TestClass]
 public sealed class DocumentationTests
@@ -54,7 +55,7 @@ public sealed class DocumentationTests
         var read = await ReadAsync(fixture, lambda.PrivateKey, changed);
 
         Assert.AreEqual(Product, File(read, LambdaSource.ProductDoc), "the documentation goes on with the program");
-        Assert.AreEqual("console.log('ok');", File(read, ".lambda/tests/smoke.mjs"), "and so do the tests");
+        Assert.AreEqual("console.log('ok');", File(read, "tests/smoke.mjs"), "and so do the tests");
 
         // and a change of the documentation leaves the version before it as it was
         var described = await ChangeAsync(fixture, lambda.PrivateKey, new VersionChangeRequest(null, null,
@@ -75,22 +76,22 @@ public sealed class DocumentationTests
 
         await SaveAsync(fixture, lambda.PrivateKey, new VersionRequest(
         [
-            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Assets.Files());"),
-            new LambdaFile("index.html", "<p>the page</p>"),
+            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Resources.Files());"),
+            new LambdaFile("resources/index.html", "<p>the page</p>"),
             new LambdaFile(LambdaSource.ProductDoc, Product),
-            // a test written in C# - and not a program anybody could compile
-            new LambdaFile(".lambda/tests/Check.cs", "this is a test script, not code of the lambda"),
+            // a test script - of a language that is not compiled, and not a program anybody could compile
+            new LambdaFile("tests/check.mjs", "this is a test script, not code of the lambda"),
         ]));
 
         var deployed = await fixture.DeployAsync(lambda.PrivateKey);
 
-        Assert.IsTrue(deployed.Success, "a C# file among the tests is not compiled");
+        Assert.IsTrue(deployed.Success, "a script among the tests is not compiled");
 
         using var page = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/index.html");
 
-        Assert.AreEqual("<p>the page</p>", await page.GetContentAsync(), "the assets are served");
+        Assert.AreEqual("<p>the page</p>", await page.GetContentAsync(), "the resources are served");
 
-        using var documentation = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/.lambda/docs/product.md");
+        using var documentation = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/docs/product.md");
 
         Assert.AreEqual(HttpStatusCode.NotFound, documentation.StatusCode, "what is written about it is not");
 
@@ -98,55 +99,53 @@ public sealed class DocumentationTests
 
         var storage = (await summary.GetContentAsync<LambdaSummaryResponse>()).Storage;
 
-        Assert.AreEqual(1, storage.CodeFiles, "the test is not counted as code");
-        Assert.AreEqual(1, storage.Assets, "nor is the documentation counted as an asset");
+        Assert.AreEqual(3, storage.CodeFiles, "the documentation and the test are files of the code");
+        Assert.AreEqual(1, storage.ResourceFiles, "and not resources");
     }
 
     [TestMethod]
-    public async Task TheContextFolderHoldsTheDocumentationAndTheTestsOnly()
+    public async Task TheDocumentationAndTheTestsAreFilesLikeAnyOther()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        foreach (var (name, content, encoding) in (List<(string, string, string?)>)
-                 [
-                     (".lambda/notes.md", "# Notes", null),
-                     (".lambda/docs/.hidden.md", "# Hidden", null),
-                     (".Lambda/docs/product.md", "# Product", null),
-                     (".lambda/docs/", "", null),
-                     (LambdaSource.ProductDoc, Convert.ToBase64String("# Product"u8.ToArray()), "base64"),
-                 ])
+        // what a folder of the code may hold: a hidden page, a page as base64,
+        // and a test without an extension - nothing infers a type from one
+        await SaveAsync(fixture, lambda.PrivateKey, new VersionRequest(
+        [
+            new(LambdaSource.EntryName, Snippet),
+            new("docs/.notes.md", "# Notes"),
+            new(LambdaSource.ProductDoc, Convert.ToBase64String("# Product"u8.ToArray()), "base64"),
+            new("tests/Makefile", "test:\n\tnode smoke.mjs")
+        ]));
+
+        foreach (var name in (string[])[".lambda/notes.md", ".lambda/docs/product.md", ".Lambda/tests/README.md"])
         {
             using var refused = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                                        new VersionRequest([new(LambdaSource.EntryName, Snippet), new(name, content, encoding)]));
+                                                        new VersionRequest([new(LambdaSource.EntryName, Snippet), new(name, "# Notes")]));
 
-            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, $"'{name}' is refused");
+            Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, $"'{name}': the folder a lambda kept them in once is no more");
 
-            StringAssert.Contains(await refused.Content.ReadAsStringAsync(), name, "and the refusal says which file");
+            var said = await refused.Content.ReadAsStringAsync();
+
+            StringAssert.Contains(said, name, "the refusal says which file");
+            StringAssert.Contains(said, "docs/", "and where it goes instead");
         }
-
-        using var misplaced = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                                      new VersionRequest([new(LambdaSource.EntryName, Snippet), new(".lambda/notes.md", "# Notes")]));
-
-        StringAssert.Contains(await misplaced.Content.ReadAsStringAsync(), LambdaSource.DocsFolder, "it says where things go instead");
-
-        // a test needs no extension - nothing infers a content type from it
-        await SaveAsync(fixture, lambda.PrivateKey, new VersionRequest([new(LambdaSource.EntryName, Snippet), new(".lambda/tests/Makefile", "test:\n\tnode smoke.mjs")]));
     }
 
     [TestMethod]
-    public async Task DocumentationCountsTowardsWhatTheAssetsMayComeTo()
+    public async Task DocumentationCountsTowardsWhatAVersionMayComeTo()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { MaxAssetBytes = 1024, PremiumMaxAssetBytes = 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024, PremiumBuildBytes = 1024 });
 
         var lambda = await fixture.CreateLambdaAsync();
 
         using var refused = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                                    new VersionRequest([new(LambdaSource.EntryName, Snippet), new(".lambda/tests/data.json", new string('x', 2000))]));
+                                                    new VersionRequest([new(LambdaSource.EntryName, Snippet), new("tests/data.json", new string('x', 2000))]));
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "every version carries its own copy, like an asset");
-        StringAssert.Contains(await refused.Content.ReadAsStringAsync(), "the documentation and the tests");
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "every version carries its own copy of all of its code");
+        StringAssert.Contains(await refused.Content.ReadAsStringAsync(), "The code and the resources of a version must not exceed 1 KB together");
     }
 
     [TestMethod]
@@ -156,16 +155,16 @@ public sealed class DocumentationTests
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        var version = await SaveAsync(fixture, lambda.PrivateKey, Documented(Snippet, new LambdaFile("web/big.gif", Convert.ToBase64String(new byte[4096]), "base64")));
+        var version = await SaveAsync(fixture, lambda.PrivateKey, Documented(Snippet, new LambdaFile("resources/web/big.gif", Convert.ToBase64String(new byte[4096]), "base64")));
 
-        foreach (var folder in (string[])[".lambda/", ".lambda%2F"])
+        foreach (var folder in (string[])["docs/", "docs%2F"])
         {
             using var answer = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/{version}?folder={folder}");
 
             var files = (await answer.GetContentAsync<VersionContentResponse>()).Files.Select(f => f.Name).ToList();
 
-            CollectionAssert.AreEquivalent(new[] { LambdaSource.ProductDoc, LambdaSource.DecisionsDoc, LambdaSource.TestingDoc, ".lambda/tests/smoke.mjs" }, files,
-                                           $"only what is below {folder}, without the program and its assets");
+            CollectionAssert.AreEquivalent(new[] { LambdaSource.ProductDoc, LambdaSource.DecisionsDoc }, files,
+                                           $"only what is below {folder}, without the program and its resources");
         }
     }
 
@@ -207,7 +206,7 @@ public sealed class DocumentationTests
 
         var feature = await created.GetContentAsync<FeatureResponse>();
 
-        using var copied = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}?folder=.lambda/docs/");
+        using var copied = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}?folder=docs/");
 
         var copy = await copied.GetContentAsync<FeatureContentResponse>();
 
@@ -239,9 +238,9 @@ public sealed class DocumentationTests
 
         // zipped as a folder, with what an operating system and a repository leave behind
         var archive = Zip(("project/lambda.cs", Snippet),
-                          ("project/.lambda/docs/product.md", Product),
-                          ("project/.lambda/tests/smoke.mjs", "console.log('ok');"),
-                          ("project/.lambda/tests/.DS_Store", "x"),
+                          ("project/docs/product.md", Product),
+                          ("project/tests/smoke.mjs", "console.log('ok');"),
+                          ("project/tests/.DS_Store", "x"),
                           ("project/.git/HEAD", "ref: refs/heads/main"),
                           (".DS_Store", "x"));
 
@@ -258,8 +257,8 @@ public sealed class DocumentationTests
 
         var read = await ReadAsync(fixture, lambda.PrivateKey, version);
 
-        CollectionAssert.AreEqual(new[] { LambdaSource.EntryName, LambdaSource.ProductDoc, ".lambda/tests/smoke.mjs" }, read.Files.Select(f => f.Name).ToArray(),
-                                  "the context is kept, the program first, and every other hidden file is not");
+        CollectionAssert.AreEqual(new[] { LambdaSource.EntryName, LambdaSource.ProductDoc, "tests/smoke.mjs" }, read.Files.Select(f => f.Name).ToArray(),
+                                  "the documentation and the tests are kept, the program first - and not what an operating system or a repository left");
 
         using var downloaded = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/{version}/zip");
 
@@ -283,7 +282,7 @@ public sealed class DocumentationTests
         [
             new(LambdaSource.EntryName, Snippet),
             new(LambdaSource.DecisionsDoc, "It could read `Secret.Read(\"WEATHER_KEY\")` one day."),
-            new(".lambda/tests/Check.cs", "var key = Secret.Read(\"TEST_KEY\");"),
+            new("tests/check.mjs", "const key = 'Secret.Read(\"TEST_KEY\")';"),
         ]));
 
         using var listed = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/secrets");
@@ -315,18 +314,18 @@ public sealed class DocumentationTests
         Assert.AreEqual(LambdaSource.DecisionsDoc, pages[1]!["name"]!.GetValue<string>());
 
         Assert.AreEqual(Testing, read["tests"]!["pages"]![0]!["content"]!.GetValue<string>(), "then how it is tested");
-        Assert.AreEqual(".lambda/tests/smoke.mjs", read["tests"]!["files"]![0]!["name"]!.GetValue<string>(), "with its scripts by name");
+        Assert.AreEqual("tests/smoke.mjs", read["tests"]!["files"]![0]!["name"]!.GetValue<string>(), "with its scripts by name");
 
         var files = ((JsonArray)read["files"]!).Select(f => f!["name"]!.GetValue<string>()).ToList();
 
-        CollectionAssert.AreEqual(new[] { LambdaSource.EntryName }, files, "the files are the program, the context is not repeated among them");
+        CollectionAssert.AreEqual(new[] { LambdaSource.EntryName }, files, "the files are the program, the documentation and the tests are not repeated among them");
 
         Assert.IsNull(read["documentationNote"], "nothing is missing, so nothing is said about it");
 
         var script = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject
         {
             ["privateKey"] = lambda.PrivateKey,
-            ["file"] = ".lambda/tests/smoke.mjs"
+            ["file"] = "tests/smoke.mjs"
         }));
 
         Assert.AreEqual("console.log('ok');", script["files"]![0]!["code"]!.GetValue<string>(), "a test is read like any file");
@@ -398,9 +397,9 @@ public sealed class DocumentationTests
 
         string Describe(string name) => tools.Single(t => t!["name"]!.GetValue<string>() == name)!["description"]!.GetValue<string>();
 
-        StringAssert.Contains(Describe("write_code"), ".lambda/", "where a tool is picked");
-        StringAssert.Contains(Describe("change_code"), ".lambda/docs/");
-        StringAssert.Contains(Describe("merge_feature"), ".lambda/");
+        StringAssert.Contains(Describe("write_code"), "docs/product.md", "where a tool is picked");
+        StringAssert.Contains(Describe("change_code"), "docs/ and tests/");
+        StringAssert.Contains(Describe("merge_feature"), "docs/ and tests/");
     }
 
     [TestMethod]
@@ -440,7 +439,7 @@ public sealed class DocumentationTests
             new(LambdaSource.ProductDoc, Product),
             new(LambdaSource.DecisionsDoc, Decisions),
             new(LambdaSource.TestingDoc, Testing),
-            new(".lambda/tests/smoke.mjs", "console.log('ok');"),
+            new("tests/smoke.mjs", "console.log('ok');"),
         ]);
 
     private static async Task<int> SaveAsync(LambdaFixture fixture, string privateKey, VersionRequest version)

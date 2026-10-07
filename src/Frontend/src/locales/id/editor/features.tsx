@@ -112,7 +112,6 @@ export const features: EditorMessages['features'] = {
     overview: 'Draf',
     docs: 'Dokumentasi',
     code: 'Kode',
-    build: 'Build',
     tests: 'Pengujian',
     data: 'Data uji',
     logs: 'Log',

@@ -256,7 +256,54 @@ public sealed class CompilationTests
 
         Assert.IsFalse(outcome.Success);
 
-        Assert.Contains("LambdaEnvironment.Assets", string.Join(" ", outcome.Diagnostics.Select(d => d.Message)));
+        Assert.Contains("what the lambda shipped is Resources", string.Join(" ", outcome.Diagnostics.Select(d => d.Message)));
+    }
+
+    [TestMethod]
+    public async Task TheResourcesAreReachedFromEveryFileAndByTheirOldName()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("shipped");
+
+        // a lambda written while they were called assets goes on working as
+        // it did, and the new name works everywhere
+        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, """
+                var old = Assets.ReadText("notes.txt");
+
+                return Inline.Create().Get(() => $"{old} {Resources.ReadText("notes.txt")} {Shipped.Text()} {LambdaEnvironment.Assets.Exists("notes.txt")}");
+                """),
+            new LambdaFile("Shipped.cs", """
+                public static class Shipped
+                {
+                    public static string Text() => Resources.ReadText("notes.txt");
+                }
+                """),
+            new LambdaFile("resources/notes.txt", "kept")
+        ]));
+
+        using var response = await fixture.GetAsync("/lambda/shipped/");
+
+        Assert.AreEqual("kept kept kept True", await response.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task ATypeOfTheAuthorsOwnCalledResourcesIsTheirs()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("named");
+
+        // written before the platform had the name, it means what it meant
+        await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
+            new LambdaFile(LambdaSource.EntryName, "return Inline.Create().Get(() => Resources.Greeting);"),
+            new LambdaFile("Resources.cs", "public static class Resources { public const string Greeting = \"mine\"; }")
+        ]));
+
+        using var response = await fixture.GetAsync("/lambda/named/");
+
+        Assert.AreEqual("mine", await response.GetContentAsync());
     }
 
     [TestMethod]

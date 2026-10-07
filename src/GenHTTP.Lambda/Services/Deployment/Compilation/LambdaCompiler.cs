@@ -57,7 +57,7 @@ internal static class LambdaCompiler
     /// <param name="request">What to compile and where to put it</param>
     internal static async ValueTask<(CompilationOutcome Outcome, IHandler? Handler)> CompileAsync(CompilationRequest request)
     {
-        var code = request.Files.Where(f => f.IsCode).ToList();
+        var code = request.Files.Where(f => f.IsCompiled).ToList();
 
         var snippet = SourceBuilder.ParseSnippet(code[0].Code);
 
@@ -116,7 +116,7 @@ internal static class LambdaCompiler
 
         var scope = $"Lambda_{request.Name}_{Guid.NewGuid():N}";
 
-        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Assets, scope, request.Limits) };
+        var trees = new List<SyntaxTree> { SourceBuilder.Wrap(snippet, request.Workspace, request.Resources, scope, request.Limits) };
 
         foreach (var other in others)
         {
@@ -179,8 +179,9 @@ internal static class LambdaCompiler
     /// snippet holds in memory.
     /// </summary>
     /// <remarks>
-    /// The secrets and the database are connected first, because the top of a
-    /// snippet is where an API key is most often read and a database migrated.
+    /// The secrets, the database and the room it takes are connected first,
+    /// because the top of a snippet is where an API key is most often read, a
+    /// database migrated and a workspace prepared.
     /// </remarks>
     private static async ValueTask<IHandler> InvokeAsync(LoadedLambda lambda, CompilationRequest request)
     {
@@ -192,6 +193,16 @@ internal static class LambdaCompiler
         if (request.Database != null)
         {
             Connect(lambda, SourceBuilder.DatabaseType, request.Database);
+        }
+
+        if (request.DatabaseSize != null)
+        {
+            Connect(lambda, SourceBuilder.WorkspaceType, request.DatabaseSize);
+        }
+
+        if (request.WorkspaceChanged != null)
+        {
+            Connect(lambda, SourceBuilder.WorkspaceType, request.WorkspaceChanged, SourceBuilder.ChangedHook);
         }
 
         var entry = lambda.Assembly.GetType($"{lambda.Scope}.{SourceBuilder.EntryType}")
@@ -216,9 +227,9 @@ internal static class LambdaCompiler
     /// <summary>
     /// Hands a generated class the function it reads through.
     /// </summary>
-    private static void Connect(LoadedLambda lambda, string type, object source)
+    private static void Connect(LoadedLambda lambda, string type, object source, string field = SourceBuilder.SecretSource)
         => lambda.Assembly.GetType($"{lambda.Scope}.{type}")?
-                 .GetField(SourceBuilder.SecretSource, BindingFlags.Static | BindingFlags.NonPublic)?
+                 .GetField(field, BindingFlags.Static | BindingFlags.NonPublic)?
                  .SetValue(null, source);
 
     /// <summary>
@@ -229,10 +240,10 @@ internal static class LambdaCompiler
     /// The directories and the limits are part of it because they are compiled
     /// in: the same code in another tier, with its workspace switched off, or
     /// as the preview of a feature, is another assembly. Beyond those it is the
-    /// code files and nothing else. The assets are read from their directory
+    /// C# files and nothing else. The resources are read from their directory
     /// while the lambda runs - only where that directory is gets compiled in -
-    /// and the documentation and the tests are never built, so a version that
-    /// only changes those builds its handler from the assembly already loaded.
+    /// and the rest of the code is never built, so a version that only
+    /// changes those builds its handler from the assembly already loaded.
     /// Compiling it again would cost seconds and add an assembly that, loaded
     /// into the default context, stays for the life of the process.
     ///
@@ -244,10 +255,10 @@ internal static class LambdaCompiler
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
         Append(hash, request.Workspace);
-        Append(hash, $"\n{request.Assets}");
+        Append(hash, $"\n{request.Resources}");
         Append(hash, $"\n{request.Limits.Quota}\n{request.Limits.Enabled}");
 
-        foreach (var file in request.Files.Where(f => f.IsCode))
+        foreach (var file in request.Files.Where(f => f.IsCompiled))
         {
             Append(hash, "\n");
             Append(hash, file.Name);
@@ -318,7 +329,7 @@ internal static class LambdaCompiler
         // outside the top-level code of lambda.cs, Assets is the type the Files
         // module declares under that name, and the raw message says nothing about why
         "CS0117" when MeantTheLambdaAssets(diagnostic) => diagnostic.GetMessage()
-            + ". Outside the top-level code of lambda.cs, Assets is the Files module's type; what the lambda shipped is LambdaEnvironment.Assets.",
+            + ". Outside the top-level code of lambda.cs, Assets is the Files module's type; what the lambda shipped is Resources.",
         // inside a DbContext, Database is the context's own, and the raw
         // message says nothing about the lambda's of the same name
         "CS1061" or "CS0120" when MeantTheLambdaDatabase(diagnostic) => diagnostic.GetMessage()
@@ -343,8 +354,8 @@ internal static class LambdaCompiler
     }
 
     /// <summary>
-    /// What the lambda's own Assets offers, which the Files module's type of the
-    /// same name does not.
+    /// What the lambda's own resources offer, which the Files module's type
+    /// called Assets - their name before - does not.
     /// </summary>
     private static readonly string[] AssetMembers = ["Root", "Exists", "ReadText", "ReadBytes", "List", "Tree", "Files", "App", "Folders"];
 
@@ -379,13 +390,16 @@ internal static class LambdaCompiler
 /// </summary>
 /// <param name="Files">The source files as written by the user</param>
 /// <param name="Workspace">The directory the lambda may read and write</param>
-/// <param name="Assets">The directory the lambda's static assets were written to</param>
+/// <param name="Resources">The directory the lambda's resources were written to</param>
 /// <param name="AssemblyDirectory">Where the generated assembly is written to</param>
 /// <param name="Name">A readable prefix for the generated namespace and assembly</param>
 /// <param name="Run">Whether the result should be loaded and invoked, or only checked</param>
 /// <param name="Limits">What the lambda may keep in its workspace, compiled into it</param>
 /// <param name="Secrets">What the lambda reads its secrets with, once it runs</param>
 /// <param name="Database">What the lambda connects to its database with, once it runs</param>
-internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Assets, string AssemblyDirectory, string Name, bool Run,
+/// <param name="DatabaseSize">What its workspace reads the room the database takes with, once it runs</param>
+/// <param name="WorkspaceChanged">What its workspace calls once it wrote, once it runs</param>
+internal sealed record CompilationRequest(IReadOnlyList<LambdaFile> Files, string Workspace, string Resources, string AssemblyDirectory, string Name, bool Run,
                                           WorkspaceLimits Limits, Func<string, bool, string?>? Secrets = null,
-                                          Func<Microsoft.Data.Sqlite.SqliteConnection>? Database = null);
+                                          Func<Microsoft.Data.Sqlite.SqliteConnection>? Database = null,
+                                          Func<long>? DatabaseSize = null, Action? WorkspaceChanged = null);

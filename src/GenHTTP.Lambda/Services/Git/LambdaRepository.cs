@@ -13,7 +13,8 @@ namespace GenHTTP.Lambda.Services.Git;
 ///
 /// The published source is the same history without the features: they are
 /// the owner's work in progress, so neither their branches nor their commits
-/// are there - a commit is only found where it is a version.
+/// are there - a commit is only found where it is a version, or lays one out
+/// anew.
 /// </remarks>
 public class LambdaRepository(GitStore store, GitHistory history, long lambdaId, GitIndex index, bool owner, Func<string, string?> branches) : IGitRepository
 {
@@ -22,9 +23,9 @@ public class LambdaRepository(GitStore store, GitHistory history, long lambdaId,
     {
         var references = new GitReferences().Head("main");
 
-        if (index.Newest is { } newest)
+        if (index.Main is { } main)
         {
-            references.Branch("main", newest);
+            references.Branch("main", main);
         }
 
         foreach (var (version, commit) in index.Versions.OrderBy(v => v.Key))
@@ -48,7 +49,7 @@ public class LambdaRepository(GitStore store, GitHistory history, long lambdaId,
 
     public ValueTask<GitCommit?> GetCommitAsync(GitObjectId id)
     {
-        if (!owner && index.VersionOf(id) == null)
+        if (!owner && !index.IsOfVersions(id))
         {
             return new((GitCommit?)null);
         }

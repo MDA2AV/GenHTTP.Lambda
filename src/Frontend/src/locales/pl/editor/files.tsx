@@ -2,43 +2,11 @@ import type { EditorMessages } from '../../en/editor';
 import { counted } from '../plural';
 
 export const files: EditorMessages['files'] = {
-  hint: (b) => (
-    <>
-      Pliki jednej wersji – czyli program. {b('Kod')} jest kompilowany i nigdy nie jest serwowany. {b('Zasoby')} –
-      strony, skrypty, style, obrazki – są zapisywane razem z kodem, razem z nim wdrażane i przywracane, i są publiczne,
-      jeśli kod je serwuje. Tego, co lambda przechowuje w trakcie działania, tu nie ma: to jej {b('Dane')}.
-    </>
-  ),
-  scope: (version, data) => (
-    <>
-      Te pliki należą do wersji {version} i zmieniają się razem z nią. To, co lambda przechowuje w trakcie działania,
-      jest wspólne dla wszystkich wersji i znajdziesz to w sekcji {data('Dane')}.
-    </>
-  ),
-  edit: 'Edytuj tę wersję',
   version: 'Wersja',
   shown: (version, online, newest) => `Wersja ${version}${online ? ', online' : newest ? ', najnowsza' : ''}`,
   optionOnline: ' (online)',
-  readFailed: 'Nie udało się odczytać tej wersji.',
-  noVersion: 'Nie ma jeszcze żadnej wersji.',
-  label: 'Pliki',
-  code: 'Kod',
-  codeWhy: 'Kompilowany do lambdy, nigdy serwowany.',
   count: (files) => counted(files, 'plik', 'pliki', 'plików'),
-  codeUsage: (files, used, of) => `${files}, ${used} z ${of} znaków`,
   usage: (files, used, of) => `${files}, ${used} z ${of}`,
-  noCode: 'W tej wersji nie ma kodu.',
-  assets: 'Zasoby',
-  assetsPublic: 'Publiczne: ta wersja serwuje je przez Assets.',
-  assetsPrivate: 'Zapisane z kodem, ale ta wersja ich nie serwuje.',
-  noAssets: 'Brak w tej wersji.',
-  context: 'Dokumentacja i testy',
-  contextWhy: 'Nigdy nie są kompilowane ani serwowane: to, co napisano o tej wersji, dla każdego, kto ją czyta lub zmienia.',
-  contextUsage: (files, size) => `${files}, ${size} – wliczane do zasobów`,
-  noContext: 'O tej wersji nic jeszcze nie napisano.',
-  build: 'Budowanie',
-  buildWhy: 'Nigdy nie kompilowane i nigdy nie serwowane: to, z czego kod lub zasoby są budowane przez tego, kto je zmienia.',
-  data: 'Dane',
   dataPublic: 'Publiczne: kod, który jest online, serwuje je przez Workspace.',
   dataPrivate: 'Dostępne tylko dla lambdy. Nie należą do żadnej wersji.',
   uploadFailed: (path) => `Nie udało się przesłać pliku ${path}.`,

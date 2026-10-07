@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: 'Code',
   version: (version) => `Version ${version}`,
   edited: ', bearbeitet',
-  online: ', online',
   loadFailed: 'Diese Version konnte nicht geladen werden.',
   compiles: 'Kompiliert.',
   notYet: 'Kompiliert noch nicht.',
@@ -18,26 +17,34 @@ export const code: EditorMessages['code'] = {
   notOnline: 'Ist nicht online gegangen. Was der Compiler sagt, steht unten.',
   failed: 'Das hat nicht geklappt.',
   unchanged: 'Seit dem letzten Speichern hat sich nichts geändert.',
-  demo: 'Eine Demo, daher ist hier alles schreibgeschützt. Um etwas zu ändern, erstellen Sie damit ein eigenes Lambda. ',
-  edit: 'Code von Hand bearbeiten. Speichern legt eine neue Version an und lässt unberührt, was online ist; Deployen stellt sie online. Um eine Änderung zuerst auszuprobieren, beginnen Sie einen Entwurf. ',
-  editFeature:
-    'Der Code dieses Entwurfs. Speichern behält ihn im Entwurf – für die Besucher des Lambdas ändert sich nichts. Deployen stellt ihn unter der eigenen Adresse des Entwurfs online, zum Ausprobieren; wird der Entwurf übernommen, wird er zur nächsten Version. ',
+  demo: 'Eine Demo, daher ist hier alles schreibgeschützt. Um etwas zu ändern, erstellen Sie damit ein eigenes Lambda.',
+  hint: (b) => (
+    <>
+      Die Dateien einer Version. Ihr {b('Code')} ist das Programm und alles, was dazu gehört: Ihre .cs-Dateien werden
+      kompiliert, in jedem Ordner, und jede andere Datei – Dokumentation, Tests, das, woraus ein Frontend gebaut wird –
+      wird mit der Version gespeichert und nie kompiliert oder ausgeliefert. Ihre {b('Ressourcen')} – Seiten, Scripts,
+      Stile, Bilder, die Migrationen der Datenbank – werden zur Laufzeit gelesen und ausgeliefert und sind öffentlich,
+      wo der Code sie ausliefert. Speichern legt eine neue Version an und lässt das, was online ist, unberührt; um eine
+      Änderung zuerst auszuprobieren, beginnen Sie einen Entwurf. Strg+S speichert, F12 springt zu einer Deklaration.
+    </>
+  ),
+  hintFeature: (b) => (
+    <>
+      Die Dateien dieses Entwurfs: sein {b('Code')} – seine .cs-Dateien werden kompiliert, in jedem Ordner, der Rest wird
+      mit ihm gespeichert – und seine {b('Ressourcen')}, die zur Laufzeit gelesen und ausgeliefert werden. Speichern
+      behält sie im Entwurf und zeigt sie unter der eigenen Adresse des Entwurfs; Ihre Besucher sehen nichts davon, bis
+      Sie den Entwurf online stellen.
+    </>
+  ),
   inFeature: (name) => `in „${name}“`,
   changedElsewhere: 'Der Entwurf wurde woanders gespeichert, seit Sie ihn geöffnet haben – vielleicht vom Agenten. Laden Sie den gespeicherten Stand, bevor Sie hier speichern; Ihre Änderungen würden nicht darüber gespeichert.',
   readAgain: 'Gespeicherten Stand laden',
-  files: (entry, cs, context) => (
-    <>
-      {entry} gibt zurück, was ausgeliefert wird. Weitere {cs}-Dateien enthalten Typen, alle anderen Dateien werden
-      ausgeliefert, wie sie sind – außer denen in {context}: Das sind die Dokumentation, die Tests und das, woraus es
-      gebaut wird, die nie kompiliert oder ausgeliefert werden. Strg+S speichert, F12 springt zur Deklaration.
-    </>
-  ),
-  newer: (version) => ` Version ${version} ist neuer als die hier geöffnete.`,
+  newer: (version) => `Version ${version} ist neuer als die hier geöffnete.`,
   check: 'Prüfen',
   save: 'Speichern',
   deploy: 'Deployen',
   deployPreviewTitle: 'Speichern und den Entwurf unter seiner eigenen Adresse online stellen, um ihn auszuprobieren',
-  binary: (size) => `Kein Text, also nichts zu bearbeiten. Die Datei wird ausgeliefert, wie sie ist, und ist ${size} kB groß.`,
+  binary: (size) => `Kein Text, also gibt es hier nichts zu bearbeiten. Die Datei ist ${size} groß.`,
   saveAndDeploy: 'Speichern und deployen',
   saveVersion: 'Neue Version speichern',
   fromOlder: (version, newest) =>
@@ -52,4 +59,27 @@ export const code: EditorMessages['code'] = {
   what: 'Was ändert sich? Optional – erscheint im Verlauf.',
   placeholder: 'Fügt ein Kontaktformular hinzu',
   goToDefinition: 'Zur Definition springen',
+  versionLabel: 'Version',
+  shown: (version, online, newest) =>
+    `Version ${version}${online ? ', online' : newest ? ', neueste' : ''}`,
+  optionOnline: ' (online)',
+  switchUnsaved: 'Ihre Änderungen hier sind nicht gespeichert. Die andere Version trotzdem öffnen?',
+  noVersion: 'Es gibt noch keine Version, die angezeigt werden kann.',
+  label: 'Dateien',
+  codeGroup: 'Code',
+  codeWhy: 'Wird nie ausgeliefert. Die .cs-Dateien werden kompiliert, in jedem Ordner; der Rest wird mit der Version gespeichert.',
+  resources: 'Ressourcen',
+  resourcesPublic: 'Öffentlich: Diese Version liefert sie mit Resources aus.',
+  resourcesPrivate: 'Gehören zur Version, werden von ihr aber nicht ausgeliefert.',
+  noResources: 'Keine in dieser Version.',
+  count: (files) => (files === 1 ? '1 Datei' : `${files} Dateien`),
+  groupUsage: (files, size) => `${files}, ${size}`,
+  usage: (used, of) => `Diese Version umfasst ${used} der ${of}, die eine Version haben darf – Code und Ressourcen zusammen.`,
+  scope: (data) => (
+    <>Was das Lambda zur Laufzeit aufbewahrt, ist für jede Version dasselbe und steht unter {data('Daten')}.</>
+  ),
+  download: 'Herunterladen',
+  newIn: (group) => `Neue Datei in ${group}`,
+  uploadIn: (group) => `In ${group} hochladen`,
+  pick: 'Wählen Sie eine Datei, um zu sehen, was darin steht.',
 };

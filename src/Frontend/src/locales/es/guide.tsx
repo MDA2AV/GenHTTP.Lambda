@@ -13,11 +13,11 @@ export const guide: Messages['guide'] = {
     why: 'Explicar el porqué',
     written: 'Documentación y pruebas',
     features: 'Cambiarla sin riesgo',
-    files: 'Más de un archivo',
+    files: 'Código y recursos',
     page: 'Servir una página',
     spa: 'Un frontend, paso a paso',
     built: 'Aquello a partir de lo que se compila',
-    storage: 'Los dos lugares donde viven los archivos',
+    storage: 'Una versión y sus datos',
     database: 'Guardar registros',
     keeping: 'Guardar archivos',
     secrets: 'Claves y contraseñas',
@@ -102,7 +102,6 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Borradores', () => <>Cambios que se prueban antes de ponerlos en línea, cada uno en su propia dirección y con sus propios datos de prueba. Al abrirlo, un borrador tiene su propio código, datos de prueba y logs. La sección aparece en cuanto hay un borrador.</>],
-    ['Archivos', () => <>Los archivos de una versión: su código y sus recursos, el programa en sí. Un candado o un globo indica si el público puede acceder a ellos.</>],
     ['Datos', () => <>Lo que la lambda guarda mientras se ejecuta, compartido por todas las versiones: la base de datos, el workspace y los secretos, cada uno en su pestaña. Mira las tablas y los archivos, sube archivos, define secretos o activa y desactiva un tipo. La vista simple lo muestra en cuanto la app guarda algo.</>],
     ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. Desde aquí despliegas o vuelves atrás, o empiezas un borrador a partir de cualquiera de ellas.</>],
     ['Despliegues', () => <>Qué estuvo en línea y cuándo, y qué lo desconectó.</>],
@@ -112,21 +111,21 @@ export const guide: Messages['guide'] = {
       'Código',
       (k) => (
         <>
-          Para escribirlo a mano. {k.b('Comprobar')} compila, {k.b('Guardar')} crea una versión y {k.b('Desplegar')} la
-          pone en línea. En un borrador, {k.b('Guardar')} lo guarda en el borrador y lo muestra en la dirección del
-          borrador. {k.code('Ctrl-S')} guarda; {k.code('F12')} va a una declaración.
+          Todos los archivos de una versión, su código y sus recursos, en un árbol junto al editor, con el espacio que
+          ocupan y si el público puede acceder a ellos. Elige una versión anterior encima para leer esa.{' '}
+          {k.b('Comprobar')} compila, {k.b('Guardar')} crea una versión y {k.b('Desplegar')} la pone en línea. En un
+          borrador, {k.b('Guardar')} lo guarda en el borrador y lo muestra en la dirección del borrador.{' '}
+          {k.code('Ctrl-S')} guarda; {k.code('F12')} va a una declaración.
         </>
       ),
     ],
     ['Pruebas', () => <>Cómo se prueba la app automáticamente, con los scripts y los datos de prueba necesarios. Solo en la vista completa.</>],
-    ['Compilación', () => <>Aquello a partir de lo que se compilan el código o los recursos allí donde los genera una herramienta de compilación, guardado con cada versión, para leerlo y no para editarlo. En la vista completa, cuando una versión lo guarda.</>],
   ],
   sections: (k) => (
     <>
       Todas las secciones funcionan igual: su título, un {k.b('ⓘ')} que la explica, sus acciones a la derecha y, si
-      tiene más de una vista, una fila de pestañas debajo. En el código, las pestañas son sus archivos. La vista
-      completa agrupa las secciones: cómo la encuentra la gente, dónde se hace un cambio, el programa y sus datos, y
-      cómo se ejecuta.
+      tiene más de una vista, una fila de pestañas debajo. La vista completa agrupa las secciones: cómo la encuentra la
+      gente, dónde se hace un cambio, las versiones y los datos, y cómo se ejecuta.
     </>
   ),
   editorAside:
@@ -162,17 +161,17 @@ export const guide: Messages['guide'] = {
     </>
   ),
   writtenFiles: [
-    ['.lambda/docs/product.md', 'qué es la app, para quién es, qué hace la gente con ella y por qué'],
-    ['.lambda/docs/decisions.md', 'las decisiones técnicas, y por qué se tomaron'],
-    ['.lambda/tests/README.md', 'cómo se prueba la app automáticamente, y cómo ejecutar las pruebas'],
-    ['.lambda/tests/…', 'los scripts y los datos de prueba que usan las pruebas'],
+    ['docs/product.md', 'qué es la app, para quién es, qué hace la gente con ella y por qué'],
+    ['docs/decisions.md', 'las decisiones técnicas, y por qué se tomaron'],
+    ['tests/README.md', 'cómo se prueba la app automáticamente, y cómo ejecutar las pruebas'],
+    ['tests/…', 'los scripts y los datos de prueba que usan las pruebas'],
   ],
   written2: (k) => (
     <>
-      Son archivos de la versión como cualquier otro, en la carpeta {k.code('.lambda')}: el historial muestra qué
-      cambió en ellos una versión, volver atrás trae de vuelta la documentación que era cierta para esa versión, y un
-      borrador tiene su propia copia, que se pone en línea con él. Nunca se compilan ni se sirven, y cuentan para el
-      límite de los recursos de una versión.
+      Son archivos de su código como cualquier otro, en las carpetas {k.code('docs')} y {k.code('tests')}: el historial
+      muestra qué cambió en ellos una versión, volver atrás trae de vuelta la documentación que era cierta para esa
+      versión, y un borrador tiene su propia copia, que se pone en línea con él. Nunca se compilan ni se sirven, y
+      cuentan para el límite de lo que puede ocupar una versión.
     </>
   ),
   written3: (k) => (
@@ -196,8 +195,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Empiézalo desde cualquier versión en {k.b('Versiones')}, o deja que lo empiece el agente. Es una copia del código,
-        los recursos, la documentación y las pruebas de esa versión, y de los datos de la lambda.
+        Empiézalo desde cualquier versión en {k.b('Versiones')}, o deja que lo empiece el agente. Es una copia del código
+        y los recursos de esa versión, con su documentación y sus pruebas, y de los datos de la lambda.
       </>
     ),
     (k) => (
@@ -226,25 +225,38 @@ export const guide: Messages['guide'] = {
 
   files: (k) => (
     <>
-      Los tipos no tienen por qué estar debajo del código que los usa. En {k.b('Código')}, haz clic en {k.b('+')} junto a
-      los archivos: el archivo nuevo se compila junto al fragmento, en el mismo namespace, así que no hay que importar
-      nada para usarlo. Un nombre sin extensión se toma como C#.
+      Una versión son tantos archivos como haga falta, en dos partes. Su {k.b('código')} es todo archivo salvo sus
+      recursos: sus archivos {k.code('.cs')} se compilan, estén en la carpeta que estén, como en cualquier proyecto de
+      C#, y todos los demás se guardan con la versión y nunca se compilan ni se sirven: su documentación, sus pruebas,
+      aquello a partir de lo que se genera un front end. Sus {k.b('recursos')}, en {k.code('resources/')}, son lo que
+      lee y sirve mientras se ejecuta (páginas, scripts, estilos, imágenes, las migraciones de la base de datos) y se
+      alcanzan desde el código como {k.code('Resources')}.
     </>
   ),
+  files2: (k) => (
+    <>
+      Los tipos no tienen por qué estar debajo del código que los usa. En {k.b('Código')}, haz clic en {k.b('+')} junto
+      al código y escribe un nombre: un archivo {k.code('.cs')} se compila junto al fragmento, en el mismo namespace,
+      esté en la carpeta que esté, así que no hay que importar nada para usarlo. Un nombre sin extensión y sin carpeta
+      se toma como C#.
+    </>
+  ),
+  filesAside:
+    'Cómo se organiza el código depende de quien lo escribe: una carpeta para los tipos, otra para las fuentes de un front end, otra para scripts. Todo archivo .cs se compila dentro de la app, así que el C# que no forma parte de ella (una prueba, una herramienta aparte) no debe estar en el código como archivo .cs. El código y los recursos de una versión comparten un único espacio, que muestra el resumen.',
 
   page: 'Hay dos formas de servir una página, y una más para lo que la gente sube junto a ella.',
   inlineTitle: 'Una página escrita en el código',
   inline: 'Sirve para algo pequeño. La página forma parte del fragmento.',
   folderTitle: 'Una carpeta de archivos reales',
   folder:
-    'Lo que necesitas para cualquier cosa con hoja de estilos y script. Los archivos se añaden igual que un archivo C# y se sirven tal como están escritos. Nada los compila.',
+    'Lo que necesitas para cualquier cosa con hoja de estilos y script. Los archivos son recursos de la versión y se sirven tal como están escritos. Nada los compila.',
   workspaceTitle: 'Archivos subidos, desde los datos',
   workspace:
-    'Para lo que la gente sube o la lambda crea (fotos, documentos), servido junto a la app. No para las páginas de la propia app: esas van en una carpeta de archivos, donde se versionan junto con el código que las necesita.',
+    'Para lo que la gente sube o la lambda crea (fotos, documentos), servido junto a la app. No para las páginas de la propia app: esas van en los recursos, donde se versionan junto con el código que las necesita.',
 
   spa: (k) => (
     <>
-      La segunda forma, completa. Todas las demos sirven su página así, desde una carpeta llamada {k.code('web')}: abre{' '}
+      La segunda forma, completa. Todas las demos sirven su página así, desde {k.code('resources/web')}: abre{' '}
       {k.link('/editor/demo-crud', 'demo-crud')} para ver una. Las demos son de solo lectura; su clave de edición es su
       nombre.
     </>
@@ -252,8 +264,9 @@ export const guide: Messages['guide'] = {
   spaSteps: [
     (k) => (
       <>
-        En {k.b('Código')}, haz clic en {k.b('+')} junto a los archivos y escribe {k.code('site/index.html')}. Un nombre
-        con barra pone el archivo en una carpeta; un nombre con extensión se toma como el tipo de archivo que indica.
+        En {k.b('Código')}, haz clic en {k.b('+')} junto a los recursos y escribe {k.code('site/index.html')}: pasa a ser{' '}
+        {k.code('resources/site/index.html')}. Un nombre con barra pone el archivo en una carpeta; un nombre con
+        extensión se toma como el tipo de archivo que indica.
       </>
     ),
     (k) => (
@@ -265,7 +278,7 @@ export const guide: Messages['guide'] = {
     (k) => (
       <>
         Para todo lo que no sea texto, como una imagen o una fuente, abre un archivo de {k.code('site')} y usa el botón de
-        subir que está junto a los archivos: va a parar a la misma carpeta. Un PNG no se puede escribir en un editor de
+        subir que está junto a los recursos: va a parar a la misma carpeta. Un PNG no se puede escribir en un editor de
         texto, así que esa es la forma de meterlo.
       </>
     ),
@@ -283,36 +296,34 @@ export const guide: Messages['guide'] = {
     <>
       Una parte de una lambda puede generarla una herramienta de compilación en lugar de escribirse tal como se sirve o
       se compila: compilada, empaquetada o generada. La versión guarda lo que produce la herramienta, como sus recursos o
-      como su código, y junto a ello los archivos a partir de los que lo produce, su {k.b('carpeta de compilación')}:{' '}
-      {k.code('.lambda/build/')} en la versión, {k.code('build/')} en un clon, con todo lo que la herramienta necesita. Tu
-      agente cambia esos archivos, ejecuta la compilación donde trabaja y guarda ambas cosas en la misma versión. Esta
-      plataforma no compila nada.
+      como su código, y los archivos a partir de los que lo produce forman parte de su código, en una carpeta propia:
+      {' '}{k.code('frontend/')}, por ejemplo, con un README que explica cómo se compila. Tu agente cambia esos archivos,
+      ejecuta la compilación donde trabaja y guarda ambas cosas en la misma versión. Esta plataforma no compila nada.
     </>
   ),
   built2: (k) => (
     <>
-      Como la documentación, pertenece a su versión: se compara en el historial, se revierte, se copia en un borrador,
-      se clona, se descarga y se publica con el código, y nunca se compila ni se sirve. En el centro de control,{' '}
-      {k.b('Compilación')} lo muestra cuando una versión lo guarda: cómo se compila, según su README, sus archivos y si
-      una versión los cambió sin cambiar nada de lo que se compila a partir de ellos. Allí se lee, no se edita: un
-      cambio se hace donde se compila.
+      Como la documentación, pertenecen a la versión: se comparan en el historial, se revierten, se copian en un
+      borrador, se clonan, se descargan y se publican con el resto del código, y nunca se compilan ni se sirven. En el
+      centro de control están en {k.b('Código')}, con todos los demás archivos de la versión.
     </>
   ),
   builtAside:
-    'Lo que se escribe tal como se sirve o se compila no necesita nada de esto. Lo que una compilación instala o guarda para sí, como node_modules, nunca forma parte de una versión: un .gitignore en la carpeta de compilación lo deja fuera.',
+    'Lo que se escribe tal como se sirve o se compila no necesita nada de esto. Lo que una compilación instala o guarda para sí, como node_modules, nunca forma parte de una versión: un .gitignore en su carpeta lo deja fuera.',
 
   storage: (k) => (
     <>
-      Una lambda guarda archivos en dos lugares, y el editor los muestra por separado: {k.b('Archivos')} contiene los
+      Una lambda guarda archivos en dos lugares, y el editor los muestra por separado: {k.b('Código')} contiene los
       archivos de una versión (el programa) y {k.b('Datos')} contiene el workspace (lo que el programa guarda). La
       diferencia está en {k.em('de quién son')}. Los archivos de una versión pertenecen a esa versión; los datos
-      pertenecen a la lambda, y todas las versiones los comparten.
+      pertenecen a la lambda, y todas las versiones los comparten. Cada uno tiene su propio espacio: el código y los
+      recursos de una versión comparten uno, y la base de datos y el workspace de la lambda comparten el otro.
     </>
   ),
   savedWithCode: 'En una versión',
   workspaceColumn: 'En los datos',
   table: [
-    ['qué contiene', 'el código y los recursos: el programa, frontend incluido, y su documentación, sus pruebas y aquello a partir de lo que se compila', 'lo que escribe la lambda o sube alguien'],
+    ['qué contiene', 'el código y los recursos: el programa, frontend incluido, y su documentación, sus pruebas y todo aquello a partir de lo que se compila', 'lo que escribe la lambda o sube alguien'],
     ['cuándo cambia', 'nunca: un cambio es una versión nueva', 'en cuanto se escribe algo en ellos'],
     ['un despliegue', 'pone en línea exactamente estos archivos', 'nunca los toca'],
     ['volver atrás', 'trae de vuelta los archivos anteriores', 'no les afecta: todas las versiones los comparten'],
@@ -334,7 +345,7 @@ export const guide: Messages['guide'] = {
   ),
   database2: (k) => (
     <>
-      Sus tablas las crean las {k.b('migraciones')}: archivos SQL que van con la versión en {k.code('migrations/')} y
+      Sus tablas las crean las {k.b('migraciones')}: archivos SQL que van con la versión en {k.code('resources/migrations/')} y
       que {k.link('https://evolve-db.netlify.app/', 'Evolve')} aplica en orden cuando arranca la lambda, cada uno una
       sola vez, así que una versión nueva solo ejecuta lo que es nuevo. Nunca cambies una migración que ya se aplicó;
       un cambio en una tabla es el siguiente archivo.
@@ -429,12 +440,11 @@ export const guide: Messages['guide'] = {
   away2: (k) => (
     <>
       Tu fragmento pasa a ser {k.code('Project.cs')}, y {k.code('Program.cs')} sirve lo que devuelve. Tus otros
-      archivos llegan exactamente como los escribiste. {k.code('Workspace')} y {k.code('Assets')} se convierten en dos
-      carpetas junto al programa, con los mismos métodos, aparte en una carpeta {k.code('Platform')}, así que no tienes
-      que cambiar nada de tu código.
-      {' '}{k.code('Secret')} lee allí las variables de entorno con el mismo nombre; los valores se quedan aquí. La
-      documentación y las pruebas también se van contigo, en {k.code('docs')} y {k.code('tests')}, y la carpeta de
-      compilación en {k.code('build')}.
+      archivos llegan exactamente como los escribiste y donde estaban: los recursos en {k.code('resources')}, la
+      documentación en {k.code('docs')} y las pruebas en {k.code('tests')}. {k.code('Workspace')} y{' '}
+      {k.code('Resources')} se convierten en dos carpetas junto al programa, con los mismos métodos, aparte en una{' '}
+      carpeta {k.code('Platform')}, así que no tienes que cambiar nada de tu código.
+      {' '}{k.code('Secret')} lee allí las variables de entorno con el mismo nombre; los valores se quedan aquí.
       {' '}{k.code('Database')} abre {k.code('database/database.db')}, que la descarga incluye con los registros que
       guardó tu app.
     </>
@@ -476,8 +486,8 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Se publican todas las versiones, también las anteriores, con su documentación, sus pruebas, su carpeta de
-      compilación y el cambio que hizo cada una. Lo que conserva la app nunca se publica (sus registros, los archivos que
+      Se publican todas las versiones, también las anteriores, con todo su código (su documentación y sus pruebas
+      incluidas) y el cambio que hizo cada una. Lo que conserva la app nunca se publica (sus registros, los archivos que
       guardó, los valores de sus claves y contraseñas), como tampoco lo que pediste con tus propias palabras ni quién
       usa la app. Si lo desactivas, la página desaparece; sus estrellas se conservan para cuando vuelvas a publicarlo.
     </>

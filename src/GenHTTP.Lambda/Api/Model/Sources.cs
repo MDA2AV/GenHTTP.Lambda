@@ -103,7 +103,7 @@ public sealed record SourceVersionResponse(int Version, DateTime Created, string
 /// <param name="ZipPath">Where it is downloaded</param>
 public sealed record SourceTreeResponse(string PublicKey, int Version, string Root, long Bytes, IReadOnlyList<SourceFileResponse> Files, string ZipPath);
 
-/// <param name="Kind">code, asset, docs, tests, platform or project</param>
+/// <param name="Kind">code, resource, docs, tests, platform or project</param>
 public sealed record SourceFileResponse(string Path, long Size, string Kind);
 
 /// <summary>

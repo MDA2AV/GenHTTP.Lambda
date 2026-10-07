@@ -13,18 +13,19 @@ it is the same in every commit until the platform changes it.
 | Here | On the platform |
 |---|---|
 | `Project.cs` | `lambda.cs`: the body of `BuildAsync()` is the code that returns the app's handler, the types below the class are its own |
-| the other `*.cs` here | its other code files: types, no statements |
-| `assets/` | what it ships and serves - the front end, its migrations, pictures |
+| every other `*.cs`, in any folder | its other C# files: types, no statements - compiled with it, as in a C# project |
+| `resources/` | what it reads and serves while it runs - the front end, its migrations, pictures |
 | `docs/` | its documentation: `product.md`, `decisions.md` and more pages |
 | `tests/` | how it is tested: `README.md`, the scripts and their data |
-| `build/` | its build folder: what its assets or code are built from with a build tool - see "What it is built from" |
+| any other file or folder | the rest of its code, kept with every version and never compiled or served - what a front end is built from, a tool's configuration, a README |
 | `Program.cs`, `{project}.csproj`, `Platform/`, `Dockerfile`, `.gitignore`, `.dockerignore`, `AGENTS.md`, `CLAUDE.md`, `LICENSE` | the platform's: they make the lambda a project that runs here, and are no part of it |
 
-Change the lambda's files only. A push that changes, adds or removes one of
-the platform's is refused, since it would change nothing of the lambda, and
-so is a file anywhere else - a README at the root, an editor's settings: keep
-those out of commits (`.git/info/exclude`). Leave `class Project` as it is
-and work in the body of `BuildAsync()`; a helper goes into a type of its own.
+Every `.cs` file is compiled, in whichever folder, here as on the platform -
+so C# that is not part of the lambda, a test or a tool of its own, does not
+belong here as a `.cs` file. Lay out the rest as you would any repository. Change the lambda's files only: a push that changes, adds or
+removes one of the platform's is refused, since it would change nothing of
+the lambda. Leave `class Project` as it is and work in the body of
+`BuildAsync()`; a helper goes into a type of its own.
 
 ## Running it here
 
@@ -33,52 +34,54 @@ and work in the body of `BuildAsync()`; a helper goes into a type of its own.
 `Platform/` stands in for what the platform provides:
 
 - `Workspace` is the folder `workspace/`
-- `Assets` is `assets/`, copied beside the program when it is built
+- `Resources` is `resources/`, copied beside the program when it is built
 - `Secret.Read("NAME")` reads the environment variable `NAME`
 - `Database.GetConnection()` opens `database/database.db`, made empty on first use
 
 None of it is the lambda's data on the platform, which is never in the
 repository (see "Data").
 
-## What it is built from: build/
+## What a tool builds
 
-What the lambda's assets - or its code - are built from with a build tool
-goes in `build/`, the build folder: whatever the tool works from, in
-whatever layout it wants. It is part of every version, like `docs/`, and
-never compiled into the lambda or served. What is written as it is served or
-compiled - plain HTML, CSS and JavaScript, C# - needs none.
+Some of a lambda may be made by a tool rather than written as it is served or
+compiled: a front end that is compiled or bundled, styles compiled from
+another language, code generated from a description. What the tool works from
+goes in a folder of its own - `frontend/`, say - and what it makes goes where
+the lambda needs it: into `resources/`, or as C#. What is written
+as it is served or compiled - plain HTML, CSS and JavaScript, C# - needs no
+tool.
 
 The platform builds nothing - not on a push, not ever. You build it here,
 and commit it together with what the build wrote:
 
-    # run the build, which writes into assets/ (or code beside Project.cs)
+    # run the build, which writes into resources/ (or C# beside Project.cs)
     git add -A && git commit -m "Adds a dark mode"
 
 - The build replaces what an earlier build wrote, so nothing of it lingers,
   and you commit all of what it wrote: a file it wrote anew and left out of
   the commit is missing from the version.
-- What it writes into `assets/` is served at `/lambda/{lambda}/`, at the root
-  of a domain and at `/features/.../`, so it refers to its files relatively,
-  like every page here - a bundler set to an absolute base such as `/` is the
-  usual way this goes wrong.
+- What it writes into `resources/` is served at `/lambda/{lambda}/`, at the
+  root of a domain and at `/features/.../`, so it refers to its files
+  relatively, like every page here - a bundler set to an absolute base such
+  as `/` is the usual way this goes wrong.
 - What the build installs, caches or writes for itself is no part of a
   version - `node_modules/`, `target/`, `.venv/`, for example: keep it out
-  with a `.gitignore` of its own in `build/` (the one at the root is the
-  platform's).
-- `build/README.md` says how it is built and where the build goes, in a few
-  lines: the owner reads it in the editor, the next agent builds from it.
-- A change in `build/` that is not built changes nothing, and a change made in
-  what the build wrote is undone by the next build.
+  with a `.gitignore` of its own in the folder that holds it (the one at the
+  root is the platform's).
+- A `README.md` in the folder says how it is built and where the build goes,
+  in a few lines: the next agent builds from it.
+- A change in what a build is made from that is not built changes nothing,
+  and a change made in what the build wrote is undone by the next build.
 - Nothing secret in it, `.env` files included: every clone has it, and so
   does everybody once the source is published.
 - Plain files, like the rest of the repository: run a script through its
   interpreter rather than as an executable, which a push refuses.
-- Without git, the API hands out a version or a feature as a zip laid out
-  as this repository is, and takes it back the same way
-  (`?layout=project`), so a build set up here writes to the same place
-  there. Its plain zip names files as the lambda does instead. A zip is
-  counted as it is sent, before any `.gitignore` leaves something out, so it
-  holds what a commit would - never what a build installed.
+- Without git, the API hands out a version or a feature as a zip laid out as
+  this repository is (`?layout=project`), and takes it back the same way.
+  Its plain zip is laid out the same but for `lambda.cs`, which it has
+  instead of `Project.cs`. A zip is counted as it is sent, before any
+  `.gitignore` leaves something out, so it holds what a commit would - never
+  what a build installed.
 
 ## Versions: main
 
@@ -153,9 +156,9 @@ when a push is refused, the line says why.
   `Websocket.Functional()`. Routes cannot return anonymous types: declare a
   record. The GenHTTP modules are imported in every file already
   (`Platform/Usings.cs`), as on the platform.
-- In other files, `Assets` is the Files module's type of that name: use
-  `LambdaEnvironment.Assets` there. `Workspace`, `Secret` and `Database` work
-  in every file.
+- `Workspace`, `Resources`, `Secret` and `Database` work in every file.
+  `Resources.App("web")` serves `resources/web/`. `Assets`, the name
+  `Resources` had before, still works in `Project.cs`.
 - Links are relative: `"api/items"`, `"app.css"`, `"./"` - no leading slash,
   never `/lambda/{lambda}/` or a full address. The same lambda answers at
   `/lambda/{lambda}/`, at the root of a domain of its own, and as a feature at
@@ -179,7 +182,7 @@ when a push is refused, the line says why.
 
 ## Data
 
-A version is the program - the code and the assets, the front end included.
+A version is the program - its code and its resources, the front end included.
 Data is what the program keeps: the database, the workspace and the secrets.
 It belongs to the lambda, is shared by every version, and no deploy, rollback
 or merge touches it. A feature works on a copy. It is never in the
@@ -187,12 +190,12 @@ repository.
 
 - Records - entries, accounts, orders, votes - go in the database: a SQLite
   file of the lambda's own, switched on once (see "Beyond git"). Its schema
-  is SQL migrations in `assets/migrations/` (`V1__Create_items.sql`), applied
-  by Evolve as the lambda starts:
+  is SQL migrations in `resources/migrations/` (`V1__Create_items.sql`),
+  applied by Evolve as the lambda starts:
 
       using (var connection = Database.GetConnection())
       {
-          new Evolve(connection) { Locations = [Assets.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+          new Evolve(connection) { Locations = [Resources.Root + "migrations"], IsEraseDisabled = true }.Migrate();
       }
 
   Never edit a migration that was applied - add the next one - and never
@@ -204,9 +207,9 @@ repository.
   Every version reads the same database, and a rollback runs an older version
   against a newer schema: change it additively where that costs little.
 - Files users upload, and large data that is no program, go in the workspace
-  (`Workspace.WriteBytes(...)`), never in `assets/`: assets are read only and
-  replaced with every version.
-- API keys and passwords are secrets, never code, assets or commits - a key
+  (`Workspace.WriteBytes(...)`), never in `resources/`: resources are read
+  only and replaced with every version.
+- API keys and passwords are secrets, never code, resources or commits - a key
   in a commit stays in every clone for good. Read one with
   `Secret.Read("NAME")`, have secrets switched on, and let the owner enter the
   value in the editor; here, set the environment variable.
@@ -226,8 +229,8 @@ a feature's preview before merging it. Write them in the user's language.
 ## Pages meant to be found
 
 A page meant to be found or shared - a website, a shop, a landing page - gets
-a `<title>`, a meta description, `<html lang>`, a favicon as an asset linked
-relatively, and a social preview (`og:title`, `og:description`, `og:image`
+a `<title>`, a meta description, `<html lang>`, a favicon in `resources/`
+linked relatively, and a social preview (`og:title`, `og:description`, `og:image`
 with a full address), with what it is about in the HTML as served rather than
 only in what a script renders. A tool for a few people gets a title and
 nothing more.
@@ -262,6 +265,6 @@ files, commits and logs.
 
 A clone of `{home}/source/{lambda}.git` is the published source, and read
 only. To build on it, create a lambda of your own ({home}/ship), clone that,
-copy the lambda's files - `Project.cs`, the other `*.cs`, `assets/`, `docs/`,
-`tests/`, `build/` - over its own and push; the platform's files stay as your clone has
-them. Keep to the terms of `LICENSE`.
+copy the lambda's files - `Project.cs`, the other `*.cs`, `resources/` and every
+other file and folder of its own - over its own and push; the platform's files
+stay as your clone has them. Keep to the terms of `LICENSE`.

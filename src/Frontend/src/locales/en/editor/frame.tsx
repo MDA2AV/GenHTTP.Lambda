@@ -14,16 +14,14 @@ export const frame = {
     showcase: 'Showcase',
     source: 'Open source',
     domain: 'Domain',
-    files: 'Files',
     data: 'Data',
     versions: 'Versions',
     history: 'History',
     deployments: 'Deployments',
     stats: 'Stats',
     logs: 'Logs',
+    /** Every file of a version - its code and its resources - to read and to change, in the full view only. */
     code: 'Code',
-    /** What the assets or the code are built from by a build tool - the full view only. */
-    build: 'Build',
   },
   sectionsLabel: 'Sections',
   /** The groups the sections of the full view are gathered in, under the overview and the documentation. */

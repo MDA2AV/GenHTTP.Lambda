@@ -7,7 +7,6 @@ import { useEditorT } from '../i18n';
 import { ChangeList } from './Changes';
 import type { Control } from './context';
 import { AgentMark, Ago, Empty, Quote, Section } from './ui';
-import { isBuild } from './written';
 
 /**
  * Every version, newest first: what it changed in a line, and - opened - what
@@ -165,20 +164,12 @@ function Detail({ control, version, previous }: { control: Control; version: Ver
       )}
 
       <div className="flex flex-wrap gap-4 text-[13px]">
-        <button type="button" onClick={() => control.browse(version.version)} className="text-accent-500 hover:underline">
-          {said.browse}
+        {/* to read, or to change from - which saves a new version */}
+        <button type="button" onClick={() => control.edit(version.version)} className="text-accent-500 hover:underline">
+          {said.files}
         </button>
         <button type="button" onClick={() => control.openContext('docs', version.version)} className="text-accent-500 hover:underline">
           {said.docs}
-        </button>
-        {/* where it keeps it: what it is built from */}
-        {sides?.after.some((file) => isBuild(file.name)) && (
-          <button type="button" onClick={() => control.openBuild(version.version)} className="text-accent-500 hover:underline">
-            {said.build}
-          </button>
-        )}
-        <button type="button" onClick={() => control.edit(version.version)} className="text-accent-500 hover:underline">
-          {said.edit}
         </button>
         {!isDemo(control.lambda.tier) && (
           <button type="button" onClick={() => control.startFeature(version.version)} className="text-accent-500 hover:underline"

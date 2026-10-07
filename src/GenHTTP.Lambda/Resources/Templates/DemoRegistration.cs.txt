@@ -13,10 +13,11 @@
 //
 // The files:
 //
-//   lambda.cs     this one: the wiring, bringing the database up to date, and the secret
-//   Accounts.cs   accounts, password hashes and sessions, kept in the database
-//   migrations/   the SQL that makes their tables, applied once by Evolve
-//   web/          the two pages and the script they share
+//   lambda.cs               this one: the wiring, bringing the database up to date, and the secret
+//   Accounts.cs             accounts, password hashes and sessions, kept in the database
+//   resources/migrations/   the SQL that makes their tables, applied once by Evolve
+//   resources/web/          the two pages and the script they share
+//   docs/, tests/           what it is for and why, and how it is tested
 //
 // A secret, PASSWORD_PEPPER, goes into every password hash where the lambda
 // has one - see Accounts.cs. Secrets are data, set by the owner under Data >
@@ -38,12 +39,12 @@ using GenHTTP.Api.Content.Authentication;
 using GenHTTP.Modules.Reflection.Injectors;
 
 // every version reads the same database, so each brings it up to the schema
-// it expects first; Evolve applies what is new in migrations/, once each
+// it expects first; Evolve applies what is new in resources/migrations/, once each
 using (var connection = Database.GetConnection())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
-        Locations = [Assets.Root + "migrations"],
+        Locations = [Resources.Root + "migrations"],
         IsEraseDisabled = true
     };
 
@@ -91,7 +92,7 @@ var api = Inline.Create()
 return Layout.Create()
              .Add("api", api)
              .Add(account)
-             .Add(Assets.App("web"));
+             .Add(Resources.App("web"));
 
 // the answer to a successful registration or sign in: who you are, and the cookie
 static Result<SignedIn> SignIn((SignedIn Member, string Token) signed, IRequest request)

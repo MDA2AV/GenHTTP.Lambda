@@ -2,18 +2,19 @@
 // nobody is around. The server holds every board and decides every move; the
 // browser only draws what it is told and asks to play a cell.
 //
-//   GET  ./            the game, a single page application in web/
+//   GET  ./            the game, a single page application in resources/web/
 //   WS   play          the socket the page opens; JSON messages both ways
 //   GET  api/stats     games played and how they ended
 //
 // The files:
 //
-//   lambda.cs      this one: the wiring, and how the games ended, kept in the database
-//   Lobby.cs       the websocket handler: pairs players, runs games, talks to sockets
-//   Board.cs       the rules and the house's moves - no sockets, easy to reason about
-//   Protocol.cs    every message that goes over the socket, in both directions
-//   migrations/    the SQL that makes the table of outcomes, applied once by Evolve
-//   web/           the page and its script
+//   lambda.cs               this one: the wiring, and how the games ended, kept in the database
+//   Lobby.cs                the websocket handler: pairs players, runs games, talks to sockets
+//   Board.cs                the rules and the house's moves - no sockets, easy to reason about
+//   Protocol.cs             every message that goes over the socket, in both directions
+//   resources/migrations/   the SQL that makes the table of outcomes, applied once by Evolve
+//   resources/web/          the page and its script
+//   docs/, tests/           what it is for and why, and how it is tested
 // [demo]
 //
 // This is a read-only demo. To build on it, create a lambda of your own from
@@ -21,12 +22,12 @@
 // [/demo]
 
 // every version reads the same database, so each brings it up to the schema
-// it expects first; Evolve applies what is new in migrations/, once each
+// it expects first; Evolve applies what is new in resources/migrations/, once each
 using (var connection = Database.GetConnection())
 {
     var evolve = new Evolve(connection, message => Console.WriteLine(message))
     {
-        Locations = [Assets.Root + "migrations"],
+        Locations = [Resources.Root + "migrations"],
         IsEraseDisabled = true
     };
 
@@ -73,7 +74,7 @@ var api = Inline.Create()
 return Layout.Create()
              .Add("play", Websocket.Reactive().Handler(lobby))
              .Add("api", api)
-             .Add(Assets.App("web"));
+             .Add(Resources.App("web"));
 
 /// <summary>How many games ended one way: X, O or draw.</summary>
 public sealed class Outcome

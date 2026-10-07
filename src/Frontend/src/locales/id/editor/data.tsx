@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Data adalah apa yang disimpan lambda selama berjalan. Data milik lambda, bukan milik satu versi: semua versi membaca dan menulis data yang sama, dan apa pun yang Anda lakukan dengan versi tidak mengubahnya. Draf dicoba dengan salinan data itu. Data baru hilang kalau lambdanya dihapus, atau kalau Anda menonaktifkan jenis data itu.',
+    'Data adalah apa yang disimpan lambda selama berjalan. Data milik lambda, bukan milik satu versi: semua versi membaca dan menulis data yang sama, dan apa pun yang Anda lakukan dengan versi tidak mengubahnya. Draf dicoba dengan salinan data itu. Data baru hilang kalau lambdanya dihapus, atau kalau Anda menonaktifkan jenis data itu. Database dan workspace berbagi satu jatah ruang, jadi masing-masing boleh tumbuh sejauh yang disisakan oleh yang lain.',
   facts: [
     ['Dipakai bersama semua versi', 'Versi mana pun yang online membaca dan menulis data yang sama.'],
     ['Tetap ada saat deploy', 'Deploy, rollback, atau menggabungkan draf tidak pernah menyentuhnya.'],

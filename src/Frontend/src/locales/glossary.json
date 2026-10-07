@@ -63,6 +63,16 @@
       "id": "versi", "de": "Version", "es": "versión", "fr": "version", "it": "versione", "nl": "versie", "pl": "wersja", "pt": "versão", "pt-pt": "versão", "tr": "sürüm", "ja": "バージョン", "ko": "버전"
     },
     {
+      "en": "code",
+      "note": "every file of a version that is not one of its resources: its C#, which is compiled, and whatever else is kept with it - its documentation, its tests",
+      "id": "kode", "de": "Code", "es": "código", "fr": "code", "it": "codice", "nl": "code", "pl": "kod", "pt": "código", "pt-pt": "código", "tr": "kod", "ja": "コード", "ko": "코드"
+    },
+    {
+      "en": "resources",
+      "note": "what a version reads and serves while it runs - pages, pictures, migrations - in its folder resources/; once called assets. In code it is Resources, which stays as written",
+      "id": "sumber daya", "de": "Ressourcen", "es": "recursos", "fr": "ressources", "it": "risorse", "nl": "resources", "pl": "zasoby", "pt": "recursos", "pt-pt": "recursos", "tr": "kaynaklar", "ja": "リソース", "ko": "리소스"
+    },
+    {
       "en": "records",
       "note": "what the app keeps in its database, table by table",
       "id": "catatan", "de": "Einträge", "es": "registros", "fr": "entrées", "it": "voci", "nl": "items", "pl": "wpisy", "pt": "registros", "pt-pt": "registos", "tr": "kayıtlar", "ja": "記録", "ko": "기록"

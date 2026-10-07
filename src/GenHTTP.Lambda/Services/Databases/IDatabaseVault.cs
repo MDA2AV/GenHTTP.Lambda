@@ -72,9 +72,10 @@ public interface IDatabaseVault
     long SizeOf(long lambdaId, long? featureId);
 
     /// <summary>
-    /// How large the database of a lambda may grow, in its tier.
+    /// How large the database of a lambda - or a feature's copy - may grow:
+    /// the room of its data in its tier, less what its workspace takes of it.
     /// </summary>
-    long QuotaOf(LambdaTier tier);
+    long RoomOf(long lambdaId, long? featureId, LambdaTier tier);
 
     /// <summary>
     /// Writes the database of a lambda into a file of its own, whole.

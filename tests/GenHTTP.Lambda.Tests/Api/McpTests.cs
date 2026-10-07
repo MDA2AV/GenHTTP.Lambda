@@ -605,7 +605,7 @@ public sealed class McpTests
 
         // an agent shipping a front end has to be told it can put it in a
         // folder, or it will flatten everything into the root and wonder why
-        Assert.Contains("Assets.App(\\u0022site\\u0022)", guide,
+        Assert.Contains("Resources.App(\\u0022site\\u0022)", guide,
                         "the guide has to say a folder can be served by naming it");
 
         // an agent has no Data panel, so the guide has to name the tool that
@@ -614,7 +614,7 @@ public sealed class McpTests
 
         var parsed = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
 
-        Assert.Contains("Assets.App", parsed["servingAFrontEnd"]!["rule"]!.GetValue<string>(),
+        Assert.Contains("Resources.App", parsed["servingAFrontEnd"]!["rule"]!.GetValue<string>(),
                         "the front end is part of the program, and shipped with it");
         Assert.Contains("workspace", parsed["servingAFrontEnd"]!["notFromTheWorkspace"]!.GetValue<string>());
     }
@@ -630,7 +630,7 @@ public sealed class McpTests
         // every one of them goes and how a change is made
         var names = guide.Select(p => p.Key).ToList();
 
-        Assert.IsLessThan(names.IndexOf("assets"), names.IndexOf("lifecycle"), "the lifecycle comes before the details");
+        Assert.IsLessThan(names.IndexOf("resources"), names.IndexOf("lifecycle"), "the lifecycle comes before the details");
 
         var lifecycle = guide["lifecycle"]!;
 
@@ -659,7 +659,7 @@ public sealed class McpTests
 
         Assert.Contains("create_feature", instructions, "the instructions every agent reads say it before the guide does");
         Assert.Contains("merge_feature", instructions);
-        Assert.Contains("never in assets", instructions);
+        Assert.Contains("never in resources", instructions);
     }
 
     [TestMethod]
@@ -680,8 +680,8 @@ public sealed class McpTests
             ["feature"] = feature,
             ["deploy"] = true,
             ["files"] = new JsonArray(
-                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Layout.Create().Add(Assets.App(\"web\"));" },
-                new JsonObject { ["name"] = "web/index.html", ["code"] = "<script>fetch('/lambda/linked/api/items', { method: 'POST' })</script>" })
+                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Layout.Create().Add(Resources.App(\"web\"));" },
+                new JsonObject { ["name"] = "resources/web/index.html", ["code"] = "<script>fetch('/lambda/linked/api/items', { method: 'POST' })</script>" })
         }));
 
         Assert.IsTrue(linked["ok"]!.GetValue<bool>(), linked.ToJsonString());
@@ -692,7 +692,7 @@ public sealed class McpTests
             ["privateKey"] = privateKey,
             ["feature"] = feature,
             ["deploy"] = true,
-            ["edits"] = new JsonArray(new JsonObject { ["file"] = "web/index.html", ["find"] = "/lambda/linked/api/items", ["replace"] = "api/items" })
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "resources/web/index.html", ["find"] = "/lambda/linked/api/items", ["replace"] = "api/items" })
         }));
 
         Assert.IsNull(relative["warning"], "a relative path stays in the preview");
@@ -722,10 +722,10 @@ public sealed class McpTests
             ["feature"] = feature,
             ["deploy"] = true,
             ["files"] = new JsonArray(
-                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Layout.Create().Add(Assets.App(\"web\"));" },
+                new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Layout.Create().Add(Resources.App(\"web\"));" },
                 new JsonObject
                 {
-                    ["name"] = "web/index.html",
+                    ["name"] = "resources/web/index.html",
                     ["code"] = "<head><meta property=\"og:image\" content=\"https://example.com/lambda/shared/preview.png\">"
                              + "<link rel=\"canonical\" href=\"https://example.com/lambda/shared/\"><link rel=\"icon\" href=\"icon.svg\"></head>"
                 })
@@ -739,7 +739,7 @@ public sealed class McpTests
             ["privateKey"] = privateKey,
             ["feature"] = feature,
             ["deploy"] = true,
-            ["edits"] = new JsonArray(new JsonObject { ["file"] = "web/index.html", ["find"] = "href=\"icon.svg\"", ["replace"] = "href=\"/lambda/shared/icon.svg\"" })
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "resources/web/index.html", ["find"] = "href=\"icon.svg\"", ["replace"] = "href=\"/lambda/shared/icon.svg\"" })
         }));
 
         Assert.Contains("live lambda", linked["warning"]!.GetValue<string>(), "an icon the page loads is a link like any other");
@@ -1251,7 +1251,7 @@ public sealed class McpTests
         var names = ((JsonArray)read["files"]!).Select(f => f!["name"]!.GetValue<string>()).ToList();
 
         Assert.Contains("Store.cs", names, "an agent should see every file, not just the snippet");
-        Assert.Contains("web/index.html", names, "and the front end in its folder");
+        Assert.Contains("resources/web/index.html", names, "and the front end in its folder");
         Assert.AreEqual("Demo", read["tier"]!.GetValue<string>());
 
         var files = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = key }));
@@ -1358,7 +1358,7 @@ public sealed class McpTests
         var large = new string('a', 1024 * 1024 + 1);
 
         using (var saved = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions", new VersionRequest([
-                   new LambdaFile(LambdaSource.EntryName, "return Assets.Files();"),
+                   new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
                    new LambdaFile("large.txt", large)
                ])))
         {
@@ -1384,17 +1384,15 @@ public sealed class McpTests
 
         var free = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 
-        Assert.AreEqual(fixture.Limits.MaxCodeLengthOf(LambdaTier.Free), free["codeCharacters"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Limits.MaxAssetBytesOf(LambdaTier.Free), free["assetBytes"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Limits.WorkspaceOf(LambdaTier.Free).Quota, free["workspaceBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.BuildOf(LambdaTier.Free), free["buildBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.DataOf(LambdaTier.Free), free["dataBytes"]!.GetValue<long>());
 
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
         var premium = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }))["limits"]!;
 
-        Assert.AreEqual(fixture.Limits.MaxCodeLengthOf(LambdaTier.Premium), premium["codeCharacters"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Limits.MaxAssetBytesOf(LambdaTier.Premium), premium["assetBytes"]!.GetValue<int>());
-        Assert.AreEqual(fixture.Limits.WorkspaceOf(LambdaTier.Premium).Quota, premium["workspaceBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.BuildOf(LambdaTier.Premium), premium["buildBytes"]!.GetValue<long>());
+        Assert.AreEqual(fixture.Limits.DataOf(LambdaTier.Premium), premium["dataBytes"]!.GetValue<long>());
     }
 
     [TestMethod]
@@ -1411,16 +1409,14 @@ public sealed class McpTests
         var free = limits["free"]!.GetValue<string>();
         var premium = limits["premium"]!.GetValue<string>();
 
-        Assert.Contains("1,048,576 characters", free);
-        Assert.Contains("Assets: 32 MB", free);
-        Assert.Contains("Workspace: 256 MB", free);
+        Assert.Contains("A version: 32 MB - its code and its resources together", free);
+        Assert.Contains("Its data: 512 MB - its database and its workspace together", free);
 
-        Assert.Contains("10,485,760 characters", premium);
-        Assert.Contains("Assets: 128 MB", premium);
-        Assert.Contains("Workspace: 2 GB", premium);
+        Assert.Contains("A version: 128 MB", premium);
+        Assert.Contains("Its data: 4 GB", premium);
 
-        Assert.IsNull(guide["moreThanOneFile"]!["limit"], "nothing counts the C# files any more");
-        Assert.AreEqual(JsonValueKind.String, guide["assets"]!["limits"]!["count"]!.GetValueKind(), "nor the assets");
+        Assert.IsNull(guide["code"]!["limit"], "nothing counts the files of the code");
+        Assert.IsNull(guide["limits"]!["code"], "nor the characters of the C#");
     }
 
     [TestMethod]
@@ -1472,7 +1468,7 @@ public sealed class McpTests
         Assert.Contains("model", rule);
         Assert.Contains("workspace", rule);
         Assert.Contains("upload_file", guide["workspace"]!["fromOutside"]!.GetValue<string>());
-        Assert.Contains("workspace", guide["assets"]!["size"]!.GetValue<string>(), "and the assets say where their large files belong");
+        Assert.Contains("workspace", guide["resources"]!["size"]!.GetValue<string>(), "and the resources say where their large files belong");
 
         var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
 

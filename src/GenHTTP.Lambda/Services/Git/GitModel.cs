@@ -10,15 +10,43 @@ namespace GenHTTP.Lambda.Services.Git;
 /// </summary>
 /// <param name="Versions">The commit of each version, by its number</param>
 /// <param name="Features">The tip of each feature, by its key</param>
-public sealed record GitIndex(Dictionary<int, string> Versions, Dictionary<string, FeatureTip> Features)
+/// <param name="Moved">
+/// The commits made before the platform laid a lambda out as it does now, which were a tip, and the commit on top of each
+/// that lays the same files out anew - see <see cref="GitLayouts"/>
+/// </param>
+public sealed record GitIndex(Dictionary<int, string> Versions, Dictionary<string, FeatureTip> Features, Dictionary<string, string> Moved)
 {
 
-    public static GitIndex Empty() => new([], []);
+    public static GitIndex Empty() => new([], [], []);
 
     /// <summary>
-    /// The commit of the newest version.
+    /// What main points to: the commit of the newest version, or the one
+    /// laying it out anew, where it was made before the platform laid a
+    /// lambda out as it does now.
     /// </summary>
-    public GitObjectId? Newest => Versions.Count == 0 ? null : GitObjectId.Parse(Versions[Versions.Keys.Max()]);
+    public GitObjectId? Main => Versions.Count == 0 ? null : GitObjectId.Parse(Current(Versions[Versions.Keys.Max()]));
+
+    /// <summary>
+    /// The commit that stands for a commit now: the one laying it out anew,
+    /// where there is one, and the commit itself otherwise.
+    /// </summary>
+    public string Current(string commit) => Moved.GetValueOrDefault(commit, commit);
+
+    /// <summary>
+    /// Whether a commit is part of the history of the versions: a version, or
+    /// the commit laying one out anew - which is all the published source has.
+    /// </summary>
+    public bool IsOfVersions(GitObjectId commit)
+    {
+        if (VersionOf(commit) != null)
+        {
+            return true;
+        }
+
+        var hex = commit.ToString();
+
+        return Versions.Values.Any(v => Moved.GetValueOrDefault(v) == hex);
+    }
 
     /// <summary>
     /// The version a commit is, or nothing for one that is none.
@@ -59,8 +87,19 @@ public sealed record FeatureTip(string Commit, int Revision, int Base);
 /// state of the lambda, because it was only on the way to one
 /// </param>
 /// <param name="Version">The version it was saved as, if it was one - which ends what it keeps of the history below it</param>
-public sealed record StoredCommit(string Data, IReadOnlyList<StoredEntry> Tree, IReadOnlyList<StoredFile>? Files, int? Version = null)
+/// <param name="Layout">
+/// How the lambda's files are laid out in its tree, one of <see cref="GitLayouts"/> - nothing for a commit made before there was
+/// more than one
+/// </param>
+public sealed record StoredCommit(string Data, IReadOnlyList<StoredEntry> Tree, IReadOnlyList<StoredFile>? Files, int? Version = null,
+                                  int? Layout = null)
 {
+
+    /// <summary>
+    /// Whether its tree lays the lambda out as the platform does now, so a
+    /// commit on top of it can be read as one.
+    /// </summary>
+    public bool IsCurrent => Layout == GitLayouts.Current;
 
     public GitCommit Parse() => GitCommit.Parse(Convert.FromBase64String(Data));
 
@@ -68,6 +107,32 @@ public sealed record StoredCommit(string Data, IReadOnlyList<StoredEntry> Tree, 
     /// The file of the tree at a path, if there is one.
     /// </summary>
     public StoredEntry? At(string path) => Tree.FirstOrDefault(e => e.Path == path);
+
+}
+
+/// <summary>
+/// How the platform has laid a lambda out in the trees of its commits.
+/// </summary>
+/// <remarks>
+/// A commit is made once and kept, so the commits made before the platform
+/// laid a lambda out differently keep the layout they were made in: the
+/// files the lambda served in <c>assets/</c>, where they are in
+/// <c>resources/</c> now, and the platform's files of then. They are the
+/// history and are served as they are. Only a commit somebody builds on - the
+/// tip of main or of a feature - is laid out anew, by a commit on top of it
+/// holding the same files the way they are laid out now, which a clone
+/// fetches like any other and rebases onto - git follows the files it moves.
+/// A push is read in today's layout, so one that builds on a commit of
+/// before is refused, saying so.
+/// </remarks>
+public static class GitLayouts
+{
+
+    /// <summary>The files to serve in <c>assets/</c>: what a commit kept without a layout of its own was laid out in.</summary>
+    public const int Assets = 1;
+
+    /// <summary>The files to serve in <c>resources/</c>, and the rest of the code where the lambda has it.</summary>
+    public const int Current = 2;
 
 }
 

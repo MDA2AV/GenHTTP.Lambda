@@ -1,7 +1,5 @@
 using GenHTTP.Api.Infrastructure;
 
-using GenHTTP.Lambda.Services.Workspace;
-
 namespace GenHTTP.Lambda.Configuration;
 
 /// <summary>
@@ -161,75 +159,42 @@ public sealed record LambdaOptions
     public TimeSpan MaintenanceInterval { get; init; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// How many characters of C# a lambda outside the premium tier may have.
+    /// How large a version of a lambda outside the premium tier may be: its
+    /// code and its resources together.
     /// </summary>
     /// <remarks>
-    /// Counted across every C# file of a lambda together, in however many
-    /// files, and not against its assets, which have their own budget. What
-    /// this guards is the time and the memory the compiler spends, which the
-    /// whole server shares.
+    /// Mind what it costs: every version keeps its own copy of all of it, as
+    /// base64 in JSON for what is not text, so a version saved at the limit
+    /// takes nearly half as much again on disk, <see cref="MaxVersions"/> of
+    /// them are kept, and a version is read and written whole, in memory.
     /// </remarks>
-    public int MaxCodeLength { get; init; } = 1024 * 1024;
+    public long BuildBytes { get; init; } = 32L * 1024 * 1024;
 
     /// <summary>
-    /// How many characters of C# a lambda in the premium tier may have.
-    /// </summary>
-    /// <remarks>
-    /// Never less than what every other lambda may have, however the two are
-    /// set.
-    /// </remarks>
-    public int PremiumMaxCodeLength { get; init; } = 10 * 1024 * 1024;
-
-    /// <summary>
-    /// How many bytes of assets a lambda outside the premium tier may ship
-    /// beside its code, in however many files.
-    /// </summary>
-    /// <remarks>
-    /// Counted apart from the code because it is not code: a stylesheet is
-    /// never compiled, and charging a page of markup against the budget for
-    /// the program that serves it is the wrong ceiling for both.
-    /// </remarks>
-    public int MaxAssetBytes { get; init; } = 32 * 1024 * 1024;
-
-    /// <summary>
-    /// How many bytes of assets a lambda in the premium tier may ship.
+    /// How large a version of a premium lambda may be.
     /// </summary>
     /// <remarks>
     /// Room for pictures, recordings and data rather than a stylesheet and a
-    /// logo. Mind what it costs: assets are kept inside every version, as
-    /// base64 in JSON, so a version saved at the limit takes nearly half as
-    /// much again on disk, <see cref="MaxVersions"/> of them are kept, and a
-    /// version is read and written whole, in memory. Never less than what
-    /// every other lambda may ship, however the two are set.
+    /// logo. Never less than what every other lambda may have, however the
+    /// two are set.
     /// </remarks>
-    public int PremiumMaxAssetBytes { get; init; } = 128 * 1024 * 1024;
+    public long PremiumBuildBytes { get; init; } = 128L * 1024 * 1024;
 
     /// <summary>
-    /// How much room the workspace of a lambda outside the premium tier may
-    /// take, however many files it is in and however large each is.
-    /// </summary>
-    public long WorkspaceBytes { get; init; } = WorkspaceLimits.Standard.Quota;
-
-    /// <summary>
-    /// How much room the workspace of a premium lambda may take.
-    /// </summary>
-    public long PremiumWorkspaceBytes { get; init; } = 2048L * 1024 * 1024;
-
-    /// <summary>
-    /// How large the database of a lambda outside the premium tier may grow.
+    /// How much room the data of a lambda outside the premium tier may take:
+    /// its database and its workspace together.
     /// </summary>
     /// <remarks>
-    /// Room of its own rather than a share of the workspace's: the two are
-    /// switched on and off apart, and a lambda that keeps its records in the
-    /// database and its uploads in the workspace should not have either fill
-    /// the other.
+    /// One allowance for both, so a lambda that keeps everything in its
+    /// database has all of it there, and one that keeps files has all of it
+    /// for them. Each feature's copy of the data is held to it on its own.
     /// </remarks>
-    public long DatabaseBytes { get; init; } = 256L * 1024 * 1024;
+    public long DataBytes { get; init; } = 512L * 1024 * 1024;
 
     /// <summary>
-    /// How large the database of a premium lambda may grow.
+    /// How much room the data of a premium lambda may take.
     /// </summary>
-    public long PremiumDatabaseBytes { get; init; } = 2048L * 1024 * 1024;
+    public long PremiumDataBytes { get; init; } = 4096L * 1024 * 1024;
 
     /// <summary>
     /// How large the picture promoting a lambda in the showcase may be.
@@ -262,7 +227,7 @@ public sealed record LambdaOptions
     /// A published source is packed into a project once per version and kept,
     /// so that it is not packed again for every visitor. Anybody may ask for
     /// any version of it, though, and a premium lambda may ship a hundred
-    /// megabytes of assets fifty times over - so the cache is held to this,
+    /// megabytes of resources fifty times over - so the cache is held to this,
     /// and the version read least recently is packed again should somebody
     /// ask for it once more.
     /// </remarks>
@@ -277,7 +242,7 @@ public sealed record LambdaOptions
     /// atomic - so this protects the process, like a buffer, rather than
     /// being a promise of a tier: what a version may hold is checked after
     /// it was unpacked, against the tier of the lambda. Room for the first
-    /// push of a premium lambda that ships all the assets it may.
+    /// push of a premium lambda that ships all the resources it may.
     /// </remarks>
     public long GitMaxPushBytes { get; init; } = 256L * 1024 * 1024;
 
@@ -533,7 +498,11 @@ public sealed record LambdaOptions
 
     public string AssemblyDirectory => Path.Combine(DataDirectory, "assemblies");
 
-    public string AssetDirectory => Path.Combine(DataDirectory, "assets");
+    /// <summary>
+    /// Where the resources of what is online are written, one folder per
+    /// lambda - rewritten from the version every time one goes online.
+    /// </summary>
+    public string ResourceDirectory => Path.Combine(DataDirectory, "resources");
 
     /// <summary>
     /// Where features keep their files, their copy of the data and what their
@@ -588,6 +557,38 @@ public sealed record LambdaOptions
     ];
 
     /// <summary>
+    /// What the four allowances that became two were by default, in the free
+    /// tier and the premium one - what a value set for only one of a pair is
+    /// added to.
+    /// </summary>
+    public static IReadOnlyDictionary<string, (long Free, long Premium)> RetiredDefaults { get; } = new Dictionary<string, (long, long)>
+    {
+        ["code-characters"] = (1024 * 1024, 10 * 1024 * 1024),
+        ["asset-bytes"] = (32L * 1024 * 1024, 128L * 1024 * 1024),
+        ["workspace-bytes"] = (256L * 1024 * 1024, 2048L * 1024 * 1024),
+        ["database-bytes"] = (256L * 1024 * 1024, 2048L * 1024 * 1024)
+    };
+
+    /// <summary>
+    /// What the variables of the four allowances that became two set: the
+    /// characters of code and the bytes of assets, which a version's build
+    /// allowance counts together now, and the room of the workspace and of
+    /// the database, which share the data allowance.
+    /// </summary>
+    /// <remarks>
+    /// Only where one of them is set, as the sum of both - the one that is
+    /// not set counting as its old default - so an installation that raised
+    /// one keeps what it raised until the panel says otherwise.
+    /// </remarks>
+    private static long Combined(long fallback, (string Name, long Before) first, (string Name, long Before) second)
+    {
+        var one = ReadOptional(first.Name) is { } a && long.TryParse(a, out var x) ? x : (long?)null;
+        var other = ReadOptional(second.Name) is { } b && long.TryParse(b, out var y) ? y : (long?)null;
+
+        return one == null && other == null ? fallback : (one ?? first.Before) + (other ?? second.Before);
+    }
+
+    /// <summary>
     /// Which of <see cref="LimitVariables"/> are set in this environment.
     /// </summary>
     public static IReadOnlyList<string> MovedToPanel()
@@ -616,14 +617,14 @@ public sealed record LambdaOptions
             DeploymentLifetime = ReadSpan("LAMBDA_DEPLOYMENT_LIFETIME_HOURS", defaults.DeploymentLifetime),
             Retention = ReadSpan("LAMBDA_RETENTION_HOURS", defaults.Retention),
             MaintenanceInterval = ReadSpan("LAMBDA_MAINTENANCE_INTERVAL_HOURS", defaults.MaintenanceInterval),
-            MaxCodeLength = ReadInt("LAMBDA_MAX_CODE_LENGTH", defaults.MaxCodeLength),
-            PremiumMaxCodeLength = ReadInt("LAMBDA_PREMIUM_MAX_CODE_LENGTH", defaults.PremiumMaxCodeLength),
-            MaxAssetBytes = ReadInt("LAMBDA_MAX_ASSET_BYTES", defaults.MaxAssetBytes),
-            PremiumMaxAssetBytes = ReadInt("LAMBDA_PREMIUM_MAX_ASSET_BYTES", defaults.PremiumMaxAssetBytes),
-            WorkspaceBytes = ReadLong("LAMBDA_WORKSPACE_BYTES", defaults.WorkspaceBytes),
-            PremiumWorkspaceBytes = ReadLong("LAMBDA_PREMIUM_WORKSPACE_BYTES", defaults.PremiumWorkspaceBytes),
-            DatabaseBytes = ReadLong("LAMBDA_DATABASE_BYTES", defaults.DatabaseBytes),
-            PremiumDatabaseBytes = ReadLong("LAMBDA_PREMIUM_DATABASE_BYTES", defaults.PremiumDatabaseBytes),
+            BuildBytes = Combined(defaults.BuildBytes, ("LAMBDA_MAX_CODE_LENGTH", RetiredDefaults["code-characters"].Free),
+                                  ("LAMBDA_MAX_ASSET_BYTES", RetiredDefaults["asset-bytes"].Free)),
+            PremiumBuildBytes = Combined(defaults.PremiumBuildBytes, ("LAMBDA_PREMIUM_MAX_CODE_LENGTH", RetiredDefaults["code-characters"].Premium),
+                                         ("LAMBDA_PREMIUM_MAX_ASSET_BYTES", RetiredDefaults["asset-bytes"].Premium)),
+            DataBytes = Combined(defaults.DataBytes, ("LAMBDA_WORKSPACE_BYTES", RetiredDefaults["workspace-bytes"].Free),
+                                 ("LAMBDA_DATABASE_BYTES", RetiredDefaults["database-bytes"].Free)),
+            PremiumDataBytes = Combined(defaults.PremiumDataBytes, ("LAMBDA_PREMIUM_WORKSPACE_BYTES", RetiredDefaults["workspace-bytes"].Premium),
+                                        ("LAMBDA_PREMIUM_DATABASE_BYTES", RetiredDefaults["database-bytes"].Premium)),
             MaxShowcaseImageBytes = ReadInt("LAMBDA_MAX_SHOWCASE_IMAGE_BYTES", defaults.MaxShowcaseImageBytes),
             MaxVersions = ReadInt("LAMBDA_MAX_VERSIONS", defaults.MaxVersions),
             MaxFeatures = ReadInt("LAMBDA_MAX_FEATURES", defaults.MaxFeatures),

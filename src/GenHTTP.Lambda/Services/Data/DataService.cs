@@ -120,14 +120,14 @@ public sealed class DataService(IDbContextFactory<LambdaDbContext> databases, IM
 
                     if (!state.Enabled)
                     {
-                        return new DataStoreInfo(kind.Id, false, kind.Default, state.Changed, 0, 0, stores.QuotaOf(tier));
+                        return new DataStoreInfo(kind.Id, false, kind.Default, state.Changed, 0, 0, stores.RoomOf(lambdaId, featureId, tier));
                     }
 
                     // what it holds is counted in tables, and its room as the
                     // file takes it on the disk
                     var tables = CountTables(lambdaId, featureId);
 
-                    return new DataStoreInfo(kind.Id, true, kind.Default, state.Changed, tables, stores.SizeOf(lambdaId, featureId), stores.QuotaOf(tier));
+                    return new DataStoreInfo(kind.Id, true, kind.Default, state.Changed, tables, stores.SizeOf(lambdaId, featureId), stores.RoomOf(lambdaId, featureId, tier));
                 }
             default:
                 return new DataStoreInfo(kind.Id, state.Enabled, kind.Default, state.Changed, 0, 0, 0);

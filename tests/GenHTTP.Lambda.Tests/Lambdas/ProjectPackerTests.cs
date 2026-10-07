@@ -30,7 +30,7 @@ public sealed class ProjectPackerTests
 
             return Layout.Create()
                          .Add("books", Inline.Create().Get(() => shelf.All()))
-                         .Add(Assets.App("site"));
+                         .Add(Resources.App("site"));
 
             record Book(string Title);
             """),
@@ -42,8 +42,8 @@ public sealed class ProjectPackerTests
                 public IEnumerable<string> All() => ["one", "two"];
             }
             """),
-        new("site/index.html", "<!doctype html><title>x</title><h1>hello</h1>"),
-        new("site/dot.gif", "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64")
+        new("resources/site/index.html", "<!doctype html><title>x</title><h1>hello</h1>"),
+        new("resources/site/dot.gif", "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64")
     ];
 
     #region Layout
@@ -57,7 +57,7 @@ public sealed class ProjectPackerTests
                  ["my-lambda/my-lambda.csproj", "my-lambda/Program.cs", "my-lambda/Project.cs", "my-lambda/Shelf.cs",
                   "my-lambda/Platform/Usings.cs", "my-lambda/Platform/LambdaEnvironment.cs", "my-lambda/Platform/Folder.cs",
                   "my-lambda/Platform/Handlers.cs", "my-lambda/Dockerfile",
-                  "my-lambda/assets/site/index.html", "my-lambda/assets/site/dot.gif"])
+                  "my-lambda/resources/site/index.html", "my-lambda/resources/site/dot.gif"])
         {
             Assert.Contains(wanted, names);
         }
@@ -163,18 +163,18 @@ public sealed class ProjectPackerTests
     #region Files
 
     [TestMethod]
-    public void AnAssetKeepsItsBytes()
+    public void AResourceKeepsItsBytes()
     {
         using var zip = new ZipArchive(new MemoryStream(ProjectPacker.Pack(Lambda, Files)));
 
-        using var stream = zip.GetEntry("my-lambda/assets/site/dot.gif")!.Open();
+        using var stream = zip.GetEntry("my-lambda/resources/site/dot.gif")!.Open();
         using var buffer = new MemoryStream();
 
         stream.CopyTo(buffer);
 
         var gif = Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
 
-        CollectionAssert.AreEqual(gif, buffer.ToArray(), "a base64 asset is written out as the bytes it stood for");
+        CollectionAssert.AreEqual(gif, buffer.ToArray(), "a base64 resource is written out as the bytes it stood for");
     }
 
     [TestMethod]
@@ -198,32 +198,37 @@ public sealed class ProjectPackerTests
     }
 
     [TestMethod]
-    public void TheDocumentationAndTheTestsLeaveWithIt()
+    public void TheRestOfTheCodeLeavesWithItWhereTheLambdaHasIt()
     {
         IReadOnlyList<LambdaFile> documented =
         [
             .. Files,
             new(LambdaSource.ProductDoc, "# Books\n\nA shelf of books.\n"),
             new(LambdaSource.TestingDoc, "# How it is tested\n"),
-            new(".lambda/tests/Check.cs", "this would not compile"),
+            new("tests/check.mjs", "check();"),
+            new("models/item.cs", "public record Item(string Name);"),
+            new("frontend/package.json", "{}"),
         ];
 
         var zip = ProjectPacker.Pack(Lambda, documented);
 
         var names = Names(zip);
 
-        Assert.Contains("my-lambda/docs/product.md", names, "where a .NET project keeps its documentation");
+        Assert.Contains("my-lambda/docs/product.md", names, "laid out as the lambda is");
         Assert.Contains("my-lambda/tests/README.md", names);
-        Assert.Contains("my-lambda/tests/Check.cs", names, "a test keeps the name it had");
-        Assert.IsFalse(names.Any(n => n.Contains(".lambda", StringComparison.Ordinal)), "the folder is the platform's, not the project's");
-        Assert.DoesNotContain("my-lambda/assets/.lambda/docs/product.md", names, "and none of it is an asset");
+        Assert.Contains("my-lambda/tests/check.mjs", names, "a test keeps the name it had");
+        Assert.Contains("my-lambda/models/Item.cs", names, "C# in a folder is named the .NET way, in its folder");
+        Assert.Contains("my-lambda/frontend/package.json", names);
 
-        Assert.Contains("<Compile Remove=\"docs/**;tests/**\" />", Read(zip, "my-lambda/my-lambda.csproj"), "a test written in C# is not compiled into the program");
+        var project = Read(zip, "my-lambda/my-lambda.csproj");
 
-        var ignored = Read(zip, "my-lambda/.dockerignore");
+        Assert.Contains("<EnableDefaultItems>false</EnableDefaultItems>", project, "nothing is gathered but what is named");
+        Assert.Contains("<Compile Include=\"**/*.cs\" Exclude=\"bin/**;obj/**;resources/**;workspace/**;database/**\" />", project,
+                        "the C# of every folder of the code is compiled, as on the platform, and nothing that is not the lambda's");
+        Assert.Contains("<None Include=\"resources/**\" CopyToOutputDirectory=\"PreserveNewest\" />", project, "and the resources are copied beside it");
 
-        Assert.Contains("docs/", ignored, "nor copied into its container");
-        Assert.Contains("tests/", ignored);
+        Assert.AreEqual("*\n!**/*.cs\n!*.csproj\n!Platform/\n!resources/\nbin/\nobj/\nworkspace/\ndatabase/\n", Read(zip, "my-lambda/.dockerignore"),
+                        "only what it is built from goes into its container, the C# of every folder included");
 
         Assert.Contains("docs/ says what the app is for", Read(zip, "my-lambda/Program.cs"), "and the program says where to read about it");
     }
@@ -233,8 +238,18 @@ public sealed class ProjectPackerTests
     {
         var zip = ProjectPacker.Pack(Lambda, Files);
 
-        Assert.DoesNotContain("Compile Remove", Read(zip, "my-lambda/my-lambda.csproj"));
         Assert.DoesNotContain("docs/", Read(zip, "my-lambda/Program.cs"));
+    }
+
+    [TestMethod]
+    public void ASnippetThatSaysAssetsKeepsItsOldName()
+    {
+        IReadOnlyList<LambdaFile> files = [new("lambda.cs", "return Assets.App(\"site\");")];
+
+        Assert.Contains("private static Platform.ResourceFolder Assets => Platform.LambdaEnvironment.Resources;", Read(ProjectPacker.Pack(Lambda, files), "my-lambda/Project.cs"),
+                        "what the resources were called before is what code written then says");
+
+        Assert.DoesNotContain("Assets =>", Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/Project.cs"), "and only that code");
     }
 
     #endregion

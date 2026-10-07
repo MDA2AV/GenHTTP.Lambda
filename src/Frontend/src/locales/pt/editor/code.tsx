@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: 'Código',
   version: (version) => `versão ${version}`,
   edited: ', editada',
-  online: ', no ar',
   loadFailed: 'Não foi possível carregar essa versão.',
   compiles: 'Compila.',
   notYet: 'Ainda não compila.',
@@ -18,26 +17,33 @@ export const code: EditorMessages['code'] = {
   notOnline: 'Não foi para o ar. Veja abaixo o que o compilador disse.',
   failed: 'Não deu certo.',
   unchanged: 'Nada mudou desde o último salvamento.',
-  demo: 'É uma demo, então tudo aqui é somente leitura. Para mudar, crie uma lambda sua a partir dela. ',
-  edit: 'Edite o código à mão. Salvar cria uma nova versão e não mexe no que está no ar; fazer deploy coloca no ar. Para testar uma mudança antes, comece um rascunho. ',
-  editFeature:
-    'O código deste rascunho. Salvar mantém a mudança no rascunho: nada do que os visitantes da lambda recebem muda. Fazer deploy coloca no ar no endereço próprio do rascunho, para testar; mesclar o rascunho faz dele a próxima versão. ',
+  demo: 'É uma demo, então tudo aqui é somente leitura. Para mudar, crie uma lambda sua a partir dela.',
+  hint: (b) => (
+    <>
+      Os arquivos de uma versão. O {b('código')} dela é o programa e tudo o que fica guardado com ele: os arquivos .cs
+      são compilados, em qualquer pasta, e todo outro arquivo (a documentação, os testes, aquilo a partir do qual um
+      front end é gerado) fica guardado com a versão e nunca é compilado nem servido. Os {b('recursos')} dela
+      (páginas, scripts, estilos, imagens, as migrações do banco de dados) são lidos e servidos enquanto ela roda, e
+      são públicos onde o código os serve. Salvar cria uma nova versão e não mexe no que está no ar; para testar uma
+      mudança antes, comece um rascunho. Ctrl-S salva, F12 vai para uma declaração.
+    </>
+  ),
+  hintFeature: (b) => (
+    <>
+      Os arquivos deste rascunho: o {b('código')} (os arquivos .cs são compilados, em qualquer pasta, o resto fica
+      guardado com ele) e os {b('recursos')}, lidos e servidos enquanto ele roda. Salvar os mantém no rascunho e os
+      mostra no endereço do próprio rascunho; seus visitantes não veem nada disso até você colocar o rascunho no ar.
+    </>
+  ),
   inFeature: (name) => `em “${name}”`,
   changedElsewhere: 'O rascunho foi salvo em outro lugar depois que você abriu (talvez pelo agente). Carregue o que está salvo antes de salvar aqui; suas alterações não seriam salvas por cima.',
   readAgain: 'Carregar o que está salvo',
-  files: (entry, cs, context) => (
-    <>
-      {entry} retorna o que é servido, outros arquivos {cs} guardam tipos, e qualquer outro arquivo é servido como
-      está, exceto o que fica em {context}: a documentação, os testes e aquilo a partir do qual é construído, que nunca
-      são compilados nem servidos. Ctrl-S salva, F12 vai para uma declaração.
-    </>
-  ),
-  newer: (version) => ` A versão ${version} é mais nova do que a que está aberta aqui.`,
+  newer: (version) => `A versão ${version} é mais nova do que a que está aberta aqui.`,
   check: 'Verificar',
   save: 'Salvar',
   deploy: 'Fazer deploy',
   deployPreviewTitle: 'Salvar e colocar o rascunho no ar no endereço próprio dele, para testar',
-  binary: (size) => `Não é texto, então não há o que editar. É servido como está e tem ${size} kB.`,
+  binary: (size) => `Não é texto, então não há o que editar aqui. Tem ${size}.`,
   saveAndDeploy: 'Salvar e fazer deploy',
   saveVersion: 'Salvar nova versão',
   fromOlder: (version, newest) =>
@@ -52,4 +58,27 @@ export const code: EditorMessages['code'] = {
   what: 'O que muda? Opcional, aparece no histórico.',
   placeholder: 'Adiciona um formulário de contato',
   goToDefinition: 'Ir para a definição',
+  versionLabel: 'Versão',
+  shown: (version, online, newest) =>
+    `Versão ${version}${online ? ', no ar' : newest ? ', mais recente' : ''}`,
+  optionOnline: ' (no ar)',
+  switchUnsaved: 'O que você mudou aqui não foi salvo. Abrir a outra versão mesmo assim?',
+  noVersion: 'Ainda não há nenhuma versão para mostrar.',
+  label: 'Arquivos',
+  codeGroup: 'Código',
+  codeWhy: 'Nunca servido. Os arquivos .cs são compilados, em qualquer pasta; o resto fica guardado com a versão.',
+  resources: 'Recursos',
+  resourcesPublic: 'Públicos: esta versão os serve com Resources.',
+  resourcesPrivate: 'Enviados com a versão, mas esta versão não os serve.',
+  noResources: 'Nenhum nesta versão.',
+  count: (files) => (files === 1 ? '1 arquivo' : `${files} arquivos`),
+  groupUsage: (files, size) => `${files}, ${size}`,
+  usage: (used, of) => `Esta versão ocupa ${used} dos ${of} que uma versão pode ter, contando o código e os recursos juntos.`,
+  scope: (data) => (
+    <>O que a lambda guarda enquanto roda é igual para todas as versões e fica em {data('Dados')}.</>
+  ),
+  download: 'Baixar',
+  newIn: (group) => `Novo arquivo em ${group}`,
+  uploadIn: (group) => `Enviar para ${group}`,
+  pick: 'Escolha um arquivo para ver o que há nele.',
 };

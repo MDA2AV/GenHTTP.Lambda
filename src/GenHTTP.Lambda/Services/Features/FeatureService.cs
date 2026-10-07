@@ -580,7 +580,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
             code = storage.ReadFeature(lambda.Id, entity.Id)
                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
-            if (code == storage.Read(lambda.Id, entity.BaseVersion))
+            if (LambdaSource.Same(code, storage.Read(lambda.Id, entity.BaseVersion)))
             {
                 throw LambdaException.Invalid($"The feature '{entity.Name}' holds exactly what version {entity.BaseVersion} holds, so there is nothing to merge. Change it first, or delete it.");
             }

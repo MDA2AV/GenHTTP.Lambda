@@ -5,10 +5,11 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <summary>
 /// What the editor needs to know about the platform it talks to.
 /// </summary>
+/// <param name="BuildBytes">How large a version of a free lambda may be, its code and its resources together</param>
 public sealed record PlatformResponse(
     string Terms,
     IReadOnlyList<StarterResponse> Starters,
-    int MaxCodeLength,
+    long BuildBytes,
     int DeploymentLifetimeHours,
     int RetentionDays,
     IReadOnlyList<string> Imports,

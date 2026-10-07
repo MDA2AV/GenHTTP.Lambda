@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: 'Kod',
   version: (version) => `wersja ${version}`,
   edited: ', edytowana',
-  online: ', online',
   loadFailed: 'Nie udało się załadować tej wersji.',
   compiles: 'Kompiluje się.',
   notYet: 'Jeszcze się nie kompiluje.',
@@ -18,26 +17,33 @@ export const code: EditorMessages['code'] = {
   notOnline: 'Nie trafiła online. Zobacz niżej, co mówi kompilator.',
   failed: 'Nie udało się.',
   unchanged: 'Nic się nie zmieniło od ostatniego zapisu.',
-  demo: 'To demo, więc wszystko tu jest tylko do odczytu. Żeby coś zmienić, utwórz na jego podstawie własną lambdę. ',
-  edit: 'Edytuj kod ręcznie. Zapisanie tworzy nową wersję i nie rusza tego, co jest online; wdrożenie wrzuca ją online. Jeśli chcesz najpierw wypróbować zmianę, utwórz szkic. ',
-  editFeature:
-    'Kod tego szkicu. Zapisanie zostawia go w szkicu – dla odwiedzających lambdę nic się nie zmienia. Wdrożenie wrzuca go online pod własnym adresem szkicu, żeby go wypróbować; scalenie szkicu zamienia go w kolejną wersję. ',
+  demo: 'To demo, więc wszystko tu jest tylko do odczytu. Żeby coś zmienić, utwórz na jego podstawie własną lambdę.',
+  hint: (b) => (
+    <>
+      Pliki jednej wersji. Jej {b('kod')} to program i wszystko, co jest z nim przechowywane: jej pliki .cs są
+      kompilowane, w dowolnym folderze, a każdy inny plik – dokumentacja, testy, to, z czego budowany jest frontend – jest
+      przechowywany z wersją i nigdy nie jest kompilowany ani serwowany. Jej {b('zasoby')} – strony, skrypty, style, obrazy, migracje
+      bazy danych – są czytane i serwowane w trakcie działania, a publiczne są tam, gdzie kod je serwuje. Zapisanie tworzy
+      nową wersję i nie rusza tego, co jest online; żeby najpierw wypróbować zmianę, utwórz szkic. Ctrl-S zapisuje, F12
+      przechodzi do deklaracji.
+    </>
+  ),
+  hintFeature: (b) => (
+    <>
+      Pliki tego szkicu: jego {b('kod')} – jego pliki .cs kompilowane, w dowolnym folderze, reszta jest z nim przechowywana – oraz jego{' '}
+      {b('zasoby')}, czytane i serwowane w trakcie działania. Zapisanie zostawia je w szkicu i pokazuje pod własnym
+      adresem szkicu; twoi odwiedzający nic z tego nie zobaczą, dopóki nie udostępnisz szkicu.
+    </>
+  ),
   inFeature: (name) => `szkic „${name}”`,
   changedElsewhere: 'Od chwili otwarcia szkic został zapisany gdzie indziej – może przez agenta. Zanim zapiszesz tutaj, wczytaj zapisany stan; twoje zmiany nie zostałyby zapisane na nim.',
   readAgain: 'Wczytaj zapisany stan',
-  files: (entry, cs, context) => (
-    <>
-      {entry} zwraca to, co jest serwowane, pozostałe pliki {cs} zawierają typy, a każdy inny plik jest serwowany bez
-      zmian – poza tym, co jest w folderze {context}: dokumentacją, testami i tym, z czego jest zbudowane, które nigdy nie
-      są kompilowane ani serwowane. Ctrl+S zapisuje, F12 przechodzi do deklaracji.
-    </>
-  ),
-  newer: (version) => ` Wersja ${version} jest nowsza niż ta otwarta tutaj.`,
+  newer: (version) => `Wersja ${version} jest nowsza niż ta otwarta tutaj.`,
   check: 'Sprawdź',
   save: 'Zapisz',
   deploy: 'Wdróż',
   deployPreviewTitle: 'Zapisz i wrzuć szkic online pod jego własnym adresem, żeby go wypróbować',
-  binary: (size) => `Ten plik nie jest tekstem, więc nie da się go edytować. Jest serwowany bez zmian i waży ${size} kB.`,
+  binary: (size) => `Ten plik nie jest tekstem, więc nie da się go tu edytować. Ma rozmiar ${size}.`,
   saveAndDeploy: 'Zapisz i wdróż',
   saveVersion: 'Zapisz nową wersję',
   fromOlder: (version, newest) =>
@@ -52,4 +58,27 @@ export const code: EditorMessages['code'] = {
   what: 'Co zmienia ta wersja? Opcjonalnie – pojawi się w historii.',
   placeholder: 'Dodaje formularz kontaktowy',
   goToDefinition: 'Przejdź do definicji',
+  versionLabel: 'Wersja',
+  shown: (version, online, newest) =>
+    `Wersja ${version}${online ? ', online' : newest ? ', najnowsza' : ''}`,
+  optionOnline: ' (online)',
+  switchUnsaved: 'To, co tu zmieniono, nie jest zapisane. Otworzyć mimo to inną wersję?',
+  noVersion: 'Nie ma jeszcze wersji do pokazania.',
+  label: 'Pliki',
+  codeGroup: 'Kod',
+  codeWhy: 'Nigdy nie jest serwowany. Pliki .cs są kompilowane, w dowolnym folderze; reszta jest przechowywana razem z wersją.',
+  resources: 'Zasoby',
+  resourcesPublic: 'Publiczne: ta wersja serwuje je przez Resources.',
+  resourcesPrivate: 'Dołączone do wersji, ale ta wersja ich nie serwuje.',
+  noResources: 'Brak w tej wersji.',
+  count: (files) => (files === 1 ? '1 plik' : files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 12 || files % 100 > 14) ? `${files} pliki` : `${files} plików`),
+  groupUsage: (files, size) => `${files}, ${size}`,
+  usage: (used, of) => `Ta wersja zajmuje ${used} z ${of}, które może mieć wersja – razem jej kod i zasoby.`,
+  scope: (data) => (
+    <>To, co lambda przechowuje w trakcie działania, jest wspólne dla każdej wersji i znajduje się w sekcji {data('Dane')}.</>
+  ),
+  download: 'Pobierz',
+  newIn: (group) => `Nowy plik w: ${group}`,
+  uploadIn: (group) => `Prześlij do: ${group}`,
+  pick: 'Wybierz plik, aby zobaczyć, co jest w środku.',
 };

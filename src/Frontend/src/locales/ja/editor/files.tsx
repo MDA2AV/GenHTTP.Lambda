@@ -1,45 +1,11 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const files: EditorMessages['files'] = {
-  hint: (b) => (
-    <>
-      1つのバージョンのファイル、つまりプログラムそのものです。{b('コード')}はコンパイルされるだけで、配信はされません。
-      {b('アセット')}
-      （ページ、スクリプト、スタイル、画像）はコードと一緒に保存され、一緒にデプロイ・ロールバックされます。コードが配信すれば公開されます。lambdaが実行中に保存するものはここにはありません。それは
-      {b('データ')}にあります。
-    </>
-  ),
-  scope: (version, data) => (
-    <>
-      これらはバージョン{version}
-      のもので、バージョンと一緒に変わります。lambdaが実行中に保存するものはどのバージョンでも同じで、{data('データ')}
-      にあります。
-    </>
-  ),
-  edit: 'このバージョンを編集',
   version: 'バージョン',
   shown: (version, online, newest) => `バージョン${version}${online ? '（オンライン）' : newest ? '（最新）' : ''}`,
   optionOnline: '（オンライン）',
-  readFailed: 'そのバージョンを読み込めませんでした。',
-  noVersion: '表示できるバージョンはまだありません。',
-  label: 'ファイル',
-  code: 'コード',
-  codeWhy: 'lambdaにコンパイルされるだけで、配信はされません。',
   count: (files) => `ファイル${files}個`,
-  codeUsage: (files, used, of) => `${files}、${used}／${of}文字`,
   usage: (files, used, of) => `${files}、${used}／${of}`,
-  noCode: 'このバージョンにはコードがありません。',
-  assets: 'アセット',
-  assetsPublic: '公開：このバージョンがAssetsで配信しています。',
-  assetsPrivate: 'コードと一緒に保存されていますが、このバージョンでは配信されていません。',
-  noAssets: 'このバージョンにはありません。',
-  context: 'ドキュメントとテスト',
-  contextWhy: 'コンパイルも配信もされません。このバージョンについて書かれたもので、読む人や変更する人のためのものです。',
-  contextUsage: (files, size) => `${files}、${size}（アセットの容量に含む）`,
-  noContext: 'このバージョンについては、まだ何も書かれていません。',
-  build: 'ビルド',
-  buildWhy: 'コンパイルも配信もされません。コードやアセットの作成元で、変更する人が扱います。',
-  data: 'データ',
   dataPublic: '公開：オンラインのコードがWorkspaceで配信しています。',
   dataPrivate: 'lambdaだけが使える非公開のデータです。どのバージョンにも含まれません。',
   uploadFailed: (path) => `${path}をアップロードできませんでした。`,

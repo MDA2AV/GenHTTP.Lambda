@@ -3,7 +3,7 @@
  * (the links localize them):
  *
  *   /source/quiz                          the code, Project.cs open
- *   /source/quiz/files/assets/app.js      the code, that file open
+ *   /source/quiz/files/resources/app.js   the code, that file open
  *   /source/quiz/docs[/decisions.md]      the documentation, a page of it
  *   /source/quiz/tests                    how it is tested
  *   /source/quiz/changes                  every version

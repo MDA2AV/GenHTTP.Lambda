@@ -56,7 +56,7 @@ public sealed class SourceTests
 
         var lambda = await fixture.CreateLambdaAsync("quiz");
 
-        await SaveAsync(fixture, lambda.PrivateKey, "Adds the scoreboard", ("index.html", "<h1>Quiz</h1>"), (LambdaSource.ProductDoc, Product));
+        await SaveAsync(fixture, lambda.PrivateKey, "Adds the scoreboard", ("resources/index.html", "<h1>Quiz</h1>"), (LambdaSource.ProductDoc, Product));
 
         var published = await PublishAsync(fixture, lambda.PrivateKey, new SourceRequest("Apache-2.0", null));
 
@@ -78,11 +78,11 @@ public sealed class SourceTests
 
         var paths = tree.Files.Select(f => f.Path).ToList();
 
-        CollectionAssert.IsSubsetOf(new[] { "Program.cs", "Project.cs", "quiz.csproj", "Dockerfile", "LICENSE", "assets/index.html", "docs/product.md" }, paths,
+        CollectionAssert.IsSubsetOf(new[] { "Program.cs", "Project.cs", "quiz.csproj", "Dockerfile", "LICENSE", "resources/index.html", "docs/product.md" }, paths,
                                     "the project the export makes, with the license beside it");
 
         Assert.AreEqual("code", tree.Files.Single(f => f.Path == "Project.cs").Kind);
-        Assert.AreEqual("asset", tree.Files.Single(f => f.Path == "assets/index.html").Kind);
+        Assert.AreEqual("resource", tree.Files.Single(f => f.Path == "resources/index.html").Kind);
         Assert.AreEqual("docs", tree.Files.Single(f => f.Path == "docs/product.md").Kind);
         Assert.AreEqual("platform", tree.Files.Single(f => f.Path == "Platform/Handlers.cs").Kind);
         Assert.AreEqual("project", tree.Files.Single(f => f.Path == "LICENSE").Kind);
@@ -120,7 +120,7 @@ public sealed class SourceTests
         }
 
         await SaveAsync(fixture, lambda.PrivateKey, "Keeps notes",
-                        ("migrations/V1__Notes.sql", "CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL);"),
+                        ("resources/migrations/V1__Notes.sql", "CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL);"),
                         (LambdaSource.EntryName, Notes));
 
         await fixture.DeployAsync(lambda.PrivateKey);
@@ -377,11 +377,11 @@ public sealed class SourceTests
 
         var lambda = await fixture.CreateLambdaAsync("pages");
 
-        await SaveAsync(fixture, lambda.PrivateKey, "Pages", ("index.html", "<script>alert(1)</script>"));
+        await SaveAsync(fixture, lambda.PrivateKey, "Pages", ("resources/index.html", "<script>alert(1)</script>"));
 
         await PublishAsync(fixture, lambda.PrivateKey, new SourceRequest(null, null));
 
-        using var page = await fixture.GetAsync($"/api/v1/sources/pages/versions/2/raw/{Uri.EscapeDataString("assets/index.html")}");
+        using var page = await fixture.GetAsync($"/api/v1/sources/pages/versions/2/raw/{Uri.EscapeDataString("resources/index.html")}");
 
         Assert.AreEqual(HttpStatusCode.OK, page.StatusCode, await page.Content.ReadAsStringAsync());
         Assert.AreEqual("text/plain", page.Content.Headers.ContentType?.MediaType, "a page a lambda ships is text here");
@@ -636,7 +636,7 @@ public sealed class SourceTests
     private const string Notes = """
         using (var connection = Database.GetConnection())
         {
-            new Evolve(connection) { Locations = [Assets.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+            new Evolve(connection) { Locations = [Resources.Root + "migrations"], IsEraseDisabled = true }.Migrate();
         }
 
         return Inline.Create()

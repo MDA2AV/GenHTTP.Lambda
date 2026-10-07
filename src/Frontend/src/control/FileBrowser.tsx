@@ -12,7 +12,7 @@ import { Ago, pill } from './ui';
 
 /**
  * The parts the two places files live are browsed with: the files of a
- * version under Files, and the workspace under Data. Built once so that the
+ * version under Code, and the workspace under Data. Built once so that the
  * two look and behave alike, which is what makes the difference between them
  * - one belongs to a version, the other to the lambda - the only thing to
  * notice.
@@ -56,8 +56,8 @@ export function workspaceOf(control: Control): WorkspaceAccess {
   };
 }
 
-/** Where a selected file lives: in the version, as code, an asset, its documentation and tests or its build folder, or in the data. */
-export type Group = 'code' | 'assets' | 'context' | 'build' | 'data';
+/** Where a selected file lives: in the version, as code or a resource, or in the data. */
+export type Group = 'code' | 'resources' | 'data';
 
 export interface Entry {
   path: string;
@@ -98,8 +98,12 @@ interface Node {
   children: Node[];
 }
 
-/** Paths into a tree, folders first, each folder weighing what it holds. */
-function grow(entries: Entry[], folders: string[] = []): Node[] {
+/**
+ * Paths into a tree, folders first, each folder weighing what it holds - or,
+ * at the top of a version's code, its files first: the snippet and the C#
+ * beside it are where the program starts, and read before its folders.
+ */
+function grow(entries: Entry[], folders: string[] = [], filesFirst = false): Node[] {
   const root: Node = { name: '', path: '', size: 0, folder: true, children: [] };
 
   const place = (path: string, size: number, folder: boolean) => {
@@ -129,11 +133,13 @@ function grow(entries: Entry[], folders: string[] = []): Node[] {
     if (node.folder) {
       node.size = node.children.reduce((total, child) => total + settle(child), 0);
 
+      const folderFirst = filesFirst && node === root ? 1 : -1;
+
       // folders first, then the snippet - it is where the program starts -
       // then everything else by name
       node.children.sort((a, b) =>
         a.folder !== b.folder
-          ? a.folder ? -1 : 1
+          ? a.folder ? folderFirst : -folderFirst
           : a.path === 'lambda.cs' ? -1 : b.path === 'lambda.cs' ? 1 : a.name.localeCompare(b.name));
     }
 
@@ -145,15 +151,20 @@ function grow(entries: Entry[], folders: string[] = []): Node[] {
   return root.children;
 }
 
-export function Tree({ entries, folders, selected, onSelect, empty, action }: {
+export function Tree({ entries, folders, selected, onSelect, empty, action, marked, markedLabel, filesFirst = false }: {
   entries: Entry[];
   folders?: string[];
+  /** Whether the files at the top come before the folders, as the C# of a version's code does. */
+  filesFirst?: boolean;
   selected: string | null;
   onSelect: (path: string) => void;
   empty: string;
   action?: (node: { path: string; folder: boolean }) => ReactNode;
+  /** Files something is wrong with - what the compiler pointed at - marked so a mistake is seen before the file is opened. */
+  marked?: Set<string>;
+  markedLabel?: string;
 }) {
-  const nodes = useMemo(() => grow(entries, folders), [entries, folders]);
+  const nodes = useMemo(() => grow(entries, folders, filesFirst), [entries, folders, filesFirst]);
   const [closed, setClosed] = useState<Set<string>>(new Set());
 
   if (nodes.length === 0) {
@@ -192,6 +203,7 @@ export function Tree({ entries, folders, selected, onSelect, empty, action }: {
               <span className="w-3 shrink-0" />
             )}
             <span className={`truncate ${node.folder ? '' : 'font-mono'}`}>{node.name}</span>
+            {!node.folder && marked?.has(node.path) && <span className="text-red-500" aria-label={markedLabel}>•</span>}
           </button>
           <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{bytes(node.size)}</span>
           {action && <span className="inline-flex shrink-0 opacity-0 focus-within:opacity-100 group-hover:opacity-100">{action(node)}</span>}

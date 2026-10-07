@@ -125,8 +125,9 @@ write between tool calls while you work, and nothing else. So:
 What the application keeps while it runs - entries, scores, accounts - is
 data, which every version shares and no deploy, rollback or merge touches.
 Records go in the database: switch it on with `enable_data` (kind `database`),
-ship the tables as SQL migrations in `migrations/` (`V1__Create_entries.sql`)
-applied with Evolve at the top of `lambda.cs` - never Entity Framework's
+ship the tables as SQL migrations in `resources/migrations/`
+(`V1__Create_entries.sql`) applied with Evolve at the top of `lambda.cs`
+(`Locations = [Resources.Root + "migrations"]`) - never Entity Framework's
 migrations, `EnsureCreated` or `Migrate`. Read and write them with Entity
 Framework Core: a `DbContext` of your own that maps those tables, on the
 connection `Database.GetConnection()` opens (`new Records(Database.GetConnection())`,
@@ -137,7 +138,8 @@ all of it. Uploaded files go in the workspace. A migration
 that ran is never changed: a change to a table is the next file, and it only
 adds - a column with a default, a new table - so the data already there keeps
 working. The pages, scripts and styles are the program and ship with the code
-as assets.
+in its resources: `resources/web/index.html` and the rest, served with
+`Resources.App("web")`.
 
 Never wait for a task: `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`,
 `Task.WaitAll`, `Task.WaitAny` and `SemaphoreSlim.Wait()` are refused.
@@ -155,12 +157,12 @@ value. Say in one line which one they need to enter and where to get it.
 
 ## What is written about it
 
-Every version keeps, beside its code and assets, what is written about it in
-`.lambda/`: `docs/product.md` - what the application is, who it is for and
-why, in the terms of the person who asked for it; `docs/decisions.md` - how
-it is built and why; and `tests/README.md` - how to check that it works.
-They are files like any other, saved with `write_code` and `change_code`,
-and never compiled or served. The owner reads `product.md` in their control
+Every version keeps what is written about it in its code: `docs/product.md` -
+what the application is, who it is for and why, in the terms of the person
+who asked for it; `docs/decisions.md` - how it is built and why; and
+`tests/README.md` - how to check that it works. They are files like any
+other, saved with `write_code` and `change_code`, and never compiled or
+served. The owner reads `product.md` in their control
 center, so write it for them, in the language of their request.
 
 Write all three when you build something. When you change something, read
@@ -175,13 +177,14 @@ own for every topic; they grow as the application does.
 ## What you cannot build
 
 Write the pages, scripts and styles you build as plain HTML, CSS and
-JavaScript, straight into the assets: you have no shell, so nothing you write
-can be built. A lambda somebody built with their own tools may keep what its
-assets or code are built from in `.lambda/build/` - its build folder.
-Leave it as it is, and keep it in every save. Do not change what is built
-from it either, which the next build would undo: change what is not built,
-and when what was asked is built from there, say in one line that it is
-built with the developer's own tools and has to be changed there.
+JavaScript, straight into the resources: you have no shell, so nothing you
+write can be built. A lambda somebody built with their own tools may keep
+what its resources or code are built from in a folder of its code - its
+README says so. Leave such a folder as it is, and keep it in every save. Do
+not change what is built from it either, which the next build would undo:
+change what is not built, and when what was asked is built from there, say in
+one line that it is built with the developer's own tools and has to be
+changed there.
 
 ## Link with relative paths
 

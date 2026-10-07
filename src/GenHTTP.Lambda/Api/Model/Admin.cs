@@ -123,10 +123,8 @@ public sealed record LimitsModel(
 /// <summary>
 /// What a lambda of one tier may have.
 /// </summary>
-/// <param name="CodeCharacters">Characters of C# across all its files</param>
-/// <param name="AssetBytes">Bytes of assets, documentation and tests in a version</param>
-/// <param name="WorkspaceBytes">Room its workspace may take</param>
-/// <param name="DatabaseBytes">How large its database may grow</param>
+/// <param name="BuildBytes">How large a version may be: its code and its resources together</param>
+/// <param name="DataBytes">The room its data may take: its database and its workspace together</param>
 /// <param name="Versions">How many of its versions are kept</param>
 /// <param name="Features">How many features it may have open at once</param>
-public sealed record TierLimitsModel(int CodeCharacters, int AssetBytes, long WorkspaceBytes, long DatabaseBytes, int Versions, int Features);
+public sealed record TierLimitsModel(long BuildBytes, long DataBytes, int Versions, int Features);

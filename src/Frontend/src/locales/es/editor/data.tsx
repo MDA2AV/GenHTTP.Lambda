@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Los datos son lo que la lambda guarda mientras se ejecuta. Pertenecen a la lambda, no a una versión: todas las versiones leen y escriben los mismos datos, y nada de lo que hagas con las versiones los cambia. Un borrador se prueba con una copia de ellos. Desaparecen cuando se elimina la lambda o cuando desactivas ese tipo de datos.',
+    'Los datos son lo que la lambda guarda mientras se ejecuta. Pertenecen a la lambda, no a una versión: todas las versiones leen y escriben los mismos datos, y nada de lo que hagas con las versiones los cambia. Un borrador se prueba con una copia de ellos. Desaparecen cuando se elimina la lambda o cuando desactivas ese tipo de datos. La base de datos y el workspace comparten un único espacio, así que cada uno puede crecer hasta donde el otro lo deje.',
   facts: [
     ['Compartidos por todas las versiones', 'La versión que esté en línea lee y escribe los mismos datos.'],
     ['Se conservan al desplegar', 'Desplegar, restaurar o fusionar un borrador nunca los toca.'],

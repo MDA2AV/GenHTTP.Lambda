@@ -35,17 +35,25 @@ internal static class SourceBuilder
 
     internal const string WorkspaceType = "__LambdaWorkspace";
 
-    internal const string AssetType = "__LambdaAssets";
+    internal const string ResourceType = "__LambdaResources";
 
     internal const string SecretType = "__LambdaSecrets";
 
     internal const string DatabaseType = "__LambdaDatabase";
 
     /// <summary>
-    /// The field of the generated secrets and database classes the platform
-    /// puts the function they read with into, once the lambda is loaded.
+    /// The field of the generated secrets, database and workspace classes
+    /// the platform puts the function they read with into, once the lambda
+    /// is loaded - for the workspace, the room the database takes.
     /// </summary>
     internal const string SecretSource = "_source";
+
+    /// <summary>
+    /// The field of the generated workspace class the platform puts what it
+    /// calls after every write into, once the lambda is loaded - so the room
+    /// the database may grow into is measured again.
+    /// </summary>
+    internal const string ChangedHook = "_changed";
 
     /// <summary>
     /// Holds what every file of a lambda may name without qualifying it.
@@ -55,9 +63,16 @@ internal static class SourceBuilder
     /// same thing in a type in Store.cs as it does in the top-level code of
     /// lambda.cs - it used to exist only there, and the first thing an agent
     /// writes is a store class in a file of its own that calls Workspace and
-    /// fails to compile. Assets stays out: GenHTTP.Modules.Files, which every
-    /// lambda imports, has a type of that name, and a using static member and
-    /// an imported type sharing a name is an ambiguity the compiler refuses.
+    /// fails to compile. Resources is here too; Assets, its name before, stays
+    /// out: GenHTTP.Modules.Files, which every lambda imports, has a type of
+    /// that name, and a using static member and an imported type sharing a
+    /// name is an ambiguity the compiler refuses.
+    ///
+    /// A type of the author's own of one of these names is found before them,
+    /// since what a namespace declares comes before what is imported into it:
+    /// code written while the platform did not have the name goes on meaning
+    /// what it meant, and its author reaches the platform's through
+    /// <c>LambdaEnvironment</c>.
     /// </remarks>
     internal const string ScopeType = "__LambdaScope";
 
@@ -127,13 +142,13 @@ internal static class SourceBuilder
     /// </summary>
     /// <param name="snippet">The parsed snippet of the user</param>
     /// <param name="workspace">The directory this lambda may read and write</param>
-    /// <param name="assets">The directory this lambda's static assets were written to</param>
+    /// <param name="resources">The directory this lambda's resources were written to</param>
     /// <param name="scope">The namespace everything generated for this lambda lives in</param>
     /// <param name="limits">
     /// What the lambda may keep in its workspace, which its tier decides. Left
     /// out where nothing is going to run, such as for the editor's questions.
     /// </param>
-    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string assets, string scope, WorkspaceLimits? limits = null)
+    internal static SyntaxTree Wrap(SyntaxTree snippet, string workspace, string resources, string scope, WorkspaceLimits? limits = null)
     {
         var root = (CompilationUnitSyntax)snippet.GetRoot();
 
@@ -171,7 +186,9 @@ internal static class SourceBuilder
         builder.AppendLine("internal static class LambdaEnvironment");
         builder.AppendLine("{");
         builder.AppendLine($"    internal static readonly {WorkspaceType} Workspace = new {WorkspaceType}({Literal(workspace)});");
-        builder.AppendLine($"    internal static readonly {AssetType} Assets = new {AssetType}({Literal(assets)});");
+        builder.AppendLine($"    internal static readonly {ResourceType} Resources = new {ResourceType}({Literal(resources)});");
+        // what they were called before, which code written then still says
+        builder.AppendLine($"    internal static {ResourceType} Assets => Resources;");
         builder.AppendLine($"    internal static readonly {SecretType} Secret = new {SecretType}();");
         builder.AppendLine($"    internal static readonly {DatabaseType} Database = new {DatabaseType}();");
         builder.AppendLine("}");
@@ -180,16 +197,18 @@ internal static class SourceBuilder
         builder.AppendLine("{");
         builder.AppendLine($"    internal static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
         builder.AppendLine($"    internal static {SecretType} Secret => LambdaEnvironment.Secret;");
-        // not a member of the entry class like the two before it, only here:
-        // a class of the author's own called Database is common enough, and
-        // it should mean the same thing in lambda.cs as in every other file
+        // not members of the entry class like the two before them, only here:
+        // a class of the author's own called Database or Resources is common
+        // enough, and should mean the same thing in lambda.cs as in every
+        // other file - and the same as it did before the platform had either
         builder.AppendLine($"    internal static {DatabaseType} Database => LambdaEnvironment.Database;");
+        builder.AppendLine($"    internal static {ResourceType} Resources => LambdaEnvironment.Resources;");
         builder.AppendLine("}");
         builder.AppendLine();
         builder.AppendLine($"internal static class {EntryType}");
         builder.AppendLine("{");
         builder.AppendLine($"    private static {WorkspaceType} Workspace => LambdaEnvironment.Workspace;");
-        builder.AppendLine($"    private static {AssetType} Assets => LambdaEnvironment.Assets;");
+        builder.AppendLine($"    private static {ResourceType} Assets => LambdaEnvironment.Resources;");
         builder.AppendLine($"    private static {SecretType} Secret => LambdaEnvironment.Secret;");
         builder.AppendLine();
         builder.AppendLine($"    internal static async global::System.Threading.Tasks.Task<object> {EntryMethod}()");
@@ -212,7 +231,7 @@ internal static class SourceBuilder
         builder.AppendLine("#line default");
         builder.AppendLine();
         builder.AppendLine(WorkspaceSource(limits ?? WorkspaceLimits.Standard));
-        builder.AppendLine(AssetSource);
+        builder.AppendLine(ResourceSource);
         builder.AppendLine(SecretSourceCode);
         builder.AppendLine(DatabaseSourceCode);
 
@@ -292,19 +311,19 @@ internal static class SourceBuilder
     #region Workspace
 
     /// <summary>
-    /// What a lambda shipped, as it can read it back.
+    /// The resources a lambda shipped, as it can read them back.
     /// </summary>
     /// <remarks>
     /// Read only, and rewritten from the version being deployed every time one
     /// goes online. It is the other half of the workspace: this is what came
     /// with the code, that is what the code has written since.
     /// </remarks>
-    private static readonly string AssetSource = $$"""
-        internal sealed class {{AssetType}}
+    private static readonly string ResourceSource = $$"""
+        internal sealed class {{ResourceType}}
         {
             private readonly string _root;
 
-            internal {{AssetType}}(string root)
+            internal {{ResourceType}}(string root)
             {
                 _root = global::System.IO.Path.TrimEndingDirectorySeparator(global::System.IO.Path.GetFullPath(root))
                       + global::System.IO.Path.DirectorySeparatorChar;
@@ -312,19 +331,19 @@ internal static class SourceBuilder
                 global::System.IO.Directory.CreateDirectory(_root);
             }
 
-            /// <summary>The absolute path the assets were written to.</summary>
+            /// <summary>The absolute path the resources were written to.</summary>
             public string Root => _root;
 
-            /// <summary>Whether an asset was shipped under this name.</summary>
+            /// <summary>Whether a resource was shipped under this name.</summary>
             public bool Exists(string name) => global::System.IO.File.Exists(Resolve(name));
 
-            /// <summary>Reads an asset as UTF-8 text.</summary>
+            /// <summary>Reads a resource as UTF-8 text.</summary>
             public string ReadText(string name) => global::System.IO.File.ReadAllText(Resolve(name));
 
-            /// <summary>Reads an asset as bytes.</summary>
+            /// <summary>Reads a resource as bytes.</summary>
             public byte[] ReadBytes(string name) => global::System.IO.File.ReadAllBytes(Resolve(name));
 
-            /// <summary>Every asset that was shipped, relative to the root.</summary>
+            /// <summary>Every resource that was shipped, relative to the root.</summary>
             public string[] List()
             {
                 if (!global::System.IO.Directory.Exists(_root))
@@ -344,38 +363,38 @@ internal static class SourceBuilder
                 return result;
             }
 
-            /// <summary>The assets as a resource tree, ready to be served.</summary>
+            /// <summary>The resources as a resource tree, ready to be served.</summary>
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree()
                 => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(_root).Build();
 
-            /// <summary>One folder of the assets as a resource tree.</summary>
+            /// <summary>One folder of the resources as a resource tree.</summary>
             public global::GenHTTP.Api.Content.IO.IResourceTree Tree(string folder)
                 => global::GenHTTP.Modules.IO.ResourceTree.FromDirectory(Folder(folder)).Build();
 
-            /// <summary>A handler that serves the assets as files.</summary>
+            /// <summary>A handler that serves the resources as files.</summary>
             /// <remarks>
             /// Served from the directory rather than through a tree, which on the
             /// ioxide engine is its own file handler: descriptors opened once and
-            /// read off the ring. The assets of a build do not change while it is
-            /// served - a deployment writes them before it builds the handler - so
-            /// the directory is never walked again to see whether they did.
+            /// read off the ring. The resources of a build do not change while it
+            /// is served - a deployment writes them before it builds the handler -
+            /// so the directory is never walked again to see whether they did.
             /// </remarks>
             public global::GenHTTP.Modules.Files.Multi.FileAssetsBuilder Files()
                 => global::GenHTTP.Modules.Files.Assets.From(_root).RefreshInterval(global::System.Threading.Timeout.InfiniteTimeSpan);
 
-            /// <summary>A handler that serves one folder of the assets as files.</summary>
+            /// <summary>A handler that serves one folder of the resources as files.</summary>
             public global::GenHTTP.Modules.Files.Multi.FileAssetsBuilder Files(string folder)
                 => global::GenHTTP.Modules.Files.Assets.From(Folder(folder)).RefreshInterval(global::System.Threading.Timeout.InfiniteTimeSpan);
 
             /// <summary>
-            /// A single page application over the assets: index.html is the
+            /// A single page application over the resources: index.html is the
             /// shell, and a path that matches no file is answered with it.
             /// </summary>
             public global::GenHTTP.Modules.SinglePageApplications.Provider.SinglePageBuilder App()
                 => global::GenHTTP.Modules.SinglePageApplications.SinglePageApplication.From(Tree()).ServerSideRouting();
 
             /// <summary>
-            /// A single page application over one folder of the assets.
+            /// A single page application over one folder of the resources.
             /// </summary>
             /// <remarks>
             /// So that a front end can be a folder of files added the same way
@@ -385,7 +404,7 @@ internal static class SourceBuilder
             public global::GenHTTP.Modules.SinglePageApplications.Provider.SinglePageBuilder App(string folder)
                 => global::GenHTTP.Modules.SinglePageApplications.SinglePageApplication.From(Tree(folder)).ServerSideRouting();
 
-            /// <summary>The folders assets were shipped in, relative to the root.</summary>
+            /// <summary>The folders resources were shipped in, relative to the root.</summary>
             public string[] Folders()
             {
                 if (!global::System.IO.Directory.Exists(_root))
@@ -415,10 +434,10 @@ internal static class SourceBuilder
 
                     var known = had.Length > 0
                               ? "The folders this lambda ships are: " + string.Join(", ", had) + "."
-                              : "This lambda ships no folders - a file has to be named like 'site/index.html' to be in one.";
+                              : "This lambda ships no folders - a resource has to be named like 'resources/site/index.html' to be in one.";
 
                     throw new global::System.InvalidOperationException(
-                        "There is no asset folder called '" + name + "'. " + known);
+                        "There is no folder called '" + name + "' in the resources. " + known);
                 }
 
                 return resolved;
@@ -428,14 +447,14 @@ internal static class SourceBuilder
             {
                 if (string.IsNullOrWhiteSpace(name))
                 {
-                    throw new global::System.ArgumentException("The name of an asset must not be empty.", "name");
+                    throw new global::System.ArgumentException("The name of a resource must not be empty.", "name");
                 }
 
                 var resolved = global::System.IO.Path.GetFullPath(global::System.IO.Path.Combine(_root, name));
 
                 if (!resolved.StartsWith(_root, global::System.StringComparison.Ordinal))
                 {
-                    throw new global::System.ArgumentException("An asset must be inside the asset directory.", "name");
+                    throw new global::System.ArgumentException("A resource must be inside the directory of the resources.", "name");
                 }
 
                 return resolved;
@@ -523,6 +542,13 @@ internal static class SourceBuilder
     /// blocks as <see cref="WorkspaceLimits"/> explains; reading never creates
     /// anything, and a folder is only made once there is room for it.
     ///
+    /// The quota is the room of the lambda's data, which its database takes
+    /// some of. What it takes is read through a function the platform hands
+    /// the class once the lambda is loaded, like the secrets, so the lambda
+    /// never learns where its database is; and the class tells the platform
+    /// it wrote, through another, so a connection to the database opened
+    /// next may grow only into what the workspace left.
+    ///
     /// A workspace its owner switched off is still the same class, so code
     /// that names it compiles, but every member refuses with the reason and
     /// the way to switch it on - which is what the stack trace in the log then
@@ -535,6 +561,10 @@ internal static class SourceBuilder
             private const long Quota = {{limits.Quota}};
 
             private const long Block = {{WorkspaceLimits.Block}};
+
+            private static global::System.Func<long> {{SecretSource}} = null;
+
+            private static global::System.Action {{ChangedHook}} = null;
 
             private readonly string _root;
 
@@ -575,6 +605,7 @@ internal static class SourceBuilder
                 var path = Resolve(name);
                 Reserve(path, content == null ? 0 : global::System.Text.Encoding.UTF8.GetByteCount(content));
                 global::System.IO.File.WriteAllText(path, content);
+                Changed();
             }
 
             /// <summary>Writes bytes into a file, replacing it if it exists.</summary>
@@ -583,6 +614,7 @@ internal static class SourceBuilder
                 var path = Resolve(name);
                 Reserve(path, content == null ? 0 : content.Length);
                 global::System.IO.File.WriteAllBytes(path, content);
+                Changed();
             }
 
             /// <summary>Removes a file, if it exists.</summary>
@@ -593,6 +625,7 @@ internal static class SourceBuilder
                 if (global::System.IO.File.Exists(path))
                 {
                     global::System.IO.File.Delete(path);
+                    Changed();
                 }
             }
 
@@ -629,7 +662,7 @@ internal static class SourceBuilder
             /// A single page application over this workspace.
             /// </summary>
             /// <remarks>
-            /// The same thing Assets.App does, over the other directory. Which
+            /// The same thing Resources.App does, over the other directory. Which
             /// one a front end belongs in is a real choice rather than a
             /// detail: shipped with the code it is versioned, travels with a
             /// clone and is replaced wholesale on every deploy; here it is
@@ -659,12 +692,13 @@ internal static class SourceBuilder
                     return;
                 }
 
-                if (Used() + (Missing(path) + 1) * Block > Quota)
+                if (Used() + Beside() + (Missing(path) + 1) * Block > Quota)
                 {
-                    throw new global::System.InvalidOperationException("A workspace must not hold more than " + Quota + " bytes.");
+                    throw Full();
                 }
 
                 global::System.IO.Directory.CreateDirectory(path);
+                Changed();
             }
 
             /// <summary>The folders of this workspace, relative to its root.</summary>
@@ -760,9 +794,9 @@ internal static class SourceBuilder
                 // through even past the quota, which is where a workspace is
                 // once its lambda leaves the tier that filled it: it can still
                 // rewrite what it holds, only not grow
-                if (Used() - replaced + added > Quota && added > replaced)
+                if (added > replaced && Used() + Beside() - replaced + added > Quota)
                 {
-                    throw new global::System.InvalidOperationException("A workspace must not hold more than " + Quota + " bytes.");
+                    throw Full();
                 }
 
                 var directory = global::System.IO.Path.GetDirectoryName(path);
@@ -802,6 +836,19 @@ internal static class SourceBuilder
 
                 return missing;
             }
+
+            /// <summary>The room the rest of the lambda's data takes - its database.</summary>
+            private static long Beside()
+            {
+                var source = {{SecretSource}};
+
+                return source == null ? 0 : source();
+            }
+
+            private static void Changed() => {{ChangedHook}}?.Invoke();
+
+            private static global::System.InvalidOperationException Full()
+                => new global::System.InvalidOperationException("The data of this lambda - its workspace and its database together - must not take more than " + Quota + " bytes.");
 
             private static long Footprint(long size) => global::System.Math.Max(1, (size + Block - 1) / Block) * Block;
 

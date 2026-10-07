@@ -3,7 +3,7 @@
 `smoke.mjs` plays the game from the outside, over the same websocket as the page. Two players play each other to a win, meet again for a game one of them leaves, and a third plays the house to the end. On the way it checks that moves out of turn, on a taken cell, before a game and after its end are refused, and that finished games are counted - and it closes its sockets, whatever happens.
 
 ```
-node .lambda/tests/smoke.mjs <address>
+node tests/smoke.mjs <address>
 ```
 
 The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. It needs Node 22 or later, for its WebSocket, and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not. A game is a sequence, so it stops at the first step that goes wrong, and nothing waits for ever: an answer that does not come within five seconds is a failure.

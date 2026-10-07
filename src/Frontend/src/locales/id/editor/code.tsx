@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: 'Kode',
   version: (version) => `versi ${version}`,
   edited: ', diedit',
-  online: ', online',
   loadFailed: 'Versi itu gagal dimuat.',
   compiles: 'Berhasil dikompilasi.',
   notYet: 'Belum bisa dikompilasi.',
@@ -18,26 +17,34 @@ export const code: EditorMessages['code'] = {
   notOnline: 'Gagal online. Lihat pesan compiler di bawah.',
   failed: 'Tidak berhasil.',
   unchanged: 'Tidak ada perubahan sejak terakhir disimpan.',
-  demo: 'Ini demo, jadi semuanya hanya bisa dibaca. Untuk mengubahnya, buat lambda Anda sendiri dari demo ini. ',
-  edit: 'Edit kode secara manual. Menyimpan membuat versi baru dan tidak mengubah yang sedang online; deploy membuatnya online. Untuk mencoba perubahan dulu, mulai draf. ',
-  editFeature:
-    'Kode draf ini. Menyimpan membuatnya tetap di draf, jadi tidak ada yang berubah bagi pengunjung lambda. Deploy membuatnya online di alamat draf itu sendiri, untuk dicoba; menggabungkan draf menjadikannya versi berikutnya. ',
+  demo: 'Ini demo, jadi semuanya hanya bisa dibaca. Untuk mengubahnya, buat lambda Anda sendiri dari demo ini.',
+  hint: (b) => (
+    <>
+      File dari satu versi. {b('Kode')}-nya adalah program beserta semua yang disimpan bersamanya: file .cs-nya
+      dikompilasi, di folder mana pun, dan setiap file lain - dokumentasi, pengujian, bahan pembuat front end - disimpan
+      bersama versi dan tidak pernah dikompilasi atau disajikan. {b('Sumber daya')}-nya - halaman, script, stylesheet,
+      gambar, migrasi database - dibaca dan disajikan selama versi berjalan, dan bersifat publik di tempat kode
+      menyajikannya. Menyimpan membuat versi baru dan tidak mengubah apa yang sedang online; untuk mencoba perubahan
+      lebih dulu, mulai draf. Ctrl-S menyimpan, F12 membuka deklarasi.
+    </>
+  ),
+  hintFeature: (b) => (
+    <>
+      File draf ini: {b('kode')}-nya - file .cs-nya dikompilasi, di folder mana pun, sisanya disimpan bersamanya - dan{' '}
+      {b('sumber daya')}-nya, yang dibaca dan disajikan selama draf berjalan. Menyimpan menaruhnya di draf dan
+      menampilkannya di alamat draf itu sendiri; pengunjung Anda tidak melihat apa pun sampai Anda menjadikan draf
+      online.
+    </>
+  ),
   inFeature: (name) => `di draf “${name}”`,
   changedElsewhere: 'Draf ini disimpan dari tempat lain sejak Anda membukanya, mungkin oleh agen. Muat yang tersimpan sebelum menyimpan di sini; perubahan Anda tidak akan disimpan di atasnya.',
   readAgain: 'Muat yang tersimpan',
-  files: (entry, cs, context) => (
-    <>
-      {entry} mengembalikan apa yang disajikan, file {cs} lainnya berisi tipe, dan file lain disajikan apa adanya -
-      kecuali yang ada di {context}: dokumentasi, pengujian, dan bahan pembuatnya, yang tidak pernah dikompilasi atau
-      disajikan. Ctrl-S untuk menyimpan, F12 untuk membuka deklarasi.
-    </>
-  ),
-  newer: (version) => ` Versi ${version} lebih baru dari yang terbuka di sini.`,
+  newer: (version) => `Versi ${version} lebih baru dari yang terbuka di sini.`,
   check: 'Periksa',
   save: 'Simpan',
   deploy: 'Deploy',
   deployPreviewTitle: 'Simpan, lalu buat draf online di alamatnya sendiri untuk dicoba',
-  binary: (size) => `Bukan teks, jadi tidak ada yang bisa diedit. File ini disajikan apa adanya, ukurannya ${size} kB.`,
+  binary: (size) => `Bukan teks, jadi tidak ada yang bisa diedit di sini. Ukurannya ${size}.`,
   saveAndDeploy: 'Simpan dan deploy',
   saveVersion: 'Simpan versi baru',
   fromOlder: (version, newest) =>
@@ -52,4 +59,27 @@ export const code: EditorMessages['code'] = {
   what: 'Apa yang diubah? Opsional, akan ditampilkan di riwayat.',
   placeholder: 'Menambahkan formulir kontak',
   goToDefinition: 'Buka definisi',
+  versionLabel: 'Versi',
+  shown: (version, online, newest) =>
+    `Versi ${version}${online ? ', online' : newest ? ', terbaru' : ''}`,
+  optionOnline: ' (online)',
+  switchUnsaved: 'Perubahan Anda di sini belum disimpan. Tetap buka versi yang lain?',
+  noVersion: 'Belum ada versi yang bisa ditampilkan.',
+  label: 'File',
+  codeGroup: 'Kode',
+  codeWhy: 'Tidak pernah disajikan. File .cs dikompilasi, di folder mana pun; sisanya disimpan bersama versi.',
+  resources: 'Sumber daya',
+  resourcesPublic: 'Publik: versi ini menyajikannya dengan Resources.',
+  resourcesPrivate: 'Ikut dalam versi, tetapi versi ini tidak menyajikannya.',
+  noResources: 'Tidak ada di versi ini.',
+  count: (files) => (files === 1 ? '1 file' : `${files} file`),
+  groupUsage: (files, size) => `${files}, ${size}`,
+  usage: (used, of) => `Versi ini memakai ${used} dari ${of} yang boleh dimiliki sebuah versi, untuk kode dan sumber daya bersama-sama.`,
+  scope: (data) => (
+    <>Apa yang disimpan lambda selama berjalan sama untuk setiap versi, dan ada di bawah {data('Data')}.</>
+  ),
+  download: 'Unduh',
+  newIn: (group) => `File baru di ${group}`,
+  uploadIn: (group) => `Unggah ke ${group}`,
+  pick: 'Pilih file untuk melihat isinya.',
 };
