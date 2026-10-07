@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Daten sind, was das Lambda zur Laufzeit aufbewahrt. Sie gehören dem Lambda, nicht einer Version: Jede Version liest und schreibt dieselben Daten, und nichts, was Sie mit Versionen tun, ändert daran etwas. Ein Entwurf wird mit einer Kopie davon ausprobiert. Gelöscht werden sie erst mit dem Lambda – oder wenn Sie diese Art von Daten ausschalten.',
+    'Daten sind, was das Lambda zur Laufzeit aufbewahrt. Sie gehören dem Lambda, nicht einer Version: Jede Version liest und schreibt dieselben Daten, und nichts, was Sie mit Versionen tun, ändert daran etwas. Ein Entwurf wird mit einer Kopie davon ausprobiert. Gelöscht werden sie erst mit dem Lambda – oder wenn Sie diese Art von Daten ausschalten. Die Datenbank und der Workspace teilen sich ein gemeinsames Platzkontingent, sodass jede so weit wachsen darf, wie die andere es zulässt.',
   facts: [
     ['Für alle Versionen dieselben', 'Welche Version auch online ist: Sie liest und schreibt dieselben Daten.'],
     ['Bleiben beim Deployen', 'Deployen, Zurückrollen oder einen Entwurf übernehmen – nichts davon rührt sie an.'],

@@ -12,7 +12,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         Gli agenti scrivono la documentazione insieme alle loro modifiche: cos’è l’app, per chi è e perché in{' '}
-        {code('.lambda/docs/product.md')}, e perché è costruita così in {code('decisions.md')}. Fa parte della
+        {code('docs/product.md')}, e perché è costruita così in {code('decisions.md')}. Fa parte della
         versione, accanto al codice.
       </>
     ),
@@ -41,7 +41,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         Come viene testata l’app (cosa deve continuare a funzionare, come verificarlo e come eseguire gli script per
-        farlo) lo scrivono gli agenti in {code('.lambda/tests/README.md')}, con gli script e i dati di test accanto.
+        farlo) lo scrivono gli agenti in {code('tests/README.md')}, con gli script e i dati di test accanto.
       </>
     ),
     ask: 'Chiedi all’agente di scrivere i test',

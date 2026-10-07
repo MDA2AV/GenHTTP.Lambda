@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import { isDemo } from '../api';
-import { IconAlert, IconCheck, IconDraft, IconGlobe, IconLock, IconPackage, IconSpinner } from '../components/Icons';
+import { IconAlert, IconCheck, IconDraft, IconGlobe, IconLock, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
 import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
@@ -36,7 +37,7 @@ export function SummaryTab({ control }: { control: Control }) {
     );
   }
 
-  const { traffic, storage, limits, activation, latest, documentation, build } = summary;
+  const { traffic, storage, limits, activation, latest, documentation } = summary;
 
   const live = lambda.activeVersion != null;
   const errorTone = traffic.dayFailed === 0 ? (traffic.dayRequests > 0 ? 'good' : 'default') : traffic.dayFailed / traffic.dayRequests > 0.05 ? 'bad' : 'warn';
@@ -165,7 +166,8 @@ export function SummaryTab({ control }: { control: Control }) {
         </section>
 
         {/* the two halves of what a lambda keeps, apart: what belongs to a
-            version, and what belongs to the lambda whichever version runs */}
+            version, and what belongs to the lambda whichever version runs -
+            each one allowance, which what is under it shares */}
         <section className="lg:col-span-2">
           <h2 className="text-sm font-medium">{said.storage}</h2>
 
@@ -175,25 +177,21 @@ export function SummaryTab({ control }: { control: Control }) {
                 <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
                   {storage.version != null ? said.inVersion(storage.version) : said.noVersion}
                 </h3>
-                <Link to={`${base}/files`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
+                <Link to={`${base}/code`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
               </div>
 
-              <div className="mt-2 space-y-4">
-                <Meter
-                  label={said.code}
-                  extra={<Exposure open={false} why={said.codeWhy} />}
-                  used={storage.codeCharacters}
-                  of={limits.codeCharacters}
-                  format={count}
-                  unit={said.characters}
-                />
-                <Meter
-                  label={said.assets}
-                  extra={<Exposure open={storage.servesAssets} why={storage.servesAssets ? said.assetsPublic : said.assetsPrivate} />}
-                  used={storage.assetBytes}
-                  of={limits.assetBytes}
-                  format={bytes}
-                />
+              <div className="mt-2 space-y-2">
+                <Meter label={said.versionAllowance} used={storage.codeBytes + storage.resourceBytes} of={limits.buildBytes} format={bytes} />
+
+                <Part label={said.code} exposure={<Exposure open={false} why={said.codeWhy} />}>
+                  {said.files(storage.codeFiles, bytes(storage.codeBytes))}
+                </Part>
+                <Part
+                  label={said.resources}
+                  exposure={<Exposure open={storage.servesResources} why={storage.servesResources ? said.resourcesPublic : said.resourcesPrivate} />}
+                >
+                  {said.files(storage.resourceFiles, bytes(storage.resourceBytes))}
+                </Part>
 
                 {/* counted in pages rather than room: what matters is whether one is missing */}
                 {storage.version != null && (
@@ -209,23 +207,6 @@ export function SummaryTab({ control }: { control: Control }) {
                     </span>
                   </div>
                 )}
-
-                {/* only where it keeps some: what it is built from, which most lambdas keep nothing of */}
-                {storage.version != null && build.files > 0 && (
-                  <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[13px]">
-                    <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                      {said.build}
-                      <Exposure open={false} why={said.buildWhy} />
-                    </span>
-                    <Link
-                      to={`${base}/build?version=${storage.version}`}
-                      className="inline-flex items-center gap-1.5 text-slate-600 hover:underline dark:text-slate-400"
-                    >
-                      <IconPackage className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="tabular-nums">{said.buildFiles(build.files, bytes(build.bytes))}</span>
-                    </Link>
-                  </p>
-                )}
               </div>
             </div>
 
@@ -237,48 +218,38 @@ export function SummaryTab({ control }: { control: Control }) {
                 <Link to={`${base}/data`} className="text-[13px] text-accent-500 hover:underline">{said.browse}</Link>
               </div>
 
-              <div className="mt-2 space-y-3">
-                {/* its records first: that is what most lambdas keep */}
-                {storage.databaseEnabled ? (
-                  <Meter
-                    label={`${said.database} · ${said.databaseTables(storage.databaseTables)}`}
-                    extra={<Exposure open={false} why={said.dataPrivate} />}
-                    used={storage.databaseBytes}
-                    of={limits.databaseBytes}
-                    format={bytes}
-                  />
-                ) : (
-                  <p className="flex items-center justify-between gap-3 text-[13px]">
-                    <span className="text-slate-700 dark:text-slate-300">{said.database}</span>
-                    {storage.usesDatabase ? (
-                      <Link
-                        to={`${base}/data/database`}
-                        className="inline-flex items-center gap-1 text-amber-600 hover:underline dark:text-amber-400"
-                        title={said.databaseOffUsed}
-                      >
-                        <IconAlert className="h-3.5 w-3.5" />
-                        {said.databaseOff}
-                      </Link>
-                    ) : (
-                      <span className="text-slate-500">{said.databaseOff}</span>
-                    )}
-                  </p>
-                )}
+              <div className="mt-2 space-y-2">
+                <Meter
+                  label={said.dataAllowance}
+                  used={(storage.databaseEnabled ? storage.databaseBytes : 0) + (storage.workspaceEnabled ? storage.workspaceBytes : 0)}
+                  of={limits.dataBytes}
+                  format={bytes}
+                />
 
-                {storage.workspaceEnabled ? (
-                  <Meter
-                    label={said.workspace}
-                    extra={<Exposure open={storage.servesWorkspace} why={storage.servesWorkspace ? said.dataPublic : said.dataPrivate} />}
-                    used={storage.workspaceBytes}
-                    of={limits.workspaceBytes}
-                    format={bytes}
-                  />
-                ) : (
-                  <p className="flex items-center justify-between text-[13px]">
-                    <span className="text-slate-700 dark:text-slate-300">{said.workspace}</span>
-                    <span className="text-slate-500">{said.workspaceOff}</span>
-                  </p>
-                )}
+                {/* its records first: that is what most lambdas keep */}
+                <Part label={said.database} exposure={<Exposure open={false} why={said.dataPrivate} />}>
+                  {storage.databaseEnabled ? (
+                    said.databaseHolds(storage.databaseTables, bytes(storage.databaseBytes))
+                  ) : storage.usesDatabase ? (
+                    <Link
+                      to={`${base}/data/database`}
+                      className="inline-flex items-center gap-1 text-amber-600 hover:underline dark:text-amber-400"
+                      title={said.databaseOffUsed}
+                    >
+                      <IconAlert className="h-3.5 w-3.5" />
+                      {said.databaseOff}
+                    </Link>
+                  ) : (
+                    said.databaseOff
+                  )}
+                </Part>
+
+                <Part
+                  label={said.workspace}
+                  exposure={<Exposure open={storage.workspaceEnabled && storage.servesWorkspace} why={storage.servesWorkspace ? said.dataPublic : said.dataPrivate} />}
+                >
+                  {storage.workspaceEnabled ? said.files(storage.workspaceFiles, bytes(storage.workspaceBytes)) : said.workspaceOff}
+                </Part>
 
                 {/* counted in names rather than room: a secret is small, and what matters is whether one is missing */}
                 <p className="flex items-center justify-between gap-3 text-[13px]">
@@ -328,6 +299,19 @@ function distinct<T extends { text: string }>(lines: T[]): T[] {
     seen.add(key);
     return true;
   });
+}
+
+/** One of the things an allowance is shared by, and what it holds. */
+function Part({ label, exposure, children }: { label: string; exposure: ReactNode; children: ReactNode }) {
+  return (
+    <p className="flex items-center justify-between gap-3 text-[13px]">
+      <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+        {label}
+        {exposure}
+      </span>
+      <span className="tabular-nums text-slate-500">{children}</span>
+    </p>
+  );
 }
 
 /** One page of the documentation or the tests, and whether the version has it. */

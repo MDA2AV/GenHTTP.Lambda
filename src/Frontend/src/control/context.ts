@@ -28,18 +28,11 @@ export interface Control {
   undeploy: () => Promise<void>;
   /** Opens a version in the code view - or, in a feature, the feature's code - at one of its files, if one is named. */
   edit: (version?: number, file?: string) => void;
-  /** Opens a version in the files view. */
-  browse: (version?: number) => void;
   /**
    * Opens what a version says about itself - its documentation or its tests -
    * or, in a feature, the feature's: the newest version when none is named.
    */
   openContext: (area: Area, version?: number) => void;
-  /**
-   * Opens what a version is built from - or, in a feature, what the feature
-   * is: the newest version when none is named.
-   */
-  openBuild: (version?: number) => void;
   /** The agent changing this lambda, followed wherever the owner is. */
   agent: AgentControl;
   /**
@@ -73,10 +66,9 @@ export interface Control {
 
 /**
  * The views of a feature: what it is and changes, its documentation, its
- * code, what it is built from, its tests, its copy of the data, what its
- * preview said.
+ * code, its tests, its copy of the data, what its preview said.
  */
-export type FeatureView = 'overview' | 'docs' | 'code' | 'build' | 'tests' | 'data' | 'logs';
+export type FeatureView = 'overview' | 'docs' | 'code' | 'tests' | 'data' | 'logs';
 
 /**
  * A feature the control center is opened on. The frame holds it, so the

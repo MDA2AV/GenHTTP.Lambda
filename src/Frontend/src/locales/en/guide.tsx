@@ -17,11 +17,11 @@ export const guide = {
     why: 'Saying why',
     written: 'Documentation and tests',
     features: 'Changing it safely',
-    files: 'More than one file',
+    files: 'Code and resources',
     page: 'Serving a page',
     spa: 'A front end, step by step',
     built: 'What it is built from',
-    storage: 'The two places files live',
+    storage: 'A version and its data',
     database: 'Keeping records',
     keeping: 'Keeping files',
     secrets: 'Keys and passwords',
@@ -106,7 +106,6 @@ export const guide = {
       ),
     ],
     ['Drafts', () => <>Changes being tried before they go online, each at an address of its own and on test data of its own. Opened, a draft has its own code, test data and logs. The section is there once there is a draft.</>],
-    ['Files', () => <>The files of a version: its code and assets, the program itself. A lock or a globe says whether the public can reach them.</>],
     ['Data', () => <>What the lambda keeps while it runs, shared by every version: the database, the workspace and the secrets, each a pill of its own. Look into the tables and files, upload files, set secrets, or switch a kind on or off. The simple view shows it once the app keeps something.</>],
     ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a draft from any of them.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
@@ -116,21 +115,21 @@ export const guide = {
       'Code',
       (k) => (
         <>
-          Writing it by hand. {k.b('Check')} compiles, {k.b('Save')} makes a version, {k.b('Deploy')} puts it online.
-          In a draft, {k.b('Save')} keeps it in the draft and shows it at the draft's address. {k.code('Ctrl-S')}{' '}
-          saves; {k.code('F12')} goes to a declaration.
+          Every file of a version, its code and its resources, in a tree beside the editor - with how much room they
+          take and whether the public can reach them. Pick an older version above it to read that one.{' '}
+          {k.b('Check')} compiles, {k.b('Save')} makes a version, {k.b('Deploy')} puts it online. In a draft,{' '}
+          {k.b('Save')} keeps it in the draft and shows it at the draft's address. {k.code('Ctrl-S')} saves;{' '}
+          {k.code('F12')} goes to a declaration.
         </>
       ),
     ],
     ['Tests', () => <>How the app is tested automatically, with the scripts and test data for it. In the full view only.</>],
-    ['Build', () => <>What the code or the assets are built from where a build tool makes them, kept with each version, to read rather than to edit. In the full view, once a version keeps it.</>],
   ] as [string, Text][],
   sections: ((k) => (
     <>
       Every section works the same way: its title, an {k.b('ⓘ')} that explains it, its actions on the right, and -
-      where it has more than one view - a row of pills underneath. The pills of the code are its files. The full
-      view gathers the sections in groups: how people find it, where a change is made, the program and its data,
-      and how it runs.
+      where it has more than one view - a row of pills underneath. The full view gathers the sections in groups: how
+      people find it, where a change is made, the versions and the data, and how it runs.
     </>
   )) as Text,
   editorAside:
@@ -166,17 +165,17 @@ export const guide = {
     </>
   )) as Text,
   writtenFiles: [
-    ['.lambda/docs/product.md', 'what the app is, who it is for, what people do with it and why'],
-    ['.lambda/docs/decisions.md', 'the technical decisions, and why they were made'],
-    ['.lambda/tests/README.md', 'how the app is tested automatically, and how to run the tests'],
-    ['.lambda/tests/…', 'the scripts and test data the tests use'],
+    ['docs/product.md', 'what the app is, who it is for, what people do with it and why'],
+    ['docs/decisions.md', 'the technical decisions, and why they were made'],
+    ['tests/README.md', 'how the app is tested automatically, and how to run the tests'],
+    ['tests/…', 'the scripts and test data the tests use'],
   ] as [string, string][],
   written2: ((k) => (
     <>
-      They are files of the version like any other, in the folder {k.code('.lambda')}: the history shows what a
-      version changed in them, rolling back brings back the documentation that was true of that version, and a draft
-      has a copy of its own that goes online with it. They are never compiled and never served, and count towards
-      what the assets of a version may come to.
+      They are files of its code like any other, in the folders {k.code('docs')} and {k.code('tests')}: the history
+      shows what a version changed in them, rolling back brings back the documentation that was true of that version,
+      and a draft has a copy of its own that goes online with it. They are never compiled and never served, and count
+      towards what a version may come to.
     </>
   )) as Text,
   written3: ((k) => (
@@ -201,7 +200,7 @@ export const guide = {
     (k) => (
       <>
         Start it from any version under {k.b('Versions')}, or let the agent start one. It is a copy of that version's
-        code, assets, documentation and tests, and of the lambda's data.
+        code and resources, its documentation and tests among them, and of the lambda's data.
       </>
     ),
     (k) => (
@@ -230,33 +229,45 @@ export const guide = {
 
   files: ((k) => (
     <>
-      Types do not have to sit underneath the code that uses them. In {k.b('Code')}, press {k.b('+')} beside the
-      files and it is compiled beside the snippet, in the same namespace, so nothing has to be imported to be
-      reached. A name with no extension is taken to be C#.
+      A version is any number of files, in two parts. Its {k.b('code')} is every file but its resources: the{' '}
+      {k.code('.cs')} files at the top are compiled, and every other file - in any folder, of any kind - is kept with
+      the version and never compiled or served: its documentation, its tests, what a front end is built from. Its{' '}
+      {k.b('resources')}, in {k.code('resources/')}, are what it reads and serves while it runs - pages, scripts,
+      styles, pictures, the database's migrations - reached from the code as {k.code('Resources')}.
     </>
   )) as Text,
+  files2: ((k) => (
+    <>
+      Types do not have to sit underneath the code that uses them. In {k.b('Code')}, press {k.b('+')} beside the code
+      and type a name: a {k.code('.cs')} file at the top is compiled beside the snippet, in the same namespace, so
+      nothing has to be imported to be reached. A name with no extension and no folder is taken to be C#.
+    </>
+  )) as Text,
+  filesAside:
+    'How the rest of the code is arranged is up to whoever writes it - a folder for the sources of a front end, one for scripts. The code and the resources of a version share one allowance of room, which the overview shows.',
 
   page: 'There are two ways to serve a page, and one more for what people upload beside it.',
   inlineTitle: 'One page, written inline',
   inline: 'Fine for something small. The page is part of the snippet.',
   folderTitle: 'A folder of real files',
   folder:
-    'What you want for anything with a stylesheet and a script. The files are added the same way a C# file is, and served exactly as written. Nothing compiles them.',
+    'What you want for anything with a stylesheet and a script. The files are resources of the version, and served exactly as written. Nothing compiles them.',
   workspaceTitle: 'Uploaded files, from the data',
   workspace:
-    'For what people upload or the lambda creates - pictures, documents - served beside the app. Not for the pages of the app itself: those belong in a folder of files, where they are versioned with the code that needs them.',
+    'For what people upload or the lambda creates - pictures, documents - served beside the app. Not for the pages of the app itself: those belong in the resources, where they are versioned with the code that needs them.',
 
   spa: ((k) => (
     <>
-      The second of those, in full. Every demo serves its page this way from a folder called {k.code('web')} - open{' '}
+      The second of those, in full. Every demo serves its page this way from {k.code('resources/web')} - open{' '}
       {k.link('/editor/demo-crud', 'demo-crud')} to read one. Demos are read only; their editor key is their name.
     </>
   )) as Text,
   spaSteps: [
     (k) => (
       <>
-        In {k.b('Code')}, press {k.b('+')} beside the files and type {k.code('site/index.html')}. A name with a slash
-        in it puts the file in a folder; a name with an extension is taken as the file it says it is.
+        In {k.b('Code')}, press {k.b('+')} beside the resources and type {k.code('site/index.html')}: it becomes{' '}
+        {k.code('resources/site/index.html')}. A name with a slash in it puts the file in a folder; a name with an
+        extension is taken as the file it says it is.
       </>
     ),
     (k) => (
@@ -269,8 +280,8 @@ export const guide = {
     (k) => (
       <>
         For anything that is not text, like an image or a font, open a file in {k.code('site')} and press the upload
-        button beside the files: it lands in the same folder. A PNG cannot be typed into a text editor, so that is the
-        way in.
+        button beside the resources: it lands in the same folder. A PNG cannot be typed into a text editor, so that is
+        the way in.
       </>
     ),
     (k) => <>In {k.code('lambda.cs')}, serve the folder:</>,
@@ -284,40 +295,39 @@ export const guide = {
     () => <>Add an API beside it and the page has something to talk to:</>,
   ] as Text[],
 
-  /** Assets or code a build tool makes, and the files it makes them from, kept beside them. */
+  /** Resources or code a build tool makes, and the files it makes them from, kept in the code. */
   built: ((k) => (
     <>
       Some of a lambda may be made by a build tool rather than written as it is served or compiled: compiled, bundled or
-      generated. The version holds what the tool makes - as its assets, or as its code - and beside it the files it
-      makes them from, its {k.b('build folder')}: {k.code('.lambda/build/')} in the version, {k.code('build/')} in a
-      clone, holding whatever the tool works from. Your agent changes those files, runs the build where it works and
-      saves both in the same version. This platform builds nothing.
+      generated. The version holds what the tool makes - as its resources, or as its code - and the files it makes
+      them from are part of its code, in a folder of their own: {k.code('frontend/')}, say, with a README that says how
+      it is built. Your agent changes those files, runs the build where it works and saves both in the same version.
+      This platform builds nothing.
     </>
   )) as Text,
   built2: ((k) => (
     <>
-      Like the documentation, it belongs to its version: compared in the history, rolled back, copied into a draft,
-      cloned, downloaded and published with the code - and never compiled or served. In the control center,{' '}
-      {k.b('Build')} shows it once a version keeps one: how it is built, as its README says, its files, and whether a
-      version changed them without changing anything built from them. It is read there, not edited - a change to it is
-      made where it is built.
+      Like the documentation, they belong to the version: compared in the history, rolled back, copied into a draft,
+      cloned, downloaded and published with the rest of the code - and never compiled or served. In the control
+      center they are in {k.b('Code')}, with every other file of the version.
     </>
   )) as Text,
   builtAside:
-    'What is written as it is served or compiled needs none. What a build installs or keeps for itself - node_modules, for example - is never part of a version: a .gitignore in the build folder keeps it out.',
+    'What is written as it is served or compiled needs none. What a build installs or keeps for itself - node_modules, for example - is never part of a version: a .gitignore in its folder keeps it out.',
 
   storage: ((k) => (
     <>
-      A lambda keeps files in two places, and the editor shows them apart: {k.b('Files')} holds the files of a
+      A lambda keeps files in two places, and the editor shows them apart: {k.b('Code')} holds the files of a
       version - the program - and {k.b('Data')} holds the workspace - what the program keeps. The difference is{' '}
       {k.em('whose they are')}. The files of a version belong to that version; the data belongs to the lambda, and
-      every version shares it.
+      every version shares it. Each has one allowance of room: a version's code and resources share one, and the
+      lambda's database and workspace share the other.
     </>
   )) as Text,
   savedWithCode: 'In a version',
   workspaceColumn: 'In the data',
   table: [
-    ['what it holds', 'the code and assets: the program, front end included - and its documentation, its tests and what it is built from', 'whatever the lambda writes, or somebody uploads'],
+    ['what it holds', 'the code and the resources: the program, front end included - and its documentation, its tests and whatever it is built from', 'whatever the lambda writes, or somebody uploads'],
     ['when it changes', 'never - a change is a new version', 'the moment something is written to it'],
     ['a deploy', 'puts exactly these files online', 'never touches it'],
     ['rolling back', 'brings the old files back', 'no effect: every version shares it'],
@@ -338,7 +348,7 @@ export const guide = {
   )) as Text,
   database2: ((k) => (
     <>
-      Its tables are made by {k.b('migrations')}: SQL files shipped with the version in {k.code('migrations/')}, applied
+      Its tables are made by {k.b('migrations')}: SQL files shipped with the version in {k.code('resources/migrations/')}, applied
       in order by {k.link('https://evolve-db.netlify.app/', 'Evolve')} as the lambda starts - each once, so a new
       version only ever runs what is new. Never change a migration that was applied; a change to a table is the next
       file.
@@ -436,12 +446,11 @@ export const guide = {
   away2: ((k) => (
     <>
       Your snippet becomes {k.code('Project.cs')}, and {k.code('Program.cs')} serves what it returns. Your other files
-      come across exactly as you wrote them. {k.code('Workspace')} and {k.code('Assets')} become two folders beside
-      the program, with the same methods, kept apart in a {k.code('Platform')} folder - so nothing in your code has to
-      change.
-      {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here. The
-      documentation and the tests come along in {k.code('docs')} and {k.code('tests')}, and the build folder in{' '}
-      {k.code('build')}.
+      come across exactly as you wrote them, where they were - the resources in {k.code('resources')}, the
+      documentation in {k.code('docs')}, the tests in {k.code('tests')}. {k.code('Workspace')} and{' '}
+      {k.code('Resources')} become two folders beside the program, with the same methods, kept apart in a{' '}
+      {k.code('Platform')} folder - so nothing in your code has to change.
+      {' '}{k.code('Secret')} reads environment variables of the same name there; the values stay here.
       {' '}{k.code('Database')} opens {k.code('database/database.db')}, which the download carries with the records
       your app kept.
     </>
@@ -482,8 +491,8 @@ export const guide = {
   )) as Text,
   open2: (() => (
     <>
-      Every version is published, the earlier ones too, with its documentation, its tests, its build folder and
-      the change each one made. What the app keeps is never published - its records, the files it saved, the values of its keys and
+      Every version is published, the earlier ones too, with all of its code - its documentation and its tests
+      among it - and the change each one made. What the app keeps is never published - its records, the files it saved, the values of its keys and
       passwords - and neither is what you asked for in your own words, or who uses the app. Switch it off and the page
       is gone; its stars are kept for when you publish it again.
     </>

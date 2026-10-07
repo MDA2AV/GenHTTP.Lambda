@@ -145,9 +145,10 @@ export function preview(text: string, feature: string): string {
 }
 
 /**
- * Whether the code asks for a directory to be served. The same test the
- * server makes for the summary, so the two never disagree.
+ * Whether the code asks for its resources to be served - by their name, or
+ * by the one they had before, Assets. The same test the server makes for the
+ * summary, so the two never disagree.
  */
-export const servesAssets = (code: string) => /\bAssets\s*\.\s*(App|Files|Tree)\s*\(/.test(code);
+export const servesResources = (code: string) => /\b(Resources|Assets)\s*\.\s*(App|Files|Tree)\s*\(/.test(code);
 
 export const servesWorkspace = (code: string) => /\bWorkspace\s*\.\s*(App|Files|Tree)\s*\(/.test(code);

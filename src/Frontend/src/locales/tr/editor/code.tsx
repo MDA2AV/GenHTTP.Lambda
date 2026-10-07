@@ -18,26 +18,33 @@ export const code: EditorMessages['code'] = {
   notOnline: 'Yayına alınamadı. Derleyicinin ne dediğine aşağıdan bakın.',
   failed: 'Bir şeyler ters gitti.',
   unchanged: 'Son kayıttan beri hiçbir şey değişmedi.',
-  demo: 'Bu bir demo, buradaki her şey salt okunur. Değiştirmek için bundan kendi lambdanızı oluşturun. ',
-  edit: 'Kodu elle düzenleyin. Kaydetmek yeni bir sürüm oluşturur ve yayındakine dokunmaz; o sürüm, siz yayına aldığınızda yayına girer. Bir değişikliği önce denemek için bir taslak başlatın. ',
-  editFeature:
-    'Bu taslağın kodu. Kaydetmek onu taslakta tutar, lambdanın ziyaretçilerinin gördüğü hiçbir şey değişmez. Yayına aldığınızda, denemeniz için taslağın kendi adresinde yayına girer; taslağı birleştirmek onu bir sonraki sürüm yapar. ',
+  demo: 'Bu bir demo, buradaki her şey salt okunur. Değiştirmek için bundan kendi lambdanızı oluşturun.',
+  hint: (b) => (
+    <>
+      Bir sürümün dosyaları. {b('Kodu')}, programdır ve onunla birlikte saklanan her şeydir: üstteki .cs dosyaları
+      derlenir; diğer her dosya - dokümantasyonu, testleri, bir ön yüzün neyden derlendiği - sürümle birlikte saklanır
+      ve asla derlenmez ya da sunulmaz. {b('Kaynakları')} - sayfalar, scriptler, stiller, görseller, veritabanının
+      migration’ları - sürüm çalışırken okunur ve sunulur; kod onları sunduğu yerde herkese açıktır. Kaydetmek yeni bir
+      sürüm oluşturur ve yayındakine dokunmaz; önce bir değişikliği denemek için bir taslak başlatın. Ctrl-S kaydeder,
+      F12 bir tanıma gider.
+    </>
+  ),
+  hintFeature: (b) => (
+    <>
+      Bu taslağın dosyaları: {b('kodu')} - üstteki .cs dosyaları derlenir, gerisi onunla birlikte saklanır - ve
+      sürüm çalışırken okunup sunulan {b('kaynakları')}. Kaydetmek onları taslakta tutar ve taslağın kendi adresinde
+      gösterir; siz taslağı yayına alana kadar ziyaretçileriniz bunların hiçbirini görmez.
+    </>
+  ),
   inFeature: (name) => `“${name}” taslağında`,
   changedElsewhere: 'Siz açtıktan sonra taslak başka bir yerden kaydedildi, belki ajan tarafından. Burada kaydetmeden önce kaydedileni yükleyin; değişiklikleriniz onun üzerine kaydedilmez.',
   readAgain: 'Kaydedileni yükle',
-  files: (entry, cs, context) => (
-    <>
-      {entry} sunulacak şeyi döndürür, diğer {cs} dosyaları türleri barındırır, geri kalan her dosya olduğu gibi
-      sunulur - {context} içindekiler hariç: onlar dokümantasyon, testler ve neyden derlendiğidir, asla derlenmez ve
-      sunulmaz. Ctrl-S kaydeder, F12 bir tanıma gider.
-    </>
-  ),
-  newer: (version) => ` Sürüm ${version}, burada açık olandan daha yeni.`,
+  newer: (version) => `Sürüm ${version}, burada açık olandan daha yeni.`,
   check: 'Kontrol et',
   save: 'Kaydet',
   deploy: 'Yayına al',
   deployPreviewTitle: 'Kaydet ve denemek için taslağı kendi adresinde yayına al',
-  binary: (size) => `Metin değil, düzenlenecek bir şey yok. Olduğu gibi sunulur. Boyutu ${size} kB.`,
+  binary: (size) => `Metin değil, burada düzenlenecek bir şey yok. Boyutu ${size}.`,
   saveAndDeploy: 'Kaydet ve yayına al',
   saveVersion: 'Yeni sürüm kaydet',
   fromOlder: (version, newest) =>
@@ -52,4 +59,27 @@ export const code: EditorMessages['code'] = {
   what: 'Ne değişiyor? İsteğe bağlı, geçmişte gösterilir.',
   placeholder: 'İletişim formu ekler',
   goToDefinition: 'Tanıma git',
+  versionLabel: 'Sürüm',
+  shown: (version, online, newest) =>
+    `Sürüm ${version}${online ? ', yayında' : newest ? ', en yeni' : ''}`,
+  optionOnline: ' (yayında)',
+  switchUnsaved: 'Burada yaptığınız değişiklik kaydedilmedi. Yine de diğer sürümü açmak istiyor musunuz?',
+  noVersion: 'Gösterilecek sürüm henüz yok.',
+  label: 'Dosyalar',
+  codeGroup: 'Kod',
+  codeWhy: 'Asla sunulmaz. Üstteki .cs dosyaları derlenir; geri kalanı sürümle birlikte saklanır.',
+  resources: 'Kaynaklar',
+  resourcesPublic: 'Herkese açık: bu sürüm bunları Resources ile sunar.',
+  resourcesPrivate: 'Sürümle birlikte gelir, ancak bu sürüm bunları sunmaz.',
+  noResources: 'Bu sürümde yok.',
+  count: (files) => (files === 1 ? '1 dosya' : `${files} dosya`),
+  groupUsage: (files, size) => `${files}, ${size}`,
+  usage: (used, of) => `Bu sürüm, kodu ve kaynaklarıyla birlikte, bir sürümün sahip olabileceği ${of} içinden ${used} tutuyor.`,
+  scope: (data) => (
+    <>Lambdanın çalışırken sakladıkları her sürüm için aynıdır ve {data('Veriler')} altındadır.</>
+  ),
+  download: 'İndir',
+  newIn: (group) => `${group} içinde yeni dosya`,
+  uploadIn: (group) => `${group} içine yükle`,
+  pick: 'İçindekileri görmek için bir dosya seçin.',
 };

@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const versions: EditorMessages['versions'] = {
   hint: (limit) =>
-    `Versi adalah programnya, yaitu kode dan asetnya, dan tidak pernah berubah setelah disimpan. Jadi versi mana pun bisa dibandingkan dan dijadikan online lagi persis seperti semula. Setiap versi menyimpan apa yang diminta dan apa yang diubah. Untuk mengubah lambda, mulai draf: draf menjadi versi berikutnya setelah hasilnya pas. Versi terlama dihapus begitu jumlahnya lebih dari ${limit}; versi yang sedang online tidak pernah dihapus.`,
+    `Versi adalah programnya, yaitu kode dan sumber dayanya, dan tidak pernah berubah setelah disimpan. Jadi versi mana pun bisa dibandingkan dan dijadikan online lagi persis seperti semula. Setiap versi menyimpan apa yang diminta dan apa yang diubah. Untuk mengubah lambda, mulai draf: draf menjadi versi berikutnya setelah hasilnya pas. Versi terlama dihapus begitu jumlahnya lebih dari ${limit}; versi yang sedang online tidak pernah dihapus.`,
   none: 'Belum ada versi.',
   noDescription: 'Tanpa deskripsi',
   online: 'online',
@@ -17,14 +17,10 @@ export const versions: EditorMessages['versions'] = {
   status: { added: 'ditambahkan', removed: 'dihapus', changed: 'diubah', same: 'sama' },
   groups: {
     code: 'Kode',
-    assets: 'Aset',
-    build: 'Build',
-    context: 'Dokumentasi dan pengujian',
+    resources: 'Sumber daya',
   },
-  browse: 'Lihat file-nya',
+  files: 'Buka file-nya',
   docs: 'Baca dokumentasinya',
-  build: 'Lihat bahan pembuatnya',
-  edit: 'Edit dari sini',
   feature: 'Mulai draf dari sini',
   featureTitle: 'Kerjakan perubahan dari versi ini di samping lambda, lalu gabungkan menjadi versi berikutnya setelah hasilnya pas',
   binary: 'Bukan teks, jadi tidak ada baris untuk dibandingkan.',

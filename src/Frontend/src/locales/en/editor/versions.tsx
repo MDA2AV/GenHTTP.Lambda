@@ -1,7 +1,7 @@
 
 export const versions = {
   hint: (limit: number) =>
-    `A version is your app as it was saved - its code and its assets - and never changes afterwards, so any of them can be compared with and put back online exactly as it was. Each keeps what was asked for and what it changed. The oldest are removed once there are more than ${limit}; the one online never is.`,
+    `A version is your app as it was saved - its code and its resources - and never changes afterwards, so any of them can be compared with and put back online exactly as it was. Each keeps what was asked for and what it changed. The oldest are removed once there are more than ${limit}; the one online never is.`,
   none: 'No versions yet.',
   noDescription: 'No description',
   online: 'online',
@@ -17,15 +17,11 @@ export const versions = {
   /** What the changed files are to the version, as headings over a list of them that holds more than one kind. */
   groups: {
     code: 'Code',
-    assets: 'Assets',
-    build: 'Build',
-    context: 'Documentation and tests',
+    resources: 'Resources',
   },
-  browse: 'Browse its files',
+  /** Opens the version in the code section, to read it or to change it from there. */
+  files: 'Open its files',
   docs: 'Read its documentation',
-  /** Opens what a version is built from, where it keeps that. */
-  build: 'See what it is built from',
-  edit: 'Edit from here',
   feature: 'Start a draft from here',
   featureTitle: 'Try a change on a copy of this version, without touching what is online',
   binary: 'Not text, so there are no lines to compare.',

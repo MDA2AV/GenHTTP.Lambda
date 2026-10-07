@@ -51,12 +51,12 @@ const KIT: Kit = {
 
 /** The samples that follow a step of building a front end, by the step they follow. */
 const SPA_SAMPLES: Record<number, string> = {
-  3: `return Layout.Create().Add(Assets.App("site"));`,
+  3: `return Layout.Create().Add(Resources.App("site"));`,
   5: `var api = Inline.Create().Get("notes", () => notes);
 
 return Layout.Create()
              .Add("api", api)
-             .Add(Assets.App("site"));`,
+             .Add(Resources.App("site"));`,
 };
 
 export function Guide() {
@@ -183,6 +183,12 @@ POST /api/v1/lambdas/{editorKey}/features/{feature}/merge
 
           <Section id="files" title={said.parts.files}>
             <p>{said.files(k)}</p>
+            <Commands text={`lambda.cs           the snippet: what it returns is served
+Shelf.cs            more C#, compiled beside it
+docs/ tests/        what is written about it
+frontend/           whatever else - kept, never compiled or served
+resources/          what it reads and serves while it runs`} />
+            <p>{said.files2(k)}</p>
 
             <Two
               left={['lambda.cs', `var shelf = new Shelf();
@@ -205,6 +211,7 @@ return Inline.Create()
 
 public record Book(string Title, string Author);`]}
             />
+            <Aside>{said.filesAside}</Aside>
           </Section>
 
           <Section id="page" title={said.parts.page}>
@@ -225,14 +232,14 @@ return Content.From(page);`} />
             <p>{said.folder}</p>
             <Sample code={`return Layout.Create()
              .Add("api", api)
-             .Add(Assets.App("site"));`} />
+             .Add(Resources.App("site"));`} />
 
             <h3 className="pt-2 text-sm font-semibold">{said.workspaceTitle}</h3>
             <p>{said.workspace}</p>
             <Sample code={`return Layout.Create()
              .Add("api", api)
              .Add("uploads", Workspace.Files("uploads"))
-             .Add(Assets.App("site"));`} />
+             .Add(Resources.App("site"));`} />
           </Section>
 
           <Section id="spa" title={said.parts.spa}>
@@ -250,10 +257,10 @@ return Content.From(page);`} />
 
           <Section id="built" title={said.parts.built}>
             <p>{said.built(k)}</p>
-            <Commands text={`build/              what it is built from, in whatever shape the tool wants
-build/README.md     how it is built, and where the build goes
-build/.gitignore    what the build installs or keeps for itself, left out
-assets/             what the build wrote, if it makes assets
+            <Commands text={`frontend/           what it is built from, in whatever shape the tool wants
+frontend/README.md  how it is built, and where the build goes
+frontend/.gitignore what the build installs or keeps for itself, left out
+resources/web/      what the build wrote, if it makes resources
 *.cs                what it wrote, if it makes code
 
 # run the build where you work, then
@@ -277,7 +284,7 @@ git add -A && git commit -m "…" && git push -o deploy`} />
                 <tbody className="divide-y divide-slate-200 dark:divide-ink-800">
                   {[
                     ...said.table,
-                    [said.reachedAs, <Code key="a">Assets</Code>, <Code key="b">Workspace</Code>] as const,
+                    [said.reachedAs, <Code key="a">Resources</Code>, <Code key="b">Workspace</Code>] as const,
                   ].map(([label, a, b], index) => (
                     <tr key={index}>
                       <td className="py-2 pr-4 text-slate-500">{label}</td>
@@ -295,12 +302,12 @@ git add -A && git commit -m "…" && git push -o deploy`} />
           <Section id="database" title={said.parts.database}>
             <p>{said.database(k)}</p>
 
-            <Sample code={`// migrations/V1__Create_notes.sql:
+            <Sample code={`// resources/migrations/V1__Create_notes.sql:
 //   CREATE TABLE notes (id INTEGER PRIMARY KEY, text TEXT NOT NULL);
 
 using (var connection = Database.GetConnection())
 {
-    new Evolve(connection) { Locations = [Assets.Root + "migrations"] }.Migrate();
+    new Evolve(connection) { Locations = [Resources.Root + "migrations"] }.Migrate();
 }
 
 return Inline.Create()

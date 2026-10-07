@@ -3,7 +3,7 @@ import { counted, plural } from '../plural';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Dane to to, co lambda przechowuje w trakcie działania. Należą do lambdy, a nie do wersji: każda wersja czyta i zapisuje te same dane, a nic, co robisz z wersjami, ich nie zmienia. Szkic wypróbowuje się na ich kopii. Znikają dopiero wtedy, gdy usuniesz lambdę albo wyłączysz dany rodzaj danych.',
+    'Dane to to, co lambda przechowuje w trakcie działania. Należą do lambdy, a nie do wersji: każda wersja czyta i zapisuje te same dane, a nic, co robisz z wersjami, ich nie zmienia. Szkic wypróbowuje się na ich kopii. Znikają dopiero wtedy, gdy usuniesz lambdę albo wyłączysz dany rodzaj danych. Baza danych i obszar roboczy dzielą jedną pulę miejsca, więc każde z nich może urosnąć tak, jak pozwoli drugie.',
   facts: [
     ['Wspólne dla wszystkich wersji', 'Niezależnie od tego, która wersja jest online, czyta i zapisuje te same dane.'],
     ['Zostają przy wdrożeniu', 'Ani wdrożenie, ani przywrócenie, ani scalenie szkicu nigdy ich nie rusza.'],

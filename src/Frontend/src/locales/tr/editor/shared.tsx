@@ -36,7 +36,7 @@ export const shared: EditorMessages['shared'] = {
   offline: 'Yayında değil',
   offlineTitle: 'Yayında değil: hiçbir şey sunulmuyor',
   premium:
-    'Premium: kendi alan adında yanıt verebilir, kod, statik dosyalar ve veriler için daha fazla yeri vardır ve ne kadar az kullanılırsa kullanılsın yayında kalır',
+    'Premium: kendi alan adında yanıt verebilir, kod, kaynaklar ve veriler için daha fazla yeri vardır ve ne kadar az kullanılırsa kullanılsın yayında kalır',
   demo: 'Demo: bu kurulum tarafından yayında tutulur ve salt okunurdur',
   tier: (tier) => `Plan: ${tier}`,
   entrances: {

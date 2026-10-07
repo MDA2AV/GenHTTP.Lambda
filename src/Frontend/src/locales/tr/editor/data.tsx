@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Veriler, lambdanın çalışırken sakladıklarıdır. Bir sürüme değil, lambdaya aittir: her sürüm aynı verileri okur ve yazar, sürümlerle yaptığınız hiçbir şey onları değiştirmez. Bir taslak ise kendini verilerin bir kopyası üzerinde dener. Lambda silindiğinde ya da o veri türünü kapattığınızda silinirler.',
+    'Veriler, lambdanın çalışırken sakladıklarıdır. Bir sürüme değil, lambdaya aittir: her sürüm aynı verileri okur ve yazar, sürümlerle yaptığınız hiçbir şey onları değiştirmez. Lambda silindiğinde ya da o veri türünü kapattığınızda silinirler. Veritabanı ve çalışma alanı tek bir yer payını paylaşır; bu yüzden her biri, diğerinin bıraktığı kadar büyüyebilir.',
   facts: [
     ['Tüm sürümler için ortak', 'Hangi sürüm yayındaysa aynı verileri okur ve yazar.'],
     ['Yayına alınca da kalır', 'Yayına almak, eski bir sürüme dönmek ya da bir taslağı birleştirmek verilere hiç dokunmaz.'],

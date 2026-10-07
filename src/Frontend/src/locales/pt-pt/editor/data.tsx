@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'Os dados são o que a lambda guarda enquanto corre. Pertencem à lambda, não a uma versão: todas as versões leem e escrevem os mesmos dados, e nada do que fazes com as versões lhes toca. Um rascunho é experimentado numa cópia deles. Só desaparecem quando a lambda é eliminada, ou quando desligas esse tipo de dados.',
+    'Os dados são o que a lambda guarda enquanto corre. Pertencem à lambda, não a uma versão: todas as versões leem e escrevem os mesmos dados, e nada do que fazes com as versões lhes toca. Um rascunho é experimentado numa cópia deles. Só desaparecem quando a lambda é eliminada, ou quando desligas esse tipo de dados. A base de dados e o workspace partilham um único espaço, por isso cada um pode crescer até onde o outro o deixar.',
   facts: [
     ['Partilhados por todas as versões', 'Seja qual for a versão online, lê e escreve os mesmos dados.'],
     ['Ficam quando fazes deploy', 'Fazer deploy, reverter ou integrar um rascunho nunca lhes toca.'],

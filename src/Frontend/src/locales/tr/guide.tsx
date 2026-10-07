@@ -13,11 +13,11 @@ export const guide: Messages['guide'] = {
     why: 'Nedenini yazmak',
     written: 'Dokümantasyon ve testler',
     features: 'Güvenle değiştirmek',
-    files: 'Birden fazla dosya',
+    files: 'Kod ve kaynaklar',
     page: 'Sayfa sunmak',
     spa: 'Adım adım bir frontend',
     built: 'Neyden derlendiği',
-    storage: 'Dosyaların durduğu iki yer',
+    storage: 'Bir sürüm ve verileri',
     database: 'Kayıt tutmak',
     keeping: 'Dosya saklamak',
     secrets: 'Anahtarlar ve parolalar',
@@ -102,7 +102,6 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Taslaklar', () => <>Yayına alınmadan önce denenen değişiklikler: her biri kendi adresinde ve kendi test verileriyle çalışır. Açıldığında bir taslağın kendi kodu, test verileri ve logları vardır. Bu bölüm, bir taslak olduğunda görünür.</>],
-    ['Dosyalar', () => <>Bir sürümün dosyaları: kodu ve statik dosyaları, yani programın kendisi. Kilit ya da dünya simgesi, herkesin onlara erişip erişemeyeceğini gösterir.</>],
     ['Veriler', () => <>Lambdanın çalışırken sakladıkları, tüm sürümler için ortak: veritabanı, çalışma alanı ve anahtarlar ve parolalar, her biri kendi sekmesinde. Tablolara ve dosyalara bakın, dosya yükleyin, anahtar ve parola girin ya da bir türü açıp kapatın. Basit görünüm, uygulama bir şey sakladığı anda bu bölümü gösterir.</>],
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
@@ -112,21 +111,21 @@ export const guide: Messages['guide'] = {
       'Kod',
       (k) => (
         <>
-          Elle yazmak için. {k.b('Kontrol et')} derler, {k.b('Kaydet')} bir sürüm oluşturur, {k.b('Yayına al')} yayına
-          alır. Bir taslakta ise {k.b('Kaydet')} onu taslakta tutar ve taslağın adresinde gösterir. {k.code('Ctrl-S')}{' '}
-          kaydeder, {k.code('F12')} bir tanıma gider.
+          Bir sürümün her dosyası, yani kodu ve kaynakları, editörün yanında bir ağaçta - ne kadar yer tuttukları ve
+          herkesin onlara erişip erişemediğiyle birlikte. Eski bir sürümü okumak için üstteki listeden onu seçin.{' '}
+          {k.b('Kontrol et')} derler, {k.b('Kaydet')} bir sürüm oluşturur, {k.b('Yayına al')} yayına alır. Bir
+          taslakta ise {k.b('Kaydet')} onu taslakta tutar ve taslağın adresinde gösterir. {k.code('Ctrl-S')} kaydeder,{' '}
+          {k.code('F12')} bir tanıma gider.
         </>
       ),
     ],
     ['Testler', () => <>Uygulamanın otomatik olarak nasıl test edildiği, bunun için gereken scriptler ve test verileriyle birlikte. Yalnızca tam görünümde.</>],
-    ['Derleme', () => <>Kodun veya statik dosyaların, bir derleme aracının onları ürettiği yerde neyden derlendiği; her sürümle birlikte saklanır, düzenlemek için değil okumak için. Tam görünümde, bir sürüm bunu sakladığında.</>],
   ],
   sections: (k) => (
     <>
       Her bölüm aynı şekilde çalışır: başlığı, onu açıklayan bir {k.b('ⓘ')} simgesi, sağda eylemleri ve birden fazla
-      görünümü varsa altında bir sıra sekme. Kod bölümünde bu sekmeler dosyalardır. Tam görünüm bölümleri gruplar
-      hâlinde toplar: insanların onu nasıl bulduğu, değişikliğin yapıldığı yer, program ile verileri ve nasıl
-      çalıştığı.
+      görünümü varsa altında bir sıra sekme. Tam görünüm bölümleri gruplar hâlinde toplar: insanların onu nasıl
+      bulduğu, değişikliğin yapıldığı yer, sürümler ve veriler ve nasıl çalıştığı.
     </>
   ),
   editorAside:
@@ -163,17 +162,17 @@ export const guide: Messages['guide'] = {
     </>
   ),
   writtenFiles: [
-    ['.lambda/docs/product.md', 'uygulamanın ne olduğu, kimin için olduğu, insanların onunla ne yaptığı ve nedeni'],
-    ['.lambda/docs/decisions.md', 'teknik kararlar ve neden alındıkları'],
-    ['.lambda/tests/README.md', 'uygulamanın otomatik olarak nasıl test edildiği ve testlerin nasıl çalıştırılacağı'],
-    ['.lambda/tests/…', 'testlerin kullandığı scriptler ve test verileri'],
+    ['docs/product.md', 'uygulamanın ne olduğu, kimin için olduğu, insanların onunla ne yaptığı ve nedeni'],
+    ['docs/decisions.md', 'teknik kararlar ve neden alındıkları'],
+    ['tests/README.md', 'uygulamanın otomatik olarak nasıl test edildiği ve testlerin nasıl çalıştırılacağı'],
+    ['tests/…', 'testlerin kullandığı scriptler ve test verileri'],
   ],
   written2: (k) => (
     <>
-      Bunlar, {k.code('.lambda')} klasöründe duran ve sürümün diğer dosyaları gibi olan dosyalardır: geçmiş, bir sürümün
-      onlarda neyi değiştirdiğini gösterir; eski bir sürüme dönmek, o sürüm için geçerli olan dokümantasyonu geri
-      getirir; bir taslağın da kendine ait, onunla birlikte yayına giren bir kopyası vardır. Asla derlenmez ve asla
-      sunulmazlar; bir sürümün statik dosyaları için tanınan sınıra dahil edilirler.
+      Bunlar, kodunun diğer dosyaları gibi olan dosyalardır ve {k.code('docs')} ile {k.code('tests')} klasörlerinde
+      durur: geçmiş, bir sürümün onlarda neyi değiştirdiğini gösterir; eski bir sürüme dönmek, o sürüm için geçerli
+      olan dokümantasyonu geri getirir; bir taslağın da kendine ait, onunla birlikte yayına giren bir kopyası vardır.
+      Asla derlenmez ve asla sunulmazlar; bir sürümün sahip olabileceği sınıra dahil edilirler.
     </>
   ),
   written3: (k) => (
@@ -197,8 +196,9 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        {k.b('Sürümler')} altındaki herhangi bir sürümden başlatın ya da ajanın başlatmasına izin verin. Taslak, o sürümün
-        kodunun, statik dosyalarının, dokümantasyonunun ve testlerinin, bir de lambdanın verilerinin kopyasıdır.
+        {k.b('Sürümler')} altındaki herhangi bir sürümden başlatın ya da ajanın başlatmasına izin verin. Taslak, o
+        sürümün kodunun ve kaynaklarının - dokümantasyonu ve testleri de dahil - bir de lambdanın verilerinin
+        kopyasıdır.
       </>
     ),
     (k) => (
@@ -228,25 +228,38 @@ export const guide: Messages['guide'] = {
 
   files: (k) => (
     <>
-      Türlerin, onları kullanan kodun altında durması gerekmez. {k.b('Kod')} bölümünde dosyaların yanındaki{' '}
-      {k.b('+')} düğmesine basın. Yeni dosya, kod parçasıyla aynı namespace içinde, onunla birlikte derlenir. Böylece
-      erişmek için hiçbir şeyi içe aktarmanız gerekmez. Uzantısı olmayan bir ad C# dosyası sayılır.
+      Bir sürüm, iki bölüme ayrılmış istediğiniz sayıda dosyadır. {k.b('Kodu')}, kaynakları dışındaki her dosyadır:
+      üstteki {k.code('.cs')} dosyaları derlenir; diğer her dosya - hangi klasörde ve ne türde olursa olsun - sürümle
+      birlikte saklanır ve asla derlenmez ya da sunulmaz: dokümantasyonu, testleri, bir ön yüzün neyden derlendiği.
+      {' '}{k.b('Kaynakları')}, yani {k.code('resources/')} içindekiler, sürümün çalışırken okuyup sunduğu şeylerdir -
+      sayfalar, scriptler, stiller, görseller, veritabanının migration’ları - ve koddan {k.code('Resources')} olarak
+      erişilir.
     </>
   ),
+  files2: (k) => (
+    <>
+      Türlerin, onları kullanan kodun altında durması gerekmez. {k.b('Kod')} bölümünde kodun yanındaki {k.b('+')}
+      düğmesine basın ve bir ad yazın: üstteki bir {k.code('.cs')} dosyası, kod parçasıyla aynı namespace içinde onunla
+      birlikte derlenir. Böylece erişmek için hiçbir şeyi içe aktarmanız gerekmez. Uzantısı ve klasörü olmayan bir ad
+      C# dosyası sayılır.
+    </>
+  ),
+  filesAside:
+    'Kodun geri kalanının nasıl düzenleneceği onu yazana kalmıştır - bir ön yüzün kaynakları için bir klasör, scriptler için bir klasör. Bir sürümün kodu ve kaynakları, genel bakışta görünen tek bir yer payını paylaşır.',
 
   page: 'Sayfa sunmanın iki yolu var. İnsanların yanına yüklediği dosyalar için de bir üçüncüsü.',
   inlineTitle: 'Tek sayfa, kodun içinde',
   inline: 'Küçük şeyler için yeterli. Sayfa doğrudan kodun içinde yer alır.',
   folderTitle: 'Gerçek dosyalarla bir klasör',
   folder:
-    'Stil dosyası ve script içeren her şey için doğru seçim. Dosyalar tıpkı bir C# dosyası gibi eklenir ve tam yazıldığı gibi sunulur. Derlenmezler.',
+    'Stil dosyası ve script içeren her şey için doğru seçim. Dosyalar sürümün kaynaklarıdır ve tam yazıldığı gibi sunulur. Derlenmezler.',
   workspaceTitle: 'Yüklenen dosyalar, verilerden',
   workspace:
-    'İnsanların yüklediği ya da lambdanın oluşturduğu şeyler (görseller, belgeler) için; uygulamanın yanında sunulurlar. Uygulamanın kendi sayfaları için değil: onların yeri bir dosya klasörüdür, orada onlara ihtiyaç duyan kodla birlikte sürümlenirler.',
+    'İnsanların yüklediği ya da lambdanın oluşturduğu şeyler (görseller, belgeler) için; uygulamanın yanında sunulurlar. Uygulamanın kendi sayfaları için değil: onların yeri kaynaklardır, orada onlara ihtiyaç duyan kodla birlikte sürümlenirler.',
 
   spa: (k) => (
     <>
-      Bunların ikincisi, baştan sona. Her demo, sayfasını bu şekilde {k.code('web')} adlı bir klasörden sunar. Bir
+      Bunların ikincisi, baştan sona. Her demo, sayfasını bu şekilde {k.code('resources/web')} içinden sunar. Bir
       örnek görmek için {k.link('/editor/demo-crud', 'demo-crud')} demosunu açın. Demolar salt okunurdur; editör
       anahtarları adlarıyla aynıdır.
     </>
@@ -254,9 +267,9 @@ export const guide: Messages['guide'] = {
   spaSteps: [
     (k) => (
       <>
-        {k.b('Kod')} bölümünde dosyaların yanındaki {k.b('+')} düğmesine basın ve {k.code('site/index.html')} yazın.
-        Adında eğik çizgi olan bir dosya bir klasöre girer. Uzantısı olan bir ad da uzantısının söylediği türde dosya
-        sayılır.
+        {k.b('Kod')} bölümünde kaynakların yanındaki {k.b('+')} düğmesine basın ve {k.code('site/index.html')} yazın:
+        dosya {k.code('resources/site/index.html')} olur. Adında eğik çizgi olan bir dosya bir klasöre girer. Uzantısı
+        olan bir ad da uzantısının söylediği türde dosya sayılır.
       </>
     ),
     (k) => (
@@ -268,7 +281,7 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Görsel ya da font gibi metin olmayan dosyalar için {k.code('site')} klasöründeki bir dosyayı açın ve dosyaların
+        Görsel ya da font gibi metin olmayan dosyalar için {k.code('site')} klasöründeki bir dosyayı açın ve kaynakların
         yanındaki yükleme düğmesine basın. Dosya aynı klasöre gider. PNG bir metin editöründe yazılamaz, o yüzden yolu bu.
       </>
     ),
@@ -286,36 +299,35 @@ export const guide: Messages['guide'] = {
   built: (k) => (
     <>
       Bir lambda’nın bir kısmı, sunulduğu ya da derlendiği şekliyle yazılmak yerine bir derleme aracıyla - derlenerek,
-      paketlenerek ya da üretilerek - oluşturulabilir. Sürüm, aracın ürettiği şeyi - statik dosyaları ya da kodu olarak -
-      ve yanında onları neyden ürettiğini, yani {k.b('derleme klasörünü')} tutar: sürümde {k.code('.lambda/build/')}, bir
-      klonda {k.code('build/')}; araç neyle çalışıyorsa onu barındırır. Ajanınız bu dosyaları değiştirir, derlemeyi
-      çalıştığı yerde yapar ve ikisini de aynı sürümde kaydeder. Bu platform hiçbir şey derlemez.
+      paketlenerek ya da üretilerek - oluşturulabilir. Sürüm, aracın ürettiği şeyi - kaynakları ya da kodu olarak -
+      tutar; onları ürettiği dosyalar ise kodunun parçasıdır ve kendi klasöründe durur, örneğin {k.code('frontend/')},
+      nasıl derlendiğini anlatan bir README ile. Ajanınız bu dosyaları değiştirir, derlemeyi çalıştığı yerde yapar ve
+      ikisini de aynı sürümde kaydeder. Bu platform hiçbir şey derlemez.
     </>
   ),
   built2: (k) => (
     <>
-      Dokümantasyon gibi o da sürümüne aittir: geçmişte karşılaştırılır, geri alınır, bir taslağa kopyalanır,
-      klonlanır, indirilir ve kodla birlikte yayımlanır - ve asla derlenmez ya da sunulmaz. Kontrol panelinde{' '}
-      {k.b('Derleme')}, bir sürüm bunu sakladığında onu gösterir: README’sinin anlattığı gibi nasıl derlendiğini,
-      dosyalarını ve bir sürümün, onlardan derlenen hiçbir şeyi değiştirmeden bu dosyaları değiştirip değiştirmediğini.
-      Orada okunur, düzenlenmez - onda yapılacak bir değişiklik derlendiği yerde yapılır.
+      Dokümantasyon gibi onlar da sürüme aittir: geçmişte karşılaştırılır, geri alınır, bir taslağa kopyalanır,
+      klonlanır, indirilir ve kodun geri kalanıyla birlikte yayımlanır - ve asla derlenmez ya da sunulmaz. Kontrol
+      panelinde sürümün diğer tüm dosyalarıyla birlikte {k.b('Kod')} içindedirler.
     </>
   ),
   builtAside:
-    'Sunulduğu ya da derlendiği şekliyle yazılan şeylerin buna ihtiyacı yoktur. Bir derlemenin kendisi için kurduğu ya da sakladığı şeyler - örneğin node_modules - asla bir sürümün parçası olmaz: derleme klasöründeki bir .gitignore onları dışarıda tutar.',
+    'Sunulduğu ya da derlendiği şekliyle yazılan şeylerin buna ihtiyacı yoktur. Bir derlemenin kendisi için kurduğu ya da sakladığı şeyler - örneğin node_modules - asla bir sürümün parçası olmaz: klasöründeki bir .gitignore onları dışarıda tutar.',
 
   storage: (k) => (
     <>
-      Bir lambda dosyaları iki yerde tutar ve editör onları ayrı gösterir: {k.b('Dosyalar')} bir sürümün dosyalarını
+      Bir lambda dosyaları iki yerde tutar ve editör onları ayrı gösterir: {k.b('Kod')} bir sürümün dosyalarını
       (programı), {k.b('Veriler')} ise çalışma alanını (programın sakladıklarını) tutar. Fark,{' '}
       {k.em('kime ait olduklarında')} yatar. Bir sürümün dosyaları o sürüme aittir; veriler ise lambdaya aittir ve her
-      sürüm onları paylaşır.
+      sürüm onları paylaşır. Her birinin tek bir yer payı vardır: bir sürümün kodu ve kaynakları birini paylaşır,
+      lambdanın veritabanı ve çalışma alanı da diğerini.
     </>
   ),
   savedWithCode: 'Bir sürümde',
   workspaceColumn: 'Verilerde',
   table: [
-    ['ne tutar', 'kod ve statik dosyalar: frontend dahil programın kendisi, bir de dokümantasyonu, testleri ve neyden derlendiği', 'lambdanın yazdığı ya da birinin yüklediği her şey'],
+    ['ne tutar', 'kod ve kaynaklar: frontend dahil programın kendisi, bir de dokümantasyonu, testleri ve neyden derlendiği', 'lambdanın yazdığı ya da birinin yüklediği her şey'],
     ['ne zaman değişir', 'hiçbir zaman: her değişiklik yeni bir sürümdür', 'içine bir şey yazıldığı anda'],
     ['yayına alma', 'tam olarak bu dosyaları yayına alır', 'ona hiç dokunmaz'],
     ['eski bir sürüme dönmek', 'eski dosyaları geri getirir', 'etkisi yok: her sürüm onu paylaşır'],
@@ -336,7 +348,7 @@ export const guide: Messages['guide'] = {
   ),
   database2: (k) => (
     <>
-      Tablolarını {k.b('migration’lar')} oluşturur: sürümle birlikte {k.code('migrations/')} içinde gelen ve lambda
+      Tablolarını {k.b('migration’lar')} oluşturur: sürümle birlikte {k.code('resources/migrations/')} içinde gelen ve lambda
       başlarken {k.link('https://evolve-db.netlify.app/', 'Evolve')} tarafından sırayla uygulanan SQL dosyaları. Her biri
       yalnızca bir kez uygulanır, yani yeni bir sürüm yalnızca yeni olanı çalıştırır. Uygulanmış bir migration’ı asla
       değiştirmeyin; bir tablodaki değişiklik bir sonraki dosyadır.
@@ -434,12 +446,11 @@ export const guide: Messages['guide'] = {
   away2: (k) => (
     <>
       Kod parçanız {k.code('Project.cs')} olur, {k.code('Program.cs')} de döndürdüğü şeyi sunar. Diğer dosyalarınız
-      tam yazdığınız gibi gelir. {k.code('Workspace')} ve {k.code('Assets')} programın yanında, ayrı bir{' '}
-      {k.code('Platform')} klasöründe iki klasör olur ve aynı metotlarla çalışır. Yani kodunuzda hiçbir şeyi
-      değiştirmeniz gerekmez.
-      {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır. Dokümantasyon ve testler
-      de {k.code('docs')} ve {k.code('tests')} klasörlerinde, derleme klasörü ise{' '}
-      {k.code('build')} klasöründe gelir.
+      tam yazdığınız gibi, bulundukları yerde gelir: kaynaklar {k.code('resources')} içinde, dokümantasyon{' '}
+      {k.code('docs')} içinde, testler {k.code('tests')} içinde. {k.code('Workspace')} ve {k.code('Resources')}{' '}
+      programın yanında, ayrı bir {k.code('Platform')} klasöründe iki klasör olur ve aynı metotlarla çalışır. Yani
+      kodunuzda hiçbir şeyi değiştirmeniz gerekmez.
+      {' '}{k.code('Secret')} orada aynı adlı ortam değişkenlerini okur; değerler burada kalır.
       {' '}{k.code('Database')} ise {k.code('database/database.db')} dosyasını açar; indirilen proje bu dosyayı
       uygulamanızın tuttuğu kayıtlarla birlikte getirir.
     </>
@@ -480,10 +491,10 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Her sürüm yayımlanır, öncekiler de; her biri dokümantasyonu, testleri, derleme klasörü ve yaptığı değişiklikle
-      birlikte. Uygulamanın sakladıkları (kayıtları, kaydettiği dosyalar, anahtarlarının ve parolalarının değerleri)
-      asla yayımlanmaz; kendi sözlerinizle ne istediğiniz ve uygulamayı kimlerin kullandığı da. Kapattığınızda sayfa
-      kaldırılır; yıldızları ise yeniden yayımladığınızda geri gelmek üzere saklanır.
+      Her sürüm yayımlanır, öncekiler de; her biri tüm koduyla (dokümantasyonu ve testleri de bunun içinde) ve yaptığı
+      değişiklikle birlikte. Uygulamanın sakladıkları (kayıtları, kaydettiği dosyalar, anahtarlarının ve parolalarının
+      değerleri) asla yayımlanmaz; kendi sözlerinizle ne istediğiniz ve uygulamayı kimlerin kullandığı da. Kapattığınızda
+      sayfa kaldırılır; yıldızları ise yeniden yayımladığınızda geri gelmek üzere saklanır.
     </>
   ),
   openAside:

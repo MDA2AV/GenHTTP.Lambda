@@ -13,7 +13,7 @@ export const simple = {
   simple: 'Simple',
   full: 'Full',
   simpleTitle: 'Your app, how it is doing, and a box to ask for changes',
-  fullTitle: 'Every section: the code, the documentation, the tests, the files, the data, the versions and the logs',
+  fullTitle: 'Every section: the code, the documentation, the tests, the data, the versions and the logs',
   simpleNote: 'Your app and a box to ask for changes.',
   fullNote: 'Every section, the code included.',
   toFull: 'Show every section',
@@ -23,7 +23,7 @@ export const simple = {
   aboutMore: 'More about your app',
 
   outsideTitle: 'This is part of the full view',
-  outsideText: 'The simple view leaves out the code, the files and the history. Show every section to work with them here.',
+  outsideText: 'The simple view leaves out the code, the tests and the logs. Show every section to work with them here.',
   back: 'Back to your app',
 
   title: 'Your app',

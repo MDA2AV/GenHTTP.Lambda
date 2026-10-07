@@ -12,7 +12,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         エージェントは、変更と一緒にドキュメントを書きます。アプリが何で、誰のために、なぜあるのかを
-        {code('.lambda/docs/product.md')}に、なぜこのように作られているのかを{code('decisions.md')}
+        {code('docs/product.md')}に、なぜこのように作られているのかを{code('decisions.md')}
         に書きます。ドキュメントはバージョンの一部で、コードの隣にあります。
       </>
     ),
@@ -41,7 +41,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         アプリのテスト方法（動き続けなければならないこと、その確かめ方、そのためのスクリプトの実行方法）は、エージェントが
-        {code('.lambda/tests/README.md')}
+        {code('tests/README.md')}
         に書きます。スクリプトとテストデータは、その隣に置きます。
       </>
     ),

@@ -5,14 +5,8 @@ export const summary: EditorMessages['summary'] = {
   reading: 'Sprawdzanie stanu…',
   readDocs: 'Przeczytaj dokumentację',
   written: 'Dokumentacja i testy',
-  writtenWhy: 'Nigdy nie są kompilowane ani serwowane. Zachowywane z każdą wersją i wliczane do zasobów.',
+  writtenWhy: 'W docs/ i tests/ w kodzie: zachowywane z każdą wersją, nigdy nie są kompilowane ani serwowane.',
   writtenMissing: 'Jeszcze nie napisano',
-  build: 'Budowanie',
-  buildWhy: 'Nigdy nie kompilowane ani serwowane: to, z czego budowany jest kod lub zasoby. Liczone razem z zasobami.',
-  buildFiles: (files, size) =>
-    files === 1
-      ? `1 plik, ${size}`
-      : `${files} ${files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 12 || files % 100 > 14) ? 'pliki' : 'plików'}, ${size}`,
   hint: (since, kept, retention, tier) =>
     `Ruch jest liczony od ostatniego startu serwera (${since}). ` +
     (kept
@@ -54,12 +48,14 @@ export const summary: EditorMessages['summary'] = {
   inData: 'W danych',
   sharedByAll: 'Wspólne dla wszystkich wersji',
   browse: 'Przeglądaj',
+  versionAllowance: 'Kod i zasoby',
+  dataAllowance: 'Baza danych i obszar roboczy',
+  files: (files, size) => (files === 1 ? `1 plik, ${size}` : files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 12 || files % 100 > 14) ? `${files} pliki, ${size}` : `${files} plików, ${size}`),
   code: 'Kod',
-  codeWhy: 'C# jest kompilowany, nigdy serwowany.',
-  characters: 'znaków',
-  assets: 'Zasoby',
-  assetsPublic: 'Publiczne: kod je serwuje.',
-  assetsPrivate: 'Kod ich nie serwuje.',
+  codeWhy: 'Nigdy nie jest serwowany. Pliki .cs na górze są kompilowane, reszta – dokumentacja, testy, to, z czego coś jest budowane – jest przechowywana razem z wersją.',
+  resources: 'Zasoby',
+  resourcesPublic: 'Publiczne: kod je serwuje.',
+  resourcesPrivate: 'Nieserwowane przez kod.',
   data: 'Dane',
   workspace: 'Obszar roboczy',
   workspaceOff: 'wyłączony',
@@ -72,6 +68,6 @@ export const summary: EditorMessages['summary'] = {
   secretsMissingTitle: 'Kod odczytuje sekrety, które nie są ustawione, i w tych miejscach nie działa.',
   database: 'Baza danych',
   databaseOff: 'wyłączona',
-  databaseTables: (count) => counted(count, 'tabela', 'tabele', 'tabel'),
+  databaseHolds: (tables, size) => (tables === 1 ? `1 tabela, ${size}` : tables % 10 >= 2 && tables % 10 <= 4 && (tables % 100 < 12 || tables % 100 > 14) ? `${tables} tabele, ${size}` : `${tables} tabel, ${size}`),
   databaseOffUsed: 'Kod łączy się z bazą danych, która jest wyłączona.',
 };

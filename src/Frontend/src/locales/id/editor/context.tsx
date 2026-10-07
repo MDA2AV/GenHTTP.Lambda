@@ -12,7 +12,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         Agen menulis dokumentasi bersama perubahannya: apa aplikasinya, untuk siapa dan mengapa di{' '}
-        {code('.lambda/docs/product.md')}, dan mengapa aplikasi dibuat seperti ini di {code('decisions.md')}.
+        {code('docs/product.md')}, dan mengapa aplikasi dibuat seperti ini di {code('decisions.md')}.
         Dokumentasi adalah bagian dari versi, di samping kode.
       </>
     ),
@@ -41,7 +41,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         Bagaimana aplikasi diuji (apa yang harus tetap berfungsi, cara memeriksanya, dan cara menjalankan script-nya)
-        ditulis agen di {code('.lambda/tests/README.md')}, dengan script dan data uji di sampingnya.
+        ditulis agen di {code('tests/README.md')}, dengan script dan data uji di sampingnya.
       </>
     ),
     ask: 'Minta agen menulis pengujian',

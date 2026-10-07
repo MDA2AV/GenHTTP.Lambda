@@ -246,7 +246,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
         <div className="surface p-4">
           <h2 className="text-sm font-medium">Tier</h2>
           <p className="mt-1 text-[13px] text-slate-500">
-            Premium lambdas may answer at a domain of their own, have more room for code, assets and data, and are never taken offline or removed for going unused.
+            Premium lambdas may answer at a domain of their own, have more room for code, resources and data, and are never taken offline or removed for going unused.
           </p>
           <div role="radiogroup" aria-label="Tier" className="mt-3 flex flex-wrap gap-1.5">
             {tiers.map((tier) => (

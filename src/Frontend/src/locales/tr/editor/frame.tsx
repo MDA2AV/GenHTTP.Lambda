@@ -11,7 +11,6 @@ export const frame: EditorMessages['frame'] = {
     showcase: 'Vitrin',
     source: 'Açık kaynak',
     domain: 'Alan adı',
-    files: 'Dosyalar',
     data: 'Veriler',
     versions: 'Sürümler',
     history: 'Geçmiş',
@@ -19,7 +18,6 @@ export const frame: EditorMessages['frame'] = {
     stats: 'İstatistikler',
     logs: 'Loglar',
     code: 'Kod',
-    build: 'Derleme',
   },
   sectionsLabel: 'Bölümler',
   groups: {

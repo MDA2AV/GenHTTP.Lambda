@@ -13,11 +13,11 @@ export const guide: Messages['guide'] = {
     why: 'Mencatat alasan',
     written: 'Dokumentasi dan pengujian',
     features: 'Mengubah dengan aman',
-    files: 'Lebih dari satu file',
+    files: 'Kode dan sumber daya',
     page: 'Menyajikan halaman',
     spa: 'Front end, langkah demi langkah',
     built: 'Bahan pembuatnya',
-    storage: 'Dua tempat file disimpan',
+    storage: 'Versi dan datanya',
     database: 'Menyimpan catatan',
     keeping: 'Menyimpan file',
     secrets: 'Kunci dan kata sandi',
@@ -103,7 +103,6 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Draf', () => <>Perubahan yang dicoba sebelum dijadikan online, masing-masing di alamat sendiri dan dengan data uji sendiri. Saat dibuka, draf punya kode, data uji, dan log-nya sendiri. Bagian ini muncul setelah ada draf.</>],
-    ['File', () => <>File dari sebuah versi: kode dan asetnya, yaitu programnya sendiri. Ikon gembok atau globe menunjukkan apakah publik bisa mengaksesnya.</>],
     ['Data', () => <>Apa yang disimpan lambda selama berjalan, dipakai bersama oleh semua versi: database, workspace, dan kunci dan kata sandi, masing-masing di tab sendiri. Lihat tabel dan file, unggah file, atur kunci dan kata sandi, atau aktifkan dan nonaktifkan suatu jenis. Tampilan sederhana menampilkannya begitu aplikasi menyimpan sesuatu.</>],
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
@@ -113,21 +112,21 @@ export const guide: Messages['guide'] = {
       'Kode',
       (k) => (
         <>
-          Menulis kode secara manual. {k.b('Periksa')} mengompilasi, {k.b('Simpan')} membuat versi, {k.b('Deploy')}{' '}
-          menjadikannya online. Di draf, {k.b('Simpan')} menyimpannya di draf dan menampilkannya di alamat draf itu.
-          {k.code('Ctrl-S')} menyimpan; {k.code('F12')} membuka deklarasi.
+          Setiap file sebuah versi, kode dan sumber dayanya, dalam pohon di samping editor - beserta ruang yang
+          dipakainya dan apakah publik bisa mengaksesnya. Pilih versi yang lebih lama di atasnya untuk membacanya.{' '}
+          {k.b('Periksa')} mengompilasi, {k.b('Simpan')} membuat versi, {k.b('Deploy')} menjadikannya online. Di draf,{' '}
+          {k.b('Simpan')} menyimpannya di draf dan menampilkannya di alamat draf itu. {k.code('Ctrl-S')} menyimpan;{' '}
+          {k.code('F12')} membuka deklarasi.
         </>
       ),
     ],
     ['Pengujian', () => <>Bagaimana aplikasi diuji secara otomatis, dengan script dan data uji untuk itu. Hanya di tampilan lengkap.</>],
-    ['Build', () => <>Bahan pembuat kode atau aset di tempat alat build membuatnya, disimpan bersama setiap versi, untuk dibaca dan bukan diedit. Di tampilan lengkap, begitu sebuah versi menyimpannya.</>],
   ],
   sections: (k) => (
     <>
       Setiap bagian bekerja dengan cara yang sama: judulnya, tombol {k.b('ⓘ')} yang menjelaskannya, aksinya di kanan,
-      dan (kalau punya lebih dari satu tampilan) deretan tab di bawahnya. Tab di bagian kode adalah file-filenya.
-      Tampilan lengkap mengelompokkan bagian-bagiannya: cara orang menemukannya, tempat perubahan dibuat, program dan
-      datanya, dan cara berjalannya.
+      dan (kalau punya lebih dari satu tampilan) deretan tab di bawahnya. Tampilan lengkap mengelompokkan bagian-bagiannya:
+      cara orang menemukannya, tempat perubahan dibuat, versi dan datanya, dan cara berjalannya.
     </>
   ),
   editorAside:
@@ -166,17 +165,17 @@ export const guide: Messages['guide'] = {
     </>
   ),
   writtenFiles: [
-    ['.lambda/docs/product.md', 'apa aplikasinya, untuk siapa, apa yang dilakukan orang dengannya, dan mengapa'],
-    ['.lambda/docs/decisions.md', 'keputusan teknis, dan alasan keputusan itu diambil'],
-    ['.lambda/tests/README.md', 'bagaimana aplikasi diuji secara otomatis, dan cara menjalankan pengujiannya'],
-    ['.lambda/tests/…', 'script dan data uji yang dipakai pengujian'],
+    ['docs/product.md', 'apa aplikasinya, untuk siapa, apa yang dilakukan orang dengannya, dan mengapa'],
+    ['docs/decisions.md', 'keputusan teknis, dan alasan keputusan itu diambil'],
+    ['tests/README.md', 'bagaimana aplikasi diuji secara otomatis, dan cara menjalankan pengujiannya'],
+    ['tests/…', 'script dan data uji yang dipakai pengujian'],
   ],
   written2: (k) => (
     <>
-      Keduanya adalah file versi seperti file lainnya, di folder {k.code('.lambda')}: riwayat menunjukkan apa yang
-      diubah sebuah versi di dalamnya, rollback mengembalikan dokumentasi yang berlaku untuk versi itu, dan draf punya
-      salinannya sendiri yang ikut online bersamanya. Keduanya tidak pernah dikompilasi dan tidak pernah disajikan, dan
-      dihitung dalam batas ukuran aset sebuah versi.
+      Keduanya adalah file kode versi seperti file lainnya, di folder {k.code('docs')} dan {k.code('tests')}: riwayat
+      menunjukkan apa yang diubah sebuah versi di dalamnya, rollback mengembalikan dokumentasi yang berlaku untuk versi
+      itu, dan draf punya salinannya sendiri yang ikut online bersamanya. Keduanya tidak pernah dikompilasi dan tidak
+      pernah disajikan, dan dihitung dalam batas ukuran sebuah versi.
     </>
   ),
   written3: (k) => (
@@ -200,8 +199,8 @@ export const guide: Messages['guide'] = {
   featureSteps: [
     (k) => (
       <>
-        Mulai dari versi mana pun di {k.b('Versi')}, atau biarkan agen memulainya. Draf adalah salinan kode, aset,
-        dokumentasi, dan pengujian versi itu, serta salinan data lambda.
+        Mulai dari versi mana pun di {k.b('Versi')}, atau biarkan agen memulainya. Draf adalah salinan kode dan sumber
+        daya versi itu, termasuk dokumentasi dan pengujiannya, serta salinan data lambda.
       </>
     ),
     (k) => (
@@ -231,34 +230,47 @@ export const guide: Messages['guide'] = {
 
   files: (k) => (
     <>
-      Tipe tidak harus berada di bawah kode yang memakainya. Di {k.b('Kode')}, tekan {k.b('+')} di samping daftar file,
-      dan file baru itu dikompilasi bersama snippet, di namespace yang sama, jadi tidak perlu import apa pun untuk
-      mengaksesnya. Nama tanpa ekstensi dianggap C#.
+      Sebuah versi terdiri dari file dalam jumlah berapa pun, dalam dua bagian. {k.b('Kode')}-nya adalah setiap file
+      kecuali sumber dayanya: file {k.code('.cs')} di bagian atas dikompilasi, dan setiap file lain - di folder mana
+      pun, jenis apa pun - disimpan bersama versi dan tidak pernah dikompilasi atau disajikan: dokumentasinya,
+      pengujiannya, bahan pembuat front end. {k.b('Sumber daya')}-nya, di {k.code('resources/')}, adalah apa yang
+      dibaca dan disajikannya selama berjalan - halaman, script, stylesheet, gambar, migrasi database - dan dijangkau
+      dari kode sebagai {k.code('Resources')}.
     </>
   ),
+  files2: (k) => (
+    <>
+      Tipe tidak harus berada di bawah kode yang memakainya. Di {k.b('Kode')}, tekan {k.b('+')} di samping kode, lalu
+      ketik sebuah nama: file {k.code('.cs')} di bagian atas dikompilasi bersama snippet, di namespace yang sama, jadi
+      tidak perlu import apa pun untuk mengaksesnya. Nama tanpa ekstensi dan tanpa folder dianggap C#.
+    </>
+  ),
+  filesAside:
+    'Bagaimana sisa kode ditata terserah penulisnya - satu folder untuk sumber front end, satu lagi untuk script. Kode dan sumber daya sebuah versi berbagi satu jatah ruang, yang ditampilkan di ringkasan.',
 
   page: 'Ada dua cara untuk menyajikan halaman, dan satu cara lagi untuk file yang diunggah orang di sampingnya.',
   inlineTitle: 'Satu halaman, ditulis inline',
   inline: 'Cocok untuk yang kecil. Halamannya jadi bagian dari snippet.',
   folderTitle: 'Folder berisi file sungguhan',
   folder:
-    'Pilihan tepat untuk apa pun yang punya stylesheet dan script. File ditambahkan dengan cara yang sama seperti file C#, dan disajikan persis seperti yang ditulis. Tidak ada yang mengompilasinya.',
+    'Pilihan tepat untuk apa pun yang punya stylesheet dan script. File-nya adalah sumber daya versi, dan disajikan persis seperti yang ditulis. Tidak ada yang mengompilasinya.',
   workspaceTitle: 'File unggahan, dari data',
   workspace:
-    'Untuk apa yang diunggah orang atau dibuat lambda (gambar, dokumen), disajikan di samping aplikasinya. Bukan untuk halaman aplikasinya sendiri: halaman itu tempatnya di folder file, di mana halaman ikut masuk versi bersama kode yang membutuhkannya.',
+    'Untuk apa yang diunggah orang atau dibuat lambda (gambar, dokumen), disajikan di samping aplikasinya. Bukan untuk halaman aplikasinya sendiri: halaman itu tempatnya di sumber daya, di mana halaman ikut masuk versi bersama kode yang membutuhkannya.',
 
   spa: (k) => (
     <>
-      Cara kedua, secara lengkap. Setiap demo menyajikan halamannya dengan cara ini, dari folder bernama{' '}
-      {k.code('web')}. Buka {k.link('/editor/demo-crud', 'demo-crud')} untuk melihat contohnya. Demo hanya bisa dibaca;
+      Cara kedua, secara lengkap. Setiap demo menyajikan halamannya dengan cara ini, dari {k.code('resources/web')}.
+      Buka {k.link('/editor/demo-crud', 'demo-crud')} untuk melihat contohnya. Demo hanya bisa dibaca;
       kunci editornya adalah namanya sendiri.
     </>
   ),
   spaSteps: [
     (k) => (
       <>
-        Di {k.b('Kode')}, tekan {k.b('+')} di samping daftar file, lalu ketik {k.code('site/index.html')}. Nama dengan
-        garis miring menaruh file di dalam folder. Nama dengan ekstensi dianggap sebagai jenis file sesuai ekstensinya.
+        Di {k.b('Kode')}, tekan {k.b('+')} di samping sumber daya, lalu ketik {k.code('site/index.html')}: file itu
+        menjadi {k.code('resources/site/index.html')}. Nama dengan garis miring menaruh file di dalam folder. Nama dengan
+        ekstensi dianggap sebagai jenis file sesuai ekstensinya.
       </>
     ),
     (k) => (
@@ -271,7 +283,7 @@ export const guide: Messages['guide'] = {
     (k) => (
       <>
         Untuk apa pun yang bukan teks, seperti gambar atau font, buka sebuah file di {k.code('site')}, lalu tekan tombol
-        unggah di samping daftar file. File itu akan masuk ke folder yang sama. PNG tidak bisa diketik di editor teks,
+        unggah di samping sumber daya. File itu akan masuk ke folder yang sama. PNG tidak bisa diketik di editor teks,
         jadi pakai tombol itu.
       </>
     ),
@@ -288,37 +300,36 @@ export const guide: Messages['guide'] = {
   built: (k) => (
     <>
       Sebagian lambda mungkin dibuat oleh alat build, bukan ditulis apa adanya untuk disajikan atau dikompilasi:
-      dikompilasi, digabungkan, atau dihasilkan. Versi menyimpan hasil buatan alat itu - sebagai asetnya, atau sebagai
-      kodenya - dan di sampingnya file bahan pembuatnya, yaitu {k.b('folder build')}-nya:{' '}
-      {k.code('.lambda/build/')} di versi, {k.code('build/')} di sebuah kloning, berisi apa pun yang menjadi bahan kerja
-      alat itu. Agen Anda mengubah file-file tersebut, menjalankan build di tempatnya bekerja, dan menyimpan keduanya di
-      versi yang sama. Platform ini tidak membangun apa pun.
+      dikompilasi, digabungkan, atau dihasilkan. Versi menyimpan hasil buatan alat itu - sebagai sumber dayanya, atau
+      sebagai kodenya - dan file bahan pembuatnya adalah bagian dari kodenya, di folder tersendiri: misalnya{' '}
+      {k.code('frontend/')}, dengan README yang menjelaskan cara membangunnya. Agen Anda mengubah file-file tersebut,
+      menjalankan build di tempatnya bekerja, dan menyimpan keduanya di versi yang sama. Platform ini tidak membangun
+      apa pun.
     </>
   ),
   built2: (k) => (
     <>
-      Seperti dokumentasi, ia milik versinya: dibandingkan di riwayat, dikembalikan, disalin ke draf, dikloning,
-      diunduh, dan dipublikasikan bersama kode - dan tidak pernah dikompilasi atau disajikan. Di pusat kontrol,{' '}
-      {k.b('Build')} menampilkannya begitu sebuah versi menyimpannya: cara membangunnya, seperti yang dijelaskan
-      README-nya, file-filenya, dan apakah sebuah versi mengubahnya tanpa mengubah apa pun yang dibangun darinya. Di sana
-      ia dibaca, bukan diedit - perubahannya dilakukan di tempat ia dibangun.
+      Seperti dokumentasi, semuanya milik versinya: dibandingkan di riwayat, dikembalikan, disalin ke draf, dikloning,
+      diunduh, dan dipublikasikan bersama kode lainnya - dan tidak pernah dikompilasi atau disajikan. Di pusat kontrol,
+      semuanya ada di {k.b('Kode')}, bersama setiap file lain dari versi itu.
     </>
   ),
   builtAside:
-    'Yang ditulis apa adanya untuk disajikan atau dikompilasi tidak membutuhkannya. Apa yang dipasang atau disimpan sebuah build untuk dirinya sendiri - node_modules, misalnya - tidak pernah menjadi bagian dari versi: sebuah .gitignore di folder build menjauhkannya.',
+    'Yang ditulis apa adanya untuk disajikan atau dikompilasi tidak membutuhkannya. Apa yang dipasang atau disimpan sebuah build untuk dirinya sendiri - node_modules, misalnya - tidak pernah menjadi bagian dari versi: sebuah .gitignore di foldernya menjauhkannya.',
 
   storage: (k) => (
     <>
-      Lambda menyimpan file di dua tempat, dan editor menampilkannya terpisah: {k.b('File')} berisi file dari sebuah
+      Lambda menyimpan file di dua tempat, dan editor menampilkannya terpisah: {k.b('Kode')} berisi file dari sebuah
       versi (programnya), dan {k.b('Data')} berisi workspace (apa yang disimpan program itu). Bedanya ada di{' '}
       {k.em('milik siapa')}. File dari sebuah versi milik versi itu; data milik lambda, dan dipakai bersama oleh semua
-      versi.
+      versi. Masing-masing punya satu jatah ruang: kode dan sumber daya sebuah versi berbagi satu, dan database serta
+      workspace lambda berbagi yang lain.
     </>
   ),
   savedWithCode: 'Di sebuah versi',
   workspaceColumn: 'Di data',
   table: [
-    ['isinya', 'kode dan aset: programnya, termasuk front end - beserta dokumentasi, pengujian, dan bahan pembuatnya', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
+    ['isinya', 'kode dan sumber daya: programnya, termasuk front end - beserta dokumentasi, pengujian, dan apa pun bahan pembuatnya', 'apa pun yang ditulis lambda, atau diunggah seseorang'],
     ['kapan berubah', 'tidak pernah: perubahan menjadi versi baru', 'begitu ada yang ditulis ke dalamnya'],
     ['saat deploy', 'file inilah yang persis dibuat online', 'tidak pernah disentuh'],
     ['rollback', 'file lama kembali', 'tidak berpengaruh: semua versi memakainya bersama'],
@@ -339,7 +350,7 @@ export const guide: Messages['guide'] = {
   ),
   database2: (k) => (
     <>
-      Tabelnya dibuat oleh {k.b('migrasi')}: file SQL yang dibawa versi di {k.code('migrations/')}, diterapkan
+      Tabelnya dibuat oleh {k.b('migrasi')}: file SQL yang dibawa versi di {k.code('resources/migrations/')}, diterapkan
       berurutan oleh {k.link('https://evolve-db.netlify.app/', 'Evolve')} saat lambda dimulai – masing-masing sekali
       saja, jadi versi baru hanya menjalankan yang baru. Jangan pernah mengubah migrasi yang sudah diterapkan; perubahan
       pada tabel dibuat sebagai file berikutnya.
@@ -436,12 +447,11 @@ export const guide: Messages['guide'] = {
   away2: (k) => (
     <>
       Snippet Anda menjadi {k.code('Project.cs')}, dan {k.code('Program.cs')} menyajikan apa yang dikembalikannya. File
-      Anda yang lain ikut persis seperti yang Anda tulis. {k.code('Workspace')} dan {k.code('Assets')} menjadi dua folder
-      di samping program, dengan method yang sama, terpisah di folder {k.code('Platform')}, jadi tidak ada yang perlu
-      diubah di kode Anda.
+      Anda yang lain ikut persis seperti yang Anda tulis, di tempatnya semula: sumber daya di {k.code('resources')},
+      dokumentasi di {k.code('docs')}, pengujian di {k.code('tests')}. {k.code('Workspace')} dan{' '}
+      {k.code('Resources')} menjadi dua folder di samping program, dengan method yang sama, terpisah di folder{' '}
+      {k.code('Platform')}, jadi tidak ada yang perlu diubah di kode Anda.
       {' '}{k.code('Secret')} di sana membaca variabel lingkungan dengan nama yang sama; nilainya tetap di sini.
-      Dokumentasi dan pengujian ikut serta di {k.code('docs')} dan {k.code('tests')}, dan folder build di{' '}
-      {k.code('build')}.
       {' '}{k.code('Database')} membuka {k.code('database/database.db')}, yang ikut terunduh bersama catatan yang
       disimpan aplikasi Anda.
     </>
@@ -483,11 +493,11 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Setiap versi dipublikasikan, termasuk yang lebih lama, beserta dokumentasi, pengujian, folder build, dan
-      perubahan yang dibuat masing-masing. Apa yang disimpan aplikasi tidak pernah dipublikasikan - catatannya, file yang
-      disimpannya, nilai kunci dan kata sandinya - begitu pula apa yang Anda minta dengan kata-kata Anda sendiri, atau
-      siapa yang memakai aplikasinya. Nonaktifkan, dan halamannya hilang; bintangnya tetap disimpan untuk saat Anda
-      memublikasikannya lagi.
+      Setiap versi dipublikasikan, termasuk yang lebih lama, beserta seluruh kodenya - dokumentasi dan pengujiannya
+      termasuk di dalamnya - dan perubahan yang dibuat masing-masing. Apa yang disimpan aplikasi tidak pernah
+      dipublikasikan - catatannya, file yang disimpannya, nilai kunci dan kata sandinya - begitu pula apa yang Anda minta
+      dengan kata-kata Anda sendiri, atau siapa yang memakai aplikasinya. Nonaktifkan, dan halamannya hilang; bintangnya
+      tetap disimpan untuk saat Anda memublikasikannya lagi.
     </>
   ),
   openAside:

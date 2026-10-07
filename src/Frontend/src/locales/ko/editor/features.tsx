@@ -111,7 +111,6 @@ export const features: EditorMessages['features'] = {
     overview: '초안',
     docs: '문서',
     code: '코드',
-    build: '빌드',
     tests: '테스트',
     data: '테스트 데이터',
     logs: '로그',

@@ -1,43 +1,11 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const files: EditorMessages['files'] = {
-  hint: (b) => (
-    <>
-      Os arquivos de uma versão: o programa. O {b('Código')} é compilado e nunca servido. Os {b('Assets')} (páginas,
-      scripts, estilos, imagens) são salvos com o código, vão junto com ele em cada deploy e em cada reversão, e ficam
-      públicos se o código os servir. O que a lambda guarda enquanto roda não fica aqui: são os {b('Dados')} dela.
-    </>
-  ),
-  scope: (version, data) => (
-    <>
-      Estes arquivos pertencem à versão {version} e mudam com ela. O que a lambda guarda enquanto roda é o mesmo em
-      todas as versões e fica em {data('Dados')}.
-    </>
-  ),
-  edit: 'Editar esta versão',
   version: 'Versão',
   shown: (version, online, newest) => `Versão ${version}${online ? ', no ar' : newest ? ', mais recente' : ''}`,
   optionOnline: ' (no ar)',
-  readFailed: 'Não foi possível ler essa versão.',
-  noVersion: 'Ainda não há versão para mostrar.',
-  label: 'Arquivos',
-  code: 'Código',
-  codeWhy: 'Compilado na lambda, nunca servido.',
   count: (files) => (files === 1 ? '1 arquivo' : `${files} arquivos`),
-  codeUsage: (files, used, of) => `${files}, ${used} de ${of} caracteres`,
   usage: (files, used, of) => `${files}, ${used} de ${of}`,
-  noCode: 'Nenhum código nesta versão.',
-  assets: 'Assets',
-  assetsPublic: 'Públicos: esta versão serve esses arquivos com Assets.',
-  assetsPrivate: 'Salvos com o código, mas esta versão não os serve.',
-  noAssets: 'Nenhum nesta versão.',
-  context: 'Documentação e testes',
-  contextWhy: 'Nunca compilados e nunca servidos: o que está escrito sobre esta versão, para quem a lê ou muda.',
-  contextUsage: (files, size) => `${files}, ${size} - contados junto com os assets`,
-  noContext: 'Ainda não há nada escrito sobre esta versão.',
-  build: 'Build',
-  buildWhy: 'Nunca compilado nem servido: aquilo a partir do qual o código ou os assets são construídos, por quem os altera.',
-  data: 'Dados',
   dataPublic: 'Públicos: o código no ar serve os dados com Workspace.',
   dataPrivate: 'Privados: só a lambda acessa. Não fazem parte de nenhuma versão.',
   uploadFailed: (path) => `Não foi possível enviar ${path}.`,

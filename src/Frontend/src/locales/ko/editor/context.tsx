@@ -12,7 +12,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         에이전트는 수정하면서 문서도 작성해요. 앱이 무엇이고, 누구를 위한 것이며, 왜 있는지는{' '}
-        {code('.lambda/docs/product.md')}에, 왜 이렇게 만들어졌는지는 {code('decisions.md')}에 적어요. 문서는 버전의
+        {code('docs/product.md')}에, 왜 이렇게 만들어졌는지는 {code('decisions.md')}에 적어요. 문서는 버전의
         일부로, 코드 옆에 있어요.
       </>
     ),
@@ -41,7 +41,7 @@ export const context: EditorMessages['context'] = {
     emptyText: (code) => (
       <>
         앱을 테스트하는 방법(계속 동작해야 하는 것, 그걸 확인하는 방법, 이를 위한 스크립트 실행 방법)은 에이전트가{' '}
-        {code('.lambda/tests/README.md')}에 적고, 스크립트와 테스트 데이터는 그 옆에 둬요.
+        {code('tests/README.md')}에 적고, 스크립트와 테스트 데이터는 그 옆에 둬요.
       </>
     ),
     ask: '에이전트에게 테스트 작성 요청하기',

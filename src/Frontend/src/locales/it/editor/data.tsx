@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const data: EditorMessages['data'] = {
   hint:
-    'I dati sono quello che la lambda conserva mentre gira. Appartengono alla lambda, non a una versione: tutte le versioni leggono e scrivono gli stessi dati, e niente di quello che fai con le versioni li cambia. Una bozza si prova su una loro copia. Spariscono quando elimini la lambda o quando disattivi quel tipo di dati.',
+    'I dati sono quello che la lambda conserva mentre gira. Appartengono alla lambda, non a una versione: tutte le versioni leggono e scrivono gli stessi dati, e niente di quello che fai con le versioni li cambia. Una bozza si prova su una loro copia. Spariscono quando elimini la lambda o quando disattivi quel tipo di dati. Il database e il workspace condividono un unico spazio a disposizione, quindi ciascuno può crescere fin dove l’altro glielo lascia.',
   facts: [
     ['Condivisi da tutte le versioni', 'Qualunque versione sia online legge e scrive gli stessi dati.'],
     ['Restano a ogni deploy', 'Deploy, ripristino o integrazione di una bozza non li toccano mai.'],

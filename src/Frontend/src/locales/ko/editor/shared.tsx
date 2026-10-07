@@ -36,7 +36,7 @@ export const shared: EditorMessages['shared'] = {
   offline: '오프라인',
   offlineTitle: '오프라인: 제공 중인 것이 없어요',
   premium:
-    '프리미엄: 전용 도메인을 쓸 수 있고, 코드·에셋·데이터 공간이 더 넉넉하고, 방문이 뜸해도 계속 온라인이에요',
+    '프리미엄: 전용 도메인을 쓸 수 있고, 코드·리소스·데이터 공간이 더 넉넉하고, 방문이 뜸해도 계속 온라인이에요',
   demo: '데모: 이 서버가 온라인으로 유지하는 읽기 전용 람다',
   tier: (tier) => `${tier} 플랜`,
   entrances: {

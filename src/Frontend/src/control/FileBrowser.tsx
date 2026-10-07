@@ -12,7 +12,7 @@ import { Ago, pill } from './ui';
 
 /**
  * The parts the two places files live are browsed with: the files of a
- * version under Files, and the workspace under Data. Built once so that the
+ * version under Code, and the workspace under Data. Built once so that the
  * two look and behave alike, which is what makes the difference between them
  * - one belongs to a version, the other to the lambda - the only thing to
  * notice.
@@ -56,8 +56,8 @@ export function workspaceOf(control: Control): WorkspaceAccess {
   };
 }
 
-/** Where a selected file lives: in the version, as code, an asset, its documentation and tests or its build folder, or in the data. */
-export type Group = 'code' | 'assets' | 'context' | 'build' | 'data';
+/** Where a selected file lives: in the version, as code or a resource, or in the data. */
+export type Group = 'code' | 'resources' | 'data';
 
 export interface Entry {
   path: string;
@@ -145,13 +145,16 @@ function grow(entries: Entry[], folders: string[] = []): Node[] {
   return root.children;
 }
 
-export function Tree({ entries, folders, selected, onSelect, empty, action }: {
+export function Tree({ entries, folders, selected, onSelect, empty, action, marked, markedLabel }: {
   entries: Entry[];
   folders?: string[];
   selected: string | null;
   onSelect: (path: string) => void;
   empty: string;
   action?: (node: { path: string; folder: boolean }) => ReactNode;
+  /** Files something is wrong with - what the compiler pointed at - marked so a mistake is seen before the file is opened. */
+  marked?: Set<string>;
+  markedLabel?: string;
 }) {
   const nodes = useMemo(() => grow(entries, folders), [entries, folders]);
   const [closed, setClosed] = useState<Set<string>>(new Set());
@@ -192,6 +195,7 @@ export function Tree({ entries, folders, selected, onSelect, empty, action }: {
               <span className="w-3 shrink-0" />
             )}
             <span className={`truncate ${node.folder ? '' : 'font-mono'}`}>{node.name}</span>
+            {!node.folder && marked?.has(node.path) && <span className="text-red-500" aria-label={markedLabel}>•</span>}
           </button>
           <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{bytes(node.size)}</span>
           {action && <span className="inline-flex shrink-0 opacity-0 focus-within:opacity-100 group-hover:opacity-100">{action(node)}</span>}

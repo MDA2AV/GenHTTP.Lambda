@@ -150,21 +150,19 @@ export const source = {
     legend: 'What is what',
     /** What each kind of file is, by where the project keeps it. */
     kinds: {
-      code: 'The lambda’s own code',
-      asset: 'What it serves: pages, scripts, styles, pictures - and its database migrations',
+      code: 'The lambda’s own code, and what else is kept with it',
+      resource: 'What it reads and serves: pages, scripts, styles, pictures - and its database migrations',
       docs: 'What it is, and why it is built this way',
       tests: 'How it is tested',
-      build: 'What its code or assets are built from with a build tool',
       platform: 'What stands in for the platform',
       project: 'The host, the build, the container and the license',
     },
     /** The same, in a word, beside the legend's dots. */
     short: {
       code: 'Code',
-      asset: 'Served',
+      resource: 'Resources',
       docs: 'Docs',
       tests: 'Tests',
-      build: 'Build',
       platform: 'Platform',
       project: 'Project',
     },

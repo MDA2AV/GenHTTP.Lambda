@@ -6,11 +6,8 @@ export const summary = {
   reading: 'Reading how it is doing…',
   readDocs: 'Read the documentation',
   written: 'Documentation and tests',
-  writtenWhy: 'Never compiled and never served. Kept with each version, and counted with the assets.',
+  writtenWhy: 'In docs/ and tests/ of the code: kept with each version, never compiled and never served.',
   writtenMissing: 'Not written yet',
-  build: 'Build',
-  buildWhy: 'Never compiled or served: what the code or the assets are built from. Counted with the assets.',
-  buildFiles: (files: number, size: string) => (files === 1 ? `1 file, ${size}` : `${files} files, ${size}`),
   hint: (since: string, kept: boolean, retention: number, tier: string) =>
     `Traffic is counted since the server last started (${since}). ` +
     (kept
@@ -52,12 +49,16 @@ export const summary = {
   inData: 'In the data',
   sharedByAll: 'Shared by every version',
   browse: 'Browse',
+  /** The meter of what a version may hold, which its code and its resources share. */
+  versionAllowance: 'Code and resources',
+  /** The meter of what the lambda may keep, which its database and its workspace share. */
+  dataAllowance: 'Database and workspace',
+  files: (files: number, size: string) => (files === 1 ? `1 file, ${size}` : `${files} files, ${size}`),
   code: 'Code',
-  codeWhy: 'C# is compiled, never served.',
-  characters: 'characters',
-  assets: 'Assets',
-  assetsPublic: 'Public: the code serves them.',
-  assetsPrivate: 'Not served by the code.',
+  codeWhy: 'Never served. The .cs files at the top are compiled; the rest - documentation, tests, what it is built from - is kept with the version.',
+  resources: 'Resources',
+  resourcesPublic: 'Public: the code serves them.',
+  resourcesPrivate: 'Not served by the code.',
   data: 'Data',
   workspace: 'Workspace',
   workspaceOff: 'switched off',
@@ -70,6 +71,6 @@ export const summary = {
   secretsMissingTitle: 'The code reads secrets that are not set, and fails where it does.',
   database: 'Database',
   databaseOff: 'switched off',
-  databaseTables: (count: number) => (count === 1 ? '1 table' : `${count} tables`),
+  databaseHolds: (tables: number, size: string) => (tables === 1 ? `1 table, ${size}` : `${tables} tables, ${size}`),
   databaseOffUsed: 'The code connects to the database, which is switched off.',
 };

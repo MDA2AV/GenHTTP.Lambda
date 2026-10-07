@@ -5,18 +5,18 @@ import { useEditorT } from '../i18n';
 import { languageFor, monaco } from '../monaco';
 import type { Theme } from '../theme';
 import { compare, type DiffLine, type FileDiff } from './diff';
-import { isBuild, isCode, isContext } from './written';
+import { isResource } from './written';
 
 /**
  * What a changed file is to the version, in the order a change is read: the
- * code, then what it is built from, then the assets - which may hold what a
- * build wrote, least worth reading first - and what is written about it last.
+ * code, then the resources - which may hold what a build wrote, least worth
+ * reading first.
  */
-const GROUPS = ['code', 'build', 'assets', 'context'] as const;
+const GROUPS = ['code', 'resources'] as const;
 
 type Kind = (typeof GROUPS)[number];
 
-const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isBuild(name) ? 'build' : isContext(name) ? 'context' : 'assets');
+const kindOf = (name: string): Kind => (isResource(name) ? 'resources' : 'code');
 
 /**
  * What changed between two sets of files: one row per file that differs,
@@ -24,11 +24,11 @@ const kindOf = (name: string): Kind => (isCode(name) ? 'code' : isBuild(name) ? 
  * usually the one to read. The versions show the difference to the version
  * before; a feature shows the difference to the version it is based on.
  *
- * Where what changed includes the build folder, the files are listed kind by
- * kind under a heading each: a change that touched what something is built
- * from and what was built reads as both, rather than as one list in which
- * the one is found among the other. Otherwise they stay in the order the
- * version has them.
+ * Where what changed includes both the code and the resources, the files are
+ * listed kind by kind under a heading each: a change that touched what a
+ * front end is built from and what was built reads as both, rather than as
+ * one list in which the one is found among the other. Otherwise they stay in
+ * the order the version has them.
  */
 export function ChangeList({ before, after, theme, empty, folded = false }: {
   before: LambdaFile[];
@@ -44,12 +44,10 @@ export function ChangeList({ before, after, theme, empty, folded = false }: {
   const changed = useMemo(() => {
     const differ = compare(before, after).filter((d) => d.status !== 'same');
 
-    return differ.some((d) => isBuild(d.name))
-      ? differ.sort((a, b) => GROUPS.indexOf(kindOf(a.name)) - GROUPS.indexOf(kindOf(b.name)))
-      : differ;
+    return differ.sort((a, b) => GROUPS.indexOf(kindOf(a.name)) - GROUPS.indexOf(kindOf(b.name)));
   }, [before, after]);
 
-  const grouped = changed.some((d) => isBuild(d.name)) && new Set(changed.map((d) => kindOf(d.name))).size > 1;
+  const grouped = new Set(changed.map((d) => kindOf(d.name))).size > 1;
 
   const first = folded ? null : changed[0]?.name ?? null;
   const [shown, setShown] = useState<string | null>(first);

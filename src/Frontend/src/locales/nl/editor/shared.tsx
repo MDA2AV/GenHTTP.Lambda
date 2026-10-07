@@ -36,7 +36,7 @@ export const shared: EditorMessages['shared'] = {
   offline: 'Offline',
   offlineTitle: 'Offline: er wordt niets geserveerd',
   premium:
-    'Premium: kan op een eigen domein draaien, heeft meer ruimte voor code, assets en data, en blijft online hoe stil het ook is',
+    'Premium: kan op een eigen domein draaien, heeft meer ruimte voor code, resources en data, en blijft online hoe stil het ook is',
   demo: 'Demo: door deze installatie online gehouden, alleen-lezen',
   tier: (tier) => `Pakket: ${tier}`,
   entrances: {

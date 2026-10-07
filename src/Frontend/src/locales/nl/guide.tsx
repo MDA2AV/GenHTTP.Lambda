@@ -13,11 +13,11 @@ export const guide: Messages['guide'] = {
     why: 'Uitleggen waarom',
     written: 'Documentatie en tests',
     features: 'Veilig aanpassen',
-    files: 'Meer dan één bestand',
+    files: 'Code en resources',
     page: 'Een pagina serveren',
     spa: 'Een frontend, stap voor stap',
     built: 'Waaruit het is gebouwd',
-    storage: 'De twee plekken voor bestanden',
+    storage: 'Een versie en zijn data',
     database: 'Records bewaren',
     keeping: 'Bestanden bewaren',
     secrets: 'Sleutels en wachtwoorden',
@@ -102,7 +102,6 @@ export const guide: Messages['guide'] = {
       ),
     ],
     ['Concepten', () => <>Wijzigingen die worden uitgeprobeerd voordat ze online gaan, elk op een eigen adres en met eigen testdata. Open je een concept, dan heeft het zijn eigen code, testdata en logs. Het onderdeel verschijnt zodra er een concept is.</>],
-    ['Bestanden', () => <>De bestanden van een versie: de code en assets, het programma zelf. Een slotje of een wereldbol laat zien of ze openbaar bereikbaar zijn.</>],
     ['Data', () => <>Wat de lambda bewaart terwijl hij draait, gedeeld door elke versie: de database, de workspace en de sleutels en wachtwoorden, elk met een eigen tabblad. Bekijk de tabellen en bestanden, upload bestanden, stel sleutels en wachtwoorden in of zet een soort aan of uit. De eenvoudige weergave toont het zodra de app iets bewaart.</>],
     ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug, en vanuit elke versie kun je een concept starten.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
@@ -112,21 +111,21 @@ export const guide: Messages['guide'] = {
       'Code',
       (k) => (
         <>
-          Zelf schrijven. {k.b('Controleren')} compileert, {k.b('Opslaan')} maakt een versie, {k.b('Deployen')} zet hem
-          online. In een concept bewaart {k.b('Opslaan')} de code in het concept en toont die op het adres van het
-          concept. {k.code('Ctrl-S')} slaat op; {k.code('F12')} springt naar een declaratie.
+          Elk bestand van een versie, de code en de resources, in een boom naast de editor – met hoeveel ruimte ze
+          innemen en of het publiek erbij kan. Kies erboven een oudere versie om die te lezen.{' '}
+          {k.b('Controleren')} compileert, {k.b('Opslaan')} maakt een versie, {k.b('Deployen')} zet hem online. In een
+          concept bewaart {k.b('Opslaan')} de code in het concept en toont die op het adres van het concept.{' '}
+          {k.code('Ctrl-S')} slaat op; {k.code('F12')} springt naar een declaratie.
         </>
       ),
     ],
     ['Tests', () => <>Hoe de app automatisch getest wordt, met de scripts en testdata daarvoor. Alleen in de volledige weergave.</>],
-    ['Build', () => <>Waaruit de code of de assets worden gebouwd waar een buildtool ze maakt, bij elke versie bewaard, om te lezen en niet om te bewerken. In de volledige weergave, zodra een versie het bewaart.</>],
   ],
   sections: (k) => (
     <>
       Elk onderdeel werkt hetzelfde: een titel, een {k.b('ⓘ')} met uitleg, acties rechts en, als er meer dan één
-      weergave is, een rij tabs eronder. Bij de code zijn de tabs de bestanden. De volledige weergave deelt de
-      onderdelen in groepen in: hoe mensen hem vinden, waar een wijziging gemaakt wordt, het programma en zijn data,
-      en hoe hij draait.
+      weergave is, een rij tabs eronder. De volledige weergave deelt de onderdelen in groepen in: hoe mensen hem
+      vinden, waar een wijziging gemaakt wordt, de versies en de data, en hoe hij draait.
     </>
   ),
   editorAside:
@@ -163,17 +162,17 @@ export const guide: Messages['guide'] = {
     </>
   ),
   writtenFiles: [
-    ['.lambda/docs/product.md', 'wat de app is, voor wie hij is, wat mensen ermee doen en waarom'],
-    ['.lambda/docs/decisions.md', 'de technische beslissingen, en waarom ze genomen zijn'],
-    ['.lambda/tests/README.md', 'hoe de app automatisch getest wordt, en hoe je de tests uitvoert'],
-    ['.lambda/tests/…', 'de scripts en testdata die de tests gebruiken'],
+    ['docs/product.md', 'wat de app is, voor wie hij is, wat mensen ermee doen en waarom'],
+    ['docs/decisions.md', 'de technische beslissingen, en waarom ze genomen zijn'],
+    ['tests/README.md', 'hoe de app automatisch getest wordt, en hoe je de tests uitvoert'],
+    ['tests/…', 'de scripts en testdata die de tests gebruiken'],
   ],
   written2: (k) => (
     <>
-      Het zijn bestanden van de versie zoals alle andere, in de map {k.code('.lambda')}: de geschiedenis laat zien
-      wat een versie erin veranderde, terugzetten haalt de documentatie terug die voor die versie gold, en een concept
-      heeft een eigen kopie die met het concept mee online gaat. Ze worden nooit gecompileerd en nooit geserveerd, en
-      tellen mee voor de ruimte die de assets van een versie mogen innemen.
+      Het zijn bestanden van de code van de versie zoals alle andere, in de mappen {k.code('docs')} en {k.code('tests')}:
+      de geschiedenis laat zien wat een versie erin veranderde, terugzetten haalt de documentatie terug die voor die
+      versie gold, en een concept heeft een eigen kopie die met het concept mee online gaat. Ze worden nooit
+      gecompileerd en nooit geserveerd, en tellen mee voor de ruimte die een versie mag innemen.
     </>
   ),
   written3: (k) => (
@@ -198,7 +197,8 @@ export const guide: Messages['guide'] = {
     (k) => (
       <>
         Start het vanuit een willekeurige versie onder {k.b('Versies')}, of laat de agent er een starten. Het is een
-        kopie van de code, assets, documentatie en tests van die versie, en van de data van de lambda.
+        kopie van de code en de resources van die versie, met de documentatie en tests erbij, en van de data van de
+        lambda.
       </>
     ),
     (k) => (
@@ -228,34 +228,47 @@ export const guide: Messages['guide'] = {
 
   files: (k) => (
     <>
-      Types hoeven niet onder de code te staan die ze gebruikt. Klik in {k.b('Code')} op {k.b('+')} naast de
-      bestanden. Het nieuwe bestand wordt naast de snippet gecompileerd, in dezelfde namespace, dus je hoeft niets te
-      importeren om erbij te kunnen. Een naam zonder extensie wordt als C# gezien.
+      Een versie bestaat uit een willekeurig aantal bestanden, in twee delen. De {k.b('code')} is elk bestand behalve de
+      resources: de {k.code('.cs')}-bestanden bovenaan worden gecompileerd, en elk ander bestand – in welke map dan ook,
+      van welk soort dan ook – wordt bij de versie bewaard en nooit gecompileerd of geserveerd: de documentatie, de
+      tests, waaruit een front end wordt gebouwd. De {k.b('resources')}, in {k.code('resources/')}, zijn wat de versie
+      leest en serveert terwijl hij draait – pagina’s, scripts, stijlen, afbeeldingen, de migraties van de database –
+      en zijn vanuit de code bereikbaar als {k.code('Resources')}.
     </>
   ),
+  files2: (k) => (
+    <>
+      Types hoeven niet onder de code te staan die ze gebruikt. Klik in {k.b('Code')} op {k.b('+')} naast de code en
+      typ een naam: een {k.code('.cs')}-bestand bovenaan wordt naast de snippet gecompileerd, in dezelfde namespace,
+      dus je hoeft niets te importeren om erbij te kunnen. Een naam zonder extensie en zonder map wordt als C# gezien.
+    </>
+  ),
+  filesAside:
+    'Hoe de rest van de code is ingedeeld, is aan wie hem schrijft – een map voor de bronnen van een front end, een voor scripts. De code en de resources van een versie delen één hoeveelheid ruimte, die het overzicht laat zien.',
 
   page: 'Er zijn twee manieren om een pagina te serveren, en nog een voor wat mensen ernaast uploaden.',
   inlineTitle: 'Eén pagina, inline geschreven',
   inline: 'Prima voor iets kleins. De pagina zit in de snippet zelf.',
   folderTitle: 'Een map met echte bestanden',
   folder:
-    'De juiste keuze voor alles met een stylesheet en een script. Je voegt de bestanden toe zoals een C#-bestand, en ze worden precies zo geserveerd als je ze schreef. Er wordt niets gecompileerd.',
+    'De juiste keuze voor alles met een stylesheet en een script. De bestanden zijn resources van de versie en worden precies zo geserveerd als je ze schreef. Er wordt niets gecompileerd.',
   workspaceTitle: 'Geüploade bestanden, uit de data',
   workspace:
-    "Voor wat mensen uploaden of wat de lambda aanmaakt, zoals foto's en documenten, geserveerd naast de app. Niet voor de pagina's van de app zelf: die horen in een map met bestanden, zodat ze in dezelfde versie zitten als de code die ze nodig heeft.",
+    'Voor wat mensen uploaden of wat de lambda aanmaakt, zoals foto’s en documenten, geserveerd naast de app. Niet voor de pagina’s van de app zelf: die horen in de resources, zodat ze in dezelfde versie zitten als de code die ze nodig heeft.',
 
   spa: (k) => (
     <>
-      De tweede manier, helemaal uitgewerkt. Elke demo serveert zijn pagina zo, vanuit een map die {k.code('web')}{' '}
-      heet. Open {k.link('/editor/demo-crud', 'demo-crud')} om er een te bekijken. Demo's zijn alleen-lezen; hun
+      De tweede manier, helemaal uitgewerkt. Elke demo serveert zijn pagina zo, vanuit {k.code('resources/web')}. Open{' '}
+      {k.link('/editor/demo-crud', 'demo-crud')} om er een te bekijken. Demo’s zijn alleen-lezen; hun
       editorsleutel is hun naam.
     </>
   ),
   spaSteps: [
     (k) => (
       <>
-        Klik in {k.b('Code')} op {k.b('+')} naast de bestanden en typ {k.code('site/index.html')}. Een slash in de naam
-        zet het bestand in een map; de extensie bepaalt wat voor bestand het is.
+        Klik in {k.b('Code')} op {k.b('+')} naast de resources en typ {k.code('site/index.html')}: het wordt{' '}
+        {k.code('resources/site/index.html')}. Een slash in de naam zet het bestand in een map; de extensie bepaalt wat
+        voor bestand het is.
       </>
     ),
     (k) => (
@@ -268,7 +281,7 @@ export const guide: Messages['guide'] = {
     (k) => (
       <>
         Voor alles wat geen tekst is, zoals een afbeelding of een font, open je een bestand in {k.code('site')} en klik
-        je op de uploadknop naast de bestanden: het komt in dezelfde map terecht. Een PNG kun je niet in een
+        je op de uploadknop naast de resources: het komt in dezelfde map terecht. Een PNG kun je niet in een
         teksteditor typen, dus zo krijg je hem erin.
       </>
     ),
@@ -285,37 +298,37 @@ export const guide: Messages['guide'] = {
   built: (k) => (
     <>
       Een deel van een lambda kan door een buildtool worden gemaakt in plaats van te worden geschreven zoals het wordt
-      geserveerd of gecompileerd: gecompileerd, gebundeld of gegenereerd. De versie bevat wat de tool maakt – als assets
-      of als code – en ernaast de bestanden waaruit de tool het maakt, de {k.b('buildmap')}:{' '}
-      {k.code('.lambda/build/')} in de versie, {k.code('build/')} in een kloon, met alles waarmee de tool werkt. Jouw
-      agent wijzigt die bestanden, draait de build op de plek waar hij werkt en slaat beide op in dezelfde versie. Dit
-      platform bouwt niets.
+      geserveerd of gecompileerd: gecompileerd, gebundeld of gegenereerd. De versie bevat wat de tool maakt – als
+      resources of als code – en de bestanden waaruit de tool het maakt, horen bij de code, in een eigen map:{' '}
+      {k.code('frontend/')} bijvoorbeeld, met een README die zegt hoe het wordt gebouwd. Jouw agent wijzigt die
+      bestanden, draait de build op de plek waar hij werkt en slaat beide op in dezelfde versie. Dit platform bouwt
+      niets.
     </>
   ),
   built2: (k) => (
     <>
-      Net als de documentatie hoort het bij zijn versie: het wordt vergeleken in de geschiedenis, teruggezet,
-      gekopieerd naar een concept, gekloond, gedownload en samen met de code gepubliceerd – en nooit gecompileerd of
-      geserveerd. In het dashboard toont {k.b('Build')} het zodra een versie het bewaart: hoe het wordt gebouwd, zoals
-      de README zegt, de bestanden, en of een versie ze heeft gewijzigd zonder iets te wijzigen wat ermee is gebouwd.
-      Het wordt daar gelezen, niet bewerkt – een wijziging maak je op de plek waar het wordt gebouwd.
+      Net als de documentatie horen ze bij de versie: ze worden vergeleken in de geschiedenis, teruggezet,
+      gekopieerd naar een concept, gekloond, gedownload en samen met de rest van de code gepubliceerd – en nooit
+      gecompileerd of geserveerd. In het dashboard staan ze in {k.b('Code')}, samen met elk ander bestand van de
+      versie.
     </>
   ),
   builtAside:
-    'Wat wordt geschreven zoals het wordt geserveerd of gecompileerd, heeft dat niet nodig. Wat een build installeert of voor zichzelf bewaart – node_modules bijvoorbeeld – hoort nooit bij een versie: een .gitignore in de buildmap houdt het erbuiten.',
+    'Wat wordt geschreven zoals het wordt geserveerd of gecompileerd, heeft dat niet nodig. Wat een build installeert of voor zichzelf bewaart – node_modules bijvoorbeeld – hoort nooit bij een versie: een .gitignore in de eigen map ervan houdt het erbuiten.',
 
   storage: (k) => (
     <>
-      Een lambda bewaart bestanden op twee plekken, en de editor toont ze apart: {k.b('Bestanden')} bevat de
+      Een lambda bewaart bestanden op twee plekken, en de editor toont ze apart: {k.b('Code')} bevat de
       bestanden van een versie (het programma), en {k.b('Data')} bevat de workspace (wat het programma bewaart). Het
       verschil zit in {k.em('van wie ze zijn')}. De bestanden van een versie horen bij die versie; de data hoort bij de
-      lambda, en elke versie deelt die.
+      lambda, en elke versie deelt die. Elk heeft één gedeelde hoeveelheid ruimte: de code en de resources van een versie delen er
+      één, en de database en de workspace van de lambda delen de andere.
     </>
   ),
   savedWithCode: 'In een versie',
   workspaceColumn: 'In de data',
   table: [
-    ['wat erin staat', 'de code en assets: het programma, frontend inbegrepen – en de documentatie, de tests en waaruit het is gebouwd', 'alles wat de lambda wegschrijft of iemand uploadt'],
+    ['wat erin staat', 'de code en de resources: het programma, frontend inbegrepen – en de documentatie, de tests en waaruit het ook is gebouwd', 'alles wat de lambda wegschrijft of iemand uploadt'],
     ['wanneer het verandert', 'nooit: een wijziging is een nieuwe versie', 'zodra er iets naar wordt geschreven'],
     ['een deploy', 'zet precies deze bestanden online', 'raakt het nooit aan'],
     ['terugzetten', 'haalt de oude bestanden terug', 'geen effect: elke versie deelt het'],
@@ -338,7 +351,7 @@ export const guide: Messages['guide'] = {
   database2: (k) => (
     <>
       De tabellen worden gemaakt door {k.b('migraties')}: SQL-bestanden die met de versie meekomen in{' '}
-      {k.code('migrations/')}, en die {k.link('https://evolve-db.netlify.app/', 'Evolve')} op volgorde toepast als de
+      {k.code('resources/migrations/')}, en die {k.link('https://evolve-db.netlify.app/', 'Evolve')} op volgorde toepast als de
       lambda start – elk één keer, dus een nieuwe versie voert alleen uit wat nieuw is. Verander nooit een migratie die
       al is toegepast; een wijziging aan een tabel is het volgende bestand.
     </>
@@ -434,12 +447,11 @@ export const guide: Messages['guide'] = {
   away2: (k) => (
     <>
       Je snippet wordt {k.code('Project.cs')}, en {k.code('Program.cs')} serveert wat hij teruggeeft. Je andere
-      bestanden komen precies mee zoals je ze schreef. {k.code('Workspace')} en {k.code('Assets')} worden twee mappen
-      naast het programma, met dezelfde methodes, apart in een map {k.code('Platform')} - dus er hoeft niets in je code
-      te veranderen.
-      {' '}{k.code('Secret')} leest daar omgevingsvariabelen met dezelfde naam; de waarden blijven hier. De
-      documentatie en de tests komen mee in {k.code('docs')} en {k.code('tests')}, en de buildmap in{' '}
-      {k.code('build')}.
+      bestanden komen precies mee zoals je ze schreef, op dezelfde plek – de resources in {k.code('resources')}, de
+      documentatie in {k.code('docs')}, de tests in {k.code('tests')}. {k.code('Workspace')} en{' '}
+      {k.code('Resources')} worden twee mappen naast het programma, met dezelfde methodes, apart in een map{' '}
+      {k.code('Platform')} - dus er hoeft niets in je code te veranderen.
+      {' '}{k.code('Secret')} leest daar omgevingsvariabelen met dezelfde naam; de waarden blijven hier.
       {' '}{k.code('Database')} opent {k.code('database/database.db')}, dat de download meelevert met de records die
       je app bewaarde.
     </>
@@ -481,7 +493,7 @@ export const guide: Messages['guide'] = {
   ),
   open2: () => (
     <>
-      Elke versie wordt gepubliceerd, ook de eerdere, met de documentatie, de tests, de buildmap en de
+      Elke versie wordt gepubliceerd, ook de eerdere, met al zijn code – de documentatie en de tests daarbij inbegrepen – en de
       wijziging die elke versie maakte. Wat de app bewaart, wordt nooit gepubliceerd – de records, de bestanden die hij
       opsloeg, de waarden van zijn sleutels en wachtwoorden – en ook niet wat je in je eigen woorden vroeg, of wie de
       app gebruikt. Zet je het uit, dan is de pagina weg; de sterren blijven bewaard voor als je de code opnieuw

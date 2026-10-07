@@ -1,6 +1,5 @@
 import { change } from './change';
 import { clone } from './clone';
-import { build } from './build';
 import { code } from './code';
 import { context } from './context';
 import { data } from './data';
@@ -44,7 +43,6 @@ export const editor = {
   openSource,
   domain,
   code,
-  build,
   clone,
   tabs,
 };

@@ -18,27 +18,36 @@ export const code: EditorMessages['code'] = {
   notOnline: 'La mise en ligne a échoué. Le compilateur explique pourquoi ci-dessous.',
   failed: 'Ça n’a pas marché.',
   unchanged: 'Rien n’a changé depuis le dernier enregistrement.',
-  demo: 'C’est une démo : tout est en lecture seule. Pour la modifier, créez votre propre lambda à partir de celle-ci. ',
-  edit: 'Modifiez le code à la main. Enregistrer crée une nouvelle version sans toucher à ce qui est en ligne ; déployer la met en ligne. Pour essayer une modification d’abord, démarrez un brouillon. ',
-  editFeature:
-    'Le code de ce brouillon. Enregistrer le garde dans le brouillon : rien ne change pour les visiteurs de la lambda. Déployer le met en ligne à l’adresse du brouillon, pour l’essayer ; intégrer le brouillon en fait la prochaine version. ',
+  demo: 'C’est une démo : tout est en lecture seule. Pour la modifier, créez votre propre lambda à partir de celle-ci.',
+  hint: (b) => (
+    <>
+      Les fichiers d’une version. Son {b('code')} est le programme et tout ce qui est conservé avec lui : les fichiers
+      .cs à la racine sont compilés, et tous les autres fichiers (sa documentation, ses tests, ce à partir de quoi un
+      front end est construit) sont conservés avec la version, sans jamais être compilés ni servis. Ses{' '}
+      {b('ressources')} (pages, scripts, styles, images, migrations de la base de données) sont lues et servies pendant
+      qu’elle tourne, et sont publiques là où le code les sert. Enregistrer crée une nouvelle version sans toucher à ce
+      qui est en ligne ; pour essayer d’abord une modification, démarrez un brouillon. Ctrl-S enregistre, F12 va à une
+      déclaration.
+    </>
+  ),
+  hintFeature: (b) => (
+    <>
+      Les fichiers de ce brouillon : son {b('code')} (les fichiers .cs à la racine sont compilés, le reste est conservé
+      avec lui) et ses {b('ressources')}, lues et servies pendant qu’il tourne. Enregistrer les garde dans le
+      brouillon et les affiche à l’adresse du brouillon ; vos visiteurs n’en voient rien tant que vous ne mettez pas
+      le brouillon en ligne.
+    </>
+  ),
   inFeature: (name) => `dans « ${name} »`,
   changedElsewhere:
     'Le brouillon a été enregistré ailleurs depuis que vous l’avez ouvert, peut-être par l’agent. Chargez ce qui est enregistré avant d’enregistrer ici ; vos modifications ne seraient pas enregistrées par-dessus.',
   readAgain: 'Charger ce qui est enregistré',
-  files: (entry, cs, context) => (
-    <>
-      {entry} renvoie ce qui est servi, les autres fichiers {cs} contiennent des types, et tout autre fichier est servi
-      tel quel, sauf ce qui se trouve dans {context} : la documentation, les tests et ce à partir de quoi il est
-      construit, jamais compilés ni servis. Ctrl-S enregistre, F12 va à une déclaration.
-    </>
-  ),
-  newer: (version) => ` La version ${version} est plus récente que celle ouverte ici.`,
+  newer: (version) => `La version ${version} est plus récente que celle ouverte ici.`,
   check: 'Vérifier',
   save: 'Enregistrer',
   deploy: 'Déployer',
   deployPreviewTitle: 'Enregistrer, et mettre le brouillon en ligne à sa propre adresse pour l’essayer',
-  binary: (size) => `Ce n’est pas du texte : rien à modifier. Le fichier est servi tel quel et pèse ${size} ko.`,
+  binary: (size) => `Ce n’est pas du texte : il n’y a rien à modifier ici. Le fichier pèse ${size}.`,
   saveAndDeploy: 'Enregistrer et déployer',
   saveVersion: 'Enregistrer une nouvelle version',
   fromOlder: (version, newest) =>
@@ -53,4 +62,27 @@ export const code: EditorMessages['code'] = {
   what: 'Qu’est-ce que ça change ? Facultatif, affiché dans l’historique.',
   placeholder: 'Ajoute un formulaire de contact',
   goToDefinition: 'Atteindre la définition',
+  versionLabel: 'Version',
+  shown: (version, online, newest) =>
+    `Version ${version}${online ? ', en ligne' : newest ? ', la plus récente' : ''}`,
+  optionOnline: ' (en ligne)',
+  switchUnsaved: 'Ce que vous avez modifié ici n’est pas enregistré. Ouvrir quand même l’autre version ?',
+  noVersion: 'Il n’y a pas encore de version à afficher.',
+  label: 'Fichiers',
+  codeGroup: 'Code',
+  codeWhy: 'Jamais servi. Les fichiers .cs à la racine sont compilés ; le reste est conservé avec la version.',
+  resources: 'Ressources',
+  resourcesPublic: 'Publiques : cette version les sert avec Resources.',
+  resourcesPrivate: 'Livrées avec la version, mais cette version ne les sert pas.',
+  noResources: 'Aucune dans cette version.',
+  count: (files) => (files === 1 ? '1 fichier' : `${files} fichiers`),
+  groupUsage: (files, size) => `${files}, ${size}`,
+  usage: (used, of) => `Cette version occupe ${used} sur les ${of} qu’une version peut avoir, code et ressources ensemble.`,
+  scope: (data) => (
+    <>Ce que la lambda garde pendant qu’elle tourne est le même pour toutes les versions, et se trouve sous {data('Données')}.</>
+  ),
+  download: 'Télécharger',
+  newIn: (group) => `Nouveau fichier dans ${group}`,
+  uploadIn: (group) => `Importer dans ${group}`,
+  pick: 'Choisissez un fichier pour voir son contenu.',
 };

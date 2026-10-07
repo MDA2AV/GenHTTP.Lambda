@@ -2,7 +2,7 @@ import type { EditorMessages } from '../../en/editor';
 
 export const versions: EditorMessages['versions'] = {
   hint: (limit) =>
-    `Uma versão é o programa (o código e os assets) e nunca muda depois de salva, então qualquer uma delas pode ser comparada e colocada de volta no ar exatamente como era. Cada uma guarda o que foi pedido e o que mudou. Para mudar a lambda, comece um rascunho: ele vira a próxima versão quando estiver tudo certo. Quando passam de ${limit}, as mais antigas são removidas; a que está no ar, nunca.`,
+    `Uma versão é o programa (o código e os recursos) e nunca muda depois de salva, então qualquer uma delas pode ser comparada e colocada de volta no ar exatamente como era. Cada uma guarda o que foi pedido e o que mudou. Para mudar a lambda, comece um rascunho: ele vira a próxima versão quando estiver tudo certo. Quando passam de ${limit}, as mais antigas são removidas; a que está no ar, nunca.`,
   none: 'Nenhuma versão ainda.',
   noDescription: 'Sem descrição',
   online: 'no ar',
@@ -17,14 +17,10 @@ export const versions: EditorMessages['versions'] = {
   status: { added: 'adicionado', removed: 'removido', changed: 'alterado', same: 'igual' },
   groups: {
     code: 'Código',
-    assets: 'Assets',
-    build: 'Build',
-    context: 'Documentação e testes',
+    resources: 'Recursos',
   },
-  browse: 'Ver os arquivos',
+  files: 'Abrir os arquivos',
   docs: 'Ler a documentação',
-  build: 'Ver aquilo a partir do qual é construído',
-  edit: 'Editar a partir daqui',
   feature: 'Começar um rascunho a partir daqui',
   featureTitle:
     'Trabalhar numa mudança desta versão ao lado da lambda e mesclar na próxima versão quando estiver tudo certo',
