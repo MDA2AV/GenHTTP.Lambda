@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: 'Kod',
   version: (version) => `sürüm ${version}`,
   edited: ', düzenlendi',
-  online: ', yayında',
   loadFailed: 'Bu sürüm yüklenemedi.',
   compiles: 'Sorunsuz derleniyor.',
   notYet: 'Henüz derlenmiyor.',

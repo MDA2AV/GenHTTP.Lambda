@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: '코드',
   version: (version) => `버전 ${version}`,
   edited: ', 수정됨',
-  online: ', 온라인',
   loadFailed: '그 버전을 불러오지 못했어요.',
   compiles: '컴파일돼요.',
   notYet: '아직 컴파일되지 않아요.',

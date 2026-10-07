@@ -10,7 +10,6 @@ export const code = {
   title: 'Code',
   version: (version: number) => `version ${version}`,
   edited: ', edited',
-  online: ', online',
   loadFailed: 'That version could not be loaded.',
   compiles: 'It compiles.',
   notYet: 'It does not compile yet.',

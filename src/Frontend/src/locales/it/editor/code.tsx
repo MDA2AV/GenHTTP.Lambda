@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: 'Codice',
   version: (version) => `versione ${version}`,
   edited: ', modificata',
-  online: ', online',
   loadFailed: 'Impossibile caricare quella versione.',
   compiles: 'Compila.',
   notYet: 'Non compila ancora.',

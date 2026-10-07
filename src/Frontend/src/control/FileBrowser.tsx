@@ -98,8 +98,12 @@ interface Node {
   children: Node[];
 }
 
-/** Paths into a tree, folders first, each folder weighing what it holds. */
-function grow(entries: Entry[], folders: string[] = []): Node[] {
+/**
+ * Paths into a tree, folders first, each folder weighing what it holds - or,
+ * at the top of a version's code, its files first: the C# there is what is
+ * compiled, and the folders beside it only what is kept with it.
+ */
+function grow(entries: Entry[], folders: string[] = [], filesFirst = false): Node[] {
   const root: Node = { name: '', path: '', size: 0, folder: true, children: [] };
 
   const place = (path: string, size: number, folder: boolean) => {
@@ -129,11 +133,13 @@ function grow(entries: Entry[], folders: string[] = []): Node[] {
     if (node.folder) {
       node.size = node.children.reduce((total, child) => total + settle(child), 0);
 
+      const folderFirst = filesFirst && node === root ? 1 : -1;
+
       // folders first, then the snippet - it is where the program starts -
       // then everything else by name
       node.children.sort((a, b) =>
         a.folder !== b.folder
-          ? a.folder ? -1 : 1
+          ? a.folder ? folderFirst : -folderFirst
           : a.path === 'lambda.cs' ? -1 : b.path === 'lambda.cs' ? 1 : a.name.localeCompare(b.name));
     }
 
@@ -145,9 +151,11 @@ function grow(entries: Entry[], folders: string[] = []): Node[] {
   return root.children;
 }
 
-export function Tree({ entries, folders, selected, onSelect, empty, action, marked, markedLabel }: {
+export function Tree({ entries, folders, selected, onSelect, empty, action, marked, markedLabel, filesFirst = false }: {
   entries: Entry[];
   folders?: string[];
+  /** Whether the files at the top come before the folders, as the C# of a version's code does. */
+  filesFirst?: boolean;
   selected: string | null;
   onSelect: (path: string) => void;
   empty: string;
@@ -156,7 +164,7 @@ export function Tree({ entries, folders, selected, onSelect, empty, action, mark
   marked?: Set<string>;
   markedLabel?: string;
 }) {
-  const nodes = useMemo(() => grow(entries, folders), [entries, folders]);
+  const nodes = useMemo(() => grow(entries, folders, filesFirst), [entries, folders, filesFirst]);
   const [closed, setClosed] = useState<Set<string>>(new Set());
 
   if (nodes.length === 0) {

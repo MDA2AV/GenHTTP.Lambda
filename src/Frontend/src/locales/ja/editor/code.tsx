@@ -4,7 +4,6 @@ export const code: EditorMessages['code'] = {
   title: 'コード',
   version: (version) => `バージョン${version}`,
   edited: '（編集中）',
-  online: '（オンライン）',
   loadFailed: 'そのバージョンを読み込めませんでした。',
   compiles: 'コンパイルできます。',
   notYet: 'まだコンパイルできません。',

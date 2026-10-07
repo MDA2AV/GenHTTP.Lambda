@@ -368,9 +368,10 @@ export function CodeTab({ control, onDirty }: { control: Control; onDirty: (dirt
       title={
         <>
           {said.title}
+          {/* the version is the pill under the title; a draft has none, so it is named here */}
           <span className="ml-2 text-sm font-normal text-slate-500">
-            {feature ? said.inFeature(feature.name) : loaded != null ? said.version(loaded) : ''}
-            {dirty ? said.edited : !feature && online ? said.online : ''}
+            {feature ? said.inFeature(feature.name) : dirty && loaded != null ? said.version(loaded) : ''}
+            {dirty ? said.edited : ''}
           </span>
         </>
       }
@@ -452,7 +453,8 @@ export function CodeTab({ control, onDirty }: { control: Control; onDirty: (dirt
         <p className="mx-4 text-sm text-slate-500 md:mx-0">{said.noVersion}</p>
       ) : (
         <div className="mx-4 flex min-h-0 flex-1 flex-col gap-4 md:mx-0 lg:flex-row">
-          <nav aria-label={said.label} className="flex shrink-0 flex-col gap-5 lg:w-72 lg:overflow-y-auto">
+          {/* on a phone the files sit above the editor, so they scroll on their own rather than push it out of reach */}
+          <nav aria-label={said.label} className="flex max-h-96 shrink-0 flex-col gap-5 overflow-y-auto lg:max-h-none lg:w-72">
             <FileGroup
               group="code"
               title={said.codeGroup}
@@ -816,8 +818,10 @@ function FileGroup({ group, title, exposure, files, all, active, faulty, editabl
         empty={group === 'resources' ? words.noResources : words.count(0)}
         marked={marked}
         markedLabel={said.errors}
+        filesFirst={group === 'code'}
         action={editable
-          ? (node) => (prefix + node.path === ENTRY ? null : (
+          // the snippet stays, but keeps the room of the button the other files have, so the sizes line up
+          ? (node) => (prefix + node.path === ENTRY ? <span aria-hidden="true" className="inline-block h-4 w-4" /> : (
               <button
                 type="button"
                 onClick={() => remove(node.path, node.folder)}
