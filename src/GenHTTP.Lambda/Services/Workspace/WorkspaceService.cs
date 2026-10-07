@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
+using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Settings;
@@ -12,7 +13,12 @@ namespace GenHTTP.Lambda.Services.Workspace;
 /// Reads and writes the private directory of a lambda on behalf of its owner -
 /// or a feature's copy of it, which is held to the same quota.
 /// </summary>
-public sealed class WorkspaceService(IStorageService storage, IMetaService meta, ILimitsService tiers, ILogger<WorkspaceService> logger) : IWorkspaceService
+/// <remarks>
+/// The quota is the room of the lambda's data, which its database shares:
+/// what the database takes is not there for the workspace.
+/// </remarks>
+public sealed class WorkspaceService(IStorageService storage, IMetaService meta, ILimitsService tiers, IWorkspaceVault vault, IDatabaseVault databases,
+                                    ILogger<WorkspaceService> logger) : IWorkspaceService
 {
 
     /// <summary>
@@ -37,7 +43,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         // the directory it would have
         if (!limits.Enabled)
         {
-            return new WorkspaceListing([], [], 0, limits.Quota, false);
+            return new WorkspaceListing([], [], 0, Room(limits, lambdaId, featureId), false);
         }
 
         var root = Root(lambdaId, featureId);
@@ -68,7 +74,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
         folders.Sort(string.CompareOrdinal);
 
-        return new WorkspaceListing(files, folders, used, limits.Quota);
+        return new WorkspaceListing(files, folders, used, Room(limits, lambdaId, featureId));
     }
 
     public FileInfo? Find(long lambdaId, string path, long? featureId = null)
@@ -133,12 +139,12 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
         // what the rest of the workspace takes already - the file being
         // replaced is not counted, since it will not be there beside this one
-        var others = Used(root) - replaced + missing.Count * WorkspaceLimits.Block;
+        var others = WorkspaceVault.Measure(root) - replaced + missing.Count * WorkspaceLimits.Block;
 
         // never less than what is being replaced: a workspace is over its
         // quota once its lambda leaves the tier that filled it, and should
         // still be able to rewrite what it holds, only not to grow
-        var room = Math.Max(limits.Quota - others, replaced);
+        var room = Math.Max(Room(limits, lambdaId, featureId) - others, replaced);
 
         // written through a temporary file so a rejected upload cannot leave a
         // half written one behind in place of what was there - nor the folders
@@ -170,6 +176,8 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         }
         catch (Exception)
         {
+            vault.Changed(lambdaId, featureId);
+
             Delete(staging);
 
             foreach (var folder in missing.AsEnumerable().Reverse())
@@ -179,6 +187,8 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
             throw;
         }
+
+        vault.Changed(lambdaId, featureId);
 
         if (featureId != null)
         {
@@ -233,12 +243,14 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
          * exists to stop.
          */
         if (!Directory.Exists(resolved)
-         && Used(root) + (Missing(root, resolved).Count + 1) * WorkspaceLimits.Block > limits.Quota)
+         && WorkspaceVault.Measure(root) + (Missing(root, resolved).Count + 1) * WorkspaceLimits.Block > Room(limits, lambdaId, featureId))
         {
-            throw LambdaException.Invalid($"A workspace must not hold more than {limits.Quota} bytes.");
+            throw Full(limits);
         }
 
         Directory.CreateDirectory(resolved);
+
+        vault.Changed(lambdaId, featureId);
 
         if (featureId != null)
         {
@@ -255,6 +267,8 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         var resolved = Resolve(Root(lambdaId, featureId), path);
 
         Delete(resolved);
+
+        vault.Changed(lambdaId, featureId);
     }
 
     public void Clear(long lambdaId, long? featureId = null)
@@ -265,6 +279,8 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         {
             Delete(entry);
         }
+
+        vault.Changed(lambdaId, featureId);
 
         if (featureId != null)
         {
@@ -296,7 +312,7 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
 
             if (WorkspaceLimits.Footprint(total) > room)
             {
-                throw LambdaException.Invalid($"A workspace must not hold more than {limits.Quota} bytes.");
+                throw Full(limits);
             }
 
             await target.WriteAsync(buffer.AsMemory(0, read), cancellation);
@@ -305,26 +321,20 @@ public sealed class WorkspaceService(IStorageService storage, IMetaService meta,
         // an empty file still takes a block
         if (WorkspaceLimits.Footprint(total) > room)
         {
-            throw LambdaException.Invalid($"A workspace must not hold more than {limits.Quota} bytes.");
+            throw Full(limits);
         }
 
         return total;
     }
 
     /// <summary>
-    /// The room everything in the workspace takes, counted as the quota is.
+    /// The room the workspace may take: the room of the lambda's data, less
+    /// what its database takes of it.
     /// </summary>
-    private static long Used(string root)
-    {
-        var used = 0L;
+    private long Room(WorkspaceLimits limits, long lambdaId, long? featureId) => Math.Max(0, limits.Quota - databases.SizeOf(lambdaId, featureId));
 
-        foreach (var file in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
-        {
-            used += WorkspaceLimits.Footprint(Size(file));
-        }
-
-        return used + Directory.GetDirectories(root, "*", SearchOption.AllDirectories).LongLength * WorkspaceLimits.Block;
-    }
+    private static LambdaException Full(WorkspaceLimits limits)
+        => LambdaException.Invalid($"The data of a lambda - its workspace and its database together - must not take more than {limits.Quota} bytes.");
 
     /// <summary>
     /// The folders between the root and a path that are not there yet,

@@ -11,7 +11,7 @@ public sealed record DataKind(string Id, bool Default);
 /// The kinds of data there are.
 /// </summary>
 /// <remarks>
-/// A version is the program - its code and its assets - and is replaced by
+/// A version is the program - its code and its resources - and is replaced by
 /// the next one. Data is what the program keeps, and belongs to the lambda:
 /// every version reads and writes the same, and none of them brings back what
 /// it was. Each kind is switched on by the owner rather than assumed, because

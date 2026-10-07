@@ -15,18 +15,19 @@ using GenHTTP.Testing;
 namespace GenHTTP.Lambda.Tests.Lambdas;
 
 /// <summary>
-/// The build folder of a version: what its assets are built from, in
-/// .lambda/build/ - kept with the version wherever it goes, and never built,
-/// compiled or served by the platform.
+/// The code of a version: every file that is not a resource, in whatever
+/// folders - the C# at the top compiled, everything else kept with the
+/// version wherever it goes, and never built, compiled or served by the
+/// platform.
 /// </summary>
 [TestClass]
-public sealed class BuildFolderTests
+public sealed class CodeTests
 {
-    private const string Snippet = "return Layout.Create().Add(Assets.Files());";
+    private const string Snippet = "return Layout.Create().Add(Resources.Files());";
 
     private const string Package = """{ "name": "shop", "scripts": { "build": "vite build" }, "devDependencies": { "vite": "^5.4.0" } }""";
 
-    private const string Readme = "# How it is built\n\n`cd build/web && npm ci && npm run build` writes `assets/web/`.\n";
+    private const string Readme = "# How it is built\n\n`cd frontend && npm ci && npm run build` writes `resources/`.\n";
 
     /// <summary>
     /// A version with a front end built from a project, and the project beside it.
@@ -34,19 +35,19 @@ public sealed class BuildFolderTests
     private static readonly LambdaFile[] Built =
     [
         new(LambdaSource.EntryName, Snippet),
-        new("index.html", "<p>what the build wrote</p>"),
-        new(LambdaSource.BuildReadme, Readme),
-        new(".lambda/build/web/package.json", Package),
-        new(".lambda/build/web/.gitignore", "node_modules/\ndist/\n"),
-        new(".lambda/build/web/index.html", "<p>the page before it is built</p>"),
+        new("resources/index.html", "<p>what the build wrote</p>"),
+        new("frontend/README.md", Readme),
+        new("frontend/package.json", Package),
+        new("frontend/.gitignore", "node_modules/\ndist/\n"),
+        new("frontend/index.html", "<p>the page before it is built</p>"),
         // a tool of the project written in C#, and nothing that compiles
-        new(".lambda/build/web/Tool.cs", "this is no C# the lambda has")
+        new("frontend/Tool.cs", "this is no C# the lambda has")
     ];
 
     #region Kept with the version
 
     [TestMethod]
-    public async Task TheBuildFolderIsKeptWithTheVersionAndNeitherCompiledNorServed()
+    public async Task TheCodeIsKeptWithTheVersionAndOnlyItsCSharpAtTheTopIsCompiled()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -56,62 +57,43 @@ public sealed class BuildFolderTests
 
         var deployed = await fixture.DeployAsync(lambda.PrivateKey);
 
-        Assert.IsTrue(deployed.Success, "a C# file of the build folder is not compiled");
+        Assert.IsTrue(deployed.Success, "a C# file in a folder is not compiled");
 
-        Assert.AreEqual("<p>what the build wrote</p>", await fixture.CallAsync("/lambda/built/index.html"), "what the build wrote is served");
+        Assert.AreEqual("<p>what the build wrote</p>", await fixture.CallAsync("/lambda/built/index.html"), "a resource is served by its name below resources/");
 
-        using (var source = await fixture.GetAsync("/lambda/built/.lambda/build/web/index.html"))
+        foreach (var path in (string[]) ["/lambda/built/frontend/index.html", "/lambda/built/resources/index.html", "/lambda/built/lambda.cs"])
         {
-            Assert.AreEqual(HttpStatusCode.NotFound, source.StatusCode, "what it was built from is not");
+            using var code = await fixture.GetAsync(path);
+
+            Assert.AreEqual(HttpStatusCode.NotFound, code.StatusCode, $"{path}: the code is not served");
         }
 
-        // a change of the code alone keeps it, as it keeps the documentation
+        // a change of the snippet alone keeps the rest
         using (var changed = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/changes",
-                                                     new VersionChangeRequest(null, null, [new FileEdit(LambdaSource.EntryName, "Assets.Files()", "Assets.Files() ")])))
+                                                     new VersionChangeRequest(null, null, [new FileEdit(LambdaSource.EntryName, "Resources.Files()", "Resources.Files() ")])))
         {
             Assert.AreEqual(HttpStatusCode.Created, changed.StatusCode);
         }
 
         var kept = (await fixture.VersionAsync(lambda, 3)).Files;
 
-        Assert.AreEqual(Package, kept.Single(f => f.Name == ".lambda/build/web/package.json").Code);
-        Assert.AreEqual("node_modules/\ndist/\n", kept.Single(f => f.Name == ".lambda/build/web/.gitignore").Code, "dot files included");
+        Assert.AreEqual(Package, kept.Single(f => f.Name == "frontend/package.json").Code);
+        Assert.AreEqual("node_modules/\ndist/\n", kept.Single(f => f.Name == "frontend/.gitignore").Code, "dot files included");
 
         using var summary = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/summary");
 
         var read = await summary.GetContentAsync<LambdaSummaryResponse>();
 
-        Assert.AreEqual(1, read.Storage.CodeFiles, "nothing of it is counted as code");
-        Assert.AreEqual(1, read.Storage.Assets, "nor as an asset");
-        Assert.AreEqual(5, read.Build.Files, "the overview says how much of it there is");
-        Assert.AreEqual(5, read.Build.NewestFiles);
+        Assert.AreEqual(6, read.Storage.CodeFiles, "every file that is not a resource is code");
+        Assert.AreEqual(1, read.Storage.ResourceFiles);
 
-        using var alone = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/3?folder=.lambda/build/");
+        using var alone = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/3?folder=frontend/");
 
-        Assert.HasCount(5, (await alone.GetContentAsync<VersionContentResponse>()).Files, "it is read on its own");
+        Assert.HasCount(5, (await alone.GetContentAsync<VersionContentResponse>()).Files, "a folder is read on its own");
     }
 
     [TestMethod]
-    public async Task TheSummarySaysWhenOnlyTheNewestVersionHasOne()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync();
-
-        var lambda = await fixture.CreateLambdaAsync("ahead");
-
-        await fixture.DeployAsync(lambda.PrivateKey, Snippet);
-
-        await fixture.SaveAsync(lambda, "Builds the front end", Built);
-
-        using var summary = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/summary");
-
-        var build = (await summary.GetContentAsync<LambdaSummaryResponse>()).Build;
-
-        Assert.AreEqual(0, build.Files, "the version online has none");
-        Assert.AreEqual(5, build.NewestFiles, "the newest, not online yet, has one - which is what the editor shows its section for");
-    }
-
-    [TestMethod]
-    public async Task AFeatureCarriesItsBuildFolderIntoTheVersionItBecomes()
+    public async Task AFeatureCarriesItsFoldersIntoTheVersionItBecomes()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -121,10 +103,10 @@ public sealed class BuildFolderTests
 
         var feature = await fixture.CreateFeatureAsync(lambda, "Dark mode");
 
-        Assert.IsTrue((await fixture.FeatureAsync(lambda, feature.Key)).Files.Any(f => f.Name == ".lambda/build/web/package.json"), "a feature starts with it");
+        Assert.IsTrue((await fixture.FeatureAsync(lambda, feature.Key)).Files.Any(f => f.Name == "frontend/package.json"), "a feature starts with it");
 
         await fixture.PutFeatureAsync(lambda, feature.Key, "Adds a dark mode",
-            [.. Built.Where(f => f.Name != ".lambda/build/web/index.html"), new LambdaFile(".lambda/build/web/dark.css", "body { background: black }")]);
+            [.. Built.Where(f => f.Name != "frontend/index.html"), new LambdaFile("frontend/dark.css", "body { background: black }")]);
 
         using var merged = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/merge", new MergeFeatureRequest());
 
@@ -132,8 +114,8 @@ public sealed class BuildFolderTests
 
         var files = (await fixture.VersionAsync(lambda, 3)).Files.Select(f => f.Name).ToList();
 
-        CollectionAssert.Contains(files, ".lambda/build/web/dark.css");
-        CollectionAssert.DoesNotContain(files, ".lambda/build/web/index.html");
+        CollectionAssert.Contains(files, "frontend/dark.css");
+        CollectionAssert.DoesNotContain(files, "frontend/index.html");
     }
 
     #endregion
@@ -141,37 +123,49 @@ public sealed class BuildFolderTests
     #region Names and room
 
     [TestMethod]
-    public async Task TheBuildFolderTakesTheNamesABuildToolsFilesHave()
+    public async Task TheCodeTakesTheNamesAToolsFilesHave()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        // what routers read off file names, and the dot files of a project
+        // what routers read off file names, the dot files of a project, and a README at the top
         await fixture.SaveAsync(lambda, "Has a project",
             new LambdaFile(LambdaSource.EntryName, Snippet),
-            new LambdaFile(".lambda/build/web/src/routes/[id]/+page.svelte", "<h1>{id}</h1>"),
-            new LambdaFile(".lambda/build/web/src/(auth)/login.tsx", "export {}"),
-            new LambdaFile(".lambda/build/web/src/routes/$slug.{lang}.tsx", "export {}"),
-            new LambdaFile(".lambda/build/web/src/console.ts", "export {}"),
-            new LambdaFile(".lambda/build/web/.npmrc", "engine-strict=true"),
-            new LambdaFile(".lambda/build/.editorconfig", "root = true"),
-            new LambdaFile(".lambda/build/web/public/logo.png", Convert.ToBase64String([137, 80, 78, 71]), "base64"));
+            new LambdaFile("README.md", "# The lambda"),
+            new LambdaFile(".editorconfig", "root = true"),
+            new LambdaFile("frontend/src/routes/[id]/+page.svelte", "<h1>{id}</h1>"),
+            new LambdaFile("frontend/src/(auth)/login.tsx", "export {}"),
+            new LambdaFile("frontend/src/routes/$slug.{lang}.tsx", "export {}"),
+            new LambdaFile("frontend/src/console.ts", "export {}"),
+            new LambdaFile("frontend/.npmrc", "engine-strict=true"),
+            new LambdaFile("frontend/public/logo.png", Convert.ToBase64String([137, 80, 78, 71]), "base64"),
+            new LambdaFile("tools/bin/run.sh", "echo"));
 
         foreach (var name in (string[])
                  [
-                     ".lambda/build/web/.git/config",
-                     ".lambda/build/web/.GIT/config",     // what a clone refuses in any case
-                     ".lambda/build/git~1/config",        // and by its short name on Windows
-                     ".lambda/build/aux.js",              // what Windows reserves, with an extension too
-                     ".lambda/build/src/con.ts",
-                     ".lambda/build/COM1",
-                     ".lambda/build/notes.",
-                     ".lambda/build/my notes.txt",
-                     ".lambda/build/",
-                     ".lambda/build/web/../../secret.txt",
-                     ".lambda/build/a:b.txt",
-                     ".lambda/builds/x.js",
+                     "frontend/.git/config",
+                     "frontend/.GIT/config",          // what a clone refuses in any case
+                     "git~1/config",                  // and by its short name on Windows
+                     "aux.js",                        // what Windows reserves, with an extension too
+                     "src/con.ts",
+                     "COM1",
+                     "notes.",
+                     "my notes.txt",
+                     "frontend/",
+                     "frontend/../../secret.txt",
+                     "a:b.txt",
+                     "Dockerfile",                    // what the project of a lambda has for its own at the top
+                     "agents.md",
+                     ".gitignore",
+                     "lambda.csproj",
+                     "Platform/Extra.cs",
+                     "bin/app.js",
+                     "Resources/web/index.html",      // the resources are in lowercase
+                     "assets/web/index.html",         // and no longer in assets/
+                     "resources/.hidden.css",         // and none of them hidden
+                     "resources/web/noextension",
+                     "Too Long Name.cs",
                  ])
         {
             using var refused = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
@@ -182,27 +176,34 @@ public sealed class BuildFolderTests
             StringAssert.Contains(await refused.Content.ReadAsStringAsync(), name, "and the refusal says which file");
         }
 
-        using var misplaced = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                                      new VersionRequest([new(LambdaSource.EntryName, Snippet), new(".lambda/output/x.js", "x")]));
+        using var old = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
+                                                new VersionRequest([new(LambdaSource.EntryName, Snippet), new(".lambda/docs/product.md", "# What it is")]));
 
-        StringAssert.Contains(await misplaced.Content.ReadAsStringAsync(), LambdaSource.BuildFolder, "it says where a project goes");
+        Assert.AreEqual(HttpStatusCode.BadRequest, old.StatusCode, "the folder a lambda kept its documentation in once is no more");
+
+        StringAssert.Contains(await old.Content.ReadAsStringAsync(), "docs/ and the tests are in tests/", "it says where it goes now");
+
+        using var both = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
+                                                 new VersionRequest([new(LambdaSource.EntryName, Snippet), new("frontend", "x"), new("frontend/x.js", "x")]));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, both.StatusCode, "a file and a folder of the same name cannot both be on a disk");
     }
 
     [TestMethod]
-    public async Task TheBuildFolderCountsTowardsWhatTheAssetsMayComeTo()
+    public async Task TheCodeCountsTowardsWhatAVersionMayComeTo()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { MaxAssetBytes = 1024, PremiumMaxAssetBytes = 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 1024, PremiumBuildBytes = 1024 });
 
         var lambda = await fixture.CreateLambdaAsync();
 
         using var refused = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/versions",
-                                                    new VersionRequest([new(LambdaSource.EntryName, Snippet), new(".lambda/build/web/package-lock.json", new string('x', 2000))]));
+                                                    new VersionRequest([new(LambdaSource.EntryName, Snippet), new("frontend/package-lock.json", new string('x', 2000))]));
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "every version carries its own copy, like an asset");
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "every version carries its own copy of all of it");
 
         var said = await refused.Content.ReadAsStringAsync();
 
-        StringAssert.Contains(said, "the build folder");
+        StringAssert.Contains(said, "frontend/ comes to");
         StringAssert.Contains(said, ".gitignore", "and what is likeliest to have made it large is named, with what keeps it out");
     }
 
@@ -211,7 +212,7 @@ public sealed class BuildFolderTests
     #region Zip
 
     [TestMethod]
-    public async Task AZipKeepsTheDotFilesOfTheBuildFolderAndLeavesOutWhatItIgnores()
+    public async Task AZipKeepsTheDotFilesOfTheCodeAndLeavesOutWhatItIgnores()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -220,29 +221,28 @@ public sealed class BuildFolderTests
         // as a folder somebody built in is zipped, the folder included
         var archive = Zip(
             ("app/lambda.cs", Snippet),
-            ("app/index.html", "<p>built</p>"),
+            ("app/resources/index.html", "<p>built</p>"),
+            ("app/resources/.hidden.css", "nothing serves it"),
             ("app/.DS_Store", "litter"),
-            ("app/.lambda/build/.gitignore", "*.tmp\n"),
-            ("app/.lambda/build/web/.gitignore", "node_modules/\n/dist\n*.log\n!keep.log\n!important.tmp\n"),
-            ("app/.lambda/build/web/package.json", Package),
-            ("app/.lambda/build/web/.npmrc", "engine-strict=true"),
-            ("app/.lambda/build/web/keep.log", "kept, as the rules take it back"),
-            ("app/.lambda/build/web/debug.log", "left out"),
-            ("app/.lambda/build/web/important.tmp", "kept: the deeper file has the last word"),
-            ("app/.lambda/build/web/scratch.tmp", "left out by the file above"),
-            ("app/.lambda/build/web/node_modules/vite/package.json", "{}"),
-            ("app/.lambda/build/web/node_modules/.gitignore", "!*"),
-            ("app/.lambda/build/web/dist/index.js", "left out"),
-            ("app/.lambda/build/web/src/dist/notes.md", "kept: /dist is the project's own only"),
-            ("app/.lambda/build/web/.git/HEAD", "a repository"),
-            ("app/.lambda/build/.DS_Store", "litter"));
+            ("app/.editorconfig", "root = true"),
+            ("app/bin/Debug/app.dll", "what dotnet wrote"),
+            ("app/frontend/.gitignore", "node_modules/\n/dist\n*.log\n!keep.log\n!important.tmp\n*.tmp\n"),
+            ("app/frontend/package.json", Package),
+            ("app/frontend/.npmrc", "engine-strict=true"),
+            ("app/frontend/keep.log", "kept, as the rules take it back"),
+            ("app/frontend/debug.log", "left out"),
+            ("app/frontend/src/.gitignore", "!important.tmp\n"),
+            ("app/frontend/src/important.tmp", "kept: the deeper file has the last word"),
+            ("app/frontend/scratch.tmp", "left out by the file above"),
+            ("app/frontend/node_modules/vite/package.json", "{}"),
+            ("app/frontend/node_modules/.gitignore", "!*"),
+            ("app/frontend/dist/index.js", "left out"),
+            ("app/frontend/src/dist/notes.md", "kept: /dist is the project's own only"),
+            ("app/frontend/.git/HEAD", "a repository"),
+            ("app/.git/HEAD", "a repository"),
+            ("app/frontend/.DS_Store", "litter"));
 
-        using var request = fixture.Host.GetRequest($"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip", HttpMethod.Post);
-
-        request.Content = new ByteArrayContent(archive);
-        request.Content.Headers.ContentType = new("application/zip");
-
-        using var saved = await fixture.Host.GetResponseAsync(request);
+        var saved = await UploadAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip", HttpMethod.Post, archive);
 
         Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode, await saved.Content.ReadAsStringAsync());
 
@@ -250,15 +250,16 @@ public sealed class BuildFolderTests
 
         CollectionAssert.AreEqual(new[]
         {
-            ".lambda/build/.gitignore",
-            ".lambda/build/web/.gitignore",
-            ".lambda/build/web/.npmrc",
-            ".lambda/build/web/important.tmp",
-            ".lambda/build/web/keep.log",
-            ".lambda/build/web/package.json",
-            ".lambda/build/web/src/dist/notes.md",
-            "index.html",
-            "lambda.cs"
+            ".editorconfig",
+            "frontend/.gitignore",
+            "frontend/.npmrc",
+            "frontend/keep.log",
+            "frontend/package.json",
+            "frontend/src/.gitignore",
+            "frontend/src/dist/notes.md",
+            "frontend/src/important.tmp",
+            "lambda.cs",
+            "resources/index.html"
         }, names);
     }
 
@@ -320,8 +321,8 @@ public sealed class BuildFolderTests
 
         CollectionAssert.AreEquivalent(new[]
         {
-            "Project.cs", "Store.cs", "assets/index.html", "build/README.md", "build/web/package.json", "build/web/.gitignore",
-            "build/web/index.html", "build/web/Tool.cs"
+            "Project.cs", "Store.cs", "resources/index.html", "frontend/README.md", "frontend/package.json", "frontend/.gitignore",
+            "frontend/index.html", "frontend/Tool.cs"
         }, entries.Keys.ToList(), "where a clone has them, and nothing of the platform's");
 
         StringAssert.Contains(entries["Project.cs"], "BuildAsync()", "the snippet in the class it is the body of, as in a clone");
@@ -329,9 +330,9 @@ public sealed class BuildFolderTests
         // changed where it was built, as a folder somebody built in is zipped
         var archive = Zip(
         [
-            .. entries.Select(e => ($"laid/{e.Key}", e.Key == "assets/index.html" ? "<p>built again</p>" : e.Value)),
-            ("laid/build/web/src/main.ts", "console.log('built');"),
-            ("laid/build/web/node_modules/vite/package.json", "{}"),
+            .. entries.Select(e => ($"laid/{e.Key}", e.Key == "resources/index.html" ? "<p>built again</p>" : e.Value)),
+            ("laid/frontend/src/main.ts", "console.log('built');"),
+            ("laid/frontend/node_modules/vite/package.json", "{}"),
             ("laid/bin/Release/laid.dll", "what dotnet run wrote"),
             ("laid/Program.cs", "the platform's"),
             ("laid/laid.csproj", "the platform's"),
@@ -347,18 +348,18 @@ public sealed class BuildFolderTests
 
         Assert.AreEqual(Snippet, files[0].Code, "Project.cs left as it was is the snippet it was, to the byte");
         Assert.AreEqual(store, files.Single(f => f.Name == "store.cs").Code, "named as the lambda named it");
-        Assert.AreEqual("<p>built again</p>", files.Single(f => f.Name == "index.html").Code);
-        Assert.AreEqual("console.log('built');", files.Single(f => f.Name == ".lambda/build/web/src/main.ts").Code);
+        Assert.AreEqual("<p>built again</p>", files.Single(f => f.Name == "resources/index.html").Code);
+        Assert.AreEqual("console.log('built');", files.Single(f => f.Name == "frontend/src/main.ts").Code);
 
         Assert.IsFalse(files.Any(f => f.Name.Contains("node_modules", StringComparison.Ordinal) || f.Name.Contains("Release", StringComparison.Ordinal)),
-                       "what the build folder and the repository ignore stays out");
+                       "what the folder's .gitignore and the repository's ignore stays out");
 
         Assert.IsFalse(files.Any(f => f.Name.Contains("Program", StringComparison.Ordinal) || f.Name.EndsWith(".csproj", StringComparison.Ordinal)),
                        "and so do the platform's files");
     }
 
     [TestMethod]
-    public async Task AZipLaidOutAsACloneRefusesWhatHasNoPlaceInIt()
+    public async Task AZipLaidOutAsACloneRefusesWhatALambdaCannotHold()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -371,10 +372,10 @@ public sealed class BuildFolderTests
         var entries = Entries(await downloaded.Content.ReadAsByteArrayAsync());
 
         var refused = await UploadAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip?layout=project", HttpMethod.Post,
-                                        Zip([.. entries.Select(e => (e.Key, e.Value)), ("web/package.json", Package)]));
+                                        Zip([.. entries.Select(e => (e.Key, e.Value)), ("assets/index.html", "<p>where it was once</p>")]));
 
-        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode);
-        StringAssert.Contains(await refused.Content.ReadAsStringAsync(), "build/", "it says where such files go");
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "where a clone kept what it served, before it was called resources");
+        StringAssert.Contains(await refused.Content.ReadAsStringAsync(), "they are in resources/ now", "it says where such files go");
 
         using var unknown = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/2/zip?layout=tree");
 
@@ -396,7 +397,7 @@ public sealed class BuildFolderTests
 
         var entries = Entries(await downloaded.Content.ReadAsByteArrayAsync());
 
-        entries["build/web/index.html"] = "<p>darker</p>";
+        entries["frontend/index.html"] = "<p>darker</p>";
 
         var saved = await UploadAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/zip?layout=project", HttpMethod.Put,
                                       Zip([.. entries.Select(e => (e.Key, e.Value))]));
@@ -406,7 +407,7 @@ public sealed class BuildFolderTests
         var files = (await fixture.FeatureAsync(lambda, feature.Key)).Files;
 
         CollectionAssert.AreEqual(Built.Select(f => f.Name).ToList(), files.Select(f => f.Name).ToList(), "the same files, in the same order");
-        Assert.AreEqual("<p>darker</p>", files.Single(f => f.Name == ".lambda/build/web/index.html").Code);
+        Assert.AreEqual("<p>darker</p>", files.Single(f => f.Name == "frontend/index.html").Code);
     }
 
     [TestMethod]
@@ -417,15 +418,15 @@ public sealed class BuildFolderTests
         var lambda = await fixture.CreateLambdaAsync("kept");
 
         // a file saved on purpose where the .gitignore would leave it out, and
-        // folders named as what dotnet run writes, below the root
+        // folders named as what dotnet run writes, below the top
         await fixture.SaveAsync(lambda, "Keeps a vendored library",
             new LambdaFile(LambdaSource.EntryName, Snippet),
-            new LambdaFile("bin/app.js", "an asset"),
-            new LambdaFile(".lambda/build/.gitignore", "vendor/\n"),
-            new LambdaFile(".lambda/build/vendor/lib.js", "vendored on purpose"),
-            new LambdaFile(".lambda/build/src/bin/main.rs", "fn main() {}"));
+            new LambdaFile("resources/bin/app.js", "a resource"),
+            new LambdaFile("frontend/.gitignore", "vendor/\n"),
+            new LambdaFile("frontend/vendor/lib.js", "vendored on purpose"),
+            new LambdaFile("frontend/src/bin/main.rs", "fn main() {}"));
 
-        var expected = new[] { LambdaSource.EntryName, "bin/app.js", ".lambda/build/.gitignore", ".lambda/build/vendor/lib.js", ".lambda/build/src/bin/main.rs" };
+        var expected = new[] { LambdaSource.EntryName, "resources/bin/app.js", "frontend/.gitignore", "frontend/vendor/lib.js", "frontend/src/bin/main.rs" };
 
         foreach (var (layout, version) in (List<(string, int)>) [("project", 3), ("lambda", 4)])
         {
@@ -433,11 +434,9 @@ public sealed class BuildFolderTests
 
             var entries = Entries(await downloaded.Content.ReadAsByteArrayAsync());
 
-            var vendor = layout == "project" ? "build/vendor/" : ".lambda/build/vendor/";
-
             // put back as it came, with a file of the build's own beside the vendored one
             var saved = await UploadAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip?layout={layout}", HttpMethod.Post,
-                                          Zip([.. entries.Select(e => (e.Key, e.Value)), ($"{vendor}installed.js", "what a build installed")]));
+                                          Zip([.. entries.Select(e => (e.Key, e.Value)), ("frontend/vendor/installed.js", "what a build installed")]));
 
             Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode, await saved.Content.ReadAsStringAsync());
 
@@ -450,7 +449,7 @@ public sealed class BuildFolderTests
     [TestMethod]
     public async Task AZipWithWhatABuildInstalledIsRefusedAsItIsSent()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { MaxCodeLength = 1000, MaxAssetBytes = 4096 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { BuildBytes = 4096, PremiumBuildBytes = 4096 });
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -459,8 +458,8 @@ public sealed class BuildFolderTests
 
         var archive = Zip(
             ("lambda.cs", Snippet),
-            (".lambda/build/web/.gitignore", "node_modules/\n"),
-            (".lambda/build/web/node_modules/vite/dist/index.js", installed));
+            ("frontend/.gitignore", "node_modules/\n"),
+            ("frontend/node_modules/vite/dist/index.js", installed));
 
         var refused = await UploadAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/versions/zip", HttpMethod.Post, archive);
 
@@ -474,45 +473,42 @@ public sealed class BuildFolderTests
     #region Agents
 
     [TestMethod]
-    public async Task AnAgentIsHandedTheReadmeAndTheNamesOfTheBuildFolder()
+    public async Task AnAgentIsHandedTheProgramFirstAndTheRestByNameWhereItRunsLong()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync();
 
-        await fixture.SaveAsync(lambda, "Builds the front end", Built);
+        // a lock file larger than an answer carries
+        await fixture.SaveAsync(lambda, "Builds the front end", [.. Built, new LambdaFile("frontend/package-lock.json", new string('x', 40_000))]);
 
         var read = await ToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey });
 
-        var build = read["build"]!.AsObject();
+        var files = read["files"]!.AsArray().Select(f => f!.AsObject()).ToList();
 
-        Assert.AreEqual(Readme, build["readme"]!["content"]!.GetValue<string>(), "how it is built, in full");
+        Assert.AreEqual(LambdaSource.EntryName, files[0]["name"]!.GetValue<string>(), "the C# first");
+        Assert.AreEqual(Snippet, files[0]["code"]!.GetValue<string>());
+        Assert.AreEqual("resources/index.html", files[1]["name"]!.GetValue<string>(), "then the resources");
+        Assert.IsNotNull(files[1]["code"]);
 
-        var listed = build["files"]!.AsArray().Select(f => f!["name"]!.GetValue<string>()).ToList();
+        var lockFile = files.Single(f => f["name"]!.GetValue<string>() == "frontend/package-lock.json");
 
-        CollectionAssert.Contains(listed, ".lambda/build/web/package.json");
-        Assert.IsNull(build["files"]![0]!["code"], "by name and length, not by content");
+        Assert.IsNull(lockFile["code"], "what does not fit is named");
+        Assert.AreEqual(40_000, lockFile["length"]!.GetValue<int>(), "with its length");
+        Assert.IsNotNull(files.Single(f => f["name"]!.GetValue<string>() == "frontend/package.json")["code"], "and the rest that fits is sent");
+        Assert.IsTrue(read["filesOmitted"]!.GetValue<bool>());
 
-        var program = read["files"]!.AsArray().Select(f => f!["name"]!.GetValue<string>()).ToList();
-
-        CollectionAssert.AreEquivalent(new[] { LambdaSource.EntryName, "index.html" }, program, "the program's files are the program's");
-
-        var one = await ToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["file"] = ".lambda/build/web/package.json" });
+        var one = await ToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["file"] = "frontend/package.json" });
 
         Assert.AreEqual(Package, one["files"]![0]!["code"]!.GetValue<string>(), "one file is read by its name");
 
-        var missing = (await ToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["file"] = "nope.txt" }))["problem"]!.GetValue<string>();
-
-        StringAssert.Contains(missing, "index.html", "a name that is not there is answered with those that are");
-        Assert.IsFalse(missing.Contains("package.json", StringComparison.Ordinal), "but the build folder by where it is, which may hold any number of files");
-
         var guide = await ToolAsync(fixture, "platform_guide", new JsonObject());
 
-        StringAssert.Contains(guide["build"]!["nothingIsBuiltHere"]!.GetValue<string>(), "never builds anything");
+        StringAssert.Contains(guide["code"]!["builtWithATool"]!["nothingIsBuiltHere"]!.GetValue<string>(), "never builds anything");
     }
 
     [TestMethod]
-    public async Task SavingEveryFileWithoutTheBuildFolderSaysSo()
+    public async Task SavingEveryFileWithoutAFolderSaysSo()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -524,18 +520,19 @@ public sealed class BuildFolderTests
         var changed = await ToolAsync(fixture, "change_code", new JsonObject
         {
             ["privateKey"] = lambda.PrivateKey,
-            ["edits"] = new JsonArray(new JsonObject { ["file"] = "index.html", ["find"] = "wrote", ["replace"] = "wrote again" })
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "resources/index.html", ["find"] = "wrote", ["replace"] = "wrote again" })
         });
 
-        Assert.IsNull(changed["build"], "nothing is said where nothing was left out");
+        Assert.IsNull(changed["dropped"], "nothing is said where nothing was left out");
 
         var written = await ToolAsync(fixture, "write_code", new JsonObject
         {
             ["privateKey"] = lambda.PrivateKey,
-            ["files"] = new JsonArray(new JsonObject { ["name"] = LambdaSource.EntryName, ["code"] = Snippet })
+            ["files"] = new JsonArray(new JsonObject { ["name"] = LambdaSource.EntryName, ["code"] = Snippet },
+                                      new JsonObject { ["name"] = "resources/index.html", ["code"] = "<p>again</p>" })
         });
 
-        StringAssert.Contains(written["build"]!.GetValue<string>(), "5 files in .lambda/build/", "an agent that did not know there was one is told what it left out");
+        StringAssert.Contains(written["dropped"]!.GetValue<string>(), "frontend/ - 5 files", "an agent that did not know the folder was there is told what it left out");
     }
 
     #endregion
@@ -543,7 +540,7 @@ public sealed class BuildFolderTests
     #region Taken away
 
     [TestMethod]
-    public async Task TheExportCarriesTheBuildFolderAndBuildsWithoutIt()
+    public async Task TheExportCarriesTheCodeAndCompilesOnlyItsTop()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -553,8 +550,8 @@ public sealed class BuildFolderTests
         await fixture.SaveAsync(lambda, "Builds the front end",
         [
             .. Built,
-            new LambdaFile(".lambda/build/tool/tool.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>"),
-            new LambdaFile(".lambda/build/tool/Program.cs", "System.Console.WriteLine(\"a tool\");")
+            new LambdaFile("tool/tool.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>"),
+            new LambdaFile("tool/Program.cs", "System.Console.WriteLine(\"a tool\");")
         ]);
 
         using var answer = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/export");
@@ -565,18 +562,19 @@ public sealed class BuildFolderTests
 
         var project = Path.Combine(directory, "exported");
 
-        Assert.AreEqual(Package, await File.ReadAllTextAsync(Path.Combine(project, "build/web/package.json")), "it is where a project keeps it");
-        Assert.AreEqual(Readme, await File.ReadAllTextAsync(Path.Combine(project, "build/README.md")));
-        Assert.Contains("build/", await File.ReadAllTextAsync(Path.Combine(project, ".dockerignore")), "and stays out of the image");
-        Assert.Contains("build/ is what its assets or code are built from", await File.ReadAllTextAsync(Path.Combine(project, "Program.cs")));
+        Assert.AreEqual(Package, await File.ReadAllTextAsync(Path.Combine(project, "frontend/package.json")), "laid out as the lambda is");
+        Assert.AreEqual("<p>what the build wrote</p>", await File.ReadAllTextAsync(Path.Combine(project, "resources/index.html")));
+        Assert.StartsWith("*\n", await File.ReadAllTextAsync(Path.Combine(project, ".dockerignore")), "only what is compiled and copied goes into the image");
 
         var (exit, output) = await BuildAsync(project);
 
-        Assert.AreEqual(0, exit, $"what is in build/ is no part of the build:\n{output}");
+        Assert.AreEqual(0, exit, $"only the C# at the top is compiled:\n{output}");
+
+        Assert.IsTrue(File.Exists(Path.Combine(project, "bin", "Release", "net10.0", "resources", "index.html")), "and the resources are copied beside the program");
     }
 
     [TestMethod]
-    public async Task AClonePushesTheBuildFolderAsBuild()
+    public async Task AClonePushesTheFoldersOfTheCode()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -588,22 +586,22 @@ public sealed class BuildFolderTests
 
         var clone = await git.CloneAsync(fixture.EditorUrl(lambda), "cloned");
 
-        Assert.AreEqual(Package, git.Read("cloned", "build/web/package.json"));
-        Assert.AreEqual("node_modules/\ndist/\n", git.Read("cloned", "build/web/.gitignore"));
+        Assert.AreEqual(Package, git.Read("cloned", "frontend/package.json"));
+        Assert.AreEqual("node_modules/\ndist/\n", git.Read("cloned", "frontend/.gitignore"));
         Assert.IsFalse(Directory.Exists(Path.Combine(clone, ".lambda")));
 
-        Assert.Contains("DefaultItemExcludes", git.Read("cloned", "cloned.csproj"), "the build does not look into it");
-        Assert.Contains("build/", git.Read("cloned", ".dockerignore"));
-        Assert.Contains("## What it is built from: build/", git.Read("cloned", "AGENTS.md"), "the agent working here is told how");
+        Assert.Contains("<EnableDefaultItems>false</EnableDefaultItems>", git.Read("cloned", "cloned.csproj"), "the build does not look into the folders");
+        Assert.Contains("## What a tool builds", git.Read("cloned", "AGENTS.md"), "the agent working here is told how");
         Assert.Contains("!/build/", git.Read("cloned", ".gitignore"), "taken back in, whatever a global ignore says of a folder called build");
         Assert.StartsWith("/bin/\n/obj/\n", git.Read("cloned", ".gitignore"), "what dotnet run writes, at the root only");
 
-        // what a build installed stays out, by the project's own .gitignore
-        git.Write("cloned", "build/web/node_modules/vite/package.json", "{}");
-        git.Write("cloned", "build/web/src/main.ts", "console.log('built');");
-        git.Write("cloned", "assets/web/main.js", "console.log('built');");
+        // what a build installed stays out, by the folder's own .gitignore
+        git.Write("cloned", "frontend/node_modules/vite/package.json", "{}");
+        git.Write("cloned", "frontend/src/main.ts", "console.log('built');");
+        git.Write("cloned", "resources/web/main.js", "console.log('built');");
+        git.Write("cloned", "notes/plan.md", "# What comes next");
 
-        await git.CommitAsync("cloned", "Builds main.ts into the assets");
+        await git.CommitAsync("cloned", "Builds main.ts into the resources");
 
         var pushed = await git.RunAsync("cloned", "push");
 
@@ -611,20 +609,21 @@ public sealed class BuildFolderTests
 
         var files = (await fixture.VersionAsync(lambda, 3)).Files.Select(f => f.Name).ToList();
 
-        CollectionAssert.IsSubsetOf(new[] { ".lambda/build/web/src/main.ts", "web/main.js" }, files, "the sources and what they built, in one version");
+        CollectionAssert.IsSubsetOf(new[] { "frontend/src/main.ts", "resources/web/main.js", "notes/plan.md" }, files,
+                                    "the sources, what they built and a folder of its own, in one version");
         Assert.IsFalse(files.Any(f => f.Contains("node_modules", StringComparison.Ordinal)));
 
         // a project of its own in there does not trip the lambda's build
-        git.Write("cloned", "build/tool/tool.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
-        git.Write("cloned", "build/tool/Program.cs", "this is no C# the lambda has");
+        git.Write("cloned", "tool/tool.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
+        git.Write("cloned", "tool/Program.cs", "this is no C# the lambda has");
 
         var (exit, output) = await BuildAsync(clone);
 
-        Assert.AreEqual(0, exit, $"what is in build/ is no part of the build:\n{output}");
+        Assert.AreEqual(0, exit, $"what is in a folder is no part of the build:\n{output}");
     }
 
     [TestMethod]
-    public async Task APushedFileOutsideTheLambdaNamesTheBuildFolder()
+    public async Task APushedFileOfTheProjectsOwnIsRefused()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
@@ -634,24 +633,24 @@ public sealed class BuildFolderTests
 
         await git.CloneAsync(fixture.EditorUrl(lambda), "strayed");
 
-        git.Write("strayed", "web/package.json", Package);
+        git.Write("strayed", "Platform/Extra.cs", "public class Extra { }");
 
-        await git.CommitAsync("strayed", "Adds a project at the root");
+        await git.CommitAsync("strayed", "Adds to what stands in for the platform");
 
         var refused = await git.TryAsync("strayed", "push");
 
         Assert.IsFalse(refused.Success);
-        Assert.Contains("build/", refused.Said, "it says where such a project goes");
+        Assert.Contains("Platform/Extra.cs", refused.Said, "it says which file");
     }
 
     [TestMethod]
-    public async Task APublishedSourceShowsItsBuildFolder()
+    public async Task APublishedSourceSaysWhatEachFileIs()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync("shared");
 
-        await fixture.SaveAsync(lambda, "Builds the front end", Built);
+        await fixture.SaveAsync(lambda, "Builds the front end", [.. Built, new LambdaFile(LambdaSource.ProductDoc, "# Shop")]);
 
         await fixture.PublishAsync(lambda);
 
@@ -659,8 +658,10 @@ public sealed class BuildFolderTests
 
         var files = (await tree.GetContentAsync<SourceTreeResponse>()).Files;
 
-        Assert.AreEqual("build", files.Single(f => f.Path == "build/web/package.json").Kind, "marked as what it is");
-        Assert.AreEqual("build", files.Single(f => f.Path == "build/README.md").Kind);
+        Assert.AreEqual("code", files.Single(f => f.Path == "frontend/package.json").Kind, "marked as what it is");
+        Assert.AreEqual("resource", files.Single(f => f.Path == "resources/index.html").Kind);
+        Assert.AreEqual("docs", files.Single(f => f.Path == "docs/product.md").Kind);
+        Assert.AreEqual("project", files.Single(f => f.Path == "Program.cs").Kind);
     }
 
     #endregion

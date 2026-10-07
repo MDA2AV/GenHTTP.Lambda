@@ -28,6 +28,10 @@ namespace GenHTTP.Lambda.Services.Git;
 /// says it holds it. A feature that holds what its version holds is that
 /// version's commit, until it changes.
 ///
+/// A tip made before the platform laid a lambda out as it does now - main,
+/// or a feature's - gets a commit on top of it that lays the same files out
+/// anew (see <see cref="GitLayouts"/>), and what follows it follows that.
+///
 /// Called in the lambda's turn to be read (see <see cref="GitService"/>), and
 /// away from the reactor: the first read of a lambda with a long history
 /// reads every version.
@@ -76,8 +80,9 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             }
 
             // the commit of the version before it - or, where that was pruned
-            // before anybody read it, of the newest before it that was read
-            var parent = before.Where(v => v.Key < version.Version).Select(v => v.Value).LastOrDefault();
+            // before anybody read it, of the newest before it that was read -
+            // as it is laid out now
+            var parent = before.Where(v => v.Key < version.Version).Select(v => index.Current(v.Value)).LastOrDefault();
 
             string code;
 
@@ -100,6 +105,19 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             before[version.Version] = made;
 
             changed = true;
+        }
+
+        // main is what a clone builds on, so it is laid out as today
+        if (versions.Count > 0 && index.Versions.TryGetValue(versions[^1].Version, out var newest) && !index.Moved.ContainsKey(newest))
+        {
+            try
+            {
+                changed |= await MoveAsync(lambda, index, newest, () => meta.GetVersion(lambda.PrivateKey, versions[^1].Version).Code) != newest;
+            }
+            catch (LambdaException)
+            {
+                // pruned since the versions were listed: the next read lays out what is newest then
+            }
         }
 
         if (withFeatures)
@@ -146,9 +164,28 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
     {
         index.Features.TryGetValue(feature.Key, out var tip);
 
+        string Code() => features.Get(lambda.PrivateKey, feature.Key).Code;
+
         if (tip != null && tip.Revision == feature.Revision && tip.Base >= feature.Base)
         {
-            return false;
+            try
+            {
+                // what a clone builds the branch on is laid out as today
+                var laid = await MoveAsync(lambda, index, tip.Commit, Code);
+
+                if (laid == tip.Commit)
+                {
+                    return false;
+                }
+
+                index.Features[feature.Key] = tip with { Commit = laid };
+                return true;
+            }
+            catch (LambdaException)
+            {
+                // merged or deleted since the features were listed
+                return false;
+            }
         }
 
         if (!index.Versions.TryGetValue(feature.Base, out var based))
@@ -162,7 +199,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         try
         {
-            code = features.Get(lambda.PrivateKey, feature.Key).Code;
+            code = Code();
         }
         catch (LambdaException)
         {
@@ -176,19 +213,21 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         if (!own)
         {
+            var version = meta.GetVersion(lambda.PrivateKey, feature.Base).Code;
+
             // nothing of its own yet: as long as it holds what its version
-            // holds, it is that version's commit
-            if (code == meta.GetVersion(lambda.PrivateKey, feature.Base).Code)
+            // holds, it is that version's commit - as it is laid out now
+            if (LambdaSource.Same(code, version))
             {
-                index.Features[feature.Key] = new FeatureTip(based, feature.Revision, feature.Base);
+                index.Features[feature.Key] = new FeatureTip(await MoveAsync(lambda, index, based, () => version), feature.Revision, feature.Base);
                 return true;
             }
 
-            parents = [based];
+            parents = [index.Current(based)];
         }
         else
         {
-            parents = tip!.Base < feature.Base ? [tip.Commit, based] : [tip.Commit];
+            parents = tip!.Base < feature.Base ? [tip.Commit, index.Current(based)] : [tip.Commit];
         }
 
         var previous = store.ReadCommit(lambda.Id, GitObjectId.Parse(parents[0]));
@@ -202,6 +241,44 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
         index.Features[feature.Key] = new FeatureTip(commit, feature.Revision, feature.Base);
 
         return true;
+    }
+
+    /// <summary>
+    /// The commit that stands for a tip now: the tip itself where it lays the
+    /// lambda out as today, and otherwise the commit on top of it that does -
+    /// made from what the tip holds, where it was not made before.
+    /// </summary>
+    /// <remarks>
+    /// Its Project.cs is made anew rather than kept, since what the platform
+    /// puts around the snippet changed with the rest of its files.
+    /// </remarks>
+    /// <param name="code">What the tip holds: its version, or its feature as it is</param>
+    /// <returns>The commit that stands for the tip</returns>
+    private async ValueTask<string> MoveAsync(GitLambda lambda, GitIndex index, string tip, Func<string> code)
+    {
+        if (index.Moved.TryGetValue(tip, out var moved))
+        {
+            return moved;
+        }
+
+        if (store.ReadCommit(lambda.Id, GitObjectId.Parse(tip)) is not { IsCurrent: false } before)
+        {
+            return tip;
+        }
+
+        var assets = before.Tree.Any(e => e.Path.StartsWith("assets/", StringComparison.Ordinal));
+
+        var message = assets
+            ? "Moves assets/ to resources/, where the platform keeps what a lambda reads and serves now"
+            : "Brings the platform's files up to date with how it lays a lambda out now";
+
+        var made = await CommitAsync(lambda, LambdaSource.Parse(code()), [tip], null, message, DateTime.UtcNow, null);
+
+        index.Moved[tip] = made;
+
+        logger.LogInformation("Laid out commit {Commit} of lambda {Lambda} anew as {Moved}", tip[..7], lambda.PublicKey, made[..7]);
+
+        return made;
     }
 
     #endregion
@@ -240,7 +317,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
         var commit = builder.Build();
 
-        store.WriteCommit(lambda.Id, commit.Id, new StoredCommit(Convert.ToBase64String(commit.Data.Span), laid.Entries, laid.Files, version));
+        store.WriteCommit(lambda.Id, commit.Id, new StoredCommit(Convert.ToBase64String(commit.Data.Span), laid.Entries, laid.Files, version, GitLayouts.Current));
 
         return commit.Id.ToString();
     }
@@ -271,7 +348,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             store.WriteBlob(lambdaId, GitObjectId.Parse(blob), content);
         }
 
-        var stored = new StoredCommit(Convert.ToBase64String(commit.Data.Span), entries, read?.Files != null ? read.Stored : null, version);
+        var stored = new StoredCommit(Convert.ToBase64String(commit.Data.Span), entries, read?.Files != null ? read.Stored : null, version, GitLayouts.Current);
 
         store.WriteCommit(lambdaId, commit.Id, stored);
 

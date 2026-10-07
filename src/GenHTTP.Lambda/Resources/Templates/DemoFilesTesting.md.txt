@@ -3,7 +3,7 @@
 `smoke.mjs` checks the app from the outside. It uploads a small picture and a text file of its own, finds them in the gallery and reads them back with their types, checks what is refused - other types, empty and too large files, removing without the key - and removes what it uploaded, whatever happens.
 
 ```
-node .lambda/tests/smoke.mjs <address>
+node tests/smoke.mjs <address>
 ```
 
 The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. It needs Node 18 or later and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not.

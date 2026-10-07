@@ -13,8 +13,9 @@ namespace GenHTTP.Lambda.Services.Storage;
 /// A feature keeps everything of its own below <c>{data}/features/{id}/{feature}</c>:
 /// <c>files.json</c> as it is being worked on, <c>preview.json</c> as its
 /// preview was deployed, its copy of the workspace in <c>workspace</c> and
-/// what its preview serves in <c>assets</c> - so deleting a feature is
-/// deleting a folder, and deleting a lambda takes its features along.
+/// the resources its preview serves in <c>resources</c> - so deleting a
+/// feature is deleting a folder, and deleting a lambda takes its features
+/// along.
 /// </remarks>
 public sealed class FileSystemStorageService : IStorageService
 {
@@ -42,6 +43,23 @@ public sealed class FileSystemStorageService : IStorageService
         Remove(options.AssemblyDirectory);
 
         Directory.CreateDirectory(options.AssemblyDirectory);
+
+        RemoveAssets();
+    }
+
+    /// <summary>
+    /// Removes where the resources were written while they were called
+    /// assets: what a lambda serves is written out again as it goes online,
+    /// into the folder of today's name, so nothing reads these any more.
+    /// </summary>
+    private void RemoveAssets()
+    {
+        Remove(Path.Combine(Options.DataDirectory, "assets"));
+
+        foreach (var (lambda, feature) in ListFeatures())
+        {
+            Remove(Path.Combine(GetFeatureDirectory(lambda, feature), "assets"));
+        }
     }
 
     #endregion
@@ -105,7 +123,7 @@ public sealed class FileSystemStorageService : IStorageService
         Remove(GetCodeDirectory(lambdaId));
         Remove(GetWorkspaceDirectory(lambdaId));
         Remove(Path.Combine(Options.DatabaseDirectory, lambdaId.ToString()));
-        Remove(GetAssetDirectory(lambdaId));
+        Remove(GetResourceDirectory(lambdaId));
         Remove(Path.Combine(Options.FeatureDirectory, lambdaId.ToString()));
         // what its published source was packed into, if it was published
         Remove(Path.Combine(Options.SourceDirectory, lambdaId.ToString()));
@@ -144,10 +162,10 @@ public sealed class FileSystemStorageService : IStorageService
 
     public string GetAssemblyDirectory(long lambdaId) => Path.Combine(Options.AssemblyDirectory, lambdaId.ToString());
 
-    public string GetAssetDirectory(long lambdaId, long? featureId = null)
+    public string GetResourceDirectory(long lambdaId, long? featureId = null)
         => featureId is { } feature
-         ? Path.Combine(GetFeatureDirectory(lambdaId, feature), "assets")
-         : Path.Combine(Options.AssetDirectory, lambdaId.ToString());
+         ? Path.Combine(GetFeatureDirectory(lambdaId, feature), "resources")
+         : Path.Combine(Options.ResourceDirectory, lambdaId.ToString());
 
     #endregion
 

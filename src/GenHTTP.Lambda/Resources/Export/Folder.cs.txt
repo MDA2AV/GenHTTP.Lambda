@@ -5,7 +5,7 @@ namespace Platform;
 
 /// <summary>
 /// A folder the app reads and writes, with the methods the platform gave
-/// Workspace - and what AssetFolder reads the assets with.
+/// Workspace - and what ResourceFolder reads the resources with.
 /// </summary>
 public sealed class Folder
 {
@@ -93,14 +93,14 @@ public sealed class Folder
 }
 
 /// <summary>
-/// What the app shipped with: read like any folder, and served from the
-/// directory itself, which is what the platform did.
+/// The resources the app shipped with: read like any folder, and served from
+/// the directory itself, which is what the platform did.
 /// </summary>
-public sealed class AssetFolder(string root)
+public sealed class ResourceFolder(string root)
 {
     private readonly Folder _folder = new(root);
 
-    /// <summary>The absolute path the assets were copied to.</summary>
+    /// <summary>The absolute path the resources were copied to.</summary>
     public string Root => _folder.Root;
 
     public bool Exists(string name) => _folder.Exists(name);
@@ -117,7 +117,7 @@ public sealed class AssetFolder(string root)
 
     public IResourceTree Tree(string folder) => _folder.Tree(folder);
 
-    /// <summary>Serves the assets as files.</summary>
+    /// <summary>Serves the resources as files.</summary>
     public FileAssetsBuilder Files() => Assets.From(Root);
 
     public FileAssetsBuilder Files(string folder) => Assets.From(Path.Combine(Root, folder));

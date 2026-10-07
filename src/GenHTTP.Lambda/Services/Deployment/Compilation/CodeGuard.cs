@@ -724,9 +724,9 @@ public static class CodeGuard
         // these all accept a plain path and would hand out a resource tree pointing
         // anywhere on the host - Listing, StaticWebsite and SinglePageApplication only
         // accept a tree and therefore stay available
-        // Assets is no longer among these: a lambda ships its own now, and
-        // Assets.Tree() is the thing it reaches them with
-        Add("use Workspace.Tree() or Assets.Tree() to serve files", "FromFile", "FromDirectory", "FromWeb", "FromAssembly");
+        // Assets is no longer among these: a lambda ships its own resources
+        // now, and Resources.Tree() is the thing it reaches them with
+        Add("use Workspace.Tree() or Resources.Tree() to serve files", "FromFile", "FromDirectory", "FromWeb", "FromAssembly");
 
         Add("outbound proxying is disabled", "Proxy", "ReverseProxy");
 

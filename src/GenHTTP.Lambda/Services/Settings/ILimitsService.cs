@@ -22,26 +22,24 @@ public interface ILimitsService
     TierLimits Of(LambdaTier tier);
 
     /// <summary>
-    /// How many characters of C# a lambda in the given tier may have - never
-    /// less for a premium lambda than for any other.
+    /// How large a version of a lambda in the given tier may be, its code and
+    /// its resources together - never less for a premium lambda than for any
+    /// other.
     /// </summary>
-    int MaxCodeLengthOf(LambdaTier tier);
+    long BuildOf(LambdaTier tier);
 
     /// <summary>
-    /// How many bytes of assets a lambda in the given tier may ship.
+    /// How much room the data of a lambda in the given tier may take, its
+    /// database and its workspace together.
     /// </summary>
-    int MaxAssetBytesOf(LambdaTier tier);
+    long DataOf(LambdaTier tier);
 
     /// <summary>
-    /// What a lambda in the given tier may keep in its workspace.
+    /// What a lambda in the given tier may keep in its workspace: the room of
+    /// its data, which its database takes some of.
     /// </summary>
     /// <param name="enabled">Whether its owner left the workspace switched on</param>
     WorkspaceLimits WorkspaceOf(LambdaTier tier, bool enabled = true);
-
-    /// <summary>
-    /// How large the database of a lambda in the given tier may grow.
-    /// </summary>
-    long DatabaseOf(LambdaTier tier);
 
     /// <summary>
     /// Replaces the limits, every one of them.

@@ -398,8 +398,8 @@ public sealed class ControlCenterTests
         var lambda = await fixture.CreateLambdaAsync("summed");
 
         await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize([
-            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Assets.App(\"site\"));"),
-            new LambdaFile("site/index.html", "<!doctype html><title>summed</title>")
+            new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Resources.App(\"site\"));"),
+            new LambdaFile("resources/site/index.html", "<!doctype html><title>summed</title>")
         ]));
 
         using (var _ = await fixture.GetAsync("/lambda/summed/")) { }
@@ -421,11 +421,12 @@ public sealed class ControlCenterTests
         Assert.HasCount(24, summary.Traffic.Hourly);
 
         Assert.AreEqual(1, summary.Storage.CodeFiles);
-        Assert.AreEqual(1, summary.Storage.Assets);
-        Assert.IsTrue(summary.Storage.ServesAssets, "the code asks for its assets to be served");
+        Assert.AreEqual(1, summary.Storage.ResourceFiles);
+        Assert.IsTrue(summary.Storage.ServesResources, "the code asks for its resources to be served");
         Assert.IsFalse(summary.Storage.ServesWorkspace);
 
-        Assert.AreEqual(fixture.Options.MaxCodeLength, summary.Limits.CodeCharacters);
+        Assert.AreEqual(fixture.Options.BuildBytes, summary.Limits.BuildBytes);
+        Assert.AreEqual(fixture.Options.DataBytes, summary.Limits.DataBytes);
     }
 
     [TestMethod]

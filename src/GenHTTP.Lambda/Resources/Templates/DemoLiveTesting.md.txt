@@ -3,7 +3,7 @@
 `smoke.mjs` checks the app from the outside, the way two browsers would. It reads the poll, opens two event streams, casts one vote and waits for it to arrive on both, checks what is refused and that the page is served - and closes its streams, whatever happens.
 
 ```
-node .lambda/tests/smoke.mjs <address>
+node tests/smoke.mjs <address>
 ```
 
 The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. The vote it casts stays, since the poll has no way to take one back; on the preview of a feature it only lands in the feature's copy of the data, which is thrown away when the feature is merged. It needs Node 18 or later and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not. Every wait has a limit of five seconds, so an app that hangs or a stream that stays silent fails rather than keeps the script waiting.

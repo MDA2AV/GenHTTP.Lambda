@@ -29,7 +29,7 @@ public sealed class DatabaseTests
     private const string Notes = """
         using (var connection = Database.GetConnection())
         {
-            new Evolve(connection) { Locations = [Assets.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+            new Evolve(connection) { Locations = [Resources.Root + "migrations"], IsEraseDisabled = true }.Migrate();
         }
 
         return Inline.Create()
@@ -73,7 +73,7 @@ public sealed class DatabaseTests
     private const string ContextNotes = """
         using (var connection = Database.GetConnection())
         {
-            new Evolve(connection) { Locations = [Assets.Root + "migrations"], IsEraseDisabled = true }.Migrate();
+            new Evolve(connection) { Locations = [Resources.Root + "migrations"], IsEraseDisabled = true }.Migrate();
         }
 
         return Inline.Create()
@@ -120,7 +120,7 @@ public sealed class DatabaseTests
 
         Assert.IsFalse(store.Enabled);
         Assert.IsFalse(store.Default);
-        Assert.AreEqual(fixture.Options.DatabaseBytes, store.QuotaBytes);
+        Assert.AreEqual(fixture.Options.DataBytes, store.QuotaBytes);
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => { using var connection = Database.GetConnection(); return \"connected\"; });");
 
@@ -169,7 +169,7 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("migrations/V1__Notes.sql", Migration));
+        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
         Assert.AreEqual("added", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=milk"));
         Assert.AreEqual("added", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=eggs"));
@@ -177,7 +177,7 @@ public sealed class DatabaseTests
         // a second version adds a column with a migration of its own; the rows
         // written before are still there, and rolling back reads them too
         await SaveAsync(fixture, lambda.PrivateKey, Notes.Replace("SELECT text", "SELECT text || ':' || done"),
-                        ("migrations/V1__Notes.sql", Migration), ("migrations/V2__Done.sql", "ALTER TABLE notes ADD COLUMN done INTEGER NOT NULL DEFAULT 0;"));
+                        ("resources/migrations/V1__Notes.sql", Migration), ("resources/migrations/V2__Done.sql", "ALTER TABLE notes ADD COLUMN done INTEGER NOT NULL DEFAULT 0;"));
 
         Assert.AreEqual("milk:0,eggs:0", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/notes"));
 
@@ -202,7 +202,7 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("migrations/V1__Notes.sql", Migration));
+        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
         await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=milk");
 
@@ -275,7 +275,7 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        await SaveAsync(fixture, lambda.PrivateKey, ContextNotes, ("migrations/V1__Notes.sql", Migration));
+        await SaveAsync(fixture, lambda.PrivateKey, ContextNotes, ("resources/migrations/V1__Notes.sql", Migration));
 
         Assert.AreEqual("1", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=milk"));
         Assert.AreEqual("1", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=eggs"));
@@ -438,7 +438,7 @@ public sealed class DatabaseTests
     [TestMethod]
     public async Task ADatabaseStopsGrowingAtItsQuota()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DatabaseBytes = 256 * 1024 });
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { DataBytes = 256 * 1024 });
 
         var lambda = await fixture.CreateLambdaAsync();
 
@@ -476,7 +476,7 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("migrations/V1__Notes.sql", Migration));
+        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
         await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=live");
 
@@ -539,8 +539,8 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("migrations/V1__Notes.sql", Migration),
-                        ("migrations/V2__More.sql", "CREATE TABLE \"odd name\" (id INTEGER PRIMARY KEY, content BLOB, note TEXT); INSERT INTO \"odd name\" (content, note) VALUES (randomblob(12), printf('%.3000c', 'x'));"));
+        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration),
+                        ("resources/migrations/V2__More.sql", "CREATE TABLE \"odd name\" (id INTEGER PRIMARY KEY, content BLOB, note TEXT); INSERT INTO \"odd name\" (content, note) VALUES (randomblob(12), printf('%.3000c', 'x'));"));
 
         foreach (var text in new[] { "one", "two", "three" })
         {
@@ -558,7 +558,7 @@ public sealed class DatabaseTests
 
         Assert.IsTrue(database.Enabled);
         Assert.IsTrue(database.Used, "the code connects to it");
-        Assert.AreEqual(fixture.Options.DatabaseBytes, database.QuotaBytes);
+        Assert.AreEqual(fixture.Options.DataBytes, database.QuotaBytes);
 
         var notes = database.Tables.Single(t => t.Name == "notes");
 
@@ -643,7 +643,7 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("migrations/V1__Notes.sql", Migration));
+        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
         await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=kept");
 
@@ -706,7 +706,7 @@ public sealed class DatabaseTests
         Assert.IsTrue(enabled["enabled"]!.GetValue<bool>());
         Assert.Contains("Evolve", enabled["next"]!.GetValue<string>(), "and it is told how to use it");
 
-        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("migrations/V1__Notes.sql", Migration));
+        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
         await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=hello");
 
@@ -736,7 +736,7 @@ public sealed class DatabaseTests
 
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("migrations/V1__Notes.sql", Migration));
+        await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
         await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=gone");
 

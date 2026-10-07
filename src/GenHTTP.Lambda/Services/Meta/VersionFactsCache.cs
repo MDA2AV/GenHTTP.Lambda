@@ -11,28 +11,24 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// What the overview of a lambda says about one of its versions: how large it
 /// is, what its code reaches for and what its documentation says.
 /// </summary>
-public sealed record VersionFacts(int CodeFiles, int CodeLength, int AssetFiles, long AssetBytes, bool ServesAssets, bool ServesWorkspace,
-                                  bool UsesWorkspace, bool UsesDatabase, DocumentationSummary Documentation, BuildSummary Build);
+/// <param name="CodeFiles">Every file of its code: the C# it is compiled from and whatever else it is kept with</param>
+/// <param name="CodeBytes">What those weigh</param>
+/// <param name="ResourceFiles">The files it reads and serves while it runs</param>
+/// <param name="ResourceBytes">What those weigh, decoded</param>
+public sealed record VersionFacts(int CodeFiles, long CodeBytes, int ResourceFiles, long ResourceBytes, bool ServesResources, bool ServesWorkspace,
+                                  bool UsesWorkspace, bool UsesDatabase, DocumentationSummary Documentation);
 
 /// <summary>
-/// What a version says about itself: the context kept in <c>.lambda/docs/</c>
-/// and <c>.lambda/tests/</c> beside its program.
+/// What a version says about itself: the pages of its code kept in
+/// <c>docs/</c> and <c>tests/</c>.
 /// </summary>
 /// <param name="About">The first paragraph of its product page, as plain text - what the app is, in a sentence or two</param>
 /// <param name="Product">Whether it has a product page: what the app is, for whom, and why</param>
 /// <param name="Decisions">Whether it says which technical decisions were made, and why</param>
 /// <param name="Tests">Whether it says how it is tested</param>
 /// <param name="Files">How many files its documentation and tests come to</param>
-/// <param name="Bytes">What those weigh, which counts towards what its assets may come to</param>
+/// <param name="Bytes">What those weigh, which counts towards what a version may come to like the rest of its code</param>
 public sealed record DocumentationSummary(string? About, bool Product, bool Decisions, bool Tests, int Files, long Bytes);
-
-/// <summary>
-/// What a version keeps of what its assets or code are built from: its build
-/// folder in <c>.lambda/build/</c>.
-/// </summary>
-/// <param name="Files">How many files it holds - none for a version whose assets are their own source</param>
-/// <param name="Bytes">What those weigh, which counts towards what its assets may come to</param>
-public sealed record BuildSummary(int Files, long Bytes);
 
 /// <summary>
 /// The facts of the versions whose overview was asked for lately, read off
@@ -41,7 +37,7 @@ public sealed record BuildSummary(int Files, long Bytes);
 /// <remarks>
 /// The overview is asked for every ten seconds by every editor that is open
 /// on it, and reading these facts means reading and unpacking the whole
-/// version - assets included, up to a hundred megabytes and more. A version
+/// version - resources included, up to a hundred megabytes and more. A version
 /// never changes once saved, so what is read off it once holds for good: kept
 /// by the lambda's id, which is never handed out again, and the number of the
 /// version. Bounded by starting over, like the other caches of requests.
@@ -86,8 +82,7 @@ public sealed partial class VersionFactsCache(IStorageService storage)
         return _facts[(lambdaId, wanted)] = Read(LambdaSource.Parse(code));
     }
 
-    public static VersionFacts Empty { get; } = new(0, 0, 0, 0, false, false, false, false, new DocumentationSummary(null, false, false, false, 0, 0),
-                                                    new BuildSummary(0, 0));
+    public static VersionFacts Empty { get; } = new(0, 0, 0, 0, false, false, false, false, new DocumentationSummary(null, false, false, false, 0, 0));
 
     #endregion
 
@@ -97,17 +92,20 @@ public sealed partial class VersionFactsCache(IStorageService storage)
     {
         var code = files.Where(f => f.IsCode).ToList();
 
+        var compiled = code.Where(f => f.IsCompiled).ToList();
+
+        var resources = files.Where(f => f.IsResource).ToList();
+
         return new VersionFacts(
             code.Count,
-            LambdaSource.Length(files),
-            files.Count(f => f.IsAsset),
-            LambdaSource.AssetBytes(files),
-            code.Any(f => ServingAssets().IsMatch(f.Code)),
-            code.Any(f => ServingWorkspace().IsMatch(f.Code)),
-            code.Any(f => UsingWorkspace().IsMatch(f.Code)),
-            code.Any(f => DatabaseService.Uses(f.Code)),
-            Document(files),
-            new BuildSummary(files.Count(f => f.IsBuild), LambdaSource.BuildBytes(files))
+            LambdaSource.Size(code),
+            resources.Count,
+            LambdaSource.Size(resources),
+            compiled.Any(f => ServingResources().IsMatch(f.Code)),
+            compiled.Any(f => ServingWorkspace().IsMatch(f.Code)),
+            compiled.Any(f => UsingWorkspace().IsMatch(f.Code)),
+            compiled.Any(f => DatabaseService.Uses(f.Code)),
+            Document(files)
         );
     }
 
@@ -119,23 +117,27 @@ public sealed partial class VersionFactsCache(IStorageService storage)
     {
         var product = ContextPages.Read(files, LambdaSource.ProductDoc);
 
+        var written = files.Where(f => f.Name.StartsWith(LambdaSource.DocsFolder, StringComparison.Ordinal)
+                                    || f.Name.StartsWith(LambdaSource.TestsFolder, StringComparison.Ordinal)).ToList();
+
         return new DocumentationSummary(
             ContextPages.FirstParagraph(product),
             !string.IsNullOrWhiteSpace(product),
             !string.IsNullOrWhiteSpace(ContextPages.Read(files, LambdaSource.DecisionsDoc)),
             !string.IsNullOrWhiteSpace(ContextPages.Read(files, LambdaSource.TestingDoc)),
-            files.Count(f => f.IsContext),
-            LambdaSource.ContextBytes(files)
+            written.Count,
+            LambdaSource.Size(written)
         );
     }
 
     /// <summary>
     /// The calls that turn a directory into something served. Read from the
     /// code, so it says what the code asks for rather than what a request
-    /// would find - which is the right thing to warn about.
+    /// would find - which is the right thing to warn about. Assets is what
+    /// the resources were called before, which older code still says.
     /// </summary>
-    [GeneratedRegex(@"\bAssets\s*\.\s*(App|Files|Tree)\s*\(")]
-    private static partial Regex ServingAssets();
+    [GeneratedRegex(@"\b(Resources|Assets)\s*\.\s*(App|Files|Tree)\s*\(")]
+    private static partial Regex ServingResources();
 
     [GeneratedRegex(@"\bWorkspace\s*\.\s*(App|Files|Tree)\s*\(")]
     private static partial Regex ServingWorkspace();

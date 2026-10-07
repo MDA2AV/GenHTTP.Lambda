@@ -28,7 +28,7 @@ The page keeps the keys in `localStorage`: the uploader's browser stands in for 
 
 ## The files are in the workspace, the list of them in the database
 
-Two kinds of data, each where it belongs: what people upload are files, kept in the workspace and served from there; what is known about them - the name they were given, their type, when they came and the hash of the key that removes them - are records, the table `uploads` in the database. `migrations/V1__Create_uploads.sql` makes it, and `lambda.cs` applies that with Evolve before it serves anything, as `demo-crud` explains. Both belong to the lambda rather than to a version, so a new version keeps the gallery.
+Two kinds of data, each where it belongs: what people upload are files, kept in the workspace and served from there; what is known about them - the name they were given, their type, when they came and the hash of the key that removes them - are records, the table `uploads` in the database. `resources/migrations/V1__Create_uploads.sql` makes it, and `lambda.cs` applies that with Evolve before it serves anything, as `demo-crud` explains. Both belong to the lambda rather than to a version, so a new version keeps the gallery.
 
 - **The file first, then its entry.** An upload writes the file and then adds the row, so the gallery never lists a picture whose file is not there yet; a removal drops the row, then the file.
 - **At most 24 uploads.** Past that the oldest is dropped, its file with it, because anybody can upload.
@@ -46,7 +46,7 @@ Checking an upload and looking one up throw `ProviderException` with the status 
 
 ## The page is part of the program
 
-`web/` is shipped with the code and served by `Assets.App("web")`, added without a path, so it answers everything outside `api/` and `files/` - an unknown address with the page. It calls both with relative paths, and the `url` of an entry is relative too (`files/{id}.png`), so everything works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike.
+`resources/web/` is shipped with the code and served by `Resources.App("web")`, added without a path, so it answers everything outside `api/` and `files/` - an unknown address with the page. It calls both with relative paths, and the `url` of an entry is relative too (`files/{id}.png`), so everything works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike.
 
 ## Left out
 

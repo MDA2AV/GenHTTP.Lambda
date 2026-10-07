@@ -2,7 +2,7 @@
 
 ## The routes are small functions
 
-`lambda.cs` wires everything with `Inline.Create()`: `register`, `login` and `logout` at the root, `api/me` and `api/members` below `api/`, and `Assets.App("web")` last, so the pages answer only what the routes did not. Five routes that each hand over to one method of `Accounts` need no webservice class; `demo-crud` shows that way for an API with more to it.
+`lambda.cs` wires everything with `Inline.Create()`: `register`, `login` and `logout` at the root, `api/me` and `api/members` below `api/`, and `Resources.App("web")` last, so the pages answer only what the routes did not. Five routes that each hand over to one method of `Accounts` need no webservice class; `demo-crud` shows that way for an API with more to it.
 
 ## Signing in happens at the root of the lambda
 
@@ -48,7 +48,7 @@ Left out: hashing such an account again, with the pepper, when it next signs in 
 
 ## Accounts and sessions are two tables in the database
 
-`accounts` and `sessions`, made by `migrations/V1__Create_accounts.sql` - which `lambda.cs` applies with Evolve before it serves anything, as `demo-crud` explains - and read and written by `Accounts` through Entity Framework Core. The database belongs to the lambda, not to a version, so a new version neither loses an account nor signs anybody out. Every request asks it: a context on a connection per call, used synchronously - as in `demo-crud`.
+`accounts` and `sessions`, made by `resources/migrations/V1__Create_accounts.sql` - which `lambda.cs` applies with Evolve before it serves anything, as `demo-crud` explains - and read and written by `Accounts` through Entity Framework Core. The database belongs to the lambda, not to a version, so a new version neither loses an account nor signs anybody out. Every request asks it: a context on a connection per call, used synchronously - as in `demo-crud`.
 
 - **The context maps, the migration makes.** `MemberContext` maps the two tables onto `Account` and `StoredSession`, with the session's account as a navigation (`Owner`), so finding who a token signs in is a query that follows it rather than a join written by hand. Every `DateTime` is kept as ISO 8601 text in UTC, by one converter for all of them (`ConfigureConventions`).
 - **The table decides who gets a name.** The account is the key, and a registration that finds it taken fails to save - SQLite's constraint, which `Register` answers with 409: of two registrations of one name at the same moment exactly one gets it, without a lock of the app's own.

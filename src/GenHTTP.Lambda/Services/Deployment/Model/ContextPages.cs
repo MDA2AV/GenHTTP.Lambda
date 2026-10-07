@@ -4,8 +4,9 @@ using System.Text.RegularExpressions;
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
-/// Reads the pages of a version's context - its documentation and its tests -
-/// for the places that show what they say without showing all of them.
+/// Reads the pages of a version's documentation and tests - <c>docs/</c> and
+/// <c>tests/</c> of its code - for the places that show what they say without
+/// showing all of them.
 /// </summary>
 public static partial class ContextPages
 {
@@ -26,7 +27,7 @@ public static partial class ContextPages
     /// Which of the pages every version is meant to have are not there.
     /// </summary>
     public static IReadOnlyList<string> Missing(IReadOnlyList<LambdaFile> files)
-        => [.. LambdaSource.ExpectedContext.Where(page => string.IsNullOrWhiteSpace(Read(files, page)))];
+        => [.. LambdaSource.ExpectedPages.Where(page => string.IsNullOrWhiteSpace(Read(files, page)))];
 
     /// <summary>
     /// The first paragraph of a page, as plain text - what the app is, in the

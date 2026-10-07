@@ -6,6 +6,7 @@ using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
+using GenHTTP.Lambda.Services.Workspace;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,7 @@ namespace GenHTTP.Lambda.Services.Databases;
 /// connection it gets is watched by <see cref="ConnectionGuard"/>, which is
 /// what keeps the SQL sent over it inside that one file.
 /// </remarks>
-public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, ILimitsService limits,
+public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, ILimitsService limits, IWorkspaceVault workspaces,
                                   ILogger<DatabaseVault> logger) : IDatabaseVault
 {
 
@@ -84,8 +85,9 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
         var connection = new SqliteConnection(ConnectionString(storage.GetDatabase(scope.LambdaId, scope.FeatureId), false));
 
         // asked on every connection rather than kept in the snapshot, so a
-        // limit the operator lowers holds from the next connection on
-        ConnectionGuard.Watch(connection, limits.DatabaseOf(snapshot.Tier) / PageSize);
+        // limit the operator lowers holds from the next connection on - and
+        // the room the workspace takes of the allowance both share with it
+        ConnectionGuard.Watch(connection, RoomOf(scope.LambdaId, scope.FeatureId, snapshot.Tier) / PageSize);
 
         try
         {
@@ -300,9 +302,14 @@ public sealed class DatabaseVault(IDbContextFactory<LambdaDbContext> databases, 
     }
 
     /// <summary>
-    /// How large the database of the lambda may grow, in its tier.
+    /// How large the database of a lambda - or a feature's copy - may grow:
+    /// the room of its data, less what its workspace takes of it.
     /// </summary>
-    public long QuotaOf(LambdaTier tier) => limits.DatabaseOf(tier);
+    /// <remarks>
+    /// Never below nothing. A database already larger than this stays as it
+    /// is and is read as before; SQLite refuses only what would make it grow.
+    /// </remarks>
+    public long RoomOf(long lambdaId, long? featureId, LambdaTier tier) => Math.Max(0, limits.DataOf(tier) - workspaces.SizeOf(lambdaId, featureId));
 
     /// <summary>
     /// Writes the database of a lambda into a file of its own, whole - what

@@ -1,5 +1,5 @@
 // The tasks, kept in the lambda's database: a table the migration in
-// migrations/ makes, read and written through Entity Framework Core.
+// resources/migrations/ makes, read and written through Entity Framework Core.
 //
 //   - TaskContext maps the table onto TaskItem. It makes no schema: the table
 //     is the migration's, and the context only says how to read it.

@@ -203,7 +203,7 @@ public sealed class ApiTests
         Assert.IsNotEmpty(platform.Starters);
         Assert.IsNotEmpty(platform.Imports);
         Assert.IsNotEmpty(platform.Completions);
-        Assert.AreEqual(fixture.Options.MaxCodeLength, platform.MaxCodeLength);
+        Assert.AreEqual(fixture.Options.BuildBytes, platform.BuildBytes);
     }
 
     [TestMethod]

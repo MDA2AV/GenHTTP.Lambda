@@ -12,7 +12,7 @@
 // it was peppered, so accounts made before there was a pepper still sign in -
 // data outlives the version that wrote it.
 //
-// Both live in the lambda's database, in the tables migrations/ makes, read
+// Both live in the lambda's database, in the tables resources/migrations/ makes, read
 // and written through Entity Framework Core. Every call makes a context on a
 // connection of its own, uses it synchronously and lets it go.
 

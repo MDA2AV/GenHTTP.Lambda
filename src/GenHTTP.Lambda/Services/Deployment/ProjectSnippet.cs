@@ -117,8 +117,15 @@ public static class ProjectSnippet
 
         builder.Append($"public static class {Class}").Append('\n');
         builder.Append("{").Append('\n');
-        builder.Append("    // Workspace comes from Platform/LambdaEnvironment.cs, for every file").Append('\n');
-        builder.Append("    private static Platform.AssetFolder Assets => Platform.LambdaEnvironment.Assets;").Append('\n');
+        builder.Append("    // Workspace, Resources, Secret and Database come from Platform/, for every file").Append('\n');
+
+        // what the resources were called before, which a snippet written then
+        // still says - and in a class, Assets is the Files module's type
+        if (SaysAssets(root))
+        {
+            builder.Append("    private static Platform.ResourceFolder Assets => Platform.LambdaEnvironment.Resources;").Append('\n');
+        }
+
         builder.Append('\n');
 
         if (asynchronous)
@@ -154,6 +161,15 @@ public static class ProjectSnippet
     }
 
     private static bool IsType(MemberDeclarationSyntax member) => member is BaseTypeDeclarationSyntax or DelegateDeclarationSyntax;
+
+    /// <summary>
+    /// Whether the statements of the snippet name Assets, which is what the
+    /// resources were called before.
+    /// </summary>
+    private static bool SaysAssets(CompilationUnitSyntax root)
+        => root.Members.Where(m => !IsType(m))
+               .SelectMany(m => m.DescendantTokens())
+               .Any(t => t.IsKind(SyntaxKind.IdentifierToken) && t.ValueText == "Assets");
 
     /// <summary>
     /// The lines of the statements, moved eight spaces in to sit in the method.
@@ -260,7 +276,8 @@ public static class ProjectSnippet
     /// The body is moved out by as much as it was moved in - eight spaces, or
     /// less where all of it stands less far in - so the lines keep where they
     /// stand to each other. A line that starts inside a string is left alone.
-    /// What the class holds besides the method - the assets, the method that
+    /// What the class holds besides the method - the resources by their old
+    /// name, the method that
     /// makes the handler - is the platform's and is left behind; anything
     /// else in it has no place in a snippet, and is refused.
     /// </remarks>

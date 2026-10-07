@@ -246,7 +246,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
             // the names the code reads, which it says itself - never what is
             // stored, and never a value
-            var secrets = files.Where(f => f.IsCode)
+            var secrets = files.Where(f => f.IsCompiled)
                                .SelectMany(f => SecretVault.ReadBy(f.Code))
                                .Select(r => r.Name)
                                .Distinct(StringComparer.Ordinal)

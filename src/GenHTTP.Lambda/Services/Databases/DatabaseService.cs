@@ -48,7 +48,7 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
 
         if (!enabled)
         {
-            return new DatabaseOverview(false, 0, vault.QuotaOf(tier), [], used);
+            return new DatabaseOverview(false, 0, vault.RoomOf(lambdaId, featureId, tier), [], used);
         }
 
         var tables = await Offload.Run(() =>
@@ -58,7 +58,7 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
             return connection == null ? [] : Describe(connection);
         }, cancellation);
 
-        return new DatabaseOverview(true, vault.SizeOf(lambdaId, featureId), vault.QuotaOf(tier), tables, used);
+        return new DatabaseOverview(true, vault.SizeOf(lambdaId, featureId), vault.RoomOf(lambdaId, featureId, tier), tables, used);
     }
 
     public async ValueTask<DatabaseRows> ReadAsync(string privateKey, string table, int offset = 0, int limit = 50, string? order = null, bool descending = true,
@@ -356,7 +356,7 @@ public sealed partial class DatabaseService(IDbContextFactory<LambdaDbContext> d
         return _uses[(lambdaId, version)] = found;
     }
 
-    private static bool UsedIn(string? source) => source != null && LambdaSource.Parse(source).Any(f => f.IsCode && Uses(f.Code));
+    private static bool UsedIn(string? source) => source != null && LambdaSource.Parse(source).Any(f => f.IsCompiled && Uses(f.Code));
 
     #endregion
 

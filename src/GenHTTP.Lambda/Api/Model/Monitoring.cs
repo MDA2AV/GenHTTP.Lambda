@@ -16,9 +16,6 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <param name="Versions">How many versions are kept</param>
 /// <param name="RecentProblems">The last few warnings and errors, newest first</param>
 /// <param name="Documentation">What the documentation of the version the storage is about says, and which of its pages it has</param>
-/// <param name="Build">
-/// The build folder of the newest version - which may be ahead of the one the storage is about - and of that one
-/// </param>
 public sealed record LambdaSummaryResponse(
     LambdaResponse Lambda,
     VersionResponse? Live,
@@ -29,24 +26,8 @@ public sealed record LambdaSummaryResponse(
     IReadOnlyList<OwnerLogEntry> RecentProblems,
     StorageSummary Storage,
     SummaryLimits Limits,
-    DocumentationSummary Documentation,
-    BuildFacts Build
+    DocumentationSummary Documentation
 );
-
-/// <summary>
-/// What a lambda keeps of what its assets or code are built from: the build
-/// folder of a version, which only whoever builds it changes.
-/// </summary>
-/// <remarks>
-/// Of two versions, because the editor asks two things of it: whether the
-/// lambda has one at all - which the newest says, saved by an agent before
-/// anybody put it online - and what the version the rest of the figures are
-/// about holds.
-/// </remarks>
-/// <param name="Files">How many files the build folder of the version the storage is about holds</param>
-/// <param name="Bytes">What those weigh, towards what the assets of a version may come to</param>
-/// <param name="NewestFiles">How many files that of the newest version holds</param>
-public sealed record BuildFacts(int Files, long Bytes, int NewestFiles);
 
 /// <summary>
 /// How much a lambda is being used, and how well it is answering.
@@ -81,13 +62,13 @@ public sealed record TrafficSummary(
 /// What a lambda keeps, and how much of each allowance it spends.
 /// </summary>
 /// <param name="Version">The version the code figures are about: the one online, else the newest</param>
-/// <param name="CodeFiles">C# files, which are compiled and never served</param>
-/// <param name="CodeCharacters">Characters of C#, which is what the code budget counts</param>
-/// <param name="Assets">Files saved with the code that are not C# and not its documentation or tests, served as they are when the code asks</param>
-/// <param name="AssetBytes">What those weigh, decoded</param>
+/// <param name="CodeFiles">Files of its code: the C# it is compiled from and whatever else it is kept with, never served</param>
+/// <param name="CodeBytes">What those weigh, towards the build allowance</param>
+/// <param name="ResourceFiles">Its resources, which it reads and serves as they are when the code asks</param>
+/// <param name="ResourceBytes">What those weigh, decoded, towards the build allowance</param>
 /// <param name="WorkspaceFiles">Files in the workspace - the lambda's data, which it writes at runtime and every version shares</param>
-/// <param name="WorkspaceBytes">The room those take</param>
-/// <param name="ServesAssets">Whether the code of that version reaches for Assets to serve them</param>
+/// <param name="WorkspaceBytes">The room those take, towards the data allowance</param>
+/// <param name="ServesResources">Whether the code of that version reaches for Resources to serve them</param>
 /// <param name="ServesWorkspace">Whether it serves the workspace, which makes those files public</param>
 /// <param name="WorkspaceEnabled">Whether the owner left the workspace switched on</param>
 /// <param name="UsesWorkspace">Whether the code of that version uses the workspace at all, and so fails where it does once it is off</param>
@@ -99,17 +80,17 @@ public sealed record TrafficSummary(
 /// </param>
 /// <param name="DatabaseEnabled">Whether the lambda has its database switched on</param>
 /// <param name="DatabaseTables">How many tables its database holds</param>
-/// <param name="DatabaseBytes">The room its database takes</param>
+/// <param name="DatabaseBytes">The room its database takes, towards the data allowance</param>
 /// <param name="UsesDatabase">Whether the code of that version connects to the database, and so fails where it does once it is off</param>
 public sealed record StorageSummary(
     int? Version,
     int CodeFiles,
-    int CodeCharacters,
-    int Assets,
-    long AssetBytes,
+    long CodeBytes,
+    int ResourceFiles,
+    long ResourceBytes,
     int WorkspaceFiles,
     long WorkspaceBytes,
-    bool ServesAssets,
+    bool ServesResources,
     bool ServesWorkspace,
     bool WorkspaceEnabled,
     bool UsesWorkspace,
@@ -126,20 +107,19 @@ public sealed record StorageSummary(
 /// The allowances a lambda on this installation has, in its tier.
 /// </summary>
 /// <remarks>
-/// Nothing counts files - C#, assets or the workspace - only what they come
-/// to, and for the workspace the room they take.
+/// Nothing counts files, only what they come to: a version, its code and its
+/// resources together; and the data, its database and its workspace together.
 /// </remarks>
+/// <param name="BuildBytes">How large a version may be, its code and its resources together</param>
+/// <param name="DataBytes">The room its data may take, its database and its workspace together</param>
 /// <param name="Features">How many features it may have open at once</param>
-/// <param name="DatabaseBytes">How large its database may grow</param>
 public sealed record SummaryLimits(
-    int CodeCharacters,
-    long AssetBytes,
-    long WorkspaceBytes,
+    long BuildBytes,
+    long DataBytes,
     int Versions,
     int DeploymentLifetimeHours,
     int RetentionDays,
-    int Features,
-    long DatabaseBytes = 0
+    int Features
 );
 
 /// <summary>

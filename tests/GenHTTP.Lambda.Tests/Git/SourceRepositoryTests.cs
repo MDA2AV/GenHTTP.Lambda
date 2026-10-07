@@ -92,7 +92,7 @@ public sealed class SourceRepositoryTests
 
         await git.CloneAsync(fixture.SourceUrl("readonly"), "readonly");
 
-        git.Write("readonly", "assets/mine.txt", "mine");
+        git.Write("readonly", "resources/mine.txt", "mine");
         await git.CommitAsync("readonly", "Mine");
 
         var pushed = await git.TryAsync("readonly", "push");

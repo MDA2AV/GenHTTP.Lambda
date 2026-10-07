@@ -293,10 +293,10 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     }
 
     private static TierLimits Tier(TierLimitsModel model)
-        => new(model.CodeCharacters, model.AssetBytes, model.WorkspaceBytes, model.DatabaseBytes, model.Versions, model.Features);
+        => new(model.BuildBytes, model.DataBytes, model.Versions, model.Features);
 
     private static TierLimitsModel Describe(TierLimits limits)
-        => new(limits.CodeCharacters, limits.AssetBytes, limits.WorkspaceBytes, limits.DatabaseBytes, limits.Versions, limits.Features);
+        => new(limits.BuildBytes, limits.DataBytes, limits.Versions, limits.Features);
 
     private static LimitsModel Describe(ProductLimits limits)
         => new(Describe(limits.Free), Describe(limits.Premium), (int)limits.OfflineAfter.TotalHours, (int)limits.RemovedAfter.TotalHours,

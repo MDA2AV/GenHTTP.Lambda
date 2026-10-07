@@ -72,7 +72,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     /// <summary>
     /// Reads a feature with its files.
     /// </summary>
-    /// <param name="folder">Only the files below this folder - <c>.lambda/docs/</c> for its documentation, <c>.lambda/build/</c> for its build folder - rather than every one</param>
+    /// <param name="folder">Only the files below this folder - <c>docs/</c> for its documentation, <c>tests/</c> for its tests - rather than every one</param>
     [ResourceMethod("lambdas/:privateKey/features/:feature")]
     public FeatureContentResponse Get(string privateKey, string feature, string? folder)
     {
@@ -180,7 +180,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
-        var files = await VersionResource.UnpackAsync(body, limits.MaxCodeLengthOf(tier) * 4L + limits.MaxAssetBytesOf(tier), laid,
+        var files = await VersionResource.UnpackAsync(body, limits.BuildOf(tier), laid,
                                                       LambdaSource.Parse(features.Get(privateKey, feature).Code));
 
         return await SaveAsync(privateKey, feature, files, deploy, specification, change);

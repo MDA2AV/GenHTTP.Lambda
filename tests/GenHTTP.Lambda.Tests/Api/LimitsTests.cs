@@ -27,19 +27,19 @@ public sealed class LimitsTests
     [TestMethod]
     public async Task TheLimitsAreTheConfiguredDefaultsUntilTheOperatorSavesThem()
     {
-        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { MaxCodeLength = 1234, DeploymentLifetime = TimeSpan.FromHours(36) });
+        await using var fixture = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { BuildBytes = 1234 * 1024, DeploymentLifetime = TimeSpan.FromHours(36) });
 
         var limits = await ReadAsync(fixture);
 
-        Assert.AreEqual(1234, limits.Free.CodeCharacters, "what the environment said is still the default, for one release");
-        Assert.AreEqual(fixture.Options.PremiumMaxCodeLength, limits.Premium.CodeCharacters);
-        Assert.AreEqual(fixture.Options.PremiumDatabaseBytes, limits.Premium.DatabaseBytes);
+        Assert.AreEqual(1234 * 1024, limits.Free.BuildBytes, "what the environment said is the default");
+        Assert.AreEqual(fixture.Options.PremiumBuildBytes, limits.Premium.BuildBytes);
+        Assert.AreEqual(fixture.Options.PremiumDataBytes, limits.Premium.DataBytes);
         Assert.AreEqual(36, limits.OfflineAfterHours);
         Assert.AreEqual(fixture.Options.RateLimit, limits.RequestsPerSecond);
     }
 
     [TestMethod]
-    public async Task AnOperatorLowersTheFreeCodeLengthAndALongerSaveIsRefused()
+    public async Task AnOperatorLowersTheFreeBuildAllowanceAndALargerSaveIsRefused()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
@@ -48,24 +48,69 @@ public sealed class LimitsTests
 
         fixture.ChangeTier(premium.PrivateKey, LambdaTier.Premium);
 
-        using (var before = await SaveAsync(fixture, free.PrivateKey, Coding(700)))
+        using (var before = await SaveAsync(fixture, free.PrivateKey, Coding(2000)))
         {
-            Assert.AreEqual(HttpStatusCode.Created, before.StatusCode, "seven hundred characters fit before");
+            Assert.AreEqual(HttpStatusCode.Created, before.StatusCode, "two thousand bytes fit before");
         }
 
         var current = await ReadAsync(fixture);
 
-        await ChangeAsync(fixture, current with { Free = current.Free with { CodeCharacters = 500 } });
+        await ChangeAsync(fixture, current with { Free = current.Free with { BuildBytes = 1024 } });
 
-        using (var refused = await SaveAsync(fixture, free.PrivateKey, Coding(700)))
+        using (var refused = await SaveAsync(fixture, free.PrivateKey, Coding(2000)))
         {
             Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "and not once the operator lowered it, without a restart");
-            Assert.Contains("500 characters", await refused.Content.ReadAsStringAsync());
+            Assert.Contains("1 KB", await refused.Content.ReadAsStringAsync());
         }
 
-        using var unaffected = await SaveAsync(fixture, premium.PrivateKey, Coding(700));
+        using var unaffected = await SaveAsync(fixture, premium.PrivateKey, Coding(2000));
 
         Assert.AreEqual(HttpStatusCode.Created, unaffected.StatusCode, "a premium lambda is held to its own tier's");
+    }
+
+    [TestMethod]
+    public async Task TheFourAllowancesSavedBeforeAreTheTwoTheyBecame()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "genhttp-lambda-tests", Guid.NewGuid().ToString("n"));
+
+        await using (var first = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { DataDirectory = directory }))
+        {
+            // what a panel saved while code and assets, the workspace and the
+            // database had an allowance each - the free database's left as it was
+            await using var connection = new SqliteConnection($"Data Source={first.Options.DatabaseFile};Pooling=false");
+
+            await connection.OpenAsync();
+
+            await using var command = connection.CreateCommand();
+
+            command.CommandText = "INSERT INTO settings (key, value) VALUES ('limits.free.code-characters', '1000'), ('limits.free.asset-bytes', '2048'), "
+                                + "('limits.free.workspace-bytes', '8192'), ('limits.premium.asset-bytes', '4096')";
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        SqliteConnection.ClearAllPools();
+
+        await using var second = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { DataDirectory = directory });
+
+        var limits = await ReadAsync(second);
+
+        Assert.AreEqual(3048, limits.Free.BuildBytes, "code and assets together, as a version may now come to");
+        Assert.AreEqual(8192 + LambdaOptions.RetiredDefaults["database-bytes"].Free, limits.Free.DataBytes, "the workspace and the database's default together");
+        Assert.AreEqual(4096 + LambdaOptions.RetiredDefaults["code-characters"].Premium, limits.Premium.BuildBytes, "and an allowance saved alone with the other's default");
+        Assert.AreEqual(second.Options.PremiumDataBytes, limits.Premium.DataBytes, "what was never saved is the default");
+
+        await ChangeAsync(second, limits);
+
+        await using var check = new SqliteConnection($"Data Source={second.Options.DatabaseFile};Pooling=false");
+
+        await check.OpenAsync();
+
+        await using var query = check.CreateCommand();
+
+        query.CommandText = "SELECT count(*) FROM settings WHERE key LIKE '%code-characters' OR key LIKE '%asset-bytes' OR key LIKE '%workspace-bytes' OR key LIKE '%database-bytes'";
+
+        Assert.AreEqual(0L, (long)(await query.ExecuteScalarAsync())!, "saved once, the four are gone");
     }
 
     [TestMethod]
@@ -77,7 +122,7 @@ public sealed class LimitsTests
         {
             var current = await ReadAsync(first);
 
-            await ChangeAsync(first, current with { Free = current.Free with { CodeCharacters = 500 }, BuildsPerDay = 3 });
+            await ChangeAsync(first, current with { Free = current.Free with { BuildBytes = 4096 }, BuildsPerDay = 3 });
         }
 
         SqliteConnection.ClearAllPools();
@@ -86,7 +131,7 @@ public sealed class LimitsTests
 
         var kept = await ReadAsync(second);
 
-        Assert.AreEqual(500, kept.Free.CodeCharacters);
+        Assert.AreEqual(4096, kept.Free.BuildBytes);
         Assert.AreEqual(3, kept.BuildsPerDay);
     }
 
@@ -99,15 +144,15 @@ public sealed class LimitsTests
         {
             var current = await ReadAsync(first);
 
-            await ChangeAsync(first, current with { Free = current.Free with { CodeCharacters = 500 } });
+            await ChangeAsync(first, current with { Free = current.Free with { BuildBytes = 4096 } });
         }
 
         SqliteConnection.ClearAllPools();
 
-        // what a host restarted with the old variable still set looks like
-        await using var second = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { DataDirectory = directory, MaxCodeLength = 9000 });
+        // what a host restarted with another default looks like
+        await using var second = await LambdaFixture.CreateAsync(o => LambdaFixture.WithPanel(o) with { DataDirectory = directory, BuildBytes = 9000 });
 
-        Assert.AreEqual(500, (await ReadAsync(second)).Free.CodeCharacters);
+        Assert.AreEqual(4096, (await ReadAsync(second)).Free.BuildBytes);
     }
 
     [TestMethod]
@@ -162,19 +207,19 @@ public sealed class LimitsTests
 
         var current = await ReadAsync(fixture);
 
-        await ChangeAsync(fixture, current with { Free = current.Free with { CodeCharacters = 4321 }, OfflineAfterHours = 48, RemovedAfterHours = 24 * 10 });
+        await ChangeAsync(fixture, current with { Free = current.Free with { BuildBytes = 4321 * 1024 }, OfflineAfterHours = 48, RemovedAfterHours = 24 * 10 });
 
         using var response = await fixture.GetAsync("/api/v1/system");
 
         var platform = await response.GetContentAsync<PlatformResponse>();
 
-        Assert.AreEqual(4321, platform.MaxCodeLength);
+        Assert.AreEqual(4321 * 1024, platform.BuildBytes);
         Assert.AreEqual(48, platform.DeploymentLifetimeHours);
         Assert.AreEqual(10, platform.RetentionDays);
     }
 
     [TestMethod]
-    public async Task ALoweredDatabaseLimitHoldsFromTheNextConnection()
+    public async Task ALoweredDataLimitHoldsFromTheNextConnection()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
 
@@ -209,7 +254,7 @@ public sealed class LimitsTests
 
         var current = await ReadAsync(fixture);
 
-        await ChangeAsync(fixture, current with { Free = current.Free with { DatabaseBytes = 256 * 1024 } });
+        await ChangeAsync(fixture, current with { Free = current.Free with { DataBytes = 256 * 1024 } });
 
         StringAssert.Contains(await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"), "full", "the records it has are kept; it grows no further");
     }
@@ -259,11 +304,11 @@ public sealed class LimitsTests
         return content;
     }
 
-    private static LambdaFile[] Coding(int characters)
+    private static LambdaFile[] Coding(int bytes)
     {
         const string code = "return Content.From(Resource.FromString(\"x\"));\n// ";
 
-        return [new(LambdaSource.EntryName, code + new string('a', characters - code.Length))];
+        return [new(LambdaSource.EntryName, code + new string('a', bytes - code.Length))];
     }
 
     private static Task<HttpResponseMessage> SaveAsync(LambdaFixture fixture, string privateKey, LambdaFile[] files)

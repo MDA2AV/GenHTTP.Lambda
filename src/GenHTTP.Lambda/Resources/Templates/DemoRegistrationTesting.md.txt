@@ -3,7 +3,7 @@
 `smoke.mjs` checks the app from the outside, the way a browser uses it. It registers an account of its own, reads what only a member may read with the session cookie it was given, signs in again and signs out, checks what is refused - no session, a session the app does not know, a name that is taken, a wrong password, names and passwords that are not allowed - and that the pages are served. It ends the sessions it opened, whatever happens.
 
 ```
-node .lambda/tests/smoke.mjs <address>
+node tests/smoke.mjs <address>
 ```
 
 The address is where the app answers: the preview of a feature (`https://…/features/<feature>/`) before it is put online, or a copy of your own. It needs Node 18 or later and nothing else, and ends with 0 when everything passed and 1, naming what failed, when something did not.
@@ -36,7 +36,7 @@ What happens in the browser - the landing page moving a signed in visitor on, th
 `accounts.json` names twelve accounts, for trying the members page with a full list: a name with a letter outside English, one as long as a name may be, and names with dots, dashes and underscores. `seed.mjs` registers them, each with the password `test-password`, and signs each out again:
 
 ```
-node .lambda/tests/seed.mjs <address>
+node tests/seed.mjs <address>
 ```
 
 The accounts are kept in the app's database, which only the app writes to, so they are made the way everybody's are; a name that is taken already is left as it is. Run it against the preview of a feature, whose data is a copy thrown away when the feature is put online - never against the app itself, since anybody who has read this can sign in with these accounts.

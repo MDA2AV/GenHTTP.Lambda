@@ -38,7 +38,8 @@ internal static class VersionInput
     }
 
     /// <summary>
-    /// Holds the code and the assets to what the tier of the lambda allows.
+    /// Holds a version to what the tier of the lambda allows it to come to:
+    /// its code and its resources together.
     /// </summary>
     /// <remarks>
     /// Only ever when a version is written. A lambda that leaves the premium
@@ -46,46 +47,36 @@ internal static class VersionInput
     /// what it cannot do is save a new one until it fits. A refusal names
     /// what the premium tier allows, so whoever reads it knows there is more.
     /// A feature is held to the same, since what it holds becomes a version.
+    ///
+    /// Counted in bytes as they are, whatever a file is - every version
+    /// carries its own copy of all of it, and is read and written whole.
     /// </remarks>
     public static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, ILimitsService limits)
     {
-        // the limit counts what was written rather than what it is stored as,
-        // so splitting a lambda into files does not spend any of it on the
-        // envelope those files are kept in
-        var code = limits.MaxCodeLengthOf(tier);
+        var allowed = limits.BuildOf(tier);
 
-        if (LambdaSource.Length(files) > code)
+        var size = LambdaSource.Size(files);
+
+        if (size <= allowed)
         {
-            throw LambdaException.Invalid($"The code must not exceed {code:N0} characters.{Beyond(tier, code, limits.MaxCodeLengthOf(LambdaTier.Premium), $"{limits.MaxCodeLengthOf(LambdaTier.Premium):N0} characters")}");
+            return;
         }
 
-        // the documentation, the tests and the build folder are carried
-        // the same way as the assets - a copy in every version - so they
-        // share the allowance
-        var assets = limits.MaxAssetBytesOf(tier);
+        // a folder of the code that takes most of it is most likely what a
+        // build installed or made, which a .gitignore of it keeps out
+        var largest = files.Where(f => f.IsCode && f.Name.Contains('/'))
+                           .GroupBy(f => f.Name[..(f.Name.IndexOf('/') + 1)])
+                           .Select(g => (Folder: g.Key, Bytes: LambdaSource.Size(g)))
+                           .OrderByDescending(g => g.Bytes)
+                           .FirstOrDefault();
 
-        var context = LambdaSource.ContextBytes(files);
+        var where = largest.Folder != null && largest.Bytes > size / 2
+            ? $" {largest.Folder} comes to {Readable(largest.Bytes)}: what a build installs, caches or makes is no part of a version - list it in a .gitignore of that folder, which a clone and a zip follow."
+            : string.Empty;
 
-        var build = LambdaSource.BuildBytes(files);
-
-        if (LambdaSource.AssetBytes(files) + context + build > assets)
-        {
-            var what = (context > 0, build > 0) switch
-            {
-                (true, true) => "The assets, the documentation, the tests and the build folder",
-                (true, false) => "The assets, the documentation and the tests",
-                (false, true) => "The assets and the build folder",
-                _ => "The assets"
-            };
-
-            // what a build installed or made is the likeliest reason a
-            // build folder is large, and its .gitignore what keeps it out
-            var built = build > 0
-                ? $" The build folder comes to {Readable(build)}: what a build installs, caches or makes is no part of it - list it in its .gitignore, which a clone and a zip follow."
-                : string.Empty;
-
-            throw LambdaException.Invalid($"{what} must not exceed {Readable(assets)} in total.{Beyond(tier, assets, limits.MaxAssetBytesOf(LambdaTier.Premium), Readable(limits.MaxAssetBytesOf(LambdaTier.Premium)))}{built} A large file that is not code - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
-        }
+        throw LambdaException.Invalid($"The code and the resources of a version must not exceed {Readable(allowed)} together; these come to {Readable(size)}."
+                                    + $"{Beyond(tier, allowed, limits.BuildOf(LambdaTier.Premium), Readable(limits.BuildOf(LambdaTier.Premium)))}{where}"
+                                    + " A large file that is no part of the program - a model, a dataset, media - belongs in the workspace, which is kept apart from the versions.");
     }
 
     /// <summary>
@@ -114,6 +105,6 @@ internal static class VersionInput
         => tier != LambdaTier.Premium && premium > allowed ? $" A lambda in the premium tier may have {readable}." : string.Empty;
 
     private static string Readable(long bytes)
-        => bytes % (1024 * 1024) == 0 ? $"{bytes / 1024 / 1024} MB" : $"{bytes / 1024} KB";
+        => bytes % (1024 * 1024) == 0 || bytes >= 10 * 1024 * 1024 ? $"{bytes / 1024 / 1024} MB" : $"{bytes / 1024} KB";
 
 }

@@ -16,7 +16,7 @@ namespace GenHTTP.Lambda.Api;
 /// The data of a lambda: which kinds it keeps, and switching them on and off.
 /// </summary>
 /// <remarks>
-/// A version is the program - its code and assets - and is replaced by the
+/// A version is the program - its code and resources - and is replaced by the
 /// next one; data is what the program keeps, shared by every version and left
 /// alone by deploying and rolling back. The database is off until it is
 /// switched on, which makes it; its tables are under

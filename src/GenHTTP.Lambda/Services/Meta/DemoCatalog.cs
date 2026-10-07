@@ -30,7 +30,7 @@ public static class DemoCatalog
         new("demo-crud", "Records you can list, add, change and remove",
             "Keep track of things", "A list people can add to, change and tick off - tasks, notes, bookmarks or a small inventory.",
             "A task list: a REST API with list, search, read, create, update and delete, kept in the lambda's database, with an OpenAPI document, Scalar to try it, and a page that uses it.",
-            "A class-based webservice ([ResourceMethod]), status codes (201, 400, 404), validation, a table made by an Evolve migration shipped in migrations/, a store with an Entity Framework Core DbContext mapping it (LINQ, EF.Functions.Like, AsNoTracking, ExecuteDelete, a value converter for times), a transaction and a size cap, synchronous calls on a context per request, OpenAPI and Scalar, and a front end shipped as assets in a folder.",
+            "A class-based webservice ([ResourceMethod]), status codes (201, 400, 404), validation, a table made by an Evolve migration shipped in resources/migrations/, a store with an Entity Framework Core DbContext mapping it (LINQ, EF.Functions.Like, AsNoTracking, ExecuteDelete, a value converter for times), a transaction and a size cap, synchronous calls on a context per request, OpenAPI and Scalar, and a front end shipped as resources in a folder.",
             "Anything that keeps a list of things: notes, bookmarks, inventory, a small admin tool.",
             Database: true),
 

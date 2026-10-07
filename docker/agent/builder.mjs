@@ -253,14 +253,15 @@ How to work:
    their editor on the app and a box to ask for changes, rather than on code
    they never meant to read.
 3. Write the code. One page that works beats four that do not. If it wants a
-   front end, ship its pages, scripts and styles with the code as assets and
-   make it look deliberate rather than default.
+   front end, ship its pages, scripts and styles with the code as resources,
+   in resources/web/, served with Resources.App("web"), and make it look
+   deliberate rather than default.
 4. Write down what you built, as three more files saved with the code:
-   .lambda/docs/product.md - what the app is in a sentence or two, then who
-   it is for, what they do with it and why, in their terms: the owner reads
-   it in their editor. .lambda/docs/decisions.md - how you built it and why,
-   for whoever changes it next. .lambda/tests/README.md - how to check that
-   it works: the requests to make and the answers to expect. Short and
+   docs/product.md - what the app is in a sentence or two, then who it is
+   for, what they do with it and why, in their terms: the owner reads it in
+   their editor. docs/decisions.md - how you built it and why, for whoever
+   changes it next. tests/README.md - how to check that it works: the
+   requests to make and the answers to expect. Short and
    specific, in proportion to the app - a few lines each for a small one -
    and in the language of the request; platform_guide says more under
    documentationAndTests. They are never compiled or served.
@@ -361,9 +362,9 @@ How to work:
    fix what they say the same way. A feature has no versions of its own, so
    save into it as often as it takes.
 6. Keep what is written about the application true, in the same feature:
-   .lambda/docs/product.md for what it does now and why, from what they
-   asked; .lambda/docs/decisions.md for how you did it; .lambda/tests/README.md
-   for how to check it. Change only the passages the change affects, with
+   docs/product.md for what it does now and why, from what they asked;
+   docs/decisions.md for how you did it; tests/README.md for how to check
+   it. Change only the passages the change affects, with
    edits. If the application has none of them yet, write them. The owner
    reads product.md in their control center, in the language of their
    request.

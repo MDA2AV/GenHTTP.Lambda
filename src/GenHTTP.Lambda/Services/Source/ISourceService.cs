@@ -12,7 +12,7 @@ namespace GenHTTP.Lambda.Services.Source;
 /// saving or deploying code reads or changes anything here.
 ///
 /// What is published is the program and what is written about it - every
-/// version's code, assets, documentation and tests, as the export packs them,
+/// version's code, resources, documentation and tests, as the export packs them,
 /// with the license it is published under. Never the data: not the database,
 /// not the workspace, not a secret's value. And nothing only the owner may
 /// know: no editor key, no traffic, no log, and not what was asked for in the

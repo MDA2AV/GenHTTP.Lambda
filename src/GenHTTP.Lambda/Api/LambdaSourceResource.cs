@@ -36,7 +36,7 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
     }
 
     /// <summary>
-    /// Publishes the source of the lambda - every version's code, assets,
+    /// Publishes the source of the lambda - every version's code, resources,
     /// documentation and tests, never its data - or changes the license it is
     /// published under.
     /// </summary>

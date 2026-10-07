@@ -37,7 +37,7 @@ public sealed class ArchiveTests
 
         var changed = Zip(("lambda.cs", Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(Greeter.Text));")),
                           ("Greeter.cs", Encoding.UTF8.GetBytes("static class Greeter { public const string Text = \"from a zip\"; }")),
-                          ("site/logo.gif", [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0xFF]));
+                          ("resources/site/logo.gif", [0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0xFF]));
 
         using var uploaded = await UploadAsync(fixture, lambda.PrivateKey, changed);
 
@@ -49,9 +49,9 @@ public sealed class ArchiveTests
 
         var content = await read.GetContentAsync<VersionContentResponse>();
 
-        CollectionAssert.AreEqual(new[] { "lambda.cs", "Greeter.cs", "site/logo.gif" }, content.Files.Select(f => f.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "lambda.cs", "Greeter.cs", "resources/site/logo.gif" }, content.Files.Select(f => f.Name).ToArray());
 
-        Assert.AreEqual("base64", content.Files[2].Encoding, "binary assets are kept as base64");
+        Assert.AreEqual("base64", content.Files[2].Encoding, "binary files are kept as base64");
 
         var deployed = await fixture.DeployAsync(lambda.PrivateKey);
 
@@ -70,7 +70,7 @@ public sealed class ArchiveTests
         var lambda = await fixture.CreateLambdaAsync();
 
         var archive = Zip(("project/lambda.cs", Encoding.UTF8.GetBytes("return Content.From(Resource.FromString(\"hi\"));")),
-                          ("project/site/app.css", Encoding.UTF8.GetBytes("body { margin: 0 }")),
+                          ("project/resources/site/app.css", Encoding.UTF8.GetBytes("body { margin: 0 }")),
                           ("project/.git/HEAD", Encoding.UTF8.GetBytes("ref: refs/heads/main")),
                           ("project/.DS_Store", [0x00, 0x01]));
 
@@ -84,9 +84,9 @@ public sealed class ArchiveTests
 
         var content = await read.GetContentAsync<VersionContentResponse>();
 
-        CollectionAssert.AreEqual(new[] { "lambda.cs", "site/app.css" }, content.Files.Select(f => f.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "lambda.cs", "resources/site/app.css" }, content.Files.Select(f => f.Name).ToArray());
 
-        Assert.IsNull(content.Files[1].Encoding, "text assets stay text");
+        Assert.IsNull(content.Files[1].Encoding, "text files stay text");
     }
 
     [TestMethod]

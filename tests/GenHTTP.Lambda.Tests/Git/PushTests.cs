@@ -71,7 +71,7 @@ public sealed class PushTests
 
         Assert.IsTrue(File.Exists(Path.Combine(git.PathOf("untouched"), "Store.cs")), "named the .NET way");
 
-        git.Write("untouched", "assets/readme.txt", "hello");
+        git.Write("untouched", "resources/readme.txt", "hello");
         git.Change("untouched", "Store.cs", "Shelf", "Bookshelf");
 
         await git.CommitAsync("untouched", "Adds a file");
@@ -81,7 +81,7 @@ public sealed class PushTests
 
         Assert.AreEqual(written, files.Single(f => f.Name == LambdaSource.EntryName).Code, "to the byte");
         Assert.AreEqual("public class Bookshelf { }\n", files.Single(f => f.Name == "store.cs").Code, "under the name the lambda gave it");
-        Assert.AreEqual("hello", files.Single(f => f.Name == "readme.txt").Code);
+        Assert.AreEqual("hello", files.Single(f => f.Name == "resources/readme.txt").Code);
     }
 
     [TestMethod]
@@ -97,7 +97,7 @@ public sealed class PushTests
 
         foreach (var word in (string[])["one", "two", "three"])
         {
-            git.Write("several", "assets/word.txt", word);
+            git.Write("several", "resources/word.txt", word);
             await git.CommitAsync("several", $"Says {word}");
         }
 
@@ -146,7 +146,7 @@ public sealed class PushTests
 
         await git.CloneAsync(fixture.EditorUrl(lambda), "offline");
 
-        git.Write("offline", "assets/note.txt", "x");
+        git.Write("offline", "resources/note.txt", "x");
 
         await git.CommitAsync("offline", "Adds a note");
 
@@ -210,16 +210,27 @@ public sealed class PushTests
 
         await git.RunAsync("platform", "reset", "--hard", "origin/main");
 
-        git.Write("platform", "README.md", "# Mine");
+        git.Write("platform", "Platform/Mine.cs", "public class Mine { }");
 
-        await git.CommitAsync("platform", "Adds a readme");
+        await git.CommitAsync("platform", "Adds to the platform");
 
         var foreign = await git.TryAsync("platform", "push");
 
         Assert.AreNotEqual(0, foreign.ExitCode);
-        Assert.Contains("'README.md' has no place in a lambda", foreign.Said);
+        Assert.Contains("'Platform/Mine.cs' is no file of the lambda", foreign.Said);
 
         Assert.HasCount(1, await fixture.VersionsAsync(lambda));
+
+        // anything else is the lambda's code, a README at the top among it
+        await git.RunAsync("platform", "reset", "--hard", "origin/main");
+
+        git.Write("platform", "README.md", "# Mine");
+
+        await git.CommitAsync("platform", "Adds a readme");
+
+        await git.RunAsync("platform", "push");
+
+        Assert.AreEqual("# Mine", (await fixture.VersionAsync(lambda, 2)).Files.Single(f => f.Name == "README.md").Code);
     }
 
     [TestMethod]
@@ -237,7 +248,7 @@ public sealed class PushTests
 
         await git.RunAsync("rewritten", "reset", "--hard", "HEAD~1");
 
-        git.Write("rewritten", "assets/other.txt", "other");
+        git.Write("rewritten", "resources/other.txt", "other");
 
         await git.CommitAsync("rewritten", "Goes another way");
 
@@ -263,11 +274,11 @@ public sealed class PushTests
         await git.CloneAsync(fixture.EditorUrl(lambda), "merged");
 
         await git.RunAsync("merged", "switch", "-c", "side");
-        git.Write("merged", "assets/side.txt", "side");
+        git.Write("merged", "resources/side.txt", "side");
         await git.CommitAsync("merged", "On the side");
 
         await git.RunAsync("merged", "switch", "main");
-        git.Write("merged", "assets/main.txt", "main");
+        git.Write("merged", "resources/main.txt", "main");
         await git.CommitAsync("merged", "On main");
 
         await git.RunAsync("merged", "merge", "--no-edit", "side");
@@ -291,7 +302,7 @@ public sealed class PushTests
 
         await fixture.SaveAsync(lambda, "Saved in the editor", new LambdaFile(LambdaSource.EntryName, Repository.Says("editor")));
 
-        git.Write("behind", "assets/mine.txt", "mine");
+        git.Write("behind", "resources/mine.txt", "mine");
         await git.CommitAsync("behind", "Mine");
 
         var pushed = await git.TryAsync("behind", "push");
@@ -337,7 +348,7 @@ public sealed class PushTests
 
         await git.CloneAsync(fixture.Host.GetUrl("/editor/demo-crud/demo-crud.git"), "demo");
 
-        git.Write("demo", "assets/mine.txt", "mine");
+        git.Write("demo", "resources/mine.txt", "mine");
         await git.CommitAsync("demo", "Mine");
 
         var pushed = await git.TryAsync("demo", "push");

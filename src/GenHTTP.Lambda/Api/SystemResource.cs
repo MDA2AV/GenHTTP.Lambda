@@ -37,7 +37,7 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
         return new(
             Terms,
             Describe(),
-            current.Free.CodeCharacters,
+            current.Free.BuildBytes,
             (int)current.OfflineAfter.TotalHours,
             (int)current.RemovedAfter.TotalDays,
             ModuleCatalog.Imports,

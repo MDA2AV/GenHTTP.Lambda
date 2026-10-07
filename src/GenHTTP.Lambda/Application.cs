@@ -143,6 +143,8 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<ISecretVault>(provider => provider.GetRequiredService<SecretVault>());
         services.AddSingleton<DatabaseVault>();
         services.AddSingleton<IDatabaseVault>(provider => provider.GetRequiredService<DatabaseVault>());
+        services.AddSingleton<WorkspaceVault>();
+        services.AddSingleton<IWorkspaceVault>(provider => provider.GetRequiredService<WorkspaceVault>());
         services.AddSingleton<IStorageService, FileSystemStorageService>();
         services.AddSingleton<IDeploymentService, DeploymentService>();
         services.AddSingleton<LambdaHistory>();

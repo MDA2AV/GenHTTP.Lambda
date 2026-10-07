@@ -43,13 +43,13 @@ public sealed class GitStore(LambdaOptions options)
 
         var stored = JsonSerializer.Deserialize<StoredIndex>(File.ReadAllText(file), Json);
 
-        return new GitIndex(stored?.Versions ?? [], stored?.Features ?? []);
+        return new GitIndex(stored?.Versions ?? [], stored?.Features ?? [], stored?.Moved ?? []);
     }
 
     public void WriteIndex(long lambda, GitIndex index)
-        => Write(Path.Combine(Root(lambda), "index.json"), JsonSerializer.SerializeToUtf8Bytes(new StoredIndex(index.Versions, index.Features), Json));
+        => Write(Path.Combine(Root(lambda), "index.json"), JsonSerializer.SerializeToUtf8Bytes(new StoredIndex(index.Versions, index.Features, index.Moved), Json));
 
-    private sealed record StoredIndex(Dictionary<int, string>? Versions, Dictionary<string, FeatureTip>? Features);
+    private sealed record StoredIndex(Dictionary<int, string>? Versions, Dictionary<string, FeatureTip>? Features, Dictionary<string, string>? Moved);
 
     #endregion
 
@@ -116,11 +116,13 @@ public sealed class GitStore(LambdaOptions options)
     /// Removes the commits and the files nothing reaches any more.
     /// </summary>
     /// <remarks>
-    /// Reached is a version that is still there, the tip of a feature that is
-    /// still there, and what lies below a tip up to the versions it starts
-    /// from. Below a version nothing is followed: the versions before it are
-    /// kept for as long as they are versions, and a version that was pruned is
-    /// gone from the history - a clone is told the history starts later.
+    /// Reached is a version that is still there, the commit laying it out
+    /// anew where it was made before the platform laid lambdas out as it does
+    /// now, the tip of a feature that is still there, and what lies below a
+    /// tip up to the versions it starts from. Below a version nothing is
+    /// followed: the versions before it are kept for as long as they are
+    /// versions, and a version that was pruned is gone from the history - a
+    /// clone is told the history starts later.
     /// </remarks>
     /// <returns>How many commits were removed</returns>
     public int Collect(long lambda, GitIndex index)
@@ -140,7 +142,9 @@ public sealed class GitStore(LambdaOptions options)
 
         var blobs = new HashSet<string>(StringComparer.Ordinal);
 
-        var pending = new Stack<string>(versions.Concat(index.Features.Values.Select(f => f.Commit)));
+        var moves = versions.Where(index.Moved.ContainsKey).Select(v => index.Moved[v]);
+
+        var pending = new Stack<string>(versions.Concat(moves).Concat(index.Features.Values.Select(f => f.Commit)));
 
         while (pending.TryPop(out var id))
         {
@@ -176,6 +180,12 @@ public sealed class GitStore(LambdaOptions options)
 
                 pending.Push(hex);
             }
+        }
+
+        // what laid out a commit that is gone is gone too
+        foreach (var gone in index.Moved.Where(m => !live.Contains(m.Value)).Select(m => m.Key).ToList())
+        {
+            index.Moved.Remove(gone);
         }
 
         var removed = 0;
