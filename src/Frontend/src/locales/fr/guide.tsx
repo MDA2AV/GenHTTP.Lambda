@@ -228,22 +228,23 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Une version est un nombre quelconque de fichiers, en deux parties. Son {k.b('code')} est tous ses fichiers sauf
-      ses ressources : les fichiers {k.code('.cs')} à la racine sont compilés, et tout autre fichier - dans n’importe
-      quel dossier, de n’importe quel type - est conservé avec la version, sans jamais être compilé ni servi : sa
-      documentation, ses tests, ce à partir de quoi un front end est construit. Ses {k.b('ressources')}, dans{' '}
-      {k.code('resources/')}, sont ce qu’elle lit et sert pendant qu’elle tourne - pages, scripts, styles, images,
-      migrations de la base de données - et le code y accède par {k.code('Resources')}.
+      ses ressources : ses fichiers {k.code('.cs')} sont compilés, dans n’importe quel dossier, comme dans tout projet
+      C#, et tout autre fichier est conservé avec la version, sans jamais être compilé ni servi : sa documentation, ses
+      tests, ce à partir de quoi un front end est construit. Ses {k.b('ressources')}, dans {k.code('resources/')}, sont
+      ce qu’elle lit et sert pendant qu’elle tourne - pages, scripts, styles, images, migrations de la base de données -
+      et le code y accède par {k.code('Resources')}.
     </>
   ),
   files2: (k) => (
     <>
       Les types n’ont pas besoin d’être sous le code qui les utilise. Dans {k.b('Code')}, cliquez sur {k.b('+')} à côté
-      du code et tapez un nom : un fichier {k.code('.cs')} à la racine est compilé avec le snippet, dans le même
-      namespace, donc rien à importer pour y accéder. Un nom sans extension et sans dossier est considéré comme du C#.
+      du code et tapez un nom : un fichier {k.code('.cs')} est compilé avec le snippet, dans le même namespace, quel que
+      soit son dossier, donc rien à importer pour y accéder. Un nom sans extension et sans dossier est considéré comme
+      du C#.
     </>
   ),
   filesAside:
-    'La façon d’organiser le reste du code revient à celui qui l’écrit : un dossier pour les sources d’un front end, un autre pour des scripts. Le code et les ressources d’une version se partagent une même réserve de place, que la vue d’ensemble montre.',
+    'La façon d’organiser le code revient à celui qui l’écrit : un dossier pour les types, un pour les sources d’un front end, un pour des scripts. Chaque fichier .cs est compilé dans l’application ; du C# qui n’en fait pas partie (un test, un outil à part) n’a donc pas sa place dans le code sous forme de fichier .cs. Le code et les ressources d’une version se partagent une même réserve de place, que la vue d’ensemble montre.',
 
   page: 'Il y a deux façons de servir une page, et une troisième pour ce que les gens importent à côté.',
   inlineTitle: 'Une page, écrite dans le code',

@@ -1,7 +1,7 @@
 /** Adding, uploading and removing the files of the code view, and what their names may be. */
 export const tabs = {
-  /** Said of a name a C# file at the top of the code may not have. */
-  codeName: 'A C# file at the top: letters, digits, dashes and underscores, starting with a letter and ending in .cs, 40 characters at most.',
+  /** Said of a name a C# file may not have, in whichever folder it is. */
+  codeName: 'A C# file is named with letters, digits, dashes, underscores and dots, starting with a letter and ending in .cs, 40 characters at most.',
   /** Said of a name any other file of the code may not have. */
   name: 'Letters, digits and - _ . + @ ( ) [ ] { } $ ~, folders separated by slashes, no spaces and no name ending in a dot.',
   /** Said of a name at the top that an exported or cloned project has for its own. */
@@ -20,7 +20,7 @@ export const tabs = {
   errors: 'has errors',
   removeFile: (name: string) => `Remove ${name}`,
   removeTitle: 'Remove',
-  codePlaceholder: 'Store.cs, docs/notes.md or frontend/app.ts',
+  codePlaceholder: 'Store.cs, models/Item.cs or docs/notes.md',
   resourcePlaceholder: 'web/index.html',
   upload: 'Upload a file',
 };

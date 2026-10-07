@@ -231,8 +231,8 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Sebuah versi terdiri dari file dalam jumlah berapa pun, dalam dua bagian. {k.b('Kode')}-nya adalah setiap file
-      kecuali sumber dayanya: file {k.code('.cs')} di bagian atas dikompilasi, dan setiap file lain - di folder mana
-      pun, jenis apa pun - disimpan bersama versi dan tidak pernah dikompilasi atau disajikan: dokumentasinya,
+      kecuali sumber dayanya: file {k.code('.cs')}-nya dikompilasi, di folder mana pun, seperti di proyek C# mana pun,
+      dan setiap file lain disimpan bersama versi dan tidak pernah dikompilasi atau disajikan: dokumentasinya,
       pengujiannya, bahan pembuat front end. {k.b('Sumber daya')}-nya, di {k.code('resources/')}, adalah apa yang
       dibaca dan disajikannya selama berjalan - halaman, script, stylesheet, gambar, migrasi database - dan dijangkau
       dari kode sebagai {k.code('Resources')}.
@@ -241,12 +241,12 @@ export const guide: Messages['guide'] = {
   files2: (k) => (
     <>
       Tipe tidak harus berada di bawah kode yang memakainya. Di {k.b('Kode')}, tekan {k.b('+')} di samping kode, lalu
-      ketik sebuah nama: file {k.code('.cs')} di bagian atas dikompilasi bersama snippet, di namespace yang sama, jadi
-      tidak perlu import apa pun untuk mengaksesnya. Nama tanpa ekstensi dan tanpa folder dianggap C#.
+      ketik sebuah nama: file {k.code('.cs')} dikompilasi bersama snippet, di namespace yang sama, di folder mana pun
+      letaknya, jadi tidak perlu import apa pun untuk mengaksesnya. Nama tanpa ekstensi dan tanpa folder dianggap C#.
     </>
   ),
   filesAside:
-    'Bagaimana sisa kode ditata terserah penulisnya - satu folder untuk sumber front end, satu lagi untuk script. Kode dan sumber daya sebuah versi berbagi satu jatah ruang, yang ditampilkan di ringkasan.',
+    'Bagaimana kode ditata terserah penulisnya - satu folder untuk tipe, satu untuk sumber front end, satu lagi untuk script. Setiap file .cs dikompilasi ke dalam aplikasi, jadi C# yang bukan bagian darinya - sebuah pengujian, alat tersendiri - tidak termasuk dalam kode sebagai file .cs. Kode dan sumber daya sebuah versi berbagi satu jatah ruang, yang ditampilkan di ringkasan.',
 
   page: 'Ada dua cara untuk menyajikan halaman, dan satu cara lagi untuk file yang diunggah orang di sampingnya.',
   inlineTitle: 'Satu halaman, ditulis inline',

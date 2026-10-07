@@ -52,7 +52,7 @@ export const summary: EditorMessages['summary'] = {
   dataAllowance: 'Database en workspace',
   files: (files, size) => (files === 1 ? `1 bestand, ${size}` : `${files} bestanden, ${size}`),
   code: 'Code',
-  codeWhy: 'Nooit geserveerd. De .cs-bestanden bovenaan worden gecompileerd; de rest – documentatie, tests, waaruit het is gebouwd – wordt bij de versie bewaard.',
+  codeWhy: 'Nooit geserveerd. De .cs-bestanden worden gecompileerd, in elke map; de rest – documentatie, tests, waaruit het is gebouwd – wordt bij de versie bewaard.',
   resources: 'Resources',
   resourcesPublic: 'Openbaar: de code serveert ze.',
   resourcesPrivate: 'Niet geserveerd door de code.',

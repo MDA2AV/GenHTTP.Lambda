@@ -234,7 +234,7 @@ public static class ProjectTree
 
         if (LambdaSource.Validate(ordered) is { } invalid)
         {
-            // named as the lambda names it, which is where the clone has it but for the C# at the top
+            // named as the lambda names it, which is where the clone has it but for the names of its C#
             return ReadTree.Refused(invalid);
         }
 

@@ -20,19 +20,20 @@ export const code: EditorMessages['code'] = {
   demo: 'Es una demo, así que todo es de solo lectura. Para cambiarla, crea tu propia lambda a partir de ella.',
   hint: (b) => (
     <>
-      Los archivos de una versión. Su {b('código')} es el programa y todo lo que se guarda con él: los archivos .cs de la
-      raíz se compilan, y todos los demás (su documentación, sus pruebas, aquello a partir de lo que se genera un front
-      end) se guardan con la versión y nunca se compilan ni se sirven. Sus {b('recursos')} (páginas, scripts, estilos,
-      imágenes, las migraciones de la base de datos) se leen y se sirven mientras se ejecuta, y son públicos donde el
-      código los sirve. Al guardar se crea una versión nueva y lo que está en línea no se toca; para probar antes un
-      cambio, empieza un borrador. Ctrl-S guarda, F12 va a una declaración.
+      Los archivos de una versión. Su {b('código')} es el programa y todo lo que se guarda con él: sus archivos .cs se
+      compilan, estén en la carpeta que estén, y todos los demás (su documentación, sus pruebas, aquello a partir de lo
+      que se genera un front end) se guardan con la versión y nunca se compilan ni se sirven. Sus {b('recursos')}
+      (páginas, scripts, estilos, imágenes, las migraciones de la base de datos) se leen y se sirven mientras se
+      ejecuta, y son públicos donde el código los sirve. Al guardar se crea una versión nueva y lo que está en línea no
+      se toca; para probar antes un cambio, empieza un borrador. Ctrl-S guarda, F12 va a una declaración.
     </>
   ),
   hintFeature: (b) => (
     <>
-      Los archivos de este borrador: su {b('código')} (los archivos .cs de la raíz se compilan, el resto se guarda con
-      él) y sus {b('recursos')}, que se leen y se sirven mientras se ejecuta. Al guardar se quedan en el borrador y se
-      muestran en la dirección propia del borrador; tus visitantes no ven nada hasta que lo pongas en línea.
+      Los archivos de este borrador: su {b('código')} (sus archivos .cs se compilan, estén en la carpeta que estén; el
+      resto se guarda con él) y sus {b('recursos')}, que se leen y se sirven mientras se ejecuta. Al guardar se quedan
+      en el borrador y se muestran en la dirección propia del borrador; tus visitantes no ven nada hasta que lo pongas
+      en línea.
     </>
   ),
   inFeature: (name) => `en «${name}»`,
@@ -66,7 +67,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Todavía no hay ninguna versión que mostrar.',
   label: 'Archivos',
   codeGroup: 'Código',
-  codeWhy: 'Nunca se sirve. Los archivos .cs de la raíz se compilan; el resto se guarda con la versión.',
+  codeWhy: 'Nunca se sirve. Los archivos .cs se compilan, estén en la carpeta que estén; el resto se guarda con la versión.',
   resources: 'Recursos',
   resourcesPublic: 'Públicos: esta versión los sirve con Resources.',
   resourcesPrivate: 'Van con la versión, pero esta versión no los sirve.',

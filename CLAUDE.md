@@ -243,11 +243,12 @@ build machinery for compatibility that nobody needs.
 
 **Decided by the owner:** a version is two parts, and nothing else.
 
-- Its **code** is every file that is not a resource. The `.cs` files at the
-  top are compiled - nothing else is, a C# file in a folder included. Every
-  other file, in any folder and of any kind - the documentation, the tests,
-  what a front end is built from, scripts, configuration - is kept with the
-  version and never compiled or served. Its **resources**, in `resources/`,
+- Its **code** is every file that is not a resource. Its `.cs` files are
+  compiled, in any folder, as a C# project compiles its own - **decided by
+  the owner**: sub folders work like in any C# project. Every other file, of
+  any kind - the documentation, the tests, what a front end is built from,
+  scripts, configuration - is kept with the version and never compiled or
+  served. Its **resources**, in `resources/`,
   are what it reads and serves while it runs (`Resources`, formerly `Assets`,
   which stays as an alias so old code compiles).
 - **No `.lambda/` and no special kinds.** The documentation and the tests are
@@ -269,11 +270,14 @@ build machinery for compatibility that nobody needs.
   feature is read in the layout it was saved in and translated as it is read
   (`LambdaSource.Parse`: an envelope `"version": 1` is the old layout, 2 is
   today's) - assets at the top move below `resources/`, `.lambda/docs/`,
-  `.lambda/tests/` and `.lambda/build/` to `docs/`, `tests/` and `build/`.
+  `.lambda/tests/` and `.lambda/build/` to `docs/`, `tests/` and `build/`;
+  C# that was in `.lambda/` was never compiled, so it keeps a `.txt` ending
+  (`tests/Smoke.cs.txt`) rather than be compiled into a lambda online.
   Never rewrite stored versions for it. Their git history keeps its commits;
   the move is a commit of its own on top (see Git). A top-level `assets/` or
   `.lambda/` is refused with a hint where it goes now.
-- Names: the C# at the top as C# names; a resource as files that are served
+- Names: a C# file's own name as C# names (dots allowed), its folders as the
+  rest of the code; a resource as files that are served
   always were (an extension, no dot names, six folders deep); the rest of the
   code as tools name files - dot files and `[]()+@$~{}` allowed, no spaces, no
   `.git`, sixteen folders deep. What a project has at its top

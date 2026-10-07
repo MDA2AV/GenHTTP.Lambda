@@ -229,9 +229,9 @@ export const guide = {
 
   files: ((k) => (
     <>
-      A version is any number of files, in two parts. Its {k.b('code')} is every file but its resources: the{' '}
-      {k.code('.cs')} files at the top are compiled, and every other file - in any folder, of any kind - is kept with
-      the version and never compiled or served: its documentation, its tests, what a front end is built from. Its{' '}
+      A version is any number of files, in two parts. Its {k.b('code')} is every file but its resources: its{' '}
+      {k.code('.cs')} files are compiled, in any folder, as in any C# project, and every other file is kept with the
+      version and never compiled or served: its documentation, its tests, what a front end is built from. Its{' '}
       {k.b('resources')}, in {k.code('resources/')}, are what it reads and serves while it runs - pages, scripts,
       styles, pictures, the database's migrations - reached from the code as {k.code('Resources')}.
     </>
@@ -239,12 +239,12 @@ export const guide = {
   files2: ((k) => (
     <>
       Types do not have to sit underneath the code that uses them. In {k.b('Code')}, press {k.b('+')} beside the code
-      and type a name: a {k.code('.cs')} file at the top is compiled beside the snippet, in the same namespace, so
-      nothing has to be imported to be reached. A name with no extension and no folder is taken to be C#.
+      and type a name: a {k.code('.cs')} file is compiled beside the snippet, in the same namespace, whichever folder
+      it is in, so nothing has to be imported to be reached. A name with no extension and no folder is taken to be C#.
     </>
   )) as Text,
   filesAside:
-    'How the rest of the code is arranged is up to whoever writes it - a folder for the sources of a front end, one for scripts. The code and the resources of a version share one allowance of room, which the overview shows.',
+    'How the code is arranged is up to whoever writes it - a folder for types, one for the sources of a front end, one for scripts. Every .cs file is compiled into the app, so C# that is not part of it - a test, a tool of its own - does not belong in the code as a .cs file. The code and the resources of a version share one allowance of room, which the overview shows.',
 
   page: 'There are two ways to serve a page, and one more for what people upload beside it.',
   inlineTitle: 'One page, written inline',

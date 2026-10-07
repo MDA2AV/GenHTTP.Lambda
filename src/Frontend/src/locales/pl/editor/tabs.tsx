@@ -1,7 +1,7 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const tabs: EditorMessages['tabs'] = {
-  codeName: 'Plik C# na górze: litery, cyfry, myślniki i podkreślenia, zaczynając od litery i kończąc na .cs, najwyżej 40 znaków.',
+  codeName: 'Plik C# ma nazwę z liter, cyfr, myślników, podkreśleń i kropek, zaczynającą się od litery i kończącą na .cs, najwyżej 40 znaków.',
   name: 'Litery, cyfry i - _ . + @ ( ) [ ] { } $ ~, foldery oddzielone ukośnikami, bez spacji i bez nazwy kończącej się kropką.',
   taken: 'Wyeksportowana lub sklonowana lambda ma na górze plik lub folder o tej nazwie. Umieść go w folderze albo nazwij inaczej.',
   lambda: 'Lambda nie ma już folderu .lambda/: jej dokumentacja trafia do docs/, a testy do tests/.',
@@ -15,7 +15,7 @@ export const tabs: EditorMessages['tabs'] = {
   errors: 'zawiera błędy',
   removeFile: (name) => `Usuń plik ${name}`,
   removeTitle: 'Usuń',
-  codePlaceholder: 'Store.cs, docs/notes.md lub frontend/app.ts',
+  codePlaceholder: 'Store.cs, models/Item.cs lub docs/notes.md',
   resourcePlaceholder: 'web/index.html',
   upload: 'Prześlij plik',
 };

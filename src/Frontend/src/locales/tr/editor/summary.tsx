@@ -51,7 +51,7 @@ export const summary: EditorMessages['summary'] = {
   dataAllowance: 'Veritabanı ve çalışma alanı',
   files: (files, size) => (files === 1 ? `1 dosya, ${size}` : `${files} dosya, ${size}`),
   code: 'Kod',
-  codeWhy: 'Asla sunulmaz. Üstteki .cs dosyaları derlenir; geri kalanı - dokümantasyon, testler, neyden derlendiği - sürümle birlikte saklanır.',
+  codeWhy: 'Asla sunulmaz. .cs dosyaları, hangi klasörde olursa olsun derlenir; geri kalanı - dokümantasyon, testler, neyden derlendiği - sürümle birlikte saklanır.',
   resources: 'Kaynaklar',
   resourcesPublic: 'Herkese açık: kod bunları sunar.',
   resourcesPrivate: 'Kod tarafından sunulmaz.',

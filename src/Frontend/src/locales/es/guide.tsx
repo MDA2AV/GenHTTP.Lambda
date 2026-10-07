@@ -226,8 +226,8 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Una versión son tantos archivos como haga falta, en dos partes. Su {k.b('código')} es todo archivo salvo sus
-      recursos: los archivos {k.code('.cs')} de la raíz se compilan, y todos los demás (en cualquier carpeta, de
-      cualquier tipo) se guardan con la versión y nunca se compilan ni se sirven: su documentación, sus pruebas,
+      recursos: sus archivos {k.code('.cs')} se compilan, estén en la carpeta que estén, como en cualquier proyecto de
+      C#, y todos los demás se guardan con la versión y nunca se compilan ni se sirven: su documentación, sus pruebas,
       aquello a partir de lo que se genera un front end. Sus {k.b('recursos')}, en {k.code('resources/')}, son lo que
       lee y sirve mientras se ejecuta (páginas, scripts, estilos, imágenes, las migraciones de la base de datos) y se
       alcanzan desde el código como {k.code('Resources')}.
@@ -236,12 +236,13 @@ export const guide: Messages['guide'] = {
   files2: (k) => (
     <>
       Los tipos no tienen por qué estar debajo del código que los usa. En {k.b('Código')}, haz clic en {k.b('+')} junto
-      al código y escribe un nombre: un archivo {k.code('.cs')} de la raíz se compila junto al fragmento, en el mismo
-      namespace, así que no hay que importar nada para usarlo. Un nombre sin extensión y sin carpeta se toma como C#.
+      al código y escribe un nombre: un archivo {k.code('.cs')} se compila junto al fragmento, en el mismo namespace,
+      esté en la carpeta que esté, así que no hay que importar nada para usarlo. Un nombre sin extensión y sin carpeta
+      se toma como C#.
     </>
   ),
   filesAside:
-    'Cómo se organiza el resto del código depende de quien lo escribe: una carpeta para las fuentes de un front end, otra para scripts. El código y los recursos de una versión comparten un único espacio, que muestra el resumen.',
+    'Cómo se organiza el código depende de quien lo escribe: una carpeta para los tipos, otra para las fuentes de un front end, otra para scripts. Todo archivo .cs se compila dentro de la app, así que el C# que no forma parte de ella (una prueba, una herramienta aparte) no debe estar en el código como archivo .cs. El código y los recursos de una versión comparten un único espacio, que muestra el resumen.',
 
   page: 'Hay dos formas de servir una página, y una más para lo que la gente sube junto a ella.',
   inlineTitle: 'Una página escrita en el código',

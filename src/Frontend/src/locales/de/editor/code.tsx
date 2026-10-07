@@ -20,20 +20,20 @@ export const code: EditorMessages['code'] = {
   demo: 'Eine Demo, daher ist hier alles schreibgeschützt. Um etwas zu ändern, erstellen Sie damit ein eigenes Lambda.',
   hint: (b) => (
     <>
-      Die Dateien einer Version. Ihr {b('Code')} ist das Programm und alles, was dazu gehört: Die .cs-Dateien ganz oben
-      werden kompiliert, jede andere Datei – Dokumentation, Tests, das, woraus ein Frontend gebaut wird – wird mit der
-      Version gespeichert und nie kompiliert oder ausgeliefert. Ihre {b('Ressourcen')} – Seiten, Scripts, Stile, Bilder,
-      die Migrationen der Datenbank – werden zur Laufzeit gelesen und ausgeliefert und sind öffentlich, wo der Code sie
-      ausliefert. Speichern legt eine neue Version an und lässt das, was online ist, unberührt; um eine Änderung zuerst
-      auszuprobieren, beginnen Sie einen Entwurf. Strg+S speichert, F12 springt zu einer Deklaration.
+      Die Dateien einer Version. Ihr {b('Code')} ist das Programm und alles, was dazu gehört: Ihre .cs-Dateien werden
+      kompiliert, in jedem Ordner, und jede andere Datei – Dokumentation, Tests, das, woraus ein Frontend gebaut wird –
+      wird mit der Version gespeichert und nie kompiliert oder ausgeliefert. Ihre {b('Ressourcen')} – Seiten, Scripts,
+      Stile, Bilder, die Migrationen der Datenbank – werden zur Laufzeit gelesen und ausgeliefert und sind öffentlich,
+      wo der Code sie ausliefert. Speichern legt eine neue Version an und lässt das, was online ist, unberührt; um eine
+      Änderung zuerst auszuprobieren, beginnen Sie einen Entwurf. Strg+S speichert, F12 springt zu einer Deklaration.
     </>
   ),
   hintFeature: (b) => (
     <>
-      Die Dateien dieses Entwurfs: sein {b('Code')} – die .cs-Dateien ganz oben werden kompiliert, der Rest wird mit ihm
-      gespeichert – und seine {b('Ressourcen')}, die zur Laufzeit gelesen und ausgeliefert werden. Speichern behält sie
-      im Entwurf und zeigt sie unter der eigenen Adresse des Entwurfs; Ihre Besucher sehen nichts davon, bis Sie den
-      Entwurf online stellen.
+      Die Dateien dieses Entwurfs: sein {b('Code')} – seine .cs-Dateien werden kompiliert, in jedem Ordner, der Rest wird
+      mit ihm gespeichert – und seine {b('Ressourcen')}, die zur Laufzeit gelesen und ausgeliefert werden. Speichern
+      behält sie im Entwurf und zeigt sie unter der eigenen Adresse des Entwurfs; Ihre Besucher sehen nichts davon, bis
+      Sie den Entwurf online stellen.
     </>
   ),
   inFeature: (name) => `in „${name}“`,
@@ -67,7 +67,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Es gibt noch keine Version, die angezeigt werden kann.',
   label: 'Dateien',
   codeGroup: 'Code',
-  codeWhy: 'Wird nie ausgeliefert. Die .cs-Dateien ganz oben werden kompiliert; der Rest wird mit der Version gespeichert.',
+  codeWhy: 'Wird nie ausgeliefert. Die .cs-Dateien werden kompiliert, in jedem Ordner; der Rest wird mit der Version gespeichert.',
   resources: 'Ressourcen',
   resourcesPublic: 'Öffentlich: Diese Version liefert sie mit Resources aus.',
   resourcesPrivate: 'Gehören zur Version, werden von ihr aber nicht ausgeliefert.',

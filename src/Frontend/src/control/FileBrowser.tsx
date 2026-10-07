@@ -100,8 +100,8 @@ interface Node {
 
 /**
  * Paths into a tree, folders first, each folder weighing what it holds - or,
- * at the top of a version's code, its files first: the C# there is what is
- * compiled, and the folders beside it only what is kept with it.
+ * at the top of a version's code, its files first: the snippet and the C#
+ * beside it are where the program starts, and read before its folders.
  */
 function grow(entries: Entry[], folders: string[] = [], filesFirst = false): Node[] {
   const root: Node = { name: '', path: '', size: 0, folder: true, children: [] };

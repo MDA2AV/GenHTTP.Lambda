@@ -55,7 +55,7 @@ export const summary = {
   dataAllowance: 'Database and workspace',
   files: (files: number, size: string) => (files === 1 ? `1 file, ${size}` : `${files} files, ${size}`),
   code: 'Code',
-  codeWhy: 'Never served. The .cs files at the top are compiled; the rest - documentation, tests, what it is built from - is kept with the version.',
+  codeWhy: 'Never served. The .cs files are compiled, in any folder; the rest - documentation, tests, what it is built from - is kept with the version.',
   resources: 'Resources',
   resourcesPublic: 'Public: the code serves them.',
   resourcesPrivate: 'Not served by the code.',

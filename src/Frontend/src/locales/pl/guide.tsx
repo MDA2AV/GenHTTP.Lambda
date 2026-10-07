@@ -222,8 +222,8 @@ export const guide: Messages['guide'] = {
 
   files: (k) => (
     <>
-      Wersja to dowolna liczba plików, w dwóch częściach. Jej {k.b('kod')} to każdy plik poza zasobami: pliki{' '}
-      {k.code('.cs')} na górze są kompilowane, a każdy inny plik – w dowolnym folderze, dowolnego rodzaju – jest
+      Wersja to dowolna liczba plików, w dwóch częściach. Jej {k.b('kod')} to każdy plik poza zasobami: jej pliki{' '}
+      {k.code('.cs')} są kompilowane, w dowolnym folderze, jak w każdym projekcie C#, a każdy inny plik jest
       przechowywany z wersją i nigdy nie jest kompilowany ani serwowany: jej dokumentacja, testy, to, z czego budowany
       jest frontend. Jej {k.b('zasoby')}, w {k.code('resources/')}, to to, co czyta i serwuje w trakcie działania –
       strony, skrypty, style, obrazy, migracje bazy danych – dostępne z kodu jako {k.code('Resources')}.
@@ -232,12 +232,12 @@ export const guide: Messages['guide'] = {
   files2: (k) => (
     <>
       Typów nie trzeba dopisywać pod kodem, który ich używa. W sekcji {k.b('Kod')} kliknij {k.b('+')} obok kodu i wpisz
-      nazwę: plik {k.code('.cs')} na górze zostanie skompilowany obok snippetu, w tej samej przestrzeni nazw – nic nie
-      trzeba importować. Nazwa bez rozszerzenia i bez folderu oznacza plik C#.
+      nazwę: plik {k.code('.cs')} zostanie skompilowany obok snippetu, w tej samej przestrzeni nazw, w którym folderze
+      by się nie znajdował – nic nie trzeba importować. Nazwa bez rozszerzenia i bez folderu oznacza plik C#.
     </>
   ),
   filesAside:
-    'To, jak ułożona jest reszta kodu, zależy od tego, kto go pisze – folder na źródła frontendu, folder na skrypty. Kod i zasoby wersji dzielą jedną pulę miejsca, którą pokazuje przegląd.',
+    'To, jak ułożony jest kod, zależy od tego, kto go pisze – folder na typy, folder na źródła frontendu, folder na skrypty. Każdy plik .cs jest kompilowany do aplikacji, więc C#, który nie jest jej częścią – test, własne narzędzie – nie należy do kodu jako plik .cs. Kod i zasoby wersji dzielą jedną pulę miejsca, którą pokazuje przegląd.',
 
   page: 'Stronę można serwować na dwa sposoby, a do tego jest jeszcze trzeci – na to, co ludzie przesyłają obok niej.',
   inlineTitle: 'Jedna strona, wpisana w kod',

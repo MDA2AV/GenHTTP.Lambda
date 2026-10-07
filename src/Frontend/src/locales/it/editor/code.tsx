@@ -20,19 +20,19 @@ export const code: EditorMessages['code'] = {
   demo: 'È una demo, quindi qui è tutto in sola lettura. Per modificarla, crea una tua lambda partendo da questa.',
   hint: (b) => (
     <>
-      I file di una versione. Il suo {b('codice')} è il programma e tutto ciò che si conserva con lui: i file .cs in
-      cima vengono compilati, e ogni altro file (la documentazione, i test, ciò da cui è costruito un front end) resta
-      con la versione e non viene mai compilato né servito. Le sue {b('risorse')} (pagine, script, stili, immagini, le
-      migrazioni del database) vengono lette e servite mentre gira, e sono pubbliche dove il codice le serve. Salvare
-      crea una nuova versione e lascia stare quella online; per provare prima una modifica, avvia una bozza. Ctrl-S
-      salva, F12 va alla dichiarazione.
+      I file di una versione. Il suo {b('codice')} è il programma e tutto ciò che si conserva con lui: i suoi file .cs
+      vengono compilati, in qualsiasi cartella, e ogni altro file (la documentazione, i test, ciò da cui è costruito un
+      front end) resta con la versione e non viene mai compilato né servito. Le sue {b('risorse')} (pagine, script,
+      stili, immagini, le migrazioni del database) vengono lette e servite mentre gira, e sono pubbliche dove il codice
+      le serve. Salvare crea una nuova versione e lascia stare quella online; per provare prima una modifica, avvia una
+      bozza. Ctrl-S salva, F12 va alla dichiarazione.
     </>
   ),
   hintFeature: (b) => (
     <>
-      I file di questa bozza: il suo {b('codice')} (i file .cs in cima vengono compilati, il resto resta con lui) e le
-      sue {b('risorse')}, lette e servite mentre gira. Salvando, restano nella bozza e compaiono al suo indirizzo; i
-      tuoi visitatori non ne vedono nulla finché non metti online la bozza.
+      I file di questa bozza: il suo {b('codice')} (i suoi file .cs vengono compilati, in qualsiasi cartella, il resto
+      resta con lui) e le sue {b('risorse')}, lette e servite mentre gira. Salvando, restano nella bozza e compaiono al
+      suo indirizzo; i tuoi visitatori non ne vedono nulla finché non metti online la bozza.
     </>
   ),
   inFeature: (name) => `in «${name}»`,
@@ -67,7 +67,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Non c’è ancora nessuna versione da mostrare.',
   label: 'File',
   codeGroup: 'Codice',
-  codeWhy: 'Mai servito. I file .cs in cima vengono compilati; il resto resta con la versione.',
+  codeWhy: 'Mai servito. I file .cs vengono compilati, in qualsiasi cartella; il resto resta con la versione.',
   resources: 'Risorse',
   resourcesPublic: 'Pubbliche: questa versione le serve con Resources.',
   resourcesPrivate: 'Distribuite con la versione, ma questa versione non le serve.',

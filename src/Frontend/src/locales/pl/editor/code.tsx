@@ -20,9 +20,9 @@ export const code: EditorMessages['code'] = {
   demo: 'To demo, więc wszystko tu jest tylko do odczytu. Żeby coś zmienić, utwórz na jego podstawie własną lambdę.',
   hint: (b) => (
     <>
-      Pliki jednej wersji. Jej {b('kod')} to program i wszystko, co jest z nim przechowywane: pliki .cs na górze są
-      kompilowane, a każdy inny plik – dokumentacja, testy, to, z czego budowany jest frontend – jest przechowywany z
-      wersją i nigdy nie jest kompilowany ani serwowany. Jej {b('zasoby')} – strony, skrypty, style, obrazy, migracje
+      Pliki jednej wersji. Jej {b('kod')} to program i wszystko, co jest z nim przechowywane: jej pliki .cs są
+      kompilowane, w dowolnym folderze, a każdy inny plik – dokumentacja, testy, to, z czego budowany jest frontend – jest
+      przechowywany z wersją i nigdy nie jest kompilowany ani serwowany. Jej {b('zasoby')} – strony, skrypty, style, obrazy, migracje
       bazy danych – są czytane i serwowane w trakcie działania, a publiczne są tam, gdzie kod je serwuje. Zapisanie tworzy
       nową wersję i nie rusza tego, co jest online; żeby najpierw wypróbować zmianę, utwórz szkic. Ctrl-S zapisuje, F12
       przechodzi do deklaracji.
@@ -30,7 +30,7 @@ export const code: EditorMessages['code'] = {
   ),
   hintFeature: (b) => (
     <>
-      Pliki tego szkicu: jego {b('kod')} – pliki .cs na górze są kompilowane, reszta jest z nim przechowywana – oraz jego{' '}
+      Pliki tego szkicu: jego {b('kod')} – jego pliki .cs kompilowane, w dowolnym folderze, reszta jest z nim przechowywana – oraz jego{' '}
       {b('zasoby')}, czytane i serwowane w trakcie działania. Zapisanie zostawia je w szkicu i pokazuje pod własnym
       adresem szkicu; twoi odwiedzający nic z tego nie zobaczą, dopóki nie udostępnisz szkicu.
     </>
@@ -66,7 +66,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Nie ma jeszcze wersji do pokazania.',
   label: 'Pliki',
   codeGroup: 'Kod',
-  codeWhy: 'Nigdy nie jest serwowany. Pliki .cs na górze są kompilowane, reszta jest przechowywana razem z wersją.',
+  codeWhy: 'Nigdy nie jest serwowany. Pliki .cs są kompilowane, w dowolnym folderze; reszta jest przechowywana razem z wersją.',
   resources: 'Zasoby',
   resourcesPublic: 'Publiczne: ta wersja serwuje je przez Resources.',
   resourcesPrivate: 'Dołączone do wersji, ale ta wersja ich nie serwuje.',

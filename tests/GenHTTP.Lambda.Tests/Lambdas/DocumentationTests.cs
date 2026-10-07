@@ -79,13 +79,13 @@ public sealed class DocumentationTests
             new LambdaFile(LambdaSource.EntryName, "return Layout.Create().Add(Resources.Files());"),
             new LambdaFile("resources/index.html", "<p>the page</p>"),
             new LambdaFile(LambdaSource.ProductDoc, Product),
-            // a test written in C# - and not a program anybody could compile
-            new LambdaFile("tests/Check.cs", "this is a test script, not code of the lambda"),
+            // a test script - of a language that is not compiled, and not a program anybody could compile
+            new LambdaFile("tests/check.mjs", "this is a test script, not code of the lambda"),
         ]));
 
         var deployed = await fixture.DeployAsync(lambda.PrivateKey);
 
-        Assert.IsTrue(deployed.Success, "a C# file among the tests is not compiled");
+        Assert.IsTrue(deployed.Success, "a script among the tests is not compiled");
 
         using var page = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/index.html");
 
@@ -282,7 +282,7 @@ public sealed class DocumentationTests
         [
             new(LambdaSource.EntryName, Snippet),
             new(LambdaSource.DecisionsDoc, "It could read `Secret.Read(\"WEATHER_KEY\")` one day."),
-            new("tests/Check.cs", "var key = Secret.Read(\"TEST_KEY\");"),
+            new("tests/check.mjs", "const key = 'Secret.Read(\"TEST_KEY\")';"),
         ]));
 
         using var listed = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/secrets");

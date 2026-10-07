@@ -251,18 +251,21 @@ A version is any number of files, in two parts:
 ```
 lambda.cs           the snippet: what it returns is served
 Store.cs            more C#, compiled beside it
+models/Item.cs      C# in a folder, compiled the same
 docs/, tests/       what is written about it (see below)
 frontend/, …        anything else: kept with the version, never compiled or served
 resources/          what it reads and serves while it runs
 ```
 
-Its **code** is every file that is not a resource. The `.cs` files at the top
-are compiled into the lambda, and nothing else is: every other file, in any
-folder and of any kind - its documentation and its tests, what a front end is
-built from, scripts, configuration - is kept with the version and never
-compiled or served. A C# file below a folder is such a file too, a test in C#
-for one. How the rest of the code is arranged is the agent's to decide; the
-editor only reads `docs/` and `tests/` as what they are (below).
+Its **code** is every file that is not a resource. Its `.cs` files are
+compiled into the lambda, in whichever folder they are, as a C# project
+compiles its own - so the types can be laid out in folders - and nothing else
+is: every other file, of any kind - its documentation and its tests, what a
+front end is built from, scripts, configuration - is kept with the version and
+never compiled or served. C# that is not part of the lambda, a test or a tool
+of its own, therefore does not belong in the code as a `.cs` file. How the
+code is arranged is the agent's to decide; the editor only reads `docs/` and
+`tests/` as what they are (below).
 
 Its **resources**, in `resources/`, are what it reads and serves while it
 runs: pages, scripts, styles, pictures, the database's migrations. The
@@ -277,15 +280,16 @@ resources together - a limit of its tier, set in the panel (see
 [Limits](#limits)). There is no separate limit for C#: the room bounds what
 the compiler is given as well.
 
-The C# at the top is held to letters, digits, dashes and underscores, starting
-with a letter and ending in `.cs`, 40 characters at most. A resource keeps the
+A C# file is named with letters, digits, dashes, underscores and dots,
+starting with a letter and ending in `.cs`, 40 characters at most, in folders
+named as the rest of the code. A resource keeps the
 rules files that are served have always had: letters, digits, dashes,
 underscores and dots, an extension, no name starting with a dot, six folders
 deep at most. The rest of the code may be named as tools name their files -
 dot files, and the brackets, parentheses, plus signs and the like some tools
 read meaning off - with no spaces, no `.git` folder, sixteen folders deep at
-most. The names a project gives its own files at the top (`Program.cs`,
-`Dockerfile`, `.gitignore`, `.dockerignore`, `LICENSE`, `AGENTS.md`,
+most. The names a project gives its own files at the top (`Dockerfile`,
+`.gitignore`, `.dockerignore`, `LICENSE`, `AGENTS.md`,
 `CLAUDE.md`, a project file, and the folders `Platform`, `bin`, `obj`,
 `workspace` and `database`) are refused, since an export or a clone has them;
 so are `.lambda/` and `assets/`, which name where the documentation and the
@@ -303,8 +307,10 @@ read in the layout it was saved in, so the old ones are translated as they are
 read - `site/app.js` becomes `resources/site/app.js`, `.lambda/docs/product.md`
 becomes `docs/product.md`, `.lambda/build/package.json` becomes
 `build/package.json` - and saved in the new one when they are next saved (an
-envelope with `"version": 2`, `LambdaSource.Parse`). A feature's files are read
-the same way. In git, a lambda's history keeps the commits its clones already
+envelope with `"version": 2`, `LambdaSource.Parse`). C# that was in `.lambda/`
+was never compiled and would be now, so it keeps what it holds under a name
+that is not: `.lambda/tests/Smoke.cs` becomes `tests/Smoke.cs.txt`. A
+feature's files are read the same way. In git, a lambda's history keeps the commits its clones already
 have; the move is a commit of its own on top of each (see
 [Working with git](#working-with-git)).
 
@@ -389,7 +395,7 @@ rolled back, copied into a feature and merged with it like any other file, in
 the zip and in the export, with no table and no migration. Rolling back brings
 back the documentation that was true of the version. They are code like any
 other file that is not a resource - never compiled, whatever they are called
-(a test in C# is not compiled), never served, left out of what identifies a
+(a test written in C# is kept as a script, not as a `.cs` file), never served, left out of what identifies a
 build, and counted towards what a version may come to. `docs/` and `tests/`
 are a convention, not a kind of file: nothing about them is special but that
 the editor reads them as what they are, and the agents are told to keep them.
@@ -721,10 +727,10 @@ without this platform (`Services/Deployment/ProjectPacker.cs`):
 |---|---|
 | `Program.cs` | the default GenHTTP host, `Host.Create().Handler(Project.Create()).Defaults().RunAsync()`, under a header naming the lambda, its version and change, the export date, where to read about GenHTTP, and the environment variables its secrets become (as `-e` flags in the `docker run` line too) |
 | `Project.cs` | `lambda.cs`: its statements are the body of `Project.Create()` (`CreateAsync()` when they `await`), its types sit beside the class, made public as on the platform |
-| `*.cs` | the other C# at the top, its code unchanged, the first letter of the name capitalized |
+| `*.cs` | the other C#, in its folders, its code unchanged, the first letter of the name capitalized |
 | `Platform/` | what the platform provided: `Workspace` and `Resources` as folders (with `Assets` beside it where the code still says that), `Secret` reading environment variables of the same name (the values are never exported), `Database` opening `database/database.db` where the code uses one, the switch that turns what `Project` returns into a handler, and the imports every lambda gets as global usings |
 | `resources/` | its resources, copied beside the program on build |
-| `docs/`, `tests/`, … | the rest of its code where it was - its documentation, its tests, what it is built from; the project compiles only the C# at the top (`EnableDefaultItems` is off), and the image takes only what it compiles and copies |
+| `docs/`, `tests/`, … | the rest of its code where it was - its documentation, its tests, what it is built from; the project compiles every `.cs` file but the resources and what dotnet and the app write (`EnableDefaultItems` is off), and the image takes only what it compiles and copies |
 | `database/database.db` | the lambda's database, an ordinary SQLite file - its records go with it |
 | `Dockerfile` | builds and runs it; the workspace is `/app/workspace`, the database folder is mounted at `/app/database` |
 
@@ -854,7 +860,7 @@ in the **Code** menu beside the star, where the zip is too.
 **What is in it.** The project the lambda is exported as, made for a
 repository: `Project.cs` is the snippet as the body of `BuildAsync()` - the
 method the platform runs it in - with its types beside the class, the other
-`.cs` files at the top keep their code and are named the .NET way, and every
+`.cs` files keep their code and are named the .NET way, and every
 other file is where the lambda has it: the rest of its code in its folders,
 its resources in `resources/`.
 Around them are the platform's files: `Program.cs`, the project file,
@@ -864,7 +870,7 @@ terms - `CLAUDE.md`, which points Claude Code to it, and `LICENSE` while the
 source is published. Those are the same in every commit until the platform
 changes them - nothing in them depends on the version, which is why the
 project references SQLite, Entity Framework and Evolve whether the code uses
-them or not, compiles the C# at the top and nothing else of the code, and
+them or not, compiles every `.cs` file of the code and nothing among the resources, and
 makes the snippet asynchronous whether it awaits or not - so a push that
 leaves them alone is always right. The `.gitignore` at the root is the
 platform's, and takes `build/` back in, which many ignore everywhere; what a
@@ -1465,7 +1471,7 @@ Every version keeps its documentation and tests in `docs/` and `tests/` of its
 code (see [Documentation and tests](#documentation-and-tests)), and the agents
 are the ones who write them: `read_lambda` hands them over first, and every
 save that leaves a page out says which. How a version is laid out - its code,
-the C# at the top compiled and the rest kept, and its resources in
+its C# compiled in any folder and the rest kept, and its resources in
 `resources/` - is said in a line of the instructions, under `code` and
 `resources` in the guide, and in the tool descriptions.
 

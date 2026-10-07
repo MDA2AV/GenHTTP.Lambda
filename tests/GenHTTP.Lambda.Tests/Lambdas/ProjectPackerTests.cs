@@ -205,7 +205,8 @@ public sealed class ProjectPackerTests
             .. Files,
             new(LambdaSource.ProductDoc, "# Books\n\nA shelf of books.\n"),
             new(LambdaSource.TestingDoc, "# How it is tested\n"),
-            new("tests/Check.cs", "this would not compile"),
+            new("tests/check.mjs", "check();"),
+            new("models/item.cs", "public record Item(string Name);"),
             new("frontend/package.json", "{}"),
         ];
 
@@ -215,16 +216,19 @@ public sealed class ProjectPackerTests
 
         Assert.Contains("my-lambda/docs/product.md", names, "laid out as the lambda is");
         Assert.Contains("my-lambda/tests/README.md", names);
-        Assert.Contains("my-lambda/tests/Check.cs", names, "a test keeps the name it had");
+        Assert.Contains("my-lambda/tests/check.mjs", names, "a test keeps the name it had");
+        Assert.Contains("my-lambda/models/Item.cs", names, "C# in a folder is named the .NET way, in its folder");
         Assert.Contains("my-lambda/frontend/package.json", names);
 
         var project = Read(zip, "my-lambda/my-lambda.csproj");
 
-        Assert.Contains("<EnableDefaultItems>false</EnableDefaultItems>", project, "nothing is gathered from the folders");
-        Assert.Contains("<Compile Include=\"*.cs;Platform/**/*.cs\" />", project, "only the C# at the top is compiled into the program, as on the platform");
+        Assert.Contains("<EnableDefaultItems>false</EnableDefaultItems>", project, "nothing is gathered but what is named");
+        Assert.Contains("<Compile Include=\"**/*.cs\" Exclude=\"bin/**;obj/**;resources/**;workspace/**;database/**\" />", project,
+                        "the C# of every folder of the code is compiled, as on the platform, and nothing that is not the lambda's");
         Assert.Contains("<None Include=\"resources/**\" CopyToOutputDirectory=\"PreserveNewest\" />", project, "and the resources are copied beside it");
 
-        Assert.AreEqual("*\n!*.cs\n!*.csproj\n!Platform/\n!resources/\n", Read(zip, "my-lambda/.dockerignore"), "only what it is built from goes into its container");
+        Assert.AreEqual("*\n!**/*.cs\n!*.csproj\n!Platform/\n!resources/\nbin/\nobj/\nworkspace/\ndatabase/\n", Read(zip, "my-lambda/.dockerignore"),
+                        "only what it is built from goes into its container, the C# of every folder included");
 
         Assert.Contains("docs/ says what the app is for", Read(zip, "my-lambda/Program.cs"), "and the program says where to read about it");
     }

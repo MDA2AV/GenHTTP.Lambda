@@ -1,7 +1,7 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const tabs: EditorMessages['tabs'] = {
-  codeName: 'File C# di bagian atas: huruf, angka, tanda hubung, dan garis bawah, diawali huruf dan diakhiri .cs, paling banyak 40 karakter.',
+  codeName: 'Nama file C# terdiri dari huruf, angka, tanda hubung, garis bawah, dan titik, diawali huruf dan diakhiri .cs, paling banyak 40 karakter.',
   name: 'Huruf, angka, dan - _ . + @ ( ) [ ] { } $ ~, folder dipisahkan garis miring, tanpa spasi dan tanpa nama yang diakhiri titik.',
   taken: 'Lambda yang diekspor atau dikloning punya file atau folder dengan nama itu di bagian atas. Taruh di dalam folder, atau beri nama lain.',
   lambda: 'Lambda tidak lagi punya folder .lambda/: dokumentasinya ada di docs/, pengujiannya di tests/.',
@@ -15,7 +15,7 @@ export const tabs: EditorMessages['tabs'] = {
   errors: 'ada error',
   removeFile: (name) => `Hapus ${name}`,
   removeTitle: 'Hapus',
-  codePlaceholder: 'Store.cs, docs/notes.md atau frontend/app.ts',
+  codePlaceholder: 'Store.cs, models/Item.cs atau docs/notes.md',
   resourcePlaceholder: 'web/index.html',
   upload: 'Unggah file',
 };

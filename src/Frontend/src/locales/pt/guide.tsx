@@ -227,8 +227,8 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Uma versão é qualquer quantidade de arquivos, em duas partes. O {k.b('código')} dela é todo arquivo menos os
-      recursos: os arquivos {k.code('.cs')} no topo são compilados, e todo outro arquivo, em qualquer pasta e de
-      qualquer tipo, fica guardado com a versão e nunca é compilado nem servido: a documentação, os testes, aquilo a
+      recursos: os arquivos {k.code('.cs')} são compilados, em qualquer pasta, como em qualquer projeto C#, e todo
+      outro arquivo fica guardado com a versão e nunca é compilado nem servido: a documentação, os testes, aquilo a
       partir do qual um front end é gerado. Os {k.b('recursos')} dela, em {k.code('resources/')}, são o que ela lê e
       serve enquanto roda (páginas, scripts, estilos, imagens, as migrações do banco de dados) e são acessados pelo
       código como {k.code('Resources')}.
@@ -237,12 +237,13 @@ export const guide: Messages['guide'] = {
   files2: (k) => (
     <>
       Os tipos não precisam ficar embaixo do código que os usa. Em {k.b('Código')}, clique em {k.b('+')} ao lado do
-      código e digite um nome: um arquivo {k.code('.cs')} no topo é compilado junto com o trecho, no mesmo namespace,
-      então não precisa importar nada. Um nome sem extensão e sem pasta é tratado como C#.
+      código e digite um nome: um arquivo {k.code('.cs')} é compilado junto com o trecho, no mesmo namespace, em
+      qualquer pasta em que esteja, então não precisa importar nada. Um nome sem extensão e sem pasta é tratado como
+      C#.
     </>
   ),
   filesAside:
-    'Como o resto do código se organiza fica a critério de quem o escreve: uma pasta para as fontes de um front end, outra para scripts. O código e os recursos de uma versão dividem um mesmo limite de espaço, que a visão geral mostra.',
+    'Como o código se organiza fica a critério de quem o escreve: uma pasta para os tipos, outra para as fontes de um front end, outra para scripts. Todo arquivo .cs é compilado no app, então um C# que não faz parte dele (um teste, uma ferramenta própria) não deve ficar no código como arquivo .cs. O código e os recursos de uma versão dividem um mesmo limite de espaço, que a visão geral mostra.',
 
   page: 'Existem dois jeitos de servir uma página, e mais um para o que as pessoas enviam junto com ela.',
   inlineTitle: 'Uma página, escrita no código',

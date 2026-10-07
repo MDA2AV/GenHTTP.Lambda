@@ -16,14 +16,17 @@ namespace GenHTTP.Lambda.Tests.Lambdas;
 
 /// <summary>
 /// The code of a version: every file that is not a resource, in whatever
-/// folders - the C# at the top compiled, everything else kept with the
-/// version wherever it goes, and never built, compiled or served by the
-/// platform.
+/// folders - its C# compiled in any of them, as a C# project compiles its
+/// own, everything else kept with the version wherever it goes, and never
+/// built, compiled or served by the platform.
 /// </summary>
 [TestClass]
 public sealed class CodeTests
 {
     private const string Snippet = "return Layout.Create().Add(Resources.Files());";
+
+    /// <summary>A snippet that needs a type of a folder of the code.</summary>
+    private const string Greeting = "return Layout.Create().Add(Resources.Files()).Add(\"greeting\", Content.From(Resource.FromString(Words.Greeting)));";
 
     private const string Package = """{ "name": "shop", "scripts": { "build": "vite build" }, "devDependencies": { "vite": "^5.4.0" } }""";
 
@@ -40,25 +43,26 @@ public sealed class CodeTests
         new("frontend/package.json", Package),
         new("frontend/.gitignore", "node_modules/\ndist/\n"),
         new("frontend/index.html", "<p>the page before it is built</p>"),
-        // a tool of the project written in C#, and nothing that compiles
-        new("frontend/Tool.cs", "this is no C# the lambda has")
+        // C# in a folder, compiled with the rest
+        new("models/Words.cs", "public static class Words { public const string Greeting = \"hello from a folder\"; }")
     ];
 
     #region Kept with the version
 
     [TestMethod]
-    public async Task TheCodeIsKeptWithTheVersionAndOnlyItsCSharpAtTheTopIsCompiled()
+    public async Task TheCodeIsKeptWithTheVersionAndItsCSharpIsCompiledInAnyFolder()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync("built");
 
-        await fixture.SaveAsync(lambda, "Builds the front end", Built);
+        await fixture.SaveAsync(lambda, "Builds the front end", [new LambdaFile(LambdaSource.EntryName, Greeting), .. Built.Skip(1)]);
 
         var deployed = await fixture.DeployAsync(lambda.PrivateKey);
 
-        Assert.IsTrue(deployed.Success, "a C# file in a folder is not compiled");
+        Assert.IsTrue(deployed.Success, string.Join("\n", deployed.Diagnostics.Select(d => d.Message)));
 
+        Assert.AreEqual("hello from a folder", await fixture.CallAsync("/lambda/built/greeting"), "a C# file in a folder is compiled with the snippet, as in a C# project");
         Assert.AreEqual("<p>what the build wrote</p>", await fixture.CallAsync("/lambda/built/index.html"), "a resource is served by its name below resources/");
 
         foreach (var path in (string[]) ["/lambda/built/frontend/index.html", "/lambda/built/resources/index.html", "/lambda/built/lambda.cs"])
@@ -89,7 +93,17 @@ public sealed class CodeTests
 
         using var alone = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/3?folder=frontend/");
 
-        Assert.HasCount(5, (await alone.GetContentAsync<VersionContentResponse>()).Files, "a folder is read on its own");
+        Assert.HasCount(4, (await alone.GetContentAsync<VersionContentResponse>()).Files, "a folder is read on its own");
+
+        // and what is no C# the lambda has does not compile, whichever folder it is in
+        await fixture.SaveAsync(lambda, "A tool of its own", [.. Built, new LambdaFile("tools/Tool.cs", "this is no C# the lambda has")]);
+
+        using var deployment = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/start", new DeploymentRequest(null));
+
+        var refused = await deployment.GetContentAsync<DeploymentOutcomeResponse>();
+
+        Assert.IsFalse(refused.Success);
+        Assert.IsTrue(refused.Diagnostics.Any(d => d.File == "tools/Tool.cs"), "the compiler names the file, folder and all");
     }
 
     [TestMethod]
@@ -311,7 +325,9 @@ public sealed class CodeTests
 
         const string store = "public class Shelf { }\n";
 
-        await fixture.SaveAsync(lambda, "Builds the front end", [.. Built, new LambdaFile("store.cs", store)]);
+        const string helper = "public static class Helper { }\n";
+
+        await fixture.SaveAsync(lambda, "Builds the front end", [.. Built, new LambdaFile("store.cs", store), new LambdaFile("models/helper.cs", helper)]);
 
         using var downloaded = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions/2/zip?layout=project");
 
@@ -322,7 +338,7 @@ public sealed class CodeTests
         CollectionAssert.AreEquivalent(new[]
         {
             "Project.cs", "Store.cs", "resources/index.html", "frontend/README.md", "frontend/package.json", "frontend/.gitignore",
-            "frontend/index.html", "frontend/Tool.cs"
+            "frontend/index.html", "models/Words.cs", "models/Helper.cs"
         }, entries.Keys.ToList(), "where a clone has them, and nothing of the platform's");
 
         StringAssert.Contains(entries["Project.cs"], "BuildAsync()", "the snippet in the class it is the body of, as in a clone");
@@ -348,6 +364,7 @@ public sealed class CodeTests
 
         Assert.AreEqual(Snippet, files[0].Code, "Project.cs left as it was is the snippet it was, to the byte");
         Assert.AreEqual(store, files.Single(f => f.Name == "store.cs").Code, "named as the lambda named it");
+        Assert.AreEqual(helper, files.Single(f => f.Name == "models/helper.cs").Code, "in a folder as well");
         Assert.AreEqual("<p>built again</p>", files.Single(f => f.Name == "resources/index.html").Code);
         Assert.AreEqual("console.log('built');", files.Single(f => f.Name == "frontend/src/main.ts").Code);
 
@@ -488,8 +505,9 @@ public sealed class CodeTests
 
         Assert.AreEqual(LambdaSource.EntryName, files[0]["name"]!.GetValue<string>(), "the C# first");
         Assert.AreEqual(Snippet, files[0]["code"]!.GetValue<string>());
-        Assert.AreEqual("resources/index.html", files[1]["name"]!.GetValue<string>(), "then the resources");
-        Assert.IsNotNull(files[1]["code"]);
+        Assert.AreEqual("models/Words.cs", files[1]["name"]!.GetValue<string>(), "C# in a folder among it");
+        Assert.AreEqual("resources/index.html", files[2]["name"]!.GetValue<string>(), "then the resources");
+        Assert.IsNotNull(files[2]["code"]);
 
         var lockFile = files.Single(f => f["name"]!.GetValue<string>() == "frontend/package-lock.json");
 
@@ -532,7 +550,7 @@ public sealed class CodeTests
                                       new JsonObject { ["name"] = "resources/index.html", ["code"] = "<p>again</p>" })
         });
 
-        StringAssert.Contains(written["dropped"]!.GetValue<string>(), "frontend/ - 5 files", "an agent that did not know the folder was there is told what it left out");
+        StringAssert.Contains(written["dropped"]!.GetValue<string>(), "frontend/, models/ - 5 files", "an agent that did not know the folders were there is told what it left out");
     }
 
     [TestMethod]
@@ -567,18 +585,18 @@ public sealed class CodeTests
     #region Taken away
 
     [TestMethod]
-    public async Task TheExportCarriesTheCodeAndCompilesOnlyItsTop()
+    public async Task TheExportCarriesTheCodeAndCompilesItsCSharpInAnyFolder()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         var lambda = await fixture.CreateLambdaAsync("exported");
 
-        // a project of its own in there, and one a build would trip over
+        // the snippet needs the C# of a folder, and a resource called .cs is no C#
         await fixture.SaveAsync(lambda, "Builds the front end",
         [
-            .. Built,
-            new LambdaFile("tool/tool.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>"),
-            new LambdaFile("tool/Program.cs", "System.Console.WriteLine(\"a tool\");")
+            new LambdaFile(LambdaSource.EntryName, Greeting),
+            .. Built.Skip(1),
+            new LambdaFile("resources/samples/Example.cs", "shown, never compiled")
         ]);
 
         using var answer = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/export");
@@ -595,7 +613,9 @@ public sealed class CodeTests
 
         var (exit, output) = await BuildAsync(project);
 
-        Assert.AreEqual(0, exit, $"only the C# at the top is compiled:\n{output}");
+        Assert.AreEqual(0, exit, $"the C# of every folder of the code is compiled, the resources are not:\n{output}");
+
+        Assert.IsTrue(File.Exists(Path.Combine(project, "models", "Words.cs")), "named as the lambda has it");
 
         Assert.IsTrue(File.Exists(Path.Combine(project, "bin", "Release", "net10.0", "resources", "index.html")), "and the resources are copied beside the program");
     }
@@ -617,7 +637,7 @@ public sealed class CodeTests
         Assert.AreEqual("node_modules/\ndist/\n", git.Read("cloned", "frontend/.gitignore"));
         Assert.IsFalse(Directory.Exists(Path.Combine(clone, ".lambda")));
 
-        Assert.Contains("<EnableDefaultItems>false</EnableDefaultItems>", git.Read("cloned", "cloned.csproj"), "the build does not look into the folders");
+        Assert.Contains("<EnableDefaultItems>false</EnableDefaultItems>", git.Read("cloned", "cloned.csproj"), "the build compiles what the platform compiles, and nothing it gathers besides");
         Assert.Contains("## What a tool builds", git.Read("cloned", "AGENTS.md"), "the agent working here is told how");
         Assert.Contains("!/build/", git.Read("cloned", ".gitignore"), "taken back in, whatever a global ignore says of a folder called build");
         Assert.StartsWith("/bin/\n/obj/\n", git.Read("cloned", ".gitignore"), "what dotnet run writes, at the root only");
@@ -640,13 +660,13 @@ public sealed class CodeTests
                                     "the sources, what they built and a folder of its own, in one version");
         Assert.IsFalse(files.Any(f => f.Contains("node_modules", StringComparison.Ordinal)));
 
-        // a project of its own in there does not trip the lambda's build
-        git.Write("cloned", "tool/tool.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
-        git.Write("cloned", "tool/Program.cs", "this is no C# the lambda has");
+        // C# in a folder is built here as on the platform, and a resource called .cs is not
+        git.Write("cloned", "models/Extra.cs", "public static class Extra { public const int Answer = 42; }");
+        git.Write("cloned", "resources/samples/Example.cs", "shown, never compiled");
 
         var (exit, output) = await BuildAsync(clone);
 
-        Assert.AreEqual(0, exit, $"what is in a folder is no part of the build:\n{output}");
+        Assert.AreEqual(0, exit, $"the C# of the code is built, in any folder, and nothing among the resources:\n{output}");
     }
 
     [TestMethod]

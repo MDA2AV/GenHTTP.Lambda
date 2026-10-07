@@ -229,23 +229,23 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Bir sürüm, iki bölüme ayrılmış istediğiniz sayıda dosyadır. {k.b('Kodu')}, kaynakları dışındaki her dosyadır:
-      üstteki {k.code('.cs')} dosyaları derlenir; diğer her dosya - hangi klasörde ve ne türde olursa olsun - sürümle
-      birlikte saklanır ve asla derlenmez ya da sunulmaz: dokümantasyonu, testleri, bir ön yüzün neyden derlendiği.
-      {' '}{k.b('Kaynakları')}, yani {k.code('resources/')} içindekiler, sürümün çalışırken okuyup sunduğu şeylerdir -
-      sayfalar, scriptler, stiller, görseller, veritabanının migration’ları - ve koddan {k.code('Resources')} olarak
-      erişilir.
+      {k.code('.cs')} dosyaları, her C# projesinde olduğu gibi hangi klasörde olursa olsun derlenir; diğer her dosya
+      sürümle birlikte saklanır ve asla derlenmez ya da sunulmaz: dokümantasyonu, testleri, bir ön yüzün neyden
+      derlendiği. {' '}{k.b('Kaynakları')}, yani {k.code('resources/')} içindekiler, sürümün çalışırken okuyup sunduğu
+      şeylerdir - sayfalar, scriptler, stiller, görseller, veritabanının migration’ları - ve koddan{' '}
+      {k.code('Resources')} olarak erişilir.
     </>
   ),
   files2: (k) => (
     <>
       Türlerin, onları kullanan kodun altında durması gerekmez. {k.b('Kod')} bölümünde kodun yanındaki {k.b('+')}
-      düğmesine basın ve bir ad yazın: üstteki bir {k.code('.cs')} dosyası, kod parçasıyla aynı namespace içinde onunla
-      birlikte derlenir. Böylece erişmek için hiçbir şeyi içe aktarmanız gerekmez. Uzantısı ve klasörü olmayan bir ad
-      C# dosyası sayılır.
+      düğmesine basın ve bir ad yazın: bir {k.code('.cs')} dosyası, hangi klasörde olursa olsun, kod parçasıyla aynı
+      namespace içinde onunla birlikte derlenir. Böylece erişmek için hiçbir şeyi içe aktarmanız gerekmez. Uzantısı ve
+      klasörü olmayan bir ad C# dosyası sayılır.
     </>
   ),
   filesAside:
-    'Kodun geri kalanının nasıl düzenleneceği onu yazana kalmıştır - bir ön yüzün kaynakları için bir klasör, scriptler için bir klasör. Bir sürümün kodu ve kaynakları, genel bakışta görünen tek bir yer payını paylaşır.',
+    'Kodun nasıl düzenleneceği onu yazana kalmıştır - türler için bir klasör, bir ön yüzün kaynakları için bir klasör, scriptler için bir klasör. Her .cs dosyası uygulamaya derlenir; bu yüzden uygulamanın parçası olmayan C# - bir test, kendi başına bir araç - kodda .cs dosyası olarak yer almaz. Bir sürümün kodu ve kaynakları, genel bakışta görünen tek bir yer payını paylaşır.',
 
   page: 'Sayfa sunmanın iki yolu var. İnsanların yanına yüklediği dosyalar için de bir üçüncüsü.',
   inlineTitle: 'Tek sayfa, kodun içinde',

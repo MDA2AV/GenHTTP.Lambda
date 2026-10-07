@@ -229,22 +229,23 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Een versie bestaat uit een willekeurig aantal bestanden, in twee delen. De {k.b('code')} is elk bestand behalve de
-      resources: de {k.code('.cs')}-bestanden bovenaan worden gecompileerd, en elk ander bestand – in welke map dan ook,
-      van welk soort dan ook – wordt bij de versie bewaard en nooit gecompileerd of geserveerd: de documentatie, de
-      tests, waaruit een front end wordt gebouwd. De {k.b('resources')}, in {k.code('resources/')}, zijn wat de versie
-      leest en serveert terwijl hij draait – pagina’s, scripts, stijlen, afbeeldingen, de migraties van de database –
-      en zijn vanuit de code bereikbaar als {k.code('Resources')}.
+      resources: de {k.code('.cs')}-bestanden worden gecompileerd, in elke map, zoals in elk C#-project, en elk ander
+      bestand wordt bij de versie bewaard en nooit gecompileerd of geserveerd: de documentatie, de tests, waaruit een
+      front end wordt gebouwd. De {k.b('resources')}, in {k.code('resources/')}, zijn wat de versie leest en serveert
+      terwijl hij draait – pagina’s, scripts, stijlen, afbeeldingen, de migraties van de database – en zijn vanuit de
+      code bereikbaar als {k.code('Resources')}.
     </>
   ),
   files2: (k) => (
     <>
       Types hoeven niet onder de code te staan die ze gebruikt. Klik in {k.b('Code')} op {k.b('+')} naast de code en
-      typ een naam: een {k.code('.cs')}-bestand bovenaan wordt naast de snippet gecompileerd, in dezelfde namespace,
-      dus je hoeft niets te importeren om erbij te kunnen. Een naam zonder extensie en zonder map wordt als C# gezien.
+      typ een naam: een {k.code('.cs')}-bestand wordt naast de snippet gecompileerd, in dezelfde namespace, in welke map
+      het ook staat, dus je hoeft niets te importeren om erbij te kunnen. Een naam zonder extensie en zonder map wordt
+      als C# gezien.
     </>
   ),
   filesAside:
-    'Hoe de rest van de code is ingedeeld, is aan wie hem schrijft – een map voor de bronnen van een front end, een voor scripts. De code en de resources van een versie delen één hoeveelheid ruimte, die het overzicht laat zien.',
+    'Hoe de code is ingedeeld, is aan wie hem schrijft – een map voor types, een voor de bronnen van een front end, een voor scripts. Elk .cs-bestand wordt in de app gecompileerd, dus C# die er geen deel van uitmaakt – een test, een eigen tool – hoort niet als .cs-bestand in de code. De code en de resources van een versie delen één hoeveelheid ruimte, die het overzicht laat zien.',
 
   page: 'Er zijn twee manieren om een pagina te serveren, en nog een voor wat mensen ernaast uploaden.',
   inlineTitle: 'Eén pagina, inline geschreven',

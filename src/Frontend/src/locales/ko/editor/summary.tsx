@@ -51,7 +51,7 @@ export const summary: EditorMessages['summary'] = {
   dataAllowance: '데이터베이스와 워크스페이스',
   files: (files, size) => (files === 1 ? `파일 1개, ${size}` : `파일 ${files}개, ${size}`),
   code: '코드',
-  codeWhy: '제공되지 않아요. 맨 위의 .cs 파일은 컴파일되고, 나머지(문서, 테스트, 빌드 원본)는 버전과 함께 보관돼요.',
+  codeWhy: '제공되지 않아요. .cs 파일은 어느 폴더에 있든 컴파일되고, 나머지(문서, 테스트, 빌드 원본)는 버전과 함께 보관돼요.',
   resources: '리소스',
   resourcesPublic: '공개: 코드가 제공해요.',
   resourcesPrivate: '코드가 제공하지 않아요.',

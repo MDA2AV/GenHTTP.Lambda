@@ -1,7 +1,7 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const tabs: EditorMessages['tabs'] = {
-  codeName: 'Um arquivo C# no topo: letras, números, hífens e underscores, começando com uma letra e terminando em .cs, com no máximo 40 caracteres.',
+  codeName: 'Um arquivo C# tem nome com letras, números, hífens, underscores e pontos, começando com uma letra e terminando em .cs, com no máximo 40 caracteres.',
   name: 'Letras, números e - _ . + @ ( ) [ ] { } $ ~, pastas separadas por barras, sem espaços e sem nome terminado em ponto.',
   taken: 'Uma lambda exportada ou clonada tem um arquivo ou uma pasta com esse nome no topo. Coloque-o numa pasta ou dê outro nome.',
   lambda: 'Uma lambda não tem mais uma pasta .lambda/: a documentação fica em docs/ e os testes em tests/.',
@@ -15,7 +15,7 @@ export const tabs: EditorMessages['tabs'] = {
   errors: 'tem erros',
   removeFile: (name) => `Remover ${name}`,
   removeTitle: 'Remover',
-  codePlaceholder: 'Store.cs, docs/notes.md ou frontend/app.ts',
+  codePlaceholder: 'Store.cs, models/Item.cs ou docs/notes.md',
   resourcePlaceholder: 'web/index.html',
   upload: 'Enviar um arquivo',
 };

@@ -9,10 +9,11 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// <remarks>
 /// The project is laid out as the lambda is: its code at the top, in the
 /// folders it has, and its resources in <c>resources/</c>. Two things differ.
-/// The snippet is <c>Project.cs</c>, and the other C# files at the top keep
-/// their names the way .NET writes them (<c>store.cs</c> is <c>Store.cs</c>);
-/// one that would be called what the project calls its own - <c>program.cs</c>
-/// - is put beside it under a name of its own.
+/// The snippet is <c>Project.cs</c>, and the other C# files keep their names
+/// the way .NET writes them (<c>store.cs</c> is <c>Store.cs</c>,
+/// <c>models/item.cs</c> is <c>models/Item.cs</c>); one at the top that would
+/// be called what the project calls its own - <c>program.cs</c> - is put
+/// beside it under a name of its own.
 ///
 /// What else the project holds is the platform's: the program that hosts the
 /// lambda, its project file, what stands in for the platform in

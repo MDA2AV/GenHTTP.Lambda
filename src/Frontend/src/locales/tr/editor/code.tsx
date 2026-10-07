@@ -20,19 +20,19 @@ export const code: EditorMessages['code'] = {
   demo: 'Bu bir demo, buradaki her şey salt okunur. Değiştirmek için bundan kendi lambdanızı oluşturun.',
   hint: (b) => (
     <>
-      Bir sürümün dosyaları. {b('Kodu')}, programdır ve onunla birlikte saklanan her şeydir: üstteki .cs dosyaları
-      derlenir; diğer her dosya - dokümantasyonu, testleri, bir ön yüzün neyden derlendiği - sürümle birlikte saklanır
-      ve asla derlenmez ya da sunulmaz. {b('Kaynakları')} - sayfalar, scriptler, stiller, görseller, veritabanının
-      migration’ları - sürüm çalışırken okunur ve sunulur; kod onları sunduğu yerde herkese açıktır. Kaydetmek yeni bir
-      sürüm oluşturur ve yayındakine dokunmaz; önce bir değişikliği denemek için bir taslak başlatın. Ctrl-S kaydeder,
-      F12 bir tanıma gider.
+      Bir sürümün dosyaları. {b('Kodu')}, programdır ve onunla birlikte saklanan her şeydir: .cs dosyaları, hangi
+      klasörde olursa olsun derlenir; diğer her dosya - dokümantasyonu, testleri, bir ön yüzün neyden derlendiği -
+      sürümle birlikte saklanır ve asla derlenmez ya da sunulmaz. {b('Kaynakları')} - sayfalar, scriptler, stiller,
+      görseller, veritabanının migration’ları - sürüm çalışırken okunur ve sunulur; kod onları sunduğu yerde herkese
+      açıktır. Kaydetmek yeni bir sürüm oluşturur ve yayındakine dokunmaz; önce bir değişikliği denemek için bir taslak
+      başlatın. Ctrl-S kaydeder, F12 bir tanıma gider.
     </>
   ),
   hintFeature: (b) => (
     <>
-      Bu taslağın dosyaları: {b('kodu')} - üstteki .cs dosyaları derlenir, gerisi onunla birlikte saklanır - ve
-      sürüm çalışırken okunup sunulan {b('kaynakları')}. Kaydetmek onları taslakta tutar ve taslağın kendi adresinde
-      gösterir; siz taslağı yayına alana kadar ziyaretçileriniz bunların hiçbirini görmez.
+      Bu taslağın dosyaları: {b('kodu')} - .cs dosyaları, hangi klasörde olursa olsun derlenir, gerisi onunla birlikte
+      saklanır - ve sürüm çalışırken okunup sunulan {b('kaynakları')}. Kaydetmek onları taslakta tutar ve taslağın
+      kendi adresinde gösterir; siz taslağı yayına alana kadar ziyaretçileriniz bunların hiçbirini görmez.
     </>
   ),
   inFeature: (name) => `“${name}” taslağında`,
@@ -66,7 +66,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Gösterilecek sürüm henüz yok.',
   label: 'Dosyalar',
   codeGroup: 'Kod',
-  codeWhy: 'Asla sunulmaz. Üstteki .cs dosyaları derlenir; geri kalanı sürümle birlikte saklanır.',
+  codeWhy: 'Asla sunulmaz. .cs dosyaları, hangi klasörde olursa olsun derlenir; geri kalanı sürümle birlikte saklanır.',
   resources: 'Kaynaklar',
   resourcesPublic: 'Herkese açık: bu sürüm bunları Resources ile sunar.',
   resourcesPrivate: 'Sürümle birlikte gelir, ancak bu sürüm bunları sunmaz.',

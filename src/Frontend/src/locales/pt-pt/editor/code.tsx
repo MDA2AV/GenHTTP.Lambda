@@ -20,19 +20,19 @@ export const code: EditorMessages['code'] = {
   demo: 'É uma demo, por isso aqui tudo é só de leitura. Para a alterar, cria uma lambda tua a partir dela.',
   hint: (b) => (
     <>
-      Os ficheiros de uma versão. O seu {b('código')} é o programa e tudo o que é guardado com ele: os ficheiros .cs no
-      topo são compilados, e todos os outros ficheiros - a documentação, os testes, aquilo a partir do qual um front end
-      é compilado - são guardados com a versão e nunca são compilados nem servidos. Os seus {b('recursos')} - páginas,
-      scripts, estilos, imagens, as migrações da base de dados - são lidos e servidos enquanto ela corre, e são públicos
-      onde o código os serve. Guardar cria uma nova versão e não toca no que está online; para experimentar primeiro uma
-      alteração, começa um rascunho. Ctrl-S guarda, F12 vai para uma declaração.
+      Os ficheiros de uma versão. O seu {b('código')} é o programa e tudo o que é guardado com ele: os ficheiros .cs são
+      compilados, em qualquer pasta, e todos os outros ficheiros - a documentação, os testes, aquilo a partir do qual um
+      front end é compilado - são guardados com a versão e nunca são compilados nem servidos. Os seus {b('recursos')} -
+      páginas, scripts, estilos, imagens, as migrações da base de dados - são lidos e servidos enquanto ela corre, e são
+      públicos onde o código os serve. Guardar cria uma nova versão e não toca no que está online; para experimentar
+      primeiro uma alteração, começa um rascunho. Ctrl-S guarda, F12 vai para uma declaração.
     </>
   ),
   hintFeature: (b) => (
     <>
-      Os ficheiros deste rascunho: o seu {b('código')} - os ficheiros .cs no topo são compilados, o resto é guardado com
-      ele - e os seus {b('recursos')}, lidos e servidos enquanto corre. Guardar mantém-nos no rascunho e mostra-os no
-      endereço do próprio rascunho; os teus visitantes não veem nada disto até pores o rascunho online.
+      Os ficheiros deste rascunho: o seu {b('código')} - os ficheiros .cs compilados, em qualquer pasta, o resto é
+      guardado com ele - e os seus {b('recursos')}, lidos e servidos enquanto corre. Guardar mantém-nos no rascunho e
+      mostra-os no endereço do próprio rascunho; os teus visitantes não veem nada disto até pores o rascunho online.
     </>
   ),
   inFeature: (name) => `em «${name}»`,
@@ -66,7 +66,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Ainda não há nenhuma versão para mostrar.',
   label: 'Ficheiros',
   codeGroup: 'Código',
-  codeWhy: 'Nunca são servidos. Os ficheiros .cs no topo são compilados; o resto é guardado com a versão.',
+  codeWhy: 'Nunca são servidos. Os ficheiros .cs são compilados, em qualquer pasta; o resto é guardado com a versão.',
   resources: 'Recursos',
   resourcesPublic: 'Públicos: esta versão serve-os com Resources.',
   resourcesPrivate: 'Seguem com a versão, mas esta versão não os serve.',

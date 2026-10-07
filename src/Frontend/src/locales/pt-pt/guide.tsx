@@ -226,8 +226,8 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Uma versão é um número qualquer de ficheiros, em duas partes. O seu {k.b('código')} é todos os ficheiros, exceto
-      os seus recursos: os ficheiros {k.code('.cs')} no topo são compilados, e todos os outros ficheiros - em qualquer
-      pasta, de qualquer tipo - são guardados com a versão e nunca são compilados nem servidos: a documentação, os
+      os seus recursos: os ficheiros {k.code('.cs')} são compilados, em qualquer pasta, como em qualquer projeto C#, e
+      todos os outros ficheiros são guardados com a versão e nunca são compilados nem servidos: a documentação, os
       testes, aquilo a partir do qual um front end é compilado. Os seus {k.b('recursos')}, em {k.code('resources/')},
       são o que ela lê e serve enquanto corre - páginas, scripts, estilos, imagens, as migrações da base de dados - e
       chegam ao código como {k.code('Resources')}.
@@ -236,12 +236,12 @@ export const guide: Messages['guide'] = {
   files2: (k) => (
     <>
       Os tipos não têm de ficar por baixo do código que os usa. Em {k.b('Código')}, clica em {k.b('+')} ao lado do
-      código e escreve um nome: um ficheiro {k.code('.cs')} no topo é compilado ao lado do snippet, no mesmo namespace,
-      por isso não é preciso importar nada. Um nome sem extensão e sem pasta é tratado como C#.
+      código e escreve um nome: um ficheiro {k.code('.cs')} é compilado ao lado do snippet, no mesmo namespace, esteja
+      em que pasta estiver, por isso não é preciso importar nada. Um nome sem extensão e sem pasta é tratado como C#.
     </>
   ),
   filesAside:
-    'A forma como o resto do código se organiza fica ao critério de quem o escreve - uma pasta para as fontes de um front end, outra para scripts. O código e os recursos de uma versão partilham um único espaço, que a visão geral mostra.',
+    'A forma como o código se organiza fica ao critério de quem o escreve - uma pasta para os tipos, outra para as fontes de um front end, outra para scripts. Todos os ficheiros .cs são compilados na app, por isso o C# que não faz parte dela - um teste, uma ferramenta própria - não pertence ao código como ficheiro .cs. O código e os recursos de uma versão partilham um único espaço, que a visão geral mostra.',
 
   page: 'Há duas formas de servir uma página, e mais uma para o que as pessoas carregam junto dela.',
   inlineTitle: 'Uma página, escrita no código',

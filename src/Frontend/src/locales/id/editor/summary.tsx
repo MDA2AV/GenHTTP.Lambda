@@ -51,7 +51,7 @@ export const summary: EditorMessages['summary'] = {
   dataAllowance: 'Database dan workspace',
   files: (files, size) => (files === 1 ? `1 file, ${size}` : `${files} file, ${size}`),
   code: 'Kode',
-  codeWhy: 'Tidak pernah disajikan. File .cs di bagian atas dikompilasi; sisanya - dokumentasi, pengujian, bahan pembuatnya - disimpan bersama versi.',
+  codeWhy: 'Tidak pernah disajikan. File .cs dikompilasi, di folder mana pun; sisanya - dokumentasi, pengujian, bahan pembuatnya - disimpan bersama versi.',
   resources: 'Sumber daya',
   resourcesPublic: 'Publik: kode yang menyajikannya.',
   resourcesPrivate: 'Tidak disajikan oleh kode.',

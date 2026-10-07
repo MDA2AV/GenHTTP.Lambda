@@ -227,23 +227,23 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Una versione è un numero qualsiasi di file, in due parti. Il suo {k.b('codice')} è ogni file tranne le sue
-      risorse: i file {k.code('.cs')} in cima vengono compilati, e ogni altro file (in qualsiasi cartella, di qualsiasi
-      tipo) resta con la versione e non viene mai compilato né servito: la sua documentazione, i suoi test, ciò da cui è
-      costruito un front end. Le sue {k.b('risorse')}, in {k.code('resources/')}, sono ciò che legge e serve mentre
-      gira (pagine, script, stili, immagini, le migrazioni del database) e si raggiungono dal codice come{' '}
+      risorse: i suoi file {k.code('.cs')} vengono compilati, in qualsiasi cartella, come in ogni progetto C#, e ogni
+      altro file resta con la versione e non viene mai compilato né servito: la sua documentazione, i suoi test, ciò da
+      cui è costruito un front end. Le sue {k.b('risorse')}, in {k.code('resources/')}, sono ciò che legge e serve
+      mentre gira (pagine, script, stili, immagini, le migrazioni del database) e si raggiungono dal codice come{' '}
       {k.code('Resources')}.
     </>
   ),
   files2: (k) => (
     <>
       I tipi non devono per forza stare sotto il codice che li usa. In {k.b('Codice')}, premi {k.b('+')} accanto al
-      codice e scrivi un nome: un file {k.code('.cs')} in cima viene compilato insieme allo snippet, nello stesso
-      namespace, quindi non devi importare niente per usarlo. Un nome senza estensione e senza cartella viene
-      considerato C#.
+      codice e scrivi un nome: un file {k.code('.cs')} viene compilato insieme allo snippet, nello stesso namespace, in
+      qualsiasi cartella si trovi, quindi non devi importare niente per usarlo. Un nome senza estensione e senza
+      cartella viene considerato C#.
     </>
   ),
   filesAside:
-    'Come è organizzato il resto del codice dipende da chi lo scrive: una cartella per i sorgenti di un front end, una per gli script. Il codice e le risorse di una versione condividono un unico spazio a disposizione, che la panoramica mostra.',
+    'Come è organizzato il codice dipende da chi lo scrive: una cartella per i tipi, una per i sorgenti di un front end, una per gli script. Ogni file .cs viene compilato nell’app, quindi il C# che non ne fa parte (un test, uno strumento a sé) non va nel codice come file .cs. Il codice e le risorse di una versione condividono un unico spazio a disposizione, che la panoramica mostra.',
 
   page: 'Ci sono due modi per servire una pagina, più uno per quello che la gente carica accanto.',
   inlineTitle: 'Una pagina, scritta nel codice',

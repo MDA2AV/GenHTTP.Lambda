@@ -21,7 +21,7 @@ export const code: EditorMessages['code'] = {
   hint: (b) => (
     <>
       De bestanden van één versie. De {b('code')} is het programma en alles wat ermee wordt bewaard: de .cs-bestanden
-      bovenaan worden gecompileerd, en elk ander bestand – de documentatie, de tests, waaruit een front end wordt
+      worden gecompileerd, in elke map, en elk ander bestand – de documentatie, de tests, waaruit een front end wordt
       gebouwd – wordt bij de versie bewaard en nooit gecompileerd of geserveerd. De {b('resources')} – pagina’s,
       scripts, stijlen, afbeeldingen, de migraties van de database – worden gelezen en geserveerd terwijl de versie
       draait, en zijn openbaar waar de code ze serveert. Opslaan maakt een nieuwe versie en laat wat online staat
@@ -31,7 +31,7 @@ export const code: EditorMessages['code'] = {
   ),
   hintFeature: (b) => (
     <>
-      De bestanden van dit concept: de {b('code')} – de .cs-bestanden bovenaan worden gecompileerd, de rest wordt
+      De bestanden van dit concept: de {b('code')} – de .cs-bestanden worden gecompileerd, in elke map, de rest wordt
       erbij bewaard – en de {b('resources')}, die worden gelezen en geserveerd terwijl het draait. Opslaan bewaart ze in
       het concept en toont ze op het eigen adres van het concept; je bezoekers zien er niets van totdat je het concept
       online zet.
@@ -68,7 +68,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Er is nog geen versie om te tonen.',
   label: 'Bestanden',
   codeGroup: 'Code',
-  codeWhy: 'Nooit geserveerd. De .cs-bestanden bovenaan worden gecompileerd; de rest wordt bij de versie bewaard.',
+  codeWhy: 'Nooit geserveerd. De .cs-bestanden worden gecompileerd, in elke map; de rest wordt bij de versie bewaard.',
   resources: 'Resources',
   resourcesPublic: 'Openbaar: deze versie serveert ze met Resources.',
   resourcesPrivate: 'Meegeleverd met de versie, maar deze versie serveert ze niet.',

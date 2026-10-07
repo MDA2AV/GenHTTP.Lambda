@@ -30,10 +30,9 @@ namespace GenHTTP.Lambda.Services.Deployment;
 /// The project is laid out as the lambda is: its resources in resources/,
 /// copied beside the program when it is built, and the rest of its code
 /// where it was - the documentation in docs/, the tests in tests/, and
-/// whatever else it was kept with. Only the C# at the top is compiled, as on
-/// the platform: the project names what it compiles rather than gathering
-/// every file below it, so a folder of the code is never looked into - once
-/// built in, one may hold whatever a build tool installed.
+/// whatever else it was kept with. Every .cs file of the code is compiled, in
+/// whichever folder, as on the platform - and nothing among the resources,
+/// nor what dotnet writes or the app keeps while it runs.
 ///
 /// A lambda with a database takes it along: what the app kept is written into
 /// database/, and the project references SQLite - Entity Framework Core where
@@ -127,9 +126,11 @@ public static class ProjectPacker
     /// <remarks>
     /// Named rather than left out, so whatever the code holds - a front end's
     /// sources and what a build installed into them among it - never goes
-    /// into the image, whatever it is called.
+    /// into the image, whatever it is called. The C# is taken in from every
+    /// folder, as the project compiles it, and what the project does not
+    /// compile is left out again after it: the last line that matches wins.
     /// </remarks>
-    private const string ImageOnly = "*\n!*.cs\n!*.csproj\n!Platform/\n!resources/\n";
+    private const string ImageOnly = "*\n!**/*.cs\n!*.csproj\n!Platform/\n!resources/\nbin/\nobj/\nworkspace/\ndatabase/\n";
 
     /// <summary>
     /// Where the project keeps its database, relative to where it runs.
@@ -331,11 +332,11 @@ public static class ProjectPacker
     /// No nullable context and no implicit usings, as on the platform: the
     /// lambda was written without either, and Platform/Usings.cs brings in
     /// exactly what it had. Nothing is gathered by default: the project
-    /// compiles the C# at the top and what stands in for the platform, as the
-    /// platform compiled the lambda, and copies its resources - so a folder of
-    /// the code, a test in C# or the sources of a tool, is never compiled into
-    /// the program, and one a build tool installed tens of thousands of files
-    /// into is never walked.
+    /// compiles the C# of the code, in whichever folder, and what stands in for
+    /// the platform, as the platform compiled the lambda, and copies its
+    /// resources. What is not the lambda's is left out by name - the
+    /// resources, what dotnet writes, what the app keeps where it runs - so a
+    /// .cs file among them is never compiled into the program.
     /// </remarks>
     /// <param name="resources">Whether there are resources to copy</param>
     /// <param name="data">Whether the code uses a database, which takes SQLite</param>
@@ -372,7 +373,7 @@ public static class ProjectPacker
                 </ItemGroup>
 
                 <ItemGroup>
-                    <Compile Include="*.cs;Platform/**/*.cs" />{copy}
+                    <Compile Include="**/*.cs" Exclude="bin/**;obj/**;resources/**;workspace/**;database/**" />{copy}
                 </ItemGroup>
 
             </Project>

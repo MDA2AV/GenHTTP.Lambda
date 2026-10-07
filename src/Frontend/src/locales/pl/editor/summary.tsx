@@ -52,7 +52,7 @@ export const summary: EditorMessages['summary'] = {
   dataAllowance: 'Baza danych i obszar roboczy',
   files: (files, size) => (files === 1 ? `1 plik, ${size}` : files % 10 >= 2 && files % 10 <= 4 && (files % 100 < 12 || files % 100 > 14) ? `${files} pliki, ${size}` : `${files} plików, ${size}`),
   code: 'Kod',
-  codeWhy: 'Nigdy nie jest serwowany. Pliki .cs na górze są kompilowane, reszta – dokumentacja, testy, to, z czego coś jest budowane – jest przechowywana razem z wersją.',
+  codeWhy: 'Nigdy nie jest serwowany. Pliki .cs są kompilowane, w dowolnym folderze; reszta – dokumentacja, testy, to, z czego coś jest budowane – jest przechowywana razem z wersją.',
   resources: 'Zasoby',
   resourcesPublic: 'Publiczne: kod je serwuje.',
   resourcesPrivate: 'Nieserwowane przez kod.',

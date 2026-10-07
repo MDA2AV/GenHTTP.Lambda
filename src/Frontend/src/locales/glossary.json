@@ -64,7 +64,7 @@
     },
     {
       "en": "code",
-      "note": "every file of a version that is not one of its resources: the C# at the top, which is compiled, and whatever else is kept with it - its documentation, its tests",
+      "note": "every file of a version that is not one of its resources: its C#, which is compiled, and whatever else is kept with it - its documentation, its tests",
       "id": "kode", "de": "Code", "es": "código", "fr": "code", "it": "codice", "nl": "code", "pl": "kod", "pt": "código", "pt-pt": "código", "tr": "kod", "ja": "コード", "ko": "코드"
     },
     {

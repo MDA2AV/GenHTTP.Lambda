@@ -21,18 +21,18 @@ export const code: EditorMessages['code'] = {
   hint: (b) => (
     <>
       Os arquivos de uma versão. O {b('código')} dela é o programa e tudo o que fica guardado com ele: os arquivos .cs
-      no topo são compilados, e todo outro arquivo (a documentação, os testes, aquilo a partir do qual um front end é
-      gerado) fica guardado com a versão e nunca é compilado nem servido. Os {b('recursos')} dela (páginas, scripts,
-      estilos, imagens, as migrações do banco de dados) são lidos e servidos enquanto ela roda, e são públicos onde o
-      código os serve. Salvar cria uma nova versão e não mexe no que está no ar; para testar uma mudança antes, comece
-      um rascunho. Ctrl-S salva, F12 vai para uma declaração.
+      são compilados, em qualquer pasta, e todo outro arquivo (a documentação, os testes, aquilo a partir do qual um
+      front end é gerado) fica guardado com a versão e nunca é compilado nem servido. Os {b('recursos')} dela
+      (páginas, scripts, estilos, imagens, as migrações do banco de dados) são lidos e servidos enquanto ela roda, e
+      são públicos onde o código os serve. Salvar cria uma nova versão e não mexe no que está no ar; para testar uma
+      mudança antes, comece um rascunho. Ctrl-S salva, F12 vai para uma declaração.
     </>
   ),
   hintFeature: (b) => (
     <>
-      Os arquivos deste rascunho: o {b('código')} (os arquivos .cs no topo são compilados, o resto fica guardado com
-      ele) e os {b('recursos')}, lidos e servidos enquanto ele roda. Salvar os mantém no rascunho e os mostra no
-      endereço do próprio rascunho; seus visitantes não veem nada disso até você colocar o rascunho no ar.
+      Os arquivos deste rascunho: o {b('código')} (os arquivos .cs são compilados, em qualquer pasta, o resto fica
+      guardado com ele) e os {b('recursos')}, lidos e servidos enquanto ele roda. Salvar os mantém no rascunho e os
+      mostra no endereço do próprio rascunho; seus visitantes não veem nada disso até você colocar o rascunho no ar.
     </>
   ),
   inFeature: (name) => `em “${name}”`,
@@ -66,7 +66,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Ainda não há nenhuma versão para mostrar.',
   label: 'Arquivos',
   codeGroup: 'Código',
-  codeWhy: 'Nunca servido. Os arquivos .cs no topo são compilados; o resto fica guardado com a versão.',
+  codeWhy: 'Nunca servido. Os arquivos .cs são compilados, em qualquer pasta; o resto fica guardado com a versão.',
   resources: 'Recursos',
   resourcesPublic: 'Públicos: esta versão os serve com Resources.',
   resourcesPrivate: 'Enviados com a versão, mas esta versão não os serve.',

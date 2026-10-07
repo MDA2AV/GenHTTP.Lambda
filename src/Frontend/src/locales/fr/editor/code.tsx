@@ -20,21 +20,21 @@ export const code: EditorMessages['code'] = {
   demo: 'C’est une démo : tout est en lecture seule. Pour la modifier, créez votre propre lambda à partir de celle-ci.',
   hint: (b) => (
     <>
-      Les fichiers d’une version. Son {b('code')} est le programme et tout ce qui est conservé avec lui : les fichiers
-      .cs à la racine sont compilés, et tous les autres fichiers (sa documentation, ses tests, ce à partir de quoi un
-      front end est construit) sont conservés avec la version, sans jamais être compilés ni servis. Ses{' '}
-      {b('ressources')} (pages, scripts, styles, images, migrations de la base de données) sont lues et servies pendant
-      qu’elle tourne, et sont publiques là où le code les sert. Enregistrer crée une nouvelle version sans toucher à ce
-      qui est en ligne ; pour essayer d’abord une modification, démarrez un brouillon. Ctrl-S enregistre, F12 va à une
-      déclaration.
+      Les fichiers d’une version. Son {b('code')} est le programme et tout ce qui est conservé avec lui : ses fichiers
+      .cs sont compilés, dans n’importe quel dossier, et tous les autres fichiers (sa documentation, ses tests, ce à
+      partir de quoi un front end est construit) sont conservés avec la version, sans jamais être compilés ni servis.
+      Ses {b('ressources')} (pages, scripts, styles, images, migrations de la base de données) sont lues et servies
+      pendant qu’elle tourne, et sont publiques là où le code les sert. Enregistrer crée une nouvelle version sans
+      toucher à ce qui est en ligne ; pour essayer d’abord une modification, démarrez un brouillon. Ctrl-S enregistre,
+      F12 va à une déclaration.
     </>
   ),
   hintFeature: (b) => (
     <>
-      Les fichiers de ce brouillon : son {b('code')} (les fichiers .cs à la racine sont compilés, le reste est conservé
-      avec lui) et ses {b('ressources')}, lues et servies pendant qu’il tourne. Enregistrer les garde dans le
-      brouillon et les affiche à l’adresse du brouillon ; vos visiteurs n’en voient rien tant que vous ne mettez pas
-      le brouillon en ligne.
+      Les fichiers de ce brouillon : son {b('code')} (ses fichiers .cs sont compilés, dans n’importe quel dossier, le
+      reste est conservé avec lui) et ses {b('ressources')}, lues et servies pendant qu’il tourne. Enregistrer les garde
+      dans le brouillon et les affiche à l’adresse du brouillon ; vos visiteurs n’en voient rien tant que vous ne mettez
+      pas le brouillon en ligne.
     </>
   ),
   inFeature: (name) => `dans « ${name} »`,
@@ -69,7 +69,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Il n’y a pas encore de version à afficher.',
   label: 'Fichiers',
   codeGroup: 'Code',
-  codeWhy: 'Jamais servi. Les fichiers .cs à la racine sont compilés ; le reste est conservé avec la version.',
+  codeWhy: 'Jamais servi. Les fichiers .cs sont compilés, dans n’importe quel dossier ; le reste est conservé avec la version.',
   resources: 'Ressources',
   resourcesPublic: 'Publiques : cette version les sert avec Resources.',
   resourcesPrivate: 'Livrées avec la version, mais cette version ne les sert pas.',

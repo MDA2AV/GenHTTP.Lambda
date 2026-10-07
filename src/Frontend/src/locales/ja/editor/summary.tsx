@@ -51,7 +51,7 @@ export const summary: EditorMessages['summary'] = {
   dataAllowance: 'データベースとワークスペース',
   files: (files, size) => (files === 1 ? `1個のファイル、${size}` : `${files}個のファイル、${size}`),
   code: 'コード',
-  codeWhy: '配信されません。先頭の.csファイルはコンパイルされ、それ以外（ドキュメント、テスト、ビルド元）はバージョンと一緒に保存されます。',
+  codeWhy: '配信されません。.csファイルはどのフォルダーにあってもコンパイルされ、それ以外（ドキュメント、テスト、ビルド元）はバージョンと一緒に保存されます。',
   resources: 'リソース',
   resourcesPublic: '公開：コードが配信します。',
   resourcesPrivate: 'コードからは配信されません。',

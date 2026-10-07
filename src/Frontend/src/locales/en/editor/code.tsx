@@ -27,9 +27,9 @@ export const code = {
   /** The hint beside the title, on a version of the lambda. */
   hint: (b: (text: string) => Node) => (
     <>
-      The files of one version. Its {b('code')} is the program and everything kept with it: the .cs files at the top
-      are compiled, and every other file - its documentation, its tests, what a front end is built from - is kept with
-      the version and never compiled or served. Its {b('resources')} - pages, scripts, styles, pictures, the database's
+      The files of one version. Its {b('code')} is the program and everything kept with it: its .cs files are
+      compiled, in any folder, and every other file - its documentation, its tests, what a front end is built from -
+      is kept with the version and never compiled or served. Its {b('resources')} - pages, scripts, styles, pictures, the database's
       migrations - are read and served while it runs, and public where the code serves them. Saving makes a new version
       and leaves what is online alone; to try a change first, start a draft. Ctrl-S saves, F12 goes to a declaration.
     </>
@@ -37,7 +37,7 @@ export const code = {
   /** The hint beside the title, in a draft. */
   hintFeature: (b: (text: string) => Node) => (
     <>
-      The files of this draft: its {b('code')} - the .cs files at the top compiled, the rest kept with it - and its{' '}
+      The files of this draft: its {b('code')} - its .cs files compiled, in any folder, the rest kept with it - and its{' '}
       {b('resources')}, read and served while it runs. Saving keeps them in the draft and shows them at the draft's own
       address; your visitors see nothing of it until you put the draft online.
     </>
@@ -79,7 +79,7 @@ export const code = {
   label: 'Files',
   /** The group of the files that are the program and what is kept with it. */
   codeGroup: 'Code',
-  codeWhy: 'Never served. The .cs files at the top are compiled; the rest is kept with the version.',
+  codeWhy: 'Never served. The .cs files are compiled, in any folder; the rest is kept with the version.',
   /** The group of the files read and served while the lambda runs. */
   resources: 'Resources',
   resourcesPublic: 'Public: this version serves them with Resources.',

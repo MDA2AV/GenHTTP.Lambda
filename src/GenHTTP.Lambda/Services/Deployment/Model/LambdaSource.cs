@@ -55,14 +55,13 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
 ///
 /// A version holds two things. Its code is every file that is not a
 /// resource, in whatever folders it is in: the snippet in <c>lambda.cs</c>,
-/// the other <c>.cs</c> files beside it - all of them compiled - and anything
-/// else the lambda is kept with: what is written about it, what its front end
-/// is built from, a tool's configuration. Only the <c>.cs</c> files at the top
-/// are compiled; everything else of the code is kept and never compiled or
-/// served, whatever it is called - a test written in C# is not part of the
-/// program. Its resources are what is below <c>resources/</c>: the front end,
-/// the migrations, pictures - written into a folder of their own when the
-/// version goes online, where the code reads and serves them.
+/// the other <c>.cs</c> files - all of them compiled, in whichever folder,
+/// as a C# project compiles its own - and anything else the lambda is kept
+/// with: what is written about it, what its front end is built from, a
+/// tool's configuration, never compiled or served. Its resources are what is
+/// below <c>resources/</c>: the front end, the migrations, pictures - written
+/// into a folder of their own when the version goes online, where the code
+/// reads and serves them.
 ///
 /// The documentation and the tests are folders of the code like any other.
 /// The editor reads <c>docs/</c> and <c>tests/</c> to show them, and the
@@ -134,17 +133,16 @@ public static class LambdaSource
     public static bool IsCode(string? name) => name != null && !IsResource(name);
 
     /// <summary>
-    /// Whether a name is C# the lambda is compiled from: a <c>.cs</c> file at
-    /// the top of the code.
+    /// Whether a name is C# the lambda is compiled from: a <c>.cs</c> file of
+    /// the code, in whichever folder.
     /// </summary>
     /// <remarks>
-    /// One in a folder is kept like any other file and not compiled: a folder
-    /// of the code holds what the lambda is kept with - a test written in C#,
-    /// the sources of a tool - and compiling it into the program would change
-    /// what the program is.
+    /// As a C# project compiles every <c>.cs</c> file below it, so that its
+    /// types can be laid out in folders. A resource is never compiled, whatever
+    /// it is called: it is read and served.
     /// </remarks>
     public static bool IsCompiled(string? name)
-        => name != null && !name.Contains('/') && name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
+        => IsCode(name) && name!.EndsWith(".cs", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Where a resource is below the folder the resources are written to.
@@ -256,16 +254,25 @@ public static class LambdaSource
     /// was served is a resource.
     /// </summary>
     /// <remarks>
-    /// The C# was at the top then as it is now, and kept its name. A name of
+    /// The C# was at the top then, and kept its name. A name of
     /// <c>.lambda/</c> was always one of its documentation, its tests or its
     /// build folder, which keep their folders: <c>docs/</c>, <c>tests/</c>
     /// and <c>build/</c>. Everything else was an asset.
+    ///
+    /// C# in <c>.lambda/</c> - a test, the sources of a tool - was never
+    /// compiled, and every <c>.cs</c> file of the code is now. Moved as it
+    /// is, it would be compiled into a program it was never part of, which
+    /// it may not compile with, and a lambda online would no longer come up.
+    /// So it keeps what it holds under a name that is not compiled:
+    /// <c>.lambda/tests/Smoke.cs</c> is <c>tests/Smoke.cs.txt</c>.
     /// </remarks>
     internal static string Moved(string name)
     {
         if (name.StartsWith(".lambda/", StringComparison.Ordinal))
         {
-            return name[".lambda/".Length..];
+            var moved = name[".lambda/".Length..];
+
+            return moved.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? moved + ".txt" : moved;
         }
 
         if (!name.Contains('/') && name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
@@ -387,14 +394,14 @@ public static class LambdaSource
                 : $"'{name}' is not a usable name for a resource. Below {ResourceFolder}, use letters, digits, dashes, underscores, dots and slashes, no names starting with a dot, an extension to serve it by, at most six folders deep and 120 characters.";
         }
 
-        if (IsCompiled(name))
+        if (CodeComplaint(name) is { } complaint)
         {
-            return IsValidName(name)
-                ? null
-                : $"'{name}' is not a usable name for a C# file. Use letters, digits, dashes and underscores, starting with a letter and ending in '.cs', 40 characters at most.";
+            return complaint;
         }
 
-        return CodeComplaint(name);
+        return !IsCompiled(name) || IsValidName(name[(name.LastIndexOf('/') + 1)..])
+            ? null
+            : $"'{name}' is not a usable name for a C# file. Name it with letters, digits, dashes, underscores and dots, starting with a letter and ending in '.cs', 40 characters at most - in any folder.";
     }
 
     /// <summary>
@@ -476,7 +483,8 @@ public static class LambdaSource
     };
 
     /// <summary>
-    /// What is wrong with the name of a file of the code that is not compiled, if anything.
+    /// What is wrong with the name of a file of the code, if anything - and
+    /// with the folders of a C# file, whose own name is held to more.
     /// </summary>
     /// <remarks>
     /// Wide, because these are names a tool's files have, which nobody here
@@ -562,12 +570,14 @@ public static class LambdaSource
         => char.IsAsciiLetterOrDigit(character) || character is '-' or '_' or '.' or '+' or '@' or '(' or ')' or '[' or ']' or '{' or '}' or '$' or '~';
 
     /// <summary>
-    /// Whether a name is one a C# file may have.
+    /// Whether a name is one a C# file may have, without its folders.
     /// </summary>
     /// <remarks>
-    /// Deliberately narrow. The name reaches a <c>#line</c> directive and a
-    /// diagnostic, and a name with a quote or a path separator in it would
-    /// either break the generated file or point somewhere it should not.
+    /// Narrower than the rest of the code. The path reaches a <c>#line</c>
+    /// directive and a diagnostic, and a quote in it would break the
+    /// generated file; the folders are held to the rules of the code, which
+    /// have none. Dots are there for the names .NET gives the parts of a
+    /// class (<c>Store.Queries.cs</c>).
     /// </remarks>
     public static bool IsValidName(string? name)
     {
@@ -578,14 +588,14 @@ public static class LambdaSource
 
         var stem = name[..^3];
 
-        if (stem.Length == 0 || !char.IsAsciiLetter(stem[0]))
+        if (stem.Length == 0 || !char.IsAsciiLetter(stem[0]) || stem.EndsWith('.'))
         {
             return false;
         }
 
         foreach (var character in stem)
         {
-            if (!char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_'))
+            if (!char.IsAsciiLetterOrDigit(character) && character is not ('-' or '_' or '.'))
             {
                 return false;
             }

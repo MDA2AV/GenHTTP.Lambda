@@ -2,9 +2,8 @@ import type { LambdaFile } from '../api';
 
 /**
  * How a version's files are laid out: its code - every file that is not a
- * resource, in whatever folders, of which the .cs files at the top are
- * compiled - and its resources, below resources/, which it reads and serves
- * while it runs.
+ * resource, in whatever folders, of which the .cs files are compiled - and
+ * its resources, below resources/, which it reads and serves while it runs.
  *
  * The same rule the server applies (LambdaSource). What is written about a
  * version - its documentation and its tests - is in docs/ and tests/ of its
@@ -34,8 +33,8 @@ export const isResource = (name: string) => name.startsWith(RESOURCES);
 /** Whether a file belongs to the code: everything that is not a resource. */
 export const isCode = (name: string) => !isResource(name);
 
-/** Whether a file is C# the lambda is compiled from: a .cs file at the top of the code. */
-export const isCompiled = (name: string) => !name.includes('/') && name.toLowerCase().endsWith('.cs');
+/** Whether a file is C# the lambda is compiled from: a .cs file of the code, in whichever folder. */
+export const isCompiled = (name: string) => isCode(name) && name.toLowerCase().endsWith('.cs');
 
 /** The two folders of the code shown as what they are, each a section of the editor. */
 export type Area = 'docs' | 'tests';

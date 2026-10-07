@@ -185,6 +185,7 @@ POST /api/v1/lambdas/{editorKey}/features/{feature}/merge
             <p>{said.files(k)}</p>
             <Commands text={`lambda.cs           the snippet: what it returns is served
 Shelf.cs            more C#, compiled beside it
+models/Book.cs      C# in a folder, compiled the same
 docs/ tests/        what is written about it
 frontend/           whatever else - kept, never compiled or served
 resources/          what it reads and serves while it runs`} />

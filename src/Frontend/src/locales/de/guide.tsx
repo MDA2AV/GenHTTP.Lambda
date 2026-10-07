@@ -228,8 +228,8 @@ export const guide: Messages['guide'] = {
   files: (k) => (
     <>
       Eine Version besteht aus beliebig vielen Dateien, in zwei Teilen. Ihr {k.b('Code')} ist jede Datei außer ihren
-      Ressourcen: Die {k.code('.cs')}-Dateien ganz oben werden kompiliert, und jede andere Datei – in jedem Ordner, von
-      jeder Art – wird mit der Version gespeichert und nie kompiliert oder ausgeliefert: ihre Dokumentation, ihre Tests,
+      Ressourcen: Ihre {k.code('.cs')}-Dateien werden kompiliert, in jedem Ordner, wie in jedem C#-Projekt, und jede
+      andere Datei wird mit der Version gespeichert und nie kompiliert oder ausgeliefert: ihre Dokumentation, ihre Tests,
       das, woraus ein Frontend gebaut wird. Ihre {k.b('Ressourcen')} in {k.code('resources/')} sind das, was sie zur
       Laufzeit liest und ausliefert – Seiten, Scripts, Stile, Bilder, die Migrationen der Datenbank – und die der Code
       als {k.code('Resources')} erreicht.
@@ -238,12 +238,13 @@ export const guide: Messages['guide'] = {
   files2: (k) => (
     <>
       Typen müssen nicht unter dem Code stehen, der sie nutzt. Klicken Sie unter {k.b('Code')} neben dem Code auf{' '}
-      {k.b('+')} und geben Sie einen Namen ein: Eine {k.code('.cs')}-Datei ganz oben wird zusammen mit dem Snippet im
-      selben Namespace kompiliert, also müssen Sie nichts importieren. Ein Name ohne Endung und ohne Ordner gilt als C#.
+      {k.b('+')} und geben Sie einen Namen ein: Eine {k.code('.cs')}-Datei wird zusammen mit dem Snippet im selben
+      Namespace kompiliert, in welchem Ordner sie auch liegt, also müssen Sie nichts importieren. Ein Name ohne Endung
+      und ohne Ordner gilt als C#.
     </>
   ),
   filesAside:
-    'Wie der übrige Code angeordnet ist, bleibt dem überlassen, der ihn schreibt – ein Ordner für die Quellen eines Frontends, einer für Scripts. Der Code und die Ressourcen einer Version teilen sich ein Platzkontingent, das die Übersicht anzeigt.',
+    'Wie der Code angeordnet ist, bleibt dem überlassen, der ihn schreibt – ein Ordner für Typen, einer für die Quellen eines Frontends, einer für Scripts. Jede .cs-Datei wird in die App kompiliert; C#, das nicht dazugehört – ein Test, ein eigenes Werkzeug –, gehört deshalb nicht als .cs-Datei in den Code. Der Code und die Ressourcen einer Version teilen sich ein Platzkontingent, das die Übersicht anzeigt.',
 
   page: 'Für eine Seite gibt es zwei Wege – und einen weiteren für das, was Leute daneben hochladen.',
   inlineTitle: 'Eine Seite, direkt im Code',

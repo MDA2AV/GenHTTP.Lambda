@@ -52,10 +52,34 @@ public sealed class SourceTests
     [DataRow("with space.cs", false)]
     [DataRow("has\"quote.cs", false)]
     [DataRow("9lives.cs", false)]
+    [DataRow("Greeter..cs", false)]
     [DataRow("Greeter.cs", true)]
     [DataRow("my-types_2.cs", true)]
+    [DataRow("Store.Queries.cs", true)]
     public void OnlyUsableNamesAreAccepted(string name, bool usable)
         => Assert.AreEqual(usable, LambdaSource.IsValidName(name));
+
+    [TestMethod]
+    [DataRow("models/Item.cs", null)]
+    [DataRow("a/b/c/Deep.cs", null)]
+    [DataRow("models/9lives.cs", "not a usable name for a C# file")]
+    [DataRow("Platform/Mine.cs", "has for its own")]
+    [DataRow("resources/samples/odd name.cs", "not a usable name for a resource")]
+    public void CSharpIsNamedInAnyFolder(string name, string? complaint)
+    {
+        var said = LambdaSource.Complaint(name);
+
+        if (complaint == null)
+        {
+            Assert.IsNull(said, name);
+            Assert.IsTrue(LambdaSource.IsCompiled(name), "and it is compiled, as in a C# project");
+        }
+        else
+        {
+            Assert.IsNotNull(said, name);
+            Assert.Contains(complaint, said);
+        }
+    }
 
     [TestMethod]
     public void AVersionOfTheFirstLayoutIsReadInTodays()
@@ -73,6 +97,7 @@ public sealed class SourceTests
               {"name":".lambda/docs/product.md","code":"# What it is"},
               {"name":".lambda/tests/smoke.mjs","code":"check();"},
               {"name":".lambda/tests/Check.cs","code":"not compiled"},
+              {"name":"samples/Sample.cs","code":"served, not compiled"},
               {"name":".lambda/build/web/package.json","code":"{}"},
               {"name":".lambda/build/web/.gitignore","code":"node_modules/"}
             ]}
@@ -83,8 +108,9 @@ public sealed class SourceTests
         CollectionAssert.AreEqual(new[]
         {
             "lambda.cs", "store.cs", "resources/index.html", "resources/web/app.js", "resources/migrations/V1__Create.sql", "resources/logo.png",
-            "docs/product.md", "tests/smoke.mjs", "tests/Check.cs", "build/web/package.json", "build/web/.gitignore"
-        }, files.Select(f => f.Name).ToArray(), "the C# where it was, what it served below resources/, and .lambda/ at the top of the code");
+            "docs/product.md", "tests/smoke.mjs", "tests/Check.cs.txt", "resources/samples/Sample.cs", "build/web/package.json", "build/web/.gitignore"
+        }, files.Select(f => f.Name).ToArray(), "the C# where it was, what it served below resources/, and .lambda/ at the top of the code - "
+                                               + "its C#, never compiled, under a name that still is not");
 
         Assert.AreEqual("iVBORw==", files.Single(f => f.Name == "resources/logo.png").Code, "nothing but the names changes");
         Assert.AreEqual("base64", files.Single(f => f.Name == "resources/logo.png").Encoding);
@@ -312,7 +338,7 @@ public sealed class SourceTests
             new LambdaFile(LambdaSource.EntryName, "return Resources.Files();"),
             new LambdaFile("resources/app.css", "body { color: blue }"),
             new LambdaFile("docs/product.md", "# Blue"),
-            new LambdaFile("tools/Generate.cs", "a tool's C#, which is no part of the program")
+            new LambdaFile("tools/generate.mjs", "a tool's script, which is no part of the program")
         ]));
 
         using var css = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/app.css");

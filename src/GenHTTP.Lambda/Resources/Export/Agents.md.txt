@@ -13,16 +13,16 @@ it is the same in every commit until the platform changes it.
 | Here | On the platform |
 |---|---|
 | `Project.cs` | `lambda.cs`: the body of `BuildAsync()` is the code that returns the app's handler, the types below the class are its own |
-| the other `*.cs` here, at the top | its other C# files: types, no statements - compiled with it |
+| every other `*.cs`, in any folder | its other C# files: types, no statements - compiled with it, as in a C# project |
 | `resources/` | what it reads and serves while it runs - the front end, its migrations, pictures |
 | `docs/` | its documentation: `product.md`, `decisions.md` and more pages |
 | `tests/` | how it is tested: `README.md`, the scripts and their data |
 | any other file or folder | the rest of its code, kept with every version and never compiled or served - what a front end is built from, a tool's configuration, a README |
 | `Program.cs`, `{project}.csproj`, `Platform/`, `Dockerfile`, `.gitignore`, `.dockerignore`, `AGENTS.md`, `CLAUDE.md`, `LICENSE` | the platform's: they make the lambda a project that runs here, and are no part of it |
 
-Only the `.cs` files at the top are compiled, here as on the platform; one in
-a folder is kept like any other file. Lay out the rest as you would any
-repository. Change the lambda's files only: a push that changes, adds or
+Every `.cs` file is compiled, in whichever folder, here as on the platform -
+so C# that is not part of the lambda, a test or a tool of its own, does not
+belong here as a `.cs` file. Lay out the rest as you would any repository. Change the lambda's files only: a push that changes, adds or
 removes one of the platform's is refused, since it would change nothing of
 the lambda. Leave `class Project` as it is and work in the body of
 `BuildAsync()`; a helper goes into a type of its own.
@@ -47,7 +47,7 @@ Some of a lambda may be made by a tool rather than written as it is served or
 compiled: a front end that is compiled or bundled, styles compiled from
 another language, code generated from a description. What the tool works from
 goes in a folder of its own - `frontend/`, say - and what it makes goes where
-the lambda needs it: into `resources/`, or as C# at the top. What is written
+the lambda needs it: into `resources/`, or as C#. What is written
 as it is served or compiled - plain HTML, CSS and JavaScript, C# - needs no
 tool.
 

@@ -35,7 +35,7 @@ type Group = 'code' | 'resources';
  *
  * A version is its code and its resources, and both are any number of files
  * in any folders, so they are a tree rather than a strip of tabs: the code
- * first - the C# at the top compiled, everything else kept with it - and the
+ * first - its C# compiled, in any folder, everything else kept with it - and the
  * resources the code reads and serves after it, each with what it comes to
  * and whether anybody on the internet can reach it. The file picked is open
  * beside them, to be read or changed; checking, saving and deploying are the
@@ -854,10 +854,6 @@ function complaintOf(name: string, said: Said): string | null {
     return usable ? null : said.resourceName;
   }
 
-  if (isCompiled(name)) {
-    return name.length <= 40 && /^[A-Za-z][A-Za-z0-9_-]*\.cs$/.test(name) ? null : said.codeName;
-  }
-
   const parts = name.split('/');
   const top = parts[0].toLowerCase();
 
@@ -877,7 +873,14 @@ function complaintOf(name: string, said: Said): string | null {
     && parts.every((part) => part.length > 0 && part.length <= 100 && part !== '.' && part !== '..' && !part.endsWith('.')
                              && part.toLowerCase() !== '.git' && /^[A-Za-z0-9\-_.+@()[\]{}$~]+$/.test(part));
 
-  return usable ? null : said.name;
+  if (!usable) {
+    return said.name;
+  }
+
+  // C# is compiled in any folder, and its own name is held to more: it is written into what the compiler is given
+  const file = parts[parts.length - 1];
+
+  return !isCompiled(name) || (file.length <= 40 && /^[A-Za-z][A-Za-z0-9_.-]*\.cs$/.test(file) && !file.endsWith('..cs')) ? null : said.codeName;
 }
 
 /** The names at the top that an exported or cloned project has for its own. */

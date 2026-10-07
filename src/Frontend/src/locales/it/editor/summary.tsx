@@ -51,7 +51,7 @@ export const summary: EditorMessages['summary'] = {
   dataAllowance: 'Database e workspace',
   files: (files, size) => (files === 1 ? `1 file, ${size}` : `${files} file, ${size}`),
   code: 'Codice',
-  codeWhy: 'Mai servito. I file .cs in cima vengono compilati; il resto (documentazione, test, ciò da cui è costruito) resta con la versione.',
+  codeWhy: 'Mai servito. I file .cs vengono compilati, in qualsiasi cartella; il resto (documentazione, test, ciò da cui è costruito) resta con la versione.',
   resources: 'Risorse',
   resourcesPublic: 'Pubbliche: le serve il codice.',
   resourcesPrivate: 'Non servite dal codice.',

@@ -1,7 +1,7 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const tabs: EditorMessages['tabs'] = {
-  codeName: '맨 위의 C# 파일: 영문자, 숫자, 하이픈, 밑줄만 쓸 수 있고, 영문자로 시작해서 .cs로 끝나야 하며 40자까지예요.',
+  codeName: 'C# 파일 이름은 영문자, 숫자, 하이픈, 밑줄, 점을 쓸 수 있고, 영문자로 시작해서 .cs로 끝나야 하며 40자까지예요.',
   name: '영문자, 숫자, - _ . + @ ( ) [ ] { } $ ~만 쓸 수 있어요. 폴더는 슬래시로 구분하고, 공백이나 점으로 끝나는 이름은 안 돼요.',
   taken: '내보내거나 클론한 람다의 맨 위에는 그 이름의 파일이나 폴더가 이미 있어요. 폴더 안에 넣거나 다른 이름을 쓰세요.',
   lambda: '람다는 더 이상 .lambda/ 폴더를 두지 않아요. 문서는 docs/에, 테스트는 tests/에 두세요.',
@@ -15,7 +15,7 @@ export const tabs: EditorMessages['tabs'] = {
   errors: '오류 있음',
   removeFile: (name) => `${name} 삭제`,
   removeTitle: '삭제',
-  codePlaceholder: 'Store.cs, docs/notes.md 또는 frontend/app.ts',
+  codePlaceholder: 'Store.cs, models/Item.cs 또는 docs/notes.md',
   resourcePlaceholder: 'web/index.html',
   upload: '파일 업로드',
 };

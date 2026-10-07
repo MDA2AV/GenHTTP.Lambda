@@ -1,7 +1,7 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const tabs: EditorMessages['tabs'] = {
-  codeName: 'Un archivo C# de la raíz: letras, números, guiones y guiones bajos, que empiece por una letra y termine en .cs, de 40 caracteres como máximo.',
+  codeName: 'Un archivo C# se nombra con letras, números, guiones, guiones bajos y puntos, empieza por una letra y termina en .cs, de 40 caracteres como máximo.',
   name: 'Letras, números y - _ . + @ ( ) [ ] { } $ ~, con las carpetas separadas por barras, sin espacios y sin que el nombre termine en punto.',
   taken: 'Una lambda exportada o clonada ya tiene en la raíz un archivo o una carpeta con ese nombre. Ponlo en una carpeta o elige otro nombre.',
   lambda: 'Una lambda ya no guarda una carpeta .lambda/: su documentación va en docs/ y sus pruebas en tests/.',
@@ -15,7 +15,7 @@ export const tabs: EditorMessages['tabs'] = {
   errors: 'tiene errores',
   removeFile: (name) => `Quitar ${name}`,
   removeTitle: 'Quitar',
-  codePlaceholder: 'Store.cs, docs/notas.md o frontend/app.ts',
+  codePlaceholder: 'Store.cs, models/Item.cs o docs/notas.md',
   resourcePlaceholder: 'web/index.html',
   upload: 'Subir un archivo',
 };

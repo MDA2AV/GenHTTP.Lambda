@@ -20,17 +20,17 @@ export const code: EditorMessages['code'] = {
   demo: 'Ini demo, jadi semuanya hanya bisa dibaca. Untuk mengubahnya, buat lambda Anda sendiri dari demo ini.',
   hint: (b) => (
     <>
-      File dari satu versi. {b('Kode')}-nya adalah program beserta semua yang disimpan bersamanya: file .cs di bagian atas
-      dikompilasi, dan setiap file lain - dokumentasi, pengujian, bahan pembuat front end - disimpan bersama versi dan
-      tidak pernah dikompilasi atau disajikan. {b('Sumber daya')}-nya - halaman, script, stylesheet, gambar, migrasi
-      database - dibaca dan disajikan selama versi berjalan, dan bersifat publik di tempat kode menyajikannya. Menyimpan
-      membuat versi baru dan tidak mengubah apa yang sedang online; untuk mencoba perubahan lebih dulu, mulai draf.
-      Ctrl-S menyimpan, F12 membuka deklarasi.
+      File dari satu versi. {b('Kode')}-nya adalah program beserta semua yang disimpan bersamanya: file .cs-nya
+      dikompilasi, di folder mana pun, dan setiap file lain - dokumentasi, pengujian, bahan pembuat front end - disimpan
+      bersama versi dan tidak pernah dikompilasi atau disajikan. {b('Sumber daya')}-nya - halaman, script, stylesheet,
+      gambar, migrasi database - dibaca dan disajikan selama versi berjalan, dan bersifat publik di tempat kode
+      menyajikannya. Menyimpan membuat versi baru dan tidak mengubah apa yang sedang online; untuk mencoba perubahan
+      lebih dulu, mulai draf. Ctrl-S menyimpan, F12 membuka deklarasi.
     </>
   ),
   hintFeature: (b) => (
     <>
-      File draf ini: {b('kode')}-nya - file .cs di bagian atas dikompilasi, sisanya disimpan bersamanya - dan{' '}
+      File draf ini: {b('kode')}-nya - file .cs-nya dikompilasi, di folder mana pun, sisanya disimpan bersamanya - dan{' '}
       {b('sumber daya')}-nya, yang dibaca dan disajikan selama draf berjalan. Menyimpan menaruhnya di draf dan
       menampilkannya di alamat draf itu sendiri; pengunjung Anda tidak melihat apa pun sampai Anda menjadikan draf
       online.
@@ -67,7 +67,7 @@ export const code: EditorMessages['code'] = {
   noVersion: 'Belum ada versi yang bisa ditampilkan.',
   label: 'File',
   codeGroup: 'Kode',
-  codeWhy: 'Tidak pernah disajikan. File .cs di bagian atas dikompilasi; sisanya disimpan bersama versi.',
+  codeWhy: 'Tidak pernah disajikan. File .cs dikompilasi, di folder mana pun; sisanya disimpan bersama versi.',
   resources: 'Sumber daya',
   resourcesPublic: 'Publik: versi ini menyajikannya dengan Resources.',
   resourcesPrivate: 'Ikut dalam versi, tetapi versi ini tidak menyajikannya.',

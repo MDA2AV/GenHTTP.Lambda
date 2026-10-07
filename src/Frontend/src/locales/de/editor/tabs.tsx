@@ -1,7 +1,7 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const tabs: EditorMessages['tabs'] = {
-  codeName: 'Eine C#-Datei ganz oben: Buchstaben, Ziffern, Binde- und Unterstriche, mit einem Buchstaben beginnend und auf .cs endend, höchstens 40 Zeichen.',
+  codeName: 'Der Name einer C#-Datei besteht aus Buchstaben, Ziffern, Binde- und Unterstrichen und Punkten, beginnt mit einem Buchstaben und endet auf .cs, höchstens 40 Zeichen.',
   name: 'Buchstaben, Ziffern und - _ . + @ ( ) [ ] { } $ ~, Ordner durch Schrägstriche getrennt, keine Leerzeichen und kein Name, der auf einen Punkt endet.',
   taken: 'Ein exportiertes oder geklontes Lambda hat ganz oben bereits eine Datei oder einen Ordner mit diesem Namen. Legen Sie sie in einen Ordner oder wählen Sie einen anderen Namen.',
   lambda: 'Ein Lambda hat keinen Ordner .lambda/ mehr: Seine Dokumentation liegt in docs/, seine Tests in tests/.',
@@ -15,7 +15,7 @@ export const tabs: EditorMessages['tabs'] = {
   errors: 'hat Fehler',
   removeFile: (name) => `${name} entfernen`,
   removeTitle: 'Entfernen',
-  codePlaceholder: 'Store.cs, docs/notes.md oder frontend/app.ts',
+  codePlaceholder: 'Store.cs, models/Item.cs oder docs/notes.md',
   resourcePlaceholder: 'web/index.html',
   upload: 'Datei hochladen',
 };

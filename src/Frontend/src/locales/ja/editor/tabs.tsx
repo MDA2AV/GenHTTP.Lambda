@@ -1,7 +1,7 @@
 import type { EditorMessages } from '../../en/editor';
 
 export const tabs: EditorMessages['tabs'] = {
-  codeName: 'コードの先頭にあるC#ファイル：英数字、ハイフン、アンダースコアを使い、英字で始まり.csで終わる、40文字以内の名前。',
+  codeName: 'C#ファイルの名前：英数字、ハイフン、アンダースコア、ドットを使い、英字で始まり.csで終わる、40文字以内。',
   name: '英数字と - _ . + @ ( ) [ ] { } $ ~ が使えます。フォルダーはスラッシュで区切り、スペースや、ドットで終わる名前は使えません。',
   taken: 'エクスポートまたはクローンしたlambdaには、その名前のファイルまたはフォルダーが先頭にあります。フォルダーの中に置くか、別の名前にしてください。',
   lambda: 'lambdaに.lambda/フォルダーはもうありません。ドキュメントはdocs/に、テストはtests/に置きます。',
@@ -15,7 +15,7 @@ export const tabs: EditorMessages['tabs'] = {
   errors: 'エラーあり',
   removeFile: (name) => `${name}を削除`,
   removeTitle: '削除',
-  codePlaceholder: 'Store.cs、docs/notes.md、frontend/app.ts',
+  codePlaceholder: 'Store.cs、models/Item.cs、docs/notes.md',
   resourcePlaceholder: 'web/index.html',
   upload: 'ファイルをアップロード',
 };
