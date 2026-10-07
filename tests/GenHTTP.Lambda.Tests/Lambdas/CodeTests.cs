@@ -535,6 +535,33 @@ public sealed class CodeTests
         StringAssert.Contains(written["dropped"]!.GetValue<string>(), "frontend/ - 5 files", "an agent that did not know the folder was there is told what it left out");
     }
 
+    [TestMethod]
+    public async Task MigrationsAtTheTopOfTheCodeAreToldToMove()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        // where a lambda kept them before its resources were a folder of their own
+        var written = await ToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = LambdaSource.EntryName, ["code"] = Snippet },
+                                      new JsonObject { ["name"] = "migrations/V1__Create_items.sql", ["code"] = "CREATE TABLE items (id INTEGER PRIMARY KEY);" })
+        });
+
+        StringAssert.Contains(written["misplaced"]!.GetValue<string>(), "resources/migrations/", "an agent used to the old layout is told where Evolve looks");
+
+        var moved = await ToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "resources/migrations/V1__Create_items.sql", ["code"] = "CREATE TABLE items (id INTEGER PRIMARY KEY);" }),
+            ["remove"] = new JsonArray("migrations/V1__Create_items.sql")
+        });
+
+        Assert.IsNull(moved["misplaced"], "nothing is said once they are where they are read");
+    }
+
     #endregion
 
     #region Taken away

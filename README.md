@@ -424,7 +424,7 @@ overview and the documentation on their own, then how people find it and what
 they get to see of it (showcase, open source, domain) - what the lambda is to
 everybody else, right under what it is - then where a change is made, under
 Develop (Change, the drafts, the code, the tests), the program and what it
-keeps (versions, data), and how it runs (deployments, stats, logs). On a phone
+keeps (data, versions), and how it runs (deployments, stats, logs). On a phone
 the groups are a rule apart in the row of sections.
 
 **Code**, in the full view only, is every file of a version: the code and the
@@ -1518,7 +1518,10 @@ how it is built, nothing secret in it, and the pitfalls (what a build writes
 refers to its files relatively; what it wrote anew is saved with it) - in
 `AGENTS.md` of a clone, and in the tool descriptions. `write_code`, which
 replaces every file, says so when what it replaced had a folder of code the
-save has none of - `change_code` keeps every file it is not told about.
+save has none of - `change_code` keeps every file it is not told about - and
+either says so of migrations kept at the top of the code, where a lambda had
+them before its resources were a folder of their own: as code they are never
+read, and Evolve looks in `resources/migrations/`.
 
 An agent that can run git works in a clone instead (see
 [Working with git](#working-with-git)): `create_lambda` and `read_lambda`

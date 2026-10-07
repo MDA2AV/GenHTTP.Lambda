@@ -480,7 +480,7 @@ public static class CodeGuard
     /// What a lambda is told that asks Entity Framework for its schema.
     /// </summary>
     internal const string SchemaMessage =
-        "A lambda's schema is SQL migrations shipped in migrations/ and applied by Evolve as it starts, not Entity Framework's EnsureCreated, EnsureDeleted or Migrate: " +
+        "A lambda's schema is SQL migrations shipped in resources/migrations/ and applied by Evolve as it starts, not Entity Framework's EnsureCreated, EnsureDeleted or Migrate: " +
         "add the next file (V2__Add_due_date.sql) and map the context onto the tables it makes.";
 
     /// <summary>

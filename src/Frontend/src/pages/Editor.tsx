@@ -86,14 +86,14 @@ type GroupId = 'develop' | 'program' | 'run' | 'sharing';
  * what the lambda is, since those are what it is to everybody else. Then
  * where a change is made: Change and the drafts, the code - every file of a
  * version, its resources included - and the tests that say whether a change
- * works. Then the program and what it keeps, side by side - the versions,
- * and the data of the lambda that all of them share. Then how it runs.
+ * works. Then the program and what it keeps, side by side - the data of the
+ * lambda, and the versions that all share it. Then how it runs.
  */
 const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: null, sections: ['overview', 'docs'] },
   { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
   { id: 'develop', sections: ['change', 'features', 'code', 'tests'] },
-  { id: 'program', sections: ['versions', 'data'] },
+  { id: 'program', sections: ['data', 'versions'] },
   { id: 'run', sections: ['deployments', 'stats', 'logs'] },
 ];
 

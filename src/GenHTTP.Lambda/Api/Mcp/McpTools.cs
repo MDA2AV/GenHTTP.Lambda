@@ -599,7 +599,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             ? LambdaSource.Parse(features.Get(privateKey, feature).Code)
             : meta.Require(privateKey).LatestVersion != null ? Api.VersionResource.Latest(meta, privateKey) : [];
 
-        return McpProtocol.Adding(await SaveAsync(arguments, files, origin), "dropped", Dropped(had, files));
+        var saved = McpProtocol.Adding(await SaveAsync(arguments, files, origin), "dropped", Dropped(had, files));
+
+        return McpProtocol.Adding(saved, "misplaced", Misplaced(files));
     }
 
     /// <summary>
@@ -672,7 +674,22 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             return McpProtocol.Refuse(invalid);
         }
 
-        return await SaveAsync(arguments, files, origin, read);
+        return McpProtocol.Adding(await SaveAsync(arguments, files, origin, read), "misplaced", Misplaced(files));
+    }
+
+    /// <summary>
+    /// Said when a save keeps migrations at the top of the code, where a
+    /// lambda kept them before its resources were a folder of their own - an
+    /// agent used to that writes them there without noticing, and as code they
+    /// are kept and never read: Evolve finds no migration, and makes no table.
+    /// </summary>
+    private static string? Misplaced(IReadOnlyList<LambdaFile> files)
+    {
+        var stray = files.Any(f => f.Name.StartsWith("migrations/", StringComparison.Ordinal) && f.Name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase));
+
+        return stray
+            ? "migrations/ at the top is a folder of the code, kept with the version and never read. Evolve applies the migrations in resources/migrations/ (Resources.Root + \"migrations\"): move them there."
+            : null;
     }
 
     /// <summary>

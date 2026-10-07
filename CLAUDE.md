@@ -651,7 +651,7 @@ rules that matter:
   also answers at a domain of its own, and a feature at `/features/{key}/`.
 - The full view's sidebar is **grouped** (overview and documentation; sharing -
   showcase, open source, domain - second, as the owner decided; develop -
-  change, drafts, code, tests; program and data - versions, data; run). A new
+  change, drafts, code, tests; program and data - data, versions; run). A new
   section joins the group it belongs to rather
   than the end of the list. The operator's **Admin** section is no group of the
   owner's: it comes last in both views, behind a rule, for a browser holding
