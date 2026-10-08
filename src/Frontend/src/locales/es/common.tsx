@@ -43,24 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Puede que el enlace sea antiguo o que la lambda a la que apuntaba se haya eliminado.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Aquí no hay nada en marcha',
-  heading: 'Aquí no hay nada en marcha',
-  notDeployed: (key) => (
-    <>
-      Hay una lambda en {key}, pero ahora mismo no está desplegada. En el plan gratuito, las lambdas siguen en línea
-      mientras se usan y se desconectan tras un mes sin visitas ni cambios. Quien tenga el enlace de edición puede volver
-      a publicarla.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      No hay ninguna lambda en {key}. Puede que esa clave nunca haya existido o que la lambda se haya eliminado.
-    </>
-  ),
-  create: 'Crear una lambda aquí',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Denunciar abuso',
   title: 'Denunciar una lambda',

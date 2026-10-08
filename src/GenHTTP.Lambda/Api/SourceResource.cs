@@ -5,6 +5,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Source;
 
@@ -29,7 +30,7 @@ namespace GenHTTP.Lambda.Api;
 /// data: the files come out of the zip it was packed into once, never out of
 /// the lambda's database, workspace or secrets.
 /// </remarks>
-public sealed class SourceResource(ISourceService sources, ILogger<SourceResource> logger)
+public sealed class SourceResource(ISourceService sources, ILambdaAddresses addresses, ILogger<SourceResource> logger)
 {
 
     public const int PageSize = 24;
@@ -78,7 +79,7 @@ public sealed class SourceResource(ISourceService sources, ILogger<SourceResourc
 
         var page = sources.List(search, ordered, from, take);
 
-        return Page<SourceEntryResponse>.Of([.. page.Entries.Select(SourceEntryResponse.Of)], from, page.Total);
+        return Page<SourceEntryResponse>.Of([.. page.Entries.Select(e => SourceEntryResponse.Of(e, addresses))], from, page.Total);
     }
 
     /// <summary>
@@ -94,7 +95,7 @@ public sealed class SourceResource(ISourceService sources, ILogger<SourceResourc
     {
         var project = sources.GetProject(publicKey) ?? throw NotPublished(publicKey);
 
-        var entry = SourceEntryResponse.Of(project.Entry);
+        var entry = SourceEntryResponse.Of(project.Entry, addresses);
 
         var versions = project.Versions.Select(v => new SourceVersionResponse(v.Version, v.Created, v.Change, v.Origin,
                                                                               v.Version == project.ActiveVersion && entry.Online,

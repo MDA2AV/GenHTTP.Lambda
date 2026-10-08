@@ -147,7 +147,7 @@ public sealed class FeatureTests
             Assert.AreEqual(HttpStatusCode.OK, put.StatusCode, await put.Content.ReadAsStringAsync());
         }
 
-        Assert.AreEqual("live", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"));
+        Assert.AreEqual("live", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"));
 
         using var versions = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/versions");
 
@@ -397,7 +397,7 @@ public sealed class FeatureTests
 
         await StartAsync(fixture, lambda.PrivateKey, feature.Key);
 
-        Assert.AreEqual("live", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"));
+        Assert.AreEqual("live", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"));
 
         for (var i = 0; i < 3; i++)
         {
@@ -475,7 +475,7 @@ public sealed class FeatureTests
         using (var _ = await fixture.SendAsync(HttpMethod.Post, $"{feature.PreviewPath}write")) { }
 
         Assert.AreEqual("written by the code", await ServedAsync(fixture, $"{feature.PreviewPath}read"));
-        Assert.AreEqual("real", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/read"), "the lambda's own data is as it was");
+        Assert.AreEqual("real", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/read"), "the lambda's own data is as it was");
 
         await PutFileAsync(fixture, $"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/workspace/extra.txt", "only here");
 
@@ -561,7 +561,7 @@ public sealed class FeatureTests
         Assert.AreEqual("Say it louder", result.Version.Specification);
         Assert.IsTrue(result.Deployment!.Success);
 
-        Assert.AreEqual("REAL", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/read"),
+        Assert.AreEqual("REAL", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/read"),
                         "the merged code runs against the lambda's own data, not against what the preview wrote");
 
         using (var gone = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}"))
@@ -600,7 +600,7 @@ public sealed class FeatureTests
         Assert.IsNull(result.Deployment);
         Assert.AreEqual("Merges the feature 'Later'", result.Version.Change, "and says where it came from when nobody said more");
 
-        Assert.AreEqual("live", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"));
+        Assert.AreEqual("live", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"));
     }
 
     [TestMethod]
@@ -721,7 +721,7 @@ public sealed class FeatureTests
             Assert.AreEqual(HttpStatusCode.NotFound, preview.StatusCode);
         }
 
-        Assert.AreEqual("live", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"), "the lambda is not touched");
+        Assert.AreEqual("live", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"), "the lambda is not touched");
 
         using var listed = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features");
 

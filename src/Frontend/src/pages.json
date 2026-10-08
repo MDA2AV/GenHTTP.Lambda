@@ -756,5 +756,117 @@
         "image": "/social/ko/default.jpg"
       }
     }
+  },
+  "hosting:/": {
+    "text": {
+      "en": {
+        "title": "Apps made with GenHTTP Lambda",
+        "description": "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of yours, go to {site}."
+      },
+      "id": {
+        "title": "Aplikasi yang dibuat dengan GenHTTP Lambda",
+        "description": "Aplikasi di domain ini dibuat dengan GenHTTP Lambda, masing-masing di alamatnya sendiri. Untuk membuat aplikasi Anda sendiri, buka {site}."
+      },
+      "de": {
+        "title": "Apps, erstellt mit GenHTTP Lambda",
+        "description": "Die Apps auf dieser Domain wurden mit GenHTTP Lambda erstellt, jede unter einer eigenen Adresse. Wenn Sie eine eigene erstellen möchten, gehen Sie zu {site}."
+      },
+      "es": {
+        "title": "Apps creadas con GenHTTP Lambda",
+        "description": "Las apps de este dominio se crearon con GenHTTP Lambda, cada una en su propia dirección. Para crear las tuyas, entra en {site}."
+      },
+      "fr": {
+        "title": "Applications créées avec GenHTTP Lambda",
+        "description": "Les applications de ce domaine ont été créées avec GenHTTP Lambda, chacune à sa propre adresse. Pour créer la vôtre, rendez-vous sur {site}."
+      },
+      "it": {
+        "title": "App create con GenHTTP Lambda",
+        "description": "Le app su questo dominio sono state create con GenHTTP Lambda, ognuna a un indirizzo tutto suo. Per creare le tue, vai su {site}."
+      },
+      "nl": {
+        "title": "Apps gemaakt met GenHTTP Lambda",
+        "description": "De apps op dit domein zijn gemaakt met GenHTTP Lambda, elk op een eigen adres. Wil je er zelf een bouwen? Ga naar {site}."
+      },
+      "pl": {
+        "title": "Aplikacje stworzone w GenHTTP Lambda",
+        "description": "Aplikacje w tej domenie powstały w GenHTTP Lambda, każda pod własnym adresem. Aby zbudować własną, przejdź na {site}."
+      },
+      "pt": {
+        "title": "Apps criados com o GenHTTP Lambda",
+        "description": "Os apps deste domínio foram criados com o GenHTTP Lambda, cada um em um endereço próprio. Para criar o seu, acesse {site}."
+      },
+      "pt-pt": {
+        "title": "Apps feitas com GenHTTP Lambda",
+        "description": "As apps deste domínio foram criadas com o GenHTTP Lambda, cada uma num endereço próprio. Para criares uma tua, vai a {site}."
+      },
+      "tr": {
+        "title": "GenHTTP Lambda ile yapılan uygulamalar",
+        "description": "Bu alan adındaki uygulamalar GenHTTP Lambda ile yapıldı ve her biri kendi adresinde yayında. Kendi uygulamanızı yapmak için {site} adresine gidin."
+      },
+      "ja": {
+        "title": "GenHTTP Lambdaで作られたアプリ",
+        "description": "このドメインのアプリはGenHTTP Lambdaで作られたもので、それぞれ専用のアドレスで動いています。あなたのアプリを作るには{site}へどうぞ。"
+      },
+      "ko": {
+        "title": "GenHTTP Lambda로 만든 앱",
+        "description": "이 도메인의 앱은 모두 GenHTTP Lambda로 만들었고, 각각 전용 주소가 있어요. 나만의 앱을 만들려면 {site}에서 시작하세요."
+      }
+    }
+  },
+  "hosting:/:key": {
+    "text": {
+      "en": {
+        "title": "Nothing is running here",
+        "description": "No app is online at {address}. It may have been taken offline or removed, or there never was one. To build one of yours, go to {site}."
+      },
+      "id": {
+        "title": "Tidak ada yang berjalan di sini",
+        "description": "Tidak ada aplikasi yang online di {address}. Mungkin sudah dimatikan atau dihapus, atau memang belum pernah ada. Untuk membuat aplikasi Anda sendiri, buka {site}."
+      },
+      "de": {
+        "title": "Hier läuft nichts",
+        "description": "Unter {address} ist keine App online. Sie wurde möglicherweise offline genommen oder entfernt, oder es gab nie eine. Wenn Sie eine eigene erstellen möchten, gehen Sie zu {site}."
+      },
+      "es": {
+        "title": "Aquí no hay nada en marcha",
+        "description": "No hay ninguna app en línea en {address}. Puede que se haya desconectado o eliminado, o que nunca haya existido. Para crear las tuyas, entra en {site}."
+      },
+      "fr": {
+        "title": "Rien ne fonctionne ici",
+        "description": "Aucune application n’est en ligne à l’adresse {address}. Elle a peut-être été mise hors ligne ou supprimée, ou n’a jamais existé. Pour créer la vôtre, rendez-vous sur {site}."
+      },
+      "it": {
+        "title": "Qui non c’è nulla in esecuzione",
+        "description": "Nessuna app è online su {address}. Potrebbe essere stata messa offline o eliminata, oppure non è mai esistita. Per creare le tue, vai su {site}."
+      },
+      "nl": {
+        "title": "Hier draait niets",
+        "description": "Op {address} staat geen app online. Hij is misschien offline gehaald of verwijderd, of er was er nooit een. Wil je er zelf een bouwen? Ga naar {site}."
+      },
+      "pl": {
+        "title": "Nic tu nie działa",
+        "description": "Pod adresem {address} nie działa żadna aplikacja. Mogła zostać wyłączona lub usunięta albo nigdy jej tu nie było. Aby zbudować własną, przejdź na {site}."
+      },
+      "pt": {
+        "title": "Nada está no ar aqui",
+        "description": "Nenhum app está no ar em {address}. Ele pode ter sido tirado do ar ou removido, ou nunca ter existido. Para criar o seu, acesse {site}."
+      },
+      "pt-pt": {
+        "title": "Aqui não está nada a funcionar",
+        "description": "Não há nenhuma app online em {address}. Pode ter sido posta offline ou removida, ou nunca ter existido. Para criares uma tua, vai a {site}."
+      },
+      "tr": {
+        "title": "Burada çalışan bir şey yok",
+        "description": "{address} adresinde yayında bir uygulama yok. Yayından kaldırılmış ya da silinmiş olabilir, hiç var olmamış da olabilir. Kendi uygulamanızı yapmak için {site} adresine gidin."
+      },
+      "ja": {
+        "title": "ここでは何も動いていません",
+        "description": "{address}で公開中のアプリはありません。オフラインになったか削除されたか、もともと存在しなかった可能性があります。あなたのアプリを作るには{site}へどうぞ。"
+      },
+      "ko": {
+        "title": "여기서 실행 중인 앱이 없어요",
+        "description": "{address}에는 온라인 상태인 앱이 없어요. 오프라인으로 전환되었거나 삭제되었거나, 처음부터 없었을 수 있어요. 나만의 앱을 만들려면 {site}에서 시작하세요."
+      }
+    }
   }
 }

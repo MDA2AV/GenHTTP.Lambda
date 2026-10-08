@@ -202,7 +202,7 @@ public sealed class WebAssetTests
 
         Assert.AreEqual(HttpStatusCode.OK, deployed.StatusCode, await deployed.GetContentAsync());
 
-        using var served = await fixture.GetAsync("/lambda/pictures/dot.gif");
+        using var served = await fixture.GetAsync("http://pictures.localhost/dot.gif");
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
 
@@ -228,7 +228,7 @@ public sealed class WebAssetTests
         await fixture.DeployAsync(lambda.PrivateKey,
             "return Layout.Create().Add(Workspace.App());");
 
-        using var before = await fixture.GetAsync("/lambda/uploaded/");
+        using var before = await fixture.GetAsync("http://uploaded.localhost/");
 
         Assert.AreNotEqual(HttpStatusCode.InternalServerError, before.StatusCode,
                            "an empty workspace is not an error, just an empty site");
@@ -240,7 +240,7 @@ public sealed class WebAssetTests
         Assert.AreEqual(HttpStatusCode.OK, written.StatusCode);
 
         // no redeploy: the files are read where they lie
-        using var served = await fixture.GetAsync("/lambda/uploaded/");
+        using var served = await fixture.GetAsync("http://uploaded.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
         Assert.Contains("uploaded", await served.GetContentAsync());

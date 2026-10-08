@@ -44,8 +44,8 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        これで完全なlambdaです。{k.code('/lambda/your-key/')}
-        にデプロイすると、どのリクエストにも「hello」と返します。
+        これで完全なlambdaです。デプロイすると、キーにちなんだ専用のアドレス（例：{k.code('your-key.genhttp.run')}
+        ）で応答し、そこへのどのリクエストにも「hello」と返します。
       </>
     ),
   ],

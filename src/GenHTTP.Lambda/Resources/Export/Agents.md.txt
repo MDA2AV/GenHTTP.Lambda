@@ -60,10 +60,10 @@ and commit it together with what the build wrote:
 - The build replaces what an earlier build wrote, so nothing of it lingers,
   and you commit all of what it wrote: a file it wrote anew and left out of
   the commit is missing from the version.
-- What it writes into `resources/` is served at `/lambda/{lambda}/`, at the
-  root of a domain and at `/features/.../`, so it refers to its files
-  relatively, like every page here - a bundler set to an absolute base such
-  as `/` is the usual way this goes wrong.
+- What it writes into `resources/` is served at the root of the lambda's
+  address and below `/features/.../`, so it refers to its files relatively,
+  like every page here - a bundler set to an absolute base such as `/` is the
+  usual way this goes wrong.
 - What the build installs, caches or writes for itself is no part of a
   version - `node_modules/`, `target/`, `.venv/`, for example: keep it out
   with a `.gitignore` of its own in the folder that holds it (the one at the
@@ -160,13 +160,13 @@ when a push is refused, the line says why.
   `Resources.App("web")` serves `resources/web/`. `Assets`, the name
   `Resources` had before, still works in `Project.cs`.
 - Links are relative: `"api/items"`, `"app.css"`, `"./"` - no leading slash,
-  never `/lambda/{lambda}/` or a full address. The same lambda answers at
-  `/lambda/{lambda}/`, at the root of a domain of its own, and as a feature at
-  `/features/.../`; a path starting with `/` leaves it, and from a preview
-  reaches the live lambda and its data. A page a level deeper needs
-  `"../api/items"`. `Redirect.To(...)` takes relative paths too. The only
-  full addresses in a page are `og:image`, `og:url` and the canonical link,
-  which name it for whoever reads it elsewhere.
+  never a full address. The lambda answers at the root of {address}, but as a
+  feature at `/features/.../` on the platform; a path starting with `/`
+  leaves the preview, and the full address is the live lambda and its data.
+  A page a level deeper needs `"../api/items"`. `Redirect.To(...)` takes
+  relative paths too. The only full addresses in a page are `og:image`,
+  `og:url` and the canonical link, which name it for whoever reads it
+  elsewhere.
 - Never wait for a task: `.Result`, `.Wait()`, `.GetAwaiter().GetResult()`,
   `Task.WaitAll`, `Task.WaitAny` and `SemaphoreSlim.Wait()` are refused - a
   request runs on one thread per core, and a task finishes on the thread that
@@ -238,11 +238,11 @@ nothing more.
 ## The link back
 
 We ask for a small "Made with GenHTTP Lambda" line at the foot of the pages
-visitors see: a link to {home}/ on a lambda without a domain of its own,
-plain text on one with a domain. The name is the whole of the link. Say that
-you added it; leave it out or take it out when the user does not want it, and
-note that in `docs/decisions.md`. Do not add one to a lambda that has none
-unless the user asks.
+visitors see: a link to {home}/ with `rel="nofollow"` on a lambda without a
+domain of its own, plain text on one with a domain. The name is the whole of
+the link. Say that you added it; leave it out or take it out when the user
+does not want it, and note that in `docs/decisions.md`. Do not add one to a
+lambda that has none unless the user asks.
 
 ## Beyond git
 

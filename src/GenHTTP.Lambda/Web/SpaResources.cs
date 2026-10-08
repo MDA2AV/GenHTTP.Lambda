@@ -2,7 +2,7 @@ using GenHTTP.Api.Content;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Configuration;
-using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Source;
 
 using GenHTTP.Modules.Files;
@@ -14,9 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace GenHTTP.Lambda.Web;
 
 /// <summary>
-/// Serves the single page application from the web root and hands its index
-/// page to whoever needs to answer with it - the landing page, the editor and
-/// the "no lambda here" page all live in the same bundle.
+/// Serves the single page application from the web root - the landing page,
+/// the editor and the rest of the site live in the same bundle.
 /// </summary>
 public sealed class SpaResources
 {
@@ -46,19 +45,19 @@ public sealed class SpaResources
 
     private ISourceService Sources { get; }
 
-    private IMetaService Lambdas { get; }
+    private ILambdaAddresses Addresses { get; }
 
     #endregion
 
     #region Initialization
 
-    public SpaResources(LambdaOptions options, SiteMeta meta, SitePrerender prerender, ISourceService sources, IMetaService lambdas,
+    public SpaResources(LambdaOptions options, SiteMeta meta, SitePrerender prerender, ISourceService sources, ILambdaAddresses addresses,
                         ILogger<SpaResources> logger)
     {
         Meta = meta;
         Prerender = prerender;
         Sources = sources;
-        Lambdas = lambdas;
+        Addresses = addresses;
 
         Root = options.WebRoot;
         IndexFile = Path.Combine(Root, "index.html");
@@ -93,7 +92,7 @@ public sealed class SpaResources
         // one from a server that answers a range with the whole file
         return SinglePageApplication.From(ResourceTree.FromDirectory(Root))
                                     .Add(RangeSupport.Create())
-                                    .Add(new SiteMetaConcernBuilder(Meta, Prerender, Sources, Lambdas, ReadIndex))
+                                    .Add(new SiteMetaConcernBuilder(Meta, Prerender, Sources, Addresses, ReadIndex))
                                     .Add(CacheControl.NoCache());
     }
 
@@ -110,21 +109,6 @@ public sealed class SpaResources
     public IHandlerBuilder CreateAssetHandler()
         => Assets.From(AssetDirectory)
                  .Add(CacheControl.Immutable());
-
-    /// <summary>
-    /// Answers with the application itself, using the given status - so a
-    /// missing lambda stays a 404 while still rendering a proper page.
-    /// </summary>
-    public IResponse Render(IRequest request, ResponseStatus status)
-    {
-        var markup = Available ? ReadIndex() : PlaceholderMarkup;
-
-        return request.Respond()
-                      .Status(status)
-                      .Content(markup, ContentType.TextHtml)
-                      .Header("Cache-Control", "no-cache")
-                      .Build();
-    }
 
     /// <summary>
     /// The shell every page is rendered into.
@@ -153,16 +137,6 @@ public sealed class SpaResources
     private volatile IndexCopy? _index;
 
     private sealed record IndexCopy(DateTime Written, string Markup);
-
-    /// <summary>
-    /// Whether the client would rather see a page than a JSON document.
-    /// </summary>
-    public bool PrefersMarkup(IRequest request)
-    {
-        var accepted = request.Header.Headers.GetEntry("Accept");
-
-        return accepted != null && accepted.Contains("text/html", StringComparison.OrdinalIgnoreCase);
-    }
 
     private static GenHTTP.Api.Content.IO.IResource Placeholder()
         => Resource.FromString(PlaceholderMarkup).Type(ContentType.TextHtml).Build();

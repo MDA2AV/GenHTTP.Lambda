@@ -23,7 +23,7 @@ public sealed class DomainLocator(IMetaService meta) : ILambdaLocator
 
     public ResolvedLambda? Locate(IRequest request)
     {
-        if (request.GetDomain() is not { } domain)
+        if (request.GetHost() is not CustomDomain domain)
         {
             return null;
         }

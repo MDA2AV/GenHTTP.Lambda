@@ -124,7 +124,7 @@ public sealed class DatabaseTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => { using var connection = Database.GetConnection(); return \"connected\"; });");
 
-        using var refused = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var refused = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode);
 
@@ -171,22 +171,22 @@ public sealed class DatabaseTests
 
         await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
-        Assert.AreEqual("added", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=milk"));
-        Assert.AreEqual("added", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=eggs"));
+        Assert.AreEqual("added", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=milk"));
+        Assert.AreEqual("added", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=eggs"));
 
         // a second version adds a column with a migration of its own; the rows
         // written before are still there, and rolling back reads them too
         await SaveAsync(fixture, lambda.PrivateKey, Notes.Replace("SELECT text", "SELECT text || ':' || done"),
                         ("resources/migrations/V1__Notes.sql", Migration), ("resources/migrations/V2__Done.sql", "ALTER TABLE notes ADD COLUMN done INTEGER NOT NULL DEFAULT 0;"));
 
-        Assert.AreEqual("milk:0,eggs:0", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/notes"));
+        Assert.AreEqual("milk:0,eggs:0", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/notes"));
 
         using (var back = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/deployment/start", new DeploymentRequest(2)))
         {
             Assert.AreEqual(HttpStatusCode.OK, back.StatusCode, await back.Content.ReadAsStringAsync());
         }
 
-        Assert.AreEqual("milk,eggs", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/notes"), "an older version reads what a newer one left");
+        Assert.AreEqual("milk,eggs", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/notes"), "an older version reads what a newer one left");
 
         var store = await StoreAsync(fixture, lambda.PrivateKey);
 
@@ -204,7 +204,7 @@ public sealed class DatabaseTests
 
         await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
-        await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=milk");
+        await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=milk");
 
         using (var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/data/database"))
         {
@@ -213,7 +213,7 @@ public sealed class DatabaseTests
 
         Assert.IsFalse(File.Exists(FileOf(fixture, lambda.PrivateKey)));
 
-        using (var refused = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/notes"))
+        using (var refused = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/notes"))
         {
             Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode);
         }
@@ -221,7 +221,7 @@ public sealed class DatabaseTests
         // and on again, it starts empty: the lambda starts anew, and migrates it
         await EnableAsync(fixture, lambda.PrivateKey);
 
-        Assert.AreEqual(string.Empty, await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/notes"));
+        Assert.AreEqual(string.Empty, await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/notes"));
     }
 
     [TestMethod]
@@ -277,10 +277,10 @@ public sealed class DatabaseTests
 
         await SaveAsync(fixture, lambda.PrivateKey, ContextNotes, ("resources/migrations/V1__Notes.sql", Migration));
 
-        Assert.AreEqual("1", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=milk"));
-        Assert.AreEqual("1", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=eggs"));
+        Assert.AreEqual("1", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=milk"));
+        Assert.AreEqual("1", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=eggs"));
 
-        Assert.AreEqual("milk,eggs", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/notes"));
+        Assert.AreEqual("milk,eggs", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/notes"));
 
         var store = await StoreAsync(fixture, lambda.PrivateKey);
 
@@ -427,10 +427,10 @@ public sealed class DatabaseTests
 
         foreach (var refused in new[] { "attach", "into", "elsewhere", "grow" })
         {
-            StringAssert.StartsWith(await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/{refused}"), "refused", refused);
+            StringAssert.StartsWith(await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/{refused}"), "refused", refused);
         }
 
-        Assert.AreEqual("ran", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/vacuum"), "what stays inside the file is fine");
+        Assert.AreEqual("ran", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/vacuum"), "what stays inside the file is fine");
 
         Assert.IsFalse(File.Exists(target));
     }
@@ -464,7 +464,7 @@ public sealed class DatabaseTests
             });
             """);
 
-        StringAssert.Contains(await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"), "full");
+        StringAssert.Contains(await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"), "full");
     }
 
     [TestMethod]
@@ -478,7 +478,7 @@ public sealed class DatabaseTests
 
         await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
-        await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=live");
+        await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=live");
 
         FeatureResponse feature;
 
@@ -499,7 +499,7 @@ public sealed class DatabaseTests
         await ServedAsync(fixture, $"{feature.PreviewPath}add?text=tried");
 
         Assert.AreEqual("live,tried", await ServedAsync(fixture, $"{feature.PreviewPath}notes"));
-        Assert.AreEqual("live", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/notes"), "the lambda's own is not touched");
+        Assert.AreEqual("live", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/notes"), "the lambda's own is not touched");
 
         // the owner reads the copy as the preview left it
         using (var copy = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/database/tables/notes"))
@@ -544,7 +544,7 @@ public sealed class DatabaseTests
 
         foreach (var text in new[] { "one", "two", "three" })
         {
-            await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text={text}");
+            await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text={text}");
         }
 
         DatabaseResponse database;
@@ -614,7 +614,7 @@ public sealed class DatabaseTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using (var tasks = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/tasks/", "application/json"))
+        using (var tasks = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/tasks/", "application/json"))
         {
             var listed = await tasks.Content.ReadAsStringAsync();
 
@@ -645,7 +645,7 @@ public sealed class DatabaseTests
 
         await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
-        await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=kept");
+        await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=kept");
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/export");
 
@@ -708,7 +708,7 @@ public sealed class DatabaseTests
 
         await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
-        await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=hello");
+        await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=hello");
 
         var tables = Structured(await CallToolAsync(fixture, "read_database", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
 
@@ -738,7 +738,7 @@ public sealed class DatabaseTests
 
         await SaveAsync(fixture, lambda.PrivateKey, Notes, ("resources/migrations/V1__Notes.sql", Migration));
 
-        await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/add?text=gone");
+        await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/add?text=gone");
 
         var file = FileOf(fixture, lambda.PrivateKey);
 

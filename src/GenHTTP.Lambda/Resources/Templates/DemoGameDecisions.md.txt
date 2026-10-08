@@ -51,7 +51,7 @@ A game lasts a minute and belongs to two open connections, so it is not saved: w
 
 ## The page is part of the program
 
-`resources/web/` is shipped with the code and served by `Resources.App("web")`, added last so it answers only what `play` and `api` did not. The page builds the socket's address from its own - `play` relative to the page, with the scheme swapped to `ws:` or `wss:` - so it works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike. When the socket closes it connects again after two seconds, and when a connection hangs without opening it says after five that something in between may not pass websockets on.
+`resources/web/` is shipped with the code and served by `Resources.App("web")`, added last so it answers only what `play` and `api` did not. The page builds the socket's address from its own - `play` relative to the page, with the scheme swapped to `ws:` or `wss:` - so it works at its own address, at a domain of its own and at the preview of a feature alike. When the socket closes it connects again after two seconds, and when a connection hangs without opening it says after five that something in between may not pass websockets on.
 
 ## What was left out
 

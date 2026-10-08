@@ -43,24 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Misschien is de link verouderd. Of de lambda waar hij naar verwees, is verwijderd.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Hier draait niets',
-  heading: 'Hier draait niets',
-  notDeployed: (key) => (
-    <>
-      Er staat een lambda op {key}, maar die is nu niet gedeployd. Gratis deployments blijven online zolang ze
-      gebruikt worden. Na een maand zonder bezoek of wijzigingen gaan ze offline. Wie de editorlink heeft, kan de
-      lambda weer online zetten.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      Op {key} staat geen lambda. Misschien heeft deze sleutel nooit bestaan, of is de lambda erachter verwijderd.
-    </>
-  ),
-  create: 'Hier een lambda aanmaken',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Misbruik melden',
   title: 'Een lambda melden',

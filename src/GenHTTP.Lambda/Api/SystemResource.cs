@@ -1,6 +1,7 @@
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Settings;
 
@@ -12,7 +13,7 @@ namespace GenHTTP.Lambda.Api;
 /// What the editor needs to know about the platform: the terms, the example it
 /// starts from, the vocabulary it can suggest and whether it can build things.
 /// </summary>
-public sealed class SystemResource(ILimitsService limits, IBuildService builds, ISettingsService settings)
+public sealed class SystemResource(ILimitsService limits, IBuildService builds, ISettingsService settings, ILambdaAddresses addresses)
 {
 
     internal const string Terms = """
@@ -42,7 +43,8 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
             (int)current.RemovedAfter.TotalDays,
             ModuleCatalog.Imports,
             CompletionCatalog.Items,
-            new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel)
+            new BuildAvailability(builds.BuildsOffered(), builds.PerDay, builds.HasSecondModel),
+            addresses.Template
         );
     }
 
@@ -65,8 +67,8 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
     /// What a new lambda can be started from: nothing much, or a copy of a
     /// demo - described by what somebody would want to build with it.
     /// </summary>
-    private static IReadOnlyList<StarterResponse> Describe()
-        => [.. DemoCatalog.All.Select(d => new StarterResponse(d.Id, d.Goal, d.Pitch, $"/lambda/{d.Key}/")),
+    private IReadOnlyList<StarterResponse> Describe()
+        => [.. DemoCatalog.All.Select(d => new StarterResponse(d.Id, d.Goal, d.Pitch, addresses.Of(d.Key))),
             new StarterResponse(TemplateCatalog.EmptyId, "Something else", "Start from an empty lambda and build whatever you have in mind.", null)];
 
 }

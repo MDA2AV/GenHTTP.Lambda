@@ -15,7 +15,7 @@ export const enterprise: Messages['enterprise'] = {
     'De ingebouwde agent, of je eigen via MCP',
     'Online zolang hij gebruikt wordt',
     `Offline na ${offline} dagen zonder bezoek, verwijderd na ${removed} dagen`,
-    'Op een pad van de gedeelde host',
+    'Op een subdomein van het gedeelde domein',
   ],
   freeNote: 'Geen creditcard, geen aanmelding. Maak een lambda aan en hij is van jou.',
 

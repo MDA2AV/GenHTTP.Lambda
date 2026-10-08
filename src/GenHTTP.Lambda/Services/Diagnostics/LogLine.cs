@@ -49,9 +49,10 @@ namespace GenHTTP.Lambda.Services.Diagnostics;
 /// name now.
 /// </param>
 /// <param name="Domain">
-/// The lambda's own domain the request was addressed to, when it was not the
-/// platform. Without it a request line of a lambda reached at its domain
-/// reads like one of the platform's paths.
+/// The host of a lambda the request was addressed to - its subdomain of the
+/// hosting domain, or a domain of its own - when it was not the platform.
+/// Without it a request line of a lambda reads like one of the platform's
+/// paths.
 /// </param>
 /// <param name="FeatureId">
 /// The feature whose preview said this, when it was not the lambda itself. A

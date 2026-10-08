@@ -126,8 +126,8 @@ page has words of its own, so they do not compete:
 
 ### Keys and ownership
 
-A lambda has a **public key** (part of its URL, may be changed) and a **private
-key** (the editor link). Whoever holds the private key owns the lambda, and
+A lambda has a **public key** (it names its address, `{key}.genhttp.run`, and
+may be changed) and a **private key** (the editor link). Whoever holds the private key owns the lambda, and
 **editing is only possible with it**. The private key is shown only to the
 creator. It travels in a brief, never in a log line the platform writes about
 what was done. The request line is the exception, decided by the owner: it logs
@@ -140,10 +140,51 @@ without the header, 403 with the wrong token, and the routes are not there at
 all (404) on an installation without a token. Behind it are the panel, the
 server's telemetry and the log - and the editor's **Admin** section, which a
 browser holding the token shows in the editor of every lambda, in both views,
-and which nobody else sees; its calls carry the token like the panel's.
+and which nobody else sees; its calls carry the token like the panel's. It is
+**empty for now - decided by the owner**: it held the sitemap switch, which
+went when the lambdas moved to hosts of their own. Keep the section; what only
+the operator decides about one lambda goes there.
 **Only owners and the operator see telemetry**
 - the owner a lambda's own in the editor, the operator everybody's; nothing is
 public.
+
+### Where the lambdas answer
+
+**Decided by the owner:** every lambda answers at a subdomain of the hosting
+domain named after its public key - `https://{key}.genhttp.run/`
+(`LAMBDA_HOSTING_URL`) - not below the site's own host.
+
+- **A site of its own.** A host of its own keeps what a lambda runs in a
+  browser away from what the site keeps there - the admin token - and from the
+  other lambdas, and gives it the root of its host. The hosting domain
+  belongs on the Public Suffix List, so a lambda cannot set cookies for the
+  others; that is the operator's to apply for.
+- **The control plane stays on the site**: the editor, the API, MCP, git,
+  the panel. So do the previews of features at `/features/{key}/` - for now
+  the one place a lambda's code still runs on the site's host; moving them is
+  a decision of its own.
+- **`/lambda/{key}/…` redirects permanently** to where the lambda answers
+  now - its domain while it has one - with the path and the query, before
+  anything else the server does: no request line, no telemetry, no other
+  middleware (`LambdaRedirectConcern`, added last on the host). Moved
+  Permanently for a read, Permanent Redirect for the rest, cached for a day
+  since a domain comes and goes.
+- **The subdomain serves the lambda only while it has no domain of its
+  own**; with one, it redirects there the same way. A domain of its own works
+  as it did.
+- **The wildcard certificate is the fallback.** The io_uring engine matches
+  names exactly, so the certificate of `*.{hosting domain}` is presented to
+  every name no certificate is listed for (`CertificateLoader`); the site's
+  keeps being presented by its names.
+- **The hosting domain itself has a minimal page** that leads to the site, and
+  a subdomain with nothing online a plain one (`HostingPages`). Both are
+  rendered by the server, never the site's bundle - no script of the site is
+  served at the hosting domain - and their words are in `pages.json`
+  (`hosting:/`, `hosting:/:key`), so they are translated with the rest.
+- **Addresses come from `ILambdaAddresses`**, never put together from strings
+  elsewhere. The API hands out `publicUrl` (the subdomain) and `address`
+  (where to link: the domain while it is served, the subdomain otherwise), the
+  frontend `lambdaUrl` (`{key}` in the template) for what has no lambda yet.
 
 ### Versions, data, and how they differ
 
@@ -364,9 +405,10 @@ of it into a lambda's pages; the agent does.
 
 - `og:image` takes a full address - social networks do not resolve a relative
   one - and is the exception to relative links, with `og:url` and the
-  canonical link. The warning a feature's deploy gives for a link to
-  `/lambda/{publicKey}/` (`McpTools.Leaks`) leaves meta tags and the canonical
-  link out: they name the page, and the page never follows them.
+  canonical link. The warning a feature's deploy gives for a link to the
+  lambda's own address, or to its old path below `/lambda/` (`McpTools.Leaks`),
+  leaves meta tags and the canonical link out: they name the page, and the
+  page never follows them.
 - **No renderer - decided for now.** Rendering a lambda in a headless browser
   on the server (for the agent to look at its page, a picture proposed in the
   showcase tab, an `og:image`) was considered and left out: it runs strangers'
@@ -374,14 +416,11 @@ of it into a lambda's pages; the agent does.
   Chromium and fonts. Nor are tools added to the build agent's image - it has
   no shell to run them, and must not get one, since its token is in its
   environment. Do not bring either back without the owner asking.
-- **The sitemap names a lambda only where the operator listed it - decided by
-  the owner.** Off for every lambda; the switch is in the editor's Admin
-  section (`in_sitemap`, `PUT /admin/lambdas/{publicKey}/sitemap`), and
-  neither owners nor agents can set it. It names the root of the lambda's
-  address below `/lambda/` - what was asked for, and the only one a sitemap of
-  this host may name, so never its own domain - while it is online, since an
-  offline lambda answers that address with a 404. No `lastmod`: what a lambda
-  serves changes with its data, which the platform cannot date.
+- **The sitemap names no lambda - decided by the owner.** The operator could
+  list one, by its address below `/lambda/`; the switch went when the lambdas
+  moved to hosts of their own (V20 drops `in_sitemap`), since a sitemap names
+  pages of the host it is served from. Do not bring it back on the site's
+  host.
 
 ### Pushing, not polling
 
@@ -399,13 +438,17 @@ the same.
 **Decided by the owner:** agents are asked - not required - to put a small
 "Made with GenHTTP Lambda" line at the foot of the pages they build.
 
-- **A link without a domain, plain text with one.** Below `/lambda/` the line
-  links to the installation's public address (`LAMBDA_PUBLIC_URL`, else the
-  address the agent called) - a link within the same site, which no
-  link-spam policy is about. On a lambda with a domain of its own it is plain
-  text: there it would be a link from another site, and the same link in the
-  footers of many sites is what search engines count as link spam. A lambda
-  whose line links and that gets a domain has it made plain text with its next
+- **A nofollow link without a domain, plain text with one.** Below the
+  hosting domain the line links to the installation's public address
+  (`LAMBDA_PUBLIC_URL`, else the address the agent called) with
+  `rel="nofollow"`. It was a plain link while the lambdas answered below
+  `/lambda/` - a link within the same site, which no link-spam policy is
+  about; at a host of its own every lambda is another site, and the same link
+  in the footers of many sites is what search engines count as link spam
+  unless it says it is no recommendation. A line from before is given the
+  attribute with the next change. On a lambda with a domain of its own it is
+  plain text: there it would be a link from its owner's site. A lambda whose
+  line links and that gets a domain has it made plain text with its next
   change.
 
 - **The user may refuse.** The agent says that it added the link, leaves it
@@ -651,8 +694,10 @@ rules that matter:
 - The frontend is a React single page application in `src/Frontend`, built into
   `src/GenHTTP.Lambda/wwwroot` (not committed). Public pages are prerendered per
   language.
-- Links inside a lambda's front end are relative, never `/lambda/...`: a lambda
-  also answers at a domain of its own, and a feature at `/features/{key}/`.
+- Links inside a lambda's front end are relative, never a full address: a
+  lambda answers at the root of its host, but a feature's preview below
+  `/features/{key}/` on the site, where a leading slash leaves it and the full
+  address is the live lambda.
 - The full view's sidebar is **grouped** (overview and documentation; sharing -
   showcase, open source, domain - second, as the owner decided; develop -
   change, drafts, code, tests; program and data - data, versions; run). A new

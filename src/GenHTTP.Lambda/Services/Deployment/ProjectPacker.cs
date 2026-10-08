@@ -670,7 +670,7 @@ public static class ProjectPacker
 /// <param name="Version">The version being exported</param>
 /// <param name="Saved">When that version was saved</param>
 /// <param name="Change">What that version changed, in a line</param>
-/// <param name="Address">Where the lambda is online, if the installation knows its own address</param>
+/// <param name="Address">Where the lambda answers - its domain while it has one, its address below the hosting domain otherwise</param>
 /// <param name="Exported">When the export was made, or nothing for a project packed to be published</param>
 /// <param name="Secrets">The names of the secrets it keeps or reads, which become environment variables - never their values</param>
 /// <param name="License">The license its source is published under, if its owner published it</param>

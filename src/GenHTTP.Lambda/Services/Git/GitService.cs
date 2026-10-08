@@ -143,15 +143,11 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
     {
         var home = (options.PublicUrl ?? origin).TrimEnd('/');
 
-        var address = lambda.Domain != null && lambda.Tier == nameof(LambdaTier.Premium)
-            ? $"https://{lambda.Domain}/"
-            : $"{home}/lambda/{lambda.PublicKey}/";
-
         var license = sources.Get(lambda.PrivateKey) is { Published: true } source && SourceLicenses.Find(source.License) is { } found
             ? new RepositoryLicense(found, DateTime.UtcNow.Year, SourceLicenses.Holder(source.Author, lambda.PublicKey))
             : null;
 
-        return new GitLambda(id, lambda.PrivateKey, lambda.PublicKey, lambda.Tier, new RepositoryProject(lambda.PublicKey, address, home, license),
+        return new GitLambda(id, lambda.PrivateKey, lambda.PublicKey, lambda.Tier, new RepositoryProject(lambda.PublicKey, lambda.Address, home, license),
                              origin.TrimEnd('/'));
     }
 

@@ -46,4 +46,4 @@ The page remembers in `localStorage` that it voted and disables the buttons. The
 
 ## The page is part of the program
 
-`resources/web/` is shipped with the code and served by `Resources.App("web")`, added last so it answers only what `api` and `events` did not. It uses relative addresses (`events`, `api/votes`), so it works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike.
+`resources/web/` is shipped with the code and served by `Resources.App("web")`, added last so it answers only what `api` and `events` did not. It uses relative addresses (`events`, `api/votes`), so it works at its own address, at a domain of its own and at the preview of a feature alike.

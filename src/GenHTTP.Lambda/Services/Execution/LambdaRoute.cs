@@ -20,8 +20,9 @@ namespace GenHTTP.Lambda.Services.Execution;
 /// runs the user code, wrapped in the layers that keep it in line.
 /// </summary>
 /// <remarks>
-/// A lambda can be reached in more than one way - by its key below
-/// <c>/lambda/</c>, or at a domain of its own - and each way is a chain built
+/// A lambda can be reached in more than one way - by its key, as a
+/// subdomain of the hosting domain, or at a domain of its own, and as the
+/// preview of a feature below <c>/features/</c> - and each way is a chain built
 /// here, differing only in the locator that finds the lambda. So a lambda is
 /// throttled, timed, counted and logged the same whichever door it was
 /// reached through.

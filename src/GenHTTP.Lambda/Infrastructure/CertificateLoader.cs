@@ -22,7 +22,11 @@ namespace GenHTTP.Lambda.Infrastructure;
 /// The server answers to more than one hostname, and a certificate is only
 /// good for the hosts it names, so there may be several: the one the client
 /// asked for by name is presented, and the configured one answers for anything
-/// left over.
+/// left over - unless one of them is the wildcard of the hosting domain, which
+/// then does. Every lambda answers at a subdomain of it named after its key,
+/// so those are the names nobody can list beforehand, and the io_uring engine
+/// matches names exactly: a wildcard covers its subdomains there only by being
+/// what it presents to a name it was not told about.
 ///
 /// Which of the two ways that happens depends on the engine. Kestrel terminates
 /// TLS in .NET and asks for a certificate per connection, so the name comes in
@@ -37,6 +41,13 @@ public sealed class CertificateLoader : IHostCertificateProvider, IFileCertifica
     private readonly Lock _lock = new();
 
     private readonly Entry _default;
+
+    /// <summary>
+    /// What is presented to a client asking for a name no certificate names:
+    /// the wildcard of the hosting domain where there is one, and the
+    /// configured certificate otherwise.
+    /// </summary>
+    private readonly Entry _fallback;
 
     private readonly List<Entry> _entries;
 
@@ -62,7 +73,27 @@ public sealed class CertificateLoader : IHostCertificateProvider, IFileCertifica
 
             _logger.LogInformation("Loaded certificate for {Names}, valid until {Expiry:u}", string.Join(", ", entry.Names), entry.Certificate!.NotAfter);
         }
+
+        _fallback = Wildcard(options) is { } wildcard
+                    && _entries.FirstOrDefault(e => e.Names.Contains(wildcard, StringComparer.OrdinalIgnoreCase)) is { } hosting
+                        ? hosting
+                        : _default;
+
+        if (_fallback != _default)
+        {
+            _logger.LogInformation("Presenting the certificate for {Names} to every name no certificate is listed for", string.Join(", ", _fallback.Names));
+        }
     }
+
+    /// <summary>
+    /// The name a certificate for every subdomain of the hosting domain has,
+    /// such as <c>*.genhttp.run</c> - or nothing, where the lambdas answer
+    /// below localhost, which no certificate is issued for.
+    /// </summary>
+    private static string? Wildcard(LambdaOptions options)
+        => options.HostingUrl != null && Uri.TryCreate(options.HostingUrl, UriKind.Absolute, out var url)
+               ? $"*.{url.IdnHost.ToLowerInvariant()}"
+               : null;
 
     /// <summary>
     /// Finds the certificates published next to the configured one, a
@@ -116,7 +147,7 @@ public sealed class CertificateLoader : IHostCertificateProvider, IFileCertifica
                 }
             }
 
-            return _default.Certificate;
+            return _fallback.Certificate;
         }
     }
 
@@ -150,6 +181,9 @@ public sealed class CertificateLoader : IHostCertificateProvider, IFileCertifica
     /// has no separate key file to hand over, so it answers with nothing and
     /// the engine falls back to the loaded certificate - falling through to
     /// the default files instead would serve that name someone else's.
+    ///
+    /// Asked without a name, it answers with what a name nothing covers is
+    /// presented, which is what the io_uring engine asks it for once per port.
     /// </remarks>
     public CertificateFiles? ProvideFiles(string? host)
     {
@@ -166,7 +200,7 @@ public sealed class CertificateLoader : IHostCertificateProvider, IFileCertifica
                 }
             }
 
-            return Files(_default);
+            return Files(_fallback);
         }
     }
 

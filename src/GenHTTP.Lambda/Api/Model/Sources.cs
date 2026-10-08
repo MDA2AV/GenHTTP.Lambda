@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Source;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -26,7 +27,7 @@ public sealed record LicenseResponse(string Id, string Name, string Kind, string
 /// <param name="About">What its newest version says it is - the first paragraph of its documentation</param>
 /// <param name="Description">What its owner says about it on the showcase, if it is there</param>
 /// <param name="Online">Whether the app answers right now</param>
-/// <param name="Address">Where the app answers - its own domain while it has one, its path otherwise</param>
+/// <param name="Address">Where the app answers - its own domain while it has one, its address below the hosting domain otherwise</param>
 /// <param name="Path">Where its source is read, without a language</param>
 /// <param name="ImagePath">Its picture on the showcase, if it has one</param>
 /// <param name="LatestVersion">Its newest version</param>
@@ -49,7 +50,7 @@ public sealed record SourceEntryResponse(
 )
 {
 
-    public static SourceEntryResponse Of(SourceEntry entry) => new(
+    public static SourceEntryResponse Of(SourceEntry entry, ILambdaAddresses addresses) => new(
         entry.PublicKey,
         entry.Title,
         entry.About,
@@ -57,7 +58,7 @@ public sealed record SourceEntryResponse(
         LicenseResponse.Of(entry.License),
         entry.Stars,
         entry.Online,
-        LambdaDescription.Address(entry.PublicKey, entry.Tier.ToString(), entry.Domain),
+        addresses.Of(entry.PublicKey, entry.Tier, entry.Domain),
         $"/source/{entry.PublicKey}",
         entry.Picture is { } picture ? $"/api/v1/showcases/{entry.PublicKey}/image?v={picture.Ticks}" : null,
         entry.LatestVersion,

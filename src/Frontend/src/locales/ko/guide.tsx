@@ -39,7 +39,8 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        이게 완전한 람다예요. {k.code('/lambda/your-key/')}에 배포하면 모든 요청에 hello라고 답해요.
+        이게 완전한 람다예요. 배포하면 키 이름을 딴 전용 주소, 예를 들어 {k.code('your-key.genhttp.run')}에서 응답하고, 그곳으로
+        오는 모든 요청에 hello라고 답해요.
       </>
     ),
   ],

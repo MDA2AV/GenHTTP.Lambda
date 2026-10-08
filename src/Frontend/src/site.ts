@@ -1,10 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { api, type ShowcaseListing } from './api';
+import { aroundKey } from './address';
+import { api, type Platform, type ShowcaseListing } from './api';
 
 /**
- * What only the server knows about a page: where it is answered from, how
- * long this installation keeps a lambda and, on the showcase, what is on it.
+ * What only the server knows about a page: where it is answered from, where
+ * the lambdas answer, how long this installation keeps a lambda and, on the
+ * showcase, what is on it.
  *
  * The public pages are rendered to markup when the frontend is built, so a
  * crawler reads them without running a script. The build cannot know any of
@@ -17,6 +19,8 @@ export interface SiteFacts {
   /** Scheme and host, without a trailing slash. */
   origin: string;
   host: string;
+  /** The domain the lambdas answer below, each at a subdomain: genhttp.run, with a port where it has one. */
+  hosting: string;
   /** How long a deployment stays up without being used. */
   lifetimeHours: number;
   /** The same, in the days it is written as on most pages. */
@@ -34,6 +38,7 @@ export interface SiteFacts {
 export const PLACEHOLDERS = {
   origin: '__LAMBDA_ORIGIN__',
   host: '__LAMBDA_HOST__',
+  hosting: '__LAMBDA_HOSTING__',
   lifetimeHours: '__LAMBDA_LIFETIME_HOURS__' as unknown as number,
   offlineDays: '__LAMBDA_OFFLINE_DAYS__' as unknown as number,
   retentionDays: '__LAMBDA_RETENTION_DAYS__' as unknown as number,
@@ -77,6 +82,37 @@ export function useOrigin(): { origin: string; host: string } {
   return facts ?? { origin: window.location.origin, host: window.location.host };
 }
 
+/** What the installation says about itself, asked for once by whichever page needs it first. */
+let asking: Promise<Platform> | null = null;
+
+const askPlatform = () => (asking ??= api.platform().catch((error) => {
+  asking = null;
+  throw error;
+}));
+
+/**
+ * The domain the lambdas answer below, each at a subdomain named after its
+ * key: genhttp.run. Sent with a rendered page, and asked for otherwise.
+ */
+export function useHosting(): string {
+  const facts = sentFacts();
+
+  const [asked, setAsked] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (facts !== null) {
+      return;
+    }
+
+    askPlatform()
+      .then((platform) => setAsked(aroundKey(platform.lambdaUrl).after.replace(/^\./, '')))
+      .catch(() => undefined);
+  }, [facts]);
+
+  // the site's own host until it has answered: an example address is no worse for it
+  return facts?.hosting ?? asked ?? window.location.host;
+}
+
 export interface Lifetimes {
   lifetimeHours: number;
   offlineDays: number;
@@ -97,8 +133,7 @@ export function useLifetimes(): Lifetimes {
       return;
     }
 
-    api
-      .platform()
+    askPlatform()
       .then((platform) =>
         setAsked({
           lifetimeHours: platform.deploymentLifetimeHours,

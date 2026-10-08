@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Die Domain konnte nicht gelesen werden.',
   reaching: (domain) => `Requests an ${domain} erreichen jetzt dieses Lambda.`,
   saveFailed: 'Die Domain konnte nicht gespeichert werden.',
-  removed: 'Die Domain ist entfernt. Das Lambda antwortet weiter unter seiner Adresse hier.',
+  removed: 'Die Domain ist entfernt. Das Lambda antwortet wieder unter seiner Adresse hier.',
   removeFailed: 'Die Domain konnte nicht entfernt werden.',
   hint:
-    'Ein Premium-Lambda kann zusätzlich zu seiner Adresse hier unter einer eigenen Domain antworten – unter der ganzen Domain, ab der Wurzel. Lassen Sie die Domain auf diesen Server zeigen und tragen Sie sie hier ein. Dann erreichen Requests an die Domain das Lambda.',
+    'Ein Premium-Lambda kann unter einer eigenen Domain antworten – unter der ganzen Domain, ab der Wurzel. Lassen Sie die Domain zuerst auf diesen Server zeigen und tragen Sie sie dann hier ein: Ab dann erreichen Requests an die Domain das Lambda, und seine Adresse hier leitet Besucher dorthin weiter.',
   loading: 'Lädt …',
   example: 'ihre-domain.de',
   open: (domain) => `${domain} öffnen`,
   label: 'Domain, unter der es antwortet',
-  serving: (domain) => <>Antwortet jetzt unter {domain}, zusätzlich zur Adresse hier.</>,
+  serving: (domain) => <>Antwortet jetzt unter {domain}. Die Adresse hier leitet Besucher dorthin weiter.</>,
   none: 'Noch keine. Eine Subdomain wie shop.example.com oder eine ganze Domain wie example.com.',
   change: 'Ändern',
   use: 'Diese Domain verwenden',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Behalten',
   confirmText: (domain) => (
     <>
-      Requests an {domain} erreichen dieses Lambda sofort nicht mehr. Seine Adresse hier bleibt, wie sie ist – ebenso
-      die DNS-Einträge der Domain.
+      Requests an {domain} erreichen dieses Lambda sofort nicht mehr, und seine Adresse hier antwortet wieder, statt
+      Besucher weiterzuleiten. Die DNS-Einträge der Domain bleiben, wie sie sind.
     </>
   ),
   point: 'Domain auf diesen Server zeigen lassen',

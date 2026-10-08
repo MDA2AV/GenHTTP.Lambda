@@ -211,7 +211,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
           {live ? <>Online, version {lambda.activeVersion}{lambda.deployedAt && <> since <Ago at={lambda.deployedAt} /></>}</> : 'Offline'}
         </Fact>
         <Fact label="Address">
-          <LambdaLink address={lambda.publicPath} className="font-mono text-accent-500 hover:underline dark:text-accent-400" />
+          <LambdaLink address={lambda.publicUrl} className="font-mono text-accent-500 hover:underline dark:text-accent-400" />
         </Fact>
         <Fact label="Domain">
           {lambda.domain ? (
@@ -349,7 +349,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
           </div>
         )}
 
-        <Entrances traffic={traffic} publicKey={lambda.publicKey} />
+        <Entrances traffic={traffic} publicUrl={lambda.publicUrl} />
 
         {traffic.paths.length > 0 && (
           <table className="mt-6 w-full text-left text-[13px]">

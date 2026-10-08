@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Deployment.Model;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Secrets;
 using GenHTTP.Lambda.Services.Storage;
@@ -19,7 +20,7 @@ namespace GenHTTP.Lambda.Services.Source;
 /// <summary>
 /// Keeps whether a lambda's source is published, and serves it packed.
 /// </summary>
-public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, SourceCache cache,
+public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, SourceCache cache, ILambdaAddresses addresses,
                                   StarGuard stars, LambdaOptions options, ILogger<SourceService> logger) : ISourceService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
@@ -229,7 +230,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
         var holder = SourceLicenses.Holder(row.Author, publicKey);
 
-        var address = options.PublicUrl is { } site ? $"{site}/lambda/{publicKey}/" : null;
+        var address = addresses.Of(publicKey, row.Tier, row.Domain);
 
         var page = options.PublicUrl is { } root ? $"{root}/source/{publicKey}" : null;
 

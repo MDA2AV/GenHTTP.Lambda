@@ -136,11 +136,9 @@ public sealed class TelemetryTests
 
         using var client = new System.Net.WebSockets.ClientWebSocket();
 
-        using var probe = fixture.Host.GetRequest("/lambda/sockets/");
-
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        await client.ConnectAsync(new UriBuilder(probe.RequestUri!) { Scheme = "ws" }.Uri, timeout.Token);
+        await fixture.ConnectAsync(client, "http://sockets.localhost/", timeout.Token);
 
         // open sockets are read from /proc and leave loopback out, so the
         // socket opened here is never among them - only the upgrade is ours

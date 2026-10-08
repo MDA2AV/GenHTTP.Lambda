@@ -36,10 +36,10 @@ public sealed class LambdaErrorMapper(ILogger<LambdaErrorMapper> logger) : IErro
 
         var lambda = request.GetLambda();
 
-        // the path alone reads as one of the platform's when the lambda was
-        // reached at a domain of its own
+        // the path alone reads as one of the platform's, so the host of the
+        // lambda goes in front of it
         logger.LogWarning(error, "Failed to handle {Method} {Host}{Path} in lambda {Lambda}",
-            request.Header.Method, request.GetDomain()?.Name ?? "", request.Header.Path, lambda?.PublicKey ?? "?");
+            request.Header.Method, request.GetHost()?.Name ?? "", request.Header.Path, lambda?.PublicKey ?? "?");
 
         return new ValueTask<IResponse?>(Render(request, acceptedFormat?.ToString(), ResponseStatus.InternalServerError, "Lambda Error",
             $"The lambda threw {error.GetType().Name}: {error.Message}", null));

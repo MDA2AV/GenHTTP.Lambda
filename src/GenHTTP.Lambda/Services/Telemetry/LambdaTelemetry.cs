@@ -32,14 +32,15 @@ public sealed class LambdaTelemetry
     private const string OtherPaths = "(other)";
 
     /// <summary>
-    /// How many domains are told apart per lambda. A lambda has one at a
-    /// time; this only has to hold the ones it had since the server came up.
+    /// How many hosts are told apart per lambda. A lambda answers at one at a
+    /// time - its subdomain, or its own domain - so this only has to hold the
+    /// ones it had since the server came up, a key or a domain changed.
     /// </summary>
     private const int MostDomains = 8;
 
     /// <summary>
-    /// Where a request that came through the platform's own path is counted,
-    /// among the domains.
+    /// Where a request that named no host of the lambda is counted, among the
+    /// hosts.
     /// </summary>
     private const string PlatformPath = "";
 
@@ -63,7 +64,7 @@ public sealed class LambdaTelemetry
     /// <param name="status">The status it answered with</param>
     /// <param name="bytes">What the response carried, where that is known</param>
     /// <param name="path">What was asked for, relative to the lambda</param>
-    /// <param name="domain">The lambda's own domain it was reached at, or nothing for its path on the platform</param>
+    /// <param name="domain">The host it was reached at - its subdomain of the hosting domain, or its own domain</param>
     public void Record(long id, string publicKey, TimeSpan elapsed, int status, long bytes, string? path = null, string? domain = null)
     {
         var counters = _lambdas.GetOrAdd(id, _ => new Counters());

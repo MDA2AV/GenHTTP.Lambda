@@ -45,7 +45,7 @@ public sealed class BranchTests
         Assert.Contains($"Its preview is online at {fixture.Host.GetUrl(feature.PreviewPath)}", pushed.Said);
 
         Assert.AreEqual("LIVE", await fixture.CallAsync(feature.PreviewPath));
-        Assert.AreEqual("live", await fixture.CallAsync("/lambda/branched/"), "the lambda goes on as it was");
+        Assert.AreEqual("live", await fixture.CallAsync("http://branched.localhost/"), "the lambda goes on as it was");
 
         // pushed again, its files are replaced - a rewrite included
         git.Write("branched", "Project.cs", PushTests.ProjectOf(Repository.Says("LIVE!")));
@@ -83,7 +83,7 @@ public sealed class BranchTests
         Assert.Contains("Version 2 is online", pushed.Said);
 
         Assert.IsEmpty(await fixture.FeaturesAsync(lambda), "the feature is gone, with its preview and its copy of the data");
-        Assert.AreEqual("merged", await fixture.CallAsync("/lambda/squashed/"));
+        Assert.AreEqual("merged", await fixture.CallAsync("http://squashed.localhost/"));
 
         Assert.HasCount(2, await fixture.VersionsAsync(lambda), "a feature merged is one version, however many commits it had");
 

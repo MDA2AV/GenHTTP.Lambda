@@ -87,11 +87,11 @@ public sealed class DocumentationTests
 
         Assert.IsTrue(deployed.Success, "a script among the tests is not compiled");
 
-        using var page = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/index.html");
+        using var page = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/index.html");
 
         Assert.AreEqual("<p>the page</p>", await page.GetContentAsync(), "the resources are served");
 
-        using var documentation = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/docs/product.md");
+        using var documentation = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/docs/product.md");
 
         Assert.AreEqual(HttpStatusCode.NotFound, documentation.StatusCode, "what is written about it is not");
 

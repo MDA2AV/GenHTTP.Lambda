@@ -43,24 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'リンクが古いか、リンク先のlambdaが削除された可能性があります。',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'ここでは何も動いていません',
-  heading: 'ここでは何も動いていません',
-  notDeployed: (key) => (
-    <>
-      {key}
-      にlambdaはありますが、今はデプロイされていません。無料プランのデプロイは、使われている間はオンラインのままです。1か月間アクセスも編集もなければオフラインになります。編集用リンクを持っている人なら、もう一度オンラインにできます。
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      {key}
-      にlambdaはありません。そのキーが最初から存在しないか、lambdaが削除された可能性があります。
-    </>
-  ),
-  create: 'lambdaを作成',
-};
-
 export const abuse: Messages['abuse'] = {
   report: '不正を報告',
   title: 'lambdaを報告する',

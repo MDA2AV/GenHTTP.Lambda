@@ -14,8 +14,8 @@ export const enterprise: Messages['enterprise'] = {
     'Lambdas illimitées, sans compte',
     'L’agent intégré, ou le vôtre via MCP',
     'En ligne tant qu’on l’utilise',
-    `Hors ligne après ${offline} jours sans visite, supprimée après ${removed} jours`,
-    'Accessible via un chemin de l’hôte partagé',
+    `Hors ligne après ${offline} jours sans visite, supprimée après ${removed} jours`,
+    'Accessible sur un sous-domaine du domaine partagé',
   ],
   freeNote: 'Pas de carte, pas d’inscription. Créez une lambda : elle est à vous.',
 

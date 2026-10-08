@@ -43,24 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Forse il link è vecchio, oppure la lambda a cui puntava è stata eliminata.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Qui non c’è niente online',
-  heading: 'Qui non c’è niente online',
-  notDeployed: (key) => (
-    <>
-      La lambda {key} esiste, ma al momento non è online. Nel piano gratuito i deployment restano online finché vengono
-      usati, e dopo un mese senza visite né modifiche vanno offline. Chi ha il link di modifica può rimetterla online.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      Non c’è nessuna lambda con la chiave {key}. Forse la chiave non è mai esistita, oppure la lambda è stata
-      eliminata.
-    </>
-  ),
-  create: 'Crea una lambda qui',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Segnala un abuso',
   title: 'Segnala una lambda',

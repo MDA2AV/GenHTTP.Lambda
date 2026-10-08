@@ -15,7 +15,7 @@ export const enterprise: Messages['enterprise'] = {
     'Yerleşik ajan ya da MCP üzerinden kendi ajanınız',
     'Kullanıldığı sürece yayında',
     `${offline} gün ziyaret olmazsa yayından kalkar, ${removed} günün sonunda silinir`,
-    'Ortak sunucuda bir alt yolda sunulur',
+    'Ortak alan adının bir alt alan adında sunulur',
   ],
   freeNote: 'Kart yok, kayıt yok. Bir lambda oluşturun, artık sizindir.',
 

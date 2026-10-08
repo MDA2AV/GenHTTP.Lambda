@@ -15,7 +15,7 @@ export const enterprise: Messages['enterprise'] = {
     'Unser Agent oder Ihr eigener per MCP',
     'Online, solange es genutzt wird',
     `Offline nach ${offline} Tagen ohne Besuche, gelöscht nach ${removed} Tagen`,
-    'Unter einem Pfad auf dem gemeinsamen Host',
+    'Unter einer Subdomain der gemeinsamen Domain',
   ],
   freeNote: 'Keine Kreditkarte, keine Registrierung. Lambda erstellen – und es gehört Ihnen.',
 

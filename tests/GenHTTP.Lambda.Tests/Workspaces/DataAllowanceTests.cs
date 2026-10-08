@@ -63,14 +63,14 @@ public sealed class DataAllowanceTests
 
         await PutAsync(fixture, lambda.PrivateKey, "upload.bin", 900 * 1024, HttpStatusCode.OK);
 
-        StringAssert.Contains(await ServedAsync(fixture, "/lambda/crowded/grow"), "full", "what the workspace takes is not there for the database");
+        StringAssert.Contains(await ServedAsync(fixture, "http://crowded.localhost/grow"), "full", "what the workspace takes is not there for the database");
 
         using (var deleted = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/files/upload.bin"))
         {
             Assert.IsTrue(deleted.IsSuccessStatusCode);
         }
 
-        Assert.AreEqual("grew", await ServedAsync(fixture, "/lambda/crowded/grow"), "and is once the workspace lets go of it");
+        Assert.AreEqual("grew", await ServedAsync(fixture, "http://crowded.localhost/grow"), "and is once the workspace lets go of it");
 
         await PutAsync(fixture, lambda.PrivateKey, "upload.bin", 900 * 1024, HttpStatusCode.BadRequest);
     }
@@ -82,14 +82,14 @@ public sealed class DataAllowanceTests
 
         await PrepareAsync(fixture, "keeper");
 
-        Assert.AreEqual("grew", await ServedAsync(fixture, "/lambda/keeper/grow"));
+        Assert.AreEqual("grew", await ServedAsync(fixture, "http://keeper.localhost/grow"));
 
-        StringAssert.Contains(await ServedAsync(fixture, $"/lambda/keeper/write?size={800 * 1024}"), "its workspace and its database together",
+        StringAssert.Contains(await ServedAsync(fixture, $"http://keeper.localhost/write?size={800 * 1024}"), "its workspace and its database together",
                               "the lambda is told what its data may come to");
 
-        Assert.AreEqual("written", await ServedAsync(fixture, $"/lambda/keeper/write?size={300 * 1024}"), "and what fits beside the database is written");
+        Assert.AreEqual("written", await ServedAsync(fixture, $"http://keeper.localhost/write?size={300 * 1024}"), "and what fits beside the database is written");
 
-        StringAssert.Contains(await ServedAsync(fixture, "/lambda/keeper/grow"), "full",
+        StringAssert.Contains(await ServedAsync(fixture, "http://keeper.localhost/grow"), "full",
                               "which the next connection to the database knows of, without a deploy");
     }
 
@@ -102,7 +102,7 @@ public sealed class DataAllowanceTests
 
         await PutAsync(fixture, lambda.PrivateKey, "upload.bin", 100 * 1024, HttpStatusCode.OK);
 
-        Assert.AreEqual("grew", await ServedAsync(fixture, "/lambda/measured/grow"));
+        Assert.AreEqual("grew", await ServedAsync(fixture, "http://measured.localhost/grow"));
 
         using var listed = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/data");
 

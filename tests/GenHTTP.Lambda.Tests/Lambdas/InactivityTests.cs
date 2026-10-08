@@ -116,7 +116,7 @@ public sealed class InactivityTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var response = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var response = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 

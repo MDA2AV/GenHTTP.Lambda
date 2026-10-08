@@ -92,7 +92,7 @@ export function SummaryTab({ control }: { control: Control }) {
           <ul className="mt-2 space-y-1.5">
             {distinct(summary.recentProblems).slice(0, 3).map((problem) => (
               <li key={problem.seq} className="flex gap-3 text-[13px]">
-                <span className="min-w-0 flex-1 truncate" title={problem.text}>{local(problem.text, lambda.publicKey)}</span>
+                <span className="min-w-0 flex-1 truncate" title={problem.text}>{local(problem.text, lambda.publicUrl)}</span>
                 <Ago at={problem.at} className="shrink-0 text-slate-500" />
               </li>
             ))}

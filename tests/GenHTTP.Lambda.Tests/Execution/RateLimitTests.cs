@@ -29,7 +29,7 @@ public sealed class RateLimitTests
 
         for (var attempt = 0; attempt < 5; attempt++)
         {
-            using var response = await fixture.GetAsync("/lambda/busy/");
+            using var response = await fixture.GetAsync("http://busy.localhost/");
 
             codes.Add(response.StatusCode);
         }
@@ -50,12 +50,12 @@ public sealed class RateLimitTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using (var first = await fixture.GetAsync("/lambda/patient/"))
+        using (var first = await fixture.GetAsync("http://patient.localhost/"))
         {
             Assert.AreEqual(HttpStatusCode.OK, first.StatusCode);
         }
 
-        using (var second = await fixture.GetAsync("/lambda/patient/"))
+        using (var second = await fixture.GetAsync("http://patient.localhost/"))
         {
             Assert.AreEqual(HttpStatusCode.TooManyRequests, second.StatusCode);
 
@@ -66,7 +66,7 @@ public sealed class RateLimitTests
         // the window is a second, which is short enough to simply wait out
         await Task.Delay(TimeSpan.FromSeconds(1.2));
 
-        using (var later = await fixture.GetAsync("/lambda/patient/"))
+        using (var later = await fixture.GetAsync("http://patient.localhost/"))
         {
             Assert.AreEqual(HttpStatusCode.OK, later.StatusCode);
         }

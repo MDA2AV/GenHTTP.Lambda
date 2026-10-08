@@ -15,7 +15,7 @@ export const enterprise: Messages['enterprise'] = {
     '내장 에이전트 또는 MCP로 내 에이전트 사용',
     '쓰는 동안 계속 온라인',
     `방문 없이 ${offline}일 지나면 오프라인, ${removed}일 지나면 삭제`,
-    '공유 호스트의 경로로 제공',
+    '공유 도메인의 서브도메인으로 제공',
   ],
   freeNote: '카드도, 가입도 필요 없어요. 람다를 만들면 바로 내 것이에요.',
 

@@ -272,7 +272,7 @@ public sealed class WorkspaceTests
             return Inline.Create().Get(() => "done");
             """);
 
-        using var _ = await fixture.GetAsync("/lambda/writer/");
+        using var _ = await fixture.GetAsync("http://writer.localhost/");
 
         var listing = await ListAsync(fixture, lambda.PrivateKey);
 

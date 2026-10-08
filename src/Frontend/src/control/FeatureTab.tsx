@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { shownAddress } from '../address';
 import { ApiError, api, type LambdaFile } from '../api';
 import { IconAlert, IconBranch, IconChevronDown, IconPencil, IconSpark, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
@@ -8,6 +9,9 @@ import { CloneMenu } from './CloneMenu';
 import type { Control } from './context';
 import { AgentMark, Ago, Quote, Section } from './ui';
 import { isCompiled, isResource } from './written';
+
+/** Where a page names an address rather than linking to it: its meta tags and its canonical link. */
+const NAMED = /<meta\b[^>]*>|<link\b[^>]*\brel\s*=\s*["']?canonical\b[^>]*>/gi;
 
 /**
  * One feature - a draft, to the owner: what it changes, what was asked for,
@@ -61,11 +65,18 @@ export function FeatureTab({ control, onNotes, onRebase }: {
   // was asked for, and whether it can go online - not the files it changes
   const { simple } = control;
 
-  // from the preview, a full path to the lambda is the live lambda - and its real data
-  const own = `/lambda/${control.lambda.publicKey}/`;
+  // from the preview, the full address of the lambda is the live lambda - and its real data;
+  // so is its old path below /lambda/, which leads there
+  const own = shownAddress(control.lambda.publicUrl);
+  const old = `/lambda/${control.lambda.publicKey}/`;
   // what is compiled or served only: documentation naming the address says where it is, and
-  // links nowhere - and what a front end is built from says it again in what it builds, if anywhere
-  const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && (isCompiled(file.name) || isResource(file.name)) && file.code.includes(own)).map((file) => file.name);
+  // links nowhere - and what a front end is built from says it again in what it builds, if anywhere.
+  // Meta tags and the canonical link name the page and are never followed, as the server sees it too
+  const links = (code: string) => {
+    const followed = code.replace(NAMED, '');
+    return followed.includes(`//${own}`) || followed.includes(old);
+  };
+  const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && (isCompiled(file.name) || isResource(file.name)) && links(file.code)).map((file) => file.name);
 
   return (
     <Section

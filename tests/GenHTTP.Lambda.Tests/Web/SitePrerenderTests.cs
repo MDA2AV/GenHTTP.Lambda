@@ -37,7 +37,7 @@ public sealed class SitePrerenderTests
     /// <summary>
     /// The entry the build renders on its own, and finds again in the showcase.
     /// </summary>
-    private const string Entry = """<div class="rise" style="animation-delay:0ms"><a href="__LAMBDA_ENTRY_PATH__" aria-label="__LAMBDA_ENTRY_TITLE__, opens __LAMBDA_ENTRY_PATH__"><img src="__LAMBDA_ENTRY_IMAGE__"/><h3>__LAMBDA_ENTRY_TITLE__</h3><p>__LAMBDA_ENTRY_DESCRIPTION__</p><span>__LAMBDA_ENTRY_PATH__</span></a></div>""";
+    private const string Entry = """<div class="rise" style="animation-delay:0ms"><a href="__LAMBDA_ENTRY_ADDRESS__" aria-label="__LAMBDA_ENTRY_TITLE__, opens __LAMBDA_ENTRY_ADDRESS__"><img src="__LAMBDA_ENTRY_IMAGE__"/><h3>__LAMBDA_ENTRY_TITLE__</h3><p>__LAMBDA_ENTRY_DESCRIPTION__</p><span>__LAMBDA_ENTRY_ADDRESS__</span></a></div>""";
 
     /// <summary>
     /// The same entry in German, which says in German that it opens a new tab.
@@ -191,8 +191,8 @@ public sealed class SitePrerenderTests
 
         StringAssert.Contains(body, "<p>2 lambdas</p>");
 
-        StringAssert.Contains(body, "href=\"/lambda/quiz/\"");
-        StringAssert.Contains(body, "<h3>Pub quiz</h3><p>Scores for the Tuesday quiz.</p><span>/lambda/quiz/</span>");
+        StringAssert.Contains(body, "href=\"http://quiz.localhost:8080/\"");
+        StringAssert.Contains(body, "<h3>Pub quiz</h3><p>Scores for the Tuesday quiz.</p><span>quiz.localhost:8080</span>");
         StringAssert.Contains(body, "<h3>Lunch poll</h3>");
 
         // staggered the way the page does it, one after the other
@@ -231,7 +231,7 @@ public sealed class SitePrerenderTests
         var body = await ReadAsync(fixture, "/de/showcase");
 
         StringAssert.Contains(body, "<p>2 Lambdas</p>");
-        StringAssert.Contains(body, "aria-label=\"Pub quiz, öffnet /lambda/quiz/\"");
+        StringAssert.Contains(body, "aria-label=\"Pub quiz, öffnet quiz.localhost:8080\"");
         Assert.DoesNotContain("__LAMBDA_", body);
     }
 

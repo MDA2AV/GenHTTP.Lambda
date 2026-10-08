@@ -188,7 +188,7 @@ public sealed class LogBook : ILogBook
     /// measure it. Nothing means never fold this line.
     /// </param>
     /// <param name="lambdaId">The identity of the lambda named by <paramref name="lambda"/></param>
-    /// <param name="domain">The lambda's own domain the request being served was addressed to</param>
+    /// <param name="domain">The host of a lambda the request being served was addressed to</param>
     /// <param name="featureId">The feature whose preview was being served, if it was one</param>
     public long Append(string level, string source, string? lambda, string text, string? detail = null,
                        string? client = null, string? agent = null, string? country = null, string? place = null,

@@ -84,6 +84,15 @@ public static class LambdaKeys
             return false;
         }
 
+        // the key is the name of a host, and a browser reads a name that
+        // starts like this as an international one written in ASCII - it
+        // would show another name, or refuse it as one that decodes to nothing
+        if (normalized.StartsWith("xn--", StringComparison.Ordinal))
+        {
+            reason = "The key must not start with 'xn--', which is how international domain names are written.";
+            return false;
+        }
+
         if (Reserved.Contains(normalized))
         {
             reason = $"'{normalized}' is reserved by the platform.";

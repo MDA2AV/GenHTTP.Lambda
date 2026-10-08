@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Impossibile leggere il dominio.',
   reaching: (domain) => `Ora le richieste a ${domain} arrivano a questa lambda.`,
   saveFailed: 'Impossibile salvare il dominio.',
-  removed: 'Dominio rimosso. La lambda risponde ancora al suo indirizzo qui.',
+  removed: 'Dominio rimosso. La lambda risponde di nuovo al suo indirizzo qui.',
   removeFailed: 'Impossibile rimuovere il dominio.',
   hint:
-    'Una lambda Premium può rispondere su un dominio tutto suo (per intero, dalla radice in giù) oltre che al suo indirizzo qui. Punta il dominio su questo server, inseriscilo qui e le richieste arriveranno alla lambda.',
+    'Una lambda Premium può rispondere su un dominio tutto suo (per intero, dalla radice in giù). Punta prima il dominio su questo server, poi inseriscilo qui: da quel momento le richieste al dominio arrivano alla lambda e il suo indirizzo qui porta i visitatori lì.',
   loading: 'Caricamento…',
   example: 'il-tuo-dominio.it',
   open: (domain) => `Apri ${domain}`,
   label: 'Il dominio su cui risponde',
-  serving: (domain) => <>Ora serve {domain}, oltre al suo indirizzo qui.</>,
+  serving: (domain) => <>Ora serve {domain}. Il suo indirizzo qui porta i visitatori lì.</>,
   none: 'Ancora nessuno. Un sottodominio come shop.example.com, o un dominio intero come example.com.',
   change: 'Cambia',
   use: 'Usa questo dominio',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Tienilo',
   confirmText: (domain) => (
     <>
-      Le richieste a {domain} smettono subito di arrivare a questa lambda. Il suo indirizzo qui resta com’è, e così
-      anche il DNS del dominio.
+      Le richieste a {domain} smettono subito di arrivare a questa lambda e il suo indirizzo qui torna a rispondere
+      invece di portare i visitatori altrove. Il DNS del dominio resta com’è.
     </>
   ),
   point: 'Punta il dominio su questo server',

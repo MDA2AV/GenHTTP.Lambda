@@ -43,24 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Link ini mungkin sudah tidak berlaku, atau lambda yang dituju sudah dihapus.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Tidak ada yang berjalan di sini',
-  heading: 'Tidak ada yang berjalan di sini',
-  notDeployed: (key) => (
-    <>
-      Ada lambda di {key}, tapi saat ini sedang tidak di-deploy. Di paket gratis, deployment tetap online selama
-      dipakai, dan dimatikan setelah sebulan tanpa kunjungan atau perubahan. Siapa pun yang memegang link editor bisa
-      membuatnya online lagi.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      Tidak ada lambda di {key}. Mungkin kunci ini tidak pernah ada, atau lambda di baliknya sudah dihapus.
-    </>
-  ),
-  create: 'Buat lambda di sini',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Laporkan penyalahgunaan',
   title: 'Laporkan lambda',

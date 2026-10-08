@@ -80,7 +80,7 @@ public sealed class DemoTests
             Assert.AreEqual(demo.PublicKey, demo.PrivateKey, "a demo's editor key is its public key, announced");
             Assert.AreEqual(LambdaSource.EntryName, demo.Files[0]);
 
-            using var page = await fixture.GetAsync(demo.Path);
+            using var page = await fixture.GetAsync(demo.Address);
 
             Assert.AreEqual(HttpStatusCode.OK, page.StatusCode, $"'{demo.Id}' should serve its page");
             Assert.AreEqual("text/html", page.Content.Headers.ContentType?.MediaType);
@@ -213,7 +213,7 @@ public sealed class DemoTests
 
         await fixture.DeployAsync(copy.PrivateKey);
 
-        using var tasks = await fixture.GetAsync($"/lambda/{copy.PublicKey}/tasks/", "application/json");
+        using var tasks = await fixture.GetAsync($"http://{copy.PublicKey}.localhost/tasks/", "application/json");
 
         Assert.AreEqual(HttpStatusCode.OK, tasks.StatusCode);
     }

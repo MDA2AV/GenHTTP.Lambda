@@ -58,7 +58,7 @@ var accounts = new Accounts(() => Secret.Exists("PASSWORD_PEPPER") ? Secret.Read
  * At the root of the lambda rather than below a folder, and for a reason: a
  * cookie set without a path belongs to the folder of the address that set it.
  * Set by "login" it covers the whole lambda - wherever the lambda is mounted,
- * below /lambda/... or at the root of a domain. Set by "auth/login" it would
+ * at the root of its address or below a preview. Set by "auth/login" it would
  * only ever be sent back to auth/.
  */
 var account = Inline.Create()

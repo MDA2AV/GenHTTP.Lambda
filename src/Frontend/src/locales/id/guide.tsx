@@ -39,8 +39,9 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Itu sudah lambda yang lengkap. Setelah di-deploy di {k.code('/lambda/your-key/')}, lambda ini menjawab setiap
-        request dengan kata hello.
+        Itu sudah lambda yang lengkap. Setelah di-deploy, lambda ini menjawab di alamatnya sendiri yang dinamai sesuai
+        kuncinya, misalnya{' '}
+        {k.code('your-key.genhttp.run')}, dan setiap request di sana mendapat kata hello.
       </>
     ),
   ],

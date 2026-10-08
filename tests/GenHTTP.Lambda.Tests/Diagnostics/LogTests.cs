@@ -233,7 +233,7 @@ public sealed class LogTests
                          });
             """);
 
-        using var called = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var called = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, called.StatusCode);
 
@@ -262,8 +262,8 @@ public sealed class LogTests
             return Inline.Create().Get(() => "done");
             """);
 
-        using var first = await fixture.GetAsync($"/lambda/{loud.PublicKey}/");
-        using var second = await fixture.GetAsync($"/lambda/{quiet.PublicKey}/");
+        using var first = await fixture.GetAsync($"http://{loud.PublicKey}.localhost/");
+        using var second = await fixture.GetAsync($"http://{quiet.PublicKey}.localhost/");
 
         var book = fixture.Book;
 
@@ -304,7 +304,7 @@ public sealed class LogTests
             return Inline.Create().Get(() => Boom());
             """);
 
-        using var called = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/", "text/html");
+        using var called = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/", "text/html");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, called.StatusCode);
 
@@ -330,7 +330,7 @@ public sealed class LogTests
                          .Get(() => { Console.WriteLine("nobody is writing this down"); return "done"; });
             """);
 
-        using var called = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var called = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         var book = fixture.Book;
 
@@ -755,7 +755,7 @@ public sealed class LogTests
                          .Get(() => { Console.WriteLine("who asked for this"); return "done"; });
             """);
 
-        using var called = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var called = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         var (lines, _, _) = fixture.Book.Read(0, "traced", LogLevel.Information, 5000);
 

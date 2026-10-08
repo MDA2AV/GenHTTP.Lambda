@@ -47,25 +47,6 @@ export const notFound = {
   text: 'The link may be stale, or the lambda it pointed at has been deleted.',
 };
 
-export const missing = {
-  title: 'Nothing Is Running Here',
-  heading: 'Nothing is running here',
-  notDeployed: (key: ReactNode) => (
-    <>
-      There is a lambda at {key}, but it is not deployed at the moment. Deployments in the free tier stay up
-      while they are used, and are taken down after a month without visits or edits - whoever holds the
-      editor link can put it back online.
-    </>
-  ),
-  unknown: (key: ReactNode) => (
-    <>
-      No lambda is hosted at {key}. The key may never have existed, or the lambda behind it has been
-      deleted.
-    </>
-  ),
-  create: 'Create a lambda here',
-};
-
 export const abuse = {
   report: 'Report abuse',
   title: 'Report a lambda',

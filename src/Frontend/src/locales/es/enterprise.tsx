@@ -15,7 +15,7 @@ export const enterprise: Messages['enterprise'] = {
     'El agente integrado, o el tuyo por MCP',
     'En línea mientras se use',
     `Se desconecta tras ${offline} días sin visitas y se elimina a los ${removed} días`,
-    'En una ruta del servidor compartido',
+    'En un subdominio del dominio compartido',
   ],
   freeNote: 'Sin tarjeta y sin registro. Crea una lambda y es tuya.',
 

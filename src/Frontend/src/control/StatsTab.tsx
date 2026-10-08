@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { platformPath } from '../address';
+import { shownAddress } from '../address';
 import { ApiError, api, type LambdaTraffic, type TrafficPoint } from '../api';
 import { Chart } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
@@ -142,7 +142,7 @@ export function StatsTab({ control }: { control: Control }) {
         </div>
       )}
 
-      <Entrances traffic={traffic} publicKey={control.lambda.publicKey} />
+      <Entrances traffic={traffic} publicUrl={control.lambda.publicUrl} />
 
       {traffic.paths.length > 0 && (
         <section className="mt-8">
@@ -175,15 +175,16 @@ export function StatsTab({ control }: { control: Control }) {
 }
 
 /**
- * Which way visitors came in - the lambda's own domain or its path here -
- * for a lambda that has been reached at a domain at all. For every other
- * lambda there is only the one way, and nothing to say about it.
+ * Which way visitors came in - the lambda's own address or its domain - for
+ * a lambda that has been reached at more than one since the server started:
+ * it was given a domain, or a new key. For every other lambda there is only
+ * the one way, and nothing to say about it.
  */
-export function Entrances({ traffic, publicKey }: { traffic: LambdaTraffic; publicKey: string }) {
+export function Entrances({ traffic, publicUrl }: { traffic: LambdaTraffic; publicUrl: string }) {
   const said = useShared().entrances;
   const entrances = traffic.entrances ?? [];
 
-  if (!entrances.some((entrance) => entrance.domain)) {
+  if (entrances.length < 2) {
     return null;
   }
 
@@ -196,7 +197,7 @@ export function Entrances({ traffic, publicKey }: { traffic: LambdaTraffic; publ
         {entrances.map((entrance) => (
           <li key={entrance.domain ?? ''} className="flex items-center gap-3 py-2">
             <span className="min-w-0 flex-1 truncate font-mono">
-              {entrance.domain ?? platformPath(publicKey)}
+              {entrance.domain ?? shownAddress(publicUrl)}
             </span>
             <span className="w-24 shrink-0">
               <span className="block h-1 bg-slate-200 dark:bg-ink-800">

@@ -30,7 +30,7 @@ public sealed class ActivityTests
 
         for (var i = 0; i < 3; i++)
         {
-            using var _ = await fixture.GetAsync("/lambda/busy/");
+            using var _ = await fixture.GetAsync("http://busy.localhost/");
         }
 
         var activity = await DescribeAsync(fixture);
@@ -50,11 +50,11 @@ public sealed class ActivityTests
             await fixture.DeployAsync(lambda.PrivateKey, $"return Inline.Create().Get(() => \"{key}\");");
         }
 
-        using var _ = await fixture.GetAsync("/lambda/one/");
+        using var _ = await fixture.GetAsync("http://one.localhost/");
 
         for (var i = 0; i < 4; i++)
         {
-            using var __ = await fixture.GetAsync("/lambda/two/");
+            using var __ = await fixture.GetAsync("http://two.localhost/");
         }
 
         var activity = await DescribeAsync(fixture);
@@ -73,7 +73,7 @@ public sealed class ActivityTests
             return Inline.Create().Get(() => { throw new InvalidOperationException("boom"); return "never"; });
             """);
 
-        using var _ = await fixture.GetAsync("/lambda/broken/");
+        using var _ = await fixture.GetAsync("http://broken.localhost/");
 
         var entry = (await DescribeAsync(fixture)).Lambdas.Single(l => l.PublicKey == "broken");
 
@@ -90,7 +90,7 @@ public sealed class ActivityTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => \"0123456789\");");
 
-        using var _ = await fixture.GetAsync("/lambda/measured/");
+        using var _ = await fixture.GetAsync("http://measured.localhost/");
 
         var entry = (await DescribeAsync(fixture)).Lambdas.Single(l => l.PublicKey == "measured");
 
@@ -109,7 +109,7 @@ public sealed class ActivityTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => \"hi\");");
 
-        using var _ = await fixture.GetAsync("/lambda/temporary/");
+        using var _ = await fixture.GetAsync("http://temporary.localhost/");
 
         Assert.ContainsSingle((await DescribeAsync(fixture)).Lambdas.Where(l => l.PublicKey == "temporary"));
 
@@ -132,7 +132,7 @@ public sealed class ActivityTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => \"hi\");");
 
-        using var _ = await fixture.GetAsync("/lambda/counted/");
+        using var _ = await fixture.GetAsync("http://counted.localhost/");
 
         var telemetry = fixture.Application.Services.GetRequiredService<LambdaTelemetry>();
 
@@ -151,7 +151,7 @@ public sealed class ActivityTests
             return Inline.Create().Get(async () => { await Task.Delay(TimeSpan.FromSeconds(5)); return "late"; });
             """);
 
-        using var response = await fixture.GetAsync("/lambda/dawdler/");
+        using var response = await fixture.GetAsync("http://dawdler.localhost/");
 
         Assert.AreEqual(HttpStatusCode.GatewayTimeout, response.StatusCode);
 

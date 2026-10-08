@@ -32,7 +32,7 @@ public sealed class TemplateTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var answer = await fixture.GetAsync("/lambda/blank/");
+        using var answer = await fixture.GetAsync("http://blank.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, answer.StatusCode);
     }

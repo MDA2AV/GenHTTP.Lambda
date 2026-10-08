@@ -43,22 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'O link pode estar desatualizado, ou a lambda para onde apontava foi eliminada.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Não há nada a correr aqui',
-  heading: 'Não há nada a correr aqui',
-  notDeployed: (key) => (
-    <>
-      Há uma lambda em {key}, mas neste momento não está online. No plano gratuito, os deploys ficam online enquanto
-      são usados e são postos offline ao fim de um mês sem visitas nem alterações. Quem tiver o link de edição pode
-      voltar a pô-la online.
-    </>
-  ),
-  unknown: (key) => (
-    <>Não há nenhuma lambda em {key}. A chave pode nunca ter existido, ou a lambda foi eliminada.</>
-  ),
-  create: 'Criar uma lambda aqui',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Denunciar abuso',
   title: 'Denunciar uma lambda',

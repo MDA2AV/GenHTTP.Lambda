@@ -39,8 +39,8 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Dat is een complete lambda. Gedeployd op {k.code('/lambda/your-key/')} beantwoordt hij elk request met het
-        woord hello.
+        Dat is een complete lambda. Gedeployd beantwoordt hij op een eigen adres, vernoemd naar zijn sleutel, zoals{' '}
+        {k.code('your-key.genhttp.run')}, elk request met het woord hello.
       </>
     ),
   ],

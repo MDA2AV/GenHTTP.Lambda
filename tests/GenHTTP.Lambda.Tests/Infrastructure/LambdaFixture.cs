@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.WebSockets;
 using System.Text.Json;
 
 using GenHTTP.Lambda.Api.Model;
@@ -157,13 +158,57 @@ internal sealed class LambdaFixture : IAsyncDisposable
     #region Functionality
 
     /// <summary>
+    /// A request for an address, the way a browser asks for it: a path of the
+    /// platform, or a full address - <c>http://quiz.localhost/api</c> - whose
+    /// host is sent as such, to the server under test.
+    /// </summary>
+    /// <remarks>
+    /// The lambdas answer at subdomains of the hosting domain, which in a
+    /// fixture is localhost as on a laptop: <c>http://quiz.localhost:8080/</c>.
+    /// The server tells hosts apart by the Host header, so that is what a full
+    /// address sets - and the request goes to the port of the fixture.
+    /// </remarks>
+    public HttpRequestMessage Request(string address, HttpMethod? method = null)
+    {
+        if (!address.StartsWith("http://", StringComparison.Ordinal) && !address.StartsWith("https://", StringComparison.Ordinal))
+        {
+            return Host.GetRequest(address, method ?? HttpMethod.Get);
+        }
+
+        var url = new Uri(address);
+
+        var request = Host.GetRequest(url.PathAndQuery, method ?? HttpMethod.Get);
+
+        request.Headers.Host = url.Host;
+
+        return request;
+    }
+
+    /// <summary>
+    /// Opens a websocket at an address, the way <see cref="Request"/> sends a
+    /// request there: to the port of the fixture, with the host of the address.
+    /// </summary>
+    public async Task ConnectAsync(ClientWebSocket client, string address, CancellationToken cancellation)
+    {
+        using var probe = Request(address);
+
+        if (probe.Headers.Host is { } host)
+        {
+            client.Options.SetRequestHeader("Host", host);
+        }
+
+        await client.ConnectAsync(new UriBuilder(probe.RequestUri!) { Scheme = "ws" }.Uri, cancellation);
+    }
+
+    /// <summary>
     /// Runs a request against the application.
     /// </summary>
+    /// <param name="address">A path of the platform, or the full address of a lambda (see <see cref="Request"/>)</param>
     /// <param name="host">The Host header to send, to reach a lambda at a domain of its own</param>
-    public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? payload = null, string? accept = null,
+    public async Task<HttpResponseMessage> SendAsync(HttpMethod method, string address, object? payload = null, string? accept = null,
                                                      string? host = null)
     {
-        using var request = Host.GetRequest(path, method);
+        using var request = Request(address, method);
 
         if (host != null)
         {
@@ -183,8 +228,8 @@ internal sealed class LambdaFixture : IAsyncDisposable
         return await Host.GetResponseAsync(request);
     }
 
-    public Task<HttpResponseMessage> GetAsync(string path, string? accept = null, string? host = null)
-        => SendAsync(HttpMethod.Get, path, accept: accept, host: host);
+    public Task<HttpResponseMessage> GetAsync(string address, string? accept = null, string? host = null)
+        => SendAsync(HttpMethod.Get, address, accept: accept, host: host);
 
     /// <summary>
     /// The administration token of an installation made with <see cref="WithPanel"/>.

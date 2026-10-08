@@ -143,13 +143,13 @@ public sealed class AdminTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var served = await fixture.GetAsync("/lambda/noisy/");
+        using var served = await fixture.GetAsync("http://noisy.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
 
         using var _ = await Send(fixture, HttpMethod.Post, "/api/v1/admin/lambdas/noisy/deployment/stop", Token);
 
-        using var after = await fixture.GetAsync("/lambda/noisy/");
+        using var after = await fixture.GetAsync("http://noisy.localhost/");
 
         Assert.AreNotEqual(HttpStatusCode.OK, after.StatusCode);
 
@@ -239,7 +239,7 @@ public sealed class AdminTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using (await fixture.GetAsync("/lambda/detailed/")) { }
+        using (await fixture.GetAsync("http://detailed.localhost/")) { }
 
         using var response = await Send(fixture, HttpMethod.Get, "/api/v1/admin/lambdas/detailed", Token);
 
@@ -274,7 +274,7 @@ public sealed class AdminTests
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
-        using var served = await fixture.GetAsync("/lambda/revived/");
+        using var served = await fixture.GetAsync("http://revived.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
 

@@ -43,24 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Vielleicht ist der Link veraltet, oder das Lambda dahinter wurde gelöscht.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Hier läuft nichts',
-  heading: 'Hier läuft nichts',
-  notDeployed: (key) => (
-    <>
-      Unter {key} gibt es ein Lambda, aber es ist gerade nicht deployt. Im Free-Tarif bleiben Deployments online,
-      solange sie genutzt werden. Nach einem Monat ohne Besuche oder Änderungen gehen sie offline. Wer den Editor-Link
-      hat, kann das Lambda wieder online stellen.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      Unter {key} gibt es kein Lambda. Entweder gab es diesen Schlüssel nie, oder das Lambda dahinter wurde gelöscht.
-    </>
-  ),
-  create: 'Hier ein Lambda erstellen',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Missbrauch melden',
   title: 'Lambda melden',

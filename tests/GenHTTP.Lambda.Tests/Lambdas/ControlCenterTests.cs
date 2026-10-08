@@ -241,11 +241,11 @@ public sealed class ControlCenterTests
 
         for (var i = 0; i < 3; i++)
         {
-            using var _ = await fixture.GetAsync("/lambda/counted/hello");
+            using var _ = await fixture.GetAsync("http://counted.localhost/hello");
         }
 
-        using (var _ = await fixture.GetAsync("/lambda/counted/broken")) { }
-        using (var _ = await fixture.GetAsync("/lambda/counted/missing")) { }
+        using (var _ = await fixture.GetAsync("http://counted.localhost/broken")) { }
+        using (var _ = await fixture.GetAsync("http://counted.localhost/missing")) { }
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/traffic");
 
@@ -321,8 +321,8 @@ public sealed class ControlCenterTests
             return Inline.Create().Get(() => { Console.WriteLine("theirs speaks"); return "ok"; });
             """);
 
-        using (var _ = await fixture.GetAsync("/lambda/mine/")) { }
-        using (var _ = await fixture.GetAsync("/lambda/theirs/")) { }
+        using (var _ = await fixture.GetAsync("http://mine.localhost/")) { }
+        using (var _ = await fixture.GetAsync("http://theirs.localhost/")) { }
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{mine.PrivateKey}/logs");
 
@@ -350,7 +350,7 @@ public sealed class ControlCenterTests
             return Inline.Create().Get(() => { Console.WriteLine("the first owner"); return "ok"; });
             """);
 
-        using (var _ = await fixture.GetAsync("/lambda/reused/")) { }
+        using (var _ = await fixture.GetAsync("http://reused.localhost/")) { }
 
         using (var _ = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{first.PrivateKey}")) { }
 
@@ -373,7 +373,7 @@ public sealed class ControlCenterTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Inline.Create().Get(() => \"ok\");");
 
-        using (var _ = await fixture.GetAsync("/lambda/followed/")) { }
+        using (var _ = await fixture.GetAsync("http://followed.localhost/")) { }
 
         using var first = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/logs");
 
@@ -402,7 +402,7 @@ public sealed class ControlCenterTests
             new LambdaFile("resources/site/index.html", "<!doctype html><title>summed</title>")
         ]));
 
-        using (var _ = await fixture.GetAsync("/lambda/summed/")) { }
+        using (var _ = await fixture.GetAsync("http://summed.localhost/")) { }
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/summary");
 
@@ -440,10 +440,10 @@ public sealed class ControlCenterTests
             return Inline.Create().Get(() => { throw new InvalidOperationException("the database is on fire"); return "never"; });
             """);
 
-        using (var _ = await fixture.GetAsync("/lambda/failing/")) { }
+        using (var _ = await fixture.GetAsync("http://failing.localhost/")) { }
 
         // a missing favicon is a warning in the log, and not a problem
-        using (var _ = await fixture.GetAsync("/lambda/failing/favicon.ico")) { }
+        using (var _ = await fixture.GetAsync("http://failing.localhost/favicon.ico")) { }
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/summary");
 
@@ -521,7 +521,7 @@ public sealed class ControlCenterTests
             await database.Database.ExecuteSqlRawAsync("DELETE FROM activations");
         }
 
-        using (var served = await fixture.GetAsync("/lambda/from-before/"))
+        using (var served = await fixture.GetAsync("http://from-before.localhost/"))
         {
             Assert.AreEqual("old", await served.GetContentAsync());
         }
@@ -547,7 +547,7 @@ public sealed class ControlCenterTests
             Assert.AreEqual(HttpStatusCode.OK, rolledBack.StatusCode);
         }
 
-        using (var served = await fixture.GetAsync("/lambda/from-before/"))
+        using (var served = await fixture.GetAsync("http://from-before.localhost/"))
         {
             Assert.AreEqual("old", await served.GetContentAsync(), "the version from before the notes deploys like any other");
         }

@@ -25,7 +25,7 @@ public sealed class WebsocketTests
                             .OnMessage(async (c, m) => await c.WritePayloadAsync("echo: " + await m.ReadPayloadAsync<string>()));
             """);
 
-        Assert.AreEqual("echo: hello", await RoundtripAsync(fixture, "/lambda/functional/", "hello"));
+        Assert.AreEqual("echo: hello", await RoundtripAsync(fixture, "http://functional.localhost/", "hello"));
     }
 
     [TestMethod]
@@ -49,7 +49,7 @@ public sealed class WebsocketTests
             }
             """);
 
-        Assert.AreEqual("echo: hello", await RoundtripAsync(fixture, "/lambda/reactive/", "hello"));
+        Assert.AreEqual("echo: hello", await RoundtripAsync(fixture, "http://reactive.localhost/", "hello"));
     }
 
     [TestMethod]
@@ -90,7 +90,7 @@ public sealed class WebsocketTests
             }
             """);
 
-        Assert.AreEqual("echo: hello", await RoundtripAsync(fixture, "/lambda/imperative/", "hello"));
+        Assert.AreEqual("echo: hello", await RoundtripAsync(fixture, "http://imperative.localhost/", "hello"));
     }
 
     [TestMethod]
@@ -105,7 +105,7 @@ public sealed class WebsocketTests
                             .OnMessage(async (c, m) => await c.WritePayloadAsync(await m.ReadPayloadAsync<string>()));
             """);
 
-        using var client = await ConnectAsync(fixture, "/lambda/longlived/");
+        using var client = await ConnectAsync(fixture, "http://longlived.localhost/");
 
         Assert.AreEqual("first", await RoundtripAsync(client, "first"));
 
@@ -130,22 +130,18 @@ public sealed class WebsocketTests
                             .OnMessage(async (c, m) => await c.WritePayloadAsync(c.Request.Header.Query.GetEntry("room") + ": " + await m.ReadPayloadAsync<string>()));
             """);
 
-        Assert.AreEqual("lobby: hello", await RoundtripAsync(fixture, "/lambda/upgraded/?room=lobby", "hello"));
+        Assert.AreEqual("lobby: hello", await RoundtripAsync(fixture, "http://upgraded.localhost/?room=lobby", "hello"));
     }
 
     #region Helpers
 
-    private static async Task<ClientWebSocket> ConnectAsync(LambdaFixture fixture, string path)
+    private static async Task<ClientWebSocket> ConnectAsync(LambdaFixture fixture, string address)
     {
-        using var probe = fixture.Host.GetRequest(path);
-
-        var address = new UriBuilder(probe.RequestUri!) { Scheme = "ws" }.Uri;
-
         var client = new ClientWebSocket();
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        await client.ConnectAsync(address, timeout.Token);
+        await fixture.ConnectAsync(client, address, timeout.Token);
 
         return client;
     }

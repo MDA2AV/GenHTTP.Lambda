@@ -132,7 +132,7 @@ public sealed class PushTests
 
         Assert.Contains("Version 2 is online at", pushed.Said);
 
-        Assert.AreEqual("pushed and online", await fixture.CallAsync("/lambda/deployed/"));
+        Assert.AreEqual("pushed and online", await fixture.CallAsync("http://deployed.localhost/"));
     }
 
     [TestMethod]

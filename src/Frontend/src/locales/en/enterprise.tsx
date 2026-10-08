@@ -15,7 +15,7 @@ export const enterprise = {
     'The built-in agent, or your own over MCP',
     'Online for as long as it is used',
     `Offline after ${offline} days without visits, removed after ${removed}`,
-    'Served at a path on the shared host',
+    'Served at a subdomain of the shared domain',
   ],
   freeNote: 'No card, no sign-up. Create a lambda and it is yours.',
 

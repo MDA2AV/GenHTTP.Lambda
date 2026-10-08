@@ -34,10 +34,10 @@ public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, G
     {
         // decided here, before anything below can read a body and take the
         // headers with it, and remembered on the request for the router
-        var domain = request.ResolveDomain(domains);
+        var host = request.ResolveHost(domains);
 
         var caller = CallerInfo.From(request, pool, options.LogClientAddress, options.Geo ? geo : null,
-                                     options.GeoPlaces ? places : null, domain?.Name);
+                                     options.GeoPlaces ? places : null, host?.Name);
 
         var started = Stopwatch.GetTimestamp();
 
@@ -102,8 +102,8 @@ public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, G
         // on its way back the request knows which lambda it reached
         var lambda = request.GetLambda();
 
-        // a lambda's own domain is named in front of the path: its paths are
-        // its own, and "/api/v1/logs" there is not the platform's
+        // a lambda's host is named in front of the path: its paths are its
+        // own, and "/api/v1/logs" there is not the platform's
         var target = caller.Domain != null ? caller.Domain + caller.Path : caller.Path;
 
         book.Append(level, "Requests", lambda?.PublicKey,

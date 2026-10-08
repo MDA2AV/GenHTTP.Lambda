@@ -43,25 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Link może być nieaktualny albo lambda, do której prowadził, została usunięta.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Pod tym adresem nic teraz nie działa',
-  heading: 'Pod tym adresem nic teraz nie działa',
-  notDeployed: (key) => (
-    <>
-      Pod adresem {key} jest lambda, ale w tej chwili nie jest wdrożona. W darmowym planie wdrożenia działają, dopóki
-      ktoś z nich korzysta, i są wyłączane po miesiącu bez odwiedzin i zmian. Kto ma link do edytora, może ją znów
-      wdrożyć.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      Pod adresem {key} nie ma żadnej lambdy. Taki klucz mógł nigdy nie istnieć albo lambda, która pod nim była, została
-      usunięta.
-    </>
-  ),
-  create: 'Utwórz tu lambdę',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Zgłoś nadużycie',
   title: 'Zgłoś lambdę',

@@ -96,7 +96,7 @@ public sealed class TierAllowanceTests
 
         await fixture.DeployAsync(lambda.PrivateKey, LambdaSource.Serialize(files));
 
-        using var page = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/www/page150.html");
+        using var page = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/www/page150.html");
 
         Assert.AreEqual(HttpStatusCode.OK, page.StatusCode);
         Assert.AreEqual("<p>page 150</p>", await page.GetContentAsync());
@@ -322,7 +322,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.OK, same.StatusCode, "rewriting a file at its size takes no more room");
         }
 
-        using (var smaller = await fixture.GetAsync("/lambda/squeezed/write?name=a.bin&size=1000"))
+        using (var smaller = await fixture.GetAsync("http://squeezed.localhost/write?name=a.bin&size=1000"))
         {
             Assert.AreEqual(HttpStatusCode.OK, smaller.StatusCode, "and neither does the lambda shrinking it");
         }
@@ -332,7 +332,7 @@ public sealed class TierAllowanceTests
             Assert.AreEqual(HttpStatusCode.BadRequest, grown.StatusCode, "growing it back does");
         }
 
-        using var added = await fixture.GetAsync("/lambda/squeezed/write?name=b.bin&size=1");
+        using var added = await fixture.GetAsync("http://squeezed.localhost/write?name=b.bin&size=1");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, added.StatusCode, "and so does anything new");
     }
@@ -348,12 +348,12 @@ public sealed class TierAllowanceTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Writer);
 
-        using (var first = await fixture.GetAsync($"/lambda/hoarder/write?name=a.bin&size={2 * WorkspaceLimits.Block}"))
+        using (var first = await fixture.GetAsync($"http://hoarder.localhost/write?name=a.bin&size={2 * WorkspaceLimits.Block}"))
         {
             Assert.AreEqual(HttpStatusCode.OK, first.StatusCode, await first.Content.ReadAsStringAsync());
         }
 
-        using var second = await fixture.GetAsync($"/lambda/hoarder/write?name=b.bin&size={2 * WorkspaceLimits.Block}");
+        using var second = await fixture.GetAsync($"http://hoarder.localhost/write?name=b.bin&size={2 * WorkspaceLimits.Block}");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, second.StatusCode);
         Assert.Contains($"{3 * WorkspaceLimits.Block} bytes", await second.Content.ReadAsStringAsync(), "the lambda is told what its quota is");
@@ -389,7 +389,7 @@ public sealed class TierAllowanceTests
             });
             """);
 
-        using var response = await fixture.GetAsync("/lambda/mason/");
+        using var response = await fixture.GetAsync("http://mason.localhost/");
 
         Assert.AreEqual("False 4 2", await response.GetContentAsync(), "four blocks: two folders and two empty files, and no folders from reading");
     }
@@ -410,7 +410,7 @@ public sealed class TierAllowanceTests
             });
             """);
 
-        using var response = await fixture.GetAsync("/lambda/scribe/");
+        using var response = await fixture.GetAsync("http://scribe.localhost/");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
     }
@@ -426,21 +426,21 @@ public sealed class TierAllowanceTests
 
         var size = 8 * WorkspaceLimits.Block;
 
-        using (var refused = await fixture.GetAsync($"/lambda/mover/write?name=big.bin&size={size}"))
+        using (var refused = await fixture.GetAsync($"http://mover.localhost/write?name=big.bin&size={size}"))
         {
             Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode, "more than a free lambda may write");
         }
 
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
-        using (var written = await fixture.GetAsync($"/lambda/mover/write?name=big.bin&size={size}"))
+        using (var written = await fixture.GetAsync($"http://mover.localhost/write?name=big.bin&size={size}"))
         {
             Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, "promoted, and not deployed again");
         }
 
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Free);
 
-        using var demoted = await fixture.GetAsync($"/lambda/mover/write?name=other.bin&size={size}");
+        using var demoted = await fixture.GetAsync($"http://mover.localhost/write?name=other.bin&size={size}");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, demoted.StatusCode, "and back again");
     }
@@ -464,7 +464,7 @@ public sealed class TierAllowanceTests
         // built again on the next request, like every lambda after a restart
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
 
-        var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => fixture.GetAsync("/lambda/crowded/")));
+        var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => fixture.GetAsync("http://crowded.localhost/")));
 
         foreach (var response in responses)
         {

@@ -79,13 +79,32 @@ public sealed class DomainTests
     }
 
     [TestMethod]
-    public async Task ThePathOnThePlatformKeepsWorking()
+    public async Task ItsAddressSendsVisitorsOnToItsDomain()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         await ServeAsync(fixture, "shop");
 
-        using var response = await fixture.GetAsync("/lambda/shop/start");
+        using var response = await fixture.GetAsync("http://shop.localhost/start?ref=old");
+
+        Assert.AreEqual(HttpStatusCode.MovedPermanently, response.StatusCode, "the domain is where it answers now, the one address search engines should keep");
+        Assert.AreEqual($"https://{Domain}/start?ref=old", response.Headers.Location?.ToString(), "with the path and the query it was asked for");
+
+        using var old = await fixture.GetAsync("/lambda/shop/start");
+
+        Assert.AreEqual($"https://{Domain}/start", old.Headers.Location?.ToString(), "the path it had on the platform goes straight there, too");
+    }
+
+    [TestMethod]
+    public async Task ItsAddressServesItAgainOnceTheDomainIsGone()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await ServeAsync(fixture, "shop");
+
+        using (await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/domain")) { }
+
+        using var response = await fixture.GetAsync("http://shop.localhost/start");
 
         Assert.AreEqual("mine", await response.GetContentAsync());
     }
@@ -198,11 +217,11 @@ public sealed class DomainTests
         var served = await ReadAsync(fixture, lambda.PrivateKey);
 
         Assert.AreEqual($"https://{Domain}/", served.Address);
-        Assert.AreEqual("/lambda/shop/", served.PublicPath, "the path is still where it answers on the platform");
+        Assert.AreEqual("http://shop.localhost:8080/", served.PublicUrl, "its own address, which sends visitors on to the domain");
 
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Free);
 
-        Assert.AreEqual("/lambda/shop/", (await ReadAsync(fixture, lambda.PrivateKey)).Address, "a domain that is not served is no place to send anybody");
+        Assert.AreEqual("http://shop.localhost:8080/", (await ReadAsync(fixture, lambda.PrivateKey)).Address, "a domain that is not served is no place to send anybody");
     }
 
     [TestMethod]
@@ -222,7 +241,7 @@ public sealed class DomainTests
 
         var entry = (await listing.GetContentAsync<Page<ShowcaseResponse>>()).Entries.Single();
 
-        Assert.AreEqual($"https://{Domain}/", entry.Path);
+        Assert.AreEqual($"https://{Domain}/", entry.Address);
     }
 
     #endregion
@@ -300,7 +319,7 @@ public sealed class DomainTests
 
         using (await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}")) { }
 
-        Assert.IsFalse(fixture.Application.Services.GetRequiredService<DomainRegistry>().TryFind(Domain, out _));
+        Assert.IsNotInstanceOfType<CustomDomain>(fixture.Application.Services.GetRequiredService<DomainRegistry>().Find(Domain));
 
         await ServeAsync(fixture, "successor");
     }
@@ -317,6 +336,14 @@ public sealed class DomainTests
         using var response = await fixture.GetAsync("/start", host: Domain);
 
         Assert.AreEqual("mine", await response.GetContentAsync());
+
+        using var moved = await fixture.GetAsync("http://store.localhost/");
+
+        Assert.AreEqual($"https://{Domain}/", moved.Headers.Location?.ToString(), "its new address sends visitors on to the domain as well");
+
+        using var left = await fixture.GetAsync("http://shop.localhost/");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, left.StatusCode, "and the one it left is nobody's");
     }
 
     [TestMethod]
@@ -351,7 +378,23 @@ public sealed class DomainTests
     {
         await using var fixture = await LambdaFixture.CreateAsync(o => o with { RateLimit = 2 });
 
-        await ServeAsync(fixture, "shop");
+        var lambda = await ServeAsync(fixture, "shop");
+
+        // the other door to the same code: the preview of a feature, which
+        // the subdomain of a lambda with a domain is not - it only redirects
+        FeatureResponse feature;
+
+        using (var created = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features", new CreateFeatureRequest("Door")))
+        {
+            feature = await created.GetContentAsync<FeatureResponse>();
+        }
+
+        using (var started = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/preview/start"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, started.StatusCode, await started.Content.ReadAsStringAsync());
+        }
+
+        var preview = feature.PreviewPath;
 
         // the budget is counted per second, so the three requests only say
         // something when they arrived within one. On a machine busy compiling
@@ -362,7 +405,7 @@ public sealed class DomainTests
         {
             var clock = Stopwatch.StartNew();
 
-            using var first = await fixture.GetAsync("/lambda/shop/");
+            using var first = await fixture.GetAsync(preview);
             using var second = await fixture.GetAsync("/", host: Domain);
             using var third = await fixture.GetAsync("/", host: Domain);
 
@@ -422,12 +465,12 @@ public sealed class DomainTests
 
         await ServeAsync(fixture, "shop");
 
-        using (await fixture.GetAsync("/lambda/shop/start")) { }
+        using (await fixture.GetAsync("/api/v1/system")) { }
 
         var line = RequestLines(fixture).Last();
 
         Assert.IsNull(line.Domain);
-        Assert.StartsWith("GET /lambda/shop/start", line.Text);
+        Assert.StartsWith("GET /api/v1/system", line.Text);
     }
 
     [TestMethod]
@@ -435,18 +478,26 @@ public sealed class DomainTests
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        var lambda = await ServeAsync(fixture, "shop");
+        var lambda = await fixture.CreateLambdaAsync("shop");
+
+        await fixture.DeployAsync(lambda.PrivateKey, Code);
+
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+
+        // at its own address while it has no domain, and at the domain after
+        using (await fixture.GetAsync("http://shop.localhost/")) { }
+
+        await SetAsync(fixture, lambda.PrivateKey, Domain);
 
         using (await fixture.GetAsync("/", host: Domain)) { }
         using (await fixture.GetAsync("/start", host: Domain)) { }
-        using (await fixture.GetAsync("/lambda/shop/")) { }
 
         using var response = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/traffic");
 
         var traffic = await response.GetContentAsync<LambdaTraffic>();
 
         Assert.AreEqual(2, traffic.Entrances.Single(e => e.Domain == Domain).Requests);
-        Assert.AreEqual(1, traffic.Entrances.Single(e => e.Domain == null).Requests);
+        Assert.AreEqual(1, traffic.Entrances.Single(e => e.Domain == "shop.localhost").Requests);
 
         Assert.IsTrue(traffic.Paths.Any(p => p.Path == "/start"), "paths are the lambda's own, whichever way it was reached");
     }

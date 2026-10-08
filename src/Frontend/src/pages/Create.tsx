@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { aroundKey } from '../address';
 import { ApiError, api, type KeyStatus, type Platform, type Starter } from '../api';
 import { IconExternal, IconSpinner } from '../components/Icons';
 import { useToast } from '../components/Toast';
@@ -120,6 +121,9 @@ export function Create() {
 
   // the server leaves out what is null, so a missing demo is how the empty one is told apart
   const demos = platform?.starters.filter((s) => s.demo) ?? [];
+
+  /** What the address reads around the key: ".genhttp.run" after it. */
+  const around = aroundKey(platform?.lambdaUrl ?? '');
   const blank = platform?.starters.find((s) => !s.demo) ?? null;
 
   return (
@@ -201,9 +205,10 @@ export function Create() {
                 {said.publicKey}
               </label>
 
+              {/* the key is the first part of the address, so it is typed where it goes */}
               <div className="flex items-center gap-2">
-                <span className="shrink-0 font-mono text-sm text-slate-500">/lambda/</span>
-                <div className="relative flex-1">
+                {around.before && <span className="shrink-0 font-mono text-sm text-slate-500">{around.before}</span>}
+                <div className="relative min-w-0 flex-1">
                   <input
                     id="key"
                     value={key}
@@ -219,6 +224,7 @@ export function Create() {
                     <IconSpinner className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   )}
                 </div>
+                {around.after && <span className="shrink-0 font-mono text-sm text-slate-500">{around.after}</span>}
               </div>
 
               <p

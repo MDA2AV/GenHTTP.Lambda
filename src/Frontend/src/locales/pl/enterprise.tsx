@@ -15,7 +15,7 @@ export const enterprise: Messages['enterprise'] = {
     'Wbudowany agent albo twój własny przez MCP',
     'Lambda działa, dopóki ktoś z niej korzysta',
     `Wyłączenie po ${offline} dniach bez odwiedzin, usunięcie po ${removed} dniach`,
-    'Dostępna pod ścieżką na wspólnym hoście',
+    'Dostępna pod subdomeną wspólnej domeny',
   ],
   freeNote: 'Bez karty i bez rejestracji. Utwórz lambdę i już jest twoja.',
 

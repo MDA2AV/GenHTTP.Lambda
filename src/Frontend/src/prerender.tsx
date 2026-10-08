@@ -28,7 +28,7 @@ export const ENTRY = {
   publicKey: '__LAMBDA_ENTRY_KEY__',
   title: '__LAMBDA_ENTRY_TITLE__',
   description: '__LAMBDA_ENTRY_DESCRIPTION__',
-  path: '__LAMBDA_ENTRY_PATH__',
+  address: '__LAMBDA_ENTRY_ADDRESS__',
   imagePath: '__LAMBDA_ENTRY_IMAGE__',
   imageType: 'image/png',
   imageBytes: 0,

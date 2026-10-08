@@ -6,7 +6,7 @@
 
 ## Signing in happens at the root of the lambda
 
-A cookie set without a path belongs to the folder of the address that set it. Set by `login`, the session covers the whole lambda, wherever it is mounted: below `/lambda/{key}/`, at a domain of its own, at the preview of a feature. Set by `auth/login`, it would only ever be sent back to `auth/`. A path of `/` is not the way out either: it would send the cookie to every other lambda on the same host.
+A cookie set without a path belongs to the folder of the address that set it. Set by `login`, the session covers the whole lambda, wherever it is mounted: at the root of its own address, at a domain of its own, below the preview of a feature. Set by `auth/login`, it would only ever be sent back to `auth/`. A path of `/` is not the way out either: a preview answers below `/features/` on the platform, and there it would send the cookie to every other preview.
 
 ## The session is a cookie the browser keeps
 

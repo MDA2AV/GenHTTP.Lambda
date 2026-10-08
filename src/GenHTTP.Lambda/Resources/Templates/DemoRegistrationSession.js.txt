@@ -3,8 +3,8 @@
 // There is no token to keep here. The session is a cookie the server sets on
 // register and login, HttpOnly so this script cannot even see it, and the
 // browser sends it with every request to this lambda by itself. Relative
-// addresses throughout: the lambda may answer below /lambda/... or at the
-// root of a domain of its own.
+// addresses throughout: the lambda answers at the root of its address, but
+// its preview below /features/... on the platform.
 
 /** Calls the API; throws with the server's message when it refuses. */
 export async function call(path, { method = 'GET', body } = {}) {

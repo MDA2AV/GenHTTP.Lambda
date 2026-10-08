@@ -6,15 +6,15 @@ export const domain = {
   readFailed: 'The domain could not be read.',
   reaching: (domain: string) => `Requests to ${domain} now reach this lambda.`,
   saveFailed: 'The domain could not be saved.',
-  removed: 'The domain is removed. The lambda still answers at its address here.',
+  removed: 'The domain is removed. The lambda answers at its address here again.',
   removeFailed: 'The domain could not be removed.',
   hint:
-    'A premium lambda can answer at a domain of its own - the whole of it, from the root down - as well as at its address here. Point the domain at this server, enter it here, and requests to it reach the lambda.',
+    'A premium lambda can answer at a domain of its own - the whole of it, from the root down. Point the domain at this server first, then enter it here: from then on requests to it reach the lambda, and its address here sends visitors on to it.',
   loading: 'Loading…',
   example: 'your-domain.com',
   open: (domain: string) => `Open ${domain}`,
   label: 'The domain it answers at',
-  serving: (domain: Node) => <>Serving {domain} now, besides its address here.</>,
+  serving: (domain: Node) => <>Serving {domain} now. Its address here sends visitors on to it.</>,
   none: 'None yet. A subdomain such as shop.example.com, or a whole domain such as example.com.',
   change: 'Change',
   use: 'Use this domain',
@@ -23,8 +23,8 @@ export const domain = {
   keep: 'Keep it',
   confirmText: (domain: Node) => (
     <>
-      Requests to {domain} stop reaching this lambda at once. Its address here stays as it is, and so does whatever the
-      domain's DNS says.
+      Requests to {domain} stop reaching this lambda at once, and its address here answers again instead of sending
+      visitors on. Whatever the domain's DNS says stays as it is.
     </>
   ),
   point: 'Point the domain at this server',

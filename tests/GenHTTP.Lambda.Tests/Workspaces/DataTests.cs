@@ -49,7 +49,7 @@ public sealed class DataTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Keeper);
 
-        using (var _ = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/write")) { }
+        using (var _ = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/write")) { }
 
         // a new version, and then back to the old one: neither touches the data
         await fixture.DeployAsync(lambda.PrivateKey, Keeper.Replace("nothing", "still nothing"));
@@ -59,7 +59,7 @@ public sealed class DataTests
             Assert.AreEqual(HttpStatusCode.OK, rolledBack.StatusCode);
         }
 
-        using var read = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/read");
+        using var read = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/read");
 
         Assert.AreEqual("kept", await read.GetContentAsync());
 
@@ -111,7 +111,7 @@ public sealed class DataTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Keeper);
 
-        using (var written = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/write"))
+        using (var written = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/write"))
         {
             Assert.AreEqual(HttpStatusCode.OK, written.StatusCode);
         }
@@ -120,7 +120,7 @@ public sealed class DataTests
 
         // compiled with a workspace, it is compiled again without one on its
         // next request - no deployment needed, and none would help
-        using (var refused = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/write"))
+        using (var refused = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/write"))
         {
             Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode);
         }
@@ -141,12 +141,12 @@ public sealed class DataTests
             Assert.IsTrue((await on.GetContentAsync<DataStoreResponse>()).Enabled);
         }
 
-        using (var read = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/read"))
+        using (var read = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/read"))
         {
             Assert.AreEqual("nothing", await read.GetContentAsync(), "switched on again, it starts empty");
         }
 
-        using (var written = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/write"))
+        using (var written = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/write"))
         {
             Assert.AreEqual(HttpStatusCode.OK, written.StatusCode, "and can be written again");
         }

@@ -35,6 +35,11 @@ services:
       LAMBDA_MCP_ORIGINS: genhttp.dev,www.genhttp.dev
       # the address pages name as canonical and the sitemap lists them under
       LAMBDA_PUBLIC_URL: https://genhttp.dev
+      # where the lambdas answer, a subdomain each - quiz.genhttp.run. Takes a
+      # wildcard record in the DNS, and the certificate for *.genhttp.run and
+      # genhttp.run in /certs/genhttp.run/, which is then presented to every
+      # name no other certificate is listed for
+      LAMBDA_HOSTING_URL: https://genhttp.run
       # Deprecated: the limits of the tiers are set in the administration
       # panel (Limits) now. Passed through for one more release, so a value
       # still in .env remains the default until the panel saves one - the

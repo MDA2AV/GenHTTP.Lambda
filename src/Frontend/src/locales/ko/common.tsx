@@ -43,23 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: '링크가 오래됐거나, 링크가 가리키던 람다가 삭제됐을 수 있어요.',
 };
 
-export const missing: Messages['missing'] = {
-  title: '여기서 실행 중인 게 없어요',
-  heading: '여기서 실행 중인 게 없어요',
-  notDeployed: (key) => (
-    <>
-      {key}에 람다가 있지만, 지금은 배포되어 있지 않아요. 무료 플랜에서는 쓰는 동안 계속 온라인이고, 한 달 동안 방문도
-      수정도 없으면 내려가요. 에디터 링크가 있는 사람은 누구나 다시 온라인에 올릴 수 있어요.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      {key}에는 람다가 없어요. 처음부터 없던 키이거나, 연결된 람다가 삭제됐을 수 있어요.
-    </>
-  ),
-  create: '이 주소로 람다 만들기',
-};
-
 export const abuse: Messages['abuse'] = {
   report: '신고하기',
   title: '람다 신고하기',

@@ -46,7 +46,7 @@ Checking an upload and looking one up throw `ProviderException` with the status 
 
 ## The page is part of the program
 
-`resources/web/` is shipped with the code and served by `Resources.App("web")`, added without a path, so it answers everything outside `api/` and `files/` - an unknown address with the page. It calls both with relative paths, and the `url` of an entry is relative too (`files/{id}.png`), so everything works at `/lambda/{key}/`, at a domain of its own and at the preview of a feature alike.
+`resources/web/` is shipped with the code and served by `Resources.App("web")`, added without a path, so it answers everything outside `api/` and `files/` - an unknown address with the page. It calls both with relative paths, and the `url` of an entry is relative too (`files/{id}.png`), so everything works at its own address, at a domain of its own and at the preview of a feature alike.
 
 ## Left out
 

@@ -27,7 +27,7 @@ public sealed class DemoBehaviourTests
 
         await fixture.SeedDemosAsync();
 
-        using var created = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-crud/tasks/",
+        using var created = await fixture.SendAsync(HttpMethod.Post, "http://demo-crud.localhost/tasks/",
                                                     new { title = "Buy milk", notes = "", done = false }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.Created, created.StatusCode);
@@ -38,13 +38,13 @@ public sealed class DemoBehaviourTests
 
         StringAssert.EndsWith(task["created"]!.GetValue<string>(), "Z", "a time comes back as the UTC it was written as");
 
-        using var changed = await fixture.SendAsync(HttpMethod.Put, $"/lambda/demo-crud/tasks/{id}",
+        using var changed = await fixture.SendAsync(HttpMethod.Put, $"http://demo-crud.localhost/tasks/{id}",
                                                     new { title = "Buy oat milk", notes = "", done = true }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.OK, changed.StatusCode);
         Assert.IsTrue((await Json(changed))["done"]!.GetValue<bool>());
 
-        using var found = await fixture.GetAsync("/lambda/demo-crud/tasks/?search=OAT", "application/json");
+        using var found = await fixture.GetAsync("http://demo-crud.localhost/tasks/?search=OAT", "application/json");
 
         var matches = JsonNode.Parse(await found.Content.ReadAsStringAsync())!.AsArray();
 
@@ -52,19 +52,19 @@ public sealed class DemoBehaviourTests
 
         Assert.AreEqual("Buy oat milk", matches[0]!["title"]!.GetValue<string>());
 
-        using var invalid = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-crud/tasks/", new { title = " " }, "application/json");
+        using var invalid = await fixture.SendAsync(HttpMethod.Post, "http://demo-crud.localhost/tasks/", new { title = " " }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.BadRequest, invalid.StatusCode);
 
-        using var removed = await fixture.SendAsync(HttpMethod.Delete, $"/lambda/demo-crud/tasks/{id}");
+        using var removed = await fixture.SendAsync(HttpMethod.Delete, $"http://demo-crud.localhost/tasks/{id}");
 
         Assert.AreEqual(HttpStatusCode.NoContent, removed.StatusCode);
 
-        using var missing = await fixture.GetAsync($"/lambda/demo-crud/tasks/{id}", "application/json");
+        using var missing = await fixture.GetAsync($"http://demo-crud.localhost/tasks/{id}", "application/json");
 
         Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode);
 
-        using var specification = await fixture.GetAsync("/lambda/demo-crud/openapi.json");
+        using var specification = await fixture.GetAsync("http://demo-crud.localhost/openapi.json");
 
         Assert.AreEqual(HttpStatusCode.OK, specification.StatusCode, "the API describes itself");
     }
@@ -82,7 +82,7 @@ public sealed class DemoBehaviourTests
 
         for (var i = 0; i < 200; i++)
         {
-            using var created = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-crud/tasks/", new { title = $"Task {i}", notes = "", done = false }, "application/json");
+            using var created = await fixture.SendAsync(HttpMethod.Post, "http://demo-crud.localhost/tasks/", new { title = $"Task {i}", notes = "", done = false }, "application/json");
 
             Assert.AreEqual(HttpStatusCode.Created, created.StatusCode);
 
@@ -95,7 +95,7 @@ public sealed class DemoBehaviourTests
 
         async Task<List<JsonNode?>> ListAsync()
         {
-            using var listed = await fixture.GetAsync("/lambda/demo-crud/tasks/", "application/json");
+            using var listed = await fixture.GetAsync("http://demo-crud.localhost/tasks/", "application/json");
 
             return [.. JsonNode.Parse(await listed.Content.ReadAsStringAsync())!.AsArray()];
         }
@@ -110,11 +110,11 @@ public sealed class DemoBehaviourTests
 
         await fixture.SeedDemosAsync();
 
-        using var anonymous = await fixture.GetAsync("/lambda/demo-registration/api/me", "application/json");
+        using var anonymous = await fixture.GetAsync("http://demo-registration.localhost/api/me", "application/json");
 
         Assert.AreEqual(HttpStatusCode.Unauthorized, anonymous.StatusCode, "no session, no members area");
 
-        using var registered = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/register",
+        using var registered = await fixture.SendAsync(HttpMethod.Post, "http://demo-registration.localhost/register",
                                                        new { name = "ada", password = "correct horse" }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.OK, registered.StatusCode);
@@ -128,46 +128,46 @@ public sealed class DemoBehaviourTests
 
         Assert.DoesNotContain("session", await registered.Content.ReadAsStringAsync(), "the token travels in the cookie only");
 
-        using var again = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/register",
+        using var again = await fixture.SendAsync(HttpMethod.Post, "http://demo-registration.localhost/register",
                                                   new { name = "Ada", password = "something else" }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.Conflict, again.StatusCode, "names are unique, whatever their case");
 
-        using (var umlaut = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/register",
+        using (var umlaut = await fixture.SendAsync(HttpMethod.Post, "http://demo-registration.localhost/register",
                                                     new { name = "Jürgen", password = "correct horse" }, "application/json"))
         {
             Assert.AreEqual(HttpStatusCode.OK, umlaut.StatusCode);
         }
 
-        using (var shouted = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/register",
+        using (var shouted = await fixture.SendAsync(HttpMethod.Post, "http://demo-registration.localhost/register",
                                                      new { name = "JÜRGEN", password = "something else" }, "application/json"))
         {
             Assert.AreEqual(HttpStatusCode.Conflict, shouted.StatusCode, "in every alphabet, not only in English");
         }
 
-        using var wrong = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/login",
+        using var wrong = await fixture.SendAsync(HttpMethod.Post, "http://demo-registration.localhost/login",
                                                   new { name = "ada", password = "wrong password" }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.Unauthorized, wrong.StatusCode);
 
-        using var login = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-registration/login",
+        using var login = await fixture.SendAsync(HttpMethod.Post, "http://demo-registration.localhost/login",
                                                   new { name = "ada", password = "correct horse" }, "application/json");
 
         var session = login.Headers.GetValues("Set-Cookie").Single().Split(';')[0];
 
-        using (var me = await SendWithCookie(fixture, HttpMethod.Get, "/lambda/demo-registration/api/me", session))
+        using (var me = await SendWithCookie(fixture, HttpMethod.Get, "http://demo-registration.localhost/api/me", session))
         {
             Assert.AreEqual(HttpStatusCode.OK, me.StatusCode);
             Assert.AreEqual("ada", (await Json(me))["name"]!.GetValue<string>(), "the member is injected into the route");
         }
 
-        using (var logout = await SendWithCookie(fixture, HttpMethod.Post, "/lambda/demo-registration/logout", session))
+        using (var logout = await SendWithCookie(fixture, HttpMethod.Post, "http://demo-registration.localhost/logout", session))
         {
             Assert.AreEqual(HttpStatusCode.NoContent, logout.StatusCode);
             Assert.Contains("Max-Age=0", logout.Headers.GetValues("Set-Cookie").Single(), "the browser is told to forget it");
         }
 
-        using var after = await SendWithCookie(fixture, HttpMethod.Get, "/lambda/demo-registration/api/me", session);
+        using var after = await SendWithCookie(fixture, HttpMethod.Get, "http://demo-registration.localhost/api/me", session);
 
         Assert.AreEqual(HttpStatusCode.Forbidden, after.StatusCode, "a session that was signed out is worth nothing");
 
@@ -181,7 +181,7 @@ public sealed class DemoBehaviourTests
             Assert.DoesNotContain("correct horse", stored, "passwords are never stored");
         }
 
-        using var members = await fixture.GetAsync("/lambda/demo-registration/members.html");
+        using var members = await fixture.GetAsync("http://demo-registration.localhost/members.html");
 
         Assert.AreEqual(HttpStatusCode.OK, members.StatusCode);
     }
@@ -201,7 +201,7 @@ public sealed class DemoBehaviourTests
 
         var upload = answer["upload"]!;
 
-        using var served = await fixture.GetAsync($"/lambda/demo-files/{upload["url"]!.GetValue<string>()}");
+        using var served = await fixture.GetAsync($"http://demo-files.localhost/{upload["url"]!.GetValue<string>()}");
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
         Assert.AreEqual("hello there", await served.Content.ReadAsStringAsync());
@@ -217,15 +217,15 @@ public sealed class DemoBehaviourTests
 
         var id = upload["id"]!.GetValue<string>();
 
-        using var stranger = await fixture.SendAsync(HttpMethod.Delete, $"/lambda/demo-files/api/files/{id}?key=guess");
+        using var stranger = await fixture.SendAsync(HttpMethod.Delete, $"http://demo-files.localhost/api/files/{id}?key=guess");
 
         Assert.AreEqual(HttpStatusCode.Forbidden, stranger.StatusCode);
 
-        using var owner = await fixture.SendAsync(HttpMethod.Delete, $"/lambda/demo-files/api/files/{id}?key={answer["key"]!.GetValue<string>()}");
+        using var owner = await fixture.SendAsync(HttpMethod.Delete, $"http://demo-files.localhost/api/files/{id}?key={answer["key"]!.GetValue<string>()}");
 
         Assert.AreEqual(HttpStatusCode.NoContent, owner.StatusCode);
 
-        using var listed = await fixture.GetAsync("/lambda/demo-files/api/files", "application/json");
+        using var listed = await fixture.GetAsync("http://demo-files.localhost/api/files", "application/json");
 
         Assert.HasCount(0, JsonNode.Parse(await listed.Content.ReadAsStringAsync())!.AsArray());
     }
@@ -237,20 +237,20 @@ public sealed class DemoBehaviourTests
 
         await fixture.SeedDemosAsync();
 
-        using var vote = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-live/api/votes", new { option = "tabs" });
+        using var vote = await fixture.SendAsync(HttpMethod.Post, "http://demo-live.localhost/api/votes", new { option = "tabs" });
 
         Assert.AreEqual(HttpStatusCode.NoContent, vote.StatusCode);
 
-        using var bad = await fixture.SendAsync(HttpMethod.Post, "/lambda/demo-live/api/votes", new { option = "neither" });
+        using var bad = await fixture.SendAsync(HttpMethod.Post, "http://demo-live.localhost/api/votes", new { option = "neither" });
 
         Assert.AreEqual(HttpStatusCode.BadRequest, bad.StatusCode);
 
-        using var poll = await fixture.GetAsync("/lambda/demo-live/api/poll", "application/json");
+        using var poll = await fixture.GetAsync("http://demo-live.localhost/api/poll", "application/json");
 
         Assert.AreEqual(1, (await Json(poll))["total"]!.GetValue<int>());
 
         // the stream opens with the counts as they are
-        using var request = fixture.Host.GetRequest("/lambda/demo-live/events");
+        using var request = fixture.Request("http://demo-live.localhost/events");
 
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
@@ -299,13 +299,11 @@ public sealed class DemoBehaviourTests
 
         await fixture.SeedDemosAsync();
 
-        using var probe = fixture.Host.GetRequest("/lambda/demo-game/play");
-
         using var socket = new ClientWebSocket();
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        await socket.ConnectAsync(new UriBuilder(probe.RequestUri!) { Scheme = "ws" }.Uri, timeout.Token);
+        await fixture.ConnectAsync(socket, "http://demo-game.localhost/play", timeout.Token);
 
         Assert.AreEqual("waiting", (await Receive(socket, timeout.Token))["type"]!.GetValue<string>());
 
@@ -345,7 +343,7 @@ public sealed class DemoBehaviourTests
 
     private static async Task<HttpResponseMessage> SendWithCookie(LambdaFixture fixture, HttpMethod method, string path, string cookie)
     {
-        using var request = fixture.Host.GetRequest(path, method);
+        using var request = fixture.Request(path, method);
 
         request.Headers.Add("Cookie", cookie);
         request.Headers.Add("Accept", "application/json");
@@ -355,7 +353,7 @@ public sealed class DemoBehaviourTests
 
     private static async Task<HttpResponseMessage> Upload(LambdaFixture fixture, string name, string content)
     {
-        using var request = fixture.Host.GetRequest($"/lambda/demo-files/api/files?name={Uri.EscapeDataString(name)}", HttpMethod.Post);
+        using var request = fixture.Request($"http://demo-files.localhost/api/files?name={Uri.EscapeDataString(name)}", HttpMethod.Post);
 
         request.Content = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
         request.Headers.Add("Accept", "application/json");

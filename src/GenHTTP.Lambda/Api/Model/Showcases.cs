@@ -1,3 +1,4 @@
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Showcase;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -5,14 +6,14 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <summary>
 /// A lambda in the showcase, as the page draws it.
 /// </summary>
-/// <param name="Path">Where it answers - its own domain while it has one, its path otherwise</param>
+/// <param name="Address">Where it answers - its own domain while it has one, its address below the hosting domain otherwise</param>
 /// <param name="ImagePath">Its picture, versioned so it can be cached for good</param>
 /// <param name="Online">Whether it answers right now - the page only lists those</param>
 public sealed record ShowcaseResponse(
     string PublicKey,
     string Title,
     string Description,
-    string Path,
+    string Address,
     string ImagePath,
     string ImageType,
     int ImageBytes,
@@ -22,11 +23,11 @@ public sealed record ShowcaseResponse(
 )
 {
 
-    public static ShowcaseResponse Of(ShowcaseInfo info) => new(
+    public static ShowcaseResponse Of(ShowcaseInfo info, ILambdaAddresses addresses) => new(
         info.PublicKey,
         info.Title,
         info.Description,
-        LambdaDescription.Address(info.PublicKey, info.Tier.ToString(), info.Domain),
+        addresses.Of(info.PublicKey, info.Tier, info.Domain),
         $"/api/v1/showcases/{info.PublicKey}/image?v={info.Updated.Ticks}",
         info.ImageType,
         info.ImageBytes,

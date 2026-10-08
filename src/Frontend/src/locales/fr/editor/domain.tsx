@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Impossible de lire le domaine.',
   reaching: (domain) => `Les requêtes vers ${domain} arrivent désormais sur cette lambda.`,
   saveFailed: 'Impossible d’enregistrer le domaine.',
-  removed: 'Domaine retiré. La lambda répond toujours à son adresse ici.',
+  removed: 'Domaine retiré. La lambda répond de nouveau à son adresse ici.',
   removeFailed: 'Impossible de retirer le domaine.',
   hint:
-    'Une lambda premium peut répondre sur son propre domaine (tout le domaine, depuis la racine) en plus de son adresse ici. Faites pointer le domaine vers ce serveur, saisissez-le ici, et ses requêtes arriveront sur la lambda.',
+    'Une lambda premium peut répondre sur son propre domaine (tout le domaine, depuis la racine). Faites d’abord pointer le domaine vers ce serveur, puis saisissez-le ici : dès lors, ses requêtes arrivent sur la lambda, et son adresse ici renvoie les visiteurs vers lui.',
   loading: 'Chargement…',
   example: 'votre-domaine.fr',
   open: (domain) => `Ouvrir ${domain}`,
   label: 'Le domaine sur lequel elle répond',
-  serving: (domain) => <>Répond désormais sur {domain}, en plus de son adresse ici.</>,
+  serving: (domain) => <>Répond désormais sur {domain}. Son adresse ici renvoie les visiteurs vers lui.</>,
   none: 'Aucun pour l’instant. Un sous-domaine comme shop.example.com, ou un domaine entier comme example.com.',
   change: 'Modifier',
   use: 'Utiliser ce domaine',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Le garder',
   confirmText: (domain) => (
     <>
-      Dès maintenant, les requêtes vers {domain} n’arriveront plus sur cette lambda. Son adresse ici ne change pas,
-      pas plus que ce que dit le DNS du domaine.
+      Dès maintenant, les requêtes vers {domain} n’arriveront plus sur cette lambda, et son adresse ici répondra de
+      nouveau au lieu de renvoyer les visiteurs. Ce que dit le DNS du domaine ne change pas.
     </>
   ),
   point: 'Faites pointer le domaine vers ce serveur',

@@ -1,12 +1,9 @@
-using System.Text;
-using System.Web;
-
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Infrastructure;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
-using GenHTTP.Lambda.Services.Meta;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Source;
 
 using GenHTTP.Modules.IO;
@@ -40,22 +37,20 @@ public sealed class SiteMetaConcern : IConcern
 
     private ISourceService Sources { get; }
 
-    /// <summary>
-    /// The lambdas, for the ones the operator listed in the sitemap.
-    /// </summary>
-    private IMetaService Lambdas { get; }
+    private ILambdaAddresses Addresses { get; }
 
     #endregion
 
     #region Initialization
 
-    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, ISourceService sources, IMetaService lambdas, Func<string> index)
+    public SiteMetaConcern(IHandler content, SiteMeta meta, SitePrerender prerender, ISourceService sources, ILambdaAddresses addresses,
+                           Func<string> index)
     {
         Content = content;
         Meta = meta;
         Prerender = prerender;
         Sources = sources;
-        Lambdas = lambdas;
+        Addresses = addresses;
         Index = index;
     }
 
@@ -78,7 +73,7 @@ public sealed class SiteMetaConcern : IConcern
                 return Answer(request, Meta.Robots(), "text/plain; charset=utf-8");
 
             case "/sitemap.xml":
-                var sitemap = Meta.Sitemap(Sources.ListAddresses(), Lambdas.ListSitemap());
+                var sitemap = Meta.Sitemap(Sources.ListAddresses());
 
                 // without a public address there is nothing to list pages
                 // under, and the index page is not a sitemap either
@@ -177,7 +172,7 @@ public sealed class SiteMetaConcern : IConcern
 
         return request.Respond()
                       .Status(ResponseStatus.Found)
-                      .Header("Location", SiteLanguages.In(language, normalized) + Query(request))
+                      .Header("Location", SiteLanguages.In(language, normalized) + RequestOrigin.Query(request))
                       .Header("Vary", "Accept-Language, Cookie")
                       .Build();
     }
@@ -203,7 +198,7 @@ public sealed class SiteMetaConcern : IConcern
 
             return request.Respond()
                           .Status(ResponseStatus.Found)
-                          .Header("Location", SiteLanguages.In(preferred, path) + Query(request))
+                          .Header("Location", SiteLanguages.In(preferred, path) + RequestOrigin.Query(request))
                           .Header("Vary", "Accept-Language, Cookie")
                           .Build();
         }
@@ -229,7 +224,7 @@ public sealed class SiteMetaConcern : IConcern
         var page = Meta.Source(language, path, name, about, image) with { ImageType = image != null ? entry.PictureType : null };
 
         var schema = new SourceSchema(name, about, SourceLicenses.Find(entry.License)?.Url ?? entry.License, project.Author, entry.Updated,
-                                      entry.Online ? LambdaDescription.Address(entry.PublicKey, entry.Tier.ToString(), entry.Domain) : null);
+                                      entry.Online ? Addresses.Of(entry.PublicKey, entry.Tier, entry.Domain) : null);
 
         return Answer(request, Meta.RenderSource(Index(), page, schema), "text/html; charset=utf-8");
     }
@@ -253,33 +248,6 @@ public sealed class SiteMetaConcern : IConcern
         return (offset == 1 ? segments[0] : null, segments[offset + 1], "/" + string.Join('/', segments.Skip(offset)));
     }
 
-    /// <summary>
-    /// The query of the request, to be passed along with it.
-    /// </summary>
-    private static string Query(IRequest request)
-    {
-        var query = request.Header.Query;
-
-        if (query.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var result = new StringBuilder();
-
-        for (var i = 0; i < query.Count; i++)
-        {
-            var entry = query.GetStringEntry(i);
-
-            result.Append(i == 0 ? '?' : '&')
-                  .Append(Uri.EscapeDataString(entry.Key.ToString()))
-                  .Append('=')
-                  .Append(Uri.EscapeDataString(HttpUtility.UrlDecode(entry.Value.ToString())));
-        }
-
-        return result.ToString();
-    }
-
     public ValueTask PrepareAsync(IServer server) => Content.PrepareAsync(server);
 
     private static IResponse Answer(IRequest request, string body, string type)
@@ -294,10 +262,11 @@ public sealed class SiteMetaConcern : IConcern
 /// <summary>
 /// Builds a <see cref="SiteMetaConcern" /> for a handler.
 /// </summary>
-public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, ISourceService sources, IMetaService lambdas, Func<string> index)
+public sealed class SiteMetaConcernBuilder(SiteMeta meta, SitePrerender prerender, ISourceService sources, ILambdaAddresses addresses,
+                                           Func<string> index)
     : IConcernBuilder
 {
 
-    public IConcern Build(IHandler content) => new SiteMetaConcern(content, meta, prerender, sources, lambdas, index);
+    public IConcern Build(IHandler content) => new SiteMetaConcern(content, meta, prerender, sources, addresses, index);
 
 }

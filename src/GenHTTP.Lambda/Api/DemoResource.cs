@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 
 using GenHTTP.Modules.Webservices;
@@ -15,7 +16,7 @@ namespace GenHTTP.Lambda.Api;
 /// on its own lambda a minute later. Everything that would change it is
 /// refused by its tier.
 /// </remarks>
-public sealed class DemoResource(IMetaService meta)
+public sealed class DemoResource(IMetaService meta, ILambdaAddresses addresses)
 {
 
     /// <summary>
@@ -41,7 +42,7 @@ public sealed class DemoResource(IMetaService meta)
                 demo.ReadWhen,
                 demo.Key,
                 demo.Key,
-                $"/lambda/{demo.Key}/",
+                addresses.Of(demo.Key),
                 [.. DemoCatalog.FilesFor(demo).Select(f => f.Name)],
                 status.Deployed
             ));

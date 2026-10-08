@@ -11,8 +11,12 @@ import pages from '../pages.json';
 import { useLanguage } from '.';
 import { inLanguage, type Language } from './languages';
 
-/** The pages that exist once per language, by their path without one. */
-const LOCALIZED = new Set(Object.keys(pages));
+/**
+ * The pages that exist once per language, by their path without one - not the
+ * templates the table holds the words of other pages in, whose keys have a
+ * colon in them.
+ */
+const LOCALIZED = new Set(Object.keys(pages).filter((path) => !path.includes(':')));
 
 /**
  * Whether a path is a public page in every language: one of the build's, or

@@ -9,7 +9,7 @@ namespace GenHTTP.Lambda.Services.Telemetry;
 /// <param name="Quarters">The last day, fifteen minutes at a time, oldest first</param>
 /// <param name="Statuses">How the requests were answered, by class</param>
 /// <param name="Paths">What was asked for, busiest first</param>
-/// <param name="Entrances">Where it was reached - its path on the platform, or its own domain - busiest first</param>
+/// <param name="Entrances">Where it was reached - its subdomain of the hosting domain, or its own domain - busiest first</param>
 /// <param name="Since">When the counting started, which is when the server came up</param>
 public sealed record LambdaTraffic(
     LambdaActivity? Totals,
@@ -44,6 +44,6 @@ public sealed record PathTraffic(string Path, long Requests, long Failed, double
 /// <summary>
 /// How often a lambda was reached through one of the ways it can be reached.
 /// </summary>
-/// <param name="Domain">The lambda's own domain, or nothing for its path on the platform</param>
+/// <param name="Domain">The host it was reached at - its subdomain of the hosting domain, or its own domain</param>
 /// <param name="Requests">Requests and upgrades alike - every time somebody came in this way</param>
 public sealed record EntranceTraffic(string? Domain, long Requests);

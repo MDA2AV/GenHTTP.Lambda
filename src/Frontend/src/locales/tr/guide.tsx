@@ -39,8 +39,8 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Bu, eksiksiz bir lambda. {k.code('/lambda/your-key/')} adresinde yayına alındığında her isteğe “hello”
-        kelimesiyle yanıt verir.
+        Bu, eksiksiz bir lambda. Yayına alındığında, anahtarından türetilen kendi adresinde, örneğin{' '}
+        {k.code('your-key.genhttp.run')} adresinde yanıt verir ve oradaki her istek “hello” kelimesini alır.
       </>
     ),
   ],
