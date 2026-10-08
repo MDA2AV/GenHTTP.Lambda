@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { platformPath } from '../address';
+import { lambdaAddress } from '../address';
 import { refusedToken, api, type Activity, type Telemetry, type TelemetrySample } from '../api';
 import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
 import { LambdaLink } from '../components/LambdaLink';
 import { Pills, Section } from '../control/ui';
+import { askPlatform } from '../site';
 import type { Access } from './context';
 
 /** What each kind of event is called on screen. */
@@ -71,6 +72,15 @@ export function ServerSection({ access }: { access: Access }) {
   const [activity, setActivity] = useState<Activity | null>(null);
   const [minutes, setMinutes] = useState(readWindow);
   const [error, setError] = useState<string | null>(null);
+
+  /** Where a lambda answers, with {key} where its key goes - the listing knows the lambdas by key alone. */
+  const [lambdaUrl, setLambdaUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    askPlatform()
+      .then((platform) => setLambdaUrl(platform.lambdaUrl))
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     try {
@@ -354,9 +364,13 @@ export function ServerSection({ access }: { access: Access }) {
                 {activity.lambdas.map((entry) => (
                   <tr key={entry.publicKey} className="border-b border-slate-200 last:border-0 dark:border-ink-800">
                     <td className="px-4 py-2">
-                      <LambdaLink address={platformPath(entry.publicKey)} className="font-mono text-accent-500 hover:underline dark:text-accent-400">
-                        {entry.publicKey}
-                      </LambdaLink>
+                      {lambdaUrl !== null ? (
+                        <LambdaLink address={lambdaAddress(lambdaUrl, entry.publicKey)} className="font-mono text-accent-500 hover:underline dark:text-accent-400">
+                          {entry.publicKey}
+                        </LambdaLink>
+                      ) : (
+                        <span className="font-mono">{entry.publicKey}</span>
+                      )}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">{count(entry.requests)}</td>
                     <td className={`px-4 py-2 text-right tabular-nums ${entry.failed > 0 ? 'text-red-500' : 'text-slate-500'}`}>

@@ -68,6 +68,24 @@ public sealed class SiteMeta
     private static readonly SiteText SourceFallback = new("{name} - Source code",
         "The source code of {name}, an app built with GenHTTP Lambda: read it, download it and run it anywhere.");
 
+    /// <summary>
+    /// The entry of <c>pages.json</c> that holds the words of the page at the
+    /// root of the hosting domain, with <c>{site}</c> where the site goes.
+    /// </summary>
+    /// <remarks>
+    /// A template like <see cref="SourceTemplate"/>: that page is not one of
+    /// the site's, which only its words are taken for - so they are translated
+    /// with the rest, and the page needs nothing of the build but them.
+    /// </remarks>
+    public const string HostingHomeTemplate = "hosting:/";
+
+    /// <summary>
+    /// The entry that holds the words of the page at a subdomain of the
+    /// hosting domain nothing answers at, with <c>{address}</c> where the
+    /// address goes and <c>{site}</c> where the site goes.
+    /// </summary>
+    public const string HostingMissingTemplate = "hosting:/:key";
+
     #region Get-/Setters
 
     private string PageFile { get; }
@@ -157,6 +175,23 @@ public sealed class SiteMeta
     }
 
     /// <summary>
+    /// The words of a template in a language, in English where the build wrote
+    /// none in that one, and the given ones where there is no build.
+    /// </summary>
+    /// <returns>The language the words are in, and the words</returns>
+    public (string Language, SiteText Text) Words(string template, string language, SiteText fallback)
+    {
+        var entry = ReadPages().GetValueOrDefault(template);
+
+        if (entry?.Text.GetValueOrDefault(language) is { } text)
+        {
+            return (language, text);
+        }
+
+        return (SiteLanguages.Default, entry?.Text.GetValueOrDefault(SiteLanguages.Default) ?? fallback);
+    }
+
+    /// <summary>
     /// The page of a published source, named, with what a search engine is
     /// told about the code beside it in schema.org terms.
     /// </summary>
@@ -239,8 +274,9 @@ public sealed class SiteMeta
     /// its keys or the views only an administrator can open.
     /// </summary>
     /// <remarks>
-    /// The lambdas are not excluded. What somebody builds and shares is theirs
-    /// to have found, and it lives under <c>/lambda</c> for as long as it does.
+    /// The old addresses of the lambdas below <c>/lambda</c> are not excluded:
+    /// they send a crawler on to where each lambda answers now, which is how a
+    /// search engine learns that it moved.
     ///
     /// Nor is the part of the API the pages of the published sources are drawn
     /// from: they are not prerendered, and a crawler that renders one may only
@@ -276,12 +312,15 @@ public sealed class SiteMeta
 
     /// <summary>
     /// Every public page in every language, under the public address, each
-    /// with the addresses of its translations, and the lambdas the operator
-    /// listed - or nothing, when there is no public address to list them under.
+    /// with the addresses of its translations - or nothing, when there is no
+    /// public address to list them under.
     /// </summary>
+    /// <remarks>
+    /// Never a lambda: a sitemap names pages of the host it is served from,
+    /// and every lambda answers at a host of its own.
+    /// </remarks>
     /// <param name="sources">The published sources, each a page in every language the page of one is written in</param>
-    /// <param name="lambdas">The public keys of the lambdas the operator listed that are online</param>
-    public string? Sitemap(IReadOnlyList<SourceAddress>? sources = null, IReadOnlyList<string>? lambdas = null)
+    public string? Sitemap(IReadOnlyList<SourceAddress>? sources = null)
     {
         if (PublicUrl == null)
         {
@@ -324,31 +363,13 @@ public sealed class SiteMeta
                 Alternate("x-default", path));
         }));
 
-        // the lambdas the operator listed, at the root of each: in none of the
-        // site's languages, and without a date - what a lambda serves changes
-        // with its data as well as its versions, and a date that is sometimes
-        // wrong teaches a search engine to ignore the others
-        var listed = (lambdas ?? []).Select(key => new XElement(ns + "url", new XElement(ns + "loc", LambdaAddress(key))));
-
         var sitemap = new XDocument(
             new XDeclaration("1.0", "utf-8", null),
-            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls, published, listed)
+            new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml.NamespaceName), urls, published)
         );
 
         return sitemap.Declaration + "\n" + sitemap;
     }
-
-    /// <summary>
-    /// What the sitemap names a lambda by: the root of its address below
-    /// <c>/lambda/</c>, under the public address - or nothing, when there is
-    /// no public address and so no sitemap.
-    /// </summary>
-    /// <remarks>
-    /// Never a domain of its own, even while the lambda answers at one: a
-    /// sitemap names pages of the host it is served from.
-    /// </remarks>
-    public string? LambdaAddress(string publicKey)
-        => PublicUrl == null ? null : $"{PublicUrl}/lambda/{Uri.EscapeDataString(publicKey)}/";
 
     /// <summary>
     /// The site as a language model reads it (<c>llms.txt</c>): what it is,
@@ -454,20 +475,43 @@ public sealed class SiteMeta
     private IReadOnlyDictionary<string, SiteEntry> Pages()
         => ReadPages().Where(p => !p.Key.Contains(':')).ToDictionary(p => p.Key, p => p.Value);
 
+    /// <remarks>
+    /// Held in memory and only read again once the file on disk is newer -
+    /// "npm run build" updates a running server. It was read on every page
+    /// that asked, which was fine while only the site's public pages did; the
+    /// pages of the hosting domain answer any name below it, which whoever
+    /// likes can make up, so parsing it there would be work anybody could have
+    /// done on the reactor for nothing.
+    /// </remarks>
     private IReadOnlyDictionary<string, SiteEntry> ReadPages()
     {
-        // read every time, because "npm run build" updates a running server;
-        // it is a few kilobytes, and only public pages ask for it
+        var written = File.GetLastWriteTimeUtc(PageFile);
+
+        if (_pages is { } known && known.Written == written)
+        {
+            return known.Entries;
+        }
+
+        IReadOnlyDictionary<string, SiteEntry> entries;
+
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, SiteEntry>>(File.ReadAllText(PageFile), Json) ?? [];
+            entries = JsonSerializer.Deserialize<Dictionary<string, SiteEntry>>(File.ReadAllText(PageFile), Json) ?? [];
         }
         catch (Exception e) when (e is IOException or JsonException)
         {
             // no build, or a broken one: the pages are still served, unnamed
-            return new Dictionary<string, SiteEntry>();
+            entries = new Dictionary<string, SiteEntry>();
         }
+
+        _pages = new PagesCopy(written, entries);
+
+        return entries;
     }
+
+    private volatile PagesCopy? _pages;
+
+    private sealed record PagesCopy(DateTime Written, IReadOnlyDictionary<string, SiteEntry> Entries);
 
     /// <summary>
     /// A path the way the table spells it: "/docs/" is "/docs".

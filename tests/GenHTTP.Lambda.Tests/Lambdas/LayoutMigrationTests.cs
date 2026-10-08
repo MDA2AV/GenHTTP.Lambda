@@ -79,8 +79,8 @@ public sealed class LayoutMigrationTests
 
         Assert.IsTrue(deployed.Success, string.Join("; ", deployed.Diagnostics.Select(d => d.Message)));
 
-        Assert.AreEqual("<h1>still here</h1>", await fixture.CallAsync("/lambda/veteran/"), "what it served it serves, from where it was");
-        Assert.AreEqual("0", await fixture.CallAsync("/lambda/veteran/count"), "and its migration ran, where its code looks for it");
+        Assert.AreEqual("<h1>still here</h1>", await fixture.CallAsync("http://veteran.localhost/"), "what it served it serves, from where it was");
+        Assert.AreEqual("0", await fixture.CallAsync("http://veteran.localhost/count"), "and its migration ran, where its code looks for it");
 
         var files = (await fixture.VersionAsync(lambda, 2)).Files.Select(f => f.Name).ToList();
 
@@ -112,7 +112,7 @@ public sealed class LayoutMigrationTests
             Assert.AreEqual(HttpStatusCode.Created, merged.StatusCode, await merged.Content.ReadAsStringAsync());
         }
 
-        Assert.AreEqual("<h1>still here, brighter</h1>", await fixture.CallAsync("/lambda/veteran/"));
+        Assert.AreEqual("<h1>still here, brighter</h1>", await fixture.CallAsync("http://veteran.localhost/"));
 
         var stored = await File.ReadAllTextAsync(VersionFile(fixture, lambda, 3));
 

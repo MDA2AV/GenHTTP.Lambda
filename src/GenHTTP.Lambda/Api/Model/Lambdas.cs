@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 
@@ -28,8 +29,12 @@ public sealed record UpdateLambdaRequest(string? PublicKey, string? View = null)
 /// <param name="DeployedUntil">When it goes offline unless used; absent while offline, or when its tier keeps it online</param>
 /// <param name="KeptUntil">When it is removed unless used; absent when its tier keeps it</param>
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
+/// <param name="PublicUrl">
+/// Its address below the hosting domain, named after its key - which sends its visitors on to its domain while it
+/// answers at one
+/// </param>
 /// <param name="DomainServed">Whether it actually answers at that domain - it has one, and its tier includes it</param>
-/// <param name="Address">Where to link to it: its domain while that is served, its path otherwise</param>
+/// <param name="Address">Where to link to it: its domain while that is served, its address below the hosting domain otherwise</param>
 /// <param name="View">How its editor opens for somebody who has not chosen a view of their own: Full or Simple</param>
 /// <param name="GitPath">
 /// Where it is cloned with git, and pushed to: its versions are the commits of main, its features the other
@@ -43,7 +48,7 @@ public sealed record LambdaResponse(
     DateTime Modified,
     int? ActiveVersion,
     int? LatestVersion,
-    string PublicPath,
+    string PublicUrl,
     string EditorPath,
     DateTime? DeployedAt,
     DateTime? DeployedUntil,
@@ -73,14 +78,14 @@ public static class LambdaDescription
         lambda.Modified,
         lambda.ActiveVersion,
         lambda.LatestVersion,
-        $"/lambda/{lambda.PublicKey}/",
+        lambda.PublicUrl,
         $"/editor/{lambda.PrivateKey}",
         lambda.DeployedAt,
         lambda.DeployedUntil,
         lambda.KeptUntil,
         lambda.Domain,
         Serves(lambda.Tier, lambda.Domain),
-        Address(lambda.PublicKey, lambda.Tier, lambda.Domain),
+        lambda.Address,
         lambda.View,
         GitPath(lambda.PrivateKey, lambda.PublicKey)
     );
@@ -97,17 +102,11 @@ public static class LambdaDescription
     public static bool AllowsDomain(string tier) => tier == nameof(LambdaTier.Premium);
 
     /// <summary>
-    /// Whether a lambda of this tier with this domain is answering at it.
+    /// Whether a lambda of this tier with this domain is answering at it, as
+    /// <see cref="LambdaAddresses.Serves"/> decides.
     /// </summary>
-    public static bool Serves(string tier, string? domain) => domain != null && AllowsDomain(tier);
-
-    /// <summary>
-    /// Where anything linking to a lambda should point: the root of its own
-    /// domain while it answers there, since that is the address its visitors
-    /// know, and its path on the platform otherwise.
-    /// </summary>
-    public static string Address(string publicKey, string tier, string? domain)
-        => Serves(tier, domain) ? $"https://{domain}/" : $"/lambda/{publicKey}/";
+    public static bool Serves(string tier, string? domain)
+        => Enum.TryParse<LambdaTier>(tier, out var parsed) && LambdaAddresses.Serves(parsed, domain);
 }
 
 /// <summary>

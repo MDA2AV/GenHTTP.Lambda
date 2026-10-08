@@ -34,7 +34,7 @@ public sealed class CompressionTests
         await fixture.DeployAsync(lambda.PrivateKey,
             "return Inline.Create().Get(() => new Blob(new string('x', 80_000)));\n\nrecord Blob(string Data);");
 
-        using var request = fixture.Host.GetRequest($"/lambda/{lambda.PublicKey}/", HttpMethod.Get);
+        using var request = fixture.Request($"http://{lambda.PublicKey}.localhost/", HttpMethod.Get);
 
         request.Headers.Add("Accept-Encoding", encodings);
 

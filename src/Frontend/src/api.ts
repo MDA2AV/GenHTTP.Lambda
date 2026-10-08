@@ -11,7 +11,11 @@ export interface Lambda {
   modified: string;
   activeVersion?: number;
   latestVersion?: number;
-  publicPath: string;
+  /**
+   * Its own address below the hosting domain, named after its key - which sends
+   * visitors on to its domain while it answers at one. See address.ts.
+   */
+  publicUrl: string;
   editorPath: string;
   /** When the live version went online; absent while nothing is deployed. */
   deployedAt?: string;
@@ -23,7 +27,7 @@ export interface Lambda {
   domain?: string;
   /** Whether it actually answers at that domain right now. */
   domainServed: boolean;
-  /** Where to link to it: its domain while that is served, its path otherwise. See address.ts. */
+  /** Where to link to it: its domain while that is served, its own address otherwise. See address.ts. */
   address: string;
   /** How its editor opens for somebody who has not chosen a view of their own: Full or Simple. See control/view.ts. */
   view: string;
@@ -99,7 +103,7 @@ export interface LambdaTraffic {
   quarters: TrafficPoint[];
   statuses: { success: number; redirect: number; clientError: number; serverError: number };
   paths: { path: string; requests: number; failed: number; averageMillis: number }[];
-  /** Where it was reached: its own domain, or its path on the platform (no domain). Busiest first. */
+  /** Where it was reached: the host - its own address, or its domain. Busiest first. */
   entrances: { domain?: string | null; requests: number }[];
   /** When counting started: the figures are held in memory and a restart begins them again. */
   since: string;
@@ -117,7 +121,7 @@ export interface OwnerLogEntry {
   country?: string | null;
   agent?: string | null;
   repeats: number;
-  /** The lambda's own domain the request was addressed to; absent for its path on the platform. */
+  /** The host the request was addressed to: the lambda's own address, or its domain. */
   domain?: string | null;
 }
 
@@ -458,6 +462,8 @@ export interface Platform {
   completions: Completion[];
   /** Whether the box on /build has an agent behind it. */
   build: { available: boolean; perDay: number; secondModel: boolean };
+  /** Where a lambda answers, with {key} where its public key goes: https://{key}.genhttp.run/. See address.ts. */
+  lambdaUrl: string;
 }
 
 export interface TelemetrySample {
@@ -745,19 +751,6 @@ export interface AdminLambdaDetail {
   versions: VersionInfo[];
   activations: Activation[];
   tiers: string[];
-  sitemap: AdminSitemap;
-}
-
-/** Whether the sitemap of the installation names a lambda, which only the operator decides. */
-export interface AdminSitemap {
-  /** Whether the operator listed it; no lambda is until they do. */
-  listed: boolean;
-  /**
-   * What the sitemap names it by while it is online - the root of its address
-   * below /lambda/ - or nothing on an installation without a public address,
-   * which has no sitemap.
-   */
-  address: string | null;
 }
 
 /** One line of what the server, or a lambda on it, has said. */
@@ -789,7 +782,7 @@ export interface LogEntry {
   place?: string;
   /** How many identical lines this one stands for; 1 is itself alone. */
   repeats: number;
-  /** The lambda's own domain the request was addressed to; absent for the platform. */
+  /** The host of a lambda the request was addressed to - its own address, or its domain; absent for the platform. */
   domain?: string;
 }
 
@@ -864,8 +857,8 @@ export interface ShowcaseEntry {
   publicKey: string;
   title: string;
   description: string;
-  /** Where to link to it: its domain while that is served, its path otherwise. See address.ts. */
-  path: string;
+  /** Where to link to it: its domain while that is served, its own address otherwise. See address.ts. */
+  address: string;
   /** Its picture, versioned so it can be cached for good. */
   imagePath: string;
   imageType: string;
@@ -921,7 +914,7 @@ export interface SourceEntry {
   stars: number;
   /** Whether the app answers right now. */
   online: boolean;
-  /** Where the app answers - its domain while it has one, its path otherwise. See address.ts. */
+  /** Where the app answers - its domain while it has one, its own address otherwise. See address.ts. */
   address: string;
   /** Where its source is read, without a language. */
   path: string;
@@ -1151,10 +1144,6 @@ export const api = {
 
     lambda: (token: string, publicKey: string) =>
       request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}`, withToken(token)),
-
-    sitemap: (token: string, publicKey: string, listed: boolean) =>
-      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/sitemap`,
-        withToken(token, { method: 'PUT', body: JSON.stringify({ listed }) })),
 
     tier: (token: string, publicKey: string, tier: string) =>
       request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/tier`,

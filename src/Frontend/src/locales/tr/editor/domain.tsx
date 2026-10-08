@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Alan adı okunamadı.',
   reaching: (domain) => `${domain} alan adına gelen istekler artık bu lambdaya ulaşıyor.`,
   saveFailed: 'Alan adı kaydedilemedi.',
-  removed: 'Alan adı kaldırıldı. Lambda buradaki adresinde yanıt vermeye devam ediyor.',
+  removed: 'Alan adı kaldırıldı. Lambda buradaki adresinde yeniden yanıt veriyor.',
   removeFailed: 'Alan adı kaldırılamadı.',
   hint:
-    'Premium bir lambda, buradaki adresinin yanı sıra kendi alan adında da yanıt verebilir, hem de kökten itibaren alan adının tamamında. Alan adını bu sunucuya yönlendirin ve buraya girin. O alan adına gelen istekler lambdaya ulaşır.',
+    'Premium bir lambda, kendi alan adında yanıt verebilir, hem de kökten itibaren alan adının tamamında. Önce alan adını bu sunucuya yönlendirin, ardından buraya girin: bundan sonra o alan adına gelen istekler lambdaya ulaşır, buradaki adresi ise ziyaretçileri alan adına yönlendirir.',
   loading: 'Yükleniyor…',
   example: 'alan-adiniz.com',
   open: (domain) => `${domain} adresini aç`,
   label: 'Yanıt verdiği alan adı',
-  serving: (domain) => <>Buradaki adresinin yanı sıra artık {domain} alan adında da yayında.</>,
+  serving: (domain) => <>Artık {domain} alan adında yayında. Buradaki adresi ziyaretçileri oraya yönlendiriyor.</>,
   none: 'Henüz yok. shop.example.com gibi bir alt alan adı ya da example.com gibi bütün bir alan adı olabilir.',
   change: 'Değiştir',
   use: 'Bu alan adını kullan',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Kalsın',
   confirmText: (domain) => (
     <>
-      {domain} alan adına gelen istekler hemen bu lambdaya ulaşmayı bırakır. Lambdanın buradaki adresi olduğu gibi
-      kalır, alan adının DNS kayıtları da.
+      {domain} alan adına gelen istekler hemen bu lambdaya ulaşmayı bırakır ve lambdanın buradaki adresi ziyaretçileri
+      yönlendirmek yerine yeniden yanıt verir. Alan adının DNS kayıtları olduğu gibi kalır.
     </>
   ),
   point: 'Alan adını bu sunucuya yönlendirin',

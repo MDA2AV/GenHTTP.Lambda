@@ -127,6 +127,52 @@ public sealed class CertificateTests
     }
 
     [TestMethod]
+    public void TheWildcardOfTheHostingDomainIsPresentedToEveryNameNobodyListed()
+    {
+        using var workspace = new TemporaryDirectory();
+
+        var site = Write(Path.Combine(workspace.Path, "default"), "genhttp.dev");
+
+        var hosts = Path.Combine(workspace.Path, "hosts");
+
+        var wildcard = Write(Path.Combine(hosts, "genhttp.run"), "*.genhttp.run", "genhttp.run");
+
+        using var loader = new CertificateLoader(site with { CertificateDirectory = hosts, HostingUrl = "https://genhttp.run" }, NullLogger<CertificateLoader>.Instance);
+
+        // the io_uring engine asks once, without a name, for what it presents
+        // to a name it was not told about - and the lambdas are named after
+        // keys that are claimed while it runs
+        Assert.AreEqual(wildcard.CertificatePath, loader.ProvideFiles(null)?.Certificate);
+        Assert.AreEqual(wildcard.CertificatePath, loader.ProvideFiles("quiz.genhttp.run")?.Certificate);
+        Assert.AreEqual(wildcard.CertificatePath, loader.ProvideFiles("genhttp.run")?.Certificate, "the root of the hosting domain, where it names that too");
+
+        Assert.AreEqual(site.CertificatePath, loader.ProvideFiles("genhttp.dev")?.Certificate, "the site keeps its own");
+        CollectionAssert.Contains(loader.Hosts.ToList(), "genhttp.dev", "by the name the engine is told up front");
+
+        // Kestrel asks per connection, and gets the same
+        Assert.AreEqual("CN=*.genhttp.run", loader.Provide("quiz.genhttp.run")?.Subject);
+        Assert.AreEqual("CN=*.genhttp.run", loader.Provide("unknown.example")?.Subject);
+        Assert.AreEqual("CN=genhttp.dev", loader.Provide("genhttp.dev")?.Subject);
+    }
+
+    [TestMethod]
+    public void WithoutAWildcardTheConfiguredCertificateIsPresented()
+    {
+        using var workspace = new TemporaryDirectory();
+
+        var site = Write(Path.Combine(workspace.Path, "default"), "genhttp.dev");
+
+        var hosts = Path.Combine(workspace.Path, "hosts");
+
+        Write(Path.Combine(hosts, "other.example"), "*.other.example");
+
+        using var loader = new CertificateLoader(site with { CertificateDirectory = hosts, HostingUrl = "https://genhttp.run" }, NullLogger<CertificateLoader>.Instance);
+
+        Assert.AreEqual(site.CertificatePath, loader.ProvideFiles(null)?.Certificate, "a wildcard of another domain is not the hosting domain's");
+        Assert.AreEqual(site.CertificatePath, loader.ProvideFiles("quiz.genhttp.run")?.Certificate);
+    }
+
+    [TestMethod]
     public void ArchivesAreLeftToTheLoadedCertificate()
     {
         using var workspace = new TemporaryDirectory();
@@ -149,11 +195,23 @@ public sealed class CertificateTests
     /// </summary>
     private static LambdaOptions Write(TemporaryDirectory workspace, string name) => Write(workspace.Path, name);
 
-    private static LambdaOptions Write(string directory, string name)
+    private static LambdaOptions Write(string directory, string name, params string[] alternatives)
     {
         using var key = RSA.Create(2048);
 
         var request = new CertificateRequest($"CN={name}", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+        if (alternatives.Length > 0)
+        {
+            var names = new SubjectAlternativeNameBuilder();
+
+            foreach (var alternative in alternatives.Prepend(name))
+            {
+                names.AddDnsName(alternative);
+            }
+
+            request.CertificateExtensions.Add(names.Build());
+        }
 
         using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
 

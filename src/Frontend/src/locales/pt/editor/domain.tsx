@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Não foi possível ler o domínio.',
   reaching: (domain) => `As requisições para ${domain} agora chegam a esta lambda.`,
   saveFailed: 'Não foi possível salvar o domínio.',
-  removed: 'Domínio removido. A lambda continua respondendo no endereço daqui.',
+  removed: 'Domínio removido. A lambda volta a responder no endereço daqui.',
   removeFailed: 'Não foi possível remover o domínio.',
   hint:
-    'Uma lambda premium pode responder em um domínio próprio (o domínio inteiro, a partir da raiz), além do endereço daqui. Aponte o domínio para este servidor, informe aqui, e as requisições para ele chegam à lambda.',
+    'Uma lambda premium pode responder em um domínio próprio (o domínio inteiro, a partir da raiz). Aponte primeiro o domínio para este servidor e informe-o aqui: a partir daí, as requisições para ele chegam à lambda e o endereço daqui encaminha os visitantes para ele.',
   loading: 'Carregando…',
   example: 'seu-dominio.com.br',
   open: (domain) => `Abrir ${domain}`,
   label: 'Domínio em que ela responde',
-  serving: (domain) => <>Servindo {domain} agora, além do endereço daqui.</>,
+  serving: (domain) => <>Servindo {domain} agora. O endereço daqui encaminha os visitantes para ele.</>,
   none: 'Nenhum ainda. Um subdomínio como loja.example.com, ou um domínio inteiro como example.com.',
   change: 'Mudar',
   use: 'Usar este domínio',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Manter',
   confirmText: (domain) => (
     <>
-      As requisições para {domain} param de chegar a esta lambda na hora. O endereço daqui continua igual, e o DNS do
-      domínio também.
+      As requisições para {domain} param de chegar a esta lambda na hora, e o endereço daqui volta a responder em vez de
+      encaminhar os visitantes. O que o DNS do domínio diz continua como está.
     </>
   ),
   point: 'Aponte o domínio para este servidor',

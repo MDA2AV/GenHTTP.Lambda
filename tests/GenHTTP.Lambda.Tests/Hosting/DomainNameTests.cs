@@ -13,6 +13,7 @@ public sealed class DomainNameTests
     private static readonly LambdaOptions Options = new()
     {
         PublicUrl = "https://genhttp.dev",
+        HostingUrl = "https://genhttp.run",
         McpOrigins = ["genhttp.dev", "mirror.example.net"]
     };
 
@@ -54,6 +55,8 @@ public sealed class DomainNameTests
     [DataRow("deep.below.genhttp.dev")]
     [DataRow("mirror.example.net")]
     [DataRow("app.localhost")]
+    [DataRow("genhttp.run")]
+    [DataRow("quiz.genhttp.run")]
     public void ThePlatformsOwnNamesCannotBeClaimed(string typed)
     {
         Assert.IsFalse(DomainNames.TryNormalize(typed, Options, out _, out var reason));

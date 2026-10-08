@@ -133,6 +133,8 @@ public sealed class Application : IAsyncDisposable
 
         services.AddSingleton<ServerRegistry>();
 
+        services.AddSingleton<LambdaAddresses>();
+        services.AddSingleton<ILambdaAddresses>(provider => provider.GetRequiredService<LambdaAddresses>());
         services.AddSingleton<DomainRegistry>();
         services.AddSingleton<IDomainRegistry>(provider => provider.GetRequiredService<DomainRegistry>());
         services.AddSingleton<LambdaThrottle>();
@@ -180,6 +182,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<SiteMeta>();
         services.AddSingleton<SitePrerender>();
         services.AddSingleton<SpaResources>();
+        services.AddSingleton<HostingPages>();
 
         services.AddSingleton<LambdaTelemetry>();
         services.AddSingleton<ITelemetryService, TelemetryService>();
@@ -206,16 +209,21 @@ public sealed class Application : IAsyncDisposable
     }
 
     /// <summary>
-    /// Builds the routes of the system: a lambda's own domain goes straight to
-    /// the lambda, and everything else to the platform.
+    /// Builds the routes of the system: a lambda's own domain and its
+    /// subdomain of the hosting domain go straight to the lambda, the hosting
+    /// domain itself to its page, and everything else to the platform.
     /// </summary>
     private static IHandler BuildHandler(IServiceProvider services, LambdaOptions options)
     {
         var meta = services.GetRequiredService<IMetaService>();
 
+        var pages = services.GetRequiredService<HostingPages>();
+
         var domains = LambdaRoute.Create(services, new DomainLocator(meta));
 
-        var router = new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, BuildPlatform(services, options));
+        var hosted = LambdaRoute.Create(services, new SubdomainLocator(meta, pages));
+
+        var router = new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, hosted, pages.CreateHome(), BuildPlatform(services, options));
 
         // ahead of the router, so a challenge for a lambda's own domain is
         // answered here rather than handed to the lambda
@@ -225,15 +233,16 @@ public sealed class Application : IAsyncDisposable
     }
 
     /// <summary>
-    /// The platform itself: the API, the deployed lambdas below their keys, the
-    /// frontend's own assets and the single page application, which serves both
-    /// the landing page and the editor and catches every other path.
+    /// The platform itself: the API, the previews of features below their
+    /// keys, the frontend's own assets and the single page application, which
+    /// serves both the landing page and the editor and catches every other
+    /// path. The lambdas are not here - they answer at hosts of their own, and
+    /// their old paths below <c>/lambda/</c> are sent there before any of this
+    /// is asked (see <see cref="LambdaRedirectConcern"/>).
     /// </summary>
     private static IHandler BuildPlatform(IServiceProvider services, LambdaOptions options)
     {
         var spa = services.GetRequiredService<SpaResources>();
-
-        var lambdas = LambdaRoute.Create(services, new KeyLocator(services.GetRequiredService<IMetaService>(), spa));
 
         // the previews of features, served like the lambdas they belong to
         var previews = LambdaRoute.Create(services, new FeatureLocator(services.GetRequiredService<IFeatureService>()));
@@ -242,7 +251,6 @@ public sealed class Application : IAsyncDisposable
                            .Add("api", ApiLayout.Create(options))
                            // one path, for agents rather than for browsers
                            .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
-                           .Add("lambda", lambdas)
                            .Add("features", previews)
                            // the repositories below the editor and the published sources, asked
                            // before the pages that answer every other path there
@@ -289,7 +297,8 @@ public sealed class Application : IAsyncDisposable
                 */
                .Defaults()
                /*
-                * Outside everything but the scope below, because a concern
+                * Outside everything but the scope and the redirect below,
+                * which sends a request elsewhere without serving it, because a concern
                 * added later wraps the ones added before it.
                 *
                 * It has to be outside the defaults specifically. Those carry
@@ -307,12 +316,22 @@ public sealed class Application : IAsyncDisposable
                 */
                .Add(Dependent.Concern<CallerConcern>())
                /*
-                * Last of all: the scope of the request, which every concern
-                * taken from the container is resolved from - this one and the
-                * telemetry above, and those in front of the lambdas. A concern
-                * outside it would find no scope to be resolved from.
+                * The scope of the request, which every concern taken from
+                * the container is resolved from - this one and the telemetry
+                * above, and those in front of the lambdas. A concern outside
+                * it would find no scope to be resolved from.
                 */
-               .AddDependencyInjection(Services);
+               .AddDependencyInjection(Services)
+               /*
+                * Outside even the scope: an old address of a lambda, and its
+                * subdomain while it has a domain of its own, are answered
+                * with where it is now before anything about the platform
+                * runs - no log line, no telemetry, no upgrade to HTTPS, which
+                * the address it is sent to has already. Built by hand, since
+                * there is no scope out here to take it from.
+                */
+               .Add(new LambdaRedirectConcernBuilder(Services.GetRequiredService<IDomainRegistry>(),
+                                                     Services.GetRequiredService<ILambdaAddresses>()));
 
     /// <summary>
     /// Starts the maintenance jobs. Call once the server is up.

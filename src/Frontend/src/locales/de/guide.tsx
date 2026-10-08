@@ -39,8 +39,8 @@ export const guide: Messages['guide'] = {
     ),
     (k) => (
       <>
-        Das ist bereits ein vollständiges Lambda. Unter {k.code('/lambda/your-key/')} deployt, beantwortet es jeden
-        Request mit „hello“.
+        Das ist bereits ein vollständiges Lambda. Einmal deployt, antwortet es unter einer eigenen, nach seinem Schlüssel
+        benannten Adresse, etwa {k.code('your-key.genhttp.run')}, und jeder Request dort erhält das Wort „hello“.
       </>
     ),
   ],

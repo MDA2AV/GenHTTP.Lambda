@@ -1,5 +1,5 @@
 import { build } from './build';
-import { abuse, common, missing, notFound, shell } from './common';
+import { abuse, common, notFound, shell } from './common';
 import { connect } from './connect';
 import { create } from './create';
 import { enterprise } from './enterprise';
@@ -21,7 +21,6 @@ export const messages = {
   common,
   connect,
   notFound,
-  missing,
   abuse,
   landing,
   build,

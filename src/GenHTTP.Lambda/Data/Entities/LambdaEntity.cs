@@ -9,7 +9,7 @@ public sealed class LambdaEntity
     public long Id { get; set; }
 
     /// <summary>
-    /// The key the lambda is publicly hosted at (<c>/lambda/{PublicKey}</c>).
+    /// The key the lambda is publicly hosted at: its subdomain of the hosting domain.
     /// </summary>
     public required string PublicKey { get; set; }
 
@@ -21,8 +21,8 @@ public sealed class LambdaEntity
     public LambdaTier Tier { get; set; }
 
     /// <summary>
-    /// The domain the lambda answers at besides its path, such as
-    /// <c>shop.example.com</c>.
+    /// The domain the lambda answers at instead of its subdomain of the
+    /// hosting domain, such as <c>shop.example.com</c>.
     /// </summary>
     /// <remarks>
     /// Kept in the form it is matched in (see <c>DomainNames</c>) and only
@@ -35,15 +35,6 @@ public sealed class LambdaEntity
     /// How its editor opens for somebody who has not chosen a view of their own.
     /// </summary>
     public EditorView View { get; set; }
-
-    /// <summary>
-    /// Whether the operator listed the lambda in the sitemap of the installation.
-    /// </summary>
-    /// <remarks>
-    /// Only ever the operator's to decide, and off until they do. The sitemap
-    /// names its address below <c>/lambda/</c> while it is online.
-    /// </remarks>
-    public bool InSitemap { get; set; }
 
     /// <summary>
     /// The version that is currently deployed, if any.

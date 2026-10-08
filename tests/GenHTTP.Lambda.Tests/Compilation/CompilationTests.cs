@@ -192,7 +192,7 @@ public sealed class CompilationTests
 
         Assert.IsTrue(deployment.Success, string.Join("; ", deployment.Diagnostics.Select(d => d.Message)));
 
-        using var response = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var response = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual("kept", await response.GetContentAsync());
 
@@ -232,7 +232,7 @@ public sealed class CompilationTests
                 """)
         ]));
 
-        using var response = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var response = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual("from a type in lambda.cs", await response.GetContentAsync());
     }
@@ -283,7 +283,7 @@ public sealed class CompilationTests
             new LambdaFile("resources/notes.txt", "kept")
         ]));
 
-        using var response = await fixture.GetAsync("/lambda/shipped/");
+        using var response = await fixture.GetAsync("http://shipped.localhost/");
 
         Assert.AreEqual("kept kept kept True", await response.GetContentAsync());
     }
@@ -301,7 +301,7 @@ public sealed class CompilationTests
             new LambdaFile("Resources.cs", "public static class Resources { public const string Greeting = \"mine\"; }")
         ]));
 
-        using var response = await fixture.GetAsync("/lambda/named/");
+        using var response = await fixture.GetAsync("http://named.localhost/");
 
         Assert.AreEqual("mine", await response.GetContentAsync());
     }

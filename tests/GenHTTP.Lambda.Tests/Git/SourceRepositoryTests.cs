@@ -113,7 +113,7 @@ public sealed class SourceRepositoryTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var added = await fixture.SendAsync(HttpMethod.Post, "/lambda/private/tasks/", new { title = "a-record-nobody-else-sees" });
+        using var added = await fixture.SendAsync(HttpMethod.Post, "http://private.localhost/tasks/", new { title = "a-record-nobody-else-sees" });
 
         Assert.IsTrue(added.IsSuccessStatusCode, await added.Content.ReadAsStringAsync());
 

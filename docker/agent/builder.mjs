@@ -840,6 +840,7 @@ async function run(job) {
             created ??= {};
             if (found.publicKey) created.publicKey = found.publicKey;
             if (found.privateKey) created.privateKey = found.privateKey;
+            if (found.publicUrl) created.publicUrl = found.publicUrl;
           }
 
           if (found?.deployed) deployed = true;
@@ -958,7 +959,8 @@ async function run(job) {
     deployed,
     publicKey: created.publicKey,
     privateKey: created.privateKey,
-    url: `${ORIGIN}/lambda/${created.publicKey}/`,
+    // the old path still leads there, for a lambda whose address no answer gave
+    url: created.publicUrl ?? `${ORIGIN}/lambda/${created.publicKey}/`,
     editorUrl: `${ORIGIN}/editor/${created.privateKey}`,
     summary: clip(summary, 1200)
   };
@@ -1094,6 +1096,10 @@ function harvest(body) {
 
   if (body.publicKey) found.publicKey = body.publicKey;
   if (body.privateKey) found.privateKey = body.privateKey;
+
+  // where the lambda answers, as the platform says it - a subdomain of its
+  // hosting domain, which the runner cannot work out from its own origin
+  if (typeof body.publicUrl === 'string') found.publicUrl = body.publicUrl;
 
   /*
    * onlineUntil is only in the answer deploy gives, which is what makes it

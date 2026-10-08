@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Tasks</title>
-  <!-- relative, like every link here: the lambda may answer below /lambda/demo-crud/ or at the root of a domain -->
+  <!-- relative, like every link here: the lambda answers at the root of its address, its preview below /features/... -->
   <link rel="stylesheet" href="base.css">
   <style>
     .task { display: flex; gap: .75rem; align-items: flex-start; padding: .75rem 0; border-bottom: 1px solid var(--line); }

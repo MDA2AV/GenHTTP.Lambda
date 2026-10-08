@@ -8,7 +8,6 @@ using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
-using GenHTTP.Lambda.Web;
 
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices;
@@ -34,7 +33,7 @@ namespace GenHTTP.Lambda.Api;
 /// here is the same deployment, recorded as the operator's.
 /// </remarks>
 public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
-                                   SiteMeta site, ILogger<AdminResource> logger)
+                                   ILogger<AdminResource> logger)
 {
 
     #region Listing
@@ -145,27 +144,6 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
         var changed = meta.ChangeDomain(privateKey, body.Domain);
 
         logger.LogInformation("Set domain of lambda {Lambda} to {Domain} by operator", changed.PublicKey, changed.Domain ?? "(none)");
-
-        return Detail(privateKey);
-    }
-
-    /// <summary>
-    /// Lists a lambda in the sitemap of the installation, or takes it out.
-    /// </summary>
-    /// <remarks>
-    /// The sitemap names the root of its address below /lambda/ while it is
-    /// online. No lambda is listed until the operator lists it, and an owner
-    /// cannot list their own.
-    /// </remarks>
-    [ResourceMethod(Method.Put, "lambdas/:publicKey/sitemap")]
-    public AdminLambdaDetail ChangeSitemap(string publicKey, SitemapRequest body)
-    {
-
-        var privateKey = meta.RequirePrivateKey(publicKey);
-
-        var changed = meta.ChangeSitemap(privateKey, body.Listed);
-
-        logger.LogInformation("Set sitemap of lambda {Lambda} to {Listed} by operator", changed.PublicKey, changed.InSitemap);
 
         return Detail(privateKey);
     }
@@ -331,8 +309,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                                                                 (long)((a.Ended ?? now) - a.Started).TotalSeconds))],
             // the tiers the operator may move a lambda to, which is every one
             // but the demos': those are the seeder's to hand out
-            [.. Enum.GetValues<LambdaTier>().Where(t => t != LambdaTier.Demo).Select(t => t.ToString())],
-            new SitemapResponse(lambda.InSitemap, site.LambdaAddress(lambda.PublicKey))
+            [.. Enum.GetValues<LambdaTier>().Where(t => t != LambdaTier.Demo).Select(t => t.ToString())]
         );
     }
 

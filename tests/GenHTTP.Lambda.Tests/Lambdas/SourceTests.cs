@@ -289,7 +289,7 @@ public sealed class SourceTests
 
         Assert.IsTrue(deployment.Success, string.Join("; ", deployment.Diagnostics.Select(d => d.Message)));
 
-        using var css = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/app.css");
+        using var css = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/app.css");
 
         Assert.AreEqual(HttpStatusCode.OK, css.StatusCode);
         Assert.Contains("margin: 0", await css.Content.ReadAsStringAsync());
@@ -314,8 +314,8 @@ public sealed class SourceTests
             new LambdaFile("resources/kept.css", "body { margin: 1px }")
         ]));
 
-        using var gone = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/gone.css");
-        using var kept = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/kept.css");
+        using var gone = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/gone.css");
+        using var kept = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/kept.css");
 
         Assert.AreEqual(HttpStatusCode.NotFound, gone.StatusCode, "a version ships what it ships, not what the last one did");
         Assert.AreEqual(HttpStatusCode.OK, kept.StatusCode);
@@ -341,7 +341,7 @@ public sealed class SourceTests
             new LambdaFile("tools/generate.mjs", "a tool's script, which is no part of the program")
         ]));
 
-        using var css = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/app.css");
+        using var css = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/app.css");
 
         Assert.Contains("blue", await css.Content.ReadAsStringAsync(), "the new version serves its own resources");
 

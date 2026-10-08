@@ -15,8 +15,12 @@ export interface PageMeta {
   index?: boolean;
 }
 
-/** The path of a public page, without the language it is shown in. */
-export type PagePath = keyof typeof pages;
+/**
+ * The path of a public page, without the language it is shown in. Not the
+ * pages of the hosting domain, whose words are in the table as well: the
+ * server draws those on its own, and they are no page of this application.
+ */
+export type PagePath = Exclude<keyof typeof pages, `hosting:${string}`>;
 
 /** How a search result and a link preview name each locale, as Open Graph spells them. */
 export const OG_LOCALES: Record<Language, string> = {

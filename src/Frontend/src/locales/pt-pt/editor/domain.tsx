@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Não foi possível ler o domínio.',
   reaching: (domain) => `Os pedidos para ${domain} já chegam a esta lambda.`,
   saveFailed: 'Não foi possível guardar o domínio.',
-  removed: 'O domínio foi removido. A lambda continua a responder no endereço daqui.',
+  removed: 'O domínio foi removido. A lambda volta a responder no endereço daqui.',
   removeFailed: 'Não foi possível remover o domínio.',
   hint:
-    'Uma lambda premium pode responder num domínio próprio (o domínio inteiro, a partir da raiz), além do endereço daqui. Aponta o domínio para este servidor, indica-o aqui, e os pedidos para ele chegam à lambda.',
+    'Uma lambda premium pode responder num domínio próprio (o domínio inteiro, a partir da raiz). Aponta primeiro o domínio para este servidor e indica-o depois aqui: a partir daí, os pedidos para ele chegam à lambda e o endereço daqui reencaminha os visitantes para ele.',
   loading: 'A carregar…',
   example: 'o-teu-dominio.pt',
   open: (domain) => `Abrir ${domain}`,
   label: 'O domínio em que responde',
-  serving: (domain) => <>A servir {domain}, além do endereço daqui.</>,
+  serving: (domain) => <>A servir {domain}. O endereço daqui reencaminha os visitantes para ele.</>,
   none: 'Ainda nenhum. Um subdomínio como loja.example.com, ou um domínio inteiro como example.com.',
   change: 'Mudar',
   use: 'Usar este domínio',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Manter',
   confirmText: (domain) => (
     <>
-      Os pedidos para {domain} deixam logo de chegar a esta lambda. O endereço daqui fica como está, tal como o DNS do
-      domínio.
+      Os pedidos para {domain} deixam logo de chegar a esta lambda, e o endereço daqui volta a responder em vez de
+      reencaminhar os visitantes. O que o DNS do domínio indica fica como está.
     </>
   ),
   point: 'Aponta o domínio para este servidor',

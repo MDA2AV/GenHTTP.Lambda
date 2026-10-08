@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { hostOf } from '../address';
 import { ApiError, api, type OwnerLogEntry } from '../api';
 import { IconChevronDown, IconSpinner } from '../components/Icons';
 import { useEditorT } from '../i18n';
@@ -94,6 +95,9 @@ export function LogsTab({ control }: { control: Control }) {
 
   const needle = search.trim().toLowerCase();
 
+  /** The lambda's own host, as its lines name it. */
+  const own = hostOf(control.lambda.publicUrl);
+
   const shown = lines.filter((line) => {
     if (view === 'requests' && line.source !== 'Requests') return false;
     if (view === 'output' && line.source !== 'stdout' && line.source !== 'stderr') return false;
@@ -149,7 +153,10 @@ export function LogsTab({ control }: { control: Control }) {
       ) : (
         <ul className="divide-y divide-slate-100 border-y border-slate-200 font-mono text-[12.5px] dark:divide-ink-850 dark:border-ink-800">
           {shown.map((line) => {
-            const expandable = !!line.detail || !!line.agent || !!line.country || !!line.domain;
+            // the lambda's own address is where every line of it comes from;
+            // only a domain of its own says something
+            const domain = line.domain && line.domain !== own ? line.domain : null;
+            const expandable = !!line.detail || !!line.agent || !!line.country || !!domain;
             const expanded = open === line.seq;
 
             return (
@@ -166,7 +173,7 @@ export function LogsTab({ control }: { control: Control }) {
                   </span>
                   <LevelMark level={line.level} />
                   <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                    {feature ? preview(line.text, feature) : local(line.text, control.lambda.publicKey)}
+                    {feature ? preview(line.text, feature) : local(line.text, control.lambda.publicUrl)}
                     {line.repeats > 1 && <span className="ml-2 text-slate-400" title={said.identical(line.repeats)}>×{line.repeats}</span>}
                   </span>
                   {expandable && (
@@ -178,7 +185,7 @@ export function LogsTab({ control }: { control: Control }) {
                   <div className="space-y-2 bg-slate-50 px-3 py-2 pl-[4.75rem] dark:bg-ink-950/50">
                     <p className="font-sans text-xs text-slate-500">
                       {line.source}
-                      {line.domain && said.at(line.domain)}
+                      {domain && said.at(domain)}
                       {line.country && said.from(line.country)}
                       {line.agent && `, ${line.agent}`}
                     </p>

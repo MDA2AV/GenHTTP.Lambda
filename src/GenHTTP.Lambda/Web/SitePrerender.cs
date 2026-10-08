@@ -7,6 +7,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Api;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Settings;
 
@@ -41,7 +42,7 @@ public sealed partial class SitePrerender
     [GeneratedRegex("__LAMBDA_[A-Z_]+__")]
     private static partial Regex Placeholder();
 
-    [GeneratedRegex("href=\"__LAMBDA_ENTRY_PATH__\"|animation-delay:0ms|__LAMBDA_ENTRY_[A-Z]+__")]
+    [GeneratedRegex("href=\"__LAMBDA_ENTRY_ADDRESS__\"|animation-delay:0ms|__LAMBDA_ENTRY_[A-Z]+__")]
     private static partial Regex EntryPlaceholder();
 
     #region Get-/Setters
@@ -54,6 +55,8 @@ public sealed partial class SitePrerender
 
     private IShowcaseService Showcases { get; }
 
+    private ILambdaAddresses Addresses { get; }
+
     private ILogger<SitePrerender> Logger { get; }
 
     private Snapshot? Cached { get; set; }
@@ -62,12 +65,14 @@ public sealed partial class SitePrerender
 
     #region Initialization
 
-    public SitePrerender(LambdaOptions options, ILimitsService limits, IShowcaseService showcases, ILogger<SitePrerender> logger)
+    public SitePrerender(LambdaOptions options, ILimitsService limits, IShowcaseService showcases, ILambdaAddresses addresses,
+                         ILogger<SitePrerender> logger)
     {
         File = Path.Combine(options.WebRoot, "prerender.json");
         Options = options;
         Limits = limits;
         Showcases = showcases;
+        Addresses = addresses;
         Logger = logger;
     }
 
@@ -99,6 +104,7 @@ public sealed partial class SitePrerender
         var facts = new SiteFacts(
             origin,
             host,
+            Addresses.Authority,
             lifetimeHours,
             (int)Math.Round(lifetimeHours / 24.0, MidpointRounding.AwayFromZero),
             (int)limits.RemovedAfter.TotalDays
@@ -163,13 +169,13 @@ public sealed partial class SitePrerender
     private static string RenderEntry(string template, ShowcaseResponse entry, int index)
         => EntryPlaceholder().Replace(template, match => match.Value switch
         {
-            "href=\"__LAMBDA_ENTRY_PATH__\"" => $"href=\"{WebUtility.HtmlEncode(entry.Path)}\"",
+            "href=\"__LAMBDA_ENTRY_ADDRESS__\"" => $"href=\"{WebUtility.HtmlEncode(entry.Address)}\"",
             // the same stagger as the page, which starts again with every page it loads
             "animation-delay:0ms" => $"animation-delay:{index % ShowcaseResource.PageSize * 40}ms",
             "__LAMBDA_ENTRY_KEY__" => WebUtility.HtmlEncode(entry.PublicKey),
             "__LAMBDA_ENTRY_TITLE__" => WebUtility.HtmlEncode(entry.Title),
             "__LAMBDA_ENTRY_DESCRIPTION__" => WebUtility.HtmlEncode(entry.Description),
-            "__LAMBDA_ENTRY_PATH__" => WebUtility.HtmlEncode(Shown(entry.Path)),
+            "__LAMBDA_ENTRY_ADDRESS__" => WebUtility.HtmlEncode(Shown(entry.Address)),
             "__LAMBDA_ENTRY_IMAGE__" => WebUtility.HtmlEncode(entry.ImagePath),
             _ => match.Value
         });
@@ -182,6 +188,7 @@ public sealed partial class SitePrerender
         {
             "__LAMBDA_ORIGIN__" => WebUtility.HtmlEncode(facts.Origin),
             "__LAMBDA_HOST__" => WebUtility.HtmlEncode(facts.Host),
+            "__LAMBDA_HOSTING__" => WebUtility.HtmlEncode(facts.Hosting),
             "__LAMBDA_LIFETIME_HOURS__" => facts.LifetimeHours.ToString(),
             "__LAMBDA_OFFLINE_DAYS__" => facts.OfflineDays.ToString(),
             "__LAMBDA_RETENTION_DAYS__" => facts.RetentionDays.ToString(),
@@ -189,16 +196,16 @@ public sealed partial class SitePrerender
         });
 
     /// <summary>
-    /// The same as <c>shownAddress</c> in the frontend: a domain bare, a path as it is.
+    /// The same as <c>shownAddress</c> in the frontend: the host, without the
+    /// scheme and the slash after it.
     /// </summary>
-    private static string Shown(string address)
-        => address.StartsWith('/') ? address : Regex.Replace(address, "^https?://", string.Empty).TrimEnd('/');
+    private static string Shown(string address) => Regex.Replace(address, "^https?://", string.Empty).TrimEnd('/');
 
     private Page<ShowcaseResponse>? ListShowcase()
     {
         try
         {
-            return new ShowcaseResource(Showcases).List();
+            return new ShowcaseResource(Showcases, Addresses).List();
         }
         catch (Exception e)
         {
@@ -257,4 +264,6 @@ public sealed record Prerendered(
 /// <summary>
 /// What the server knows and the build could not, as <c>SiteFacts</c> in <c>site.ts</c>.
 /// </summary>
-public sealed record SiteFacts(string Origin, string Host, int LifetimeHours, int OfflineDays, int RetentionDays, Page<ShowcaseResponse>? Showcase = null);
+/// <param name="Hosting">The domain the lambdas answer below, with its port where it has one: genhttp.run</param>
+public sealed record SiteFacts(string Origin, string Host, string Hosting, int LifetimeHours, int OfflineDays, int RetentionDays,
+                               Page<ShowcaseResponse>? Showcase = null);

@@ -69,6 +69,13 @@ foreach (var variable in LambdaOptions.MovedToPanel())
     logger.LogWarning("Read {Variable} from the environment, which is deprecated: the limits of the tiers are set in the administration panel, and a value saved there wins", variable);
 }
 
+// an installation that names where it is found, and not where its lambdas
+// are, hands its visitors addresses below localhost
+if (options.PublicUrl != null && options.HostingUrl == null)
+{
+    logger.LogWarning("LAMBDA_PUBLIC_URL is set and LAMBDA_HOSTING_URL is not, so the lambdas answer below localhost: set it to the address their subdomains are below, such as https://genhttp.run");
+}
+
 /*
  * An unhandled exception on a thread the runtime does not own ends the
  * process, and the only trace of it is whatever reached stderr on the way

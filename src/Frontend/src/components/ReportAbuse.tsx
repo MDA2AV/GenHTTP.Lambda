@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ABUSE_MAILBOX } from '../abuse';
 import { useT } from '../i18n';
 import { Link } from '../i18n/links';
+import { useHosting } from '../site';
 import { Dialog } from './Dialog';
 
 /**
@@ -55,7 +56,7 @@ export function ReportAbuse() {
                 {ABUSE_MAILBOX}
               </a>,
               strong,
-              <span className="font-mono">/lambda/some-key/</span>,
+              <Example />,
             )}
           </p>
 
@@ -77,4 +78,14 @@ export function ReportAbuse() {
       </Dialog>
     </>
   );
+}
+
+/**
+ * What the address of an app looks like here. Drawn only while the dialog is
+ * open, since an unrendered page asks the server where the apps answer.
+ */
+function Example() {
+  const hosting = useHosting();
+
+  return <span className="font-mono">{hosting ? `some-app.${hosting}` : 'some-app'}</span>;
 }

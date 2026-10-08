@@ -12,7 +12,7 @@ public enum LambdaTier
 {
 
     /// <summary>
-    /// Anybody's lambda: reachable below <c>/lambda/{key}/</c>, taken offline
+    /// Anybody's lambda: reachable at its subdomain of the hosting domain, taken offline
     /// when unused and removed when abandoned.
     /// </summary>
     Free,

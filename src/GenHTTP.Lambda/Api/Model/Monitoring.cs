@@ -132,7 +132,7 @@ public sealed record SummaryLimits(
 /// itself are as far as this goes.
 /// </remarks>
 /// <param name="Source">Requests, stdout, stderr, or the part of the server that spoke</param>
-/// <param name="Domain">The lambda's own domain the request was addressed to, absent for its path on the platform</param>
+/// <param name="Domain">The host the request was addressed to: the lambda's subdomain of the hosting domain, or its own domain</param>
 public sealed record OwnerLogEntry(long Seq, DateTime At, string Level, string Source, string Text, string? Detail,
                                    string? Country, string? Agent, int Repeats, string? Domain);
 

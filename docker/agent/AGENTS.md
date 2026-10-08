@@ -190,11 +190,11 @@ changed there.
 
 Every link, script, stylesheet, image, `fetch`, form action and websocket
 address the lambda serves is relative: `api/items`, `app.css`, `./`. No
-leading slash, and never `/lambda/<key>/` or the full address. The same lambda
-may also answer at the root of a domain of its own, where both of those point
-at nothing - and a feature answers at `/features/<key>/`, where
-`/lambda/<key>/` is the live lambda: a feature's page linking there would read
-and write the real data instead of the feature's copy. `platform_guide` says more under `paths`.
+leading slash, and never the full address. The lambda answers at the root of
+its own address, but a feature answers at `/features/<key>/` on the
+platform, where a leading slash leaves it and the full address is the live
+lambda: a feature's page linking there would read and write the real data
+instead of the feature's copy. `platform_guide` says more under `paths`.
 
 ## When it is meant to be found
 
@@ -226,14 +226,15 @@ says more under `liveUpdates`.
 
 When you build something with pages people visit, put one small line at the
 foot of them: "Made with GenHTTP Lambda", in the language of the page,
-linking to the address `platform_guide` gives under `backlink`. Small and
-muted, in the page's own style; the name is the whole of the link. On a
-lambda with a domain of its own (`read_lambda` gives a `domainUrl`), the line
-is plain text, without the link. It is a request, not a rule: say in a few
-words when you finish that it is there and goes if they ask. When you change
-a lambda, keep the line it has and do not add one it lacks. When the owner
-asks for it to go, take it out and note in `docs/decisions.md` that they did
-not want it.
+linking to the address `platform_guide` gives under `backlink`, with
+`rel="nofollow"`. Small and muted, in the page's own style; the name is the
+whole of the link. On a lambda with a domain of its own (`read_lambda` gives
+a `domainUrl`), the line is plain text, without the link. It is a request,
+not a rule: say in a few words when you finish that it is there and goes if
+they ask. When you change a lambda, keep the line it has - giving a link
+without `rel="nofollow"` the attribute - and do not add one it lacks. When
+the owner asks for it to go, take it out and note in `docs/decisions.md` that
+they did not want it.
 
 ## What not to build
 

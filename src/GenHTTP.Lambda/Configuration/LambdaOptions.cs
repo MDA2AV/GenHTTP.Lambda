@@ -443,6 +443,26 @@ public sealed record LambdaOptions
     public string? PublicUrl { get; init; }
 
     /// <summary>
+    /// The address the lambdas answer below, each at a subdomain named after
+    /// its public key, such as <c>https://genhttp.run</c> for
+    /// <c>https://quiz.genhttp.run/</c>.
+    /// </summary>
+    /// <remarks>
+    /// A domain of its own rather than a path below the platform's, so that
+    /// what somebody built runs on a site of its own: it cannot read what the
+    /// platform keeps in a browser - the admin token, for one - nor what
+    /// another lambda keeps there, and it has the root of its host to itself.
+    /// Needs a wildcard record in the DNS and a wildcard certificate, which is
+    /// presented to every name no other certificate is listed for (see
+    /// <see cref="GenHTTP.Lambda.Infrastructure.CertificateLoader"/>).
+    ///
+    /// Left empty, it is this server on localhost - <c>http://quiz.localhost:8080/</c> -
+    /// which browsers resolve without a record, so a server run on a laptop
+    /// serves its lambdas as it is.
+    /// </remarks>
+    public string? HostingUrl { get; init; }
+
+    /// <summary>
     /// A directory holding further certificates, one subdirectory per name,
     /// each with a <c>fullchain.pem</c> and a <c>privkey.pem</c> beside it.
     /// </summary>
@@ -654,7 +674,8 @@ public sealed record LambdaOptions
             SecretsKey = ReadOptional("LAMBDA_SECRETS_KEY"),
             McpOrigins = (ReadOptional("LAMBDA_MCP_ORIGINS") ?? "")
                          .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-            PublicUrl = ReadOptional("LAMBDA_PUBLIC_URL")?.TrimEnd('/')
+            PublicUrl = ReadOptional("LAMBDA_PUBLIC_URL")?.TrimEnd('/'),
+            HostingUrl = ReadOptional("LAMBDA_HOSTING_URL")?.TrimEnd('/')
         };
     }
 

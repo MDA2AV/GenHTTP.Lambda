@@ -2,6 +2,7 @@ using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Showcase;
 
@@ -19,7 +20,7 @@ namespace GenHTTP.Lambda.Api;
 /// listed - an entry for something that does not answer is an advertisement
 /// for a broken link.
 /// </remarks>
-public sealed class ShowcaseResource(IShowcaseService showcases)
+public sealed class ShowcaseResource(IShowcaseService showcases, ILambdaAddresses addresses)
 {
 
     public const int PageSize = 12;
@@ -36,7 +37,7 @@ public sealed class ShowcaseResource(IShowcaseService showcases)
 
         var page = showcases.List(from, take);
 
-        return Page<ShowcaseResponse>.Of([.. page.Entries.Select(ShowcaseResponse.Of)], from, page.Total);
+        return Page<ShowcaseResponse>.Of([.. page.Entries.Select(e => ShowcaseResponse.Of(e, addresses))], from, page.Total);
     }
 
     /// <summary>

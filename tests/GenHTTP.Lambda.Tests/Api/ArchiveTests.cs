@@ -57,7 +57,7 @@ public sealed class ArchiveTests
 
         Assert.IsTrue(deployed.Success);
 
-        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var served = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual("from a zip", await served.GetContentAsync());
     }
@@ -178,7 +178,7 @@ public sealed class ArchiveTests
 
         Assert.AreEqual("second 1", await preview.GetContentAsync());
 
-        using var live = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var live = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreNotEqual("second 1", await live.GetContentAsync(), "and the lambda itself is not touched");
 

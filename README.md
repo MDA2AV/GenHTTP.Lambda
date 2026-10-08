@@ -18,7 +18,9 @@ docker compose up --build
 
 The application is then available at <http://localhost:8080/>. Its data - the
 SQLite database, the stored code, and the workspaces and databases of the
-lambdas - lives in a named volume mounted at `/data`.
+lambdas - lives in a named volume mounted at `/data`. The lambdas answer at
+subdomains of `LAMBDA_HOSTING_URL`, one each (see
+[Where the lambdas answer](#where-the-lambdas-answer)).
 
 ## Developing locally
 
@@ -32,9 +34,11 @@ dotnet run --project src/GenHTTP.Lambda
 cd src/Frontend && npm install && npm run dev
 ```
 
-Work against <http://localhost:5173/> while developing. The server on its own
-answers with a placeholder page until a frontend has been built into its web
-root, which is what `npm run build` does:
+Work against <http://localhost:5173/> while developing. The lambdas answer at
+subdomains of localhost named after their keys - <http://quiz.localhost:8080/> -
+which browsers resolve without a record. The server on its own answers with a
+placeholder page until a frontend has been built into its web root, which is
+what `npm run build` does:
 
 ```bash
 cd src/Frontend && npm run build   # writes src/GenHTTP.Lambda/wwwroot
@@ -79,9 +83,11 @@ port, each against its own temporary data directory.
 | `/editor/create`     | the creation assistant                                    |
 | `/editor/:privateKey`| the editor for one lambda                                 |
 | `/editor/:privateKey/:name.git` | the lambda as a git repository, to clone and push to (any name; the editor offers the public key) |
-| `/lambda/:publicKey` | the deployed handler                                      |
+| `/lambda/:publicKey/…` | where a lambda answered once: a permanent redirect to where it answers now, with the rest of the path and the query |
 | `/features/:feature` | the preview of a feature, while it is online              |
+| any path, at `{publicKey}.{hosting domain}` | the deployed handler - or, while the lambda answers at a domain of its own, a permanent redirect there |
 | any path, at a lambda's own domain | the deployed handler of a premium lambda with that domain |
+| the hosting domain itself | a page saying what is hosted there, leading to the site |
 | `/api/v1/`           | everything the editor calls, see below                    |
 | `/mcp`               | the same, for agents                                      |
 | `/admin`             | every lambda on the server, for whoever runs it            |
@@ -148,7 +154,7 @@ path.
 | `GET /sources/:publicKey/versions/:version/zip`       | a version as a project to download        |
 | `POST /sources/:publicKey/star`                       | stars it, or takes the star back (`ticket`, `starred`) |
 | `POST /builds`, `GET /builds/:id`                     | the text box on `/build`                  |
-| `GET /system`                                         | terms, limits, starters, build agent      |
+| `GET /system`                                         | terms, limits, starters, build agent, where a lambda answers (`lambdaUrl`) |
 | `GET /telemetry`, `/logs`, `/admin/...`               | for whoever runs the installation         |
 
 Creating a lambda asks what somebody would like to build and offers the demos
@@ -156,9 +162,13 @@ in those words - "Keep track of things", "Let people sign up" - next to an empty
 lambda. Picking a demo starts the new lambda as a copy of it, which is theirs to
 change. The files are in `Resources/Templates` and listed in `TemplateCatalog`.
 
-A lambda has two keys. The public one is part of its URL and may be changed;
-the private one is the editor link and is shown only to whoever created the
-lambda - anyone holding it can edit, deploy and delete.
+A lambda has two keys. The public one names its address - `quiz` answers at
+`https://quiz.genhttp.run/` - and may be changed; the private one is the
+editor link and is shown only to whoever created the lambda - anyone holding
+it can edit, deploy and delete. What the API answers about a lambda carries
+both its address below the hosting domain, `publicUrl`, and where to link to
+it, `address` - its own domain while it answers at one, `publicUrl` otherwise
+(see [Where the lambdas answer](#where-the-lambdas-answer)).
 
 A lambda may also return a websocket rather than a document, in any of the
 three flavours the module offers - `Websocket.Functional()`, `.Reactive()` and
@@ -171,6 +181,71 @@ frame, is one of the names a lambda is given, so no import is needed.
 The editor says when both free tier timers run out: a hint under the public URL
 for the deployment, and a chip beside the buttons for the lambda itself, which
 opens an explanation of how each one is extended.
+
+### Where the lambdas answer
+
+Every lambda answers at a subdomain of one domain, the hosting domain, named
+after its public key: `https://quiz.genhttp.run/`, the whole of the host its
+own. `LAMBDA_HOSTING_URL` names that domain with its scheme and port; left
+empty it is this server on localhost - `http://quiz.localhost:8080/` - which
+browsers resolve without a record in the DNS.
+
+A host of its own rather than a path below the platform's, so that what
+somebody built is a site of its own: a page of it cannot read what the
+platform keeps in a browser - the admin token, for one - nor what another
+lambda keeps there, and its paths start at the root of its host, so a
+browser asking for `/favicon.ico` asks the lambda. The editor, the API, the
+agents' endpoint and git stay where they are, on the platform.
+
+- **Its old address.** `/lambda/{key}/…` on the platform is answered with a
+  permanent redirect to where the lambda answers now, with the rest of the
+  path and the query as they were sent, byte for byte - a signature over
+  them still matches - Moved Permanently for a read, Permanent Redirect for
+  anything else, which a client sends again with the same method and body.
+  It is answered before anything else the server does: no request line, no
+  telemetry, no upgrade to HTTPS, since the address it sends to is secure
+  already. A browser keeps it for a day rather than for good, because where
+  a lambda answers changes when it gets a domain or loses one. A key nobody
+  has is sent on as well - the address moved, whether or not something is
+  there - while a path below `/lambda/` that could never have been a key is
+  not found.
+- **A domain of its own.** A premium lambda with a domain answers there and
+  only there: its subdomain sends visitors on to the domain the same way, so
+  there is one address for search engines to keep and for visitors to pass
+  on. Removing the domain, or the tier that serves it, has the subdomain
+  answer again.
+- **Nothing there.** A subdomain nothing is online at - a key nobody has, a
+  lambda that is offline, a name no key can be - is told so in a plain page
+  that leads to the site, or in a line of JSON for anything but a browser.
+  The hosting domain itself, and `www.` in front of it, has a page of its own
+  that says what is hosted there and leads to the site, in the language the
+  browser prefers; its words are in `pages.json` (`hosting:/` and
+  `hosting:/:key`) and translated with the rest. Both link the site's legal
+  notice and privacy policy, named as the site names them. Neither is one of
+  the site's pages: none of the site's scripts is ever served at the hosting
+  domain.
+- **Keys are host names.** A key is a label of the hosting domain, so the
+  names mail clients and servers look for below a domain (`mail`,
+  `autoconfig`, `autodiscover`, `mta-sts`) cannot be claimed, nor can a key
+  starting with `xn--`, which a browser reads as an international name. A
+  lambda is found by its key as it is spelled, whatever the rules for
+  claiming one say today, so a rule made later takes nothing offline.
+- **Previews stay on the platform.** The preview of a feature answers at
+  `/features/{feature}/`, as it did, which is why a lambda links relatively.
+  It is the one place a lambda's code still runs on the platform's host -
+  with what the platform keeps in that browser in reach of its scripts -
+  until previews get hosts of their own as well.
+
+The request log names the host in front of the path - `GET
+quiz.genhttp.run/api/items` - as it does for a domain of its own, and the
+traffic of a lambda counts its visitors by the host they came to.
+
+What it takes is a wildcard record in the DNS - `*.genhttp.run`, and
+`genhttp.run` for the page at its root, pointing at the server - and a
+certificate for both names (see [The hosting domain](#the-hosting-domain)).
+The hosting domain belongs on the [Public Suffix List](https://publicsuffix.org/):
+until it is there, a lambda can set a cookie for the whole domain, which the
+browser then sends to every other lambda as well.
 
 ### Versions, features and data
 
@@ -1055,6 +1130,14 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   assemblies, read once and kept - the metadata alone, not the whole files.
 - **Execution** (`Services/Execution`) - an `IHandler`, not a web service: it
   looks up the handler for a request and runs it.
+- **Hosting** (`Services/Hosting`) - where the lambdas answer (see
+  [Where the lambdas answer](#where-the-lambdas-answer)). `LambdaAddresses`
+  (`ILambdaAddresses`) builds the address of a lambda below the hosting
+  domain and reads the lambda off a host, `DomainRegistry` holds the domains
+  of their own and decides once per request whose host it is, `DomainRouter`
+  hands it to a lambda, to the page of the hosting domain or to the platform,
+  and `LambdaRedirectConcern`, in front of everything the server does, sends
+  an old address on to where its lambda answers now.
 - **Protection** (`Services/Protection`) - concerns in front of execution that
   resolve the lambda, rate limit per client and cap concurrency. A lambda is
   resolved from memory (`Services/Meta/ResolutionCache.cs`), which every write
@@ -1161,6 +1244,7 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_MCP_ORIGINS`                | -                | hosts a browser may use `/mcp` from         |
 | `LAMBDA_SECRETS_KEY`                | `secrets.key`    | the installation's half of the key secrets are sealed with, see [Secrets](#secrets) |
 | `LAMBDA_PUBLIC_URL`                 | -                | canonical address, enables the sitemap      |
+| `LAMBDA_HOSTING_URL`                | `http://localhost:{LAMBDA_PORT}` | the domain the lambdas answer below, a subdomain each: `https://genhttp.run` |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
 | `LAMBDA_CERTIFICATE_KEY`            | -                | private key, for a PEM pair                 |
@@ -1265,8 +1349,10 @@ LAMBDA_CERTIFICATE_KEY=/certs/privkey.pem
 ```
 
 A PKCS#12 archive works just as well - leave the key empty and set
-`LAMBDA_CERTIFICATE_PASSWORD` instead. The certificate is read again when the
-files change, so a renewal is picked up without a restart.
+`LAMBDA_CERTIFICATE_PASSWORD` instead. On Kestrel the certificate is read
+again when the files change, so a renewal is picked up without a restart; the
+io_uring engine takes the files when it opens its port, and is restarted to
+serve a renewal.
 
 ### Shipping resources
 
@@ -1340,7 +1426,8 @@ keeps them in:
 
 The names come from the certificates themselves rather than the folder names,
 including wildcards, and a client asking for a name none of them covers is
-answered with the default one.
+answered with the default one - or with the wildcard of the hosting domain,
+where one of them is that (see below).
 
 Note that this needs a PEM pair per name when running on the io_uring engine.
 Kestrel terminates TLS in .NET and is handed a loaded certificate, but the
@@ -1386,11 +1473,56 @@ certbot certonly --webroot -w /opt/genhttp-lambda/acme -d your.host.name
 The challenge is asked for over plain HTTP, and it is the one request the
 upgrade to HTTPS lets through rather than redirecting.
 
+### The hosting domain
+
+Every lambda answers at a subdomain of the hosting domain (see
+[Where the lambdas answer](#where-the-lambdas-answer)), named after a key
+that may be claimed at any moment, so its certificate is a wildcard - one
+certificate for `*.genhttp.run`, and for `genhttp.run` as well, which a
+wildcard does not cover and where the hosting domain has its page:
+
+```
+LAMBDA_HOSTING_URL=https://genhttp.run
+```
+
+```
+/certs/fullchain.pem               the site's, genhttp.dev - the default
+/certs/genhttp.run/fullchain.pem   *.genhttp.run and genhttp.run
+/certs/genhttp.run/privkey.pem
+```
+
+The io_uring engine matches the name a client asks for exactly, against the
+names it was told when it opened the port, and a wildcard is no such name:
+`quiz.genhttp.run` is never in that list. So the certificate whose names
+include `*.` and the hosting domain is presented to every name no
+certificate is listed for, in place of the default one - which keeps being
+presented, by name, to the names it carries. Kestrel asks per connection and
+finds the wildcard by the name anyway; it is given the same.
+
+A wildcard is issued only against a challenge in the DNS - the HTTP challenge
+the server answers proves one host, not all of them - so it takes the DNS
+plugin of certbot for whoever runs the domain's DNS, or a manual challenge:
+
+```bash
+certbot certonly --dns-<provider> -d genhttp.run -d '*.genhttp.run'
+
+mkdir -p /opt/genhttp-lambda/certs/genhttp.run
+install -m 0644 -o root -g 1001 /etc/letsencrypt/live/genhttp.run/fullchain.pem /opt/genhttp-lambda/certs/genhttp.run/
+install -m 0640 -o root -g 1001 /etc/letsencrypt/live/genhttp.run/privkey.pem   /opt/genhttp-lambda/certs/genhttp.run/
+```
+
+Like every certificate in the folder, it is found on startup. Kestrel reads a
+renewal as it is written; the io_uring engine takes the files when it opens
+its port, so the hook that installs a renewal restarts the container. A
+server whose certificates include no wildcard of the hosting domain presents
+the default one to every name, as it always did - and says so on startup, as
+it says when no certificate names the hosting domain itself.
+
 ### Custom domains
 
-A lambda in the premium tier can answer at a domain of its own, which its owner
-sets in the editor after pointing the domain's A and AAAA records at the
-server. Plain requests to it are redirected to HTTPS on the same domain like
+A lambda in the premium tier can answer at a domain of its own instead of its
+subdomain of the hosting domain, which its owner sets in the editor after
+pointing the domain's A and AAAA records at the server. Plain requests to it are redirected to HTTPS on the same domain like
 every other request, so it needs a certificate - issued by hand for now, with
 the web root above, into a folder of its own:
 
@@ -1404,10 +1536,16 @@ install -m 0640 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/privkey.p
 
 The folder is only looked through on startup - the io_uring engine learns the
 names it holds certificates for when it opens the TLS port - so a new
-certificate is served after the next restart of the container. Renewals of a
-certificate the server knows are picked up without one. Until the certificate is there, visitors of the
-domain are redirected to HTTPS and shown the default certificate, which does
-not carry their name.
+certificate is served after the next restart of the container, and so is a
+renewal on that engine. Until the certificate is there, visitors of the
+domain are redirected to HTTPS and shown the certificate every unknown name
+is shown, which does not carry their name.
+
+Mind the order: once the domain is set, the lambda's subdomain sends its
+visitors to the domain at once. The challenge is answered for any host as
+soon as its DNS points here, whether the domain is set or not, so the
+certificate can be issued and the container restarted before the owner
+enters it.
 
 ## For agents
 
@@ -1483,11 +1621,12 @@ script renders, since crawlers and agents mostly run none. The instructions say
 so in a line, `platform_guide` says how under `beingFound`, and the build
 agent's brief says the same; a tool for a few people needs a title and nothing
 more. `og:image` takes a full address - social networks do not resolve a
-relative one - so the warning a feature's deploy gives for a link to
-`/lambda/{publicKey}/` leaves meta tags and the canonical link out: they name
-the page, and the page never follows them. A lambda with a domain of its own
-names the domain as canonical, so search engines list it rather than
-`/lambda/{publicKey}/`.
+relative one - so the warning a feature's deploy gives for a link to the
+lambda's own address (or to its old path below `/lambda/`, which leads
+there) leaves meta tags and the canonical link out: they name the page, and
+the page never follows them. A lambda with a domain of its own names the
+domain as canonical and in `og:url`, so what is listed and shared names the
+domain.
 
 A page that shows what changes while it is open - what others do, a count, a
 feed, a game - is pushed the change by the server, with server-sent events when
@@ -1499,11 +1638,14 @@ shares. The instructions say so in a line, `platform_guide` under
 
 Agents are asked - not required - to put a small "Made with GenHTTP Lambda"
 line at the foot of the pages they build, linking to `LAMBDA_PUBLIC_URL` (or
-the address the agent called, where it is not set). The link's words are the
-name and nothing else. On a lambda with a domain of its own the line is plain
-text: there the link would come from another site, and the same link in the
-footers of many sites is what search engines count as link spam - below
-`/lambda/` it is a link within the site. It is the user's to refuse: the agent says that it added
+the address the agent called, where it is not set) with `rel="nofollow"`.
+The link's words are the name and nothing else. Every lambda is a site of
+its own below the hosting domain, so the link comes from another site, and
+the same link in the footers of many sites is what search engines count as
+link spam unless it says it is no recommendation - which `nofollow` does; a
+line written while the lambdas answered below the site, without it, is given
+it with the next change. On a lambda with a domain of its own the line is
+plain text. It is the user's to refuse: the agent says that it added
 it, leaves it out or takes it out when asked, and notes in `decisions.md` that
 it was not wanted, so the next agent does not put it back. A change does not
 add one to a lambda that has none. The instructions say so in a line,
@@ -1817,22 +1959,12 @@ and reading it in the editor is also how it gets emptied or corrected rather
 than only deleted. It is one more reason the token belongs to a person and not
 in a browser somebody else uses.
 
-Whoever holds the token also decides which lambdas the sitemap names. In a
-browser that holds it, the editor of every lambda has one more section,
-**Admin**, after all of the owner's in both views; nobody else sees it, and the
-server asks for the token again behind it (`PUT /api/v1/admin/lambdas/:publicKey/sitemap`
-with `{ "listed": true }`, and `sitemap` in what `GET /api/v1/admin/lambdas/:publicKey`
-answers). Its switch, off for every lambda until the operator turns it on, has
-`/sitemap.xml` name the root of the lambda's address - `https://genhttp.dev/lambda/quiz/` -
-for as long as the lambda is online. An offline lambda answers its address
-with a 404, which is no use to a crawler, so it is left out until it is back.
-Never its own domain, even where it answers at one, since a sitemap names
-pages of its own host; and without a `lastmod`, since what a lambda serves
-changes with its data as well as its versions, and a date that is sometimes
-wrong teaches a search engine to ignore the others. Neither an owner nor an
-agent can list a lambda. The section is in English, like the panel, and a
-token the server turns away is forgotten there as the panel forgets it, which
-takes the section with it.
+In a browser that holds the token, the editor of every lambda has one more
+section, **Admin**, after all of the owner's in both views; nobody else sees
+it. It is where what only the operator decides about a lambda goes, and holds
+nothing yet but the way to its page in the panel. It is in English, like the
+panel. The sitemap names no lambda: every lambda answers at a host of its own,
+and a sitemap names pages of the host it is served from.
 
 ## Database
 

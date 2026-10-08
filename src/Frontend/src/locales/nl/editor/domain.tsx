@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Het domein kon niet worden gelezen.',
   reaching: (domain) => `Requests naar ${domain} komen nu bij deze lambda uit.`,
   saveFailed: 'Het domein kon niet worden opgeslagen.',
-  removed: 'Het domein is verwijderd. De lambda reageert nog gewoon op zijn adres hier.',
+  removed: 'Het domein is verwijderd. De lambda reageert hier weer op zijn adres.',
   removeFailed: 'Het domein kon niet worden verwijderd.',
   hint:
-    'Een premium lambda kan naast zijn adres hier ook op een eigen domein draaien, helemaal vanaf de root. Laat het domein naar deze server wijzen en vul het hier in. Dan komen requests naar dat domein bij de lambda uit.',
+    'Een premium lambda kan op een eigen domein draaien, helemaal vanaf de root. Laat het domein eerst naar deze server wijzen en vul het daarna hier in: vanaf dan komen requests naar dat domein bij de lambda uit, en stuurt het adres hier bezoekers door naar dat domein.',
   loading: 'Laden…',
   example: 'jouw-domein.nl',
   open: (domain) => `${domain} openen`,
   label: 'Het domein waarop hij reageert',
-  serving: (domain) => <>Draait nu op {domain}, naast zijn adres hier.</>,
+  serving: (domain) => <>Draait nu op {domain}. Het adres hier stuurt bezoekers door.</>,
   none: 'Nog geen. Een subdomein zoals shop.example.com, of een heel domein zoals example.com.',
   change: 'Wijzigen',
   use: 'Dit domein gebruiken',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Laten staan',
   confirmText: (domain) => (
     <>
-      Requests naar {domain} komen meteen niet meer bij deze lambda uit. Het adres hier blijft zoals het is, en de
-      DNS-instellingen van het domein ook.
+      Requests naar {domain} komen meteen niet meer bij deze lambda uit, en het adres hier antwoordt weer zelf in plaats
+      van bezoekers door te sturen. De DNS-instellingen van het domein blijven zoals ze zijn.
     </>
   ),
   point: 'Laat het domein naar deze server wijzen',

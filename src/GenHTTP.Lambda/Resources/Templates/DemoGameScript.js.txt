@@ -16,7 +16,7 @@ const cells = [...Array(9)].map((_, i) => {
 });
 
 // the socket's address from the page's own: relative, with the scheme swapped,
-// so it works below /lambda/demo-game/ and at the root of a domain alike
+// so it works at the root of its address and below a preview's alike
 const address = new URL('play', location.href);
 address.protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
 

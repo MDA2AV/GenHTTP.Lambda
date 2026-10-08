@@ -15,7 +15,7 @@ export const enterprise: Messages['enterprise'] = {
     'Agen bawaan, atau agen Anda sendiri lewat MCP',
     'Online selama dipakai',
     `Offline setelah ${offline} hari tanpa kunjungan, dihapus setelah ${removed} hari`,
-    'Diakses lewat path di host bersama',
+    'Diakses lewat subdomain dari domain bersama',
   ],
   freeNote: 'Tanpa kartu kredit, tanpa daftar. Buat lambda, dan langsung jadi milik Anda.',
 

@@ -6,6 +6,7 @@ namespace GenHTTP.Lambda.Api.Model;
 /// What the editor needs to know about the platform it talks to.
 /// </summary>
 /// <param name="BuildBytes">How large a version of a free lambda may be, its code and its resources together</param>
+/// <param name="LambdaUrl">Where a lambda answers, with <c>{key}</c> where its public key goes: https://{key}.genhttp.run/</param>
 public sealed record PlatformResponse(
     string Terms,
     IReadOnlyList<StarterResponse> Starters,
@@ -14,7 +15,8 @@ public sealed record PlatformResponse(
     int RetentionDays,
     IReadOnlyList<string> Imports,
     IReadOnlyList<CompletionItem> Completions,
-    BuildAvailability Build
+    BuildAvailability Build,
+    string LambdaUrl
 );
 
 /// <summary>

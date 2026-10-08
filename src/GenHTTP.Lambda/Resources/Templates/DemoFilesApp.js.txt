@@ -1,6 +1,6 @@
 // Uploads a file as the raw body of a POST, and shows what is there.
-// Relative addresses only: the lambda may answer below /lambda/demo-files/
-// or at the root of a domain of its own.
+// Relative addresses only: the lambda answers at the root of its address,
+// but its preview below /features/... on the platform.
 
 const drop = document.getElementById('drop');
 const input = document.getElementById('file');

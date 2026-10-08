@@ -250,13 +250,13 @@ public sealed class LimitsTests
             });
             """);
 
-        Assert.AreEqual("grew", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"));
+        Assert.AreEqual("grew", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"));
 
         var current = await ReadAsync(fixture);
 
         await ChangeAsync(fixture, current with { Free = current.Free with { DataBytes = 256 * 1024 } });
 
-        StringAssert.Contains(await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"), "full", "the records it has are kept; it grows no further");
+        StringAssert.Contains(await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"), "full", "the records it has are kept; it grows no further");
     }
 
     #region Helpers

@@ -4,15 +4,15 @@ export const domain: EditorMessages['domain'] = {
   readFailed: 'Nie udało się odczytać domeny.',
   reaching: (domain) => `Żądania do ${domain} trafiają teraz do tej lambdy.`,
   saveFailed: 'Nie udało się zapisać domeny.',
-  removed: 'Domena została usunięta. Lambda nadal odpowiada pod swoim adresem tutaj.',
+  removed: 'Domena została usunięta. Lambda znów odpowiada pod swoim adresem tutaj.',
   removeFailed: 'Nie udało się usunąć domeny.',
   hint:
-    'Lambda premium może odpowiadać nie tylko pod swoim adresem tutaj, ale też pod całą własną domeną. Skieruj domenę na ten serwer, wpisz ją tutaj, a żądania do niej trafią do lambdy.',
+    'Lambda premium może odpowiadać pod własną domeną – całą, od korzenia. Najpierw skieruj domenę na ten serwer, potem wpisz ją tutaj: od tej chwili żądania do niej trafiają do lambdy, a jej adres tutaj przekierowuje odwiedzających na domenę.',
   loading: 'Ładowanie…',
   example: 'twoja-domena.pl',
   open: (domain) => `Otwórz ${domain}`,
   label: 'Domena, pod którą odpowiada',
-  serving: (domain) => <>Działa teraz pod {domain} i nadal pod swoim adresem tutaj.</>,
+  serving: (domain) => <>Działa teraz pod {domain}. Jej adres tutaj przekierowuje odwiedzających na tę domenę.</>,
   none: 'Jeszcze brak. Może to być subdomena, np. shop.example.com, albo cała domena, np. example.com.',
   change: 'Zmień',
   use: 'Użyj tej domeny',
@@ -21,8 +21,8 @@ export const domain: EditorMessages['domain'] = {
   keep: 'Zostaw',
   confirmText: (domain) => (
     <>
-      Żądania do {domain} od razu przestaną trafiać do tej lambdy. Jej adres tutaj zostaje bez zmian, podobnie jak
-      ustawienia DNS domeny.
+      Żądania do {domain} od razu przestaną trafiać do tej lambdy, a jej adres tutaj znów będzie odpowiadał zamiast
+      przekierowywać odwiedzających. Ustawienia DNS domeny zostają bez zmian.
     </>
   ),
   point: 'Skieruj domenę na ten serwer',

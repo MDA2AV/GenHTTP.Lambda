@@ -125,7 +125,7 @@ public sealed class SourceTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using (var added = await fixture.GetAsync($"/lambda/notes/add?text={Uri.EscapeDataString(record)}"))
+        using (var added = await fixture.GetAsync($"http://notes.localhost/add?text={Uri.EscapeDataString(record)}"))
         {
             Assert.AreEqual(HttpStatusCode.OK, added.StatusCode);
         }
@@ -476,7 +476,7 @@ public sealed class SourceTests
         var before = await ProjectAsync(fixture, "shop");
 
         Assert.IsTrue(before.Source.Online);
-        Assert.AreEqual("/lambda/shop/", before.Source.Address, "its path on the platform, while it has no domain");
+        Assert.AreEqual("http://shop.localhost:8080/", before.Source.Address, "its own address, while it has no domain");
         Assert.IsTrue(before.Versions[0].Online, "and which version is the one online");
 
         fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);

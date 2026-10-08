@@ -43,9 +43,9 @@ public static class Caller
 /// The parts of a request worth keeping against every line it causes.
 /// </summary>
 /// <param name="Domain">
-/// The lambda's own domain the request was addressed to, or nothing for a
-/// request to the platform - whose host is the same on every line and would
-/// say nothing.
+/// The host of a lambda the request was addressed to - its subdomain of the
+/// hosting domain, or a domain of its own - or nothing for a request to the
+/// platform, whose host is the same on every line and would say nothing.
 /// </param>
 public sealed record CallerInfo(string? Client, string? Agent, string Method, string Path, string? Country = null, string? Place = null,
                                 string? Domain = null)
@@ -85,8 +85,9 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
             // a town and a network, where a database has one. Pooled: a busy
             // server sees the same few hundred callers over and over
             pool.Share(Empty(places?.Find(client)?.Describe())),
-            // one of the few names the registry holds, so already shared
-            domain
+            // a host of a lambda, read off every request it serves and
+            // shared, since its lines repeat it
+            pool.Share(domain)
         );
     }
 

@@ -162,9 +162,9 @@ export function Entry({ entry, index }: { entry: ShowcaseEntry; index: number })
       <ShowcaseCard
         title={entry.title}
         description={entry.description}
-        address={entry.path}
+        address={entry.address}
         image={entry.imagePath}
-        href={entry.path}
+        href={entry.address}
       />
     </div>
   );

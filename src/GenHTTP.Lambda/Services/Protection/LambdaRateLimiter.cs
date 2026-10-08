@@ -17,7 +17,7 @@ namespace GenHTTP.Lambda.Services.Protection;
 ///
 /// One budget per client across every route a lambda can be reached through.
 /// Held here rather than in the concern that enforces it: a lambda answering
-/// at a domain of its own as well as at its path is served by two chains, and
+/// at its subdomain and at a preview is served by two chains, and
 /// buckets per chain would give a client its allowance twice.
 /// </remarks>
 public sealed class LambdaRateLimiter(ILimitsService limits)

@@ -141,7 +141,8 @@
   const globe = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>';
   const down = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v16M6 14l6 6 6-6"/></svg>';
 
-  const HOST = 'genhttp.dev';
+  // the domain the apps answer below, each at a subdomain named after its key
+  const HOSTING = 'genhttp.run';
 
   const params = new URLSearchParams(location.search);
   const language = params.get('lang') ?? 'en';
@@ -174,11 +175,11 @@
   /** What each card shows beside its words, in the words of the language. */
   const SCENES = {
     '/': (w) => `<div class="card">${conversation(w.ask, words.shared)}
-        <div class="body">${bar(`${HOST}/lambda/q7x2k9`)}${people(5, w.count)}${scores([74, 52, 30])}</div></div>`,
+        <div class="body">${bar(`q7x2k9.${HOSTING}`)}${people(5, w.count)}${scores([74, 52, 30])}</div></div>`,
     '/build': (w) => `<div class="card">${conversation(w.ask, w.reply)}
-        <div class="body">${bar(`${HOST}/lambda/w3dd1n`)}${people(4, w.count)}</div></div>`,
+        <div class="body">${bar(`w3dd1n.${HOSTING}`)}${people(4, w.count)}</div></div>`,
     '/ship': (w) => `<div class="card">${conversation(w.ask, words.shared)}
-        <div class="body">${bar('localhost:5173', 'local', '')}${bar(`${HOST}/lambda/q7x2k9`)}${people(6, w.count)}</div></div>`,
+        <div class="body">${bar('localhost:5173', 'local', '')}${bar(`q7x2k9.${HOSTING}`)}${people(6, w.count)}</div></div>`,
     '/showcase': (w) => `<div class="card"><div class="body">
         ${w.apps.map((app) => bar(app, 'live', words.live)).join('')}
         ${people(6, w.count)}</div></div>`,
@@ -188,7 +189,7 @@
         ${bar(w.domain, 'own', w.yours)}</div>`,
     '/docs': (w) => `<div class="card"><div class="code"><span class="k">return</span> <span class="f">Inline</span>.Create()
     .Get(() =&gt; <span class="s">"Hello, world"</span>);</div>
-        <div class="body">${bar(`${HOST}/lambda/h3ll0w`)}<div class="it" style="font-size:19px">${check}${w.deployed}</div></div></div>`,
+        <div class="body">${bar(`h3ll0w.${HOSTING}`)}<div class="it" style="font-size:19px">${check}${w.deployed}</div></div></div>`,
   };
 
   const card = words[page] ?? words['/'];

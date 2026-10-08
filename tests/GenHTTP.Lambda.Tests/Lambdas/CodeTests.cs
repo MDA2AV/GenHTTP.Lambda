@@ -62,10 +62,10 @@ public sealed class CodeTests
 
         Assert.IsTrue(deployed.Success, string.Join("\n", deployed.Diagnostics.Select(d => d.Message)));
 
-        Assert.AreEqual("hello from a folder", await fixture.CallAsync("/lambda/built/greeting"), "a C# file in a folder is compiled with the snippet, as in a C# project");
-        Assert.AreEqual("<p>what the build wrote</p>", await fixture.CallAsync("/lambda/built/index.html"), "a resource is served by its name below resources/");
+        Assert.AreEqual("hello from a folder", await fixture.CallAsync("http://built.localhost/greeting"), "a C# file in a folder is compiled with the snippet, as in a C# project");
+        Assert.AreEqual("<p>what the build wrote</p>", await fixture.CallAsync("http://built.localhost/index.html"), "a resource is served by its name below resources/");
 
-        foreach (var path in (string[]) ["/lambda/built/frontend/index.html", "/lambda/built/resources/index.html", "/lambda/built/lambda.cs"])
+        foreach (var path in (string[]) ["http://built.localhost/frontend/index.html", "http://built.localhost/resources/index.html", "http://built.localhost/lambda.cs"])
         {
             using var code = await fixture.GetAsync(path);
 

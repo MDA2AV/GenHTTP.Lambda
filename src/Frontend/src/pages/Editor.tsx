@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAdminToken } from '../admin';
-import { absoluteAddress, isDomain, platformPath } from '../address';
+import { absoluteAddress, aroundKey, shownAddress } from '../address';
 import {
   ApiError,
   allowsDomain,
@@ -53,6 +53,7 @@ import { Link as SiteLink } from '../i18n/links';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 import { usePageMeta } from '../meta';
+import { askPlatform } from '../site';
 
 interface Props {
   theme: Theme;
@@ -133,10 +134,10 @@ const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
 
 /*
- * What only the operator decides about a lambda - whether the sitemap names
- * it - in both views, set apart after every section of the owner's. There
- * only for a browser holding the admin token the panel asked for, so the
- * owner never sees it; the server asks for the token again.
+ * What only the operator decides about a lambda, in both views, set apart
+ * after every section of the owner's. There only for a browser holding the
+ * admin token the panel asked for, so the owner never sees it; the panel asks
+ * for the token again.
  */
 const ADMIN_SECTIONS: SectionId[] = ['admin'];
 
@@ -227,12 +228,16 @@ export function Editor({ theme }: Props) {
 
   const base = `/editor/${privateKey}`;
 
-  // completions come from the server, so they always match what compiles
+  /** Where a lambda answers, with {key} where its key goes - for the field a new key is typed into. */
+  const [lambdaUrl, setLambdaUrl] = useState<string | null>(null);
+
+  // completions come from the server, so they always match what compiles -
+  // asked once with whatever else on the page wants to know the platform
   useEffect(() => {
-    api
-      .platform()
+    askPlatform()
       .then((platform) => {
         registerCompletions(platform.completions);
+        setLambdaUrl(platform.lambdaUrl);
       })
       .catch(() => undefined);
   }, []);
@@ -687,8 +692,6 @@ export function Editor({ theme }: Props) {
   const putting = merging ? (features?.find((f) => f.key === merging) ?? null) : null;
 
   const live = lambda.activeVersion != null;
-  const publicUrl = absoluteAddress(lambda.publicPath);
-  const domainUrl = isDomain(lambda.address) ? lambda.address : null;
   const editorUrl = `${window.location.origin}${lambda.editorPath}`;
   const latest = lambda.latestVersion;
   const ahead = latest != null && latest !== lambda.activeVersion;
@@ -821,11 +824,11 @@ export function Editor({ theme }: Props) {
             </Menu>
           </div>
 
-          {/* where it answers: its own domain first when it has one, since
-              that is the address its visitors know */}
+          {/* where it answers: its own domain while it has one - its address
+              here only sends visitors on to it then - and its address here
+              otherwise */}
           <div className="mt-3 space-y-0.5">
-            {domainUrl && <Address url={domainUrl} live={live} primary />}
-            <Address url={publicUrl} live={live} primary={!domainUrl} />
+            <Address url={lambda.address} live={live} />
             {/* where anybody reads its code, once its owner published it */}
             {source?.published && (
               <SiteLink
@@ -1179,12 +1182,13 @@ export function Editor({ theme }: Props) {
       <RenameDialog
         open={renaming}
         current={lambda.publicKey}
+        template={lambdaUrl}
         onClose={() => setRenaming(false)}
         onRenamed={(updated) => {
           setLambda(updated);
           setRenaming(false);
           refresh().catch(() => undefined);
-          toast(said.moved(platformPath(updated.publicKey)));
+          toast(said.moved(shownAddress(updated.publicUrl)));
         }}
         privateKey={privateKey}
       />
@@ -1407,9 +1411,9 @@ function FeatureMissing({ onBack, onVersions }: { onBack: () => void; onVersions
  * main one is the link to follow; any other is there to be found, not to
  * compete with it.
  */
-function Address({ url, live, primary }: { url: string; live: boolean; primary: boolean }) {
+function Address({ url, live, primary = true }: { url: string; live: boolean; primary?: boolean }) {
   const said = useEditorT().frame;
-  const shown = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const shown = shownAddress(url);
 
   return (
     <div className={`flex items-center gap-1 ${primary ? 'text-[13px]' : 'text-xs'}`}>
@@ -1489,17 +1493,21 @@ function CopyItem({ value, label, title, onDone }: { value: string; label: strin
 function RenameDialog({
   open,
   current,
+  template,
   privateKey,
   onClose,
   onRenamed,
 }: {
   open: boolean;
   current: string;
+  /** Where a lambda answers, with {key} where its key goes - nothing until the server said. */
+  template: string | null;
   privateKey: string;
   onClose: () => void;
   onRenamed: (lambda: Lambda) => void;
 }) {
   const said = useEditorT().frame;
+  const { before, after } = aroundKey(template ?? '');
   const [value, setValue] = useState(current);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
@@ -1543,16 +1551,18 @@ function RenameDialog({
     >
       <p className="text-slate-600 dark:text-slate-400">{said.renameText}</p>
 
+      {/* the key is the first part of the address, so it is typed where it goes */}
       <div className="flex items-center gap-2">
-        <span className="shrink-0 font-mono text-sm text-slate-500">/lambda/</span>
+        {before && <span className="shrink-0 font-mono text-sm text-slate-500">{before}</span>}
         <input
           value={value}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => event.key === 'Enter' && submit()}
           spellCheck={false}
           autoComplete="off"
-          className="field font-mono"
+          className="field min-w-0 font-mono"
         />
+        {after && <span className="shrink-0 font-mono text-sm text-slate-500">{after}</span>}
       </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}

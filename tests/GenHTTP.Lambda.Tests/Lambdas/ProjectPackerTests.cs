@@ -20,7 +20,7 @@ namespace GenHTTP.Lambda.Tests.Lambdas;
 [TestClass]
 public sealed class ProjectPackerTests
 {
-    private static readonly ExportedLambda Lambda = new("my-lambda", 7, new DateTime(2026, 9, 12), "Adds a search box\nto the list", "https://genhttp.dev/lambda/my-lambda/", new DateTime(2026, 9, 30));
+    private static readonly ExportedLambda Lambda = new("my-lambda", 7, new DateTime(2026, 9, 12), "Adds a search box\nto the list", "https://my-lambda.genhttp.run/", new DateTime(2026, 9, 30));
 
     private static readonly IReadOnlyList<LambdaFile> Files =
     [
@@ -90,7 +90,7 @@ public sealed class ProjectPackerTests
 
         Assert.Contains("https://genhttp.dev", program);
         Assert.Contains("https://genhttp.org/documentation/", program);
-        Assert.Contains("my-lambda (https://genhttp.dev/lambda/my-lambda/)", program);
+        Assert.Contains("my-lambda (https://my-lambda.genhttp.run/)", program);
         Assert.Contains("7, saved 2026-09-12", program);
         Assert.Contains("Adds a search box to the list", program, "a change is one line, whatever it was written as");
         Assert.Contains("2026-09-30", program);

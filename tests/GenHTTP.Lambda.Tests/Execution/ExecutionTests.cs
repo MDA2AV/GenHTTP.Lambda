@@ -23,7 +23,7 @@ public sealed class ExecutionTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var index = await fixture.GetAsync("/lambda/example/");
+        using var index = await fixture.GetAsync("http://example.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, index.StatusCode);
         Assert.Contains("Hello", await index.GetContentAsync());
@@ -43,13 +43,13 @@ public sealed class ExecutionTests
 
         Assert.AreEqual(HttpStatusCode.Created, saved.StatusCode);
 
-        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var served = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual("live", await served.GetContentAsync(), "saving does not deploy");
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var updated = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var updated = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual("draft", await updated.GetContentAsync());
     }
@@ -64,7 +64,7 @@ public sealed class ExecutionTests
         await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"here\"));");
 
         // served once, so what answers to the key is remembered
-        using var before = await fixture.GetAsync("/lambda/first-key/");
+        using var before = await fixture.GetAsync("http://first-key.localhost/");
 
         Assert.AreEqual("here", await before.GetContentAsync());
 
@@ -72,11 +72,11 @@ public sealed class ExecutionTests
 
         Assert.AreEqual(HttpStatusCode.OK, moved.StatusCode);
 
-        using var old = await fixture.GetAsync("/lambda/first-key/");
+        using var old = await fixture.GetAsync("http://first-key.localhost/");
 
         Assert.AreEqual(HttpStatusCode.NotFound, old.StatusCode, "the old key is given up at once");
 
-        using var current = await fixture.GetAsync("/lambda/second-key/");
+        using var current = await fixture.GetAsync("http://second-key.localhost/");
 
         Assert.AreEqual("here", await current.GetContentAsync());
     }
@@ -87,7 +87,7 @@ public sealed class ExecutionTests
         await using var fixture = await LambdaFixture.CreateAsync();
 
         // nothing there yet, which is remembered as well
-        using var missing = await fixture.GetAsync("/lambda/later/");
+        using var missing = await fixture.GetAsync("http://later.localhost/");
 
         Assert.AreEqual(HttpStatusCode.NotFound, missing.StatusCode);
 
@@ -95,7 +95,7 @@ public sealed class ExecutionTests
 
         await fixture.DeployAsync(lambda.PrivateKey, "return Content.From(Resource.FromString(\"arrived\"));");
 
-        using var found = await fixture.GetAsync("/lambda/later/");
+        using var found = await fixture.GetAsync("http://later.localhost/");
 
         Assert.AreEqual("arrived", await found.GetContentAsync());
     }
@@ -111,7 +111,7 @@ public sealed class ExecutionTests
             return Inline.Create().Get(async () => { await Task.Yield(); if (DateTime.UtcNow.Year > 2000) throw new TimeoutException("the upstream gave up"); return "never"; });
             """);
 
-        using var response = await fixture.GetAsync("/lambda/impatient/");
+        using var response = await fixture.GetAsync("http://impatient.localhost/");
 
         Assert.AreNotEqual(HttpStatusCode.GatewayTimeout, response.StatusCode, "the lambda answered in time, with a failure of its own");
         Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -130,22 +130,22 @@ public sealed class ExecutionTests
 
         Assert.AreEqual(HttpStatusCode.OK, undeployed.StatusCode);
 
-        using var response = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/", "text/html");
+        using var response = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/", "text/html");
 
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [TestMethod]
-    public async Task MissingLambdasSendBrowsersToTheApplication()
+    public async Task MissingLambdasAreSaidToBeMissing()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
-        using var browser = await fixture.GetAsync("/lambda/nothing-here/", "text/html");
+        using var browser = await fixture.GetAsync("http://nothing-here.localhost/", "text/html");
 
         Assert.AreEqual(HttpStatusCode.NotFound, browser.StatusCode);
-        Assert.AreEqual(LambdaFixture.SpaMarkup, await browser.GetContentAsync(), "the application explains the situation");
+        Assert.Contains("Nothing is running here", await browser.GetContentAsync(), "a page of its own explains the situation");
 
-        using var client = await fixture.GetAsync("/lambda/nothing-here/", "application/json");
+        using var client = await fixture.GetAsync("http://nothing-here.localhost/", "application/json");
 
         Assert.AreEqual(HttpStatusCode.NotFound, client.StatusCode);
         Assert.Contains("nothing-here", await client.GetContentAsync());
@@ -160,7 +160,7 @@ public sealed class ExecutionTests
 
         await fixture.DeployAsync(lambda.PrivateKey);
 
-        using var response = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/nowhere");
+        using var response = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/nowhere");
 
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("does not serve", await response.GetContentAsync());
@@ -180,7 +180,7 @@ public sealed class ExecutionTests
                          .Get(() => Boom());
             """);
 
-        using var response = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/", "text/html");
+        using var response = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/", "text/html");
 
         Assert.AreEqual(HttpStatusCode.InternalServerError, response.StatusCode);
 
@@ -211,12 +211,12 @@ public sealed class ExecutionTests
          * and the error page used to look for Accept there - so every refusal
          * of a route with a body became a 500 about headers.
          */
-        using var json = await fixture.SendAsync(HttpMethod.Post, $"/lambda/{lambda.PublicKey}/", new { text = "" }, "application/json");
+        using var json = await fixture.SendAsync(HttpMethod.Post, $"http://{lambda.PublicKey}.localhost/", new { text = "" }, "application/json");
 
         Assert.AreEqual(HttpStatusCode.BadRequest, json.StatusCode);
         Assert.Contains("a note needs a text", await json.GetContentAsync());
 
-        using var html = await fixture.SendAsync(HttpMethod.Post, $"/lambda/{lambda.PublicKey}/", new { text = "" }, "text/html");
+        using var html = await fixture.SendAsync(HttpMethod.Post, $"http://{lambda.PublicKey}.localhost/", new { text = "" }, "text/html");
 
         Assert.AreEqual(HttpStatusCode.BadRequest, html.StatusCode);
         Assert.AreEqual("text/html", html.Content.Headers.ContentType?.MediaType, "a browser still gets a page");

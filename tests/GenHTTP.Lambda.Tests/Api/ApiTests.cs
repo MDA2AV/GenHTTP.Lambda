@@ -37,7 +37,8 @@ public sealed class ApiTests
         var lambda = await fixture.CreateLambdaAsync("my-lambda");
 
         Assert.AreEqual("my-lambda", lambda.PublicKey);
-        Assert.AreEqual("/lambda/my-lambda/", lambda.PublicPath);
+        Assert.AreEqual("http://my-lambda.localhost:8080/", lambda.PublicUrl, "its own address, below the hosting domain");
+        Assert.AreEqual(lambda.PublicUrl, lambda.Address, "which is where it is linked to while it has no domain");
         Assert.AreEqual($"/editor/{lambda.PrivateKey}", lambda.EditorPath);
         Assert.AreEqual(1, lambda.LatestVersion);
         Assert.IsNull(lambda.ActiveVersion);
@@ -120,7 +121,7 @@ public sealed class ApiTests
         Assert.AreEqual(3, result.Version);
         Assert.IsTrue(result.Deployment?.Success);
 
-        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var served = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual("after", await served.GetContentAsync());
     }
@@ -430,7 +431,7 @@ public sealed class ApiTests
 
         Assert.IsTrue((await DeploymentOfAsync(fixture, lambda)).Deployed);
 
-        using var served = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/");
+        using var served = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/");
 
         Assert.AreEqual("compiled", await served.GetContentAsync());
     }

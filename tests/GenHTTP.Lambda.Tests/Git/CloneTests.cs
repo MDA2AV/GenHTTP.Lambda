@@ -58,7 +58,7 @@ public sealed class CloneTests
         var guide = git.Read("guided", "AGENTS.md");
 
         Assert.Contains("# guided", guide);
-        Assert.Contains("/lambda/guided/", guide, "where it runs");
+        Assert.Contains("http://guided.localhost:8080/", guide, "where it runs");
         Assert.Contains("git push -o deploy", guide);
         Assert.DoesNotContain("{lambda}", guide, "every placeholder is filled in");
         Assert.DoesNotContain("{home}", guide);

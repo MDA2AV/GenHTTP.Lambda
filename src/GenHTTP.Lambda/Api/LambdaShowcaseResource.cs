@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Api.Model;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -20,7 +21,8 @@ namespace GenHTTP.Lambda.Api;
 /// the versions and the deployment on purpose: presenting a lambda is
 /// something done once it works, not a step of making it work.
 /// </remarks>
-public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, ILimitsService limits, ILogger<LambdaShowcaseResource> logger)
+public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, ILimitsService limits, ILambdaAddresses addresses,
+                                           ILogger<LambdaShowcaseResource> logger)
 {
 
     /// <summary>
@@ -31,7 +33,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
     {
         var showcase = showcases.Get(privateKey);
 
-        return new OwnShowcaseResponse(showcase == null ? null : ShowcaseResponse.Of(showcase), Limits(limits));
+        return new OwnShowcaseResponse(showcase == null ? null : ShowcaseResponse.Of(showcase, addresses), Limits(limits));
     }
 
     /// <summary>
@@ -62,7 +64,7 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
 
         logger.LogInformation("Added lambda {Lambda} to showcase as '{Title}'", saved.PublicKey, saved.Title);
 
-        return ShowcaseResponse.Of(saved);
+        return ShowcaseResponse.Of(saved, addresses);
     }
 
     /// <summary>

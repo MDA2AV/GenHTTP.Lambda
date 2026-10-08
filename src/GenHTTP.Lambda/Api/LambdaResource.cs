@@ -140,7 +140,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
 
         var content = meta.GetVersion(privateKey, latest);
 
-        var address = options.PublicUrl is { } site ? $"{site}/lambda/{lambda.PublicKey}/" : null;
+        var address = lambda.Address;
 
         // the names say which variables to set; the values stay here
         var kept = secrets.List(privateKey);

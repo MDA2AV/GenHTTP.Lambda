@@ -43,25 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Link eskimiş ya da gösterdiği lambda silinmiş olabilir.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Burada çalışan bir şey yok',
-  heading: 'Burada çalışan bir şey yok',
-  notDeployed: (key) => (
-    <>
-      {key} adresinde bir lambda var ama şu anda yayında değil. Ücretsiz plandaki lambdalar kullanıldıkları sürece
-      yayında kalır; bir ay boyunca ziyaret ya da değişiklik olmazsa yayından kaldırılır. Editör linki elinde olan
-      herkes onu yeniden yayına alabilir.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      {key} adresinde barındırılan bir lambda yok. Böyle bir anahtar hiç olmamış olabilir ya da arkasındaki lambda
-      silinmiş olabilir.
-    </>
-  ),
-  create: 'Bu adreste lambda oluştur',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Kötüye kullanımı bildir',
   title: 'Bir lambdayı bildirin',

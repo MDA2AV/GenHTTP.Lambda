@@ -6,7 +6,7 @@ import { Reveal } from '../components/Reveal';
 import { useT } from '../i18n';
 import { Link } from '../i18n/links';
 import { usePublicPage } from '../meta';
-import { useBrowserValue, useLifetimes, useOrigin } from '../site';
+import { useBrowserValue, useHosting, useLifetimes, useOrigin } from '../site';
 
 const SOLUTIONS = 'solutions@genhttp.dev';
 
@@ -23,7 +23,8 @@ export function Ship() {
   const said = useT().ship;
 
   const connect = useRef<HTMLElement>(null);
-  const { origin, host } = useOrigin();
+  const { origin } = useOrigin();
+  const hosting = useHosting();
 
   const { offlineDays: offline, retentionDays: removed } = useLifetimes();
 
@@ -81,7 +82,7 @@ export function Ship() {
           </div>
 
           <div className="rise" style={{ animationDelay: '260ms' }}>
-            <GoingPublic host={host} />
+            <GoingPublic hosting={hosting} />
           </div>
         </div>
       </section>
@@ -202,7 +203,7 @@ export function Ship() {
             </div>
 
             <div aria-hidden="true" className="space-y-3">
-              <AddressBar muted>{host}/lambda/q7x2k9</AddressBar>
+              <AddressBar muted>{hosting ? `q7x2k9.${hosting}` : 'q7x2k9'}</AddressBar>
               <div className="flex justify-center text-logo-500 dark:text-logo-400">
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                   <path d="M12 4v16M6 14l6 6 6-6" />
@@ -300,7 +301,7 @@ const PEOPLE = [
  * then people arriving. Plays on its own and starts again; somebody who asked
  * for no motion gets the last frame, which tells the whole story anyway.
  */
-function GoingPublic({ host }: { host: string }) {
+function GoingPublic({ hosting }: { hosting: string | null }) {
   const said = useT().ship.scene;
   const still = usePrefersStill();
   const [phase, setPhase] = useState<Phase>(still ? 4 : 0);
@@ -412,7 +413,7 @@ function GoingPublic({ host }: { host: string }) {
                   live ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
                 } text-grey-900 dark:text-grey-100`}
               >
-                {host}/lambda/q7x2k9
+                {hosting ? `q7x2k9.${hosting}` : 'q7x2k9'}
               </span>
             </span>
 

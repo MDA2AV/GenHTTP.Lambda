@@ -44,7 +44,7 @@ public sealed class ShowcaseTests
 
         Assert.AreEqual(1, listing.Total);
         Assert.AreEqual("quiz", listing.Entries[0].PublicKey);
-        Assert.AreEqual("/lambda/quiz/", listing.Entries[0].Path);
+        Assert.AreEqual("http://quiz.localhost:8080/", listing.Entries[0].Address);
 
         using var image = await fixture.GetAsync(listing.Entries[0].ImagePath);
 

@@ -57,9 +57,9 @@ public sealed class SecretTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Reader);
 
-        Assert.AreEqual("no", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/exists"), "Exists is false while they are off");
+        Assert.AreEqual("no", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/exists"), "Exists is false while they are off");
 
-        using (var failed = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/read"))
+        using (var failed = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/read"))
         {
             Assert.AreEqual(HttpStatusCode.InternalServerError, failed.StatusCode);
         }
@@ -78,7 +78,7 @@ public sealed class SecretTests
 
         await fixture.DeployAsync(lambda.PrivateKey, Reader);
 
-        using (var missing = await fixture.GetAsync($"/lambda/{lambda.PublicKey}/read"))
+        using (var missing = await fixture.GetAsync($"http://{lambda.PublicKey}.localhost/read"))
         {
             Assert.AreEqual(HttpStatusCode.InternalServerError, missing.StatusCode);
         }
@@ -87,12 +87,12 @@ public sealed class SecretTests
 
         await SetAsync(fixture, lambda.PrivateKey, "GREETING", "hello");
 
-        Assert.AreEqual("hello", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/read"));
-        Assert.AreEqual("yes", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/exists"));
+        Assert.AreEqual("hello", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/read"));
+        Assert.AreEqual("yes", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/exists"));
 
         await SetAsync(fixture, lambda.PrivateKey, "GREETING", "hello again");
 
-        Assert.AreEqual("hello again", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/read"), "replaced, and read at once");
+        Assert.AreEqual("hello again", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/read"), "replaced, and read at once");
     }
 
     [TestMethod]
@@ -116,7 +116,7 @@ public sealed class SecretTests
 
         Assert.IsTrue(version.Deployment!.Success, string.Join(" | ", version.Deployment.Diagnostics.Select(d => d.Message)));
 
-        Assert.AreEqual("hello nobody", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/"));
+        Assert.AreEqual("hello nobody", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/"));
     }
 
     [TestMethod]
@@ -224,7 +224,7 @@ public sealed class SecretTests
 
         await using (var second = await LambdaFixture.CreateAsync(o => o with { DataDirectory = moved, SecretsKey = key }))
         {
-            Assert.AreEqual("moved along", await ServedAsync(second, $"/lambda/{publicKey}/read"));
+            Assert.AreEqual("moved along", await ServedAsync(second, $"http://{publicKey}.localhost/read"));
         }
 
         SqliteConnection.ClearAllPools();
@@ -234,7 +234,7 @@ public sealed class SecretTests
 
         await using (var third = await LambdaFixture.CreateAsync(o => o with { DataDirectory = stolen, SecretsKey = "another passphrase, which opens none of what was sealed" }))
         {
-            using var refused = await third.GetAsync($"/lambda/{publicKey}/read");
+            using var refused = await third.GetAsync($"http://{publicKey}.localhost/read");
 
             Assert.AreEqual(HttpStatusCode.InternalServerError, refused.StatusCode);
             Assert.IsTrue(Logged(third).Any(l => l.Contains("another key")), "and the server says why");
@@ -310,7 +310,7 @@ public sealed class SecretTests
         }
 
         Assert.AreEqual("sandbox", await ServedAsync(fixture, $"{feature.PreviewPath}read"));
-        Assert.AreEqual("live", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/read"), "the lambda's own is as it was");
+        Assert.AreEqual("live", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/read"), "the lambda's own is as it was");
 
         // a fresh copy of the lambda's
         using (var _ = await fixture.SendAsync(HttpMethod.Post, $"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/data/refresh")) { }
@@ -349,7 +349,7 @@ public sealed class SecretTests
             feature = await created.GetContentAsync<FeatureResponse>();
         }
 
-        Assert.AreEqual("hello", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/read"));
+        Assert.AreEqual("hello", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/read"));
 
         using (var off = await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/data/secrets"))
         {
@@ -359,7 +359,7 @@ public sealed class SecretTests
             Assert.AreEqual(0, store.Items);
         }
 
-        Assert.AreEqual("no", await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/exists"), "gone from the lambda at once");
+        Assert.AreEqual("no", await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/exists"), "gone from the lambda at once");
 
         using (var copy = await fixture.GetAsync($"/api/v1/lambdas/{lambda.PrivateKey}/features/{feature.Key}/secrets"))
         {
@@ -424,7 +424,7 @@ public sealed class SecretTests
         Assert.IsTrue(Structured(stored)["usedByCode"]!.GetValue<bool>());
         Assert.DoesNotContain(Value, stored.ToJsonString(), "the value is in the conversation once, where the user put it");
 
-        Assert.AreEqual(Value, await ServedAsync(fixture, $"/lambda/{lambda.PublicKey}/read"));
+        Assert.AreEqual(Value, await ServedAsync(fixture, $"http://{lambda.PublicKey}.localhost/read"));
 
         var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
 

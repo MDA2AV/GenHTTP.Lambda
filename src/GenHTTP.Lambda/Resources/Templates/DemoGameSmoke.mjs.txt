@@ -20,7 +20,7 @@ if (!address) {
 const base = address.endsWith('/') ? address : `${address}/`;
 
 // the socket's address the way the page builds it: relative, with the scheme
-// swapped, so it works below /lambda/{key}/ and at the root of a domain alike
+// swapped, so it works at the root of its address and below a preview's alike
 const play = new URL('play', base);
 play.protocol = play.protocol === 'https:' ? 'wss:' : 'ws:';
 

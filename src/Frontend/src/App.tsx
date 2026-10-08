@@ -6,7 +6,6 @@ import { IconSpinner } from './components/Icons';
 import { ToastHost } from './components/Toast';
 import { Create } from './pages/Create';
 import { Enterprise } from './pages/Enterprise';
-import { LambdaMissing } from './pages/LambdaMissing';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { Admin } from './pages/Admin';
@@ -115,7 +114,6 @@ export function App() {
             element={
               <Shell theme={theme} onToggleTheme={toggleTheme}>
                 <Routes>
-                  <Route path="/lambda/:publicKey/*" element={<LambdaMissing />} />
                   <Route path="/:language/*" element={<Localized />} />
                   <Route path="*" element={<Unlocalized />} />
                 </Routes>

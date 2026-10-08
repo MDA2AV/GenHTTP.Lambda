@@ -10,7 +10,8 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="KeptUntil">When it is removed unless used, or nothing when its tier keeps it</param>
 /// <param name="Domain">The domain it is configured to answer at, whether or not its tier lets it</param>
 /// <param name="View">How its editor opens for somebody who has not chosen a view of their own</param>
-/// <param name="InSitemap">Whether the operator listed it in the sitemap - for the operator, never told its owner</param>
+/// <param name="PublicUrl">Its address below the hosting domain, which sends visitors on to its domain while it answers at one</param>
+/// <param name="Address">Where to link to it: its domain while that is served, its address below the hosting domain otherwise</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
@@ -24,7 +25,8 @@ public sealed record LambdaInfo(
     DateTime? KeptUntil,
     string? Domain,
     string View,
-    bool InSitemap
+    string PublicUrl,
+    string Address
 );
 
 /// <summary>

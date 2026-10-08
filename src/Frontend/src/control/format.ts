@@ -1,3 +1,4 @@
+import { hostOf } from '../address';
 import { SHARED, type SharedWords } from './words';
 
 /**
@@ -132,11 +133,16 @@ export function ending(value?: string | null, words: SharedWords = SHARED): stri
 }
 
 /**
- * A log line with the lambda's own address taken out of its paths. Inside
- * the lambda's own view "/lambda/my-app/api" says nothing "/api" does not.
+ * A log line with the lambda's own host taken out of the paths it names.
+ * Inside the lambda's own view "GET my-app.genhttp.run/api" says nothing
+ * "GET /api" does not; a domain of its own stays, since it says which way the
+ * visitor came. Only where a path starts - a full address the lambda printed,
+ * "https://my-app.genhttp.run/api", stays whole.
  */
-export function local(text: string, publicKey: string): string {
-  return text.split(`/lambda/${publicKey}/`).join('/').split(`/lambda/${publicKey} `).join('/ ');
+export function local(text: string, publicUrl: string): string {
+  const host = hostOf(publicUrl).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  return text.replace(new RegExp(`(^|\\s)${host}(?=/)`, 'g'), '$1');
 }
 
 /** The same for the preview of a feature, which answers below its own key. */

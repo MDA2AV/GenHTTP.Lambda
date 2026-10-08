@@ -301,7 +301,7 @@ public sealed class McpTests
 
         Assert.IsTrue(address.IsAbsoluteUri);
 
-        using var served = await fixture.GetAsync(address.PathAndQuery);
+        using var served = await fixture.GetAsync(address.ToString());
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
         Assert.Contains("built by an agent", await served.Content.ReadAsStringAsync());
@@ -343,7 +343,7 @@ public sealed class McpTests
 
         Assert.IsTrue(changed["ok"]!.GetValue<bool>(), changed.ToJsonString());
 
-        using var served = await fixture.GetAsync("/lambda/changed-by-agent/");
+        using var served = await fixture.GetAsync("http://changed-by-agent.localhost/");
 
         Assert.AreEqual("second", await served.Content.ReadAsStringAsync());
 
@@ -391,7 +391,7 @@ public sealed class McpTests
 
         Assert.IsTrue(fixedUp["compiles"]!.GetValue<bool>(), fixedUp.ToJsonString());
 
-        using var served = await fixture.GetAsync("/lambda/checked-first/");
+        using var served = await fixture.GetAsync("http://checked-first.localhost/");
 
         Assert.AreEqual("first", await served.Content.ReadAsStringAsync(), "checking puts nothing online");
     }
@@ -513,7 +513,7 @@ public sealed class McpTests
 
         Structured(await CallToolAsync(fixture, "deploy", new JsonObject { ["privateKey"] = privateKey }));
 
-        using (var _ = await fixture.GetAsync("/lambda/observed/")) { }
+        using (var _ = await fixture.GetAsync("http://observed.localhost/")) { }
 
         var logs = Structured(await CallToolAsync(fixture, "read_logs", new JsonObject { ["privateKey"] = privateKey }));
 
@@ -581,10 +581,11 @@ public sealed class McpTests
 
         var guide = Structured(await CallToolAsync(fixture, "platform_guide", new JsonObject()));
 
-        // a lambda can answer at the root of a domain of its own, where a
-        // path starting with /lambda/ or / points at nothing of the lambda's
+        // the preview of a feature answers below /features/ on the platform,
+        // where a path starting with / or the full address leaves it
         Assert.Contains("relative", guide["paths"]!["rule"]!.GetValue<string>());
-        Assert.Contains("domain", guide["paths"]!["why"]!.GetValue<string>());
+        Assert.Contains("/features/", guide["paths"]!["why"]!.GetValue<string>());
+        Assert.Contains("http://{publicKey}.localhost:8080/", guide["paths"]!["why"]!.GetValue<string>(), "and where the lambda itself answers");
 
         var initialized = await CallAsync(fixture, "initialize", new JsonObject());
 
@@ -681,7 +682,7 @@ public sealed class McpTests
             ["deploy"] = true,
             ["files"] = new JsonArray(
                 new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Layout.Create().Add(Resources.App(\"web\"));" },
-                new JsonObject { ["name"] = "resources/web/index.html", ["code"] = "<script>fetch('/lambda/linked/api/items', { method: 'POST' })</script>" })
+                new JsonObject { ["name"] = "resources/web/index.html", ["code"] = "<script>fetch('http://linked.localhost:8080/api/items', { method: 'POST' })</script>" })
         }));
 
         Assert.IsTrue(linked["ok"]!.GetValue<bool>(), linked.ToJsonString());
@@ -692,7 +693,7 @@ public sealed class McpTests
             ["privateKey"] = privateKey,
             ["feature"] = feature,
             ["deploy"] = true,
-            ["edits"] = new JsonArray(new JsonObject { ["file"] = "resources/web/index.html", ["find"] = "/lambda/linked/api/items", ["replace"] = "api/items" })
+            ["edits"] = new JsonArray(new JsonObject { ["file"] = "resources/web/index.html", ["find"] = "http://linked.localhost:8080/api/items", ["replace"] = "api/items" })
         }));
 
         Assert.IsNull(relative["warning"], "a relative path stays in the preview");
@@ -726,8 +727,8 @@ public sealed class McpTests
                 new JsonObject
                 {
                     ["name"] = "resources/web/index.html",
-                    ["code"] = "<head><meta property=\"og:image\" content=\"https://example.com/lambda/shared/preview.png\">"
-                             + "<link rel=\"canonical\" href=\"https://example.com/lambda/shared/\"><link rel=\"icon\" href=\"icon.svg\"></head>"
+                    ["code"] = "<head><meta property=\"og:image\" content=\"http://shared.localhost:8080/preview.png\">"
+                             + "<link rel=\"canonical\" href=\"http://shared.localhost:8080/\"><link rel=\"icon\" href=\"icon.svg\"></head>"
                 })
         }));
 
@@ -809,9 +810,10 @@ public sealed class McpTests
 
         var backlink = guide["backlink"]!;
 
-        Assert.Contains("<a href=\"https://genhttp.dev/\">Made with GenHTTP Lambda</a>", backlink["how"]!.GetValue<string>(),
+        Assert.Contains("<a href=\"https://genhttp.dev/\" rel=\"nofollow\">Made with GenHTTP Lambda</a>", backlink["how"]!.GetValue<string>(),
                         "to the address the site is meant to be found at, not the one the agent called");
         Assert.Contains("plain text", backlink["onADomain"]!.GetValue<string>(), "a lambda on a domain of its own names the platform without linking to it");
+        Assert.Contains("nofollow", backlink["fromBefore"]!.GetValue<string>(), "and a link written before the lambdas had hosts of their own is given it");
         Assert.Contains("not a rule", backlink["ask"]!.GetValue<string>());
         Assert.Contains("decisions.md", backlink["theUserDecides"]!.GetValue<string>(), "a link the user took out stays out");
     }
@@ -876,7 +878,7 @@ public sealed class McpTests
 
             Assert.AreEqual(attempt, await preview.GetContentAsync());
 
-            using var live = await fixture.GetAsync("/lambda/in-a-feature/");
+            using var live = await fixture.GetAsync("http://in-a-feature.localhost/");
 
             Assert.AreEqual("live", await live.GetContentAsync(), "the lambda goes on serving its visitors");
         }
@@ -886,7 +888,7 @@ public sealed class McpTests
         var texts = ((JsonArray)logs["lines"]!).Select(l => l!["text"]!.GetValue<string>()).ToList();
 
         Assert.IsTrue(texts.Any(t => t.Contains($"/features/{feature}/")), string.Join(" | ", texts));
-        Assert.IsFalse(texts.Any(t => t.Contains("/lambda/in-a-feature/")), "what the lambda's visitors caused is not the feature's");
+        Assert.IsFalse(texts.Any(t => t.Contains("in-a-feature.localhost/")), "what the lambda's visitors caused is not the feature's");
 
         var read = Structured(await CallToolAsync(fixture, "read_lambda", new JsonObject { ["privateKey"] = privateKey }));
 
@@ -903,7 +905,7 @@ public sealed class McpTests
         Assert.IsTrue(merged["ok"]!.GetValue<bool>(), merged.ToJsonString());
         Assert.AreEqual(3, merged["version"]!.GetValue<int>());
 
-        using (var live = await fixture.GetAsync("/lambda/in-a-feature/"))
+        using (var live = await fixture.GetAsync("http://in-a-feature.localhost/"))
         {
             Assert.AreEqual("LIVE!", await live.GetContentAsync());
         }
@@ -1029,7 +1031,7 @@ public sealed class McpTests
 
         using (var _ = await fixture.SendAsync(HttpMethod.Post, $"/features/{feature}/wipe")) { }
 
-        using (var live = await fixture.GetAsync("/lambda/copied-data/"))
+        using (var live = await fixture.GetAsync("http://copied-data.localhost/"))
         {
             Assert.AreEqual("real", await live.GetContentAsync(), "and whatever it does to the copy, the lambda's own is as it was");
         }
@@ -1184,7 +1186,7 @@ public sealed class McpTests
         Assert.IsTrue(written["ok"]!.GetValue<bool>(), written.ToJsonString());
 
         // no second deploy
-        using var served = await fixture.GetAsync("/lambda/uploaded-by-agent/");
+        using var served = await fixture.GetAsync("http://uploaded-by-agent.localhost/");
 
         Assert.AreEqual(HttpStatusCode.OK, served.StatusCode);
         Assert.Contains("uploaded, not deployed", await served.GetContentAsync());
@@ -1200,7 +1202,7 @@ public sealed class McpTests
             ["encoding"] = "base64"
         }));
 
-        using var image = await fixture.GetAsync("/lambda/uploaded-by-agent/dot.gif");
+        using var image = await fixture.GetAsync("http://uploaded-by-agent.localhost/dot.gif");
 
         Assert.AreEqual(HttpStatusCode.OK, image.StatusCode);
         CollectionAssert.AreEqual(gif, await image.Content.ReadAsByteArrayAsync(),
@@ -1227,7 +1229,7 @@ public sealed class McpTests
          * every address that names no file with its shell. What says it has
          * gone is that the answer is the page rather than the image.
          */
-        using var gone = await fixture.GetAsync("/lambda/uploaded-by-agent/dot.gif");
+        using var gone = await fixture.GetAsync("http://uploaded-by-agent.localhost/dot.gif");
 
         Assert.AreEqual("text/html", gone.Content.Headers.ContentType?.MediaType,
                         "and it can be taken away again");

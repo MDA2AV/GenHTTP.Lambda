@@ -43,25 +43,6 @@ export const notFound: Messages['notFound'] = {
   text: 'Le lien est peut-être périmé, ou la lambda vers laquelle il menait a été supprimée.',
 };
 
-export const missing: Messages['missing'] = {
-  title: 'Rien n’est en ligne ici',
-  heading: 'Rien n’est en ligne ici',
-  notDeployed: (key) => (
-    <>
-      Il y a bien une lambda à l’adresse {key}, mais elle n’est pas déployée en ce moment. Dans l’offre gratuite, une
-      lambda reste en ligne tant qu’on l’utilise, et elle est mise hors ligne après un mois sans visite ni
-      modification. Avec le lien d’édition, on peut la remettre en ligne.
-    </>
-  ),
-  unknown: (key) => (
-    <>
-      Aucune lambda n’est hébergée à l’adresse {key}. Cette clé n’a peut-être jamais existé, ou la lambda a été
-      supprimée.
-    </>
-  ),
-  create: 'Créer une lambda ici',
-};
-
 export const abuse: Messages['abuse'] = {
   report: 'Signaler un abus',
   title: 'Signaler une lambda',

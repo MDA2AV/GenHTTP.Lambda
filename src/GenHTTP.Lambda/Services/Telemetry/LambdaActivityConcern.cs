@@ -37,7 +37,7 @@ public sealed class LambdaActivityConcern(LambdaTelemetry telemetry) : IDependen
         // handlers below move along, and afterwards it points at nothing
         var path = PathOf(request);
 
-        var domain = request.GetDomain()?.Name;
+        var domain = request.GetHost()?.Name;
 
         var started = Stopwatch.GetTimestamp();
 

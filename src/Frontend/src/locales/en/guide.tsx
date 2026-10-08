@@ -43,8 +43,8 @@ export const guide = {
     ),
     (k) => (
       <>
-        That is a complete lambda. Deployed at {k.code('/lambda/your-key/')}, it answers every request with the
-        word hello.
+        That is a complete lambda. Deployed, it answers at an address of its own named after its key, such as{' '}
+        {k.code('your-key.genhttp.run')}, and every request there gets the word hello.
       </>
     ),
   ] as Text[],

@@ -144,13 +144,14 @@ public static class DomainNames
 
     /// <summary>
     /// Whether a domain is one the platform itself answers at, or below one
-    /// of them - claiming either would take the platform's own address.
+    /// of them - claiming either would take the platform's own address, or
+    /// the address of a lambda below the hosting domain.
     /// </summary>
     private static bool IsPlatform(string domain, LambdaOptions options)
     {
-        foreach (var own in PlatformHosts(options))
+        foreach (var own in PlatformHosts(options).Append(HostingDomain(options)))
         {
-            if (domain == own || domain.EndsWith("." + own, StringComparison.Ordinal))
+            if (own != null && (domain == own || domain.EndsWith("." + own, StringComparison.Ordinal)))
             {
                 return true;
             }
@@ -159,7 +160,14 @@ public static class DomainNames
         return false;
     }
 
-    private static IEnumerable<string> PlatformHosts(LambdaOptions options)
+    private static string? HostingDomain(LambdaOptions options)
+        => options.HostingUrl != null && Uri.TryCreate(options.HostingUrl, UriKind.Absolute, out var url) ? Normalize(url.IdnHost) : null;
+
+    /// <summary>
+    /// The names the platform itself answers at: localhost, its public
+    /// address, and the hosts a browser drives the agents' endpoint from.
+    /// </summary>
+    internal static IEnumerable<string> PlatformHosts(LambdaOptions options)
     {
         yield return "localhost";
 
