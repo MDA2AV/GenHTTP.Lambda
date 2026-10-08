@@ -6,6 +6,7 @@ import { Chart, type Series } from '../components/Chart';
 import { IconSpinner } from '../components/Icons';
 import { LambdaLink } from '../components/LambdaLink';
 import { Pills, Section } from '../control/ui';
+import { askPlatform } from '../site';
 import type { Access } from './context';
 
 /** What each kind of event is called on screen. */
@@ -76,8 +77,7 @@ export function ServerSection({ access }: { access: Access }) {
   const [lambdaUrl, setLambdaUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .platform()
+    askPlatform()
       .then((platform) => setLambdaUrl(platform.lambdaUrl))
       .catch(() => undefined);
   }, []);

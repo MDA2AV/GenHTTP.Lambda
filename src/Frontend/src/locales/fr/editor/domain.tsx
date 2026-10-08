@@ -7,7 +7,7 @@ export const domain: EditorMessages['domain'] = {
   removed: 'Domaine retiré. La lambda répond de nouveau à son adresse ici.',
   removeFailed: 'Impossible de retirer le domaine.',
   hint:
-    'Une lambda premium peut répondre sur son propre domaine (tout le domaine, depuis la racine). Faites d’abord pointer le domaine vers ce serveur, puis saisissez-le ici : dès lors, ses requêtes arrivent sur la lambda, et son adresse ici renvoie les visiteurs vers lui.',
+    'Une lambda premium peut répondre sur son propre domaine (tout le domaine, depuis la racine). Faites d’abord pointer le domaine vers ce serveur, puis saisissez-le ici : dès lors, les requêtes envoyées à ce domaine arrivent sur la lambda, et son adresse ici renvoie les visiteurs vers lui.',
   loading: 'Chargement…',
   example: 'votre-domaine.fr',
   open: (domain) => `Ouvrir ${domain}`,

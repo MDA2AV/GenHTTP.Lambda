@@ -34,6 +34,7 @@ public sealed class LambdaKeyTests
     [DataRow("lambda-", "ends with a dash")]
     [DataRow("editor", "is reserved")]
     [DataRow("xn--bcher-kva", "is how a browser writes an international name, so it would not read as itself")]
+    [DataRow("mta-sts", "is a name mail servers look for below a domain")]
     [DataRow("", "is empty")]
     public void InvalidKeysAreRejected(string key, string because)
     {

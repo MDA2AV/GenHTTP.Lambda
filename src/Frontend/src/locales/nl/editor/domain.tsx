@@ -7,7 +7,7 @@ export const domain: EditorMessages['domain'] = {
   removed: 'Het domein is verwijderd. De lambda reageert hier weer op zijn adres.',
   removeFailed: 'Het domein kon niet worden verwijderd.',
   hint:
-    'Een premium lambda kan op een eigen domein draaien, helemaal vanaf de root. Laat het domein eerst naar deze server wijzen en vul het daarna hier in: vanaf dan komen requests naar dat domein bij de lambda uit, en stuurt zijn adres hier bezoekers door.',
+    'Een premium lambda kan op een eigen domein draaien, helemaal vanaf de root. Laat het domein eerst naar deze server wijzen en vul het daarna hier in: vanaf dan komen requests naar dat domein bij de lambda uit, en stuurt het adres hier bezoekers door naar dat domein.',
   loading: 'Laden…',
   example: 'jouw-domein.nl',
   open: (domain) => `${domain} openen`,

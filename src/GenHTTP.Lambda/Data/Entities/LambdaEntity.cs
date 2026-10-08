@@ -21,8 +21,8 @@ public sealed class LambdaEntity
     public LambdaTier Tier { get; set; }
 
     /// <summary>
-    /// The domain the lambda answers at besides its path, such as
-    /// <c>shop.example.com</c>.
+    /// The domain the lambda answers at instead of its subdomain of the
+    /// hosting domain, such as <c>shop.example.com</c>.
     /// </summary>
     /// <remarks>
     /// Kept in the form it is matched in (see <c>DomainNames</c>) and only

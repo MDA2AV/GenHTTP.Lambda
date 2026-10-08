@@ -24,7 +24,7 @@ public sealed class SubdomainLocator(IMetaService meta, HostingPages pages) : IL
 
     public ResolvedLambda? Locate(IRequest request)
     {
-        if (request.GetHost() is not HostedLambda hosted || !LambdaKeys.TryNormalize(hosted.Label, out var key, out _))
+        if (request.GetHost() is not HostedLambda hosted || !LambdaKeys.TryRead(hosted.Label, out var key))
         {
             return null;
         }

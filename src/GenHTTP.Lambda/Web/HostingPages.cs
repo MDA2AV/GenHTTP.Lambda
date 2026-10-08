@@ -32,10 +32,14 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
     private const string Site = "GenHTTP Lambda";
 
     private static readonly SiteText HomeFallback = new("Apps made with GenHTTP Lambda",
-        "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of yours, go to {site}.");
+        "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of your own, go to {site}.");
 
     private static readonly SiteText MissingFallback = new("Nothing is running here",
-        "No app is online at {address}. It may have been taken offline or removed, or there never was one. To build one of yours, go to {site}.");
+        "No app is online at {address}. It may have been taken offline or removed, or there never was one. To build one of your own, go to {site}.");
+
+    private static readonly SiteText ImprintFallback = new("Legal Notice", string.Empty);
+
+    private static readonly SiteText PrivacyFallback = new("Privacy Policy", string.Empty);
 
     private static readonly HtmlEncoder Html = HtmlEncoder.Create(System.Text.Unicode.UnicodeRanges.All);
 
@@ -100,6 +104,12 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
         var summary = Html.Encode(text.Description.Replace("{address}", host, StringComparison.Ordinal)
                                                   .Replace("{site}", options.PublicUrl is { } named ? new Uri(named).Authority : Site, StringComparison.Ordinal));
 
+        // who runs it and what is recorded of a visit, on the site's pages
+        // for both, named as the site names them in the same language
+        var legal = options.PublicUrl is { } root
+                        ? $"<small>{Legal(root, language, "/imprint", ImprintFallback)} · {Legal(root, language, "/privacy", PrivacyFallback)}</small>"
+                        : string.Empty;
+
         return $$"""
             <!doctype html>
             <html lang="{{SiteLanguages.TagOf(language)}}">
@@ -117,16 +127,26 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
                     p { margin: 0; opacity: .85; }
                     a { color: #1765cc; }
                     @media (prefers-color-scheme: dark) { a { color: #8ab4f8; } }
+                    small { display: block; margin-top: 2rem; font-size: .8rem; opacity: .65; }
+                    small a { color: inherit; }
                 </style>
             </head>
             <body>
             <main>
                 <h1>{{title}}</h1>
                 <p>{{description}}</p>
+                {{legal}}
             </main>
             </body>
             </html>
             """;
+    }
+
+    private string Legal(string root, string language, string page, SiteText fallback)
+    {
+        var (written, words) = meta.Words(page, language, fallback);
+
+        return $"<a href=\"{Html.Encode(root + SiteLanguages.In(written, page))}\">{Html.Encode(words.Title)}</a>";
     }
 
     #endregion

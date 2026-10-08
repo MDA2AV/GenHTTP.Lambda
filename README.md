@@ -16,11 +16,11 @@ return Inline.Create()
 docker compose up --build
 ```
 
-The application is then available at <http://localhost:8080/>, and every
-lambda at a subdomain of localhost named after its key -
-<http://quiz.localhost:8080/> - which browsers resolve without a record. Its
-data - the SQLite database, the stored code, and the workspaces and
-databases of the lambdas - lives in a named volume mounted at `/data`.
+The application is then available at <http://localhost:8080/>. Its data - the
+SQLite database, the stored code, and the workspaces and databases of the
+lambdas - lives in a named volume mounted at `/data`. The lambdas answer at
+subdomains of `LAMBDA_HOSTING_URL`, one each (see
+[Where the lambdas answer](#where-the-lambdas-answer)).
 
 ## Developing locally
 
@@ -34,9 +34,11 @@ dotnet run --project src/GenHTTP.Lambda
 cd src/Frontend && npm install && npm run dev
 ```
 
-Work against <http://localhost:5173/> while developing. The server on its own
-answers with a placeholder page until a frontend has been built into its web
-root, which is what `npm run build` does:
+Work against <http://localhost:5173/> while developing. The lambdas answer at
+subdomains of localhost named after their keys - <http://quiz.localhost:8080/> -
+which browsers resolve without a record. The server on its own answers with a
+placeholder page until a frontend has been built into its web root, which is
+what `npm run build` does:
 
 ```bash
 cd src/Frontend && npm run build   # writes src/GenHTTP.Lambda/wwwroot
@@ -197,7 +199,8 @@ agents' endpoint and git stay where they are, on the platform.
 
 - **Its old address.** `/lambda/{key}/…` on the platform is answered with a
   permanent redirect to where the lambda answers now, with the rest of the
-  path and the query - Moved Permanently for a read, Permanent Redirect for
+  path and the query as they were sent, byte for byte - a signature over
+  them still matches - Moved Permanently for a read, Permanent Redirect for
   anything else, which a client sends again with the same method and body.
   It is answered before anything else the server does: no request line, no
   telemetry, no upgrade to HTTPS, since the address it sends to is secure
@@ -212,15 +215,26 @@ agents' endpoint and git stay where they are, on the platform.
   on. Removing the domain, or the tier that serves it, has the subdomain
   answer again.
 - **Nothing there.** A subdomain nothing is online at - a key nobody has, a
-  lambda that is offline, a name no key can be such as `www` - is told so in
-  a plain page that leads to the site, or in a line of JSON for anything but
-  a browser. The hosting domain itself has a page of its own that says what
-  is hosted there and leads to the site, in the language the browser
-  prefers; its words are in `pages.json` (`hosting:/` and `hosting:/:key`)
-  and translated with the rest. Neither is one of the site's pages: none of
-  the site's scripts is ever served at the hosting domain.
+  lambda that is offline, a name no key can be - is told so in a plain page
+  that leads to the site, or in a line of JSON for anything but a browser.
+  The hosting domain itself, and `www.` in front of it, has a page of its own
+  that says what is hosted there and leads to the site, in the language the
+  browser prefers; its words are in `pages.json` (`hosting:/` and
+  `hosting:/:key`) and translated with the rest. Both link the site's legal
+  notice and privacy policy, named as the site names them. Neither is one of
+  the site's pages: none of the site's scripts is ever served at the hosting
+  domain.
+- **Keys are host names.** A key is a label of the hosting domain, so the
+  names mail clients and servers look for below a domain (`mail`,
+  `autoconfig`, `autodiscover`, `mta-sts`) cannot be claimed, nor can a key
+  starting with `xn--`, which a browser reads as an international name. A
+  lambda is found by its key as it is spelled, whatever the rules for
+  claiming one say today, so a rule made later takes nothing offline.
 - **Previews stay on the platform.** The preview of a feature answers at
   `/features/{feature}/`, as it did, which is why a lambda links relatively.
+  It is the one place a lambda's code still runs on the platform's host -
+  with what the platform keeps in that browser in reach of its scripts -
+  until previews get hosts of their own as well.
 
 The request log names the host in front of the path - `GET
 quiz.genhttp.run/api/items` - as it does for a domain of its own, and the
@@ -1335,8 +1349,10 @@ LAMBDA_CERTIFICATE_KEY=/certs/privkey.pem
 ```
 
 A PKCS#12 archive works just as well - leave the key empty and set
-`LAMBDA_CERTIFICATE_PASSWORD` instead. The certificate is read again when the
-files change, so a renewal is picked up without a restart.
+`LAMBDA_CERTIFICATE_PASSWORD` instead. On Kestrel the certificate is read
+again when the files change, so a renewal is picked up without a restart; the
+io_uring engine takes the files when it opens its port, and is restarted to
+serve a renewal.
 
 ### Shipping resources
 
@@ -1495,9 +1511,12 @@ install -m 0644 -o root -g 1001 /etc/letsencrypt/live/genhttp.run/fullchain.pem 
 install -m 0640 -o root -g 1001 /etc/letsencrypt/live/genhttp.run/privkey.pem   /opt/genhttp-lambda/certs/genhttp.run/
 ```
 
-Like every certificate in the folder, it is found on startup and renewed
-without one. A server whose certificates include no wildcard of the hosting
-domain presents the default one to every name, as it always did.
+Like every certificate in the folder, it is found on startup. Kestrel reads a
+renewal as it is written; the io_uring engine takes the files when it opens
+its port, so the hook that installs a renewal restarts the container. A
+server whose certificates include no wildcard of the hosting domain presents
+the default one to every name, as it always did - and says so on startup, as
+it says when no certificate names the hosting domain itself.
 
 ### Custom domains
 
@@ -1517,8 +1536,8 @@ install -m 0640 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/privkey.p
 
 The folder is only looked through on startup - the io_uring engine learns the
 names it holds certificates for when it opens the TLS port - so a new
-certificate is served after the next restart of the container. Renewals of a
-certificate the server knows are picked up without one. Until the certificate is there, visitors of the
+certificate is served after the next restart of the container, and so is a
+renewal on that engine. Until the certificate is there, visitors of the
 domain are redirected to HTTPS and shown the certificate every unknown name
 is shown, which does not carry their name.
 

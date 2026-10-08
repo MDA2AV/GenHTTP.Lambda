@@ -85,5 +85,7 @@ export function ReportAbuse() {
  * open, since an unrendered page asks the server where the apps answer.
  */
 function Example() {
-  return <span className="font-mono">some-app.{useHosting()}</span>;
+  const hosting = useHosting();
+
+  return <span className="font-mono">{hosting ? `some-app.${hosting}` : 'some-app'}</span>;
 }

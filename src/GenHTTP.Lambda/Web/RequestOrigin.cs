@@ -1,5 +1,4 @@
 using System.Text;
-using System.Web;
 
 using GenHTTP.Api.Protocol;
 
@@ -36,8 +35,11 @@ public static class RequestOrigin
     /// sent on - or nothing, where it has none.
     /// </summary>
     /// <remarks>
-    /// The parameters are kept as they were sent, so each is decoded before it
-    /// is encoded again - a key encoded twice would be another key.
+    /// Passed on as it was sent: the engines keep each parameter as it arrived,
+    /// still encoded, so decoding and encoding it again would only change it -
+    /// a plus would become a space, a signature over the query would no longer
+    /// match. Only what has no place in an address is encoded, should anything
+    /// like it have come along.
     /// </remarks>
     public static string Query(IRequest request)
     {
@@ -54,13 +56,37 @@ public static class RequestOrigin
         {
             var entry = query.GetStringEntry(i);
 
-            result.Append(i == 0 ? '?' : '&')
-                  .Append(Uri.EscapeDataString(HttpUtility.UrlDecode(entry.Key.ToString())))
-                  .Append('=')
-                  .Append(Uri.EscapeDataString(HttpUtility.UrlDecode(entry.Value.ToString())));
+            result.Append(i == 0 ? '?' : '&');
+
+            AsSent(result, entry.Key.ToString());
+
+            var value = entry.Value.ToString();
+
+            if (value.Length > 0)
+            {
+                AsSent(result, value.Insert(0, "="));
+            }
         }
 
         return result.ToString();
+    }
+
+    private static void AsSent(StringBuilder into, string raw)
+    {
+        foreach (var character in raw)
+        {
+            if (character is > ' ' and < '\u007f' and not '#')
+            {
+                into.Append(character);
+            }
+            else
+            {
+                foreach (var part in Encoding.UTF8.GetBytes(character.ToString()))
+                {
+                    into.Append('%').Append(part.ToString("X2"));
+                }
+            }
+        }
     }
 
 }

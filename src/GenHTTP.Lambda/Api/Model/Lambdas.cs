@@ -1,4 +1,5 @@
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 
@@ -101,9 +102,11 @@ public static class LambdaDescription
     public static bool AllowsDomain(string tier) => tier == nameof(LambdaTier.Premium);
 
     /// <summary>
-    /// Whether a lambda of this tier with this domain is answering at it.
+    /// Whether a lambda of this tier with this domain is answering at it, as
+    /// <see cref="LambdaAddresses.Serves"/> decides.
     /// </summary>
-    public static bool Serves(string tier, string? domain) => domain != null && AllowsDomain(tier);
+    public static bool Serves(string tier, string? domain)
+        => Enum.TryParse<LambdaTier>(tier, out var parsed) && LambdaAddresses.Serves(parsed, domain);
 }
 
 /// <summary>

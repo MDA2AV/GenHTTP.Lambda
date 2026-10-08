@@ -7,7 +7,7 @@ export const domain: EditorMessages['domain'] = {
   removed: 'Dominio rimosso. La lambda risponde di nuovo al suo indirizzo qui.',
   removeFailed: 'Impossibile rimuovere il dominio.',
   hint:
-    'Una lambda Premium può rispondere su un dominio tutto suo (per intero, dalla radice in giù). Punta prima il dominio su questo server, poi inseriscilo qui: da quel momento le richieste al dominio arrivano alla lambda e il suo indirizzo qui porta i visitatori lì.',
+    'Una lambda Premium può rispondere su un dominio tutto suo (per intero, dalla radice in giù). Punta prima il dominio su questo server, poi inseriscilo qui: da quel momento le richieste al dominio arrivano alla lambda e il suo indirizzo qui manda i visitatori al dominio.',
   loading: 'Caricamento…',
   example: 'il-tuo-dominio.it',
   open: (domain) => `Apri ${domain}`,

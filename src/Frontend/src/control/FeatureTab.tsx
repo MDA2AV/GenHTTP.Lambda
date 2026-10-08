@@ -67,16 +67,22 @@ export function FeatureTab({ control, onNotes, onRebase }: {
 
   // from the preview, the full address of the lambda is the live lambda - and its real data;
   // so is its old path below /lambda/, which leads there
-  const own = shownAddress(control.lambda.publicUrl);
+  const own = shownAddress(control.lambda.publicUrl).toLowerCase();
   const old = `/lambda/${control.lambda.publicKey}/`;
   // what is compiled or served only: documentation naming the address says where it is, and
   // links nowhere - and what a front end is built from says it again in what it builds, if anywhere.
-  // Meta tags and the canonical link name the page and are never followed, as the server sees it too
-  const links = (code: string) => {
+  // Meta tags and the canonical link name the page and are never followed, as the server sees it too.
+  // A host is matched in any case, as the server matches it
+  const linked = (code: string) => {
     const followed = code.replace(NAMED, '');
-    return followed.includes(`//${own}`) || followed.includes(old);
+    return followed.toLowerCase().includes(`//${own}`) ? own : followed.includes(old) ? old : null;
   };
-  const leaks = (files ?? []).filter((file) => file.encoding !== 'base64' && (isCompiled(file.name) || isResource(file.name)) && links(file.code)).map((file) => file.name);
+  const found = (files ?? []).filter((file) => file.encoding !== 'base64' && (isCompiled(file.name) || isResource(file.name)))
+                             .map((file) => ({ name: file.name, address: linked(file.code) }))
+                             .filter((file) => file.address !== null);
+  const leaks = found.map((file) => file.name);
+  // said as the files write it: the address, or the old path that leads there
+  const leaked = found.some((file) => file.address === own) ? own : old;
 
   return (
     <Section
@@ -151,7 +157,7 @@ export function FeatureTab({ control, onNotes, onRebase }: {
         {leaks.length > 0 && !simple && (
           <p className="mt-5 flex gap-2 text-[13px] text-amber-700 dark:text-amber-400">
             <IconAlert className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{said.leaks(own, leaks.join(', '))}</span>
+            <span>{said.leaks(leaked, leaks.join(', '))}</span>
           </p>
         )}
 

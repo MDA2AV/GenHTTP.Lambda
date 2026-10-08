@@ -15,9 +15,15 @@ public static class LambdaKeys
 
     private const int MaxLength = 40;
 
+    /// <remarks>
+    /// A key is the name of a host below the hosting domain as well, so the
+    /// names that mail clients and servers look up below a domain - to set
+    /// themselves up, or for the policy of its mail - are nobody's.
+    /// </remarks>
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
-        "admin", "api", "assets", "create", "editor", "health", "index", "lambda", "new", "static", "www"
+        "admin", "api", "assets", "autoconfig", "autodiscover", "create", "editor", "health", "index", "lambda", "mail", "mta-sts", "new",
+        "static", "www"
     };
 
     /// <summary>
@@ -59,6 +65,43 @@ public static class LambdaKeys
     /// <param name="reason">Why the key cannot be used, if it cannot</param>
     public static bool TryNormalize(string? key, out string normalized, out string? reason)
     {
+        if (!TryRead(key, out normalized, out reason))
+        {
+            return false;
+        }
+
+        // the key is the name of a host, and a browser reads a name that
+        // starts like this as an international one written in ASCII - it
+        // would show another name, or refuse it as one that decodes to nothing
+        if (normalized.StartsWith("xn--", StringComparison.Ordinal))
+        {
+            reason = "The key must not start with 'xn--', which is how international domain names are written.";
+            return false;
+        }
+
+        if (Reserved.Contains(normalized))
+        {
+            reason = $"'{normalized}' is reserved by the platform.";
+            return false;
+        }
+
+        reason = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Reads a key in the form it is stored, as far as its spelling goes -
+    /// not whether it could be claimed today.
+    /// </summary>
+    /// <remarks>
+    /// For finding the lambda an address names: a key that a rule made since
+    /// refuses to be claimed may still belong to a lambda from before the
+    /// rule, which keeps answering at it.
+    /// </remarks>
+    public static bool TryRead(string? key, out string normalized) => TryRead(key, out normalized, out _);
+
+    private static bool TryRead(string? key, out string normalized, out string? reason)
+    {
         normalized = (key ?? string.Empty).Trim().ToLowerInvariant();
 
         if (normalized.Length < MinLength || normalized.Length > MaxLength)
@@ -81,21 +124,6 @@ public static class LambdaKeys
         if (normalized[0] == '-' || normalized[^1] == '-')
         {
             reason = "The key must not start or end with a dash.";
-            return false;
-        }
-
-        // the key is the name of a host, and a browser reads a name that
-        // starts like this as an international one written in ASCII - it
-        // would show another name, or refuse it as one that decodes to nothing
-        if (normalized.StartsWith("xn--", StringComparison.Ordinal))
-        {
-            reason = "The key must not start with 'xn--', which is how international domain names are written.";
-            return false;
-        }
-
-        if (Reserved.Contains(normalized))
-        {
-            reason = $"'{normalized}' is reserved by the platform.";
             return false;
         }
 

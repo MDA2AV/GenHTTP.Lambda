@@ -63,6 +63,7 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
         {
             using var database = databases.CreateDbContext();
 
+            // LambdaAddresses.Serves, as the database is asked it
             var served = database.Lambdas.AsNoTracking()
                                  .Where(l => l.Tier == LambdaTier.Premium && l.Domain != null)
                                  .Select(l => new { l.Id, l.PublicKey, Domain = l.Domain! })

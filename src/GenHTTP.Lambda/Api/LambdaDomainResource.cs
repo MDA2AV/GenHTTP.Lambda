@@ -14,7 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace GenHTTP.Lambda.Api;
 
 /// <summary>
-/// The domain a lambda answers at besides its path, for its owner.
+/// The domain a lambda answers at instead of its subdomain of the hosting
+/// domain, for its owner.
 /// </summary>
 /// <remarks>
 /// Behind the editor key like everything else about a lambda. Whether a lambda
@@ -43,8 +44,10 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     /// </summary>
     /// <remarks>
     /// Only in the premium tier. Takes effect at once: the next request
-    /// addressed to the domain reaches the lambda, and one addressed to the
-    /// previous domain no longer does.
+    /// addressed to the domain reaches the lambda, one addressed to the
+    /// previous domain no longer does, and the lambda's subdomain of the
+    /// hosting domain sends its visitors on to the domain from then on - so
+    /// the domain should point here, with a certificate for it, first.
     /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/domain")]
     public async ValueTask<DomainResponse> Put(string privateKey, DomainChangeRequest request)
@@ -57,7 +60,8 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     }
 
     /// <summary>
-    /// Stops the lambda answering at its domain. Its path stays as it is.
+    /// Stops the lambda answering at its domain. Its subdomain of the hosting
+    /// domain answers again instead of sending visitors there.
     /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/domain")]
     public async ValueTask<DomainResponse> Delete(string privateKey)

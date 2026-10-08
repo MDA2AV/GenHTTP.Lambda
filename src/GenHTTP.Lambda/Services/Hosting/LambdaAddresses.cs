@@ -34,6 +34,8 @@ public sealed class LambdaAddresses : ILambdaAddresses
     /// </summary>
     private readonly string? _home;
 
+    private readonly string _www;
+
     /// <summary>
     /// The names the platform answers at, which are never a lambda's.
     /// </summary>
@@ -74,6 +76,8 @@ public sealed class LambdaAddresses : ILambdaAddresses
         _platform = [.. DomainNames.PlatformHosts(options)];
 
         _home = _platform.Contains(Domain) ? null : Domain;
+
+        _www = "www." + Domain;
     }
 
     #endregion
@@ -97,7 +101,9 @@ public sealed class LambdaAddresses : ILambdaAddresses
     /// <param name="host">The host in its normalized form, see <see cref="DomainNames.Normalize"/></param>
     public LambdaHost? Resolve(string host)
     {
-        if (host == _home)
+        // and where somebody typed it the way sites used to be found; no key
+        // can be www, so it is nobody's lambda either
+        if (_home != null && (host == _home || host == _www))
         {
             return new HostingHome(host);
         }

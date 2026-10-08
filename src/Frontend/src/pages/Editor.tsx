@@ -53,6 +53,7 @@ import { Link as SiteLink } from '../i18n/links';
 import { registerCompletions, registerResolver, registerSemantics } from '../monaco';
 import type { Theme } from '../theme';
 import { usePageMeta } from '../meta';
+import { askPlatform } from '../site';
 
 interface Props {
   theme: Theme;
@@ -230,10 +231,10 @@ export function Editor({ theme }: Props) {
   /** Where a lambda answers, with {key} where its key goes - for the field a new key is typed into. */
   const [lambdaUrl, setLambdaUrl] = useState<string | null>(null);
 
-  // completions come from the server, so they always match what compiles
+  // completions come from the server, so they always match what compiles -
+  // asked once with whatever else on the page wants to know the platform
   useEffect(() => {
-    api
-      .platform()
+    askPlatform()
       .then((platform) => {
         registerCompletions(platform.completions);
         setLambdaUrl(platform.lambdaUrl);
@@ -1181,8 +1182,7 @@ export function Editor({ theme }: Props) {
       <RenameDialog
         open={renaming}
         current={lambda.publicKey}
-        // the server's, and until it said: this lambda's own address with its key taken out
-        template={lambdaUrl ?? lambda.publicUrl.replace(`//${lambda.publicKey}.`, '//{key}.')}
+        template={lambdaUrl}
         onClose={() => setRenaming(false)}
         onRenamed={(updated) => {
           setLambda(updated);
@@ -1500,14 +1500,14 @@ function RenameDialog({
 }: {
   open: boolean;
   current: string;
-  /** Where a lambda answers, with {key} where its key goes. */
-  template: string;
+  /** Where a lambda answers, with {key} where its key goes - nothing until the server said. */
+  template: string | null;
   privateKey: string;
   onClose: () => void;
   onRenamed: (lambda: Lambda) => void;
 }) {
   const said = useEditorT().frame;
-  const { before, after } = aroundKey(template);
+  const { before, after } = aroundKey(template ?? '');
   const [value, setValue] = useState(current);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);

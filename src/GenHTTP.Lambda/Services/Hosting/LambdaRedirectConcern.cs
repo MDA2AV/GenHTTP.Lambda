@@ -35,6 +35,8 @@ public sealed class LambdaRedirectConcern(IHandler content, IDomainRegistry regi
 {
     private const string Prefix = "/lambda/";
 
+    private static ReadOnlySpan<byte> PrefixBytes => "/lambda/"u8;
+
     #region Get-/Setters
 
     public IHandler Content => content;
@@ -63,20 +65,20 @@ public sealed class LambdaRedirectConcern(IHandler content, IDomainRegistry regi
     /// </summary>
     private string? FromPlatform(IRequest request)
     {
-        var path = request.Header.Path.ToString();
-
-        if (!path.StartsWith(Prefix, StringComparison.Ordinal))
+        // asked of every request to the platform, so on the bytes, before
+        // anything is made of them
+        if (!request.Header.Path.Bytes.Span.StartsWith(PrefixBytes))
         {
             return null;
         }
 
-        var rest = path[Prefix.Length..];
+        var rest = request.Header.Path.ToString()[Prefix.Length..];
 
         var cut = rest.IndexOf('/');
 
         // a key that could never have been one is not a lambda's address, and
         // finds out at the platform that it is not anything else either
-        if (!LambdaKeys.TryNormalize(Uri.UnescapeDataString(cut < 0 ? rest : rest[..cut]), out var key, out _))
+        if (!LambdaKeys.TryRead(Uri.UnescapeDataString(cut < 0 ? rest : rest[..cut]), out var key))
         {
             return null;
         }
@@ -92,7 +94,7 @@ public sealed class LambdaRedirectConcern(IHandler content, IDomainRegistry regi
     /// </summary>
     private string? ToDomain(IRequest request, HostedLambda hosted)
     {
-        if (!LambdaKeys.TryNormalize(hosted.Label, out var key, out _) || registry.DomainOf(key) is not { } domain)
+        if (!LambdaKeys.TryRead(hosted.Label, out var key) || registry.DomainOf(key) is not { } domain)
         {
             return null;
         }

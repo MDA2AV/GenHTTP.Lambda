@@ -159,6 +159,25 @@ public sealed class HostingTests
 
         Assert.AreEqual(HttpStatusCode.PermanentRedirect, posted.StatusCode, "followed with the same method and body");
         Assert.AreEqual("https://quiz.genhttp.run/items", posted.Headers.Location?.ToString());
+
+        using var put = await fixture.SendAsync(HttpMethod.Put, "/lambda/quiz/items");
+
+        Assert.AreEqual(HttpStatusCode.PermanentRedirect, put.StatusCode);
+
+        using var head = await fixture.SendAsync(HttpMethod.Head, "/lambda/quiz/");
+
+        Assert.AreEqual(HttpStatusCode.MovedPermanently, head.StatusCode, "a read, like a GET");
+    }
+
+    [TestMethod]
+    public async Task TheOldAddressPassesTheQueryOnAsItWasSent()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { HostingUrl = "https://genhttp.run" });
+
+        // a callback whose sender signed the query as it sent it
+        using var moved = await fixture.GetAsync("/lambda/quiz/callback?state=a+b%2Fc&flag&code=x%26y");
+
+        Assert.AreEqual("https://quiz.genhttp.run/callback?state=a+b%2Fc&flag&code=x%26y", moved.Headers.Location?.OriginalString);
     }
 
     [TestMethod]
@@ -203,6 +222,36 @@ public sealed class HostingTests
     }
 
     [TestMethod]
+    public async Task ALambdaWhoseKeyIsReservedSinceKeepsAnswering()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await ServeAsync(fixture, "mailroom");
+
+        // the key it had before the name was kept for something else
+        await using (var database = fixture.Application.Services.GetRequiredService<Microsoft.EntityFrameworkCore.IDbContextFactory<GenHTTP.Lambda.Data.LambdaDbContext>>()
+                                           .CreateDbContext())
+        {
+            database.Lambdas.Single(l => l.PublicKey == "mailroom").PublicKey = "mail";
+            await database.SaveChangesAsync();
+        }
+
+        using var served = await fixture.GetAsync("http://mail.localhost/start");
+
+        Assert.AreEqual("mine", await served.GetContentAsync(), "a rule for claiming a key takes no lambda offline");
+
+        using var moved = await fixture.GetAsync("/lambda/mail/start");
+
+        Assert.AreEqual("http://mail.localhost:8080/start", moved.Headers.Location?.ToString(), "nor its old address");
+
+        using var claimed = await fixture.SendAsync(HttpMethod.Post, "/api/v1/lambdas", new CreateLambdaRequest("mta-sts", true));
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, claimed.StatusCode, "while nobody claims such a name any more");
+
+        Assert.IsNotNull(lambda.PrivateKey);
+    }
+
+    [TestMethod]
     public async Task APathOfALambdaThatStartsWithLambdaIsItsOwn()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
@@ -233,7 +282,14 @@ public sealed class HostingTests
 
         Assert.Contains("Apps made with GenHTTP Lambda", markup);
         Assert.Contains("<a href=\"https://genhttp.dev/\">genhttp.dev</a>", markup, "it leads to the site");
+        Assert.Contains("href=\"https://genhttp.dev/en/imprint\"", markup, "and to who runs it");
+        Assert.Contains("href=\"https://genhttp.dev/en/privacy\"", markup, "and to what is recorded of a visit");
         Assert.DoesNotContain(LambdaFixture.SpaMarkup, markup, "and is none of the site's pages");
+
+        using var www = await fixture.GetAsync("/", accept: "text/html", host: "www.genhttp.run");
+
+        Assert.AreEqual(HttpStatusCode.OK, www.StatusCode, "where somebody typed it the way sites used to be found");
+        Assert.Contains("Apps made with GenHTTP Lambda", await www.GetContentAsync());
 
         using var other = await fixture.GetAsync("/anything", accept: "text/html", host: "genhttp.run");
 

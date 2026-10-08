@@ -7,7 +7,7 @@ export const domain: EditorMessages['domain'] = {
   removed: 'Alan adı kaldırıldı. Lambda buradaki adresinde yeniden yanıt veriyor.',
   removeFailed: 'Alan adı kaldırılamadı.',
   hint:
-    'Premium bir lambda, kendi alan adında da yanıt verebilir, hem de kökten itibaren alan adının tamamında. Önce alan adını bu sunucuya yönlendirin, ardından buraya girin: bundan sonra o alan adına gelen istekler lambdaya ulaşır, buradaki adresi ise ziyaretçileri alan adına yönlendirir.',
+    'Premium bir lambda, kendi alan adında yanıt verebilir, hem de kökten itibaren alan adının tamamında. Önce alan adını bu sunucuya yönlendirin, ardından buraya girin: bundan sonra o alan adına gelen istekler lambdaya ulaşır, buradaki adresi ise ziyaretçileri alan adına yönlendirir.',
   loading: 'Yükleniyor…',
   example: 'alan-adiniz.com',
   open: (domain) => `${domain} adresini aç`,

@@ -140,10 +140,12 @@ without the header, 403 with the wrong token, and the routes are not there at
 all (404) on an installation without a token. Behind it are the panel, the
 server's telemetry and the log - and the editor's **Admin** section, which a
 browser holding the token shows in the editor of every lambda, in both views,
-and which nobody else sees; its calls carry the token like the panel's. It is
+and which nobody else sees; what it calls carries the token like the panel's. It is
 **empty for now - decided by the owner**: it held the sitemap switch, which
-went when the lambdas moved to hosts of their own. Keep the section; what only
-the operator decides about one lambda goes there.
+went when the lambdas moved to hosts of their own, and calls nothing until
+something goes there again - so a token the server would refuse is found out
+in the panel, not there. Keep the section; what only the operator decides
+about one lambda goes there.
 **Only owners and the operator see telemetry**
 - the owner a lambda's own in the editor, the operator everybody's; nothing is
 public.
@@ -170,8 +172,12 @@ domain named after its public key - `https://{key}.genhttp.run/`
   Permanently for a read, Permanent Redirect for the rest, cached for a day
   since a domain comes and goes.
 - **The subdomain serves the lambda only while it has no domain of its
-  own**; with one, it redirects there the same way. A domain of its own works
-  as it did.
+  own that its tier serves**; with one, it redirects there the same way. A
+  domain of its own works as it did.
+- **Finding a lambda by an address reads the key as it is spelled
+  (`LambdaKeys.TryRead`), never by the rules for claiming one**
+  (`TryNormalize`): a rule made later - a reserved name, `xn--` - must not
+  take a lambda from before it offline.
 - **The wildcard certificate is the fallback.** The io_uring engine matches
   names exactly, so the certificate of `*.{hosting domain}` is presented to
   every name no certificate is listed for (`CertificateLoader`); the site's

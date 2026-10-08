@@ -240,9 +240,10 @@ nothing more.
 We ask for a small "Made with GenHTTP Lambda" line at the foot of the pages
 visitors see: a link to {home}/ with `rel="nofollow"` on a lambda without a
 domain of its own, plain text on one with a domain. The name is the whole of
-the link. Say that you added it; leave it out or take it out when the user
-does not want it, and note that in `docs/decisions.md`. Do not add one to a
-lambda that has none unless the user asks.
+the link; one written without `rel="nofollow"` is given it with your next
+change to the page. Say that you added it; leave it out or take it out when
+the user does not want it, and note that in `docs/decisions.md`. Do not add
+one to a lambda that has none unless the user asks.
 
 ## Beyond git
 

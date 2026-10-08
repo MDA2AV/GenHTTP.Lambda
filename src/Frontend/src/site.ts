@@ -85,16 +85,21 @@ export function useOrigin(): { origin: string; host: string } {
 /** What the installation says about itself, asked for once by whichever page needs it first. */
 let asking: Promise<Platform> | null = null;
 
-const askPlatform = () => (asking ??= api.platform().catch((error) => {
+/**
+ * What the installation says about itself - the terms, the starters, where a
+ * lambda answers - asked for once however many parts of a page want it.
+ */
+export const askPlatform = () => (asking ??= api.platform().catch((error) => {
   asking = null;
   throw error;
 }));
 
 /**
  * The domain the lambdas answer below, each at a subdomain named after its
- * key: genhttp.run. Sent with a rendered page, and asked for otherwise.
+ * key: genhttp.run. Sent with a rendered page, and asked for otherwise -
+ * nothing until it is known, since any other domain would be a wrong example.
  */
-export function useHosting(): string {
+export function useHosting(): string | null {
   const facts = sentFacts();
 
   const [asked, setAsked] = useState<string | null>(null);
@@ -109,8 +114,7 @@ export function useHosting(): string {
       .catch(() => undefined);
   }, [facts]);
 
-  // the site's own host until it has answered: an example address is no worse for it
-  return facts?.hosting ?? asked ?? window.location.host;
+  return facts?.hosting ?? asked;
 }
 
 export interface Lifetimes {

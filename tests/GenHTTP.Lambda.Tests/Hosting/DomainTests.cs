@@ -170,6 +170,11 @@ public sealed class DomainTests
             Assert.AreNotEqual("mine", await response.GetContentAsync(), "the domain is the platform's again");
         }
 
+        using (var response = await fixture.GetAsync("http://shop.localhost/start"))
+        {
+            Assert.AreEqual("mine", await response.GetContentAsync(), "and its own address serves it rather than sending visitors to a domain it does not answer at");
+        }
+
         var described = await DescribeAsync(fixture, lambda.PrivateKey);
 
         Assert.AreEqual(Domain, described.Domain, "still configured");

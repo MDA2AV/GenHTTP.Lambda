@@ -74,14 +74,31 @@ public sealed class CertificateLoader : IHostCertificateProvider, IFileCertifica
             _logger.LogInformation("Loaded certificate for {Names}, valid until {Expiry:u}", string.Join(", ", entry.Names), entry.Certificate!.NotAfter);
         }
 
-        _fallback = Wildcard(options) is { } wildcard
-                    && _entries.FirstOrDefault(e => e.Names.Contains(wildcard, StringComparer.OrdinalIgnoreCase)) is { } hosting
+        var wildcard = Wildcard(options);
+
+        _fallback = wildcard != null && _entries.FirstOrDefault(e => e.Names.Contains(wildcard, StringComparer.OrdinalIgnoreCase)) is { } hosting
                         ? hosting
                         : _default;
 
         if (_fallback != _default)
         {
             _logger.LogInformation("Presenting the certificate for {Names} to every name no certificate is listed for", string.Join(", ", _fallback.Names));
+        }
+
+        // every lambda answers below the hosting domain and its old address
+        // sends its visitors there, so a server without the certificate is a
+        // server whose lambdas no browser opens - said where it is started
+        if (wildcard != null && options.HostingUrl!.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+        {
+            if (_fallback == _default && !_default.Names.Contains(wildcard, StringComparer.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("No certificate names {Wildcard}, so the address of every lambda is shown one that does not carry its name", wildcard);
+            }
+
+            if (!_entries.Any(e => Covers(e, wildcard[2..])))
+            {
+                _logger.LogWarning("No certificate names {Domain}, where the hosting domain has its page - a wildcard does not cover it", wildcard[2..]);
+            }
         }
     }
 

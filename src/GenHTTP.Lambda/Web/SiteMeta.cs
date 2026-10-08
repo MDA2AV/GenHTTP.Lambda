@@ -475,20 +475,43 @@ public sealed class SiteMeta
     private IReadOnlyDictionary<string, SiteEntry> Pages()
         => ReadPages().Where(p => !p.Key.Contains(':')).ToDictionary(p => p.Key, p => p.Value);
 
+    /// <remarks>
+    /// Held in memory and only read again once the file on disk is newer -
+    /// "npm run build" updates a running server. It was read on every page
+    /// that asked, which was fine while only the site's public pages did; the
+    /// pages of the hosting domain answer any name below it, which whoever
+    /// likes can make up, so parsing it there would be work anybody could have
+    /// done on the reactor for nothing.
+    /// </remarks>
     private IReadOnlyDictionary<string, SiteEntry> ReadPages()
     {
-        // read every time, because "npm run build" updates a running server;
-        // it is a few kilobytes, and only public pages ask for it
+        var written = File.GetLastWriteTimeUtc(PageFile);
+
+        if (_pages is { } known && known.Written == written)
+        {
+            return known.Entries;
+        }
+
+        IReadOnlyDictionary<string, SiteEntry> entries;
+
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, SiteEntry>>(File.ReadAllText(PageFile), Json) ?? [];
+            entries = JsonSerializer.Deserialize<Dictionary<string, SiteEntry>>(File.ReadAllText(PageFile), Json) ?? [];
         }
         catch (Exception e) when (e is IOException or JsonException)
         {
             // no build, or a broken one: the pages are still served, unnamed
-            return new Dictionary<string, SiteEntry>();
+            entries = new Dictionary<string, SiteEntry>();
         }
+
+        _pages = new PagesCopy(written, entries);
+
+        return entries;
     }
+
+    private volatile PagesCopy? _pages;
+
+    private sealed record PagesCopy(DateTime Written, IReadOnlyDictionary<string, SiteEntry> Entries);
 
     /// <summary>
     /// A path the way the table spells it: "/docs/" is "/docs".

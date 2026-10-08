@@ -2079,7 +2079,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// operator installs a certificate for the domain.
     /// </summary>
     private static string? DomainUrl(LambdaInfo lambda)
-        => LambdaDescription.Serves(lambda.Tier, lambda.Domain) ? $"https://{lambda.Domain}/" : null;
+        => LambdaDescription.Serves(lambda.Tier, lambda.Domain) ? lambda.Address : null;
 
     private static IEnumerable<object> Diagnostics(IReadOnlyList<CompilationDiagnostic> diagnostics)
         => diagnostics.Select(d => new { file = d.File ?? LambdaSource.EntryName, d.Line, d.Column, d.Severity, d.Message });
@@ -2190,7 +2190,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         paths = new
         {
             rule = "Use relative paths for every link, script, stylesheet, image, fetch, form action, websocket and redirect: \"api/items\", \"app.css\", \"./\". No leading slash, and never the full address.",
-            why = $"A lambda answers at the root of its own address - {addresses.Of("{publicKey}")}, its publicUrl - or of a domain of its own in the premium tier; as a feature, its preview answers below /features/{{feature}}/ on this platform. A path starting with / leaves the preview, and the full address is the live lambda - so a feature's page that used either would read and write the real data instead of its copy.",
+            why = $"A lambda answers at the root of its own address - {addresses.Of("{publicKey}")}, its publicUrl - or of a domain of its own in the premium tier; as a feature, its preview answers below /features/{{feature}}/ on this platform. A path starting with / leaves the preview for the platform's own pages, where nothing of the lambda is, and the full address is the live lambda - so a feature's page that used it would read and write the real data instead of its copy.",
             pages = "A page at the root of the lambda resolves \"api/items\" against the lambda. A page one level deeper needs \"../api/items\" - or keep the pages at the root.",
             websockets = "Build the address from the page: new URL(\"play\", location.href) with the scheme swapped to ws: or wss:.",
             inCSharp = "Redirect.To(\"other\") and Location headers take relative paths too. Never build an absolute URL from the request's host.",

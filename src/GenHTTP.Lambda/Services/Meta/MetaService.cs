@@ -659,7 +659,7 @@ public sealed class MetaService : IMetaService
 
     public string? GetPrivateKey(string publicKey)
     {
-        if (!LambdaKeys.TryNormalize(publicKey, out var normalized, out _))
+        if (!LambdaKeys.TryRead(publicKey, out var normalized))
         {
             return null;
         }

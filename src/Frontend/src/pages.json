@@ -761,7 +761,7 @@
     "text": {
       "en": {
         "title": "Apps made with GenHTTP Lambda",
-        "description": "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of yours, go to {site}."
+        "description": "The apps on this domain were built with GenHTTP Lambda, each at an address of its own. To build one of your own, go to {site}."
       },
       "id": {
         "title": "Aplikasi yang dibuat dengan GenHTTP Lambda",
@@ -817,7 +817,7 @@
     "text": {
       "en": {
         "title": "Nothing is running here",
-        "description": "No app is online at {address}. It may have been taken offline or removed, or there never was one. To build one of yours, go to {site}."
+        "description": "No app is online at {address}. It may have been taken offline or removed, or there never was one. To build one of your own, go to {site}."
       },
       "id": {
         "title": "Tidak ada yang berjalan di sini",
