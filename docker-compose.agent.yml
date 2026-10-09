@@ -120,9 +120,9 @@ services:
     pids_limit: 512
     restart: unless-stopped
     # One line per build, with the start of what was asked for. A deploy
-    # rebuilds the server and leaves this container alone, so without a cap
-    # its log would keep every prompt ever typed. Capped like the server's,
-    # and promised the same way on the privacy page.
+    # recreates this container only when its image changed, so without a cap
+    # its log would keep every prompt typed in between. Capped like the
+    # server's, and promised the same way on the privacy page.
     logging:
       driver: json-file
       options:
