@@ -1309,6 +1309,15 @@ costs no downtime; when there is something to change it restarts the container,
 which drops every open connection - including anyone using a hosted lambda at
 that moment.
 
+The build agent is rebuilt with the server, because its runner reads the
+answers of the server's tools and a runner left behind reads them as they used
+to be. Both images are built before anything restarts. The runner's container
+is recreated only when its image changed, and only once the builds running at
+that moment have finished (ten minutes at most): a running build lives in the
+runner, and recreating it would lose the build. New builds start from the new
+image straight away. `--check` fails while the runner is older than the image
+built last.
+
 Linking it onto the path makes it available to anyone with sudo:
 
 ```bash
