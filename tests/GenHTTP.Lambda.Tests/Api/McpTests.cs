@@ -872,7 +872,8 @@ public sealed class McpTests
             }));
 
             Assert.IsTrue(changed["ok"]!.GetValue<bool>(), changed.ToJsonString());
-            Assert.IsNull(changed["onlineUntil"], "a preview is not the lambda going online");
+            Assert.IsNull(changed["online"], "a preview is not the lambda going online");
+            Assert.IsNull(changed["onlineUntil"]);
 
             using var preview = await fixture.GetAsync(previewUrl.AbsolutePath);
 
@@ -993,7 +994,46 @@ public sealed class McpTests
 
         Assert.IsTrue(merged["ok"]!.GetValue<bool>(), merged.ToJsonString());
         Assert.AreEqual(4, merged["version"]!.GetValue<int>());
-        Assert.IsNull(merged["onlineUntil"], "merged without deploy, nothing went online");
+        Assert.IsNull(merged["online"], "merged without deploy, nothing went online");
+        Assert.IsNull(merged["onlineUntil"]);
+    }
+
+    [TestMethod]
+    public async Task APremiumLambdaIsSaidToGoOnlineThoughItHasNoDeadline()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync();
+
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+
+        var deployed = Structured(await CallToolAsync(fixture, "write_code", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey,
+            ["deploy"] = true,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"one\"));" })
+        }));
+
+        Assert.IsTrue(deployed["ok"]!.GetValue<bool>(), deployed.ToJsonString());
+        Assert.IsTrue(deployed["online"]!.GetValue<bool>(), "its tier keeps it online, and it did go online");
+        Assert.IsNull(deployed["onlineUntil"], "with no deadline to name");
+
+        var created = Structured(await CallToolAsync(fixture, "create_feature", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["name"] = "Two" }));
+
+        var feature = created["feature"]!["feature"]!.GetValue<string>();
+
+        Structured(await CallToolAsync(fixture, "change_code", new JsonObject
+        {
+            ["privateKey"] = lambda.PrivateKey,
+            ["feature"] = feature,
+            ["files"] = new JsonArray(new JsonObject { ["name"] = "lambda.cs", ["code"] = "return Content.From(Resource.FromString(\"two\"));" })
+        }));
+
+        var merged = Structured(await CallToolAsync(fixture, "merge_feature", new JsonObject { ["privateKey"] = lambda.PrivateKey, ["feature"] = feature, ["deploy"] = true }));
+
+        Assert.IsTrue(merged["ok"]!.GetValue<bool>(), merged.ToJsonString());
+        Assert.IsTrue(merged["online"]!.GetValue<bool>(), "a merge put online says so as well");
+        Assert.AreEqual(merged["version"]!.GetValue<int>(), fixture.Meta.Get(lambda.PrivateKey)?.ActiveVersion);
     }
 
     [TestMethod]

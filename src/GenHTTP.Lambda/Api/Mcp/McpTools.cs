@@ -939,6 +939,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             publicUrl = lambda.PublicUrl,
             domainUrl = DomainUrl(lambda),
             version = lambda.ActiveVersion,
+            online = true,
             onlineUntil = lambda.DeployedUntil,
             next = "Merged and online. Call the public address, then read_logs to see how it answers."
         });
@@ -1385,6 +1386,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var lambda = result.Lambda!;
 
+        /*
+         * online says it went online, for anything that reads the answer:
+         * onlineUntil is no such signal, since a tier that keeps its lambdas
+         * online has no deadline, and the field is then left out. The build
+         * agent's runner read it as one, and told the owner of a premium
+         * lambda that a change it had just put online had not gone online.
+         */
         return McpProtocol.Say(new
         {
             ok = true,
@@ -1392,9 +1400,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             publicUrl = lambda.PublicUrl,
             domainUrl = DomainUrl(lambda),
             version = lambda.ActiveVersion,
+            online = true,
             onlineUntil = lambda.DeployedUntil,
             next = "Call the public address, then read_logs to see how it answered. While you are still building it, fix with change_code and deploy: true; once people use it, make changes in a feature (create_feature), which is tried at an address of its own and merged into the next version once it is right.",
-            note = reminder ?? "Deploying again extends onlineUntil.",
+            note = reminder ?? (lambda.DeployedUntil != null ? "Deploying again extends onlineUntil." : null),
             documentation
         });
     }

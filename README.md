@@ -1576,7 +1576,8 @@ online. A lambda that exists is now changed in a feature: `write_code`,
 optional `feature` and then act on the feature - its files, its preview, its
 copy of the data - instead of the lambda, so the same few tools do both. The
 answers name the feature, its `previewUrl` and whether it is `mergeable`, and
-never carry `onlineUntil`, which only a deployment of the lambda does.
+never carry `online: true`, which only a deployment of the lambda does - with
+its `onlineUntil`, unless its tier keeps it online and it has none.
 `merge_feature` refuses a feature that is behind with how to get it there;
 `read_lambda` with `feature` lists the `newerVersions` it would have to take
 in. The same rules are said wherever an agent decides something - in the

@@ -810,7 +810,7 @@ async function run(job) {
           if (['write_code', 'change_code', 'deploy', 'check_code', 'merge_feature'].includes(from)) {
             if (Array.isArray(body?.diagnostics)) compiles = errorsIn(body.diagnostics) === 0;
             // previewUrl at the top is the answer of a preview that went online
-            else if (body?.ok === true && (body.onlineUntil !== undefined || body.previewUrl !== undefined)) compiles = true;
+            else if (wentOnline(from, body) || (body?.ok === true && body.previewUrl !== undefined)) compiles = true;
           }
 
           const described = body?.feature && typeof body.feature === 'object' ? body.feature : null;
@@ -826,11 +826,11 @@ async function run(job) {
           if (from === 'merge_feature' && body?.merged === true) feature = null;
           if (from === 'delete_feature' && body?.ok === true && body.deleted === feature?.key) feature = null;
 
-          if (body?.ok === true && body.onlineUntil !== undefined && Number.isInteger(body.version)) {
+          if (wentOnline(from, body) && Number.isInteger(body.version)) {
             online = body.version;
           }
 
-          const found = harvest(body);
+          const found = harvest(from, body);
 
           // merged field by field rather than spread: a later tool answers
           // with the public key and no private one, and spreading that over
@@ -1088,8 +1088,21 @@ function parse(content) {
   return null;
 }
 
+/*
+ * Whether a tool's answer says a version went online. online: true says it,
+ * in the answers of a deploy and of a save or a merge with deploy: true -
+ * only those, because read_lambda and read_logs say online about the lambda
+ * as it is. onlineUntil was read as the signal before, and a premium lambda
+ * has none, its tier keeping it online: its changes went online and the page
+ * said they had not. It still counts, for a server from before online.
+ */
+const DEPLOYING = ['write_code', 'change_code', 'deploy', 'merge_feature'];
+
+const wentOnline = (tool, body) =>
+  DEPLOYING.includes(tool) && body?.ok === true && (body.online === true || body.onlineUntil !== undefined);
+
 /** Pulls the facts out of a tool result. */
-function harvest(body) {
+function harvest(tool, body) {
   if (!body) return null;
 
   const found = {};
@@ -1102,13 +1115,12 @@ function harvest(body) {
   if (typeof body.publicUrl === 'string') found.publicUrl = body.publicUrl;
 
   /*
-   * onlineUntil is only in the answer deploy gives, which is what makes it
-   * usable as the signal. Reading it as "anything mentioning deployed"
+   * Asked of the deploy's answer, not of anything mentioning deployed: that
    * also matched read_lambda, and testing publicKey first - as this did -
    * meant the deploy was never examined at all, because its answer carries
    * a public key too. The change went online and the page said it had not.
    */
-  if (body.ok && body.onlineUntil !== undefined) found.deployed = true;
+  if (wentOnline(tool, body)) found.deployed = true;
 
   return Object.keys(found).length > 0 ? found : null;
 }
@@ -1186,7 +1198,7 @@ function finish(entry, tool, body) {
       if (Number.isInteger(body.version)) entry.version = body.version;
 
       // a version went online, or a feature's preview did
-      if (body.ok === true && (body.onlineUntil !== undefined || body.previewUrl !== undefined)) entry.online = true;
+      if (wentOnline(tool, body) || (body.ok === true && body.previewUrl !== undefined)) entry.online = true;
 
       if (Array.isArray(body.diagnostics)) {
         entry.errors = errorsIn(body.diagnostics);
