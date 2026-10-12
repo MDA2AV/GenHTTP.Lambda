@@ -26,6 +26,11 @@ namespace GenHTTP.Lambda.Api.Model;
 /// <param name="Crawlers">Whose bots came: search engines, AIs, chats showing a preview</param>
 /// <param name="Updated">When visits were last written down; visits since then are not in this answer yet</param>
 /// <param name="IntervalSeconds">How often they are written down</param>
+/// <param name="ConfirmedCrawlers">
+/// The operators whose crawlers are confirmed by the addresses they publish - Google, Bing, OpenAI, Apple, Perplexity -
+/// as far as those could be fetched. In <paramref name="Crawlers"/> their names stand for confirmed visits,
+/// "unconfirmed" for claims to be theirs from elsewhere, and every other value for a kind of crawler.
+/// </param>
 public sealed record AnalyticsResponse(
     bool Enabled,
     DateTime? Since,
@@ -47,7 +52,8 @@ public sealed record AnalyticsResponse(
     IReadOnlyList<AnalyticsValueResponse>? Systems,
     IReadOnlyList<AnalyticsValueResponse>? Crawlers,
     DateTime? Updated,
-    int IntervalSeconds
+    int IntervalSeconds,
+    IReadOnlyList<string> ConfirmedCrawlers
 )
 {
 
@@ -79,7 +85,8 @@ public sealed record AnalyticsResponse(
             Of(AnalyticsDimension.Systems),
             Of(AnalyticsDimension.Crawlers),
             analytics.Updated,
-            (int)analytics.Interval.TotalSeconds
+            (int)analytics.Interval.TotalSeconds,
+            analytics.Confirmed
         );
     }
 

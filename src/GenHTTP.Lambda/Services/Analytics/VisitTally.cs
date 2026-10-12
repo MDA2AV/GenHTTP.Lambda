@@ -1,4 +1,4 @@
-using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.Visits;
 
 namespace GenHTTP.Lambda.Services.Analytics;
 
@@ -13,7 +13,7 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// referred from, the device it came on - is worked out here, once, off the
 /// requests.
 /// </remarks>
-public sealed class VisitTally(DailyVisitors visitors)
+public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classifier)
 {
     private readonly Dictionary<(long Lambda, DateOnly Day), Totals> _days = [];
 
@@ -82,9 +82,11 @@ public sealed class VisitTally(DailyVisitors visitors)
                 break;
         }
 
-        // a visitor is counted with the first thing they asked for that day,
-        // whatever it was
-        if (visitors.IsNew(lambda, day, visit.Client, visit.Agent) == true)
+        var agent = classifier.Classify(visit.Agent, visit.Hints, visit.Client);
+
+        // a visitor is a person, counted with the first thing they asked for
+        // that day, whatever it was - a crawler opens pages, but is nobody
+        if (agent.Browser != null && visitors.IsNew(lambda, day, visit.Client, visit.Agent) == true)
         {
             totals.Visitors++;
         }
@@ -102,8 +104,6 @@ public sealed class VisitTally(DailyVisitors visitors)
         {
             Count(lambda, day, AnalyticsDimension.Referrers, referrer, view);
         }
-
-        var agent = VisitorAgents.Classify(visit.Agent);
 
         Count(lambda, day, AnalyticsDimension.Devices, agent.Device, view);
 

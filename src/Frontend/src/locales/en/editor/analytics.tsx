@@ -30,7 +30,7 @@ export const analytics = {
 
   /** The figures at the top; each one picks what the chart below shows. */
   visitors: 'Visitors',
-  visitorsHint: 'Different people, each counted once a day.',
+  visitorsHint: 'Different people, each counted once a day. Search engines and other programs are not visitors.',
   views: 'Page views',
   viewsHint: 'Every time somebody opened a page.',
   hits: 'Requests',
@@ -80,12 +80,32 @@ export const analytics = {
   },
   browsers: 'Browsers',
   systems: 'Systems',
-  crawlers: 'Search engines and AI',
-  crawlersHint: 'Programs that came by: search engines indexing your pages, AI assistants reading them, chats showing a preview of a link.',
-  noCrawlers: 'No search engine or AI has come by in these days.',
+  crawlers: 'Search engines, AI and other programs',
+  crawlersHint:
+    'Programs that came by, by what they are. Google, Bing, OpenAI, Apple and Perplexity are named only when the visit came from an address they publish - anybody can claim to be them.',
+  noCrawlers: 'No search engine, AI or other program has come by in these days.',
+  /** On hover, next to the name of a crawler that was confirmed. */
+  confirmed: (name: string) => `Came from an address ${name} publishes for its crawlers`,
+  /** The kinds of programs that are counted without a name of their own. */
+  crawlerKinds: {
+    'search-engine': 'Search engines',
+    'ai-crawler': 'AI crawlers',
+    'social-preview': 'Link previews in chats and social networks',
+    advertising: 'Advertising',
+    seo: 'SEO tools',
+    monitoring: 'Monitoring',
+    'feed-reader': 'Feed readers',
+    archiver: 'Web archives',
+    academic: 'Research',
+    scanner: 'Security scanners',
+    'browser-automation': 'Automated browsers',
+    'http-library': 'Scripts and apps',
+    other: 'Other programs',
+    /** Programs that called themselves Google, Bing and so on, but did not come from their addresses. */
+    unconfirmed: 'Claimed to be a known crawler, not confirmed',
+  },
   /** What did not fit in a day's list, gathered in one row. */
   other: 'Others',
-  otherBots: 'Other programs',
   showAll: (count: number) => `Show all ${count}`,
   showFewer: 'Show fewer',
   /** Next to a share in a list, on hover. */

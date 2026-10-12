@@ -518,9 +518,11 @@ export const guide: Messages['guide'] = {
     <>
       Gezählt wird von der Plattform, vor Ihrer App – Ihre App braucht dafür nichts: keine Cookies, kein Script, kein Banner,
       das Ihre Besucher akzeptieren müssten. Gespeichert werden nur Zahlen pro Tag – nie eine Adresse, und von der Seite, von
-      der jemand kam, nur die Website. Ein Besucher wird einmal pro Tag gezählt. Ein Jahr wird aufbewahrt; eine kostenlose App
-      zeigt davon die letzten sieben Tage und {k.b('Premium')} alles, auch was vorher gezählt wurde. Wer die Analyse
-      ausschaltet, löscht, was gezählt wurde.
+      der jemand kam, nur die Website. Ein Besucher ist eine Person, einmal pro Tag gezählt: Suchmaschinen, KI-Crawler und
+      andere Programme werden getrennt gezählt, nach Art, und Google, Bing, OpenAI, Apple und Perplexity nur dann mit Namen,
+      wenn der Besuch von einer Adresse kam, die sie veröffentlichen – jeder kann behaupten, sie zu sein. Ein Jahr wird
+      aufbewahrt; eine kostenlose App zeigt davon die letzten sieben Tage und {k.b('Premium')} alles, auch was vorher gezählt
+      wurde. Wer die Analyse ausschaltet, löscht, was gezählt wurde.
     </>
   )),
   visitorsAside:

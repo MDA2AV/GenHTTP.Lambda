@@ -811,12 +811,15 @@ feature's preview.
   one (see [Limits](#limits)) - so a lambda that becomes premium shows what was
   counted before it was. A range of the same length before is summed for a
   comparison only where the tier shows it as well.
-- **Counted in front of the lambda, written behind it.** The request to a
-  lambda is made into one visit (`LambdaVisit`: its status, its time, its
-  path, its caller's country and agent) by `LambdaActivityConcern`, which
-  counts the overview's figures from it and leaves it on the request;
-  `AnalyticsConcern`, outside it, puts it on a lock-free queue where the
-  owner counts visits. `AnalyticsJob` empties the queue every
+- **Counted in front of the lambda, written behind it.** A request to a
+  lambda or a preview is made into one visit (`LambdaVisit`: its status, its
+  time, its bytes, its path, its caller's country and agent) by
+  `LambdaVisitConcern`, which only makes it and leaves it on the request.
+  Whatever wants to know about requests to lambdas reads it rather than
+  measuring again: the overview's figures (`LambdaActivityConcern`), the
+  request log (`CallerConcern`), and `AnalyticsConcern`, which puts it on a
+  lock-free queue where the owner counts visits. Each leaves out what is not
+  its own - the figures and the analytics previews. `AnalyticsJob` empties the queue every
   `LAMBDA_ANALYTICS_INTERVAL_SECONDS` (five minutes), sums it into a row
   per lambda, day and value, and writes those in one transaction. Nothing is
   written while a visitor waits; visits not yet written are lost when the
@@ -830,12 +833,33 @@ feature's preview.
   `(other)`, so a scanner cannot fill a day. A referrer is kept as its host,
   without `www.`, and only where it is another site than the one visited (100
   a day). Country, device, browser and system come from the address and the
-  `User-Agent` the request line already has (`VisitorAgents`); a bot is
-  counted under whose it is, not as a browser.
+  `User-Agent` the request line already has, and from the client hints
+  (`Sec-CH-UA`, `-Mobile`, `-Platform`) where a Chromium browser sends them -
+  its agent no longer says which phone or system it is on. Hints are only
+  believed from an agent that is Chromium's, and only where they name a
+  browser or system that is known, so nobody writes words of their own into
+  an owner's figures (`VisitorClassifier`).
+- **Crawlers, hardened.** A program is told from a person by
+  [crawler-user-agents](https://github.com/monperrus/crawler-user-agents)
+  (MIT, `Resources/Crawlers`), a maintained list of about 1,500 crawlers with a
+  kind each - search engine, AI crawler, link preview, monitoring, scanner,
+  HTTP library and so on - and counted under that kind, never as a browser
+  or a visitor. Google, Bing, OpenAI, Apple and Perplexity publish the
+  addresses their crawlers come from; a visit is only counted as theirs when
+  the connection came from one of them, and as an unconfirmed claim otherwise
+  - anybody can send `Googlebot`. The address checked is the connection's,
+  never a forwarding header's, so an installation behind a proxy confirms
+  none. `CrawlerJob` fetches the list and the addresses daily into
+  `/data/crawlers` (`LAMBDA_ANALYTICS_CRAWLER_LISTS`,
+  `LAMBDA_ANALYTICS_CRAWLER_REFRESH_HOURS`), the list of the release
+  standing in until it has. Matching is linear in the length of the agent
+  whatever it says: the list's plain text is looked for in one pass
+  (`SearchValues`), its few expressions run without backtracking, and only
+  500 characters of an agent are read.
 - **Visitors without keeping anybody.** A visitor is their address and their
   agent, hashed with a key made at random per day and lambda, held in memory
-  for today and yesterday only (`DailyVisitors`). So a visitor counts once a
-  day; a restart counts somebody again who comes back the same day, and an
+  for today and yesterday only (`DailyVisitors`), and only a person is one.
+  So a visitor counts once a day; a restart counts somebody again who comes back the same day, and an
   installation that keeps no addresses (`LAMBDA_LOG_CLIENT_ADDRESS=false`)
   counts no visitors. No cookie, no script in the lambda.
 - **A database of its own.** `analytics.db` beside `lambda.db`, a star:
@@ -1168,7 +1192,8 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   switched analytics on (see [Analytics](#analytics)). `AnalyticsService` is
   what the API and MCP call and what writes a batch down, `AnalyticsQueue`
   holds the visits until then, `VisitTally` sums them into rows,
-  `VisitorAgents` and `DailyVisitors` say what and who a visitor was, and
+  `VisitorClassifier` says what a visitor was - with `CrawlerList` and
+  `CrawlerRanges`, kept current by `CrawlerJob` - `DailyVisitors` who, and
   `AnalyticsStore` keeps `analytics.db` - `IAnalyticsStore` for Meta, which
   forgets a deleted lambda's rows.
 - **Building** (`Services/Building`) - the jobs of the build agent: builds
@@ -1293,6 +1318,8 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
 | `LAMBDA_ANALYTICS_INTERVAL_SECONDS` | `300`            | how often the visits counted for the owners' analytics are written down |
+| `LAMBDA_ANALYTICS_CRAWLER_LISTS`    | `true`           | fetch the list of crawlers and the addresses Google, Bing, OpenAI, Apple and Perplexity crawl from |
+| `LAMBDA_ANALYTICS_CRAWLER_REFRESH_HOURS` | `24`        | how often they are fetched again            |
 | `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel, and closes the figures   |
 | `LAMBDA_LOG_HISTORY`                | `4000`           | log lines the panel can read back, to 10^6  |
 | `LAMBDA_LOG_MEMORY_MB`              | derived          | what their text may cost; whichever runs out first |

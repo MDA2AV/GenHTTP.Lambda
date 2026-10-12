@@ -138,6 +138,8 @@ export interface LambdaAnalytics {
   /** When visits were last written down. */
   updated: string | null;
   intervalSeconds: number;
+  /** The operators whose crawlers are confirmed by their published addresses; in `crawlers` their names stand for confirmed visits. */
+  confirmedCrawlers: string[];
 }
 
 /** One interval of a lambda's traffic. */

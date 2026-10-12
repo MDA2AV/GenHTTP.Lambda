@@ -153,12 +153,39 @@ public sealed class AnalyticsTests
         Assert.AreEqual(1, Views(shown.Systems, "iOS"));
         Assert.IsNull(shown.Browsers!.FirstOrDefault(b => b.Value == "bot"), "a bot is no browser of a person");
 
-        Assert.AreEqual(1, Views(shown.Crawlers, "Google"));
+        Assert.AreEqual(1, Views(shown.Crawlers, "unconfirmed"), "Google publishes its addresses, and none are known here");
+
+        Assert.AreEqual(2, shown.Totals.Visitors, "the crawler opened a page, but is nobody");
 
         var today = shown.Daily!.Last();
 
         Assert.AreEqual(DateOnly.FromDateTime(DateTime.UtcNow), today.Date);
         Assert.AreEqual(3, today.Totals.Views);
+    }
+
+    [TestMethod]
+    public async Task ACrawlerIsCountedAsGooglesWhereItCameFromGoogle()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await OnlineAsync(fixture, "indexed");
+
+        await EnableAsync(fixture, lambda.PrivateKey);
+
+        // the test host's own address, both families, as Google's
+        fixture.Application.Services.GetRequiredService<CrawlerRanges>().Load("Google", [
+            new MemoryStream("""{"prefixes": [{"ipv4Prefix": "127.0.0.0/8"}, {"ipv6Prefix": "::1/128"}]}"""u8.ToArray())
+        ]);
+
+        await VisitAsync(fixture, "http://indexed.localhost/", Googlebot);
+
+        Flush(fixture);
+
+        var shown = await ReadAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual(1, Views(shown.Crawlers, "Google"));
+        Assert.Contains("Google", shown.ConfirmedCrawlers, "the page marks whose crawlers are confirmed");
+        Assert.AreEqual(0, shown.Totals!.Visitors);
     }
 
     [TestMethod]

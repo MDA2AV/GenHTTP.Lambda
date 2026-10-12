@@ -508,9 +508,11 @@ export const guide: Messages['guide'] = {
     <>
       La cuenta la lleva la plataforma, delante de tu app, así que tu app no necesita nada para ello: ni cookies, ni
       scripts, ni avisos que tus visitantes tengan que aceptar. Solo se guardan recuentos por día, nunca una dirección,
-      y de la página de la que alguien viene solo se guarda el sitio. Un visitante se cuenta una vez al día. Se guarda
-      un año: una app gratuita muestra los últimos siete días y {k.b('Premium')} todo, incluido lo contado antes. Al
-      desactivarla se borra lo contado.
+      y de la página de la que alguien viene solo se guarda el sitio. Un visitante es una persona, contada una vez al
+      día: los buscadores, los rastreadores de IA y otros programas se cuentan aparte, según lo que son, y Google, Bing,
+      OpenAI, Apple y Perplexity solo se nombran cuando la visita llegó desde una dirección que ellos publican: cualquiera
+      puede decir que es uno de ellos. Se guarda un año: una app gratuita muestra los últimos siete días y {k.b('Premium')}
+      todo, incluido lo contado antes. Al desactivarla se borra lo contado.
     </>
   ),
   visitorsAside:

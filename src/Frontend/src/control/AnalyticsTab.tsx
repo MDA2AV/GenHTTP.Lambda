@@ -224,7 +224,7 @@ export function AnalyticsTab({ control }: { control: Control }) {
           {(state.crawlers ?? []).length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-500">{said.noCrawlers}</p>
           ) : (
-            <Ranked values={state.crawlers ?? []} by="hits" name={(value) => (value === 'other' ? said.otherBots : value)} />
+            <Ranked values={state.crawlers ?? []} by="hits" name={(value) => <Crawler value={value} confirmed={state.confirmedCrawlers ?? []} />} />
           )}
         </Card>
       </div>
@@ -744,6 +744,27 @@ function Devices({ values, by, dark }: { values: AnalyticsValue[]; by: 'views' |
       </ul>
     </div>
   );
+}
+
+/**
+ * A crawler by its operator's name, marked as confirmed, where it came from
+ * the addresses the operator publishes - or by the kind of program it is.
+ */
+function Crawler({ value, confirmed }: { value: string; confirmed: string[] }) {
+  const said = useEditorT().analytics;
+  const kinds: Record<string, string> = said.crawlerKinds;
+
+  if (confirmed.includes(value)) {
+    return (
+      <span className="inline-flex items-center gap-1.5" title={said.confirmed(value)}>
+        {value}
+        <IconCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+        <span className="sr-only">{said.confirmed(value)}</span>
+      </span>
+    );
+  }
+
+  return <>{kinds[value] ?? value}</>;
 }
 
 /** The browsers and the operating systems of people, one card with a pill for each. */

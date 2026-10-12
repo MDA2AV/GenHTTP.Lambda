@@ -503,7 +503,9 @@ export const guide: Messages['guide'] = {
     <>
       Liczy to platforma, przed twoją aplikacją, więc aplikacja nie potrzebuje do tego niczego: ani plików cookie, ani
       skryptu, ani banera do zaakceptowania przez odwiedzających. Przechowujemy tylko liczby dzień po dniu – nigdy
-      adresu, a ze strony, z której ktoś przyszedł, tylko nazwę witryny. Odwiedzający jest liczony raz dziennie.
+      adresu, a ze strony, z której ktoś przyszedł, tylko nazwę witryny. Odwiedzający to osoba, liczona raz dziennie:
+      wyszukiwarki, roboty AI i inne programy są liczone osobno, według tego, czym są, a Google, Bing, OpenAI, Apple
+      i Perplexity tylko z nazwy, gdy wizyta przyszła z adresu, który publikują – każdy może się za nie podać.
       Dane są przechowywane przez rok; bezpłatna aplikacja pokazuje z nich ostatnie siedem dni, a {k.b('Premium')}
       całość, także to, co policzono wcześniej. Wyłączenie analityki usuwa to, co policzono.
     </>

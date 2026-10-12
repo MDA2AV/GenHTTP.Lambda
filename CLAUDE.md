@@ -444,15 +444,18 @@ section.
   shows seven days, premium the year; the window is a tier limit in the
   panel (`analytics-days`), the year is `AnalyticsStore.Kept`. What is kept
   beyond the window is shown once the lambda is premium, which is the point.
-- **One visit per request, counted by whoever needs it - decided by the
-  owner.** `LambdaActivityConcern` makes the `LambdaVisit` once (status,
-  time, path, caller's country and agent) and leaves it on the request; the
-  overview's figures are counted from it, and `AnalyticsConcern` reads it off
-  the request on the way back. A new consumer of request data reads the
-  visit, it does not measure again. What only analytics need (the referrer,
-  whether a page was opened) is read only for a lambda that counts visits;
-  what is made of it (the referrer's host, the kind of device) is worked out
-  by the job, never on the request.
+- **One visit per request, read by whoever needs it - decided by the
+  owner.** `LambdaVisitConcern` makes the `LambdaVisit` once (status, time,
+  bytes, path, caller's country and agent), for previews too, and does
+  nothing else; the overview's figures (`LambdaActivityConcern`), the
+  request log (`CallerConcern`) and the analytics (`AnalyticsConcern`) read
+  it off the request and decide for themselves what is theirs. Anything new
+  that wants to know about requests to lambdas reads the visit, and what is
+  missing is added to it - nothing measures a request to a lambda again.
+  What only analytics need (the referrer, whether a page was opened, the
+  client hints) is read only for a lambda that counts visits; what is made of
+  it (the referrer's host, the kind of device) is worked out by the job,
+  never on the request.
 - **Collected on the request, written by a job - decided by the owner.** A
   lock-free queue (`AnalyticsQueue`, bounded) and a job every five minutes
   that sums it and writes one transaction. Losing what is queued on a restart
@@ -462,6 +465,16 @@ section.
   (and value). Plain commands, synchronous; migrated by Evolve from
   `Services/Analytics/Migrations`, numbered on their own. Only the switch is
   in the platform's database, so serving reads it from memory.
+- **Crawlers by a maintained list and by their addresses, not by guessing -
+  decided with the owner.** Bots are told from people by
+  crawler-user-agents (MIT, refreshed daily, the release's copy as fallback)
+  and counted by its kinds; Google, Bing, OpenAI, Apple and Perplexity are
+  named only when the connection came from an address they publish - never
+  a forwarding header's - and an unconfirmed claim otherwise. Visitors are
+  people only. Browsers, systems and devices come from the agent's tokens
+  and Chromium's client hints, and a value the sender wrote is only taken
+  where it is one of a known few. Matching stays linear in the length of an
+  agent: no backtracking expression ever reads one.
 - **Nothing that names a visitor is kept.** Counts only; the referrer as its
   host; visitors told apart for a day by a hash under a random key per day
   and lambda, held in memory and never written. No cookie, no script in the

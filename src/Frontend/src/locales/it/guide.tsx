@@ -509,9 +509,11 @@ export const guide: Messages['guide'] = {
     <>
       Lo conta la piattaforma, davanti alla tua app, quindi alla tua app non serve nulla: niente cookie, niente script,
       nessun banner che i visitatori debbano accettare. Si conservano solo i conteggi per giorno: mai un indirizzo e,
-      della pagina da cui qualcuno è arrivato, solo il sito. Un visitatore viene contato una volta al giorno. Si
-      conserva un anno: un’app gratuita ne mostra gli ultimi sette giorni e {k.b('Premium')} tutto, anche ciò che è
-      stato contato prima. Disattivandolo, ciò che è stato contato viene eliminato.
+      della pagina da cui qualcuno è arrivato, solo il sito. Un visitatore è una persona, contata una volta al giorno: i
+      motori di ricerca, i crawler IA e gli altri programmi vengono contati a parte, per ciò che sono, e Google, Bing,
+      OpenAI, Apple e Perplexity solo per nome quando la visita arriva da un indirizzo che pubblicano: chiunque può
+      dichiararsi uno di loro. Si conserva un anno: un’app gratuita ne mostra gli ultimi sette giorni e {k.b('Premium')}
+      tutto, anche ciò che è stato contato prima. Disattivandolo, ciò che è stato contato viene eliminato.
     </>
   )),
   visitorsAside:

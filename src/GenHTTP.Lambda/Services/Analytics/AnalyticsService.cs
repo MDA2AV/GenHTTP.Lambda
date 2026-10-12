@@ -23,7 +23,7 @@ namespace GenHTTP.Lambda.Services.Analytics;
 /// few minutes rather than once per request.
 /// </remarks>
 public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> databases, AnalyticsStore store, AnalyticsQueue queue, DailyVisitors visitors,
-                                     ILimitsService limits, LambdaOptions options, ILogger<AnalyticsService> logger) : IAnalyticsService
+                                     VisitorClassifier classifier, CrawlerRanges ranges, ILimitsService limits, LambdaOptions options, ILogger<AnalyticsService> logger) : IAnalyticsService
 {
     private const string Missing = "This lambda does not exist (or has been deleted).";
 
@@ -119,7 +119,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
 
             if (visits.Count > 0)
             {
-                var tally = new VisitTally(visitors);
+                var tally = new VisitTally(visitors, classifier);
 
                 var since = Counting(visits.Select(v => v.Lambda.Id).Distinct().ToList());
 
@@ -203,7 +203,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
         if (lambda.AnalyticsSince == null)
         {
             return new LambdaAnalytics(lambda.PublicKey, tier, null, shown, window, AnalyticsStore.Kept, from, to, null, null, null, _updated,
-                                       options.AnalyticsInterval);
+                                       options.AnalyticsInterval, ranges.Confirmed);
         }
 
         var report = store.Read(lambda.Id, from, to, Listed);
@@ -211,7 +211,7 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
         var previous = shown * 2 <= window ? store.Sum(lambda.Id, from.AddDays(-shown), from.AddDays(-1)) : null;
 
         return new LambdaAnalytics(lambda.PublicKey, tier, lambda.AnalyticsSince, shown, window, AnalyticsStore.Kept, from, to,
-                                   store.Earliest(lambda.Id), report, previous, _updated, options.AnalyticsInterval);
+                                   store.Earliest(lambda.Id), report, previous, _updated, options.AnalyticsInterval, ranges.Confirmed);
     }
 
     /// <summary>

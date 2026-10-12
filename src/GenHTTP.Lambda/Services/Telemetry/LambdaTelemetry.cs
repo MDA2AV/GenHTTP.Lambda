@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 
+using GenHTTP.Lambda.Services.Visits;
+
 namespace GenHTTP.Lambda.Services.Telemetry;
 
 /// <summary>

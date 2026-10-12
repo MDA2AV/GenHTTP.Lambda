@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Protection;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.Visits;
 
 using GenHTTP.Modules.DependencyInjection;
 using GenHTTP.Modules.ErrorHandling;
@@ -57,15 +58,19 @@ public static class LambdaRoute
             .. options.CaptureLambdaOutput
                ? new IConcernBuilder[] { Dependent.Concern<LambdaOutputConcern>() }
                : [],
-            // outside the error handler and the throttle, inside the lookup: so
-            // it records the answer the visitor actually got, and knows which
-            // lambda to file it under. Inside the throttle it saw neither the
-            // timeout nor the rejection - a lambda that timed out on every
-            // request was recorded as succeeding, slowly.
+            // the visit the request was, made once: outside the error handler
+            // and the throttle, inside the lookup - so it is the answer the
+            // visitor actually got, filed under the lambda that gave it.
+            // Inside the throttle it saw neither the timeout nor the
+            // rejection - a lambda that timed out on every request was
+            // recorded as succeeding, slowly.
+            Dependent.Concern<LambdaVisitConcern>(),
+            // what reads the visit, outside what makes it, so it is on the
+            // request as the answer passes: the figures, and the owner's
+            // analytics, which only queue it - nothing is written while the
+            // visitor waits. The request log reads it at the outside of the
+            // host.
             Dependent.Concern<LambdaActivityConcern>(),
-            // outside the one that makes the visit, so it finds it on the
-            // request on the way back, and queues it where the owner counts
-            // visits - nothing is written while the visitor waits
             Dependent.Concern<AnalyticsConcern>(),
             new LambdaResolutionConcernBuilder(locator),
             Dependent.Concern<RateLimitConcern>()

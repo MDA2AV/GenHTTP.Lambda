@@ -518,10 +518,12 @@ export const guide: Messages['guide'] = {
     <>
       Penghitungan dilakukan oleh platform, di depan aplikasi Anda, sehingga aplikasi Anda tidak memerlukan apa pun
       untuk itu: tanpa cookie, tanpa skrip, tanpa banner yang harus disetujui pengunjung Anda. Hanya jumlah per hari
-      yang disimpan - tidak pernah alamat, dan dari halaman asal seorang pengunjung hanya situsnya. Pengunjung
-      dihitung sekali sehari. Data disimpan selama setahun; aplikasi gratis menampilkan tujuh hari terakhir
-      darinya dan {k.b('Premium')} menampilkan semuanya, termasuk yang dihitung sebelumnya. Menonaktifkannya
-      menghapus apa yang telah dihitung.
+      yang disimpan - tidak pernah alamat, dan dari halaman asal seorang pengunjung hanya situsnya. Pengunjung adalah
+      seseorang yang dihitung sekali sehari: mesin pencari, crawler AI, dan program lain dihitung terpisah menurut
+      jenisnya, dan Google, Bing, OpenAI, Apple, dan Perplexity hanya disebut namanya jika kunjungan berasal dari
+      alamat yang mereka publikasikan - siapa pun bisa mengaku sebagai mereka. Data disimpan selama setahun; aplikasi
+      gratis menampilkan tujuh hari terakhir darinya dan {k.b('Premium')} menampilkan semuanya, termasuk yang dihitung
+      sebelumnya. Menonaktifkannya menghapus apa yang telah dihitung.
     </>
   )),
   visitorsAside:

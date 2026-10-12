@@ -18,13 +18,16 @@ public enum AnalyticsDimension
     /// <summary>desktop, mobile, tablet, bot or other</summary>
     Devices,
 
-    /// <summary>The browser of a person, never of a bot</summary>
+    /// <summary>The browser of a person, or the app it was opened in - never of a bot</summary>
     Browsers,
 
     /// <summary>The operating system of a person, never of a bot</summary>
     Systems,
 
-    /// <summary>Who runs a bot - a search engine, an AI, a chat that shows a preview</summary>
+    /// <summary>
+    /// A bot: whose it is where its operator confirms it by its address, "unconfirmed" where it only claimed to be one
+    /// of those, and the kind of crawler the list says otherwise
+    /// </summary>
     Crawlers
 }
 
@@ -138,6 +141,7 @@ public sealed record AnalyticsValue(string Value, long Hits, long Views);
 /// <param name="Previous">The same number of days before, where the tier shows those too</param>
 /// <param name="Updated">When counts were last written, or nothing since the server came up</param>
 /// <param name="Interval">How often they are written</param>
+/// <param name="Confirmed">The operators whose crawlers are confirmed by their addresses, as far as those are known</param>
 public sealed record LambdaAnalytics(
     string PublicKey,
     string Tier,
@@ -151,7 +155,8 @@ public sealed record LambdaAnalytics(
     AnalyticsReport? Report,
     AnalyticsTotals? Previous,
     DateTime? Updated,
-    TimeSpan Interval
+    TimeSpan Interval,
+    IReadOnlyList<string> Confirmed
 );
 
 /// <summary>

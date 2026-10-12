@@ -520,8 +520,11 @@ export const guide: Messages['guide'] = {
     <>
       Le comptage est fait par la plateforme, en amont de votre application, qui n’a donc besoin de rien : pas de
       cookies, pas de script, pas de bannière à faire accepter à vos visiteurs. Seuls des totaux par jour sont
-      conservés - jamais une adresse, et de la page d’où quelqu’un est venu, seulement le site. Un visiteur est
-      compté une fois par jour. Un an est conservé ; une application gratuite en montre les sept derniers jours et{' '}
+      conservés - jamais une adresse, et de la page d’où quelqu’un est venu, seulement le site. Un visiteur est une
+      personne, comptée une fois par jour : les moteurs de recherche, les robots d’exploration IA et les autres
+      programmes sont comptés à part, selon ce qu’ils sont, et Google, Bing, OpenAI, Apple et Perplexity ne sont
+      nommés que si la visite provient d’une adresse qu’ils publient : n’importe qui peut se faire passer pour eux.
+      Un an est conservé ; une application gratuite en montre les sept derniers jours et{' '}
       {k.b('Premium')} la totalité, y compris ce qui a été compté avant. Désactiver la mesure d’audience supprime ce
       qui a été compté.
     </>

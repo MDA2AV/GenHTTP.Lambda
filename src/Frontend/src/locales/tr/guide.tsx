@@ -514,9 +514,11 @@ export const guide: Messages['guide'] = {
     <>
       Sayımı platform yapar, uygulamanızın önünde; bu yüzden uygulamanızın bunun için hiçbir şeye ihtiyacı yoktur:
       çerez yok, script yok, ziyaretçilerinizin kabul etmesi gereken banner yok. Yalnızca günlük sayılar saklanır - hiçbir
-      adres saklanmaz, birinin geldiği sayfadan da yalnızca site saklanır. Bir ziyaretçi günde bir kez sayılır. Bir yıl
-      saklanır; ücretsiz bir uygulama bunun son yedi gününü, {k.b('Premium')} ise öncesinde sayılanlar dahil
-      tamamını gösterir. Analitiği kapatmak, sayılanları siler.
+      adres saklanmaz, birinin geldiği sayfadan da yalnızca site saklanır. Ziyaretçi bir kişidir ve günde bir kez
+      sayılır: arama motorları, yapay zekâ tarayıcıları ve diğer programlar ne olduklarına göre ayrıca sayılır; Google,
+      Bing, OpenAI, Apple ve Perplexity ise yalnızca ziyaret, yayımladıkları bir adresten geldiyse adıyla sayılır - herkes
+      onlardan biri olduğunu iddia edebilir. Bir yıl saklanır; ücretsiz bir uygulama bunun son yedi gününü,
+      {k.b('Premium')} ise öncesinde sayılanlar dahil tamamını gösterir. Analitiği kapatmak, sayılanları siler.
     </>
   )),
   visitorsAside:

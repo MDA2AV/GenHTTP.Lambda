@@ -26,6 +26,7 @@ using GenHTTP.Lambda.Services.Showcase;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Storage;
 using GenHTTP.Lambda.Services.Telemetry;
+using GenHTTP.Lambda.Services.Visits;
 using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Web;
 
@@ -192,6 +193,9 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IAnalyticsStore>(provider => provider.GetRequiredService<AnalyticsStore>());
         services.AddSingleton<AnalyticsQueue>();
         services.AddSingleton<DailyVisitors>();
+        services.AddSingleton<CrawlerList>();
+        services.AddSingleton<CrawlerRanges>();
+        services.AddSingleton<VisitorClassifier>();
         services.AddSingleton<IAnalyticsService, AnalyticsService>();
 
         /*
@@ -204,6 +208,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<TelemetryConcern>();
         services.AddSingleton<ThrottleConcern>();
         services.AddSingleton<LambdaOutputConcern>();
+        services.AddSingleton<LambdaVisitConcern>();
         services.AddSingleton<LambdaActivityConcern>();
         services.AddSingleton<AnalyticsConcern>();
         services.AddSingleton<RateLimitConcern>();
@@ -212,6 +217,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IBackgroundJob, TelemetryJob>();
         services.AddSingleton<IBackgroundJob, GeoJob>();
         services.AddSingleton<IBackgroundJob, AnalyticsJob>();
+        services.AddSingleton<IBackgroundJob, CrawlerJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();

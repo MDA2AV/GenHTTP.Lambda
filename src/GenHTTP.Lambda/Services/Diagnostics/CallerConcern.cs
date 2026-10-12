@@ -6,6 +6,7 @@ using GenHTTP.Api.Protocol;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Protection;
+using GenHTTP.Lambda.Services.Visits;
 
 using GenHTTP.Modules.DependencyInjection;
 
@@ -91,16 +92,27 @@ public sealed class CallerConcern(LogBook book, StringPool pool, GeoTable geo, G
             return;
         }
 
-        // nothing answered is a not found by the time the client sees it
-        var status = response != null ? (int)response.Status : 404;
+        /*
+         * A request a lambda or a preview answered was measured once, as the
+         * visit it was (see LambdaVisitConcern), and the line says what the
+         * lambda's figures say. Only a request to the platform, or one no
+         * lambda was found for, is measured here.
+         */
+        var visit = request.GetVisit();
 
-        var bytes = response?.Content?.Length ?? 0;
+        // nothing answered is a not found by the time the client sees it
+        var status = visit?.Status ?? (response != null ? (int)response.Status : 404);
+
+        var bytes = visit?.Bytes ?? (long)(response?.Content?.Length ?? 0);
+
+        took = visit?.Elapsed ?? took;
 
         var level = status >= 500 ? "error" : status >= 400 ? "warn" : "info";
 
         // resolved by a concern below this one, so by the time the answer is
-        // on its way back the request knows which lambda it reached
-        var lambda = request.GetLambda();
+        // on its way back the request knows which lambda it reached - even
+        // where it never got to be a visit, refused by the rate limit
+        var lambda = visit?.Lambda ?? request.GetLambda();
 
         // a lambda's host is named in front of the path: its paths are its
         // own, and "/api/v1/logs" there is not the platform's
