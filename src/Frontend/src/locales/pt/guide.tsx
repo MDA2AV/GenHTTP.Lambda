@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Levando seu código embora',
     git: 'Trabalhando com git',
     open: 'Publicando o código',
+    visitors: 'Vendo quem visita',
     agents: 'Deixando um agente fazer',
   },
 
@@ -106,6 +107,7 @@ export const guide: Messages['guide'] = {
     ['Versões', () => <>O que cada versão mudou, o que foi pedido e a diferença para a anterior. Faça deploy ou volte uma versão por aqui, ou comece um rascunho a partir de qualquer uma delas.</>],
     ['Deploys', () => <>O que esteve no ar e quando, e o que tirou do ar.</>],
     ['Métricas', () => <>Requisições, falhas, tempos de resposta e os caminhos mais acessados, na última hora ou nas últimas 24 horas.</>],
+    ['Analytics', () => <>Quem visita o app, depois que você ativa: visitantes, visualizações de página e requisições por dia, as páginas que eles abrem, os sites que os enviam, os países e dispositivos deles, e os mecanismos de busca e IAs que passaram por aqui.</>],
     ['Logs', () => <>As requisições, o que ela imprimiu e o stack trace de qualquer erro, em tempo real.</>],
     [
       'Código',
@@ -129,7 +131,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'O tráfego e o log ficam em memória, para acompanhar, não para guardar: reiniciar o servidor zera tudo. As versões e o histórico de deploys ficam salvos.',
+    'O tráfego e o log ficam em memória, para acompanhar, não para guardar: reiniciar o servidor zera tudo. As versões, o histórico de deploys e o analytics ficam salvos.',
 
   why: (k) => (
     <>
@@ -495,6 +497,27 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Tudo o que está no código fica público, inclusive as versões anteriores. Uma chave ou uma senha fica junto das chaves e senhas em Dados, nunca no código, publicado ou não.',
+  visitors: ((k) => (
+    <>
+      Abra {k.b('Analytics')} no painel de controle e ative para ver quem visita o seu app: quantas pessoas chegam
+      por dia, quais páginas abrem, quais sites as enviam - um mecanismo de busca, uma postagem, uma newsletter -, de
+      quais países, em quais dispositivos e navegadores, e quais mecanismos de busca e assistentes de IA leem as
+      páginas dele. Escolha um número no alto para vê-lo dia a dia.
+    </>
+  )),
+  visitors2: ((k) => (
+    <>
+      A contagem é feita pela plataforma, na frente do seu app, então ele não precisa de nada para isso: sem cookies,
+      sem script, sem banner para os seus visitantes aceitarem. Só as contagens por dia são guardadas - nunca um
+      endereço, e da página de onde alguém veio, apenas o site. Um visitante é uma pessoa, contada uma vez por dia:
+      mecanismos de busca, rastreadores de IA e outros programas são contados à parte, conforme o que são, e Google,
+      Bing, OpenAI, Apple e Perplexity só pelo nome quando a visita veio de um endereço que eles publicam - qualquer
+      um pode dizer que é eles. Um ano fica guardado; um app gratuito mostra os últimos sete dias dele e o {k.b('Premium')}
+      mostra tudo, inclusive o que foi contado antes. Desativar apaga o que foi contado.
+    </>
+  )),
+  visitorsAside:
+    'Os números são registrados a cada poucos minutos, então as últimas visitas aparecem um pouco depois. Um rascunho nunca é contado: testar uma mudança não é uma visita.',
 
   agents: (k) => (
     <>

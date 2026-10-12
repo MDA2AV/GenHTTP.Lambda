@@ -17,6 +17,11 @@ export const privacy: Messages['privacy'] = {
       'Serve a trovare i problemi, a capire cosa sta sovraccaricando il server e a rintracciare gli abusi che ci vengono segnalati. L’indirizzo IP viene usato anche, solo in memoria, per limitare quante richieste può fare e quante app può creare un singolo visitatore. Senza questi dati non si può rispondere a una richiesta. La base giuridica è il nostro legittimo interesse a gestire il servizio e a mantenerlo sicuro (art. 6, par. 1, lett. f) GDPR).',
       'Gli amministratori possono vedere tutto. Il proprietario di una lambda vede il paese e il browser di ogni richiesta alla sua lambda, ma non l’indirizzo IP.',
     ],
+    analyticsTitle: 'Visite contate per il proprietario di una lambda',
+    analytics: [
+      'Il proprietario di una lambda può attivare Analytics per quella lambda. Da quel momento il server conta le visite alla lambda giorno per giorno: quante richieste e visualizzazioni di pagina ci sono state, per quali pagine, il sito da cui è arrivato un visitatore (solo il nome, non l’indirizzo della pagina), il paese dell’indirizzo IP del visitatore e il tipo di dispositivo, browser e sistema operativo indicato dal browser. Si conservano solo questi conteggi, non l’indirizzo IP né altro che identifichi un visitatore, in un database sul server, per un anno. Il proprietario della lambda li vede nel suo editor e gli amministratori possono leggerli.',
+      'Per contare ogni visitatore una volta al giorno, l’indirizzo IP e il browser vengono trasformati in un codice che non si può invertire, con una chiave generata a caso per ogni giorno e per ogni lambda. I codici e le chiavi restano solo in memoria, non vengono mai scritti e dopo un giorno vengono dimenticati. Non viene impostato alcun cookie e nel browser del visitatore non viene memorizzato nulla. Quando una visita dichiara di provenire dal crawler di Google, Bing, OpenAI, Apple o Perplexity, il suo indirizzo IP viene confrontato, in memoria, con gli indirizzi che questi pubblicano per i propri crawler. Per distinguere i crawler dalle persone, il server scarica una volta al giorno un elenco pubblico di crawler e questi indirizzi pubblicati; per questo non viene inviato altrove nulla sui visitatori. La base giuridica è il legittimo interesse del proprietario a sapere come viene usata la sua lambda (art. 6, par. 1, lett. f GDPR).',
+    ],
 
     logsTitle: 'Per quanto tempo si conserva il log',
     logs: 'Il log si trova in due posti: nella memoria del server, che si svuota a ogni riavvio, e nell’output della console del server, che viene cancellato a ogni aggiornamento. Entrambi hanno una dimensione fissa, quindi ogni nuova riga spinge fuori la più vecchia, e quanto dura una riga dipende da quanto è trafficato il sito. Nessuna parte del log viene archiviata.',
@@ -43,14 +48,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'Cosa fa una lambda lo decide il suo proprietario',
     lambdas:
-      'Una lambda la scrive chi ha il suo link di modifica, non noi. Cosa chiede ai suoi visitatori e cosa ne fa lo decide quella persona, e questa pagina non lo copre, a parte il log delle richieste descritto sopra, che il server tiene per ogni lambda. I termini di servizio non consentono di usare una lambda per raccogliere dati personali di altre persone: se ne trovi una che lo fa, segnalacela.',
+      'Una lambda la scrive chi ha il suo link di modifica, non noi. Cosa chiede ai suoi visitatori e cosa ne fa lo decide quella persona, e questa pagina non lo copre, a parte il log delle richieste descritto sopra, che il server tiene per ogni lambda, e le visite che conta per il proprietario che ha attivato Analytics. I termini di servizio non consentono di usare una lambda per raccogliere dati personali di altre persone: se ne trovi una che lo fa, segnalacela.',
 
     mailTitle: 'Quando ci scrivi',
     mail: 'Se ci scrivi, per segnalare un abuso o per qualsiasi altro motivo, usiamo il tuo indirizzo email e il tuo messaggio per risponderti e occuparci di quello che ci hai scritto, e li cancelliamo quando non servono più a questo (art. 6, par. 1, lett. f) GDPR).',
 
     storageTitle: 'I cookie e il tuo browser',
     storage:
-      'C’è un solo cookie, che si chiama lang. Ricorda la lingua che hai scelto, così gli indirizzi che non ne indicano una si aprono in quella lingua, e dura un anno. La memoria locale del browser ricorda il tema chiaro o scuro, alcune impostazioni delle pagine che usi e, per gli amministratori, il loro token. Niente di tutto questo serve a seguirti e niente va a qualcun altro: niente strumenti di analisi, niente pubblicità, e niente viene caricato da altri siti, nemmeno i font. Visto che tutto serve solo a fare quello che hai chiesto tu, non serve il consenso (§ 25, comma 2, n. 2 della legge tedesca TDDDG).',
+      'C’è un solo cookie, che si chiama lang. Ricorda la lingua che hai scelto, così gli indirizzi che non ne indicano una si aprono in quella lingua, e dura un anno. La memoria locale del browser ricorda il tema chiaro o scuro, alcune impostazioni delle pagine che usi e, per gli amministratori, il loro token. Niente di tutto questo serve a seguirti e niente va a qualcun altro: nessuno strumento di analisi di questo sito, niente pubblicità, e niente viene caricato da altri siti, nemmeno i font. Visto che tutto serve solo a fare quello che hai chiesto tu, non serve il consenso (§ 25, comma 2, n. 2 della legge tedesca TDDDG).',
 
     hostingTitle: 'Dove sono conservati i dati',
     hosting:

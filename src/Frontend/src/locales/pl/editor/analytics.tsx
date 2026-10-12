@@ -1,0 +1,117 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const analytics: EditorMessages['analytics'] = {
+  hint: 'Liczone za ciebie przez platformę: bez plików cookie, bez kodu w twojej aplikacji i bez niczego, co twoi odwiedzający musieliby akceptować.',
+  loading: 'Wczytuję wizyty…',
+  loadFailed: 'Nie udało się wczytać wizyt.',
+
+  offTitle: 'Zobacz, kto odwiedza twoją aplikację',
+  offText:
+    'Ilu ludzi przychodzi każdego dnia, jakie strony otwierają, które strony ich kierują, z jakich krajów i na jakich urządzeniach – liczone dzień po dniu, od chwili włączenia.',
+  offPrivate: 'Bez plików cookie i bez banera, który odwiedzający musieliby zaakceptować',
+  offAddresses: 'Nie przechowujemy żadnych adresów – tylko liczbę wizyt każdego dnia',
+  offKept: (days) =>
+    days >= 365
+      ? 'Przechowywane przez rok, a pokazujemy ci całość'
+      : `Przechowywane przez rok – pokazujemy ostatnie ${days} dni, całość w Premium`,
+  switchOn: 'Włącz analitykę',
+  switchedOn: 'Analityka jest włączona. Pierwsze wizyty pojawią się w ciągu kilku minut.',
+  switchOnFailed: 'Nie udało się włączyć analityki.',
+  demo: 'Odwiedzający dema nie są liczeni. Twoja własna kopia może liczyć swoich odwiedzających.',
+
+  range: 'Zakres czasu',
+  days: (days) => (days >= 365 ? '12 miesięcy' : `${days} dni`),
+  premiumRange: 'Premium pokazuje do roku',
+
+  visitors: 'Odwiedzający',
+  visitorsHint: 'Różne osoby, każda liczona raz dziennie. Wyszukiwarki i inne programy nie są odwiedzającymi.',
+  views: 'Odsłony stron',
+  viewsHint: 'Za każdym razem, gdy ktoś otworzył stronę.',
+  hits: 'Żądania',
+  hitsHint: 'Wszystko, o co poproszono twoją aplikację: jej strony oraz obrazy i skrypty, które ładują.',
+  versus: (days) => `względem poprzednich ${days} dni`,
+  noChange: 'bez zmian',
+  inDays: (days) => (days >= 365 ? 'w ostatnich 12 miesiącach' : `w ostatnich ${days} dniach`),
+
+  perDay: {
+    visitors: 'Odwiedzający dziennie',
+    views: 'Odsłony stron dziennie',
+    hits: 'Żądania dziennie',
+  },
+  perWeek: {
+    visitors: 'Odwiedzający tygodniowo',
+    views: 'Odsłony stron tygodniowo',
+    hits: 'Żądania tygodniowo',
+  },
+  showValues: 'Pokaż wartości',
+  showChart: 'Pokaż wykres',
+  day: 'Dzień',
+  week: 'Tydzień od',
+
+  nobody: 'W tych dniach nikt nie odwiedził aplikacji.',
+  nobodyYet: 'Od włączenia analityki nikt jej nie odwiedził. Pierwsze wizyty pojawią się w ciągu kilku minut.',
+
+  pages: 'Strony',
+  pagesHint: 'Strony otwierane przez ludzi, od najczęściej otwieranych.',
+  requested: 'Najczęściej żądane',
+  requestedHint: 'Wszystko, o co poproszono twoją aplikację, według adresu – nie ma w niej stron otwieranych przez ludzi.',
+  sources: 'Skąd przychodzą odwiedzający',
+  sourcesHint: 'Strony, które skierowały tu ludzi, według strony, na której byli. Wyszukiwarki podają tylko, że to one, a nie czego szukano.',
+  direct: 'Wpisany adres, zakładka lub aplikacja',
+  countries: 'Kraje',
+  countriesHint: 'Gdzie zarejestrowane są adresy internetowe odwiedzających – zwykle, choć nie zawsze, tam, gdzie się znajdują.',
+  unknownCountry: 'Nieznany',
+  devices: 'Urządzenia',
+  device: {
+    desktop: 'Komputer',
+    mobile: 'Telefon',
+    tablet: 'Tablet',
+    bot: 'Boty',
+    other: 'Inne',
+  },
+  browsers: 'Przeglądarki',
+  systems: 'Systemy',
+  crawlers: 'Wyszukiwarki, AI i inne programy',
+  crawlersHint: 'Programy, które zajrzały, według tego, czym są. Google, Bing, OpenAI, Apple i Perplexity są podawane z nazwy tylko wtedy, gdy wizyta przyszła z adresu, który publikują – każdy może się za nie podać.',
+  noCrawlers: 'W tych dniach nie zajrzała żadna wyszukiwarka, AI ani inny program.',
+  confirmed: (name) => `Wizyta z adresu, który ${name} publikuje dla swoich robotów`,
+  crawlerKinds: {
+    'search-engine': 'Wyszukiwarki',
+    'ai-crawler': 'Roboty AI',
+    'social-preview': 'Podglądy linków w czatach i sieciach społecznościowych',
+    advertising: 'Reklama',
+    seo: 'Narzędzia SEO',
+    monitoring: 'Monitoring',
+    'feed-reader': 'Czytniki kanałów',
+    archiver: 'Archiwa internetu',
+    academic: 'Badania',
+    scanner: 'Skanery bezpieczeństwa',
+    'browser-automation': 'Zautomatyzowane przeglądarki',
+    'http-library': 'Skrypty i aplikacje',
+    other: 'Inne programy',
+    unconfirmed: 'Podały się za znanego robota, bez potwierdzenia',
+  },
+  other: 'Pozostałe',
+  showAll: (count) => `Pokaż wszystkie (${count})`,
+  showFewer: 'Pokaż mniej',
+  share: (part, whole) => `${part} z ${whole}`,
+  none: 'Jeszcze nic.',
+
+  moreKept: (since) => `Liczone od ${since} – Premium pokazuje całość, do roku.`,
+  premiumAsk: 'Zapytaj o Premium',
+  premiumSubject: 'Premium dla mojej aplikacji',
+  premiumBody: (address) => `Dzień dobry,\n\nproszę o dostęp do pełnej analityki mojej aplikacji: ${address}\n\n`,
+
+  footer: (minutes) =>
+    minutes === 1 ? 'Liczone dziennie, w UTC. Odświeżane co minutę.' : `Liczone dziennie, w UTC. Odświeżane co ${minutes} min.`,
+  updated: (time) => `Ostatnia aktualizacja: ${time}.`,
+  since: (date) => `Liczone od ${date}.`,
+
+  switchOff: 'Wyłącz analitykę',
+  switchOffTitle: 'Wyłączyć analitykę?',
+  switchOffText: 'Liczenie zostanie zatrzymane, a wszystko, co dotąd policzono, zostanie usunięte. Tego nie można cofnąć.',
+  keep: 'Liczyć dalej',
+  switchOffConfirm: 'Wyłącz i usuń',
+  switchedOff: 'Analityka jest wyłączona, a to, co policzono, zostało usunięte.',
+  switchOffFailed: 'Nie udało się wyłączyć analityki.',
+};

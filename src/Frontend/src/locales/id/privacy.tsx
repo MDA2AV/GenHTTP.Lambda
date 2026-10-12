@@ -17,6 +17,11 @@ export const privacy: Messages['privacy'] = {
       'Dengan cara inilah gangguan ditemukan, server yang kelebihan beban dilacak ke penyebabnya, dan penyalahgunaan yang dilaporkan kepada kami ditelusuri. Alamat IP juga dipakai, hanya di memori, untuk membatasi berapa banyak permintaan dan build yang bisa dibuat satu pengunjung. Permintaan tidak bisa dijawab tanpa data ini. Dasar hukumnya adalah kepentingan yang sah dari kami untuk menjalankan layanan ini dan menjaganya tetap aman (Pasal 6 ayat (1) huruf f GDPR).',
       'Administrator bisa membaca semuanya. Pemilik lambda bisa melihat negara dan browser dari setiap permintaan ke lambda miliknya, tapi tidak bisa melihat alamat IP-nya.',
     ],
+    analyticsTitle: 'Kunjungan yang dihitung untuk pemilik lambda',
+    analytics: [
+      "Pemilik sebuah lambda dapat mengaktifkan analitik untuknya. Server kemudian menghitung kunjungan ke lambda itu per hari: berapa banyak request dan tampilan halaman, halaman mana yang diminta, situs asal pengunjung (hanya namanya, bukan alamat halamannya), negara dari alamat IP pengunjung, serta jenis perangkat, browser, dan sistem operasi yang disebutkan browser. Hanya hitungan ini yang disimpan - bukan alamat IP dan bukan hal lain yang menyebut nama pengunjung - dalam database di server, selama setahun. Pemilik lambda melihatnya di editornya, dan administrator dapat membacanya.",
+      "Untuk menghitung setiap pengunjung sekali sehari, alamat IP dan browser diubah menjadi kode yang tidak dapat dikembalikan, dengan kunci yang dibuat secara acak untuk setiap hari dan setiap lambda. Kode dan kunci itu hanya disimpan di memori, tidak pernah dituliskan, dan dilupakan setelah satu hari. Tidak ada cookie yang dipasang dan tidak ada yang disimpan di browser pengunjung. Jika sebuah kunjungan menyatakan berasal dari crawler Google, Bing, OpenAI, Apple, atau Perplexity, alamat IP-nya dibandingkan, di memori, dengan alamat yang mereka publikasikan untuk crawler mereka. Untuk membedakan crawler dari manusia, server mengambil daftar publik crawler dan alamat yang dipublikasikan tersebut sekali sehari; tidak ada data tentang pengunjung yang dikirim ke mana pun untuk keperluan ini. Dasar hukumnya adalah kepentingan sah pemilik untuk mengetahui bagaimana lambdanya digunakan (Pasal 6 ayat (1) huruf f GDPR).",
+    ],
 
     logsTitle: 'Berapa lama log disimpan',
     logs: 'Log disimpan di dua tempat: di memori server, yang dikosongkan setiap kali server dimulai ulang, dan di output konsol server, yang dihapus setiap kali server diperbarui. Ukuran keduanya tetap, jadi setiap baris baru menggeser baris yang paling lama. Berapa lama satu baris bertahan tergantung seberapa sibuk situs ini. Tidak ada isi log yang disalin ke arsip.',
@@ -43,14 +48,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'Apa yang dilakukan lambda ditentukan pemiliknya',
     lambdas:
-      'Lambda ditulis oleh pemegang link editornya, bukan oleh kami. Apa yang diminta lambda dari pengunjungnya dan apa yang dilakukannya dengan data itu ditentukan oleh mereka, dan halaman ini tidak mencakupnya. Satu-satunya pengecualian adalah log permintaan di atas, yang disimpan server untuk setiap lambda. Ketentuan layanan melarang penggunaan lambda untuk mengumpulkan data pribadi orang lain. Kalau Anda menemukan lambda yang melakukannya, tolong laporkan.',
+      'Lambda ditulis oleh pemegang link editornya, bukan oleh kami. Apa yang diminta lambda dari pengunjungnya dan apa yang dilakukannya dengan data itu ditentukan oleh mereka, dan halaman ini tidak mencakupnya. Pengecualiannya adalah log permintaan di atas, yang disimpan server untuk setiap lambda, dan kunjungan yang dihitungnya untuk pemilik yang mengaktifkan analitik. Ketentuan layanan melarang penggunaan lambda untuk mengumpulkan data pribadi orang lain. Kalau Anda menemukan lambda yang melakukannya, tolong laporkan.',
 
     mailTitle: 'Kalau Anda menghubungi kami',
     mail: 'Kalau Anda mengirim email kepada kami, untuk melaporkan penyalahgunaan atau untuk hal lain, kami memakai alamat dan pesan Anda untuk membalas dan menindaklanjuti isinya. Keduanya kami hapus begitu tidak diperlukan lagi untuk itu (Pasal 6 ayat (1) huruf f GDPR).',
 
     storageTitle: 'Cookie dan browser Anda',
     storage:
-      'Hanya ada satu cookie, namanya lang. Cookie ini mengingat bahasa yang Anda pilih, supaya alamat yang tidak mencantumkan bahasa terbuka dalam bahasa itu, dan berlaku selama satu tahun. Penyimpanan bawaan browser mengingat mode terang atau gelap, beberapa pengaturan di halaman yang Anda pakai, dan, bagi administrator, token mereka. Tidak ada yang dipakai untuk melacak Anda, dan tidak ada yang dikirim ke pihak lain: tidak ada analitik, tidak ada iklan, dan tidak ada yang dimuat dari situs lain, bahkan font sekalipun. Karena semuanya hanya menjalankan apa yang Anda minta, tidak diperlukan persetujuan (§ 25 ayat (2) angka 2 TDDDG, undang-undang Jerman).',
+      'Hanya ada satu cookie, namanya lang. Cookie ini mengingat bahasa yang Anda pilih, supaya alamat yang tidak mencantumkan bahasa terbuka dalam bahasa itu, dan berlaku selama satu tahun. Penyimpanan bawaan browser mengingat mode terang atau gelap, beberapa pengaturan di halaman yang Anda pakai, dan, bagi administrator, token mereka. Tidak ada yang dipakai untuk melacak Anda, dan tidak ada yang dikirim ke pihak lain: tidak ada analitik untuk situs ini, tidak ada iklan, dan tidak ada yang dimuat dari situs lain, bahkan font sekalipun. Karena semuanya hanya menjalankan apa yang Anda minta, tidak diperlukan persetujuan (§ 25 ayat (2) angka 2 TDDDG, undang-undang Jerman).',
 
     hostingTitle: 'Tempat semuanya disimpan',
     hosting:

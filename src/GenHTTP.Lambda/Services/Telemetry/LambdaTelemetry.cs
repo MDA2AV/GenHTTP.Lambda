@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 
+using GenHTTP.Lambda.Services.Visits;
+
 namespace GenHTTP.Lambda.Services.Telemetry;
 
 /// <summary>
@@ -54,6 +56,12 @@ public sealed class LambdaTelemetry
     #endregion
 
     #region Functionality
+
+    /// <summary>
+    /// Records a visit to a lambda, as <see cref="LambdaActivityConcern"/> made it.
+    /// </summary>
+    public void Record(LambdaVisit visit)
+        => Record(visit.Lambda.Id, visit.Lambda.PublicKey, visit.Elapsed, visit.Status, visit.Bytes, visit.Path, visit.Domain);
 
     /// <summary>
     /// Records a request a lambda answered.

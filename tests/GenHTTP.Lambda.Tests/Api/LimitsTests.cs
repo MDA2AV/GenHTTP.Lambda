@@ -171,6 +171,25 @@ public sealed class LimitsTests
     }
 
     [TestMethod]
+    public async Task AnalyticsAreShownForAWeekOrAYearAndNeverLongerThanTheyAreKept()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        var current = await ReadAsync(fixture);
+
+        Assert.AreEqual(7, current.Free.AnalyticsDays);
+        Assert.AreEqual(365, current.Premium.AnalyticsDays);
+
+        using var refused = await SendAsync(fixture, HttpMethod.Put, current with { Premium = current.Premium with { AnalyticsDays = 400 } });
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, refused.StatusCode, "a year is all that is kept");
+
+        await ChangeAsync(fixture, current with { Free = current.Free with { AnalyticsDays = 30 } });
+
+        Assert.AreEqual(30, (await ReadAsync(fixture)).Free.AnalyticsDays);
+    }
+
+    [TestMethod]
     public async Task ALimitOfZeroIsRefused()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);

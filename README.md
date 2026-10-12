@@ -146,6 +146,7 @@ path.
 | `GET / PUT / DELETE /lambdas/:privateKey/showcase`    | its entry on the showcase: read, list it (title, description, picture), take it off |
 | `GET /lambdas/:privateKey/domain`, `PUT / DELETE`     | the domain of a premium lambda, whether it is served, and what it resolves to |
 | `GET /showcases`, `GET /showcases/:publicKey/image`   | what `/showcase` lists, and a picture |
+| `GET / PUT / DELETE /lambdas/:privateKey/analytics`   | who visits it, by day, over the last `days` (at most what its tier shows); switches counting on; switches it off and deletes what was counted, see [Analytics](#analytics) |
 | `GET / PUT / DELETE /lambdas/:privateKey/source`      | whether its code is published and under which license, the licenses on offer; publishes it or changes the license (`license`, `author`); takes it down |
 | `GET /sources`                                        | what `/source` lists (`search`, `order`: `stars`, `updated`, `published`, `skip`, `take`) |
 | `GET /sources/:publicKey`                             | a published source: what it is, its license, where it runs, every version and what it changed, a ticket to star it with |
@@ -793,6 +794,83 @@ has chosen for themselves, for that lambda, which is kept in their browser and
 never sent anywhere - so an operator looking at somebody's lambda in the full
 view leaves it simple for its owner.
 
+### Analytics
+
+An owner can have the visits of a lambda counted, and reads them in the
+editor's **Analytics** section, in both views: visitors, page views and
+requests per day, and the pages, referring sites, countries, devices,
+browsers, operating systems and crawlers behind them - search engines, AI
+assistants, chats fetching a preview. Opt-in: nothing is counted until the
+owner switches it on (`PUT …/analytics`, or the `analytics` tool when the
+user asks an agent), and switching it off (`DELETE …/analytics`) deletes
+what was counted. A demo's visitors are not counted, and neither is a
+feature's preview.
+
+- **By day, in UTC, kept for a year.** How much of the year the owner sees is
+  a limit of the tier - seven days for a free lambda, all of it for a premium
+  one (see [Limits](#limits)) - so a lambda that becomes premium shows what was
+  counted before it was. A range of the same length before is summed for a
+  comparison only where the tier shows it as well.
+- **Counted in front of the lambda, written behind it.** A request to a
+  lambda or a preview is made into one visit (`LambdaVisit`: its status, its
+  time, its bytes, its path, its caller's country and agent) by
+  `LambdaVisitConcern`, which only makes it and leaves it on the request.
+  Whatever wants to know about requests to lambdas reads it rather than
+  measuring again: the overview's figures (`LambdaActivityConcern`), the
+  request log (`CallerConcern`), and `AnalyticsConcern`, which puts it on a
+  lock-free queue where the owner counts visits. Each leaves out what is not
+  its own - the figures and the analytics previews. `AnalyticsJob` empties the queue every
+  `LAMBDA_ANALYTICS_INTERVAL_SECONDS` (five minutes), sums it into a row
+  per lambda, day and value, and writes those in one transaction. Nothing is
+  written while a visitor waits; visits not yet written are lost when the
+  server stops. The queue holds 250,000 visits; what does not fit is dropped
+  and logged.
+- **What a visit is counted as.** A *hit* is every request answered; a *view*
+  is somebody opening a page - a browser's navigation (`Sec-Fetch-Dest:
+  document`, a revalidation included) or, from a program that does not send
+  that header, a successful `GET` answered with HTML. A path is counted where
+  it was answered without an error, at most 200 a day, and the rest under
+  `(other)`, so a scanner cannot fill a day. A referrer is kept as its host,
+  without `www.`, and only where it is another site than the one visited (100
+  a day). Country, device, browser and system come from the address and the
+  `User-Agent` the request line already has, and from the client hints
+  (`Sec-CH-UA`, `-Mobile`, `-Platform`) where a Chromium browser sends them -
+  its agent no longer says which phone or system it is on. Hints are only
+  believed from an agent that is Chromium's, and only where they name a
+  browser or system that is known, so nobody writes words of their own into
+  an owner's figures (`VisitorClassifier`).
+- **Crawlers, hardened.** A program is told from a person by
+  [crawler-user-agents](https://github.com/monperrus/crawler-user-agents)
+  (MIT, `Resources/Crawlers`), a maintained list of about 1,500 crawlers with a
+  kind each - search engine, AI crawler, link preview, monitoring, scanner,
+  HTTP library and so on - and counted under that kind, never as a browser
+  or a visitor. Google, Bing, OpenAI, Apple and Perplexity publish the
+  addresses their crawlers come from; a visit is only counted as theirs when
+  the connection came from one of them, and as an unconfirmed claim otherwise
+  - anybody can send `Googlebot`. The address checked is the connection's,
+  never a forwarding header's, so an installation behind a proxy confirms
+  none. `CrawlerJob` fetches the list and the addresses daily into
+  `/data/crawlers` (`LAMBDA_ANALYTICS_CRAWLER_LISTS`,
+  `LAMBDA_ANALYTICS_CRAWLER_REFRESH_HOURS`), the list of the release
+  standing in until it has. Matching is linear in the length of the agent
+  whatever it says: the list's plain text is looked for in one pass
+  (`SearchValues`), its few expressions run without backtracking, and only
+  500 characters of an agent are read.
+- **Visitors without keeping anybody.** A visitor is their address and their
+  agent, hashed with a key made at random per day and lambda, held in memory
+  for today and yesterday only (`DailyVisitors`), and only a person is one.
+  So a visitor counts once a day; a restart counts somebody again who comes back the same day, and an
+  installation that keeps no addresses (`LAMBDA_LOG_CLIENT_ADDRESS=false`)
+  counts no visitors. No cookie, no script in the lambda.
+- **A database of its own.** `analytics.db` beside `lambda.db`, a star:
+  `lambdas`, and a table of facts per statistic - `days` (the totals),
+  `pages`, `referrers`, `countries`, `devices`, `browsers`, `systems`,
+  `crawlers` - keyed by lambda, year, month and day (and value), so a
+  lambda's days are a range of the key. Migrated by Evolve from
+  `Services/Analytics/Migrations`. Only the switch is in `lambda.db`
+  (`lambdas.analytics_since`), read with everything else that serves a
+  request. Deleting a lambda deletes its rows.
+
 ### Taking a lambda away
 
 The code belongs to whoever made the lambda, so `GET …/export` (the editor's
@@ -1110,6 +1188,14 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   keeps the commits and their files below `/data/git/{lambda}`, and
   `ProjectTree` says what a lambda is as a tree and back. The door is
   `Api/Git/GitRoutes.cs`, beside the pages below `/editor/` and `/source/`.
+- **Analytics** (`Services/Analytics`) - the visits counted for an owner who
+  switched analytics on (see [Analytics](#analytics)). `AnalyticsService` is
+  what the API and MCP call and what writes a batch down, `AnalyticsQueue`
+  holds the visits until then, `VisitTally` sums them into rows,
+  `VisitorClassifier` says what a visitor was - with `CrawlerList` and
+  `CrawlerRanges`, kept current by `CrawlerJob` - `DailyVisitors` who, and
+  `AnalyticsStore` keeps `analytics.db` - `IAnalyticsStore` for Meta, which
+  forgets a deleted lambda's rows.
 - **Building** (`Services/Building`) - the jobs of the build agent: builds
   asked for on `/build` and changes asked for in the editor's Change section.
   `BuildService` decides what may be asked for and in which order that is
@@ -1231,6 +1317,9 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_EXECUTION_TIMEOUT_SECONDS`  | `15`             | before an invocation is aborted             |
 | `LAMBDA_TELEMETRY_INTERVAL_SECONDS` | `30`             | how often a reading is taken                |
 | `LAMBDA_TELEMETRY_SAMPLES`          | `2880`           | how many readings are kept                  |
+| `LAMBDA_ANALYTICS_INTERVAL_SECONDS` | `300`            | how often the visits counted for the owners' analytics are written down |
+| `LAMBDA_ANALYTICS_CRAWLER_LISTS`    | `true`           | fetch the list of crawlers and the addresses Google, Bing, OpenAI, Apple and Perplexity crawl from |
+| `LAMBDA_ANALYTICS_CRAWLER_REFRESH_HOURS` | `24`        | how often they are fetched again            |
 | `LAMBDA_ADMIN_TOKEN`                | -                | enables the panel, and closes the figures   |
 | `LAMBDA_LOG_HISTORY`                | `4000`           | log lines the panel can read back, to 10^6  |
 | `LAMBDA_LOG_MEMORY_MB`              | derived          | what their text may cost; whichever runs out first |
@@ -1573,7 +1662,8 @@ The tools are the shape of the job: `create_lambda`, `update_lambda`, `write_cod
 data tools `upload_file`, `list_files`, `delete_file`, `enable_data`,
 `read_database`, `set_secret`, `list_secrets` and `delete_secret`, `showcase` for listing
 a lambda on the public showcase and `open_source` for publishing its code -
-only when its owner asks for either - and
+only when its owner asks for either - `analytics` for reading who visits a
+lambda, and switching that on when the user asks, and
 `list_demos` for reading something that already works. `platform_guide` is the one to call first
 - it opens with how versions, features and data live, then says what a snippet
 has to return, what is imported, what is refused, and the handful of things
@@ -1660,6 +1750,14 @@ it, leaves it out or takes it out when asked, and notes in `decisions.md` that
 it was not wanted, so the next agent does not put it back. A change does not
 add one to a lambda that has none. The instructions say so in a line,
 `platform_guide` under `backlink`, and the build agent's brief the same.
+
+`analytics` answers what the owner sees in the editor's Analytics section -
+the totals, the days and each breakdown - over `days`, at most what the tier
+shows; while it is off it says so and that the owner switches it on.
+`enable: true` switches it on, only when the user asks; there is no way for an
+agent to switch it off, since that deletes what was counted. `platform_guide`
+says under `analytics` that the platform counts this in front of the lambda,
+so an agent does not build a counter of its own.
 
 `open_source` publishes a lambda's code, changes its license or takes it down;
 with only the editor key it says how things are and changes nothing. It is not
@@ -1772,6 +1870,7 @@ no tier in a block of their own below it.
 | Data              | 512 MB   | 4 GB     | what a lambda keeps: its database and its workspace, together |
 | Versions kept     | 50       | 50       | older ones are removed, never the one online     |
 | Features open     | 10       | 10       | each holds a copy of the workspace and database  |
+| Analytics shown   | 7 days   | 365 days | how far back the owner sees what was counted of their visitors; a year is kept of every lambda, so at most 366 |
 
 A free lambda also goes offline after 720 hours without visits or edits and is
 removed after 2160; a premium one stays online and is kept. Three limits are
@@ -1982,6 +2081,11 @@ SQLite through EF Core, migrated on startup by [Evolve][evolve] from the SQL
 files in `Data/Migrations`. To change the schema, add the next
 `V<n>__<name>.sql` next to them - they are embedded resources, and the
 existing ones are never edited.
+
+The analytics are kept apart, in `analytics.db`, migrated the same way from
+`Services/Analytics/Migrations` and spoken to with plain commands. Back it up
+with the data volume, or leave it out: nothing else depends on it, and an
+installation without it starts counting again from nothing.
 
 [genhttp]: https://genhttp.org/
 [evolve]: https://evolve-db.netlify.app/

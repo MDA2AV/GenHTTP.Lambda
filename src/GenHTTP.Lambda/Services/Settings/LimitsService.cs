@@ -3,6 +3,7 @@ using System.Globalization;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Workspace;
 
@@ -38,6 +39,17 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     private readonly Lock _lock = new();
 
     private ProductLimits? _current;
+
+    /// <summary>
+    /// How many days of its analytics a free lambda shows its owner: a week,
+    /// enough to see whether anybody comes.
+    /// </summary>
+    private const int FreeAnalyticsDays = 7;
+
+    /// <summary>
+    /// How many a premium lambda shows: the year that is kept of every lambda.
+    /// </summary>
+    private const int PremiumAnalyticsDays = 365;
 
     #region Reading
 
@@ -106,8 +118,8 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
     /// options say, which is the environment or the built in defaults.
     /// </summary>
     public static ProductLimits DefaultsOf(LambdaOptions options) => new(
-        new TierLimits(options.BuildBytes, options.DataBytes, options.MaxVersions, options.MaxFeatures),
-        new TierLimits(options.PremiumBuildBytes, options.PremiumDataBytes, options.MaxVersions, options.MaxFeatures),
+        new TierLimits(options.BuildBytes, options.DataBytes, options.MaxVersions, options.MaxFeatures, FreeAnalyticsDays),
+        new TierLimits(options.PremiumBuildBytes, options.PremiumDataBytes, options.MaxVersions, options.MaxFeatures, PremiumAnalyticsDays),
         options.DeploymentLifetime,
         options.Retention,
         options.MaxShowcaseImageBytes,
@@ -179,6 +191,7 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
             yield return ($"{Prefix}{tier}.data-bytes", Text(values.DataBytes));
             yield return ($"{Prefix}{tier}.versions", Text(values.Versions));
             yield return ($"{Prefix}{tier}.features", Text(values.Features));
+            yield return ($"{Prefix}{tier}.analytics-days", Text(values.AnalyticsDays));
         }
 
         yield return ($"{Prefix}offline-after-hours", Text(limits.OfflineAfter.TotalHours));
@@ -207,6 +220,11 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
             throw LambdaException.Invalid($"The data of a lambda needs room for at least one block of {WorkspaceLimits.Block} bytes.");
         }
 
+        if (limits.Free.AnalyticsDays > AnalyticsStore.Kept || limits.Premium.AnalyticsDays > AnalyticsStore.Kept)
+        {
+            throw LambdaException.Invalid($"Analytics are kept for {AnalyticsStore.Kept} days, so no tier can show more of them.");
+        }
+
         var free = limits.Free;
         var premium = limits.Premium;
 
@@ -215,7 +233,8 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
             ("build bytes", premium.BuildBytes < free.BuildBytes),
             ("data bytes", premium.DataBytes < free.DataBytes),
             ("versions", premium.Versions < free.Versions),
-            ("features", premium.Features < free.Features)
+            ("features", premium.Features < free.Features),
+            ("analytics days", premium.AnalyticsDays < free.AnalyticsDays)
         }.Where(c => c.Smaller).Select(c => c.Name).ToList();
 
         if (smaller.Count > 0)
@@ -253,7 +272,8 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
         (long)Number(stored, $"{tier}.build-bytes", Before(stored, tier, "code-characters", "asset-bytes", defaults.BuildBytes)),
         (long)Number(stored, $"{tier}.data-bytes", Before(stored, tier, "workspace-bytes", "database-bytes", defaults.DataBytes)),
         (int)Number(stored, $"{tier}.versions", defaults.Versions),
-        (int)Number(stored, $"{tier}.features", defaults.Features)
+        (int)Number(stored, $"{tier}.features", defaults.Features),
+        (int)Number(stored, $"{tier}.analytics-days", defaults.AnalyticsDays)
     );
 
     /// <summary>
@@ -306,7 +326,11 @@ public sealed class LimitsService(IDbContextFactory<LambdaDbContext> databases, 
 /// <param name="DataBytes">The room its data may take: its database and its workspace together</param>
 /// <param name="Versions">How many of its versions are kept</param>
 /// <param name="Features">How many features it may have open at once</param>
-public sealed record TierLimits(long BuildBytes, long DataBytes, int Versions, int Features);
+/// <param name="AnalyticsDays">
+/// How many days of its analytics its owner is shown. A year is counted of every lambda whatever its tier, so a lambda
+/// moved to a tier that shows more shows what was counted before as well.
+/// </param>
+public sealed record TierLimits(long BuildBytes, long DataBytes, int Versions, int Features, int AnalyticsDays);
 
 /// <summary>
 /// Every limit of the product.

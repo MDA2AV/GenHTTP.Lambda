@@ -76,6 +76,16 @@ public sealed class LambdaEntity
     /// </remarks>
     public byte[]? SecretSalt { get; set; }
 
+    /// <summary>
+    /// Since when its visits are counted for its owner, or nothing while
+    /// analytics are switched off.
+    /// </summary>
+    /// <remarks>
+    /// Only the switch: the counts are kept in a database of their own (see
+    /// <c>AnalyticsStore</c>), which serving a request never waits for.
+    /// </remarks>
+    public DateTime? AnalyticsSince { get; set; }
+
     public List<DeploymentEntity> Deployments { get; set; } = [];
 
 }

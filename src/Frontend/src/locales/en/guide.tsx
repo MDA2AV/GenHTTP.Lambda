@@ -30,6 +30,7 @@ export const guide = {
     away: 'Taking it away',
     git: 'Working on it with git',
     open: 'Publishing the code',
+    visitors: 'Who visits it',
     agents: 'Letting an agent do it',
   },
 
@@ -110,6 +111,7 @@ export const guide = {
     ['Versions', () => <>What each version changed and what was asked for, and the difference to the one before. Deploy or roll back from here, or start a draft from any of them.</>],
     ['Deployments', () => <>What was online when, and what took it down.</>],
     ['Stats', () => <>Requests, failures, response times and the most asked-for paths, over the last hour or day.</>],
+    ['Analytics', () => <>Who visits the app, once you switch it on: visitors, page views and requests per day, the pages they open, the sites that send them, their countries and devices, and the search engines and AIs that came by.</>],
     ['Logs', () => <>Its requests, what it printed, and the stack trace of anything that went wrong, as it happens.</>],
     [
       'Code',
@@ -133,7 +135,7 @@ export const guide = {
     </>
   )) as Text,
   editorAside:
-    'The traffic and the log are held in memory, for watching rather than keeping: a restart of the server begins them again. Versions and the deployment history are stored.',
+    'The traffic and the log are held in memory, for watching rather than keeping: a restart of the server begins them again. Versions, the deployment history and the analytics are stored.',
 
   why: ((k) => (
     <>
@@ -499,6 +501,28 @@ export const guide = {
   )) as Text,
   openAside:
     'Everything in the code becomes public, the earlier versions included. A key or a password belongs with the keys and passwords under Data, never in the code - published or not.',
+
+  visitors: ((k) => (
+    <>
+      Open {k.b('Analytics')} in the control center and switch it on to see who visits your app: how many people
+      come each day, which pages they open, which sites send them - a search engine, a post, a newsletter - from
+      which countries, on which devices and browsers, and which search engines and AI assistants read its pages.
+      Pick a figure at the top to see it day by day.
+    </>
+  )) as Text,
+  visitors2: ((k) => (
+    <>
+      It is counted by the platform, in front of your app, so your app needs nothing for it: no cookies, no script,
+      no banner for your visitors to accept. Only counts per day are kept - never an address, and of the page somebody
+      came from only the site. A visitor is a person, counted once a day: search engines, AI crawlers and other
+      programs are counted apart, by what they are, and Google, Bing, OpenAI, Apple and Perplexity only by name when
+      the visit came from an address they publish - anybody can claim to be them. A year is kept; a free app shows the last seven
+      days of it and {k.b('Premium')} all of it, what was counted before included. Switching it off deletes what was
+      counted.
+    </>
+  )) as Text,
+  visitorsAside:
+    'The figures are written down every few minutes, so the last visits show up a little later. A draft is never counted: trying a change is not a visit.',
 
   agents: ((k) => (
     <>

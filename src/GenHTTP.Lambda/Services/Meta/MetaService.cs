@@ -317,7 +317,8 @@ public sealed class MetaService : IMetaService
 
         var workspace = DataSwitches.IsEnabled(database, lambda.Id, DataKinds.Workspace);
 
-        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created, workspace);
+        return new ResolvedLambda(lambda.Id, lambda.PublicKey, lambda.Tier, deployment.Version, deployment.Created, workspace,
+                                  AnalyticsSince: lambda.AnalyticsSince);
     }
 
     public IReadOnlyList<LambdaVersionInfo> GetVersions(string privateKey)

@@ -17,6 +17,11 @@ export const privacy: Messages['privacy'] = {
       'É assim que se encontram falhas, que se descobre o que está a sobrecarregar o servidor e que se investigam os abusos que nos são denunciados. O endereço IP também é usado, só em memória, para limitar quantos pedidos um mesmo visitante pode fazer e quantas apps pode mandar criar. Sem estes dados, não é possível responder a um pedido. O fundamento jurídico é o nosso interesse legítimo em manter o serviço a funcionar e em segurança (art. 6.º, n.º 1, alínea f), do RGPD).',
       'Os administradores podem ver tudo isto. Quem é dono de uma lambda vê o país e o browser de cada pedido feito a essa lambda, mas não o endereço IP.',
     ],
+    analyticsTitle: 'Visitas contadas para o proprietário de uma lambda',
+    analytics: [
+      'O proprietário de uma lambda pode ligar a análise de visitas dessa lambda. Nesse caso, o servidor conta as visitas a essa lambda por dia: quantos pedidos e visualizações de páginas houve, para que páginas eram, o site de onde veio o visitante (apenas o nome, não o endereço da página), o país do endereço IP do visitante e o tipo de dispositivo, de browser e de sistema operativo que o browser indica. Guardam-se apenas estas contagens - não o endereço IP nem mais nada que identifique um visitante - numa base de dados no servidor, durante um ano. O proprietário da lambda vê-as no seu editor e os administradores podem lê-las.',
+      'Para contar cada visitante uma vez por dia, o endereço IP e o browser são transformados num código que não pode ser revertido, com uma chave gerada aleatoriamente para cada dia e cada lambda. Os códigos e as chaves existem apenas em memória, nunca são escritos e são esquecidos ao fim de um dia. Não é definido nenhum cookie e nada é guardado no browser do visitante. Quando uma visita diz vir do crawler da Google, do Bing, da OpenAI, da Apple ou da Perplexity, o seu endereço IP é comparado, em memória, com os endereços que estes publicam para os seus crawlers. Para distinguir crawlers de pessoas, o servidor vai buscar uma vez por dia uma lista pública de crawlers e estes endereços publicados; nada sobre os visitantes é enviado para lado nenhum para isso. O fundamento jurídico é o interesse legítimo do proprietário em saber como a sua lambda é usada (art. 6.º, n.º 1, alínea f), do RGPD).',
+    ],
 
     logsTitle: 'Durante quanto tempo o log é guardado',
     logs: 'O log fica em dois sítios: na memória do servidor, que é esvaziada sempre que o servidor reinicia, e na saída da consola do servidor, que é apagada sempre que o servidor é atualizado. Ambos têm um tamanho fixo, por isso cada linha nova empurra para fora a mais antiga, e o tempo que uma linha lá fica depende do movimento que o site tiver. Nada do log é copiado para um arquivo.',
@@ -43,14 +48,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'Quem decide o que uma lambda faz é o dono dela',
     lambdas:
-      'Uma lambda é escrita por quem tem o link de edição, não por nós. O que pede aos visitantes e o que faz com isso é decisão dessa pessoa, e esta página não trata disso, à exceção do log de pedidos descrito acima, que o servidor guarda para todas as lambdas. Os termos de utilização não permitem usar uma lambda para recolher dados pessoais de outras pessoas. Se encontrares uma que o faça, denuncia-a.',
+      'Uma lambda é escrita por quem tem o link de edição, não por nós. O que pede aos visitantes e o que faz com isso é decisão dessa pessoa, e esta página não trata disso, à exceção do log de pedidos descrito acima, que o servidor guarda para todas as lambdas, e das visitas que conta para um proprietário que ligou a análise de visitas. Os termos de utilização não permitem usar uma lambda para recolher dados pessoais de outras pessoas. Se encontrares uma que o faça, denuncia-a.',
 
     mailTitle: 'Quando nos escreves',
     mail: 'Se nos escreveres, para denunciar um abuso ou por qualquer outro motivo, usamos o teu endereço de email e a tua mensagem para te responder e tratar do assunto, e apagamo-los quando deixarem de ser necessários para isso (art. 6.º, n.º 1, alínea f), do RGPD).',
 
     storageTitle: 'Cookies e o teu browser',
     storage:
-      'Há um único cookie, chamado lang. Guarda o idioma que escolheste, para que os endereços que não indicam idioma abram nesse idioma, e dura um ano. O armazenamento do próprio browser guarda o modo claro ou escuro, algumas definições das páginas que usas e, no caso dos administradores, o respetivo token. Nada disto é usado para te seguir, e nada vai para mais ninguém: não há ferramentas de análise, nem publicidade, e nada é carregado de outros sites, nem sequer os tipos de letra. Como tudo isto só serve para fazer o que pediste, não é necessário consentimento (§ 25(2), n.º 2, da lei alemã TDDDG).',
+      'Há um único cookie, chamado lang. Guarda o idioma que escolheste, para que os endereços que não indicam idioma abram nesse idioma, e dura um ano. O armazenamento do próprio browser guarda o modo claro ou escuro, algumas definições das páginas que usas e, no caso dos administradores, o respetivo token. Nada disto é usado para te seguir, e nada vai para mais ninguém: não há ferramentas de análise deste site, nem publicidade, e nada é carregado de outros sites, nem sequer os tipos de letra. Como tudo isto só serve para fazer o que pediste, não é necessário consentimento (§ 25(2), n.º 2, da lei alemã TDDDG).',
 
     hostingTitle: 'Onde fica guardado',
     hosting:

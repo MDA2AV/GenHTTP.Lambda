@@ -1,0 +1,117 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const analytics: EditorMessages['analytics'] = {
+  hint: 'Lo cuenta la plataforma por ti: sin cookies, sin código en tu app y sin nada que tus visitantes tengan que aceptar.',
+  loading: 'Leyendo las visitas…',
+  loadFailed: 'No se pudieron leer las visitas.',
+
+  offTitle: 'Descubre quién visita tu app',
+  offText:
+    'Cuánta gente llega cada día, qué páginas abre, qué sitios la envían, desde qué países y en qué dispositivos: se cuenta día a día, desde el momento en que lo activas.',
+  offPrivate: 'Sin cookies y sin ningún aviso que tus visitantes tengan que aceptar',
+  offAddresses: 'No se guardan direcciones: solo cuántas visitas hubo cada día',
+  offKept: (days) =>
+    days >= 365
+      ? 'Se guarda durante un año y se te muestra todo'
+      : `Se guarda durante un año: se muestran los últimos ${days} días, y todo con Premium`,
+  switchOn: 'Activar la analítica',
+  switchedOn: 'La analítica está activada. Las primeras visitas aparecen en unos minutos.',
+  switchOnFailed: 'No se pudo activar la analítica.',
+  demo: 'Los visitantes de una demo no se cuentan. Una copia tuya sí puede contar a sus visitantes.',
+
+  range: 'Periodo',
+  days: (days) => (days >= 365 ? '12 meses' : `${days} días`),
+  premiumRange: 'Premium muestra hasta un año',
+
+  visitors: 'Visitantes',
+  visitorsHint: 'Personas distintas, cada una contada una vez al día. Los buscadores y otros programas no son visitantes.',
+  views: 'Visualizaciones de página',
+  viewsHint: 'Cada vez que alguien abrió una página.',
+  hits: 'Peticiones',
+  hitsHint: 'Todo lo que se pidió a tu app: sus páginas y también las imágenes y los scripts que cargan.',
+  versus: (days) => `frente a los ${days} días anteriores`,
+  noChange: 'sin cambios',
+  inDays: (days) => (days >= 365 ? 'en los últimos 12 meses' : `en los últimos ${days} días`),
+
+  perDay: {
+    visitors: 'Visitantes por día',
+    views: 'Visualizaciones de página por día',
+    hits: 'Peticiones por día',
+  },
+  perWeek: {
+    visitors: 'Visitantes por semana',
+    views: 'Visualizaciones de página por semana',
+    hits: 'Peticiones por semana',
+  },
+  showValues: 'Mostrar los valores',
+  showChart: 'Mostrar el gráfico',
+  day: 'Día',
+  week: 'Semana del',
+
+  nobody: 'Nadie visitó la app en estos días.',
+  nobodyYet: 'Nadie la ha visitado desde que se activó la analítica. Las primeras visitas aparecen en unos minutos.',
+
+  pages: 'Páginas',
+  pagesHint: 'Las páginas que abrió la gente, las más abiertas primero.',
+  requested: 'Lo más pedido',
+  requestedHint: 'Todo lo que se pidió a tu app, por dirección: no tiene páginas que la gente abra.',
+  sources: 'De dónde vienen los visitantes',
+  sourcesHint: 'Los sitios que enviaron gente aquí, según la página en la que estaban. Los buscadores solo indican que fueron ellos, no qué se buscó.',
+  direct: 'Escrito a mano, un marcador o una app',
+  countries: 'Países',
+  countriesHint: 'Donde están registradas las direcciones IP de los visitantes: normalmente, aunque no siempre, donde se encuentran.',
+  unknownCountry: 'Desconocido',
+  devices: 'Dispositivos',
+  device: {
+    desktop: 'Ordenador',
+    mobile: 'Móvil',
+    tablet: 'Tableta',
+    bot: 'Bots',
+    other: 'Otros',
+  },
+  browsers: 'Navegadores',
+  systems: 'Sistemas',
+  crawlers: 'Buscadores, IA y otros programas',
+  crawlersHint: 'Programas que pasaron por aquí, según lo que son. Google, Bing, OpenAI, Apple y Perplexity solo se nombran cuando la visita llegó desde una dirección que ellos publican: cualquiera puede decir que es uno de ellos.',
+  noCrawlers: 'Ningún buscador, IA ni otro programa ha pasado por aquí en estos días.',
+  confirmed: (name) => `Llegó desde una dirección que ${name} publica para sus rastreadores`,
+  crawlerKinds: {
+    'search-engine': 'Buscadores',
+    'ai-crawler': 'Rastreadores de IA',
+    'social-preview': 'Vistas previas de enlaces en chats y redes sociales',
+    advertising: 'Publicidad',
+    seo: 'Herramientas de SEO',
+    monitoring: 'Monitorización',
+    'feed-reader': 'Lectores de feeds',
+    archiver: 'Archivos web',
+    academic: 'Investigación',
+    scanner: 'Escáneres de seguridad',
+    'browser-automation': 'Navegadores automatizados',
+    'http-library': 'Scripts y apps',
+    other: 'Otros programas',
+    unconfirmed: 'Dijeron ser un rastreador conocido, sin confirmar',
+  },
+  other: 'Otros',
+  showAll: (count) => `Mostrar los ${count}`,
+  showFewer: 'Mostrar menos',
+  share: (part, whole) => `${part} de ${whole}`,
+  none: 'Todavía nada.',
+
+  moreKept: (since) => `Contado desde ${since}: Premium muestra todo, hasta un año.`,
+  premiumAsk: 'Preguntar por Premium',
+  premiumSubject: 'Premium para mi app',
+  premiumBody: (address) => `Hola:\n\nMe gustaría ver toda la analítica de mi app: ${address}\n\n`,
+
+  footer: (minutes) =>
+    minutes === 1 ? 'Se cuenta por día, en UTC. Se actualiza cada minuto.' : `Se cuenta por día, en UTC. Se actualiza cada ${minutes} minutos.`,
+  updated: (time) => `Última actualización a las ${time}.`,
+  since: (date) => `Contando desde ${date}.`,
+
+  switchOff: 'Desactivar la analítica',
+  switchOffTitle: '¿Desactivar la analítica?',
+  switchOffText: 'Se deja de contar y se borra todo lo contado hasta ahora. No se puede deshacer.',
+  keep: 'Seguir contando',
+  switchOffConfirm: 'Desactivar y borrar',
+  switchedOff: 'La analítica está desactivada y lo contado se ha borrado.',
+  switchOffFailed: 'No se pudo desactivar la analítica.',
+};

@@ -17,6 +17,11 @@ export const privacy: Messages['privacy'] = {
       'Zo vinden we fouten, zo zien we waardoor een server overbelast raakt, en zo sporen we misbruik op dat bij ons gemeld wordt. Het IP-adres wordt ook gebruikt, alleen in het geheugen, om te beperken hoeveel verzoeken en builds één bezoeker kan doen. Zonder deze gegevens kan een verzoek niet beantwoord worden. De rechtsgrond is ons gerechtvaardigd belang om de dienst te laten draaien en veilig te houden (art. 6 lid 1 sub f AVG).',
       'Beheerders kunnen alles inzien. De eigenaar van een lambda ziet bij elk verzoek aan die lambda het land en de browser, maar niet het IP-adres.',
     ],
+    analyticsTitle: 'Bezoeken die voor de eigenaar van een lambda worden geteld',
+    analytics: [
+      "De eigenaar van een lambda kan analytics ervoor aanzetten. Dan telt de server de bezoeken aan die lambda per dag: hoeveel requests en paginaweergaven er waren, voor welke pagina’s, de site waar een bezoeker vandaan kwam (alleen de naam, niet het adres van de pagina), het land van het IP-adres van de bezoeker, en het soort apparaat, de browser en het besturingssysteem die de browser opgeeft. Alleen deze aantallen worden bewaard – niet het IP-adres en niets anders waaruit een bezoeker blijkt – in een database op de server, een jaar lang. De eigenaar van de lambda ziet ze in zijn editor, en beheerders kunnen ze inzien.",
+      "Om elke bezoeker één keer per dag te tellen, worden het IP-adres en de browser omgezet in een code die niet terug te rekenen is, met een sleutel die voor elke dag en elke lambda willekeurig wordt gemaakt. De codes en de sleutels staan alleen in het geheugen, worden nooit opgeschreven en na een dag vergeten. Er wordt geen cookie geplaatst en er wordt niets opgeslagen in de browser van de bezoeker. Als een bezoek zegt van de crawler van Google, Bing, OpenAI, Apple of Perplexity te komen, wordt het IP-adres in het geheugen vergeleken met de adressen die zij voor hun crawlers publiceren. Om crawlers van mensen te onderscheiden haalt de server één keer per dag een openbare lijst van crawlers en deze gepubliceerde adressen op; daarvoor wordt niets over bezoekers ergens naartoe gestuurd. De rechtsgrond is het gerechtvaardigd belang van de eigenaar om te weten hoe zijn lambda wordt gebruikt (art. 6 lid 1 sub f AVG).",
+    ],
 
     logsTitle: 'Hoe lang het log bewaard blijft',
     logs: 'Het log staat op twee plekken: in het geheugen van de server, dat bij elke herstart wordt leeggemaakt, en in de console-uitvoer van de server, die bij elke update wordt verwijderd. Allebei hebben ze een vaste grootte, dus elke nieuwe regel duwt de oudste eruit. Hoe lang een regel blijft staan, hangt af van hoe druk het op de site is. Niets uit het log wordt in een archief bewaard.',
@@ -43,14 +48,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'Wat een lambda doet, bepaalt de eigenaar',
     lambdas:
-      'Een lambda wordt geschreven door wie de editorlink heeft, niet door ons. Wat hij aan bezoekers vraagt en wat hij daarmee doet, bepaalt die persoon, en dat valt buiten dit privacybeleid. Alleen het verzoeklog hierboven, dat de server voor elke lambda bijhoudt, valt er wel onder. Volgens de gebruiksvoorwaarden mag je een lambda niet gebruiken om persoonsgegevens van anderen te verzamelen. Kom je er een tegen die dat wel doet? Meld het dan.',
+      'Een lambda wordt geschreven door wie de editorlink heeft, niet door ons. Wat hij aan bezoekers vraagt en wat hij daarmee doet, bepaalt die persoon, en dat valt buiten dit privacybeleid. Alleen het verzoeklog hierboven, dat de server voor elke lambda bijhoudt, en de bezoeken die de server telt voor een eigenaar die analytics heeft aangezet, vallen er wel onder. Volgens de gebruiksvoorwaarden mag je een lambda niet gebruiken om persoonsgegevens van anderen te verzamelen. Kom je er een tegen die dat wel doet? Meld het dan.',
 
     mailTitle: 'Als je ons mailt',
     mail: 'Als je ons schrijft, om misbruik te melden of over iets anders, gebruiken we je adres en je bericht om je te antwoorden en af te handelen wat je schreef. We verwijderen ze zodra we ze daarvoor niet meer nodig hebben (art. 6 lid 1 sub f AVG).',
 
     storageTitle: 'Cookies en je browser',
     storage:
-      "Er is één cookie, met de naam lang. Die onthoudt welke taal je hebt gekozen, zodat adressen zonder taal in die taal openen, en blijft een jaar bewaard. De opslag van je browser zelf onthoudt of je de lichte of donkere modus gebruikt, een paar instellingen van de pagina's die je gebruikt en, voor beheerders, hun token. Niets daarvan wordt gebruikt om je te volgen en niets gaat naar anderen: er zijn geen analytics en geen advertenties, en er wordt niets van andere sites geladen, zelfs geen lettertypen. Omdat dit allemaal alleen doet waar je zelf om vraagt, is er geen toestemming nodig (§ 25 lid 2 nr. 2 van de Duitse TDDDG).",
+      "Er is één cookie, met de naam lang. Die onthoudt welke taal je hebt gekozen, zodat adressen zonder taal in die taal openen, en blijft een jaar bewaard. De opslag van je browser zelf onthoudt of je de lichte of donkere modus gebruikt, een paar instellingen van de pagina's die je gebruikt en, voor beheerders, hun token. Niets daarvan wordt gebruikt om je te volgen en niets gaat naar anderen: er zijn geen analytics van deze site en geen advertenties, en er wordt niets van andere sites geladen, zelfs geen lettertypen. Omdat dit allemaal alleen doet waar je zelf om vraagt, is er geen toestemming nodig (§ 25 lid 2 nr. 2 van de Duitse TDDDG).",
 
     hostingTitle: 'Waar het wordt bewaard',
     hosting:

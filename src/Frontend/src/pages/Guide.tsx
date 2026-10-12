@@ -34,6 +34,7 @@ const PARTS = [
   'away',
   'git',
   'open',
+  'visitors',
   'agents',
 ] as const;
 
@@ -434,6 +435,12 @@ return Layout.Create().Add("chat", socket);`} />
             <p>{said.open(k)}</p>
             <p>{said.open2(k)}</p>
             <Aside>{said.openAside}</Aside>
+          </Section>
+
+          <Section id="visitors" title={said.parts.visitors}>
+            <p>{said.visitors(k)}</p>
+            <p>{said.visitors2(k)}</p>
+            <Aside>{said.visitorsAside}</Aside>
           </Section>
 
           <Section id="agents" title={said.parts.agents}>

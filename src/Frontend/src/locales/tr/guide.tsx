@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Kodunuzu alıp gitmek',
     git: 'git ile üzerinde çalışmak',
     open: 'Kodu yayımlamak',
+    visitors: 'Kimlerin ziyaret ettiği',
     agents: 'İşi bir ajana bırakmak',
   },
 
@@ -106,6 +107,7 @@ export const guide: Messages['guide'] = {
     ['Sürümler', () => <>Her sürümün neyi değiştirdiği, ne istendiği ve bir öncekinden farkı. Buradan yayına alabilir, eski bir sürüme dönebilir ya da herhangi bir sürümden bir taslak başlatabilirsiniz.</>],
     ['Yayın geçmişi', () => <>Ne zaman neyin yayında olduğu ve neden yayından kalktığı.</>],
     ['İstatistikler', () => <>Son bir saatin ya da günün istekleri, hataları, yanıt süreleri ve en çok istenen yolları.</>],
+    ['Analitik', () => <>Uygulamanızı kimlerin ziyaret ettiği, açtığınızda: günlük ziyaretçiler, sayfa görüntülemeleri ve istekler, açtıkları sayfalar, onları yönlendiren siteler, ülkeleri ve cihazları, ayrıca uğrayan arama motorları ve yapay zekâlar.</>],
     ['Loglar', () => <>İstekler, lambdanın yazdırdıkları ve ters giden her şeyin stack trace’i, anında.</>],
     [
       'Kod',
@@ -129,7 +131,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'Trafik ve log bellekte tutulur. Saklamak için değil, izlemek içindir: sunucu yeniden başlarsa sıfırdan başlarlar. Sürümler ve yayın geçmişi ise kalıcı olarak saklanır.',
+    'Trafik ve log bellekte tutulur. Saklamak için değil, izlemek içindir: sunucu yeniden başlarsa sıfırdan başlarlar. Sürümler, yayın geçmişi ve analitik ise kalıcı olarak saklanır.',
 
   why: (k) => (
     <>
@@ -499,6 +501,28 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Koddaki her şey herkese açık hâle gelir, önceki sürümler de dahil. Bir anahtarın ya da parolanın yeri, Veriler altındaki anahtarlar ve parolalardır; yayımlansın ya da yayımlanmasın, asla kod değildir.',
+  visitors: ((k) => (
+    <>
+      Uygulamanızı kimlerin ziyaret ettiğini görmek için kontrol panelinde {k.b('Analitik')} bölümünü açın ve
+      açın: her gün kaç kişinin geldiğini, hangi sayfaları açtığını, onları hangi sitelerin - bir arama motoru, bir
+      paylaşım, bir bülten - yönlendirdiğini, hangi ülkelerden, hangi cihaz ve tarayıcılarla geldiğini ve hangi arama
+      motorlarının ve yapay zekâ asistanlarının sayfalarını okuduğunu görürsünüz. Gün gün görmek için üstten bir
+      rakam seçin.
+    </>
+  )),
+  visitors2: ((k) => (
+    <>
+      Sayımı platform yapar, uygulamanızın önünde; bu yüzden uygulamanızın bunun için hiçbir şeye ihtiyacı yoktur:
+      çerez yok, script yok, ziyaretçilerinizin kabul etmesi gereken banner yok. Yalnızca günlük sayılar saklanır - hiçbir
+      adres saklanmaz, birinin geldiği sayfadan da yalnızca site saklanır. Ziyaretçi bir kişidir ve günde bir kez
+      sayılır: arama motorları, yapay zekâ tarayıcıları ve diğer programlar ne olduklarına göre ayrıca sayılır; Google,
+      Bing, OpenAI, Apple ve Perplexity ise yalnızca ziyaret, yayımladıkları bir adresten geldiyse adıyla sayılır - herkes
+      onlardan biri olduğunu iddia edebilir. Bir yıl saklanır; ücretsiz bir uygulama bunun son yedi gününü,
+      {k.b('Premium')} ise öncesinde sayılanlar dahil tamamını gösterir. Analitiği kapatmak, sayılanları siler.
+    </>
+  )),
+  visitorsAside:
+    'Rakamlar birkaç dakikada bir yazılır, bu yüzden son ziyaretler biraz geç görünür. Bir taslak asla sayılmaz: bir değişikliği denemek ziyaret değildir.',
 
   agents: (k) => (
     <>

@@ -428,6 +428,67 @@ of it into a lambda's pages; the agent does.
   pages of the host it is served from. Do not bring it back on the site's
   host.
 
+### Analytics
+
+An owner can have the visits of their lambda counted - visitors, page views
+and requests per day, and the pages, referring sites, countries, devices,
+browsers, systems and crawlers behind them - in the editor's **Analytics**
+section.
+
+- **Opt-in - decided by the owner.** Nothing is counted until the owner
+  switches it on. Switching it off deletes what was counted, like switching
+  off a kind of data, so an agent may switch it on when the user asks
+  (`analytics` with `enable`) and never off. A demo and a feature's preview
+  are not counted.
+- **By day, kept for a year, shown per tier - decided by the owner.** Free
+  shows seven days, premium the year; the window is a tier limit in the
+  panel (`analytics-days`), the year is `AnalyticsStore.Kept`. What is kept
+  beyond the window is shown once the lambda is premium, which is the point.
+- **One visit per request, read by whoever needs it - decided by the
+  owner.** `LambdaVisitConcern` makes the `LambdaVisit` once (status, time,
+  bytes, path, caller's country and agent), for previews too, and does
+  nothing else; the overview's figures (`LambdaActivityConcern`), the
+  request log (`CallerConcern`) and the analytics (`AnalyticsConcern`) read
+  it off the request and decide for themselves what is theirs. Anything new
+  that wants to know about requests to lambdas reads the visit, and what is
+  missing is added to it - nothing measures a request to a lambda again.
+  What only analytics need (the referrer, whether a page was opened, the
+  client hints) is read only for a lambda that counts visits; what is made of
+  it (the referrer's host, the kind of device) is worked out by the job,
+  never on the request.
+- **Collected on the request, written by a job - decided by the owner.** A
+  lock-free queue (`AnalyticsQueue`, bounded) and a job every five minutes
+  that sums it and writes one transaction. Losing what is queued on a restart
+  is accepted. Do not write to a database while a request is served.
+- **A database of its own, a star - decided by the owner.** `analytics.db`,
+  `lambdas` and a fact table per statistic keyed by lambda, year, month, day
+  (and value). Plain commands, synchronous; migrated by Evolve from
+  `Services/Analytics/Migrations`, numbered on their own. Only the switch is
+  in the platform's database, so serving reads it from memory.
+- **Crawlers by a maintained list and by their addresses, not by guessing -
+  decided with the owner.** Bots are told from people by
+  crawler-user-agents (MIT, refreshed daily, the release's copy as fallback)
+  and counted by its kinds; Google, Bing, OpenAI, Apple and Perplexity are
+  named only when the connection came from an address they publish - never
+  a forwarding header's - and an unconfirmed claim otherwise. Visitors are
+  people only. Browsers, systems and devices come from the agent's tokens
+  and Chromium's client hints, and a value the sender wrote is only taken
+  where it is one of a known few. Matching stays linear in the length of an
+  agent: no backtracking expression ever reads one.
+- **Nothing that names a visitor is kept.** Counts only; the referrer as its
+  host; visitors told apart for a day by a hash under a random key per day
+  and lambda, held in memory and never written. No cookie, no script in the
+  lambda. The privacy page says so; keep it saying so.
+- **In both views, in the words of the simple one.** It is about the
+  audience, not the program, so unlike the stats it is in the simple view as
+  well (after the domain). Charts, not tables: the figures at the top pick
+  what the columns below show, the breakdowns are ranked bars, the devices
+  one bar of shares; every chart has its values as a table one click away.
+  It does not poll - it reads again when the page is looked at again.
+- This is said in the README (Analytics), `/docs` (Who visits it),
+  `platform_guide` (`analytics`), the tool's description and the privacy
+  page - keep them the same.
+
 ### Pushing, not polling
 
 Agents are told never to poll: a page does not fetch on a timer to see
@@ -972,5 +1033,7 @@ is in `platform_guide` and the tool descriptions; do not repeat it there.
 - Tailwind for styling, both light and dark themes, phones included.
 - Check a change you cannot test in the browser by running the app (see above)
   and looking at it; type checks and tests are not proof that a UI works.
-- PR screenshots: an orphan branch `pr-assets/<topic>` with the images at its
-  root, linked from the PR body by commit-pinned raw URLs.
+- PR screenshots: one branch `pr-assets`, unrelated to `main`, with a folder
+  per topic (`<topic>/<file>.png`), a commit added on top for each PR and
+  linked from the PR body by commit-pinned raw URLs - decided by the owner;
+  no branch per topic.

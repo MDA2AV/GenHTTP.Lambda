@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Alles meenemen',
     git: 'Werken met git',
     open: 'De code publiceren',
+    visitors: 'Wie je app bezoekt',
     agents: 'Het aan een agent overlaten',
   },
 
@@ -106,6 +107,7 @@ export const guide: Messages['guide'] = {
     ['Versies', () => <>Wat elke versie veranderde en wat er gevraagd werd, en het verschil met de vorige. Van hieruit deploy je of zet je een versie terug, en vanuit elke versie kun je een concept starten.</>],
     ['Deployments', () => <>Wat wanneer online stond, en waardoor het offline ging.</>],
     ['Statistieken', () => <>Requests, fouten, responstijden en de meest opgevraagde paden, over het afgelopen uur of de afgelopen dag.</>],
+    ['Analytics', () => <>Wie de app bezoekt, zodra je het aanzet: bezoekers, paginaweergaven en requests per dag, de pagina’s die ze openen, de sites die hen sturen, hun landen en apparaten, en de zoekmachines en AI’s die langskwamen.</>],
     ['Logs', () => <>Requests, output en de stacktrace van alles wat misging, live.</>],
     [
       'Code',
@@ -129,7 +131,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'Het verkeer en de logs staan in het geheugen. Ze zijn om mee te kijken, niet om te bewaren: na een herstart van de server beginnen ze opnieuw. Versies en de deploygeschiedenis worden wel opgeslagen.',
+    'Het verkeer en de logs staan in het geheugen. Ze zijn om mee te kijken, niet om te bewaren: na een herstart van de server beginnen ze opnieuw. Versies, de deploygeschiedenis en de analytics worden wel opgeslagen.',
 
   why: (k) => (
     <>
@@ -503,6 +505,27 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Alles in de code wordt openbaar, de eerdere versies inbegrepen. Een sleutel of wachtwoord hoort bij de sleutels en wachtwoorden onder Data, nooit in de code – gepubliceerd of niet.',
+  visitors: ((k) => (
+    <>
+      Open {k.b('Analytics')} in het dashboard en zet het aan om te zien wie je app bezoekt: hoeveel mensen er per dag
+      komen, welke pagina’s ze openen, welke sites hen sturen – een zoekmachine, een bericht, een nieuwsbrief – uit welke
+      landen, op welke apparaten en browsers, en welke zoekmachines en AI-assistenten de pagina’s lezen. Kies bovenaan
+      een cijfer om het dag voor dag te zien.
+    </>
+  )),
+  visitors2: ((k) => (
+    <>
+      Het wordt geteld door het platform, vóór je app, dus je app heeft er niets voor nodig: geen cookies, geen script,
+      geen banner die je bezoekers moeten accepteren. Alleen aantallen per dag worden bewaard – nooit een adres, en van
+      de pagina waar iemand vandaan kwam alleen de site. Een bezoeker is een persoon, één keer per dag geteld:
+      zoekmachines, AI-crawlers en andere programma’s worden apart geteld, per soort, en Google, Bing, OpenAI, Apple en
+      Perplexity alleen bij naam als het bezoek van een door hen gepubliceerd adres kwam – iedereen kan zich als hen
+      voordoen. Een jaar wordt bewaard; een gratis app toont daarvan de laatste zeven dagen en {k.b('Premium')} alles,
+      ook wat eerder geteld is. Als je het uitzet, wordt wat geteld was verwijderd.
+    </>
+  )),
+  visitorsAside:
+    'De cijfers worden om de paar minuten opgeschreven, dus de laatste bezoeken verschijnen iets later. Een concept wordt nooit geteld: een wijziging uitproberen is geen bezoek.',
 
   agents: (k) => (
     <>

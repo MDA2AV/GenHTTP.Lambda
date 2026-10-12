@@ -63,16 +63,15 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
     public static CallerInfo From(IRequest request, StringPool pool, bool addresses, GeoTable? geo = null, GeoPlaces? places = null,
                                   string? domain = null)
     {
-        string? client = null;
+        var peer = Format(request.Client.Address);
 
-        if (addresses)
-        {
-            var peer = Format(request.Client.Address);
+        var claimed = First(request.Header.Headers.GetEntry("X-Forwarded-For"));
 
-            var claimed = First(request.Header.Headers.GetEntry("X-Forwarded-For"));
+        var address = claimed == null || claimed == peer ? peer : $"{claimed} via {peer}";
 
-            client = claimed == null || claimed == peer ? peer : $"{claimed} via {peer}";
-        }
+        // the country is placed whether or not the address is kept: it names
+        // nobody, and the owner's analytics count visits by it
+        var client = addresses ? address : null;
 
         return new CallerInfo(
             pool.Share(client),
@@ -81,7 +80,7 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
             request.Header.Path.ToString(),
             // looked up once here rather than per line, and the codes are
             // already shared by the table that produced them
-            geo?.CountryOf(client),
+            geo?.CountryOf(address),
             // a town and a network, where a database has one. Pooled: a busy
             // server sees the same few hundred callers over and over
             pool.Share(Empty(places?.Find(client)?.Describe())),

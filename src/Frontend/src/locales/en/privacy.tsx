@@ -20,6 +20,12 @@ export const privacy = {
       'Administrators can read all of it. The owner of a lambda sees the country and the browser of each request to their lambda, but not the IP address.',
     ],
 
+    analyticsTitle: 'Visits counted for the owner of a lambda',
+    analytics: [
+      "The owner of a lambda can switch on analytics for it. Then the server counts the visits to that lambda by day: how many requests and page views there were, which pages they were for, the site a visitor came from (its name only, not the address of the page), the country of the visitor's IP address, and the kind of device, browser and operating system the browser names. Only these counts are kept - not the IP address and nothing else that names a visitor - in a database on the server, for a year. The owner of the lambda sees them in its editor, and administrators can read them.",
+      "To count each visitor once a day, the IP address and the browser are turned into a code that cannot be turned back, with a key made at random for each day and lambda. The codes and the keys are held in memory only, never written down, and forgotten after a day. No cookie is set and nothing is stored in the visitor's browser. Where a visit says it comes from the crawler of Google, Bing, OpenAI, Apple or Perplexity, its IP address is compared, in memory, with the addresses these publish for their crawlers. To tell crawlers from people, the server fetches a public list of crawlers and these published addresses once a day; nothing about visitors is sent anywhere for it. The legal basis is the owner's legitimate interest in knowing how their lambda is used (Art. 6(1)(f) GDPR).",
+    ],
+
     logsTitle: 'How long the log is kept',
     logs: "The log is kept in two places: in the server's memory, which is emptied whenever the server restarts, and in the console output of the server, which is removed whenever the server is updated. Both have a fixed size, so every new line pushes out the oldest one, and how long a line lasts depends on how busy the site is. Nothing from the log is copied into an archive.",
 
@@ -44,14 +50,14 @@ export const privacy = {
 
     lambdasTitle: 'What a lambda does is up to its owner',
     lambdas:
-      'A lambda is written by whoever holds its editor link, not by us. What it asks its visitors for and what it does with that is up to them, and this page does not cover it - apart from the request log above, which the server keeps for every lambda. The terms do not allow using a lambda to collect personal data about other people; if you come across one that does, please report it.',
+      'A lambda is written by whoever holds its editor link, not by us. What it asks its visitors for and what it does with that is up to them, and this page does not cover it - apart from the request log above, which the server keeps for every lambda, and the visits it counts for an owner who switched analytics on. The terms do not allow using a lambda to collect personal data about other people; if you come across one that does, please report it.',
 
     mailTitle: 'When you write to us',
     mail: 'If you write to us, to report abuse or about anything else, we use your address and your message to answer you and to deal with what you wrote, and delete them once they are no longer needed for that (Art. 6(1)(f) GDPR).',
 
     storageTitle: 'Cookies and your browser',
     storage:
-      "There is one cookie, called lang. It remembers the language you picked, so that addresses without one open in it, and it lasts a year. The browser's own storage remembers light or dark mode, a few settings of the pages you use and, for administrators, their token. None of it is used to follow you and none of it goes to anybody else: there is no analytics, no advertising, and nothing is loaded from other sites, not even fonts. Since all of it only does what you asked for, it needs no consent (§ 25(2) no. 2 TDDDG).",
+      "There is one cookie, called lang. It remembers the language you picked, so that addresses without one open in it, and it lasts a year. The browser's own storage remembers light or dark mode, a few settings of the pages you use and, for administrators, their token. None of it is used to follow you and none of it goes to anybody else: there is no analytics of this site, no advertising, and nothing is loaded from other sites, not even fonts. Since all of it only does what you asked for, it needs no consent (§ 25(2) no. 2 TDDDG).",
 
     hostingTitle: 'Where it is kept',
     hosting:
