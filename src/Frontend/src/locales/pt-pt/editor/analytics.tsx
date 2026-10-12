@@ -1,0 +1,101 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const analytics: EditorMessages['analytics'] = {
+  hint: 'Contado para ti pela plataforma: sem cookies, sem código na tua app e sem nada para os teus visitantes aceitarem.',
+  loading: 'A ler as visitas…',
+  loadFailed: 'Não foi possível ler as visitas.',
+
+  offTitle: 'Vê quem visita a tua app',
+  offText:
+    'Quantas pessoas chegam por dia, que páginas abrem, que sites as enviam, de que países e em que dispositivos - contado dia a dia, a partir do momento em que ligares.',
+  offPrivate: 'Sem cookies e sem banners para os teus visitantes aceitarem',
+  offAddresses: 'Não se guardam endereços - apenas quantas visitas houve em cada dia',
+  offKept: (days) =>
+    days >= 365
+      ? 'Guardado durante um ano, e tudo é mostrado a ti'
+      : `Guardado durante um ano - são mostrados os últimos ${days} dias, e tudo com o Premium`,
+  switchOn: 'Ligar a análise de visitas',
+  switchedOn: 'A análise de visitas está ligada. As primeiras visitas aparecem dentro de alguns minutos.',
+  switchOnFailed: 'Não foi possível ligar a análise de visitas.',
+  demo: 'Os visitantes de uma demo não são contados. Uma cópia tua pode contar os seus visitantes.',
+
+  range: 'Período',
+  days: (days) => (days >= 365 ? '12 meses' : `${days} dias`),
+  premiumRange: 'O Premium mostra até um ano',
+
+  visitors: 'Visitantes',
+  visitorsHint: 'Pessoas diferentes, cada uma contada uma vez por dia.',
+  views: 'Visualizações de páginas',
+  viewsHint: 'Cada vez que alguém abriu uma página.',
+  hits: 'Pedidos',
+  hitsHint: 'Tudo o que foi pedido à tua app: as suas páginas e as imagens e scripts que elas carregam.',
+  versus: (days) => `em relação aos ${days} dias anteriores`,
+  noChange: 'sem alteração',
+  inDays: (days) => (days >= 365 ? 'nos últimos 12 meses' : `nos últimos ${days} dias`),
+
+  perDay: {
+    visitors: 'Visitantes por dia',
+    views: 'Visualizações de páginas por dia',
+    hits: 'Pedidos por dia',
+  },
+  perWeek: {
+    visitors: 'Visitantes por semana',
+    views: 'Visualizações de páginas por semana',
+    hits: 'Pedidos por semana',
+  },
+  showValues: 'Mostrar os valores',
+  showChart: 'Mostrar o gráfico',
+  day: 'Dia',
+  week: 'Semana de',
+
+  nobody: 'Ninguém visitou nestes dias.',
+  nobodyYet: 'Ninguém visitou desde que a análise de visitas foi ligada. As primeiras visitas aparecem dentro de alguns minutos.',
+
+  pages: 'Páginas',
+  pagesHint: 'As páginas que as pessoas abriram, as mais abertas primeiro.',
+  requested: 'Mais pedidos',
+  requestedHint: 'Tudo o que foi pedido à tua app, por endereço - ela não tem páginas que as pessoas abram.',
+  sources: 'De onde vêm os visitantes',
+  sourcesHint: 'Os sites que enviaram pessoas para aqui, pela página em que estavam. Os motores de pesquisa só indicam que foram eles, não o que foi pesquisado.',
+  direct: 'Endereço escrito, favorito ou app',
+  countries: 'Países',
+  countriesHint: 'Onde estão registados os endereços de internet dos visitantes - normalmente, mas nem sempre, onde eles estão.',
+  unknownCountry: 'Desconhecido',
+  devices: 'Dispositivos',
+  device: {
+    desktop: 'Computador',
+    mobile: 'Telemóvel',
+    tablet: 'Tablet',
+    bot: 'Bots',
+    other: 'Outro',
+  },
+  browsers: 'Browsers',
+  systems: 'Sistemas',
+  crawlers: 'Motores de pesquisa e IA',
+  crawlersHint: 'Programas que passaram por aqui: motores de pesquisa a indexar as tuas páginas, assistentes de IA a lê-las, chats a mostrar uma pré-visualização de um link.',
+  noCrawlers: 'Nenhum motor de pesquisa ou IA passou por cá nestes dias.',
+  other: 'Outros',
+  otherBots: 'Outros programas',
+  showAll: (count) => `Mostrar todos os ${count}`,
+  showFewer: 'Mostrar menos',
+  share: (part, whole) => `${part} de ${whole}`,
+  none: 'Ainda nada.',
+
+  moreKept: (since) => `Contado desde ${since} - o Premium mostra tudo, até um ano.`,
+  premiumAsk: 'Pergunta pelo Premium',
+  premiumSubject: 'Premium para a minha app',
+  premiumBody: (address) => `Olá,\n\nGostaria de ver toda a análise de visitas da minha app: ${address}\n\n`,
+
+  footer: (minutes) =>
+    minutes === 1 ? 'Contado por dia, em UTC. Atualizado a cada minuto.' : `Contado por dia, em UTC. Atualizado a cada ${minutes} minutos.`,
+  updated: (time) => `Última atualização às ${time}.`,
+  since: (date) => `Contagem desde ${date}.`,
+
+  switchOff: 'Desligar a análise de visitas',
+  switchOffTitle: 'Desligar a análise de visitas?',
+  switchOffText: 'A contagem pára e tudo o que foi contado até agora é apagado. Isto não pode ser desfeito.',
+  keep: 'Continuar a contar',
+  switchOffConfirm: 'Desligar e apagar',
+  switchedOff: 'A análise de visitas está desligada e o que foi contado foi apagado.',
+  switchOffFailed: 'Não foi possível desligar a análise de visitas.',
+};

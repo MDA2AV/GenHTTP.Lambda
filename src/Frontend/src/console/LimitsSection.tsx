@@ -29,6 +29,8 @@ const TIER: (Limit & { key: keyof TierLimits })[] = [
     note: 'Older ones are removed when a new one is saved, never the one online.' },
   { key: 'features', title: 'Features open at once', unit: '',
     note: 'Each holds a copy of the files, the workspace and the database.' },
+  { key: 'analyticsDays', title: 'Analytics shown', unit: 'days',
+    note: 'How far back the owner sees what was counted of their visitors. A year is kept of every lambda, so at most 366; moved to a tier that shows more, a lambda shows what was counted before.' },
 ];
 
 /** Only the free tier's: a premium lambda is kept online and kept. */

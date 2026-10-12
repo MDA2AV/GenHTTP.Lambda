@@ -109,4 +109,5 @@ public sealed record LimitsModel(
 /// <param name="DataBytes">The room its data may take: its database and its workspace together</param>
 /// <param name="Versions">How many of its versions are kept</param>
 /// <param name="Features">How many features it may have open at once</param>
-public sealed record TierLimitsModel(long BuildBytes, long DataBytes, int Versions, int Features);
+/// <param name="AnalyticsDays">How many days of its analytics its owner is shown, of the year that is kept</param>
+public sealed record TierLimitsModel(long BuildBytes, long DataBytes, int Versions, int Features, int AnalyticsDays);

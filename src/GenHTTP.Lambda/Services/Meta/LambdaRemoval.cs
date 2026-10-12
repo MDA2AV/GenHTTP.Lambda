@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Hosting;
@@ -20,7 +21,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// it, or the sweep finds it abandoned - and both have to leave nothing behind.
 /// </remarks>
 public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryService telemetry, LambdaHistory history, ISecretVault secrets,
-                                  IDatabaseVault databaseVault, IDomainRegistry domains, IStorageService storage)
+                                  IDatabaseVault databaseVault, IDomainRegistry domains, IStorageService storage, IAnalyticsStore analytics)
 {
 
     public void Remove(LambdaDbContext database, LambdaEntity lambda)
@@ -61,6 +62,9 @@ public sealed class LambdaRemoval(IDeploymentService deployments, ITelemetryServ
         }
 
         storage.Delete(lambda.Id);
+
+        // what its owner counted of its visitors goes with it
+        analytics.Forget(lambda.Id);
     }
 
 }

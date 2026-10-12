@@ -20,6 +20,11 @@ export const privacy: Messages['privacy'] = {
       'C’est ce qui permet de trouver les pannes, de remonter jusqu’à ce qui surcharge le serveur et de retrouver les abus qui nous sont signalés. L’adresse IP sert aussi, uniquement en mémoire, à limiter le nombre de requêtes et de créations d’un même visiteur. Sans ces informations, impossible de répondre à une requête. La base légale est notre intérêt légitime à faire fonctionner le service et à le sécuriser (art. 6.1.f du RGPD).',
       'Les administrateurs peuvent tout consulter. Le propriétaire d’une lambda voit le pays et le navigateur de chaque requête vers sa lambda, mais pas l’adresse IP.',
     ],
+    analyticsTitle: 'Visites comptées pour le propriétaire d’une lambda',
+    analytics: [
+      'Le propriétaire d’une lambda peut activer la mesure d’audience pour celle-ci. Le serveur compte alors les visites de cette lambda par jour : le nombre de requêtes et de pages vues, les pages concernées, le site d’où vient un visiteur (son nom seulement, pas l’adresse de la page), le pays de l’adresse IP du visiteur, ainsi que le type d’appareil, de navigateur et de système d’exploitation que le navigateur indique. Seuls ces totaux sont conservés - ni l’adresse IP, ni rien d’autre qui désigne un visiteur - dans une base de données du serveur, pendant un an. Le propriétaire de la lambda les consulte dans son éditeur, et les administrateurs peuvent les lire.',
+      'Pour compter chaque visiteur une fois par jour, l’adresse IP et le navigateur sont transformés en un code irréversible, avec une clé générée au hasard pour chaque jour et chaque lambda. Les codes et les clés ne sont gardés qu’en mémoire, jamais écrits, et oubliés au bout d’un jour. Aucun cookie n’est déposé et rien n’est stocké dans le navigateur du visiteur. La base juridique est l’intérêt légitime du propriétaire à savoir comment sa lambda est utilisée (art. 6, par. 1, point f du RGPD).',
+    ],
 
     logsTitle: 'Combien de temps le journal est conservé',
     logs: 'Le journal est conservé à deux endroits : dans la mémoire du serveur, qui est vidée à chaque redémarrage, et dans la sortie console du serveur, qui est effacée à chaque mise à jour. Les deux ont une taille fixe : chaque nouvelle ligne chasse la plus ancienne, et la durée de vie d’une ligne dépend de l’activité du site. Rien n’en est archivé.',
@@ -46,14 +51,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'Ce que fait une lambda dépend de son propriétaire',
     lambdas:
-      'Une lambda est écrite par la personne qui a son lien d’édition, pas par nous. Ce qu’elle demande à ses visiteurs et ce qu’elle en fait ne dépend que de cette personne, et cette page ne le couvre pas, à part le journal des requêtes décrit plus haut, que le serveur tient pour chaque lambda. Les conditions d’utilisation interdisent d’utiliser une lambda pour collecter des données personnelles sur d’autres personnes. Si vous en trouvez une qui le fait, merci de la signaler.',
+      'Une lambda est écrite par la personne qui a son lien d’édition, pas par nous. Ce qu’elle demande à ses visiteurs et ce qu’elle en fait ne dépend que de cette personne, et cette page ne le couvre pas, à part le journal des requêtes décrit plus haut, que le serveur tient pour chaque lambda, et les visites qu’il compte pour un propriétaire qui a activé la mesure d’audience. Les conditions d’utilisation interdisent d’utiliser une lambda pour collecter des données personnelles sur d’autres personnes. Si vous en trouvez une qui le fait, merci de la signaler.',
 
     mailTitle: 'Quand vous nous écrivez',
     mail: 'Si vous nous écrivez, pour signaler un abus ou pour autre chose, nous utilisons votre adresse e-mail et votre message pour vous répondre et traiter ce que vous nous écrivez, puis nous les supprimons dès qu’ils ne sont plus nécessaires pour cela (art. 6.1.f du RGPD).',
 
     storageTitle: 'Cookies et navigateur',
     storage:
-      'Il y a un seul cookie, appelé lang. Il retient la langue que vous avez choisie, pour que les adresses qui n’en indiquent pas s’ouvrent dans cette langue, et il dure un an. Le stockage local du navigateur retient le mode clair ou sombre, quelques réglages des pages que vous utilisez et, pour les administrateurs, leur jeton. Rien de tout cela ne sert à vous suivre et rien n’est transmis à qui que ce soit : pas de mesure d’audience, pas de publicité, et rien n’est chargé depuis d’autres sites, pas même les polices. Comme tout cela sert uniquement à ce que vous avez demandé, aucun consentement n’est nécessaire (§ 25, al. 2, n° 2 de la loi allemande TDDDG).',
+      'Il y a un seul cookie, appelé lang. Il retient la langue que vous avez choisie, pour que les adresses qui n’en indiquent pas s’ouvrent dans cette langue, et il dure un an. Le stockage local du navigateur retient le mode clair ou sombre, quelques réglages des pages que vous utilisez et, pour les administrateurs, leur jeton. Rien de tout cela ne sert à vous suivre et rien n’est transmis à qui que ce soit : pas de mesure d’audience de ce site, pas de publicité, et rien n’est chargé depuis d’autres sites, pas même les polices. Comme tout cela sert uniquement à ce que vous avez demandé, aucun consentement n’est nécessaire (§ 25, al. 2, n° 2 de la loi allemande TDDDG).',
 
     hostingTitle: 'Où tout cela est stocké',
     hosting:

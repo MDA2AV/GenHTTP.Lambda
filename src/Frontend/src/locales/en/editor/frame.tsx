@@ -19,6 +19,8 @@ export const frame = {
     history: 'History',
     deployments: 'Deployments',
     stats: 'Stats',
+    /** Who visits the lambda - from where, to which pages, on what - once its owner switched it on. */
+    analytics: 'Analytics',
     logs: 'Logs',
     /** Every file of a version - its code and its resources - to read and to change, in the full view only. */
     code: 'Code',

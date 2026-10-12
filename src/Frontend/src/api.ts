@@ -81,6 +81,65 @@ export interface Activation {
   seconds: number;
 }
 
+/** What was counted of a lambda's visits over some days, summed. */
+export interface AnalyticsTotals {
+  /** Every request answered - pages, the files they load, calls of an API. */
+  hits: number;
+  /** The requests that were somebody opening a page. */
+  views: number;
+  /** Different visitors, each counted once a day. */
+  visitors: number;
+  failed: number;
+  rejected: number;
+  bytes: number;
+  averageMillis: number;
+}
+
+/** One day of a lambda's visits, in UTC. */
+export interface AnalyticsDay {
+  /** yyyy-mm-dd */
+  date: string;
+  totals: AnalyticsTotals;
+}
+
+/** One value of what visits are counted by - a path, a host, a country code, a name. */
+export interface AnalyticsValue {
+  value: string;
+  hits: number;
+  views: number;
+}
+
+/** How a lambda's visitors reach it, as its owner is shown. */
+export interface LambdaAnalytics {
+  enabled: boolean;
+  since: string | null;
+  tier: string;
+  /** How many days the answer covers, today included. */
+  days: number;
+  /** The most days the tier shows. */
+  window: number;
+  /** How many days are kept of every lambda. */
+  kept: number;
+  from: string;
+  to: string;
+  /** The first day anything was counted on - before `from` where more is kept than shown. */
+  earliest: string | null;
+  totals: AnalyticsTotals | null;
+  /** The same number of days before, where the tier shows those too. */
+  previous: AnalyticsTotals | null;
+  daily: AnalyticsDay[] | null;
+  pages: AnalyticsValue[] | null;
+  referrers: AnalyticsValue[] | null;
+  countries: AnalyticsValue[] | null;
+  devices: AnalyticsValue[] | null;
+  browsers: AnalyticsValue[] | null;
+  systems: AnalyticsValue[] | null;
+  crawlers: AnalyticsValue[] | null;
+  /** When visits were last written down. */
+  updated: string | null;
+  intervalSeconds: number;
+}
+
 /** One interval of a lambda's traffic. */
 export interface TrafficPoint {
   at: string;
@@ -1045,6 +1104,8 @@ export interface TierLimits {
   versions: number;
   /** How many features it may have open at once. */
   features: number;
+  /** How many days of its analytics its owner is shown, of the year that is kept. */
+  analyticsDays: number;
 }
 
 /** Every limit of the product, which the panel edits. */
@@ -1313,6 +1374,10 @@ export const api = {
   summary: (privateKey: string) => request<LambdaSummary>(`/lambdas/${privateKey}/summary`),
 
   traffic: (privateKey: string) => request<LambdaTraffic>(`/lambdas/${privateKey}/traffic`),
+  analytics: (privateKey: string, days?: number) =>
+    request<LambdaAnalytics>(`/lambdas/${privateKey}/analytics${days ? `?days=${days}` : ''}`),
+  enableAnalytics: (privateKey: string) => request<LambdaAnalytics>(`/lambdas/${privateKey}/analytics`, { method: 'PUT' }),
+  disableAnalytics: (privateKey: string) => request<void>(`/lambdas/${privateKey}/analytics`, { method: 'DELETE' }),
 
   /** The lambda's own log. No cursor answers with the tail. */
   lambdaLogs: (privateKey: string, options: { since?: number; level?: string; limit?: number } = {}) => {

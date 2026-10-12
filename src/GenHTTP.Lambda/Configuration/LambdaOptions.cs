@@ -289,6 +289,12 @@ public sealed record LambdaOptions
     public int TelemetrySamples { get; init; } = 2880;
 
     /// <summary>
+    /// How often the visits counted for the owners' analytics are written
+    /// down. Visits not yet written are lost when the server stops.
+    /// </summary>
+    public TimeSpan AnalyticsInterval { get; init; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
     /// How many log lines are kept for the panel to read back.
     /// </summary>
     /// <remarks>
@@ -506,6 +512,11 @@ public sealed record LambdaOptions
 
     public string ConnectionString => $"Data Source={DatabaseFile};Default Timeout=30;Pooling=True";
 
+    /// <summary>
+    /// The database the owners' analytics are kept in, apart from the platform's.
+    /// </summary>
+    public string AnalyticsFile => Path.Combine(DataDirectory, "analytics.db");
+
     public string CodeDirectory => Path.Combine(DataDirectory, "code");
 
     public string WorkspaceDirectory => Path.Combine(DataDirectory, "workspaces");
@@ -656,6 +667,7 @@ public sealed record LambdaOptions
             AdminToken = ReadOptional("LAMBDA_ADMIN_TOKEN"),
             TelemetryInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_TELEMETRY_INTERVAL_SECONDS", (int)defaults.TelemetryInterval.TotalSeconds)),
             TelemetrySamples = ReadInt("LAMBDA_TELEMETRY_SAMPLES", defaults.TelemetrySamples),
+            AnalyticsInterval = TimeSpan.FromSeconds(ReadInt("LAMBDA_ANALYTICS_INTERVAL_SECONDS", (int)defaults.AnalyticsInterval.TotalSeconds)),
             LogHistory = ReadInt("LAMBDA_LOG_HISTORY", defaults.LogHistory),
             LogMemory = ReadInt("LAMBDA_LOG_MEMORY_MB", defaults.LogMemory),
             CaptureLambdaOutput = ReadBool("LAMBDA_LOG_LAMBDA_OUTPUT", defaults.CaptureLambdaOutput),

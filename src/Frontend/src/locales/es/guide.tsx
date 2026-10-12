@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Llévate tu código',
     git: 'Trabajar con git',
     open: 'Publicar el código',
+    visitors: 'Quién la visita',
     agents: 'Que lo haga un agente',
   },
 
@@ -106,6 +107,7 @@ export const guide: Messages['guide'] = {
     ['Versiones', () => <>Qué cambió cada versión, qué se pidió y la diferencia con la anterior. Desde aquí despliegas o vuelves atrás, o empiezas un borrador a partir de cualquiera de ellas.</>],
     ['Despliegues', () => <>Qué estuvo en línea y cuándo, y qué lo desconectó.</>],
     ['Estadísticas', () => <>Peticiones, fallos, tiempos de respuesta y las rutas más pedidas, en la última hora o el último día.</>],
+    ['Analítica', () => <>Quién visita la app, en cuanto la activas: visitantes, visualizaciones de página y peticiones por día, las páginas que abren, los sitios que los envían, sus países y dispositivos, y los buscadores y las IA que han pasado por aquí.</>],
     ['Logs', () => <>Sus peticiones, lo que imprimió y el stack trace de cualquier error, en tiempo real.</>],
     [
       'Código',
@@ -129,7 +131,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'El tráfico y los logs se guardan en memoria, para mirarlos, no para conservarlos: si el servidor se reinicia, empiezan de cero. Las versiones y el historial de despliegues sí se guardan.',
+    'El tráfico y los logs se guardan en memoria, para mirarlos, no para conservarlos: si el servidor se reinicia, empiezan de cero. Las versiones, el historial de despliegues y la analítica sí se guardan.',
 
   why: (k) => (
     <>
@@ -494,6 +496,25 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Todo lo que hay en el código se hace público, incluidas las versiones anteriores. Una clave o una contraseña va en Claves y contraseñas, dentro de Datos, nunca en el código, esté publicado o no.',
+  visitors: (k) => (
+    <>
+      Abre {k.b('Analítica')} en el centro de control y actívala para ver quién visita tu app: cuánta gente llega cada
+      día, qué páginas abre, qué sitios la envían (un buscador, una publicación, un boletín), desde qué países, en qué
+      dispositivos y navegadores, y qué buscadores y asistentes de IA leen sus páginas. Elige una cifra arriba para
+      verla día a día.
+    </>
+  ),
+  visitors2: (k) => (
+    <>
+      La cuenta la lleva la plataforma, delante de tu app, así que tu app no necesita nada para ello: ni cookies, ni
+      scripts, ni avisos que tus visitantes tengan que aceptar. Solo se guardan recuentos por día, nunca una dirección,
+      y de la página de la que alguien viene solo se guarda el sitio. Un visitante se cuenta una vez al día. Se guarda
+      un año: una app gratuita muestra los últimos siete días y {k.b('Premium')} todo, incluido lo contado antes. Al
+      desactivarla se borra lo contado.
+    </>
+  ),
+  visitorsAside:
+    'Las cifras se anotan cada pocos minutos, así que las últimas visitas aparecen un poco más tarde. Un borrador nunca se cuenta: probar un cambio no es una visita.',
 
   agents: (k) => (
     <>

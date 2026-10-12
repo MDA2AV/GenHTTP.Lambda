@@ -26,6 +26,7 @@ import {
 } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { AdminTab } from '../control/AdminTab';
+import { AnalyticsTab } from '../control/AnalyticsTab';
 import { useAgent } from '../control/agent';
 import { ChangeTab } from '../control/ChangeTab';
 import { CodeTab } from '../control/CodeTab';
@@ -60,7 +61,7 @@ interface Props {
 }
 
 type SectionId =
-  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'data' | 'versions' | 'deployments' | 'stats'
+  | 'overview' | 'docs' | 'change' | 'features' | 'code' | 'tests' | 'data' | 'versions' | 'deployments' | 'stats' | 'analytics'
   | 'logs' | 'showcase' | 'source' | 'domain' | 'history' | 'admin';
 
 /*
@@ -95,7 +96,7 @@ const GROUPS: { id: GroupId | null; sections: SectionId[] }[] = [
   { id: 'sharing', sections: ['showcase', 'source', 'domain'] },
   { id: 'develop', sections: ['change', 'features', 'code', 'tests'] },
   { id: 'program', sections: ['data', 'versions'] },
-  { id: 'run', sections: ['deployments', 'stats', 'logs'] },
+  { id: 'run', sections: ['deployments', 'stats', 'analytics', 'logs'] },
 ];
 
 const SECTIONS: SectionId[] = GROUPS.flatMap((group) => group.sections);
@@ -127,8 +128,11 @@ const WRITABLE = ['code', 'docs', 'tests'];
  * what it saved, and the keys it uses - and not while there is nothing in it.
  * Publishing its code is there, next to the showcase: it is the owner's to
  * decide whoever built the app, and said in the same words in both views.
+ * And who visits it, after how people find it: an owner who never reads the
+ * code wants to know who comes as much as one who does - it is about the
+ * audience, not the program, so unlike the figures it is in both.
  */
-const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 'history', 'data', 'showcase', 'source', 'domain'];
+const SIMPLE_SECTIONS: SectionId[] = ['overview', 'docs', 'change', 'features', 'history', 'data', 'showcase', 'source', 'domain', 'analytics'];
 
 /** A draft, in the simple view, is what it does and where to try it - not its code, its data or its log. */
 const SIMPLE_FEATURE_VIEWS: FeatureView[] = ['overview'];
@@ -506,7 +510,7 @@ export function Editor({ theme }: Props) {
   // of them is nothing to look at until then
   const absent = (id: SectionId) =>
     (hidden && id === 'domain')
-    || (demo && (id === 'showcase' || id === 'source' || id === 'change' || id === 'features'))
+    || (demo && (id === 'showcase' || id === 'source' || id === 'change' || id === 'features' || id === 'analytics'))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
     // the simple view has the data once the app keeps any, or waits for a key
     || (id === 'data' && simple && section !== 'data' && !keeps)
@@ -1054,6 +1058,8 @@ export function Editor({ theme }: Props) {
           <VersionsTab control={control} />
         ) : section === 'deployments' ? (
           <DeploymentsTab control={control} />
+        ) : section === 'analytics' ? (
+          <AnalyticsTab control={control} />
         ) : section === 'stats' ? (
           <StatsTab control={control} />
         ) : section === 'logs' ? (

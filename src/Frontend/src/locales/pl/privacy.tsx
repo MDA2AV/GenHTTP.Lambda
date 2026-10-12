@@ -17,6 +17,11 @@ export const privacy: Messages['privacy'] = {
       'Dzięki temu znajdujemy błędy, ustalamy, co przeciąża serwer, i namierzamy zgłoszone nam nadużycia. Adres IP służy też – wyłącznie w pamięci – do ograniczania liczby żądań i zadań budowania, jakie może zlecić jeden odwiedzający. Bez tych danych nie da się odpowiedzieć na żądanie. Podstawą prawną jest nasz prawnie uzasadniony interes w prowadzeniu usługi i dbaniu o jej bezpieczeństwo (art. 6 ust. 1 lit. f RODO).',
       'Administratorzy serwisu mogą zobaczyć wszystko. Właściciel lambdy widzi przy każdym żądaniu do niej kraj i przeglądarkę, ale nie adres IP.',
     ],
+    analyticsTitle: 'Wizyty liczone dla właściciela lambdy',
+    analytics: [
+      'Właściciel lambdy może włączyć dla niej analitykę. Wtedy serwer liczy wizyty w tej lambdzie dzień po dniu: ile było żądań i odsłon stron, jakich stron dotyczyły, z jakiej witryny przyszedł odwiedzający (tylko jej nazwa, bez adresu strony), kraj adresu IP odwiedzającego oraz rodzaj urządzenia, przeglądarki i systemu operacyjnego, który podaje przeglądarka. Przechowujemy wyłącznie te liczby – bez adresu IP i bez niczego innego, co wskazuje odwiedzającego – w bazie danych na serwerze, przez rok. Właściciel lambdy widzi je w swoim edytorze, a administratorzy mogą je odczytać.',
+      'Aby policzyć każdego odwiedzającego raz dziennie, adres IP i przeglądarka są zamieniane na kod, którego nie da się odwrócić, za pomocą klucza tworzonego losowo dla każdego dnia i każdej lambdy. Kody i klucze są trzymane tylko w pamięci, nigdy nie są zapisywane i po dobie są zapominane. Nie jest ustawiany żaden plik cookie i nic nie jest zapisywane w przeglądarce odwiedzającego. Podstawą prawną jest uzasadniony interes właściciela w wiedzy o tym, jak jego lambda jest używana (art. 6 ust. 1 lit. f RODO).',
+    ],
 
     logsTitle: 'Jak długo przechowujemy log',
     logs: 'Log jest przechowywany w dwóch miejscach: w pamięci serwera, która jest czyszczona przy każdym restarcie, oraz w wyjściu konsoli serwera, które jest usuwane przy każdej aktualizacji. Oba mają stały rozmiar, więc każdy nowy wpis wypycha najstarszy, a to, jak długo wpis przetrwa, zależy od ruchu na stronie. Nic z logu nie trafia do archiwum.',
@@ -42,14 +47,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'O tym, co robi lambda, decyduje jej właściciel',
     lambdas:
-      'Lambdę pisze ten, kto ma link do edytora, a nie my. O co pyta odwiedzających i co robi z tymi danymi, zależy od tej osoby, a ta polityka tego nie obejmuje – poza opisanym wyżej logiem żądań, który serwer prowadzi dla każdej lambdy. Regulamin zabrania używania lambdy do zbierania danych osobowych innych ludzi. Jeśli trafisz na taką, która to robi, zgłoś ją.',
+      'Lambdę pisze ten, kto ma link do edytora, a nie my. O co pyta odwiedzających i co robi z tymi danymi, zależy od tej osoby, a ta polityka tego nie obejmuje – poza opisanym wyżej logiem żądań, który serwer prowadzi dla każdej lambdy, oraz wizytami, które liczy dla właściciela, który włączył analitykę. Regulamin zabrania używania lambdy do zbierania danych osobowych innych ludzi. Jeśli trafisz na taką, która to robi, zgłoś ją.',
 
     mailTitle: 'Gdy do nas piszesz',
     mail: 'Jeśli do nas napiszesz – żeby zgłosić nadużycie albo w innej sprawie – używamy twojego adresu i wiadomości, żeby ci odpowiedzieć i zająć się sprawą. Usuwamy je, gdy nie są już do tego potrzebne (art. 6 ust. 1 lit. f RODO).',
 
     storageTitle: 'Pliki cookie i twoja przeglądarka',
     storage:
-      'Jest jeden plik cookie o nazwie lang. Zapamiętuje wybrany przez ciebie język, żeby adresy bez języka otwierały się właśnie w nim, i jest ważny przez rok. Pamięć samej przeglądarki przechowuje jasny lub ciemny motyw, kilka ustawień stron, z których korzystasz, a w przypadku administratorów serwisu – ich token. Nic z tego nie służy do śledzenia cię i nic nie trafia do nikogo innego: nie ma analityki ani reklam, a nic nie jest ładowane z innych stron, nawet czcionki. Wszystko to służy wyłącznie temu, o co prosisz, więc nie wymaga zgody (§ 25 ust. 2 pkt 2 niemieckiej ustawy TDDDG).',
+      'Jest jeden plik cookie o nazwie lang. Zapamiętuje wybrany przez ciebie język, żeby adresy bez języka otwierały się właśnie w nim, i jest ważny przez rok. Pamięć samej przeglądarki przechowuje jasny lub ciemny motyw, kilka ustawień stron, z których korzystasz, a w przypadku administratorów serwisu – ich token. Nic z tego nie służy do śledzenia cię i nic nie trafia do nikogo innego: nie ma analityki tego serwisu ani reklam, a nic nie jest ładowane z innych stron, nawet czcionki. Wszystko to służy wyłącznie temu, o co prosisz, więc nie wymaga zgody (§ 25 ust. 2 pkt 2 niemieckiej ustawy TDDDG).',
 
     hostingTitle: 'Gdzie są przechowywane dane',
     hosting:

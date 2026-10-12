@@ -47,6 +47,12 @@ export function Privacy() {
         ))}
       </LegalSection>
 
+      <LegalSection title={part.analyticsTitle}>
+        {part.analytics.map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+      </LegalSection>
+
       <LegalSection title={part.logsTitle}>
         <p>{part.logs}</p>
       </LegalSection>

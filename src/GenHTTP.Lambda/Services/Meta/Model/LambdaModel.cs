@@ -99,8 +99,12 @@ public sealed record LambdaActivation(int Version, DateTime Started, string? Ori
 /// The feature whose preview is being served, or nothing for the lambda itself. A preview runs the feature's files
 /// against the feature's copy of the data, and is kept out of the lambda's figures.
 /// </param>
+/// <param name="AnalyticsSince">
+/// Since when its owner has its visits counted, or nothing while analytics are off - read on every request, so
+/// switching them on counts from the next one, and switching them off stops at once.
+/// </param>
 public sealed record ResolvedLambda(long Id, string PublicKey, LambdaTier Tier, int ActiveVersion, DateTime DeployedAt,
-                                    bool WorkspaceEnabled = true, ResolvedFeature? Feature = null);
+                                    bool WorkspaceEnabled = true, ResolvedFeature? Feature = null, DateTime? AnalyticsSince = null);
 
 /// <summary>
 /// The preview of a feature a request was addressed to.

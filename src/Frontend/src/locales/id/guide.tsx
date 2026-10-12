@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Membawa kode Anda keluar',
     git: 'Mengerjakannya dengan git',
     open: 'Memublikasikan kode',
+    visitors: 'Siapa yang berkunjung',
     agents: 'Menyerahkannya ke agen',
   },
 
@@ -108,6 +109,7 @@ export const guide: Messages['guide'] = {
     ['Versi', () => <>Apa yang diubah setiap versi dan apa yang diminta, serta bedanya dengan versi sebelumnya. Deploy atau rollback dari sini, atau mulai draf dari versi mana pun.</>],
     ['Deployment', () => <>Apa yang online dan kapan, dan apa yang membuatnya berhenti.</>],
     ['Statistik', () => <>Request, kegagalan, waktu respons, dan path yang paling sering diminta, selama satu jam atau satu hari terakhir.</>],
+    ['Analitik', () => <>Siapa yang mengunjungi aplikasi, setelah Anda mengaktifkannya: pengunjung, tampilan halaman, dan request per hari, halaman yang mereka buka, situs yang mengarahkan mereka, negara dan perangkat mereka, serta mesin pencari dan AI yang datang.</>],
     ['Log', () => <>Request yang masuk, apa yang dicetak lambda, dan stack trace dari setiap error, secara langsung.</>],
     [
       'Kode',
@@ -131,7 +133,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'Trafik dan log hanya ada di memori, untuk dipantau, bukan untuk diarsipkan: restart server memulainya dari awal. Versi dan riwayat deployment disimpan permanen.',
+    'Trafik dan log hanya ada di memori, untuk dipantau, bukan untuk diarsipkan: restart server memulainya dari awal. Versi, riwayat deployment, dan analitik disimpan permanen.',
 
   why: (k) => (
     <>
@@ -503,6 +505,27 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Semua yang ada di kode menjadi publik, termasuk versi-versi sebelumnya. Kunci atau kata sandi tempatnya di kunci dan kata sandi di bagian Data, tidak pernah di kode - dipublikasikan atau tidak.',
+  visitors: ((k) => (
+    <>
+      Buka {k.b('Analitik')} di pusat kontrol dan aktifkan untuk melihat siapa yang mengunjungi aplikasi Anda: berapa
+      banyak orang yang datang setiap hari, halaman apa yang mereka buka, situs mana yang mengarahkan mereka - mesin
+      pencari, sebuah postingan, sebuah newsletter - dari negara mana, dengan perangkat dan browser apa, dan mesin
+      pencari serta asisten AI mana yang membaca halamannya. Pilih salah satu angka di bagian atas untuk melihatnya
+      hari demi hari.
+    </>
+  )),
+  visitors2: ((k) => (
+    <>
+      Penghitungan dilakukan oleh platform, di depan aplikasi Anda, sehingga aplikasi Anda tidak memerlukan apa pun
+      untuk itu: tanpa cookie, tanpa skrip, tanpa banner yang harus disetujui pengunjung Anda. Hanya jumlah per hari
+      yang disimpan - tidak pernah alamat, dan dari halaman asal seorang pengunjung hanya situsnya. Pengunjung
+      dihitung sekali sehari. Data disimpan selama setahun; aplikasi gratis menampilkan tujuh hari terakhir
+      darinya dan {k.b('Premium')} menampilkan semuanya, termasuk yang dihitung sebelumnya. Menonaktifkannya
+      menghapus apa yang telah dihitung.
+    </>
+  )),
+  visitorsAside:
+    'Angka-angkanya dicatat setiap beberapa menit, jadi kunjungan terakhir muncul sedikit lebih lambat. Draf tidak pernah dihitung: mencoba perubahan bukanlah kunjungan.',
 
   agents: (k) => (
     <>

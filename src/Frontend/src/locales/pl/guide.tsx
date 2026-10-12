@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Zabierz kod ze sobą',
     git: 'Praca z git',
     open: 'Publikowanie kodu',
+    visitors: 'Kto ją odwiedza',
     agents: 'Niech zrobi to agent',
   },
 
@@ -105,6 +106,7 @@ export const guide: Messages['guide'] = {
     ['Wersje', () => <>Co zmieniła każda wersja, o co proszono i czym różni się od poprzedniej. Stąd wdrażasz wersję albo wracasz do starszej – albo tworzysz szkic na bazie dowolnej z nich.</>],
     ['Wdrożenia', () => <>Co i kiedy było online – i co to wyłączyło.</>],
     ['Statystyki', () => <>Żądania, błędy, czasy odpowiedzi i najczęściej odwiedzane ścieżki z ostatniej godziny albo ostatnich 24 godzin.</>],
+    ['Analityka', () => <>Kto odwiedza aplikację, gdy ją włączysz: odwiedzający, odsłony stron i żądania dziennie, otwierane strony, strony, które kierują ludzi do aplikacji, ich kraje i urządzenia oraz wyszukiwarki i AI, które zajrzały.</>],
     ['Logi', () => <>Żądania, to, co lambda wypisała, i stack trace każdego błędu – na bieżąco.</>],
     [
       'Kod',
@@ -127,7 +129,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'Ruch i log są trzymane w pamięci – do podglądu, nie do archiwizacji: po restarcie serwera zaczynają się od zera. Wersje i historia wdrożeń są zapisywane na stałe.',
+    'Ruch i log są trzymane w pamięci – do podglądu, nie do archiwizacji: po restarcie serwera zaczynają się od zera. Wersje, historia wdrożeń i analityka są zapisywane na stałe.',
 
   why: (k) => (
     <>
@@ -489,6 +491,25 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Wszystko, co jest w kodzie, staje się publiczne, łącznie z wcześniejszymi wersjami. Miejsce klucza czy hasła jest wśród kluczy i haseł w sekcji Dane, nigdy w kodzie – opublikowanym czy nie.',
+  visitors: (k) => (
+    <>
+      Otwórz {k.b('Analityka')} w centrum sterowania i włącz ją, aby zobaczyć, kto odwiedza twoją aplikację: ilu ludzi
+      przychodzi każdego dnia, jakie strony otwierają, które strony ich kierują – wyszukiwarka, post, newsletter – z
+      jakich krajów, na jakich urządzeniach i w jakich przeglądarkach oraz które wyszukiwarki i asystenci AI czytają
+      jej strony. Wybierz liczbę u góry, aby zobaczyć ją dzień po dniu.
+    </>
+  ),
+  visitors2: (k) => (
+    <>
+      Liczy to platforma, przed twoją aplikacją, więc aplikacja nie potrzebuje do tego niczego: ani plików cookie, ani
+      skryptu, ani banera do zaakceptowania przez odwiedzających. Przechowujemy tylko liczby dzień po dniu – nigdy
+      adresu, a ze strony, z której ktoś przyszedł, tylko nazwę witryny. Odwiedzający jest liczony raz dziennie.
+      Dane są przechowywane przez rok; bezpłatna aplikacja pokazuje z nich ostatnie siedem dni, a {k.b('Premium')}
+      całość, także to, co policzono wcześniej. Wyłączenie analityki usuwa to, co policzono.
+    </>
+  ),
+  visitorsAside:
+    'Liczby są zapisywane co kilka minut, więc ostatnie wizyty pojawiają się z niewielkim opóźnieniem. Szkic nigdy nie jest liczony: wypróbowywanie zmiany nie jest wizytą.',
 
   agents: (k) => (
     <>

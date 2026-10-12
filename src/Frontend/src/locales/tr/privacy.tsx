@@ -19,6 +19,11 @@ export const privacy: Messages['privacy'] = {
       'Hataları bu sayede buluruz. Sunucuyu aşırı yükleyen şeyi bu sayede tespit ederiz. Bize bildirilen kötüye kullanımın izini de bu sayede süreriz. IP adresi ayrıca, yalnızca bellekte, bir ziyaretçinin kaç istek gönderip kaç uygulama oluşturabileceğini sınırlamak için kullanılır. Bu bilgiler olmadan bir isteğe yanıt verilemez. Hukuki dayanak, hizmeti işletme ve güvende tutma konusundaki meşru menfaatimizdir (GDPR md. 6/1-f).',
       'Yöneticiler bunların hepsini görebilir. Bir lambdanın sahibi, kendi lambdasına gelen her isteğin ülkesini ve tarayıcısını görür ama IP adresini göremez.',
     ],
+    analyticsTitle: 'Bir lambdanın sahibi için sayılan ziyaretler',
+    analytics: [
+      'Bir lambdanın sahibi, o lambda için analitiği açabilir. Bu durumda sunucu, o lambdaya yapılan ziyaretleri güne göre sayar: kaç istek ve sayfa görüntülemesi olduğu, hangi sayfalar için olduğu, ziyaretçinin geldiği site (yalnızca adı, sayfanın adresi değil), ziyaretçinin IP adresinin ülkesi ve tarayıcının bildirdiği cihaz, tarayıcı ve işletim sistemi türü. Yalnızca bu sayılar saklanır - IP adresi ve bir ziyaretçiyi belirten başka hiçbir şey saklanmaz - sunucudaki bir veritabanında, bir yıl boyunca. Lambdanın sahibi bunları editöründe görür, yöneticiler de okuyabilir.',
+      'Her ziyaretçiyi günde bir kez saymak için IP adresi ve tarayıcı, her gün ve her lambda için rastgele üretilen bir anahtarla, geri çevrilemeyen bir koda dönüştürülür. Kodlar ve anahtarlar yalnızca bellekte tutulur, hiçbir zaman yazılmaz ve bir gün sonra unutulur. Hiçbir çerez ayarlanmaz ve ziyaretçinin tarayıcısında hiçbir şey saklanmaz. Hukuki dayanak, sahibin lambdasının nasıl kullanıldığını bilmeye yönelik meşru menfaatidir (GDPR madde 6(1)(f)).',
+    ],
 
     logsTitle: 'Log ne kadar süre saklanır',
     logs: 'Log iki yerde tutulur: sunucunun belleğinde ve sunucunun konsol çıktısında. Bellek sunucu her yeniden başladığında boşalır, konsol çıktısı da sunucu her güncellendiğinde silinir. İkisinin de boyutu sabittir, yani her yeni satır en eski satırı dışarı iter. Bu yüzden bir satırın ne kadar kalacağı, sitenin ne kadar yoğun olduğuna bağlıdır. Logdaki hiçbir şey bir arşive kopyalanmaz.',
@@ -44,14 +49,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'Bir lambdanın ne yaptığına sahibi karar verir',
     lambdas:
-      'Bir lambdayı biz değil, editör linkine sahip olan kişi yazar. Lambdanın ziyaretçilerinden ne istediği ve bununla ne yaptığı o kişiye bağlıdır. Bu sayfa bunları kapsamaz. Tek istisna, yukarıda anlatılan ve sunucunun her lambda için tuttuğu istek logudur. Kullanım koşulları, bir lambdanın başkaları hakkında kişisel veri toplamak için kullanılmasına izin vermez. Bunu yapan bir lambdaya rastlarsanız lütfen bildirin.',
+      'Bir lambdayı biz değil, editör linkine sahip olan kişi yazar. Lambdanın ziyaretçilerinden ne istediği ve bununla ne yaptığı o kişiye bağlıdır. Bu sayfa bunları kapsamaz. İstisnalar, yukarıda anlatılan ve sunucunun her lambda için tuttuğu istek logu ile analitiği açan bir sahip için saydığı ziyaretlerdir. Kullanım koşulları, bir lambdanın başkaları hakkında kişisel veri toplamak için kullanılmasına izin vermez. Bunu yapan bir lambdaya rastlarsanız lütfen bildirin.',
 
     mailTitle: 'Bize yazdığınızda',
     mail: 'Kötüye kullanımı bildirmek ya da başka bir konu için bize yazarsanız, e-posta adresinizi ve mesajınızı size yanıt vermek ve yazdığınız konuyla ilgilenmek için kullanırız. Bu iş için artık gerekmediklerinde onları sileriz (GDPR md. 6/1-f).',
 
     storageTitle: 'Çerezler ve tarayıcınız',
     storage:
-      'Tek bir çerez var, adı lang. Seçtiğiniz dili hatırlar, böylece dil belirtmeyen adresler o dilde açılır. Bir yıl geçerlidir. Tarayıcının kendi depolama alanı ise açık ya da koyu temayı, kullandığınız sayfaların birkaç ayarını ve yöneticiler için onların erişim anahtarını hatırlar. Bunların hiçbiri sizi takip etmek için kullanılmaz ve hiçbiri başka birine gitmez: analiz aracı yok, reklam yok, başka sitelerden hiçbir şey yüklenmez, yazı tipleri bile. Bunların hepsi yalnızca sizin istediğiniz şeyi yaptığı için onay gerekmez (Alman TDDDG yasası, § 25(2) no. 2).',
+      'Tek bir çerez var, adı lang. Seçtiğiniz dili hatırlar, böylece dil belirtmeyen adresler o dilde açılır. Bir yıl geçerlidir. Tarayıcının kendi depolama alanı ise açık ya da koyu temayı, kullandığınız sayfaların birkaç ayarını ve yöneticiler için onların erişim anahtarını hatırlar. Bunların hiçbiri sizi takip etmek için kullanılmaz ve hiçbiri başka birine gitmez: bu sitenin ziyaret analizi yok, reklam yok, başka sitelerden hiçbir şey yüklenmez, yazı tipleri bile. Bunların hepsi yalnızca sizin istediğiniz şeyi yaptığı için onay gerekmez (Alman TDDDG yasası, § 25(2) no. 2).',
 
     hostingTitle: 'Nerede saklanır',
     hosting:

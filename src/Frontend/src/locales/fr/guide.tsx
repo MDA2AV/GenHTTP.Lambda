@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Repartir avec votre code',
     git: 'Travailler avec git',
     open: 'Publier le code',
+    visitors: 'Voir qui la visite',
     agents: 'Laisser faire un agent',
   },
 
@@ -106,6 +107,7 @@ export const guide: Messages['guide'] = {
     ['Versions', () => <>Ce que chaque version a changé, ce qui avait été demandé, et la différence avec la précédente. C’est ici qu’on déploie ou qu’on revient en arrière, ou qu’on démarre un brouillon à partir de n’importe quelle version.</>],
     ['Déploiements', () => <>Ce qui était en ligne, quand, et ce qui l’a arrêté.</>],
     ['Stats', () => <>Requêtes, échecs, temps de réponse et chemins les plus demandés, sur la dernière heure ou les dernières 24 heures.</>],
+    ['Audience', () => <>Qui visite l’application, une fois que vous l’avez activée : visiteurs, pages vues et requêtes par jour, les pages ouvertes, les sites qui envoient les visiteurs, leurs pays et leurs appareils, et les moteurs de recherche et IA qui sont passés.</>],
     ['Logs', () => <>Ses requêtes, ce qu’elle affiche, et la stack trace de tout ce qui plante, en direct.</>],
     [
       'Code',
@@ -129,7 +131,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'Le trafic et les logs sont gardés en mémoire, pour suivre ce qui se passe, pas pour archiver : un redémarrage du serveur les remet à zéro. Les versions et l’historique des déploiements, eux, sont enregistrés.',
+    'Le trafic et les logs sont gardés en mémoire, pour suivre ce qui se passe, pas pour archiver : un redémarrage du serveur les remet à zéro. Les versions, l’historique des déploiements et l’audience, eux, sont enregistrés.',
 
   why: (k) => (
     <>
@@ -506,6 +508,26 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Tout ce qui est dans le code devient public, les versions précédentes comprises. Une clé ou un mot de passe a sa place avec les clés et mots de passe, sous Données, jamais dans le code – publié ou non.',
+  visitors: ((k) => (
+    <>
+      Ouvrez {k.b('Audience')} dans le tableau de bord et activez-la pour voir qui visite votre application : combien
+      de personnes viennent chaque jour, quelles pages elles ouvrent, quels sites les envoient - un moteur de
+      recherche, une publication, une newsletter - depuis quels pays, sur quels appareils et navigateurs, et quels
+      moteurs de recherche et assistants IA lisent ses pages. Choisissez un chiffre en haut pour le voir jour par jour.
+    </>
+  )),
+  visitors2: ((k) => (
+    <>
+      Le comptage est fait par la plateforme, en amont de votre application, qui n’a donc besoin de rien : pas de
+      cookies, pas de script, pas de bannière à faire accepter à vos visiteurs. Seuls des totaux par jour sont
+      conservés - jamais une adresse, et de la page d’où quelqu’un est venu, seulement le site. Un visiteur est
+      compté une fois par jour. Un an est conservé ; une application gratuite en montre les sept derniers jours et{' '}
+      {k.b('Premium')} la totalité, y compris ce qui a été compté avant. Désactiver la mesure d’audience supprime ce
+      qui a été compté.
+    </>
+  )),
+  visitorsAside:
+    'Les chiffres sont enregistrés toutes les quelques minutes, les dernières visites apparaissent donc un peu plus tard. Un brouillon n’est jamais compté : essayer une modification n’est pas une visite.',
 
   agents: (k) => (
     <>

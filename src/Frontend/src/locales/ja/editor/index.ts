@@ -1,4 +1,5 @@
 import type { EditorMessages } from '../../en/editor';
+import { analytics } from './analytics';
 import { change } from './change';
 import { clone } from './clone';
 import { code } from './code';
@@ -39,6 +40,7 @@ export const editor: EditorMessages = {
   versions,
   deployments,
   stats,
+  analytics,
   logs,
   showcase,
   openSource,

@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -64,7 +65,8 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// <see cref="OperationLog"/> for what is left out.
 /// </remarks>
 public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDataService data, IFeatureService features, ISecretService secrets,
-                              IDatabaseService databases, IShowcaseService showcases, ISourceService sources, ITelemetryService telemetry, ILogBook book,
+                              IDatabaseService databases, IShowcaseService showcases, ISourceService sources, IAnalyticsService analytics,
+                              ITelemetryService telemetry, ILogBook book,
                               LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, ILogger<McpTools> logger)
 {
 
@@ -472,6 +474,20 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                  ["required"] = new JsonArray("privateKey")
              }),
 
+        Tool("analytics", "Read who visits a lambda", Effect.Replace,
+             "How people reach a lambda, as its owner sees it in the editor: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers (search engines, AIs, link previews) behind them. Counted by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Off until switched on - nothing is counted before. enable: true switches it on, only when the user asks; switching off deletes what was counted and is the owner's to do in the editor. Use it to answer what the user asks about their visitors, or to see which pages matter before changing them.",
+             new JsonObject
+             {
+                 ["type"] = "object",
+                 ["properties"] = new JsonObject
+                 {
+                     ["privateKey"] = Field("string", "The editor key."),
+                     ["days"] = Field("integer", "How many days, today included. Left out, as many as the lambda's tier shows, which is also the most."),
+                     ["enable"] = Field("boolean", "Switch analytics on, counting from the next request - only when the user asked for it.")
+                 },
+                 ["required"] = new JsonArray("privateKey")
+             }),
+
         Tool("list_demos", "List the demos", Effect.Read,
              "Demos this platform keeps online, each a finished lambda showing one way to build something: a REST API over records, registration and login, a websocket game, uploads, live updates. Their keys are public and read only: read the closest one with read_lambda (and list_files, read_logs) before writing similar code. create_lambda with a demo's id as template starts from a copy.",
              new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
@@ -517,6 +533,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 "delete_secret" => DeleteSecret(arguments),
                 "showcase" => Showcase(arguments, origin),
                 "open_source" => OpenSource(arguments, origin),
+                "analytics" => Analytics(arguments),
                 "list_demos" => ListDemos(),
                 "platform_guide" => ReadGuide(origin),
                 _ => McpProtocol.Refuse($"There is no tool called '{name}'.")
@@ -1991,6 +2008,54 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// One tool, like the showcase, for the same reason: it is used rarely,
     /// and every tool listed is read by every agent in every conversation.
     /// </remarks>
+    private JsonObject Analytics(JsonObject arguments)
+    {
+        var privateKey = Required(arguments, "privateKey");
+
+        var days = Number(arguments, "days");
+
+        LambdaAnalytics found;
+
+        if (Flag(arguments, "enable") == true)
+        {
+            found = analytics.Enable(privateKey);
+
+            logger.LogInformation("Switched on analytics of lambda {Lambda}", found.PublicKey);
+
+            if (days != null)
+            {
+                found = analytics.Get(privateKey, days);
+            }
+        }
+        else
+        {
+            found = analytics.Get(privateKey, days);
+
+            logger.LogInformation("Read analytics of lambda {Lambda} days {Days}", found.PublicKey, found.Shown);
+        }
+
+        if (found.Since == null)
+        {
+            return McpProtocol.Say(new
+            {
+                ok = true,
+                enabled = false,
+                note = "Analytics are off for this lambda, so nothing about its visitors was counted. The owner switches them on in the editor (Analytics); pass enable: true only when the user asks for it."
+            });
+        }
+
+        var minutes = Math.Max(1, (int)found.Interval.TotalMinutes);
+
+        return McpProtocol.Say(new
+        {
+            ok = true,
+            analytics = AnalyticsResponse.Of(found),
+            note = found.Shown < found.Kept && found.Earliest is { } earliest && earliest < found.From
+                ? $"Counted by day in UTC, written down every {minutes} minutes. More is kept than this tier shows: the owner sees all of the year with premium."
+                : $"Counted by day in UTC, written down every {minutes} minutes - the visits of the last minutes are not in it yet. Views are pages opened, hits every request; visitors are counted once a day."
+        });
+    }
+
     private JsonObject OpenSource(JsonObject arguments, string origin)
     {
         var privateKey = Required(arguments, "privateKey");
@@ -2430,6 +2495,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             thenPublic = "Once published, every version is public, the ones saved before included. Keys, passwords and personal data never go into files anyway; for a published lambda it matters at once.",
             licenses = SourceLicenses.All.Select(l => new { l.Id, l.Name, kind = l.Kind.ToString() }),
             startingFromOne = "A published source downloads as a .NET project, not as a lambda - or is cloned with git from /source/{publicKey}.git. To make a lambda of it with git: create_lambda, clone its gitUrl, copy the lambda's files - Project.cs, the other .cs files at the top, resources/ and every other folder and file of its code - over its own, commit and push. Without git: Project.cs holds the snippet as the body of Build() or BuildAsync() with the types after the class - put the body back into lambda.cs with those types below it; every other file of the lambda keeps its name and folder; Program.cs, the .csproj, Platform/, the Dockerfile and the ignore files are the platform's and stay behind. Keep to the terms of its LICENSE."
+        },
+        analytics = new
+        {
+            what = "The owner can have a lambda's visits counted: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers behind them. They read it in the editor, and the analytics tool reads the same.",
+            when = "Off until the owner switches it on, in the editor or by asking you (analytics with enable: true). Switching off deletes what was counted, and is theirs to do. A feature's preview is never counted.",
+            how = "Counted by the platform, in front of the lambda, by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Only the host of a referring site is kept, never an address, and a visitor is told apart for a day by a hash that is never stored. The lambda needs no code for it - do not build a counter of your own for what this counts."
         },
         afterDeploying = new
         {

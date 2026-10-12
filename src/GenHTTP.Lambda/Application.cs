@@ -7,6 +7,7 @@ using GenHTTP.Lambda.Api.Mcp;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Background;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -187,6 +188,12 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<LambdaTelemetry>();
         services.AddSingleton<ITelemetryService, TelemetryService>();
 
+        services.AddSingleton<AnalyticsStore>();
+        services.AddSingleton<IAnalyticsStore>(provider => provider.GetRequiredService<AnalyticsStore>());
+        services.AddSingleton<AnalyticsQueue>();
+        services.AddSingleton<DailyVisitors>();
+        services.AddSingleton<IAnalyticsService, AnalyticsService>();
+
         /*
          * The concerns that need nothing but services, resolved per request
          * from the scope the outermost concern opens (see Configure).
@@ -198,11 +205,13 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<ThrottleConcern>();
         services.AddSingleton<LambdaOutputConcern>();
         services.AddSingleton<LambdaActivityConcern>();
+        services.AddSingleton<AnalyticsConcern>();
         services.AddSingleton<RateLimitConcern>();
 
         services.AddSingleton<IBackgroundJob, MaintenanceJob>();
         services.AddSingleton<IBackgroundJob, TelemetryJob>();
         services.AddSingleton<IBackgroundJob, GeoJob>();
+        services.AddSingleton<IBackgroundJob, AnalyticsJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();

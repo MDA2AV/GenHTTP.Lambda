@@ -1,0 +1,101 @@
+import type { EditorMessages } from '../../en/editor';
+
+export const analytics: EditorMessages['analytics'] = {
+  hint: 'Von der Plattform für Sie gezählt: keine Cookies, kein Code in Ihrer App und nichts, was Ihre Besucher akzeptieren müssten.',
+  loading: 'Besuche werden gelesen …',
+  loadFailed: 'Die Besuche konnten nicht gelesen werden.',
+
+  offTitle: 'Sehen Sie, wer Ihre App besucht',
+  offText:
+    'Wie viele Personen jeden Tag kommen, welche Seiten sie öffnen, welche Websites sie schicken, aus welchen Ländern und auf welchen Geräten – tageweise gezählt, ab dem Moment, in dem Sie es einschalten.',
+  offPrivate: 'Keine Cookies und kein Banner, das Ihre Besucher akzeptieren müssen',
+  offAddresses: 'Es werden keine Adressen gespeichert – nur, wie viele Besuche es pro Tag gab',
+  offKept: (days) =>
+    days >= 365
+      ? 'Ein Jahr lang gespeichert, und Sie sehen alles davon'
+      : `Ein Jahr lang gespeichert – angezeigt werden die letzten ${days} Tage, mit Premium alles`,
+  switchOn: 'Analyse einschalten',
+  switchedOn: 'Die Analyse ist eingeschaltet. Die ersten Besuche erscheinen innerhalb weniger Minuten.',
+  switchOnFailed: 'Die Analyse konnte nicht eingeschaltet werden.',
+  demo: 'Die Besucher einer Demo werden nicht gezählt. Eine eigene Kopie kann ihre Besucher zählen.',
+
+  range: 'Zeitraum',
+  days: (days) => (days >= 365 ? '12 Monate' : `${days} Tage`),
+  premiumRange: 'Premium zeigt bis zu einem Jahr',
+
+  visitors: 'Besucher',
+  visitorsHint: 'Verschiedene Personen, jede einmal pro Tag gezählt.',
+  views: 'Seitenaufrufe',
+  viewsHint: 'Jedes Mal, wenn jemand eine Seite geöffnet hat.',
+  hits: 'Requests',
+  hitsHint: 'Alles, was bei Ihrer App angefragt wurde: ihre Seiten sowie die Bilder und Skripte, die sie laden.',
+  versus: (days) => `gegenüber den ${days} Tagen davor`,
+  noChange: 'unverändert',
+  inDays: (days) => (days >= 365 ? 'in den letzten 12 Monaten' : `in den letzten ${days} Tagen`),
+
+  perDay: {
+    visitors: 'Besucher pro Tag',
+    views: 'Seitenaufrufe pro Tag',
+    hits: 'Requests pro Tag',
+  },
+  perWeek: {
+    visitors: 'Besucher pro Woche',
+    views: 'Seitenaufrufe pro Woche',
+    hits: 'Requests pro Woche',
+  },
+  showValues: 'Werte anzeigen',
+  showChart: 'Diagramm anzeigen',
+  day: 'Tag',
+  week: 'Woche ab',
+
+  nobody: 'In diesen Tagen hat niemand die App besucht.',
+  nobodyYet: 'Seit dem Einschalten der Analyse hat niemand die App besucht. Die ersten Besuche erscheinen innerhalb weniger Minuten.',
+
+  pages: 'Seiten',
+  pagesHint: 'Die Seiten, die geöffnet wurden – die am häufigsten geöffneten zuerst.',
+  requested: 'Am häufigsten angefragt',
+  requestedHint: 'Alles, was bei Ihrer App angefragt wurde, nach Adresse – sie hat keine Seiten, die Personen öffnen.',
+  sources: 'Woher die Besucher kommen',
+  sourcesHint: 'Die Websites, die Personen hierher geschickt haben, nach der Seite, auf der sie waren. Bei Suchmaschinen steht nur, dass sie es waren, nicht wonach gesucht wurde.',
+  direct: 'Direkt eingegeben, Lesezeichen oder App',
+  countries: 'Länder',
+  countriesHint: 'Wo die Internetadressen der Besucher registriert sind – meist, aber nicht immer, dort, wo sie sich befinden.',
+  unknownCountry: 'Unbekannt',
+  devices: 'Geräte',
+  device: {
+    desktop: 'Computer',
+    mobile: 'Smartphone',
+    tablet: 'Tablet',
+    bot: 'Bots',
+    other: 'Andere',
+  },
+  browsers: 'Browser',
+  systems: 'Betriebssysteme',
+  crawlers: 'Suchmaschinen und KI',
+  crawlersHint: 'Programme, die vorbeigeschaut haben: Suchmaschinen, die Ihre Seiten erfassen, KI-Assistenten, die sie lesen, und Chats, die eine Vorschau eines Links zeigen.',
+  noCrawlers: 'In diesen Tagen hat keine Suchmaschine und keine KI vorbeigeschaut.',
+  other: 'Andere',
+  otherBots: 'Andere Programme',
+  showAll: (count) => `Alle ${count} anzeigen`,
+  showFewer: 'Weniger anzeigen',
+  share: (part, whole) => `${part} von ${whole}`,
+  none: 'Noch nichts.',
+
+  moreKept: (since) => `Gezählt seit ${since} – Premium zeigt alles davon, bis zu einem Jahr.`,
+  premiumAsk: 'Nach Premium fragen',
+  premiumSubject: 'Premium für meine App',
+  premiumBody: (address) => `Guten Tag,\n\nich möchte die gesamte Analyse meiner App sehen: ${address}\n\n`,
+
+  footer: (minutes) =>
+    minutes === 1 ? 'Pro Tag gezählt, in UTC. Wird jede Minute aktualisiert.' : `Pro Tag gezählt, in UTC. Wird alle ${minutes} Minuten aktualisiert.`,
+  updated: (time) => `Letzte Aktualisierung um ${time}.`,
+  since: (date) => `Gezählt wird seit ${date}.`,
+
+  switchOff: 'Analyse ausschalten',
+  switchOffTitle: 'Analyse ausschalten?',
+  switchOffText: 'Das Zählen endet, und alles, was bisher gezählt wurde, wird gelöscht. Das lässt sich nicht rückgängig machen.',
+  keep: 'Weiter zählen',
+  switchOffConfirm: 'Ausschalten und löschen',
+  switchedOff: 'Die Analyse ist ausgeschaltet, und was gezählt wurde, ist gelöscht.',
+  switchOffFailed: 'Die Analyse konnte nicht ausgeschaltet werden.',
+};

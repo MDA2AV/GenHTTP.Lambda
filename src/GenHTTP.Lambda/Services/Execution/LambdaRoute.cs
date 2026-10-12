@@ -1,6 +1,7 @@
 using GenHTTP.Api.Content;
 
 using GenHTTP.Lambda.Configuration;
+using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Protection;
@@ -62,6 +63,10 @@ public static class LambdaRoute
             // timeout nor the rejection - a lambda that timed out on every
             // request was recorded as succeeding, slowly.
             Dependent.Concern<LambdaActivityConcern>(),
+            // outside the one that makes the visit, so it finds it on the
+            // request on the way back, and queues it where the owner counts
+            // visits - nothing is written while the visitor waits
+            Dependent.Concern<AnalyticsConcern>(),
             new LambdaResolutionConcernBuilder(locator),
             Dependent.Concern<RateLimitConcern>()
         ], execution);

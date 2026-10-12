@@ -26,6 +26,7 @@ export const guide: Messages['guide'] = {
     away: 'Alles mitnehmen',
     git: 'Mit git arbeiten',
     open: 'Den Code veröffentlichen',
+    visitors: 'Wer sie besucht',
     agents: 'Mit einem Agenten arbeiten',
   },
 
@@ -105,6 +106,7 @@ export const guide: Messages['guide'] = {
     ['Versionen', () => <>Was jede Version geändert hat, worum gebeten wurde und der Diff zur vorherigen. Von hier aus deployen oder zurückrollen – oder aus jeder von ihnen einen Entwurf beginnen.</>],
     ['Deployments', () => <>Was wann online war und warum es offline ging.</>],
     ['Statistik', () => <>Requests, Fehler, Antwortzeiten und die meistgefragten Pfade der letzten Stunde oder des letzten Tages.</>],
+    ['Analyse', () => <>Wer die App besucht, sobald Sie sie einschalten: Besucher, Seitenaufrufe und Requests pro Tag, die geöffneten Seiten, die Websites, die Besucher schicken, ihre Länder und Geräte sowie die Suchmaschinen und KI, die vorbeigeschaut haben.</>],
     ['Logs', () => <>Requests, Ausgaben und Stacktraces von allem, was schiefging – live.</>],
     [
       'Code',
@@ -128,7 +130,7 @@ export const guide: Messages['guide'] = {
     </>
   ),
   editorAside:
-    'Traffic und Log liegen im Arbeitsspeicher. Sie sind zum Beobachten da, nicht zum Aufbewahren: Nach einem Neustart des Servers beginnen sie von vorn. Versionen und der Deployment-Verlauf werden gespeichert.',
+    'Traffic und Log liegen im Arbeitsspeicher. Sie sind zum Beobachten da, nicht zum Aufbewahren: Nach einem Neustart des Servers beginnen sie von vorn. Versionen, der Deployment-Verlauf und die Analyse werden gespeichert.',
 
   why: (k) => (
     <>
@@ -504,6 +506,25 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Alles im Code wird öffentlich, auch die früheren Versionen. Ein Schlüssel oder Passwort gehört zu den Schlüsseln und Passwörtern unter Daten, nie in den Code – ob veröffentlicht oder nicht.',
+  visitors: ((k) => (
+    <>
+      Öffnen Sie im Kontrollzentrum {k.b('Analyse')} und schalten Sie sie ein, um zu sehen, wer Ihre App besucht: wie viele
+      Personen jeden Tag kommen, welche Seiten sie öffnen, welche Websites sie schicken – eine Suchmaschine, ein Beitrag, ein
+      Newsletter –, aus welchen Ländern, auf welchen Geräten und in welchen Browsern, und welche Suchmaschinen und
+      KI-Assistenten ihre Seiten lesen. Wählen Sie oben eine Zahl, um sie Tag für Tag zu sehen.
+    </>
+  )),
+  visitors2: ((k) => (
+    <>
+      Gezählt wird von der Plattform, vor Ihrer App – Ihre App braucht dafür nichts: keine Cookies, kein Script, kein Banner,
+      das Ihre Besucher akzeptieren müssten. Gespeichert werden nur Zahlen pro Tag – nie eine Adresse, und von der Seite, von
+      der jemand kam, nur die Website. Ein Besucher wird einmal pro Tag gezählt. Ein Jahr wird aufbewahrt; eine kostenlose App
+      zeigt davon die letzten sieben Tage und {k.b('Premium')} alles, auch was vorher gezählt wurde. Wer die Analyse
+      ausschaltet, löscht, was gezählt wurde.
+    </>
+  )),
+  visitorsAside:
+    'Die Zahlen werden alle paar Minuten festgehalten, die letzten Besuche erscheinen also etwas später. Ein Entwurf wird nie gezählt: Eine Änderung auszuprobieren ist kein Besuch.',
 
   agents: (k) => (
     <>

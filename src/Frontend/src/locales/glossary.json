@@ -106,6 +106,11 @@
       "id": "Showcase", "de": "Showcase", "es": "Galería", "fr": "Vitrine", "it": "Vetrina", "nl": "Showcase", "pl": "Galeria", "pt": "Vitrine", "pt-pt": "Montra", "tr": "Vitrin", "ja": "ショーケース", "ko": "쇼케이스"
     },
     {
+      "en": "Analytics",
+      "note": "the editor's section that counts who visits a lambda, once its owner switched it on",
+      "id": "Analitik", "de": "Analyse", "es": "Analítica", "fr": "Audience", "it": "Analytics", "nl": "Analytics", "pl": "Analityka", "pt": "Analytics", "pt-pt": "Análise de visitas", "tr": "Analitik", "ja": "アクセス解析", "ko": "분석"
+    },
+    {
       "en": "open source",
       "id": "open source", "de": "Open Source", "es": "código abierto", "fr": "open source", "it": "open source", "nl": "open source", "pl": "open source", "pt": "código aberto", "pt-pt": "código aberto", "tr": "açık kaynak", "ja": "オープンソース", "ko": "오픈 소스"
     },

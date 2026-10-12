@@ -16,6 +16,7 @@ export const frame: EditorMessages['frame'] = {
     history: 'Geschiedenis',
     deployments: 'Deployments',
     stats: 'Statistieken',
+    analytics: 'Analytics',
     logs: 'Logs',
     code: 'Code',
   },

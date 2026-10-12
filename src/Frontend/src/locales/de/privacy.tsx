@@ -17,6 +17,11 @@ export const privacy: Messages['privacy'] = {
       'So finden wir Fehler, so führen wir einen überlasteten Server auf die Ursache zurück, und so gehen wir Missbrauch nach, der uns gemeldet wird. Außerdem nutzt der Server die IP-Adresse, nur im Arbeitsspeicher, um zu begrenzen, wie viele Anfragen und Builds eine Person auslösen kann. Ohne diese Angaben lässt sich eine Anfrage nicht beantworten. Rechtsgrundlage ist unser berechtigtes Interesse daran, den Dienst zu betreiben und sicher zu halten (Art. 6 Abs. 1 lit. f DSGVO).',
       'Administratoren können alles davon lesen. Wer ein Lambda besitzt, sieht bei jeder Anfrage an dieses Lambda das Land und den Browser, aber nicht die IP-Adresse.',
     ],
+    analyticsTitle: 'Besuche, die für den Inhaber eines Lambdas gezählt werden',
+    analytics: [
+      'Der Inhaber eines Lambdas kann dafür die Analyse einschalten. Dann zählt der Server die Besuche dieses Lambdas pro Tag: wie viele Requests und Seitenaufrufe es gab, für welche Seiten sie waren, von welcher Website ein Besucher kam (nur deren Name, nicht die Adresse der Seite), das Land der IP-Adresse des Besuchers sowie die Art des Geräts, des Browsers und des Betriebssystems, die der Browser angibt. Nur diese Zahlen werden gespeichert – nicht die IP-Adresse und nichts anderes, das einen Besucher benennt – in einer Datenbank auf dem Server, für ein Jahr. Der Inhaber des Lambdas sieht sie in seinem Editor, und Administratoren können sie lesen.',
+      'Um jeden Besucher einmal pro Tag zu zählen, werden die IP-Adresse und der Browser mit einem Schlüssel, der für jeden Tag und jedes Lambda zufällig erzeugt wird, in einen Code umgewandelt, der sich nicht zurückrechnen lässt. Die Codes und die Schlüssel liegen nur im Arbeitsspeicher, werden nie aufgeschrieben und nach einem Tag vergessen. Es wird kein Cookie gesetzt und nichts im Browser des Besuchers gespeichert. Rechtsgrundlage ist das berechtigte Interesse des Inhabers, zu wissen, wie sein Lambda genutzt wird (Art. 6 Abs. 1 lit. f DSGVO).',
+    ],
 
     logsTitle: 'Wie lange das Log aufbewahrt wird',
     logs: 'Das Log liegt an zwei Stellen: im Arbeitsspeicher des Servers, der bei jedem Neustart geleert wird, und in der Konsolenausgabe des Servers, die bei jedem Update gelöscht wird. Beide haben eine feste Größe. Jede neue Zeile verdrängt also die älteste, und wie lange eine Zeile erhalten bleibt, hängt davon ab, wie viel auf der Seite los ist. Nichts aus dem Log wird archiviert.',
@@ -44,14 +49,14 @@ export const privacy: Messages['privacy'] = {
 
     lambdasTitle: 'Was ein Lambda tut, entscheidet sein Besitzer',
     lambdas:
-      'Ein Lambda wird von der Person geschrieben, die den Editor-Link hat – nicht von uns. Was es von seinen Besuchern wissen will und was es damit macht, entscheidet diese Person. Diese Erklärung gilt dafür nicht, mit Ausnahme des Anfrage-Logs oben, das der Server für jedes Lambda führt. Die Nutzungsbedingungen verbieten, mit einem Lambda personenbezogene Daten anderer Menschen zu sammeln. Wenn Sie auf eines stoßen, das es trotzdem tut, melden Sie es bitte.',
+      'Ein Lambda wird von der Person geschrieben, die den Editor-Link hat – nicht von uns. Was es von seinen Besuchern wissen will und was es damit macht, entscheidet diese Person. Diese Erklärung gilt dafür nicht, mit Ausnahme des Anfrage-Logs oben, das der Server für jedes Lambda führt, und der Besuche, die er für Inhaber zählt, die die Analyse eingeschaltet haben. Die Nutzungsbedingungen verbieten, mit einem Lambda personenbezogene Daten anderer Menschen zu sammeln. Wenn Sie auf eines stoßen, das es trotzdem tut, melden Sie es bitte.',
 
     mailTitle: 'Wenn Sie uns schreiben',
     mail: 'Wenn Sie uns schreiben – um Missbrauch zu melden oder aus einem anderen Grund –, nutzen wir Ihre Adresse und Ihre Nachricht, um Ihnen zu antworten und Ihr Anliegen zu bearbeiten. Sobald wir sie dafür nicht mehr brauchen, löschen wir sie (Art. 6 Abs. 1 lit. f DSGVO).',
 
     storageTitle: 'Cookies und Ihr Browser',
     storage:
-      'Es gibt ein einziges Cookie. Es heißt lang, merkt sich die Sprache, die Sie gewählt haben, damit sich Adressen ohne Sprachangabe in dieser Sprache öffnen, und hält ein Jahr. Im Speicher Ihres Browsers liegen außerdem das helle oder dunkle Design, ein paar Einstellungen der Seiten, die Sie nutzen, und bei Administratoren ihr Token. Nichts davon dient dazu, Sie zu verfolgen, und nichts davon geht an andere: Es gibt keine Analyse-Tools, keine Werbung, und nichts wird von fremden Seiten geladen, nicht einmal Schriftarten. Weil all das nur tut, was Sie selbst wollen, ist keine Einwilligung nötig (§ 25 Abs. 2 Nr. 2 TDDDG).',
+      'Es gibt ein einziges Cookie. Es heißt lang, merkt sich die Sprache, die Sie gewählt haben, damit sich Adressen ohne Sprachangabe in dieser Sprache öffnen, und hält ein Jahr. Im Speicher Ihres Browsers liegen außerdem das helle oder dunkle Design, ein paar Einstellungen der Seiten, die Sie nutzen, und bei Administratoren ihr Token. Nichts davon dient dazu, Sie zu verfolgen, und nichts davon geht an andere: Es gibt keine Analyse dieser Website, keine Werbung, und nichts wird von fremden Seiten geladen, nicht einmal Schriftarten. Weil all das nur tut, was Sie selbst wollen, ist keine Einwilligung nötig (§ 25 Abs. 2 Nr. 2 TDDDG).',
 
     hostingTitle: 'Wo die Daten liegen',
     hosting:

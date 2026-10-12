@@ -72,6 +72,7 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.Modified).HasColumnName("modified");
         lambdas.Property(l => l.Deployed).HasColumnName("deployed");
         lambdas.Property(l => l.LastSeen).HasColumnName("last_seen");
+        lambdas.Property(l => l.AnalyticsSince).HasColumnName("analytics_since");
         lambdas.Property(l => l.Domain).HasColumnName("domain");
         lambdas.Property(l => l.View).HasColumnName("editor_view").HasConversion<string>();
         lambdas.Property(l => l.SecretSalt).HasColumnName("secret_salt");
