@@ -839,6 +839,13 @@ feature's preview.
   believed from an agent that is Chromium's, and only where they name a
   browser or system that is known, so nobody writes words of their own into
   an owner's figures (`VisitorClassifier`).
+- **Two groups in the editor, by what they count.** The pages, the referring
+  sites, the countries, the devices, the browsers and the systems are counted
+  in page views, under that heading; what was requested by path and the
+  crawlers in requests, under theirs. The two can be far apart - a crawler
+  asks for a hundred things that are no page - so a card never leaves the
+  reader to guess which it is. A lambda without pages people open has the
+  requests group only.
 - **Crawlers, hardened.** A program is told from a person by
   [crawler-user-agents](https://github.com/monperrus/crawler-user-agents)
   (MIT, `Resources/Crawlers`), a maintained list of about 1,500 crawlers with a

@@ -190,35 +190,64 @@ export function AnalyticsTab({ control }: { control: Control }) {
 
       <Columns state={state} measure={measure} dark={dark} date={date} />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card title={by === 'views' ? said.pages : said.requested} hint={by === 'views' ? said.pagesHint : said.requestedHint}>
-          <Ranked
-            values={(state.pages ?? []).filter((p) => p[by] > 0)}
-            by={by}
-            mono
-            name={(value) => (value === '(other)' ? said.other : value)}
-          />
+      {/*
+        * In two groups by what their numbers count, since the two can be far
+        * apart: a person opens a page and it loads a dozen things, a crawler
+        * asks for a hundred that are no page at all. An app that has no pages
+        * people open is described by its requests alone.
+        */}
+      {by === 'views' && (
+        <Group title={said.views} hint={said.viewsHint}>
+          <Card title={said.pages} hint={said.pagesHint}>
+            <Ranked
+              values={(state.pages ?? []).filter((p) => p.views > 0)}
+              by="views"
+              mono
+              name={(value) => (value === '(other)' ? said.other : value)}
+            />
+          </Card>
+
+          <Card title={said.sources} hint={said.sourcesHint}>
+            <Ranked
+              values={(state.referrers ?? []).filter((r) => r.views > 0)}
+              by="views"
+              name={(value) => (value === '(other)' ? said.other : value)}
+              icon={<IconGlobe className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
+              rest={{ label: said.direct, value: Math.max(0, state.totals.views - sum(state.referrers, 'views')) }}
+            />
+          </Card>
+
+          <Card title={said.countries} hint={said.countriesHint}>
+            <Countries values={(state.countries ?? []).filter((c) => c.views > 0)} by="views" tag={tag} />
+          </Card>
+
+          <Agents devices={state.devices ?? []} browsers={state.browsers ?? []} systems={state.systems ?? []} by="views" dark={dark} />
+        </Group>
+      )}
+
+      <Group title={said.hits} hint={said.hitsHint}>
+        <Card title={said.requested} hint={by === 'hits' ? said.requestedHint : undefined}>
+          <Ranked values={state.pages ?? []} by="hits" mono name={(value) => (value === '(other)' ? said.other : value)} />
         </Card>
 
-        <Card title={said.sources} hint={said.sourcesHint}>
-          <Ranked
-            values={(state.referrers ?? []).filter((r) => r[by] > 0)}
-            by={by}
-            name={(value) => (value === '(other)' ? said.other : value)}
-            icon={<IconGlobe className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
-            rest={by === 'views' ? { label: said.direct, value: Math.max(0, state.totals.views - sum(state.referrers, 'views')) } : undefined}
-          />
-        </Card>
+        {by === 'hits' && (
+          <>
+            <Card title={said.sources} hint={said.sourcesHint}>
+              <Ranked
+                values={state.referrers ?? []}
+                by="hits"
+                name={(value) => (value === '(other)' ? said.other : value)}
+                icon={<IconGlobe className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
+              />
+            </Card>
 
-        <Card title={said.countries} hint={said.countriesHint}>
-          <Countries values={(state.countries ?? []).filter((c) => c[by] > 0)} by={by} tag={tag} />
-        </Card>
+            <Card title={said.countries} hint={said.countriesHint}>
+              <Countries values={state.countries ?? []} by="hits" tag={tag} />
+            </Card>
 
-        <Card title={said.devices}>
-          <Devices values={state.devices ?? []} by={by} dark={dark} />
-        </Card>
-
-        <Agents browsers={state.browsers ?? []} systems={state.systems ?? []} by={by} />
+            <Agents devices={state.devices ?? []} browsers={state.browsers ?? []} systems={state.systems ?? []} by="hits" dark={dark} />
+          </>
+        )}
 
         <Card title={said.crawlers} hint={said.crawlersHint}>
           {(state.crawlers ?? []).length === 0 ? (
@@ -227,7 +256,7 @@ export function AnalyticsTab({ control }: { control: Control }) {
             <Ranked values={state.crawlers ?? []} by="hits" name={(value) => <Crawler value={value} confirmed={state.confirmedCrawlers ?? []} />} />
           )}
         </Card>
-      </div>
+      </Group>
 
       <footer className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-200 pt-4 text-xs text-slate-500 dark:border-ink-800">
         <span>
@@ -601,11 +630,22 @@ function useWidth(initial: number) {
   return [ref, width] as const;
 }
 
-/** A card of the grid under the chart. */
+/** The cards whose numbers count the same thing, under the name of the figure they count. */
+function Group({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+  return (
+    <section className="mt-8">
+      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+      <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
+      <div className="mt-3 grid gap-6 lg:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+/** A card of a group. */
 function Card({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
     <section className="surface flex min-w-0 flex-col p-4">
-      <h2 className="text-sm font-medium">{title}</h2>
+      <h3 className="text-sm font-medium">{title}</h3>
       {hint && <p className="mt-0.5 text-xs text-slate-500">{hint}</p>}
       <div className="mt-3 flex-1">{children}</div>
     </section>
@@ -767,24 +807,37 @@ function Crawler({ value, confirmed }: { value: string; confirmed: string[] }) {
   return <>{kinds[value] ?? value}</>;
 }
 
-/** The browsers and the operating systems of people, one card with a pill for each. */
-function Agents({ browsers, systems, by }: { browsers: AnalyticsValue[]; systems: AnalyticsValue[]; by: 'views' | 'hits' }) {
+/**
+ * What visitors came with - the devices, and the browsers and systems of
+ * people - one card with a pill for each, so a group's cards pair up.
+ */
+function Agents({ devices, browsers, systems, by, dark }: {
+  devices: AnalyticsValue[];
+  browsers: AnalyticsValue[];
+  systems: AnalyticsValue[];
+  by: 'views' | 'hits';
+  dark: boolean;
+}) {
   const said = useEditorT().analytics;
-  const [showing, setShowing] = useState<'browsers' | 'systems'>('browsers');
+  const [showing, setShowing] = useState<'devices' | 'browsers' | 'systems'>('devices');
 
   const values = (showing === 'browsers' ? browsers : systems).filter((v) => v[by] > 0);
 
   return (
     <section className="surface flex min-w-0 flex-col p-4">
-      <div role="tablist" className="flex gap-1.5">
-        {(['browsers', 'systems'] as const).map((id) => (
+      <div role="tablist" className="flex flex-wrap gap-1.5">
+        {(['devices', 'browsers', 'systems'] as const).map((id) => (
           <button key={id} type="button" role="tab" aria-selected={showing === id} onClick={() => setShowing(id)} className={pill(showing === id)}>
             {said[id]}
           </button>
         ))}
       </div>
       <div className="mt-3 flex-1">
-        <Ranked values={values} by={by} name={(value) => (value === 'other' ? said.device.other : value)} />
+        {showing === 'devices' ? (
+          <Devices values={devices} by={by} dark={dark} />
+        ) : (
+          <Ranked values={values} by={by} name={(value) => (value === 'other' ? said.device.other : value)} />
+        )}
       </div>
     </section>
   );
