@@ -485,6 +485,11 @@ section.
   what the columns below show, the breakdowns are ranked bars, the devices
   one bar of shares; every chart has its values as a table one click away.
   It does not poll - it reads again when the page is looked at again.
+- **The breakdowns are grouped by what they count - decided by the owner.**
+  Page views (pages, sites, countries, devices, browsers, systems) under one
+  heading, requests (what was requested, crawlers) under another: the two can
+  be far apart, and a card counting one beside a card counting the other
+  read as figures that did not add up.
 - This is said in the README (Analytics), `/docs` (Who visits it),
   `platform_guide` (`analytics`), the tool's description and the privacy
   page - keep them the same.
