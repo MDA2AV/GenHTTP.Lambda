@@ -185,8 +185,11 @@ else
     waited=$((waited + 5))
   done
 
+  # Forced, because compose does not see the change: an image built by an
+  # earlier `compose build` leaves `up -d` with the containers "Running", and
+  # the runner on the image before. That the image changed is known above.
   say "Restarting the build agent"
-  docker compose "${FILES[@]}" up -d agent egress-proxy
+  docker compose "${FILES[@]}" up -d --force-recreate agent egress-proxy
 fi
 
 say "Verifying"
