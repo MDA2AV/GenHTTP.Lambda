@@ -61,6 +61,8 @@ public sealed class LambdaVisitConcern : IDependentConcern
 
         var hints = counted ? HintsOf(headers) : null;
 
+        var method = request.Header.Method;
+
         var started = Stopwatch.GetTimestamp();
 
         IResponse? response = null;
@@ -87,7 +89,7 @@ public sealed class LambdaVisitConcern : IDependentConcern
 
             request.SetVisit(new LambdaVisit(lambda, DateTime.UtcNow, path, domain, status, Stopwatch.GetElapsedTime(started),
                                              (long)(response?.Content?.Length ?? 0), caller?.Client, caller?.Agent, caller?.Country,
-                                             referrer, counted && IsPage(request, status, destination, response), hints));
+                                             referrer, counted && IsPage(method, status, destination, response), hints));
         }
     }
 
@@ -132,9 +134,9 @@ public sealed class LambdaVisitConcern : IDependentConcern
     /// they got back was HTML. A redirect is not a page: the page it sends to
     /// is counted when it is opened.
     /// </remarks>
-    private static bool IsPage(IRequest request, int status, string? destination, IResponse? response)
+    private static bool IsPage(RequestMethod method, int status, string? destination, IResponse? response)
     {
-        if (request.Header.Method != RequestMethod.Get || status is not (>= 200 and < 300 or 304))
+        if (method != RequestMethod.Get || status is not (>= 200 and < 300 or 304))
         {
             return false;
         }
