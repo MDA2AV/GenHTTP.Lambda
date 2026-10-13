@@ -29,6 +29,11 @@ public interface IDeploymentService
     ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default);
 
     /// <summary>
+    /// Checks whether the files compile, without deploying them.
+    /// </summary>
+    ValueTask<CompilationOutcome> ValidateAsync(IReadOnlyList<LambdaFile> files, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default);
+
+    /// <summary>
     /// Compiles and prepares the given version so it is ready to serve requests.
     /// </summary>
     /// <remarks>

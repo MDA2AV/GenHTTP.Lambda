@@ -243,7 +243,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
             var code = storage.Read(row.Id, version)
                     ?? throw LambdaException.NotFound($"The code of version {version} is missing.");
 
-            var files = LambdaSource.Parse(code);
+            var files = LambdaSource.Parse(code, storage.Resources(row.Id));
 
             // the names the code reads, which it says itself - never what is
             // stored, and never a value

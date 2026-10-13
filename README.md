@@ -383,12 +383,27 @@ read in the layout it was saved in, so the old ones are translated as they are
 read - `site/app.js` becomes `resources/site/app.js`, `.lambda/docs/product.md`
 becomes `docs/product.md`, `.lambda/build/package.json` becomes
 `build/package.json` - and saved in the new one when they are next saved (an
-envelope with `"version": 2`, `LambdaSource.Parse`). C# that was in `.lambda/`
+envelope with `"version": 3` today, `LambdaSource.Parse`). C# that was in `.lambda/`
 was never compiled and would be now, so it keeps what it holds under a name
 that is not: `.lambda/tests/Smoke.cs` becomes `tests/Smoke.cs.txt`. A
 feature's files are read the same way. In git, a lambda's history keeps the commits its clones already
 have; the move is a commit of its own on top of each (see
 [Working with git](#working-with-git)).
+
+**Resources are kept once, apart from the versions.** A version names its
+resources by the SHA-256 of what they hold rather than carrying them, and the
+lambda keeps each of them once, below `{data}/code/{id}/resources/`, for every
+version, feature and preview that ships it unchanged. Going online copies them
+out of there, file to file, and an archive is packed by streaming them, so
+nothing reads a site's worth of pages into the server's memory to save it or
+put it online - which, when versions carried their resources as text and
+base64 in one string, took a few hundred megabytes of a process every lambda
+shares for a site of fifteen. A version saved before carries its resources
+inside, as an envelope of `"version": 2` did, and is read as it is - nothing
+on disk is rewritten - until it is saved again. A resource that no version,
+feature or preview names any more is removed with the version or the feature
+that named it last, once it is an hour old: the resources of a save are kept
+before what names them is written.
 
 ### What it is built from
 
@@ -1146,7 +1161,9 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   maps the DTOs. `LambdaGuard` (who may change a lambda - not a demo) and
   `VersionInput` (what a version may hold) are rules other services apply too.
 - **Storage** (`Services/Storage`) - the code itself, on the file system, one
-  file per version. Never in the database.
+  file per version, and the resources of a lambda's versions and features in a
+  store of its own, each once, by what it holds (`ResourceStore`). Never in the
+  database.
 - **Data** (`Services/Data`) - which kinds of data a lambda keeps, switched on
   and off by its owner. Only the choice is stored: a lambda without a row for a
   kind has its default, so a kind added to `DataKinds` needs no migration to
@@ -1439,7 +1456,11 @@ Both are for the operator only, behind the administration token (see
 in the editor, and nobody sees everybody's. What it is for is
 the shape of the memory curve. A managed heap that climbs across gen 2
 collections is a leak; committed bytes climbing while the managed heap stays
-flat is the heap keeping pages it could return, which is not.
+flat is the heap keeping pages it could return, which is not. The collector is
+asked to conserve memory (`System.GC.ConserveMemory` in the project file), so
+after a spike - a large version saved, an archive packed - it compacts the
+large object heap and gives back what it no longer needs, rather than keeping
+the high water mark of the busiest lambda for all of them.
 
 ## TLS
 
@@ -1502,18 +1523,19 @@ version may come to, its code and its resources together, is a
 [limit](#limits) of the lambda's tier. How many files there are is not
 limited, and neither is the number of C# files.
 
-Budget the disk for the premium tier. A version is kept whole, its files as
-text or base64 in JSON, so each version saved at the limit takes up to half as
-much again on disk - 184 MB for 128 MB of pictures - and fifty of them are
-kept by default: at the defaults, a premium lambda that is saved over and over
-at its limit can come to around 9 GB of history.
+Budget the disk for the premium tier. A version keeps its code whole, as text
+in JSON, and names its resources, which the lambda's store keeps once each, as
+the bytes they are: a version costs what it changed, and fifty of them are
+kept by default. A version saved before resources were kept apart carries
+them inside, as text or base64, up to half as much again as they are.
 
-Budget the memory too. A version is read and written whole: with the 128 MB
-the premium tier allows, saving one took the server to 2.3 GB and deploying it
-to 2.8 GB. Even the 32 MB of a free lambda took a server idling at 350 MB to
-950 MB to save, and anybody can create a free lambda. Set what a version may
-come to, for both tiers, in the panel's **Limits** to what the machine can
-carry until resources are stored apart from the versions.
+Budget the memory too. Saving a version reads the archive or the request it
+came in, and its resources go into the store file by file; going online copies
+them out. A site of 15 MB in 1,768 files took the server 237 MB higher to save
+and deploy while versions carried their resources, and 46 MB since; its first
+request after a restart, 111 MB and 37. Set what a version may come to, for
+both tiers, in the panel's **Limits** to what the machine can carry - the
+request a version arrives in is still read whole.
 
 ### More than one hostname
 

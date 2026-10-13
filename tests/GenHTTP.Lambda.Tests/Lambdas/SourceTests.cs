@@ -122,7 +122,7 @@ public sealed class SourceTests
 
         var written = LambdaSource.Serialize(files);
 
-        StringAssert.StartsWith(written, "{\"version\":2,", "written again, it is written in today's layout");
+        StringAssert.StartsWith(written, "{\"version\":3,", "written again, it is written in today's layout");
         Assert.IsTrue(LambdaSource.Same(stored.ReplaceLineEndings(string.Empty), written), "and is the same lambda");
     }
 

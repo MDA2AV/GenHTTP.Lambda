@@ -69,9 +69,24 @@ public interface IMetaService
     LambdaVersionInfo Save(string privateKey, string code, VersionNote? note = null, int? after = null);
 
     /// <summary>
+    /// Saves files as the next version - what an archive, a push or a request
+    /// holds - without making them one text first.
+    /// </summary>
+    /// <remarks>
+    /// The resources go into the lambda's store as the bytes they were read
+    /// as, rather than as a copy of them twice their size, in base64.
+    /// </remarks>
+    LambdaVersionInfo Save(string privateKey, IReadOnlyList<LambdaFile> files, VersionNote? note = null, int? after = null);
+
+    /// <summary>
     /// Compiles the given code without deploying it.
     /// </summary>
     ValueTask<CompilationOutcome> CheckAsync(string privateKey, string code, CancellationToken cancellation = default);
+
+    /// <summary>
+    /// Checks whether files would compile as a version of the lambda, without saving them.
+    /// </summary>
+    ValueTask<CompilationOutcome> CheckAsync(string privateKey, IReadOnlyList<LambdaFile> files, CancellationToken cancellation = default);
 
     /// <summary>
     /// Builds the given version (or the latest one) and makes it the active deployment.

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Deployment.Model;
 
@@ -54,7 +56,18 @@ public sealed record LambdaVersionInfo(int Version, DateTime Created, string? Sp
 /// <summary>
 /// A stored version, including the code itself.
 /// </summary>
-public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Specification = null, string? Change = null, string? Origin = null);
+/// <param name="Code">Every file, as the single blob a version is stored as</param>
+/// <param name="Resources">Where the lambda keeps the resources the blob names, to read what they hold</param>
+public sealed record LambdaVersionContent(int Version, DateTime Created, string Code, string? Specification = null, string? Change = null, string? Origin = null,
+                                          [property: JsonIgnore] IResourceStore? Resources = null)
+{
+
+    /// <summary>
+    /// The files, what the resources hold read from the store where somebody asks for it.
+    /// </summary>
+    public IReadOnlyList<LambdaFile> Files() => LambdaSource.Parse(Code, Resources);
+
+}
 
 /// <summary>
 /// Why a version was written, as whoever wrote it tells it.

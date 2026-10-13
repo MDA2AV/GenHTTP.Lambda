@@ -4,6 +4,7 @@ using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
 using GenHTTP.Lambda.Services.Data;
 using GenHTTP.Lambda.Services.Databases;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Secrets;
 
@@ -125,12 +126,16 @@ public sealed class DemoSeeder(IMetaService meta, IDbContextFactory<LambdaDbCont
 
         var current = CurrentCode(demo.Key, lambda);
 
-        if (current == wanted && lambda?.ActiveVersion != null)
+        // compared by what the files hold: a saved version names its resources
+        // by their hash, where the template carries them
+        var same = LambdaSource.Same(current, wanted);
+
+        if (same && lambda?.ActiveVersion != null)
         {
             return false;
         }
 
-        if (current != wanted)
+        if (!same)
         {
             var change = current == null ? "Set up as a demo" : "Brought up to date with its template";
 

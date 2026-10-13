@@ -74,7 +74,7 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
 
         var content = meta.GetVersion(privateKey, version);
 
-        var zip = LambdaArchive.Pack(LambdaSource.Parse(content.Code), laid);
+        var zip = LambdaArchive.Pack(content.Files(), laid);
 
         logger.LogInformation("Downloaded lambda {Lambda} version {Version} layout {Layout}", lambda.PublicKey, version, laid);
 
@@ -157,7 +157,7 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
     {
         var note = new VersionNote(specification, change, VersionOrigins.Api);
 
-        var version = meta.Save(privateKey, Serialize(files), note);
+        var version = meta.Save(privateKey, Checked(files), note);
 
         var publicKey = meta.PublicKeyOf(privateKey);
 
@@ -208,14 +208,14 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
             return [];
         }
 
-        return LambdaSource.Parse((meta.GetVersion(privateKey, latest)).Code);
+        return meta.GetVersion(privateKey, latest).Files();
     }
 
     internal static VersionResponse Describe(LambdaVersionInfo version)
         => new(version.Version, version.Created, version.Specification, version.Change, version.Origin);
 
     internal static VersionContentResponse Describe(LambdaVersionContent content, string? folder = null)
-        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, Below(LambdaSource.Parse(content.Code), folder));
+        => new(content.Version, content.Created, content.Specification, content.Change, content.Origin, Below(content.Files(), folder));
 
     /// <summary>
     /// The files below a folder, or all of them when none is named.
@@ -224,16 +224,21 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
         => string.IsNullOrEmpty(folder) ? files : [.. files.Where(f => f.Name.StartsWith(folder, StringComparison.Ordinal))];
 
     /// <summary>
-    /// Turns what was submitted into the single blob a version is stored as.
+    /// What was submitted, checked before it goes anywhere.
     /// </summary>
-    internal static string Serialize(IReadOnlyList<LambdaFile>? files)
+    /// <remarks>
+    /// Handed on as the files they are rather than made one text first:
+    /// the resources of an archive go into the lambda's store as the bytes
+    /// they were read as.
+    /// </remarks>
+    internal static IReadOnlyList<LambdaFile> Checked(IReadOnlyList<LambdaFile>? files)
     {
         if (LambdaSource.Validate(files) is { } complaint)
         {
             throw LambdaException.Invalid(complaint);
         }
 
-        return LambdaSource.Serialize(files!);
+        return files!;
     }
 
 }

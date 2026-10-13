@@ -51,6 +51,11 @@ public static class LambdaArchive
     /// <summary>
     /// Packs the given files into a zip archive.
     /// </summary>
+    /// <remarks>
+    /// Every file is streamed into its entry from wherever it is - a resource
+    /// straight out of the lambda's store - rather than copied into an array
+    /// of its own first.
+    /// </remarks>
     public static byte[] Pack(IReadOnlyList<LambdaFile> files, ArchiveLayout layout = ArchiveLayout.Lambda)
     {
         using var buffer = new MemoryStream();
@@ -59,16 +64,25 @@ public static class LambdaArchive
         {
             foreach (var file in files)
             {
-                var (name, content) = layout == ArchiveLayout.Lambda ? (file.Name, file.Bytes) : InProject(file);
+                var snippet = layout == ArchiveLayout.Project && file.Name == LambdaSource.EntryName;
 
-                var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
+                var entry = zip.CreateEntry(layout == ArchiveLayout.Lambda ? file.Name : InProject(file), CompressionLevel.Optimal);
 
                 // fixed, so the same version always packs to the same bytes
                 entry.LastWriteTime = Timestamp;
 
                 using var target = entry.Open();
 
-                target.Write(content);
+                if (snippet)
+                {
+                    target.Write(Encoding.UTF8.GetBytes(ProjectSnippet.ForRepository(file.Code)));
+                }
+                else
+                {
+                    using var source = file.Open();
+
+                    source.CopyTo(target);
+                }
             }
         }
 
@@ -76,13 +90,11 @@ public static class LambdaArchive
     }
 
     /// <summary>
-    /// A file of the lambda where a clone has it: the snippet in the class
-    /// it is the body of, the rest where <see cref="ProjectPaths"/> puts it.
+    /// Where a clone has a file of the lambda: the snippet in the class it is
+    /// the body of, the rest where <see cref="ProjectPaths"/> puts it.
     /// </summary>
-    private static (string Path, byte[] Content) InProject(LambdaFile file)
-        => file.Name == LambdaSource.EntryName
-            ? (ProjectPaths.Snippet, Encoding.UTF8.GetBytes(ProjectSnippet.ForRepository(file.Code)))
-            : (ProjectPaths.Of(file.Name), file.Bytes);
+    private static string InProject(LambdaFile file)
+        => file.Name == LambdaSource.EntryName ? ProjectPaths.Snippet : ProjectPaths.Of(file.Name);
 
     #endregion
 
@@ -367,6 +379,13 @@ public static class LambdaArchive
 
     private static LambdaFile ToFile(string name, byte[] bytes)
     {
+        // a resource stays the bytes it was read as until the lambda's store
+        // has them, rather than becoming a string of twice their size
+        if (LambdaSource.IsResource(name))
+        {
+            return LambdaFile.FromBytes(name, bytes);
+        }
+
         if (TryText(bytes, out var text))
         {
             return new LambdaFile(name, text);

@@ -315,14 +315,44 @@ build machinery for compatibility that nobody needs.
   leaves (`DatabaseVault.RoomOf`).
 - **Lambdas saved before keep working, untouched on disk.** A version or a
   feature is read in the layout it was saved in and translated as it is read
-  (`LambdaSource.Parse`: an envelope `"version": 1` is the old layout, 2 is
-  today's) - assets at the top move below `resources/`, `.lambda/docs/`,
+  (`LambdaSource.Parse`: an envelope `"version": 1` is the first layout, 2
+  the second - today's names, every resource inside it - and 3 today's) -
+  assets at the top move below `resources/`, `.lambda/docs/`,
   `.lambda/tests/` and `.lambda/build/` to `docs/`, `tests/` and `build/`;
   C# that was in `.lambda/` was never compiled, so it keeps a `.txt` ending
   (`tests/Smoke.cs.txt`) rather than be compiled into a lambda online.
   Never rewrite stored versions for it. Their git history keeps its commits;
   the move is a commit of its own on top (see Git). A top-level `assets/` or
   `.lambda/` is refused with a hint where it goes now.
+- **Resources are kept once, by what they hold - decided.** A version or a
+  feature names each resource by the SHA-256 of what it holds (`stored` and
+  `length` in the envelope) and the lambda's `IResourceStore`
+  (`{data}/code/{id}/resources/`) keeps it, once for all its versions,
+  features and previews. Carried inside, every save and every deployment of a
+  site took several copies of all of it as strings and base64 in one process
+  for every lambda: a fifteen megabyte site spiked the server by hundreds. So:
+  - **Never carry a resource as text when it can be bytes.** What an archive or
+    a push holds becomes a file with `LambdaFile.FromBytes`, and goes on as
+    files to the overloads that take them (`IMetaService.Save`,
+    `IFeatureService.Save`, `CheckAsync`) - never `LambdaSource.Serialize`d
+    into one text on its way there.
+  - **The two writers keep them** (`LambdaHistory.Append`,
+    `FeatureService.Save`, both with `LambdaSource.Keep`) before anything that
+    names them is written, so a version only ever names what is kept.
+  - **What needs what a resource holds reads it through the store**:
+    `LambdaVersionContent.Files()`, `FeatureContent.Files()`,
+    `IStorageService.ReadFiles`, or `LambdaSource.Parse(code, resources)`.
+    Parsed without one, a stored resource can be named, counted and compared
+    and throws when read, rather than reading as nothing. Going online copies
+    a resource out of the store file to file (`Materialize`), and an archive
+    streams it.
+  - Versions of the second layout are read as they are, resources inside, and
+    never rewritten.
+  - What nothing names any more goes with the version or the feature that
+    named it last (`DeleteVersion`, `DeleteFeature`), and only once it is an
+    hour old: the resources of a save are kept before what names them is
+    written, under a turn a pruning does not hold. An envelope that cannot be
+    read stops the collection rather than naming nothing.
 - Names: a C# file's own name as C# names (dots allowed), its folders as the
   rest of the code; a resource as files that are served
   always were (an extension, no dot names, six folders deep); the rest of the
@@ -756,6 +786,10 @@ rules that matter:
   interface (`IMetaService.GetFacts`, `ISourceService.Star`), not taken from
   the unit. An exception is an entry in the test with its reason; today only
   the composition root (`Application`) has one.
+- **The collector conserves memory - decided.** Server GC, with
+  `System.GC.ConserveMemory` set in the project file: every lambda shares the
+  process, and what one does now and then (a large version saved, an archive
+  packed) left the high water mark of large objects held for all of them.
 - Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
   misbehaving; **it is not a sandbox.** Do not describe it as one.
 - Database: SQLite, EF Core, migrated by Evolve from `Data/Migrations/V<n>__*.sql`.
@@ -819,7 +853,9 @@ method is called - so the code is written the way it runs:
   binding with Roslyn, packing, copying a workspace or a database. Not in many
   small asynchronous steps (`File.ReadAllTextAsync` hops out and back per
   buffer), and not in place. A version's file is read and written in place:
-  it is bounded by its tier's allowance, and saving one is rare. `Task.Run` is
+  it names its resources rather than carrying them, is bounded by its tier's
+  allowance, and saving one is rare; one that still carries them is read from
+  its file as it is parsed, not into a string first. `Task.Run` is
   refused, so every hop is marked in `Offload` and can be given a scheduler of
   its own there; work started in the background rather than awaited (the
   scheduler's jobs, seeding the demos) is not a hop and suppresses RS0030

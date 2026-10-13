@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 
@@ -54,7 +56,16 @@ public sealed record FeatureInfo(
 /// A feature with the files it holds.
 /// </summary>
 /// <param name="Code">Every file, as the single blob a version is stored as</param>
-public sealed record FeatureContent(FeatureInfo Feature, string Code);
+/// <param name="Resources">Where the lambda keeps the resources the blob names, to read what they hold</param>
+public sealed record FeatureContent(FeatureInfo Feature, string Code, [property: JsonIgnore] IResourceStore? Resources = null)
+{
+
+    /// <summary>
+    /// The files, what the resources hold read from the store where somebody asks for it.
+    /// </summary>
+    public IReadOnlyList<LambdaFile> Files() => LambdaSource.Parse(Code, Resources);
+
+}
 
 /// <summary>
 /// What a new feature is to be.

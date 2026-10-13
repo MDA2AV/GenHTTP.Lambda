@@ -78,7 +78,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var found = features.Get(privateKey, feature);
 
-        return new FeatureContentResponse(Describe(found.Feature), VersionResource.Below(LambdaSource.Parse(found.Code), folder));
+        return new FeatureContentResponse(Describe(found.Feature), VersionResource.Below(found.Files(), folder));
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     {
         var read = features.Get(privateKey, feature);
 
-        var files = LambdaChanges.Apply(LambdaSource.Parse(read.Code), request.Files, request.Remove, request.Edits);
+        var files = LambdaChanges.Apply(read.Files(), request.Files, request.Remove, request.Edits);
 
         // made on top of what was read, and refused if something else was saved meanwhile
         return await SaveAsync(privateKey, feature, files, deploy, request.Specification, request.Change, read.Feature.Revision);
@@ -150,7 +150,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
 
         var found = features.Get(privateKey, feature);
 
-        var zip = LambdaArchive.Pack(LambdaSource.Parse(found.Code), laid);
+        var zip = LambdaArchive.Pack(found.Files(), laid);
 
         logger.LogInformation("Downloaded feature '{Feature}' of lambda {Lambda} layout {Layout}", found.Feature.Name, meta.PublicKeyOf(privateKey), laid);
 
@@ -181,7 +181,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
         var tier = Enum.Parse<LambdaTier>(lambda.Tier);
 
         var files = await VersionResource.UnpackAsync(body, limits.BuildOf(tier), laid,
-                                                      LambdaSource.Parse(features.Get(privateKey, feature).Code));
+                                                      features.Get(privateKey, feature).Files());
 
         return await SaveAsync(privateKey, feature, files, deploy, specification, change);
     }
@@ -328,7 +328,7 @@ public sealed class FeatureResource(IFeatureService features, IMetaService meta,
     private async ValueTask<FeatureSavedResponse> SaveAsync(string privateKey, string feature, IReadOnlyList<LambdaFile>? files, bool? deploy,
                                                             string? specification, string? change, int? after = null)
     {
-        var saved = features.Save(privateKey, feature, VersionResource.Serialize(files), new VersionNote(specification, change), after);
+        var saved = features.Save(privateKey, feature, VersionResource.Checked(files), new VersionNote(specification, change), after);
 
         var publicKey = meta.PublicKeyOf(privateKey);
 

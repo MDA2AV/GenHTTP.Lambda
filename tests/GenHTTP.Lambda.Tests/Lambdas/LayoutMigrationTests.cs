@@ -116,7 +116,7 @@ public sealed class LayoutMigrationTests
 
         var stored = await File.ReadAllTextAsync(VersionFile(fixture, lambda, 3));
 
-        StringAssert.StartsWith(stored, "{\"version\":2,", "what is saved now is saved in today's layout");
+        StringAssert.StartsWith(stored, "{\"version\":3,", "what is saved now is saved in today's layout");
         StringAssert.StartsWith(await File.ReadAllTextAsync(VersionFile(fixture, lambda, 2)), "{\"version\":1,", "and what was saved then is left as it was");
     }
 

@@ -1,3 +1,5 @@
+using GenHTTP.Lambda.Services.Deployment.Model;
+
 namespace GenHTTP.Lambda.Services.Storage;
 
 /// <summary>
@@ -15,7 +17,28 @@ public interface IStorageService
     /// <summary>
     /// Reads the code of the given version, if it exists.
     /// </summary>
+    /// <remarks>
+    /// As it was stored: its resources named by what they hold, which
+    /// <see cref="Resources"/> keeps - or, for a version saved before there
+    /// was a store, with what they hold.
+    /// </remarks>
     string? Read(long lambdaId, int version);
+
+    /// <summary>
+    /// Reads the files of the given version, if it exists, straight from where
+    /// it is stored and with its resources read from the lambda's store.
+    /// </summary>
+    IReadOnlyList<LambdaFile>? ReadFiles(long lambdaId, int version);
+
+    /// <summary>
+    /// Where the resources of a lambda are kept: each once, by what it holds,
+    /// for all its versions and features.
+    /// </summary>
+    /// <remarks>
+    /// What is no longer named by a version, a feature or a preview of the
+    /// lambda goes when a version or a feature is removed.
+    /// </remarks>
+    IResourceStore Resources(long lambdaId);
 
     /// <summary>
     /// Removes a single version of a lambda.
@@ -90,6 +113,13 @@ public interface IStorageService
     /// Reads what the preview of a feature was deployed with, if it was.
     /// </summary>
     string? ReadPreview(long lambdaId, long featureId);
+
+    /// <summary>
+    /// Reads the files the preview of a feature was deployed with, if it was,
+    /// straight from where they are stored and with the resources read from
+    /// the lambda's store.
+    /// </summary>
+    IReadOnlyList<LambdaFile>? ReadPreviewFiles(long lambdaId, long featureId);
 
     /// <summary>
     /// Replaces the feature's copy of the workspace with a fresh copy of the

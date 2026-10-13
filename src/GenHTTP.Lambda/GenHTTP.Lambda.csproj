@@ -26,6 +26,19 @@
         <Features>$(Features);runtime-async=on</Features>
     </PropertyGroup>
 
+    <!--
+        Every lambda runs in this one process, and what one of them does now
+        and then - a large version saved, an archive packed - leaves large
+        objects behind that the server collector only frees in a full
+        collection, and keeps the memory of afterwards for the next time. Asked
+        to conserve memory it compacts the large object heap once it is
+        fragmented and gives back what it no longer needs, rather than holding
+        the high water mark of the busiest lambda for all of them.
+    -->
+    <ItemGroup>
+        <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+    </ItemGroup>
+
     <ItemGroup>
 
         <PackageReference Include="GenHTTP.Full.Ioxide" />

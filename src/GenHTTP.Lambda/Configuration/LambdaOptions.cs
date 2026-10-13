@@ -163,10 +163,10 @@ public sealed record LambdaOptions
     /// code and its resources together.
     /// </summary>
     /// <remarks>
-    /// Mind what it costs: every version keeps its own copy of all of it, as
-    /// base64 in JSON for what is not text, so a version saved at the limit
-    /// takes nearly half as much again on disk, <see cref="MaxVersions"/> of
-    /// them are kept, and a version is read and written whole, in memory.
+    /// Mind what it costs: a version keeps its code whole and names its
+    /// resources, which the lambda's store keeps once each, so a version costs
+    /// the disk what it changed - <see cref="MaxVersions"/> of them are kept -
+    /// and the request it arrives in is read whole, in memory.
     /// </remarks>
     public long BuildBytes { get; init; } = 32L * 1024 * 1024;
 

@@ -347,7 +347,7 @@ public sealed class MetaService : IMetaService
         var code = Storage.Read(lambda.Id, version)
                 ?? throw LambdaException.NotFound($"The code of version {version} is no longer available.");
 
-        return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Specification, deployment.Change, deployment.Origin);
+        return new LambdaVersionContent(deployment.Version, deployment.Created, code, deployment.Specification, deployment.Change, deployment.Origin, Storage.Resources(lambda.Id));
     }
 
     public IReadOnlyList<LambdaActivation> GetActivations(string privateKey)
@@ -430,8 +430,11 @@ public sealed class MetaService : IMetaService
     #region Editing
 
     public LambdaVersionInfo Save(string privateKey, string code, VersionNote? note = null, int? after = null)
+        => Save(privateKey, VersionInput.Validate(code), note, after);
+
+    public LambdaVersionInfo Save(string privateKey, IReadOnlyList<LambdaFile> files, VersionNote? note = null, int? after = null)
     {
-        var files = VersionInput.Validate(code);
+        VersionInput.Validate(files);
 
         using var database = Databases.CreateDbContext();
 
@@ -456,16 +459,19 @@ public sealed class MetaService : IMetaService
 
         VersionInput.ValidateAllowance(files, lambda.Tier, Limits);
 
-        var version = History.Append(database, lambda, code, DateTime.UtcNow, note);
+        var version = History.Append(database, lambda, files, DateTime.UtcNow, note);
 
         Logger.LogInformation("Saved lambda #{LambdaId} version {Version}", lambda.Id, version.Version);
 
         return version;
     }
 
-    public async ValueTask<CompilationOutcome> CheckAsync(string privateKey, string code, CancellationToken cancellation = default)
+    public ValueTask<CompilationOutcome> CheckAsync(string privateKey, string code, CancellationToken cancellation = default)
+        => CheckAsync(privateKey, VersionInput.Validate(code), cancellation);
+
+    public async ValueTask<CompilationOutcome> CheckAsync(string privateKey, IReadOnlyList<LambdaFile> files, CancellationToken cancellation = default)
     {
-        var files = VersionInput.Validate(code);
+        VersionInput.Validate(files);
 
         long id;
 
@@ -480,7 +486,7 @@ public sealed class MetaService : IMetaService
             (id, limits) = (lambda.Id, WorkspaceOf(database, lambda));
         }
 
-        return await Deployments.ValidateAsync(code, id, limits, cancellation);
+        return await Deployments.ValidateAsync(files, id, limits, cancellation);
     }
 
     /// <remarks>

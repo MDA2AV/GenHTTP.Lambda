@@ -614,7 +614,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         // what it held before the save replaces it
         var had = Text(arguments, "feature") is { } feature
-            ? LambdaSource.Parse(features.Get(privateKey, feature).Code)
+            ? features.Get(privateKey, feature).Files()
             : meta.Require(privateKey).LatestVersion != null ? Api.VersionResource.Latest(meta, privateKey) : [];
 
         var saved = McpProtocol.Adding(await SaveAsync(arguments, files, origin), "dropped", Dropped(had, files));
@@ -676,7 +676,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             var content = features.Get(privateKey, feature);
 
-            current = LambdaSource.Parse(content.Code);
+            current = content.Files();
 
             read = content.Feature.Revision;
         }
@@ -720,18 +720,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
 
-        var code = LambdaSource.Serialize(files);
-
         // said where the next save is decided, and as a request rather than a
         // refusal - like the note below: the code matters more
         var documentation = Unwritten(files);
 
         if (Text(arguments, "feature") is { } feature)
         {
-            return await SaveFeatureAsync(arguments, privateKey, feature, code, files.Count, note, origin, read, documentation);
+            return await SaveFeatureAsync(arguments, privateKey, feature, files, note, origin, read, documentation);
         }
 
-        var version = meta.Save(privateKey, code, note);
+        var version = meta.Save(privateKey, files, note);
 
         logger.LogInformation("Saved lambda {Lambda} version {Version} files {Files}", meta.PublicKeyOf(privateKey), version.Version, files.Count);
 
@@ -761,7 +759,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              * would have to read the whole lambda back to find out whether the
              * line compiles. The version is saved either way.
              */
-            var outcome = await meta.CheckAsync(privateKey, code);
+            var outcome = await meta.CheckAsync(privateKey, files);
 
             return McpProtocol.Say(new
             {
@@ -782,12 +780,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Stores the files as the feature's, and puts its preview online or
     /// compiles it if the arguments ask for that.
     /// </summary>
-    private async ValueTask<JsonObject> SaveFeatureAsync(JsonObject arguments, string privateKey, string feature, string code, int files, VersionNote note,
+    private async ValueTask<JsonObject> SaveFeatureAsync(JsonObject arguments, string privateKey, string feature, IReadOnlyList<LambdaFile> files, VersionNote note,
                                                          string origin, int? read, string? documentation)
     {
-        var saved = features.Save(privateKey, feature, code, note, read);
+        var saved = features.Save(privateKey, feature, files, note, read);
 
-        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, meta.PublicKeyOf(privateKey), files);
+        logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, meta.PublicKeyOf(privateKey), files.Count);
 
         if (Flag(arguments, "deploy") == true)
         {
@@ -796,7 +794,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (Flag(arguments, "check") == true)
         {
-            var outcome = await meta.CheckAsync(privateKey, code);
+            var outcome = await meta.CheckAsync(privateKey, files);
 
             return McpProtocol.Say(new
             {
@@ -831,7 +829,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var privateKey = Required(arguments, "privateKey");
 
-        var outcome = await meta.CheckAsync(privateKey, LambdaSource.Serialize(files));
+        var outcome = await meta.CheckAsync(privateKey, files);
 
         logger.LogInformation("Checked code of lambda {Lambda} files {Files} compiles {Compiles}", meta.PublicKeyOf(privateKey), files.Count, outcome.Success);
 
@@ -1446,7 +1444,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         // links that leave the preview for the live lambda, said while there is still time
         var lambda = meta.Get(privateKey);
 
-        var files = LambdaSource.Parse((features.Get(privateKey, feature)).Code);
+        var files = features.Get(privateKey, feature).Files();
 
         var warning = lambda != null ? Leaks(files, lambda.PublicKey) : null;
 
@@ -1594,7 +1592,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             feature = features.Get(privateKey, wanted);
 
-            files = LambdaSource.Parse(feature.Code);
+            files = feature.Files();
         }
         else
         {
@@ -1604,7 +1602,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             {
                 content = meta.GetVersion(privateKey, which);
 
-                files = LambdaSource.Parse(content.Code);
+                files = content.Files();
             }
         }
 
@@ -2320,7 +2318,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             serving = "return Layout.Create().Add(\"api\", api).Add(Resources.App(\"web\"));",
             files = "Resources.Files(\"media\") serves a folder as plain files, straight from the directory - the fastest way the server has to send a file. Use it for what is not the app's pages: pictures, downloads, media.",
             contentTypes = "Inferred from the file extension.",
-            size = "Every version keeps its own copy of its resources and is read whole to be saved and deployed, so a large file that is data rather than program - a model, a dataset, video, a library of pictures - belongs in the workspace, where it is kept once. They count towards what a version may come to, with its code - see limits.",
+            size = "Resources count towards what a version may come to, with its code - see limits - however many versions ship them unchanged, so a large file that is data rather than program - a model, a dataset, video, a library of pictures - belongs in the workspace, where it does not.",
             names = "Below resources/: letters, digits, dashes, underscores, dots and slashes, and an extension to serve it by. No name starting with a dot, no .."
         },
         workspace = new

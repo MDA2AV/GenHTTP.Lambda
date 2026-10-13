@@ -50,6 +50,12 @@ public interface IFeatureService
     FeatureInfo Save(string privateKey, string feature, string code, VersionNote? note = null, int? after = null);
 
     /// <summary>
+    /// Saves files into the feature - what an archive, a push or a request
+    /// holds - without making them one text first.
+    /// </summary>
+    FeatureInfo Save(string privateKey, string feature, IReadOnlyList<LambdaFile> files, VersionNote? note = null, int? after = null);
+
+    /// <summary>
     /// Puts the feature's files online at its own address, with its own copy
     /// of the data. The lambda itself is not touched.
     /// </summary>

@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
 using GenHTTP.Lambda.Services.Storage;
@@ -42,6 +43,17 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
     /// go from both.
     /// </remarks>
     public LambdaVersionInfo Append(LambdaDbContext database, LambdaEntity lambda, string code, DateTime now, VersionNote note)
+        => Append(database, lambda, LambdaSource.Parse(code, storage.Resources(lambda.Id)), now, note);
+
+    /// <summary>
+    /// Adds the files as the next version of the lambda, and saves.
+    /// </summary>
+    /// <remarks>
+    /// The resources go into the lambda's store first, and the version names
+    /// them: a resource the store keeps already - shipped unchanged from the
+    /// version before - is not kept again.
+    /// </remarks>
+    public LambdaVersionInfo Append(LambdaDbContext database, LambdaEntity lambda, IReadOnlyList<LambdaFile> files, DateTime now, VersionNote note)
     {
         var version = database.Deployments.Where(d => d.LambdaId == lambda.Id)
                               .Max(d => (int?)d.Version) + 1 ?? 1;
@@ -50,7 +62,7 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
 
         var change = VersionInput.Tidy(note.Change, VersionNote.MaxChange);
 
-        storage.Write(lambda.Id, version, code);
+        storage.Write(lambda.Id, version, LambdaSource.Serialize(LambdaSource.Keep(files, storage.Resources(lambda.Id))));
 
         database.Deployments.Add(new DeploymentEntity
         {

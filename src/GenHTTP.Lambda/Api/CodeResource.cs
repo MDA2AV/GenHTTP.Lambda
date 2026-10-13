@@ -28,7 +28,7 @@ public sealed class CodeResource(IMetaService meta)
     [ResourceMethod(Method.Post, "lambdas/:privateKey/code/check")]
     public async ValueTask<CompilationResponse> Check(string privateKey, CodeRequest request)
     {
-        var outcome = await meta.CheckAsync(privateKey, VersionResource.Serialize(request.Files));
+        var outcome = await meta.CheckAsync(privateKey, VersionResource.Checked(request.Files));
 
         return new CompilationResponse(outcome.Success, outcome.Diagnostics);
     }

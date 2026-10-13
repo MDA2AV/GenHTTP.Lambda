@@ -102,7 +102,7 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         var code = storage.ReadFeature(lambda.Id, entity.Id)
                 ?? throw LambdaException.NotFound($"The files of the feature '{entity.Name}' are no longer available.");
 
-        return new FeatureContent(Describe(entity, Newest(database, lambda.Id)), code);
+        return new FeatureContent(Describe(entity, Newest(database, lambda.Id)), code, storage.Resources(lambda.Id));
     }
 
     public (long LambdaId, long FeatureId) Require(string privateKey, string feature, bool editable)
@@ -313,8 +313,11 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
     }
 
     public FeatureInfo Save(string privateKey, string feature, string code, VersionNote? note = null, int? after = null)
+        => Save(privateKey, feature, VersionInput.Validate(code), note, after);
+
+    public FeatureInfo Save(string privateKey, string feature, IReadOnlyList<LambdaFile> files, VersionNote? note = null, int? after = null)
     {
-        var files = VersionInput.Validate(code);
+        VersionInput.Validate(files);
 
         var (database, lambda, entity, turn) = Locked(privateKey, feature);
 
@@ -334,7 +337,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
         // version may hold from the start rather than refused when merged
         VersionInput.ValidateAllowance(files, lambda.Tier, limits);
 
-        storage.WriteFeature(lambda.Id, entity.Id, code);
+        // its resources go into the lambda's store, which every feature of it
+        // shares with the versions, and the feature names them
+        storage.WriteFeature(lambda.Id, entity.Id, LambdaSource.Serialize(LambdaSource.Keep(files, storage.Resources(lambda.Id))));
 
         entity.Specification = VersionInput.Tidy(note?.Specification, VersionNote.MaxSpecification) ?? entity.Specification;
         entity.Change = VersionInput.Tidy(note?.Change, VersionNote.MaxChange) ?? entity.Change;

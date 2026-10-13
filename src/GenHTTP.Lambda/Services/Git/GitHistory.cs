@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Features;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
+using GenHTTP.Lambda.Services.Storage;
 
 using Microsoft.Extensions.Logging;
 
@@ -36,7 +37,7 @@ namespace GenHTTP.Lambda.Services.Git;
 /// away from the reactor: the first read of a lambda with a long history
 /// reads every version.
 /// </remarks>
-public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureService features, ILogger<GitHistory> logger)
+public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureService features, IStorageService storage, ILogger<GitHistory> logger)
 {
 
     /// <summary>
@@ -98,7 +99,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
 
             var previous = parent != null ? store.ReadCommit(lambda.Id, GitObjectId.Parse(parent)) : null;
 
-            var made = await CommitAsync(lambda, LambdaSource.Parse(code), parent != null ? [parent] : [], previous,
+            var made = await CommitAsync(lambda, LambdaSource.Parse(code, storage.Resources(lambda.Id)), parent != null ? [parent] : [], previous,
                                          OneLine(version.Change) ?? $"Version {version.Version}", version.Created, version.Version);
 
             index.Versions[version.Version] = made;
@@ -236,7 +237,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             ? $"Brings version {feature.Base} into the feature '{feature.Name}'"
             : OneLine(feature.Change) ?? feature.Name;
 
-        var commit = await CommitAsync(lambda, LambdaSource.Parse(code), parents, previous, message, feature.Modified, null);
+        var commit = await CommitAsync(lambda, LambdaSource.Parse(code, storage.Resources(lambda.Id)), parents, previous, message, feature.Modified, null);
 
         index.Features[feature.Key] = new FeatureTip(commit, feature.Revision, feature.Base);
 
@@ -272,7 +273,7 @@ public sealed class GitHistory(GitStore store, IMetaService meta, IFeatureServic
             ? "Moves assets/ to resources/, where the platform keeps what a lambda reads and serves now"
             : "Brings the platform's files up to date with how it lays a lambda out now";
 
-        var made = await CommitAsync(lambda, LambdaSource.Parse(code()), [tip], null, message, DateTime.UtcNow, null);
+        var made = await CommitAsync(lambda, LambdaSource.Parse(code(), storage.Resources(lambda.Id)), [tip], null, message, DateTime.UtcNow, null);
 
         index.Moved[tip] = made;
 

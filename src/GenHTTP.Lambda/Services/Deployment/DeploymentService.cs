@@ -76,11 +76,14 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
     #region Functionality
 
-    public async ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default)
+    public ValueTask<CompilationOutcome> ValidateAsync(string code, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default)
+        => ValidateAsync(LambdaSource.Parse(code, Storage.Resources(lambdaId ?? 0)), lambdaId, limits, cancellation);
+
+    public async ValueTask<CompilationOutcome> ValidateAsync(IReadOnlyList<LambdaFile> files, long? lambdaId = null, WorkspaceLimits? limits = null, CancellationToken cancellation = default)
     {
         var id = lambdaId ?? 0;
 
-        var request = new CompilationRequest(LambdaSource.Parse(code), Storage.GetWorkspace(id), Storage.GetResourceDirectory(id),
+        var request = new CompilationRequest(files, Storage.GetWorkspace(id), Storage.GetResourceDirectory(id),
                                             Storage.GetAssemblyDirectory(id), $"check_{id}", false, limits ?? WorkspaceLimits.Standard);
 
         await _compiling.WaitAsync(cancellation);
@@ -105,25 +108,25 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     }
 
     public ValueTask<CompilationOutcome> ActivateAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
-        => ActivateAsync(new Slot(lambdaId, null), version, limits, () => Storage.Read(lambdaId, version), cancellation);
+        => ActivateAsync(new Slot(lambdaId, null), version, limits, () => Storage.ReadFiles(lambdaId, version), cancellation);
 
     public ValueTask<IHandler> ResolveAsync(long lambdaId, int version, WorkspaceLimits limits, CancellationToken cancellation = default)
-        => ResolveAsync(new Slot(lambdaId, null), version, limits, () => Storage.Read(lambdaId, version), cancellation);
+        => ResolveAsync(new Slot(lambdaId, null), version, limits, () => Storage.ReadFiles(lambdaId, version), cancellation);
 
     public ValueTask<CompilationOutcome> PreviewAsync(long lambdaId, long featureId, int preview, string code, WorkspaceLimits limits,
                                                       CancellationToken cancellation = default)
-        => ActivateAsync(new Slot(lambdaId, featureId), preview, limits, () => code, cancellation);
+        => ActivateAsync(new Slot(lambdaId, featureId), preview, limits, () => LambdaSource.Parse(code, Storage.Resources(lambdaId)), cancellation);
 
     public ValueTask<IHandler> ResolvePreviewAsync(long lambdaId, long featureId, int preview, WorkspaceLimits limits,
                                                    CancellationToken cancellation = default)
-        => ResolveAsync(new Slot(lambdaId, featureId), preview, limits, () => Storage.ReadPreview(lambdaId, featureId), cancellation);
+        => ResolveAsync(new Slot(lambdaId, featureId), preview, limits, () => Storage.ReadPreviewFiles(lambdaId, featureId), cancellation);
 
     /// <summary>
     /// Builds what a slot is to serve and makes it what it serves.
     /// </summary>
     /// <param name="stamp">Which build this is: the version, or the deployment of a preview</param>
     /// <param name="read">Where the code comes from</param>
-    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
+    private async ValueTask<CompilationOutcome> ActivateAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<IReadOnlyList<LambdaFile>?> read,
                                                               CancellationToken cancellation)
     {
         if (IsDeployed(slot, stamp, limits))
@@ -168,19 +171,18 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// Reads, writes out and compiles what a slot is to serve - under the lock
     /// and away from the reactor, see the activation above.
     /// </summary>
-    private async ValueTask<CompilationOutcome> BuildAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
+    private async ValueTask<CompilationOutcome> BuildAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<IReadOnlyList<LambdaFile>?> read,
                                                            CancellationToken cancellation)
     {
-        var code = read();
+        // straight from where it is stored, the resources named rather than read
+        var files = read();
 
-        if (code == null)
+        if (files == null)
         {
             return CompilationOutcome.Failed(slot.FeatureId == null
                 ? $"Version {stamp} of this lambda does not exist anymore."
                 : "The preview of this feature has nothing to serve anymore.");
         }
-
-        var files = LambdaSource.Parse(code);
 
         // what this version ships is written out before it is compiled, so the
         // handler it returns is serving the resources of the version going
@@ -268,13 +270,13 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
         try
         {
-            var code = slot.FeatureId is { } feature
-                ? Storage.ReadPreview(slot.LambdaId, feature)
-                : Storage.Read(slot.LambdaId, running.Stamp);
+            var files = slot.FeatureId is { } feature
+                ? Storage.ReadPreviewFiles(slot.LambdaId, feature)
+                : Storage.ReadFiles(slot.LambdaId, running.Stamp);
 
-            if (code != null)
+            if (files != null)
             {
-                Materialize(slot, LambdaSource.Parse(code));
+                Materialize(slot, files);
             }
         }
         catch (Exception e)
@@ -283,7 +285,7 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
         }
     }
 
-    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<string?> read,
+    private async ValueTask<IHandler> ResolveAsync(Slot slot, int stamp, WorkspaceLimits limits, Func<IReadOnlyList<LambdaFile>?> read,
                                                    CancellationToken cancellation)
     {
         if (_deployed.TryGetValue(slot, out var existing) && existing.Stamp == stamp && existing.Limits == limits)
@@ -329,6 +331,11 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
     /// rather than lingering because nothing overwrote it. Names were checked
     /// before they got here, and the path is resolved against the root again
     /// anyway - a file that would land outside is skipped rather than trusted.
+    ///
+    /// A resource the lambda's store keeps is copied out of it, file to file,
+    /// without being read into the server - which a site of a few thousand
+    /// pages, written out on every deployment and on the first request after
+    /// a restart, would otherwise be, all of it, every time.
     /// </remarks>
     private void Materialize(Slot slot, IReadOnlyList<LambdaFile> files)
     {
@@ -364,7 +371,14 @@ public sealed class DeploymentService : IDeploymentService, IDisposable
 
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-                File.WriteAllBytes(path, file.Bytes);
+                if (file.Stored is { } stored)
+                {
+                    stored.CopyTo(path);
+                }
+                else
+                {
+                    File.WriteAllBytes(path, file.Bytes);
+                }
             }
         }
         catch (Exception e)

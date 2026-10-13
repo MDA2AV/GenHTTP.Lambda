@@ -171,7 +171,7 @@ public sealed class LambdaResource(IMetaService meta, ISecretService secrets, IS
             {
                 using var stream = File.Create(target);
 
-                ProjectPacker.Pack(exported, LambdaSource.Parse(content.Code), stream, database);
+                ProjectPacker.Pack(exported, content.Files(), stream, database);
 
                 return target;
             }

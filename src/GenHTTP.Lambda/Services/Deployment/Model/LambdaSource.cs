@@ -1,6 +1,10 @@
 using System.Buffers.Text;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Unicode;
 
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
@@ -9,11 +13,108 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 /// kept with it - or one of its resources, which it reads and serves while it
 /// runs.
 /// </summary>
-/// <param name="Name">What it is called, which is also what diagnostics name</param>
-/// <param name="Code">Its contents, base64 when <paramref name="Encoding" /> says so</param>
-/// <param name="Encoding">"base64" for a file that is not text, absent otherwise</param>
-public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(LongStringConverter))] string Code, string? Encoding = null)
+/// <remarks>
+/// What a file holds is in one of three places, and is only turned into the
+/// others when somebody asks for it: the text or the base64 it was sent as
+/// (<see cref="Code"/>), the bytes it was read as from an archive or a push,
+/// or - for a resource of a saved version - the lambda's resource store,
+/// which keeps every resource once, by what it holds (<see cref="Stored"/>).
+///
+/// A version of a website ships its pages as resources, thousands of them.
+/// Carried as strings, every save and every deployment of one took several
+/// copies of them at twice their size, as text and as base64, in one string
+/// the size of all of them together - a few hundred megabytes, all at once,
+/// for a site of fifteen, in a process every lambda shares. So the bytes stay
+/// bytes until the store has them, and a version names them rather than
+/// carries them.
+/// </remarks>
+public sealed record LambdaFile
 {
+    private static readonly UTF8Encoding Text = new(false, false);
+
+    private string? _code;
+
+    private byte[]? _bytes;
+
+    /// <param name="name">What it is called, which is also what diagnostics name</param>
+    /// <param name="code">Its contents, base64 when <paramref name="encoding" /> says so</param>
+    /// <param name="encoding">"base64" for a file that is not text, absent otherwise</param>
+    [JsonConstructor]
+    public LambdaFile(string name, string code, string? encoding = null)
+    {
+        Name = name;
+        Encoding = encoding;
+        _code = code;
+    }
+
+    private LambdaFile(string name, string? encoding, byte[]? bytes, StoredContent? stored)
+    {
+        Name = name;
+        Encoding = encoding;
+        _bytes = bytes;
+        Stored = stored;
+    }
+
+    /// <summary>
+    /// A resource as it was read, kept as the bytes it is: text where it is
+    /// UTF-8 without a NUL, base64 otherwise - once somebody asks for it as either.
+    /// </summary>
+    /// <remarks>
+    /// A byte order mark is not part of the text, as it never was when a
+    /// resource was read into a string.
+    /// </remarks>
+    /// <param name="binary">True for a file that stays what it was before - not text - whatever its bytes look like now</param>
+    public static LambdaFile FromBytes(string name, byte[] bytes, bool binary = false)
+    {
+        if (!binary && Utf8.IsValid(bytes) && !bytes.AsSpan().Contains((byte)0))
+        {
+            return new LambdaFile(name, null, bytes.AsSpan().StartsWith(Preamble) ? bytes[Preamble.Length..] : bytes, null);
+        }
+
+        return new LambdaFile(name, "base64", bytes, null);
+    }
+
+    /// <summary>
+    /// A resource as the lambda's resource store keeps it.
+    /// </summary>
+    /// <param name="encoding">"base64" where it is not text, as it was when it was kept</param>
+    public static LambdaFile FromStore(string name, StoredContent stored, string? encoding)
+        => new(name, encoding, null, stored);
+
+    private static ReadOnlySpan<byte> Preamble => [0xEF, 0xBB, 0xBF];
+
+    /// <summary>What it is called, which is also what diagnostics name.</summary>
+    public string Name { get; init; }
+
+    /// <summary>
+    /// What it holds, base64 when <see cref="Encoding" /> says so - made from
+    /// its bytes, or read from the store, the first time it is asked for.
+    /// </summary>
+    /// <remarks>
+    /// Given anew - an edit of the text, say - it is what the file holds from
+    /// then on, and the bytes or the stored copy it was before are let go.
+    /// </remarks>
+    [JsonConverter(typeof(LongStringConverter))]
+    public string Code
+    {
+        get => _code ??= Decode();
+        init
+        {
+            _code = value;
+            _bytes = null;
+            Stored = null;
+        }
+    }
+
+    /// <summary>"base64" for a file that is not text, absent otherwise.</summary>
+    public string? Encoding { get; init; }
+
+    /// <summary>
+    /// Where the lambda's resource store keeps it - for a resource of a saved
+    /// version or feature, and nothing for a file sent or read with what it holds.
+    /// </summary>
+    [JsonIgnore]
+    public StoredContent? Stored { get; private init; }
 
     /// <summary>Whether this is C# the lambda is compiled from.</summary>
     /// <remarks>
@@ -35,11 +136,131 @@ public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(Lon
     [JsonIgnore]
     public bool IsResource => LambdaSource.IsResource(Name);
 
-    /// <summary>The bytes of a file, whatever it was sent as.</summary>
+    /// <summary>
+    /// Whether what it holds is text sent with it - base64 that still has to
+    /// be checked, say - rather than bytes it was read as or a stored copy.
+    /// </summary>
     [JsonIgnore]
-    public byte[] Bytes => Encoding == "base64"
-                         ? Convert.FromBase64String(Code)
-                         : System.Text.Encoding.UTF8.GetBytes(Code);
+    public bool IsSent => _bytes == null && Stored == null;
+
+    /// <summary>The bytes of a file, whatever it was sent, read or kept as.</summary>
+    /// <remarks>A copy, made anew every time it is asked for - <see cref="Open"/> streams it.</remarks>
+    [JsonIgnore]
+    public byte[] Bytes
+    {
+        get
+        {
+            if (_bytes != null)
+            {
+                return _bytes;
+            }
+
+            if (Stored is { } stored)
+            {
+                return stored.ReadAll();
+            }
+
+            return Encoding == "base64" ? Convert.FromBase64String(Code) : Text.GetBytes(Code);
+        }
+    }
+
+    /// <summary>How many bytes it holds - decoded rather than as sent - without making any of them.</summary>
+    [JsonIgnore]
+    public long Length
+    {
+        get
+        {
+            if (_bytes != null)
+            {
+                return _bytes.Length;
+            }
+
+            if (Stored is { } stored)
+            {
+                return stored.Length;
+            }
+
+            // a file that is not the base64 it claims to be is caught by
+            // Validate; here it simply counts for nothing
+            if (Encoding == "base64")
+            {
+                return Base64.IsValid(_code!, out var decoded) ? decoded : 0;
+            }
+
+            return Text.GetByteCount(_code!);
+        }
+    }
+
+    /// <summary>The SHA-256 of what it holds, in lowercase hex - the name the resource store keeps it under.</summary>
+    [JsonIgnore]
+    public string Sha256 => Stored?.Sha256 ?? Convert.ToHexStringLower(SHA256.HashData(Bytes));
+
+    /// <summary>Reads what the file holds, from wherever it is.</summary>
+    public Stream Open() => Stored is { } stored ? stored.Open() : new MemoryStream(Bytes, false);
+
+    private string Decode()
+    {
+        var bytes = _bytes ?? Stored?.ReadAll() ?? [];
+
+        return Encoding == "base64" ? Convert.ToBase64String(bytes) : Text.GetString(bytes);
+    }
+
+    /// <summary>
+    /// The same file: of the same name and encoding, holding the same.
+    /// </summary>
+    /// <remarks>
+    /// Wherever either holds it, so a resource read from the store is the
+    /// same as the one it was kept from.
+    /// </remarks>
+    public bool Equals(LambdaFile? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (Name != other.Name || Encoding != other.Encoding)
+        {
+            return false;
+        }
+
+        if (Stored != null && other.Stored != null)
+        {
+            return Stored.Sha256 == other.Stored.Sha256;
+        }
+
+        if (IsSent && other.IsSent)
+        {
+            return _code == other._code;
+        }
+
+        return Length == other.Length && Sha256 == other.Sha256;
+    }
+
+    public override int GetHashCode() => HashCode.Combine(Name, Encoding);
+
+    /// <summary>
+    /// Says which file it is - not what it holds, which a file of the store
+    /// would have to be read for, and a large one would fill the log.
+    /// </summary>
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("Name = ").Append(Name);
+
+        if (Encoding != null)
+        {
+            builder.Append(", Encoding = ").Append(Encoding);
+        }
+
+        builder.Append(", Length = ").Append(Length);
+
+        return true;
+    }
 
 }
 
@@ -151,21 +372,36 @@ public static class LambdaSource
 
     #endregion
 
+    /// <remarks>
+    /// Written without escaping what only matters inside HTML: an envelope is
+    /// stored and read back, never put into a page, and the default escapes
+    /// every &lt;, &gt;, &amp; and ' of a file in six characters - a third more
+    /// for a version that keeps a site's pages in its code.
+    /// </remarks>
     private static readonly JsonSerializerOptions Format = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
     /// <summary>
-    /// Marks the stored text as an envelope in today's layout.
+    /// Marks the stored text as an envelope in today's layout, whose
+    /// resources are named by what they hold and kept in the resource store.
     /// </summary>
     /// <remarks>
     /// No C# begins this way, so a blob that starts with it was written by this
     /// and one that does not is code from before there was more than one file
-    /// - or an envelope of the first layout, which starts with its own marker.
+    /// - or an envelope of an earlier layout, which starts with its own marker.
     /// </remarks>
-    private const string Marker = "{\"version\":2,\"files\":";
+    private const string Marker = "{\"version\":3,\"files\":";
+
+    /// <summary>
+    /// Marks an envelope written in the second layout: today's names, with
+    /// what every file holds in the envelope itself, resources included.
+    /// </summary>
+    private const string SecondMarker = "{\"version\":2,\"files\":";
 
     /// <summary>
     /// Marks an envelope written in the first layout: the files to serve at
@@ -176,26 +412,38 @@ public static class LambdaSource
     #region Functionality
 
     /// <summary>
-    /// Reads stored text as the files it holds, in today's layout.
+    /// Reads stored text as the files it holds, in today's layout - without
+    /// what the resources hold, which can be named, counted and compared
+    /// like this but not read.
     /// </summary>
-    public static IReadOnlyList<LambdaFile> Parse(string? stored)
+    public static IReadOnlyList<LambdaFile> Parse(string? stored) => Parse(stored, null);
+
+    /// <summary>
+    /// Reads stored text as the files it holds, in today's layout, its
+    /// resources read from the store of the lambda it belongs to.
+    /// </summary>
+    /// <remarks>
+    /// Nothing written in an earlier layout is ever rewritten: it is read in
+    /// today's, as it is read. An envelope of the second layout still carries
+    /// what its resources hold, and keeps carrying it until it is saved again.
+    /// </remarks>
+    /// <param name="resources">The resource store of the lambda the text belongs to</param>
+    public static IReadOnlyList<LambdaFile> Parse(string? stored, IResourceStore? resources)
     {
         var text = stored ?? string.Empty;
 
-        var current = text.StartsWith(Marker, StringComparison.Ordinal);
+        var layout = LayoutOf(text);
 
-        if (!current && !text.StartsWith(FirstMarker, StringComparison.Ordinal))
+        if (layout == 0)
         {
             return [new LambdaFile(EntryName, text)];
         }
 
         try
         {
-            var envelope = JsonSerializer.Deserialize<Envelope>(text, Format);
-
-            if (envelope?.Files is { Count: > 0 } files)
+            if (JsonSerializer.Deserialize<Envelope>(text, Format) is { Files.Count: > 0 } envelope)
             {
-                return current ? files : [.. files.Select(f => f with { Name = Moved(f.Name) })];
+                return Files(envelope, layout, resources);
             }
         }
         catch (JsonException)
@@ -208,12 +456,85 @@ public static class LambdaSource
     }
 
     /// <summary>
+    /// Reads what a version was stored as straight from where it is stored,
+    /// rather than as a string first.
+    /// </summary>
+    /// <remarks>
+    /// An envelope of the second layout carries every resource of a version,
+    /// a site's worth of them: read as one string, that string alone took
+    /// twice what it held, beside the files read out of it.
+    /// </remarks>
+    /// <param name="stored">What was stored, which has to be seekable</param>
+    /// <param name="resources">The resource store of the lambda it belongs to</param>
+    public static IReadOnlyList<LambdaFile> Read(Stream stored, IResourceStore? resources)
+    {
+        var start = new byte[Marker.Length];
+
+        var layout = LayoutOf(Encoding.ASCII.GetString(start, 0, stored.ReadAtLeast(start, start.Length, throwOnEndOfStream: false)));
+
+        stored.Position = 0;
+
+        if (layout != 0)
+        {
+            try
+            {
+                if (JsonSerializer.Deserialize<Envelope>(stored, Format) is { Files.Count: > 0 } envelope)
+                {
+                    return Files(envelope, layout, resources);
+                }
+            }
+            catch (JsonException)
+            {
+                // somebody's code that only starts like an envelope, as above
+            }
+
+            stored.Position = 0;
+        }
+
+        using var reader = new StreamReader(stored, leaveOpen: true);
+
+        return [new LambdaFile(EntryName, reader.ReadToEnd())];
+    }
+
+    /// <summary>
+    /// The hashes of the resources stored text names: what the resource store
+    /// has to keep for it.
+    /// </summary>
+    /// <remarks>
+    /// Only today's layout names any. Text of an earlier one carries what its
+    /// resources hold and is not read at all, however large it is.
+    ///
+    /// An envelope of today's layout that cannot be read throws rather than
+    /// naming nothing: what it names would be taken from the store.
+    /// </remarks>
+    /// <exception cref="JsonException">Stored text that starts as an envelope of today's layout and is not one</exception>
+    public static IReadOnlyList<string> References(Stream stored)
+    {
+        var start = new byte[Marker.Length];
+
+        if (LayoutOf(Encoding.ASCII.GetString(start, 0, stored.ReadAtLeast(start, start.Length, throwOnEndOfStream: false))) != 3)
+        {
+            return [];
+        }
+
+        stored.Position = 0;
+
+        var envelope = JsonSerializer.Deserialize<Envelope>(stored, Format) ?? throw new JsonException("The envelope is empty.");
+
+        return [.. envelope.Files.Where(f => f.Stored != null).Select(f => f.Stored!)];
+    }
+
+    /// <summary>
     /// Writes the files as the single blob a version is stored as.
     /// </summary>
     /// <remarks>
     /// A lambda that is still one file is stored as that file and nothing else,
     /// so the common case stays readable on disk and anything reading an older
     /// version cannot tell the difference.
+    ///
+    /// A resource the store keeps is named by its hash; one it does not keep
+    /// yet is written with what it holds, as it was before there was a store
+    /// - which is what <see cref="Keep"/> is for, before a version is written.
     /// </remarks>
     public static string Serialize(IReadOnlyList<LambdaFile> files)
     {
@@ -222,7 +543,52 @@ public static class LambdaSource
             return files[0].Code;
         }
 
-        return JsonSerializer.Serialize(new Envelope(2, files), Format);
+        var stored = files.Select(f => f.Stored is { } kept
+                                      ? new StoredFile(f.Name, null, f.Encoding, kept.Sha256, kept.Length)
+                                      : new StoredFile(f.Name, f.Code, f.Encoding))
+                          .ToList();
+
+        return JsonSerializer.Serialize(new Envelope(3, stored), Format);
+    }
+
+    /// <summary>
+    /// Puts what the resources hold into the resource store of the lambda
+    /// they are saved for, and gives back the files as it keeps them.
+    /// </summary>
+    /// <remarks>
+    /// Before anything is written that names them, so that a version names
+    /// only what is kept. A resource the store keeps already - read from a
+    /// version of this lambda, or the same as one - is kept once, however
+    /// many versions ship it.
+    /// </remarks>
+    /// <param name="resources">The resource store of the lambda the files are saved for</param>
+    public static IReadOnlyList<LambdaFile> Keep(IReadOnlyList<LambdaFile> files, IResourceStore resources)
+    {
+        var kept = new List<LambdaFile>(files.Count);
+
+        foreach (var file in files)
+        {
+            if (!file.IsResource)
+            {
+                kept.Add(file);
+                continue;
+            }
+
+            if (file.Stored is { } stored && resources.Has(stored.Sha256))
+            {
+                kept.Add(ReferenceEquals(stored.Store, resources) ? file : LambdaFile.FromStore(file.Name, stored with { Store = resources }, file.Encoding));
+                continue;
+            }
+
+            if (file.Stored is { Store: null })
+            {
+                throw new InvalidOperationException($"'{file.Name}' names a resource as {file.Stored.Sha256}, which the lambda it is saved for does not keep.");
+            }
+
+            kept.Add(LambdaFile.FromStore(file.Name, resources.Keep(file.Bytes), file.Encoding));
+        }
+
+        return kept;
     }
 
     /// <summary>
@@ -230,8 +596,10 @@ public static class LambdaSource
     /// was written in.
     /// </summary>
     /// <remarks>
-    /// Compared as they are first, which is the answer nearly always: only a
-    /// blob of the first layout beside one written since is read to tell.
+    /// Compared as they are first, which is the answer nearly always. Read
+    /// otherwise - without the resource store, which is not needed to tell:
+    /// a resource it keeps is compared by its hash, and one written with what
+    /// it holds by the hash of that.
     /// </remarks>
     public static bool Same(string? stored, string? other)
     {
@@ -245,7 +613,60 @@ public static class LambdaSource
             return false;
         }
 
-        return Serialize(Parse(stored)) == Serialize(Parse(other));
+        var files = Parse(stored);
+
+        var others = Parse(other);
+
+        return files.Count == others.Count && files.Zip(others).All(pair => pair.First.Equals(pair.Second));
+    }
+
+    /// <summary>
+    /// Which layout stored text starts in: 3 for today's, 2 and 1 for the
+    /// earlier envelopes, 0 for code from before there were several files.
+    /// </summary>
+    private static int LayoutOf(string text)
+    {
+        if (text.StartsWith(Marker, StringComparison.Ordinal))
+        {
+            return 3;
+        }
+
+        if (text.StartsWith(SecondMarker, StringComparison.Ordinal))
+        {
+            return 2;
+        }
+
+        return text.StartsWith(FirstMarker, StringComparison.Ordinal) ? 1 : 0;
+    }
+
+    /// <summary>
+    /// The files of an envelope, named as today's layout names them.
+    /// </summary>
+    private static IReadOnlyList<LambdaFile> Files(Envelope envelope, int layout, IResourceStore? resources)
+    {
+        var files = new List<LambdaFile>(envelope.Files.Count);
+
+        foreach (var file in envelope.Files)
+        {
+            var name = layout == 1 ? Moved(file.Name) : file.Name;
+
+            if (file.Stored == null)
+            {
+                files.Add(new LambdaFile(name, file.Code ?? string.Empty, file.Encoding));
+            }
+            else if (StoredContent.IsHash(file.Stored))
+            {
+                files.Add(LambdaFile.FromStore(name, new StoredContent(file.Stored, file.Length ?? 0, resources), file.Encoding));
+            }
+            else
+            {
+                // a hash becomes part of a path in the store, and what is not
+                // one could name a file outside it
+                throw new InvalidOperationException($"'{name}' is stored as '{file.Stored}', which is not the hash of a resource.");
+            }
+        }
+
+        return files;
     }
 
     /// <summary>
@@ -308,17 +729,7 @@ public static class LambdaSource
     /// <summary>
     /// How many bytes one file comes to, decoded.
     /// </summary>
-    public static long Size(LambdaFile file)
-    {
-        if (file.Encoding == "base64")
-        {
-            // a file that is not the base64 it claims to be is caught by
-            // Validate; here it simply counts for nothing
-            return Base64.IsValid(file.Code, out var decoded) ? decoded : 0;
-        }
-
-        return System.Text.Encoding.UTF8.GetByteCount(file.Code);
-    }
+    public static long Size(LambdaFile file) => file.Length;
 
     /// <summary>
     /// Checks the shape of what was submitted, and says what is wrong with it.
@@ -350,8 +761,9 @@ public static class LambdaSource
                 return $"'{file.Name}' asks for encoding '{file.Encoding}'. Only 'base64' is understood; leave it out for text.";
             }
 
-            // the same test Convert.FromBase64String makes, without the copy
-            if (file.Encoding == "base64" && !Base64.IsValid(file.Code))
+            // the same test Convert.FromBase64String makes, without the copy -
+            // of what was sent as base64, since bytes read or kept are bytes
+            if (file.Encoding == "base64" && file.IsSent && !Base64.IsValid(file.Code))
             {
                 return $"'{file.Name}' says it is base64 and is not.";
             }
@@ -608,7 +1020,14 @@ public static class LambdaSource
 
     #region Types
 
-    private sealed record Envelope(int Version, IReadOnlyList<LambdaFile> Files);
+    private sealed record Envelope(int Version, IReadOnlyList<StoredFile> Files);
+
+    /// <summary>
+    /// A file as an envelope holds it: with what it holds, or - a resource of
+    /// today's layout - with the hash and the length it is kept under.
+    /// </summary>
+    private sealed record StoredFile(string Name, [property: JsonConverter(typeof(LongStringConverter))] string? Code = null, string? Encoding = null,
+                                     string? Stored = null, long? Length = null);
 
     #endregion
 

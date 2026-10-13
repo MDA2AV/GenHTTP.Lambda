@@ -1,5 +1,6 @@
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
+using GenHTTP.Lambda.Services.Deployment.Model;
 
 using Microsoft.Extensions.Logging;
 
@@ -10,6 +11,11 @@ namespace GenHTTP.Lambda.Services.Storage;
 /// every lambda a private directory below <c>{data}/workspaces/{id}</c>.
 /// </summary>
 /// <remarks>
+/// The resources of all versions and features of a lambda are kept below
+/// <c>{data}/code/{id}/resources</c>, each once and named by what it holds
+/// (<see cref="ResourceStore"/>), and the versions name them. What nothing
+/// names any more is removed with a version or a feature.
+///
 /// A feature keeps everything of its own below <c>{data}/features/{id}/{feature}</c>:
 /// <c>files.json</c> as it is being worked on, <c>preview.json</c> as its
 /// preview was deployed, its copy of the workspace in <c>workspace</c> and
@@ -89,6 +95,10 @@ public sealed class FileSystemStorageService : IStorageService
         return File.ReadAllText(file);
     }
 
+    public IReadOnlyList<LambdaFile>? ReadFiles(long lambdaId, int version) => ReadFilesIfThere(lambdaId, GetFile(lambdaId, version));
+
+    public IResourceStore Resources(long lambdaId) => new ResourceStore(GetResourceStoreDirectory(lambdaId));
+
     public void DeleteVersion(long lambdaId, int version)
     {
         var file = GetFile(lambdaId, version);
@@ -97,6 +107,9 @@ public sealed class FileSystemStorageService : IStorageService
         {
             File.Delete(file);
         }
+
+        // what only this version named
+        CollectResources(lambdaId);
 
         // and the project its published source was packed into, which no
         // visitor can ask for any more
@@ -183,6 +196,9 @@ public sealed class FileSystemStorageService : IStorageService
     public string? ReadPreview(long lambdaId, long featureId)
         => ReadIfThere(Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"));
 
+    public IReadOnlyList<LambdaFile>? ReadPreviewFiles(long lambdaId, long featureId)
+        => ReadFilesIfThere(lambdaId, Path.Combine(GetFeatureDirectory(lambdaId, featureId), "preview.json"));
+
     /// <remarks>
     /// Copied beside the copy it replaces and swapped in once complete, so a
     /// copy that fails halfway leaves the one there was. On a thread of its
@@ -226,6 +242,9 @@ public sealed class FileSystemStorageService : IStorageService
     public void DeleteFeature(long lambdaId, long featureId)
     {
         Remove(GetFeatureDirectory(lambdaId, featureId));
+
+        // what only the feature named, its preview included
+        CollectResources(lambdaId);
     }
 
     public IEnumerable<(long LambdaId, long FeatureId)> ListFeatures()
@@ -297,6 +316,25 @@ public sealed class FileSystemStorageService : IStorageService
         File.Move(staging, file, true);
     }
 
+    /// <summary>
+    /// Reads stored files straight from their file, the resources from the
+    /// lambda's store - without the string an envelope that carries them is.
+    /// </summary>
+    private IReadOnlyList<LambdaFile>? ReadFilesIfThere(long lambdaId, string file)
+    {
+        try
+        {
+            using var stored = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+            return LambdaSource.Read(stored, Resources(lambdaId));
+        }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // removed between looking and reading, or never there
+            return null;
+        }
+    }
+
     private static string? ReadIfThere(string file)
     {
         try
@@ -312,9 +350,90 @@ public sealed class FileSystemStorageService : IStorageService
 
     #endregion
 
+    #region Resources
+
+    /// <summary>
+    /// How long a resource nothing names is kept all the same.
+    /// </summary>
+    /// <remarks>
+    /// The resources of a save are kept before the version or the feature
+    /// that names them is written, and a version is removed under the lambda's
+    /// turn while a feature is saved under its own - so what was kept a moment
+    /// ago may be named a moment from now. An hour is longer than any save.
+    /// </remarks>
+    private static readonly TimeSpan ResourceGrace = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Removes the resources none of the lambda's versions, features and
+    /// previews names any more.
+    /// </summary>
+    /// <remarks>
+    /// Anything that cannot be read leaves everything kept: a name that is
+    /// missed would take a resource somebody still serves.
+    /// </remarks>
+    private void CollectResources(long lambdaId)
+    {
+        var store = GetResourceStoreDirectory(lambdaId);
+
+        if (!Directory.Exists(store))
+        {
+            return;
+        }
+
+        try
+        {
+            var named = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var version in Directory.EnumerateFiles(GetCodeDirectory(lambdaId), "v*.cs"))
+            {
+                Name(version, named);
+            }
+
+            var features = Path.Combine(Options.FeatureDirectory, lambdaId.ToString());
+
+            if (Directory.Exists(features))
+            {
+                foreach (var feature in Directory.EnumerateDirectories(features))
+                {
+                    Name(Path.Combine(feature, "files.json"), named);
+                    Name(Path.Combine(feature, "preview.json"), named);
+                }
+            }
+
+            var (files, bytes) = new ResourceStore(store).Collect(named, DateTime.UtcNow - ResourceGrace);
+
+            if (files > 0)
+            {
+                Logger.LogInformation("Removed {Files} resources of lambda #{LambdaId} no version or feature names any more ({Bytes} bytes)", files, lambdaId, bytes);
+            }
+        }
+        catch (Exception e) when (e is IOException or System.Text.Json.JsonException)
+        {
+            Logger.LogWarning(e, "Kept the resources of lambda #{LambdaId}: what names them could not be read", lambdaId);
+        }
+    }
+
+    private static void Name(string file, HashSet<string> named)
+    {
+        try
+        {
+            using var stored = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+            named.UnionWith(LambdaSource.References(stored));
+        }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // not there, so it names nothing
+        }
+    }
+
+    #endregion
+
     #region Helpers
 
     private string GetCodeDirectory(long lambdaId) => Path.Combine(Options.CodeDirectory, lambdaId.ToString());
+
+    private string GetResourceStoreDirectory(long lambdaId) => Path.Combine(GetCodeDirectory(lambdaId), "resources");
 
     private string GetWorkspaceDirectory(long lambdaId) => Path.Combine(Options.WorkspaceDirectory, lambdaId.ToString());
 

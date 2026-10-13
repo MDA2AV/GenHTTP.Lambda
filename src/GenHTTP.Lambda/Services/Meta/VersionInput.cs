@@ -27,14 +27,22 @@ internal static class VersionInput
             throw LambdaException.Invalid("The code must not be empty.");
         }
 
-        var files = LambdaSource.Parse(code);
+        return Validate(LambdaSource.Parse(code));
+    }
 
+    /// <summary>
+    /// Checks files sent or read as they are - what an archive or a push
+    /// holds - the way <see cref="Validate(string?)"/> checks text.
+    /// </summary>
+    /// <returns>The files, for the checks that do need to know whose they are</returns>
+    public static IReadOnlyList<LambdaFile> Validate(IReadOnlyList<LambdaFile>? files)
+    {
         if (LambdaSource.Validate(files) is { } complaint)
         {
             throw LambdaException.Invalid(complaint);
         }
 
-        return files;
+        return files!;
     }
 
     /// <summary>
@@ -48,8 +56,9 @@ internal static class VersionInput
     /// what the premium tier allows, so whoever reads it knows there is more.
     /// A feature is held to the same, since what it holds becomes a version.
     ///
-    /// Counted in bytes as they are, whatever a file is - every version
-    /// carries its own copy of all of it, and is read and written whole.
+    /// Counted in bytes as they are, whatever a file is - all of it, however
+    /// much of it the lambda's store keeps already for the versions before:
+    /// any version may be the one put online, and it ships all of it.
     /// </remarks>
     public static void ValidateAllowance(IReadOnlyList<LambdaFile> files, LambdaTier tier, ILimitsService limits)
     {

@@ -213,6 +213,15 @@ public static class ProjectTree
                 files.Add(new LambdaFile(name, text));
                 stored.Add(new StoredFile(name, entry.Path, blob, false));
             }
+            else if (LambdaSource.IsResource(name))
+            {
+                // the bytes it is, until the lambda's store has them - binary
+                // where it was before, whatever its bytes look like now
+                var file = LambdaFile.FromBytes(name, content, known is { Binary: true } && known.Blob == blob);
+
+                files.Add(file);
+                stored.Add(new StoredFile(name, entry.Path, blob, file.Encoding == "base64"));
+            }
             else if (known is { Binary: true } && known.Blob == blob || !TryText(content, out var asText))
             {
                 files.Add(new LambdaFile(name, Convert.ToBase64String(content), "base64"));

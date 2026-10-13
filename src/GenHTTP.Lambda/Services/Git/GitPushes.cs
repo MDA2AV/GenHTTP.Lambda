@@ -193,7 +193,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
         // a version is only made of what compiles, as when a feature is merged
         var tip = steps[^1];
 
-        var check = await meta.CheckAsync(lambda.PrivateKey, LambdaSource.Serialize(tip.Read.Files!));
+        var check = await meta.CheckAsync(lambda.PrivateKey, tip.Read.Files!);
 
         if (!check.Success)
         {
@@ -214,7 +214,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
             try
             {
-                version = meta.Save(lambda.PrivateKey, LambdaSource.Serialize(step.Read.Files!), new VersionNote(specification, change, VersionOrigins.Git), after);
+                version = meta.Save(lambda.PrivateKey, step.Read.Files!, new VersionNote(specification, change, VersionOrigins.Git), after);
             }
             catch (LambdaException e) when (saved.Count > 0)
             {
@@ -366,8 +366,6 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
             return;
         }
 
-        var code = LambdaSource.Serialize(read.Files);
-
         var (change, _) = Message(commits.Find(update.NewId)!);
 
         var started = feature == null;
@@ -383,7 +381,7 @@ public sealed class GitPushes(GitStore store, GitHistory history, IMetaService m
 
         try
         {
-            feature = features.Save(lambda.PrivateKey, feature.Key, code, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
+            feature = features.Save(lambda.PrivateKey, feature.Key, read.Files, new VersionNote(Change: feature.Change == null ? change : null, Origin: VersionOrigins.Git),
                                     after: feature.Revision);
         }
         catch (LambdaException) when (started)
