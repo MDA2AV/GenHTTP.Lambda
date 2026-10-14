@@ -30,7 +30,7 @@ export const analytics = {
 
   /** The figures at the top; each one picks what the chart below shows. */
   visitors: 'Visitors',
-  visitorsHint: 'Different people, each counted once a day. Search engines and other programs are not visitors.',
+  visitorsHint: 'Different people who opened a page, each counted once a day. Search engines and other programs are not visitors.',
   views: 'Page views',
   viewsHint: 'Every time somebody opened a page.',
   hits: 'Requests',

@@ -24,7 +24,7 @@ export const analytics: EditorMessages['analytics'] = {
   premiumRange: '프리미엄에서는 최대 1년까지 볼 수 있어요',
 
   visitors: '방문자',
-  visitorsHint: '서로 다른 사람을 하루에 한 번씩 세어요. 검색 엔진과 그 밖의 프로그램은 방문자가 아니에요.',
+  visitorsHint: '페이지를 연 서로 다른 사람을 하루에 한 번씩 세어요. 검색 엔진과 그 밖의 프로그램은 방문자가 아니에요.',
   views: '페이지 조회수',
   viewsHint: '누군가 페이지를 열 때마다 세어요.',
   hits: '요청',

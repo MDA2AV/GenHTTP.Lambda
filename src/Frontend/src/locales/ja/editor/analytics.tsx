@@ -28,7 +28,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   /** The figures at the top; each one picks what the chart below shows. */
   visitors: '訪問者',
-  visitorsHint: 'ユニークな訪問者数です。同じ人は1日に1回だけ数えます。検索エンジンやその他のプログラムは訪問者に含めません。',
+  visitorsHint: 'ページを開いたユニークな訪問者数です。同じ人は1日に1回だけ数えます。検索エンジンやその他のプログラムは訪問者に含めません。',
   views: 'ページビュー',
   viewsHint: 'ページが開かれた回数です。',
   hits: 'リクエスト',

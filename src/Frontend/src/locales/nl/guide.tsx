@@ -517,11 +517,11 @@ export const guide: Messages['guide'] = {
     <>
       Het wordt geteld door het platform, vóór je app, dus je app heeft er niets voor nodig: geen cookies, geen script,
       geen banner die je bezoekers moeten accepteren. Alleen aantallen per dag worden bewaard – nooit een adres, en van
-      de pagina waar iemand vandaan kwam alleen de site. Een bezoeker is een persoon, één keer per dag geteld:
-      zoekmachines, AI-crawlers en andere programma’s worden apart geteld, per soort, en Google, Bing, OpenAI, Apple en
-      Perplexity alleen bij naam als het bezoek van een door hen gepubliceerd adres kwam – iedereen kan zich als hen
-      voordoen. Een jaar wordt bewaard; een gratis app toont daarvan de laatste zeven dagen en {k.b('Premium')} alles,
-      ook wat eerder geteld is. Als je het uitzet, wordt wat geteld was verwijderd.
+      de pagina waar iemand vandaan kwam alleen de site. Een bezoeker is een persoon die een pagina heeft geopend, één
+      keer per dag geteld: zoekmachines, AI-crawlers en andere programma’s worden apart geteld, per soort, en Google,
+      Bing, OpenAI, Apple en Perplexity alleen bij naam als het bezoek van een door hen gepubliceerd adres kwam –
+      iedereen kan zich als hen voordoen. Een jaar wordt bewaard; een gratis app toont daarvan de laatste zeven dagen en
+      {k.b('Premium')} alles, ook wat eerder geteld is. Als je het uitzet, wordt wat geteld was verwijderd.
     </>
   )),
   visitorsAside:

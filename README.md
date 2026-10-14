@@ -865,8 +865,10 @@ feature's preview.
   500 characters of an agent are read.
 - **Visitors without keeping anybody.** A visitor is their address and their
   agent, hashed with a key made at random per day and lambda, held in memory
-  for today and yesterday only (`DailyVisitors`), and only a person is one.
-  So a visitor counts once a day; a restart counts somebody again who comes back the same day, and an
+  for today and yesterday only (`DailyVisitors`), and only a person who
+  opened a page is one: a request for anything else - a script, an API call,
+  a path a scanner guessed - makes nobody a visitor, whatever agent it names,
+  so there are never more visitors than page views. So a visitor counts once a day; a restart counts somebody again who comes back the same day, and an
   installation that keeps no addresses (`LAMBDA_LOG_CLIENT_ADDRESS=false`)
   counts no visitors. No cookie, no script in the lambda.
 - **A database of its own.** `analytics.db` beside `lambda.db`, a star:

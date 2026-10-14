@@ -24,7 +24,7 @@ export const analytics: EditorMessages['analytics'] = {
   premiumRange: 'Premium pokazuje do roku',
 
   visitors: 'Odwiedzający',
-  visitorsHint: 'Różne osoby, każda liczona raz dziennie. Wyszukiwarki i inne programy nie są odwiedzającymi.',
+  visitorsHint: 'Różne osoby, które otworzyły stronę, każda liczona raz dziennie. Wyszukiwarki i inne programy nie są odwiedzającymi.',
   views: 'Odsłony stron',
   viewsHint: 'Za każdym razem, gdy ktoś otworzył stronę.',
   hits: 'Żądania',
