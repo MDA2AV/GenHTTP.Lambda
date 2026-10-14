@@ -10,8 +10,8 @@ namespace GenHTTP.Lambda.Services.Hosting;
 
 /// <summary>
 /// Which hosts the server answers for on behalf of a lambda, and which lambda
-/// each of them belongs to: the domains of their own, and the subdomains of
-/// the hosting domain.
+/// each of them belongs to: the domains of their own, www in front of them,
+/// and the subdomains of the hosting domain.
 /// </summary>
 /// <remarks>
 /// Asked on every request the server receives, so the domains are held in
@@ -29,7 +29,7 @@ namespace GenHTTP.Lambda.Services.Hosting;
 public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases, LambdaAddresses addresses, ILogger<DomainRegistry> logger)
     : IDomainRegistry
 {
-    private volatile Served _served = new(FrozenDictionary<string, long>.Empty, FrozenDictionary<string, string>.Empty);
+    private volatile Served _served = new(FrozenDictionary<string, long>.Empty, FrozenDictionary<string, string>.Empty, FrozenDictionary<string, string>.Empty);
 
     /// <summary>
     /// One reload at a time: two running side by side could finish in either
@@ -49,7 +49,21 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
     #region Functionality
 
     public LambdaHost? Find(string host)
-        => _served.Domains.TryGetValue(host, out var lambdaId) ? new CustomDomain(host, lambdaId) : addresses.Resolve(host);
+    {
+        var served = _served;
+
+        if (served.Domains.TryGetValue(host, out var lambdaId))
+        {
+            return new CustomDomain(host, lambdaId);
+        }
+
+        if (served.Www.TryGetValue(host, out var domain))
+        {
+            return new WwwOfDomain(host, domain);
+        }
+
+        return addresses.Resolve(host);
+    }
 
     public string? DomainOf(string publicKey) => _served.ByKey.GetValueOrDefault(publicKey);
 
@@ -71,8 +85,17 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
 
             var previous = _served.Domains.Count;
 
-            _served = new Served(served.ToFrozenDictionary(l => l.Domain, l => l.Id, StringComparer.Ordinal),
-                                 served.ToFrozenDictionary(l => l.PublicKey, l => l.Domain, StringComparer.Ordinal));
+            var domains = served.ToFrozenDictionary(l => l.Domain, l => l.Id, StringComparer.Ordinal);
+
+            // a domain entered without www is also typed with it, the way
+            // sites used to be found; one entered with it is the owner's
+            // choice, and so is a www that is a domain of its own
+            var www = served.Where(l => !l.Domain.StartsWith("www.", StringComparison.Ordinal))
+                            .Select(l => (Name: "www." + l.Domain, l.Domain))
+                            .Where(w => !domains.ContainsKey(w.Name) && !addresses.Owns(w.Name))
+                            .ToFrozenDictionary(w => w.Name, w => w.Domain, StringComparer.Ordinal);
+
+            _served = new Served(domains, served.ToFrozenDictionary(l => l.PublicKey, l => l.Domain, StringComparer.Ordinal), www);
 
             if (previous != _served.Domains.Count)
             {
@@ -86,10 +109,11 @@ public sealed class DomainRegistry(IDbContextFactory<LambdaDbContext> databases,
     #region Types
 
     /// <summary>
-    /// The served domains, by name and by the key of their lambda - swapped
-    /// together, so the two never tell different stories.
+    /// The served domains, by name and by the key of their lambda, and the
+    /// domain each www in front of one is sent on to - swapped together, so
+    /// they never tell different stories.
     /// </summary>
-    private sealed record Served(FrozenDictionary<string, long> Domains, FrozenDictionary<string, string> ByKey);
+    private sealed record Served(FrozenDictionary<string, long> Domains, FrozenDictionary<string, string> ByKey, FrozenDictionary<string, string> Www);
 
     #endregion
 

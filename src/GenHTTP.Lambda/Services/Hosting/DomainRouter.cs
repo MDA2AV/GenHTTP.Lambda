@@ -36,6 +36,9 @@ public sealed class DomainRouter(DomainRegistry registry, IHandler domains, IHan
     public ValueTask<IResponse?> HandleAsync(IRequest request) => request.ResolveHost(registry) switch
     {
         CustomDomain => domains.HandleAsync(request),
+        // sent on to the domain before it gets here; were it not, it is still
+        // somebody's site and never the platform
+        WwwOfDomain => domains.HandleAsync(request),
         HostedLambda => hosted.HandleAsync(request),
         HostingHome => home.HandleAsync(request),
         _ => platform.HandleAsync(request)

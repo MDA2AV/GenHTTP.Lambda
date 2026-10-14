@@ -72,6 +72,13 @@ public abstract record LambdaHost(string Name);
 public sealed record CustomDomain(string Name, long LambdaId) : LambdaHost(Name);
 
 /// <summary>
+/// <c>www.</c> in front of a domain of its own that its owner entered
+/// without it, which sends its visitors on to that domain.
+/// </summary>
+/// <param name="Domain">The domain it is in front of, the one the lambda answers at</param>
+public sealed record WwwOfDomain(string Name, string Domain) : LambdaHost(Name);
+
+/// <summary>
 /// A subdomain of the hosting domain, which is the address of the lambda
 /// whose public key it is named after - if there is one.
 /// </summary>

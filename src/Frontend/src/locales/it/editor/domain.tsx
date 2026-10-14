@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Punta il dominio su questo server',
   check: 'Controlla di nuovo',
   records:
-    'Aggiungi questi due record dove gestisci il DNS del dominio. Salta il record AAAA se preferisci non essere raggiungibile via IPv6.',
+    'Aggiungi questi record dove gestisci il DNS del dominio. Salta i record AAAA se preferisci non essere raggiungibile via IPv6.',
+  www: (www, domain) => (
+    <>
+      Chi digita {www} viene reindirizzato a {domain}, così i motori di ricerca mantengono un solo indirizzo. I record per questo nome sono facoltativi.
+    </>
+  ),
   type: 'Tipo',
   name: 'Nome',
   value: 'Valore',

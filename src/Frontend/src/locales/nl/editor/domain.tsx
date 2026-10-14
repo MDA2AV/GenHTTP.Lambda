@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Laat het domein naar deze server wijzen',
   check: 'Opnieuw controleren',
   records:
-    'Voeg deze twee records toe bij de partij die de DNS van het domein beheert. Laat het AAAA-record weg als je liever niet via IPv6 bereikbaar bent.',
+    'Voeg deze records toe bij de partij die de DNS van het domein beheert. Laat de AAAA-records weg als je liever niet via IPv6 bereikbaar bent.',
+  www: (www, domain) => (
+    <>
+      Bezoekers die {www} intypen, worden doorgestuurd naar {domain}, zodat zoekmachines één adres houden. De bijbehorende records zijn optioneel.
+    </>
+  ),
   type: 'Type',
   name: 'Naam',
   value: 'Waarde',

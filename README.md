@@ -214,7 +214,11 @@ agents' endpoint and git stay where they are, on the platform.
   only there: its subdomain sends visitors on to the domain the same way, so
   there is one address for search engines to keep and for visitors to pass
   on. Removing the domain, or the tier that serves it, has the subdomain
-  answer again.
+  answer again. For the same reason `www.` in front of the domain sends its
+  visitors on to it - `www.shop.example.com` to `shop.example.com` - unless
+  the owner entered the domain with `www.`, which is then where it answers,
+  and nothing is sent there from the name without; or unless that `www.` is
+  the domain of another lambda, or one of the platform's own names.
 - **Nothing there.** A subdomain nothing is online at - a key nobody has, a
   lambda that is offline, a name no key can be - is told so in a plain page
   that leads to the site, or in a line of JSON for anything but a browser.
@@ -1643,7 +1647,7 @@ every other request, so it needs a certificate - issued by hand for now, with
 the web root above, into a folder of its own:
 
 ```bash
-certbot certonly --webroot -w /opt/genhttp-lambda/acme -d shop.example.com
+certbot certonly --webroot -w /opt/genhttp-lambda/acme -d shop.example.com -d www.shop.example.com
 
 mkdir -p /opt/genhttp-lambda/certs/shop.example.com
 install -m 0644 -o root -g 1001 /etc/letsencrypt/live/shop.example.com/fullchain.pem /opt/genhttp-lambda/certs/shop.example.com/
@@ -1656,6 +1660,12 @@ certificate is served after the next restart of the container, and so is a
 renewal on that engine. Until the certificate is there, visitors of the
 domain are redirected to HTTPS and shown the certificate every unknown name
 is shown, which does not carry their name.
+
+The `www.` name goes on the same certificate: a visitor who types it is sent
+on to the domain, and has to trust the server before they can be told so.
+Leave it out where its DNS does not point here, or certbot fails for both
+names. The challenge for `www.` is sent on to the domain like any other
+request once the domain is set, which the certificate authority follows.
 
 Mind the order: once the domain is set, the lambda's subdomain sends its
 visitors to the domain at once. The challenge is answered for any host as

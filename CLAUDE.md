@@ -174,6 +174,11 @@ domain named after its public key - `https://{key}.genhttp.run/`
 - **The subdomain serves the lambda only while it has no domain of its
   own that its tier serves**; with one, it redirects there the same way. A
   domain of its own works as it did.
+- **`www.` in front of a domain redirects to the domain - decided by the
+  owner**, the same way, unless the owner entered the domain with `www.`:
+  then that is where it answers, and the name without is not sent there.
+  Never served at both names (two sites to a search engine), and never
+  where the `www.` is another lambda's domain or the platform's own name.
 - **Finding a lambda by an address reads the key as it is spelled
   (`LambdaKeys.TryRead`), never by the rules for claiming one**
   (`TryNormalize`): a rule made later - a reserved name, `xn--` - must not
