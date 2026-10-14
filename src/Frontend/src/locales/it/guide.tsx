@@ -497,14 +497,15 @@ export const guide: Messages['guide'] = {
   ),
   openAside:
     'Tutto quello che c’è nel codice diventa pubblico, comprese le versioni precedenti. Una chiave o una password va tra le chiavi e password in Dati, mai nel codice, che sia pubblicato o no.',
-  visitors: ((k) => (
+  visitors: (k) => (
     <>
       Apri {k.b('Analytics')} nel pannello di controllo e attivalo per vedere chi visita la tua app: quante persone
       arrivano ogni giorno, quali pagine aprono, quali siti le mandano (un motore di ricerca, un post, una newsletter),
       da quali paesi, con quali dispositivi e browser, e quali motori di ricerca e assistenti IA leggono le sue pagine.
-      Scegli una cifra in alto per vederla giorno per giorno.
+      Scegli una cifra in alto per vederla giorno per giorno. Le visualizzazioni di pagina sono le pagine aperte dalle
+      persone; attiva {k.b('Includi i bot')} per contare anche quelle di motori di ricerca, crawler IA e altri programmi.
     </>
-  )),
+  ),
   visitors2: ((k) => (
     <>
       Lo conta la piattaforma, davanti alla tua app, quindi alla tua app non serve nulla: niente cookie, niente script,

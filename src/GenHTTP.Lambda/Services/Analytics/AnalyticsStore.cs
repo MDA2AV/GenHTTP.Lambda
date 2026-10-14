@@ -92,19 +92,20 @@ public sealed class AnalyticsStore : IAnalyticsStore
         }
 
         using (var days = Command(connection, """
-                   INSERT INTO days (lambda, year, month, day, hits, views, visitors, failed, rejected, bytes, millis)
-                   VALUES ($lambda, $year, $month, $day, $hits, $views, $visitors, $failed, $rejected, $bytes, $millis)
+                   INSERT INTO days (lambda, year, month, day, hits, views, bot_views, visitors, failed, rejected, bytes, millis)
+                   VALUES ($lambda, $year, $month, $day, $hits, $views, $botViews, $visitors, $failed, $rejected, $bytes, $millis)
                    ON CONFLICT (lambda, year, month, day) DO UPDATE SET
-                       hits = hits + excluded.hits, views = views + excluded.views, visitors = visitors + excluded.visitors,
-                       failed = failed + excluded.failed, rejected = rejected + excluded.rejected,
+                       hits = hits + excluded.hits, views = views + excluded.views, bot_views = bot_views + excluded.bot_views,
+                       visitors = visitors + excluded.visitors, failed = failed + excluded.failed, rejected = rejected + excluded.rejected,
                        bytes = bytes + excluded.bytes, millis = millis + excluded.millis
-                   """, [.. DayKey, "$hits", "$views", "$visitors", "$failed", "$rejected", "$bytes", "$millis"]))
+                   """, [.. DayKey, "$hits", "$views", "$botViews", "$visitors", "$failed", "$rejected", "$bytes", "$millis"]))
         {
             foreach (var (lambda, day, totals) in tally.Days)
             {
                 Day(days, lambda, day);
                 days.Parameters["$hits"].Value = totals.Hits;
                 days.Parameters["$views"].Value = totals.Views;
+                days.Parameters["$botViews"].Value = totals.BotViews;
                 days.Parameters["$visitors"].Value = totals.Visitors;
                 days.Parameters["$failed"].Value = totals.Failed;
                 days.Parameters["$rejected"].Value = totals.Rejected;
@@ -121,11 +122,11 @@ public sealed class AnalyticsStore : IAnalyticsStore
             var most = AnalyticsDimensions.MostOf(group.Key);
 
             using var upsert = Command(connection, $"""
-                INSERT INTO {table} (lambda, year, month, day, value, hits, views)
-                VALUES ($lambda, $year, $month, $day, $value, $hits, $views)
+                INSERT INTO {table} (lambda, year, month, day, value, hits, views, bot_views)
+                VALUES ($lambda, $year, $month, $day, $value, $hits, $views, $botViews)
                 ON CONFLICT (lambda, year, month, day, value) DO UPDATE SET
-                    hits = hits + excluded.hits, views = views + excluded.views
-                """, [.. DayKey, "$value", "$hits", "$views"]);
+                    hits = hits + excluded.hits, views = views + excluded.views, bot_views = bot_views + excluded.bot_views
+                """, [.. DayKey, "$value", "$hits", "$views", "$botViews"]);
 
             using var known = Command(connection, $"SELECT value FROM {table} WHERE lambda = $lambda AND year = $year AND month = $month AND day = $day", DayKey);
 
@@ -141,7 +142,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
                     values = Strings(known);
                 }
 
-                foreach (var (cell, hits, views) in day.OrderByDescending(c => c.Views).ThenByDescending(c => c.Hits))
+                foreach (var (cell, hits, views, botViews) in day.OrderByDescending(c => c.Views).ThenByDescending(c => c.Hits))
                 {
                     var value = cell.Value;
 
@@ -161,6 +162,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
                     upsert.Parameters["$value"].Value = value;
                     upsert.Parameters["$hits"].Value = hits;
                     upsert.Parameters["$views"].Value = views;
+                    upsert.Parameters["$botViews"].Value = botViews;
                     upsert.ExecuteNonQuery();
                 }
             }
@@ -253,7 +255,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
         var counted = new Dictionary<DateOnly, AnalyticsTotals>();
 
         using (var days = Ranged(connection, lambda, from, to, """
-                   SELECT year, month, day, hits, views, visitors, failed, rejected, bytes, millis FROM days
+                   SELECT year, month, day, hits, views, bot_views, visitors, failed, rejected, bytes, millis FROM days
                    WHERE lambda = $lambda AND (year, month, day) >= ($fromYear, $fromMonth, $fromDay) AND (year, month, day) <= ($toYear, $toMonth, $toDay)
                    """))
         using (var reader = days.ExecuteReader())
@@ -282,7 +284,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
         foreach (var dimension in AnalyticsDimensions.All)
         {
             using var values = Ranged(connection, lambda, from, to, $"""
-                SELECT value, SUM(hits) AS hits, SUM(views) AS views FROM {AnalyticsDimensions.TableOf(dimension)}
+                SELECT value, SUM(hits) AS hits, SUM(views) AS views, SUM(bot_views) AS bot_views FROM {AnalyticsDimensions.TableOf(dimension)}
                 WHERE lambda = $lambda AND (year, month, day) >= ($fromYear, $fromMonth, $fromDay) AND (year, month, day) <= ($toYear, $toMonth, $toDay)
                 GROUP BY value ORDER BY views DESC, hits DESC, value LIMIT $most
                 """);
@@ -295,7 +297,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
             while (reader.Read())
             {
-                listed.Add(new AnalyticsValue(reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2)));
+                listed.Add(new AnalyticsValue(reader.GetString(0), reader.GetInt64(1), reader.GetInt64(2), reader.GetInt64(3)));
             }
 
             breakdowns[dimension] = listed;
@@ -312,7 +314,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
         using var connection = Open();
 
         using var sum = Ranged(connection, lambda, from, to, """
-            SELECT IFNULL(SUM(hits), 0), IFNULL(SUM(views), 0), IFNULL(SUM(visitors), 0), IFNULL(SUM(failed), 0),
+            SELECT IFNULL(SUM(hits), 0), IFNULL(SUM(views), 0), IFNULL(SUM(bot_views), 0), IFNULL(SUM(visitors), 0), IFNULL(SUM(failed), 0),
                    IFNULL(SUM(rejected), 0), IFNULL(SUM(bytes), 0), IFNULL(SUM(millis), 0) FROM days
             WHERE lambda = $lambda AND (year, month, day) >= ($fromYear, $fromMonth, $fromDay) AND (year, month, day) <= ($toYear, $toMonth, $toDay)
             """);
@@ -424,7 +426,7 @@ public sealed class AnalyticsStore : IAnalyticsStore
 
     private static AnalyticsTotals Totals(SqliteDataReader reader, int at)
         => new(reader.GetInt64(at), reader.GetInt64(at + 1), reader.GetInt64(at + 2), reader.GetInt64(at + 3), reader.GetInt64(at + 4),
-               reader.GetInt64(at + 5), reader.GetDouble(at + 6));
+               reader.GetInt64(at + 5), reader.GetInt64(at + 6), reader.GetDouble(at + 7));
 
     #endregion
 

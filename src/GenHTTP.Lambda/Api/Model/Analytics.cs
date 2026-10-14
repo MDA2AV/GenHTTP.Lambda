@@ -62,7 +62,7 @@ public sealed record AnalyticsResponse(
         var report = analytics.Report;
 
         IReadOnlyList<AnalyticsValueResponse>? Of(AnalyticsDimension dimension)
-            => report?.Breakdowns[dimension].Select(v => new AnalyticsValueResponse(v.Value, v.Hits, v.Views)).ToList();
+            => report?.Breakdowns[dimension].Select(v => new AnalyticsValueResponse(v.Value, v.Hits, v.Views, v.BotViews)).ToList();
 
         return new AnalyticsResponse(
             analytics.Since != null,
@@ -96,17 +96,30 @@ public sealed record AnalyticsResponse(
 /// What was counted over some days, summed.
 /// </summary>
 /// <param name="Hits">Every request answered - pages, the files they load, calls of an API</param>
-/// <param name="Views">The requests that were somebody opening a page</param>
+/// <param name="Views">The requests that were somebody opening a page - people and programs alike</param>
+/// <param name="BotViews">
+/// Of the views, those of programs rather than people: crawlers, and whatever names no browser. The pages people
+/// opened are the views less these.
+/// </param>
 /// <param name="Visitors">Different visitors, each counted once a day - summed over days, one who came back is counted again</param>
 /// <param name="Failed">Answered with a server error</param>
 /// <param name="Rejected">Answered with a client error, not found included</param>
 /// <param name="Bytes">What the responses carried, where that was known</param>
 /// <param name="AverageMillis">The mean time to answer a request</param>
-public sealed record AnalyticsTotalsResponse(long Hits, long Views, long Visitors, long Failed, long Rejected, long Bytes, double AverageMillis)
+public sealed record AnalyticsTotalsResponse(
+    long Hits,
+    long Views,
+    long BotViews,
+    long Visitors,
+    long Failed,
+    long Rejected,
+    long Bytes,
+    double AverageMillis
+)
 {
 
     public static AnalyticsTotalsResponse Of(AnalyticsTotals totals)
-        => new(totals.Hits, totals.Views, totals.Visitors, totals.Failed, totals.Rejected, totals.Bytes,
+        => new(totals.Hits, totals.Views, totals.BotViews, totals.Visitors, totals.Failed, totals.Rejected, totals.Bytes,
                totals.Hits > 0 ? Math.Round(totals.Millis / totals.Hits, 2) : 0);
 
 }
@@ -122,4 +135,5 @@ public sealed record AnalyticsDayResponse(DateOnly Date, AnalyticsTotalsResponse
 /// <param name="Value">The path, the host, the country code or the name; "(other)" gathers what did not fit in a day</param>
 /// <param name="Hits">Requests it was part of</param>
 /// <param name="Views">Pages opened it was part of</param>
-public sealed record AnalyticsValueResponse(string Value, long Hits, long Views);
+/// <param name="BotViews">Of those, the pages programs opened rather than people</param>
+public sealed record AnalyticsValueResponse(string Value, long Hits, long Views, long BotViews);

@@ -27,6 +27,9 @@ export const analytics: EditorMessages['analytics'] = {
   visitorsHint: 'Orang yang berbeda yang membuka sebuah halaman, masing-masing dihitung sekali sehari. Mesin pencari dan program lain bukan pengunjung.',
   views: 'Tampilan halaman',
   viewsHint: 'Setiap kali seseorang membuka sebuah halaman.',
+  bots: 'Sertakan bot',
+  botsHint: 'Hitung juga halaman yang dibuka oleh mesin pencari, crawler AI, dan program lain. Pengunjung tetap hanya manusia.',
+  withBots: 'termasuk bot',
   hits: 'Request',
   hitsHint: 'Semua yang diminta dari aplikasi Anda: halamannya, serta gambar dan skrip yang dimuat halaman itu.',
   versus: (days) => `dibandingkan ${days} hari sebelumnya`,
@@ -53,6 +56,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   pages: 'Halaman',
   pagesHint: 'Halaman yang dibuka orang, yang paling sering dibuka di atas.',
+  pagesHintBots: 'Halaman yang dibuka orang dan bot, yang paling sering dibuka di atas.',
   requested: 'Paling sering diminta',
   requestedHint: 'Semua yang diminta dari aplikasi Anda, menurut alamat - aplikasi ini tidak punya halaman yang dibuka orang.',
   sources: 'Asal pengunjung',

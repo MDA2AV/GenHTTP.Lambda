@@ -26,13 +26,14 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
     /// </summary>
     public IEnumerable<(long Lambda, DateOnly Day, AnalyticsTotals Totals)> Days
         => _days.Select(d => (d.Key.Lambda, d.Key.Day,
-                              new AnalyticsTotals(d.Value.Hits, d.Value.Views, d.Value.Visitors, d.Value.Failed, d.Value.Rejected,
+                              new AnalyticsTotals(d.Value.Hits, d.Value.Views, d.Value.BotViews, d.Value.Visitors, d.Value.Failed, d.Value.Rejected,
                                                   d.Value.Bytes, d.Value.Millis)));
 
     /// <summary>
     /// What each value of a dimension came to, per lambda and day.
     /// </summary>
-    public IEnumerable<(Cell Cell, long Hits, long Views)> Cells => _cells.Select(c => (c.Key, c.Value.Hits, c.Value.Views));
+    public IEnumerable<(Cell Cell, long Hits, long Views, long BotViews)> Cells
+        => _cells.Select(c => (c.Key, c.Value.Hits, c.Value.Views, c.Value.BotViews));
 
     /// <summary>
     /// The lambdas anything was counted for.
@@ -59,10 +60,17 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
             _days[(lambda, day)] = totals = new Totals();
         }
 
+        var agent = classifier.Classify(visit.Agent, visit.Hints, visit.Client);
+
         var view = visit.Page ? 1 : 0;
+
+        // a page a program opened - a crawler, or whatever names no browser -
+        // is a view the owner may leave out
+        var botView = agent.Browser == null ? view : 0;
 
         totals.Hits++;
         totals.Views += view;
+        totals.BotViews += botView;
         totals.Bytes += visit.Bytes;
 
         // an upgraded connection returned at the handshake; what follows is a
@@ -82,8 +90,6 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
                 break;
         }
 
-        var agent = classifier.Classify(visit.Agent, visit.Hints, visit.Client);
-
         // a visitor is a person who opened a page, counted with the first page
         // they opened that day - a crawler opens pages, but is nobody, and a
         // scanner that names a browser guesses paths, but opens none; so there
@@ -97,31 +103,31 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
         // are in the totals, and the paths stay the lambda's own
         if (visit.Status < 400)
         {
-            Count(lambda, day, AnalyticsDimension.Pages, visit.Path, view);
+            Count(lambda, day, AnalyticsDimension.Pages, visit.Path, view, botView);
         }
 
-        Count(lambda, day, AnalyticsDimension.Countries, visit.Country ?? string.Empty, view);
+        Count(lambda, day, AnalyticsDimension.Countries, visit.Country ?? string.Empty, view, botView);
 
         if (ReferrerOf(visit.Referrer, visit.Domain) is { } referrer)
         {
-            Count(lambda, day, AnalyticsDimension.Referrers, referrer, view);
+            Count(lambda, day, AnalyticsDimension.Referrers, referrer, view, botView);
         }
 
-        Count(lambda, day, AnalyticsDimension.Devices, agent.Device, view);
+        Count(lambda, day, AnalyticsDimension.Devices, agent.Device, view, botView);
 
         if (agent.Browser != null)
         {
-            Count(lambda, day, AnalyticsDimension.Browsers, agent.Browser, view);
+            Count(lambda, day, AnalyticsDimension.Browsers, agent.Browser, view, botView);
         }
 
         if (agent.System != null)
         {
-            Count(lambda, day, AnalyticsDimension.Systems, agent.System, view);
+            Count(lambda, day, AnalyticsDimension.Systems, agent.System, view, botView);
         }
 
         if (agent.Crawler != null)
         {
-            Count(lambda, day, AnalyticsDimension.Crawlers, agent.Crawler, view);
+            Count(lambda, day, AnalyticsDimension.Crawlers, agent.Crawler, view, botView);
         }
     }
 
@@ -161,7 +167,7 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
         return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
     }
 
-    private void Count(long lambda, DateOnly day, AnalyticsDimension dimension, string value, int view)
+    private void Count(long lambda, DateOnly day, AnalyticsDimension dimension, string value, int view, int botView)
     {
         var cell = new Cell(lambda, day, dimension, value);
 
@@ -172,6 +178,7 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
 
         counts.Hits++;
         counts.Views += view;
+        counts.BotViews += botView;
     }
 
     #endregion
@@ -187,6 +194,7 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
     {
         internal long Hits;
         internal long Views;
+        internal long BotViews;
         internal long Visitors;
         internal long Failed;
         internal long Rejected;
@@ -198,6 +206,7 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
     {
         internal long Hits;
         internal long Views;
+        internal long BotViews;
     }
 
     #endregion

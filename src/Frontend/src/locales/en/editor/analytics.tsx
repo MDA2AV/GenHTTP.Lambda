@@ -33,6 +33,11 @@ export const analytics = {
   visitorsHint: 'Different people who opened a page, each counted once a day. Search engines and other programs are not visitors.',
   views: 'Page views',
   viewsHint: 'Every time somebody opened a page.',
+  /** The switch beside the time ranges: whether the page views count the pages bots opened as well. Off, they count people only. */
+  bots: 'Include bots',
+  botsHint: 'Count the pages that search engines, AI crawlers and other programs opened as well. Visitors are people either way.',
+  /** Beside "Page views" at the top while bots are included. */
+  withBots: 'incl. bots',
   hits: 'Requests',
   hitsHint: 'Everything your app was asked for: its pages, and the pictures and scripts they load.',
   /** Under a figure: how it changed against the days before the ones shown. */
@@ -62,6 +67,8 @@ export const analytics = {
 
   pages: 'Pages',
   pagesHint: 'The pages people opened, the most opened first.',
+  /** The same, while the bots are included. */
+  pagesHintBots: 'The pages people and bots opened, the most opened first.',
   requested: 'Most requested',
   requestedHint: 'Everything your app was asked for, by address - it has no pages people open.',
   sources: 'Where visitors come from',

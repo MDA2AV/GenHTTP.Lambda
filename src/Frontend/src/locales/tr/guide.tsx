@@ -504,10 +504,12 @@ export const guide: Messages['guide'] = {
   visitors: ((k) => (
     <>
       Uygulamanızı kimlerin ziyaret ettiğini görmek için kontrol panelinde {k.b('Analitik')} bölümünü açın ve
-      açın: her gün kaç kişinin geldiğini, hangi sayfaları açtığını, onları hangi sitelerin - bir arama motoru, bir
-      paylaşım, bir bülten - yönlendirdiğini, hangi ülkelerden, hangi cihaz ve tarayıcılarla geldiğini ve hangi arama
-      motorlarının ve yapay zekâ asistanlarının sayfalarını okuduğunu görürsünüz. Gün gün görmek için üstten bir
-      rakam seçin.
+      etkinleştirin: her gün kaç kişinin geldiğini, hangi sayfaları açtığını, onları hangi sitelerin - bir arama
+      motoru, bir paylaşım, bir bülten - yönlendirdiğini, hangi ülkelerden, hangi cihaz ve tarayıcılarla geldiğini ve
+      hangi arama motorlarının ve yapay zekâ asistanlarının sayfalarını okuduğunu görürsünüz. Gün gün görmek için
+      üstten bir rakam seçin. Sayfa görüntülemeleri, kişilerin açtığı sayfalardır; arama motorlarının, yapay zekâ
+      tarayıcılarının ve diğer programların görüntülemelerini de saymak için {k.b('Botları dahil et')} seçeneğini
+      açın.
     </>
   )),
   visitors2: ((k) => (

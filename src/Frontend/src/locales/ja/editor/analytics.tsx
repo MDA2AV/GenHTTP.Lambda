@@ -31,6 +31,9 @@ export const analytics: EditorMessages['analytics'] = {
   visitorsHint: 'ページを開いたユニークな訪問者数です。同じ人は1日に1回だけ数えます。検索エンジンやその他のプログラムは訪問者に含めません。',
   views: 'ページビュー',
   viewsHint: 'ページが開かれた回数です。',
+  bots: 'ボットを含める',
+  botsHint: '検索エンジンやAIクローラー、その他のプログラムが開いたページも数えます。訪問者は、どちらの場合も人だけです。',
+  withBots: 'ボットを含む',
   hits: 'リクエスト',
   hitsHint: 'アプリに寄せられたすべてのリクエストです。ページに加え、ページが読み込む画像やスクリプトも含みます。',
   /** Under a figure: how it changed against the days before the ones shown. */
@@ -60,6 +63,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   pages: 'ページ',
   pagesHint: '開かれたページを、多い順に表示します。',
+  pagesHintBots: '人とボットが開いたページを、多い順に表示します。',
   requested: 'リクエストの多いもの',
   requestedHint: 'アプリに寄せられたすべてのリクエストを、パスごとに表示します。人が開くページはありません。',
   sources: '訪問元',

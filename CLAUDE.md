@@ -480,6 +480,17 @@ section.
   counted once a day with the first page they opened. A request for anything
   else - a script, an API call, `robots.txt`, a path that was not there -
   makes nobody a visitor, so there are never more visitors than page views.
+- **Page views are people's, bots behind a switch - decided by the owner.**
+  The views of programs are counted apart (`bot_views`, in every table), and
+  the editor shows the pages people opened unless the owner switches on
+  **Include bots** - beside the ranges, since it changes the figure, its chart
+  and the page views' cards alike; remembered in their browser, and worked out
+  from the one answer rather than asked for again, and marked "incl. bots"
+  wherever it counts them. Where visitors came from is people's whatever the
+  switch says - a bot comes from nowhere and would read as typed in - and
+  requests and crawlers count every request either way. Days counted before `V2` keep their bots among
+  the people of their pages, referrers and countries; their totals and devices
+  were filled in.
 - **Nothing that names a visitor is kept.** Counts only; the referrer as its
   host; visitors told apart for a day by a hash under a random key per day
   and lambda, held in memory and never written. No cookie, no script in the

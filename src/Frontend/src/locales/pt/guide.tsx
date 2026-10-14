@@ -502,7 +502,9 @@ export const guide: Messages['guide'] = {
       Abra {k.b('Analytics')} no painel de controle e ative para ver quem visita o seu app: quantas pessoas chegam
       por dia, quais páginas abrem, quais sites as enviam - um mecanismo de busca, uma postagem, uma newsletter -, de
       quais países, em quais dispositivos e navegadores, e quais mecanismos de busca e assistentes de IA leem as
-      páginas dele. Escolha um número no alto para vê-lo dia a dia.
+      páginas dele. Escolha um número no alto para vê-lo dia a dia. As visualizações de página são as páginas que as
+      pessoas abriram; ative {k.b('Incluir bots')} para contar também as de mecanismos de busca, crawlers de IA e
+      outros programas.
     </>
   )),
   visitors2: ((k) => (

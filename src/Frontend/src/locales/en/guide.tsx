@@ -507,7 +507,8 @@ export const guide = {
       Open {k.b('Analytics')} in the control center and switch it on to see who visits your app: how many people
       come each day, which pages they open, which sites send them - a search engine, a post, a newsletter - from
       which countries, on which devices and browsers, and which search engines and AI assistants read its pages.
-      Pick a figure at the top to see it day by day.
+      Pick a figure at the top to see it day by day. Page views are the pages people opened; switch on {k.b('Include bots')}
+      to count those of search engines, AI crawlers and other programs as well.
     </>
   )) as Text,
   visitors2: ((k) => (
