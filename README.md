@@ -828,7 +828,9 @@ feature's preview.
 - **What a visit is counted as.** A *hit* is every request answered; a *view*
   is somebody opening a page - a browser's navigation (`Sec-Fetch-Dest:
   document`, a revalidation included) or, from a program that does not send
-  that header, a successful `GET` answered with HTML. Of the views, those
+  that header, a successful `GET` answered with HTML - unless it asked for
+  a file that is no page (`/favicon.ico`, an image, a script, a style
+  sheet, …), which a single page app answers with its page too. Of the views, those
   of programs - crawlers, and whatever names no browser - are counted apart
   as well (`bot_views`, `botViews` in the answer), everywhere a view is: the
   editor shows the pages people opened and adds the bots' behind a switch

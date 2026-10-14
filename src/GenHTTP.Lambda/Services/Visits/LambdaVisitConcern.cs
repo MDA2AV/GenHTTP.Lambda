@@ -42,7 +42,9 @@ public sealed class LambdaVisitConcern : IDependentConcern
 
         // read before the lambda routes it: the target is a pointer that the
         // handlers below move along, and afterwards it points at nothing
-        var path = PathOf(request);
+        var target = TargetOf(request);
+
+        var path = target.Length <= 100 ? target : string.Concat(target.AsSpan(0, 99), "…");
 
         var domain = request.GetHost()?.Name;
 
@@ -89,22 +91,23 @@ public sealed class LambdaVisitConcern : IDependentConcern
 
             request.SetVisit(new LambdaVisit(lambda, DateTime.UtcNow, path, domain, status, Stopwatch.GetElapsedTime(started),
                                              (long)(response?.Content?.Length ?? 0), caller?.Client, caller?.Agent, caller?.Country,
-                                             referrer, counted && IsPage(method, status, destination, response), hints));
+                                             referrer, counted && IsPage(method, target, status, destination, response), hints));
         }
     }
 
     /// <summary>
-    /// What was asked for, relative to the lambda and cut to a length worth
-    /// showing - the lookup above has already stepped past the key, where
-    /// there was one.
+    /// What was asked for, relative to the lambda - the lookup above has
+    /// already stepped past the key, where there was one.
     /// </summary>
-    private static string PathOf(IRequest request)
+    /// <remarks>
+    /// In full, so its ending is there to be read; the visit keeps it cut to
+    /// a length worth showing.
+    /// </remarks>
+    private static string TargetOf(IRequest request)
     {
         var remaining = request.Header.Target.AsString(decode: false, remainingOnly: true);
 
-        var path = remaining.Length == 0 ? "/" : remaining[0] == '/' ? remaining : "/" + remaining;
-
-        return path.Length <= 100 ? path : string.Concat(path.AsSpan(0, 99), "…");
+        return remaining.Length == 0 ? "/" : remaining[0] == '/' ? remaining : "/" + remaining;
     }
 
     /// <summary>
@@ -131,10 +134,13 @@ public sealed class LambdaVisitConcern : IDependentConcern
     /// from its cache (Not Modified) is a page opened again, and a script or
     /// a call to an API is not one, whatever it answers with. Programs that
     /// do not send the header - crawlers, mostly - opened a page when what
-    /// they got back was HTML. A redirect is not a page: the page it sends to
-    /// is counted when it is opened.
+    /// they got back was HTML - unless they asked for a file that is no page
+    /// (<see cref="Files"/>): a single page app answers every path with its
+    /// page, <c>/favicon.ico</c> included, and a browser fetching its icons
+    /// sends no <c>Sec-Fetch-Dest</c>. A redirect is not a page: the page it
+    /// sends to is counted when it is opened.
     /// </remarks>
-    private static bool IsPage(RequestMethod method, int status, string? destination, IResponse? response)
+    private static bool IsPage(RequestMethod method, string target, int status, string? destination, IResponse? response)
     {
         if (method != RequestMethod.Get || status is not (>= 200 and < 300 or 304))
         {
@@ -146,7 +152,33 @@ public sealed class LambdaVisitConcern : IDependentConcern
             return string.Equals(destination, "document", StringComparison.OrdinalIgnoreCase);
         }
 
-        return status != 304 && response?.Content?.Type is { } type && type.Bytes.Span.StartsWith("text/html"u8);
+        return status != 304 && response?.Content?.Type is { } type && type.Bytes.Span.StartsWith("text/html"u8) && !NamesAFile(target);
+    }
+
+    /// <summary>
+    /// The endings of files a page is made of or comes with, which nobody
+    /// opens as a page.
+    /// </summary>
+    /// <remarks>
+    /// A known few rather than every ending: a path with a dot in it may well
+    /// be a page (<c>/user/jane.doe</c>, <c>/release/1.2</c>).
+    /// </remarks>
+    private static readonly HashSet<string> Files = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "ico", "png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp",
+        "js", "mjs", "map", "css", "json", "webmanifest", "xml", "txt",
+        "woff", "woff2", "ttf", "otf", "eot",
+        "mp3", "mp4", "webm", "ogg", "wav",
+        "pdf", "zip", "wasm"
+    };
+
+    private static bool NamesAFile(string target)
+    {
+        var name = target.AsSpan(target.LastIndexOf('/') + 1);
+
+        var dot = name.LastIndexOf('.');
+
+        return dot >= 0 && Files.GetAlternateLookup<ReadOnlySpan<char>>().Contains(name[(dot + 1)..]);
     }
 
 }
