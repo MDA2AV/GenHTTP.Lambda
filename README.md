@@ -1667,6 +1667,19 @@ Leave it out where its DNS does not point here, or certbot fails for both
 names. The challenge for `www.` is sent on to the domain like any other
 request once the domain is set, which the certificate authority follows.
 
+`reissue-www.sh` adds `www.` to the certificates issued without it. It looks
+through the certificates folder and reissues each certificate whose names lack
+their `www.` with both names. It finds the certbot lineage by the names, and
+leaves out a `www.` that does not resolve to where its domain does, saying so.
+Then it installs the files. It does not restart the server, so the new
+certificates are served from the next restart on:
+
+```bash
+sudo ./reissue-www.sh --list      # what would be reissued, nothing changed
+sudo ./reissue-www.sh --dry-run   # asks the staging CA, installs nothing
+sudo ./reissue-www.sh             # reissues and installs
+```
+
 Mind the order: once the domain is set, the lambda's subdomain sends its
 visitors to the domain at once. The challenge is answered for any host as
 soon as its DNS points here, whether the domain is set or not, so the
