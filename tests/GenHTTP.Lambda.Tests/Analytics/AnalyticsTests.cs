@@ -219,6 +219,35 @@ public sealed class AnalyticsTests
     }
 
     [TestMethod]
+    public async Task AnIconAnsweredWithThePageIsNoPage()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await OnlineAsync(fixture, "iconless");
+
+        await EnableAsync(fixture, lambda.PrivateKey);
+
+        // a browser fetching the icons of a site sends no Sec-Fetch-Dest, and
+        // the website answers every path with its page
+        await VisitAsync(fixture, "http://iconless.localhost/favicon.ico", IPhone);
+        await VisitAsync(fixture, "http://iconless.localhost/apple-touch-icon-152x152-precomposed.png", IPhone);
+
+        // while a dot alone does not make a file
+        await VisitAsync(fixture, "http://iconless.localhost/release/1.2", Googlebot);
+
+        Flush(fixture);
+
+        var shown = await ReadAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual(3, shown.Totals!.Hits);
+        Assert.AreEqual(1, shown.Totals.Views);
+        Assert.AreEqual(0, shown.Totals.Visitors, "nobody opened a page");
+
+        Assert.AreEqual(0, Views(shown.Pages, "/favicon.ico"));
+        Assert.AreEqual(1, Views(shown.Pages, "/release/1.2"));
+    }
+
+    [TestMethod]
     public async Task AVisitorIsSomebodyWhoOpenedAPage()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
