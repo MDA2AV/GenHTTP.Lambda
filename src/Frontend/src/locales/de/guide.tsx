@@ -511,7 +511,9 @@ export const guide: Messages['guide'] = {
       Öffnen Sie im Kontrollzentrum {k.b('Analyse')} und schalten Sie sie ein, um zu sehen, wer Ihre App besucht: wie viele
       Personen jeden Tag kommen, welche Seiten sie öffnen, welche Websites sie schicken – eine Suchmaschine, ein Beitrag, ein
       Newsletter –, aus welchen Ländern, auf welchen Geräten und in welchen Browsern, und welche Suchmaschinen und
-      KI-Assistenten ihre Seiten lesen. Wählen Sie oben eine Zahl, um sie Tag für Tag zu sehen.
+      KI-Assistenten ihre Seiten lesen. Wählen Sie oben eine Zahl, um sie Tag für Tag zu sehen. Seitenaufrufe sind die Seiten,
+      die Personen geöffnet haben; schalten Sie {k.b('Bots einbeziehen')} ein, um auch die von Suchmaschinen, KI-Crawlern und
+      anderen Programmen zu zählen.
     </>
   )),
   visitors2: ((k) => (

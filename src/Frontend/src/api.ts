@@ -85,8 +85,10 @@ export interface Activation {
 export interface AnalyticsTotals {
   /** Every request answered - pages, the files they load, calls of an API. */
   hits: number;
-  /** The requests that were somebody opening a page. */
+  /** The requests that were somebody opening a page - people and programs alike. */
   views: number;
+  /** Of the views, those of programs - crawlers, and whatever names no browser - rather than people. */
+  botViews: number;
   /** Different visitors, each counted once a day. */
   visitors: number;
   failed: number;
@@ -107,6 +109,8 @@ export interface AnalyticsValue {
   value: string;
   hits: number;
   views: number;
+  /** Of the views, those programs opened rather than people. */
+  botViews: number;
 }
 
 /** How a lambda's visitors reach it, as its owner is shown. */

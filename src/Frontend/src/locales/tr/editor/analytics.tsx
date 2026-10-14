@@ -27,6 +27,9 @@ export const analytics: EditorMessages['analytics'] = {
   visitorsHint: 'Bir sayfa açan farklı kişiler, her biri günde bir kez sayılır. Arama motorları ve diğer programlar ziyaretçi sayılmaz.',
   views: 'Sayfa görüntülemeleri',
   viewsHint: 'Birinin bir sayfayı her açışı.',
+  bots: 'Botları dahil et',
+  botsHint: 'Arama motorlarının, yapay zekâ tarayıcılarının ve diğer programların açtığı sayfaları da say. Ziyaretçiler her durumda yalnızca insanlardır.',
+  withBots: 'botlar dahil',
   hits: 'İstekler',
   hitsHint: 'Uygulamanızdan istenen her şey: sayfaları ve onların yüklediği resimler ile scriptler.',
   versus: (days) => `önceki ${days} güne göre`,
@@ -53,6 +56,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   pages: 'Sayfalar',
   pagesHint: 'İnsanların açtığı sayfalar, en çok açılan başta.',
+  pagesHintBots: 'İnsanların ve botların açtığı sayfalar, en çok açılan başta.',
   requested: 'En çok istenenler',
   requestedHint: 'Uygulamanızdan istenen her şey, adrese göre - insanların açtığı sayfaları yok.',
   sources: 'Ziyaretçiler nereden geliyor',

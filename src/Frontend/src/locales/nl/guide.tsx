@@ -510,7 +510,8 @@ export const guide: Messages['guide'] = {
       Open {k.b('Analytics')} in het dashboard en zet het aan om te zien wie je app bezoekt: hoeveel mensen er per dag
       komen, welke pagina’s ze openen, welke sites hen sturen – een zoekmachine, een bericht, een nieuwsbrief – uit welke
       landen, op welke apparaten en browsers, en welke zoekmachines en AI-assistenten de pagina’s lezen. Kies bovenaan
-      een cijfer om het dag voor dag te zien.
+      een cijfer om het dag voor dag te zien. Paginaweergaven zijn de pagina’s die mensen hebben geopend; zet {k.b('Bots meetellen')} aan
+      om ook die van zoekmachines, AI-crawlers en andere programma’s mee te tellen.
     </>
   )),
   visitors2: ((k) => (

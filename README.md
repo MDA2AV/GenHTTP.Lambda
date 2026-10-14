@@ -828,7 +828,14 @@ feature's preview.
 - **What a visit is counted as.** A *hit* is every request answered; a *view*
   is somebody opening a page - a browser's navigation (`Sec-Fetch-Dest:
   document`, a revalidation included) or, from a program that does not send
-  that header, a successful `GET` answered with HTML. A path is counted where
+  that header, a successful `GET` answered with HTML. Of the views, those
+  of programs - crawlers, and whatever names no browser - are counted apart
+  as well (`bot_views`, `botViews` in the answer), everywhere a view is: the
+  editor shows the pages people opened and adds the bots' behind a switch
+  (**Include bots**), off by default and remembered in the browser, worked
+  out from the one answer so it switches at once. The referring sites stay
+  people's either way: a bot names no page it came from and would be counted
+  as typed in. A path is counted where
   it was answered without an error, at most 200 a day, and the rest under
   `(other)`, so a scanner cannot fill a day. A referrer is kept as its host,
   without `www.`, and only where it is another site than the one visited (100

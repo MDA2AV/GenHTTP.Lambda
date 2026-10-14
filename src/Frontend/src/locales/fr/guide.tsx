@@ -514,6 +514,8 @@ export const guide: Messages['guide'] = {
       de personnes viennent chaque jour, quelles pages elles ouvrent, quels sites les envoient - un moteur de
       recherche, une publication, une newsletter - depuis quels pays, sur quels appareils et navigateurs, et quels
       moteurs de recherche et assistants IA lisent ses pages. Choisissez un chiffre en haut pour le voir jour par jour.
+      Les pages vues sont les pages que les visiteurs ont ouvertes ; activez {k.b('Inclure les robots')} pour compter
+      aussi celles des moteurs de recherche, des robots d’exploration IA et d’autres programmes.
     </>
   )),
   visitors2: ((k) => (

@@ -511,7 +511,8 @@ export const guide: Messages['guide'] = {
       banyak orang yang datang setiap hari, halaman apa yang mereka buka, situs mana yang mengarahkan mereka - mesin
       pencari, sebuah postingan, sebuah newsletter - dari negara mana, dengan perangkat dan browser apa, dan mesin
       pencari serta asisten AI mana yang membaca halamannya. Pilih salah satu angka di bagian atas untuk melihatnya
-      hari demi hari.
+      hari demi hari. Tayangan halaman adalah halaman yang dibuka orang; aktifkan {k.b('Sertakan bot')} untuk ikut
+      menghitung tayangan dari mesin pencari, crawler AI, dan program lain.
     </>
   )),
   visitors2: ((k) => (

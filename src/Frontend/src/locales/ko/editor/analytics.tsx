@@ -27,6 +27,9 @@ export const analytics: EditorMessages['analytics'] = {
   visitorsHint: '페이지를 연 서로 다른 사람을 하루에 한 번씩 세어요. 검색 엔진과 그 밖의 프로그램은 방문자가 아니에요.',
   views: '페이지 조회수',
   viewsHint: '누군가 페이지를 열 때마다 세어요.',
+  bots: '봇 포함',
+  botsHint: '검색 엔진, AI 크롤러 등 다른 프로그램이 연 페이지도 함께 세어요. 방문자는 어느 쪽이든 사람만 해당해요.',
+  withBots: '봇 포함',
   hits: '요청',
   hitsHint: '앱이 받은 모든 요청이에요. 페이지와, 페이지가 불러오는 그림과 스크립트를 포함해요.',
   versus: (days) => `직전 ${days}일 대비`,
@@ -53,6 +56,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   pages: '페이지',
   pagesHint: '사람들이 연 페이지예요. 가장 많이 열린 것부터 보여 줘요.',
+  pagesHintBots: '사람들과 봇이 연 페이지예요. 가장 많이 열린 것부터 보여 줘요.',
   requested: '가장 많이 요청된 것',
   requestedHint: '앱이 받은 모든 요청을 주소별로 보여 줘요. 이 앱에는 사람들이 여는 페이지가 없어요.',
   sources: '방문 경로',

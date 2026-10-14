@@ -2052,7 +2052,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             analytics = AnalyticsResponse.Of(found),
             note = found.Shown < found.Kept && found.Earliest is { } earliest && earliest < found.From
                 ? $"Counted by day in UTC, written down every {minutes} minutes. More is kept than this tier shows: the owner sees all of the year with premium."
-                : $"Counted by day in UTC, written down every {minutes} minutes - the visits of the last minutes are not in it yet. Views are pages opened, hits every request; visitors are people who opened a page, counted once a day."
+                : $"Counted by day in UTC, written down every {minutes} minutes - the visits of the last minutes are not in it yet. Views are pages opened, by people and programs alike - botViews are those of programs, so people opened views - botViews; hits are every request; visitors are people who opened a page, counted once a day."
         });
     }
 
@@ -2500,7 +2500,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             what = "The owner can have a lambda's visits counted: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers behind them. They read it in the editor, and the analytics tool reads the same.",
             when = "Off until the owner switches it on, in the editor or by asking you (analytics with enable: true). Switching off deletes what was counted, and is theirs to do. A feature's preview is never counted.",
-            how = "Counted by the platform, in front of the lambda, by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Only the host of a referring site is kept, never an address, and a visitor - a person who opened a page, never a program - is told apart for a day by a hash that is never stored. Crawlers are counted by their kind from a maintained list; Google, Bing, OpenAI, Apple and Perplexity by name only where the visit came from an address they publish. The lambda needs no code for it - do not build a counter of your own for what this counts."
+            how = "Counted by the platform, in front of the lambda, by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Only the host of a referring site is kept, never an address, and a visitor - a person who opened a page, never a program - is told apart for a day by a hash that is never stored. Views count people and programs alike, with those of programs as botViews, so people opened views - botViews; the owner sees the people's and may include the bots. Crawlers are counted by their kind from a maintained list; Google, Bing, OpenAI, Apple and Perplexity by name only where the visit came from an address they publish. The lambda needs no code for it - do not build a counter of your own for what this counts."
         },
         afterDeploying = new
         {

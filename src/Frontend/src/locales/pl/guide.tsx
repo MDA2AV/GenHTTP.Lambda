@@ -496,7 +496,8 @@ export const guide: Messages['guide'] = {
       Otwórz {k.b('Analityka')} w centrum sterowania i włącz ją, aby zobaczyć, kto odwiedza twoją aplikację: ilu ludzi
       przychodzi każdego dnia, jakie strony otwierają, które strony ich kierują – wyszukiwarka, post, newsletter – z
       jakich krajów, na jakich urządzeniach i w jakich przeglądarkach oraz które wyszukiwarki i asystenci AI czytają
-      jej strony. Wybierz liczbę u góry, aby zobaczyć ją dzień po dniu.
+      jej strony. Wybierz liczbę u góry, aby zobaczyć ją dzień po dniu. Wyświetlenia stron to strony, które ludzie
+      otworzyli; włącz {k.b('Uwzględnij boty')}, aby liczyć także te wyszukiwarek, robotów AI i innych programów.
     </>
   ),
   visitors2: (k) => (

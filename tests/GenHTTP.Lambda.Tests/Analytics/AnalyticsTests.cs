@@ -244,6 +244,45 @@ public sealed class AnalyticsTests
     }
 
     [TestMethod]
+    public async Task PagesProgramsOpenedAreCountedApartFromPeoples()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        Place(fixture, "CH");
+
+        var lambda = await OnlineAsync(fixture, "crawled");
+
+        await EnableAsync(fixture, lambda.PrivateKey);
+
+        await VisitAsync(fixture, "http://crawled.localhost/", Chrome, destination: "document");
+        await VisitAsync(fixture, "http://crawled.localhost/menu", IPhone, destination: "document");
+
+        // a crawler, and a program that names no browser, both fetching HTML
+        await VisitAsync(fixture, "http://crawled.localhost/menu", Googlebot);
+        await VisitAsync(fixture, "http://crawled.localhost/menu", "curl/8.9.1");
+
+        Flush(fixture);
+
+        var shown = await ReadAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual(4, shown.Totals!.Views, "every page opened");
+        Assert.AreEqual(2, shown.Totals.BotViews, "of which programs opened two");
+        Assert.AreEqual(2, shown.Daily!.Last().Totals.BotViews);
+
+        var menu = shown.Pages!.Single(p => p.Value == "/menu");
+
+        Assert.AreEqual(3, menu.Views);
+        Assert.AreEqual(2, menu.BotViews, "people opened the menu once");
+
+        Assert.AreEqual(2, shown.Countries!.Single(c => c.Value == "CH").BotViews);
+
+        Assert.AreEqual(2, shown.Devices!.Where(d => d.Value is "bot" or "other").Sum(d => d.BotViews), "what is no person's device is a program's");
+        Assert.AreEqual(0, shown.Devices!.Single(d => d.Value == "desktop").BotViews);
+
+        Assert.IsTrue(shown.Browsers!.All(b => b.BotViews == 0), "browsers are people's only");
+    }
+
+    [TestMethod]
     public async Task AScannerCannotFillADayWithPaths()
     {
         await using var fixture = await LambdaFixture.CreateAsync();

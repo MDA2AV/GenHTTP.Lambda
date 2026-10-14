@@ -10,7 +10,7 @@ import { useEditorT, useLanguage } from '../i18n';
 import { tagOf } from '../i18n/languages';
 import type { Control } from './context';
 import { count, percent } from './format';
-import { Section, Sparkline, pill } from './ui';
+import { Section, Sparkline, Switch, pill } from './ui';
 
 /** The time ranges offered; those longer than the tier shows are offered locked. */
 const RANGES = [7, 30, 90, 365];
@@ -34,6 +34,17 @@ const DEVICES: Record<string, [string, string]> = {
 };
 
 const DEVICE_ORDER = ['desktop', 'mobile', 'tablet', 'bot', 'other'];
+
+/** Whether the owner counts the pages bots opened as well, remembered in their browser. */
+const BOTS = 'lambda-analytics-bots';
+
+function rememberedBots(): boolean {
+  try {
+    return localStorage.getItem(BOTS) === 'yes';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Who visits the lambda: how many people come each day, which pages they
@@ -66,6 +77,25 @@ export function AnalyticsTab({ control }: { control: Control }) {
   const [measure, setMeasure] = useState<Measure>('visitors');
   const [switching, setSwitching] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [bots, setBots] = useState(rememberedBots);
+
+  const toggleBots = () => {
+    setBots((were) => {
+      try {
+        localStorage.setItem(BOTS, were ? 'no' : 'yes');
+      } catch {
+        // a browser that keeps nothing starts with people only, which is fine
+      }
+
+      return !were;
+    });
+  };
+
+  // the pages people opened, unless the owner asked for those of bots as
+  // well: worked out here rather than asked for again, so the switch answers
+  // at once
+  const people = useMemo(() => state && withoutBots(state), [state]);
+  const shown = bots ? state : people;
 
   /*
    * Read when opened and when the range changes, and again when the page is
@@ -126,7 +156,7 @@ export function AnalyticsTab({ control }: { control: Control }) {
     }
   }
 
-  if (!state) {
+  if (!state || !shown || !people) {
     return (
       <Section title={title}>
         {failure ? (
@@ -150,8 +180,9 @@ export function AnalyticsTab({ control }: { control: Control }) {
   const date = (day: string, options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }) =>
     new Date(`${day}T00:00:00Z`).toLocaleDateString(tag, { ...options, timeZone: 'UTC' });
 
-  // pages opened where there are any; an app that only answers calls is
-  // described by what it was asked for
+  // pages opened where there are any, by bots included, so the switch never
+  // turns the page into another; an app that only answers calls is described
+  // by what it was asked for
   const by: 'views' | 'hits' = state.totals.views > 0 ? 'views' : 'hits';
   const hidden = state.earliest != null && state.earliest < state.from;
 
@@ -180,15 +211,32 @@ export function AnalyticsTab({ control }: { control: Control }) {
     </div>
   );
 
+  /*
+   * Beside the ranges rather than in the page views' own group, since it
+   * changes the figure at the top and its chart as well. Only where pages
+   * are opened: requests and visitors are what they are either way.
+   */
+  const toolbar = (
+    <>
+      {ranges}
+      {by === 'views' && (
+        <label title={said.botsHint} className="ml-auto inline-flex cursor-pointer items-center gap-2 text-[13px] text-slate-600 dark:text-slate-400">
+          <span id="analytics-bots">{said.bots}</span>
+          <Switch on={bots} onToggle={toggleBots} labelledBy="analytics-bots" />
+        </label>
+      )}
+    </>
+  );
+
   return (
-    <Section title={title} hint={said.hint} pills={ranges}>
+    <Section title={title} hint={said.hint} pills={toolbar}>
       {hidden && lambda.tier !== 'Premium' && (
         <Nudge since={date(state.earliest!, { day: 'numeric', month: 'long', year: 'numeric' })} address={absoluteAddress(lambda.address)} />
       )}
 
-      <Figures state={state} measure={measure} onPick={setMeasure} dark={dark} />
+      <Figures state={shown} measure={measure} onPick={setMeasure} dark={dark} bots={bots} />
 
-      <Columns state={state} measure={measure} dark={dark} date={date} />
+      <Columns state={shown} measure={measure} dark={dark} date={date} />
 
       {/*
         * In two groups by what their numbers count, since the two can be far
@@ -197,31 +245,32 @@ export function AnalyticsTab({ control }: { control: Control }) {
         * people open is described by its requests alone.
         */}
       {by === 'views' && (
-        <Group title={said.views} hint={said.viewsHint}>
-          <Card title={said.pages} hint={said.pagesHint}>
+        <Group title={said.views} hint={said.viewsHint} badge={bots ? said.withBots : undefined}>
+          <Card title={said.pages} hint={bots ? said.pagesHintBots : said.pagesHint}>
             <Ranked
-              values={(state.pages ?? []).filter((p) => p.views > 0)}
+              values={(shown.pages ?? []).filter((p) => p.views > 0)}
               by="views"
               mono
               name={(value) => (value === '(other)' ? said.other : value)}
             />
           </Card>
 
+          {/* people's, whatever the switch says: a bot comes from nowhere, and would be counted as typed in */}
           <Card title={said.sources} hint={said.sourcesHint}>
             <Ranked
-              values={(state.referrers ?? []).filter((r) => r.views > 0)}
+              values={(people.referrers ?? []).filter((r) => r.views > 0)}
               by="views"
               name={(value) => (value === '(other)' ? said.other : value)}
               icon={<IconGlobe className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
-              rest={{ label: said.direct, value: Math.max(0, state.totals.views - sum(state.referrers, 'views')) }}
+              rest={{ label: said.direct, value: Math.max(0, people.totals!.views - sum(people.referrers, 'views')) }}
             />
           </Card>
 
           <Card title={said.countries} hint={said.countriesHint}>
-            <Countries values={(state.countries ?? []).filter((c) => c.views > 0)} by="views" tag={tag} />
+            <Countries values={(shown.countries ?? []).filter((c) => c.views > 0)} by="views" tag={tag} />
           </Card>
 
-          <Agents devices={state.devices ?? []} browsers={state.browsers ?? []} systems={state.systems ?? []} by="views" dark={dark} />
+          <Agents devices={shown.devices ?? []} browsers={shown.browsers ?? []} systems={shown.systems ?? []} by="views" dark={dark} />
         </Group>
       )}
 
@@ -365,7 +414,13 @@ function Nudge({ since, address }: { since: string; address: string }) {
  * range, how it changed against the days before where those are shown, and
  * its days in small.
  */
-function Figures({ state, measure, onPick, dark }: { state: LambdaAnalytics; measure: Measure; onPick: (m: Measure) => void; dark: boolean }) {
+function Figures({ state, measure, onPick, dark, bots }: {
+  state: LambdaAnalytics;
+  measure: Measure;
+  onPick: (m: Measure) => void;
+  dark: boolean;
+  bots: boolean;
+}) {
   const said = useEditorT().analytics;
 
   const figures: { id: Measure; label: string; hint: string }[] = [
@@ -397,7 +452,11 @@ function Figures({ state, measure, onPick, dark }: { state: LambdaAnalytics; mea
               className="absolute inset-x-0 top-0 h-0.5"
               style={{ background: active ? ACCENT[dark ? 1 : 0] : 'transparent' }}
             />
-            <div className={`text-[13px] ${active ? 'font-medium text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}>{figure.label}</div>
+            <div className={`flex flex-wrap items-center gap-x-1.5 text-[13px] ${active ? 'font-medium text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}>
+              {figure.label}
+              {/* so a figure read on its own, or in a screenshot, says what it counts */}
+              {figure.id === 'views' && bots && <Badge>{said.withBots}</Badge>}
+            </div>
             <div className="mt-1 text-xl font-semibold tabular-nums tracking-tight sm:text-3xl">{count(value)}</div>
             <Change now={value} before={before} days={state.days} />
             <div className="mt-3 hidden sm:block">
@@ -631,14 +690,22 @@ function useWidth(initial: number) {
 }
 
 /** The cards whose numbers count the same thing, under the name of the figure they count. */
-function Group({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+function Group({ title, hint, badge, children }: { title: string; hint: string; badge?: string; children: ReactNode }) {
   return (
     <section className="mt-8">
-      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+      <h2 className="flex flex-wrap items-center gap-x-2 text-base font-semibold tracking-tight">
+        {title}
+        {badge && <Badge>{badge}</Badge>}
+      </h2>
       <p className="mt-0.5 text-xs text-slate-500">{hint}</p>
       <div className="mt-3 grid gap-6 lg:grid-cols-2">{children}</div>
     </section>
   );
+}
+
+/** A word beside a heading that says what its numbers count besides the usual. */
+function Badge({ children }: { children: ReactNode }) {
+  return <span className="rounded-sm bg-slate-100 px-1 text-[11px] font-normal tracking-normal text-slate-500 dark:bg-ink-800 dark:text-slate-400">{children}</span>;
 }
 
 /** A card of a group. */
@@ -866,6 +933,34 @@ function niceCeiling(value: number) {
   }
 
   return 10 * power;
+}
+
+/**
+ * The pages people opened: what the analytics are without the views of bots,
+ * everywhere a view is counted - the totals, the days and every breakdown.
+ */
+function withoutBots(state: LambdaAnalytics): LambdaAnalytics {
+  const people = <T extends { views: number; botViews: number }>(counted: T): T => ({
+    ...counted,
+    views: Math.max(0, counted.views - (counted.botViews ?? 0)),
+    botViews: 0,
+  });
+
+  const list = (values: AnalyticsValue[] | null) => values?.map(people) ?? null;
+
+  return {
+    ...state,
+    totals: state.totals && people(state.totals),
+    previous: state.previous && people(state.previous),
+    daily: state.daily?.map((day) => ({ ...day, totals: people(day.totals) })) ?? null,
+    pages: list(state.pages),
+    referrers: list(state.referrers),
+    countries: list(state.countries),
+    devices: list(state.devices),
+    browsers: list(state.browsers),
+    systems: list(state.systems),
+    crawlers: list(state.crawlers),
+  };
 }
 
 const sum = (values: AnalyticsValue[] | null, by: keyof Pick<AnalyticsTotals, 'views' | 'hits'>) =>

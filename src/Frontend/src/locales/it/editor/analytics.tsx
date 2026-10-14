@@ -27,6 +27,9 @@ export const analytics: EditorMessages['analytics'] = {
   visitorsHint: 'Persone diverse che hanno aperto una pagina, ognuna contata una volta al giorno. I motori di ricerca e gli altri programmi non sono visitatori.',
   views: 'Visualizzazioni di pagina',
   viewsHint: 'Ogni volta che qualcuno ha aperto una pagina.',
+  bots: 'Includi i bot',
+  botsHint: 'Conta anche le pagine aperte da motori di ricerca, crawler di IA e altri programmi. I visitatori sono sempre persone.',
+  withBots: 'bot inclusi',
   hits: 'Richieste',
   hitsHint: 'Tutto ciò che è stato chiesto alla tua app: le sue pagine, e le immagini e gli script che caricano.',
   versus: (days) => `rispetto ai ${days} giorni precedenti`,
@@ -53,6 +56,7 @@ export const analytics: EditorMessages['analytics'] = {
 
   pages: 'Pagine',
   pagesHint: 'Le pagine aperte dalle persone, le più aperte per prime.',
+  pagesHintBots: 'Le pagine aperte dalle persone e dai bot, le più aperte per prime.',
   requested: 'Più richieste',
   requestedHint: 'Tutto ciò che è stato chiesto alla tua app, per indirizzo: non ha pagine che le persone aprono.',
   sources: 'Da dove arrivano i visitatori',
