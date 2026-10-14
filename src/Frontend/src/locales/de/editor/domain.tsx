@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Domain auf diesen Server zeigen lassen',
   check: 'Nochmal prüfen',
   records:
-    'Legen Sie beim DNS-Anbieter der Domain diese zwei Einträge an. Den AAAA-Eintrag können Sie weglassen, wenn die Domain nicht über IPv6 erreichbar sein soll.',
+    'Legen Sie beim DNS-Anbieter der Domain diese Einträge an. Die AAAA-Einträge können Sie weglassen, wenn die Domain nicht über IPv6 erreichbar sein soll.',
+  www: (www, domain) => (
+    <>
+      Besucher, die {www} eingeben, werden zu {domain} weitergeleitet, damit Suchmaschinen eine einzige Adresse behalten. Die zugehörigen Einträge sind optional.
+    </>
+  ),
   type: 'Typ',
   name: 'Name',
   value: 'Wert',

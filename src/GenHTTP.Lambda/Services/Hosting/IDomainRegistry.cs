@@ -13,8 +13,9 @@ public interface IDomainRegistry
     int Count { get; }
 
     /// <summary>
-    /// What a host belongs to: a lambda's domain, a subdomain of the hosting
-    /// domain or that domain itself - or nothing, for the platform.
+    /// What a host belongs to: a lambda's domain, www in front of one, a
+    /// subdomain of the hosting domain or that domain itself - or nothing,
+    /// for the platform.
     /// </summary>
     /// <param name="host">A host in its normalized form, see <see cref="DomainNames.Normalize"/></param>
     LambdaHost? Find(string host);

@@ -95,6 +95,13 @@ public sealed class LambdaAddresses : ILambdaAddresses
     public static bool Serves(LambdaTier tier, string? domain) => domain != null && tier == LambdaTier.Premium;
 
     /// <summary>
+    /// Whether a host is the platform's or the hosting domain's - one of its
+    /// names, the domain itself or below it - and so never a lambda's own.
+    /// </summary>
+    /// <param name="host">The host in its normalized form, see <see cref="DomainNames.Normalize"/></param>
+    public bool Owns(string host) => _platform.Contains(host) || Resolve(host) != null;
+
+    /// <summary>
     /// What a host below the hosting domain names, or nothing for a host that
     /// is not below it - one of the platform's, or a lambda's own domain.
     /// </summary>

@@ -212,6 +212,9 @@ function Records({ domain, configured, state, checking, onCheck }: {
   const ours = new Set([ADDRESSES.v4, ADDRESSES.v6]);
   const pointsHere = resolved.some((address) => ours.has(address));
   const elsewhere = resolved.filter((address) => !ours.has(address));
+  // typed with www by some, and sent on to the domain by the server - unless
+  // the owner chose the name with www, which is then the domain itself
+  const www = domain.startsWith('www.') ? null : `www.${domain}`;
 
   return (
     <section className="mt-8">
@@ -239,9 +242,21 @@ function Records({ domain, configured, state, checking, onCheck }: {
           <tbody className="divide-y divide-slate-100 dark:divide-ink-850">
             <Record type="A" name={domain} value={ADDRESSES.v4} />
             <Record type="AAAA" name={domain} value={ADDRESSES.v6} />
+            {www && (
+              <>
+                <Record type="A" name={www} value={ADDRESSES.v4} />
+                <Record type="AAAA" name={www} value={ADDRESSES.v6} />
+              </>
+            )}
           </tbody>
         </table>
       </div>
+
+      {www && (
+        <p className="mt-2 text-[13px] text-slate-600 dark:text-slate-400">
+          {said.www(<span className="font-mono">{www}</span>, <span className="font-mono">{domain}</span>)}
+        </p>
+      )}
 
       {configured && state.dns && (
         <p className="mt-3 flex items-start gap-2 text-[13px]">

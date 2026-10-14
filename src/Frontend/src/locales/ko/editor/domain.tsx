@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: '도메인이 이 서버를 가리키게 하기',
   check: '다시 확인',
   records:
-    '도메인의 DNS를 관리하는 곳에서 아래 두 레코드를 추가하세요. IPv6로 접속되지 않길 원하면 AAAA 레코드는 빼도 돼요.',
+    '도메인의 DNS를 관리하는 곳에서 아래 레코드를 추가하세요. IPv6로 접속되지 않길 원하면 AAAA 레코드는 빼도 돼요.',
+  www: (www, domain) => (
+    <>
+      {www}를 입력해서 들어온 방문자는 {domain}(으)로 자동 이동해요. 그래서 검색 엔진에는 주소가 하나만 남아요. 이 이름의 레코드는 선택 사항이에요.
+    </>
+  ),
   type: '유형',
   name: '이름',
   value: '값',

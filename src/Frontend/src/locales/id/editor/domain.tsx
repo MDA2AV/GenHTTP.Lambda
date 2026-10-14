@@ -27,7 +27,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Arahkan domain ke server ini',
   check: 'Cek lagi',
   records:
-    'Di penyedia DNS domain Anda, tambahkan dua record ini. Lewati record AAAA kalau Anda tidak ingin bisa diakses lewat IPv6.',
+    'Di penyedia DNS domain Anda, tambahkan record ini. Lewati record AAAA kalau Anda tidak ingin bisa diakses lewat IPv6.',
+  www: (www, domain) => (
+    <>
+      Pengunjung yang mengetik {www} akan diarahkan ke {domain}, sehingga mesin pencari hanya mengenal satu alamat. Record-nya bersifat opsional.
+    </>
+  ),
   type: 'Tipe',
   name: 'Nama',
   value: 'Nilai',

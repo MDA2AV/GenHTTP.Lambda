@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Faites pointer le domaine vers ce serveur',
   check: 'Revérifier',
   records:
-    'Chez le gestionnaire DNS du domaine, ajoutez ces deux enregistrements. Laissez de côté l’enregistrement AAAA si vous ne voulez pas être joignable en IPv6.',
+    'Chez le gestionnaire DNS du domaine, ajoutez ces enregistrements. Laissez de côté les enregistrements AAAA si vous ne voulez pas être joignable en IPv6.',
+  www: (www, domain) => (
+    <>
+      Les visiteurs qui saisissent {www} sont redirigés vers {domain}, afin que les moteurs de recherche ne retiennent qu’une seule adresse. Ses enregistrements sont facultatifs.
+    </>
+  ),
   type: 'Type',
   name: 'Nom',
   value: 'Valeur',

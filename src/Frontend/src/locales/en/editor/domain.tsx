@@ -30,7 +30,13 @@ export const domain = {
   point: 'Point the domain at this server',
   check: 'Check again',
   records:
-    'At whoever manages the DNS of the domain, add these two records. Leave out the AAAA record if you would rather not be reachable over IPv6.',
+    'At whoever manages the DNS of the domain, add these records. Leave out the AAAA records if you would rather not be reachable over IPv6.',
+  /** Under the DNS records, when the domain was entered without www: why there are records for the name with www as well. */
+  www: (www: Node, domain: Node) => (
+    <>
+      Visitors who type {www} are sent on to {domain}, so search engines keep one address. Its records are optional.
+    </>
+  ),
   type: 'Type',
   name: 'Name',
   value: 'Value',

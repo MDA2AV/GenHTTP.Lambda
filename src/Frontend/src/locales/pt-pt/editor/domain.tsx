@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Aponta o domínio para este servidor',
   check: 'Verificar outra vez',
   records:
-    'No serviço que gere o DNS do domínio, adiciona estes dois registos. Deixa de fora o registo AAAA se preferires não estar acessível por IPv6.',
+    'No serviço que gere o DNS do domínio, adiciona estes registos. Deixa de fora os registos AAAA se preferires não estar acessível por IPv6.',
+  www: (www, domain) => (
+    <>
+      Os visitantes que escreverem {www} são reencaminhados para {domain}, para que os motores de pesquisa mantenham um único endereço. Os registos deste nome são opcionais.
+    </>
+  ),
   type: 'Tipo',
   name: 'Nome',
   value: 'Valor',

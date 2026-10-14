@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Alan adını bu sunucuya yönlendirin',
   check: 'Tekrar kontrol et',
   records:
-    'Alan adınızın DNS kayıtlarını yönettiğiniz yerde şu iki kaydı ekleyin. IPv6 üzerinden erişilebilir olmak istemiyorsanız AAAA kaydını eklemeyin.',
+    'Alan adınızın DNS kayıtlarını yönettiğiniz yerde şu kayıtları ekleyin. IPv6 üzerinden erişilebilir olmak istemiyorsanız AAAA kayıtlarını eklemeyin.',
+  www: (www, domain) => (
+    <>
+      {www} yazan ziyaretçiler {domain} adresine yönlendirilir, böylece arama motorları tek bir adres görür. Bunun kayıtları isteğe bağlıdır.
+    </>
+  ),
   type: 'Tür',
   name: 'Ad',
   value: 'Değer',

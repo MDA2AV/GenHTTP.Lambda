@@ -28,7 +28,12 @@ export const domain: EditorMessages['domain'] = {
   point: 'Skieruj domenę na ten serwer',
   check: 'Sprawdź ponownie',
   records:
-    'U dostawcy DNS domeny dodaj te dwa rekordy. Pomiń rekord AAAA, jeśli nie chcesz, żeby domena była dostępna przez IPv6.',
+    'U dostawcy DNS domeny dodaj te rekordy. Pomiń rekordy AAAA, jeśli nie chcesz, żeby domena była dostępna przez IPv6.',
+  www: (www, domain) => (
+    <>
+      Osoby, które wpiszą {www}, są przekierowywane na {domain}, dzięki czemu wyszukiwarki widzą jeden adres. Rekordy dla {www} są opcjonalne.
+    </>
+  ),
   type: 'Typ',
   name: 'Nazwa',
   value: 'Wartość',

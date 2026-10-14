@@ -12,8 +12,9 @@ namespace GenHTTP.Lambda.Services.Hosting;
 /// <summary>
 /// Sends a request for an address a lambda no longer answers at on to the
 /// one it does, for good: its old path below <c>/lambda/</c> on the platform,
-/// and its subdomain of the hosting domain while it answers at a domain of
-/// its own.
+/// its subdomain of the hosting domain while it answers at a domain of its
+/// own, and <c>www.</c> in front of that domain where its owner entered it
+/// without.
 /// </summary>
 /// <remarks>
 /// In front of everything else the server does, the request log and the
@@ -30,6 +31,11 @@ namespace GenHTTP.Lambda.Services.Hosting;
 /// day: where a lambda answers changes when its owner gives it a domain or
 /// takes it away, and a browser that kept the old answer for good would send
 /// its visitors to a domain that is no longer the lambda's.
+///
+/// The www of a domain is sent on rather than served as well, since a site
+/// that answers at two names is two sites to a search engine. Its owner
+/// decides which of the two it is: a domain entered with www is served there,
+/// and nothing is sent to it from the name without.
 /// </remarks>
 public sealed class LambdaRedirectConcern(IHandler content, IDomainRegistry registry, ILambdaAddresses addresses) : IConcern
 {
@@ -53,6 +59,7 @@ public sealed class LambdaRedirectConcern(IHandler content, IDomainRegistry regi
         {
             null => FromPlatform(request),
             HostedLambda hosted => ToDomain(request, hosted),
+            WwwOfDomain www => $"https://{www.Domain}{request.Header.Path}{RequestOrigin.Query(request)}",
             _ => null
         };
 

@@ -96,6 +96,99 @@ public sealed class DomainTests
     }
 
     [TestMethod]
+    public async Task TheWwwOfItsDomainSendsVisitorsOnToTheDomain()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await ServeAsync(fixture, "shop");
+
+        using var page = await fixture.GetAsync("/start?ref=old", host: $"WWW.{Domain}:80");
+
+        Assert.AreEqual(HttpStatusCode.MovedPermanently, page.StatusCode, "one name for search engines to keep, the one the owner entered");
+        Assert.AreEqual($"https://{Domain}/start?ref=old", page.Headers.Location?.ToString(), "with the path and the query it was asked for");
+
+        using var posted = await fixture.SendAsync(HttpMethod.Post, "/items", host: $"www.{Domain}");
+
+        Assert.AreEqual(HttpStatusCode.PermanentRedirect, posted.StatusCode, "followed with the same method and body");
+        Assert.AreEqual($"https://{Domain}/items", posted.Headers.Location?.ToString());
+    }
+
+    [TestMethod]
+    public async Task ADomainEnteredWithWwwIsServedThereAndOnlyThere()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await fixture.CreateLambdaAsync("shop");
+
+        await fixture.DeployAsync(lambda.PrivateKey, Code);
+
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+
+        await SetAsync(fixture, lambda.PrivateKey, $"www.{Domain}");
+
+        using var www = await fixture.GetAsync("/start", host: $"www.{Domain}");
+
+        Assert.AreEqual("mine", await www.GetContentAsync(), "the owner chose the name with www");
+
+        using var bare = await fixture.GetAsync("/start", host: Domain);
+
+        Assert.AreNotEqual(HttpStatusCode.MovedPermanently, bare.StatusCode, "nothing is sent on to a name the owner did not enter");
+        Assert.AreNotEqual("mine", await bare.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task AWwwThatIsADomainOfItsOwnIsNotSentOn()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await ServeAsync(fixture, "shop");
+
+        var other = await fixture.CreateLambdaAsync("other");
+
+        await fixture.DeployAsync(other.PrivateKey, """return Inline.Create().Get(() => "other");""");
+
+        fixture.ChangeTier(other.PrivateKey, LambdaTier.Premium);
+
+        await SetAsync(fixture, other.PrivateKey, $"www.{Domain}");
+
+        using var response = await fixture.GetAsync("/", host: $"www.{Domain}");
+
+        Assert.AreEqual("other", await response.GetContentAsync());
+    }
+
+    [TestMethod]
+    public async Task TheWwwOfADomainNeverTakesThePlatformsName()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = "https://www.example.org" });
+
+        var lambda = await fixture.CreateLambdaAsync("apex");
+
+        await fixture.DeployAsync(lambda.PrivateKey, Code);
+
+        fixture.ChangeTier(lambda.PrivateKey, LambdaTier.Premium);
+
+        await SetAsync(fixture, lambda.PrivateKey, "example.org");
+
+        using var response = await fixture.GetAsync("/api/v1/system", host: "www.example.org");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, "the platform answers at its own name, whoever has the domain below it");
+    }
+
+    [TestMethod]
+    public async Task TheWwwIsNoLongerSentOnOnceTheDomainIsGone()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await ServeAsync(fixture, "shop");
+
+        using (await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/domain")) { }
+
+        using var response = await fixture.GetAsync("/api/v1/system", host: $"www.{Domain}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, "any other host is the platform again");
+    }
+
+    [TestMethod]
     public async Task ItsAddressServesItAgainOnceTheDomainIsGone()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
