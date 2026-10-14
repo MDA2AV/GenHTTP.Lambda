@@ -24,7 +24,7 @@ export const analytics: EditorMessages['analytics'] = {
   premiumRange: 'Premium bir yıla kadar gösterir',
 
   visitors: 'Ziyaretçiler',
-  visitorsHint: 'Farklı kişiler, her biri günde bir kez sayılır. Arama motorları ve diğer programlar ziyaretçi sayılmaz.',
+  visitorsHint: 'Bir sayfa açan farklı kişiler, her biri günde bir kez sayılır. Arama motorları ve diğer programlar ziyaretçi sayılmaz.',
   views: 'Sayfa görüntülemeleri',
   viewsHint: 'Birinin bir sayfayı her açışı.',
   hits: 'İstekler',

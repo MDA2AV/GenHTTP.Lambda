@@ -514,7 +514,7 @@ export const guide = {
     <>
       It is counted by the platform, in front of your app, so your app needs nothing for it: no cookies, no script,
       no banner for your visitors to accept. Only counts per day are kept - never an address, and of the page somebody
-      came from only the site. A visitor is a person, counted once a day: search engines, AI crawlers and other
+      came from only the site. A visitor is a person who opened a page, counted once a day: search engines, AI crawlers and other
       programs are counted apart, by what they are, and Google, Bing, OpenAI, Apple and Perplexity only by name when
       the visit came from an address they publish - anybody can claim to be them. A year is kept; a free app shows the last seven
       days of it and {k.b('Premium')} all of it, what was counted before included. Switching it off deletes what was

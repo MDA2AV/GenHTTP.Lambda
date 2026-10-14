@@ -24,7 +24,7 @@ export const analytics: EditorMessages['analytics'] = {
   premiumRange: 'Premium zeigt bis zu einem Jahr',
 
   visitors: 'Besucher',
-  visitorsHint: 'Verschiedene Personen, jede einmal pro Tag gezählt. Suchmaschinen und andere Programme sind keine Besucher.',
+  visitorsHint: 'Verschiedene Personen, die eine Seite geöffnet haben, jede einmal pro Tag gezählt. Suchmaschinen und andere Programme sind keine Besucher.',
   views: 'Seitenaufrufe',
   viewsHint: 'Jedes Mal, wenn jemand eine Seite geöffnet hat.',
   hits: 'Requests',

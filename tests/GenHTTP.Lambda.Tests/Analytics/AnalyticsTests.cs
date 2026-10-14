@@ -29,6 +29,8 @@ public sealed class AnalyticsTests
 
     private const string Chrome = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
+    private const string Firefox = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0";
+
     private const string IPhone = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1";
 
     private const string Googlebot = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
@@ -214,6 +216,31 @@ public sealed class AnalyticsTests
         Assert.AreEqual(1, shown.Pages!.Single(p => p.Value == "/app.js").Hits, "what was loaded is requested, not viewed");
         Assert.AreEqual(0, Views(shown.Pages, "/app.js"));
         Assert.IsEmpty(shown.Referrers!, "the lambda referring to itself is nobody coming from elsewhere");
+    }
+
+    [TestMethod]
+    public async Task AVisitorIsSomebodyWhoOpenedAPage()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        var lambda = await OnlineAsync(fixture, "visited");
+
+        await EnableAsync(fixture, lambda.PrivateKey);
+
+        // programs that call themselves a browser and open nothing: a script
+        // fetched on its own, an app calling the API
+        await VisitAsync(fixture, "http://visited.localhost/app.js", Chrome, destination: "script");
+        await VisitAsync(fixture, "http://visited.localhost/api/items", Firefox, destination: "empty");
+
+        await VisitAsync(fixture, "http://visited.localhost/", IPhone, destination: "document");
+
+        Flush(fixture);
+
+        var shown = await ReadAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual(3, shown.Totals!.Hits);
+        Assert.AreEqual(1, shown.Totals.Views);
+        Assert.AreEqual(1, shown.Totals.Visitors, "only the one who opened a page");
     }
 
     [TestMethod]

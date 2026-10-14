@@ -84,9 +84,11 @@ public sealed class VisitTally(DailyVisitors visitors, VisitorClassifier classif
 
         var agent = classifier.Classify(visit.Agent, visit.Hints, visit.Client);
 
-        // a visitor is a person, counted with the first thing they asked for
-        // that day, whatever it was - a crawler opens pages, but is nobody
-        if (agent.Browser != null && visitors.IsNew(lambda, day, visit.Client, visit.Agent) == true)
+        // a visitor is a person who opened a page, counted with the first page
+        // they opened that day - a crawler opens pages, but is nobody, and a
+        // scanner that names a browser guesses paths, but opens none; so there
+        // are never more visitors than pages opened
+        if (visit.Page && agent.Browser != null && visitors.IsNew(lambda, day, visit.Client, visit.Agent) == true)
         {
             totals.Visitors++;
         }

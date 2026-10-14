@@ -24,7 +24,7 @@ export const analytics: EditorMessages['analytics'] = {
   premiumRange: 'Premium menampilkan hingga setahun',
 
   visitors: 'Pengunjung',
-  visitorsHint: 'Orang yang berbeda, masing-masing dihitung sekali sehari. Mesin pencari dan program lain bukan pengunjung.',
+  visitorsHint: 'Orang yang berbeda yang membuka sebuah halaman, masing-masing dihitung sekali sehari. Mesin pencari dan program lain bukan pengunjung.',
   views: 'Tampilan halaman',
   viewsHint: 'Setiap kali seseorang membuka sebuah halaman.',
   hits: 'Request',

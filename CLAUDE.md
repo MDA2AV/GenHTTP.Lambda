@@ -475,6 +475,11 @@ section.
   and Chromium's client hints, and a value the sender wrote is only taken
   where it is one of a known few. Matching stays linear in the length of an
   agent: no backtracking expression ever reads one.
+- **A visitor is a person who opened a page - decided by the owner.** One
+  the classifier takes for a browser and whose visit was a page view,
+  counted once a day with the first page they opened. A request for anything
+  else - a script, an API call, `robots.txt`, a path that was not there -
+  makes nobody a visitor, so there are never more visitors than page views.
 - **Nothing that names a visitor is kept.** Counts only; the referrer as its
   host; visitors told apart for a day by a hash under a random key per day
   and lambda, held in memory and never written. No cookie, no script in the
