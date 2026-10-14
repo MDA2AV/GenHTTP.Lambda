@@ -172,13 +172,15 @@ public sealed class LambdaVisitConcern : IDependentConcern
         "pdf", "zip", "wasm"
     };
 
+    private static readonly HashSet<string>.AlternateLookup<ReadOnlySpan<char>> FileEndings = Files.GetAlternateLookup<ReadOnlySpan<char>>();
+
     private static bool NamesAFile(string target)
     {
         var name = target.AsSpan(target.LastIndexOf('/') + 1);
 
         var dot = name.LastIndexOf('.');
 
-        return dot >= 0 && Files.GetAlternateLookup<ReadOnlySpan<char>>().Contains(name[(dot + 1)..]);
+        return dot >= 0 && FileEndings.Contains(name[(dot + 1)..]);
     }
 
 }
