@@ -1,12 +1,16 @@
+using GenHTTP.Api.Content.Services;
+
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// One page of a listing that is read a page at a time, with <c>skip</c> and
-/// <c>take</c>.
-/// </summary>
-/// <param name="Total">How many there are altogether</param>
-/// <param name="Next">Where the next page starts, or nothing when this was the last</param>
-public sealed record Page<T>(IReadOnlyList<T> Entries, int Total, int? Next)
+[Summary("A page of a listing that is read a page at a time, with `skip` and `take`.")]
+public sealed record Page<T>(
+    [Summary("The entries of this page")]
+    IReadOnlyList<T> Entries,
+    [Summary("How many entries there are altogether")]
+    int Total,
+    [Summary("The `skip` of the next page; absent when this was the last")]
+    int? Next
+)
 {
 
     /// <summary>

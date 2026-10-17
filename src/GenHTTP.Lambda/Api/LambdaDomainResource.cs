@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
 
+using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Protocol;
+
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Meta;
@@ -13,16 +16,24 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The domain a lambda answers at instead of its subdomain of the hosting
-/// domain, for its owner.
-/// </summary>
 /// <remarks>
 /// Behind the editor key like everything else about a lambda. Whether a lambda
 /// may have one at all is decided by its tier, which only an administrator
 /// sets - so the owner can read here why the domain is not served, but can
 /// only change the domain itself.
 /// </remarks>
+[Tag(ApiDocumentation.Domain)]
+[Summary("A domain of a lambda's own, which it answers at instead of its subdomain of the hosting domain.")]
+[Remarks("""
+         Part of the premium tier, which only the operator assigns. While a lambda answers at its domain, its subdomain of the
+         hosting domain sends its visitors on to the domain with a permanent redirect, and `address` names the domain.
+
+         The domain is entered as it should answer. `www.` in front of a domain is sent on to the domain itself, unless the
+         domain was entered with `www.` - then that is where it answers, and the name without is not sent there. The domain has
+         to point to this installation (in the DNS) and needs a certificate, which the operator of the installation takes
+         care of; the answer says what the domain resolves to, as the server sees it, to check the first.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomainResource> logger)
 {
 
@@ -32,25 +43,29 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
     /// </summary>
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(3);
 
-    /// <summary>
-    /// The domain of the lambda, whether it is served, and what it resolves to.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/domain")]
-    public async ValueTask<DomainResponse> Get(string privateKey)
+    [Summary("Reads the domain of a lambda")]
+    [Remarks("The name servers are asked as the request is answered, for up to three seconds, and their answers may be cached for as long as the records say.")]
+    [return: Summary("The domain, and what it resolves to")]
+    public async ValueTask<DomainResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
         => await DescribeAsync(meta.Require(privateKey));
 
-    /// <summary>
-    /// Sets the domain the lambda answers at.
-    /// </summary>
-    /// <remarks>
-    /// Only in the premium tier. Takes effect at once: the next request
-    /// addressed to the domain reaches the lambda, one addressed to the
-    /// previous domain no longer does, and the lambda's subdomain of the
-    /// hosting domain sends its visitors on to the domain from then on - so
-    /// the domain should point here, with a certificate for it, first.
-    /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/domain")]
-    public async ValueTask<DomainResponse> Put(string privateKey, DomainChangeRequest request)
+    [Summary("Sets the domain a lambda answers at")]
+    [Remarks("""
+             Takes effect at once: the next request addressed to the domain reaches the lambda, one addressed to its previous
+             domain no longer does, and its subdomain of the hosting domain sends its visitors on to the domain from then on -
+             so the domain should point here, with a certificate, first.
+
+             The domain is lower cased, an international one written as it is in the DNS, and a pasted address is forgiven its
+             scheme and path. It needs an ending (`example.com`, not `example`), and may not be an IP address or a name of the
+             platform. Sending none removes it, as `DELETE` does.
+             """)]
+    [Response(ResponseStatus.BadRequest, "That is not a domain that can be used. The message says why.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, "The lambda is not in the premium tier - or it is a demo.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "Another lambda answers at that domain.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The domain afterwards, and what it resolves to")]
+    public async ValueTask<DomainResponse> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, DomainChangeRequest request)
     {
         var lambda = meta.ChangeDomain(privateKey, request.Domain);
 
@@ -59,12 +74,12 @@ public sealed class LambdaDomainResource(IMetaService meta, ILogger<LambdaDomain
         return await DescribeAsync(lambda);
     }
 
-    /// <summary>
-    /// Stops the lambda answering at its domain. Its subdomain of the hosting
-    /// domain answers again instead of sending visitors there.
-    /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/domain")]
-    public async ValueTask<DomainResponse> Delete(string privateKey)
+    [Summary("Removes the domain of a lambda")]
+    [Remarks("From the next request on it no longer answers at the domain, and its subdomain of the hosting domain answers again instead of sending visitors there. Any tier may remove a domain.")]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The lambda, without a domain")]
+    public async ValueTask<DomainResponse> Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var lambda = meta.ChangeDomain(privateKey, null);
 

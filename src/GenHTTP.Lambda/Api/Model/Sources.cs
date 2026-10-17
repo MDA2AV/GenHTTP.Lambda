@@ -1,15 +1,21 @@
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Source;
 
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// A license a source can be published under.
-/// </summary>
-/// <param name="Id">Its SPDX identifier, which is how it is asked for</param>
-/// <param name="Kind">Permissive, Copyleft or PublicDomain - roughly what it asks of whoever reuses the code</param>
-/// <param name="Url">Where it is described in full</param>
-public sealed record LicenseResponse(string Id, string Name, string Kind, string Url)
+[Summary("A license a source can be published under.")]
+public sealed record LicenseResponse(
+    [Summary("Its SPDX identifier, which is how it is asked for: `MIT`, `Apache-2.0`, `GPL-3.0-or-later` …")]
+    string Id,
+    [Summary("Its full name")]
+    string Name,
+    [Summary("`Permissive`, `Copyleft` or `PublicDomain` - roughly what it asks of whoever reuses the code")]
+    string Kind,
+    [Summary("Where it is described in full")]
+    string Url
+)
 {
 
     public static LicenseResponse Of(SourceLicense license) => new(license.Id, license.Name, license.Kind.ToString(), license.Url);
@@ -20,32 +26,33 @@ public sealed record LicenseResponse(string Id, string Name, string Kind, string
 
 #region Public
 
-/// <summary>
-/// A published source, as the listing shows it.
-/// </summary>
-/// <param name="Title">What its owner calls it on the showcase, if it is on the showcase</param>
-/// <param name="About">What its newest version says it is - the first paragraph of its documentation</param>
-/// <param name="Description">What its owner says about it on the showcase, if it is there</param>
-/// <param name="Online">Whether the app answers right now</param>
-/// <param name="Address">Where the app answers - its own domain while it has one, its address below the hosting domain otherwise</param>
-/// <param name="Path">Where its source is read, without a language</param>
-/// <param name="ImagePath">Its picture on the showcase, if it has one</param>
-/// <param name="LatestVersion">Its newest version</param>
-/// <param name="Updated">When its newest version was saved</param>
-/// <param name="PublishedAt">When its source was published</param>
+[Summary("A published source, as the listing shows it.")]
 public sealed record SourceEntryResponse(
+    [Summary("The public key of the lambda")]
     string PublicKey,
+    [Summary("What its owner calls it in the showcase, where it is in the showcase")]
     string? Title,
+    [Summary("What its newest version says it is: the first paragraph of its `docs/product.md`")]
     string? About,
+    [Summary("What its owner says about it in the showcase, where it is there")]
     string? Description,
+    [Summary("The license it is published under")]
     LicenseResponse License,
+    [Summary("How many visitors starred it")]
     int Stars,
+    [Summary("Whether the app answers right now")]
     bool Online,
+    [Summary("Where the app answers - its own domain while it has one, its address below the hosting domain otherwise")]
     string Address,
+    [Summary("Where its source is read on this site: `/source/{publicKey}`")]
     string Path,
+    [Summary("Its picture in the showcase, where it has one")]
     string? ImagePath,
+    [Summary("Its newest version")]
     int? LatestVersion,
+    [Summary("When its newest version was saved")]
     DateTime? Updated,
+    [Summary("When its source was published")]
     DateTime PublishedAt
 )
 {
@@ -68,84 +75,137 @@ public sealed record SourceEntryResponse(
 
 }
 
-/// <summary>
-/// A published source with its history.
-/// </summary>
-/// <param name="Author">Who holds the copyright, if the owner named somebody</param>
-/// <param name="Holder">Who the license names as holding it - the author, or the authors of the lambda</param>
-/// <param name="ActiveVersion">The version online, if one is</param>
-/// <param name="Created">When the lambda was made</param>
-/// <param name="Versions">Every version kept, newest first: what each changed, never what was asked for</param>
-/// <param name="StarTicket">What starring it has to be sent with, good for a day from a second on</param>
-/// <param name="GitPath">Where it is cloned with git - every version, read only</param>
+[Summary("A published source with its history.")]
 public sealed record SourceProjectResponse(
+    [Summary("The source, as the listing shows it")]
     SourceEntryResponse Source,
+    [Summary("Who holds the copyright, where the owner named somebody")]
     string? Author,
+    [Summary("Who the license names as holding it: the author, or the authors of the lambda")]
     string Holder,
+    [Summary("The version online, if one is")]
     int? ActiveVersion,
+    [Summary("When the lambda was created")]
     DateTime Created,
+    [Summary("Every version kept, newest first: what each changed, never what was asked for")]
     IReadOnlyList<SourceVersionResponse> Versions,
+    [Summary("What starring it is sent with (`POST …/star`): good from a second after it was handed out, for a day")]
     string StarTicket,
+    [Summary("Where it is cloned with git on this site - every version, read only")]
     string GitPath
 );
 
-/// <param name="Change">What it changed, in a line</param>
-/// <param name="Origin">Which door it came through: template, api, agent or git</param>
-/// <param name="Online">Whether this is the version online</param>
-/// <param name="ZipPath">Where it is downloaded as a project</param>
-public sealed record SourceVersionResponse(int Version, DateTime Created, string? Change, string? Origin, bool Online, string ZipPath);
+[Summary("A version of a published source.")]
+public sealed record SourceVersionResponse(
+    [Summary("Its number")]
+    int Version,
+    [Summary("When it was saved")]
+    DateTime Created,
+    [Summary("What it changed, in a line")]
+    string? Change,
+    [Summary("How it was saved: `template`, `api`, `agent` or `git`")]
+    string? Origin,
+    [Summary("Whether it is the version online")]
+    bool Online,
+    [Summary("Where it is downloaded as a project")]
+    string ZipPath
+);
 
-/// <summary>
-/// The files of a version, as the project it is packed into has them.
-/// </summary>
-/// <param name="Root">The folder the project is in, inside the zip</param>
-/// <param name="Bytes">How large the zip is</param>
-/// <param name="Files">Every file, by its path below the project's folder</param>
-/// <param name="ZipPath">Where it is downloaded</param>
-public sealed record SourceTreeResponse(string PublicKey, int Version, string Root, long Bytes, IReadOnlyList<SourceFileResponse> Files, string ZipPath);
+[Summary("The files of a published version, as the project it is packed into has them.")]
+public sealed record SourceTreeResponse(
+    [Summary("The public key of the lambda")]
+    string PublicKey,
+    [Summary("The number of the version")]
+    int Version,
+    [Summary("The folder the project is in, inside the zip")]
+    string Root,
+    [Summary("How large the zip is, in bytes")]
+    long Bytes,
+    [Summary("Every file, by its path below the project's folder")]
+    IReadOnlyList<SourceFileResponse> Files,
+    [Summary("Where the zip is downloaded")]
+    string ZipPath
+);
 
-/// <param name="Kind">code, resource, docs, tests, platform or project</param>
-public sealed record SourceFileResponse(string Path, long Size, string Kind);
+[Summary("A file of a published version.")]
+public sealed record SourceFileResponse(
+    [Summary("Its path below the project's folder")]
+    string Path,
+    [Summary("How large it is, in bytes")]
+    long Size,
+    [Summary("What it is: `code`, `resource`, `docs`, `tests`, `platform` (what stands in for the platform) or `project` (what makes it a project)")]
+    string Kind
+);
 
-/// <summary>
-/// One file of a version.
-/// </summary>
-/// <param name="Text">Whether it is text, which is then in Content</param>
-/// <param name="Content">The text, while it is text and not too long to show</param>
-/// <param name="RawPath">Where it is fetched as it is</param>
-public sealed record SourceFileContentResponse(string Path, long Size, string Kind, bool Text, string? Content, string RawPath);
+[Summary("A file of a published version, with its text.")]
+public sealed record SourceFileContentResponse(
+    [Summary("Its path below the project's folder")]
+    string Path,
+    [Summary("How large it is, in bytes")]
+    long Size,
+    [Summary("What it is: `code`, `resource`, `docs`, `tests`, `platform` or `project`")]
+    string Kind,
+    [Summary("Whether it is text - which is then in `content`, unless it is longer than a megabyte")]
+    bool Text,
+    [Summary("Its text, while it is text no longer than a megabyte")]
+    string? Content,
+    [Summary("Where it is fetched as it is")]
+    string RawPath
+);
 
-/// <summary>
-/// A star given, or taken back.
-/// </summary>
-/// <param name="Ticket">What the page was handed with the source</param>
-/// <param name="Starred">True, or left out, to star it; false to take the star back</param>
-public sealed record StarRequest(string? Ticket, bool? Starred);
+[Summary("A star given, or taken back.")]
+public sealed record StarRequest(
+    [Summary("The `starTicket` the source was read with")]
+    string? Ticket,
+    [Summary("`true`, or left out, to star it; `false` to take the star back")]
+    bool? Starred
+);
 
-/// <param name="Stars">How many it has now</param>
-/// <param name="Counted">Whether this one changed the count - it does not when the same was done from here before</param>
-public sealed record StarResponse(int Stars, bool Starred, bool Counted);
+[Summary("How a source is starred now.")]
+public sealed record StarResponse(
+    [Summary("How many stars it has now")]
+    int Stars,
+    [Summary("Whether this address stars it now")]
+    bool Starred,
+    [Summary("Whether this request changed the count - it does not where the same was done from here before")]
+    bool Counted
+);
 
 #endregion
 
 #region Owner
 
-/// <summary>
-/// Whether a lambda's source is published, as its owner sees it, and what it
-/// can be published under.
-/// </summary>
-/// <param name="Source">What it is published under, or nothing when it never was</param>
-/// <param name="Licenses">The licenses on offer, the default first</param>
-/// <param name="MaxAuthor">How long the name in the license may be</param>
-public sealed record OwnSourceResponse(SourceSettingsResponse? Source, IReadOnlyList<LicenseResponse> Licenses, string Default, int MaxAuthor);
+[Summary("Whether a lambda's source is published, as its owner sees it, and what it can be published under.")]
+public sealed record OwnSourceResponse(
+    [Summary("What it is published under; absent when it never was")]
+    SourceSettingsResponse? Source,
+    [Summary("The licenses on offer, the default first")]
+    IReadOnlyList<LicenseResponse> Licenses,
+    [Summary("The license a source is published under unless another is asked for: `MIT`")]
+    string Default,
+    [Summary("How many characters the name in the license may have")]
+    int MaxAuthor
+);
 
-/// <param name="Published">Whether anybody may read it right now</param>
-/// <param name="Author">Who holds the copyright, if the owner named somebody</param>
-/// <param name="Holder">Who the license names - the author, or the authors of the lambda</param>
-/// <param name="Stars">How many visitors starred it, kept while it is taken down</param>
-/// <param name="Path">Where it is read, without a language</param>
-public sealed record SourceSettingsResponse(bool Published, LicenseResponse License, string? Author, string Holder, int Stars,
-                                            DateTime PublishedAt, DateTime Updated, string Path)
+[Summary("What a lambda's source is published under.")]
+public sealed record SourceSettingsResponse(
+    [Summary("Whether anybody may read it right now - it may have been taken down since")]
+    bool Published,
+    [Summary("The license")]
+    LicenseResponse License,
+    [Summary("Who holds the copyright, where the owner named somebody")]
+    string? Author,
+    [Summary("Who the license names: the author, or the authors of the lambda")]
+    string Holder,
+    [Summary("How many visitors starred it - kept while it is taken down")]
+    int Stars,
+    [Summary("When it was published")]
+    DateTime PublishedAt,
+    [Summary("When what it is published under last changed")]
+    DateTime Updated,
+    [Summary("Where it is read on this site: `/source/{publicKey}`")]
+    string Path
+)
 {
 
     public static SourceSettingsResponse Of(SourceSettings settings) => new(
@@ -161,12 +221,12 @@ public sealed record SourceSettingsResponse(bool Published, LicenseResponse Lice
 
 }
 
-/// <summary>
-/// What a lambda's source is to be published under. What is left out stays as
-/// it is; an empty author names nobody.
-/// </summary>
-/// <param name="License">An SPDX identifier from the licenses on offer - MIT when a source is first published without one</param>
-/// <param name="Author">Who holds the copyright, as the license is to name them</param>
-public sealed record SourceRequest(string? License, string? Author);
+[Summary("What a lambda's source is to be published under. What is left out stays as it is.")]
+public sealed record SourceRequest(
+    [Summary("The SPDX identifier of one of the licenses on offer; `MIT` when a source is first published without one")]
+    string? License,
+    [Summary("Who holds the copyright, as the license is to name them, on one line; empty names nobody")]
+    string? Author
+);
 
 #endregion

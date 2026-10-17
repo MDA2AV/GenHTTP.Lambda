@@ -2,6 +2,8 @@ using System.Buffers.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using GenHTTP.Api.Content.Services;
+
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
 /// <summary>
@@ -9,10 +11,15 @@ namespace GenHTTP.Lambda.Services.Deployment.Model;
 /// kept with it - or one of its resources, which it reads and serves while it
 /// runs.
 /// </summary>
-/// <param name="Name">What it is called, which is also what diagnostics name</param>
-/// <param name="Code">Its contents, base64 when <paramref name="Encoding" /> says so</param>
-/// <param name="Encoding">"base64" for a file that is not text, absent otherwise</param>
-public sealed record LambdaFile(string Name, [property: JsonConverter(typeof(LongStringConverter))] string Code, string? Encoding = null)
+[Summary("One file of a lambda.")]
+[Remarks("`lambda.cs` and the other `.cs` files are compiled, files below `resources/` are served and read while the lambda runs, and every other file is kept with the version.")]
+public sealed record LambdaFile(
+    [Summary("Its path, with forward slashes: `lambda.cs`, `Store.cs`, `resources/web/index.html`, `docs/product.md`. Case sensitive, and also what the compiler's messages name.")]
+    string Name,
+    [Summary("Its content: the text itself, or base64 where `encoding` says so")]
+    [property: JsonConverter(typeof(LongStringConverter))] string Code,
+    [Summary("`base64` for a file that is not text - a picture, a font; left out for text. C# files are always text.")]
+    string? Encoding = null)
 {
 
     /// <summary>Whether this is C# the lambda is compiled from.</summary>

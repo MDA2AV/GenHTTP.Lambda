@@ -1,58 +1,55 @@
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Analytics;
 
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// How a lambda's visitors reach it, as its owner is shown.
-/// </summary>
-/// <param name="Enabled">Whether its visits are counted; nothing below <paramref name="Earliest"/> is there while they are not</param>
-/// <param name="Since">When counting was switched on</param>
-/// <param name="Tier">Free, Premium or Demo - what decides how many days are shown</param>
-/// <param name="Days">How many days this answer covers, today included</param>
-/// <param name="Window">The most days its tier shows</param>
-/// <param name="Kept">How many days are kept of every lambda, whatever its tier shows</param>
-/// <param name="From">The first day of the answer, in UTC</param>
-/// <param name="To">The last day of the answer: today, in UTC</param>
-/// <param name="Earliest">The first day anything was counted on - before <paramref name="From"/> where more is kept than shown</param>
-/// <param name="Totals">The days of the answer, summed</param>
-/// <param name="Previous">The same number of days before, summed - only where the tier shows those as well</param>
-/// <param name="Daily">Each day of the answer, oldest first, days without visits included</param>
-/// <param name="Pages">The paths that were answered, the most viewed first - a page opened is a view, every request a hit</param>
-/// <param name="Referrers">The sites visitors came from, by host</param>
-/// <param name="Countries">The countries their addresses were allocated to, by ISO code; empty where not known</param>
-/// <param name="Devices">desktop, mobile, tablet, bot or other</param>
-/// <param name="Browsers">The browsers of people - bots are not counted here</param>
-/// <param name="Systems">The operating systems of people</param>
-/// <param name="Crawlers">Whose bots came: search engines, AIs, chats showing a preview</param>
-/// <param name="Updated">When visits were last written down; visits since then are not in this answer yet</param>
-/// <param name="IntervalSeconds">How often they are written down</param>
-/// <param name="ConfirmedCrawlers">
-/// The operators whose crawlers are confirmed by the addresses they publish - Google, Bing, OpenAI, Apple, Perplexity -
-/// as far as those could be fetched. In <paramref name="Crawlers"/> their names stand for confirmed visits,
-/// "unconfirmed" for claims to be theirs from elsewhere, and every other value for a kind of crawler.
-/// </param>
+[Summary("What was counted of a lambda's visitors, as its owner is shown it.")]
+[Remarks("While counting is switched off, everything from `totals` to `crawlers` is absent.")]
 public sealed record AnalyticsResponse(
+    [Summary("Whether its visits are counted")]
     bool Enabled,
+    [Summary("When counting was switched on")]
     DateTime? Since,
+    [Summary("`Free`, `Premium` or `Demo` - which decides how many days are shown")]
     string Tier,
+    [Summary("How many days this answer covers, today included")]
     int Days,
+    [Summary("The most days its tier shows")]
     int Window,
+    [Summary("How many days are kept of every lambda, whatever its tier shows")]
     int Kept,
+    [Summary("The first day of the answer, in UTC")]
     DateOnly From,
+    [Summary("The last day of the answer: today, in UTC")]
     DateOnly To,
+    [Summary("The first day anything was counted on - before `from` where more is kept than shown")]
     DateOnly? Earliest,
+    [Summary("The days of the answer, summed")]
     AnalyticsTotalsResponse? Totals,
+    [Summary("The same number of days before, summed - only where the tier shows those as well")]
     AnalyticsTotalsResponse? Previous,
+    [Summary("Each day of the answer, oldest first, days without visits included")]
     IReadOnlyList<AnalyticsDayResponse>? Daily,
+    [Summary("The paths that were answered, the most viewed first")]
     IReadOnlyList<AnalyticsValueResponse>? Pages,
+    [Summary("The sites people came from, by host")]
     IReadOnlyList<AnalyticsValueResponse>? Referrers,
+    [Summary("The countries their addresses are registered in, by ISO code; empty where not known")]
     IReadOnlyList<AnalyticsValueResponse>? Countries,
+    [Summary("`desktop`, `mobile`, `tablet`, `bot` or `other`")]
     IReadOnlyList<AnalyticsValueResponse>? Devices,
+    [Summary("The browsers of people - programs are not counted here")]
     IReadOnlyList<AnalyticsValueResponse>? Browsers,
+    [Summary("The operating systems of people")]
     IReadOnlyList<AnalyticsValueResponse>? Systems,
+    [Summary("Whose programs came: search engines, AIs, chats showing a preview. The names in `confirmedCrawlers` stand for visits confirmed by their addresses, `unconfirmed` for claims to be one of them from elsewhere, and every other value for a kind of crawler.")]
     IReadOnlyList<AnalyticsValueResponse>? Crawlers,
+    [Summary("When visits were last written down; the visits since then are not in this answer yet")]
     DateTime? Updated,
+    [Summary("How often visits are written down, in seconds")]
     int IntervalSeconds,
+    [Summary("The operators whose crawlers are confirmed by the addresses they publish - Google, Bing, OpenAI, Apple, Perplexity - as far as those could be fetched")]
     IReadOnlyList<string> ConfirmedCrawlers
 )
 {
@@ -92,28 +89,23 @@ public sealed record AnalyticsResponse(
 
 }
 
-/// <summary>
-/// What was counted over some days, summed.
-/// </summary>
-/// <param name="Hits">Every request answered - pages, the files they load, calls of an API</param>
-/// <param name="Views">The requests that were somebody opening a page - people and programs alike</param>
-/// <param name="BotViews">
-/// Of the views, those of programs rather than people: crawlers, and whatever names no browser. The pages people
-/// opened are the views less these.
-/// </param>
-/// <param name="Visitors">Different visitors, each counted once a day - summed over days, one who came back is counted again</param>
-/// <param name="Failed">Answered with a server error</param>
-/// <param name="Rejected">Answered with a client error, not found included</param>
-/// <param name="Bytes">What the responses carried, where that was known</param>
-/// <param name="AverageMillis">The mean time to answer a request</param>
+[Summary("What was counted over some days, summed.")]
 public sealed record AnalyticsTotalsResponse(
+    [Summary("Every request answered - pages, the files they load, calls of an API")]
     long Hits,
+    [Summary("The requests that were somebody opening a page - people and programs alike")]
     long Views,
+    [Summary("Of the views, those of programs rather than people: crawlers, and whatever names no browser. The pages people opened are the views less these.")]
     long BotViews,
+    [Summary("Different people who opened a page, each counted once a day - summed over days, one who came back is counted again")]
     long Visitors,
+    [Summary("Requests answered with a server error")]
     long Failed,
+    [Summary("Requests answered with a client error, not found included")]
     long Rejected,
+    [Summary("What the responses carried, where that was known, in bytes")]
     long Bytes,
+    [Summary("The mean time to answer a request, in milliseconds")]
     double AverageMillis
 )
 {
@@ -124,16 +116,22 @@ public sealed record AnalyticsTotalsResponse(
 
 }
 
-/// <summary>
-/// One day, in UTC.
-/// </summary>
-public sealed record AnalyticsDayResponse(DateOnly Date, AnalyticsTotalsResponse Totals);
+[Summary("What was counted on one day.")]
+public sealed record AnalyticsDayResponse(
+    [Summary("The day, in UTC")]
+    DateOnly Date,
+    [Summary("What was counted on it")]
+    AnalyticsTotalsResponse Totals
+);
 
-/// <summary>
-/// One value of what visits are counted by.
-/// </summary>
-/// <param name="Value">The path, the host, the country code or the name; "(other)" gathers what did not fit in a day</param>
-/// <param name="Hits">Requests it was part of</param>
-/// <param name="Views">Pages opened it was part of</param>
-/// <param name="BotViews">Of those, the pages programs opened rather than people</param>
-public sealed record AnalyticsValueResponse(string Value, long Hits, long Views, long BotViews);
+[Summary("One value visits are counted by, and how often it came up.")]
+public sealed record AnalyticsValueResponse(
+    [Summary("The path, the host, the country code or the name; `(other)` gathers what did not fit into a day's list")]
+    string Value,
+    [Summary("Requests it was part of")]
+    long Hits,
+    [Summary("Pages opened it was part of")]
+    long Views,
+    [Summary("Of those, the pages programs opened rather than people")]
+    long BotViews
+);

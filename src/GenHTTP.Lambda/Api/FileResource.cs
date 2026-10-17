@@ -1,3 +1,4 @@
+using GenHTTP.Api.Content.Services;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -12,90 +13,112 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The files a lambda keeps in its private directory - its workspace, which is
-/// the lambda's data rather than a part of any version.
-/// </summary>
 /// <remarks>
 /// A file is addressed by its path within the workspace, sent as a single
 /// segment with the slashes encoded (<c>logs%2Ftoday.txt</c>), so that a path
 /// that happens to end in something this API routes on cannot be mistaken
-/// for it. A feature's copy of the workspace is reached the same way below
-/// <c>/lambdas/{privateKey}/features/{feature}/workspace</c>.
+/// for it. The description of the tag is here; the feature's copy, in
+/// <see cref="FeatureWorkspaceResource"/>, shares it.
 /// </remarks>
+[Tag(ApiDocumentation.Workspace)]
+[Summary("The files a lambda keeps: its workspace, which its code reads and writes while it runs.")]
+[Remarks("""
+         The workspace is data, not part of a version: every version reads and writes the same files, and deploying or rolling
+         back leaves them alone. It is where uploads, generated files and large files that are no part of the program - a
+         model, a dataset, media - go. It is switched on unless its owner switched it off (`DELETE …/data/workspace`, which
+         deletes every file); while it is off, nothing can be written.
+
+         A file is addressed by its path within the workspace, sent as **one** segment with its slashes encoded:
+         `GET /lambdas/{privateKey}/files/logs%2Ftoday.txt`. Files are written as they are with `PUT …/content`, of any size, or
+         base64 encoded in JSON. Either way, the room it takes counts towards the data allowance of the lambda - workspace and
+         database together - in blocks of 4 KB, a folder taking one block.
+
+         A feature has a copy of the workspace, reached the same way below `/lambdas/{privateKey}/features/{feature}/`.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class FileResource(IMetaService meta, IWorkspaceService workspace, ILogger<FileResource> logger)
 {
 
-    /// <summary>
-    /// Lists every file and folder.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/files")]
-    public WorkspaceListing List(string privateKey)
+    [Summary("Lists the files of the workspace")]
+    [return: Summary("The files and folders of the workspace")]
+    public WorkspaceListing List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
         => workspace.List(meta.RequireId(privateKey));
 
-    /// <summary>
-    /// Reads one file.
-    /// </summary>
-    /// <param name="path">The path of the file within the workspace</param>
-    /// <remarks>
-    /// The content travels base64 encoded in a JSON document like everything
-    /// else this API answers, so a workspace holding an image or an archive
-    /// reads the same way as one holding text. Up to 32 MB; anything larger
-    /// is read from <c>…/content</c>.
-    /// </remarks>
     [ResourceMethod("lambdas/:privateKey/files/:path")]
-    public async ValueTask<FileResponse> Get(string privateKey, string path)
+    [Summary("Reads a file, base64 encoded")]
+    [Remarks("""
+             The content travels base64 encoded in JSON, so an image or an archive reads the same way as text. Up to 32 MB; a
+             larger file is refused here and read as it is from `…/{path}/content`.
+             """)]
+    [Response(ResponseStatus.BadRequest, "The file is larger than 32 MB, or the path is empty or leads outside of the workspace.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such file.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The file, base64 encoded")]
+    public async ValueTask<FileResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path)
         => await WorkspaceFiles.ReadAsync(workspace, meta.RequireId(privateKey), null, path, "/api/v1/lambdas/{privateKey}/files");
 
-    /// <summary>
-    /// Reads one file as it is, streamed from the disk, however large.
-    /// </summary>
-    /// <param name="path">The path of the file within the workspace</param>
     [ResourceMethod("lambdas/:privateKey/files/:path/content")]
-    public IResponse GetContent(string privateKey, string path, IRequest request)
+    [Summary("Downloads a file as it is, however large")]
+    [Remarks("Always sent as bytes to save, whatever the name of the file says, so a page somebody uploaded never runs on this site.")]
+    [Response(ResponseStatus.Ok, "The bytes of the file", ContentType = "application/octet-stream")]
+    [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, with the name of the file")]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such file.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public IResponse GetContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path, IRequest request)
         => WorkspaceFiles.Send(workspace, meta.RequireId(privateKey), null, path, request);
 
-    /// <summary>
-    /// Writes a file from the body as it is, replacing it if it is already
-    /// there.
-    /// </summary>
-    /// <param name="path">The path of the file within the workspace</param>
-    /// <remarks>
-    /// Written to the disk as it arrives, so a file of any size costs the
-    /// server a buffer rather than itself - the way in for a model, a dataset
-    /// or anything else too large for a JSON document.
-    /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path/content")]
-    public async ValueTask<WorkspaceEntry> PutContent(string privateKey, string path, IRequest request)
+    [Summary("Uploads a file as it is")]
+    [Remarks("""
+             The body is the file. It replaces a file of the same path, and the folders it goes into are made. It is written as
+             it arrives and only takes the place of the old one once it is complete: an upload that is refused for want of room,
+             or that ends before the `Content-Length` it announced, leaves what was there as it was. The way in for anything too
+             large for JSON.
+             """)]
+    [RequestBody("The bytes of the file", ContentType = "application/octet-stream")]
+    [Response(ResponseStatus.BadRequest, "The file does not fit into the data allowance of the lambda, the upload ended early, or the path cannot be used. Nothing was written.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "The workspace is switched off.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The file as it was written")]
+    public async ValueTask<WorkspaceEntry> PutContent([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path,
+                                                      IRequest request)
         => Written(privateKey, await WorkspaceFiles.ReceiveAsync(workspace, meta.RequireEditable(privateKey), null, path, request));
 
-    /// <summary>
-    /// Writes a file, replacing it if it is already there.
-    /// </summary>
-    /// <param name="path">The path of the file within the workspace</param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/files/:path")]
-    public async ValueTask<WorkspaceEntry> Put(string privateKey, string path, FileRequest request)
+    [Summary("Writes a file sent base64 encoded")]
+    [Remarks("Replaces a file of the same path, and makes the folders it goes into. For a large file, `PUT …/{path}/content` sends it as it is.")]
+    [Response(ResponseStatus.BadRequest, "The content is not base64, it does not fit into the data allowance of the lambda, or the path cannot be used. Nothing was written.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "The workspace is switched off.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The file as it was written")]
+    public async ValueTask<WorkspaceEntry> Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path,
+                                               FileRequest request)
         => Written(privateKey, await workspace.WriteEncodedAsync(meta.RequireEditable(privateKey), path, request.Content));
 
-    /// <summary>
-    /// Removes a file, or a folder and everything in it.
-    /// </summary>
-    /// <param name="path">The path within the workspace</param>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/files/:path")]
-    public void Delete(string privateKey, string path)
+    [Summary("Deletes a file, or a folder and everything in it")]
+    [Remarks("Nothing happens for a path where there is nothing.")]
+    [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
+    [Response(ResponseStatus.BadRequest, "The path is empty or leads outside of the workspace.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.WorkspacePath)] string path)
     {
         workspace.Delete(meta.RequireEditable(privateKey), path);
 
         logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
     }
 
-    /// <summary>
-    /// Makes a folder, so files can be put into it.
-    /// </summary>
-    /// <param name="path">Where it goes within the workspace</param>
-    /// <returns>The workspace afterwards</returns>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/folders/:path")]
-    public WorkspaceListing PutFolder(string privateKey, string path)
+    [Summary("Makes a folder, with the folders it goes into")]
+    [Remarks("Writing a file makes its folders on its own; this is for a folder that is empty for now. Nothing happens if it is there already.")]
+    [Response(ResponseStatus.BadRequest, "A file has that path, there is no room for another folder, or the path cannot be used.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "The workspace is switched off.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The workspace afterwards")]
+    public WorkspaceListing PutFolder([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary("Where the folder goes within the workspace, sent as one segment with its slashes encoded")] string path)
     {
         var listing = WorkspaceFiles.CreateFolder(workspace, meta.RequireEditable(privateKey), null, path);
 

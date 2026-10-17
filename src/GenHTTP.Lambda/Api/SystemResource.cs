@@ -1,3 +1,6 @@
+using GenHTTP.Api.Content.Services;
+
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Building;
 using GenHTTP.Lambda.Services.Deployment.Compilation;
@@ -9,10 +12,9 @@ using GenHTTP.Modules.Webservices;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// What the editor needs to know about the platform: the terms, the example it
-/// starts from, the vocabulary it can suggest and whether it can build things.
-/// </summary>
+[Tag(ApiDocumentation.Platform)]
+[Summary("What this installation is like: its terms, its limits, what a lambda can start from, and where lambdas answer.")]
+[Remarks("Public. Read it first: the limits and the address of lambdas differ between installations, and may change.")]
 public sealed class SystemResource(ILimitsService limits, IBuildService builds, ISettingsService settings, ILambdaAddresses addresses)
 {
 
@@ -27,10 +29,14 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
         may be removed at any time.
         """;
 
-    /// <summary>
-    /// The terms, limits and editor vocabulary of this installation.
-    /// </summary>
     [ResourceMethod]
+    [Summary("Describes this installation")]
+    [Remarks("""
+             Its terms, which creating a lambda accepts; the limits of a free lambda; what a new lambda can start from; whether
+             the build agent is on offer; where a lambda answers (`lambdaUrl`); and what the editor suggests while code is
+             written - the namespaces a lambda has imported and the types and snippets it may use.
+             """)]
+    [return: Summary("The terms, limits, starters and vocabulary of this installation")]
     public PlatformResponse Get()
     {
         var current = limits.Get();
@@ -48,14 +54,14 @@ public sealed class SystemResource(ILimitsService limits, IBuildService builds, 
         );
     }
 
-    /// <summary>
-    /// Which pages the site links to, as the operator switched them.
-    /// </summary>
     /// <remarks>
     /// Apart from the platform description, which carries the whole editor
     /// vocabulary and is too much to ask for on every page.
     /// </remarks>
     [ResourceMethod("features")]
+    [Summary("Reads which pages the site links to")]
+    [Remarks("What the site asks on every page. Unrelated to the features of a lambda.")]
+    [return: Summary("Which pages are linked")]
     public FeaturesResponse GetFeatures()
     {
         var current = settings.Get();

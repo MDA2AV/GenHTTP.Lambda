@@ -1,24 +1,31 @@
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Showcase;
 
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// A lambda in the showcase, as the page draws it.
-/// </summary>
-/// <param name="Address">Where it answers - its own domain while it has one, its address below the hosting domain otherwise</param>
-/// <param name="ImagePath">Its picture, versioned so it can be cached for good</param>
-/// <param name="Online">Whether it answers right now - the page only lists those</param>
+[Summary("A lambda in the showcase, as the showcase lists it.")]
 public sealed record ShowcaseResponse(
+    [Summary("The public key of the lambda")]
     string PublicKey,
+    [Summary("What its owner calls it")]
     string Title,
+    [Summary("What its owner says it is, and what a visitor can do with it")]
     string Description,
+    [Summary("Where it answers - its own domain while it has one, its address below the hosting domain otherwise")]
     string Address,
+    [Summary("Where its picture is on this site; it changes with the picture, so it may be cached for good")]
     string ImagePath,
+    [Summary("The media type of the picture: `image/png`, `image/jpeg`, `image/gif` or `image/webp`")]
     string ImageType,
+    [Summary("How large the picture is, in bytes")]
     int ImageBytes,
+    [Summary("Whether the lambda answers right now - the listing only has those")]
     bool Online,
+    [Summary("When it was put into the showcase")]
     DateTime Created,
+    [Summary("When its entry last changed")]
     DateTime Updated
 )
 {
@@ -38,17 +45,34 @@ public sealed record ShowcaseResponse(
 
 }
 
-/// <summary>
-/// The entry of a lambda as its owner sees it, with what may go into one.
-/// </summary>
-/// <param name="Showcase">The entry, or nothing while the lambda is not in the showcase</param>
-public sealed record OwnShowcaseResponse(ShowcaseResponse? Showcase, ShowcaseLimitsResponse Limits);
+[Summary("The showcase entry of a lambda as its owner sees it, with what may go into one.")]
+public sealed record OwnShowcaseResponse(
+    [Summary("The entry; absent while the lambda is not in the showcase")]
+    ShowcaseResponse? Showcase,
+    [Summary("What an entry may hold")]
+    ShowcaseLimitsResponse Limits
+);
 
-/// <param name="Tone">How an entry should read</param>
-public sealed record ShowcaseLimitsResponse(int Title, int Description, int ImageBytes, IReadOnlyList<string> ImageTypes, string Tone);
+[Summary("What a showcase entry may hold.")]
+public sealed record ShowcaseLimitsResponse(
+    [Summary("How many characters the title may have")]
+    int Title,
+    [Summary("How many characters the description may have")]
+    int Description,
+    [Summary("How large the picture may be, in bytes, as the operator set it")]
+    int ImageBytes,
+    [Summary("The media types a picture may have")]
+    IReadOnlyList<string> ImageTypes,
+    [Summary("How an entry should read")]
+    string Tone
+);
 
-/// <summary>
-/// What the entry should say.
-/// </summary>
-/// <param name="Image">The picture, base64 encoded. Left out, the one already there is kept.</param>
-public sealed record ShowcaseRequest(string? Title, string? Description, string? Image);
+[Summary("What a showcase entry should say.")]
+public sealed record ShowcaseRequest(
+    [Summary("What it is called, on one line")]
+    string? Title,
+    [Summary("What it is, and what a visitor can do with it")]
+    string? Description,
+    [Summary("The picture, base64 encoded: a PNG, JPEG, GIF or WebP image. Required for a new entry; left out, the one there is kept.")]
+    string? Image
+);

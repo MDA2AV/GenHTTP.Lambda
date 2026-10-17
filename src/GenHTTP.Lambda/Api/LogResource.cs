@@ -1,3 +1,6 @@
+using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Protocol;
+
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
@@ -16,24 +19,30 @@ namespace GenHTTP.Lambda.Api;
 /// Behind the token, see <see cref="AdminAuthentication"/>: this is whatever a
 /// stranger's code decided to print, which can be anything it saw.
 /// </remarks>
+[Tag(ApiDocumentation.ServerLog)]
+[Summary("What the server and the lambdas on it have been saying.")]
+[Remarks("""
+         One ring of lines, held in memory and shared by everything on the installation: the requests, what lambdas printed,
+         and what the server said. Behind the token, since it holds whatever a stranger's code decided to print - and, where
+         the operator records them, the addresses of callers.
+         """)]
+[RequestHeader(AdminAuthentication.Header, AdminAuthentication.HeaderDescription, Required = true)]
+[Response(ResponseStatus.Unauthorized, AdminAuthentication.MissingDescription)]
+[Response(ResponseStatus.Forbidden, AdminAuthentication.WrongDescription)]
 public sealed class LogResource(ILogBook book, IRunLog runs, LambdaOptions options)
 {
 
     #region Functionality
 
-    /// <summary>
-    /// Everything said after the given sequence, oldest first.
-    /// </summary>
-    /// <param name="since">
-    /// The last sequence already seen. Omitted, only the tail comes back, so
-    /// arriving does not mean reading the whole ring.
-    /// </param>
-    /// <param name="lambda">Narrows it to one lambda's public key</param>
-    /// <param name="client">Narrows it to one caller's address</param>
-    /// <param name="level">The lowest level worth returning</param>
-    /// <param name="limit">At most this many lines</param>
     [ResourceMethod]
-    public LogResponse Get(long? since, string? lambda, string? level, string? client, int? limit)
+    [Summary("Reads the log, oldest first")]
+    [Remarks("To follow it, pass the `cursor` of each answer as `since` of the next. Arriving without one reads only the tail, not the whole ring.")]
+    [return: Summary("The lines, and where to carry on from")]
+    public LogResponse Get([Summary("The `cursor` of the previous answer: only what came after it. Left out, the last 1000 lines.")] long? since,
+                           [Summary("Only the lines of the lambda of this public key")] string? lambda,
+                           [Summary("The lowest level to answer with: `trace`, `debug`, `info` (the default), `warn`, `error` or `critical`")] string? level,
+                           [Summary("Only the lines about the caller of this address")] string? client,
+                           [Summary("At most this many lines; by default 1000, or 2000 with `since`")] int? limit)
     {
         // a reader carrying a cursor wants what is new, which is little; one
         // arriving without one wants a screenful of history, and how much of a
@@ -59,15 +68,15 @@ public sealed class LogResource(ILogBook book, IRunLog runs, LambdaOptions optio
         );
     }
 
-    /// <summary>
-    /// Every caller the log still holds something about, busiest first.
-    /// </summary>
     /// <remarks>
     /// Its own route rather than part of the tail, because it is a pass over
     /// the whole ring and the tail is asked for every second and a half.
     /// </remarks>
     [ResourceMethod("callers")]
-    public IReadOnlyList<LogCaller> GetCallers(int limit = 500)
+    [Summary("Lists the callers in the log")]
+    [Remarks("Busiest first.")]
+    [return: Summary("The callers")]
+    public IReadOnlyList<LogCaller> GetCallers([Summary("At most this many callers")] int limit = 500)
     {
         return book.Callers(limit)
                    .Select(c => new LogCaller(c.Client, c.Place, c.Country, c.Agent, c.Lines, c.Failed, c.First, c.Last))

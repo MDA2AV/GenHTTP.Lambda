@@ -1,3 +1,4 @@
+using GenHTTP.Api.Content.Services;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Model;
@@ -12,52 +13,60 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The data of a lambda: which kinds it keeps, and switching them on and off.
-/// </summary>
 /// <remarks>
-/// A version is the program - its code and resources - and is replaced by the
-/// next one; data is what the program keeps, shared by every version and left
-/// alone by deploying and rolling back. The database is off until it is
-/// switched on, which makes it; its tables are under
-/// <c>/lambdas/{privateKey}/database</c>. The workspace is on unless its owner
-/// switched it off; its files are under <c>/lambdas/{privateKey}/files</c>.
-/// The secrets are off until they are switched on; their names are under
-/// <c>/lambdas/{privateKey}/secrets</c>. Kinds that come later are listed here
-/// the same way, each switched on before the lambda can use it.
+/// Kinds that come later are listed here the same way, each switched on
+/// before the lambda can use it.
 /// </remarks>
+[Tag(ApiDocumentation.Data)]
+[Summary("What a lambda keeps: which kinds of data it has, and switching them on and off.")]
+[Remarks("""
+         A version is the program and is replaced by the next one. Data is what the program keeps, shared by every version
+         and left alone by deploying, rolling back and merging. There are three kinds:
+
+         - `database`: a SQLite database, which the code reaches with `Database.GetConnection()`. Off until it is switched
+           on. Its tables are under `…/database`.
+         - `workspace`: files the code reads and writes. On unless its owner switched it off. They are under `…/files`.
+         - `secrets`: API keys and passwords the code reads with `Secret.Read("NAME")`, which nobody else can read. Off
+           until they are switched on. Their names are under `…/secrets`.
+
+         A kind is switched on before the lambda can use it, and the lambda can use it from its next request on, without
+         being deployed again. **Switching a kind off deletes everything it held**, the copies of the lambda's features
+         included, and cannot be undone. Code that uses a kind while it is off fails with an exception that says so.
+
+         The database and the workspace share one allowance, the data allowance of the lambda's tier.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class DataResource(IDataService data, IMetaService meta, ILogger<DataResource> logger)
 {
 
-    /// <summary>
-    /// Every kind of data there is, and how the lambda has it.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/data")]
-    public List<DataStoreResponse> List(string privateKey)
+    [Summary("Lists the kinds of data")]
+    [return: Summary("Every kind of data")]
+    public List<DataStoreResponse> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
         => [.. (data.List(privateKey)).Select(Describe)];
 
-    /// <summary>
-    /// One kind of data, and how the lambda has it.
-    /// </summary>
-    /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod("lambdas/:privateKey/data/:kind")]
-    public DataStoreResponse Get(string privateKey, string kind)
+    [Summary("Reads one kind of data")]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such kind of data.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The kind of data")]
+    public DataStoreResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                 [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
         => Describe(data.Get(privateKey, kind));
 
-    /// <summary>
-    /// Switches a kind of data on.
-    /// </summary>
-    /// <remarks>
-    /// Nothing happens if it is on already. The lambda can use it from its
-    /// next request on, without being deployed again. The database is made
-    /// empty, and the lambda is started again on its next request, so what it
-    /// does with its database as it starts - migrating it - is done. The
-    /// secrets start empty: their values are set under
-    /// <c>/lambdas/{privateKey}/secrets</c>.
-    /// </remarks>
-    /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/data/:kind")]
-    public DataStoreResponse Enable(string privateKey, string kind)
+    [Summary("Switches a kind of data on")]
+    [Remarks("""
+             Nothing happens if it is on already. The lambda can use it from its next request on, without being deployed again.
+
+             The database is made empty, and the lambda is started again on its next request, so what it does as it starts -
+             applying its migrations - runs against it. The secrets start empty: their values are entered with
+             `PUT …/secrets/{name}`.
+             """)]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such kind of data.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The kind of data, switched on")]
+    public DataStoreResponse Enable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                    [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
     {
         var store = data.Enable(privateKey, kind);
 
@@ -66,16 +75,19 @@ public sealed class DataResource(IDataService data, IMetaService meta, ILogger<D
         return Describe(store);
     }
 
-    /// <summary>
-    /// Switches a kind of data off, and deletes everything it held.
-    /// </summary>
-    /// <remarks>
-    /// This cannot be undone. From its next request on, code that uses it is
-    /// refused with an exception saying that it is off.
-    /// </remarks>
-    /// <param name="kind">Which kind: <c>database</c>, <c>workspace</c> or <c>secrets</c></param>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/data/:kind")]
-    public DataStoreResponse Disable(string privateKey, string kind)
+    [Summary("Switches a kind of data off and deletes it")]
+    [Remarks("""
+             **This cannot be undone.** Every table, file or secret of that kind is deleted, the copies of the lambda's features
+             included. From its next request on, code that uses it fails with an exception that says it is off. `GET …/summary`
+             says whether the code of the lambda uses each kind (`usesDatabase`, `usesWorkspace`, `missingSecrets`), before
+             switching one off. Nothing happens if it is off already.
+             """)]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or there is no such kind of data.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The kind of data, switched off and empty")]
+    public DataStoreResponse Disable([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                     [Summary("Which kind: `database`, `workspace` or `secrets`")] string kind)
     {
         var store = data.Disable(privateKey, kind);
 

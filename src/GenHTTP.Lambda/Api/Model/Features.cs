@@ -1,106 +1,123 @@
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Deployment.Model;
 
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// Starts a feature: a copy of a version's files, and of the lambda's data, to
-/// work on without touching the lambda.
-/// </summary>
-/// <param name="Name">What it is, in a few words - "Leaderboard", "Dark mode"</param>
-/// <param name="Specification">What the user wants from it and why; the version it is merged into keeps it</param>
-/// <param name="Base">The version to branch off. Left out, the newest.</param>
-public sealed record CreateFeatureRequest(string? Name, string? Specification = null, int? Base = null);
+[Summary("Starts a feature: a copy of a version's files, and of the lambda's data, to work on without touching the lambda.")]
+public sealed record CreateFeatureRequest(
+    [Summary("What it is, in a few words - \"Leaderboard\", \"Dark mode\". One line, 80 characters at most.")]
+    string? Name,
+    [Summary("What the user wants from it and why. The version it is merged into keeps it.")]
+    string? Specification = null,
+    [Summary("The number of the version to start from; left out, the newest")]
+    int? Base = null
+);
 
-/// <summary>
-/// Changes a feature. What is left out stays as it is.
-/// </summary>
-/// <param name="Name">What it is, in a few words</param>
-/// <param name="Specification">What the user wants from it and why</param>
-/// <param name="Change">What it changes, in a line - what the version it is merged into will say</param>
-/// <param name="Base">
-/// The version it is now based on. Set once the changes of that version are in the feature's files: only a feature
-/// based on the newest version can be merged, and nothing checks that the changes really are in.
-/// </param>
-public sealed record UpdateFeatureRequest(string? Name = null, string? Specification = null, string? Change = null, int? Base = null);
+[Summary("Changes a feature. What is left out stays as it is.")]
+public sealed record UpdateFeatureRequest(
+    [Summary("What it is, in a few words")]
+    string? Name = null,
+    [Summary("What the user wants from it and why; empty clears it")]
+    string? Specification = null,
+    [Summary("What it changes, in one line - what the version it is merged into will say; empty clears it")]
+    string? Change = null,
+    [Summary("The version it is based on from now on. Move it only once the changes of that version are in the feature's files: only a feature based on the newest version can be merged, and nothing checks that the changes really are in.")]
+    int? Base = null
+);
 
-/// <summary>
-/// Every file of a feature, replacing the ones it has.
-/// </summary>
-/// <param name="Files">Every file, <c>lambda.cs</c> first</param>
-/// <param name="Specification">What the user wants from it and why; left out, the one it has is kept</param>
-/// <param name="Change">What it changes, in a line; left out, the one it has is kept</param>
-/// <param name="Revision">
-/// The save of the feature these files were made from; when given, the save is refused with 409 if the
-/// feature was saved again since, instead of replacing that save without a trace
-/// </param>
-public sealed record FeatureFilesRequest(IReadOnlyList<LambdaFile>? Files, string? Specification = null, string? Change = null,
-                                         int? Revision = null);
+[Summary("Every file of a feature, replacing the ones it has.")]
+public sealed record FeatureFilesRequest(
+    [Summary("Every file, `lambda.cs` first")]
+    IReadOnlyList<LambdaFile>? Files,
+    [Summary("What the user wants from it and why; left out, the one it has is kept")]
+    string? Specification = null,
+    [Summary("What it changes, in one line; left out, the one it has is kept")]
+    string? Change = null,
+    [Summary("The `revision` of the feature these files were made from. Given, the save is refused with 409 if the feature was saved again since, instead of replacing that save without a trace.")]
+    int? Revision = null
+);
 
-/// <summary>
-/// Merges a feature into the lambda.
-/// </summary>
-/// <param name="Deploy">Whether to put the version it becomes online as well</param>
-/// <param name="Specification">What the version keeps as what the user wanted; left out, the feature's</param>
-/// <param name="Change">What the version says it changes; left out, the feature's</param>
-public sealed record MergeFeatureRequest(bool? Deploy = null, string? Specification = null, string? Change = null);
+[Summary("How to merge a feature into the lambda.")]
+public sealed record MergeFeatureRequest(
+    [Summary("Whether to put the version it becomes online as well")]
+    bool? Deploy = null,
+    [Summary("What the version keeps as what the user wanted; left out, the feature's")]
+    string? Specification = null,
+    [Summary("What the version says it changes; left out, the feature's, or that it merges the feature")]
+    string? Change = null
+);
 
-/// <summary>
-/// A feature: a change being worked on beside the lambda.
-/// </summary>
-/// <param name="Key">What it is addressed by in this API, and where its preview answers</param>
-/// <param name="Branch">The branch it is in the lambda's git repository - given when it starts, and kept when it is renamed</param>
-/// <param name="Base">The version it is based on</param>
-/// <param name="Newest">The newest version of the lambda</param>
-/// <param name="Mergeable">Whether it can be merged: it is based on the newest version</param>
-/// <param name="Online">Whether its preview is online</param>
-/// <param name="Current">Whether its preview is online and serves what the feature holds now, rather than an earlier save</param>
-/// <param name="Previewed">When its preview was last put online, while it is</param>
-/// <param name="PreviewPath">Where its preview answers on this server, whether it is online or not</param>
-/// <param name="Revision">How many times its files were saved, counting the ones it began with - to notice a save made elsewhere</param>
+[Summary("A feature: a change being worked on beside the lambda.")]
 public sealed record FeatureResponse(
+    [Summary("What every call about it takes, and what its preview is reached by")]
     string Key,
+    [Summary("What it is, in a few words")]
     string Name,
+    [Summary("The branch it is in the lambda's git repository - given when it starts, and kept when it is renamed")]
     string Branch,
+    [Summary("What the user wants from it and why")]
     string? Specification,
+    [Summary("What it changes, in one line")]
     string? Change,
+    [Summary("The version it is based on")]
     int Base,
+    [Summary("The newest version of the lambda")]
     int? Newest,
+    [Summary("Whether it can be merged: it is based on the newest version")]
     bool Mergeable,
+    [Summary("How it was started: `api`, `agent` or `git`")]
     string? Origin,
+    [Summary("When it was started")]
     DateTime Created,
+    [Summary("When it was last saved or changed")]
     DateTime Modified,
+    [Summary("Whether its preview is online")]
     bool Online,
+    [Summary("Whether its preview is online and serves what the feature holds now, rather than an earlier save")]
     bool Current,
+    [Summary("When its preview was last put online, while it is")]
     DateTime? Previewed,
+    [Summary("Where its preview answers on this site, whether it is online or not: `/features/{key}/`")]
     string PreviewPath,
+    [Summary("How many times its files were saved, counting the ones it began with. Passed back with a save, it keeps that save from replacing one made elsewhere.")]
     int Revision
 );
 
-/// <summary>
-/// A feature with the files it holds.
-/// </summary>
-/// <param name="Files">Every file, <c>lambda.cs</c> first</param>
-public sealed record FeatureContentResponse(FeatureResponse Feature, IReadOnlyList<LambdaFile> Files);
+[Summary("A feature with its files.")]
+public sealed record FeatureContentResponse(
+    [Summary("The feature")]
+    FeatureResponse Feature,
+    [Summary("Its files, `lambda.cs` first - all of them, or those of the folder asked for")]
+    IReadOnlyList<LambdaFile> Files
+);
 
-/// <summary>
-/// The result of putting the preview of a feature online.
-/// </summary>
-/// <param name="Feature">The feature afterwards</param>
-/// <param name="Diagnostics">What the compiler said on the way</param>
-public sealed record FeaturePreviewResponse(bool Success, FeatureResponse Feature, IReadOnlyList<CompilationDiagnostic> Diagnostics);
+[Summary("What came of putting the preview of a feature online.")]
+public sealed record FeaturePreviewResponse(
+    [Summary("Whether it compiled and the preview is online with it")]
+    bool Success,
+    [Summary("The feature afterwards")]
+    FeatureResponse Feature,
+    [Summary("What the compiler said: the errors that kept it offline, or the warnings of a preview that went online")]
+    IReadOnlyList<CompilationDiagnostic> Diagnostics
+);
 
-/// <summary>
-/// A feature that was just saved.
-/// </summary>
-/// <param name="Preview">The outcome of putting its preview online, if that was asked for</param>
-public sealed record FeatureSavedResponse(FeatureResponse Feature, FeaturePreviewResponse? Preview);
+[Summary("A feature that was just saved.")]
+public sealed record FeatureSavedResponse(
+    [Summary("The feature afterwards")]
+    FeatureResponse Feature,
+    [Summary("What came of putting its preview online, where that was asked for (`?deploy=true`); absent otherwise")]
+    FeaturePreviewResponse? Preview
+);
 
-/// <summary>
-/// The result of merging a feature.
-/// </summary>
-/// <param name="Merged">Whether its files became a version, and the feature is gone</param>
-/// <param name="Version">The version it became</param>
-/// <param name="Diagnostics">Why it was not merged, where its code does not compile</param>
-/// <param name="Deployment">The outcome of putting that version online, if that was asked for</param>
-public sealed record FeatureMergeResponse(bool Merged, VersionResponse? Version, IReadOnlyList<CompilationDiagnostic> Diagnostics,
-                                          DeploymentOutcomeResponse? Deployment);
+[Summary("What came of merging a feature.")]
+public sealed record FeatureMergeResponse(
+    [Summary("Whether its files became a version, and the feature is gone")]
+    bool Merged,
+    [Summary("The version it became")]
+    VersionResponse? Version,
+    [Summary("Why it was not merged, where its code does not compile")]
+    IReadOnlyList<CompilationDiagnostic> Diagnostics,
+    [Summary("What came of putting that version online, where that was asked for")]
+    DeploymentOutcomeResponse? Deployment
+);

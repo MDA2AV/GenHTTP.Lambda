@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 
+using GenHTTP.Api.Content.Services;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -28,8 +29,10 @@ namespace GenHTTP.Lambda.Api;
 ///
 /// What is read is a version packed into a project, the export without the
 /// data: the files come out of the zip it was packed into once, never out of
-/// the lambda's database, workspace or secrets.
+/// the lambda's database, workspace or secrets. Listed under the tag
+/// <see cref="LambdaSourceResource"/> describes.
 /// </remarks>
+[Tag(ApiDocumentation.OpenSource)]
 public sealed class SourceResource(ISourceService sources, ILambdaAddresses addresses, ILogger<SourceResource> logger)
 {
 
@@ -58,15 +61,14 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
 
     #region Listing
 
-    /// <summary>
-    /// One page of the published sources.
-    /// </summary>
-    /// <param name="search">Words the key, the title or what it is about have to contain</param>
-    /// <param name="order">stars (the default), updated or published</param>
-    /// <param name="skip">How many to leave out, from the start</param>
-    /// <param name="take">How many to answer with, at most 48</param>
     [ResourceMethod]
-    public Page<SourceEntryResponse> List(string? search, string? order, int skip = 0, int take = PageSize)
+    [Summary("Lists the published sources, a page at a time")]
+    [Remarks("Public. Every lambda whose owner published its code, whether or not it is online.")]
+    [return: Summary("A page of sources, and where the next one starts")]
+    public Page<SourceEntryResponse> List([Summary("Words that the key, the title or what it is about all have to contain")] string? search,
+                                          [Summary("`stars` (the default), the most starred first; `updated`, the most recently saved first; or `published`, the most recently published first")] string? order,
+                                          [Summary("How many sources to leave out, from the start")] int skip = 0,
+                                          [Summary("How many sources to answer with, 1 to 48")] int take = PageSize)
     {
         var from = Math.Max(0, skip);
 
@@ -82,16 +84,13 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
         return Page<SourceEntryResponse>.Of([.. page.Entries.Select(e => SourceEntryResponse.Of(e, addresses))], from, page.Total);
     }
 
-    /// <summary>
-    /// A published source: what it is, under which license, where it runs,
-    /// and every version it went through.
-    /// </summary>
-    /// <remarks>
-    /// Answered with a ticket to star it with, which is the one thing here that
-    /// changes anything.
-    /// </remarks>
     [ResourceMethod(":publicKey")]
-    public SourceProjectResponse Get(string publicKey)
+    [Summary("Reads a published source")]
+    [Remarks("What it is, under which license, where it runs, every version kept and what each changed - and a `starTicket` to star it with.")]
+    [Response(ResponseStatus.NotFound, "There is no published source at this public key - it does not exist, or its owner has not published it, which are answered alike.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The source, its versions and a ticket to star it with")]
+    public SourceProjectResponse Get([Summary("The public key of the lambda")] string publicKey)
     {
         var project = sources.GetProject(publicKey) ?? throw NotPublished(publicKey);
 
@@ -109,16 +108,15 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
 
     #region Versions
 
-    /// <summary>
-    /// The files of a version, as the project it is packed into has them.
-    /// </summary>
-    /// <remarks>
-    /// Packed on the first request for the version and kept, so the first
-    /// answer may take a moment for a large lambda and every later one does
-    /// not.
-    /// </remarks>
     [ResourceMethod(":publicKey/versions/:version")]
-    public async ValueTask<SourceTreeResponse> Tree(string publicKey, int version)
+    [Summary("Lists the files of a published version")]
+    [Remarks("""
+             As the project it is packed into has them - the export of that version, without its data. Packed on the first
+             request for the version and kept, so the first answer may take a moment for a large lambda.
+             """)]
+    [Response(ResponseStatus.NotFound, "There is no published source at this public key, or it has no such version.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The files of the version")]
+    public async ValueTask<SourceTreeResponse> Tree([Summary("The public key of the lambda")] string publicKey, [Summary(ApiDocumentation.VersionNumber)] int version)
     {
         var archive = await RequireAsync(publicKey, version);
 
@@ -131,13 +129,14 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
         return new SourceTreeResponse(publicKey, version, archive.Root, new FileInfo(archive.File).Length, files, ZipPath(publicKey, version));
     }
 
-    /// <summary>
-    /// One file of a version: its text, while it is text and no longer than a
-    /// megabyte, and where to fetch it as it is either way.
-    /// </summary>
-    /// <param name="path">Its path below the project's folder, encoded as one segment ("docs%2Fproduct.md")</param>
     [ResourceMethod(":publicKey/versions/:version/files/:path")]
-    public async ValueTask<SourceFileContentResponse> File(string publicKey, int version, string path)
+    [Summary("Reads a file of a published version")]
+    [Remarks("Its text, while it is UTF-8 text no longer than a megabyte, and either way where to fetch it as it is (`rawPath`).")]
+    [Response(ResponseStatus.NotFound, "There is no published source at this public key, it has no such version, or the version has no such file.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The file, with its text where it is text")]
+    public async ValueTask<SourceFileContentResponse> File([Summary("The public key of the lambda")] string publicKey, [Summary(ApiDocumentation.VersionNumber)] int version,
+                                                           [Summary("Its path below the project's folder, encoded as one segment: `docs%2Fproduct.md`")] string path)
     {
         var archive = await RequireAsync(publicKey, version);
 
@@ -158,20 +157,26 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
                                              text, raw);
     }
 
-    /// <summary>
-    /// One file of a version as it is: a picture as a picture, anything else
-    /// as text or bytes - never as something a browser would run.
-    /// </summary>
     /// <remarks>
     /// Served from the origin of the site, so a page or a script a lambda
     /// ships is sent as text here, and whatever is sent is sandboxed and never
     /// sniffed. That is what lets the documentation show the pictures beside
     /// it without letting a published source run anything on this site.
     /// </remarks>
-    /// <param name="path">Its path below the project's folder, encoded as one segment</param>
-    /// <param name="download">Anything but empty: sent to be saved rather than shown</param>
     [ResourceMethod(":publicKey/versions/:version/raw/:path")]
-    public async ValueTask<IResponse> Raw(string publicKey, int version, string path, string? download, IRequest request)
+    [Summary("Fetches a file of a published version as it is")]
+    [Remarks("""
+             A picture as a picture, anything else as plain text or as bytes - never as something a browser would run: a page
+             or a script is sent as text, under a sandboxing content security policy. Bytes, and anything asked for with
+             `download`, are sent to be saved.
+             """)]
+    [Response(ResponseStatus.Ok, "The file: a picture, `text/plain` or `application/octet-stream`", ContentType = "*/*")]
+    [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, with the name of the file - where it is bytes or `download` was asked for")]
+    [Response(ResponseStatus.NotFound, "There is no published source at this public key, it has no such version, or the version has no such file.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public async ValueTask<IResponse> Raw([Summary("The public key of the lambda")] string publicKey, [Summary(ApiDocumentation.VersionNumber)] int version,
+                                          [Summary("Its path below the project's folder, encoded as one segment")] string path,
+                                          [Summary("Anything but empty sends it to be saved rather than shown: `?download=1`")] string? download, IRequest request)
     {
         var archive = await RequireAsync(publicKey, version);
 
@@ -207,13 +212,13 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
         return response.Build();
     }
 
-    /// <summary>
-    /// A version as a project to download: a .NET 10 project with a
-    /// Dockerfile, its documentation and tests, and its license - and none of
-    /// the data the lambda keeps.
-    /// </summary>
     [ResourceMethod(":publicKey/versions/:version/zip")]
-    public async ValueTask<IResponse> Zip(string publicKey, int version, IRequest request)
+    [Summary("Downloads a published version as a project")]
+    [Remarks("A .NET 10 project with a `Dockerfile`, its documentation and tests, and its `LICENSE` - and none of the data the lambda keeps.")]
+    [Response(ResponseStatus.Ok, "The project, as a zip archive", ContentType = ApiDocumentation.Zip)]
+    [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, named after the public key and the version: `quiz-v3.zip`")]
+    [Response(ResponseStatus.NotFound, "There is no published source at this public key, or it has no such version.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public async ValueTask<IResponse> Zip([Summary("The public key of the lambda")] string publicKey, [Summary(ApiDocumentation.VersionNumber)] int version, IRequest request)
     {
         var archive = await RequireAsync(publicKey, version);
 
@@ -230,16 +235,25 @@ public sealed class SourceResource(ISourceService sources, ILambdaAddresses addr
 
     #region Stars
 
-    /// <summary>
-    /// Stars a published source, or takes the star back.
-    /// </summary>
     /// <remarks>
     /// A POST with the ticket the source was read with, not a link: something
-    /// that follows every link it finds stars nothing. Each address stars a
-    /// source once, and only so many in a while.
+    /// that follows every link it finds stars nothing.
     /// </remarks>
     [ResourceMethod(Method.Post, ":publicKey/star")]
-    public StarResponse Star(string publicKey, IRequest request, StarRequest body)
+    [Summary("Stars a published source, or takes the star back")]
+    [Remarks("""
+             With the `starTicket` the source was read with, which is good from a second after it was handed out for a day.
+             Each address stars a source once - starring it again changes nothing, and `counted` says so - and an address may
+             star only so many sources in a while.
+             """)]
+    [Response(ResponseStatus.BadRequest, "The ticket is missing, too fresh or too old. Read the source again and star it then.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.TooManyRequests, "This address starred a lot in a short while. Try again in a few minutes.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.NotFound, "There is no published source at this public key - it does not exist, or its owner has not published it, which are answered alike.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("How it is starred now")]
+    public StarResponse Star([Summary("The public key of the lambda")] string publicKey, IRequest request, StarRequest body)
     {
         var outcome = sources.Star(publicKey, body?.Ticket, request.Client.Address, body?.Starred ?? true)
                    ?? throw NotPublished(publicKey);

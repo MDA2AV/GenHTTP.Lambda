@@ -1,15 +1,21 @@
 using System.Text.Json.Serialization;
 
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Deployment.Model;
 
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// The content of a workspace file, base64 encoded so anything can travel.
-/// </summary>
-public sealed record FileResponse(string Path, [property: JsonConverter(typeof(LongStringConverter))] string Content, int Size);
+[Summary("A file of a workspace, base64 encoded so anything can travel in JSON.")]
+public sealed record FileResponse(
+    [Summary("Its path within the workspace, with forward slashes")]
+    string Path,
+    [Summary("Its bytes, base64 encoded")]
+    [property: JsonConverter(typeof(LongStringConverter))] string Content,
+    [Summary("How many bytes it holds")]
+    int Size);
 
-/// <summary>
-/// A file to write into the workspace, base64 encoded.
-/// </summary>
-public sealed record FileRequest(string? Content);
+[Summary("A file to write into a workspace.")]
+public sealed record FileRequest(
+    [Summary("Its bytes, base64 encoded; empty for an empty file")]
+    string? Content);

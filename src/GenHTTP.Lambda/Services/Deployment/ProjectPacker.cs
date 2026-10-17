@@ -238,9 +238,8 @@ public static class ProjectPacker
                 Write(archive, $"{name}/LICENSE", SourceLicenses.Text(license.License, lambda.Saved.Year, license.Holder));
             }
 
-            // the aspnet image rather than runtime, although nothing here uses
-            // ASP.NET Core: GenHTTP.Full depends on GenHTTP.Testing, which
-            // brings the Kestrel engine and with it Microsoft.AspNetCore.App
+            // the plain runtime image: since 11.1, GenHTTP.Full no longer brings
+            // GenHTTP.Testing, and with it the Kestrel engine and ASP.NET Core
             Write(archive, $"{name}/Dockerfile", Resource("Dockerfile").Replace("{assembly}", name));
 
             // what the app keeps is kept out of the repository - data is

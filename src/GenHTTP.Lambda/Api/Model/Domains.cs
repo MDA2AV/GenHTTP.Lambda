@@ -1,23 +1,31 @@
+using GenHTTP.Api.Content.Services;
+
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// The domain of a lambda, as its owner configures it.
-/// </summary>
-/// <param name="Domain">The domain it is configured to answer at, if any</param>
-/// <param name="Tier">The tier of the lambda, which decides whether it may have one</param>
-/// <param name="Allowed">Whether the tier includes a domain of its own</param>
-/// <param name="Served">Whether requests to the domain reach the lambda right now</param>
-/// <param name="Dns">What the domain resolves to, as seen from the server; absent without a domain</param>
-public sealed record DomainResponse(string? Domain, string Tier, bool Allowed, bool Served, DnsResponse? Dns);
+[Summary("The domain of a lambda, and whether it answers at it.")]
+public sealed record DomainResponse(
+    [Summary("The domain it is configured to answer at; absent without one")]
+    string? Domain,
+    [Summary("The tier of the lambda, which decides whether it may have one")]
+    string Tier,
+    [Summary("Whether the tier includes a domain of its own: only the premium tier does")]
+    bool Allowed,
+    [Summary("Whether requests to the domain reach the lambda right now - it has one, and its tier includes it. A domain kept from a premium tier is not served.")]
+    bool Served,
+    [Summary("What the domain resolves to, as the server sees it; absent without a domain")]
+    DnsResponse? Dns
+);
 
-/// <summary>
-/// What a domain resolves to, looked up by the server as the request was answered.
-/// </summary>
 /// <remarks>
 /// Only the addresses, and not whether they are the right ones: which
 /// addresses this installation answers at is not something it can reliably
 /// tell about itself from inside a container.
 /// </remarks>
-/// <param name="Addresses">Every address the name resolved to, IPv4 and IPv6 alike</param>
-/// <param name="Problem">Why nothing could be resolved, where nothing could</param>
-public sealed record DnsResponse(IReadOnlyList<string> Addresses, string? Problem);
+[Summary("What a domain resolves to, looked up by the server as the request was answered.")]
+[Remarks("Only the addresses - not whether they are this installation's, which is for whoever knows where it runs to compare.")]
+public sealed record DnsResponse(
+    [Summary("Every address the domain resolved to, IPv4 and IPv6 alike")]
+    IReadOnlyList<string> Addresses,
+    [Summary("Why nothing could be resolved, where nothing could: it does not resolve yet, or the name servers could not be asked")]
+    string? Problem
+);

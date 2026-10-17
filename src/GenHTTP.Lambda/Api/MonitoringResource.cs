@@ -1,3 +1,6 @@
+using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Protocol;
+
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
@@ -16,10 +19,6 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// How one lambda is doing: its traffic, what it has said, and the whole of
-/// it at a glance.
-/// </summary>
 /// <remarks>
 /// The owner's slice of what the operator sees across the installation, and
 /// behind the same thing everything else about a lambda is: its editor key.
@@ -27,18 +26,33 @@ namespace GenHTTP.Lambda.Api;
 /// than by the public key, because a public key can be given up and claimed
 /// again, and what was said under it before belongs to whoever said it.
 /// </remarks>
+[Tag(ApiDocumentation.Monitoring)]
+[Summary("How a lambda is doing: the whole of it at a glance, its traffic, and its log.")]
+[Remarks("""
+         `GET …/summary` answers the question *is this all right?* in one call: whether it is online, how it is used,
+         whether it is failing, what it keeps, and how much of its allowances that takes - what an agent asks after deploying
+         to see whether it works.
+
+         Traffic and logs are kept in memory: a restart of the server starts the counting again, and the log is a ring shared
+         with every other lambda, so a busy neighbour shortens how far back it reaches. They are for watching, not keeping;
+         what is counted of visitors over time is under *Analytics*. Neither ever holds a visitor's address.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class MonitoringResource(IMetaService meta, IWorkspaceService workspace, ISecretService secrets, IDataService data,
                                                ITelemetryService telemetry, ILogBook book, LambdaOptions options, ILimitsService limits)
 {
 
     #region Functionality
 
-    /// <summary>
-    /// Whether the lambda is online, how it is being used, whether it is
-    /// failing, and how much of its allowance it spends.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/summary")]
-    public LambdaSummaryResponse Summary(string privateKey)
+    [Summary("Reads the whole of a lambda at a glance")]
+    [Remarks("""
+             Whether it is online and with which version, its traffic over the last hour and day, its last few problems, what
+             its version and its data take, its limits, and what its documentation says. The figures about code and storage
+             are about the version online, or the newest where none is.
+             """)]
+    [return: Summary("The lambda at a glance")]
+    public LambdaSummaryResponse Summary([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var lambda = meta.Require(privateKey);
 
@@ -105,34 +119,29 @@ public sealed class MonitoringResource(IMetaService meta, IWorkspaceService work
         );
     }
 
-    /// <summary>
-    /// The traffic of the lambda: the last hour by the minute, the last day by
-    /// the quarter hour, how requests were answered and what was asked for.
-    /// </summary>
-    /// <remarks>
-    /// Counted in memory since the server last started, which the answer
-    /// says, so a restart starts every figure here again from nothing.
-    /// </remarks>
     [ResourceMethod("lambdas/:privateKey/traffic")]
-    public LambdaTraffic Traffic(string privateKey)
+    [Summary("Reads the traffic of a lambda")]
+    [Remarks("""
+             The last hour by the minute, the last day by the quarter hour, how requests were answered, what was asked for and
+             at which of its addresses. Counted in memory since the server last started, which `since` says.
+             """)]
+    [return: Summary("Its traffic since the server came up")]
+    public LambdaTraffic Traffic([Summary(ApiDocumentation.PrivateKey)] string privateKey)
         => telemetry.DescribeLambda(meta.RequireId(privateKey));
 
-    /// <summary>
-    /// What the lambda and the server about it have said, oldest first.
-    /// </summary>
-    /// <param name="since">
-    /// The last sequence already seen. Omitted, only the tail comes back.
-    /// </param>
-    /// <param name="level">The lowest level worth returning: debug, info, warn or error</param>
-    /// <param name="limit">At most this many lines, up to 2000</param>
-    /// <remarks>
-    /// Its requests, what it printed, and what the server said while serving
-    /// it - a handler that threw, a request that timed out. Held in a ring
-    /// shared with everything else on the installation, so a busy neighbour
-    /// shortens how far back this reaches; it is for watching, not keeping.
-    /// </remarks>
     [ResourceMethod("lambdas/:privateKey/logs")]
-    public OwnerLogResponse Logs(string privateKey, long? since, string? level, int? limit)
+    [Summary("Reads the log of a lambda")]
+    [Remarks("""
+             Its requests, what its code printed, and what the server said while serving it - a handler that threw, a request
+             that timed out. Oldest first. To follow it, pass the `cursor` of each answer as `since` of the next; `missed` says
+             how many lines went by unread in between. Requests are logged as warnings when they were answered with a client
+             error and as errors with a server error. The previews of its features have logs of their own.
+             """)]
+    [return: Summary("The lines, and where to carry on from")]
+    public OwnerLogResponse Logs([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                 [Summary("The `cursor` of the previous answer: only what came after it. Left out, the last 500 lines.")] long? since,
+                                 [Summary("The lowest level to answer with: `debug`, `info` (the default), `warn` or `error`")] string? level,
+                                 [Summary("At most this many lines, up to 2000; by default 500, or 1000 with `since`")] int? limit)
     {
         var id = meta.RequireId(privateKey);
 

@@ -1,3 +1,5 @@
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Deployment.Model;
 
 namespace GenHTTP.Lambda.Api.Model;
@@ -10,39 +12,70 @@ namespace GenHTTP.Lambda.Api.Model;
 /// position: the analyses that read a single file take the one named by
 /// <paramref name="File" />, those that read the lambda take them all.
 /// </remarks>
-/// <param name="Files">The files of the lambda, <c>lambda.cs</c> first</param>
-/// <param name="File">The file the question is about, the first one if omitted</param>
-/// <param name="Line">The line the caret is on, counting from zero</param>
-/// <param name="Column">The column it is at, counting from zero</param>
-public sealed record CodeRequest(IReadOnlyList<LambdaFile>? Files, string? File = null, int Line = 0, int Column = 0);
+[Summary("The files a question about code is asked of, and where in them to look.")]
+public sealed record CodeRequest(
+    [Summary("The files of the lambda, `lambda.cs` first, as they would be saved")]
+    IReadOnlyList<LambdaFile>? Files,
+    [Summary("The file a question about one file is about; left out, the first")]
+    string? File = null,
+    [Summary("The line of the position, counting from zero")]
+    int Line = 0,
+    [Summary("The column of the position, counting from zero")]
+    int Column = 0
+);
 
-/// <summary>
-/// The result of a build, whether or not it went online.
-/// </summary>
-public sealed record CompilationResponse(bool Success, IReadOnlyList<CompilationDiagnostic> Diagnostics);
+[Summary("Whether code compiles, and what the compiler said about it.")]
+public sealed record CompilationResponse(
+    [Summary("Whether it compiles, and would go online if it were deployed")]
+    bool Success,
+    [Summary("The errors that keep it from compiling, or the warnings of code that does")]
+    IReadOnlyList<CompilationDiagnostic> Diagnostics
+);
 
-/// <summary>
-/// One name in a snippet and what the compiler resolved it to, in the
-/// coordinates of the code the user wrote.
-/// </summary>
-public sealed record SemanticToken(int Line, int Column, int Length, string Kind);
+[Summary("A name in a file, and what the compiler resolved it to.")]
+public sealed record SemanticToken(
+    [Summary("The line it is on, counting from zero")]
+    int Line,
+    [Summary("The column it starts at, counting from zero")]
+    int Column,
+    [Summary("How many characters it spans")]
+    int Length,
+    [Summary("What it names: `type`, `interface`, `struct`, `enum`, `enumMember`, `method`, `property`, `parameter`, `local` or `namespace`")]
+    string Kind
+);
 
-/// <summary>
-/// What every name in a snippet means.
-/// </summary>
-public sealed record SemanticsResponse(IReadOnlyList<SemanticToken> Tokens);
+[Summary("What every name in a file means.")]
+public sealed record SemanticsResponse(
+    [Summary("The names, in the order they appear")]
+    IReadOnlyList<SemanticToken> Tokens
+);
 
-/// <summary>
-/// One thing the compiler says could be written there.
-/// </summary>
-public sealed record ResolvedCompletionResponse(string Label, string Kind, string Detail, string? Documentation);
+[Summary("Something that could be written at a position.")]
+public sealed record ResolvedCompletionResponse(
+    [Summary("What to write")]
+    string Label,
+    [Summary("What it is: `class`, `interface`, `struct`, `enum`, `method`, `property`, `field`, `parameter`, `variable` or `text`")]
+    string Kind,
+    [Summary("Its signature, as C# writes it")]
+    string Detail,
+    [Summary("What its documentation says about it, where it has any")]
+    string? Documentation
+);
 
-/// <summary>
-/// Everything that could be written there.
-/// </summary>
-public sealed record CompletionsResponse(IReadOnlyList<ResolvedCompletionResponse> Completions);
+[Summary("Everything that could be written at a position.")]
+public sealed record CompletionsResponse(
+    [Summary("The suggestions")]
+    IReadOnlyList<ResolvedCompletionResponse> Completions
+);
 
-/// <summary>
-/// Where to go, or nothing if there is nowhere in the lambda to go.
-/// </summary>
-public sealed record DefinitionResponse(string? File, int Line, int Column, int Length);
+[Summary("Where a name was declared, or nothing where that is in none of the files.")]
+public sealed record DefinitionResponse(
+    [Summary("The file it was declared in; absent where it was not declared in any file of the request")]
+    string? File,
+    [Summary("The line of the declaration, counting from zero")]
+    int Line,
+    [Summary("The column the declared name starts at, counting from zero")]
+    int Column,
+    [Summary("How many characters the declared name spans")]
+    int Length
+);

@@ -31,8 +31,8 @@
         <PackageReference Include="GenHTTP.Full.Ioxide" />
 
         <!-- LAMBDA_ENGINE=Kestrel, for Windows where io_uring does not run;
-             referenced in its own right rather than relied on through
-             GenHTTP.Full.Ioxide, which only carries it by way of GenHTTP.Testing -->
+             referenced in its own right, since GenHTTP.Full.Ioxide does not
+             carry it (it did by way of GenHTTP.Testing, until 11.1) -->
         <PackageReference Include="GenHTTP.Engine.Kestrel" />
 
         <PackageReference Include="GenHTTP.Modules.Git" />
@@ -79,6 +79,8 @@
         <EmbeddedResource Include="Resources/Export/*.txt" WithCulture="false" />
         <!-- the texts of the licenses a lambda's source can be published under, see SourceLicenses -->
         <EmbeddedResource Include="Resources/Licenses/*.txt" WithCulture="false" />
+        <!-- what the API's OpenAPI document opens with, see ApiDocumentation -->
+        <EmbeddedResource Include="Resources/Api/Introduction.md" WithCulture="false" />
     </ItemGroup>
 
 </Project>

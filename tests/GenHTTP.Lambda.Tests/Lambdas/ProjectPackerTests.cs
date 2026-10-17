@@ -101,9 +101,9 @@ public sealed class ProjectPackerTests
     {
         var docker = Read(ProjectPacker.Pack(Lambda, Files), "my-lambda/Dockerfile");
 
-        // GenHTTP.Full carries the Kestrel engine, which needs the ASP.NET Core
-        // framework to start at all - the plain runtime image exits at once
-        Assert.Contains("FROM mcr.microsoft.com/dotnet/aspnet:10.0", docker);
+        // GenHTTP.Full needs nothing of ASP.NET Core since 11.1, so the plain
+        // runtime image is enough - the aspnet one would only be larger
+        Assert.Contains("FROM mcr.microsoft.com/dotnet/runtime:10.0", docker);
         Assert.Contains("""ENTRYPOINT ["dotnet", "my-lambda.dll"]""", docker);
     }
 
