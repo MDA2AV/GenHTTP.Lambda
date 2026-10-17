@@ -1,3 +1,4 @@
+using GenHTTP.Api.Content.Services;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -13,10 +14,6 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The agent of this installation, working on one lambda for whoever holds
-/// its editor key: the Change section of the control center.
-/// </summary>
 /// <remarks>
 /// Behind the editor key like everything else about a lambda, and refused for
 /// a demo like everything else that would change one. The agent is the same
@@ -27,41 +24,57 @@ namespace GenHTTP.Lambda.Api;
 /// A process rather than a thing, so it is read at <c>agent</c> and driven
 /// with verbs, the way a deployment is.
 /// </remarks>
+[Tag(ApiDocumentation.Changes)]
+[Summary("The build agent of the installation, changing a lambda for whoever holds its editor key.")]
+[Remarks("""
+         What the Change section of the editor does: the owner says what should be different, and the agent changes the lambda
+         in a feature - a new one, or one named - and tries it at its preview. With `deploy` (the default) it merges the feature
+         and puts the new version online once it works; without, it leaves the feature for the owner to try and merge. What is
+         online stays online until then.
+
+         One change of a lambda runs at a time. Changes count against the same daily allowance as builds, per address, which
+         starts again at midnight UTC. Demos cannot be changed. Errors that come from the agent carry `status` and `message`
+         only.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+[Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta, IFeatureService features, ILogger<LambdaAgentResource> logger)
 {
 
-    /// <summary>
-    /// Whether a change can be asked for, how many this caller has left
-    /// today, and the change under way or the last one.
-    /// </summary>
-    /// <remarks>
-    /// Polled while a change runs. The agent remembers a change for an hour
-    /// after it was asked for; after that there is nothing to report, and the
-    /// versions it made are in the history.
-    /// </remarks>
     [ResourceMethod("lambdas/:privateKey/agent")]
-    public async ValueTask<AgentState> Get(string privateKey, IRequest request)
+    [Summary("Reads how a change is getting on")]
+    [Remarks("""
+             Asked again while a change runs. The agent remembers a change for an hour after it was asked for; after that there
+             is nothing to report, and what it saved is in the history of the lambda and its features.
+             """)]
+    [return: Summary("Whether there is an agent, how many changes this caller has left today, and the change under way or the last one")]
+    public async ValueTask<AgentState> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
         var lambda = meta.RequireEditable(privateKey);
 
         return await builds.StateAsync(lambda, request.Client.Address);
     }
 
-    /// <summary>
-    /// Asks the agent to change the lambda.
-    /// </summary>
     /// <remarks>
-    /// One change of a lambda at a time: a second is refused with 409 while
-    /// the first is queued or running, since two agents writing the same files
-    /// would each undo the other. Counted against the same daily allowance as
-    /// the build page.
-    ///
-    /// The agent works in a feature: a new one, or the one named - which is
-    /// looked up here, so a feature that does not exist is refused before
-    /// anything is spent on it.
+    /// One change of a lambda at a time, since two agents writing the same
+    /// files would each undo the other. The feature is looked up here, so one
+    /// that does not exist is refused before anything is spent on it.
     /// </remarks>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/start")]
-    public async ValueTask<Result<AgentState>> Start(string privateKey, ChangeRequest body, IRequest request)
+    [Summary("Asks the agent to change a lambda")]
+    [Remarks("""
+             The change is queued and runs in the background; `GET …/agent` follows it. The prompt is logged in full, so the
+             operator knows what people ask for, and cut past 2000 characters. A request that is not about changing the
+             application is declined, and the result says why.
+             """)]
+    [Response(ResponseStatus.Accepted, "The change was taken on.")]
+    [Response(ResponseStatus.BadRequest, "The prompt says too little, or there is no such model.")]
+    [Response(ResponseStatus.Conflict, "A change of this lambda is under way already. Wait for it, or stop it first.")]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature to go on with, or this installation takes no changes from here.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.TooManyRequests, "This address asked for as many builds and changes today as one may.")]
+    [Response(ResponseStatus.ServiceUnavailable, "The agent is not answering. Nothing was counted.")]
+    public async ValueTask<Result<AgentState>> Start([Summary(ApiDocumentation.PrivateKey)] string privateKey, ChangeRequest body, IRequest request)
     {
         var lambda = meta.RequireEditable(privateKey);
 
@@ -78,12 +91,11 @@ public sealed class LambdaAgentResource(IBuildService builds, IMetaService meta,
         return new Result<AgentState>(state).Status(ResponseStatus.Accepted);
     }
 
-    /// <summary>
-    /// Stops the change under way. What it saved so far stays saved - in its
-    /// feature, or as a version - and whatever is online stays online.
-    /// </summary>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/agent/stop")]
-    public async ValueTask<AgentState> Stop(string privateKey, IRequest request)
+    [Summary("Stops the change under way")]
+    [Remarks("What it saved so far stays saved - in its feature, or as a version - and whatever is online stays online. A change that is stopped is not counted back.")]
+    [return: Summary("The state afterwards")]
+    public async ValueTask<AgentState> Stop([Summary(ApiDocumentation.PrivateKey)] string privateKey, IRequest request)
     {
         var lambda = meta.RequireEditable(privateKey);
 

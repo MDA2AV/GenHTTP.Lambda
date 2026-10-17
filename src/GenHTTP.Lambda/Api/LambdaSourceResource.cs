@@ -1,3 +1,6 @@
+using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Protocol;
+
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -10,24 +13,30 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// Whether the source of one lambda is published, for its owner.
-/// </summary>
 /// <remarks>
 /// Behind the editor key like everything else about a lambda, so only whoever
-/// may change the lambda may give its code away. Publishing is the owner's
-/// choice and never happens on its own: nothing is published until this is
-/// asked for, and what is published is the program - never the data.
+/// may change the lambda may give its code away. The tag is described here;
+/// the public side, <see cref="SourceResource"/>, shares it.
 /// </remarks>
+[Tag(ApiDocumentation.OpenSource)]
+[Summary("Publishing the code of a lambda, for anybody to read, clone, download and star.")]
+[Remarks("""
+         Publishing is the owner's choice and never happens on its own. What is published is the program: every version kept,
+         as the export packs it - its code, resources, documentation and tests - with a `LICENSE`. **Never the data**: no
+         database, workspace or secret, and nothing only the owner may know - not the specification of a version, the editor
+         key, traffic, logs or visitors. A version is described by its change line only.
+
+         A published source is read at `/source/{publicKey}` on this site, through `GET /sources/…`, and cloned with git from
+         `/source/{publicKey}.git`, read only. A source that is not published is not found, like a key nobody has.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class LambdaSourceResource(ISourceService sources, IMetaService meta, ILogger<LambdaSourceResource> logger)
 {
 
-    /// <summary>
-    /// Whether the source is published and under which license, and the
-    /// licenses it can be published under.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/source")]
-    public OwnSourceResponse Get(string privateKey)
+    [Summary("Reads whether the code is published")]
+    [return: Summary("What it is published under, if it ever was, and the licenses it can be published under")]
+    public OwnSourceResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var source = sources.Get(privateKey);
 
@@ -35,18 +44,19 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
                                      [.. SourceLicenses.All.Select(LicenseResponse.Of)], SourceLicenses.Default, SourceLicenses.MaxAuthor);
     }
 
-    /// <summary>
-    /// Publishes the source of the lambda - every version's code, resources,
-    /// documentation and tests, never its data - or changes the license it is
-    /// published under.
-    /// </summary>
-    /// <remarks>
-    /// What the request leaves out stays as it is; published for the first
-    /// time without a license, it is MIT. An empty author names nobody, and
-    /// the license then names "the authors of" the lambda.
-    /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/source")]
-    public SourceSettingsResponse Put(string privateKey, SourceRequest request)
+    [Summary("Publishes the code of a lambda")]
+    [Remarks("""
+             Asked again, it changes the license or the author. Every version kept is published at once, and every version saved later as well. What the request leaves out stays
+             as it is; published for the first time without a license, it is MIT. The license names the `author` as the holder
+             of the copyright - or, without one, "the authors of" the lambda. Whatever somebody downloaded keeps the license it
+             came with.
+             """)]
+    [Response(ResponseStatus.BadRequest, "The license is not one on offer, or the author is too long or more than one line.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("What it is published under now")]
+    public SourceSettingsResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, SourceRequest request)
     {
         var source = sources.Publish(privateKey, new SourceDraft(request.License, request.Author));
 
@@ -55,13 +65,16 @@ public sealed class LambdaSourceResource(ISourceService sources, IMetaService me
         return SourceSettingsResponse.Of(source);
     }
 
-    /// <summary>
-    /// Takes the source down. Its stars are kept for when it is published
-    /// again. Whatever somebody downloaded while it was published stays theirs
-    /// under the license it came with.
-    /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/source")]
-    public void Delete(string privateKey)
+    [Summary("Takes the published code of a lambda down")]
+    [Remarks("""
+             From now on it is not found at `/source/{publicKey}`, and cannot be cloned. Its stars and its license are kept for
+             when it is published again. Whatever somebody downloaded while it was published stays theirs, under the license it
+             came with. Nothing happens if it is not published.
+             """)]
+    [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var source = sources.Withdraw(privateKey);
 

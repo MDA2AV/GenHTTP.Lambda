@@ -1,3 +1,6 @@
+using GenHTTP.Api.Content.Services;
+
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
@@ -6,9 +9,6 @@ using GenHTTP.Modules.Webservices;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The lambdas the installation keeps online for people and agents to read.
-/// </summary>
 /// <remarks>
 /// Only the listing lives here. A demo is read like any other lambda - its
 /// editor key is announced with it - so its versions, files and logs are the
@@ -16,13 +16,22 @@ namespace GenHTTP.Lambda.Api;
 /// on its own lambda a minute later. Everything that would change it is
 /// refused by its tier.
 /// </remarks>
+[Tag(ApiDocumentation.Demos)]
+[Summary("Finished lambdas the installation keeps online, to be read and started from.")]
+[Remarks("""
+         Each demo shows how something is done the GenHTTP way - a REST API with a database, sign-up and log-in, a multiplayer
+         game over websockets, uploads, live updates - with its documentation and tests. Its editor key is public, so it is
+         read with the same calls as any lambda (`GET /lambdas/{privateKey}/versions/1`, its logs, its database), and every
+         change is refused with `403`. A lambda of your own starts as a copy of one with `POST /lambdas` and its `id` as
+         `template`.
+         """)]
 public sealed class DemoResource(IMetaService meta, ILambdaAddresses addresses)
 {
 
-    /// <summary>
-    /// Every demo, with what reading it teaches and the key to read it with.
-    /// </summary>
     [ResourceMethod]
+    [Summary("Lists the demos")]
+    [Remarks("Public. A few seconds after the server started, a demo may not be online yet (`live`).")]
+    [return: Summary("Every demo")]
     public IReadOnlyList<DemoResponse> Get()
     {
         var demos = new List<DemoResponse>();

@@ -1,3 +1,6 @@
+using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Protocol;
+
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Hosting;
 using GenHTTP.Lambda.Services.Meta;
@@ -12,39 +15,48 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The showcase entry of one lambda, for its owner.
-/// </summary>
 /// <remarks>
 /// Behind the editor key like everything else about a lambda, so only
 /// whoever may change the lambda may put it in front of everybody. Apart from
 /// the versions and the deployment on purpose: presenting a lambda is
-/// something done once it works, not a step of making it work.
+/// something done once it works, not a step of making it work. The tag is
+/// described here; the public listing, <see cref="ShowcaseResource"/>, shares it.
 /// </remarks>
+[Tag(ApiDocumentation.Showcase)]
+[Summary("The showcase: lambdas their owners chose to show, for anybody to browse - and putting one there.")]
+[Remarks("""
+         Showcasing is the owner's choice and never happens on its own. An entry has a title, a description and a picture,
+         and is listed (`GET /showcases`) only while its lambda is online. The listing is public and names lambdas by their
+         public key and address only - never an editor key.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaService meta, ILimitsService limits, ILambdaAddresses addresses,
                                            ILogger<LambdaShowcaseResource> logger)
 {
 
-    /// <summary>
-    /// The entry of the lambda, if it has one, and what may go into one.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/showcase")]
-    public OwnShowcaseResponse Get(string privateKey)
+    [Summary("Reads the showcase entry of a lambda")]
+    [return: Summary("The entry, if the lambda has one, and the limits of an entry")]
+    public OwnShowcaseResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var showcase = showcases.Get(privateKey);
 
         return new OwnShowcaseResponse(showcase == null ? null : ShowcaseResponse.Of(showcase, addresses), Limits(limits));
     }
 
-    /// <summary>
-    /// Puts the lambda into the showcase, or changes what its entry says.
-    /// </summary>
-    /// <remarks>
-    /// A new entry needs a picture; a changed one keeps its picture unless
-    /// another is sent. The entry is only listed while the lambda is online.
-    /// </remarks>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/showcase")]
-    public ShowcaseResponse Put(string privateKey, ShowcaseRequest request)
+    [Summary("Puts a lambda into the showcase")]
+    [Remarks("""
+             Or changes what its entry says. A new entry needs a picture: a PNG, JPEG, GIF or WebP image, base64 encoded, no larger than the limits say. A
+             changed entry keeps its picture unless another is sent. The title (60 characters, one line) and the description
+             (280 characters) are required either way, and should read plainly: what it is and what a visitor can do with it.
+             The entry is listed from now on, while the lambda is online.
+             """)]
+    [Response(ResponseStatus.BadRequest, "The title or the description is missing or too long, or the picture is missing, too large, not base64 or not an image of a kind that is taken.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The entry, as the showcase lists it")]
+    public ShowcaseResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey, ShowcaseRequest request)
     {
         byte[]? image = null;
 
@@ -67,11 +79,12 @@ public sealed class LambdaShowcaseResource(IShowcaseService showcases, IMetaServ
         return ShowcaseResponse.Of(saved, addresses);
     }
 
-    /// <summary>
-    /// Takes the lambda out of the showcase.
-    /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/showcase")]
-    public void Delete(string privateKey)
+    [Summary("Takes a lambda out of the showcase")]
+    [Remarks("Its entry and its picture are deleted. Nothing happens if it has none.")]
+    [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         showcases.Remove(privateKey);
 

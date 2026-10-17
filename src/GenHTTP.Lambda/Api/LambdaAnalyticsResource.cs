@@ -1,3 +1,7 @@
+using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Protocol;
+
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Analytics;
 
@@ -8,37 +12,49 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// How a lambda's visitors reach it, for its owner.
-/// </summary>
 /// <remarks>
 /// Behind the editor key like everything else about a lambda: what is
 /// counted of its visitors is the owner's to see, and nobody else's.
-/// Counting is the owner's choice and never starts on its own.
 /// </remarks>
+[Tag(ApiDocumentation.Analytics)]
+[Summary("Who visits a lambda, counted by day: visitors, page views and requests, and where they came from.")]
+[Remarks("""
+         Counting is the owner's choice and never starts on its own. Once switched on, the visits of a lambda are counted by
+         day in UTC: visitors, page views and requests, and the pages, referring sites, countries, devices, browsers, systems
+         and crawlers behind them. They are written down every few minutes, so the last minutes are not in an answer yet.
+         A year is kept of every lambda; the tier decides how much of it is shown - a free lambda the last seven days, a
+         premium one all of it, as the operator set it.
+
+         A **visitor** is a person who opened a page, counted once a day. A **page view** is a page opened, by people or by
+         programs - `botViews` are the programs'. Requests count everything. Crawlers are told from people by a maintained
+         list, and the big operators' (Google, Bing, OpenAI, Apple, Perplexity) are confirmed by the addresses they publish.
+
+         Nothing that names a visitor is kept: counts only, the referrer as its host, and visitors told apart for a day by a
+         hash that is never written down. No cookie, and nothing added to the lambda. The previews of features and the demos
+         are not counted.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class LambdaAnalyticsResource(IAnalyticsService analytics, ILogger<LambdaAnalyticsResource> logger)
 {
 
-    /// <summary>
-    /// Whether the lambda's visits are counted, and what was counted over the
-    /// last days: by day, page, referrer, country, device, browser, system and
-    /// crawler.
-    /// </summary>
-    /// <remarks>
-    /// Counted by day in UTC, and written down every few minutes, so the
-    /// visits of the last minutes are not in it yet. A year is kept of every
-    /// lambda; a free one shows its owner the last seven days of it, a premium
-    /// one all of it.
-    /// </remarks>
-    /// <param name="days">How many days, today included - left out, as many as its tier shows, which is also the most</param>
     [ResourceMethod("lambdas/:privateKey/analytics")]
-    public AnalyticsResponse Get(string privateKey, int? days = null) => AnalyticsResponse.Of(analytics.Get(privateKey, days));
+    [Summary("Reads what was counted")]
+    [Remarks("""
+             By day, and broken down by page, referring site, country, device, browser, system and crawler, with the same number
+             of days before for comparison where the tier shows those as well. While counting is switched off, the answer says
+             so and has no figures.
+             """)]
+    [return: Summary("Whether visits are counted, and what was counted")]
+    public AnalyticsResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                 [Summary("How many days, today included; left out, as many as the tier shows, which is also the most")] int? days = null)
+        => AnalyticsResponse.Of(analytics.Get(privateKey, days));
 
-    /// <summary>
-    /// Starts counting the lambda's visits, from the next request on.
-    /// </summary>
     [ResourceMethod(Method.Put, "lambdas/:privateKey/analytics")]
-    public AnalyticsResponse Put(string privateKey)
+    [Summary("Switches counting on")]
+    [Remarks("Counting starts with the next request. Nothing happens if it is on already.")]
+    [Response(ResponseStatus.Forbidden, "The lambda is a demo, whose visitors are not counted.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("Analytics, switched on")]
+    public AnalyticsResponse Put([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var enabled = analytics.Enable(privateKey);
 
@@ -47,11 +63,12 @@ public sealed class LambdaAnalyticsResource(IAnalyticsService analytics, ILogger
         return AnalyticsResponse.Of(enabled);
     }
 
-    /// <summary>
-    /// Stops counting the lambda's visits, and deletes what was counted.
-    /// </summary>
     [ResourceMethod(Method.Delete, "lambdas/:privateKey/analytics")]
-    public void Delete(string privateKey)
+    [Summary("Switches counting off and deletes it")]
+    [Remarks("**This cannot be undone**: the whole year that was kept is deleted. Switched on again, counting starts from nothing.")]
+    [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
+    [Response(ResponseStatus.Forbidden, "The lambda is a demo, whose visitors are not counted.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public void Delete([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var publicKey = analytics.Disable(privateKey);
 

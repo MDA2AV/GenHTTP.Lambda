@@ -1,178 +1,176 @@
+using GenHTTP.Api.Content.Services;
+
 namespace GenHTTP.Lambda.Services.Building;
 
-/// <summary>
-/// A build the agent has taken on.
-/// </summary>
-/// <param name="Id">What to ask for its progress by</param>
-/// <param name="Queued">How many builds are waiting ahead of it</param>
-public sealed record BuildStarted(string Id, int Queued);
+[Summary("A build the agent has taken on.")]
+public sealed record BuildStarted(
+    [Summary("What to follow it by: `GET /builds/{id}`")]
+    string Id,
+    [Summary("How many builds are waiting ahead of it")]
+    int Queued
+);
 
-/// <summary>
-/// How a build is getting on.
-/// </summary>
-/// <param name="State">queued, running, done or failed</param>
-/// <param name="Steps">
-/// What it has done so far, as facts the build page says in the visitor's
-/// language - the same steps the control center shows of a change
-/// </param>
-/// <param name="Result">How it ended, once it has</param>
-/// <param name="Waiting">Its place in the queue, zero once it runs</param>
-/// <param name="Seconds">How long it has been running, counted by the agent so a wrong clock in the browser does not matter</param>
-/// <param name="Limit">How long it may run, in seconds; nothing when there is no clock on it</param>
-public sealed record BuildProgress(string State, IReadOnlyList<AgentStep> Steps, BuildResult? Result, int Waiting, int Seconds = 0, int? Limit = null);
+[Summary("How a build is getting on.")]
+public sealed record BuildProgress(
+    [Summary("`queued`, `running`, `done` or `failed`")]
+    string State,
+    [Summary("What it has done so far, as facts a page can say in the visitor's language - the same steps the editor shows of a change")]
+    IReadOnlyList<AgentStep> Steps,
+    [Summary("How it ended, once it has")]
+    BuildResult? Result,
+    [Summary("Its place in the queue; zero once it runs")]
+    int Waiting,
+    [Summary("How long it has been running, in seconds, counted by the agent")]
+    int Seconds = 0,
+    [Summary("How long it may run, in seconds; absent when there is no clock on it")]
+    int? Limit = null
+);
 
-/// <summary>
-/// How a build ended.
-/// </summary>
-/// <param name="Keep">What the person needs to be told about the editor key</param>
-/// <param name="Detail">What went wrong, in the words of whatever it went wrong in</param>
-/// <param name="Declined">
-/// The agent would not build what was asked for, because it is not an application
-/// or not one this platform is for; <c>Error</c> is what it said, in the language
-/// of the request
-/// </param>
+[Summary("How a build ended.")]
 public sealed record BuildResult(
+    [Summary("Whether a lambda was made")]
     bool Ok,
+    [Summary("Whether it is online")]
     bool? Deployed,
+    [Summary("The public key of the lambda that was made")]
     string? PublicKey,
+    [Summary("Its editor key - handed out here, to whoever asked for the build, and nowhere else")]
     string? PrivateKey,
+    [Summary("Where it answers")]
     string? Url,
+    [Summary("Where its editor is")]
     string? EditorUrl,
+    [Summary("What the agent said it made")]
     string? Summary,
+    [Summary("What the person needs to be told about keeping the editor key")]
     string? Keep,
+    [Summary("What went wrong, or - where it was declined - why, in the language of the request")]
     string? Error,
+    [Summary("What went wrong, in the words of whatever it went wrong in")]
     string? Detail,
+    [Summary("Whether the agent would not build what was asked for, because it is not an application or not one this platform is for; `error` says why")]
     bool? Declined = null
 );
 
-/// <summary>
-/// One thing the agent did while building or changing a lambda, as the build
-/// page and the control center draw it.
-/// </summary>
 /// <remarks>
 /// Facts rather than sentences, so the pages can say them in the visitor's or
 /// the owner's language: the kind of step, what it was about, and - once the
 /// tool has answered - how it went. The only prose is what the agent itself
 /// said between steps, which it was asked to write in the owner's language.
 /// </remarks>
-/// <param name="At">Seconds into the run</param>
-/// <param name="Kind">
-/// say, guide, demos, read, logs, create, write, check, deploy, upload, delete,
-/// list, feature (started one), update (changed one's notes or base), merge,
-/// discard (deleted one), data (switched a kind of data on), records (read the
-/// database), secrets (listed the secrets) or other
-/// </param>
-/// <param name="Data">The kind of data a step of kind data switched on: database, secrets or workspace</param>
-/// <param name="Text">What the agent said, for a step of kind say</param>
-/// <param name="Tool">The tool, for a step of a kind this list does not name</param>
-/// <param name="Files">The files written or read</param>
-/// <param name="Removed">The files a write removed</param>
-/// <param name="Whole">Whether a write replaced every file rather than some</param>
-/// <param name="Path">The workspace path of an upload or a removal</param>
-/// <param name="Done">Whether the tool has answered</param>
-/// <param name="Version">The version read, saved, merged into, put online, or made a feature's base</param>
-/// <param name="Online">Whether a write or a deployment went online - at the preview address, for a feature</param>
-/// <param name="Feature">The name of the feature the step was about</param>
-/// <param name="Preview">Whether the step was about a feature rather than the lambda itself</param>
-/// <param name="Errors">How many errors the compiler found</param>
-/// <param name="Problems">How many errors the log holds</param>
-/// <param name="Problem">Why the platform refused the step, in its words</param>
+[Summary("One thing the agent did while building or changing a lambda.")]
+[Remarks("A fact rather than a sentence, so a page can say it in its own language. The only prose is what the agent itself said between steps (`say`).")]
 public sealed record AgentStep(
+    [Summary("Seconds into the run")]
     int At,
+    [Summary("What it did: `say`, `guide`, `demos`, `read`, `logs`, `create`, `write`, `check`, `deploy`, `upload`, `delete`, `list`, `feature` (started one), `update` (changed a feature's notes or base), `merge`, `discard` (deleted a feature), `data` (switched a kind of data on), `records` (read the database), `secrets` (listed the secrets) or `other`")]
     string Kind,
+    [Summary("What the agent said, for a step of kind `say`")]
     string? Text = null,
+    [Summary("The tool, for a step of kind `other`")]
     string? Tool = null,
+    [Summary("The files written or read")]
     IReadOnlyList<string>? Files = null,
+    [Summary("The files a write removed")]
     IReadOnlyList<string>? Removed = null,
+    [Summary("Whether a write replaced every file rather than some")]
     bool? Whole = null,
+    [Summary("The workspace path of an upload or a removal")]
     string? Path = null,
+    [Summary("Whether the tool has answered")]
     bool? Done = null,
+    [Summary("The version read, saved, merged into, put online, or made a feature's base")]
     int? Version = null,
+    [Summary("Whether a write or a deployment went online - at the preview address, for a feature")]
     bool? Online = null,
+    [Summary("How many errors the compiler found")]
     int? Errors = null,
+    [Summary("How many errors the log holds")]
     int? Problems = null,
+    [Summary("Why the platform refused the step, in its words")]
     string? Problem = null,
+    [Summary("The name of the feature the step was about")]
     string? Feature = null,
+    [Summary("Whether the step was about a feature rather than the lambda itself")]
     bool? Preview = null,
+    [Summary("The kind of data a step of kind `data` switched on: `database`, `secrets` or `workspace`")]
     string? Data = null
 );
 
-/// <summary>
-/// How a change ended, from what the tools answered rather than from what the
-/// model said about them.
-/// </summary>
-/// <param name="Ok">Whether it saved anything - into a feature, or as a version</param>
-/// <param name="Version">The newest version it saved, merging included</param>
-/// <param name="Online">The version it put online, if it put one there</param>
-/// <param name="Deployed">Whether it put a version online</param>
-/// <param name="Compiles">Whether the last version it compiled compiles, where it is known</param>
-/// <param name="Before">The version that was online when it started</param>
-/// <param name="Unchanged">It saved nothing</param>
-/// <param name="Cancelled">Somebody stopped it</param>
-/// <param name="Reason">
-/// What cut it short - timeout, turns (it used up its steps) or unauthorised - or,
-/// with nothing saved and nothing said, nothing; declined when the agent would
-/// not make the change at all
-/// </param>
-/// <param name="Declined">The agent would not make the change; <c>Summary</c> says why</param>
-/// <param name="Summary">What the agent said at the end, for the owner</param>
-/// <param name="Error">What went wrong, in English, for a client without words of its own</param>
-/// <param name="Detail">What went wrong, in the words of whatever it went wrong in</param>
-/// <param name="Feature">The feature the change was left in, by its key, when it was not merged</param>
-/// <param name="FeatureName">What that feature is called</param>
-/// <param name="Preview">Whether that feature's preview is online, to be tried</param>
+[Summary("How a change ended, from what the tools answered rather than from what the model said about them.")]
 public sealed record ChangeResult(
+    [Summary("Whether it saved anything - into a feature, or as a version")]
     bool Ok,
+    [Summary("The newest version it saved, merging included")]
     int? Version = null,
+    [Summary("The version it put online, if it put one there")]
     int? Online = null,
+    [Summary("Whether it put a version online")]
     bool? Deployed = null,
+    [Summary("Whether the last code it compiled compiles, where it is known")]
     bool? Compiles = null,
+    [Summary("The version that was online when it started - to put back, if the change is not wanted")]
     int? Before = null,
+    [Summary("Whether it saved nothing")]
     bool? Unchanged = null,
+    [Summary("Whether somebody stopped it")]
     bool? Cancelled = null,
+    [Summary("What cut it short: `timeout`, `turns` (it used up its steps) or `unauthorised`; `declined` where the agent would not make the change at all")]
     string? Reason = null,
+    [Summary("What the agent said at the end, for the owner - or, where it declined, why")]
     string? Summary = null,
+    [Summary("What went wrong, in English")]
     string? Error = null,
+    [Summary("What went wrong, in the words of whatever it went wrong in")]
     string? Detail = null,
+    [Summary("The key of the feature the change was left in, where it was not merged")]
     string? Feature = null,
+    [Summary("What that feature is called")]
     string? FeatureName = null,
+    [Summary("Whether that feature's preview is online, to be tried")]
     bool? Preview = null,
+    [Summary("Whether the agent would not make the change; `summary` says why")]
     bool? Declined = null
 );
 
-/// <summary>
-/// A change the agent was asked for, and how it is getting on.
-/// </summary>
-/// <param name="State">queued, running, done, failed or cancelled</param>
-/// <param name="Prompt">What was asked for</param>
-/// <param name="Deploy">Whether it was asked to merge the change and put it online</param>
-/// <param name="Model">Which of the offered models is doing it</param>
-/// <param name="Before">The version that was online when it was asked for</param>
-/// <param name="Waiting">Its place in the queue, zero once it runs</param>
-/// <param name="Seconds">How long it has been running</param>
-/// <param name="Limit">How long it may run, in seconds; null when there is no clock on it</param>
-/// <param name="Feature">The feature it was asked to go on with, by its key; null when it starts one of its own</param>
+[Summary("A change the agent was asked for, and how it is getting on.")]
 public sealed record ChangeProgress(
+    [Summary("What the agent knows it by")]
     string Id,
+    [Summary("`queued`, `running`, `done`, `failed` or `cancelled`")]
     string State,
+    [Summary("What was asked for")]
     string Prompt,
+    [Summary("Whether it was asked to merge the change and put it online")]
     bool Deploy,
+    [Summary("Which of the offered models is making it")]
     string Model,
+    [Summary("The version that was online when it was asked for")]
     int? Before,
+    [Summary("What it has done so far")]
     IReadOnlyList<AgentStep> Steps,
+    [Summary("How it ended, once it has")]
     ChangeResult? Result,
+    [Summary("Its place in the queue; zero once it runs")]
     int Waiting,
+    [Summary("How long it has been running, in seconds")]
     int Seconds,
+    [Summary("How long it may run, in seconds; absent when there is no clock on it")]
     int? Limit,
+    [Summary("The key of the feature it was asked to go on with; absent when it starts one of its own")]
     string? Feature = null
 );
 
-/// <summary>
-/// What the Change section of the control center needs to draw itself.
-/// </summary>
-/// <param name="Available">Whether this installation has an agent at all</param>
-/// <param name="PerDay">How many builds and changes one address may ask for in a day</param>
-/// <param name="Left">How many of those this caller has left today</param>
-/// <param name="SecondModel">Whether a second model is on offer, behind a password</param>
-/// <param name="Job">The change under way, or the last one, while the agent still remembers it</param>
-public sealed record AgentState(bool Available, int PerDay, int Left, bool SecondModel, ChangeProgress? Job);
+[Summary("Whether a change can be asked for, and the change under way or the last one.")]
+public sealed record AgentState(
+    [Summary("Whether changes can be asked for: there is an agent, and the operator has not switched the box off")]
+    bool Available,
+    [Summary("How many builds and changes one address may ask for in a day")]
+    int PerDay,
+    [Summary("How many of those this caller has left today")]
+    int Left,
+    [Summary("Whether a second model is on offer, behind a password")]
+    bool SecondModel,
+    [Summary("The change under way, or the last one, while the agent still remembers it")]
+    ChangeProgress? Job
+);

@@ -94,10 +94,19 @@ port, each against its own temporary data directory.
 
 ### API
 
-Browsable at `/api/v1/scalar/`. A lambda is addressed by its editor key, which
-is also what authorizes the call. Things that can be listed, read, created or
-changed are resources; what is a process rather than a thing is a verb in the
-path.
+Browsable at `/api/v1/scalar/`, described by `/api/v1/openapi.json` (or
+`.yaml`). The description is the reference for whoever calls the API: it opens
+with an introduction (getting started, keys, files, limits, errors), groups
+the operations by what they are about, and says of each what it does, what it
+leaves alone and every way it is refused. It is written with GenHTTP's
+documentation attributes beside the code (see `ApiDocumentation`), and
+`ApiDocumentationTests` keeps it complete.
+
+A lambda is addressed by its editor key, which is also what authorizes the
+call. Things that can be listed, read, created or changed are resources; what
+is a process rather than a thing is a verb in the path. A refusal is answered
+with a status and `{ status, error, message }`, where `error` is `Invalid`
+(400), `Forbidden` (403), `NotFound` (404), `Conflict` (409) or `TooMany` (429).
 
 | Endpoint                                              | Does                                      |
 |-------------------------------------------------------|-------------------------------------------|

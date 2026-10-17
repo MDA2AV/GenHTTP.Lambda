@@ -6,7 +6,6 @@ using GenHTTP.Modules.ApiBrowsing;
 using GenHTTP.Modules.DependencyInjection.Infrastructure;
 using GenHTTP.Modules.ErrorHandling;
 using GenHTTP.Modules.Layouting;
-using GenHTTP.Modules.OpenApi;
 using GenHTTP.Modules.Reflection;
 using GenHTTP.Modules.Webservices.Provider;
 
@@ -47,7 +46,7 @@ public static class ApiLayout
                             .Add(Resource<LambdaDomainResource>(mode))
                             .Add(Resource<LambdaAgentResource>(mode))
                             .AddScalar(title: "GenHTTP Lambda API")
-                            .AddOpenApi()
+                            .Add(ApiDocumentation.Create())
                             .Add(ErrorHandler.From(new ApiErrorMapper()));
 
         // what only the operator may see, behind the token - and not there at

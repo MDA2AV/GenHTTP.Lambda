@@ -7,8 +7,11 @@
 
     <ItemGroup>
 
-        <PackageVersion Include="GenHTTP.Full.Ioxide" Version="11.0.5" />
-        <PackageVersion Include="GenHTTP.Engine.Kestrel" Version="11.0.5" />
+        <PackageVersion Include="GenHTTP.Full.Ioxide" Version="11.1.0" />
+        <PackageVersion Include="GenHTTP.Engine.Kestrel" Version="11.1.0" />
+
+        <!-- the tests' client and host; no longer carried by GenHTTP.Full.Ioxide since 11.1 -->
+        <PackageVersion Include="GenHTTP.Testing" Version="11.1.0" />
 
         <!-- serves every lambda as a git repository, see Services/Git -->
         <PackageVersion Include="GenHTTP.Modules.Git" Version="0.1.1" />

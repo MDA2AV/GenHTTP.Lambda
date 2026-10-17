@@ -32,7 +32,19 @@ public static class AdminAuthentication
     /// </summary>
     public const string Role = "admin";
 
-    private const string Header = "X-Admin-Token";
+    /// <summary>
+    /// The header the token is presented in.
+    /// </summary>
+    public const string Header = "X-Admin-Token";
+
+    // how the API description says it, for each resource behind the token -
+    // the framework's API key concern does not describe itself
+
+    public const string HeaderDescription = "The administration token of the installation (`LAMBDA_ADMIN_TOKEN`)";
+
+    public const string MissingDescription = "The token is missing.";
+
+    public const string WrongDescription = "The token is wrong.";
 
     /// <summary>
     /// The concern that lets a request with the configured token through.

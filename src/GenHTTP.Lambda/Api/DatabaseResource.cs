@@ -1,3 +1,7 @@
+using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Protocol;
+
+using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Services.Databases;
 
@@ -5,61 +9,84 @@ using GenHTTP.Modules.Webservices;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The database of a lambda - a SQLite file its code reaches with
-/// <c>Database.GetConnection()</c> - as its owner reads it: the tables, and
-/// what is in them.
-/// </summary>
 /// <remarks>
-/// Reading only: what is in the database is written by the lambda. It is
-/// data, so every version reads the same, deploying and rolling back leave it
-/// alone, and a feature works on a copy of it. It is off until it is switched
-/// on (<c>PUT /lambdas/{privateKey}/data/database</c>), which makes it, empty;
-/// switching it off deletes it.
+/// Reading only: what is in the database is written by the lambda, and a
+/// change to the records is a change to the app.
 /// </remarks>
+[Tag(ApiDocumentation.Database)]
+[Summary("The database of a lambda, read as its owner reads it: its tables, and the records in them.")]
+[Remarks("""
+         Every lambda may have a SQLite database, which its code reaches with `Database.GetConnection()`. Its schema is made
+         by migrations the lambda ships in `resources/migrations/`, applied as it starts; its records are written by the
+         lambda. This API only reads it - there is no way to change a record from outside the lambda.
+
+         It is data: every version reads the same database, deploying and rolling back leave it alone, and a feature works on
+         a copy of it, read below `…/features/{feature}/database`. It is off until it is switched on
+         (`PUT /lambdas/{privateKey}/data/database`), which makes it empty. Switching it off deletes it.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class DatabaseResource(IDatabaseService databases)
 {
 
     #region The lambda's
 
-    /// <summary>
-    /// Whether the lambda has a database, how full it is, and every table and
-    /// view in it with its columns and how many rows it holds.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/database")]
-    public async ValueTask<DatabaseResponse> Get(string privateKey)
+    [Summary("Lists the tables of the database")]
+    [Remarks("""
+             And whether the lambda has a database at all, how much room it takes, and whether its code connects to it. Tables
+             SQLite keeps for itself are left out; the one Evolve keeps of the migrations it applied is marked (`migrations`).
+             While the database is switched off, the answer says so and lists nothing.
+             """)]
+    [return: Summary("The database and its tables")]
+    public async ValueTask<DatabaseResponse> Get([Summary(ApiDocumentation.PrivateKey)] string privateKey)
         => Describe(await databases.GetAsync(privateKey));
 
-    /// <summary>
-    /// A page of the rows of one table or view, newest first unless a column
-    /// to sort by is named.
-    /// </summary>
-    /// <param name="table">The name of the table, encoded</param>
-    /// <param name="offset">How many rows to skip; none, left out</param>
-    /// <param name="limit">How many rows to answer with, up to 200; 50, left out</param>
-    /// <param name="order">A column to sort by; left out, the order the rows were written in</param>
-    /// <param name="descending">Whether that order is reversed, which it is unless this says otherwise</param>
     [ResourceMethod("lambdas/:privateKey/database/tables/:table")]
-    public async ValueTask<DatabaseRowsResponse> Rows(string privateKey, string table, string? order, int offset = 0, int limit = 50, bool descending = true)
+    [Summary("Reads rows of a table")]
+    [Remarks("""
+             The newest rows first, unless a column to sort by is named. Each row is a list of values in the order of the
+             columns. A text longer than 2000 characters is cut and sent as `{ "text": …, "length": … }`, bytes as
+             `{ "blob": length }`, and an integer beyond what JavaScript holds exactly as text.
+             """)]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or its database has no such table.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.BadRequest, "The table has no column of the name to sort by.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "The database is switched off.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("A page of rows")]
+    public async ValueTask<DatabaseRowsResponse> Rows([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                      [Summary("The name of the table or view, encoded as one segment")] string table,
+                                                      [Summary("A column to sort by; left out, the order the rows were written in")] string? order,
+                                                      [Summary("How many rows to skip")] int offset = 0,
+                                                      [Summary("How many rows to answer with, 1 to 200")] int limit = 50,
+                                                      [Summary("Whether the order is reversed - newest, or highest, first - which it is unless this is `false`")] bool descending = true)
         => Describe(await databases.ReadAsync(privateKey, table, offset, limit, order, descending));
 
     #endregion
 
     #region A feature's copy
 
-    /// <summary>
-    /// A feature's copy of the database, which its preview reads and writes.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/features/:feature/database")]
-    public async ValueTask<DatabaseResponse> GetOfFeature(string privateKey, string feature)
+    [Summary("Lists the tables of a feature's database")]
+    [Remarks("The copy its preview reads and writes, taken when the feature was started or its data last refreshed. Its migrations may have changed its schema.")]
+    [Response(ResponseStatus.NotFound, ApiDocumentation.NoFeature, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The feature's copy of the database and its tables")]
+    public async ValueTask<DatabaseResponse> GetOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.FeatureKey)] string feature)
         => Describe(await databases.GetAsync(privateKey, feature));
 
-    /// <summary>
-    /// A page of the rows of one table of a feature's copy.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/features/:feature/database/tables/:table")]
-    public async ValueTask<DatabaseRowsResponse> RowsOfFeature(string privateKey, string feature, string table, string? order, int offset = 0,
-                                                               int limit = 50, bool descending = true)
+    [Summary("Reads rows of a feature's database")]
+    [Remarks("As for the lambda's own database.")]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, it has no such feature, or the copy has no such table.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.BadRequest, "The table has no column of the name to sort by.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Conflict, "The lambda's database is switched off.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("A page of rows")]
+    public async ValueTask<DatabaseRowsResponse> RowsOfFeature([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                               [Summary(ApiDocumentation.FeatureKey)] string feature,
+                                                               [Summary("The name of the table or view, encoded as one segment")] string table,
+                                                               [Summary("A column to sort by; left out, the order the rows were written in")] string? order,
+                                                               [Summary("How many rows to skip")] int offset = 0,
+                                                               [Summary("How many rows to answer with, 1 to 200")] int limit = 50,
+                                                               [Summary("Whether the order is reversed, which it is unless this is `false`")] bool descending = true)
         => Describe(await databases.ReadAsync(privateKey, table, offset, limit, order, descending, feature));
 
     #endregion

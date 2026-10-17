@@ -1039,7 +1039,8 @@ touches all that apply:
 3. `platform_guide`, the MCP instructions and the tool descriptions
    (`Api/Mcp`) - for agents; and `AGENTS.md` in every lambda's repository
    (`Resources/Export/Agents.md.txt`) for an agent working in a clone.
-4. The API description (Scalar at `/api/v1/scalar/`, from the resources).
+4. The API description (Scalar at `/api/v1/scalar/`, from the resources) -
+   see below.
 
 The same rule is worded the same way in all of them.
 
@@ -1049,6 +1050,38 @@ would otherwise break before it reads the guide (where data goes, the
 database, waiting for tasks, relative paths, secrets, documentation, pages
 meant to be found). The rest
 is in `platform_guide` and the tool descriptions; do not repeat it there.
+
+### The API description
+
+The OpenAPI document (`/api/v1/openapi.json`, browsed in Scalar) is written for
+whoever calls the API - an agent or a developer writing a client - with
+GenHTTP's documentation attributes beside the code they describe.
+
+- **Behaviour, not just what - decided by the owner.** An operation says what
+  it changes and what it leaves alone, every way it is refused and why
+  (`[Response]` with `ErrorResponse` for the platform's own refusals), what it
+  answers with (`[return: Summary]`, `[Response]` for 201, 202 and 422), and
+  bodies and downloads that are not JSON (`[RequestBody]`,
+  `ContentType`, `[ResponseHeader]`). Read the service before writing it.
+- **The attributes for the caller, the XML comments for the maintainer.** A
+  `[Summary]` and `[Remarks]` say what the caller needs; `<remarks>` keep the
+  *why* for whoever changes the code. The same sentence is not in both: a
+  record's fields are described by `[Summary]` on its parameters, not by
+  `<param>`.
+- **A summary is a short label** - Scalar lists the operations by it - and
+  the rest goes into the remarks.
+- **Tags are concepts, not classes**, in the order and groups of
+  `ApiDocumentation` (`x-tagGroups`); a tag shared by several resources is
+  described on one of them. The introduction everybody reads first is
+  `Resources/Api/Introduction.md`. The wording every route shares (the editor
+  key, a demo's refusal) is a constant of `ApiDocumentation`.
+- **Limits the operator sets are never written as numbers**: say where to
+  read them (`GET /system`, the summary's `limits`). Fixed ones (100 secrets,
+  32 KB a value) may be.
+- `ApiDocumentationTests` refuses an operation without a summary, a parameter,
+  answer, model or field without a description, a call about a lambda that
+  does not say how an unknown key is answered, and a tag in no group. A new
+  endpoint or field is documented in the same change.
 
 ## Working conventions
 

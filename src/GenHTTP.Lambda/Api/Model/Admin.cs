@@ -1,113 +1,137 @@
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Telemetry;
 
 namespace GenHTTP.Lambda.Api.Model;
 
-/// <summary>
-/// Every lambda on the installation, for the administration panel.
-/// </summary>
-/// <param name="Matched">How many the search matched, which is what the pages count from</param>
+[Summary("A page of every lambda on the installation.")]
 public sealed record AdminListingResponse(
+    [Summary("The lambdas of this page")]
     IReadOnlyList<AdminLambda> Lambdas,
+    [Summary("How many lambdas there are")]
     int Total,
+    [Summary("How many of them are online")]
     int Deployed,
+    [Summary("How many the search matched, which is what the pages count from")]
     int Matched,
+    [Summary("The page this is, counting from 1")]
     int Page,
+    [Summary("How many pages there are")]
     int Pages
 );
 
-/// <summary>
-/// One lambda as the panel sees it: what the database knows, and what it has
-/// been doing since the server came up.
-/// </summary>
 /// <remarks>
 /// This carries the editor key, so it only ever answers a request that has
-/// presented the administration token. The traffic figures are counters held
-/// in memory, so they start again with the process and are absent for a lambda
-/// nobody has called yet.
+/// presented the administration token.
 /// </remarks>
+[Summary("A lambda as the operator sees it: what is kept about it, and what it has been doing since the server came up.")]
 public sealed record AdminLambda(
+    [Summary("Its public key")]
     string PublicKey,
+    [Summary("Its editor key")]
     string PrivateKey,
+    [Summary("`Free`, `Premium` or `Demo`")]
     string Tier,
+    [Summary("When it was created")]
     DateTime Created,
+    [Summary("When something about it last changed")]
     DateTime Modified,
+    [Summary("The version online; absent while none is")]
     int? ActiveVersion,
+    [Summary("Its newest version")]
     int? LatestVersion,
+    [Summary("How many versions are kept")]
     int Versions,
+    [Summary("When it is taken offline unless it is used before then")]
     DateTime? DeployedUntil,
+    [Summary("When it is deleted unless it is used before then")]
     DateTime? KeptUntil,
+    [Summary("Requests since the server came up")]
     long Requests,
+    [Summary("Of those, answered with a server error")]
     long Failed,
+    [Summary("When the last request arrived, since the server came up")]
     DateTime? LastSeen,
+    [Summary("The domain of its own, if it has one")]
     string? Domain,
+    [Summary("Whether it answers at that domain")]
     bool DomainServed
 );
 
-/// <summary>
-/// Everything about one lambda, for the page the panel shows it on.
-/// </summary>
-/// <param name="Lambda">The lambda, as its owner sees it - including the editor key</param>
-/// <param name="Traffic">What it has been doing since the server came up</param>
-/// <param name="Versions">Its stored versions, newest first</param>
-/// <param name="Activations">Every stretch of time it was online, newest first</param>
-/// <param name="Tiers">The tiers there are, for the panel to offer</param>
+[Summary("Everything about one lambda, for the operator.")]
 public sealed record AdminLambdaDetail(
+    [Summary("The lambda, as its owner sees it - its editor key included")]
     LambdaResponse Lambda,
+    [Summary("What it has been doing since the server came up")]
     LambdaTraffic Traffic,
+    [Summary("Its versions, newest first")]
     IReadOnlyList<VersionResponse> Versions,
+    [Summary("Every stretch of time it was online, newest first")]
     IReadOnlyList<ActivationResponse> Activations,
+    [Summary("The tiers it may be moved to")]
     IReadOnlyList<string> Tiers
 );
 
-/// <summary>
-/// Moves a lambda to a tier.
-/// </summary>
-public sealed record TierRequest(string Tier);
+[Summary("The tier to move a lambda to.")]
+public sealed record TierRequest(
+    [Summary("`Free` or `Premium`, in any case")]
+    string Tier
+);
 
-/// <summary>
-/// Sets the domain of a lambda. Nothing, or an empty one, removes it.
-/// </summary>
-public sealed record DomainChangeRequest(string? Domain);
+[Summary("The domain a lambda is to answer at.")]
+public sealed record DomainChangeRequest(
+    [Summary("The domain, as it should answer: `shop.example.com`, or `www.example.com` to answer there. Nothing, or an empty one, removes it.")]
+    string? Domain
+);
 
-/// <summary>
-/// What is left of a lambda after the panel acted on it.
-/// </summary>
-public sealed record LambdaOverviewResponse(string PublicKey, int? ActiveVersion, DateTime? DeployedUntil);
+[Summary("What is left of a lambda after the operator acted on it.")]
+public sealed record LambdaOverviewResponse(
+    [Summary("Its public key")]
+    string PublicKey,
+    [Summary("The version online; absent while none is")]
+    int? ActiveVersion,
+    [Summary("When it is taken offline unless it is used before then")]
+    DateTime? DeployedUntil
+);
 
-/// <summary>
-/// What the operator can switch on or off.
-/// </summary>
-/// <param name="EnterprisePage">Whether the header links to the enterprise page</param>
-/// <param name="BuildBox">Whether /build offers its text box, where there is an agent</param>
-/// <param name="ChangeBox">Whether the Change section of the editor offers its text box, where there is an agent</param>
-public sealed record SettingsModel(bool EnterprisePage, bool BuildBox = true, bool ChangeBox = true);
+[Summary("What the operator can switch on or off for the whole installation.")]
+public sealed record SettingsModel(
+    [Summary("Whether the header of the site links to the enterprise page")]
+    bool EnterprisePage,
+    [Summary("Whether `/build` offers its text box, where there is an agent")]
+    bool BuildBox = true,
+    [Summary("Whether the Change section of the editor offers its text box, where there is an agent")]
+    bool ChangeBox = true
+);
 
-/// <summary>
-/// What a lambda may have and do, as the operator set it.
-/// </summary>
-/// <param name="Free">What a free lambda, or a demo, may have</param>
-/// <param name="Premium">What a premium lambda may have; never less than a free one</param>
-/// <param name="OfflineAfterHours">How long a free lambda may go without visits or edits before it is taken offline</param>
-/// <param name="RemovedAfterHours">How long a free lambda may go without visits or edits before it is removed</param>
-/// <param name="ShowcaseImageBytes">How large the picture of a showcase entry may be</param>
-/// <param name="RequestsPerSecond">How many requests one client may send to the lambdas in a second</param>
-/// <param name="BuildsPerDay">How many builds and changes one address may ask the build agent for in a day</param>
+[Summary("What a lambda may have and do, as the operator set it.")]
 public sealed record LimitsModel(
+    [Summary("What a free lambda, or a demo, may have")]
     TierLimitsModel Free,
+    [Summary("What a premium lambda may have; never less than a free one")]
     TierLimitsModel Premium,
+    [Summary("How long a free lambda may go without a visit or an edit before it is taken offline, in hours")]
     int OfflineAfterHours,
+    [Summary("How long a free lambda may go without a visit or an edit before it is deleted, in hours")]
     int RemovedAfterHours,
+    [Summary("How large the picture of a showcase entry may be, in bytes")]
     int ShowcaseImageBytes,
+    [Summary("How many requests one client may send to the lambdas in a second")]
     int RequestsPerSecond,
+    [Summary("How many builds and changes one address may ask the build agent for in a day")]
     int BuildsPerDay
 );
 
-/// <summary>
-/// What a lambda of one tier may have.
-/// </summary>
-/// <param name="BuildBytes">How large a version may be: its code and its resources together</param>
-/// <param name="DataBytes">The room its data may take: its database and its workspace together</param>
-/// <param name="Versions">How many of its versions are kept</param>
-/// <param name="Features">How many features it may have open at once</param>
-/// <param name="AnalyticsDays">How many days of its analytics its owner is shown, of the year that is kept</param>
-public sealed record TierLimitsModel(long BuildBytes, long DataBytes, int Versions, int Features, int AnalyticsDays);
+[Summary("What a lambda of one tier may have.")]
+public sealed record TierLimitsModel(
+    [Summary("What a version may come to, its code and its resources together, in bytes")]
+    long BuildBytes,
+    [Summary("The room its data may take, its database and its workspace together, in bytes")]
+    long DataBytes,
+    [Summary("How many of its versions are kept")]
+    int Versions,
+    [Summary("How many features it may have open at once")]
+    int Features,
+    [Summary("How many days of its analytics its owner is shown, of the year that is kept")]
+    int AnalyticsDays
+);

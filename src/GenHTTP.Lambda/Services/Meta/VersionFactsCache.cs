@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Databases;
 using GenHTTP.Lambda.Services.Deployment.Model;
 using GenHTTP.Lambda.Services.Storage;
@@ -22,13 +24,20 @@ public sealed record VersionFacts(int CodeFiles, long CodeBytes, int ResourceFil
 /// What a version says about itself: the pages of its code kept in
 /// <c>docs/</c> and <c>tests/</c>.
 /// </summary>
-/// <param name="About">The first paragraph of its product page, as plain text - what the app is, in a sentence or two</param>
-/// <param name="Product">Whether it has a product page: what the app is, for whom, and why</param>
-/// <param name="Decisions">Whether it says which technical decisions were made, and why</param>
-/// <param name="Tests">Whether it says how it is tested</param>
-/// <param name="Files">How many files its documentation and tests come to</param>
-/// <param name="Bytes">What those weigh, which counts towards what a version may come to like the rest of its code</param>
-public sealed record DocumentationSummary(string? About, bool Product, bool Decisions, bool Tests, int Files, long Bytes);
+[Summary("What a version says about itself, in `docs/` and `tests/`.")]
+public sealed record DocumentationSummary(
+    [Summary("The first paragraph of `docs/product.md`, as plain text - what the app is, in a sentence or two")]
+    string? About,
+    [Summary("Whether it has `docs/product.md`: what the app is, for whom, and why")]
+    bool Product,
+    [Summary("Whether it has `docs/decisions.md`: which technical decisions were made, and why")]
+    bool Decisions,
+    [Summary("Whether it has `tests/README.md`: how it is tested")]
+    bool Tests,
+    [Summary("How many files its documentation and tests come to")]
+    int Files,
+    [Summary("What those weigh, which counts towards what a version may come to like the rest of its code")]
+    long Bytes);
 
 /// <summary>
 /// The facts of the versions whose overview was asked for lately, read off

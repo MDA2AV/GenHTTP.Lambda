@@ -1,14 +1,17 @@
+using GenHTTP.Api.Content.Services;
+
 using GenHTTP.Lambda.Services.Meta;
 
 namespace GenHTTP.Lambda.Services.Deployment.Model;
 
-/// <summary>
-/// A text replacement within one file.
-/// </summary>
-/// <param name="File">The name of the file to change</param>
-/// <param name="Find">The text to replace, which has to occur exactly once</param>
-/// <param name="Replace">What to put in its place</param>
-public sealed record FileEdit(string File, string Find, string Replace);
+[Summary("A replacement of text within one file.")]
+public sealed record FileEdit(
+    [Summary("The name of the file to change, which has to be text")]
+    string File,
+    [Summary("The text to replace, exactly as it is in the file. It has to occur exactly once - include more of what surrounds it where it occurs more often.")]
+    string Find,
+    [Summary("What to put in its place; empty removes it")]
+    string Replace);
 
 /// <summary>
 /// Applies a partial change to the files of a version.

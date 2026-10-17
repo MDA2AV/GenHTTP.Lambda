@@ -1,3 +1,4 @@
+using GenHTTP.Api.Content.Services;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -16,9 +17,6 @@ using Microsoft.Extensions.Logging;
 
 namespace GenHTTP.Lambda.Api;
 
-/// <summary>
-/// The saved versions of a lambda's code.
-/// </summary>
 /// <remarks>
 /// Versions are never changed once they are stored and never removed one by
 /// one, so there is nothing to put or delete here: a change to the code is a
@@ -27,46 +25,62 @@ namespace GenHTTP.Lambda.Api;
 /// Every way of storing one takes an optional specification and change: what
 /// the user wanted and what was done about it, which the code alone cannot say.
 /// </remarks>
+[Tag(ApiDocumentation.Versions)]
+[Summary("The saved versions of a lambda: its program, which never changes once it is saved.")]
+[Remarks("""
+         A version is the program: its code and its resources, and what is written about it (`docs/`, `tests/`). It is
+         numbered from 1 and never changes; a change to the lambda is a new version. Saving one does not put it online -
+         pass `?deploy=true`, or deploy it afterwards. Data (database, workspace, secrets) is not part of a version.
+
+         Every save may say what the user wanted (`specification`) and what it changes (`change`), which the history shows.
+         Only so many versions are kept, as the tier of the lambda allows; with every save the oldest beyond that go, but
+         never the version online or one a feature is based on.
+
+         A lambda that exists is best changed in a feature (see *Features*) rather than by saving versions directly: the
+         feature can be tried at its own address first.
+         """)]
+[Response(ResponseStatus.NotFound, ApiDocumentation.NoLambda, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
 public sealed class VersionResource(IMetaService meta, ILimitsService limits, ILogger<VersionResource> logger)
 {
 
-    /// <summary>
-    /// Lists the stored versions, newest first.
-    /// </summary>
     [ResourceMethod("lambdas/:privateKey/versions")]
-    public List<VersionResponse> List(string privateKey)
+    [Summary("Lists the versions that are kept, newest first")]
+    [Remarks("Without their files. `GET …/versions/{version}` reads one with them.")]
+    [return: Summary("The versions, newest first")]
+    public List<VersionResponse> List([Summary(ApiDocumentation.PrivateKey)] string privateKey)
     {
         var versions = meta.GetVersions(privateKey);
 
         return versions.Select(Describe).ToList();
     }
 
-    /// <summary>
-    /// Reads the files of a single version.
-    /// </summary>
-    /// <remarks>
-    /// Every file unless a folder is named: its documentation is
-    /// <c>?folder=docs/</c> and its tests <c>?folder=tests/</c>, which is how
-    /// they are read without every resource of the version coming along.
-    /// </remarks>
-    /// <param name="folder">Only the files below this folder, such as <c>docs/</c> or <c>resources/</c></param>
     [ResourceMethod("lambdas/:privateKey/versions/:version")]
-    public VersionContentResponse Get(string privateKey, int version, string? folder)
+    [Summary("Reads a version with its files")]
+    [Remarks("""
+             Every file, `lambda.cs` first, unless a `folder` is named: `?folder=docs/` reads the documentation of the version
+             and `?folder=tests/` its tests, without every resource coming along.
+             """)]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no such version - it never existed, or it was not kept.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The version with its files")]
+    public VersionContentResponse Get([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.VersionNumber)] int version,
+                                      [Summary("Only the files whose name starts with this, such as `docs/` or `resources/`")] string? folder)
         => Describe(meta.GetVersion(privateKey, version), folder);
 
-    /// <summary>
-    /// Downloads the files of a single version as a zip archive.
-    /// </summary>
-    /// <remarks>
-    /// The archive holds the files as they are named in the lambda, so it can
-    /// be changed locally and uploaded again as a new version. With
-    /// <c>?layout=project</c> it holds them where a clone has them instead -
-    /// the snippet as <c>Project.cs</c> and the other C# files named the .NET
-    /// way - so a .NET tool set up in a clone finds them where it looks.
-    /// </remarks>
-    /// <param name="layout"><c>lambda</c> (the default) or <c>project</c></param>
     [ResourceMethod("lambdas/:privateKey/versions/:version/zip")]
-    public IResponse GetArchive(string privateKey, int version, string? layout, IRequest request)
+    [Summary("Downloads a version as a zip archive")]
+    [Remarks("""
+             The archive holds the files as the lambda names them, so it can be changed locally and saved again as a new version
+             with `POST …/versions/zip`. With `?layout=project` it holds them where a clone of the lambda's git repository has
+             them instead, so a .NET tool set up in a clone finds them where it looks. Unlike the export, it holds no project
+             around them and no data.
+             """)]
+    [Response(ResponseStatus.Ok, "The files, as a zip archive", ContentType = ApiDocumentation.Zip)]
+    [ResponseHeader(ResponseStatus.Ok, "Content-Disposition", "`attachment`, named after the public key and the version: `quiz-v3.zip`, or `quiz-v3-project.zip`")]
+    [Response(ResponseStatus.BadRequest, "There is no such layout.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.NotFound, "No lambda has this editor key, or it has no such version.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public IResponse GetArchive([Summary(ApiDocumentation.PrivateKey)] string privateKey, [Summary(ApiDocumentation.VersionNumber)] int version,
+                                [Summary(ApiDocumentation.Layout)] string? layout, IRequest request)
     {
         var laid = LayoutOf(layout);
 
@@ -84,28 +98,30 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
                       .Build();
     }
 
-    /// <summary>
-    /// Stores the files of a zip archive as a new version.
-    /// </summary>
-    /// <remarks>
-    /// The archive replaces the whole set of files, so it has to hold all of
-    /// them - a file left out is gone from the new version. It is read as a
-    /// commit of the files would be: a git repository is skipped, and so is
-    /// what the <c>.gitignore</c> files of the code's folders leave out, and
-    /// what a clone's own leaves out at the top (<c>bin/</c>, <c>obj/</c>).
-    /// Other dot files of the code are kept; hidden files among the resources
-    /// are skipped. A single top level folder is removed. With
-    /// <c>?layout=project</c>, the archive is laid out as a clone and the
-    /// platform's files are left out. The archive is counted as it is sent,
-    /// before anything is left out, so it holds what a commit would - never
-    /// what a build installed.
-    /// </remarks>
-    /// <param name="deploy">Whether to put the new version online as well</param>
-    /// <param name="specification">What the user wants from this version and why</param>
-    /// <param name="change">What this version changes, in a line</param>
-    /// <param name="layout"><c>lambda</c> (the default) or <c>project</c></param>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/zip")]
-    public async ValueTask<Result<SavedVersionResponse>> CreateFromArchive(string privateKey, bool? deploy, string? specification, string? change, string? layout,
+    [Summary("Saves a zip archive as a new version")]
+    [Remarks("""
+             The archive replaces every file, so it has to hold all of them: a file it leaves out is not in the new version.
+
+             It is read as a commit of the files would be. A single folder around everything is removed. A git repository is
+             skipped, and so is what the `.gitignore` files in the archive leave out - except files the newest version already
+             has, which are kept as git keeps what it tracks. Other dot files of the code are kept; hidden files among the
+             resources are skipped. Text files are kept as text, anything that is not UTF-8 as base64. With `?layout=project`
+             the archive is read as a clone of the lambda's git repository has it, and the platform's own files are left out.
+
+             The archive is counted as it is sent, before anything is left out, against what a version may come to. Zip what a
+             commit would hold - never what a build installed (`node_modules`, for example).
+             """)]
+    [RequestBody("A zip archive of every file of the lambda", ContentType = ApiDocumentation.Zip)]
+    [Response(ResponseStatus.Created, "The version was saved. If it was to be deployed as well, `deployment` says whether that worked.")]
+    [Response(ResponseStatus.BadRequest, "The body is not a zip archive, it is larger than a version may be, it has no `lambda.cs`, or a file in it cannot be part of a lambda. The message says which.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public async ValueTask<Result<SavedVersionResponse>> CreateFromArchive([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                                           [Summary(ApiDocumentation.Deploy)] bool? deploy,
+                                                                           [Summary(ApiDocumentation.Specification)] string? specification,
+                                                                           [Summary(ApiDocumentation.Change)] string? change,
+                                                                           [Summary(ApiDocumentation.Layout)] string? layout,
                                                                            Stream body)
     {
         var laid = LayoutOf(layout);
@@ -121,28 +137,43 @@ public sealed class VersionResource(IMetaService meta, ILimitsService limits, IL
         return await SaveAsync(privateKey, files, deploy, specification, change);
     }
 
-    /// <summary>
-    /// Applies changes to the newest version and stores the result as a new one.
-    /// </summary>
-    /// <remarks>
-    /// Files that are not named stay as they are, so a small change does not
-    /// need every file to be sent again.
-    /// </remarks>
-    /// <param name="deploy">Whether to put the new version online as well</param>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions/changes")]
-    public async ValueTask<Result<SavedVersionResponse>> Change(string privateKey, bool? deploy, VersionChangeRequest request)
+    [Summary("Saves changes to some files as a new version")]
+    [Remarks("""
+             Files that are not named stay as they are, so a small change does not send every file again. The changes are
+             applied in this order: `remove` takes files out, `files` adds files or replaces those of the same name, and `edits`
+             replaces text within files - each `find` has to occur exactly once in its file, or nothing is saved. What results
+             has to be a valid lambda, as for any save.
+             """)]
+    [Response(ResponseStatus.Created, "The version was saved. If it was to be deployed as well, `deployment` says whether that worked.")]
+    [Response(ResponseStatus.BadRequest, "Nothing to change, a file to remove or edit that does not exist, a `find` that occurs never or more than once, or a result that cannot be a lambda. Nothing was saved.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public async ValueTask<Result<SavedVersionResponse>> Change([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                                [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionChangeRequest request)
     {
         var files = LambdaChanges.Apply(Latest(meta, privateKey), request.Files, request.Remove, request.Edits);
 
         return await SaveAsync(privateKey, files, deploy, request.Specification, request.Change);
     }
 
-    /// <summary>
-    /// Stores the code as a new version.
-    /// </summary>
-    /// <param name="deploy">Whether to put the new version online as well</param>
     [ResourceMethod(Method.Post, "lambdas/:privateKey/versions")]
-    public async ValueTask<Result<SavedVersionResponse>> Create(string privateKey, bool? deploy, VersionRequest request)
+    [Summary("Saves every file of the lambda as a new version")]
+    [Remarks("""
+             `files` is the whole lambda, `lambda.cs` first: a file the newest version has and this request does not is not in
+             the new version. To change a few files, `POST …/versions/changes` sends only those.
+
+             A file name may be refused - a C# file has to be named as C# names its files, a resource needs an extension, and
+             no name may hold spaces or be one Windows reserves; the message says what is wrong with which. The files together
+             may not come to more than the tier of the lambda allows a version (see the limits). Whether the code compiles is
+             not checked unless it is deployed: `POST …/code/check` compiles it without saving.
+             """)]
+    [Response(ResponseStatus.Created, "The version was saved. If it was to be deployed as well, `deployment` says whether that worked.")]
+    [Response(ResponseStatus.BadRequest, "There are no files, `lambda.cs` is not the first, a name or an encoding cannot be used, or the files are larger than a version may be. Nothing was saved.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, ApiDocumentation.Demo, Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public async ValueTask<Result<SavedVersionResponse>> Create([Summary(ApiDocumentation.PrivateKey)] string privateKey,
+                                                                [Summary(ApiDocumentation.Deploy)] bool? deploy, VersionRequest request)
         => await SaveAsync(privateKey, request.Files, deploy, request.Specification, request.Change);
 
     /// <summary>
