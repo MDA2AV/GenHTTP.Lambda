@@ -1,6 +1,6 @@
 # Tasks
 
-A shared task list: anybody who opens it can add a task, tick it off, change it and remove it, and finds the list as it was left the next time. Everything the page does goes through a small REST API, which can be used on its own.
+A shared task list: anybody who opens it can add a task, tick it off, change it and remove it, and finds the list as it was left the next time. Everything the page does goes through a small REST API, which can be used on its own - and an AI agent can keep the list too.
 
 <!-- [demo] -->
 This is one of the demos of GenHTTP Lambda, kept online and read only. To build on it, create a lambda of your own from it - a copy is yours to change.
@@ -8,7 +8,7 @@ This is one of the demos of GenHTTP Lambda, kept online and read only. To build 
 <!-- [/demo] -->
 ## Who it is for
 
-Anybody who keeps a short list together with others - chores, shopping, the to-dos of a small team - and does not want accounts for it. And developers who want to see a REST API beside the page that uses it.
+Anybody who keeps a short list together with others - chores, shopping, the to-dos of a small team - and does not want accounts for it. And developers who want to see a REST API beside the page that uses it, and the same records offered to an AI agent.
 
 ## What people do with it
 
@@ -17,6 +17,7 @@ Anybody who keeps a short list together with others - chores, shopping, the to-d
 - **Change** its title or notes, or **remove** it.
 - **Search** the titles and notes.
 - **Use the API directly**: try it at `scalar/`, or read its description at `openapi.json`, to add tasks from somewhere else.
+- **Let an AI agent keep the list**: an agent such as Claude connects to `mcp` and lists, adds, ticks off and removes tasks with tools of its own.
 
 ## Features, and why they are there
 

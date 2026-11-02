@@ -1,4 +1,4 @@
-using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;
@@ -40,9 +40,6 @@ namespace GenHTTP.Lambda.Api;
          operator's. The answers carry editor keys. The settings and the limits apply to the whole installation, from the next
          request on.
          """)]
-[RequestHeader(AdminAuthentication.Header, AdminAuthentication.HeaderDescription, Required = true)]
-[Response(ResponseStatus.Unauthorized, AdminAuthentication.MissingDescription)]
-[Response(ResponseStatus.Forbidden, AdminAuthentication.WrongDescription)]
 public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
                                    ILogger<AdminResource> logger)
 {

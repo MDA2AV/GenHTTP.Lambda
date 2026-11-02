@@ -32,7 +32,7 @@ public static class TemplateCatalog
         new(EmptyId, "Empty"),
 
         new("demo-crud", "DemoCrud",
-            ("Tasks.cs", "DemoCrudTasks"), ("Store.cs", "DemoCrudStore"),
+            ("Tasks.cs", "DemoCrudTasks"), ("Tools.cs", "DemoCrudTools"), ("Store.cs", "DemoCrudStore"),
             ("resources/migrations/V1__Create_tasks.sql", "DemoCrudMigration1"),
             ("resources/web/index.html", "DemoCrudPage"), ("resources/web/app.js", "DemoCrudApp"), ("resources/web/base.css", "DemoStyle"),
             (LambdaSource.ProductDoc, "DemoCrudProduct"), (LambdaSource.DecisionsDoc, "DemoCrudDecisions"),

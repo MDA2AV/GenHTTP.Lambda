@@ -1,5 +1,13 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+
+using GenHTTP.Api.Content;
+using GenHTTP.Api.Content.Documentation;
+using GenHTTP.Api.Protocol;
+
+using GenHTTP.Modules.Mcp;
 
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
@@ -21,6 +29,7 @@ using GenHTTP.Lambda.Services.Source;
 using GenHTTP.Lambda.Services.Telemetry;
 using GenHTTP.Lambda.Services.Workspace;
 using GenHTTP.Lambda.Api.Infrastructure;
+using GenHTTP.Lambda.Web;
 
 using Microsoft.Extensions.Logging;
 
@@ -58,7 +67,9 @@ namespace GenHTTP.Lambda.Api.Mcp;
 /// same few tools do both, and nothing is learned twice.
 ///
 /// Every tool answers with an object rather than prose. A model reads the text
-/// and a program reads the structured copy, and both are the same thing.
+/// and a program reads the structured copy, and both are the same thing - the
+/// MCP module writes both. A refusal of the platform is said as text, marked
+/// as an error, like the module's own refusal of arguments that do not fit.
 ///
 /// Every tool that did something logs what it did, as the API does - reads
 /// included, since what an agent looks at is how it goes about its work. See
@@ -70,504 +81,347 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                               LambdaOptions options, ILimitsService tiers, ILambdaAddresses addresses, ILogger<McpTools> logger)
 {
 
-    #region Catalogue
+    #region Tools
 
-    /// <summary>
-    /// The tools, as the protocol describes them.
-    /// </summary>
-    public JsonArray Describe() =>
-    [
-        Tool("create_lambda", "Create a lambda", Effect.Create,
-             "Create a lambda. Returns its public address and a private editor key, the only way back in. It starts with version 1 - an empty starter, or a copy of a demo. Nothing is online until deploy.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["publicKey"] = Field("string", "Requested address: lower case letters, digits and dashes. Generated if omitted."),
-                     ["template"] = Field("string", $"Left out, the lambda starts empty. The id of a demo ({string.Join(", ", DemoCatalog.All.Select(d => d.Id))}) starts it as a copy of that demo, which is yours to change."),
-                     ["acceptTerms"] = Field("boolean", "Must be true: the user accepts the terms in platform_guide (free shared machine, deployments may be removed, nothing malicious)."),
-                     ["view"] = Field("string", ViewField)
-                 },
-                 ["required"] = new JsonArray("acceptTerms")
-             }),
+    /*
+     * The tools as an agent sees them, in the order it reads them: the name,
+     * what the tool does, what it takes, and what calling it does to the
+     * platform. The parameters are the arguments and their schema, and an
+     * attribute on one - a range, a length, the values it takes - is
+     * advertised and checked before the tool runs. The work is done below.
+     *
+     * Every tool states all four hints. Clients read them to decide what to
+     * ask the user before a call - a read can go through, a deploy is worth a
+     * question - and without them every tool looks like the worst case, which
+     * is what the defaults assume. Four effects are told apart: a read looks
+     * and changes nothing; creating adds something and replaces nothing;
+     * saving adds a version or changes a feature, and with deploy: true
+     * replaces what is online; replacing replaces or removes what was there,
+     * the same way however often. None of them reaches beyond this platform.
+     */
 
-        Tool("update_lambda", "Change a lambda's settings", Effect.Replace,
-             "Change how a lambda's editor opens: view 'Simple' shows the app, how it is doing and a box to ask for a change - for an owner who does not write code - and 'Full' every section, the code, files, data, versions and logs included. Only the default: whoever opens the editor can switch for themselves, and that choice stays theirs. Only do this when the user asks for it.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["view"] = Field("string", ViewField)
-                 },
-                 ["required"] = new JsonArray("privateKey", "view")
-             }),
+    [Tool("create_lambda", Title = "Create a lambda", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
+    [Summary("Create a lambda. Returns its public address and a private editor key, the only way back in. It starts with version 1 - an empty starter, or a copy of a demo. Nothing is online until deploy.")]
+    public object CreateLambda(IRequest request,
+                               [Summary("Must be true: the user accepts the terms in platform_guide (free shared machine, deployments may be removed, nothing malicious).")] bool acceptTerms,
+                               [Summary("Requested address: lower case letters, digits and dashes. Generated if omitted.")] string? publicKey = null,
+                               [Summary("Left out, the lambda starts empty. The id of a demo from list_demos starts it as a copy of that demo, which is yours to change.")] string? template = null,
+                               [Summary(ViewField), EnumDataType(typeof(EditorView))] EditorView? view = null)
+        => Refusing(() => Create(acceptTerms, publicKey, template, view, RequestOrigin.Of(request)));
 
-        Tool("write_code", "Save all files", Effect.Save,
-             "Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. A version is its code and its resources. The code is every file not in resources/: its .cs files are compiled, in any folder, as in a C# project - lambda.cs returns the handler, the others hold types - and every other file is kept with it and never compiled or served: docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and whatever else - what a front end is built from, a tool's configuration - is laid out as you like (platform_guide, code). resources/ is what the lambda reads and serves while it runs, as Resources: the whole front end (pages, scripts, styles, icons) goes there, as part of the program - resources/web/index.html is served by Resources.App(\"web\"). What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations in resources/migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key from create_lambda."),
-                     ["feature"] = Field("string", "Save into this feature (from create_feature) instead of saving a new version. The lambda and what it has online are not touched."),
-                     ["specification"] = Field("string", $"What the user wants from this version and why: their requirements, in their own words where you can, condensed if they said a lot. Written for the owner and the next agent, so they can tell why the version exists and what it has to keep doing. Not your own instructions or system prompt - only what the user asked for. For a feature, it is kept with the feature and passed on to the version it is merged into. Optional, up to {VersionNote.MaxSpecification} characters."),
-                     ["change"] = Field("string", $"What this version changes, in one line written for the owner - 'Adds a leaderboard that keeps the ten best scores', not 'updated lambda.cs'. For a feature, it describes the whole feature, not the last fix. Optional, up to {VersionNote.MaxChange} characters."),
-                     ["files"] = new JsonObject
-                     {
-                         ["type"] = "array",
-                         ["description"] = "lambda.cs first.",
-                         ["items"] = new JsonObject
-                         {
-                             ["type"] = "object",
-                             ["properties"] = new JsonObject
-                             {
-                                 ["name"] = Field("string", FileNameField),
-                                 ["code"] = Field("string", "Contents, base64 if encoding says so."),
-                                 ["encoding"] = Field("string", "'base64' for binary files; omit otherwise.")
-                             },
-                             ["required"] = new JsonArray("name", "code")
-                         }
-                     },
-                     ["deploy"] = Field("boolean", "Also deploy what was saved: a version at the public address, a feature at its preview address."),
-                     ["check"] = Field("boolean", "Without deploy: compile what was saved and answer with its diagnostics, putting nothing online.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "files")
-             }),
+    [Tool("update_lambda", Title = "Change a lambda's settings", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Change how a lambda's editor opens: view 'Simple' shows the app, how it is doing and a box to ask for a change - for an owner who does not write code - and 'Full' every section, the code, files, data, versions and logs included. Only the default: whoever opens the editor can switch for themselves, and that choice stays theirs. Only do this when the user asks for it.")]
+    public object UpdateLambda(IRequest request,
+                               [Summary(PrivateKey)] string privateKey,
+                               [Summary(ViewField), EnumDataType(typeof(EditorView))] EditorView view)
+        => Refusing(() => Update(privateKey, view, RequestOrigin.Of(request)));
 
-        Tool("change_code", "Change some files", Effect.Save,
-             "Change some files: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. With feature, the change is saved into that feature - the way to work on a lambda that exists: change it as often as you like, deploy: true to try it at the feature's preview address, merge_feature when it is right. Without feature, the newest version is changed and saved as a new version. Update what the change affects in docs/ and tests/ in the same change - an edit of a passage is enough. check: true compiles without publishing. Code that does not compile is saved but never goes online.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "Change this feature (from create_feature) instead of saving a new version. The lambda and what it has online are not touched."),
-                     ["specification"] = Field("string", $"What the user wants from this change and why: their requirements, in their own words where you can. Not your own instructions or system prompt. Kept with the version or the feature. Optional, up to {VersionNote.MaxSpecification} characters."),
-                     ["change"] = Field("string", $"What this changes, in one line written for the owner. For a feature, it describes the whole feature, not the last fix. Optional, up to {VersionNote.MaxChange} characters."),
-                     ["files"] = new JsonObject
-                     {
-                         ["type"] = "array",
-                         ["description"] = "Files to add, or to replace where one of that name exists.",
-                         ["items"] = new JsonObject
-                         {
-                             ["type"] = "object",
-                             ["properties"] = new JsonObject
-                             {
-                                 ["name"] = Field("string", FileNameField),
-                                 ["code"] = Field("string", "Contents, base64 if encoding says so."),
-                                 ["encoding"] = Field("string", "'base64' for binary files; omit otherwise.")
-                             },
-                             ["required"] = new JsonArray("name", "code")
-                         }
-                     },
-                     ["remove"] = new JsonObject
-                     {
-                         ["type"] = "array",
-                         ["description"] = "Names of files to remove.",
-                         ["items"] = new JsonObject { ["type"] = "string" }
-                     },
-                     ["edits"] = new JsonObject
-                     {
-                         ["type"] = "array",
-                         ["description"] = "Text replacements, applied after files and remove.",
-                         ["items"] = new JsonObject
-                         {
-                             ["type"] = "object",
-                             ["properties"] = new JsonObject
-                             {
-                                 ["file"] = Field("string", "The file to change."),
-                                 ["find"] = Field("string", "Text that occurs exactly once in the file."),
-                                 ["replace"] = Field("string", "What to put in its place.")
-                             },
-                             ["required"] = new JsonArray("file", "find", "replace")
-                         }
-                     },
-                     ["deploy"] = Field("boolean", "Also deploy what was saved: a version at the public address, a feature at its preview address."),
-                     ["check"] = Field("boolean", "Without deploy: compile what was saved and answer with its diagnostics, putting nothing online.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("write_code", Title = "Save all files", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
+    [Summary("Save every file, replacing the previous set: as a new version of the lambda, or - with feature - into that feature. A version is its code and its resources. The code is every file not in resources/: its .cs files are compiled, in any folder, as in a C# project - lambda.cs returns the handler, the others hold types - and every other file is kept with it and never compiled or served: docs/product.md, docs/decisions.md, tests/README.md and the tests' scripts and data are what is written about the program, and whatever else - what a front end is built from, a tool's configuration - is laid out as you like (platform_guide, code). resources/ is what the lambda reads and serves while it runs, as Resources: the whole front end (pages, scripts, styles, icons) goes there, as part of the program - resources/web/index.html is served by Resources.App(\"web\"). What the lambda keeps at runtime is data, never files here: records and accounts in the database (a DbContext of Entity Framework Core on Database.GetConnection(), used synchronously; its schema as Evolve migrations in resources/migrations/), uploads in the workspace - and so is a large input file such as a model or a dataset (upload_file). Send the documentation and tests with the code: written with a new lambda, updated with every change, in proportion to the lambda - a few lines and one quick check for a small one. Say why with specification and change. deploy: true publishes in the same call - a version at the public address, a feature at its preview address. To send only what changes, use change_code. To change a lambda that is already in use, work in a feature.")]
+    public ValueTask<object> WriteCode(IRequest request,
+                                       [Summary("The editor key from create_lambda.")] string privateKey,
+                                       [Summary("lambda.cs first.")] List<CodeFile> files,
+                                       [Summary("Save into this feature (from create_feature) instead of saving a new version. The lambda and what it has online are not touched.")] string? feature = null,
+                                       [Summary("What the user wants from this version and why: their requirements, in their own words where you can, condensed if they said a lot. Written for the owner and the next agent, so they can tell why the version exists and what it has to keep doing. Not your own instructions or system prompt - only what the user asked for. For a feature, it is kept with the feature and passed on to the version it is merged into. Optional, up to 4000 characters.")] string? specification = null,
+                                       [Summary("What this version changes, in one line written for the owner - 'Adds a leaderboard that keeps the ten best scores', not 'updated lambda.cs'. For a feature, it describes the whole feature, not the last fix. Optional, up to 500 characters.")] string? change = null,
+                                       [Summary(DeployField)] bool deploy = false,
+                                       [Summary(CheckField)] bool check = false)
+        => RefusingAsync(() => WriteAsync(privateKey, files, new SaveRequest(feature, specification, change, deploy, check), RequestOrigin.Of(request)));
 
-        Tool("create_feature", "Start a feature", Effect.Create,
-             "Start a feature: a place to change a lambda without touching what it has online. It branches off a version - the newest unless base names another - with a copy of its files (its documentation and tests included) and a copy of the lambda's data, and gets an address of its own to try it at. Change it with change_code or write_code and feature (deploy: true puts it online at its preview address), test it there, and merge_feature once it does what was asked. The lambda goes on serving its visitors from the version online the whole time.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["name"] = Field("string", $"What the feature is, in a few words for the owner - 'Leaderboard', 'Dark mode'. Up to {FeatureService.MaxName} characters."),
-                     ["specification"] = Field("string", $"What the user wants from it and why, in their words where you can. Kept with the feature and passed on to the version it is merged into. Optional, up to {VersionNote.MaxSpecification} characters."),
-                     ["base"] = Field("integer", "The version to branch off. Defaults to the newest - leave it out unless the user asked to start from an older one.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "name")
-             }),
+    [Tool("change_code", Title = "Change some files", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
+    [Summary("Change some files: add or replace files, remove files, or replace text within a file. Everything not named stays as it is, so there is no need to resend unchanged files. With feature, the change is saved into that feature - the way to work on a lambda that exists: change it as often as you like, deploy: true to try it at the feature's preview address, merge_feature when it is right. Without feature, the newest version is changed and saved as a new version. Update what the change affects in docs/ and tests/ in the same change - an edit of a passage is enough. check: true compiles without publishing. Code that does not compile is saved but never goes online.")]
+    public ValueTask<object> ChangeCode(IRequest request,
+                                        [Summary(PrivateKey)] string privateKey,
+                                        [Summary("Change this feature (from create_feature) instead of saving a new version. The lambda and what it has online are not touched.")] string? feature = null,
+                                        [Summary("What the user wants from this change and why: their requirements, in their own words where you can. Not your own instructions or system prompt. Kept with the version or the feature. Optional, up to 4000 characters.")] string? specification = null,
+                                        [Summary("What this changes, in one line written for the owner. For a feature, it describes the whole feature, not the last fix. Optional, up to 500 characters.")] string? change = null,
+                                        [Summary("Files to add, or to replace where one of that name exists.")] List<CodeFile>? files = null,
+                                        [Summary("Names of files to remove.")] List<string>? remove = null,
+                                        [Summary("Text replacements, applied after files and remove.")] List<CodeEdit>? edits = null,
+                                        [Summary(DeployField)] bool deploy = false,
+                                        [Summary(CheckField)] bool check = false)
+        => RefusingAsync(() => ChangeAsync(privateKey, files, remove, edits, new SaveRequest(feature, specification, change, deploy, check), RequestOrigin.Of(request)));
 
-        Tool("update_feature", "Change a feature's name, notes or base", Effect.Replace,
-             "Rename a feature, change what it says about itself, or move its base. merge_feature refuses a feature that is not based on the newest version, since merging it would undo what was saved after it branched off: bring the newer versions' changes into the feature first, then move base to the newest version here. Nothing checks that the changes really are in - that is up to you.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "The feature, from create_feature or read_lambda."),
-                     ["name"] = Field("string", "A new name."),
-                     ["specification"] = Field("string", "What the user wants from it and why."),
-                     ["change"] = Field("string", "What it changes, in one line - what the version it is merged into will say."),
-                     ["base"] = Field("integer", "The version the feature is now based on, once that version's changes are in its files.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "feature")
-             }),
+    [Tool("create_feature", Title = "Start a feature", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
+    [Summary("Start a feature: a place to change a lambda without touching what it has online. It branches off a version - the newest unless base names another - with a copy of its files (its documentation and tests included) and a copy of the lambda's data, and gets an address of its own to try it at. Change it with change_code or write_code and feature (deploy: true puts it online at its preview address), test it there, and merge_feature once it does what was asked. The lambda goes on serving its visitors from the version online the whole time.")]
+    public ValueTask<object> CreateFeature(IRequest request,
+                                           [Summary(PrivateKey)] string privateKey,
+                                           [Summary("What the feature is, in a few words for the owner - 'Leaderboard', 'Dark mode'."), MaxLength(FeatureService.MaxName)] string name,
+                                           [Summary("What the user wants from it and why, in their words where you can. Kept with the feature and passed on to the version it is merged into. Optional, up to 4000 characters.")] string? specification = null,
+                                           [Summary("The version to branch off. Defaults to the newest - leave it out unless the user asked to start from an older one.")] int? @base = null)
+        => RefusingAsync(() => CreateFeatureAsync(privateKey, name, specification, @base, RequestOrigin.Of(request)));
 
-        Tool("merge_feature", "Merge a feature into the lambda", Effect.Save,
-             "Make a feature's files the next version of the lambda, and delete the feature with its preview and its copy of the data - the lambda's own data is not touched. Its docs/ and tests/ become the version's documentation and tests, so bring them up to date in the feature first, and run its tests against the preview. Refused while the feature is not based on the newest version (update_feature says how to get it there), and while its code does not compile. deploy: true puts the new version online at once; otherwise deploy it when the user wants it live.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "The feature."),
-                     ["specification"] = Field("string", "What the new version keeps as what the user wanted. Left out, the feature's."),
-                     ["change"] = Field("string", "What the new version says it changes. Left out, the feature's."),
-                     ["deploy"] = Field("boolean", "Also put the new version online.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "feature")
-             }),
+    [Tool("update_feature", Title = "Change a feature's name, notes or base", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Rename a feature, change what it says about itself, or move its base. merge_feature refuses a feature that is not based on the newest version, since merging it would undo what was saved after it branched off: bring the newer versions' changes into the feature first, then move base to the newest version here. Nothing checks that the changes really are in - that is up to you.")]
+    public object UpdateFeature(IRequest request,
+                                [Summary(PrivateKey)] string privateKey,
+                                [Summary("The feature, from create_feature or read_lambda.")] string feature,
+                                [Summary("A new name."), MaxLength(FeatureService.MaxName)] string? name = null,
+                                [Summary("What the user wants from it and why.")] string? specification = null,
+                                [Summary("What it changes, in one line - what the version it is merged into will say.")] string? change = null,
+                                [Summary("The version the feature is now based on, once that version's changes are in its files.")] int? @base = null)
+        => Refusing(() => ChangeFeature(privateKey, feature, new FeatureUpdate(name, specification, change, @base), RequestOrigin.Of(request)));
 
-        Tool("delete_feature", "Delete a feature", Effect.Replace,
-             "Throw a feature away: its files, its preview and its copy of the data. The lambda is not touched. For a feature the user does not want after all.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "The feature.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "feature")
-             }),
+    [Tool("merge_feature", Title = "Merge a feature into the lambda", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
+    [Summary("Make a feature's files the next version of the lambda, and delete the feature with its preview and its copy of the data - the lambda's own data is not touched. Its docs/ and tests/ become the version's documentation and tests, so bring them up to date in the feature first, and run its tests against the preview. Refused while the feature is not based on the newest version (update_feature says how to get it there), and while its code does not compile. deploy: true puts the new version online at once; otherwise deploy it when the user wants it live.")]
+    public ValueTask<object> MergeFeature([Summary(PrivateKey)] string privateKey,
+                                          [Summary("The feature.")] string feature,
+                                          [Summary("What the new version keeps as what the user wanted. Left out, the feature's.")] string? specification = null,
+                                          [Summary("What the new version says it changes. Left out, the feature's.")] string? change = null,
+                                          [Summary("Also put the new version online.")] bool deploy = false)
+        => RefusingAsync(() => MergeFeatureAsync(privateKey, feature, specification, change, deploy));
 
-        Tool("check_code", "Check that code compiles", Effect.Read,
-             "Compile without saving or deploying; returns diagnostics with file and line. Does not build the handler, so deploy can still refuse a route whose return type cannot be served.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["files"] = new JsonObject
-                     {
-                         ["type"] = "array",
-                         ["description"] = "lambda.cs first.",
-                         ["items"] = new JsonObject
-                         {
-                             ["type"] = "object",
-                             ["properties"] = new JsonObject
-                             {
-                                 ["name"] = Field("string", "The .cs files of the code are compiled, in any folder; nothing else is - send those, the rest may be left out."),
-                                 ["code"] = Field("string", "Contents, base64 if encoding says so."),
-                                 ["encoding"] = Field("string", "'base64' for binary files; omit otherwise.")
-                             },
-                             ["required"] = new JsonArray("name", "code")
-                         }
-                     }
-                 },
-                 ["required"] = new JsonArray("privateKey", "files")
-             }),
+    [Tool("delete_feature", Title = "Delete a feature", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Throw a feature away: its files, its preview and its copy of the data. The lambda is not touched. For a feature the user does not want after all.")]
+    public object DeleteFeature([Summary(PrivateKey)] string privateKey,
+                                [Summary("The feature.")] string feature)
+        => Refusing(() => RemoveFeature(privateKey, feature));
 
-        Tool("deploy", "Deploy a version or a feature", Effect.Replace,
-             "Deploy (publish) a saved version so it goes live at its public address - the newest by default. With feature, deploy that feature's files to its own preview address instead, against its copy of the data, leaving the lambda alone. Returns diagnostics on failure, and whatever was online stays online.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["version"] = Field("integer", "Defaults to the newest."),
-                     ["feature"] = Field("string", "Deploy this feature to its preview address instead of a version to the lambda's.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("check_code", Title = "Check that code compiles", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("Compile without saving or deploying; returns diagnostics with file and line. Does not build the handler, so deploy can still refuse a route whose return type cannot be served.")]
+    public ValueTask<object> CheckCode([Summary(PrivateKey)] string privateKey,
+                                       [Summary("lambda.cs first. The .cs files of the code are compiled, in any folder; nothing else is - send those, the rest may be left out.")] List<CodeFile> files)
+        => RefusingAsync(() => CheckAsync(privateKey, files));
 
-        Tool("read_lambda", "Read a lambda", Effect.Read,
-             $"A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the database, the workspace and the secrets: whether each is on, what it holds, and which secrets the code reads that have no value yet), and one version - or, with feature, that feature: its documentation (docs/: what the app is and why, the technical decisions), how it is tested (tests/), and its files. The documentation comes first and in full up to {ContextBudget:N0} characters; the files come in full while they fit into {ReadBudget:N0} characters - the C# first, then the resources, then the rest of the code - and by name and length after that, with file to read one - a test script or its data too. Read the documentation and the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
-                     ["version"] = Field("integer", "Defaults to the newest."),
-                     ["feature"] = Field("string", "Read this feature - its files, its base, and which newer versions it would have to take in before it can be merged - instead of a version."),
-                     ["file"] = Field("string", $"Return only this file, in full however large the rest is - up to {ReadFileLimit:N0} characters, beyond which the zip has it. Any file of the version, 'tests/smoke.mjs' and 'resources/web/index.html' included.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("deploy", Title = "Deploy a version or a feature", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Deploy (publish) a saved version so it goes live at its public address - the newest by default. With feature, deploy that feature's files to its own preview address instead, against its copy of the data, leaving the lambda alone. Returns diagnostics on failure, and whatever was online stays online.")]
+    public ValueTask<object> Deploy(IRequest request,
+                                    [Summary(PrivateKey)] string privateKey,
+                                    [Summary("Defaults to the newest.")] int? version = null,
+                                    [Summary("Deploy this feature to its preview address instead of a version to the lambda's.")] string? feature = null)
+        => RefusingAsync(() => feature != null
+                                   ? DeployFeatureAsync(privateKey, feature, RequestOrigin.Of(request))
+                                   : DeployVersionAsync(privateKey, version, RequestOrigin.Of(request)));
 
-        Tool("read_logs", "Read a lambda's logs", Effect.Read,
-             "What a deployed lambda has been doing: its recent requests and how they were answered, what it printed, the errors it threw with their stack traces, and how much traffic it has had in the last hour and day. With feature, what that feature's preview has been doing instead, kept apart from the lambda's visitors. Call it after deploying to see that it works, and first when something is reported broken.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
-                     ["feature"] = Field("string", "Read what this feature's preview did instead."),
-                     ["level"] = Field("string", "The lowest level worth reading: 'info' for everything, 'warn' for problems, 'error' for failures. Left out, 'info'."),
-                     ["since"] = Field("integer", "The cursor a previous call answered with, to read only what is new since then."),
-                     ["limit"] = Field("integer", "At most this many lines, the newest. Left out, 100.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("read_lambda", Title = "Read a lambda", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("A lambda's status (online version, newest version, expiry, its tier and what it may use there), its open features, the recent versions with what each was asked for and changed, its data (the database, the workspace and the secrets: whether each is on, what it holds, and which secrets the code reads that have no value yet), and one version - or, with feature, that feature: its documentation (docs/: what the app is and why, the technical decisions), how it is tested (tests/), and its files. The documentation comes first and in full up to 20,000 characters; the files come in full while they fit into 30,000 characters - the C# first, then the resources, then the rest of the code - and by name and length after that, with file to read one - a test script or its data too. Read the documentation and the history before changing what you did not write. Also how a demo is read: pass its key from list_demos.")]
+    public object ReadLambda(IRequest request,
+                             [Summary(PrivateKeyOrDemo)] string privateKey,
+                             [Summary("Defaults to the newest.")] int? version = null,
+                             [Summary("Read this feature - its files, its base, and which newer versions it would have to take in before it can be merged - instead of a version.")] string? feature = null,
+                             [Summary("Return only this file, in full however large the rest is - up to 1,048,576 characters, beyond which the zip has it. Any file of the version, 'tests/smoke.mjs' and 'resources/web/index.html' included.")] string? file = null)
+        => Refusing(() => Read(privateKey, version, feature, file, RequestOrigin.Of(request)));
 
-        Tool("upload_file", "Put a file into the lambda's data", Effect.Replace,
-             "Write a file to the lambda's workspace - its data, which every version shares and no deploy, rollback or merge touches. With feature, to that feature's copy of the data instead, for trying things out without touching the real one. For files the lambda works with at runtime (pictures people will browse) and large input files that are not program: a model, a dataset, media. Records belong in the database, where the code writes them. Takes effect at once, without a deploy. Not for the front end: pages, scripts and styles are the program and belong in the version's resources (write_code).",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "Write to this feature's copy of the data instead."),
-                     ["path"] = Field("string", "Relative to the workspace; slashes make folders, e.g. 'models/model.onnx'."),
-                     ["content"] = Field("string", "Text, or base64 with encoding set."),
-                     ["encoding"] = Field("string", "'base64' for binary; omit otherwise.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "path", "content")
-             }),
+    [Tool("read_logs", Title = "Read a lambda's logs", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("What a deployed lambda has been doing: its recent requests and how they were answered, what it printed, the errors it threw with their stack traces, and how much traffic it has had in the last hour and day. With feature, what that feature's preview has been doing instead, kept apart from the lambda's visitors. Call it after deploying to see that it works, and first when something is reported broken.")]
+    public object ReadLogs([Summary(PrivateKeyOrDemo)] string privateKey,
+                           [Summary("Read what this feature's preview did instead.")] string? feature = null,
+                           [Summary("The lowest level worth reading: 'info' for everything, 'warn' for problems, 'error' for failures."), AllowedValues("debug", "info", "warn", "warning", "error")] string level = "info",
+                           [Summary("The cursor a previous call answered with, to read only what is new since then.")] long since = 0,
+                           [Summary("At most this many lines, the newest."), Range(1, 1000)] int limit = 100)
+        => Refusing(() => Logs(privateKey, feature, level, since, limit));
 
-        Tool("list_files", "List the lambda's data", Effect.Read,
-             "The lambda's data: whether its workspace is switched on, and every file in it with size and last write - the same whichever version is online. With feature, that feature's copy of it. The code and resources of a version are in read_lambda.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
-                     ["feature"] = Field("string", "List this feature's copy of the data instead.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("upload_file", Title = "Put a file into the lambda's data", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Write a file to the lambda's workspace - its data, which every version shares and no deploy, rollback or merge touches. With feature, to that feature's copy of the data instead, for trying things out without touching the real one. For files the lambda works with at runtime (pictures people will browse) and large input files that are not program: a model, a dataset, media. Records belong in the database, where the code writes them. Takes effect at once, without a deploy. Not for the front end: pages, scripts and styles are the program and belong in the version's resources (write_code).")]
+    public ValueTask<object> UploadFile([Summary(PrivateKey)] string privateKey,
+                                        [Summary("Relative to the workspace; slashes make folders, e.g. 'models/model.onnx'.")] string path,
+                                        [Summary("Text, or base64 with encoding set.")] string content,
+                                        [Summary("Write to this feature's copy of the data instead.")] string? feature = null,
+                                        [Summary("'base64' for binary; omit otherwise.")] string? encoding = null)
+        => RefusingAsync(() => UploadAsync(privateKey, path, content, feature, encoding));
 
-        Tool("delete_file", "Delete a file from the lambda's data", Effect.Replace,
-             "Remove a file, or a folder with its contents, from the workspace - the lambda's data, shared by every version. No deploy or rollback brings it back. With feature, from that feature's copy instead.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "Delete from this feature's copy of the data instead."),
-                     ["path"] = Field("string", "Relative to the workspace.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "path")
-             }),
+    [Tool("list_files", Title = "List the lambda's data", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("The lambda's data: whether its workspace is switched on, and every file in it with size and last write - the same whichever version is online. With feature, that feature's copy of it. The code and resources of a version are in read_lambda.")]
+    public object ListFiles([Summary(PrivateKeyOrDemo)] string privateKey,
+                            [Summary("List this feature's copy of the data instead.")] string? feature = null)
+        => Refusing(() => Files(privateKey, feature));
 
-        Tool("enable_data", "Switch on a kind of data", Effect.Replace,
-             "Switch on a kind of data the lambda needs and does not have: 'database' (a SQLite database for its records - off until switched on, which makes it, empty), 'secrets' (off until switched on) or 'workspace' (on unless the owner switched it off). Do it when what you build needs it - records need the database, an API key for a service it calls needs secrets. Takes effect at once, without a deploy; switching the database on starts the lambda again on its next request, so its migrations run. There is no tool to switch one off: that deletes what it held, and is the owner's to do in the editor.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["kind"] = Field("string", $"Which kind: {string.Join(" or ", DataKinds.All.Select(k => $"'{k.Id}'"))}.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "kind")
-             }),
+    [Tool("delete_file", Title = "Delete a file from the lambda's data", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Remove a file, or a folder with its contents, from the workspace - the lambda's data, shared by every version. No deploy or rollback brings it back. With feature, from that feature's copy instead.")]
+    public object DeleteFile([Summary(PrivateKey)] string privateKey,
+                             [Summary("Relative to the workspace.")] string path,
+                             [Summary("Delete from this feature's copy of the data instead.")] string? feature = null)
+        => Refusing(() => Remove(privateKey, path, feature));
 
-        Tool("read_database", "Read the lambda's database", Effect.Read,
-             $"The lambda's database - its records, shared by every version: whether it is switched on, how full it is, and its tables and views with their columns and how many rows each holds. With table, a page of that table's rows, newest first, up to {MaxDatabaseRows} at a time. Read only: the lambda writes it, through Database.GetConnection(). Use it to see that migrations were applied and records were written. With feature, that feature's copy.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
-                     ["feature"] = Field("string", "Read this feature's copy of the database instead."),
-                     ["table"] = Field("string", "A table or view to read the rows of; left out, the tables are listed."),
-                     ["offset"] = Field("integer", "Rows to skip, for the next page."),
-                     ["limit"] = Field("integer", $"Rows to read, up to {MaxDatabaseRows}. Left out, 20."),
-                     ["order"] = Field("string", "A column to sort by; left out, the order the rows were written in."),
-                     ["ascending"] = Field("boolean", "Oldest or smallest first, rather than newest or largest.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("enable_data", Title = "Switch on a kind of data", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Switch on a kind of data the lambda needs and does not have: 'database' (a SQLite database for its records - off until switched on, which makes it, empty), 'secrets' (off until switched on) or 'workspace' (on unless the owner switched it off). Do it when what you build needs it - records need the database, an API key for a service it calls needs secrets. Takes effect at once, without a deploy; switching the database on starts the lambda again on its next request, so its migrations run. There is no tool to switch one off: that deletes what it held, and is the owner's to do in the editor.")]
+    public object EnableData([Summary(PrivateKey)] string privateKey,
+                             [Summary("Which kind."), AllowedValues(DataKinds.DatabaseId, DataKinds.SecretsId, DataKinds.WorkspaceId)] string kind)
+        => Refusing(() => SwitchOn(privateKey, kind));
 
-        Tool("set_secret", "Store a secret", Effect.Replace,
-             $"Store an API key, password or token under a name the code reads with Secret.Read(\"NAME\") - never put one in the code, a resource, the workspace, a log line or a note. The value is sealed and can never be read back, by you or the owner; only the lambda reads it, from its next call on, without a deploy. Only set a value the user gave you for this: when you do not have it, write the code with Secret.Read and tell the user to set it under Data > Secrets in the editor - read_lambda and list_secrets list what is still missing. Secrets must be switched on first (enable_data). With feature, into that feature's copy (a sandbox key to try it with). Up to {SecretVault.MaxSecrets} secrets of {SecretVault.MaxValue / 1024} KB each.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "Store it in this feature's copy of the secrets instead."),
-                     ["name"] = Field("string", "Letters, digits and underscores, not starting with a digit - conventionally upper case: 'STRIPE_KEY'. The name of an environment variable in an exported project."),
-                     ["value"] = Field("string", "The value, as the user gave it.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "name", "value")
-             }),
+    [Tool("read_database", Title = "Read the lambda's database", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("The lambda's database - its records, shared by every version: whether it is switched on, how full it is, and its tables and views with their columns and how many rows each holds. With table, a page of that table's rows, newest first, up to 100 at a time. Read only: the lambda writes it, through Database.GetConnection(). Use it to see that migrations were applied and records were written. With feature, that feature's copy.")]
+    public ValueTask<object> ReadDatabase([Summary(PrivateKeyOrDemo)] string privateKey,
+                                          [Summary("Read this feature's copy of the database instead.")] string? feature = null,
+                                          [Summary("A table or view to read the rows of; left out, the tables are listed.")] string? table = null,
+                                          [Summary("Rows to skip, for the next page."), Range(0, int.MaxValue)] int offset = 0,
+                                          [Summary("Rows to read."), Range(1, MaxDatabaseRows)] int limit = 20,
+                                          [Summary("A column to sort by; left out, the order the rows were written in.")] string? order = null,
+                                          [Summary("Oldest or smallest first, rather than newest or largest.")] bool ascending = false)
+        => RefusingAsync(() => DatabaseAsync(privateKey, feature, table, offset, limit, order, ascending));
 
-        Tool("list_secrets", "List a lambda's secrets", Effect.Read,
-             "The lambda's secrets by name - never their values: whether secrets are switched on, what is stored and when, which names the code reads with Secret.Read and have no value yet (missing) - what the user still has to set - and which it only uses when they are there, checked with Secret.Exists (optional). With feature, that feature's copy.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key, or the key of a demo."),
-                     ["feature"] = Field("string", "List this feature's copy instead.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("set_secret", Title = "Store a secret", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Store an API key, password or token under a name the code reads with Secret.Read(\"NAME\") - never put one in the code, a resource, the workspace, a log line or a note. The value is sealed and can never be read back, by you or the owner; only the lambda reads it, from its next call on, without a deploy. Only set a value the user gave you for this: when you do not have it, write the code with Secret.Read and tell the user to set it under Data > Secrets in the editor - read_lambda and list_secrets list what is still missing. Secrets must be switched on first (enable_data). With feature, into that feature's copy (a sandbox key to try it with). Up to 100 secrets of 32 KB each.")]
+    public object SetSecret([Summary(PrivateKey)] string privateKey,
+                            [Summary("Letters, digits and underscores, not starting with a digit - conventionally upper case: 'STRIPE_KEY'. The name of an environment variable in an exported project.")] string name,
+                            [Summary("The value, as the user gave it.")] string value,
+                            [Summary("Store it in this feature's copy of the secrets instead.")] string? feature = null)
+        => Refusing(() => StoreSecret(privateKey, name, value, feature));
 
-        Tool("delete_secret", "Delete a secret", Effect.Replace,
-             "Remove a secret. Code that reads it with Secret.Read fails from its next call on. Only when the user asks for it, or a secret you stored yourself is no longer used. With feature, from that feature's copy instead.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["feature"] = Field("string", "Delete from this feature's copy instead."),
-                     ["name"] = Field("string", "The name, as stored - names are case sensitive.")
-                 },
-                 ["required"] = new JsonArray("privateKey", "name")
-             }),
+    [Tool("list_secrets", Title = "List a lambda's secrets", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("The lambda's secrets by name - never their values: whether secrets are switched on, what is stored and when, which names the code reads with Secret.Read and have no value yet (missing) - what the user still has to set - and which it only uses when they are there, checked with Secret.Exists (optional). With feature, that feature's copy.")]
+    public object ListSecrets([Summary(PrivateKeyOrDemo)] string privateKey,
+                              [Summary("List this feature's copy instead.")] string? feature = null)
+        => Refusing(() => Secrets(privateKey, feature));
 
-        Tool("showcase", "Showcase a lambda", Effect.Replace,
-             $"List a lambda on the public showcase page, change its entry, or take it off. Not part of building: only do this when the user asks for it. With only privateKey it returns the current entry. An entry needs a title, a description and a picture (a screenshot or short GIF of the lambda in use); it is listed while the lambda is online. {ShowcaseLimits.Tone}",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["title"] = Field("string", $"What it is, in a few words - 'Pub quiz scoreboard', not 'The ultimate quiz experience'. Up to {ShowcaseLimits.MaxTitle} characters."),
-                     ["description"] = Field("string", $"One to three plain sentences on what a visitor can do with it. Up to {ShowcaseLimits.MaxDescription} characters."),
-                     ["image"] = Field("string", $"The picture, base64: PNG, JPEG, GIF or WebP, up to {tiers.Get().ShowcaseImageBytes / 1024 / 1024} MB. Needed for a new entry; left out, the current one is kept."),
-                     ["remove"] = Field("boolean", "Take the lambda off the showcase instead.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("delete_secret", Title = "Delete a secret", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Remove a secret. Code that reads it with Secret.Read fails from its next call on. Only when the user asks for it, or a secret you stored yourself is no longer used. With feature, from that feature's copy instead.")]
+    public object DeleteSecret([Summary(PrivateKey)] string privateKey,
+                               [Summary("The name, as stored - names are case sensitive.")] string name,
+                               [Summary("Delete from this feature's copy instead.")] string? feature = null)
+        => Refusing(() => RemoveSecret(privateKey, name, feature));
 
-        Tool("open_source", "Publish a lambda's source code", Effect.Replace,
-             $"Publish a lambda's source code at /source/{{publicKey}} for anybody to read, star and download as a .NET project, change the license it is published under, or take it down. What is published is the program and what is written about it - every version's code, resources, documentation and tests, and the history of what each changed - never its data: not the database, not the workspace, not a secret's value. Not part of building: only do this when the user asks for it, and ask which license if they did not say (MIT unless they want another). With only privateKey it returns whether it is published. Once published, everything in every version is public, older ones included: keep keys, passwords and personal data out of the files - in secrets and the database.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["license"] = Field("string", $"The SPDX identifier of the license: {string.Join(", ", SourceLicenses.All.Select(l => l.Id))}. Left out, it stays as it is - {SourceLicenses.Default} when first published."),
-                     ["author"] = Field("string", $"Who holds the copyright, as the license names them - the user's name or organization, only if they gave it. Left out, it stays as it is; empty, the license names 'the authors of' the lambda. Up to {SourceLicenses.MaxAuthor} characters."),
-                     ["remove"] = Field("boolean", "Take the source down instead. Its stars are kept for when it is published again.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("showcase", Title = "Showcase a lambda", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("List a lambda on the public showcase page, change its entry, or take it off. Not part of building: only do this when the user asks for it. With only privateKey it returns the current entry. An entry needs a title, a description and a picture (a screenshot or short GIF of the lambda in use); it is listed while the lambda is online. " + ShowcaseLimits.Tone)]
+    public object Showcase(IRequest request,
+                           [Summary(PrivateKey)] string privateKey,
+                           [Summary("What it is, in a few words - 'Pub quiz scoreboard', not 'The ultimate quiz experience'."), MaxLength(ShowcaseLimits.MaxTitle)] string? title = null,
+                           [Summary("One to three plain sentences on what a visitor can do with it."), MaxLength(ShowcaseLimits.MaxDescription)] string? description = null,
+                           [Summary("The picture, base64: PNG, JPEG, GIF or WebP, up to the size platform_guide names under showcase. Needed for a new entry; left out, the current one is kept.")] string? image = null,
+                           [Summary("Take the lambda off the showcase instead.")] bool remove = false)
+        => Refusing(() => ChangeShowcase(privateKey, title, description, image, remove, RequestOrigin.Of(request)));
 
-        Tool("analytics", "Read who visits a lambda", Effect.Replace,
-             "How people reach a lambda, as its owner sees it in the editor: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers (search engines, AIs, link previews) behind them. Counted by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Off until switched on - nothing is counted before. enable: true switches it on, only when the user asks; switching off deletes what was counted and is the owner's to do in the editor. Use it to answer what the user asks about their visitors, or to see which pages matter before changing them.",
-             new JsonObject
-             {
-                 ["type"] = "object",
-                 ["properties"] = new JsonObject
-                 {
-                     ["privateKey"] = Field("string", "The editor key."),
-                     ["days"] = Field("integer", "How many days, today included. Left out, as many as the lambda's tier shows, which is also the most."),
-                     ["enable"] = Field("boolean", "Switch analytics on, counting from the next request - only when the user asked for it.")
-                 },
-                 ["required"] = new JsonArray("privateKey")
-             }),
+    [Tool("open_source", Title = "Publish a lambda's source code", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("Publish a lambda's source code at /source/{publicKey} for anybody to read, star and download as a .NET project, change the license it is published under, or take it down. What is published is the program and what is written about it - every version's code, resources, documentation and tests, and the history of what each changed - never its data: not the database, not the workspace, not a secret's value. Not part of building: only do this when the user asks for it, and ask which license if they did not say (MIT unless they want another). With only privateKey it returns whether it is published. Once published, everything in every version is public, older ones included: keep keys, passwords and personal data out of the files - in secrets and the database.")]
+    public object OpenSource(IRequest request,
+                             [Summary(PrivateKey)] string privateKey,
+                             [Summary(LicenseField)] string? license = null,
+                             [Summary("Who holds the copyright, as the license names them - the user's name or organization, only if they gave it. Left out, it stays as it is; empty, the license names 'the authors of' the lambda."), MaxLength(SourceLicenses.MaxAuthor)] string? author = null,
+                             [Summary("Take the source down instead. Its stars are kept for when it is published again.")] bool remove = false)
+        => Refusing(() => ChangeSource(privateKey, license, author, remove, RequestOrigin.Of(request)));
 
-        Tool("list_demos", "List the demos", Effect.Read,
-             "Demos this platform keeps online, each a finished lambda showing one way to build something: a REST API over records, registration and login, a websocket game, uploads, live updates. Their keys are public and read only: read the closest one with read_lambda (and list_files, read_logs) before writing similar code. create_lambda with a demo's id as template starts from a copy.",
-             new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() }),
+    [Tool("analytics", Title = "Read who visits a lambda", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Summary("How people reach a lambda, as its owner sees it in the editor: visitors, pages opened and requests per day, and the pages, referring sites, countries, devices, browsers, operating systems and crawlers (search engines, AIs, link previews) behind them. Counted by day in UTC and written down every few minutes; a year is kept, of which a free lambda shows the last 7 days and a premium one all. Off until switched on - nothing is counted before. enable: true switches it on, only when the user asks; switching off deletes what was counted and is the owner's to do in the editor. Use it to answer what the user asks about their visitors, or to see which pages matter before changing them.")]
+    public object Analytics([Summary(PrivateKey)] string privateKey,
+                            [Summary("How many days, today included. Left out, as many as the lambda's tier shows, which is also the most.")] int? days = null,
+                            [Summary("Switch analytics on, counting from the next request - only when the user asked for it.")] bool enable = false)
+        => Refusing(() => ReadAnalytics(privateKey, days, enable));
 
-        Tool("platform_guide", "Read the platform guide", Effect.Read,
-             "How this platform works - read it first: what a version, a feature and data are and how long each lives, what is code and what is a resource, the documentation and tests every version keeps, what the snippet returns, what is imported, what is refused, limits and terms.",
-             new JsonObject { ["type"] = "object", ["properties"] = new JsonObject() })
-    ];
+    [Tool("list_demos", Title = "List the demos", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("Demos this platform keeps online, each a finished lambda showing one way to build something: a REST API over records, registration and login, a websocket game, uploads, live updates. Their keys are public and read only: read the closest one with read_lambda (and list_files, read_logs) before writing similar code. create_lambda with a demo's id as template starts from a copy.")]
+    public object ListDemos()
+    {
+        logger.LogInformation("Listed demos");
+
+        return Demos();
+    }
+
+    [Tool("platform_guide", Title = "Read the platform guide", ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [Summary("How this platform works - read it first: what a version, a feature and data are and how long each lives, what is code and what is a resource, the documentation and tests every version keeps, what the snippet returns, what is imported, what is refused, limits and terms.")]
+    public object PlatformGuide(IRequest request)
+    {
+        logger.LogInformation("Read platform guide");
+
+        return Guide(RequestOrigin.Of(request));
+    }
 
     #endregion
 
-    #region Dispatch
+    #region Answers
 
     /// <summary>
-    /// Runs a tool and describes what happened.
+    /// Runs a tool, and answers a refusal of the platform as what it is.
     /// </summary>
-    /// <param name="origin">Scheme and host the caller reached this server at, to build absolute links with</param>
-    public async ValueTask<JsonObject> CallAsync(string name, JsonObject arguments, string origin = "")
+    /// <remarks>
+    /// The platform refusing something - a key nobody has, a demo that cannot
+    /// be changed, a name that is taken - is an answer, not a fault: the model
+    /// should read why and try something else rather than see a tool that
+    /// failed unexpectedly, which is what the MCP module makes of every
+    /// exception but its own <see cref="ProviderException"/>, logged as an
+    /// error. Anything else is left to it: that is a fault, and logged as one.
+    /// </remarks>
+    private static object Refusing(Func<object> tool)
     {
         try
         {
-            return name switch
-            {
-                "create_lambda" => Create(arguments, origin),
-                "update_lambda" => Update(arguments, origin),
-                "write_code" => await WriteAsync(arguments, origin),
-                "change_code" => await ChangeAsync(arguments, origin),
-                "create_feature" => await CreateFeatureAsync(arguments, origin),
-                "update_feature" => UpdateFeature(arguments, origin),
-                "merge_feature" => await MergeFeatureAsync(arguments, origin),
-                "delete_feature" => DeleteFeature(arguments),
-                "check_code" => await CheckAsync(arguments),
-                "deploy" => await DeployAsync(arguments, origin),
-                "read_lambda" => Read(arguments, origin),
-                "read_logs" => Logs(arguments),
-                "upload_file" => await UploadAsync(arguments),
-                "list_files" => Files(arguments),
-                "delete_file" => Remove(arguments),
-                "enable_data" => EnableData(arguments),
-                "read_database" => await DatabaseAsync(arguments),
-                "set_secret" => SetSecret(arguments),
-                "list_secrets" => Secrets(arguments),
-                "delete_secret" => DeleteSecret(arguments),
-                "showcase" => Showcase(arguments, origin),
-                "open_source" => OpenSource(arguments, origin),
-                "analytics" => Analytics(arguments),
-                "list_demos" => ListDemos(),
-                "platform_guide" => ReadGuide(origin),
-                _ => McpProtocol.Refuse($"There is no tool called '{name}'.")
-            };
+            return tool();
         }
         catch (LambdaException e)
         {
-            // the platform refusing something is an answer, not a fault: the
-            // model should read why and try again rather than see a protocol
-            // error and give up
-            return McpProtocol.Refuse(e.Message);
-        }
-        catch (Exception e)
-        {
-            return McpProtocol.Refuse($"Failed: {e.Message}");
+            return ToolResult.Error(e.Message);
         }
     }
 
-    private JsonObject Create(JsonObject arguments, string origin)
+    /// <inheritdoc cref="Refusing"/>
+    private static async ValueTask<object> RefusingAsync(Func<ValueTask<object>> tool)
     {
-        if (Flag(arguments, "acceptTerms") != true)
+        try
         {
-            return McpProtocol.Refuse(
-                "acceptTerms must be true. Show the user the terms from platform_guide first.");
+            return await tool();
+        }
+        catch (LambdaException e)
+        {
+            return ToolResult.Error(e.Message);
+        }
+    }
+
+    /// <summary>
+    /// An answer that says the tool did not do what it was asked, with what
+    /// the agent needs to know to try again: the diagnostics, what is online.
+    /// </summary>
+    /// <remarks>
+    /// Read as text by the model and as data by anything that would rather
+    /// parse it, like every other answer.
+    /// </remarks>
+    private static ToolResult Failed(object answer) => new(null, answer, isError: true);
+
+    /// <summary>
+    /// The same answer with one more thing said.
+    /// </summary>
+    /// <remarks>
+    /// For what is worth saying however the call went on - a save that left
+    /// something out - so the several answers it may end in need not each
+    /// carry it. Written as the module writes every answer: camel case,
+    /// without what is null, enumerations by their names.
+    /// </remarks>
+    /// <param name="note">Nothing to leave the answer as it is</param>
+    private static object Adding(object said, string name, string? note)
+    {
+        if (note == null)
+        {
+            return said;
         }
 
-        var view = EditorViews.Parse(Text(arguments, "view")) ?? EditorView.Full;
+        if (said is ToolResult { Structured: { } data } result)
+        {
+            return new ToolResult(result.Content, Adding(data, name, note), result.IsError);
+        }
 
-        var lambda = meta.Create(Text(arguments, "publicKey"), Text(arguments, "template"), view);
+        if (said is ToolResult)
+        {
+            return said;
+        }
+
+        var answer = JsonSerializer.SerializeToNode(said, AnswerFormat)!.AsObject();
+
+        answer[name] = note;
+
+        return answer;
+    }
+
+    private static readonly JsonSerializerOptions AnswerFormat = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
+    #endregion
+
+    #region Code
+
+    private object Create(bool acceptTerms, string? publicKey, string? template, EditorView? view, string origin)
+    {
+        if (!acceptTerms)
+        {
+            return ToolResult.Error("acceptTerms must be true. Show the user the terms from platform_guide first.");
+        }
+
+        var lambda = meta.Create(publicKey, template, view ?? EditorView.Full);
 
         logger.LogInformation("Created lambda {Lambda} template {Template} view {View}", lambda.PublicKey,
-                              Text(arguments, "template") ?? "(none)", lambda.View);
+                              template ?? "(none)", lambda.View);
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             publicKey = lambda.PublicKey,
@@ -578,48 +432,42 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             view = lambda.View,
             next = "write_code with deploy: true, and fix what needs fixing with change_code and deploy: true - a new lambda needs no feature. Send docs/product.md, docs/decisions.md and tests/README.md with the code - short for a small app (platform_guide, documentationAndTests). Once people use it, make further changes in a feature (create_feature).",
             warning = "The editor key cannot be recovered. Give it to the user."
-        });
+        };
     }
 
-    private JsonObject Update(JsonObject arguments, string origin)
+    private object Update(string privateKey, EditorView view, string origin)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var view = EditorViews.Parse(Required(arguments, "view"))!.Value;
-
         var lambda = meta.ChangeView(privateKey, view);
 
         logger.LogInformation("Set view of lambda {Lambda} to {View}", lambda.PublicKey, lambda.View);
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             publicKey = lambda.PublicKey,
             editorUrl = $"{origin}/editor/{lambda.PrivateKey}",
             view = lambda.View,
             note = "The editor opens in this view for everybody who has not switched it for themselves; whoever has keeps their own."
-        });
+        };
     }
 
-    private async ValueTask<JsonObject> WriteAsync(JsonObject arguments, string origin)
+    private async ValueTask<object> WriteAsync(string privateKey, List<CodeFile> sent, SaveRequest save, string origin)
     {
-        var files = Files(arguments, out var complaint);
+        var files = Files(sent);
 
-        if (files == null)
+        if (LambdaSource.Validate(files) is { } invalid)
         {
-            return McpProtocol.Refuse(complaint!);
+            return ToolResult.Error(invalid);
         }
 
-        var privateKey = Required(arguments, "privateKey");
-
         // what it held before the save replaces it
-        var had = Text(arguments, "feature") is { } feature
+        var had = save.Feature is { } feature
             ? LambdaSource.Parse(features.Get(privateKey, feature).Code)
             : meta.Require(privateKey).LatestVersion != null ? Api.VersionResource.Latest(meta, privateKey) : [];
 
-        var saved = McpProtocol.Adding(await SaveAsync(arguments, files, origin), "dropped", Dropped(had, files));
+        var saved = Adding(await SaveAsync(privateKey, files, save, origin), "dropped", Dropped(had, files));
 
-        return McpProtocol.Adding(saved, "misplaced", Misplaced(files));
+        return Adding(saved, "misplaced", Misplaced(files));
     }
 
     /// <summary>
@@ -649,22 +497,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              + "If that was not meant, save them again, or make changes with change_code, which keeps every file it is not told about.";
     }
 
-    private async ValueTask<JsonObject> ChangeAsync(JsonObject arguments, string origin)
+    private async ValueTask<object> ChangeAsync(string privateKey, List<CodeFile>? sent, List<string>? remove, List<CodeEdit>? replacements, SaveRequest save,
+                                                string origin)
     {
-        var privateKey = Required(arguments, "privateKey");
+        var changed = sent != null ? Files(sent) : [];
 
-        List<LambdaFile>? changed = [];
-
-        if (arguments.ContainsKey("files") && (changed = ParseFiles(arguments, out var complaint)) == null)
-        {
-            return McpProtocol.Refuse(complaint!);
-        }
-
-        var remove = (arguments["remove"] as JsonArray)?.Select(n => n?.GetValue<string>() ?? "").ToList();
-
-        var edits = (arguments["edits"] as JsonArray)?.OfType<JsonObject>()
-                                                     .Select(e => new FileEdit(Text(e, "file") ?? "", Text(e, "find") ?? "", Text(e, "replace") ?? ""))
-                                                     .ToList();
+        var edits = replacements?.Select(e => new FileEdit(e.File, e.Find, e.Replace)).ToList();
 
         // a feature is changed from what it holds - and only if that is still
         // what it holds when the change is saved; a new version from the newest
@@ -672,7 +510,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         int? read = null;
 
-        if (Text(arguments, "feature") is { } feature)
+        if (save.Feature is { } feature)
         {
             var content = features.Get(privateKey, feature);
 
@@ -689,10 +527,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (LambdaSource.Validate(files) is { } invalid)
         {
-            return McpProtocol.Refuse(invalid);
+            return ToolResult.Error(invalid);
         }
 
-        return McpProtocol.Adding(await SaveAsync(arguments, files, origin, read), "misplaced", Misplaced(files));
+        return Adding(await SaveAsync(privateKey, files, save, origin, read), "misplaced", Misplaced(files));
     }
 
     /// <summary>
@@ -714,11 +552,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Stores the files - as a new version, or into the feature named - and
     /// deploys or checks them if the arguments ask for that.
     /// </summary>
-    private async ValueTask<JsonObject> SaveAsync(JsonObject arguments, IReadOnlyList<LambdaFile> files, string origin, int? read = null)
+    private async ValueTask<object> SaveAsync(string privateKey, IReadOnlyList<LambdaFile> files, SaveRequest save, string origin, int? read = null)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
+        var note = new VersionNote(save.Specification, save.Change, VersionOrigins.Agent);
 
         var code = LambdaSource.Serialize(files);
 
@@ -726,9 +562,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         // refusal - like the note below: the code matters more
         var documentation = Unwritten(files);
 
-        if (Text(arguments, "feature") is { } feature)
+        if (save.Feature is { } feature)
         {
-            return await SaveFeatureAsync(arguments, privateKey, feature, code, files.Count, note, origin, read, documentation);
+            return await SaveFeatureAsync(save, privateKey, feature, code, files.Count, note, origin, read, documentation);
         }
 
         var version = meta.Save(privateKey, code, note);
@@ -741,18 +577,18 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             ? "Pass change (one line on what the version does) and specification (what the user wants, and why) next time; the owner reads them in the version history."
             : null;
 
-        if (Flag(arguments, "deploy") != true)
+        if (!save.Deploy)
         {
-            if (Flag(arguments, "check") != true)
+            if (!save.Check)
             {
-                return McpProtocol.Say(new
+                return new
                 {
                     ok = true,
                     version = version.Version,
                     next = "deploy",
                     note = reminder,
                     documentation
-                });
+                };
             }
 
             /*
@@ -763,7 +599,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              */
             var outcome = await meta.CheckAsync(privateKey, code);
 
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 version = version.Version,
@@ -772,7 +608,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 next = outcome.Success ? "deploy, when it should go online" : "fix the diagnostics with change_code",
                 note = reminder,
                 documentation
-            });
+            };
         }
 
         return await DeployVersionAsync(privateKey, version.Version, origin, reminder, documentation);
@@ -782,23 +618,23 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Stores the files as the feature's, and puts its preview online or
     /// compiles it if the arguments ask for that.
     /// </summary>
-    private async ValueTask<JsonObject> SaveFeatureAsync(JsonObject arguments, string privateKey, string feature, string code, int files, VersionNote note,
-                                                         string origin, int? read, string? documentation)
+    private async ValueTask<object> SaveFeatureAsync(SaveRequest save, string privateKey, string feature, string code, int files, VersionNote note,
+                                                     string origin, int? read, string? documentation)
     {
         var saved = features.Save(privateKey, feature, code, note, read);
 
         logger.LogInformation("Saved feature '{Feature}' of lambda {Lambda} files {Files}", saved.Name, meta.PublicKeyOf(privateKey), files);
 
-        if (Flag(arguments, "deploy") == true)
+        if (save.Deploy)
         {
             return await DeployFeatureAsync(privateKey, feature, origin);
         }
 
-        if (Flag(arguments, "check") == true)
+        if (save.Check)
         {
             var outcome = await meta.CheckAsync(privateKey, code);
 
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 feature = Brief(saved, origin),
@@ -808,89 +644,78 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     ? $"deploy with feature: '{saved.Key}' to try it at its preview address"
                     : $"fix the diagnostics with change_code and feature: '{saved.Key}'",
                 documentation
-            });
+            };
         }
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             feature = Brief(saved, origin),
             next = $"Saved into the feature; nothing is online yet. Try it with deploy and feature: '{saved.Key}' (or deploy: true on the next save), then merge_feature when it does what was asked.",
             documentation
-        });
+        };
     }
 
-    private async ValueTask<JsonObject> CheckAsync(JsonObject arguments)
+    private async ValueTask<object> CheckAsync(string privateKey, List<CodeFile> sent)
     {
-        var files = Files(arguments, out var complaint);
+        var files = Files(sent);
 
-        if (files == null)
+        if (LambdaSource.Validate(files) is { } invalid)
         {
-            return McpProtocol.Refuse(complaint!);
+            return ToolResult.Error(invalid);
         }
-
-        var privateKey = Required(arguments, "privateKey");
 
         var outcome = await meta.CheckAsync(privateKey, LambdaSource.Serialize(files));
 
         logger.LogInformation("Checked code of lambda {Lambda} files {Files} compiles {Compiles}", meta.PublicKeyOf(privateKey), files.Count, outcome.Success);
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = outcome.Success,
             compiles = outcome.Success,
             diagnostics = Diagnostics(outcome.Diagnostics)
-        });
+        };
     }
 
     #endregion
 
     #region Features
 
-    private async ValueTask<JsonObject> CreateFeatureAsync(JsonObject arguments, string origin)
+    private async ValueTask<object> CreateFeatureAsync(string privateKey, string name, string? specification, int? @base, string origin)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var created = await features.CreateAsync(privateKey, new FeatureDraft(Text(arguments, "name"), Text(arguments, "specification"),
-                                                                              Number(arguments, "base"), VersionOrigins.Agent));
+        var created = await features.CreateAsync(privateKey, new FeatureDraft(name, specification, @base, VersionOrigins.Agent));
 
         logger.LogInformation("Created feature '{Feature}' of lambda {Lambda} base {Version}", created.Name, meta.PublicKeyOf(privateKey), created.Base);
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             feature = Brief(created, origin),
             next = $"Change it with change_code (or write_code) and feature: '{created.Key}' - it holds the files of version {created.Base} and a copy of the lambda's data. deploy: true on a save puts it online at previewUrl, never at the lambda's address; read_logs with feature shows how it answers. merge_feature when it does what was asked."
-        });
+        };
     }
 
-    private JsonObject UpdateFeature(JsonObject arguments, string origin)
+    private object ChangeFeature(string privateKey, string feature, FeatureUpdate update, string origin)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var updated = features.Update(privateKey, Required(arguments, "feature"),
-                                                 new FeatureUpdate(Text(arguments, "name"), Text(arguments, "specification"), Text(arguments, "change"),
-                                                                   Number(arguments, "base")));
+        var updated = features.Update(privateKey, feature, update);
 
         logger.LogInformation("Updated feature '{Feature}' of lambda {Lambda} base {Version}", updated.Name, meta.PublicKeyOf(privateKey), updated.Base);
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             feature = Brief(updated, origin),
             next = updated.Mergeable
                 ? $"It is based on the newest version, so merge_feature can merge it once it does what was asked."
                 : $"It is based on version {updated.Base}, the newest is {updated.Newest}: bring the newer versions' changes in and move base to {updated.Newest} before merging."
-        });
+        };
     }
 
-    private async ValueTask<JsonObject> MergeFeatureAsync(JsonObject arguments, string origin)
+    private async ValueTask<object> MergeFeatureAsync(string privateKey, string feature, string? specification, string? change, bool deploy)
     {
-        var privateKey = Required(arguments, "privateKey");
+        var note = new VersionNote(specification, change, VersionOrigins.Agent);
 
-        var note = new VersionNote(Text(arguments, "specification"), Text(arguments, "change"), VersionOrigins.Agent);
-
-        var merged = await features.MergeAsync(privateKey, Required(arguments, "feature"), note, Flag(arguments, "deploy") == true);
+        var merged = await features.MergeAsync(privateKey, feature, note, deploy);
 
         var publicKey = meta.PublicKeyOf(privateKey);
 
@@ -910,32 +735,32 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (!merged.Merged)
         {
-            return McpProtocol.Say(new
+            return Failed(new
             {
                 ok = false,
                 problem = "Not merged: the feature's code does not compile. Nothing changed - fix it with change_code and feature, then merge again.",
                 diagnostics = Diagnostics(merged.Diagnostics)
-            }, failed: true);
+            });
         }
 
         var version = merged.Version!;
 
         if (merged.Deployment is not { } deployment)
         {
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 merged = true,
                 version = version.Version,
                 next = $"The feature is now version {version.Version}, and gone - its preview and its copy of the data with it; the lambda's own data is as it was. deploy puts version {version.Version} online when the user wants it live."
-            });
+            };
         }
 
         if (!deployment.Success)
         {
             var current = meta.Get(privateKey);
 
-            return McpProtocol.Say(new
+            return Failed(new
             {
                 ok = false,
                 merged = true,
@@ -943,12 +768,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 version = version.Version,
                 stillOnline = current?.ActiveVersion,
                 diagnostics = Diagnostics(deployment.Diagnostics)
-            }, failed: true);
+            });
         }
 
         var lambda = deployment.Lambda!;
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             merged = true,
@@ -959,20 +784,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             online = true,
             onlineUntil = lambda.DeployedUntil,
             next = "Merged and online. Call the public address, then read_logs to see how it answers."
-        });
+        };
     }
 
-    private JsonObject DeleteFeature(JsonObject arguments)
+    private object RemoveFeature(string privateKey, string feature)
     {
-        var feature = Required(arguments, "feature");
-
-        var privateKey = Required(arguments, "privateKey");
-
         var name = features.Delete(privateKey, feature);
 
         logger.LogInformation("Deleted feature '{Feature}' of lambda {Lambda}", name, meta.PublicKeyOf(privateKey));
 
-        return McpProtocol.Say(new { ok = true, deleted = feature.Trim().ToLowerInvariant() });
+        return new { ok = true, deleted = feature.Trim().ToLowerInvariant() };
     }
 
     /// <summary>
@@ -1066,19 +887,13 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// putting a model or a dataset beside the code something it could be told
     /// about and not do.
     /// </remarks>
-    private async ValueTask<JsonObject> UploadAsync(JsonObject arguments)
+    private async ValueTask<object> UploadAsync(string privateKey, string path, string content, string? named, string? encoding)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var path = Required(arguments, "path");
-
-        var content = Required(arguments, "content");
-
-        var (id, feature) = WorkspaceOf(privateKey, Text(arguments, "feature"), true);
+        var (id, feature) = WorkspaceOf(privateKey, named, true);
 
         WorkspaceEntry written;
 
-        if (Text(arguments, "encoding") == "base64")
+        if (encoding == Base64)
         {
             written = await workspace.WriteEncodedAsync(id, path, content, feature);
         }
@@ -1089,7 +904,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             written = await workspace.WriteAsync(id, path, stream, featureId: feature);
         }
 
-        if (Text(arguments, "feature") is { } named)
+        if (named != null)
         {
             logger.LogInformation("Wrote workspace file {Path} of feature '{Feature}' of lambda {Lambda} size {Size}", written.Path,
                                   features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey), written.Size);
@@ -1099,7 +914,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             logger.LogInformation("Wrote workspace file {Path} of lambda {Lambda} size {Size}", written.Path, meta.PublicKeyOf(privateKey), written.Size);
         }
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             written.Path,
@@ -1107,18 +922,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             note = feature == null
                 ? "In the lambda's data: there at once, no deploy needed, and shared by every version."
                 : "In the feature's copy of the data: its preview sees it at once; the lambda's own data is not touched."
-        });
+        };
     }
 
-    private JsonObject Files(JsonObject arguments)
+    private object Files(string privateKey, string? named)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var (id, feature) = WorkspaceOf(privateKey, Text(arguments, "feature"), false);
+        var (id, feature) = WorkspaceOf(privateKey, named, false);
 
         var listing = workspace.List(id, feature);
 
-        if (Text(arguments, "feature") is { } named)
+        if (named != null)
         {
             logger.LogInformation("Listed workspace of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
         }
@@ -1127,7 +940,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             logger.LogInformation("Listed workspace of lambda {Lambda}", meta.PublicKeyOf(privateKey));
         }
 
-        return McpProtocol.Say(new
+        return new
         {
             enabled = listing.Enabled,
             files = listing.Files.Select(f => new { f.Path, f.Size, f.Modified }),
@@ -1137,18 +950,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             note = listing.Enabled
                 ? null
                 : "The workspace is switched off: it holds nothing, and code that uses Workspace fails. The owner switched it off, so ask the user before switching it on again with enable_data."
-        });
+        };
     }
 
-    private JsonObject EnableData(JsonObject arguments)
+    private object SwitchOn(string privateKey, string kind)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var store = data.Enable(privateKey, Required(arguments, "kind"));
+        var store = data.Enable(privateKey, kind);
 
         logger.LogInformation("Enabled {Kind} of lambda {Lambda}", store.Kind, meta.PublicKeyOf(privateKey));
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             kind = store.Kind,
@@ -1159,7 +970,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 DataKinds.DatabaseId => "The database is on, and empty. Ship its schema as SQL migrations in resources/migrations/ (V1__Create_items.sql) and apply them with Evolve at the top of lambda.cs - see platform_guide under database, or demo-crud. The code keeps its records with a DbContext of Entity Framework Core on the connection Database.GetConnection() opens, synchronously; read_database shows what it holds.",
                 _ => "On from the lambda's next request, without a deploy."
             }
-        });
+        };
     }
 
     /// <summary>
@@ -1169,13 +980,9 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// The answer repeats the name and never the value, so the value is in the
     /// conversation once - where the user put it - rather than twice.
     /// </remarks>
-    private JsonObject SetSecret(JsonObject arguments)
+    private object StoreSecret(string privateKey, string name, string value, string? feature)
     {
-        var feature = Text(arguments, "feature");
-
-        var privateKey = Required(arguments, "privateKey");
-
-        var stored = secrets.Set(privateKey, Required(arguments, "name"), Required(arguments, "value"), feature);
+        var stored = secrets.Set(privateKey, name, value, feature);
 
         // the name only - the value is not repeated anywhere, here least of all
         if (feature != null)
@@ -1187,7 +994,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             logger.LogInformation("Set secret {Name} of lambda {Lambda}", stored.Name, meta.PublicKeyOf(privateKey));
         }
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             name = stored.Name,
@@ -1197,16 +1004,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                        : "Stored in the feature's copy: its preview reads it; the lambda's own secrets are not touched. ")
                  + (stored.Used ? "" : $"No code reads it yet - read it with Secret.Read(\"{stored.Name}\"). ")
                  + "Do not repeat the value anywhere - not in code, notes, logs or your answer."
-        });
+        };
     }
 
-    private JsonObject Secrets(JsonObject arguments)
+    private object Secrets(string privateKey, string? named)
     {
-        var privateKey = Required(arguments, "privateKey");
+        var listing = secrets.List(privateKey, named);
 
-        var listing = secrets.List(privateKey, Text(arguments, "feature"));
-
-        if (Text(arguments, "feature") is { } named)
+        if (named != null)
         {
             logger.LogInformation("Listed secrets of feature '{Feature}' of lambda {Lambda}", features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
         }
@@ -1215,7 +1020,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             logger.LogInformation("Listed secrets of lambda {Lambda}", meta.PublicKeyOf(privateKey));
         }
 
-        return McpProtocol.Say(new
+        return new
         {
             enabled = listing.Enabled,
             secrets = listing.Secrets.Select(s => new { s.Name, s.Changed, usedByCode = s.Used }),
@@ -1227,7 +1032,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 : listing.Missing.Count > 0
                     ? $"The code reads {string.Join(", ", listing.Missing)}, which have no value: Secret.Read throws until they are set. Ask the user to set them under Data > Secrets in the editor, or store one they gave you with set_secret."
                     : null
-        });
+        };
     }
 
     /// <summary>
@@ -1237,14 +1042,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// Rows go out as objects keyed by column, which is what a model reads
     /// best; the editor gets arrays, which is what a grid draws best.
     /// </remarks>
-    private async ValueTask<JsonObject> DatabaseAsync(JsonObject arguments)
+    private async ValueTask<object> DatabaseAsync(string privateKey, string? feature, string? table, int offset, int limit, string? order, bool ascending)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var feature = Text(arguments, "feature");
-
-        var table = Text(arguments, "table");
-
         if (feature != null)
         {
             logger.LogInformation("Read database of feature '{Feature}' of lambda {Lambda} table {Table}", features.NameOf(privateKey, feature), meta.PublicKeyOf(privateKey),
@@ -1259,7 +1058,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             var overview = await databases.GetAsync(privateKey, feature);
 
-            return McpProtocol.Say(new
+            return new
             {
                 enabled = overview.Enabled,
                 overview.UsedBytes,
@@ -1278,20 +1077,19 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                     : overview.Tables.Count == 0
                         ? "The database is empty: no migration has made a table yet. Ship them in resources/migrations/ and apply them with Evolve as the lambda starts."
                         : null
-            });
+            };
         }
 
-        var rows = await databases.ReadAsync(privateKey, table, Number(arguments, "offset") ?? 0, Math.Clamp(Number(arguments, "limit") ?? 20, 1, MaxDatabaseRows),
-                                             Text(arguments, "order"), Flag(arguments, "ascending") != true, feature);
+        var rows = await databases.ReadAsync(privateKey, table, offset, limit, order, !ascending, feature);
 
-        return McpProtocol.Say(new
+        return new
         {
             rows.Table,
             rows.Total,
             rows.Offset,
             rows = rows.Rows.Select(r => rows.Columns.Select((c, i) => (c.Name, Value: r[i])).ToDictionary(p => p.Name, p => p.Value)),
             next = rows.Offset + rows.Rows.Count < rows.Total ? rows.Offset + rows.Rows.Count : (int?)null
-        });
+        };
     }
 
     /// <summary>
@@ -1299,14 +1097,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </summary>
     private const int MaxDatabaseRows = 100;
 
-    private JsonObject DeleteSecret(JsonObject arguments)
+    private object RemoveSecret(string privateKey, string name, string? feature)
     {
-        var name = Required(arguments, "name");
-
-        var privateKey = Required(arguments, "privateKey");
-
-        var feature = Text(arguments, "feature");
-
         secrets.Delete(privateKey, name, feature);
 
         if (feature != null)
@@ -1318,20 +1110,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             logger.LogInformation("Deleted secret {Name} of lambda {Lambda}", name.Trim(), meta.PublicKeyOf(privateKey));
         }
 
-        return McpProtocol.Say(new { ok = true, deleted = name.Trim() });
+        return new { ok = true, deleted = name.Trim() };
     }
 
-    private JsonObject Remove(JsonObject arguments)
+    private object Remove(string privateKey, string path, string? named)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var (id, feature) = WorkspaceOf(privateKey, Text(arguments, "feature"), true);
-
-        var path = Required(arguments, "path");
+        var (id, feature) = WorkspaceOf(privateKey, named, true);
 
         workspace.Delete(id, path, feature);
 
-        if (Text(arguments, "feature") is { } named)
+        if (named != null)
         {
             logger.LogInformation("Deleted workspace path {Path} of feature '{Feature}' of lambda {Lambda}", path, features.NameOf(privateKey, named), meta.PublicKeyOf(privateKey));
         }
@@ -1340,7 +1128,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             logger.LogInformation("Deleted workspace path {Path} of lambda {Lambda}", path, meta.PublicKeyOf(privateKey));
         }
 
-        return McpProtocol.Say(new { ok = true, path });
+        return new { ok = true, path };
     }
 
     /// <summary>
@@ -1367,12 +1155,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     #region Deploying
 
-    private ValueTask<JsonObject> DeployAsync(JsonObject arguments, string origin)
-        => Text(arguments, "feature") is { } feature
-         ? DeployFeatureAsync(Required(arguments, "privateKey"), feature, origin)
-         : DeployVersionAsync(Required(arguments, "privateKey"), Number(arguments, "version"), origin);
-
-    private async ValueTask<JsonObject> DeployVersionAsync(string privateKey, int? version, string origin, string? reminder = null, string? documentation = null)
+    private async ValueTask<object> DeployVersionAsync(string privateKey, int? version, string origin, string? reminder = null, string? documentation = null)
     {
         var result = await meta.DeployAsync(privateKey, version, VersionOrigins.Agent);
 
@@ -1390,7 +1173,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
              */
             var current = meta.Get(privateKey);
 
-            return McpProtocol.Say(new
+            return Failed(new
             {
                 ok = false,
                 problem = "Not deployed. The diagnostics say whether compiling or building the handler failed. Whatever was online before still is.",
@@ -1398,7 +1181,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 stillOnline = current?.ActiveVersion,
                 diagnostics = Diagnostics(result.Diagnostics),
                 next = "Fix the diagnostics with change_code and deploy: true. If people already use the lambda, fix it in a feature (create_feature) instead, so every attempt is tried at its own address rather than saved as a version."
-            }, failed: true);
+            });
         }
 
         var lambda = result.Lambda!;
@@ -1410,7 +1193,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
          * agent's runner read it as one, and told the owner of a premium
          * lambda that a change it had just put online had not gone online.
          */
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             publicKey = lambda.PublicKey,
@@ -1422,10 +1205,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             next = "Call the public address, then read_logs to see how it answered. While you are still building it, fix with change_code and deploy: true; once people use it, make changes in a feature (create_feature), which is tried at an address of its own and merged into the next version once it is right.",
             note = reminder ?? (lambda.DeployedUntil != null ? "Deploying again extends onlineUntil." : null),
             documentation
-        });
+        };
     }
 
-    private async ValueTask<JsonObject> DeployFeatureAsync(string privateKey, string feature, string origin)
+    private async ValueTask<object> DeployFeatureAsync(string privateKey, string feature, string origin)
     {
         var result = await features.DeployAsync(privateKey, feature);
 
@@ -1433,14 +1216,14 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (!result.Success)
         {
-            return McpProtocol.Say(new
+            return Failed(new
             {
                 ok = false,
                 problem = "The preview was not deployed. The diagnostics say whether compiling or building the handler failed. Whatever the preview served before, it still does; the lambda was not touched.",
                 feature = Brief(result.Feature, origin),
                 diagnostics = Diagnostics(result.Diagnostics),
                 next = $"Fix the diagnostics with change_code and feature: '{result.Feature.Key}', deploy: true."
-            }, failed: true);
+            });
         }
 
         // links that leave the preview for the live lambda, said while there is still time
@@ -1450,7 +1233,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         var warning = lambda != null ? Leaks(files, lambda.PublicKey) : null;
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             feature = Brief(result.Feature, origin),
@@ -1460,7 +1243,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 ? $"Call previewUrl, and read_logs with feature: '{result.Feature.Key}' to see how it answered. It works on its own copy of the data. Run what tests/README.md describes against previewUrl, and bring docs/ and tests/ up to date with what the feature changes. When it does what was asked: merge_feature (deploy: true to put it live)."
                 : $"Call previewUrl, and read_logs with feature to see how it answered. Before merging: {Later(result.Feature)} saved after this feature's base, version {result.Feature.Base} - bring those changes in and move the base to {result.Feature.Newest} with update_feature.",
             documentation = Unwritten(files)
-        });
+        };
     }
 
     #endregion
@@ -1477,12 +1260,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// owner gets in the control center, with the same thing left out: who
     /// the visitors were.
     /// </remarks>
-    private JsonObject Logs(JsonObject arguments)
+    private object Logs(string privateKey, string? feature, string level, long since, int limit)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var feature = Text(arguments, "feature");
-
         var id = meta.GetId(privateKey)
               ?? throw LambdaException.NotFound("There is no lambda with that editor key.");
 
@@ -1504,12 +1283,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             logger.LogInformation("Read logs of lambda {Lambda}", meta.PublicKeyOf(privateKey));
         }
 
-        var since = arguments.TryGetPropertyValue("since", out var cursor) && cursor is JsonValue value && value.TryGetValue<long>(out var from)
-                  ? from
-                  : 0;
-
-        var (said, next, missed) = book.Read(since, null, Level(Text(arguments, "level")),
-                                             Math.Clamp(Number(arguments, "limit") ?? 100, 1, 1000), lambdaId: id, feature: lines);
+        var (said, next, missed) = book.Read(since, null, Level(level), limit, lambdaId: id, feature: lines);
 
         var shown = said.Select(l => new { l.At, l.Level, l.Source, l.Text, detail = l.Detail, repeats = l.Repeats > 1 ? l.Repeats : (int?)null });
 
@@ -1522,7 +1296,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         if (feature != null)
         {
             // a preview is not counted, so there is no traffic to report
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 feature,
@@ -1531,12 +1305,12 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 missed,
                 capturingOutput = options.CaptureLambdaOutput,
                 note
-            });
+            };
         }
 
         var traffic = telemetry.DescribeLambda(id);
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             online = lambda?.ActiveVersion != null,
@@ -1552,29 +1326,29 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             missed,
             capturingOutput = options.CaptureLambdaOutput,
             note
-        });
+        };
     }
 
-    private static Microsoft.Extensions.Logging.LogLevel Level(string? level) => level?.Trim().ToLowerInvariant() switch
+    /// <summary>
+    /// The lowest level read_logs reads, by one of the names its schema allows -
+    /// warning and debug among them, since agents send those as well.
+    /// </summary>
+    private static LogLevel Level(string level) => level switch
     {
-        "debug" => Microsoft.Extensions.Logging.LogLevel.Debug,
-        "warn" or "warning" => Microsoft.Extensions.Logging.LogLevel.Warning,
-        "error" => Microsoft.Extensions.Logging.LogLevel.Error,
-        _ => Microsoft.Extensions.Logging.LogLevel.Information
+        "debug" => LogLevel.Debug,
+        "warn" or "warning" => LogLevel.Warning,
+        "error" => LogLevel.Error,
+        _ => LogLevel.Information
     };
 
-    private JsonObject Read(JsonObject arguments, string origin)
+    private object Read(string privateKey, int? asked, string? wanted, string? only, string origin)
     {
-        var privateKey = Required(arguments, "privateKey");
-
         var lambda = meta.Get(privateKey)
                   ?? throw LambdaException.NotFound("There is no lambda with that editor key.");
 
         var history = meta.GetVersions(privateKey);
 
         var open = features.List(privateKey);
-
-        var wanted = Text(arguments, "feature");
 
         // read for a feature, the data it works on is its own copy
         var stores = data.List(privateKey, wanted);
@@ -1598,7 +1372,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         }
         else
         {
-            version = Number(arguments, "version") ?? lambda.LatestVersion;
+            version = asked ?? lambda.LatestVersion;
 
             if (version is { } which)
             {
@@ -1623,8 +1397,6 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         var archive = feature != null
             ? $"GET /api/v1/lambdas/{{privateKey}}/features/{feature.Feature.Key}/zip"
             : $"GET /api/v1/lambdas/{{privateKey}}/versions/{version}/zip";
-
-        var only = Text(arguments, "file");
 
         IEnumerable<object> listing;
 
@@ -1683,7 +1455,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             };
         }
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             lambda.PublicKey,
@@ -1753,7 +1525,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             files = listing,
             filesOmitted = note != null ? true : (bool?)null,
             note
-        });
+        };
     }
 
     /// <summary>
@@ -1930,22 +1702,16 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// read by every agent on every conversation whether it showcases
     /// anything or not.
     /// </remarks>
-    private JsonObject Showcase(JsonObject arguments, string origin)
+    private object ChangeShowcase(string privateKey, string? title, string? description, string? encoded, bool remove, string origin)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        if (Flag(arguments, "remove") == true)
+        if (remove)
         {
             showcases.Remove(privateKey);
 
             logger.LogInformation("Removed lambda {Lambda} from showcase", meta.PublicKeyOf(privateKey));
 
-            return McpProtocol.Say(new { ok = true, showcased = false });
+            return new { ok = true, showcased = false };
         }
-
-        var title = Text(arguments, "title");
-        var description = Text(arguments, "description");
-        var encoded = Text(arguments, "image");
 
         ShowcaseInfo? entry;
 
@@ -1967,7 +1733,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
                 }
                 catch (FormatException)
                 {
-                    return McpProtocol.Refuse("The image is not valid base64.");
+                    return ToolResult.Error("The image is not valid base64.");
                 }
             }
 
@@ -1981,15 +1747,15 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (entry == null)
         {
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 showcased = false,
                 note = "Not in the showcase. Pass title, description and image to add it - only if the user asked for that."
-            });
+            };
         }
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             showcased = true,
@@ -1998,25 +1764,17 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             entry.Online,
             page = $"{origin}/showcase",
             note = entry.Online ? null : "Listed once the lambda is online again - deploy it."
-        });
+        };
     }
 
     /// <summary>
-    /// Reads, publishes or takes down the source of a lambda.
+    /// Reads what was counted of a lambda's visitors, and switches counting on.
     /// </summary>
-    /// <remarks>
-    /// One tool, like the showcase, for the same reason: it is used rarely,
-    /// and every tool listed is read by every agent in every conversation.
-    /// </remarks>
-    private JsonObject Analytics(JsonObject arguments)
+    private object ReadAnalytics(string privateKey, int? days, bool enable)
     {
-        var privateKey = Required(arguments, "privateKey");
-
-        var days = Number(arguments, "days");
-
         LambdaAnalytics found;
 
-        if (Flag(arguments, "enable") == true)
+        if (enable)
         {
             found = analytics.Enable(privateKey);
 
@@ -2036,49 +1794,51 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (found.Since == null)
         {
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 enabled = false,
                 note = "Analytics are off for this lambda, so nothing about its visitors was counted. The owner switches them on in the editor (Analytics); pass enable: true only when the user asks for it."
-            });
+            };
         }
 
         var minutes = Math.Max(1, (int)found.Interval.TotalMinutes);
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             analytics = AnalyticsResponse.Of(found),
             note = found.Shown < found.Kept && found.Earliest is { } earliest && earliest < found.From
                 ? $"Counted by day in UTC, written down every {minutes} minutes. More is kept than this tier shows: the owner sees all of the year with premium."
                 : $"Counted by day in UTC, written down every {minutes} minutes - the visits of the last minutes are not in it yet. Views are pages opened, by people and programs alike - botViews are those of programs, so people opened views - botViews; hits are every request; visitors are people who opened a page, counted once a day."
-        });
+        };
     }
 
-    private JsonObject OpenSource(JsonObject arguments, string origin)
+    /// <summary>
+    /// Reads, publishes or takes down the source of a lambda.
+    /// </summary>
+    /// <remarks>
+    /// One tool, like the showcase, for the same reason: it is used rarely,
+    /// and every tool listed is read by every agent in every conversation.
+    /// </remarks>
+    private object ChangeSource(string privateKey, string? license, string? author, bool remove, string origin)
     {
-        var privateKey = Required(arguments, "privateKey");
-
         SourceSettings? source;
 
-        if (Flag(arguments, "remove") == true)
+        if (remove)
         {
             source = sources.Withdraw(privateKey);
 
             logger.LogInformation("Unpublished source of lambda {Lambda}", source?.PublicKey ?? meta.PublicKeyOf(privateKey));
 
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 published = false,
                 stars = source?.Stars,
                 note = "Taken down: the page and the downloads are gone. Whatever somebody downloaded while it was published stays theirs under the license it came with."
-            });
+            };
         }
-
-        var license = Text(arguments, "license");
-        var author = arguments.TryGetPropertyValue("author", out var named) && named != null ? named.ToString() : null;
 
         if (license == null && author == null)
         {
@@ -2095,19 +1855,19 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
         if (source is not { Published: true })
         {
-            return McpProtocol.Say(new
+            return new
             {
                 ok = true,
                 published = false,
                 stars = source?.Stars,
                 licenses = SourceLicenses.All.Select(l => new { l.Id, l.Name, kind = l.Kind.ToString() }),
                 note = "Not published. Pass license (and author, if the user named one) to publish it - only if the user asked for that."
-            });
+            };
         }
 
         var chosen = SourceLicenses.Find(source.License)!;
 
-        return McpProtocol.Say(new
+        return new
         {
             ok = true,
             published = true,
@@ -2118,17 +1878,10 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             source.Stars,
             url = $"{origin}/source/{source.PublicKey}",
             note = "Everything in every version is public now, older versions included - code, resources, documentation, tests and the one line each version says it changed. Never write keys, passwords or personal data into files: secrets and the database stay private."
-        });
+        };
     }
 
-    private JsonObject ListDemos()
-    {
-        logger.LogInformation("Listed demos");
-
-        return Demos();
-    }
-
-    private JsonObject Demos() => McpProtocol.Say(new
+    private object Demos() => new
     {
         ok = true,
         demos = DemoCatalog.All.Select(d => new
@@ -2144,7 +1897,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         }),
         howToRead = "read_lambda with the demo's privateKey returns every file and the version history; list_files shows what it keeps as data; read_logs shows how it answers real traffic. Open the url to use it.",
         readOnly = "Anything that would change a demo is refused. To build on one, create_lambda with its id as template - that gives a lambda of your own with the same files."
-    });
+    };
 
     /// <summary>
     /// The domain of its own the lambda answers at instead of its publicUrl,
@@ -2162,13 +1915,6 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
 
     #region Guide
 
-    private JsonObject ReadGuide(string origin)
-    {
-        logger.LogInformation("Read platform guide");
-
-        return Guide(origin);
-    }
-
     /// <summary>
     /// What the link back to this platform points at.
     /// </summary>
@@ -2179,7 +1925,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     /// </remarks>
     private string Home(string origin) => $"{options.PublicUrl ?? origin}/";
 
-    private JsonObject Guide(string origin) => McpProtocol.Say(new
+    private object Guide(string origin) => new
     {
         ok = true,
         preferTheApi = "If you can make HTTP requests, the REST API at https://genhttp.dev/api/v1/openapi.json does the same as these tools and costs fewer tokens, because files are sent directly. GET /api/v1/lambdas/{privateKey}/versions/{version}/zip downloads a version; a feature is downloaded from and put back to /api/v1/lambdas/{privateKey}/features/{feature}/zip (GET, PUT) - so edit locally and push as often as it takes. POST /api/v1/lambdas/{privateKey}/versions/zip saves a zip as a new version. The zip holds the files as the lambda names them: lambda.cs, the rest of the code in its folders, resources/. Zip the contents of the folder ('zip -r ../feature.zip .', not '*'), so dot files a tool keeps come along. A zip put back is read as a commit would be: what the .gitignore files of its folders leave out is left out, as git add does. With ?layout=project, a zip has the snippet as Project.cs, as a clone does - both ways. Every endpoint that saves takes ?deploy=true. Many environments cannot reach it; then use these tools.",
@@ -2440,6 +2186,20 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             why = "A poll is a request whether anything changed or not, and every lambda shares one server: a page asking every second, open in a hundred browsers, is a hundred requests a second for nothing - and still a second late. A push is one write when something changes, and arrives at once.",
             notPolling = "Loading once when the page opens, and again when the user acts - presses a button, sends a form, comes back to the tab - is not polling."
         },
+        toolsForAgents = new
+        {
+            what = "A lambda can offer tools to AI agents itself, over the Model Context Protocol: Layout.Create().Add(\"mcp\", Tools.Create().Server(\"name\", \"1.0.0\").Instructions(\"...\").Add(new MyTools(store))) - an agent connects to its address followed by mcp. demo-crud shows it, in Tools.cs.",
+            tools = "A tool is a public method marked [Tool], described for the model with [Summary]: named after the method in snake case, its parameters the arguments, each described with [Summary] too. [Range], [MaxLength] and [AllowedValues] on a parameter (using System.ComponentModel.DataAnnotations) are said to the agent and checked before the method runs. [Tool(ReadOnly = true)], Destructive and Idempotent tell a client what to ask its user before a call.",
+            answers = "Return a record, which the agent gets as JSON, or a string. A problem the agent can act on is thrown as ProviderException, or returned as ToolResult.Error(\"why\"), and the agent reads the message; anything else thrown is a fault. A method may take the IRequest besides, which is no argument.",
+            design = "Name a tool for what it does and take no more than it needs - ticking a task off takes its id, not the task. Where the lambda has an API as well, have both call the same code, so the records are the same whichever way they change.",
+            noSession = "Each call stands alone, like a request: keep what has to last in the database."
+        },
+        describingAnApi = new
+        {
+            what = "A webservice describes itself as OpenAPI: Layout.Create().AddService(\"items\", new Items(store)).AddOpenApi() serves openapi.json, and .AddScalar() a page to try it at scalar/. demo-crud shows it.",
+            words = "[Summary] and [Remarks] on a route, its parameters and the fields of the records it takes and returns say what each does, [Tag] on the class groups its routes, and [Response] names an answer the code gives that the description could not find by itself. They need no using.",
+            authentication = "A route behind the Authentication module says in the description which credentials it takes and how a request without them is answered, where the concern knows where they are read - a key WithHeader, WithQueryParameter or WithCookie, basic, bearer. A key read by an Extractor of your own is described with .Documentation(SecurityScheme.ApiKey(...)), using GenHTTP.Api.Content.Documentation.Security."
+        },
         beingFound = new
         {
             when = "For a page meant to be found or shared - a website, a landing page, a shop, a portfolio, an event: anything the user wants people to come across in a search engine, in an AI agent's answer, or as a link in a chat. A tool for a few people, a page behind a login or an admin page needs a title and nothing more.",
@@ -2485,6 +2245,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         {
             what = "The owner can list a lambda on the public showcase page with a title, a short description and a picture. The showcase tool does it.",
             when = "Only when the user asks. It is not part of building or deploying.",
+            pictureBytes = tiers.Get().ShowcaseImageBytes,
             tone = ShowcaseLimits.Tone
         },
         openSource = new
@@ -2560,7 +2321,7 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
             retention = $"A free lambda is removed about {(int)tiers.Get().RemovedAfter.TotalDays} days after the last of either. A premium one is kept."
         },
         terms = SystemResource.Terms
-    });
+    };
 
     /// <summary>
     /// What a lambda in the given tier may use, as the guide says it.
@@ -2581,123 +2342,67 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
     #region Arguments
 
     /// <summary>
-    /// What the view of an editor is, wherever a tool takes one.
+    /// What a file's name says, wherever a tool takes files.
     /// </summary>
     private const string FileNameField =
         "lambda.cs and every other .cs file, in any folder, are compiled; 'resources/...' is read and served ('resources/web/app.js'); anything else is code kept with the version, never compiled or served - 'docs/...' and 'tests/...' are the documentation and the tests.";
 
+    /// <summary>
+    /// What the view of an editor is, wherever a tool takes one.
+    /// </summary>
     private const string ViewField =
         "How the editor opens: 'Full' (the default) shows every section, 'Simple' only the app, how it is doing and a box to ask for a change. Simple suits an owner who is not going to read the code - use it when the user asks for a simple editor, or says they are not a developer.";
 
-    private static JsonObject Tool(string name, string title, Effect effect, string description, JsonObject schema) => new()
-    {
-        ["name"] = name,
-        ["title"] = title,
-        ["description"] = description,
-        ["inputSchema"] = schema,
-        ["annotations"] = new JsonObject
-        {
-            ["title"] = title,
-            ["readOnlyHint"] = effect.ReadOnly,
-            ["destructiveHint"] = effect.Destructive,
-            ["idempotentHint"] = effect.Idempotent,
-            // every tool acts on this platform and nothing beyond it
-            ["openWorldHint"] = false
-        }
-    };
+    private const string PrivateKey = "The editor key.";
+
+    private const string PrivateKeyOrDemo = "The editor key, or the key of a demo.";
+
+    private const string DeployField = "Also deploy what was saved: a version at the public address, a feature at its preview address.";
+
+    private const string CheckField = "Without deploy: compile what was saved and answer with its diagnostics, putting nothing online.";
 
     /// <summary>
-    /// What calling a tool does to the platform, as the protocol's hints say it.
+    /// The licenses a source may be published under, as open_source names them.
     /// </summary>
     /// <remarks>
-    /// Clients read these to decide what to ask the user before a call - a
-    /// read can go through, a deploy is worth a question. Without them every
-    /// tool looks like the worst case, which is what the defaults assume.
+    /// Written out, since a description is fixed when the tools are described;
+    /// a test holds it to <see cref="SourceLicenses.All"/>.
     /// </remarks>
-    private readonly record struct Effect(bool ReadOnly, bool Destructive, bool Idempotent)
-    {
-        /// <summary>Looks and changes nothing.</summary>
-        public static Effect Read => new(true, false, true);
-
-        /// <summary>Adds something new and replaces nothing.</summary>
-        public static Effect Create => new(false, false, false);
-
-        /// <summary>Adds a version or changes a feature, and with deploy: true replaces what is online.</summary>
-        public static Effect Save => new(false, true, false);
-
-        /// <summary>Replaces or removes what was there, the same way however often.</summary>
-        public static Effect Replace => new(false, true, true);
-    }
-
-    private static JsonObject Field(string type, string description) => new()
-    {
-        ["type"] = type,
-        ["description"] = description
-    };
-
-    private static string? Text(JsonObject arguments, string name)
-        => arguments.TryGetPropertyValue(name, out var value) && value is JsonValue text && text.TryGetValue<string>(out var result)
-         ? result
-         : null;
-
-    private static string Required(JsonObject arguments, string name)
-        => Text(arguments, name) ?? throw LambdaException.Invalid($"'{name}' is needed and was not given.");
-
-    private static int? Number(JsonObject arguments, string name)
-        => arguments.TryGetPropertyValue(name, out var value) && value is JsonValue number && number.TryGetValue<int>(out var result)
-         ? result
-         : null;
-
-    private static bool? Flag(JsonObject arguments, string name)
-        => arguments.TryGetPropertyValue(name, out var value) && value is JsonValue flag && flag.TryGetValue<bool>(out var result)
-         ? result
-         : null;
+    private const string LicenseField =
+        "The SPDX identifier of the license: MIT, Apache-2.0, BSD-3-Clause, MPL-2.0, GPL-3.0-or-later, AGPL-3.0-or-later or Unlicense. Left out, it stays as it is - " + SourceLicenses.Default + " when first published.";
 
     /// <summary>
-    /// The files an argument list carries, or null and a complaint.
+    /// The encoding of a file that is not text.
     /// </summary>
-    private static IReadOnlyList<LambdaFile>? Files(JsonObject arguments, out string? complaint)
-    {
-        var files = ParseFiles(arguments, out complaint);
-
-        if (files == null)
-        {
-            return null;
-        }
-
-        complaint = LambdaSource.Validate(files);
-
-        return complaint == null ? files : null;
-    }
+    private const string Base64 = "base64";
 
     /// <summary>
-    /// The files an argument list carries, without checking them as a whole.
+    /// A file as write_code, change_code and check_code take it.
     /// </summary>
-    private static List<LambdaFile>? ParseFiles(JsonObject arguments, out string? complaint)
-    {
-        complaint = null;
+    /// <remarks>
+    /// The encoding is checked with the rest of the files, by the rule the
+    /// API holds them to as well (<see cref="LambdaSource.Validate"/>), which
+    /// takes what agents send for text besides leaving it out.
+    /// </remarks>
+    public sealed record CodeFile([Summary(FileNameField)] string Name,
+                                  [Summary("Contents, base64 if encoding says so.")] string Code,
+                                  [Summary("'base64' for binary files; omit otherwise.")] string? Encoding = null);
 
-        if (!arguments.TryGetPropertyValue("files", out var value) || value is not JsonArray array)
-        {
-            complaint = "'files' has to be an array of { name, code }, with lambda.cs first.";
-            return null;
-        }
+    /// <summary>
+    /// A replacement of text within a file, as change_code takes it.
+    /// </summary>
+    public sealed record CodeEdit([Summary("The file to change.")] string File,
+                                  [Summary("Text that occurs exactly once in the file.")] string Find,
+                                  [Summary("What to put in its place.")] string Replace);
 
-        var files = new List<LambdaFile>();
+    /// <summary>
+    /// What a save is asked to do besides storing the files.
+    /// </summary>
+    /// <param name="Feature">The feature to save into, or nothing for a new version</param>
+    private sealed record SaveRequest(string? Feature, string? Specification, string? Change, bool Deploy, bool Check);
 
-        foreach (var entry in array)
-        {
-            if (entry is not JsonObject file)
-            {
-                complaint = "Every file has to be an object with a name and some code.";
-                return null;
-            }
-
-            files.Add(new LambdaFile(Text(file, "name") ?? "", Text(file, "code") ?? "", Text(file, "encoding")));
-        }
-
-        return files;
-    }
+    private static List<LambdaFile> Files(IEnumerable<CodeFile> files)
+        => files.Select(f => new LambdaFile(f.Name, f.Code, f.Encoding)).ToList();
 
     #endregion
 

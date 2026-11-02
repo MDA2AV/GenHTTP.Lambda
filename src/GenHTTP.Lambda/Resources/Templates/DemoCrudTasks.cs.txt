@@ -7,38 +7,43 @@
 //
 // Problems are thrown as ProviderException with the status to answer, which
 // the platform turns into a response with that status and the message.
+//
+// [Summary] and [Remarks] say what a route does in the API's description,
+// openapi.json - and so in scalar/, where it is tried. A parameter or a field
+// of a record can have one too.
 
-/// <summary>What a client sends to add or change a task.</summary>
-public record TaskInput(string Title, string Notes, bool Done);
+[Summary("What a client sends to add or change a task.")]
+public record TaskInput([Summary("What is to be done, up to 120 characters")] string Title,
+                        [Summary("More about it, up to 1000 characters")] string Notes,
+                        [Summary("Whether it is done")] bool Done);
 
 public class Tasks(TaskStore store)
 {
-    private const int MaxTitle = 120;
+    internal const int MaxTitle = 120;
 
-    private const int MaxNotes = 1000;
+    internal const int MaxNotes = 1000;
 
     [ResourceMethod]
-    public List<TaskItem> List(string search = null) => store.List(search);
+    [Summary("Lists the tasks")]
+    [Remarks("Open tasks first, the newest first. With search, only those whose title or notes contain it, whatever the case.")]
+    public List<TaskItem> List([Summary("Text to look for")] string search = null) => store.List(search);
 
     [ResourceMethod(":id")]
+    [Summary("Reads a task")]
     public TaskItem Get(string id) => store.Find(id) ?? throw Missing(id);
 
     [ResourceMethod(Method.Post)]
+    [Summary("Adds a task")]
     public Result<TaskItem> Create(TaskInput input)
     {
         var (title, notes) = Validate(input);
 
-        var now = DateTime.UtcNow;
-
-        var task = new TaskItem { Id = Guid.NewGuid().ToString("n")[..10], Title = title, Notes = notes, Done = input.Done, Created = now, Updated = now };
-
-        store.Add(task);
-
         // 201 rather than 200: something new exists now
-        return new Result<TaskItem>(task).Status(ResponseStatus.Created);
+        return new Result<TaskItem>(Add(store, title, notes, input.Done)).Status(ResponseStatus.Created);
     }
 
     [ResourceMethod(Method.Put, ":id")]
+    [Summary("Changes a task")]
     public TaskItem Update(string id, TaskInput input)
     {
         var (title, notes) = Validate(input);
@@ -47,6 +52,7 @@ public class Tasks(TaskStore store)
     }
 
     [ResourceMethod(Method.Delete, ":id")]
+    [Summary("Removes a task")]
     public void Delete(string id)
     {
         // nothing returned is answered with 204 No Content
@@ -57,9 +63,23 @@ public class Tasks(TaskStore store)
     }
 
     /// <summary>
+    /// Makes a task of what was checked, and keeps it.
+    /// </summary>
+    internal static TaskItem Add(TaskStore store, string title, string notes, bool done)
+    {
+        var now = DateTime.UtcNow;
+
+        var task = new TaskItem { Id = Guid.NewGuid().ToString("n")[..10], Title = title, Notes = notes, Done = done, Created = now, Updated = now };
+
+        store.Add(task);
+
+        return task;
+    }
+
+    /// <summary>
     /// Checks what was sent, and answers 400 with the reason where it is wrong.
     /// </summary>
-    private static (string Title, string Notes) Validate(TaskInput input)
+    internal static (string Title, string Notes) Validate(TaskInput input)
     {
         var title = (input?.Title ?? "").Trim();
 
@@ -83,7 +103,7 @@ public class Tasks(TaskStore store)
         return (title, notes);
     }
 
-    private static ProviderException Missing(string id)
+    internal static ProviderException Missing(string id)
         => new(ResponseStatus.NotFound, $"There is no task '{id}'.");
 
     /// <summary>

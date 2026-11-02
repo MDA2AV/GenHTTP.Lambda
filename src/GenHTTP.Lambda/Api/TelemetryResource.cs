@@ -1,7 +1,7 @@
 using System.Runtime;
 using System.Runtime.InteropServices;
 
-using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Content.Documentation;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
@@ -30,9 +30,6 @@ namespace GenHTTP.Lambda.Api;
          Readings of memory, the collector, the threads and the connections, taken on an interval and kept in memory, and what
          happened on the platform per day. Only the public key identifies a lambda here.
          """)]
-[RequestHeader(AdminAuthentication.Header, AdminAuthentication.HeaderDescription, Required = true)]
-[Response(ResponseStatus.Unauthorized, AdminAuthentication.MissingDescription)]
-[Response(ResponseStatus.Forbidden, AdminAuthentication.WrongDescription)]
 public sealed class TelemetryResource(ITelemetryService telemetry, IMetaService meta, LambdaOptions options)
 {
 

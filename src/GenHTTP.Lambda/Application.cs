@@ -265,7 +265,7 @@ public sealed class Application : IAsyncDisposable
         var layout = Layout.Create()
                            .Add("api", ApiLayout.Create(options))
                            // one path, for agents rather than for browsers
-                           .Add("mcp", new McpHandlerBuilder(services.GetRequiredService<McpTools>(), options.McpOrigins))
+                           .Add("mcp", McpEndpoint.Create(options))
                            .Add("features", previews)
                            // the repositories below the editor and the published sources, asked
                            // before the pages that answer every other path there

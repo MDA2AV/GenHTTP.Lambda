@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 
-using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;

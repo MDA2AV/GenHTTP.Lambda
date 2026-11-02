@@ -21,7 +21,7 @@ The pages keep nothing: `session.js` calls the routes with relative paths and th
 
 ## The Authentication module guards `api/`
 
-`ApiKeyAuthentication` with an extractor that reads the cookie rather than a header, and an authenticator that turns the token into a `Member` or null. Without a cookie it answers 401, with one it does not know 403, before any route runs. The routes ask for a `Member` parameter and `UserInjector<Member>` fills it in, so no route can forget to check. The pages take either as signed out: the members page sends the visitor back to the landing page, and shows any other failure as it is.
+`ApiKeyAuthentication` reading the token from the cookie (`WithCookie`) rather than a header, and an authenticator that turns the token into a `Member` or null. Without a cookie it answers 401, with one it does not know 403, before any route runs. The routes ask for a `Member` parameter and `UserInjector<Member>` fills it in, so no route can forget to check. The pages take either as signed out: the members page sends the visitor back to the landing page, and shows any other failure as it is.
 
 ## The pages are not what is protected
 

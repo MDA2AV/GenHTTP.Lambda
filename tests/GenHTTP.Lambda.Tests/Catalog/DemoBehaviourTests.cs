@@ -67,6 +67,60 @@ public sealed class DemoBehaviourTests
         using var specification = await fixture.GetAsync("http://demo-crud.localhost/openapi.json");
 
         Assert.AreEqual(HttpStatusCode.OK, specification.StatusCode, "the API describes itself");
+
+        var routes = JsonNode.Parse(await specification.Content.ReadAsStringAsync())!["paths"]!["/tasks/"]!;
+
+        Assert.AreEqual("Adds a task", routes["post"]!["summary"]!.GetValue<string>(), "and says what each route does");
+    }
+
+    [TestMethod]
+    public async Task AnAgentKeepsTheSameTasksWithToolsOfItsOwn()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync();
+
+        await fixture.SeedDemosAsync();
+
+        var added = await ToolAsync("add_task", new JsonObject { ["title"] = "Water the plants" });
+
+        var id = added["structuredContent"]!["id"]!.GetValue<string>();
+
+        using (var read = await fixture.GetAsync($"http://demo-crud.localhost/tasks/{id}", "application/json"))
+        {
+            Assert.AreEqual(HttpStatusCode.OK, read.StatusCode, "what an agent adds is on the list everybody sees");
+        }
+
+        var done = await ToolAsync("complete_task", new JsonObject { ["id"] = id });
+
+        Assert.IsTrue(done["structuredContent"]!["done"]!.GetValue<bool>());
+
+        var untitled = await ToolAsync("add_task", new JsonObject { ["title"] = "   " });
+
+        Assert.IsTrue(untitled["isError"]!.GetValue<bool>(), "what it sends is checked as the API checks it");
+        Assert.Contains("needs a title", untitled["content"]![0]!["text"]!.GetValue<string>(), "and it reads why");
+
+        var removed = await ToolAsync("remove_task", new JsonObject { ["id"] = id });
+
+        Assert.IsFalse(removed["isError"]!.GetValue<bool>());
+
+        using (var gone = await fixture.GetAsync($"http://demo-crud.localhost/tasks/{id}", "application/json"))
+        {
+            Assert.AreEqual(HttpStatusCode.NotFound, gone.StatusCode);
+        }
+
+        async Task<JsonNode> ToolAsync(string name, JsonObject arguments)
+        {
+            using var response = await fixture.SendAsync(HttpMethod.Post, "http://demo-crud.localhost/mcp", new JsonObject
+            {
+                ["jsonrpc"] = "2.0",
+                ["id"] = 1,
+                ["method"] = "tools/call",
+                ["params"] = new JsonObject { ["name"] = name, ["arguments"] = arguments }
+            });
+
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+            return JsonNode.Parse(await response.Content.ReadAsStringAsync())!["result"]!;
+        }
     }
 
     [TestMethod]

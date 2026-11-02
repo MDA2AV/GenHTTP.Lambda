@@ -80,7 +80,7 @@ var account = Inline.Create()
  * route then simply asks for a Member parameter: the user injector fills it in.
  */
 var session = ApiKeyAuthentication.Create()
-                                  .Extractor(request => request.Header.Headers.GetCookie(Session.Cookie))
+                                  .WithCookie(Session.Cookie)
                                   .Authenticator((_, token) => ValueTask.FromResult<IUser>(accounts.Authenticate(token)));
 
 var api = Inline.Create()

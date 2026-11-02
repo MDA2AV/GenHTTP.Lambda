@@ -1,5 +1,4 @@
-using GenHTTP.Api.Content.Services;
-using GenHTTP.Api.Protocol;
+using GenHTTP.Api.Content.Documentation;
 
 using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
@@ -26,9 +25,6 @@ namespace GenHTTP.Lambda.Api;
          and what the server said. Behind the token, since it holds whatever a stranger's code decided to print - and, where
          the operator records them, the addresses of callers.
          """)]
-[RequestHeader(AdminAuthentication.Header, AdminAuthentication.HeaderDescription, Required = true)]
-[Response(ResponseStatus.Unauthorized, AdminAuthentication.MissingDescription)]
-[Response(ResponseStatus.Forbidden, AdminAuthentication.WrongDescription)]
 public sealed class LogResource(ILogBook book, IRunLog runs, LambdaOptions options)
 {
 
