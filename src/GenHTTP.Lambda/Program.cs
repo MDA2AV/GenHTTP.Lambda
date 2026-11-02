@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using GenHTTP.Api.Infrastructure;
 
 using GenHTTP.Lambda;
+using GenHTTP.Lambda.Api.Mcp;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Diagnostics;
@@ -56,6 +57,12 @@ using var loggers = LoggerFactory.Create(builder =>
     // request - written to the console while the request waits, and into the
     // book where, each with its own duration, nothing ever folded them
     builder.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+
+    // and the MCP module writes a line of its own for every tool call, beside
+    // the one the tool writes about what it did - and one for every refusal,
+    // which is an answer rather than a problem. A tool that fails is an error,
+    // and still written down
+    builder.AddFilter("GenHTTP.Modules.Mcp", LogLevel.Warning);
 });
 
 var logger = loggers.CreateLogger("GenHTTP.Lambda");
@@ -67,6 +74,13 @@ runs.Report(logger);
 foreach (var variable in LambdaOptions.MovedToPanel())
 {
     logger.LogWarning("Read {Variable} from the environment, which is deprecated: the limits of the tiers are set in the administration panel, and a value saved there wins", variable);
+}
+
+// an entry that names no origin is left out rather than keep the server from
+// starting, and said here so the operator finds out
+foreach (var entry in options.McpOrigins.Where(e => McpEndpoint.Origin(e) == null))
+{
+    logger.LogWarning("Ignored {Entry} in LAMBDA_MCP_ORIGINS, which names neither a host nor an origin such as https://genhttp.dev", entry);
 }
 
 // an installation that names where it is found, and not where its lambdas

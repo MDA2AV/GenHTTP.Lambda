@@ -102,19 +102,33 @@ public sealed class ApiDocumentationTests
 
         Assert.IsNotEmpty(operations, "an installation with a token describes its panel");
 
+        var scheme = document.RootElement.GetProperty("components").GetProperty("securitySchemes").GetProperty("adminToken");
+
+        Assert.AreEqual("apiKey", scheme.GetProperty("type").GetString());
+        Assert.AreEqual("header", scheme.GetProperty("in").GetString(), "the token is presented in a header");
+        Assert.AreEqual("X-Admin-Token", scheme.GetProperty("name").GetString());
+        Assert.Contains("LAMBDA_ADMIN_TOKEN", scheme.GetProperty("description").GetString()!, "it says where the token comes from");
+
         foreach (var (name, operation) in operations)
         {
-            var token = operation.GetProperty("parameters").EnumerateArray()
-                                 .FirstOrDefault(p => p.GetProperty("name").GetString() == "X-Admin-Token");
+            var required = operation.GetProperty("security").EnumerateArray().Select(r => r.EnumerateObject().Select(p => p.Name).ToList()).ToList();
 
-            Assert.AreEqual("header", token.GetProperty("in").GetString(), $"{name} asks for the token in a header");
-            Assert.IsTrue(token.GetProperty("required").GetBoolean(), $"{name} requires the token");
+            Assert.HasCount(1, required, $"{name} is called one way");
+            CollectionAssert.AreEqual(new[] { "adminToken" }, required[0], $"{name} requires the token");
 
             var responses = operation.GetProperty("responses");
 
             Assert.IsTrue(responses.TryGetProperty("401", out _), $"{name} says how a missing token is answered");
             Assert.IsTrue(responses.TryGetProperty("403", out _), $"{name} says how a wrong token is answered");
         }
+
+        var panel = operations.Select(o => o.Name).ToHashSet();
+
+        var others = Operations(document).Where(o => !panel.Contains(o.Name) && o.Operation.TryGetProperty("security", out _))
+                                         .Select(o => o.Name)
+                                         .ToList();
+
+        Assert.IsEmpty(others, $"everywhere else the editor key is the credential, not the token: {string.Join(", ", others)}");
     }
 
     #endregion

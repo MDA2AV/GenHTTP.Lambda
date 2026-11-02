@@ -757,9 +757,15 @@ async function run(job) {
       if (event.type === 'assistant') {
         for (const part of event.message?.content ?? []) {
           if (part.type === 'tool_use') {
-            const tool = String(part.name ?? '').replace('mcp__genhttp__', '');
+            const name = String(part.name ?? '');
+            const tool = name.replace('mcp__genhttp__', '');
 
-            calls.set(part.id, { tool, step: step(job, begin(tool, part.input)) });
+            // only a tool the run may call reaches the platform, so only its
+            // errors are the platform's refusals; the CLI turns away any other
+            // in words of its own, which are no step's problem
+            const allowed = (job.kind === 'change' ? CHANGE_ALLOW : ALLOW).includes(name);
+
+            calls.set(part.id, { tool, allowed, step: step(job, begin(tool, part.input)) });
             closing = '';
           }
 
@@ -783,7 +789,7 @@ async function run(job) {
 
           const call = calls.get(part.tool_use_id);
           const from = call?.tool;
-          const body = parse(part.content);
+          const body = parse(part.content) ?? (call?.allowed && part.is_error ? refused(part.content) : null);
 
           if (call) finish(call.step, from, body);
 
@@ -1086,6 +1092,19 @@ function parse(content) {
   }
 
   return null;
+}
+
+/**
+ * A refusal of the platform's - a key nobody has, a name that is taken, an
+ * argument that does not fit - which says why in a sentence rather than in an
+ * object, as the answer of a step that went wrong.
+ */
+function refused(content) {
+  const text = (Array.isArray(content) ? content.filter(c => c.type === 'text').map(c => c.text) : [String(content ?? '')])
+    .join(' ')
+    .trim();
+
+  return text ? { ok: false, problem: text } : null;
 }
 
 /*

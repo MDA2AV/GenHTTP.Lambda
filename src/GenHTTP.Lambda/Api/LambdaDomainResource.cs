@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Content.Documentation;
 using GenHTTP.Api.Protocol;
 
 using GenHTTP.Lambda.Api.Infrastructure;

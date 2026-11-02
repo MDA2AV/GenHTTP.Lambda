@@ -31,6 +31,8 @@ public static class ModuleCatalog
         "IO",
         "Layouting",
         "LoadBalancing",
+        // tools for AI agents, served over the Model Context Protocol
+        "Mcp",
         "OpenApi",
         "Pages",
         "Protobuf",
@@ -122,6 +124,9 @@ public static class ModuleCatalog
         string[] api =
         [
             "GenHTTP.Api.Content",
+            // [Summary], [Remarks], [Tag], [Response]: what a webservice says
+            // about itself in its OpenAPI description, and a tool to an agent
+            "GenHTTP.Api.Content.Documentation",
             "GenHTTP.Api.Content.IO",
             "GenHTTP.Api.Infrastructure",
             "GenHTTP.Api.Protocol"

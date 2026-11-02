@@ -1,4 +1,4 @@
-using GenHTTP.Api.Content.Services;
+using GenHTTP.Api.Content.Documentation;
 
 using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Data.Entities;

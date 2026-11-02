@@ -3,8 +3,8 @@
 //   node smoke.mjs <address>        the preview of a feature, or a copy of your own
 //
 // Adds a task of its own, reads, searches, changes and removes it, checks
-// what is refused and that the page and the API description are served - and
-// removes what it added, whatever happens. Ends with 1, naming what failed,
+// what is refused, that the page and the API description are served and that
+// an agent is offered the tools - and removes what it added, whatever happens. Ends with 1, naming what failed,
 // when something did not pass. Needs Node 18 or later and nothing else.
 
 const address = process.argv[2];
@@ -86,6 +86,11 @@ try {
 
   const described = await call('GET', 'openapi.json');
   check('the API is described', described.status === 200 && described.json?.paths != null, `status ${described.status}`);
+
+  const offered = await call('POST', 'mcp', { jsonrpc: '2.0', id: 1, method: 'tools/list' });
+  const tools = (offered.json?.result?.tools ?? []).map((t) => t.name);
+  check('an agent is offered the tools', offered.status === 200 && ['list_tasks', 'add_task', 'complete_task', 'remove_task'].every((t) => tools.includes(t)),
+        `status ${offered.status}`);
 } catch (error) {
   check(`${base} answers`, false, error.message);
 } finally {

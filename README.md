@@ -188,6 +188,14 @@ connection, which is why a socket may stay open far longer than a lambda is
 given to answer. `FrameType`, which the imperative flavour reads off every
 frame, is one of the names a lambda is given, so no import is needed.
 
+A lambda may offer tools to AI agents itself, over the Model Context Protocol:
+`Tools.Create()` with a class whose methods are marked `[Tool]`, added at a
+path such as `mcp`, which an agent then connects to. And a webservice of its
+own describes itself as OpenAPI, in the words of `[Summary]`, `[Remarks]`,
+`[Tag]` and `[Response]` on its routes and records. The MCP module and those
+attributes are imported for every lambda and in its export; `demo-crud` shows
+both, and the guide says how (`toolsForAgents`, `describingAnApi`).
+
 The editor says when both free tier timers run out: a hint under the public URL
 for the deployment, and a chip beside the buttons for the lambda itself, which
 opens an explanation of how each one is extended.
@@ -1361,7 +1369,7 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_LOG_GEO_REFRESH_HOURS`      | `168`            | how often the registry files are refetched  |
 | `LAMBDA_LOG_GEO_PLACES`             | `true`           | also fetch the town and network databases   |
 | `LAMBDA_LOG_MAX_LINES_PER_REQUEST`  | `200`            | before one request's output is cut off      |
-| `LAMBDA_MCP_ORIGINS`                | -                | hosts a browser may use `/mcp` from         |
+| `LAMBDA_MCP_ORIGINS`                | -                | hosts (or origins) a browser may use `/mcp` from |
 | `LAMBDA_SECRETS_KEY`                | `secrets.key`    | the installation's half of the key secrets are sealed with, see [Secrets](#secrets) |
 | `LAMBDA_PUBLIC_URL`                 | -                | canonical address, enables the sitemap      |
 | `LAMBDA_HOSTING_URL`                | `http://localhost:{LAMBDA_PORT}` | the domain the lambdas answer below, a subdomain each: `https://genhttp.run` |
@@ -1699,8 +1707,21 @@ enters it.
 
 There is a Model Context Protocol endpoint at `/mcp`, so an agent can build
 something here and put it online without a person driving the editor. It is
-JSON-RPC over a single path, taking POST; a GET is declined with 405, because
-this server answers rather than streams.
+GenHTTP's MCP module (`GenHTTP.Modules.Mcp`): JSON-RPC over a single path,
+taking POST, in the stateless revision of the protocol and in the ones before
+it that start with a handshake, which it answers without keeping a session. A
+GET is declined with 405, because this server answers rather than streams.
+
+The tools are the methods of `McpTools` marked `[Tool]`: their `[Summary]` is
+what an agent reads, their parameters are the arguments and their schema, and
+a fixed limit - a length, a range, the values an argument takes - is an
+attribute on the parameter, advertised and checked before the tool runs. A
+tool answers with an object, as text for the model and as structured content
+for a program. When the platform refuses - a key nobody has, a demo that
+cannot be changed, a name that is taken - the answer is an error that says
+why in a sentence, as is one for an argument that does not fit; a failed
+deployment or merge is an error that carries its diagnostics as structured
+content.
 
 ```
 https://genhttp.dev/mcp
@@ -1879,10 +1900,14 @@ Nothing is created until `acceptTerms` is true, and the editor key that comes
 back is the only way into what was made. There is no session and nothing is
 remembered between calls: everything a call needs is in its arguments.
 
-`LAMBDA_MCP_ORIGINS` lists the hosts a browser may drive the endpoint from. An
-agent speaking HTTP sends no `Origin` and is never checked against it; the list
-is there because a browser does, and a page on another site could otherwise aim
-somebody's browser at this endpoint.
+`LAMBDA_MCP_ORIGINS` lists the hosts a browser may drive the endpoint from: a
+host stands for its page over HTTPS (`genhttp.dev` for
+`https://genhttp.dev`), and an entry with a scheme for the origin it names,
+port included (`http://localhost:5173`); an entry that names neither is left
+out, with a warning on startup. An agent speaking HTTP sends no
+`Origin` and is never checked against it; the list is there because a browser
+does, and a page on another site could otherwise aim somebody's browser at
+this endpoint.
 
 ## Administration
 
@@ -1899,6 +1924,8 @@ the credential and it only ever reaches one lambda; this reads code that belongs
 to other people and can take their work away, so it asks for `LAMBDA_ADMIN_TOKEN`
 in an `X-Admin-Token` header (GenHTTP's API key authentication). A request
 without the header is answered with 401, one with the wrong token with 403.
+The concern says so in the API description itself: every operation behind it
+requires the `adminToken` security scheme, which Scalar asks for once.
 Until that variable is set there is no panel at all: `/admin`, `/telemetry`
 and `/logs` are not there, and answer 404.
 

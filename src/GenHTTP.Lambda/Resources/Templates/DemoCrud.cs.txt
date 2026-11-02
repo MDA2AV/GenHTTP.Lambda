@@ -8,12 +8,14 @@
 //
 //   openapi.json            the generated description of the API
 //   scalar/                 a page to try the API in the browser
+//   mcp                     the same tasks as tools for an AI agent
 //   anything else           the page in resources/web/, which uses the API
 //
 // The files:
 //
 //   lambda.cs               this one: the wiring, and bringing the database up to date
 //   Tasks.cs                the API - a class whose methods are the routes
+//   Tools.cs                the tools - a class whose methods an agent calls
 //   Store.cs                the tasks in the database, through Entity Framework Core
 //   resources/migrations/   the SQL that makes the table, applied once by Evolve
 //   resources/web/          the front end, shipped with the code and served as it is
@@ -48,9 +50,16 @@ if (store.Count() == 0)
     Tasks.Seed(store);
 }
 
+// what an agent is told before it calls anything: how the tools fit together
+var tools = Tools.Create()
+                 .Server("tasks", "1.0.0", "Tasks")
+                 .Instructions("A task list shared by everybody who opens it. list_tasks first: the other tools take the id it names.")
+                 .Add(new TaskTools(store));
+
 return Layout.Create()
              .AddService("tasks", new Tasks(store))
              .AddOpenApi()
              .AddScalar()
+             .Add("mcp", tools)
              // last, so that it only answers what nothing above did
              .Add(Resources.App("web"));

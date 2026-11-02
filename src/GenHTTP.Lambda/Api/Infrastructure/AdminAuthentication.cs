@@ -3,6 +3,7 @@ using System.Text;
 
 using GenHTTP.Api.Content;
 using GenHTTP.Api.Content.Authentication;
+using GenHTTP.Api.Content.Documentation.Security;
 
 using GenHTTP.Lambda.Configuration;
 
@@ -37,14 +38,17 @@ public static class AdminAuthentication
     /// </summary>
     public const string Header = "X-Admin-Token";
 
-    // how the API description says it, for each resource behind the token -
-    // the framework's API key concern does not describe itself
-
-    public const string HeaderDescription = "The administration token of the installation (`LAMBDA_ADMIN_TOKEN`)";
-
-    public const string MissingDescription = "The token is missing.";
-
-    public const string WrongDescription = "The token is wrong.";
+    /// <summary>
+    /// How the API description names the token.
+    /// </summary>
+    /// <remarks>
+    /// The concern describes itself to the API description: every operation
+    /// behind it requires this scheme, and says how a request without the
+    /// token and one with the wrong token are answered. Named for what it is,
+    /// since Scalar asks for it once by that name for all of them.
+    /// </remarks>
+    public static readonly SecurityScheme Scheme = SecurityScheme.ApiKey(Header, ApiKeyLocation.Header, "The administration token of the installation (`LAMBDA_ADMIN_TOKEN`).")
+                                                   with { Name = "adminToken" };
 
     /// <summary>
     /// The concern that lets a request with the configured token through.
@@ -55,6 +59,7 @@ public static class AdminAuthentication
 
         return ApiKeyAuthentication.Create()
                                    .WithHeader(Header)
+                                   .Documentation(Scheme)
                                    .Authenticator((_, presented) =>
                                    {
                                        var actual = Encoding.UTF8.GetBytes(presented);

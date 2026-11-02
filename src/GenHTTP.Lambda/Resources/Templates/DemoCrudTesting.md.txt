@@ -1,6 +1,6 @@
 # How it is tested
 
-`smoke.mjs` checks the API from the outside. It adds a task of its own, reads, searches, changes and removes it, checks what is refused and that the page and the API description are served - and removes what it added, whatever happens.
+`smoke.mjs` checks the API from the outside. It adds a task of its own, reads, searches, changes and removes it, checks what is refused, that the page and the API description are served and that an agent is offered the tools - and removes what it added, whatever happens.
 
 ```
 node tests/smoke.mjs <address>
@@ -23,6 +23,7 @@ The address is where the app answers: the preview of a feature (`https://…/fea
 | A task is removed | `DELETE tasks/{id}` | 204, and 404 when it is read again |
 | The page | `GET ./` | 200, HTML |
 | The API is described | `GET openapi.json` | 200, the OpenAPI document |
+| An agent is offered the tools | `POST mcp` with `{ "jsonrpc": "2.0", "id": 1, "method": "tools/list" }` | 200, `list_tasks`, `add_task`, `complete_task` and `remove_task` |
 
 ## Test data
 

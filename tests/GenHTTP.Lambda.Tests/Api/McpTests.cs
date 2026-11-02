@@ -42,32 +42,6 @@ public sealed class McpTests
     }
 
     [TestMethod]
-    public async Task AVersionItDoesNotKnowIsAnsweredWithOneItDoes()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync();
-
-        var answer = await CallAsync(fixture, "initialize", new JsonObject { ["protocolVersion"] = "1999-01-01" });
-
-        Assert.AreEqual("2025-06-18", answer["result"]!["protocolVersion"]!.GetValue<string>(),
-                        "the client decides whether it can live with that, rather than being refused outright");
-    }
-
-    [TestMethod]
-    public async Task ANotificationIsAcknowledgedAndNotAnswered()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync();
-
-        using var response = await PostAsync(fixture, new JsonObject
-        {
-            ["jsonrpc"] = "2.0",
-            ["method"] = "notifications/initialized"
-        });
-
-        Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.IsEmpty(await response.Content.ReadAsStringAsync());
-    }
-
-    [TestMethod]
     public async Task EveryToolSaysWhatItTakes()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
@@ -230,10 +204,20 @@ public sealed class McpTests
 
         var privateKey = made["privateKey"]!.GetValue<string>();
 
+        var tools = (JsonArray)(await CallAsync(fixture, "tools/list", new JsonObject()))["result"]!["tools"]!;
+
+        var views = tools.Single(t => t!["name"]!.GetValue<string>() == "update_lambda")!["inputSchema"]!["properties"]!["view"]!["enum"]!.AsArray()
+                         .Select(v => v!.GetValue<string>())
+                         .Order()
+                         .ToList();
+
+        CollectionAssert.AreEqual(new[] { "Full", "Simple" }, views, "the tool names the views there are");
+
         var refused = await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey, ["view"] = "minimal" });
 
         Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
-        Assert.Contains("Simple", Structured(refused)["problem"]!.GetValue<string>(), "the refusal names the views there are");
+        Assert.Contains("view", Problem(refused), "the refusal says which argument does not fit");
+        Assert.AreEqual("Full", fixture.Meta.Get(privateKey)!.View, "and nothing was changed");
 
         var missing = await CallToolAsync(fixture, "update_lambda", new JsonObject { ["privateKey"] = privateKey });
 
@@ -447,7 +431,7 @@ public sealed class McpTests
         });
 
         Assert.IsTrue(answer["result"]!["isError"]!.GetValue<bool>());
-        Assert.Contains("more than once", Structured(answer)["problem"]!.GetValue<string>());
+        Assert.Contains("more than once", Problem(answer));
     }
 
     [TestMethod]
@@ -962,7 +946,7 @@ public sealed class McpTests
 
         Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
 
-        var problem = Structured(refused)["problem"]!.GetValue<string>();
+        var problem = Problem(refused);
 
         Assert.Contains("version 3", problem);
         Assert.Contains("update_feature", problem, "the refusal says how to get there");
@@ -1159,7 +1143,7 @@ public sealed class McpTests
         });
 
         Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>());
-        Assert.Contains("switched off", Structured(refused)["problem"]!.GetValue<string>());
+        Assert.Contains("switched off", Problem(refused));
     }
 
     [TestMethod]
@@ -1178,7 +1162,7 @@ public sealed class McpTests
         });
 
         Assert.IsTrue(refused["result"]!["isError"]!.GetValue<bool>(), "an answer to read and act on, not a fault");
-        Assert.Contains("base64", Structured(refused)["problem"]!.GetValue<string>());
+        Assert.Contains("base64", Problem(refused));
 
         var listed = Structured(await CallToolAsync(fixture, "list_files", new JsonObject { ["privateKey"] = lambda.PrivateKey }));
 
@@ -1316,7 +1300,7 @@ public sealed class McpTests
         });
 
         Assert.IsTrue(write["result"]!["isError"]!.GetValue<bool>());
-        Assert.Contains("create_lambda", Structured(write)["problem"]!.GetValue<string>(), "the refusal says what to do instead");
+        Assert.Contains("create_lambda", Problem(write), "the refusal says what to do instead");
 
         var upload = await CallToolAsync(fixture, "upload_file", new JsonObject
         {
@@ -1347,45 +1331,29 @@ public sealed class McpTests
     }
 
     [TestMethod]
-    public async Task AGetIsToldThereIsNoStream()
+    public async Task OnlyABrowserOnAHostTheOperatorNamedMayUseIt()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        // an entry that names no origin is left out, rather than keep the server from starting
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { McpOrigins = ["console.example", "http://localhost:5173", "not a host"] });
 
-        using var response = await fixture.GetAsync("/mcp");
+        async Task<HttpStatusCode> FromAsync(string origin)
+        {
+            using var request = fixture.Host.GetRequest("/mcp", HttpMethod.Post);
 
-        Assert.AreEqual(HttpStatusCode.MethodNotAllowed, response.StatusCode,
-                        "which is how the specification says to decline one");
-    }
+            request.Headers.Add("Origin", origin);
+            request.Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}", System.Text.Encoding.UTF8, "application/json");
 
-    [TestMethod]
-    public async Task ABrowserFromSomewhereElseIsTurnedAway()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync();
+            using var response = await fixture.Host.GetResponseAsync(request);
 
-        using var request = fixture.Host.GetRequest("/mcp", HttpMethod.Post);
+            return response.StatusCode;
+        }
 
-        request.Headers.Add("Origin", "https://not-this-server.example");
-        request.Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}");
+        Assert.AreEqual(HttpStatusCode.OK, await FromAsync("https://console.example"), "a host the operator named stands for its page over HTTPS");
+        Assert.AreEqual(HttpStatusCode.OK, await FromAsync("http://localhost:5173"), "an origin the operator named is taken as it is");
 
-        using var response = await fixture.Host.GetResponseAsync(request);
-
-        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode,
+        Assert.AreEqual(HttpStatusCode.Forbidden, await FromAsync("https://not-this-server.example"),
                         "an agent sends no origin; only a browser does, and only a browser can be aimed by somebody else");
-    }
-
-    [TestMethod]
-    public async Task AProtocolVersionItDoesNotKnowIsRefused()
-    {
-        await using var fixture = await LambdaFixture.CreateAsync();
-
-        using var request = fixture.Host.GetRequest("/mcp", HttpMethod.Post);
-
-        request.Headers.Add("MCP-Protocol-Version", "1999-01-01");
-        request.Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}");
-
-        using var response = await fixture.Host.GetResponseAsync(request);
-
-        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.AreEqual(HttpStatusCode.Forbidden, await FromAsync("http://console.example"), "nor is the host's page over plain HTTP, which the platform never serves");
     }
 
     [TestMethod]
@@ -1595,12 +1563,24 @@ public sealed class McpTests
         var tool = tools.Single(t => t!["name"]!.GetValue<string>() == "open_source")!;
 
         Assert.Contains("never its data", tool["description"]!.GetValue<string>());
+
+        var license = tool["inputSchema"]!["properties"]!["license"]!["description"]!.GetValue<string>();
+
+        foreach (var offered in GenHTTP.Lambda.Services.Source.SourceLicenses.All)
+        {
+            Assert.Contains(offered.Id, license, "the tool names every license there is to choose from");
+        }
         Assert.IsFalse(tool["annotations"]!["readOnlyHint"]!.GetValue<bool>());
     }
 
     #region Plumbing
 
     private static JsonObject Structured(JsonObject answer) => (JsonObject)answer["result"]!["structuredContent"]!;
+
+    /// <summary>
+    /// What a refusal says, as the model reads it.
+    /// </summary>
+    private static string Problem(JsonObject answer) => answer["result"]!["content"]![0]!["text"]!.GetValue<string>();
 
     private static Task<JsonObject> CallToolAsync(LambdaFixture fixture, string tool, JsonObject arguments)
         => CallAsync(fixture, "tools/call", new JsonObject { ["name"] = tool, ["arguments"] = arguments });

@@ -1,0 +1,50 @@
+// The same tasks as tools for an AI agent, over the Model Context Protocol.
+//
+// An agent is pointed at mcp - with Claude Code:
+//
+//   claude mcp add --transport http tasks <address of the app>mcp
+//
+// and sees a tool for every public method with [Tool]: named after the method
+// in snake case (add_task), described by its [Summary], its parameters the
+// arguments. [MaxLength] on a parameter is said to the agent and checked
+// before the method runs; a ProviderException is answered as an error the
+// agent reads, so it can try again. ReadOnly, Destructive and Idempotent tell
+// a client what to ask its user before a call.
+//
+// The tools work on the store the API works on, and check what they are sent
+// the way the API does - two doors to the same records.
+using System.ComponentModel.DataAnnotations;
+
+public class TaskTools(TaskStore store)
+{
+
+    [Tool(ReadOnly = true)]
+    [Summary("Lists the tasks: open ones first, the newest first. With search, only those whose title or notes contain it.")]
+    public List<TaskItem> ListTasks([Summary("Text to look for, whatever its case")] string search = null) => store.List(search);
+
+    [Tool]
+    [Summary("Adds a task to the list everybody shares.")]
+    public TaskItem AddTask([Summary("What is to be done"), MaxLength(Tasks.MaxTitle)] string title,
+                            [Summary("More about it, where there is more to say"), MaxLength(Tasks.MaxNotes)] string notes = "")
+    {
+        var (checkedTitle, checkedNotes) = Tasks.Validate(new TaskInput(title, notes, false));
+
+        return Tasks.Add(store, checkedTitle, checkedNotes, false);
+    }
+
+    [Tool(Idempotent = true)]
+    [Summary("Ticks a task off, or opens it again.")]
+    public TaskItem CompleteTask([Summary("The id of the task, as list_tasks names it")] string id,
+                                 [Summary("Whether it is done - true unless it is to be opened again")] bool done = true)
+    {
+        var task = store.Find(id) ?? throw Tasks.Missing(id);
+
+        return store.Change(id, task.Title, task.Notes, done) ?? throw Tasks.Missing(id);
+    }
+
+    [Tool(Destructive = true, Idempotent = true)]
+    [Summary("Removes a task from the list, for everybody.")]
+    public string RemoveTask([Summary("The id of the task, as list_tasks names it")] string id)
+        => store.Remove(id) ? $"Removed task '{id}'." : throw Tasks.Missing(id);
+
+}

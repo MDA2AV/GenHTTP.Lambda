@@ -2,7 +2,11 @@
 
 ## The API is a class whose methods are the routes
 
-`Tasks.cs` is a webservice: every public method with `[ResourceMethod]` is a route. A parameter named like a segment of the path (`:id`) comes from the path, a record from the JSON body, anything else from the query, and what a method returns is sent as camel case JSON. It is how GenHTTP writes a REST API, and it gives the OpenAPI description (`AddOpenApi()`) and the page to try it (`AddScalar()`) for nothing.
+`Tasks.cs` is a webservice: every public method with `[ResourceMethod]` is a route. A parameter named like a segment of the path (`:id`) comes from the path, a record from the JSON body, anything else from the query, and what a method returns is sent as camel case JSON. It is how GenHTTP writes a REST API, and it gives the OpenAPI description (`AddOpenApi()`) and the page to try it (`AddScalar()`) for nothing. `[Summary]` and `[Remarks]` on the routes, their parameters and the fields of `TaskInput` are what the description says about each.
+
+## Agents get tools of their own, beside the API
+
+`Tools.cs` offers the same tasks to an AI agent over the Model Context Protocol, at `mcp`: every public method with `[Tool]` is a tool, described by its `[Summary]`, its parameters the arguments. A REST API is made for a program someone writes against it; a tool is made for a model choosing what to call, so it is named for what it does (`add_task`, `complete_task`), says so in a sentence, and takes no more than it needs - ticking a task off takes its id, not the whole task again. Both work on the same `TaskStore` and check what they are sent with the same `Tasks.Validate`, so the list is the same whichever way it is changed. `[MaxLength]` on a parameter tells the agent the limit before it calls, and a refusal is answered as an error the agent reads and acts on. The hints say what a tool does to the list - `ReadOnly` for listing, `Destructive` for removing - so a client knows what to ask its user first.
 
 ## The tasks are a table in the database
 

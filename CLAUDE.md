@@ -703,7 +703,9 @@ how to write apps and to give them a good starting point.
   (<https://genhttp.org/documentation/content/>) and use its **high-level APIs
   wherever possible** rather than inventing their own functionality.
 - **When you add functionality to the platform, add it to the demos as well if
-  it makes sense**, so agents learn it by reading them. Every demo has the three
+  it makes sense**, so agents learn it by reading them. `demo-crud` is where a
+  lambda offers tools to AI agents (`Tools.cs`, over the same store as its API)
+  and describes its API in the words of the documentation attributes. Every demo has the three
   pages of its documentation and tests and a script its tests run
   (`EveryDemoSaysWhatItIsWhyAndHowItIsTested`); a new demo gets them too. They
   keep their records in the database, migrated with Evolve and read and
@@ -902,6 +904,9 @@ change; the helpers are in `OperationLog`.
 - API reads are not logged (the editor polls), apart from exports and
   downloads; an agent's reads through MCP are.
 - A refused request is not logged here - its request line has the status.
+- **The MCP module's own lines are filtered below warnings** (`Program`): it
+  writes one per tool call beside the tool's own, and one per refusal. A tool
+  that fails is an error, and is written down.
 
 ### Frameworks: GenHTTP and Ioxide
 
@@ -909,6 +914,21 @@ change; the helpers are in `OperationLog`.
   clearly** - say what it is, where, and a reproduction - **instead of working
   around it**, so it can be fixed at the source. Tell the owner in your answer;
   do not bury it in a comment.
+- **Use what the framework offers the way it is meant to be used - decided by
+  the owner** ("embrace it"). When GenHTTP brings a module for something the
+  platform does by hand, move onto it rather than keep a protocol of our own
+  beside it; what it lacks is a bug or a feature to ask for at the source.
+- **The MCP endpoint is GenHTTP's MCP module.** `/mcp` is `McpEndpoint` over
+  `GenHTTP.Modules.Mcp`, the tools are the methods of `McpTools` marked
+  `[Tool]` - their `[Summary]` the description, their typed parameters the
+  arguments - and a fixed limit of an argument is an attribute on it (`[Range]`,
+  `[MaxLength]`, `[AllowedValues]`), advertised and checked by the module, not
+  a check of our own. The module takes every exception but its sealed
+  `ProviderException` for a fault, so a refusal of the platform
+  (`LambdaException`) is turned into an error that says why in a sentence
+  (`Refusing`), never left to be logged as a crash. Its protocol - versions,
+  notifications, origins - is the framework's and is not tested here; what we
+  configure (`LAMBDA_MCP_ORIGINS`, the instructions) is.
 - **Do not write tests for the frameworks.** Test GenHTTP Lambda only.
 - The framework source is normally checked out beside this repository
   (`../GenHTTP`). Read it instead of decompiling the NuGet packages.
@@ -1044,7 +1064,7 @@ touches all that apply:
 
 The same rule is worded the same way in all of them.
 
-The MCP instructions (`McpHandler`) are **short**: how to get from nothing to
+The MCP instructions (`McpEndpoint`) are **short**: how to get from nothing to
 something online, how a lambda that exists is changed, and the rules an agent
 would otherwise break before it reads the guide (where data goes, the
 database, waiting for tasks, relative paths, secrets, documentation, pages
@@ -1077,7 +1097,13 @@ GenHTTP's documentation attributes beside the code they describe.
   key, a demo's refusal) is a constant of `ApiDocumentation`.
 - **Limits the operator sets are never written as numbers**: say where to
   read them (`GET /system`, the summary's `limits`). Fixed ones (100 secrets,
-  32 KB a value) may be.
+  32 KB a value) may be. The same holds for the MCP tools, whose descriptions
+  are fixed when the endpoint starts: a limit of the panel is named where to
+  read it (`platform_guide`), never written into one.
+- **Authentication describes itself.** The admin token's concern declares the
+  `adminToken` security scheme and the 401 and 403 it answers; an operation
+  behind it says nothing about the token of its own. Everywhere else the
+  editor key in the path is the credential, and no operation names a scheme.
 - `ApiDocumentationTests` refuses an operation without a summary, a parameter,
   answer, model or field without a description, a call about a lambda that
   does not say how an unknown key is answered, and a tag in no group. A new
