@@ -246,6 +246,17 @@ agents' endpoint and git stay where they are, on the platform.
   notice and privacy policy, named as the site names them. Neither is one of
   the site's pages: none of the site's scripts is ever served at the hosting
   domain.
+- **A host nobody has.** Where `LAMBDA_PUBLIC_URL` is set, the platform
+  answers only at its own names - `localhost`, the host of that address and
+  the hosts in `LAMBDA_MCP_ORIGINS` - and a host that is neither one of those
+  nor a lambda's is told nothing is online there, in the same page, with a
+  404 on every path. That is usually a domain pointed here before its owner
+  entered it, or after it left the lambda or the premium tier. Served the
+  site, it was a copy of the site under somebody else's name, which crawlers
+  kept and kept asking for once the domain was a lambda's. The challenges of
+  an ACME client are answered there all the same. An installation without
+  `LAMBDA_PUBLIC_URL` cannot tell its own names from anybody else's, and the
+  platform answers at every host.
 - **Keys are host names.** A key is a label of the hosting domain, so the
   names mail clients and servers look for below a domain (`mail`,
   `autoconfig`, `autodiscover`, `mta-sts`) cannot be claimed, nor can a key
@@ -1261,8 +1272,8 @@ its own (`IDatabaseVault`, `ISecretVault`, `IDomainRegistry`, `ILogBook`,
   (`ILambdaAddresses`) builds the address of a lambda below the hosting
   domain and reads the lambda off a host, `DomainRegistry` holds the domains
   of their own and decides once per request whose host it is, `DomainRouter`
-  hands it to a lambda, to the page of the hosting domain or to the platform,
-  and `LambdaRedirectConcern`, in front of everything the server does, sends
+  hands it to a lambda, to the page of the hosting domain, to the platform or
+  - for a host nobody has - to the page that says nothing is there, and `LambdaRedirectConcern`, in front of everything the server does, sends
   an old address on to where its lambda answers now.
 - **Protection** (`Services/Protection`) - concerns in front of execution that
   resolve the lambda, rate limit per client and cap concurrency. A lambda is
@@ -1373,7 +1384,7 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_LOG_MAX_LINES_PER_REQUEST`  | `200`            | before one request's output is cut off      |
 | `LAMBDA_MCP_ORIGINS`                | -                | hosts (or origins) a browser may use `/mcp` from |
 | `LAMBDA_SECRETS_KEY`                | `secrets.key`    | the installation's half of the key secrets are sealed with, see [Secrets](#secrets) |
-| `LAMBDA_PUBLIC_URL`                 | -                | canonical address, enables the sitemap      |
+| `LAMBDA_PUBLIC_URL`                 | -                | canonical address, enables the sitemap; set, the platform answers only at its own names, see [Where the lambdas answer](#where-the-lambdas-answer) |
 | `LAMBDA_HOSTING_URL`                | `http://localhost:{LAMBDA_PORT}` | the domain the lambdas answer below, a subdomain each: `https://genhttp.run` |
 | `LAMBDA_TLS_PORT`                   | `0`              | port for TLS, zero leaves it off            |
 | `LAMBDA_CERTIFICATE`                | -                | PEM chain or PKCS#12 archive                |
@@ -1703,7 +1714,8 @@ Mind the order: once the domain is set, the lambda's subdomain sends its
 visitors to the domain at once. The challenge is answered for any host as
 soon as its DNS points here, whether the domain is set or not, so the
 certificate can be issued and the container restarted before the owner
-enters it.
+enters it. Until they do, the domain is a host nobody has, and visitors are
+told nothing is online there.
 
 ## For agents
 

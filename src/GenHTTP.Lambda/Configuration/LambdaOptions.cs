@@ -491,7 +491,10 @@ public sealed record LambdaOptions
     /// Pages name it as their canonical address and the sitemap lists pages
     /// under it. Left empty, neither is written: a canonical pointing at the
     /// wrong host is worse than none, and an installation cannot tell which of
-    /// the names it answers to is the one that counts.
+    /// the names it answers to is the one that counts. Set, it is also what
+    /// tells the platform's own names from a host nobody here has, which is
+    /// then not answered with the site (see
+    /// <see cref="Services.Hosting.LambdaAddresses.IsPlatform"/>).
     /// </remarks>
     public string? PublicUrl { get; init; }
 

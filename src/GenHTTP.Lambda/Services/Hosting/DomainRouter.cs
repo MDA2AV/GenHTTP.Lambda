@@ -7,7 +7,8 @@ namespace GenHTTP.Lambda.Services.Hosting;
 /// <summary>
 /// The root of the handler tree: a request addressed to a lambda's own domain
 /// or to its subdomain of the hosting domain goes to that lambda, one to the
-/// hosting domain itself to its page, everything else to the platform.
+/// hosting domain itself to its page, one to the platform's names to the
+/// platform, and one to any other host is told nothing is there.
 /// </summary>
 /// <remarks>
 /// The virtual hosting module of the framework does the same with a table
@@ -20,9 +21,11 @@ namespace GenHTTP.Lambda.Services.Hosting;
 /// line naming the caller, compression, the upgrade from plain HTTP to HTTPS
 /// on the same host - sits outside this and covers every branch alike. The
 /// platform's routes live in the platform branch only, so a lambda's host is
-/// never answered with one of the platform's pages.
+/// never answered with one of the platform's pages - nor is a host that is
+/// nobody's yet, which is usually a domain on its way to becoming a lambda's.
 /// </remarks>
-public sealed class DomainRouter(DomainRegistry registry, IHandler domains, IHandler hosted, IHandler home, IHandler platform) : IHandler
+public sealed class DomainRouter(DomainRegistry registry, IHandler domains, IHandler hosted, IHandler home, IHandler unknown, IHandler platform)
+    : IHandler
 {
 
     public async ValueTask PrepareAsync(IServer server)
@@ -30,6 +33,7 @@ public sealed class DomainRouter(DomainRegistry registry, IHandler domains, IHan
         await domains.PrepareAsync(server);
         await hosted.PrepareAsync(server);
         await home.PrepareAsync(server);
+        await unknown.PrepareAsync(server);
         await platform.PrepareAsync(server);
     }
 
@@ -41,6 +45,7 @@ public sealed class DomainRouter(DomainRegistry registry, IHandler domains, IHan
         WwwOfDomain => domains.HandleAsync(request),
         HostedLambda => hosted.HandleAsync(request),
         HostingHome => home.HandleAsync(request),
+        UnknownHost => unknown.HandleAsync(request),
         _ => platform.HandleAsync(request)
     };
 

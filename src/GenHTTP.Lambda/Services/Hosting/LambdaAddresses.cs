@@ -41,6 +41,12 @@ public sealed class LambdaAddresses : ILambdaAddresses
     /// </summary>
     private readonly HashSet<string> _platform;
 
+    /// <summary>
+    /// Whether the installation was given its public address, and so knows
+    /// which of the names it is reached at are its own.
+    /// </summary>
+    private readonly bool _named;
+
     #region Get-/Setters
 
     public string Domain { get; }
@@ -75,6 +81,8 @@ public sealed class LambdaAddresses : ILambdaAddresses
 
         _platform = [.. DomainNames.PlatformHosts(options)];
 
+        _named = options.PublicUrl != null;
+
         _home = _platform.Contains(Domain) ? null : Domain;
 
         _www = "www." + Domain;
@@ -93,6 +101,20 @@ public sealed class LambdaAddresses : ILambdaAddresses
     /// Whether a lambda of this tier with this domain answers at it.
     /// </summary>
     public static bool Serves(LambdaTier tier, string? domain) => domain != null && tier == LambdaTier.Premium;
+
+    /// <summary>
+    /// Whether the platform answers at a host that is not below the hosting
+    /// domain: at one of its names - localhost, its public address and the
+    /// hosts its agents' endpoint is driven from - and, on an installation
+    /// that was given no public address, at any host at all.
+    /// </summary>
+    /// <remarks>
+    /// Without a public address there is no telling the platform's own names
+    /// from anybody else's - a laptop on the network is reached by whatever
+    /// its owner types - so nothing is turned away.
+    /// </remarks>
+    /// <param name="host">The host in its normalized form, see <see cref="DomainNames.Normalize"/></param>
+    public bool IsPlatform(string host) => !_named || _platform.Contains(host);
 
     /// <summary>
     /// Whether a host is the platform's or the hosting domain's - one of its

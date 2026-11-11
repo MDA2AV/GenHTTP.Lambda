@@ -13,8 +13,9 @@ namespace GenHTTP.Lambda.Web;
 
 /// <summary>
 /// The two pages of the hosting domain that are nobody's lambda: the one at
-/// its root, and the one at a subdomain nothing answers at. Both say where
-/// the apps here come from and lead to the site.
+/// its root, and the one at a subdomain nothing answers at - which a host
+/// nobody here answers for is shown as well. Both say where the apps here
+/// come from and lead to the site.
 /// </summary>
 /// <remarks>
 /// Rendered here, plain and on their own, rather than taken from the bundle of
@@ -55,8 +56,23 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
     public IHandler CreateHome() => new Home(this);
 
     /// <summary>
+    /// What answers at a host the installation does not answer for, on
+    /// every path: that no app is online there.
+    /// </summary>
+    /// <remarks>
+    /// Such a host is usually a domain pointed at the server before it is
+    /// given to a lambda - its certificate is issued first - or after it was
+    /// taken off one. Served the site, it was a copy of the site at somebody
+    /// else's name, which crawlers found, kept and came back to long after
+    /// the domain was a lambda's, whose pages then answered for paths it
+    /// never had. A page that is not found lets them go.
+    /// </remarks>
+    public IHandler CreateUnknown() => new Unknown(this);
+
+    /// <summary>
     /// What a request is told at a subdomain of the hosting domain no lambda
-    /// is online at - a page for a browser, a line of JSON for anything else.
+    /// is online at, and at a host nobody here answers for - a page for a
+    /// browser, a line of JSON for anything else.
     /// </summary>
     public IResponse Missing(IRequest request, string host)
     {
@@ -167,6 +183,18 @@ public sealed class HostingPages(SiteMeta meta, LambdaOptions options)
 
             return new(pages.Render(request, status, SiteMeta.HostingHomeTemplate, HomeFallback, request.GetHost()?.Name ?? string.Empty));
         }
+
+    }
+
+    /// <summary>
+    /// A host nobody here answers for.
+    /// </summary>
+    private sealed class Unknown(HostingPages pages) : IHandler
+    {
+
+        public ValueTask PrepareAsync(IServer server) => ValueTask.CompletedTask;
+
+        public ValueTask<IResponse?> HandleAsync(IRequest request) => new(pages.Missing(request, request.GetHost()?.Name ?? string.Empty));
 
     }
 

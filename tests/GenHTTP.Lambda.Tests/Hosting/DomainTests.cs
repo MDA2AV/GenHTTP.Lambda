@@ -25,6 +25,17 @@ public sealed class DomainTests
     private const string Domain = "shop.example.com";
 
     /// <summary>
+    /// A domain pointed at the server that no lambda has.
+    /// </summary>
+    private const string Unclaimed = "unclaimed.example.com";
+
+    /// <summary>
+    /// Where the installation says it is found, which is what tells its own
+    /// names from everybody else's.
+    /// </summary>
+    private const string PublicUrl = "https://genhttp.dev";
+
+    /// <summary>
     /// Answers at its root and at a path the platform has a route of its own
     /// for, so a request that reached the platform instead is told apart.
     /// </summary>
@@ -177,15 +188,16 @@ public sealed class DomainTests
     [TestMethod]
     public async Task TheWwwIsNoLongerSentOnOnceTheDomainIsGone()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = PublicUrl });
 
         var lambda = await ServeAsync(fixture, "shop");
 
         using (await fixture.SendAsync(HttpMethod.Delete, $"/api/v1/lambdas/{lambda.PrivateKey}/domain")) { }
 
-        using var response = await fixture.GetAsync("/api/v1/system", host: $"www.{Domain}");
+        using var response = await fixture.GetAsync("/start", host: $"www.{Domain}");
 
-        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, "any other host is the platform again");
+        Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "a host nobody here answers for again");
+        Assert.IsNull(response.Headers.Location);
     }
 
     [TestMethod]
@@ -203,15 +215,73 @@ public sealed class DomainTests
     }
 
     [TestMethod]
-    public async Task AnyOtherHostIsThePlatform()
+    public async Task AHostNobodyHasIsNeverThePlatform()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = PublicUrl });
+
+        // a domain pointed here whose owner has not entered it yet - a page of
+        // the site there would be found and kept under that name
+        using var page = await fixture.GetAsync("/en/source/demo-registration/files/tests/smoke.mjs", accept: "text/html", host: Unclaimed);
+
+        Assert.AreEqual(HttpStatusCode.NotFound, page.StatusCode, "so a crawler that was there lets the address go");
+
+        var markup = await page.GetContentAsync();
+
+        Assert.DoesNotContain(LambdaFixture.SpaMarkup, markup, "not a copy of the site at somebody else's name");
+        Assert.Contains("Nothing is running here", markup);
+        Assert.Contains(Unclaimed, markup, "named as it was asked for");
+        Assert.Contains($"href=\"{PublicUrl}/\"", markup, "and it leads to the site");
+
+        foreach (var path in (string[]) ["/", "/api/v1/system", "/mcp", "/robots.txt", "/sitemap.xml"])
+        {
+            using var response = await fixture.GetAsync(path, host: Unclaimed);
+
+            Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, path);
+            Assert.AreEqual("application/json", response.Content.Headers.ContentType?.MediaType, path);
+        }
+    }
+
+    [TestMethod]
+    public async Task ThePlatformAnswersAtItsOwnNames()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = PublicUrl, McpOrigins = ["www.genhttp.dev"] });
+
+        // its public address, a name its agents' endpoint is driven from, and
+        // localhost, which the container's health check asks
+        foreach (var host in (string[]) ["genhttp.dev", "GenHTTP.dev:443", "www.genhttp.dev", "localhost:8080"])
+        {
+            using var response = await fixture.GetAsync("/api/v1/system", host: host);
+
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode, host);
+        }
+    }
+
+    [TestMethod]
+    public async Task WithoutAPublicAddressAnyHostIsThePlatform()
     {
         await using var fixture = await LambdaFixture.CreateAsync();
 
         await ServeAsync(fixture, "shop");
 
+        // an installation that was not told its name cannot tell it from
+        // anybody else's - a laptop is reached by whatever its owner types
         using var response = await fixture.GetAsync("/api/v1/system", host: "somewhere-else.example.com");
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task TheRequestLineNamesAHostNobodyHas()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = PublicUrl });
+
+        using (await fixture.GetAsync("/en/docs", host: Unclaimed)) { }
+
+        var line = RequestLines(fixture).Last();
+
+        Assert.IsNull(line.Lambda);
+        Assert.AreEqual(Unclaimed, line.Domain);
+        Assert.StartsWith($"GET {Unclaimed}/en/docs", line.Text);
     }
 
     [TestMethod]
@@ -252,7 +322,7 @@ public sealed class DomainTests
     [TestMethod]
     public async Task LeavingTheTierStopsServingTheDomainButKeepsIt()
     {
-        await using var fixture = await LambdaFixture.CreateAsync();
+        await using var fixture = await LambdaFixture.CreateAsync(o => o with { PublicUrl = PublicUrl });
 
         var lambda = await ServeAsync(fixture, "shop");
 
@@ -260,7 +330,8 @@ public sealed class DomainTests
 
         using (var response = await fixture.GetAsync("/start", host: Domain))
         {
-            Assert.AreNotEqual("mine", await response.GetContentAsync(), "the domain is the platform's again");
+            Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode, "the domain is nobody's here again");
+            Assert.AreNotEqual("mine", await response.GetContentAsync());
         }
 
         using (var response = await fixture.GetAsync("http://shop.localhost/start"))

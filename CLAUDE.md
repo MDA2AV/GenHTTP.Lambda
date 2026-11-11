@@ -179,6 +179,16 @@ domain named after its public key - `https://{key}.genhttp.run/`
   then that is where it answers, and the name without is not sent there.
   Never served at both names (two sites to a search engine), and never
   where the `www.` is another lambda's domain or the platform's own name.
+- **A host nobody has is never the platform - decided by the owner.** With
+  a public address (`LAMBDA_PUBLIC_URL`) the platform answers only at its
+  own names - `localhost`, that address's host, the MCP origins - and any
+  other host that is no lambda's gets the page of a subdomain with nothing
+  online, 404, on every path (`UnknownHost`). A domain pointed here before
+  its owner entered it served the site under its name, and crawlers kept
+  asking for the site's paths there once it was a lambda's. The ACME
+  challenge is still answered for every host. Without a public address the
+  installation cannot tell its names from others', and every host is the
+  platform's.
 - **Finding a lambda by an address reads the key as it is spelled
   (`LambdaKeys.TryRead`), never by the rules for claiming one**
   (`TryNormalize`): a rule made later - a reserved name, `xn--` - must not

@@ -232,7 +232,8 @@ public sealed class Application : IAsyncDisposable
     /// <summary>
     /// Builds the routes of the system: a lambda's own domain and its
     /// subdomain of the hosting domain go straight to the lambda, the hosting
-    /// domain itself to its page, and everything else to the platform.
+    /// domain itself to its page, the platform's names to the platform, and
+    /// any other host to a page saying nothing is there.
     /// </summary>
     private static IHandler BuildHandler(IServiceProvider services, LambdaOptions options)
     {
@@ -244,7 +245,8 @@ public sealed class Application : IAsyncDisposable
 
         var hosted = LambdaRoute.Create(services, new SubdomainLocator(meta, pages));
 
-        var router = new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, hosted, pages.CreateHome(), BuildPlatform(services, options));
+        var router = new DomainRouter(services.GetRequiredService<DomainRegistry>(), domains, hosted, pages.CreateHome(), pages.CreateUnknown(),
+                                      BuildPlatform(services, options));
 
         // ahead of the router, so a challenge for a lambda's own domain is
         // answered here rather than handed to the lambda
