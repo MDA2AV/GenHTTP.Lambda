@@ -1005,6 +1005,11 @@ change; the helpers are in `OperationLog`.
   repository today; keep it that way. A fake is acceptable only for something
   outside our process (`FakeAgent` stands in for the build agent's runner).
 - Each test has its own temporary data directory and runs in parallel.
+- **A test that runs the .NET SDK builds through `DotnetBuild`** - two at a
+  time for the whole run, without build servers. The tests that build every
+  demo used to start them all at once beside the parallel tests, and ran a
+  machine with 8 GB and no swap out of memory, twice. Never start builds of
+  your own beside it.
 - MSTest, `TreatWarningsAsErrors` is on.
 
 ```bash
