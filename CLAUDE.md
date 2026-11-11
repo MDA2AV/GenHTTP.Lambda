@@ -933,9 +933,10 @@ change; the helpers are in `OperationLog`.
 - The framework source is normally checked out beside this repository
   (`../GenHTTP`). Read it instead of decompiling the NuGet packages.
 - Known and already dealt with: GenHTTP releases the request headers once a body
-  is bound, so declare path and query parameters *before* the body parameter, and
-  check headers in a concern in front of the resource, not inside a
-  body-taking method (see `AdminAuthentication`). A new instance of the same kind of
+  is bound, so check headers in a concern in front of the resource, not inside
+  a body-taking method (see `AdminAuthentication`). Since 11.3 the framework
+  binds path and query parameters before the body whatever their order, so
+  the order of a method's parameters no longer matters. A new instance of the same kind of
   problem is a bug to flag, not to work around again.
 
 ## Testing
