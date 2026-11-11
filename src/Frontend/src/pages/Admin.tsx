@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useAdminToken } from '../admin';
 import { ApiError, api, refusedToken } from '../api';
 import { IconLock, IconSpinner } from '../components/Icons';
+import { BlocksSection } from '../console/BlocksSection';
 import type { Access } from '../console/context';
 import { LambdaDetail } from '../console/LambdaDetail';
 import { LambdasSection } from '../console/LambdasSection';
@@ -14,11 +15,12 @@ import { SettingsSection } from '../console/SettingsSection';
 import { usePageMeta } from '../meta';
 import type { Theme } from '../theme';
 
-type SectionId = 'server' | 'lambdas' | 'log' | 'settings' | 'limits';
+type SectionId = 'server' | 'lambdas' | 'blocks' | 'log' | 'settings' | 'limits';
 
 const SECTIONS: { id: SectionId; title: string; note: string }[] = [
   { id: 'server', title: 'Server', note: 'Memory, connections and what the engine is doing' },
   { id: 'lambdas', title: 'Lambdas', note: 'Every lambda on the installation' },
+  { id: 'blocks', title: 'Blocked addresses', note: 'Addresses refused before anything else, for two weeks' },
   { id: 'log', title: 'Log', note: 'What the server and the lambdas are printing, live' },
   { id: 'settings', title: 'Settings', note: 'What the site shows, switched without a restart' },
   { id: 'limits', title: 'Limits', note: 'What a lambda may have in its tier' },
@@ -115,6 +117,8 @@ export function Admin({ theme }: { theme: Theme }) {
             <LambdaDetail key={detail} access={access} publicKey={decodeURIComponent(detail)} />
           ) : section === 'lambdas' ? (
             <LambdasSection access={access} />
+          ) : section === 'blocks' ? (
+            <BlocksSection access={access} />
           ) : section === 'log' ? (
             <LogSection access={access} />
           ) : section === 'settings' ? (

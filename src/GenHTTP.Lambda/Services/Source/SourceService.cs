@@ -132,6 +132,13 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
 
     #region Public
 
+    /*
+     * The source of a lambda the operator blocked is not found while the
+     * block lasts, as though it were not published - what it was blocked for
+     * is not handed out here either. The publication itself is kept, and is
+     * back once the block is lifted.
+     */
+
     public SourceListing List(string? search, SourceOrder order, int skip, int take)
     {
         using var database = databases.CreateDbContext();
@@ -139,11 +146,11 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         // every published source at once: the words searched for may be in
         // what the showcase says, and the showcase is a table of its own - and
         // a row here is a few hundred bytes
-        var rows = Rows(database.Sources.Where(s => s.Published)).ToList();
+        var rows = Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null)).ToList();
 
-        var newest = Newest(database, database.Sources.Where(s => s.Published).Select(s => s.LambdaId));
+        var newest = Newest(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId));
 
-        var showcases = Showcases(database, database.Sources.Where(s => s.Published).Select(s => s.LambdaId));
+        var showcases = Showcases(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId));
 
         var entries = rows.Select(r => Entry(r, newest, showcases)).ToList();
 
@@ -178,7 +185,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     {
         using var database = databases.CreateDbContext();
 
-        var row = Rows(database.Sources.Where(s => s.Published && s.Lambda!.PublicKey == publicKey)).FirstOrDefault();
+        var row = Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)).FirstOrDefault();
 
         if (row == null)
         {
@@ -209,7 +216,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     {
         using var database = databases.CreateDbContext();
 
-        var row = Rows(database.Sources.Where(s => s.Published && s.Lambda!.PublicKey == publicKey)).FirstOrDefault();
+        var row = Rows(database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)).FirstOrDefault();
 
         if (row == null)
         {
@@ -302,7 +309,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     {
         using var database = databases.CreateDbContext();
 
-        var id = database.Sources.Where(s => s.Published && s.Lambda!.PublicKey == publicKey)
+        var id = database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)
                          .Select(s => (long?)s.LambdaId)
                          .FirstOrDefault();
 
@@ -336,7 +343,7 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         using var database = databases.CreateDbContext();
 
         return database.Sources.AsNoTracking()
-                       .Where(s => s.Published && s.Lambda!.PublicKey == publicKey)
+                       .Where(s => s.Published && s.Lambda!.Blocked == null && s.Lambda!.PublicKey == publicKey)
                        .Select(s => new SourceStars(s.LambdaId, s.Stars))
                        .FirstOrDefault();
     }
@@ -346,11 +353,11 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
         using var database = databases.CreateDbContext();
 
         var keys = database.Sources.AsNoTracking()
-                           .Where(s => s.Published)
+                           .Where(s => s.Published && s.Lambda!.Blocked == null)
                            .Select(s => new { s.LambdaId, s.Lambda!.PublicKey })
                            .ToList();
 
-        var newest = Newest(database, database.Sources.Where(s => s.Published).Select(s => s.LambdaId));
+        var newest = Newest(database, database.Sources.Where(s => s.Published && s.Lambda!.Blocked == null).Select(s => s.LambdaId));
 
         return [.. keys.OrderBy(k => k.PublicKey, StringComparer.Ordinal)
                        .Select(k => new SourceAddress(k.PublicKey, newest.TryGetValue(k.LambdaId, out var n) ? n.Created : null))];
@@ -492,6 +499,8 @@ public sealed class SourceService(IDbContextFactory<LambdaDbContext> databases, 
     private static LambdaEntity RequireEditable(LambdaDbContext database, string privateKey)
     {
         var lambda = Require(database, privateKey);
+
+        LambdaGuard.EnsureUnblocked(lambda);
 
         return lambda.Tier == LambdaTier.Demo
              ? throw LambdaException.Forbidden(LambdaGuard.ReadOnly(lambda.PublicKey))

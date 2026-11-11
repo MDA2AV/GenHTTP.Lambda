@@ -247,6 +247,8 @@ public sealed class ShowcaseService(IDbContextFactory<LambdaDbContext> databases
     {
         var lambda = Require(database, privateKey);
 
+        LambdaGuard.EnsureUnblocked(lambda);
+
         return lambda.Tier == LambdaTier.Demo
              ? throw LambdaException.Forbidden(LambdaGuard.ReadOnly(lambda.PublicKey))
              : lambda;

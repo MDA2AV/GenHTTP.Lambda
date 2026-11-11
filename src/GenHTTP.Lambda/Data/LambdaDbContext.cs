@@ -32,6 +32,10 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
 
     public DbSet<SecretEntity> Secrets => Set<SecretEntity>();
 
+    public DbSet<EditorAddressEntity> EditorAddresses => Set<EditorAddressEntity>();
+
+    public DbSet<AddressBlockEntity> AddressBlocks => Set<AddressBlockEntity>();
+
     /// <summary>
     /// Every date is written in UTC, and read back as UTC.
     /// </summary>
@@ -76,6 +80,8 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
         lambdas.Property(l => l.Domain).HasColumnName("domain");
         lambdas.Property(l => l.View).HasColumnName("editor_view").HasConversion<string>();
         lambdas.Property(l => l.SecretSalt).HasColumnName("secret_salt");
+        lambdas.Property(l => l.Blocked).HasColumnName("blocked");
+        lambdas.Property(l => l.BlockReason).HasColumnName("block_reason");
 
         lambdas.HasIndex(l => l.PublicKey).IsUnique();
         lambdas.HasIndex(l => l.PrivateKey).IsUnique();
@@ -254,6 +260,36 @@ public sealed class LambdaDbContext(DbContextOptions<LambdaDbContext> options) :
                .WithMany()
                .HasForeignKey(s => s.FeatureId)
                .OnDelete(DeleteBehavior.Cascade);
+
+        var editors = builder.Entity<EditorAddressEntity>();
+
+        editors.ToTable("editor_addresses");
+
+        editors.HasKey(e => new { e.LambdaId, e.Address });
+
+        editors.Property(e => e.LambdaId).HasColumnName("lambda_id");
+        editors.Property(e => e.Address).HasColumnName("address");
+        editors.Property(e => e.FirstSeen).HasColumnName("first_seen");
+        editors.Property(e => e.LastSeen).HasColumnName("last_seen");
+
+        editors.HasOne<LambdaEntity>()
+               .WithMany()
+               .HasForeignKey(e => e.LambdaId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        var blocks = builder.Entity<AddressBlockEntity>();
+
+        blocks.ToTable("address_blocks");
+
+        blocks.HasKey(b => b.Id);
+
+        blocks.Property(b => b.Id).HasColumnName("id");
+        blocks.Property(b => b.Address).HasColumnName("address");
+        blocks.Property(b => b.Reason).HasColumnName("reason");
+        blocks.Property(b => b.PublicKey).HasColumnName("public_key");
+        blocks.Property(b => b.Created).HasColumnName("created");
+
+        blocks.HasIndex(b => b.Address).IsUnique();
 
         deployments.HasOne(d => d.Lambda)
                    .WithMany(l => l.Deployments)

@@ -156,7 +156,9 @@ public sealed class FeatureService(IDbContextFactory<LambdaDbContext> databases,
                             .Join(database.Lambdas, f => f.LambdaId, l => l.Id, (f, l) => new { Feature = f, Lambda = l })
                             .FirstOrDefault();
 
-        if (found == null)
+        // blocking takes the previews offline; this is for one that was put
+        // online at the very moment the lambda was blocked
+        if (found == null || found.Lambda.Blocked != null)
         {
             return null;
         }

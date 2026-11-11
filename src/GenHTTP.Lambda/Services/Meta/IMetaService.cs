@@ -134,7 +134,33 @@ public interface IMetaService
     /// <summary>
     /// Removes the lambda, its versions and its workspace.
     /// </summary>
-    void Delete(string privateKey);
+    /// <param name="origin">Who is asking: the operator may delete a lambda they blocked, its owner may not</param>
+    void Delete(string privateKey, string? origin = null);
+
+    /// <summary>
+    /// Blocks the lambda: takes it and the previews of its features offline,
+    /// and refuses every change to it from here on, until the block is lifted.
+    /// Only ever done by the operator.
+    /// </summary>
+    /// <remarks>
+    /// Its code, its data and its history are kept and can still be read; it
+    /// may still be deleted by the operator. Blocked again, it keeps the time
+    /// it was first blocked and takes the new reason.
+    /// </remarks>
+    /// <param name="reason">Why, in the operator's words - never shown to the owner</param>
+    LambdaInfo Block(string privateKey, string? reason);
+
+    /// <summary>
+    /// Lifts the block of a lambda. It stays offline until its owner, or the
+    /// operator, puts it online again.
+    /// </summary>
+    LambdaInfo Unblock(string privateKey);
+
+    /// <summary>
+    /// The addresses the lambda was changed from lately, most recent first -
+    /// for the operator who blocks it, to block them as well.
+    /// </summary>
+    IReadOnlyList<EditorAddress> GetEditorAddresses(string privateKey);
 
     /// <summary>
     /// Undeploys and removes lambdas that have outlived their tier.
@@ -165,7 +191,8 @@ public interface IMetaService
     /// </summary>
     /// <remarks>
     /// Refuses a demo, whose editor key is announced: reading one is the
-    /// point, and anybody could otherwise replace what it serves.
+    /// point, and anybody could otherwise replace what it serves - and a
+    /// lambda the operator blocked. Notes where the change comes from.
     /// </remarks>
     long RequireEditable(string privateKey);
 

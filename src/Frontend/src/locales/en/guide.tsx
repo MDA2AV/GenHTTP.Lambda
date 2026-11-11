@@ -437,6 +437,9 @@ export const guide = {
     'Your code runs on a shared server, so some of C# is refused before it compiles: starting processes, opening sockets of your own, loading assemblies, reaching the file system outside your workspace, and reflection used to get around any of that. So is waiting for a task with .Result or .Wait() instead of awaiting it: requests run on one thread per core, and the task would have to finish on the very thread that is waiting for it.',
   limits2:
     'Everything else is there, including the whole of the GenHTTP module API. If something is refused you are told which line and why, not simply that it failed.',
+  /** The last paragraph of "What it will not let you do": what happens to a lambda that breaks the terms. */
+  limitsBlocked:
+    'A lambda that breaks the terms - phishing, malware, attacks on others - can be blocked by whoever runs the site. It goes offline, and nothing about it can be changed or put online until the block is lifted; the control center says so at the top. What it has can still be read and downloaded.',
 
   away: ((k) => (
     <>

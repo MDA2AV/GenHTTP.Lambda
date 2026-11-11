@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Co możemy z tym zrobić',
     action:
-      'Wszystko, co tu wdrożono, możemy w dowolnej chwili wyłączyć lub usunąć, bez uprzedzenia i bez obowiązku wyjaśnień. W praktyce dzieje się tak, gdy coś łamie powyższe zasady, gdy zagraża serwerowi, z którego korzystają wszyscy inni, albo gdy ktoś to zgłosi i okaże się, że ma rację.',
+      'Wszystko, co tu wdrożono, możemy w dowolnej chwili wyłączyć lub usunąć, bez uprzedzenia i bez obowiązku wyjaśnień. W praktyce dzieje się tak, gdy coś łamie powyższe zasady, gdy zagraża serwerowi, z którego korzystają wszyscy inni, albo gdy ktoś to zgłosi i okaże się, że ma rację. Lambdę można też zablokować: pozostaje wtedy offline i nie można jej już zmieniać, a adresy, z których ją zmieniano, mogą zostać odrzucane przez cały serwis na dwa tygodnie.',
     lastingTitle: 'Jak długo coś tu zostaje',
     lasting: (hours, days) =>
       `Wdrożenie jest dostępne przez około ${hours} godzin. Lambda, której nie otwierasz, zostaje usunięta razem ze wszystkimi wersjami kodu – około ${days} dni od twojej ostatniej aktywności przy niej. Zapisanie albo wdrożenie liczy się jako aktywność, więc to, nad czym pracujesz, zostaje. Nic tutaj nie jest kopią zapasową: trzymaj własną kopię kodu, na którym ci zależy.`,

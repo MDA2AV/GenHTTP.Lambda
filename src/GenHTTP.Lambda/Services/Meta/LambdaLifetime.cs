@@ -40,7 +40,7 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
     /// When the sweep removes the lambda unless it is used before then.
     /// </summary>
     public DateTime? KeptUntil(LambdaEntity lambda)
-        => !Kept(lambda) ? Quiet(lambda) + limits.Get().RemovedAfter : null;
+        => !Kept(lambda) && lambda.Blocked == null ? Quiet(lambda) + limits.Get().RemovedAfter : null;
 
     /// <summary>
     /// Whether the tier of a lambda keeps it, rather than the sweeps deciding.
@@ -90,9 +90,11 @@ public sealed class LambdaLifetime(IDbContextFactory<LambdaDbContext> databases,
 
         // demos are the installation's own, and being untouched is their
         // normal state rather than a sign that nobody wants them; premium
-        // lambdas are kept by their tier (see Kept)
+        // lambdas are kept by their tier (see Kept). A blocked lambda is the
+        // operator's to delete or let go: removed by itself, its key would be
+        // free again for whoever it was blocked for
         var expired = database.Lambdas
-                              .Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.Modified < abandoned
+                              .Where(l => l.Tier != LambdaTier.Demo && l.Tier != LambdaTier.Premium && l.Blocked == null && l.Modified < abandoned
                                              && (l.LastSeen == null || l.LastSeen < abandoned))
                               .ToList();
 

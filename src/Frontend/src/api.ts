@@ -33,6 +33,12 @@ export interface Lambda {
   view: string;
   /** Where it is cloned with git and pushed to - holding the editor key, like editorPath. */
   gitPath: string;
+  /**
+   * Since when the operator has blocked it; absent while it is not. A blocked
+   * lambda is offline and every change to it is refused, until the operator
+   * lifts the block.
+   */
+  blocked?: string;
 }
 
 /** The tiers there are. Only an administrator moves a lambda between them. */
@@ -807,6 +813,8 @@ export interface LambdaOverview {
   keptUntil?: string;
   domain?: string;
   domainServed: boolean;
+  /** Since when it is blocked; absent while it is not. */
+  blocked?: string;
 }
 
 /** One lambda in full, for the page the panel shows it on. */
@@ -816,6 +824,44 @@ export interface AdminLambdaDetail {
   versions: VersionInfo[];
   activations: Activation[];
   tiers: string[];
+  /** Its block, while it has one. */
+  block?: { since: string; reason?: string | null } | null;
+  /** The addresses it was changed from lately, most recent first. */
+  editorAddresses: EditorAddress[];
+  /** The address the panel asks from, as a block would cover it; absent on one of the installation's own networks. */
+  you?: string | null;
+}
+
+/** An address a lambda was changed from with its editor key. */
+export interface EditorAddress {
+  address: string;
+  /** What a block of it covers: the address, or the /64 of an IPv6 one. */
+  range: string;
+  firstSeen: string;
+  lastSeen: string;
+  /** Whether a block covers it now. */
+  blocked: boolean;
+}
+
+/** An address the server refuses before anything else - apart from the panel. */
+export interface AddressBlock {
+  id: number;
+  /** An IPv4 address, or the /64 of an IPv6 one. */
+  address: string;
+  reason?: string | null;
+  /** The lambda it was blocked for, by the key it had then. */
+  lambda?: string | null;
+  created: string;
+  expires: string;
+  /** Requests it refused since the server came up. */
+  refused: number;
+  lastRefused?: string | null;
+}
+
+export interface AddressBlockListing {
+  blocks: AddressBlock[];
+  /** The address the panel asks from, as a block would cover it. */
+  you?: string | null;
 }
 
 /** One line of what the server, or a lambda on it, has said. */
@@ -1131,8 +1177,16 @@ export interface AdminLimits {
 }
 
 export class ApiError extends Error {
-  constructor(readonly status: number, message: string) {
+  /**
+   * What kind of refusal the platform says it is - `Forbidden`, `Blocked`, … -
+   * where it says; absent for one made before its own checks, like a token
+   * that was not accepted.
+   */
+  readonly kind?: string;
+
+  constructor(readonly status: number, message: string, kind?: string) {
     super(message);
+    this.kind = kind;
   }
 }
 
@@ -1157,7 +1211,8 @@ async function request<T>(path: string, init?: RequestInit, allow: number[] = []
   }
 
   if (!response.ok && !allow.includes(response.status)) {
-    throw new ApiError(response.status, await describe(response));
+    const { message, kind } = await describe(response);
+    throw new ApiError(response.status, message, kind);
   }
 
   if (response.status === 204) {
@@ -1167,12 +1222,12 @@ async function request<T>(path: string, init?: RequestInit, allow: number[] = []
   return (await response.json()) as T;
 }
 
-async function describe(response: Response): Promise<string> {
+async function describe(response: Response): Promise<{ message: string; kind?: string }> {
   try {
     const body = await response.json();
-    return body.message ?? body.error ?? `The server responded with ${response.status}.`;
+    return { message: body.message ?? body.error ?? `The server responded with ${response.status}.`, kind: body.message ? body.error : undefined };
   } catch {
-    return `The server responded with ${response.status}.`;
+    return { message: `The server responded with ${response.status}.` };
   }
 }
 
@@ -1234,6 +1289,19 @@ export const api = {
     remove: (token: string, publicKey: string) =>
       request<void>(`/admin/lambdas/${encodeURIComponent(publicKey)}`,
         withToken(token, { method: 'DELETE' })),
+
+    block: (token: string, publicKey: string, reason: string, addresses: string[]) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/block`,
+        withToken(token, { method: 'POST', body: JSON.stringify({ reason, addresses }) })),
+
+    unblock: (token: string, publicKey: string) =>
+      request<AdminLambdaDetail>(`/admin/lambdas/${encodeURIComponent(publicKey)}/block`,
+        withToken(token, { method: 'DELETE' })),
+
+    blocks: (token: string) => request<AddressBlockListing>('/admin/blocks', withToken(token)),
+
+    removeBlock: (token: string, id: number) =>
+      request<void>(`/admin/blocks/${id}`, withToken(token, { method: 'DELETE' })),
 
     settings: (token: string) => request<AdminSettings>('/admin/settings', withToken(token)),
 

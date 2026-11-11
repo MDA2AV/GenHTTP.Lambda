@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Lo que podemos hacer al respecto',
     action:
-      'Cualquier cosa desplegada aquí puede desconectarse o eliminarse en cualquier momento, sin aviso y sin obligación de dar explicaciones. En la práctica, eso pasa cuando algo incumple las reglas de arriba, cuando pone en riesgo la máquina que todos comparten o cuando alguien lo denuncia y resulta que tiene razón.',
+      'Cualquier cosa desplegada aquí puede desconectarse o eliminarse en cualquier momento, sin aviso y sin obligación de dar explicaciones. En la práctica, eso pasa cuando algo incumple las reglas de arriba, cuando pone en riesgo la máquina que todos comparten o cuando alguien lo denuncia y resulta que tiene razón. Una lambda también puede ser bloqueada: sigue desconectada y ya no se puede cambiar, y las direcciones desde las que se cambió pueden ser rechazadas por todo el sitio durante dos semanas.',
     lastingTitle: 'Cuánto dura cada cosa',
     lasting: (hours, days) =>
       `Un despliegue sigue accesible unas ${hours} horas. Una lambda que no hayas abierto se elimina, con todas las versiones de su código, unos ${days} días después de la última vez que la tocaste. Guardar o desplegar cuenta como tocarla, así que lo que tengas entre manos se conserva. Nada de esto es una copia de seguridad: guarda tu propia copia del código que te importe.`,

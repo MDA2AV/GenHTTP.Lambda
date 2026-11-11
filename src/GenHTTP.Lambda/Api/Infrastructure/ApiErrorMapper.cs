@@ -24,7 +24,7 @@ public sealed class ApiErrorMapper : IErrorMapper<LambdaException>
         {
             LambdaError.NotFound => ResponseStatus.NotFound,
             LambdaError.Conflict => ResponseStatus.Conflict,
-            LambdaError.Forbidden => ResponseStatus.Forbidden,
+            LambdaError.Forbidden or LambdaError.Blocked => ResponseStatus.Forbidden,
             LambdaError.TooMany => ResponseStatus.TooManyRequests,
             _ => ResponseStatus.BadRequest
         };

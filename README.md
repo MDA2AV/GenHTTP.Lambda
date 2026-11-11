@@ -804,7 +804,8 @@ its keys and passwords, which the owner can enter and replace - the ones the
 app is waiting for first, and the overview asks for them too. Entering one there switches secrets on if the agent left them off.
 The **full** view is every section, as before. In both, a browser that holds
 the admin token has one more section after all the others, **Admin**, which
-nobody else sees (see Administration).
+nobody else sees: it blocks the lambda and lifts the block (see
+[Blocking](#blocking)).
 
 Each lambda says which view it opens in, `view` - `Full` or `Simple` - set
 when it is created (`POST /lambdas`, `create_lambda`) and changed later
@@ -1365,6 +1366,7 @@ server's configuration and are set in the administration panel while it runs
 | `LAMBDA_LOG_LAMBDA_OUTPUT`          | `true`           | keep what lambdas print, filed under them   |
 | `LAMBDA_LOG_REPEAT_WINDOW_SECONDS`  | `10`             | fold identical lines; zero writes every one |
 | `LAMBDA_LOG_CLIENT_ADDRESS`         | `true`           | record the address a request came from      |
+| `LAMBDA_UNBLOCKABLE_NETWORKS`       | own networks     | never recorded against a lambda nor blocked: loopback, the private ranges, link local and shared space by default; a list of networks, or `none` (see [Blocking](#blocking)) |
 | `LAMBDA_LOG_GEO`                    | `true`           | say which country a range is registered in  |
 | `LAMBDA_LOG_GEO_REFRESH_HOURS`      | `168`            | how often the registry files are refetched  |
 | `LAMBDA_LOG_GEO_PLACES`             | `true`           | also fetch the town and network databases   |
@@ -1932,6 +1934,50 @@ and `/logs` are not there, and answer 404.
 The server figures and the log follow the same token. Only owners and the
 operator see telemetry: the owner of a lambda its own, in the editor, and the
 operator everybody's.
+
+### Blocking
+
+What the operator does about a lambda that breaks the terms - phishing,
+malware, attacks on others. **Block** is on its page in the panel and in the
+**Admin** section of its editor (`POST /admin/lambdas/{publicKey}/block`), and
+**Lift the block** beside it (`DELETE …/block`).
+
+- **A blocked lambda is offline and frozen.** Blocking takes it offline, and
+  the previews of its features, and from then on every change is refused -
+  through the editor, the API, MCP and git alike - with `403` and the kind
+  `Blocked`, whose message tells an agent not to try again. The operator's own
+  actions on it are refused too, but two: lifting the block, and deleting it.
+  Its owner can still read and export it; the code is theirs. They are told it
+  was blocked, never why: the reason is the operator's note. Its published
+  source is not found while the block lasts, and a blocked lambda is never
+  removed for going unused - removed by itself, its key would be free again for
+  whoever it was blocked for. Lifting the block leaves it offline.
+- **The addresses it was changed from.** Where the server keeps addresses
+  (`LAMBDA_LOG_CLIENT_ADDRESS`), every lambda remembers the addresses it was
+  created, saved, put online or otherwise changed from with its editor key,
+  through any door, for 30 days after each was last seen (`EditorAddresses`,
+  written at most hourly). The panel shows them with the lambda, and blocking
+  it can block them as well - all of them are offered but the operator's own,
+  which is marked. The operator's requests in the panel are not recorded.
+- **Blocked addresses** are refused before anything else is done for them -
+  the outermost concern of the host (`AddressBlockConcern`), ahead of the
+  redirects, the request log and every lambda: a plain `403`, counted against
+  its block in memory instead of logged. An IPv4 address is blocked as it is,
+  an IPv6 address with its /64, since a device picks a new address within it
+  by itself. Each block is let go of two weeks after it was made, by a job that
+  runs hourly; the panel's **Blocked addresses** section (`GET /admin/blocks`,
+  `DELETE /admin/blocks/{id}`) lists them with why, which lambda, until when and
+  how many requests each refused, and lifts them.
+- **The panel stays reachable from a blocked address** - its page, its assets,
+  `/api/v1/system` and the API behind the token - so an operator who blocked
+  themselves lifts it there; the panel says when their own address is blocked.
+  Nothing else is let through, and the token is asked for as always.
+- **The installation's own networks are never recorded nor blocked**
+  (`LAMBDA_UNBLOCKABLE_NETWORKS`): the build agent reaches the MCP from a
+  container on one, with a fresh address each build, and a proxy in front of
+  the server would be one. An installation reached through a proxy on its own
+  network therefore cannot block addresses - the connection is the proxy's,
+  and a forwarded header is written by whoever sends it.
 
 ### Limits
 

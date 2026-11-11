@@ -26,7 +26,9 @@ import { AgentMark, Ago, Figure, Section, Sparkline } from './ui';
 export function SimpleOverview({ control }: { control: Control }) {
   const said = useEditorT().simple;
   const { lambda, agent } = control;
-  const demo = isDemo(lambda.tier);
+  // nothing to offer for what nobody can change: a demo, or an app the
+  // operator blocked
+  const demo = isDemo(lambda.tier) || lambda.blocked != null;
   const teaser = !demo && lambda.tier !== 'Premium';
   const problems = (control.summary?.recentProblems.length ?? 0) > 0;
 
@@ -104,7 +106,7 @@ function Status({ control }: { control: Control }) {
   // go online, or by somebody who went back. Not while the agent works: what
   // it saved last may be something it is still fixing, and it puts online
   // what it finishes
-  const pending = live && latest != null && latest !== lambda.activeVersion && !isActive(control.agent.state?.job) && !isDemo(lambda.tier);
+  const pending = live && latest != null && latest !== lambda.activeVersion && !isActive(control.agent.state?.job) && !isDemo(lambda.tier) && !lambda.blocked;
 
   const since = summary?.activation ? span(summary.activation.seconds, t.shared) : null;
 
@@ -123,7 +125,7 @@ function Status({ control }: { control: Control }) {
                 ? since
                   ? said.onlineFor(<strong className="font-medium text-ink-900 dark:text-slate-100">{since}</strong>)
                   : said.onlineNow
-                : said.offlineText}
+                : lambda.blocked ? null : said.offlineText}
             </p>
           </div>
 
@@ -133,7 +135,7 @@ function Status({ control }: { control: Control }) {
               {said.openApp}
             </a>
           ) : (
-            !isDemo(lambda.tier) && (
+            !isDemo(lambda.tier) && !lambda.blocked && (
               <button type="button" onClick={() => control.deploy()} disabled={busy !== null} className="btn-primary !px-4 !py-1.5 text-[13px]">
                 {busy === 'deploy' ? <IconSpinner className="h-3.5 w-3.5" /> : <IconPlay className="h-3.5 w-3.5" />}
                 {said.putOnline}

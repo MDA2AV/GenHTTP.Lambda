@@ -118,7 +118,8 @@ public static class ApiDocumentation
     public const string NoFeature = "No lambda has this editor key, or the lambda has no feature with this key: it never existed, or it was merged or deleted.";
 
     public const string Demo = "The lambda is a demo, which anybody may read and nobody may change. Create a lambda of your own from it instead: "
-                             + "`POST /lambdas` with the demo's id as `template`.";
+                             + "`POST /lambdas` with the demo's id as `template`. Or the operator blocked it (`Blocked`): nothing about it can be "
+                             + "changed until they lift the block, and asking again will not help.";
 
     public const string Diagnostics = "The code does not compile. `diagnostics` holds what the compiler said, with the file, line and column of each problem; "
                                     + "nothing was put online, and whatever was online before still is.";

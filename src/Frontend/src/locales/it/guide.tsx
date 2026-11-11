@@ -432,6 +432,8 @@ export const guide: Messages['guide'] = {
     'Il tuo codice gira su un server condiviso, quindi una parte di C# viene rifiutata prima ancora della compilazione: avviare processi, aprire socket propri, caricare assembly, accedere al file system fuori dal workspace e usare la reflection per aggirare uno di questi limiti. Lo stesso vale per attendere un task con .Result o .Wait() invece di usare await: le richieste girano su un thread per core, e il task dovrebbe terminare proprio sul thread che lo sta aspettando.',
   limits2:
     'Tutto il resto c’è, compresa l’intera API dei moduli GenHTTP. Se qualcosa viene rifiutato, vedi quale riga e perché, non solo che non ha funzionato.',
+  limitsBlocked:
+    'Una lambda che viola i termini (phishing, malware, attacchi ad altri) può essere bloccata da chi gestisce il sito. Va offline e finché il blocco non viene tolto non si può né modificare né mettere online; il pannello di controllo lo dice in alto. Quello che contiene si può ancora leggere e scaricare.',
 
   away: (k) => (
     <>

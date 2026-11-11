@@ -54,6 +54,13 @@ export const frame: EditorMessages['frame'] = {
       {start('buat lambda Anda sendiri dari demo ini')}.
     </>
   ),
+  blockedTitle: 'Diblokir oleh operator situs ini.',
+  blocked: (write) => (
+    <>
+      Lambda ini offline, dan tidak bisa lagi diubah atau dijadikan online. Semua yang dimilikinya tetap bisa dibaca dan
+      diunduh. Kalau Anda merasa ini keliru, {write('hubungi kami')}.
+    </>
+  ),
   keep: 'Simpan link ini. Hanya lewat link ini Anda bisa masuk lagi ke lambda ini.',
   gotIt: 'Mengerti',
   rejected: (version) => `Versi ${version} gagal online`,

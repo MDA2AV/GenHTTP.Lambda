@@ -82,6 +82,8 @@ public sealed class MetaService : IMetaService
 
     private EventReader Events { get; }
 
+    private EditorAddresses Editors { get; }
+
     private ILogger Logger { get; }
 
     /// <summary>
@@ -101,7 +103,7 @@ public sealed class MetaService : IMetaService
     public MetaService(IDbContextFactory<LambdaDbContext> databases, IStorageService storage, IDeploymentService deployments,
         LambdaOptions options, ILimitsService limits, ILogBook book, IDatabaseVault databaseVault, LambdaHosting hosting, LambdaHistory history,
         LambdaLifetime lifetime, LambdaRemoval removal, LambdaDescriber describer, VersionFactsCache facts, EventReader events,
-        DatabaseChanges changes, ILogger<MetaService> logger)
+        EditorAddresses editors, DatabaseChanges changes, ILogger<MetaService> logger)
     {
         ByKey = new ResolutionCache<string>(changes);
         ById = new ResolutionCache<long>(changes);
@@ -120,6 +122,7 @@ public sealed class MetaService : IMetaService
         Describer = describer;
         Facts = facts;
         Events = events;
+        Editors = editors;
         Logger = logger;
     }
 
@@ -258,11 +261,22 @@ public sealed class MetaService : IMetaService
         }
     }
 
-    public void Delete(string privateKey)
+    public void Delete(string privateKey, string? origin = null)
     {
         using var database = Databases.CreateDbContext();
 
         var lambda = LambdaGuard.Require(database, privateKey);
+
+        // the operator may delete what they blocked, which is one of the two
+        // ways out of a block; a demo stays the installation's either way
+        if (origin == VersionOrigins.Admin && lambda.Tier != LambdaTier.Demo)
+        {
+            Removal.Remove(database, lambda);
+
+            Logger.LogInformation("Deleted lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
+
+            return;
+        }
 
         LambdaGuard.EnsureEditable(lambda);
 
@@ -302,7 +316,9 @@ public sealed class MetaService : IMetaService
 
         var lambda = find(database);
 
-        if (lambda?.ActiveVersion == null)
+        // blocking takes it offline as well; this is for a deployment that
+        // was being written down at the very moment the block was
+        if (lambda?.ActiveVersion == null || lambda.Blocked != null)
         {
             return null;
         }
@@ -550,6 +566,14 @@ public sealed class MetaService : IMetaService
 
         using var turn = held;
 
+        // blocked while it was being compiled: what was built never goes online
+        if (lambda.Blocked != null)
+        {
+            Deployments.Evict(lambda.Id);
+
+            LambdaGuard.EnsureUnblocked(lambda);
+        }
+
         if (!outcome.Success)
         {
             Logger.LogInformation("Rejected deployment of lambda #{LambdaId} errors {Count}", lambda.Id, outcome.Diagnostics.Count);
@@ -611,9 +635,106 @@ public sealed class MetaService : IMetaService
 
     #endregion
 
+    #region Blocking
+
+    public LambdaInfo Block(string privateKey, string? reason)
+    {
+        using var database = Databases.CreateDbContext();
+
+        var (lambda, held) = Locked(database, privateKey);
+
+        using var turn = held;
+
+        if (lambda.Tier == LambdaTier.Demo)
+        {
+            throw LambdaException.Forbidden($"'{lambda.PublicKey}' is a demo, which the installation keeps and nobody else can change: there is nothing to block.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        // blocked again: since when stays, the reason is the newest
+        lambda.Blocked ??= now;
+        lambda.BlockReason = VersionInput.Tidy(reason, MaxBlockReason);
+
+        if (lambda.ActiveVersion != null)
+        {
+            lambda.ActiveVersion = null;
+            lambda.Deployed = null;
+
+            History.Close(database, lambda.Id, now, ActivationEndings.Admin);
+
+            History.Record(database, lambda, LambdaEvents.Undeployed);
+        }
+
+        // its drafts run its code as well, at addresses of their own
+        foreach (var feature in database.Features.Where(f => f.LambdaId == lambda.Id && f.Previewed != null).ToList())
+        {
+            feature.Previewed = null;
+            feature.Modified = now;
+        }
+
+        database.SaveChanges();
+
+        Deployments.EvictAll(lambda.Id);
+
+        Logger.LogInformation("Blocked lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
+
+        return Describer.Describe(database, lambda);
+    }
+
+    public LambdaInfo Unblock(string privateKey)
+    {
+        using var database = Databases.CreateDbContext();
+
+        var (lambda, held) = Locked(database, privateKey);
+
+        using var turn = held;
+
+        if (lambda.Blocked != null)
+        {
+            lambda.Blocked = null;
+            lambda.BlockReason = null;
+
+            // the time it was blocked does not count against a free lambda:
+            // it gets the whole of its time again from here
+            lambda.Modified = DateTime.UtcNow;
+
+            database.SaveChanges();
+
+            Logger.LogInformation("Unblocked lambda {Lambda} #{LambdaId}", lambda.PublicKey, lambda.Id);
+        }
+
+        return Describer.Describe(database, lambda);
+    }
+
+    public IReadOnlyList<EditorAddress> GetEditorAddresses(string privateKey)
+    {
+        using var database = Databases.CreateDbContext();
+
+        var lambda = LambdaGuard.Require(database, privateKey);
+
+        return Editors.Of(database, lambda.Id);
+    }
+
+    /// <summary>
+    /// How long the operator's note on a block may be.
+    /// </summary>
+    private const int MaxBlockReason = 500;
+
+    #endregion
+
     #region Maintenance
 
-    public MaintenanceReport RunMaintenance(DateTime now) => Lifetime.Sweep(now);
+    public MaintenanceReport RunMaintenance(DateTime now)
+    {
+        var report = Lifetime.Sweep(now);
+
+        using var database = Databases.CreateDbContext();
+
+        Editors.Prune(database, now);
+
+        return report;
+    }
 
     #endregion
 
@@ -627,6 +748,8 @@ public sealed class MetaService : IMetaService
                   ?? throw LambdaException.NotFound("This lambda does not exist (or has been deleted).");
 
         LambdaGuard.EnsureEditable(lambda);
+
+        Editors.Note(lambda.Id);
 
         return lambda.Id;
     }

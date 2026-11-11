@@ -54,6 +54,13 @@ export const frame: EditorMessages['frame'] = {
       {start('bundan kendi lambdanızı oluşturun')}.
     </>
   ),
+  blockedTitle: 'Bu sitenin işletmecisi tarafından engellendi.',
+  blocked: (write) => (
+    <>
+      Yayından kaldırıldı; artık değiştirilemez ya da yayına alınamaz. Sahip olduğu her şey okunabilir ve indirilebilir.
+      Bunun bir hata olduğunu düşünüyorsanız {write('bize yazın')}.
+    </>
+  ),
   keep: 'Bu linki saklayın. Bu lambdaya geri dönmenin tek yolu bu.',
   gotIt: 'Anladım',
   rejected: (version) => `Sürüm ${version} yayına alınamadı`,

@@ -54,6 +54,13 @@ export const frame: EditorMessages['frame'] = {
       {start('cria uma lambda tua a partir dela')}.
     </>
   ),
+  blockedTitle: 'Bloqueada pelo operador deste site.',
+  blocked: (write) => (
+    <>
+      Está offline e já não pode ser alterada nem posta online. Tudo o que tem ainda pode ser lido e descarregado. Se
+      achas que isto é um engano, {write('escreve-nos')}.
+    </>
+  ),
   keep: 'Guarda este link. É a única forma de voltares a esta lambda.',
   gotIt: 'Percebi',
   rejected: (version) => `A versão ${version} não ficou online`,

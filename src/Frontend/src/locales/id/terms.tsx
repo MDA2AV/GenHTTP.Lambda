@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Tindakan yang bisa kami ambil',
     action:
-      'Apa pun yang di-deploy di sini bisa dimatikan atau dihapus kapan saja, tanpa pemberitahuan dan tanpa kewajiban menjelaskan alasannya. Dalam praktiknya, itu terjadi kalau sesuatu melanggar aturan di atas, mengancam server yang dipakai bersama semua orang, atau dilaporkan seseorang dan laporannya ternyata benar.',
+      'Apa pun yang di-deploy di sini bisa dimatikan atau dihapus kapan saja, tanpa pemberitahuan dan tanpa kewajiban menjelaskan alasannya. Dalam praktiknya, itu terjadi kalau sesuatu melanggar aturan di atas, mengancam server yang dipakai bersama semua orang, atau dilaporkan seseorang dan laporannya ternyata benar. Sebuah lambda juga bisa diblokir: lambda itu tetap offline dan tidak bisa lagi diubah, dan alamat tempat lambda itu diubah bisa ditolak oleh seluruh situs selama dua minggu.',
     lastingTitle: 'Berapa lama semuanya bertahan',
     lasting: (hours, days) =>
       `Deployment tetap bisa diakses sekitar ${hours} jam. Lambda yang tidak Anda buka akan dihapus, beserta semua versi kodenya, sekitar ${days} hari setelah terakhir kali Anda menyentuhnya. Menyimpan atau men-deploy juga dihitung, jadi apa pun yang sedang Anda kerjakan tetap ada. Layanan ini bukan backup: simpan salinan sendiri untuk kode yang penting bagi Anda.`,

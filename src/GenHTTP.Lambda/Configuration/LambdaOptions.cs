@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Sockets;
+
 using GenHTTP.Api.Infrastructure;
 
 namespace GenHTTP.Lambda.Configuration;
@@ -419,6 +422,37 @@ public sealed record LambdaOptions
     public bool LogClientAddress { get; init; } = true;
 
     /// <summary>
+    /// The networks whose addresses are never recorded against a lambda and
+    /// never blocked.
+    /// </summary>
+    /// <remarks>
+    /// The installation's own: loopback, the private ranges, link local and
+    /// shared address space. The build agent reaches the MCP from a
+    /// container on one of them, a fresh address each build, and a proxy in
+    /// front of the server would be one - blocking either would refuse
+    /// everybody behind it. An installation reached from a network of its
+    /// own (behind a proxy, inside a company) cannot block anybody; one whose
+    /// proxy has a public address adds it here.
+    /// </remarks>
+    public IReadOnlyList<IPNetwork> UnblockableNetworks { get; init; } = DefaultUnblockableNetworks;
+
+    /// <summary>
+    /// The networks that are the installation's own by default (see <see cref="UnblockableNetworks"/>).
+    /// </summary>
+    public static readonly IReadOnlyList<IPNetwork> DefaultUnblockableNetworks =
+    [
+        IPNetwork.Parse("127.0.0.0/8"),
+        IPNetwork.Parse("10.0.0.0/8"),
+        IPNetwork.Parse("172.16.0.0/12"),
+        IPNetwork.Parse("192.168.0.0/16"),
+        IPNetwork.Parse("169.254.0.0/16"),
+        IPNetwork.Parse("100.64.0.0/10"),
+        IPNetwork.Parse("::1/128"),
+        IPNetwork.Parse("fc00::/7"),
+        IPNetwork.Parse("fe80::/10")
+    ];
+
+    /// <summary>
     /// The port the server offers TLS on. Zero leaves the secure endpoint off.
     /// </summary>
     public ushort SecurePort { get; init; }
@@ -688,6 +722,7 @@ public sealed record LambdaOptions
             CaptureLambdaOutput = ReadBool("LAMBDA_LOG_LAMBDA_OUTPUT", defaults.CaptureLambdaOutput),
             MaxOutputLines = ReadInt("LAMBDA_LOG_MAX_LINES_PER_REQUEST", defaults.MaxOutputLines),
             LogClientAddress = ReadBool("LAMBDA_LOG_CLIENT_ADDRESS", defaults.LogClientAddress),
+            UnblockableNetworks = ReadNetworks("LAMBDA_UNBLOCKABLE_NETWORKS", defaults.UnblockableNetworks),
             RepeatWindow = TimeSpan.FromSeconds(ReadInt("LAMBDA_LOG_REPEAT_WINDOW_SECONDS", (int)defaults.RepeatWindow.TotalSeconds)),
             Geo = ReadBool("LAMBDA_LOG_GEO", defaults.Geo),
             GeoPlaces = ReadBool("LAMBDA_LOG_GEO_PLACES", defaults.GeoPlaces),
@@ -718,6 +753,45 @@ public sealed record LambdaOptions
         var value = Environment.GetEnvironmentVariable(key);
 
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    /// <summary>
+    /// A list of networks, separated by commas: <c>10.0.0.0/8, 2001:db8::/32</c>,
+    /// a single address for itself, or <c>none</c> for none at all.
+    /// </summary>
+    private static IReadOnlyList<IPNetwork> ReadNetworks(string key, IReadOnlyList<IPNetwork> fallback)
+    {
+        var value = ReadOptional(key);
+
+        if (value == null)
+        {
+            return fallback;
+        }
+
+        if (value.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        var networks = new List<IPNetwork>();
+
+        foreach (var entry in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (IPNetwork.TryParse(entry, out var network))
+            {
+                networks.Add(network);
+            }
+            else if (IPAddress.TryParse(entry, out var address))
+            {
+                networks.Add(new IPNetwork(address, address.AddressFamily == AddressFamily.InterNetwork ? 32 : 128));
+            }
+            else
+            {
+                throw new InvalidOperationException($"{key}: '{entry}' is neither a network nor an address.");
+            }
+        }
+
+        return networks;
     }
 
     private static int ReadInt(string key, int fallback)

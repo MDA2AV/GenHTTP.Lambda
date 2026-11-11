@@ -54,6 +54,13 @@ export const frame: EditorMessages['frame'] = {
       {start('starten Sie damit ein eigenes Lambda')}.
     </>
   ),
+  blockedTitle: 'Vom Betreiber dieser Seite gesperrt.',
+  blocked: (write) => (
+    <>
+      Es ist offline und kann nicht mehr geändert oder online gestellt werden. Alles, was es enthält, lässt sich weiterhin
+      lesen und herunterladen. Wenn Sie glauben, dass das ein Irrtum ist, {write('schreiben Sie uns')}.
+    </>
+  ),
   keep: 'Heben Sie diesen Link auf. Er ist der einzige Weg zurück zu diesem Lambda.',
   gotIt: 'Verstanden',
   rejected: (version) => `Version ${version} ging nicht online`,

@@ -437,6 +437,8 @@ export const guide: Messages['guide'] = {
     'Kodunuz ortak bir sunucuda çalışır. Bu yüzden C# dilinin bazı kısımları derlenmeden önce reddedilir: süreç başlatmak, kendi soketlerinizi açmak, assembly yüklemek, çalışma alanınızın dışında dosya sistemine erişmek ve bunları aşmak için reflection kullanmak. Bir task’ı await yerine .Result veya .Wait() ile beklemek de reddedilir: istekler çekirdek başına tek bir thread üzerinde çalışır ve task, onu bekleyen thread’in ta kendisinde tamamlanmak zorunda kalırdı.',
   limits2:
     'Geri kalan her şey mevcut, GenHTTP modül API’sinin tamamı dahil. Bir şey reddedilirse sadece başarısız olduğu değil, hangi satırda ve neden reddedildiği de söylenir.',
+  limitsBlocked:
+    'Kuralları ihlal eden bir lambda - kimlik avı, kötü amaçlı yazılım, başkalarına saldırı - siteyi işleten kişi tarafından engellenebilir. Yayından kalkar ve engel kaldırılana kadar hakkında hiçbir şey değiştirilemez ya da yayına alınamaz; kontrol paneli bunu en üstte belirtir. Sahip olduğu her şey yine de okunabilir ve indirilebilir.',
 
   away: (k) => (
     <>

@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Cosa possiamo fare',
     action:
-      'Tutto ciò che viene messo online qui può essere messo offline o eliminato in qualsiasi momento, senza preavviso e senza obbligo di spiegazioni. In pratica succede quando qualcosa viola le regole qui sopra, quando mette a rischio il server che tutti condividono, o quando qualcuno lo segnala e ha ragione.',
+      'Tutto ciò che viene messo online qui può essere messo offline o eliminato in qualsiasi momento, senza preavviso e senza obbligo di spiegazioni. In pratica succede quando qualcosa viola le regole qui sopra, quando mette a rischio il server che tutti condividono, o quando qualcuno lo segnala e ha ragione. Una lambda può anche essere bloccata: resta offline e non si può più modificare, e gli indirizzi da cui è stata modificata possono essere rifiutati da tutto il sito per due settimane.',
     lastingTitle: 'Quanto dura',
     lasting: (hours, days) =>
       `Un deployment resta raggiungibile per circa ${hours} ore. Una lambda che non apri viene eliminata, con tutte le versioni del suo codice, circa ${days} giorni dopo l’ultima volta che ci hai messo mano. Salvare o fare il deploy conta come metterci mano, quindi quello su cui stai lavorando resta. Niente qui è un backup: tieni una tua copia del codice che ti sta a cuore.`,
