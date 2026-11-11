@@ -226,6 +226,8 @@ public sealed class AnalyticsService(IDbContextFactory<LambdaDbContext> database
         var lambda = database.Lambdas.FirstOrDefault(l => l.PrivateKey == privateKey)
                   ?? throw LambdaException.NotFound(Missing);
 
+        LambdaGuard.EnsureUnblocked(lambda);
+
         if (lambda.Tier == LambdaTier.Demo)
         {
             throw LambdaException.Forbidden($"'{lambda.PublicKey}' is a demo and read only: its visitors are not counted. A lambda of your own made from it can count them.");

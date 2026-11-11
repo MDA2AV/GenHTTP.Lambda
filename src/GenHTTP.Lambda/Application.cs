@@ -9,6 +9,7 @@ using GenHTTP.Lambda.Data;
 using GenHTTP.Lambda.Infrastructure;
 using GenHTTP.Lambda.Services.Analytics;
 using GenHTTP.Lambda.Services.Background;
+using GenHTTP.Lambda.Services.Blocking;
 using GenHTTP.Lambda.Services.Deployment;
 using GenHTTP.Lambda.Services.Diagnostics;
 using GenHTTP.Lambda.Services.Execution;
@@ -85,8 +86,9 @@ public sealed class Application : IAsyncDisposable
 
         Scheduler = Services.GetRequiredService<BackgroundScheduler>();
 
-        // before the first request, which is asked about against it
+        // before the first request, which is asked about against them
         Services.GetRequiredService<DomainRegistry>().Reload();
+        Services.GetRequiredService<AddressBlocks>().Reload();
 
         Handler = BuildHandler(Services, options);
     }
@@ -141,6 +143,8 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IDomainRegistry>(provider => provider.GetRequiredService<DomainRegistry>());
         services.AddSingleton<LambdaThrottle>();
         services.AddSingleton<LambdaRateLimiter>();
+        services.AddSingleton<AddressBlocks>();
+        services.AddSingleton<IAddressBlocks>(provider => provider.GetRequiredService<AddressBlocks>());
 
         services.AddSingleton<SecretCipher>();
         services.AddSingleton<SecretVault>();
@@ -151,6 +155,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IWorkspaceVault>(provider => provider.GetRequiredService<WorkspaceVault>());
         services.AddSingleton<IStorageService, FileSystemStorageService>();
         services.AddSingleton<IDeploymentService, DeploymentService>();
+        services.AddSingleton<EditorAddresses>();
         services.AddSingleton<LambdaHistory>();
         services.AddSingleton<LambdaRemoval>();
         services.AddSingleton<LambdaLifetime>();
@@ -218,6 +223,7 @@ public sealed class Application : IAsyncDisposable
         services.AddSingleton<IBackgroundJob, GeoJob>();
         services.AddSingleton<IBackgroundJob, AnalyticsJob>();
         services.AddSingleton<IBackgroundJob, CrawlerJob>();
+        services.AddSingleton<IBackgroundJob, AddressBlockJob>();
         services.AddSingleton<BackgroundScheduler>();
 
         return services.BuildServiceProvider();
@@ -346,7 +352,15 @@ public sealed class Application : IAsyncDisposable
                 * there is no scope out here to take it from.
                 */
                .Add(new LambdaRedirectConcernBuilder(Services.GetRequiredService<IDomainRegistry>(),
-                                                     Services.GetRequiredService<ILambdaAddresses>()));
+                                                     Services.GetRequiredService<ILambdaAddresses>()))
+               /*
+                * Outermost of all: a blocked address is refused before it is
+                * redirected, logged or counted - apart from the panel, so an
+                * operator who blocked themselves can lift it (see
+                * AddressBlockConcern).
+                */
+               .Add(new AddressBlockConcernBuilder(Services.GetRequiredService<IAddressBlocks>(),
+                                                   Services.GetRequiredService<IDomainRegistry>()));
 
     /// <summary>
     /// Starts the maintenance jobs. Call once the server is up.

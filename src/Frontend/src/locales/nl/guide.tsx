@@ -439,6 +439,8 @@ export const guide: Messages['guide'] = {
     'Je code draait op een gedeelde server, dus een deel van C# wordt al vóór het compileren geweigerd: processen starten, eigen sockets openen, assemblies laden, het bestandssysteem buiten je workspace benaderen, en reflection om daar omheen te komen. Net als wachten op een task met .Result of .Wait() in plaats van await: requests draaien op één thread per core, en de task zou moeten afronden op precies de thread die erop wacht.',
   limits2:
     'Al het andere is er, inclusief de hele module-API van GenHTTP. Wordt er iets geweigerd, dan hoor je welke regel en waarom, niet alleen dat het misging.',
+  limitsBlocked:
+    'Een lambda die de voorwaarden overtreedt - phishing, malware, aanvallen op anderen - kan worden geblokkeerd door wie de site beheert. Hij gaat dan offline en er kan niets meer aan worden aangepast of online gezet totdat de blokkade is opgeheven; het dashboard meldt dat bovenaan. Wat hij heeft, kun je nog wel bekijken en downloaden.',
 
   away: (k) => (
     <>

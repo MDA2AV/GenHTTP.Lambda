@@ -5,6 +5,7 @@ using GenHTTP.Lambda.Api.Infrastructure;
 using GenHTTP.Lambda.Api.Model;
 using GenHTTP.Lambda.Configuration;
 using GenHTTP.Lambda.Data.Entities;
+using GenHTTP.Lambda.Services.Blocking;
 using GenHTTP.Lambda.Services.Meta;
 using GenHTTP.Lambda.Services.Meta.Model;
 using GenHTTP.Lambda.Services.Settings;
@@ -41,7 +42,7 @@ namespace GenHTTP.Lambda.Api;
          request on.
          """)]
 public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry, ISettingsService settings, ILimitsService limits,
-                                   ILogger<AdminResource> logger)
+                                   IAddressBlocks blocks, LambdaOptions options, ILogger<AdminResource> logger)
 {
 
     #region Listing
@@ -82,7 +83,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                 seen?.Failed ?? 0,
                 seen?.LastSeen,
                 l.Domain,
-                LambdaDescription.Serves(l.Tier, l.Domain)
+                LambdaDescription.Serves(l.Tier, l.Domain),
+                l.Blocked
             );
         }).ToList();
 
@@ -100,12 +102,12 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Remarks("What it is - its editor key included - what it has been doing, its versions and when it was online.")]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("Everything about the lambda")]
-    public AdminLambdaDetail GetLambda([Summary("The public key of the lambda")] string publicKey)
+    public AdminLambdaDetail GetLambda([Summary("The public key of the lambda")] string publicKey, IRequest request)
     {
 
         var privateKey = meta.RequirePrivateKey(publicKey);
 
-        return Detail(privateKey);
+        return Detail(privateKey, request);
     }
 
     [ResourceMethod("lambdas/:publicKey/versions/:version")]
@@ -132,7 +134,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.Forbidden, "The demo tier is the installation's own. Nothing is moved into or out of it by hand.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail ChangeTier([Summary("The public key of the lambda")] string publicKey, TierRequest body)
+    public AdminLambdaDetail ChangeTier([Summary("The public key of the lambda")] string publicKey, TierRequest body, IRequest request)
     {
 
         var privateKey = meta.RequirePrivateKey(publicKey);
@@ -141,7 +143,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         logger.LogInformation("Set tier of lambda {Lambda} to {Tier} by operator", changed.PublicKey, changed.Tier);
 
-        return Detail(privateKey);
+        return Detail(privateKey, request);
     }
 
     [ResourceMethod(Method.Put, "lambdas/:publicKey/domain")]
@@ -151,7 +153,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     [Response(ResponseStatus.Conflict, "Another lambda answers at that domain.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     [return: Summary("The lambda afterwards")]
-    public AdminLambdaDetail ChangeDomain([Summary("The public key of the lambda")] string publicKey, DomainChangeRequest body)
+    public AdminLambdaDetail ChangeDomain([Summary("The public key of the lambda")] string publicKey, DomainChangeRequest body, IRequest request)
     {
 
         var privateKey = meta.RequirePrivateKey(publicKey);
@@ -160,7 +162,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
         logger.LogInformation("Set domain of lambda {Lambda} to {Domain} by operator", changed.PublicKey, changed.Domain ?? "(none)");
 
-        return Detail(privateKey);
+        return Detail(privateKey, request);
     }
 
     [ResourceMethod(Method.Post, "lambdas/:publicKey/deployment/start")]
@@ -198,16 +200,122 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
 
     [ResourceMethod(Method.Delete, "lambdas/:publicKey")]
     [Summary("Deletes a lambda and everything kept for it")]
-    [Remarks("As its owner would, for good. Demos cannot be deleted: the installation keeps them.")]
+    [Remarks("As its owner would, for good - a blocked lambda as well, which its owner cannot delete. Demos cannot be deleted: the installation keeps them.")]
     [Response(ResponseStatus.NoContent, ApiDocumentation.Deleted)]
     [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
     public void Delete([Summary("The public key of the lambda")] string publicKey)
     {
 
-        meta.Delete(meta.RequirePrivateKey(publicKey));
+        meta.Delete(meta.RequirePrivateKey(publicKey), VersionOrigins.Admin);
 
         logger.LogInformation("Deleted lambda {Lambda} by operator", publicKey);
     }
+
+    #endregion
+
+    #region Blocking
+
+    [ResourceMethod(Method.Post, "lambdas/:publicKey/block")]
+    [Summary("Blocks a lambda")]
+    [Remarks("""
+             Takes it offline, and the previews of its features, and refuses every change to it from then on - through the
+             editor, the API, MCP and git, with `Blocked` (403) and a message that says so. Its code, its data and its history
+             are kept and can still be read and exported; nothing about it can be changed, put online or deleted by its owner
+             until the block is lifted. The operator may still delete it, and a blocked lambda is never removed for going unused.
+             Its published source is not found while the block lasts, and nothing of the reason is shown to the owner.
+
+             The addresses named are refused as well, for two weeks, before anything else is done for them - usually some of the
+             `editorAddresses` the lambda was changed from. Blocking a lambda that is blocked already keeps the time it was
+             first blocked and takes the new reason.
+             """)]
+    [Response(ResponseStatus.BadRequest, "One of the addresses is not one, or is on one of the installation's own networks, which are never blocked. Nothing was blocked.",
+              Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.Forbidden, "The lambda is a demo, which the installation keeps: there is nothing to block.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The lambda afterwards")]
+    public AdminLambdaDetail Block([Summary("The public key of the lambda")] string publicKey, BlockRequest? body, IRequest request)
+    {
+        var privateKey = meta.RequirePrivateKey(publicKey);
+
+        var addresses = body?.Addresses ?? [];
+
+        // read before anything is done, so an address that cannot be
+        // blocked leaves the lambda as it was too
+        foreach (var address in addresses)
+        {
+            NetworkAddress.ReadBlockable(address, options.UnblockableNetworks);
+        }
+
+        var blocked = meta.Block(privateKey, body?.Reason);
+
+        if (addresses.Count > 0)
+        {
+            blocks.Block(addresses, body?.Reason, blocked.PublicKey);
+        }
+
+        logger.LogInformation("Blocked lambda {Lambda} addresses {Addresses} by operator", blocked.PublicKey, addresses.Count);
+
+        return Detail(privateKey, request);
+    }
+
+    [ResourceMethod(Method.Delete, "lambdas/:publicKey/block")]
+    [Summary("Lifts the block of a lambda")]
+    [Remarks("""
+             Its owner can change it again. It stays offline until its owner, or the operator, puts it online again, and its free
+             tier starts its time again from now. The blocks of the addresses it was changed from are left as they are:
+             they are lifted in `DELETE /admin/blocks/{id}`, or by themselves after two weeks.
+             """)]
+    [Response(ResponseStatus.NotFound, "No lambda has this public key.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    [return: Summary("The lambda afterwards")]
+    public AdminLambdaDetail Unblock([Summary("The public key of the lambda")] string publicKey, IRequest request)
+    {
+        var privateKey = meta.RequirePrivateKey(publicKey);
+
+        var lambda = meta.Unblock(privateKey);
+
+        logger.LogInformation("Unblocked lambda {Lambda} by operator", lambda.PublicKey);
+
+        return Detail(privateKey, request);
+    }
+
+    [ResourceMethod("blocks")]
+    [Summary("Lists the blocked addresses")]
+    [Remarks("""
+             Newest first. A blocked address is answered with 403 before anything else is done for it - on the platform and at
+             every lambda - apart from the administration panel, so an operator who blocked their own address can lift the
+             block. Each is let go of two weeks after it was blocked. What each refused is counted in memory, since the server
+             came up.
+             """)]
+    [return: Summary("The blocks, and the address of whoever asks")]
+    public AddressBlockListing GetBlocks(IRequest request)
+        => new([.. blocks.List().Select(Describe)], You(request));
+
+    [ResourceMethod(Method.Delete, "blocks/:id")]
+    [Summary("Lifts the block of an address")]
+    [Remarks("From the next request on. A lambda it was blocked for stays blocked.")]
+    [Response(ResponseStatus.NoContent, "The block is lifted.")]
+    [Response(ResponseStatus.NotFound, "There is no block with this id - it may have been lifted, or let go of by itself.", Type = typeof(ErrorResponse), ContentType = ApiDocumentation.Json)]
+    public void RemoveBlock([Summary("The id of the block, from `GET /admin/blocks`")] long id)
+    {
+        if (!blocks.Remove(id))
+        {
+            throw LambdaException.NotFound($"There is no block #{id}. It may have been lifted already, or let go of by itself.");
+        }
+
+        logger.LogInformation("Removed address block #{Block} by operator", id);
+    }
+
+    private static AddressBlockResponse Describe(AddressBlock block)
+        => new(block.Id, block.Address, block.Reason, block.PublicKey, block.Created, block.Expires, block.Refused, block.LastRefused);
+
+    /// <summary>
+    /// The address of the request as a block would cover it, or nothing for
+    /// one on the installation's own networks, which is never blocked.
+    /// </summary>
+    private string? You(IRequest request)
+        => request.Client.Address is { } address && !NetworkAddress.IsOwn(address, options.UnblockableNetworks)
+         ? NetworkAddress.Describe(NetworkAddress.RangeOf(address))
+         : null;
 
     #endregion
 
@@ -298,7 +406,7 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
     /// </summary>
     private const int PageSize = 20;
 
-    private AdminLambdaDetail Detail(string privateKey)
+    private AdminLambdaDetail Detail(string privateKey, IRequest request)
     {
         var lambda = meta.Require(privateKey);
 
@@ -318,8 +426,19 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
                                                                 (long)((a.Ended ?? now) - a.Started).TotalSeconds))],
             // the tiers the operator may move a lambda to, which is every one
             // but the demos': those are the seeder's to hand out
-            [.. Enum.GetValues<LambdaTier>().Where(t => t != LambdaTier.Demo).Select(t => t.ToString())]
+            [.. Enum.GetValues<LambdaTier>().Where(t => t != LambdaTier.Demo).Select(t => t.ToString())],
+            lambda.Blocked is { } since ? new LambdaBlockResponse(since, lambda.BlockReason) : null,
+            [.. meta.GetEditorAddresses(privateKey).Select(Describe)],
+            You(request)
         );
+    }
+
+    private EditorAddressResponse Describe(EditorAddress editor)
+    {
+        // written by the platform, so always an address
+        var address = System.Net.IPAddress.Parse(editor.Address);
+
+        return new(editor.Address, NetworkAddress.Describe(NetworkAddress.RangeOf(address)), editor.FirstSeen, editor.LastSeen, blocks.Covers(address));
     }
 
     private static LambdaTier ParseTier(string tier)

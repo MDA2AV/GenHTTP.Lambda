@@ -62,7 +62,9 @@ public sealed record LambdaResponse(
     [Summary("How its editor opens for somebody who has not chosen a view of their own: `Full` or `Simple`")]
     string View,
     [Summary("Where it is cloned with git and pushed to, on this site. The versions are the commits of `main`, the features the other branches. Holds the editor key, like the editor's path.")]
-    string GitPath
+    string GitPath,
+    [Summary("Since when the operator has blocked it; absent while it is not. A blocked lambda is offline, and every change to it is refused with `Blocked` (403) until the operator lifts the block. It can still be read and exported.")]
+    DateTime? Blocked = null
 );
 
 /// <summary>
@@ -92,7 +94,8 @@ public static class LambdaDescription
         Serves(lambda.Tier, lambda.Domain),
         lambda.Address,
         lambda.View,
-        GitPath(lambda.PrivateKey, lambda.PublicKey)
+        GitPath(lambda.PrivateKey, lambda.PublicKey),
+        lambda.Blocked
     );
 
     /// <summary>

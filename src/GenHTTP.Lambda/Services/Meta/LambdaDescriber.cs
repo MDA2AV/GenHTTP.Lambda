@@ -28,7 +28,7 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
         return new LambdaInfo(lambda.PublicKey, lambda.PrivateKey, lambda.Tier.ToString(), lambda.Created, lambda.Modified,
                               lambda.ActiveVersion, latest, lambda.Deployed, lifetime.DeployedUntil(lambda), lifetime.KeptUntil(lambda),
                               lambda.Domain, lambda.View.ToString(), addresses.Of(lambda.PublicKey),
-                              addresses.Of(lambda.PublicKey, lambda.Tier, lambda.Domain));
+                              addresses.Of(lambda.PublicKey, lambda.Tier, lambda.Domain), lambda.Blocked, lambda.BlockReason);
     }
 
     /// <summary>
@@ -47,6 +47,7 @@ public sealed class LambdaDescriber(LambdaLifetime lifetime, ILambdaAddresses ad
                versions,
                lifetime.DeployedUntil(lambda),
                lifetime.KeptUntil(lambda),
-               lambda.Domain);
+               lambda.Domain,
+               lambda.Blocked);
 
 }

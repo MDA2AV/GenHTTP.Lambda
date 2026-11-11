@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'O que podemos fazer a respeito',
     action:
-      'Tudo o que for colocado no ar aqui pode ser tirado do ar ou removido a qualquer momento, sem aviso e sem obrigação de explicar. Na prática, isso acontece quando algo viola as regras acima, quando ameaça a máquina que todo mundo compartilha, ou quando alguém denuncia e tem razão.',
+      'Tudo o que for colocado no ar aqui pode ser tirado do ar ou removido a qualquer momento, sem aviso e sem obrigação de explicar. Na prática, isso acontece quando algo viola as regras acima, quando ameaça a máquina que todo mundo compartilha, ou quando alguém denuncia e tem razão. Uma lambda também pode ser bloqueada: ela continua fora do ar e não pode mais ser mudada, e os endereços de onde foi mudada podem ser recusados pelo site inteiro por duas semanas.',
     lastingTitle: 'Quanto tempo as coisas duram',
     lasting: (hours, days) =>
       `Um deploy fica acessível por cerca de ${hours} horas. Uma lambda que você não abre é removida, com todas as versões do código, cerca de ${days} dias depois da última vez que você mexeu nela. Salvar ou fazer deploy conta como mexer, então tudo em que você está trabalhando continua aqui. Nada aqui é backup: guarde sua própria cópia do código que importa para você.`,

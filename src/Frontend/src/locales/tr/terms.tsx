@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Neler yapabiliriz',
     action:
-      'Burada yayına alınan her şey, herhangi bir zamanda, haber verilmeden ve açıklama yapma zorunluluğu olmadan yayından kaldırılabilir ya da silinebilir. Pratikte bu şu durumlarda olur: bir şey yukarıdaki kuralları ihlal ettiğinde, herkesin paylaştığı makineyi tehdit ettiğinde ya da biri onu bildirdiğinde ve bildirim haklı çıktığında.',
+      'Burada yayına alınan her şey, herhangi bir zamanda, haber verilmeden ve açıklama yapma zorunluluğu olmadan yayından kaldırılabilir ya da silinebilir. Pratikte bu şu durumlarda olur: bir şey yukarıdaki kuralları ihlal ettiğinde, herkesin paylaştığı makineyi tehdit ettiğinde ya da biri onu bildirdiğinde ve bildirim haklı çıktığında. Bir lambda ayrıca engellenebilir: yayından kalkmış olarak kalır, artık değiştirilemez ve değiştirildiği adresler tüm site tarafından iki hafta boyunca reddedilebilir.',
     lastingTitle: 'Ne kadar süre kalır',
     lasting: (hours, days) =>
       `Yayına alınan bir sürüm yaklaşık ${hours} saat erişilebilir kalır. Açmadığınız bir lambda, ona en son dokunduğunuz andan yaklaşık ${days} gün sonra kodunun tüm sürümleriyle birlikte silinir. Kaydetmek ya da yayına almak da dokunmak sayılır; yani üzerinde çalıştığınız her şey kalır. Buradaki hiçbir şey yedek değildir: önem verdiğiniz kodun bir kopyasını kendiniz saklayın.`,

@@ -140,12 +140,12 @@ without the header, 403 with the wrong token, and the routes are not there at
 all (404) on an installation without a token. Behind it are the panel, the
 server's telemetry and the log - and the editor's **Admin** section, which a
 browser holding the token shows in the editor of every lambda, in both views,
-and which nobody else sees; what it calls carries the token like the panel's. It is
-**empty for now - decided by the owner**: it held the sitemap switch, which
-went when the lambdas moved to hosts of their own, and calls nothing until
-something goes there again - so a token the server would refuse is found out
-in the panel, not there. Keep the section; what only the operator decides
-about one lambda goes there.
+and which nobody else sees; what it calls carries the token like the panel's. It
+holds the lambda's **block** - the same control as its page in the panel
+(`console/BlockControl.tsx`), and what only the operator decides about one
+lambda goes there; a token the server no longer takes is said there and
+entered again in the panel. (It held the sitemap switch once, which went when
+the lambdas moved to hosts of their own.)
 **Only owners and the operator see telemetry**
 - the owner a lambda's own in the editor, the operator everybody's; nothing is
 public.
@@ -715,6 +715,59 @@ how to write apps and to give them a good starting point.
   reads a secret is given a random value by the seeder (`LambdaDemo.Secrets`)
   and works without one, so a copy runs before its owner switches secrets on
   (`demo-registration`, `PASSWORD_PEPPER`).
+
+### Blocking
+
+What the operator does about abuse - a lambda that phishes, spreads malware or
+attacks others. It is the operator's alone, in the panel and the editor's
+Admin section, in English like the panel.
+
+- **A blocked lambda is offline and frozen.** Blocking takes it offline with
+  its features' previews, and every change is refused, through every door, in
+  `LambdaGuard.EnsureUnblocked` - which a new door into a lambda calls too
+  (`LambdaError.Blocked`, 403, a message that tells an agent to stop and the
+  user). The operator is refused as well but for lifting the block and
+  deleting it: anything else would put back online what it was blocked for.
+- **Reading and the export stay**: the code belongs to its owner. The owner is
+  told it was blocked - a banner in both views of the editor, which leaves out
+  what would only be refused (the Change, Showcase and Open source sections,
+  putting a version online) - never why: the reason is the operator's note, and naming the
+  rule tells whoever broke it how to go around it.
+- **What it shows the public goes with it**: offline, out of the showcase, its
+  published source not found - kept, and back once the block is lifted.
+- **Kept until the operator decides**: a blocked lambda is never removed for
+  going unused, since removed its key would be free again for whoever it was
+  blocked for. Lifting the block leaves it offline and starts a free lambda's
+  time again. A demo cannot be blocked.
+- **The addresses a lambda was changed from are recorded with it**
+  (`EditorAddresses`, `editor_addresses`): wherever it is created, saved, put
+  online or asked for as a lambda its owner may change, through any door, at
+  most hourly, for 30 days after each was last seen - only where the server
+  keeps addresses at all (`LAMBDA_LOG_CLIENT_ADDRESS`), never the operator's
+  own requests in the panel. The privacy page says so; keep it saying so.
+- **Never the installation's own networks** (`LAMBDA_UNBLOCKABLE_NETWORKS`,
+  loopback and the private, link local and shared ranges by default): the
+  build agent reaches the MCP from a container on one with a fresh address each
+  build, and blocking it would stop every build. The connection's address,
+  never a forwarded one: a header is written by whoever sends it.
+- **A blocked address is refused before anything else** - the outermost
+  concern (`AddressBlockConcern`), ahead of the redirects and the request log,
+  every lambda's host as well as the platform's - with a plain 403 that is
+  counted against its block in memory rather than logged. An IPv6 address is
+  blocked with its /64. Held in memory and asked of every request, so it costs
+  nothing while no block is held.
+- **The panel stays reachable from a blocked address - decided by the owner**
+  - its page, its assets, `/api/v1/system` and the API behind the token - so
+  an operator who blocked themselves can lift it. Nothing else is let through.
+- **Two weeks, by a job - decided by the owner.** `AddressBlockJob` lets go
+  of every block two weeks after it was made (`IAddressBlocks.Kept`); blocking
+  an address again starts its time again. Addresses change hands, so a block
+  that held for good would one day refuse somebody who did nothing.
+- The panel's **Blocked addresses** section lists the blocks with why, the
+  lambda, until when and what each refused, marks the operator's own and lifts
+  them. This is said in the README (Blocking), `platform_guide`
+  (`theLambda.blocked`), the API's introduction, `/docs` (What it will not let
+  you do), the terms and the privacy page - keep them the same.
 
 ### Tiers
 

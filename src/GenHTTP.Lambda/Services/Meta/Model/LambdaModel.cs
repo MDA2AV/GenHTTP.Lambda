@@ -12,6 +12,8 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="View">How its editor opens for somebody who has not chosen a view of their own</param>
 /// <param name="PublicUrl">Its address below the hosting domain, which sends visitors on to its domain while it answers at one</param>
 /// <param name="Address">Where to link to it: its domain while that is served, its address below the hosting domain otherwise</param>
+/// <param name="Blocked">Since when the operator has blocked it, or nothing</param>
+/// <param name="BlockReason">Why, in the operator's words - for the operator only, never its owner</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,
@@ -26,8 +28,17 @@ public sealed record LambdaInfo(
     string? Domain,
     string View,
     string PublicUrl,
-    string Address
+    string Address,
+    DateTime? Blocked = null,
+    string? BlockReason = null
 );
+
+/// <summary>
+/// An address a lambda was changed from with its editor key.
+/// </summary>
+/// <param name="FirstSeen">When it was first changed from there</param>
+/// <param name="LastSeen">When it was last changed from there, to within an hour</param>
+public sealed record EditorAddress(string Address, DateTime FirstSeen, DateTime LastSeen);
 
 /// <summary>
 /// One page of the lambdas on the installation.
@@ -169,5 +180,6 @@ public sealed record LambdaOverview(
     int Versions,
     DateTime? DeployedUntil,
     DateTime? KeptUntil,
-    string? Domain
+    string? Domain,
+    DateTime? Blocked = null
 );

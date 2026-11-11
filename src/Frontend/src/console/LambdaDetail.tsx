@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError, allowsDomain, api, type AdminLambdaDetail, type LambdaFile } from '../api';
+import { BlockControl } from './BlockControl';
 import { Chart } from '../components/Chart';
 import { Dialog } from '../components/Dialog';
 import { IconExternal, IconPlay, IconSpinner, IconTrash } from '../components/Icons';
@@ -70,7 +71,9 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
     try {
       await action();
     } catch (error) {
-      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      // the platform's own refusals - a demo, a blocked lambda - say what
+      // kind they are; only the token's lock the panel again
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403) && !error.kind) {
         deny();
       } else {
         toast(error instanceof ApiError ? error.message : failed, 'error');
@@ -104,6 +107,8 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
   const latest = lambda.latestVersion;
   const totals = traffic.totals;
   const premium = allowsDomain(lambda.tier);
+  // nothing about a blocked lambda changes but its block, or its going
+  const blocked = detail.block != null;
 
   const deploy = (version?: number) =>
     act('deploy', async () => {
@@ -172,6 +177,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
           <span className="font-mono">{lambda.publicKey}</span>
           <StatusBadge version={lambda.activeVersion} />
           <TierBadge tier={lambda.tier} />
+          {blocked && <BlockedBadge />}
         </span>
       }
       hint="Everything about one lambda. The figures are counted in memory since the server came up."
@@ -185,13 +191,13 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
           <Link to={`/admin/log?lambda=${encodeURIComponent(lambda.publicKey)}`} className="btn-ghost !px-3 !py-1.5 text-[13px]">
             Log
           </Link>
-          {latest != null && latest !== lambda.activeVersion && (
+          {latest != null && latest !== lambda.activeVersion && !blocked && (
             <button type="button" onClick={() => deploy(latest)} disabled={busy !== null} className="btn-primary !px-3 !py-1.5 text-[13px]">
               {busy === 'deploy' ? <IconSpinner /> : <IconPlay className="h-3.5 w-3.5" />}
               Deploy version {latest}
             </button>
           )}
-          {live && (
+          {live && !blocked && (
             <button type="button" onClick={undeploy} disabled={busy !== null} className="btn-ghost !px-3 !py-1.5 text-[13px]">
               {busy === 'undeploy' && <IconSpinner />}
               Take offline
@@ -208,7 +214,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
 
       <dl className="surface grid gap-x-8 gap-y-3 p-5 text-[13px] sm:grid-cols-2 lg:grid-cols-3">
         <Fact label="State">
-          {live ? <>Online, version {lambda.activeVersion}{lambda.deployedAt && <> since <Ago at={lambda.deployedAt} /></>}</> : 'Offline'}
+          {blocked ? <>Blocked <Ago at={detail.block!.since} /></> : live ? <>Online, version {lambda.activeVersion}{lambda.deployedAt && <> since <Ago at={lambda.deployedAt} /></>}</> : 'Offline'}
         </Fact>
         <Fact label="Address">
           <LambdaLink address={lambda.publicUrl} className="font-mono text-accent-500 hover:underline dark:text-accent-400" />
@@ -234,6 +240,8 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
               {live && lambda.deployedUntil && <>online until <Ago at={lambda.deployedUntil} />, </>}
               removed <Ago at={lambda.keptUntil} /> unless used
             </>
+          ) : blocked ? (
+            <>until you delete it or lift the block</>
           ) : (
             <>by its tier, however quiet</>
           )}
@@ -242,7 +250,11 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
 
       {/* ------------------------------------------------------- administration */}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      <div className="mt-6">
+        <BlockControl token={token} detail={detail} onChanged={adopt} deny={deny} />
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div className="surface p-4">
           <h2 className="text-sm font-medium">Tier</h2>
           <p className="mt-1 text-[13px] text-slate-500">
@@ -284,16 +296,18 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
         >
           <h2 className="text-sm font-medium">Domain</h2>
           <p className="mt-1 text-[13px] text-slate-500">
-            {premium
-              ? 'The owner sets this in their editor; it can be corrected or removed here.'
-              : 'Only a premium lambda can be given one. Removing one is always possible.'}
+            {blocked
+              ? 'Kept as it is while the lambda is blocked.'
+              : premium
+                ? 'The owner sets this in their editor; it can be corrected or removed here.'
+                : 'Only a premium lambda can be given one. Removing one is always possible.'}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
               value={domain}
               onChange={(event) => setDomain(event.target.value)}
               placeholder={premium ? 'shop.example.com' : 'premium only'}
-              disabled={!premium && !lambda.domain}
+              disabled={blocked || (!premium && !lambda.domain)}
               spellCheck={false}
               autoComplete="off"
               className="field min-w-0 flex-1 py-1.5 font-mono text-sm"
@@ -301,7 +315,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
             />
             <button
               type="submit"
-              disabled={busy !== null || domain.trim() === (lambda.domain ?? '') || (!premium && domain.trim() !== '')}
+              disabled={busy !== null || blocked || domain.trim() === (lambda.domain ?? '') || (!premium && domain.trim() !== '')}
               className="btn-primary !px-3 !py-1.5 text-[13px]"
             >
               {busy === 'domain' && <IconSpinner />}
@@ -404,7 +418,7 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
                     <button type="button" onClick={() => view(version.version)} disabled={busy !== null} className="btn-ghost !px-2 !py-0.5 text-xs">
                       Code
                     </button>
-                    {version.version !== lambda.activeVersion && (
+                    {version.version !== lambda.activeVersion && !blocked && (
                       <button type="button" onClick={() => deploy(version.version)} disabled={busy !== null} className="btn-ghost !px-2 !py-0.5 text-xs">
                         Deploy
                       </button>
@@ -473,6 +487,18 @@ export function LambdaDetail({ access, publicKey }: { access: Access; publicKey:
         </p>
       </Dialog>
     </Section>
+  );
+}
+
+/** That the operator blocked a lambda, beside its other badges. */
+export function BlockedBadge() {
+  return (
+    <span
+      title="Blocked by the operator: offline, and nothing about it can be changed"
+      className="inline-flex items-center whitespace-nowrap rounded-full bg-red-500/10 px-2 py-0.5 text-[11px] font-medium text-red-600 dark:text-red-400"
+    >
+      Blocked
+    </span>
   );
 }
 

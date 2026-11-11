@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { useAdminToken } from '../admin';
 import { absoluteAddress, aroundKey, shownAddress } from '../address';
+import { CONTACT_MAIL } from '../contact';
 import {
   ApiError,
   allowsDomain,
@@ -453,8 +454,9 @@ export function Editor({ theme }: Props) {
 
   const agent = useAgent({
     privateKey,
-    // a demo is changed by nobody, the agent included
-    enabled: lambda != null && !isDemo(lambda.tier),
+    // a demo is changed by nobody, the agent included - nor is a lambda the
+    // operator blocked
+    enabled: lambda != null && !isDemo(lambda.tier) && !lambda.blocked,
     watching: section === 'change',
     refresh,
     onFinished: finished,
@@ -494,6 +496,10 @@ export function Editor({ theme }: Props) {
   // a demo is read by anybody holding its announced key, and changed by nobody
   const demo = lambda != null && isDemo(lambda.tier);
 
+  // blocked by the operator: offline, and nothing about it can be changed -
+  // so there is no agent to ask; the rest is there to be read
+  const blocked = lambda?.blocked != null;
+
   // what the lambda keeps as data, and the secrets its code waits for
   const holding = summary?.storage;
   const missingSecrets = holding?.missingSecrets ?? [];
@@ -511,6 +517,8 @@ export function Editor({ theme }: Props) {
   const absent = (id: SectionId) =>
     (hidden && id === 'domain')
     || (demo && (id === 'showcase' || id === 'source' || id === 'change' || id === 'features' || id === 'analytics'))
+    // nor what only changes a blocked one, or puts it before the public again
+    || (blocked && (id === 'change' || id === 'showcase' || id === 'source'))
     || (id === 'features' && section !== 'features' && (features?.length ?? 0) === 0)
     // the simple view has the data once the app keeps any, or waits for a key
     || (id === 'data' && simple && section !== 'data' && !keeps)
@@ -833,8 +841,9 @@ export function Editor({ theme }: Props) {
               otherwise */}
           <div className="mt-3 space-y-0.5">
             <Address url={lambda.address} live={live} />
-            {/* where anybody reads its code, once its owner published it */}
-            {source?.published && (
+            {/* where anybody reads its code, once its owner published it -
+                not while it is blocked, when nobody does */}
+            {source?.published && !blocked && (
               <SiteLink
                 to={source.path}
                 target="_blank"
@@ -848,7 +857,7 @@ export function Editor({ theme }: Props) {
 
           {/* not while the agent is at work: what it saved last may be a
               version it is still fixing, and it deploys what it finishes */}
-          {!featureKey && ahead && latest != null && !demo && !changing && (
+          {!featureKey && ahead && latest != null && !demo && !blocked && !changing && (
             <button
               type="button"
               onClick={() => deploy(latest)}
@@ -974,7 +983,19 @@ export function Editor({ theme }: Props) {
             </p>
           </div>
         )}
-        {welcome && !demo && (
+        {blocked && (
+          <div className="mx-4 mt-6 border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm md:mx-0">
+            <p className="font-medium text-red-700 dark:text-red-400">{said.blockedTitle}</p>
+            <p className="mt-1 text-slate-600 dark:text-slate-400">
+              {said.blocked((text) => (
+                <a href={`mailto:${CONTACT_MAIL}?subject=${encodeURIComponent(lambda.publicKey)}`} className="text-accent-500 hover:underline">
+                  {text}
+                </a>
+              ))}
+            </p>
+          </div>
+        )}
+        {welcome && !demo && !blocked && (
           <div className="mx-4 mt-6 border border-accent-500/30 bg-accent-500/5 px-4 py-3 md:mx-0">
             <div className="flex items-start justify-between gap-4">
               <p className="text-sm font-medium">{said.keep}</p>
@@ -1048,7 +1069,7 @@ export function Editor({ theme }: Props) {
           <ContextTab key={section} control={control} area={section} onDirty={onDirty} />
         ) : section === 'features' && !demo ? (
           <FeaturesTab control={control} />
-        ) : section === 'change' && !demo ? (
+        ) : section === 'change' && !demo && !blocked ? (
           <ChangeTab control={control} />
         ) : section === 'data' ? (
           <DataTab control={control} kind={dataKind} onKind={(kind) => go(`${base}/data/${kind}`)} />
@@ -1064,9 +1085,9 @@ export function Editor({ theme }: Props) {
           <StatsTab control={control} />
         ) : section === 'logs' ? (
           <LogsTab control={control} />
-        ) : section === 'showcase' && !demo ? (
+        ) : section === 'showcase' && !demo && !blocked ? (
           <ShowcaseTab control={control} />
-        ) : section === 'source' && !demo ? (
+        ) : section === 'source' && !demo && !blocked ? (
           <SourceTab control={control} onChanged={() => refresh().catch(() => undefined)} />
         ) : section === 'domain' && !hidden ? (
           <DomainTab control={control} />

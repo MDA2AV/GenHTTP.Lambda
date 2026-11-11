@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'O que podemos fazer',
     action:
-      'Tudo o que for publicado aqui pode ser posto offline ou removido a qualquer momento, sem aviso e sem obrigação de explicar porquê. Na prática, isso acontece quando algo viola as regras acima, quando ameaça a máquina que toda a gente partilha, ou quando alguém o denuncia e tem razão.',
+      'Tudo o que for publicado aqui pode ser posto offline ou removido a qualquer momento, sem aviso e sem obrigação de explicar porquê. Na prática, isso acontece quando algo viola as regras acima, quando ameaça a máquina que toda a gente partilha, ou quando alguém o denuncia e tem razão. Uma lambda também pode ser bloqueada: fica offline e já não pode ser alterada, e os endereços a partir dos quais foi alterada podem ser recusados por todo o site durante duas semanas.',
     lastingTitle: 'Quanto tempo as coisas duram',
     lasting: (hours, days) =>
       `Um deploy fica acessível durante cerca de ${hours} horas. Uma lambda que não abriste é removida, com todas as versões do código, cerca de ${days} dias depois da última vez que lhe mexeste. Guardar ou fazer deploy conta como mexer, por isso aquilo em que estás a trabalhar fica. Nada aqui é uma cópia de segurança: guarda a tua própria cópia do código que te importa.`,

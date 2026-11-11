@@ -18,7 +18,12 @@ public enum LambdaError
     /// <summary>
     /// Allowed, but asked for too often lately by the same caller.
     /// </summary>
-    TooMany
+    TooMany,
+
+    /// <summary>
+    /// The operator has blocked the lambda: nothing about it may be changed.
+    /// </summary>
+    Blocked
 }
 
 /// <summary>
@@ -38,5 +43,7 @@ public sealed class LambdaException(LambdaError error, string message) : Excepti
     public static LambdaException Forbidden(string message) => new(LambdaError.Forbidden, message);
 
     public static LambdaException TooMany(string message) => new(LambdaError.TooMany, message);
+
+    public static LambdaException Blocked(string message) => new(LambdaError.Blocked, message);
 
 }

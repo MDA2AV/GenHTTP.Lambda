@@ -10,7 +10,7 @@ namespace GenHTTP.Lambda.Api.Model;
 public sealed record ErrorResponse(
     [Summary("The status code it was answered with")]
     int Status,
-    [Summary("What kind of refusal it is: `Invalid` (400), `Forbidden` (403), `NotFound` (404), `Conflict` (409) or `TooMany` (429)")]
+    [Summary("What kind of refusal it is: `Invalid` (400), `Forbidden` (403), `Blocked` (403, the operator blocked the lambda and nothing about it can be changed), `NotFound` (404), `Conflict` (409) or `TooMany` (429)")]
     string Error,
     [Summary("What went wrong, written for a person or an agent to act on - often with what to do instead")]
     string Message

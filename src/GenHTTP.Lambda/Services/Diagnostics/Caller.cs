@@ -47,8 +47,13 @@ public static class Caller
 /// hosting domain, or a domain of its own - or nothing for a request to the
 /// platform, whose host is the same on every line and would say nothing.
 /// </param>
+/// <param name="Peer">
+/// The address the connection came from, never a forwarded one - what a
+/// change of a lambda is recorded against (see <c>EditorAddresses</c>). Kept
+/// only where the addresses are, like <paramref name="Client"/>.
+/// </param>
 public sealed record CallerInfo(string? Client, string? Agent, string Method, string Path, string? Country = null, string? Place = null,
-                                string? Domain = null)
+                                string? Domain = null, IPAddress? Peer = null)
 {
 
     /// <summary>
@@ -86,7 +91,8 @@ public sealed record CallerInfo(string? Client, string? Agent, string Method, st
             pool.Share(Empty(places?.Find(client)?.Describe())),
             // a host of a lambda, read off every request it serves and
             // shared, since its lines repeat it
-            pool.Share(domain)
+            pool.Share(domain),
+            addresses ? request.Client.Address : null
         );
     }
 

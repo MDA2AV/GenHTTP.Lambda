@@ -60,6 +60,15 @@ export const frame = {
       {start('start a lambda of your own from it')}.
     </>
   ),
+  /** Above every section of an app the operator of the site has blocked, in both views. */
+  blockedTitle: 'Blocked by the operator of this site.',
+  /** Under blockedTitle; `write` links to the site's mail address. */
+  blocked: (write: (text: string) => Node) => (
+    <>
+      It is offline, and it can no longer be changed or put online. Everything it has can still be read and downloaded. If
+      you think this is a mistake, {write('write to us')}.
+    </>
+  ),
   keep: 'Keep this link. It is the only way back into this lambda.',
   gotIt: 'Got it',
   rejected: (version: number) => `Version ${version} did not go online`,

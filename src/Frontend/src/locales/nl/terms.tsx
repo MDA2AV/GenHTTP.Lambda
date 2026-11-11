@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Wat wij eraan mogen doen',
     action:
-      'Alles wat hier gedeployd is, kan op elk moment offline gehaald of verwijderd worden, zonder waarschuwing en zonder dat we het hoeven uit te leggen. In de praktijk gebeurt dat als iets de regels hierboven overtreedt, als het de server bedreigt die iedereen deelt, of als iemand het meldt en gelijk blijkt te hebben.',
+      'Alles wat hier gedeployd is, kan op elk moment offline gehaald of verwijderd worden, zonder waarschuwing en zonder dat we het hoeven uit te leggen. In de praktijk gebeurt dat als iets de regels hierboven overtreedt, als het de server bedreigt die iedereen deelt, of als iemand het meldt en gelijk blijkt te hebben. Een lambda kan ook worden geblokkeerd: hij blijft offline en kan niet meer worden aangepast, en de adressen waarvanaf hij is aangepast kunnen twee weken door de hele site worden geweigerd.',
     lastingTitle: 'Hoe lang iets blijft',
     lasting: (hours, days) =>
       `Een deployment blijft ongeveer ${hours} uur bereikbaar. Een lambda die je niet hebt geopend, wordt met alle versies van de code verwijderd, ongeveer ${days} dagen nadat je er voor het laatst iets mee hebt gedaan. Opslaan of deployen telt ook, dus alles waar je aan werkt, blijft bestaan. Niets hier is een back-up: bewaar zelf een kopie van code die je belangrijk vindt.`,

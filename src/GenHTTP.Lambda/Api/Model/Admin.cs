@@ -55,7 +55,9 @@ public sealed record AdminLambda(
     [Summary("The domain of its own, if it has one")]
     string? Domain,
     [Summary("Whether it answers at that domain")]
-    bool DomainServed
+    bool DomainServed,
+    [Summary("Since when it is blocked; absent while it is not")]
+    DateTime? Blocked = null
 );
 
 [Summary("Everything about one lambda, for the operator.")]
@@ -69,7 +71,71 @@ public sealed record AdminLambdaDetail(
     [Summary("Every stretch of time it was online, newest first")]
     IReadOnlyList<ActivationResponse> Activations,
     [Summary("The tiers it may be moved to")]
-    IReadOnlyList<string> Tiers
+    IReadOnlyList<string> Tiers,
+    [Summary("Its block, while it has one")]
+    LambdaBlockResponse? Block = null,
+    [Summary("The addresses it was changed from with its editor key lately, most recent first - which a block may block as well. Never one of the installation's own networks, and none where the server keeps no addresses (`LAMBDA_LOG_CLIENT_ADDRESS`).")]
+    IReadOnlyList<EditorAddressResponse>? EditorAddresses = null,
+    [Summary("The address this request came from as a block would cover it, so the operator does not block themselves; absent where it is on one of the installation's own networks")]
+    string? You = null
+);
+
+[Summary("That the operator blocked a lambda, and why.")]
+public sealed record LambdaBlockResponse(
+    [Summary("Since when")]
+    DateTime Since,
+    [Summary("Why, in the operator's words; never shown to the owner")]
+    string? Reason
+);
+
+[Summary("An address a lambda was changed from with its editor key.")]
+public sealed record EditorAddressResponse(
+    [Summary("The address, as the connection came from it")]
+    string Address,
+    [Summary("What a block of it covers: the address, or the /64 of an IPv6 one")]
+    string Range,
+    [Summary("When the lambda was first changed from it")]
+    DateTime FirstSeen,
+    [Summary("When it was last changed from it, to within an hour")]
+    DateTime LastSeen,
+    [Summary("Whether a block covers it now")]
+    bool Blocked
+);
+
+[Summary("Blocks a lambda, and the addresses it was changed from if any are named.")]
+public sealed record BlockRequest(
+    [Summary("Why, in the operator's words, up to 500 characters. Kept with the block and with the blocks of the addresses; never shown to the owner.")]
+    string? Reason = null,
+    [Summary("Addresses to refuse as well for two weeks, usually some of the lambda's `editorAddresses`: an IPv4 or IPv6 address - which blocks the /64 it belongs to - or such a /64")]
+    IReadOnlyList<string>? Addresses = null
+);
+
+[Summary("Every address the server refuses, and the address of whoever asks.")]
+public sealed record AddressBlockListing(
+    [Summary("The blocks, newest first")]
+    IReadOnlyList<AddressBlockResponse> Blocks,
+    [Summary("The address this request came from as a block would cover it - so the operator can tell whether one of these is theirs; absent where it is on one of the installation's own networks")]
+    string? You
+);
+
+[Summary("An address the server refuses, before it does anything else for it - apart from the administration panel.")]
+public sealed record AddressBlockResponse(
+    [Summary("What `DELETE /admin/blocks/{id}` takes")]
+    long Id,
+    [Summary("An IPv4 address, or the /64 of an IPv6 address: `2001:db8:1:2::/64`")]
+    string Address,
+    [Summary("Why, in the operator's words")]
+    string? Reason,
+    [Summary("The lambda it was blocked for, by the public key it had then; it may have gone since")]
+    string? Lambda,
+    [Summary("When it was blocked")]
+    DateTime Created,
+    [Summary("When it is let go of by itself, two weeks after it was blocked")]
+    DateTime Expires,
+    [Summary("How many requests it refused since the server came up")]
+    long Refused,
+    [Summary("When it last refused one, since the server came up")]
+    DateTime? LastRefused
 );
 
 [Summary("The tier to move a lambda to.")]

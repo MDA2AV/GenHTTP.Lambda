@@ -50,7 +50,9 @@ There are no accounts. A lambda has two keys:
 
 A key that names no lambda is answered with `404`, the same way as one whose
 lambda was deleted. The demos' editor keys are public. A demo can be read like
-any other lambda, but every change is refused with `403`.
+any other lambda, but every change is refused with `403`. So is every change
+to a lambda the operator blocked, until they lift the block: it is offline, and
+can still be read and exported.
 
 The operations under *Operating the installation* are for whoever runs the
 server. They take the token of the installation in the `X-Admin-Token` header:
@@ -138,6 +140,9 @@ A request that is refused is answered with a status code and a JSON body:
   what to change.
 - `403` **Forbidden**: not for this lambda - it is a demo, or its tier does not
   include what was asked for.
+- `403` **Blocked**: the operator blocked the lambda. Nothing about it can be
+  changed, put online or deleted until they lift the block; asking again will not
+  help.
 - `404` **NotFound**: the lambda, version, feature, file or table does not exist.
 - `409` **Conflict**: it collides with the state of the lambda - a key or a domain
   that is taken, a feature that is behind the newest version, a save based on a

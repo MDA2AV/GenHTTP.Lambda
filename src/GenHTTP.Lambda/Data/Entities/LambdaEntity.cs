@@ -86,6 +86,21 @@ public sealed class LambdaEntity
     /// </remarks>
     public DateTime? AnalyticsSince { get; set; }
 
+    /// <summary>
+    /// Since when the operator has blocked it, or nothing while it is not.
+    /// </summary>
+    /// <remarks>
+    /// A blocked lambda is offline, and nobody may change it - its owner
+    /// through no door, the operator only by lifting the block or deleting
+    /// it (see <c>LambdaGuard</c>). Lifting the block leaves it offline.
+    /// </remarks>
+    public DateTime? Blocked { get; set; }
+
+    /// <summary>
+    /// Why it was blocked, in the operator's words. Never shown to its owner.
+    /// </summary>
+    public string? BlockReason { get; set; }
+
     public List<DeploymentEntity> Deployments { get; set; } = [];
 
 }

@@ -7,6 +7,7 @@ import { IconSpinner, IconTrash } from '../components/Icons';
 import { useToast } from '../components/Toast';
 import { Ago, Empty, Pills, Section, StatusBadge, TierBadge } from '../control/ui';
 import type { Access } from './context';
+import { BlockedBadge } from './LambdaDetail';
 
 /**
  * Every lambda on the installation, to find the one that needs looking at.
@@ -156,7 +157,7 @@ export function LambdasSection({ access }: { access: Access }) {
                         {lambda.publicKey}
                       </Link>
                     </td>
-                    <td className="px-4 py-2"><StatusBadge version={lambda.activeVersion} /></td>
+                    <td className="px-4 py-2">{lambda.blocked ? <BlockedBadge /> : <StatusBadge version={lambda.activeVersion} />}</td>
                     <td className="px-4 py-2"><TierBadge tier={lambda.tier} /></td>
                     <td className="max-w-[14rem] truncate px-4 py-2 font-mono text-[13px]">
                       {lambda.domain ? (

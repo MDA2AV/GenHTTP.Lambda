@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Was wir dagegen tun dürfen',
     action:
-      'Alles, was hier deployt ist, kann jederzeit offline genommen oder gelöscht werden – ohne Ankündigung und ohne dass wir es begründen müssen. In der Praxis passiert das, wenn etwas gegen die Regeln oben verstößt, wenn es den gemeinsam genutzten Server gefährdet oder wenn jemand es meldet und recht hat.',
+      'Alles, was hier deployt ist, kann jederzeit offline genommen oder gelöscht werden – ohne Ankündigung und ohne dass wir es begründen müssen. In der Praxis passiert das, wenn etwas gegen die Regeln oben verstößt, wenn es den gemeinsam genutzten Server gefährdet oder wenn jemand es meldet und recht hat. Ein Lambda kann auch gesperrt werden: Es bleibt offline und lässt sich nicht mehr ändern, und die Adressen, von denen aus es geändert wurde, können von der gesamten Seite zwei Wochen lang abgelehnt werden.',
     lastingTitle: 'Wie lange etwas bleibt',
     lasting: (hours, days) =>
       `Ein Deployment bleibt etwa ${hours} Stunden erreichbar. Ein Lambda, das Sie nicht mehr öffnen, wird samt allen Versionen seines Codes etwa ${days} Tage nach Ihrer letzten Bearbeitung gelöscht. Speichern und Deployen zählen als Bearbeitung – woran Sie arbeiten, bleibt also erhalten. Nichts hier ist ein Backup: Bewahren Sie eine eigene Kopie von Code auf, der Ihnen wichtig ist.`,

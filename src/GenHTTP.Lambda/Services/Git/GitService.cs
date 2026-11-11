@@ -104,6 +104,12 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
     /// </remarks>
     private async ValueTask PushAsync(GitLambda lambda, GitPush push)
     {
+        if (lambda.Blocked)
+        {
+            pushes.RefuseAll(lambda, push, LambdaGuard.Blocked(lambda.PublicKey));
+            return;
+        }
+
         if (lambda.Tier == nameof(LambdaTier.Demo))
         {
             pushes.RefuseAll(lambda, push, LambdaGuard.ReadOnly(lambda.PublicKey));
@@ -148,7 +154,7 @@ public sealed class GitService(IMetaService meta, IFeatureService features, ISou
             : null;
 
         return new GitLambda(id, lambda.PrivateKey, lambda.PublicKey, lambda.Tier, new RepositoryProject(lambda.PublicKey, lambda.Address, home, license),
-                             origin.TrimEnd('/'));
+                             origin.TrimEnd('/'), lambda.Blocked != null);
     }
 
     private SemaphoreSlim Turn(long lambdaId) => _turns[(int)((ulong)lambdaId % (ulong)_turns.Length)];

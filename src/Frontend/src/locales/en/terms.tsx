@@ -17,7 +17,7 @@ export const terms = {
     ],
     actionTitle: 'What we may do about it',
     action:
-      'Anything deployed here can be taken offline or removed at any time, with no notice and no obligation to explain. In practice that happens when something breaks the rules above, when it threatens the machine everybody else is sharing, or when somebody reports it and they turn out to be right.',
+      'Anything deployed here can be taken offline or removed at any time, with no notice and no obligation to explain. In practice that happens when something breaks the rules above, when it threatens the machine everybody else is sharing, or when somebody reports it and they turn out to be right. A lambda can also be blocked: it stays offline and can no longer be changed, and the addresses it was changed from can be refused by the whole site for two weeks.',
     lastingTitle: 'How long anything lasts',
     lasting: (hours: number, days: number) =>
       `A deployment stays reachable for about ${hours} hours. A lambda you have not opened is removed, with every version of its code, about ${days} days after you last touched it. Saving or deploying counts as touching it, so anything you are working on stays. Nothing here is a backup: keep your own copy of code you care about.`,

@@ -54,6 +54,13 @@ export const frame: EditorMessages['frame'] = {
       {start('이 데모로 내 람다를 시작하세요')}.
     </>
   ),
+  blockedTitle: '이 사이트의 운영자가 차단했어요.',
+  blocked: (write) => (
+    <>
+      지금은 오프라인이며, 더 이상 변경하거나 온라인으로 전환할 수 없어요. 가진 내용은 계속 읽고 내려받을 수 있어요. 잘못된
+      차단이라고 생각하시면 {write('문의해 주세요')}.
+    </>
+  ),
   keep: '이 링크를 꼭 보관하세요. 이 람다로 돌아올 수 있는 유일한 방법이에요.',
   gotIt: '확인',
   rejected: (version) => `버전 ${version}, 온라인에 올리지 못했어요`,

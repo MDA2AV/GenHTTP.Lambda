@@ -15,7 +15,7 @@ export const terms: Messages['terms'] = {
     ],
     actionTitle: 'Ce que nous pouvons faire',
     action:
-      'Tout ce qui est déployé ici peut être mis hors ligne ou supprimé à tout moment, sans préavis et sans obligation de s’expliquer. En pratique, cela arrive quand quelque chose enfreint les règles ci-dessus, menace la machine que tout le monde partage, ou quand quelqu’un le signale et qu’il a raison.',
+      'Tout ce qui est déployé ici peut être mis hors ligne ou supprimé à tout moment, sans préavis et sans obligation de s’expliquer. En pratique, cela arrive quand quelque chose enfreint les règles ci-dessus, menace la machine que tout le monde partage, ou quand quelqu’un le signale et qu’il a raison. Une lambda peut aussi être bloquée : elle reste hors ligne et ne peut plus être modifiée, et les adresses depuis lesquelles elle a été modifiée peuvent être refusées par l’ensemble du site pendant deux semaines.',
     lastingTitle: 'Durée de vie',
     lasting: (hours, days) =>
       `Un déploiement reste accessible environ ${hours} heures. Une lambda que vous n’avez pas ouverte est supprimée, avec toutes les versions de son code, environ ${days} jours après la dernière fois que vous y avez touché. Enregistrer ou déployer, c’est y toucher : ce sur quoi vous travaillez reste donc en place. Rien ici ne fait office de sauvegarde : gardez votre propre copie du code auquel vous tenez.`,

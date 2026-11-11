@@ -54,6 +54,13 @@ export const frame: EditorMessages['frame'] = {
       {start('utwórz na jego podstawie własną lambdę')}.
     </>
   ),
+  blockedTitle: 'Zablokowane przez administratora tego serwisu.',
+  blocked: (write) => (
+    <>
+      Lambda jest wyłączona i nie można jej już zmieniać ani udostępniać. Wszystko, co zawiera, nadal można przeczytać i
+      pobrać. Jeśli uważasz, że to pomyłka, {write('napisz do nas')}.
+    </>
+  ),
   keep: 'Zachowaj ten link. To jedyna droga powrotu do tej lambdy.',
   gotIt: 'Rozumiem',
   rejected: (version) => `Wersja ${version} nie trafiła online`,

@@ -18,7 +18,7 @@ namespace GenHTTP.Lambda.Services.Meta;
 /// Each kind is kept to a bound, oldest first, so a lambda an agent saves and
 /// deploys all day long does not grow without end.
 /// </remarks>
-public sealed class LambdaHistory(IStorageService storage, ILimitsService limits)
+public sealed class LambdaHistory(IStorageService storage, ILimitsService limits, EditorAddresses editors)
 {
 
     /// <summary>
@@ -191,6 +191,13 @@ public sealed class LambdaHistory(IStorageService storage, ILimitsService limits
             PublicKey = lambda.PublicKey,
             Occurred = DateTime.UtcNow
         });
+
+        // where it was changed from, for the operator who blocks it; a
+        // lambda that is going has nothing left to block
+        if (kind != LambdaEvents.Deleted)
+        {
+            editors.Note(lambda.Id);
+        }
     }
 
     #endregion

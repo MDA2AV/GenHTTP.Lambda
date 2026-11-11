@@ -54,6 +54,13 @@ export const frame: EditorMessages['frame'] = {
       {start('Maak er je eigen lambda van')}.
     </>
   ),
+  blockedTitle: 'Geblokkeerd door de beheerder van deze site.',
+  blocked: (write) => (
+    <>
+      Hij staat offline en kan niet meer worden aangepast of online gezet. Alles wat hij heeft, kun je nog wel bekijken en
+      downloaden. Denk je dat dit een vergissing is? {write('Schrijf ons')}.
+    </>
+  ),
   keep: 'Bewaar deze link. Het is de enige weg terug naar deze lambda.',
   gotIt: 'Begrepen',
   rejected: (version) => `Versie ${version} is niet online gegaan`,
