@@ -168,7 +168,10 @@ public static class CompletionResolver
                     continue;
                 }
 
-                if (member.IsStatic != isType || !seen.Add(member.Name))
+                // never suggest what the code guard would turn down - asked
+                // before the name is taken, so a refused overload does not
+                // hide one that is not
+                if (member.IsStatic != isType || SymbolPolicy.Refuse(member, model.Compilation.Assembly) != null || !seen.Add(member.Name))
                 {
                     continue;
                 }
@@ -199,7 +202,7 @@ public static class CompletionResolver
                 continue;
             }
 
-            if (symbol is INamespaceSymbol || CodeGuard.IsBanned(symbol.Name))
+            if (symbol is INamespaceSymbol || CodeGuard.IsBanned(symbol.Name) || SymbolPolicy.Refuse(symbol, model.Compilation.Assembly) != null)
             {
                 continue;
             }

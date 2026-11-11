@@ -1317,9 +1317,25 @@ grammar colours each keystroke in the meantime so nothing waits on the network.
 Snippets are compiled against the GenHTTP module surface with its namespaces
 already imported, so no `using` directives are needed. A guard
 (`Compilation/CodeGuard.cs`) rejects code that reaches for the file system,
-processes, reflection, sockets or the internals of this application before it
-is ever compiled, and a lambda that does need files gets a directory of its
-own under `/data/workspaces`.
+processes, reflection or the internals of this application, and a lambda that
+does need files gets a directory of its own under `/data/workspaces`.
+
+The guard judges what a name means, not how it is spelled. It first reads the
+names as written, to answer before anything is compiled; then it asks the
+compiler what every name in the author's code is bound to and judges that
+(`Compilation/SymbolPolicy.cs`): the refused namespaces and types, System.IO
+but for its streams, readers and writers, every overload that takes a path on
+the host (a `StreamReader`, an XML document, a mail attachment, a socket's
+`SendFile`, `Assets.From`), the console's writer and the parts of the server
+that are the platform's - its logging, its handler, its end points. An alias,
+a `using static` or a member reached through a property is bound to the same
+thing. A lambda is compiled against an allow-list of assemblies
+(`Compilation/ReferenceProvider.cs`): .NET's base libraries, GenHTTP and its
+modules, SQLite, Entity Framework Core and Evolve - not ASP.NET Core, not
+Visual Basic, not the libraries the server uses for itself. `PathMemberTests`
+lists every member of those assemblies that takes a path and fails on one that
+is neither refused nor reviewed, so a library update is looked at before a
+lambda can call what it added.
 
 It also refuses code that waits for a task: `.Result`, `.Wait()`,
 `.GetAwaiter().GetResult()`, `Task.WaitAll`, `Task.WaitAny` and
@@ -1343,7 +1359,9 @@ say so where they start. CLAUDE.md has the rules.
 
 Compiled lambdas run in the server process. The guard raises the cost of
 misbehaving; it is not a sandbox, which is why the container runs unprivileged
-and the seccomp profile is left alone.
+and the seccomp profile is left alone. Whatever the guard misses runs as the
+platform, with the platform's files and environment: `/data/lambda.db` with
+every editor key, `secrets.key`, `LAMBDA_ADMIN_TOKEN`.
 
 ## Configuration
 

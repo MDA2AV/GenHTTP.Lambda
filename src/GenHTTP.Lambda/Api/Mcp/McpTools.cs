@@ -2278,6 +2278,8 @@ public sealed class McpTools(IMetaService meta, IWorkspaceService workspace, IDa
         refused = new
         {
             what = "Reflection, dynamic, processes, the environment, the file system, and anything else that reaches the host.",
+            paths = "Readers, writers, XML documents, mail attachments and sockets work on streams and content; their overloads that take a path on the host are refused. Files are the Workspace's.",
+            libraries = "A lambda is compiled against .NET's base libraries, GenHTTP and its modules, Microsoft.Data.Sqlite, Entity Framework Core and Evolve - not the other libraries the server uses (ASP.NET Core, Newtonsoft.Json and the rest). JSON is System.Text.Json.",
             why = "All lambdas share one process."
         },
         waiting = new
