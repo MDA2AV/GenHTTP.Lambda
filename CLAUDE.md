@@ -847,6 +847,26 @@ rules that matter:
   the composition root (`Application`) has one.
 - Compiled lambdas run in the server process. The `CodeGuard` raises the cost of
   misbehaving; **it is not a sandbox.** Do not describe it as one.
+- **The guard judges what a name means, not how it is spelled - decided after
+  a security review** read the platform's database through
+  `MemoryMappedFile.CreateFromFile`, a name nobody had listed. Two layers, and
+  keep both:
+  - **Lambdas are compiled against an allow-list of assemblies**
+    (`ReferenceProvider`): .NET's base libraries, GenHTTP and its modules,
+    SQLite, EF Core, Evolve, and what a module's public API names. Never every
+    assembly the server ships again; a new one is added by name, for a reason.
+  - **Every name in the author's code is bound and judged** (`SymbolPolicy`,
+    `CodeGuard.InspectSymbols`): the refused namespaces and names, System.IO by
+    an allow-list of streams, readers and writers, the overloads of
+    `PathTypes` that take a path, and members of the platform's (the console's
+    writer; the server's logging, handler and end points - a lambda's own
+    handler may still take the `IServer`). Of EF, only what holds a context's
+    services, options, connection and migrations is refused where it is not
+    written out. The scaffolding the platform generates is not judged, so a
+    lambda may write no `#line` directive of either form.
+  - `PathMemberTests` fails on a member of those assemblies that takes a path
+    and is neither refused nor in its reviewed list. Decide each one; do not
+    add one to the list without reading what it does.
 - Database: SQLite, EF Core, migrated by Evolve from `Data/Migrations/V<n>__*.sql`.
   Existing migrations are never edited. **Before pushing a new migration check
   the highest `V` on `origin/main`** - a duplicate fails every test in CI. New

@@ -173,8 +173,14 @@ when a push is refused, the line says why.
   would be waiting for it. Await it, or call the synchronous method.
 - Refused as well: reflection, `dynamic`, processes, the environment, the
   file system outside `Workspace`, and anything else that reaches the host.
-  All lambdas share one process. Code that compiles here can still be refused
-  there - the push says so.
+  Readers, writers, XML documents, mail attachments and sockets work on
+  streams and content; their overloads that take a path on the host are
+  refused. All lambdas share one process. Code that compiles here can still
+  be refused there - the push says so.
+- A lambda is compiled against .NET's base libraries, GenHTTP and its
+  modules, Microsoft.Data.Sqlite, Entity Framework Core and Evolve - not the
+  other libraries the server uses (ASP.NET Core, Newtonsoft.Json and the
+  rest), even where this project builds with them. JSON is System.Text.Json.
 - Never poll: a page does not fetch on a timer to see whether something
   changed. Push the change from the server - server-sent events
   (`EventSource.Create()`, `new EventSource("events")` in the browser) when

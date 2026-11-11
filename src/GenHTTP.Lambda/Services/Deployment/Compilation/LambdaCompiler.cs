@@ -130,11 +130,12 @@ internal static class LambdaCompiler
             CompilationOptions
         );
 
-        // what needs the compiler to tell: a connection made without naming
-        // its type, a task waited for rather than awaited, and a context of
-        // Entity Framework that is not on the lambda's connection
-        List<CompilationDiagnostic> constructed = [.. CodeGuard.InspectConstruction(compilation), .. CodeGuard.InspectWaiting(compilation),
-                                                   .. CodeGuard.InspectEntityFramework(compilation)];
+        // what needs the compiler to tell: what each name means, a connection
+        // made without naming its type, a task waited for rather than
+        // awaited, and a context of Entity Framework that is not on the
+        // lambda's connection
+        List<CompilationDiagnostic> constructed = [.. CodeGuard.InspectSymbols(compilation), .. CodeGuard.InspectConstruction(compilation),
+                                                   .. CodeGuard.InspectWaiting(compilation), .. CodeGuard.InspectEntityFramework(compilation)];
 
         if (constructed.Count > 0)
         {

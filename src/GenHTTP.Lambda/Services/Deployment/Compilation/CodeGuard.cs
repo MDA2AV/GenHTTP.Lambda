@@ -68,6 +68,25 @@ public static class CodeGuard
     public static bool IsBanned(string name) => BannedNames.ContainsKey(name);
 
     /// <summary>
+    /// Why the given name is refused, or nothing where it is not.
+    /// </summary>
+    internal static string? ReasonFor(string name) => BannedNames.GetValueOrDefault(name);
+
+    /// <summary>
+    /// Whether a member of this name means nothing dangerous, though a type
+    /// of the same name does, see <see cref="HarmlessMembers" />.
+    /// </summary>
+    internal static bool IsHarmlessMemberName(string name) => HarmlessMembers.Contains(name);
+
+    /// <summary>
+    /// Whether the types of the given namespace are refused: it is a banned
+    /// one or below one, and not one of those allowed by name.
+    /// </summary>
+    internal static bool RefusesNamespace(string space)
+        => !AllowedNamespaces.Contains(space)
+        && BannedNamespaces.Any(b => space.Equals(b, StringComparison.Ordinal) || space.StartsWith(b + ".", StringComparison.Ordinal));
+
+    /// <summary>
     /// Inspects the parsed snippet and returns a message for every rule it breaks.
     /// </summary>
     public static IReadOnlyList<CompilationDiagnostic> Inspect(SyntaxNode root, IReadOnlySet<string>? declared = null)
@@ -105,7 +124,10 @@ public static class CodeGuard
 
         foreach (var trivia in root.DescendantTrivia())
         {
-            if (trivia.IsKind(SyntaxKind.LineDirectiveTrivia) || trivia.IsKind(SyntaxKind.PragmaWarningDirectiveTrivia))
+            // a line directive in either form would also move code out of what
+            // InspectSymbols reads as the author's, into the scaffolding's
+            if (trivia.IsKind(SyntaxKind.LineDirectiveTrivia) || trivia.IsKind(SyntaxKind.LineSpanDirectiveTrivia)
+                || trivia.IsKind(SyntaxKind.PragmaWarningDirectiveTrivia))
             {
                 findings.Add(Reject("Preprocessor directives that change diagnostics are not allowed.", trivia.GetLocation()));
             }
@@ -412,6 +434,101 @@ public static class CodeGuard
         {
             findings.Add(Reject($"'{name}' is reserved, names must not start with a double underscore.", location));
         }
+    }
+
+    /// <summary>
+    /// Refuses every name in the author's code that is bound to something a
+    /// lambda may not use, as <see cref="SymbolPolicy" /> decides.
+    /// </summary>
+    /// <remarks>
+    /// The check by name above stays: it answers before anything is compiled,
+    /// in the words agents have learned. This one is what holds - an alias, a
+    /// <c>using static</c>, an extension method, a member reached through a
+    /// property or a type the list above never named are all bound to what
+    /// they are, and judged as that.
+    ///
+    /// Only the author's code is read: what the platform generates around it
+    /// opens files on purpose. The author's code is what is mapped onto one of
+    /// their files by a line directive; they cannot write one of their own,
+    /// see <see cref="Inspect" />.
+    /// </remarks>
+    public static IReadOnlyList<CompilationDiagnostic> InspectSymbols(Microsoft.CodeAnalysis.Compilation compilation)
+    {
+        var findings = new List<CompilationDiagnostic>();
+
+        foreach (var tree in compilation.SyntaxTrees)
+        {
+            SemanticModel? model = null;
+
+            // one refusal per expression: new StreamReader("...") is the
+            // constructor, not the constructor and then its type again
+            var refused = default(Microsoft.CodeAnalysis.Text.TextSpan?);
+
+            foreach (var node in tree.GetRoot().DescendantNodes())
+            {
+                if (!IsBound(node) || refused?.Contains(node.Span) == true)
+                {
+                    continue;
+                }
+
+                var span = node.GetLocation().GetMappedLineSpan();
+
+                if (!span.HasMappedPath)
+                {
+                    continue;
+                }
+
+                var info = (model ??= compilation.GetSemanticModel(tree)).GetSymbolInfo(node);
+
+                // where overloads could not be told apart, any of them would do
+                ISymbol[] candidates = info.Symbol != null ? [info.Symbol] : [..info.CandidateSymbols];
+
+                foreach (var symbol in candidates)
+                {
+                    if (SymbolPolicy.Refuse(symbol, compilation.Assembly) is { } reason)
+                    {
+                        findings.Add(new CompilationDiagnostic("Error", "LAMBDA0001", $"'{Describe(symbol)}' is not available inside a lambda ({reason}).",
+                                                               span.StartLinePosition.Line + 1, span.StartLinePosition.Character + 1, span.Path));
+
+                        refused = node.Span;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return findings;
+
+        // what names something: a name, a construction, a call of a base
+        // constructor, an indexer - but not var, which names what the
+        // expression beside it already answered for
+        static bool IsBound(SyntaxNode node) => node switch
+        {
+            IdentifierNameSyntax { IsVar: true } => false,
+            SimpleNameSyntax => true,
+            BaseObjectCreationExpressionSyntax or ConstructorInitializerSyntax or PrimaryConstructorBaseTypeSyntax or ElementAccessExpressionSyntax => true,
+            _ => false
+        };
+    }
+
+    /// <summary>
+    /// A symbol as a refusal names it: <c>MemoryMappedFile.CreateFromFile</c>,
+    /// <c>new StreamReader</c>.
+    /// </summary>
+    private static string Describe(ISymbol symbol)
+    {
+        if (symbol is IMethodSymbol { ReducedFrom: { } reduced })
+        {
+            symbol = reduced;
+        }
+
+        return symbol switch
+        {
+            ITypeSymbol type => type.Name,
+            IMethodSymbol { MethodKind: MethodKind.Constructor } constructor => $"new {constructor.ContainingType.Name}",
+            _ when symbol.ContainingType is { } owner => $"{owner.Name}.{symbol.Name}",
+            _ => symbol.Name
+        };
     }
 
     /// <summary>
