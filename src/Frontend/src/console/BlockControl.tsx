@@ -89,7 +89,7 @@ export function BlockControl({ token, detail, onChanged, deny }: {
             </p>
             <p className="mt-2 text-[13px] text-slate-500">
               Offline, and every change is refused - for its owner through every door, for you too. Its owner can still read and
-              download it, and is told it was blocked, not why. You can still delete it.
+              download it, and is shown it was blocked, with your reason. You can still delete it.
             </p>
           </div>
           <button type="button" onClick={liftIt} disabled={busy} className="btn-ghost !px-3 !py-1.5 text-[13px]">
@@ -141,17 +141,18 @@ export function BlockControl({ token, detail, onChanged, deny }: {
         }
       >
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          It goes offline, and nobody can change it until you lift the block. Its owner is told it was blocked, not why.
+          It goes offline, and nobody can change it until you lift the block. Its owner is told it was blocked, and reads
+          your reason in its editor as you write it.
         </p>
 
-        <label className="mt-4 block text-[13px] font-medium" htmlFor="block-reason">Why</label>
+        <label className="mt-4 block text-[13px] font-medium" htmlFor="block-reason">Why <span className="font-normal text-slate-500">- its owner reads this</span></label>
         <textarea
           id="block-reason"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           maxLength={500}
           rows={2}
-          placeholder="Phishing for bank logins, reported by …"
+          placeholder="Phishing for bank logins"
           className="field mt-1 w-full text-sm"
         />
 

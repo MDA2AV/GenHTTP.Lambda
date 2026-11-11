@@ -986,6 +986,11 @@ export function Editor({ theme }: Props) {
         {blocked && (
           <div className="mx-4 mt-6 border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm md:mx-0">
             <p className="font-medium text-red-700 dark:text-red-400">{said.blockedTitle}</p>
+            {lambda.blockReason && (
+              <p className="mt-1 whitespace-pre-line break-words text-slate-700 dark:text-slate-300">
+                {said.blockedReason(lambda.blockReason)}
+              </p>
+            )}
             <p className="mt-1 text-slate-600 dark:text-slate-400">
               {said.blocked((text) => (
                 <a href={`mailto:${CONTACT_MAIL}?subject=${encodeURIComponent(lambda.publicKey)}`} className="text-accent-500 hover:underline">

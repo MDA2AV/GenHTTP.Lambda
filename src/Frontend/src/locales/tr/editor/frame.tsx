@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Bu sitenin işletmecisi tarafından engellendi.',
+  blockedReason: (reason) => `Belirtilen gerekçe: “${reason}”`,
   blocked: (write) => (
     <>
       Yayından kaldırıldı; artık değiştirilemez ya da yayına alınamaz. Sahip olduğu her şey okunabilir ve indirilebilir.

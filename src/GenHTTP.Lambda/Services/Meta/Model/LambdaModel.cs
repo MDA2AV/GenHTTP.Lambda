@@ -13,7 +13,7 @@ namespace GenHTTP.Lambda.Services.Meta.Model;
 /// <param name="PublicUrl">Its address below the hosting domain, which sends visitors on to its domain while it answers at one</param>
 /// <param name="Address">Where to link to it: its domain while that is served, its address below the hosting domain otherwise</param>
 /// <param name="Blocked">Since when the operator has blocked it, or nothing</param>
-/// <param name="BlockReason">Why, in the operator's words - for the operator only, never its owner</param>
+/// <param name="BlockReason">Why, in the operator's words - which its owner reads as well</param>
 public sealed record LambdaInfo(
     string PublicKey,
     string PrivateKey,

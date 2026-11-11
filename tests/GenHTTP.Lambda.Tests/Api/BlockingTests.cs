@@ -121,6 +121,28 @@ public sealed class BlockingTests
     }
 
     [TestMethod]
+    public async Task TheOwnerIsToldWhyTheLambdaWasBlocked()
+    {
+        await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
+
+        var lambda = await fixture.CreateLambdaAsync("phish");
+        var quiet = await fixture.CreateLambdaAsync("quiet");
+
+        await BlockAsync(fixture, "phish", new BlockRequest("  Asks for bank passwords  "));
+        await BlockAsync(fixture, "quiet", new BlockRequest());
+
+        var blocked = await OwnerSeesAsync(fixture, lambda.PrivateKey);
+
+        Assert.AreEqual("Asks for bank passwords", blocked.BlockReason, "the operator's words, as they wrote them");
+        Assert.IsNull((await OwnerSeesAsync(fixture, quiet.PrivateKey)).BlockReason, "no reason given, none shown");
+
+        using var lifted = await AsOperatorAsync(fixture, HttpMethod.Delete, "/api/v1/admin/lambdas/phish/block");
+
+        Assert.AreEqual(HttpStatusCode.OK, lifted.StatusCode);
+        Assert.IsNull((await OwnerSeesAsync(fixture, lambda.PrivateKey)).BlockReason, "it goes with the block");
+    }
+
+    [TestMethod]
     public async Task LiftingTheBlockLetsTheOwnerChangeItAgainButLeavesItOffline()
     {
         await using var fixture = await LambdaFixture.CreateAsync(LambdaFixture.WithPanel);
@@ -470,6 +492,15 @@ public sealed class BlockingTests
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
         return await response.GetContentAsync<AdminLambdaDetail>();
+    }
+
+    private static async Task<LambdaResponse> OwnerSeesAsync(LambdaFixture fixture, string privateKey)
+    {
+        using var response = await fixture.GetAsync($"/api/v1/lambdas/{privateKey}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+        return await response.GetContentAsync<LambdaResponse>();
     }
 
     private static async Task<AddressBlockListing> BlocksAsync(LambdaFixture fixture)

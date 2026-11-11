@@ -1948,7 +1948,9 @@ malware, attacks on others. **Block** is on its page in the panel and in the
   `Blocked`, whose message tells an agent not to try again. The operator's own
   actions on it are refused too, but two: lifting the block, and deleting it.
   Its owner can still read and export it; the code is theirs. They are told it
-  was blocked, never why: the reason is the operator's note. Its published
+  was blocked and why: the operator's reason, as they wrote it, is in the
+  banner of its editor and in `blockReason` of the lambda - not in the
+  refusals, which may end up in a build log others read. Its published
   source is not found while the block lasts, and a blocked lambda is never
   removed for going unused - removed by itself, its key would be free again for
   whoever it was blocked for. Lifting the block leaves it offline.

@@ -431,7 +431,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Todo o resto está lá, incluindo toda a API de módulos do GenHTTP. Se algo for recusado, ficas a saber em que linha e porquê, e não apenas que falhou.',
   limitsBlocked:
-    'Uma lambda que viole os termos - phishing, malware, ataques a outras pessoas - pode ser bloqueada por quem gere o site. Fica offline e nada nela pode ser alterado nem posto online até o bloqueio ser levantado; o painel de controlo di-lo no topo. O que ela tem ainda pode ser lido e descarregado.',
+    'Uma lambda que viole os termos - phishing, malware, ataques a outras pessoas - pode ser bloqueada por quem gere o site. Fica offline e nada nela pode ser alterado nem posto online até o bloqueio ser levantado; o painel de controlo di-lo no topo, com o motivo indicado. O que ela tem ainda pode ser lido e descarregado.',
 
   away: (k) => (
     <>

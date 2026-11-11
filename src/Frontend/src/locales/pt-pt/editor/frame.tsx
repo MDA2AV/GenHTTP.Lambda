@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Bloqueada pelo operador deste site.',
+  blockedReason: (reason) => `O motivo indicado: «${reason}»`,
   blocked: (write) => (
     <>
       Está offline e já não pode ser alterada nem posta online. Tudo o que tem ainda pode ser lido e descarregado. Se

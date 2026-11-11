@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'このサイトの運営者によってブロックされています。',
+  blockedReason: (reason) => `示された理由：「${reason}」`,
   blocked: (write) => (
     <>
       オフラインになっており、変更することも公開することもできません。内容の閲覧とダウンロードは引き続きできます。誤りだと思われる場合は、{write('私たちまでご連絡ください')}。

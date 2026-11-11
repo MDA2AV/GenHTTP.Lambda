@@ -222,7 +222,8 @@ public sealed class AdminResource(IMetaService meta, ITelemetryService telemetry
              editor, the API, MCP and git, with `Blocked` (403) and a message that says so. Its code, its data and its history
              are kept and can still be read and exported; nothing about it can be changed, put online or deleted by its owner
              until the block is lifted. The operator may still delete it, and a blocked lambda is never removed for going unused.
-             Its published source is not found while the block lasts, and nothing of the reason is shown to the owner.
+             Its published source is not found while the block lasts. The reason is shown to its owner as it is written, in the
+             editor and as `blockReason` of the lambda.
 
              The addresses named are refused as well, for two weeks, before anything else is done for them - usually some of the
              `editorAddresses` the lambda was changed from. Blocking a lambda that is blocked already keeps the time it was

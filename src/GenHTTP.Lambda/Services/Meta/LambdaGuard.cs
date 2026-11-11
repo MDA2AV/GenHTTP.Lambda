@@ -69,8 +69,9 @@ internal static class LambdaGuard
     /// or their agent, which should stop rather than try again.
     /// </summary>
     /// <remarks>
-    /// Not why: the reason is the operator's note, and saying which rule was
-    /// broken tells whoever broke it how to go around it.
+    /// Not why: the owner reads the operator's note where they read the
+    /// lambda - its editor, <c>blockReason</c> - rather than in every refusal,
+    /// which may end up in a build log others read.
     /// </remarks>
     public static string Blocked(string publicKey)
         => $"'{publicKey}' has been blocked by the operator of this installation: it is offline, and it cannot be changed, put online or deleted any more - " +

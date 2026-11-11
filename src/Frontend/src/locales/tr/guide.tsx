@@ -438,7 +438,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Geri kalan her şey mevcut, GenHTTP modül API’sinin tamamı dahil. Bir şey reddedilirse sadece başarısız olduğu değil, hangi satırda ve neden reddedildiği de söylenir.',
   limitsBlocked:
-    'Kuralları ihlal eden bir lambda - kimlik avı, kötü amaçlı yazılım, başkalarına saldırı - siteyi işleten kişi tarafından engellenebilir. Yayından kalkar ve engel kaldırılana kadar hakkında hiçbir şey değiştirilemez ya da yayına alınamaz; kontrol paneli bunu en üstte belirtir. Sahip olduğu her şey yine de okunabilir ve indirilebilir.',
+    'Kuralları ihlal eden bir lambda - kimlik avı, kötü amaçlı yazılım, başkalarına saldırı - siteyi işleten kişi tarafından engellenebilir. Yayından kalkar ve engel kaldırılana kadar hakkında hiçbir şey değiştirilemez ya da yayına alınamaz; kontrol paneli bunu, belirtilen gerekçeyle birlikte en üstte belirtir. Sahip olduğu her şey yine de okunabilir ve indirilebilir.',
 
   away: (k) => (
     <>

@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Diblokir oleh operator situs ini.',
+  blockedReason: (reason) => `Alasan yang diberikan: “${reason}”`,
   blocked: (write) => (
     <>
       Lambda ini offline, dan tidak bisa lagi diubah atau dijadikan online. Semua yang dimilikinya tetap bisa dibaca dan

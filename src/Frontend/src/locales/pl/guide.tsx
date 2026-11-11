@@ -427,7 +427,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Cała reszta jest dostępna, łącznie z pełnym API modułów GenHTTP. Jeśli coś zostanie odrzucone, dowiesz się, w której linii i dlaczego – a nie tylko, że się nie udało.',
   limitsBlocked:
-    'Lambdę, która łamie regulamin – phishing, złośliwe oprogramowanie, ataki na innych – może zablokować osoba prowadząca serwis. Lambda przechodzi wtedy w tryb offline i dopóki blokada nie zostanie zdjęta, nie można jej zmieniać ani udostępniać; centrum sterowania informuje o tym u góry. To, co zawiera, nadal można przeczytać i pobrać.',
+    'Lambdę, która łamie regulamin – phishing, złośliwe oprogramowanie, ataki na innych – może zablokować osoba prowadząca serwis. Lambda przechodzi wtedy w tryb offline i dopóki blokada nie zostanie zdjęta, nie można jej zmieniać ani udostępniać; centrum sterowania informuje o tym u góry i podaje powód. To, co zawiera, nadal można przeczytać i pobrać.',
 
   away: (k) => (
     <>

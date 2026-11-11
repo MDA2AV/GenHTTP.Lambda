@@ -440,7 +440,7 @@ export const guide: Messages['guide'] = {
   limits2:
     'Semua yang lain tersedia, termasuk seluruh API modul GenHTTP. Kalau ada yang ditolak, Anda diberi tahu baris mana dan alasannya, bukan sekadar pesan gagal.',
   limitsBlocked:
-    'Lambda yang melanggar ketentuan - phishing, malware, serangan terhadap pihak lain - bisa diblokir oleh pengelola situs. Lambda itu menjadi offline, dan tidak ada yang bisa diubah atau dijadikan online sampai blokirnya dicabut; pusat kontrol menyatakannya di bagian atas. Isinya tetap bisa dibaca dan diunduh.',
+    'Lambda yang melanggar ketentuan - phishing, malware, serangan terhadap pihak lain - bisa diblokir oleh pengelola situs. Lambda itu menjadi offline, dan tidak ada yang bisa diubah atau dijadikan online sampai blokirnya dicabut; pusat kontrol menyatakannya di bagian atas, beserta alasan yang diberikan. Isinya tetap bisa dibaca dan diunduh.',
 
   away: (k) => (
     <>

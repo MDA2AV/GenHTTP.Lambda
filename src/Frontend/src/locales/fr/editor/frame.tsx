@@ -55,6 +55,7 @@ export const frame: EditorMessages['frame'] = {
     </>
   ),
   blockedTitle: 'Bloquée par l’exploitant de ce site.',
+  blockedReason: (reason) => `Raison indiquée : « ${reason} »`,
   blocked: (write) => (
     <>
       Elle est hors ligne et ne peut plus être modifiée ni mise en ligne. Tout ce qu’elle contient peut encore être lu et

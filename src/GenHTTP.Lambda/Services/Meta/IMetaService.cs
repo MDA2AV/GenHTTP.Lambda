@@ -147,7 +147,7 @@ public interface IMetaService
     /// may still be deleted by the operator. Blocked again, it keeps the time
     /// it was first blocked and takes the new reason.
     /// </remarks>
-    /// <param name="reason">Why, in the operator's words - never shown to the owner</param>
+    /// <param name="reason">Why, in the operator's words - shown to the owner as they wrote it</param>
     LambdaInfo Block(string privateKey, string? reason);
 
     /// <summary>
