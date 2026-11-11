@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 
@@ -365,21 +364,9 @@ public sealed class ProjectPackerTests
 
     private static async Task<(string, int, string)> BuildAsync(string demo, string directory)
     {
-        var start = new ProcessStartInfo("dotnet", "build -c Release -nologo -clp:ErrorsOnly")
-        {
-            WorkingDirectory = directory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
+        var (exit, output) = await DotnetBuild.RunAsync(directory);
 
-        using var process = Process.Start(start)!;
-
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
-
-        await process.WaitForExitAsync();
-
-        return (demo, process.ExitCode, await output + await error);
+        return (demo, exit, output);
     }
 
     #endregion

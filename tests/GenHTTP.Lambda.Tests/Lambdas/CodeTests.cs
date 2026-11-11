@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Security.Cryptography;
@@ -770,24 +769,7 @@ public sealed class CodeTests
         return buffer.ToArray();
     }
 
-    private static async Task<(int, string)> BuildAsync(string directory)
-    {
-        var start = new ProcessStartInfo("dotnet", "build -c Release -nologo -clp:ErrorsOnly")
-        {
-            WorkingDirectory = directory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        using var process = Process.Start(start)!;
-
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
-
-        await process.WaitForExitAsync();
-
-        return (process.ExitCode, await output + await error);
-    }
+    private static Task<(int ExitCode, string Output)> BuildAsync(string directory) => DotnetBuild.RunAsync(directory);
 
     #endregion
 
